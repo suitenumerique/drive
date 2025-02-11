@@ -129,7 +129,7 @@ select = [
 
 [tool.ruff.lint.isort]
 section-order = ["future","standard-library","django","third-party","drive","first-party","local-folder"]
-sections = { drive=["core"], django=["django"] }
+sections = { drive=["core", "wopi"], django=["django"] }
 extra-standard-library = ["tomllib"]
 
 [tool.ruff.lint.per-file-ignores]
