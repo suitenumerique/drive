@@ -7,10 +7,12 @@ from django.contrib.auth.hashers import make_password
 
 import factory.fuzzy
 from faker import Faker
+from faker.providers import file
 
 from core import models
 
 fake = Faker()
+fake.add_provider(file)
 
 
 class UserFactory(factory.django.DjangoModelFactory):
@@ -66,9 +68,7 @@ class ItemFactory(factory.django.DjangoModelFactory):
     )
     type = factory.fuzzy.FuzzyChoice([t[0] for t in models.ItemTypeChoices.choices])
     filename = factory.lazy_attribute(
-        lambda o: factory.Faker("file_name")
-        if o.type == models.ItemTypeChoices.FILE
-        else None
+        lambda o: fake.file_name() if o.type == models.ItemTypeChoices.FILE else None
     )
     upload_state = None
 

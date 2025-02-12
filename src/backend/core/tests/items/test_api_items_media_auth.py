@@ -28,17 +28,11 @@ def test_api_items_media_auth_anonymous_public():
         update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
-    filename = f"{uuid.uuid4()!s}.jpg"
-    key = f"item/{item.pk!s}/{filename:s}"
-
-    default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
     )
-
-    original_url = f"http://localhost/media/{key:s}"
+    original_url = f"http://localhost/media/{item.file_key:s}"
     response = APIClient().get(
         "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
     )
@@ -54,7 +48,7 @@ def test_api_items_media_auth_anonymous_public():
     assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
 
     s3_url = urlparse(settings.AWS_S3_ENDPOINT_URL)
-    file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{key:s}"
+    file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{item.file_key:s}"
     response = requests.get(
         file_url,
         headers={
@@ -103,17 +97,12 @@ def test_api_items_media_auth_authenticated_public_or_authenticated(reach):
     client = APIClient()
     client.force_login(user)
 
-    filename = f"{uuid.uuid4()!s}.jpg"
-    key = f"item/{item.pk!s}/{filename:s}"
-
-    default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
     )
 
-    original_url = f"http://localhost/media/{key:s}"
+    original_url = f"http://localhost/media/{item.file_key:s}"
     response = client.get(
         "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
     )
@@ -129,7 +118,7 @@ def test_api_items_media_auth_authenticated_public_or_authenticated(reach):
     assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
 
     s3_url = urlparse(settings.AWS_S3_ENDPOINT_URL)
-    file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{key:s}"
+    file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{item.file_key:s}"
     response = requests.get(
         file_url,
         headers={
@@ -195,17 +184,12 @@ def test_api_items_media_auth_related(via, mock_user_teams, upload_state):
         mock_user_teams.return_value = ["lasuite", "unknown"]
         factories.TeamItemAccessFactory(item=item, team="lasuite")
 
-    filename = f"{uuid.uuid4()!s}.jpg"
-    key = f"item/{item.pk!s}/{filename:s}"
-
-    default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
     )
 
-    original_url = f"http://localhost/media/{key:s}"
+    original_url = f"http://localhost/media/{item.file_key:s}"
     response = client.get(
         "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
     )
@@ -221,7 +205,7 @@ def test_api_items_media_auth_related(via, mock_user_teams, upload_state):
     assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
 
     s3_url = urlparse(settings.AWS_S3_ENDPOINT_URL)
-    file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{key:s}"
+    file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{item.file_key:s}"
     response = requests.get(
         file_url,
         headers={
