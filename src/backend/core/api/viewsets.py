@@ -10,10 +10,12 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.search import TrigramSimilarity
 from django.core.exceptions import ValidationError
+from django.core.files.storage import default_storage
 from django.db import models as db
 from django.db import transaction
 from django.db.models.expressions import RawSQL
 
+import magic
 import rest_framework as drf
 from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
@@ -576,8 +578,14 @@ class ItemViewSet(
                 {"item": "This action is only available for items in PENDING state."}
             )
 
+        mime_detector = magic.Magic(mime=True)
+        file = default_storage.open(item.file_key)
+        mimetype = mime_detector.from_buffer(file.read(2048))
+        file.close()
+
         item.upload_state = models.ItemUploadStateChoices.UPLOADED
-        item.save(update_fields=["upload_state"])
+        item.mimetype = mimetype
+        item.save(update_fields=["upload_state", "mimetype"])
 
         serializer = self.get_serializer(item)
         return drf_response.Response(serializer.data, status=status.HTTP_200_OK)
