@@ -1,5 +1,9 @@
 """Test related to item upload ended API."""
 
+from io import BytesIO
+
+from django.core.files.storage import default_storage
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -83,8 +87,13 @@ def test_api_item_upload_ended_success():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(type=ItemTypeChoices.FILE)
+    item = factories.ItemFactory(type=ItemTypeChoices.FILE, filename="my_file.txt")
     factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
+    )
 
     response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
@@ -92,3 +101,4 @@ def test_api_item_upload_ended_success():
 
     item.refresh_from_db()
     assert item.upload_state == ItemUploadStateChoices.UPLOADED
+    assert item.mimetype == "text/plain"

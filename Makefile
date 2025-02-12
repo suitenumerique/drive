@@ -285,6 +285,10 @@ clean: ## restore repository state as it was freshly cloned
 	git clean -idx
 .PHONY: clean
 
+clean-media: ## remove all media files
+	rm -rf data/media/*
+.PHONY: clean-media
+
 help:
 	@echo "$(BOLD)impress Makefile"
 	@echo "Please use 'make $(BOLD)target$(RESET)' where $(BOLD)target$(RESET) is one of:"

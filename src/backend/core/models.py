@@ -478,10 +478,12 @@ class Item(TreeModel, BaseModel):
     )
     numchild = models.PositiveIntegerField(default=0)
     numchild_folder = models.PositiveIntegerField(default=0)
+    mimetype = models.CharField(max_length=255, null=True, blank=True)
 
     label_size = 7
 
     objects = ItemManager()
+    
 
     class Meta:
         db_table = "drive_item"
