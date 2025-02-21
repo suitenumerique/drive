@@ -84,6 +84,7 @@ def test_api_items_list_format():
             "link_role": item2.link_role,
             "nb_accesses": 3,
             "numchild": 0,
+            "numchild_folder": 0,
             "path": str(item2.path),
             "title": item2.title,
             "updated_at": item2.updated_at.isoformat().replace("+00:00", "Z"),
@@ -103,6 +104,7 @@ def test_api_items_list_format():
             "link_role": item.link_role,
             "nb_accesses": 3,
             "numchild": 0,
+            "numchild_folder": 0,
             "path": str(item.path),
             "title": item.title,
             "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
@@ -195,11 +197,11 @@ def test_api_items_list_authenticated_direct(django_assert_num_queries):
         str(child4_with_access.id),
     }
 
-    with django_assert_num_queries(10):
+    with django_assert_num_queries(8):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(6):
+    with django_assert_num_queries(4):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
@@ -327,11 +329,11 @@ def test_api_items_list_authenticated_link_reach_public_or_authenticated(
 
     expected_ids = {str(item1.id), str(item2.id), str(visible_child.id)}
 
-    with django_assert_num_queries(9):
+    with django_assert_num_queries(7):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(6):
+    with django_assert_num_queries(4):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200

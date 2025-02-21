@@ -83,7 +83,6 @@ class ItemTypeChoices(models.TextChoices):
     """Defines the types of items that can be created."""
 
     FOLDER = "folder", _("Folder")
-    LINK = "link", _("Link")
     FILE = "file", _("File")
 
 
@@ -393,9 +392,23 @@ class ItemManager(TreeManager):
                     {"title": _("title already exists in this folder.")}
                 )
 
-        return super().create_child(parent=parent, **kwargs)
+        item = super().create_child(parent=parent, **kwargs)
+
+        if parent:
+            update = {
+                "numchild": models.F("numchild") + 1,
+            }
+            if kwargs.get("type") == ItemTypeChoices.FOLDER:
+                update["numchild_folder"] = models.F("numchild_folder") + 1
+            # updating parent.numchild and parent.numchild_folder is impossible infortunately
+            # using F() expressions because the save method is calling full_clean() and and error
+            # is raised because the value is not an integer. We have to use the update method
+            self.filter(pk=parent.id).update(**update)
+
+        return item
 
 
+# pylint: disable=too-many-public-methods
 class Item(TreeModel, BaseModel):
     """Item in the tree."""
 
@@ -430,6 +443,8 @@ class Item(TreeModel, BaseModel):
         null=True,
         blank=True,
     )
+    numchild = models.PositiveIntegerField(default=0)
+    numchild_folder = models.PositiveIntegerField(default=0)
 
     label_size = 7
 
@@ -471,6 +486,18 @@ class Item(TreeModel, BaseModel):
 
         return super().save(*args, **kwargs)
 
+    def delete(self, using=None, keep_parents=False):
+        delete = super().delete(using, keep_parents)
+        if self.depth > 1:
+            parent = self.parent()
+            update = {
+                "numchild": models.F("numchild") - 1,
+            }
+            if self.type == ItemTypeChoices.FOLDER:
+                update["numchild_folder"] = models.F("numchild_folder") - 1
+            Item.objects.filter(pk=parent.id).update(**update)
+        return delete
+
     def ancestors(self):
         """Return the ancestors of the item excluding the item itself."""
         return super().ancestors().exclude(id=self.id)
@@ -504,20 +531,6 @@ class Item(TreeModel, BaseModel):
     def depth(self):
         """Return the depth of the item in the tree."""
         return len(self.path)
-
-    @property
-    def numchild(self):
-        """Return the number of children of the item."""
-        if self.type != ItemTypeChoices.FOLDER:
-            return 0
-        return self.children().count()
-
-    @property
-    def numfolder_children(self):
-        """Return the number of folder children of the item."""
-        if self.type != ItemTypeChoices.FOLDER:
-            return 0
-        return self.children().filter(type=ItemTypeChoices.FOLDER).count()
 
     def get_nb_accesses_cache_key(self):
         """Generate a unique cache key for each item."""
@@ -706,12 +719,23 @@ class Item(TreeModel, BaseModel):
             )
 
         self.ancestors_deleted_at = self.deleted_at = timezone.now()
+
         self.save()
 
+        if self.depth > 1:
+            parent = self.parent()
+            update = {
+                "numchild": models.F("numchild") - 1,
+            }
+            if self.type == ItemTypeChoices.FOLDER:
+                update["numchild_folder"] = models.F("numchild_folder") - 1
+            Item.objects.filter(pk=parent.id).update(**update)
+
         # Mark all descendants as soft deleted
-        self.descendants().filter(ancestors_deleted_at__isnull=True).update(
-            ancestors_deleted_at=self.ancestors_deleted_at
-        )
+        if self.type == ItemTypeChoices.FOLDER:
+            self.descendants().filter(ancestors_deleted_at__isnull=True).update(
+                ancestors_deleted_at=self.ancestors_deleted_at,
+            )
 
     @transaction.atomic
     def restore(self):
@@ -739,15 +763,27 @@ class Item(TreeModel, BaseModel):
         ancestors_deleted_at = (
             self.ancestors()
             .filter(deleted_at__isnull=False)
+            .order_by("deleted_at")
             .values_list("deleted_at", flat=True)
+            .first()
         )
-        self.ancestors_deleted_at = min(ancestors_deleted_at, default=None)
+        self.ancestors_deleted_at = ancestors_deleted_at
         self.save()
 
         self.descendants().exclude(
             models.Q(deleted_at__isnull=False)
             | models.Q(ancestors_deleted_at__lt=current_deleted_at)
         ).update(ancestors_deleted_at=self.ancestors_deleted_at)
+
+        if self.depth > 1 and self.ancestors_deleted_at is None:
+            # Update parent numchild and numchild_folder
+            parent = self.parent()
+            update = {
+                "numchild": models.F("numchild") + 1,
+            }
+            if self.type == ItemTypeChoices.FOLDER:
+                update["numchild_folder"] = models.F("numchild_folder") + 1
+            Item.objects.filter(pk=parent.id).update(**update)
 
     def move(self, target):
         """

@@ -144,6 +144,7 @@ class ListItemSerializer(BaseResourceSerializer):
             "link_reach",
             "nb_accesses",
             "numchild",
+            "numchild_folder",
             "path",
             "title",
             "updated_at",
@@ -163,6 +164,7 @@ class ListItemSerializer(BaseResourceSerializer):
             "link_reach",
             "nb_accesses",
             "numchild",
+            "numchild_folder",
             "path",
             "updated_at",
             "user_roles",
@@ -209,6 +211,7 @@ class ItemSerializer(ListItemSerializer):
             "link_reach",
             "nb_accesses",
             "numchild",
+            "numchild_folder",
             "path",
             "title",
             "updated_at",
@@ -228,6 +231,7 @@ class ItemSerializer(ListItemSerializer):
             "link_reach",
             "nb_accesses",
             "numchild",
+            "numchild_folder",
             "path",
             "updated_at",
             "user_roles",
@@ -245,6 +249,8 @@ class CreateItemSerializer(ItemSerializer):
 
     policy = serializers.SerializerMethodField()
     title = serializers.CharField(max_length=255, required=False)
+    numchild_folder = serializers.SerializerMethodField()
+    numchild = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Item
@@ -259,6 +265,7 @@ class CreateItemSerializer(ItemSerializer):
             "link_reach",
             "nb_accesses",
             "numchild",
+            "numchild_folder",
             "path",
             "title",
             "updated_at",
@@ -279,6 +286,7 @@ class CreateItemSerializer(ItemSerializer):
             "link_reach",
             "nb_accesses",
             "numchild",
+            "numchild_folder",
             "path",
             "updated_at",
             "user_roles",
@@ -334,6 +342,14 @@ class CreateItemSerializer(ItemSerializer):
             return None
 
         return utils.generate_upload_policy(item)
+
+    def get_numchild(self, _item):
+        """On creation, an item can not have children, return directly 0"""
+        return 0
+
+    def get_numchild_folder(self, _item):
+        """On creation, an item can not have folders' children, return directly 0"""
+        return 0
 
     def update(self, instance, validated_data):
         raise NotImplementedError("Update method can not be used.")

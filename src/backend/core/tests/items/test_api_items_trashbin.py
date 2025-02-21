@@ -91,6 +91,7 @@ def test_api_items_trashbin_format():
         "link_role": item.link_role,
         "nb_accesses": 3,
         "numchild": 0,
+        "numchild_folder": 0,
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
@@ -145,10 +146,10 @@ def test_api_items_trashbin_authenticated_direct(django_assert_num_queries):
 
     expected_ids = {str(item1.id), str(item2.id), str(item3.id)}
 
-    with django_assert_num_queries(9):
+    with django_assert_num_queries(7):
         response = client.get("/api/v1.0/items/trashbin/")
 
-    with django_assert_num_queries(6):
+    with django_assert_num_queries(4):
         response = client.get("/api/v1.0/items/trashbin/")
 
     assert response.status_code == 200
