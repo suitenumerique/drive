@@ -54,25 +54,9 @@ def test_models_items_file_key():
     assert item.file_key == "item/9531a5f1-42b1-496c-b3f4-1c09ed139b3c/logo.png"
 
 
-def test_models_items_tree_alphabet():
-    """Test the creation of items with treebeard methods."""
-    models.Item.load_bulk(
-        [
-            {
-                "data": {
-                    "title": f"item-{i}",
-                }
-            }
-            for i in range(len(models.Item.alphabet) * 2)
-        ]
-    )
-
-    assert models.Item.objects.count() == 124
-
-
 @pytest.mark.parametrize("depth", range(5))
 def test_models_items_soft_delete(depth):
-    """Trying to delete a item that is already deleted or is a descendant of
+    """Trying to delete an item that is already deleted or is a descendant of
     a deleted item should raise an error.
     """
     items = []
@@ -90,20 +74,23 @@ def test_models_items_soft_delete(depth):
     deleted_item = random.choice(items)
     deleted_item.soft_delete()
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError) as exc_info:
         items[-1].soft_delete()
+        assert str(exc_info) == "This item is already deleted or has deleted ancestors."
 
     assert deleted_item.deleted_at is not None
     assert deleted_item.ancestors_deleted_at == deleted_item.deleted_at
 
-    descendants = deleted_item.get_descendants()
+    descendants = deleted_item.descendants()
     for child in descendants:
+        assert child.id != deleted_item.id
         assert child.deleted_at is None
         assert child.ancestors_deleted_at is not None
         assert child.ancestors_deleted_at == deleted_item.deleted_at
 
-    ancestors = deleted_item.get_ancestors()
+    ancestors = deleted_item.ancestors()
     for parent in ancestors:
+        assert parent.id != deleted_item.id
         assert parent.deleted_at is None
         assert parent.ancestors_deleted_at is None
 
@@ -128,7 +115,7 @@ def test_models_items_get_abilities_forbidden(
     is_authenticated, reach, role, django_assert_num_queries
 ):
     """
-    Check abilities returned for a item giving insufficient roles to link holders
+    Check abilities returned for an item giving insufficient roles to link holders
     i.e anonymous users or authenticated users who have no specific role on the item.
     """
     item = factories.ItemFactory(link_reach=reach, link_role=role)
@@ -625,15 +612,191 @@ def test_models_items_unique_title_in_current_path():
         filename="file.txt",
     )
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError) as exc_info:
         factories.ItemFactory(
             parent=parent, title="folder", type=models.ItemTypeChoices.FOLDER
         )
+        assert exc_info.value.message_dict == {
+            "title": "title already exists in this folder."
+        }
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError) as exc_info:
         factories.ItemFactory(
             parent=parent,
             title="file.txt",
             type=models.ItemTypeChoices.FILE,
             filename="file.txt",
         )
+        assert exc_info.value.message_dict == {
+            "title": "title already exists in this folder."
+        }
+
+
+def test_models_items_numchild():
+    """The numchild property should return the number of children."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    assert parent.numchild == 0
+
+    factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    parent.refresh_from_db()
+    assert parent.numchild == 1
+
+    factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FILE)
+    parent.refresh_from_db()
+    assert parent.numchild == 2
+
+    to_delete = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    parent.refresh_from_db()
+    assert parent.numchild == 3
+
+    to_delete.soft_delete()
+    parent.refresh_from_db()
+    assert parent.numchild == 2
+
+    to_delete.restore()
+    parent.refresh_from_db()
+    assert parent.numchild == 3
+
+
+def test_models_items_numchild_folder():
+    """The numchild_folder property should return the number of folder children."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    assert parent.numchild_folder == 0
+
+    factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    parent.refresh_from_db()
+    assert parent.numchild_folder == 1
+
+    factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FILE)
+    parent.refresh_from_db()
+    assert parent.numchild_folder == 1
+
+    to_delete = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    parent.refresh_from_db()
+    assert parent.numchild_folder == 2
+
+    to_delete.soft_delete()
+    parent.refresh_from_db()
+    assert parent.numchild_folder == 1
+
+    to_delete.restore()
+    parent.refresh_from_db()
+    assert parent.numchild_folder == 2
+
+
+def test_models_items_restore():
+    """The restore method should restore a soft-deleted item."""
+    item = factories.ItemFactory()
+    item.soft_delete()
+    item.refresh_from_db()
+    assert item.deleted_at is not None
+    assert item.ancestors_deleted_at == item.deleted_at
+
+    item.restore()
+    item.refresh_from_db()
+    assert item.deleted_at is None
+    assert item.ancestors_deleted_at == item.deleted_at
+
+
+def test_models_items_restore_complex():
+    """The restore method should restore a soft-deleted item and its ancestors."""
+    grand_parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(
+        parent=grand_parent, type=models.ItemTypeChoices.FOLDER
+    )
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    child1 = factories.ItemFactory(parent=item)
+    child2 = factories.ItemFactory(parent=item)
+
+    # Soft delete first the item
+    item.soft_delete()
+    item.refresh_from_db()
+    child1.refresh_from_db()
+    child2.refresh_from_db()
+    assert item.deleted_at is not None
+    assert item.ancestors_deleted_at == item.deleted_at
+    assert child1.ancestors_deleted_at == item.deleted_at
+    assert child2.ancestors_deleted_at == item.deleted_at
+
+    # Soft delete the grand parent
+    grand_parent.soft_delete()
+    grand_parent.refresh_from_db()
+    parent.refresh_from_db()
+    assert grand_parent.deleted_at is not None
+    assert grand_parent.ancestors_deleted_at == grand_parent.deleted_at
+    assert parent.ancestors_deleted_at == grand_parent.deleted_at
+    # item, child1 and child2 should not be affected
+    item.refresh_from_db()
+    child1.refresh_from_db()
+    child2.refresh_from_db()
+    assert item.deleted_at is not None
+    assert item.ancestors_deleted_at == item.deleted_at
+    assert child1.ancestors_deleted_at == item.deleted_at
+    assert child2.ancestors_deleted_at == item.deleted_at
+
+    # Restore the item
+    item.restore()
+    item.refresh_from_db()
+    child1.refresh_from_db()
+    child2.refresh_from_db()
+    grand_parent.refresh_from_db()
+    assert item.deleted_at is None
+    assert item.ancestors_deleted_at == grand_parent.deleted_at
+    # child 1 and child 2 should now have the same ancestors_deleted_at as the grand parent
+    assert child1.ancestors_deleted_at == grand_parent.deleted_at
+    assert child2.ancestors_deleted_at == grand_parent.deleted_at
+
+
+def test_models_items_restore_complex_bis():
+    """The restore method should restore a soft-deleted item and its ancestors."""
+    grand_parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(
+        parent=grand_parent, type=models.ItemTypeChoices.FOLDER
+    )
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    child1 = factories.ItemFactory(parent=item)
+    child2 = factories.ItemFactory(parent=item)
+
+    # Soft delete first the item
+    item.soft_delete()
+    item.refresh_from_db()
+    child1.refresh_from_db()
+    child2.refresh_from_db()
+    assert item.deleted_at is not None
+    assert item.ancestors_deleted_at == item.deleted_at
+    assert child1.ancestors_deleted_at == item.deleted_at
+    assert child2.ancestors_deleted_at == item.deleted_at
+
+    # Soft delete the grand parent
+    grand_parent.soft_delete()
+    grand_parent.refresh_from_db()
+    parent.refresh_from_db()
+    assert grand_parent.deleted_at is not None
+    assert grand_parent.ancestors_deleted_at == grand_parent.deleted_at
+    assert parent.ancestors_deleted_at == grand_parent.deleted_at
+    # item, child1 and child2 should not be affected
+    item.refresh_from_db()
+    child1.refresh_from_db()
+    child2.refresh_from_db()
+    assert item.deleted_at is not None
+    assert item.ancestors_deleted_at == item.deleted_at
+    assert child1.ancestors_deleted_at == item.deleted_at
+    assert child2.ancestors_deleted_at == item.deleted_at
+
+    # Restoring the grand parent should all the tree
+    grand_parent.restore()
+    grand_parent.refresh_from_db()
+    parent.refresh_from_db()
+    item.refresh_from_db()
+    child1.refresh_from_db()
+    child2.refresh_from_db()
+    assert grand_parent.deleted_at is None
+    assert grand_parent.ancestors_deleted_at is None
+    assert parent.deleted_at is None
+    assert parent.ancestors_deleted_at is None
+    assert item.deleted_at is not None
+    assert item.ancestors_deleted_at == item.deleted_at
+    assert child1.ancestors_deleted_at == item.deleted_at
+    assert child2.ancestors_deleted_at == item.deleted_at

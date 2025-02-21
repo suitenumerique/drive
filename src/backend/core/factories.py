@@ -63,7 +63,7 @@ class ItemFactory(factory.django.DjangoModelFactory):
         django_get_or_create = ("title",)
         skip_postgeneration_save = True
 
-    parent = ParentNodeFactory()
+    # parent = ParentNodeFactory()
 
     title = factory.Sequence(lambda n: f"item{n}")
     creator = factory.SubFactory(UserFactory)
@@ -81,23 +81,27 @@ class ItemFactory(factory.django.DjangoModelFactory):
         else None
     )
 
+    # @classmethod
+    # def _create(cls, model_class, *args, **kwargs):
+    #     """
+    #     Custom creation logic for the factory: creates an item as a child node if
+    #     a parent is provided; otherwise, creates it as a root node.
+    #     """
+    #     parent = kwargs.pop("parent", None)
+
+    #     if parent:
+    #         # Add as a child node
+    #         kwargs["ancestors_deleted_at"] = (
+    #             kwargs.get("ancestors_deleted_at") or parent.ancestors_deleted_at
+    #         )
+    #         return parent.add_child(**kwargs)
+
+    #     # Add as a root node
+    #     return model_class.add_root(**kwargs)
+
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
-        """
-        Custom creation logic for the factory: creates an item as a child node if
-        a parent is provided; otherwise, creates it as a root node.
-        """
-        parent = kwargs.pop("parent", None)
-
-        if parent:
-            # Add as a child node
-            kwargs["ancestors_deleted_at"] = (
-                kwargs.get("ancestors_deleted_at") or parent.ancestors_deleted_at
-            )
-            return parent.add_child(**kwargs)
-
-        # Add as a root node
-        return model_class.add_root(**kwargs)
+        return model_class.objects.create_child(**kwargs)
 
     @factory.lazy_attribute
     def ancestors_deleted_at(self):

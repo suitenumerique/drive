@@ -84,7 +84,7 @@ def test_api_items_list_format():
             "link_role": item2.link_role,
             "nb_accesses": 3,
             "numchild": 0,
-            "path": item2.path,
+            "path": str(item2.path),
             "title": item2.title,
             "updated_at": item2.updated_at.isoformat().replace("+00:00", "Z"),
             "user_roles": [access2.role],
@@ -103,7 +103,7 @@ def test_api_items_list_format():
             "link_role": item.link_role,
             "nb_accesses": 3,
             "numchild": 0,
-            "path": item.path,
+            "path": str(item.path),
             "title": item.title,
             "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
             "user_roles": [access.role],
@@ -151,9 +151,13 @@ def test_api_items_list_authenticated_direct(django_assert_num_queries):
 
     # Children of hidden items should get listed when visible by the logged-in user
     hidden_root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
-    child3_with_access = factories.ItemFactory(parent=hidden_root)
+    child3_with_access = factories.ItemFactory(
+        parent=hidden_root, type=models.ItemTypeChoices.FILE
+    )
     factories.UserItemAccessFactory(user=user, item=child3_with_access)
-    child4_with_access = factories.ItemFactory(parent=hidden_root)
+    child4_with_access = factories.ItemFactory(
+        parent=hidden_root, type=models.ItemTypeChoices.FILE
+    )
     factories.UserItemAccessFactory(user=user, item=child4_with_access)
 
     # items that are soft deleted and children of a soft deleted item should not be listed
@@ -191,11 +195,11 @@ def test_api_items_list_authenticated_direct(django_assert_num_queries):
         str(child4_with_access.id),
     }
 
-    with django_assert_num_queries(8):
+    with django_assert_num_queries(10):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
@@ -220,11 +224,15 @@ def test_api_items_list_authenticated_via_team(
 
     items_team1 = [
         access.item
-        for access in factories.TeamItemAccessFactory.create_batch(2, team="team1")
+        for access in factories.TeamItemAccessFactory.create_batch(
+            2, team="team1", item__type=models.ItemTypeChoices.FILE
+        )
     ]
     items_team2 = [
         access.item
-        for access in factories.TeamItemAccessFactory.create_batch(3, team="team2")
+        for access in factories.TeamItemAccessFactory.create_batch(
+            3, team="team2", item__type=models.ItemTypeChoices.FILE
+        )
     ]
 
     expected_ids = {str(item.id) for item in items_team1 + items_team2}
@@ -255,11 +263,15 @@ def test_api_items_list_authenticated_link_reach_restricted(
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(link_traces=[user], link_reach="restricted")
+    item = factories.ItemFactory(
+        link_traces=[user], link_reach="restricted", type=models.ItemTypeChoices.FILE
+    )
 
     # Link traces for other items or other users should not interfere
     models.LinkTrace.objects.create(item=item, user=factories.UserFactory())
-    other_item = factories.ItemFactory(link_reach="public")
+    other_item = factories.ItemFactory(
+        link_reach="public", type=models.ItemTypeChoices.FILE
+    )
     models.LinkTrace.objects.create(item=other_item, user=user)
 
     with django_assert_num_queries(5):
@@ -310,15 +322,16 @@ def test_api_items_list_authenticated_link_reach_public_or_authenticated(
         link_traces=[user],
         link_reach=random.choice(["public", "authenticated"]),
         parent=hidden_item,
+        type=models.ItemTypeChoices.FILE,
     )
 
     expected_ids = {str(item1.id), str(item2.id), str(visible_child.id)}
 
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(9):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
@@ -405,8 +418,12 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
     client = APIClient()
     client.force_login(user)
 
-    special_items = factories.ItemFactory.create_batch(3, users=[user])
-    factories.ItemFactory.create_batch(2, users=[user])
+    special_items = factories.ItemFactory.create_batch(
+        3, users=[user], type=models.ItemTypeChoices.FILE
+    )
+    factories.ItemFactory.create_batch(
+        2, users=[user], type=models.ItemTypeChoices.FILE
+    )
 
     url = "/api/v1.0/items/"
     with django_assert_num_queries(9):

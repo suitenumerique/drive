@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from rest_framework import exceptions, serializers
 
-from core import enums, models
+from core import models
 from core.api import utils
 
 
@@ -429,28 +429,15 @@ class MoveItemSerializer(serializers.Serializer):
     Fields:
         - target_item_id (UUIDField): The ID of the target parent item where the
             item should be moved. This field is required and must be a valid UUID.
-        - position (ChoiceField): Specifies the position of the item in relation to
-            the target parent's children.
-          Choices:
-            - "first-child": Place the item as the first child of the target parent.
-            - "last-child": Place the item as the last child of the target parent (default).
-            - "left": Place the item as the left sibling of the target parent.
-            - "right": Place the item as the right sibling of the target parent.
 
     Example:
         Input payload for moving a item:
         {
             "target_item_id": "123e4567-e89b-12d3-a456-426614174000",
-            "position": "first-child"
         }
 
     Notes:
         - The `target_item_id` is mandatory.
-        - The `position` defaults to "last-child" if not provided.
     """
 
     target_item_id = serializers.UUIDField(required=True)
-    position = serializers.ChoiceField(
-        choices=enums.MoveNodePositionChoices.choices,
-        default=enums.MoveNodePositionChoices.LAST_CHILD,
-    )

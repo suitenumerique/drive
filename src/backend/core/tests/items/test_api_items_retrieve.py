@@ -51,7 +51,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "link_role": item.link_role,
         "nb_accesses": 0,
         "numchild": 0,
-        "path": item.path,
+        "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
         "user_roles": [],
@@ -108,7 +108,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "link_role": item.link_role,
         "nb_accesses": 0,
         "numchild": 0,
-        "path": item.path,
+        "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
         "user_roles": [],
@@ -195,7 +195,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "link_role": item.link_role,
         "nb_accesses": 0,
         "numchild": 0,
-        "path": item.path,
+        "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
         "user_roles": [],
@@ -257,7 +257,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "link_role": item.link_role,
         "nb_accesses": 0,
         "numchild": 0,
-        "path": item.path,
+        "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
         "user_roles": [],
@@ -367,7 +367,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "link_role": item.link_role,
         "nb_accesses": 2,
         "numchild": 0,
-        "path": item.path,
+        "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
         "user_roles": [access.role],
@@ -431,7 +431,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "link_role": item.link_role,
         "nb_accesses": 2,
         "numchild": 0,
-        "path": item.path,
+        "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
         "user_roles": [access.role],
@@ -583,7 +583,7 @@ def test_api_items_retrieve_authenticated_related_team_members(
         "link_role": item.link_role,
         "nb_accesses": 5,
         "numchild": 0,
-        "path": item.path,
+        "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
         "user_roles": roles,
@@ -643,7 +643,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
         "link_role": item.link_role,
         "nb_accesses": 5,
         "numchild": 0,
-        "path": item.path,
+        "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
         "user_roles": roles,
@@ -703,7 +703,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(
         "link_role": item.link_role,
         "nb_accesses": 5,
         "numchild": 0,
-        "path": item.path,
+        "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
         "user_roles": roles,
@@ -732,7 +732,9 @@ def test_api_items_retrieve_user_roles(django_assert_num_queries):
         type=models.ItemTypeChoices.FOLDER,
     )
     item = factories.ItemFactory(
-        parent=parent, users=factories.UserFactory.create_batch(2)
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+        users=factories.UserFactory.create_batch(2),
     )
 
     accesses = (
@@ -757,7 +759,9 @@ def test_api_items_retrieve_numqueries_with_link_trace(django_assert_num_queries
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(users=[user], link_traces=[user])
+    item = factories.ItemFactory(
+        users=[user], link_traces=[user], type=models.ItemTypeChoices.FILE
+    )
 
     with django_assert_num_queries(4):
         response = client.get(f"/api/v1.0/items/{item.id!s}/")
@@ -973,7 +977,7 @@ def test_api_items_retrieve_file_uploaded():
         "link_role": item.link_role,
         "nb_accesses": 0,
         "numchild": 0,
-        "path": item.path,
+        "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
         "user_roles": [],

@@ -301,7 +301,7 @@ class Base(Configuration):
         "dockerflow.django",
         "rest_framework",
         "parler",
-        "treebeard",
+        "django_ltree",
         "easy_thumbnails",
         # Django
         "django.contrib.admin",

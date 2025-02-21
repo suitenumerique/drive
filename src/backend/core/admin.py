@@ -4,9 +4,6 @@ from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
 from django.utils.translation import gettext_lazy as _
 
-from treebeard.admin import TreeAdmin
-from treebeard.forms import movenodeform_factory
-
 from . import models
 
 
@@ -105,7 +102,7 @@ class ItemAccessInline(admin.TabularInline):
 
 
 @admin.register(models.Item)
-class ItemAdmin(TreeAdmin):
+class ItemAdmin(admin.ModelAdmin):
     """item admin interface declaration."""
 
     fieldsets = (
@@ -139,7 +136,6 @@ class ItemAdmin(TreeAdmin):
             },
         ),
     )
-    form = movenodeform_factory(models.Item)
     inlines = (ItemAccessInline,)
     list_display = (
         "id",

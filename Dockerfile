@@ -8,7 +8,8 @@ RUN python -m pip install --upgrade pip setuptools
 
 # Upgrade system packages to install security updates
 RUN apk update && \
-  apk upgrade
+  apk upgrade && \
+  apk add git
 
 # ---- Back-end builder image ----
 FROM base AS back-builder

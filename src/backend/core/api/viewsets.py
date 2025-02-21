@@ -13,7 +13,6 @@ from django.core.exceptions import ValidationError
 from django.db import models as db
 from django.db import transaction
 from django.db.models.expressions import RawSQL
-from django.db.models.functions import Left, Length
 
 import rest_framework as drf
 from django_filters import rest_framework as drf_filters
@@ -415,7 +414,7 @@ class ItemViewSet(
         if user.is_authenticated:
             user_roles_subquery = models.ItemAccess.objects.filter(
                 db.Q(user=user) | db.Q(team__in=user.teams),
-                item__path=Left(db.OuterRef("path"), Length("item__path")),
+                item__path__ancestors=db.OuterRef("path"),
             ).values_list("role", flat=True)
 
             return queryset.annotate(
@@ -535,7 +534,7 @@ class ItemViewSet(
     @transaction.atomic
     def perform_create(self, serializer):
         """Set the current user as creator and owner of the newly created object."""
-        obj = models.Item.add_root(
+        obj = models.Item.objects.create_child(
             creator=self.request.user,
             **serializer.validated_data,
         )
@@ -610,64 +609,53 @@ class ItemViewSet(
 
         return self.get_response_for_queryset(queryset)
 
-    @drf.decorators.action(detail=True, methods=["post"])
-    @transaction.atomic
-    def move(self, request, *args, **kwargs):
-        """
-        Move an item to another location within the item tree.
+    # @drf.decorators.action(detail=True, methods=["post"])
+    # @transaction.atomic
+    # def move(self, request, *args, **kwargs):
+    #     """
+    #     Move an item to another location within the item tree.
 
-        The user must be an administrator or owner of both the item being moved
-        and the target parent item.
-        """
-        user = request.user
-        item = self.get_object()  # including permission checks
+    #     The user must be an administrator or owner of both the item being moved
+    #     and the target parent item.
+    #     """
+    #     user = request.user
+    #     item = self.get_object()  # including permission checks
 
-        # Validate the input payload
-        serializer = serializers.MoveItemSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        validated_data = serializer.validated_data
+    #     # Validate the input payload
+    #     serializer = serializers.MoveItemSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     validated_data = serializer.validated_data
 
-        target_item_id = validated_data["target_item_id"]
-        try:
-            target_item = models.Item.objects.get(
-                id=target_item_id, ancestors_deleted_at__isnull=True
-            )
-        except models.Item.DoesNotExist:
-            return drf.response.Response(
-                {"target_item_id": "Target parent item does not exist."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+    #     target_item_id = validated_data["target_item_id"]
+    #     try:
+    #         target_item = models.Item.objects.get(
+    #             id=target_item_id, ancestors_deleted_at__isnull=True
+    #         )
+    #     except models.Item.DoesNotExist:
+    #         return drf.response.Response(
+    #             {"target_item_id": "Target parent item does not exist."},
+    #             status=status.HTTP_400_BAD_REQUEST,
+    #         )
 
-        position = validated_data["position"]
-        message = None
+    #     message = None
 
-        if position in [
-            enums.MoveNodePositionChoices.FIRST_CHILD,
-            enums.MoveNodePositionChoices.LAST_CHILD,
-        ]:
-            if not target_item.get_abilities(user).get("move"):
-                message = (
-                    "You do not have permission to move items "
-                    "as a child to this target item."
-                )
-        elif not target_item.is_root():
-            if not target_item.get_parent().get_abilities(user).get("move"):
-                message = (
-                    "You do not have permission to move items "
-                    "as a sibling of this target item."
-                )
+    #     if not target_item.get_abilities(user).get("move"):
+    #         message = (
+    #             "You do not have permission to move items "
+    #             "as a child to this target item."
+    #         )
 
-        if message:
-            return drf.response.Response(
-                {"target_item_id": message},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+    #     if message:
+    #         return drf.response.Response(
+    #             {"target_item_id": message},
+    #             status=status.HTTP_400_BAD_REQUEST,
+    #         )
 
-        item.move(target_item, pos=position)
+    #     item.move(target_item)
 
-        return drf.response.Response(
-            {"message": "item moved successfully."}, status=status.HTTP_200_OK
-        )
+    #     return drf.response.Response(
+    #         {"message": "item moved successfully."}, status=status.HTTP_200_OK
+    #     )
 
     @drf.decorators.action(
         detail=True,
@@ -703,8 +691,9 @@ class ItemViewSet(
             serializer.is_valid(raise_exception=True)
 
             with transaction.atomic():
-                child_item = item.add_child(
+                child_item = models.Item.objects.create_child(
                     creator=request.user,
+                    parent=item,
                     **serializer.validated_data,
                 )
                 models.ItemAccess.objects.create(
@@ -721,7 +710,7 @@ class ItemViewSet(
             )
 
         # GET: List children
-        queryset = item.get_children().filter(deleted_at__isnull=True)
+        queryset = item.children().filter(deleted_at__isnull=True)
         queryset = self.filter_queryset(queryset)
         queryset = self.annotate_is_favorite(queryset)
         queryset = self.annotate_user_roles(queryset)

@@ -91,7 +91,7 @@ def test_api_items_trashbin_format():
         "link_role": item.link_role,
         "nb_accesses": 3,
         "numchild": 0,
-        "path": item.path,
+        "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
         "user_roles": ["owner"],
@@ -132,7 +132,9 @@ def test_api_items_trashbin_authenticated_direct(django_assert_num_queries):
 
     # Nested items should also get listed
     parent = factories.ItemFactory(parent=item1, type=models.ItemTypeChoices.FOLDER)
-    item3 = factories.ItemFactory(parent=parent, deleted_at=now)
+    item3 = factories.ItemFactory(
+        parent=parent, deleted_at=now, type=models.ItemTypeChoices.FILE
+    )
     models.ItemAccess.objects.create(item=parent, user=user, role="owner")
 
     # Permanently deleted items should not be listed
@@ -143,10 +145,10 @@ def test_api_items_trashbin_authenticated_direct(django_assert_num_queries):
 
     expected_ids = {str(item1.id), str(item2.id), str(item3.id)}
 
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(9):
         response = client.get("/api/v1.0/items/trashbin/")
 
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/trashbin/")
 
     assert response.status_code == 200
@@ -171,13 +173,13 @@ def test_api_items_trashbin_authenticated_via_team(
     mock_user_teams.return_value = ["team1", "team2", "unknown"]
 
     deleted_item_team1 = factories.ItemFactory(
-        teams=[("team1", "owner")], deleted_at=now
+        teams=[("team1", "owner")], deleted_at=now, type=models.ItemTypeChoices.FILE
     )
     factories.ItemFactory(teams=[("team1", "owner")])
     factories.ItemFactory(teams=[("team1", "administrator")], deleted_at=now)
     factories.ItemFactory(teams=[("team1", "administrator")])
     deleted_item_team2 = factories.ItemFactory(
-        teams=[("team2", "owner")], deleted_at=now
+        teams=[("team2", "owner")], deleted_at=now, type=models.ItemTypeChoices.FILE
     )
     factories.ItemFactory(teams=[("team2", "owner")])
     factories.ItemFactory(teams=[("team2", "administrator")], deleted_at=now)

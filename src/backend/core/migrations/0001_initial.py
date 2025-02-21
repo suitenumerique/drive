@@ -15,6 +15,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('auth', '0012_alter_user_first_name_max_length'),
+        ('django_ltree', '0001_create_extension'),
     ]
 
     operations = [

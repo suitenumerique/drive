@@ -11,21 +11,23 @@ from logging import getLogger
 from django.conf import settings
 from django.contrib.auth import models as auth_models
 from django.contrib.auth.base_user import AbstractBaseUser
+from django.contrib.postgres.indexes import GistIndex
 from django.contrib.sites.models import Site
 from django.core import mail, validators
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import models, transaction
-from django.db.models.functions import Left, Length
+from django.db.models.expressions import RawSQL
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.functional import cached_property, lazy
 from django.utils.translation import get_language, override
 from django.utils.translation import gettext_lazy as _
 
+from django_ltree.managers import TreeManager
+from django_ltree.models import TreeModel
 from timezone_field import TimeZoneField
-from treebeard.mp_tree import MP_Node
 
 logger = getLogger(__name__)
 
@@ -374,7 +376,27 @@ class BaseAccess(BaseModel):
         }
 
 
-class Item(MP_Node, BaseModel):
+class ItemManager(TreeManager):
+    """Custom manager for Item model overriding create_child method."""
+
+    def create_child(self, parent=None, **kwargs):
+        """
+        Check if the item can have children before adding one and if the title is
+        unique in the same path.
+        """
+        if parent:
+            if parent.type != ItemTypeChoices.FOLDER:
+                raise ValidationError({"type": _("Only folders can have children.")})
+
+            if self.children(parent.path).filter(title=kwargs.get("title")).exists():
+                raise ValidationError(
+                    {"title": _("title already exists in this folder.")}
+                )
+
+        return super().create_child(parent=parent, **kwargs)
+
+
+class Item(TreeModel, BaseModel):
     """Item in the tree."""
 
     title = models.CharField(_("title"), max_length=255)
@@ -396,13 +418,6 @@ class Item(MP_Node, BaseModel):
     deleted_at = models.DateTimeField(null=True, blank=True)
     ancestors_deleted_at = models.DateTimeField(null=True, blank=True)
 
-    # Tree structure
-    alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-    steplen = 7  # nb siblings max: 3,521,614,606,208
-    node_order_by = []  # Manual ordering
-
-    path = models.CharField(max_length=7 * 36, unique=True, db_collation="C")
-
     filename = models.CharField(max_length=255, null=True, blank=True)
     type = models.CharField(
         max_length=30,
@@ -416,9 +431,12 @@ class Item(MP_Node, BaseModel):
         blank=True,
     )
 
+    label_size = 7
+
+    objects = ItemManager()
+
     class Meta:
         db_table = "drive_item"
-        ordering = ("path",)
         verbose_name = _("Item")
         verbose_name_plural = _("Items")
         constraints = [
@@ -439,9 +457,12 @@ class Item(MP_Node, BaseModel):
                 name="check_filename_set_for_files",
             ),
         ]
+        indexes = [
+            GistIndex(fields=["path"]),
+        ]
 
     def __str__(self):
-        return str(self.title) if self.title else str(_("Untitled Item"))
+        return str(self.title)
 
     def save(self, *args, **kwargs):
         """Set the upload state to pending if it's the first save and it's a file"""
@@ -449,6 +470,14 @@ class Item(MP_Node, BaseModel):
             self.upload_state = ItemUploadStateChoices.PENDING
 
         return super().save(*args, **kwargs)
+
+    def ancestors(self):
+        """Return the ancestors of the item excluding the item itself."""
+        return super().ancestors().exclude(id=self.id)
+
+    def descendants(self):
+        """Return the descendants of the item excluding the item itself."""
+        return super().descendants().exclude(id=self.id)
 
     @property
     def key_base(self):
@@ -471,6 +500,25 @@ class Item(MP_Node, BaseModel):
 
         return f"{self.key_base}/{self.filename}"
 
+    @property
+    def depth(self):
+        """Return the depth of the item in the tree."""
+        return len(self.path)
+
+    @property
+    def numchild(self):
+        """Return the number of children of the item."""
+        if self.type != ItemTypeChoices.FOLDER:
+            return 0
+        return self.children().count()
+
+    @property
+    def numfolder_children(self):
+        """Return the number of folder children of the item."""
+        if self.type != ItemTypeChoices.FOLDER:
+            return 0
+        return self.children().filter(type=ItemTypeChoices.FOLDER).count()
+
     def get_nb_accesses_cache_key(self):
         """Generate a unique cache key for each item."""
         return f"item_{self.id!s}_nb_accesses"
@@ -483,7 +531,7 @@ class Item(MP_Node, BaseModel):
 
         if nb_accesses is None:
             nb_accesses = ItemAccess.objects.filter(
-                item__path=Left(models.Value(self.path), Length("item__path")),
+                item__path__ancestors=self.path,
             ).count()
             cache.set(cache_key, nb_accesses)
 
@@ -493,7 +541,7 @@ class Item(MP_Node, BaseModel):
         """
         Invalidate the cache for number of accesses, including on affected descendants.
         """
-        for item in Item.objects.filter(path__startswith=self.path).only("id"):
+        for item in Item.objects.filter(path__descendants=self.path).only("id"):
             cache_key = item.get_nb_accesses_cache_key()
             cache.delete(cache_key)
 
@@ -508,7 +556,7 @@ class Item(MP_Node, BaseModel):
             try:
                 roles = ItemAccess.objects.filter(
                     models.Q(user=user) | models.Q(team__in=user.teams),
-                    item__path=Left(models.Value(self.path), Length("item__path")),
+                    item__path__ancestors=self.path,
                 ).values_list("role", flat=True)
             except (models.ObjectDoesNotExist, IndexError):
                 roles = []
@@ -521,8 +569,10 @@ class Item(MP_Node, BaseModel):
 
         # Ancestors links definitions are only interesting if the item is not the highest
         # ancestor to which the current user has access. Look for the annotation:
-        if self.depth > 1 and not getattr(self, "is_highest_ancestor_for_user", False):
-            for ancestor in self.get_ancestors().values("link_reach", "link_role"):
+        if len(self.path) > 1 and not getattr(
+            self, "is_highest_ancestor_for_user", False
+        ):
+            for ancestor in self.ancestors().values("link_reach", "link_role"):
                 links_definitions.setdefault(ancestor["link_reach"], set()).add(
                     ancestor["link_role"]
                 )
@@ -650,7 +700,7 @@ class Item(MP_Node, BaseModel):
             raise RuntimeError("This item is already deleted or has deleted ancestors.")
 
         # Check if any ancestors are deleted
-        if self.get_ancestors().filter(deleted_at__isnull=False).exists():
+        if self.ancestors().filter(deleted_at__isnull=False).exists():
             raise RuntimeError(
                 "Cannot delete this item because one or more ancestors are already deleted."
             )
@@ -659,7 +709,7 @@ class Item(MP_Node, BaseModel):
         self.save()
 
         # Mark all descendants as soft deleted
-        self.get_descendants().filter(ancestors_deleted_at__isnull=True).update(
+        self.descendants().filter(ancestors_deleted_at__isnull=True).update(
             ancestors_deleted_at=self.ancestors_deleted_at
         )
 
@@ -679,54 +729,41 @@ class Item(MP_Node, BaseModel):
                 }
             )
 
+        # save the current deleted_at value to exclude it from the descendants update
+        current_deleted_at = self.deleted_at
+
         # Restore the current item
         self.deleted_at = None
 
         # Calculate the minimum `deleted_at` among all ancestors
         ancestors_deleted_at = (
-            self.get_ancestors()
+            self.ancestors()
             .filter(deleted_at__isnull=False)
             .values_list("deleted_at", flat=True)
         )
         self.ancestors_deleted_at = min(ancestors_deleted_at, default=None)
         self.save()
 
-        # Update descendants excluding those who were deleted prior to the deletion of the
-        # current item (the ancestor_deleted_at date for those should already by good)
-        # The number of deleted descendants should not be too big so we can handcraft a union
-        # clause for them:
-        deleted_descendants_paths = (
-            self.get_descendants()
-            .filter(deleted_at__isnull=False)
-            .values_list("path", flat=True)
-        )
-        exclude_condition = models.Q(
-            *(models.Q(path__startswith=path) for path in deleted_descendants_paths)
-        )
-        self.get_descendants().exclude(exclude_condition).update(
-            ancestors_deleted_at=self.ancestors_deleted_at
-        )
+        self.descendants().exclude(
+            models.Q(deleted_at__isnull=False)
+            | models.Q(ancestors_deleted_at__lt=current_deleted_at)
+        ).update(ancestors_deleted_at=self.ancestors_deleted_at)
 
-    def add_child(self, **kwargs):
-        """Check if the item can have children before adding one."""
-        if self.type != ItemTypeChoices.FOLDER:
-            raise ValidationError({"type": _("Only folders can have children.")})
-
-        if (title := kwargs.get("title")) and Item.objects.filter(
-            models.Q(path__startswith=self.path, title=title),
-            ~models.Q(id=self.id),
-        ).exists():
-            raise ValidationError({"title": _("title already exists in this folder.")})
-
-        return super().add_child(**kwargs)
-
-    def move(self, target, pos=None):
+    def move(self, target):
+        """
+        Move an item to a new position in the tree. Inspired by
+        https://patshaughnessy.net/2017/12/14/manipulating-trees-using-sql-and-the-postgres-ltree-extension
+        """
         if target.type != ItemTypeChoices.FOLDER:
             raise ValidationError(
                 {"target": _("Only folders can be targeted when moving an item")}
             )
 
-        return super().move(target, pos)
+        Item.objects.filter(path__descendants=self.path).update(
+            path=RawSQL(
+                "%s || subpath(path, nlevel(%s)-1)", (str(target.path), str(self.path))
+            )
+        )
 
 
 class LinkTrace(BaseModel):
