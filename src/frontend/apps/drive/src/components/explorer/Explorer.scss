@@ -1,0 +1,19 @@
+.explorer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 2rem;
+
+  &__filters {
+    height: 50px;
+    background-color: #fff;
+    border: 1px grey solid;
+  }
+
+  &__content {
+    flex: 1;
+    background-color: #fff;
+    border: 1px grey solid;
+    min-height: 500px;
+  }
+}

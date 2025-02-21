@@ -1,0 +1,11 @@
+@use "./../components/layouts/global/GlobalLayout.scss";
+@use "./../components/layouts/explorer/ExplorerLayout.scss";
+@use "./../components/explorer/Explorer.scss";
+
+body {
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}

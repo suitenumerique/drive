@@ -1,0 +1,16 @@
+{
+  "en": {
+    "translation": {
+      "app_title": "Files",
+      "app_description": "Files management",
+      "welcome": "Welcome"
+    }
+  },
+  "fr": {
+    "translation": {
+      "app_title": "Fichiers",
+      "app_description": "Gestion de fichiers",
+      "welcome": "Bienvenue"
+    }
+  }
+}
