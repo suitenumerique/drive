@@ -2,6 +2,7 @@ import { GlobalLayout } from "@/components/layouts/global/GlobalLayout";
 import Head from "next/head";
 import Link from "next/link";
 import { useTranslation } from "next-i18next";
+import { ExportButton } from "@lasuite/ui-kit";
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -15,6 +16,7 @@ export default function HomePage() {
       </Head>
       <div>
         {t("welcome")}
+        <ExportButton />
         <Link href="/explorer/items/truc">Go to fichiers</Link>
       </div>
     </>

@@ -76,3 +76,6 @@ db.sqlite3
 .vscode/
 *.iml
 .devcontainer
+
+# Various
+.turbo
