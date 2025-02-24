@@ -10,17 +10,19 @@
     "build-theme": "cunningham -g css -o src/styles"
   },
   "dependencies": {
+    "@lasuite/ui-kit": "../../../design-system",
+    "@tanstack/react-query": "5.66.9",
     "i18next": "24.2.2",
     "next": "15.1.7",
     "next-i18next": "15.4.2",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-i18next": "15.4.1",
-    "sass": "1.85.0",
-    "@lasuite/ui-kit": "../../../design-system"
+    "sass": "1.85.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "3.2.0",
+    "@tanstack/eslint-plugin-query": "5.66.1",
     "@types/node": "20.14.2",
     "@types/react": "18.3.18",
     "@types/react-dom": "18.3.5",

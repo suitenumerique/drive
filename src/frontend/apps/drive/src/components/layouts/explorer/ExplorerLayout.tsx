@@ -1,3 +1,4 @@
+import { ExplorerTree } from "@/components/explorer/ExplorerTree";
 import { login, useAuth } from "@/core/auth/Auth";
 
 export const ExplorerLayout = ({ children }: { children: React.ReactNode }) => {
@@ -8,7 +9,9 @@ export const ExplorerLayout = ({ children }: { children: React.ReactNode }) => {
   }
   return (
     <div className="explorer-layout">
-      <div className="explorer-layout__sidebar">SIDEBAR</div>
+      <div className="explorer-layout__sidebar">
+        <ExplorerTree />
+      </div>
       <div className="explorer-layout__content">
         <div className="explorer-layout__content__inner">{children}</div>
       </div>

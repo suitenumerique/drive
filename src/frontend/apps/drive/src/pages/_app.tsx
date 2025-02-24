@@ -2,6 +2,7 @@ import type { ReactElement, ReactNode } from "react";
 import type { NextPage } from "next";
 import type { AppProps } from "next/app";
 import { CunninghamProvider } from "@openfun/cunningham-react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "../styles/globals.scss";
 import "./../i18n/initI18n";
@@ -14,13 +15,17 @@ type AppPropsWithLayout = AppProps & {
   Component: NextPageWithLayout;
 };
 
+const queryClient = new QueryClient();
+
 export default function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   // Use the layout defined at the page level, if available
   const getLayout = Component.getLayout ?? ((page) => page);
 
   return (
-    <CunninghamProvider theme="dsfr">
-      {getLayout(<Component {...pageProps} />)}
-    </CunninghamProvider>
+    <QueryClientProvider client={queryClient}>
+      <CunninghamProvider theme="dsfr">
+        {getLayout(<Component {...pageProps} />)}
+      </CunninghamProvider>
+    </QueryClientProvider>
   );
 }
