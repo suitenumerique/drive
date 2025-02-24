@@ -1,8 +1,8 @@
 import React, { PropsWithChildren, useEffect, useState } from "react";
 
-import { fetchAPI } from "@/core/api/fetchApi";
-import { User } from "@/core/auth/types";
-import { baseApiUrl } from "@/core/conf";
+import { fetchAPI } from "@/features/api/fetchApi";
+import { User } from "@/features/auth/types";
+import { baseApiUrl } from "../api/utils";
 
 export const logout = () => {
   window.location.replace(new URL("logout/", baseApiUrl()).href);

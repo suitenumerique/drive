@@ -1,4 +1,4 @@
-import { Auth, login, logout, useAuth } from "@/core/auth/Auth";
+import { Auth, login, logout, useAuth } from "@/features/auth/Auth";
 
 export const GlobalLayout = ({ children }: { children: React.ReactNode }) => {
   return (

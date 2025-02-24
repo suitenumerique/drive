@@ -1,5 +1,5 @@
-import { logout } from '@/core/auth/Auth';
-import { baseApiUrl } from '@/core/conf';
+import { logout } from "@/features/auth/Auth";
+import { baseApiUrl } from "./utils";
 
 /**
  * Retrieves the CSRF token from the document's cookies.
@@ -8,9 +8,9 @@ import { baseApiUrl } from '@/core/conf';
  */
 function getCSRFToken() {
   return document.cookie
-    .split(';')
-    .filter((cookie) => cookie.trim().startsWith('csrftoken='))
-    .map((cookie) => cookie.split('=')[1])
+    .split(";")
+    .filter((cookie) => cookie.trim().startsWith("csrftoken="))
+    .map((cookie) => cookie.split("=")[1])
     .pop();
 }
 
@@ -21,18 +21,18 @@ export interface fetchAPIOptions {
 export const fetchAPI = async (
   input: string,
   init?: RequestInit,
-  options?: fetchAPIOptions,
+  options?: fetchAPIOptions
 ) => {
-  const apiUrl = `${baseApiUrl('1.0')}${input}`;
+  const apiUrl = `${baseApiUrl("1.0")}${input}`;
   const csrfToken = getCSRFToken();
 
   const response = await fetch(apiUrl, {
     ...init,
-    credentials: 'include',
+    credentials: "include",
     headers: {
       ...init?.headers,
-      'Content-Type': 'application/json',
-      ...(csrfToken && { 'X-CSRFToken': csrfToken }),
+      "Content-Type": "application/json",
+      ...(csrfToken && { "X-CSRFToken": csrfToken }),
     },
   });
 

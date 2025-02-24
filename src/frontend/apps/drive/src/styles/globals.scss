@@ -1,8 +1,8 @@
 @use "@lasuite/ui-kit/style";
 @use "./cunningham-tokens.css";
-@use "./../components/layouts/global/GlobalLayout.scss";
-@use "./../components/layouts/explorer/ExplorerLayout.scss";
-@use "./../components/explorer/Explorer.scss";
+@use "./../features/layouts/components/global/GlobalLayout.scss";
+@use "./../features/layouts/components/explorer/ExplorerLayout.scss";
+@use "./../features/explorer/components/Explorer.scss";
 
 body {
   margin: 0;

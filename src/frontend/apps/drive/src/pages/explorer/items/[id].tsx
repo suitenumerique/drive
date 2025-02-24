@@ -1,6 +1,6 @@
-import { Explorer } from "@/components/explorer/Explorer";
-import { ExplorerLayout } from "@/components/layouts/explorer/ExplorerLayout";
-import { GlobalLayout } from "@/components/layouts/global/GlobalLayout";
+import { Explorer } from "@/features/explorer/components/Explorer";
+import { ExplorerLayout } from "@/features/layouts/components/explorer/ExplorerLayout";
+import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
 import { useRouter } from "next/router";
 
 export default function ItemPage() {

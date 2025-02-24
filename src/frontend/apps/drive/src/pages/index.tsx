@@ -1,4 +1,4 @@
-import { GlobalLayout } from "@/components/layouts/global/GlobalLayout";
+import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
 import Head from "next/head";
 import Link from "next/link";
 import { useTranslation } from "next-i18next";

@@ -5,7 +5,7 @@ import { CunninghamProvider } from "@openfun/cunningham-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "../styles/globals.scss";
-import "./../i18n/initI18n";
+import "../features/i18n/initI18n";
 
 export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;

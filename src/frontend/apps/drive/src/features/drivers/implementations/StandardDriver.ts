@@ -1,4 +1,4 @@
-import { fetchAPI } from "@/core/api/fetchApi";
+import { fetchAPI } from "@/features/api/fetchApi";
 import { Driver } from "../Driver";
 import { Item } from "../types";
 

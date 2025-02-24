@@ -1,7 +1,5 @@
-import { Explorer } from "@/components/explorer/Explorer";
-import { ExplorerLayout } from "@/components/layouts/explorer/ExplorerLayout";
-import { GlobalLayout } from "@/components/layouts/global/GlobalLayout";
-import { SdkLayout } from "@/components/layouts/sdk/SdkLayout";
+import { Explorer } from "@/features/explorer/components/Explorer";
+import { SdkLayout } from "@/features/layouts/components/sdk/SdkLayout";
 import { useRouter } from "next/router";
 
 /**

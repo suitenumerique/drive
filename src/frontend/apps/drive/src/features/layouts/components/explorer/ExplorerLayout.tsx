@@ -1,5 +1,5 @@
-import { ExplorerTree } from "@/components/explorer/ExplorerTree";
-import { login, useAuth } from "@/core/auth/Auth";
+import { login, useAuth } from "@/features/auth/Auth";
+import { ExplorerTree } from "@/features/explorer/components/ExplorerTree";
 
 export const ExplorerLayout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
