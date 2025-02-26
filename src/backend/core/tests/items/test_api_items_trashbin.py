@@ -81,6 +81,7 @@ def test_api_items_trashbin_format():
             "partial_update": True,
             "restore": True,
             "retrieve": True,
+            "tree": True,
             "update": True,
             "upload_ended": True,
         },

@@ -2,6 +2,7 @@
 Tests for items API endpoint in drive's core app: retrieve
 """
 
+# pylint: disable=too-many-lines
 import random
 from datetime import timedelta
 from unittest import mock
@@ -40,6 +41,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
             "partial_update": item.link_role == "editor",
             "restore": False,
             "retrieve": True,
+            "tree": True,
             "update": item.link_role == "editor",
             "upload_ended": False,
         },
@@ -98,6 +100,7 @@ def test_api_items_retrieve_anonymous_public_parent():
             "partial_update": grand_parent.link_role == "editor",
             "restore": False,
             "retrieve": True,
+            "tree": True,
             "update": grand_parent.link_role == "editor",
             "upload_ended": False,
         },
@@ -186,6 +189,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
             "partial_update": item.link_role == "editor",
             "restore": False,
             "retrieve": True,
+            "tree": True,
             "update": item.link_role == "editor",
             "upload_ended": False,
         },
@@ -249,6 +253,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
             "partial_update": grand_parent.link_role == "editor",
             "restore": False,
             "retrieve": True,
+            "tree": True,
             "update": grand_parent.link_role == "editor",
             "upload_ended": False,
         },
@@ -425,6 +430,7 @@ def test_api_items_retrieve_authenticated_related_parent():
             "partial_update": access.role != "reader",
             "restore": access.role == "owner",
             "retrieve": True,
+            "tree": True,
             "update": access.role != "reader",
             "upload_ended": access.role in ["administrator", "owner"],
         },

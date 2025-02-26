@@ -156,7 +156,10 @@ def test_utils_flat_to_nested_not_started_with_a_depth_1():
 
 
 def test_utils_flat_to_nested_with_two_root_elements():
-    """Test the function flat_to_nested with multiple root elements. Should raise a ValueError if it's the case."""
+    """
+    Test the function flat_to_nested with multiple root elements. Should raise a ValueError
+    if it's the case.
+    """
 
     flat_items_list = [
         {"depth": 1, "path": "0000000", "title": "root1"},
@@ -174,6 +177,7 @@ def test_utils_flat_to_nested_with_two_root_elements():
 
 
 def test_utils_flat_to_nested_with_empty_list():
-    """Test the function flat_to_nested with an empty list. Should return None."""
+    """Test the function flat_to_nested with an empty list. Should return an empty dict."""
 
+    # pylint: disable=use-implicit-booleaness-not-comparison
     assert flat_to_nested([]) == {}

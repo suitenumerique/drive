@@ -388,6 +388,7 @@ class ItemViewSet(
     trashbin_serializer_class = serializers.ListItemSerializer
     children_serializer_class = serializers.ListItemSerializer
     create_serializer_class = serializers.CreateItemSerializer
+    tree_serializer_class = serializers.ListItemSerializer
 
     def annotate_is_favorite(self, queryset):
         """
@@ -715,6 +716,80 @@ class ItemViewSet(
         queryset = self.annotate_is_favorite(queryset)
         queryset = self.annotate_user_roles(queryset)
         return self.get_response_for_queryset(queryset)
+
+    @drf.decorators.action(detail=True, methods=["get"])
+    def tree(self, request, pk=None):
+        """
+        List ancestors tree above the item
+        What we need to display is the tree structure opened for the current document.
+        """
+        try:
+            item = self.queryset.only("path").get(pk=pk)
+        except models.Item.DoesNotExist as exc:
+            raise drf.exceptions.NotFound from exc
+
+        highest_ancestor = (
+            self.queryset.filter(
+                path__ancestors=item.path, ancestors_deleted_at__isnull=True
+            )
+            .readable_per_se(request.user)
+            .only("path")
+            .order_by("path")
+            .first()
+        )
+
+        if not highest_ancestor:
+            raise (
+                drf.exceptions.PermissionDenied()
+                if request.user.is_authenticated
+                else drf.exceptions.NotAuthenticated()
+            )
+
+        ancestors = (
+            self.queryset.filter(
+                path__ancestors=item.path,
+                path__descendants=highest_ancestor.path,
+                ancestors_deleted_at__isnull=True,
+            )
+            .order_by("path")
+            .values_list("path", "link_reach", "link_role", named=True)
+        )
+
+        if len(ancestors) == 0:
+            raise (
+                drf.exceptions.PermissionDenied()
+                if request.user.is_authenticated
+                else drf.exceptions.NotAuthenticated()
+            )
+
+        clause = db.Q()
+        for i, ancestor in enumerate(ancestors):
+            # exclude first iteration
+            if i == 0:
+                # this is the highest ancestor, select it directly
+                clause |= db.Q(path=ancestor.path)
+            else:
+                # Select all siblings of the current ancestor
+                clause |= db.Q(
+                    path__descendants=".".join(ancestor.path[:-1]),
+                    path__depth=len(ancestor.path),
+                )
+
+        tree = self.queryset.filter(
+            clause, type=models.ItemTypeChoices.FOLDER, deleted_at__isnull=True
+        ).order_by("path")
+
+        tree = self.annotate_user_roles(tree)
+        tree = self.annotate_is_favorite(tree)
+
+        serializer = self.get_serializer(
+            tree,
+            many=True,
+        )
+
+        return drf.response.Response(
+            utils.flat_to_nested(serializer.data), status=drf.status.HTTP_200_OK
+        )
 
     @drf.decorators.action(detail=True, methods=["put"], url_path="link-configuration")
     def link_configuration(self, request, *args, **kwargs):

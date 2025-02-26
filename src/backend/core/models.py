@@ -25,7 +25,7 @@ from django.utils.functional import cached_property, lazy
 from django.utils.translation import get_language, override
 from django.utils.translation import gettext_lazy as _
 
-from django_ltree.managers import TreeManager
+from django_ltree.managers import TreeManager, TreeQuerySet
 from django_ltree.models import TreeModel
 from timezone_field import TimeZoneField
 
@@ -375,8 +375,39 @@ class BaseAccess(BaseModel):
         }
 
 
+class ItemQuerySet(TreeQuerySet):
+    """Custom queryset for Item model with additional methods."""
+
+    def readable_per_se(self, user):
+        """
+        Filters the queryset to return documents that the given user has
+        permission to read.
+        :param user: The user for whom readable documents are to be fetched.
+        :return: A queryset of documents readable by the user.
+        """
+        if user.is_authenticated:
+            return self.filter(
+                models.Q(accesses__user=user)
+                | models.Q(accesses__team__in=user.teams)
+                | ~models.Q(link_reach=LinkReachChoices.RESTRICTED)
+            )
+
+        return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC))
+
+
 class ItemManager(TreeManager):
     """Custom manager for Item model overriding create_child method."""
+
+    def get_queryset(self):
+        return ItemQuerySet(model=self.model, using=self._db).order_by("path")
+
+    def readable_per_se(self, user):
+        """
+        Filters documents based on user permissions using the custom queryset.
+        :param user: The user for whom readable documents are to be fetched.
+        :return: A queryset of documents readable by the user.
+        """
+        return self.get_queryset().readable_per_se(user)
 
     def create_child(self, parent=None, **kwargs):
         """
@@ -642,6 +673,7 @@ class Item(TreeModel, BaseModel):
             "partial_update": can_update,
             "restore": is_owner,
             "retrieve": can_get,
+            "tree": can_get,
             "media_auth": can_get,
             "update": can_update,
             "upload_ended": is_owner_or_admin,

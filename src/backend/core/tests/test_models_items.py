@@ -134,6 +134,7 @@ def test_models_items_get_abilities_forbidden(
         "partial_update": False,
         "restore": False,
         "retrieve": False,
+        "tree": False,
         "update": False,
         "upload_ended": False,
     }
@@ -176,6 +177,7 @@ def test_models_items_get_abilities_reader(
         "partial_update": False,
         "restore": False,
         "retrieve": True,
+        "tree": True,
         "update": False,
         "upload_ended": False,
     }
@@ -218,6 +220,7 @@ def test_models_items_get_abilities_editor(
         "partial_update": True,
         "restore": False,
         "retrieve": True,
+        "tree": True,
         "update": True,
         "upload_ended": False,
     }
@@ -247,6 +250,7 @@ def test_models_items_get_abilities_owner(django_assert_num_queries):
         "partial_update": True,
         "restore": True,
         "retrieve": True,
+        "tree": True,
         "update": True,
         "upload_ended": True,
     }
@@ -276,6 +280,7 @@ def test_models_items_get_abilities_administrator(django_assert_num_queries):
         "partial_update": True,
         "restore": False,
         "retrieve": True,
+        "tree": True,
         "update": True,
         "upload_ended": True,
     }
@@ -304,6 +309,7 @@ def test_models_items_get_abilities_editor_user(django_assert_num_queries):
         "partial_update": True,
         "restore": False,
         "retrieve": True,
+        "tree": True,
         "update": True,
         "upload_ended": False,
     }
@@ -333,6 +339,7 @@ def test_models_items_get_abilities_reader_user(django_assert_num_queries):
         "partial_update": access_from_link,
         "restore": False,
         "retrieve": True,
+        "tree": True,
         "update": access_from_link,
         "upload_ended": False,
     }
@@ -365,6 +372,7 @@ def test_models_items_get_abilities_preset_role(django_assert_num_queries):
         "partial_update": False,
         "restore": False,
         "retrieve": True,
+        "tree": True,
         "update": False,
         "upload_ended": False,
     }
