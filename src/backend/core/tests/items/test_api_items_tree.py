@@ -277,10 +277,15 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
         item__type=models.ItemTypeChoices.FOLDER,
     )
 
-    # Decrease this number of queries, it is too high
-    # with django_assert_num_queries(18):
-    # access to the tree for level2_2
-    response = client.get(f"/api/v1.0/items/{level3_1.item.id}/tree/")
+    # Without nb_accesses cache
+    with django_assert_num_queries(12):
+        # access to the tree for level2_2
+        client.get(f"/api/v1.0/items/{level3_1.item.id}/tree/")
+
+    # With nb_accesses cache
+    with django_assert_num_queries(5):
+        # access to the tree for level2_2
+        response = client.get(f"/api/v1.0/items/{level3_1.item.id}/tree/")
 
     assert response.status_code == 200
     assert response.json() == {

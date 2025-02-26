@@ -5,6 +5,7 @@ Declare and configure the models for the drive core application
 
 import smtplib
 import uuid
+from collections import defaultdict
 from datetime import timedelta
 from logging import getLogger
 
@@ -606,27 +607,26 @@ class Item(TreeModel, BaseModel):
                 roles = []
         return roles
 
-    @cached_property
-    def links_definitions(self):
+    def get_links_definitions(self, ancestors_links=None):
         """Get links reach/role definitions for the current item and its ancestors."""
-        links_definitions = {self.link_reach: {self.link_role}}
+        links_definitions = defaultdict(set)
+        links_definitions[self.link_reach].add(self.link_role)
 
-        # Ancestors links definitions are only interesting if the item is not the highest
-        # ancestor to which the current user has access. Look for the annotation:
-        if len(self.path) > 1 and not getattr(
-            self, "is_highest_ancestor_for_user", False
-        ):
-            for ancestor in self.ancestors().values("link_reach", "link_role"):
-                links_definitions.setdefault(ancestor["link_reach"], set()).add(
-                    ancestor["link_role"]
-                )
+        # Merge ancestor link definitions
+        for ancestor in ancestors_links:
+            links_definitions[ancestor["link_reach"]].add(ancestor["link_role"])
 
-        return links_definitions
+        return dict(links_definitions)  # Convert defaultdict back to a normal dict
 
-    def get_abilities(self, user):
+    def get_abilities(self, user, ancestors_links=None):
         """
         Compute and return abilities for a given user on the item.
         """
+        if self.depth <= 1 or getattr(self, "is_highest_ancestor_for_user", False):
+            ancestors_links = []
+        elif ancestors_links is None:
+            ancestors_links = self.ancestors().values("link_reach", "link_role")
+
         roles = set(
             self.get_roles(user)
         )  # at this point only roles based on specific access
@@ -645,7 +645,7 @@ class Item(TreeModel, BaseModel):
         # Add roles provided by the item link, taking into account its ancestors
 
         # Add roles provided by the item link
-        links_definitions = self.links_definitions
+        links_definitions = self.get_links_definitions(ancestors_links=ancestors_links)
         public_roles = links_definitions.get(LinkReachChoices.PUBLIC, set())
         authenticated_roles = (
             links_definitions.get(LinkReachChoices.AUTHENTICATED, set())

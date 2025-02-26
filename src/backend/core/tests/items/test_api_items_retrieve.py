@@ -759,7 +759,7 @@ def test_api_items_retrieve_user_roles(django_assert_num_queries):
     )
     expected_roles = {access.role for access in accesses}
 
-    with django_assert_num_queries(10):
+    with django_assert_num_queries(11):
         response = client.get(f"/api/v1.0/items/{item.id!s}/")
 
     assert response.status_code == 200

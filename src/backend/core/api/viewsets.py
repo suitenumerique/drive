@@ -762,6 +762,8 @@ class ItemViewSet(
                 else drf.exceptions.NotAuthenticated()
             )
 
+        paths_links_mapping = {}
+        ancestors_links = []
         clause = db.Q()
         for i, ancestor in enumerate(ancestors):
             # exclude first iteration
@@ -775,6 +777,13 @@ class ItemViewSet(
                     path__depth=len(ancestor.path),
                 )
 
+            # Compute cache for ancestors links to avoid many queries while computing
+            # abilties for his items in the tree!
+            ancestors_links.append(
+                {"link_reach": ancestor.link_reach, "link_role": ancestor.link_role}
+            )
+            paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
+
         tree = self.queryset.filter(
             clause, type=models.ItemTypeChoices.FOLDER, deleted_at__isnull=True
         ).order_by("path")
@@ -785,6 +794,10 @@ class ItemViewSet(
         serializer = self.get_serializer(
             tree,
             many=True,
+            context={
+                "request": request,
+                "paths_links_mapping": paths_links_mapping,
+            },
         )
 
         return drf.response.Response(

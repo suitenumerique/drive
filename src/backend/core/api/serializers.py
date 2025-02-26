@@ -110,22 +110,10 @@ class ItemAccessSerializer(BaseAccessSerializer):
         read_only_fields = ["id", "abilities"]
 
 
-class BaseResourceSerializer(serializers.ModelSerializer):
-    """Serialize items."""
-
-    abilities = serializers.SerializerMethodField(read_only=True)
-
-    def get_abilities(self, item) -> dict:
-        """Return abilities of the logged-in user on the instance."""
-        request = self.context.get("request")
-        if request:
-            return item.get_abilities(request.user)
-        return {}
-
-
-class ListItemSerializer(BaseResourceSerializer):
+class ListItemSerializer(serializers.ModelSerializer):
     """Serialize items with limited fields for display in lists."""
 
+    abilities = serializers.SerializerMethodField(read_only=True)
     is_favorite = serializers.BooleanField(read_only=True)
     nb_accesses = serializers.IntegerField(read_only=True)
     user_roles = serializers.SerializerMethodField()
@@ -172,6 +160,20 @@ class ListItemSerializer(BaseResourceSerializer):
             "upload_state",
             "url",
         ]
+
+    def get_abilities(self, item) -> dict:
+        """Return abilities of the logged-in user on the instance."""
+        request = self.context.get("request")
+        if request:
+            paths_links_mapping = self.context.get("paths_links_mapping", None)
+            # Retrieve ancestor links from paths_links_mapping (if provided)
+            ancestors_links = (
+                paths_links_mapping.get(str(item.path[:-1]))
+                if paths_links_mapping
+                else None
+            )
+            return item.get_abilities(request.user, ancestors_links=ancestors_links)
+        return {}
 
     def get_user_roles(self, item):
         """
@@ -355,7 +357,7 @@ class CreateItemSerializer(ItemSerializer):
         raise NotImplementedError("Update method can not be used.")
 
 
-class LinkItemSerializer(BaseResourceSerializer):
+class LinkItemSerializer(serializers.ModelSerializer):
     """
     Serialize link configuration for items.
     We expose it separately from item in order to simplify and secure access control.
