@@ -6,6 +6,35 @@ from django.core.files.storage import default_storage
 import botocore
 
 
+def flat_to_nested(items):
+    """
+    Create a nested tree structure from a flat list of items.
+    """
+    # Create a dictionary to hold nodes by their path
+    node_dict = {}
+    roots = []
+
+    # Sort the flat list by path to ensure parent nodes are processed first
+    items.sort(key=lambda x: x["path"])
+
+    for item in items:
+        item["children"] = []  # Initialize children list
+        node_dict[item["path"]] = item
+
+        # Determine parent path
+        parent_path = ".".join(item["path"].split(".")[:-1])
+
+        if parent_path in node_dict:
+            node_dict[parent_path]["children"].append(item)
+        else:
+            roots.append(item)  # Collect root nodes
+
+    if len(roots) > 1:
+        raise ValueError("More than one root element detected")
+
+    return roots[0] if roots else {}
+
+
 def filter_root_paths(paths, skip_sorting=False):
     """
     Filters root paths from a list of paths representing a tree structure.
