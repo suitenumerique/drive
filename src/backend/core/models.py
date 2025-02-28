@@ -527,7 +527,7 @@ class Item(TreeModel, BaseModel):
             }
             if self.type == ItemTypeChoices.FOLDER:
                 update["numchild_folder"] = models.F("numchild_folder") - 1
-            Item.objects.filter(pk=parent.id).update(**update)
+            self._meta.model.objects.filter(pk=parent.id).update(**update)
         return delete
 
     def ancestors(self):
@@ -586,7 +586,9 @@ class Item(TreeModel, BaseModel):
         """
         Invalidate the cache for number of accesses, including on affected descendants.
         """
-        for item in Item.objects.filter(path__descendants=self.path).only("id"):
+        for item in self._meta.model.objects.filter(path__descendants=self.path).only(
+            "id"
+        ):
             cache_key = item.get_nb_accesses_cache_key()
             cache.delete(cache_key)
 
@@ -761,7 +763,7 @@ class Item(TreeModel, BaseModel):
             }
             if self.type == ItemTypeChoices.FOLDER:
                 update["numchild_folder"] = models.F("numchild_folder") - 1
-            Item.objects.filter(pk=parent.id).update(**update)
+            self._meta.model.objects.filter(pk=parent.id).update(**update)
 
         # Mark all descendants as soft deleted
         if self.type == ItemTypeChoices.FOLDER:
@@ -815,7 +817,7 @@ class Item(TreeModel, BaseModel):
             }
             if self.type == ItemTypeChoices.FOLDER:
                 update["numchild_folder"] = models.F("numchild_folder") + 1
-            Item.objects.filter(pk=parent.id).update(**update)
+            self._meta.model.objects.filter(pk=parent.id).update(**update)
 
     def move(self, target):
         """
@@ -827,7 +829,7 @@ class Item(TreeModel, BaseModel):
                 {"target": _("Only folders can be targeted when moving an item")}
             )
 
-        Item.objects.filter(path__descendants=self.path).update(
+        self._meta.model.objects.filter(path__descendants=self.path).update(
             path=RawSQL(
                 "%s || subpath(path, nlevel(%s)-1)", (str(target.path), str(self.path))
             )
