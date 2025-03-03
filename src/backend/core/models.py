@@ -28,6 +28,7 @@ from django.utils.translation import gettext_lazy as _
 
 from django_ltree.managers import TreeManager, TreeQuerySet
 from django_ltree.models import TreeModel
+from django_ltree.paths import PathGenerator
 from timezone_field import TimeZoneField
 
 logger = getLogger(__name__)
@@ -819,21 +820,55 @@ class Item(TreeModel, BaseModel):
                 update["numchild_folder"] = models.F("numchild_folder") + 1
             self._meta.model.objects.filter(pk=parent.id).update(**update)
 
+    @transaction.atomic
     def move(self, target):
         """
-        Move an item to a new position in the tree. Inspired by
-        https://patshaughnessy.net/2017/12/14/manipulating-trees-using-sql-and-the-postgres-ltree-extension
+        Move an item to a new position in the tree.
         """
         if target.type != ItemTypeChoices.FOLDER:
             raise ValidationError(
                 {"target": _("Only folders can be targeted when moving an item")}
             )
 
-        self._meta.model.objects.filter(path__descendants=self.path).update(
-            path=RawSQL(
-                "%s || subpath(path, nlevel(%s)-1)", (str(target.path), str(self.path))
-            )
+        # compute next path in the target folder
+        paths_in_use = target.children()
+        prefix = target.path
+        path_generator = PathGenerator(
+            prefix,
+            skip=paths_in_use.values_list("path", flat=True),
+            label_size=self.label_size,
         )
+
+        old_path = self.path
+        old_parent_id = None
+        if self.depth > 1:
+            # Store old parent id in order to update its numchild and numchild_folder
+            old_parent_id = self.parent().id
+
+        self.path = next(path_generator)
+        self.save(update_fields=["path"])
+        target_update = {
+            "numchild": models.F("numchild") + 1,
+        }
+
+        if self.type == ItemTypeChoices.FOLDER:
+            # https://patshaughnessy.net/2017/12/14/manipulating-trees-using-sql-and-the-postgres-ltree-extension
+            self._meta.model.objects.filter(path__descendants=old_path).update(
+                path=RawSQL(
+                    "%s || subpath(path, nlevel(%s)-1)", (str(self.path), str(old_path))
+                )
+            )
+            target_update["numchild_folder"] = models.F("numchild_folder") + 1
+
+        # update target numchild and numchild_folder
+        self._meta.model.objects.filter(pk=target.id).update(**target_update)
+
+        # update old parent numchild and numchild_folder
+        if old_parent_id:
+            update = {"numchild": models.F("numchild") - 1}
+            if self.type == ItemTypeChoices.FOLDER:
+                update["numchild_folder"] = models.F("numchild_folder") - 1
+            self._meta.model.objects.filter(pk=old_parent_id).update(**update)
 
 
 class LinkTrace(BaseModel):

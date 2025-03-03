@@ -432,7 +432,6 @@ class ItemViewSet(
         """Get queryset performing all annotation and filtering on the item tree structure."""
         user = self.request.user
         queryset = super().get_queryset()
-
         # Only list views need filtering and annotation
         if self.detail:
             return queryset
@@ -610,53 +609,53 @@ class ItemViewSet(
 
         return self.get_response_for_queryset(queryset)
 
-    # @drf.decorators.action(detail=True, methods=["post"])
-    # @transaction.atomic
-    # def move(self, request, *args, **kwargs):
-    #     """
-    #     Move an item to another location within the item tree.
+    @drf.decorators.action(detail=True, methods=["post"])
+    @transaction.atomic
+    def move(self, request, *args, **kwargs):
+        """
+        Move an item to another location within the item tree.
 
-    #     The user must be an administrator or owner of both the item being moved
-    #     and the target parent item.
-    #     """
-    #     user = request.user
-    #     item = self.get_object()  # including permission checks
+        The user must be an administrator or owner of both the item being moved
+        and the target parent item.
+        """
+        user = request.user
+        item = self.get_object()  # including permission checks
 
-    #     # Validate the input payload
-    #     serializer = serializers.MoveItemSerializer(data=request.data)
-    #     serializer.is_valid(raise_exception=True)
-    #     validated_data = serializer.validated_data
+        # Validate the input payload
+        serializer = serializers.MoveItemSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
 
-    #     target_item_id = validated_data["target_item_id"]
-    #     try:
-    #         target_item = models.Item.objects.get(
-    #             id=target_item_id, ancestors_deleted_at__isnull=True
-    #         )
-    #     except models.Item.DoesNotExist:
-    #         return drf.response.Response(
-    #             {"target_item_id": "Target parent item does not exist."},
-    #             status=status.HTTP_400_BAD_REQUEST,
-    #         )
+        target_item_id = validated_data["target_item_id"]
+        try:
+            target_item = models.Item.objects.get(
+                id=target_item_id, ancestors_deleted_at__isnull=True
+            )
+        except models.Item.DoesNotExist:
+            return drf.response.Response(
+                {"target_item_id": "Target parent item does not exist."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-    #     message = None
+        message = None
 
-    #     if not target_item.get_abilities(user).get("move"):
-    #         message = (
-    #             "You do not have permission to move items "
-    #             "as a child to this target item."
-    #         )
+        if not target_item.get_abilities(user).get("move"):
+            message = (
+                "You do not have permission to move items "
+                "as a child to this target item."
+            )
 
-    #     if message:
-    #         return drf.response.Response(
-    #             {"target_item_id": message},
-    #             status=status.HTTP_400_BAD_REQUEST,
-    #         )
+        if message:
+            return drf.response.Response(
+                {"target_item_id": message},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-    #     item.move(target_item)
+        item.move(target_item)
 
-    #     return drf.response.Response(
-    #         {"message": "item moved successfully."}, status=status.HTTP_200_OK
-    #     )
+        return drf.response.Response(
+            {"message": "item moved successfully."}, status=status.HTTP_200_OK
+        )
 
     @drf.decorators.action(
         detail=True,
