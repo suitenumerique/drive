@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 import type { NextPage } from "next";
 import type { AppProps } from "next/app";
-import { CunninghamProvider } from "@openfun/cunningham-react";
+import { CunninghamProvider } from "@lasuite/ui-kit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "../styles/globals.scss";
@@ -23,7 +23,7 @@ export default function MyApp({ Component, pageProps }: AppPropsWithLayout) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <CunninghamProvider theme="dsfr">
+      <CunninghamProvider>
         {getLayout(<Component {...pageProps} />)}
       </CunninghamProvider>
     </QueryClientProvider>

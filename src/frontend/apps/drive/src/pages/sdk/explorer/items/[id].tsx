@@ -1,5 +1,6 @@
 import { Explorer } from "@/features/explorer/components/Explorer";
-import { SdkLayout } from "@/features/layouts/components/sdk/SdkLayout";
+import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
+import { DefaultLayout } from "@/features/layouts/components/default/DefaultLayout";
 import { useRouter } from "next/router";
 
 /**
@@ -12,5 +13,9 @@ export default function ItemPage() {
 }
 
 ItemPage.getLayout = function getLayout(page: React.ReactElement) {
-  return <SdkLayout>{page}</SdkLayout>;
+  return (
+    <GlobalLayout>
+      <DefaultLayout>{page}</DefaultLayout>
+    </GlobalLayout>
+  );
 };

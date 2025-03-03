@@ -1,30 +1,8 @@
-import { Auth, login, logout, useAuth } from "@/features/auth/Auth";
+import { Auth } from "@/features/auth/Auth";
 
+/**
+ * This layout is used for the global contexts (auth, etc).
+ */
 export const GlobalLayout = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <Auth>
-      <Navbar />
-      {children}
-    </Auth>
-  );
-};
-
-const Navbar = () => {
-  const { user } = useAuth();
-  return (
-    <nav>
-      NAVBAR
-      {user ? (
-        <div>
-          Welcome {user.email}
-          <button onClick={logout}>Logout</button>
-        </div>
-      ) : (
-        <div>
-          <div>Not logged in</div>
-          <button onClick={login}>Login</button>
-        </div>
-      )}
-    </nav>
-  );
+  return <Auth>{children}</Auth>;
 };

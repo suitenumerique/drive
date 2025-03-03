@@ -1,11 +1,21 @@
 import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
 import Head from "next/head";
-import Link from "next/link";
 import { useTranslation } from "next-i18next";
-import { ExportButton } from "@lasuite/ui-kit";
+import { DefaultLayout } from "@/features/layouts/components/default/DefaultLayout";
+import { ProConnectButton } from "@lasuite/ui-kit";
+import { login, useAuth } from "@/features/auth/Auth";
+import { useRouter } from "next/router";
 
 export default function HomePage() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const router = useRouter();
+
+  if (user) {
+    router.push("/explorer/items/truc");
+    return null;
+  }
+
   return (
     <>
       <Head>
@@ -16,13 +26,16 @@ export default function HomePage() {
       </Head>
       <div>
         {t("welcome")}
-        <ExportButton />
-        <Link href="/explorer/items/truc">Go to fichiers</Link>
+        <ProConnectButton onClick={login} />
       </div>
     </>
   );
 }
 
 HomePage.getLayout = function getLayout(page: React.ReactElement) {
-  return <GlobalLayout>{page}</GlobalLayout>;
+  return (
+    <GlobalLayout>
+      <DefaultLayout>{page}</DefaultLayout>
+    </GlobalLayout>
+  );
 };
