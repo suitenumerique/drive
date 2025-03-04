@@ -22,14 +22,7 @@ export const ExplorerLayout = ({ children }: { children: React.ReactNode }) => {
       icon={<img src={logo.src} alt="logo" />}
       rightHeaderContent={<HeaderRight />}
     >
-      <div
-        style={{
-          height: "500px",
-          backgroundColor: "var(--c--theme--colors--greyscale-100)",
-        }}
-      >
-        {children}
-      </div>
+      {children}
     </MainLayout>
   );
 };

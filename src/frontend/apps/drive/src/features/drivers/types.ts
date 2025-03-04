@@ -7,4 +7,5 @@ export type Item = {
   id: string;
   name: string;
   type: ItemType;
+  lastUpdate: string;
 };

@@ -4,10 +4,22 @@
 @use "./../features/layouts/components/explorer/ExplorerLayout.scss";
 @use "./../features/explorer/components/Explorer.scss";
 @use "./../features/layouts/components/header/index.scss";
+@use "./../features/ui/components/breadcrumbs";
 body {
   margin: 0;
 }
 
 * {
   box-sizing: border-box;
+}
+
+// Related to @viselect/react
+.selection-area {
+  background: rgba(46, 115, 252, 0.11);
+  border: 2px solid rgba(98, 155, 255, 0.81);
+  border-radius: 0.1em;
+
+  &__container {
+    user-select: none;
+  }
 }

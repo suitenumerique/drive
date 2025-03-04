@@ -9,7 +9,7 @@ import { useRouter } from "next/router";
 
 export default function ItemPage() {
   const router = useRouter();
-  return <Explorer itemId={router.query.id as string} />;
+  return <Explorer itemId={router.query.id as string} displayMode="sdk" />;
 }
 
 ItemPage.getLayout = function getLayout(page: React.ReactElement) {

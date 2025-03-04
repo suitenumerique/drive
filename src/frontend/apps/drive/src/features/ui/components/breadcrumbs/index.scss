@@ -1,0 +1,30 @@
+.c__breadcrumbs {
+  display: flex;
+  align-items: center;
+  overflow: auto;
+
+  > * {
+    flex-shrink: 0;
+  }
+}
+
+.c__breadcrumbs__button {
+  height: 32px;
+  padding: 4px;
+  background-color: transparent;
+  border: none;
+  color: var(--c--theme--colors--greyscale-600);
+  font-size: 16px;
+  font-weight: 400;
+  font-family: var(--c--theme--font--families--base);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+
+  &.active {
+    font-weight: 500;
+    color: var(--c--theme--colors--greyscale-950);
+  }
+}

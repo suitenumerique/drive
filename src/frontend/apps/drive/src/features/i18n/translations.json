@@ -5,7 +5,13 @@
       "app_description": "Files management",
       "welcome": "Welcome",
       "logout": "Logout",
-      "my_account": "My Account"
+      "my_account": "My Account",
+      "explorer": {
+        "grid": {
+          "name": "Name",
+          "last_update": "Last Update"
+        }
+      }
     }
   },
   "fr": {
@@ -14,7 +20,13 @@
       "app_description": "Gestion de fichiers",
       "welcome": "Bienvenue",
       "logout": "Déconnexion",
-      "my_account": "Mon Compte"
+      "my_account": "Mon Compte",
+      "explorer": {
+        "grid": {
+          "name": "Nom",
+          "last_update": "Dernière modification"
+        }
+      }
     }
   }
 }

@@ -2051,10 +2051,22 @@
   dependencies:
     "@tanstack/table-core" "8.20.1"
 
+"@tanstack/react-table@8.20.6":
+  version "8.20.6"
+  resolved "https://registry.yarnpkg.com/@tanstack/react-table/-/react-table-8.20.6.tgz#a1f3103327aa59aa621931f4087a7604a21054d0"
+  integrity sha512-w0jluT718MrOKthRcr2xsjqzx+oEM7B7s/XXyfs19ll++hlId3fjTm+B2zrR3ijpANpkzBAr15j1XGVOMxpggQ==
+  dependencies:
+    "@tanstack/table-core" "8.20.5"
+
 "@tanstack/table-core@8.20.1":
   version "8.20.1"
   resolved "https://registry.yarnpkg.com/@tanstack/table-core/-/table-core-8.20.1.tgz#74bfab10fa35bed51fa0bd2f3539a331d7e78f1b"
   integrity sha512-5Ly5TIRHnWH7vSDell9B/OVyV380qqIJVg7H7R7jU4fPEmOD4smqAX7VRflpYI09srWR8aj5OLD2Ccs1pI5mTg==
+
+"@tanstack/table-core@8.20.5":
+  version "8.20.5"
+  resolved "https://registry.yarnpkg.com/@tanstack/table-core/-/table-core-8.20.5.tgz#3974f0b090bed11243d4107283824167a395cf1d"
+  integrity sha512-P9dF7XbibHph2PFRz8gfBKEXEY/HJPOhym8CHmjF8y3q5mWpKx9xtZapXQUWCgkqvsK0R46Azuz+VaxD4Xl+Tg==
 
 "@tsconfig/node10@^1.0.7":
   version "1.0.11"
@@ -2228,6 +2240,18 @@
   dependencies:
     "@typescript-eslint/types" "8.24.1"
     eslint-visitor-keys "^4.2.0"
+
+"@viselect/react@3.5.1":
+  version "3.5.1"
+  resolved "https://registry.yarnpkg.com/@viselect/react/-/react-3.5.1.tgz#926f55049b39a8dbe2dd09eaad2579a8096da220"
+  integrity sha512-Y1gTdqiAEJv5+ct+3lCkZ7gTytTLSoh4FPmi5hZukG30V3LAtSKuFpNnB4/zBAk2MRY11kZ1ox3APRFO5VNP+g==
+  dependencies:
+    "@viselect/vanilla" "3.5.1"
+
+"@viselect/vanilla@3.5.1":
+  version "3.5.1"
+  resolved "https://registry.yarnpkg.com/@viselect/vanilla/-/vanilla-3.5.1.tgz#b6471d1b970a65564fa363f5fc8e8cbcba8782f4"
+  integrity sha512-qsHOoFd97MkSQREAvHHylBq5jVIsUYt+Bt/E2ncUIJLV7izKZVNX+UgNIgmeAyvW9qKLzUDft5bOab1aUXHYdw==
 
 acorn-jsx@^5.3.2:
   version "5.3.2"
@@ -2500,7 +2524,7 @@ client-only@0.0.1, client-only@^0.0.1:
   resolved "https://registry.npmjs.org/client-only/-/client-only-0.0.1.tgz"
   integrity sha512-IV3Ou0jSMzZrd3pZ48nLkT9DA7Ag1pnPzaiQhpW7c3RbcqqzvzzVu+L8gfqMp/8IM2MQtSiqaCxrrcfu8I8rMA==
 
-clsx@^2.0.0, clsx@^2.1.1:
+clsx@2.1.1, clsx@^2.0.0, clsx@^2.1.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/clsx/-/clsx-2.1.1.tgz#eed397c9fd8bd882bfb18deab7102049a2f32999"
   integrity sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==
