@@ -3,7 +3,7 @@
 @use "./../features/layouts/components/global/GlobalLayout.scss";
 @use "./../features/layouts/components/explorer/ExplorerLayout.scss";
 @use "./../features/explorer/components/Explorer.scss";
-
+@use "./../features/layouts/components/header/index.scss";
 body {
   margin: 0;
 }
