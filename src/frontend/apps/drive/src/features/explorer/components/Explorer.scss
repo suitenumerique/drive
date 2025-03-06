@@ -96,4 +96,21 @@
       }
     }
   }
+
+  &__tree {
+    &__actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+
+      &__left {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+    }
+  }
+
 }
