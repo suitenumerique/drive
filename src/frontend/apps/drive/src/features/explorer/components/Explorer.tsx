@@ -13,7 +13,7 @@ interface ExplorerContextType {
   selectedItems: Record<string, boolean>;
   setSelectedItems: Dispatch<SetStateAction<Record<string, boolean>>>;
   displayMode: "sdk" | "app";
-  getSelectedItems: () => Item[];
+  selectedItemsEntities: Item[];
 }
 
 const ExplorerContext = createContext<ExplorerContextType | undefined>(
@@ -49,7 +49,7 @@ export const Explorer = ({
         selectedItems,
         setSelectedItems,
         displayMode,
-        getSelectedItems,
+        selectedItemsEntities: getSelectedItems(),
       }}
     >
       <ExplorerInner />

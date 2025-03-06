@@ -69,6 +69,7 @@
 	--c--theme--colors--success-text: #1f8d49;
 	--c--theme--colors--warning-text: #d64d00;
 	--c--theme--colors--danger-text: #FFF;
+	--c--theme--colors--primary-050: #F5F5FE;
 	--c--theme--colors--primary-150: #F4F4FD;
 	--c--theme--colors--greyscale-text: #303C4B;
 	--c--theme--colors--greyscale-050: #F6F6F6;
@@ -161,6 +162,7 @@
 	--c--components--button--medium-height: 40px;
 	--c--components--button--medium-text-height: 40px;
 	--c--components--button--border-radius: 4px;
+	--c--components--button--small-height: 26px;
 	--c--components--button--primary--background--color: var(--c--theme--colors--primary-text);
 	--c--components--button--primary--background--color-hover: #1212ff;
 	--c--components--button--primary--background--color-active: #2323ff;

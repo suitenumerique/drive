@@ -113,4 +113,32 @@
     }
   }
 
+  &__selection-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 32px;
+    padding: 0 8px;
+    background-color: var(--c--theme--colors--primary-050);
+    border: 1px solid var(--c--theme--colors--primary-300);
+    border-radius: 4px;
+
+    &__left {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    &__actions {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    &__caption {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--c--theme--colors--primary-800);
+    }
+  }
 }

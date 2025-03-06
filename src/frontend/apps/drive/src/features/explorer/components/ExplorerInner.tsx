@@ -3,9 +3,15 @@ import { database } from "./database";
 import { ExplorerGrid } from "./ExplorerGrid";
 import { ExplorerBreadcrumbs } from "./ExplorerBreadcrumbs";
 import { useExplorer } from "./Explorer";
+import { ExplorerSelectionBar } from "./ExplorerSelectionBar";
 
 export const ExplorerInner = () => {
-  const { selectedItems, setSelectedItems, displayMode } = useExplorer();
+  const {
+    selectedItems,
+    setSelectedItems,
+    displayMode,
+    selectedItemsEntities,
+  } = useExplorer();
 
   const onSelectionStart = ({ event, selection }: SelectionEvent) => {
     if (!event?.ctrlKey && !event?.metaKey) {
@@ -52,7 +58,12 @@ export const ExplorerInner = () => {
     >
       <div className={`explorer explorer--${displayMode}`}>
         <div className="explorer__container">
-          <div className="explorer__filters">Filters</div>
+          {selectedItemsEntities.length > 0 ? (
+            <ExplorerSelectionBar />
+          ) : (
+            <div className="explorer__filters">Filters</div>
+          )}
+
           <div className="explorer__content">
             <ExplorerBreadcrumbs />
             <ExplorerGrid />

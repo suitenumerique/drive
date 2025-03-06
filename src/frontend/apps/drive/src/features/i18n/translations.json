@@ -10,6 +10,19 @@
         "grid": {
           "name": "Name",
           "last_update": "Last Update"
+        },
+        "tree": {
+          "createFolder": "Create",
+          "import": "Import",
+          "search": "Search"
+        },
+        "selectionBar": {
+          "caption_one": "1 item selected",
+          "caption_other": "{{count}} items selected",
+          "download": "Download",
+          "move": "Move",
+          "delete": "Delete",
+          "reset_selection": "Reset selection"
         }
       }
     }
@@ -25,6 +38,19 @@
         "grid": {
           "name": "Nom",
           "last_update": "Dernière modification"
+        },
+        "tree": {
+          "createFolder": "Créer",
+          "import": "Importer",
+          "search": "Rechercher"
+        },
+        "selectionBar": {
+          "caption_one": "1 élément sélectionné",
+          "caption_other": "{{count}} éléments sélectionnés",
+          "download": "Télécharger",
+          "move": "Déplacer",
+          "delete": "Supprimer",
+          "reset_selection": "Réinitialiser la sélection"
         }
       }
     }
