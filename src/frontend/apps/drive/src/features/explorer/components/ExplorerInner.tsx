@@ -67,25 +67,6 @@ export const ExplorerInner = () => {
           <div className="explorer__content">
             <ExplorerBreadcrumbs />
             <ExplorerGrid />
-
-            <div>
-              <div className="selected-items">
-                <h3>Selected Items</h3>
-                <div>
-                  {Object.keys(selectedItems).filter(
-                    (key) => selectedItems[key]
-                  )}
-                </div>
-                <ul>
-                  {Object.keys(selectedItems)
-                    .filter((key) => selectedItems[key])
-                    .map((key) => {
-                      const item = database.find((item) => item.id === key)!;
-                      return <li key={key}>{item.name}</li>;
-                    })}
-                </ul>
-              </div>
-            </div>
           </div>
         </div>
       </div>

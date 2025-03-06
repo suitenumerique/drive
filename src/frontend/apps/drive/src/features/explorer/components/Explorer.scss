@@ -3,6 +3,7 @@
   min-height: calc(100vh - 52px);
   background-color: var(--c--theme--colors--greyscale-050);
   justify-content: center;
+  align-items: flex-start;
 
   &--app {
     padding: 16px;
