@@ -637,3 +637,124 @@ def test_api_items_children_list_authenticated_related_team_members(
             },
         ],
     }
+
+
+def test_api_items_children_list_filter_type():
+    """
+    Authenticated users should be allowed to retrieve the children of an item
+    to which they are directly related whatever the role and filter by type.
+    """
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    access = factories.UserItemAccessFactory(item=item, user=user)
+    factories.UserItemAccessFactory(item=item)
+
+    child1 = factories.ItemFactory(parent=item, type=models.ItemTypeChoices.FOLDER)
+    factories.UserItemAccessFactory(item=child1)
+
+    child2 = factories.ItemFactory(parent=item, type=models.ItemTypeChoices.FILE)
+    factories.UserItemAccessFactory(item=child2)
+
+    # filter by type: folder
+    response = client.get(
+        f"/api/v1.0/items/{item.id!s}/children/?type=folder",
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "count": 1,
+        "next": None,
+        "previous": None,
+        "results": [
+            {
+                "abilities": child1.get_abilities(user),
+                "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
+                "creator": str(child1.creator.id),
+                "depth": 2,
+                "id": str(child1.id),
+                "is_favorite": False,
+                "link_reach": child1.link_reach,
+                "link_role": child1.link_role,
+                "numchild": 0,
+                "numchild_folder": 0,
+                "nb_accesses": 3,
+                "path": str(child1.path),
+                "title": child1.title,
+                "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
+                "user_roles": [access.role],
+                "type": child1.type,
+                "upload_state": models.ItemUploadStateChoices.PENDING
+                if child1.type == models.ItemTypeChoices.FILE
+                else None,
+                "url": None,
+            },
+        ],
+    }
+
+    # filter by type: file
+    response = client.get(
+        f"/api/v1.0/items/{item.id!s}/children/?type=file",
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "count": 1,
+        "next": None,
+        "previous": None,
+        "results": [
+            {
+                "abilities": child2.get_abilities(user),
+                "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
+                "creator": str(child2.creator.id),
+                "depth": 2,
+                "id": str(child2.id),
+                "is_favorite": False,
+                "link_reach": child2.link_reach,
+                "link_role": child2.link_role,
+                "numchild": 0,
+                "numchild_folder": 0,
+                "nb_accesses": 3,
+                "path": str(child2.path),
+                "title": child2.title,
+                "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
+                "user_roles": [access.role],
+                "type": child2.type,
+                "upload_state": models.ItemUploadStateChoices.PENDING
+                if child2.type == models.ItemTypeChoices.FILE
+                else None,
+                "url": None,
+            },
+        ],
+    }
+
+
+def test_api_items_children_list_filter_wrong_type():
+    """
+    Filtering with a wront type should not filter result
+    """
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    factories.UserItemAccessFactory(item=item, user=user)
+    factories.UserItemAccessFactory(item=item)
+
+    child1 = factories.ItemFactory(parent=item, type=models.ItemTypeChoices.FOLDER)
+    factories.UserItemAccessFactory(item=child1)
+
+    child2 = factories.ItemFactory(parent=item, type=models.ItemTypeChoices.FILE)
+    factories.UserItemAccessFactory(item=child2)
+
+    response = client.get(
+        f"/api/v1.0/items/{item.id!s}/children/?type=unknown",
+    )
+    assert response.status_code == 400
+
+    assert response.json() == {
+        "type": ["Select a valid choice. unknown is not one of the available choices."]
+    }

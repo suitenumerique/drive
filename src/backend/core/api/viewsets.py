@@ -521,11 +521,12 @@ class ItemViewSet(
         filterset = ListItemFilter(
             self.request.GET, queryset=queryset, request=self.request
         )
-        filterset.is_valid()
+        if not filterset.is_valid():
+            raise drf.exceptions.ValidationError(filterset.errors)
         filter_data = filterset.form.cleaned_data
 
         # Filter as early as possible on fields that are available on the model
-        for field in ["is_creator_me", "title"]:
+        for field in ["is_creator_me", "title", "type"]:
             queryset = filterset.filters[field].filter(queryset, filter_data[field])
 
         queryset = self.annotate_user_roles(queryset)
@@ -722,8 +723,9 @@ class ItemViewSet(
         queryset = item.children().filter(deleted_at__isnull=True)
         queryset = self.filter_queryset(queryset)
         filterset = ItemFilter(request.GET, queryset=queryset)
-        if filterset.is_valid():
-            queryset = filterset.qs
+        if not filterset.is_valid():
+            raise drf.exceptions.ValidationError(filterset.errors)
+        queryset = filterset.qs
         return self.get_response_for_queryset(queryset)
 
     @drf.decorators.action(detail=True, methods=["get"])
