@@ -15,7 +15,6 @@ from django.db import transaction
 from django.db.models.expressions import RawSQL
 
 import rest_framework as drf
-from django_filters import rest_framework as drf_filters
 from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
 from rest_framework.permissions import AllowAny
@@ -23,7 +22,7 @@ from rest_framework.permissions import AllowAny
 from core import enums, models
 
 from . import permissions, serializers, utils
-from .filters import ItemFilter
+from .filters import ItemFilter, ListItemFilter
 
 logger = logging.getLogger(__name__)
 
@@ -307,7 +306,6 @@ class ItemViewSet(
     SerializerPerActionMixin,
     drf.mixins.CreateModelMixin,
     drf.mixins.DestroyModelMixin,
-    drf.mixins.ListModelMixin,
     drf.mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
@@ -374,11 +372,10 @@ class ItemViewSet(
     - Implements soft delete logic to retain item tree structures.
     """
 
-    filter_backends = [drf_filters.DjangoFilterBackend]
-    filterset_class = ItemFilter
     metadata_class = ItemMetadata
     ordering = ["-updated_at"]
     ordering_fields = ["created_at", "updated_at", "title"]
+    pagination_class = Pagination
     permission_classes = [
         permissions.ItemAccessPermission,
     ]
@@ -460,44 +457,11 @@ class ItemViewSet(
         )
 
     def filter_queryset(self, queryset):
-        """Apply annotations and filters sequentially."""
-        filterset = ItemFilter(
-            self.request.GET, queryset=queryset, request=self.request
-        )
-        filterset.is_valid()
-        filter_data = filterset.form.cleaned_data
-
-        # Filter as early as possible on fields that are available on the model
-        for field in ["is_creator_me", "title"]:
-            queryset = filterset.filters[field].filter(queryset, filter_data[field])
-
-        queryset = self.annotate_user_roles(queryset)
-
-        if self.action == "list":
-            # Among the results, we may have items that are ancestors/descendants
-            # of each other. In this case we want to keep only the highest ancestors.
-            root_paths = utils.filter_root_paths(
-                queryset.order_by("path").values_list("path", flat=True),
-                skip_sorting=True,
-            )
-            queryset = queryset.filter(path__in=root_paths)
-
-            # Annotate the queryset with an attribute marking instances as highest ancestor
-            # in order to save some time while computing abilities in the instance
-            queryset = queryset.annotate(
-                is_highest_ancestor_for_user=db.Value(
-                    True, output_field=db.BooleanField()
-                )
-            )
-
-        # Annotate favorite status and filter if applicable as late as possible
+        """Override to apply annotations to generic views."""
+        queryset = super().filter_queryset(queryset)
         queryset = self.annotate_is_favorite(queryset)
-        queryset = filterset.filters["is_favorite"].filter(
-            queryset, filter_data["is_favorite"]
-        )
-
-        # Apply ordering only now that everyting is filtered and annotated
-        return filters.OrderingFilter().filter_queryset(self.request, queryset, self)
+        queryset = self.annotate_user_roles(queryset)
+        return queryset
 
     def get_response_for_queryset(self, queryset):
         """Return paginated response for the queryset if requested."""
@@ -548,6 +512,50 @@ class ItemViewSet(
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
         instance.soft_delete()
+
+    def list(self, request, *args, **kwargs):
+        """List items with pagination and filtering."""
+        # Not calling filter_queryset. We do our own cooking.
+        queryset = self.get_queryset()
+
+        filterset = ListItemFilter(
+            self.request.GET, queryset=queryset, request=self.request
+        )
+        filterset.is_valid()
+        filter_data = filterset.form.cleaned_data
+
+        # Filter as early as possible on fields that are available on the model
+        for field in ["is_creator_me", "title"]:
+            queryset = filterset.filters[field].filter(queryset, filter_data[field])
+
+        queryset = self.annotate_user_roles(queryset)
+
+        # Among the results, we may have items that are ancestors/descendants
+        # of each other. In this case we want to keep only the highest ancestors.
+        root_paths = utils.filter_root_paths(
+            queryset.order_by("path").values_list("path", flat=True),
+            skip_sorting=True,
+        )
+        queryset = queryset.filter(path__in=root_paths)
+
+        # Annotate the queryset with an attribute marking instances as highest ancestor
+        # in order to save some time while computing abilities in the instance
+        queryset = queryset.annotate(
+            is_highest_ancestor_for_user=db.Value(True, output_field=db.BooleanField())
+        )
+
+        # Annotate favorite status and filter if applicable as late as possible
+        queryset = self.annotate_is_favorite(queryset)
+        queryset = filterset.filters["is_favorite"].filter(
+            queryset, filter_data["is_favorite"]
+        )
+
+        # Apply ordering only now that everyting is filtered and annotated
+        queryset = filters.OrderingFilter().filter_queryset(
+            self.request, queryset, self
+        )
+
+        return self.get_response_for_queryset(queryset)
 
     @drf.decorators.action(detail=True, methods=["post"], url_path="upload-ended")
     def upload_ended(self, request, *args, **kwargs):
@@ -713,8 +721,9 @@ class ItemViewSet(
         # GET: List children
         queryset = item.children().filter(deleted_at__isnull=True)
         queryset = self.filter_queryset(queryset)
-        queryset = self.annotate_is_favorite(queryset)
-        queryset = self.annotate_user_roles(queryset)
+        filterset = ItemFilter(request.GET, queryset=queryset)
+        if filterset.is_valid():
+            queryset = filterset.qs
         return self.get_response_for_queryset(queryset)
 
     @drf.decorators.action(detail=True, methods=["get"])

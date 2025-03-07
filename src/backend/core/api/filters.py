@@ -12,14 +12,23 @@ class ItemFilter(django_filters.FilterSet):
     Custom filter for filtering items.
     """
 
+    title = django_filters.CharFilter(
+        field_name="title", lookup_expr="icontains", label=_("Title")
+    )
+
+    class Meta:
+        model = models.Item
+        fields = ["title"]
+
+
+class ListItemFilter(ItemFilter):
+    """Filter class dedicated to the Item viewset list method."""
+
     is_creator_me = django_filters.BooleanFilter(
         method="filter_is_creator_me", label=_("Creator is me")
     )
     is_favorite = django_filters.BooleanFilter(
         method="filter_is_favorite", label=_("Favorite")
-    )
-    title = django_filters.CharFilter(
-        field_name="title", lookup_expr="icontains", label=_("Title")
     )
 
     class Meta:
