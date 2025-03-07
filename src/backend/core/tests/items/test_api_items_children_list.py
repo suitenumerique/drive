@@ -64,6 +64,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -97,6 +98,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
         ],
     }
@@ -167,6 +169,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -198,6 +201,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
         ],
     }
@@ -283,6 +287,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -316,6 +321,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
         ],
     }
@@ -386,6 +392,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -419,6 +426,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
         ],
     }
@@ -514,6 +522,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -547,6 +556,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
         ],
     }
@@ -618,6 +628,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -651,6 +662,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
         ],
     }
@@ -785,6 +797,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -818,6 +831,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
         ],
     }
@@ -885,6 +899,7 @@ def test_api_items_children_list_filter_type():
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
         ],
     }
@@ -931,6 +946,7 @@ def test_api_items_children_list_filter_type():
                 "description": None,
                 "deleted_at": None,
                 "hard_delete_at": None,
+                "is_wopi_supported": False,
             },
         ],
     }
