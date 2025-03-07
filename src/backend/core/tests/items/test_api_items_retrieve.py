@@ -63,6 +63,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -122,6 +123,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -211,6 +213,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "is_wopi_supported": False,
     }
     assert models.LinkTrace.objects.filter(item=item, user=user).exists() is True
 
@@ -275,6 +278,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -386,6 +390,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -452,6 +457,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -605,6 +611,7 @@ def test_api_items_retrieve_authenticated_related_team_members(
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -666,6 +673,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -727,6 +735,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -1000,4 +1009,36 @@ def test_api_items_retrieve_file_uploaded():
         "type": models.ItemTypeChoices.FILE,
         "upload_state": models.ItemUploadStateChoices.UPLOADED,
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
+        "is_wopi_supported": False,
     }
+
+
+def test_api_items_retrieve_wopi_supported(settings):
+    """
+    The `is_wopi_supported` field should be true if the item is a file and the
+    `WopiEnabled` setting is true.
+    """
+    settings.WOPI_CLIENTS = ["vendorA"]
+    settings.WOPI_CLIENTS_CONFIGURATION = {
+        "vendorA": {
+            "launch_url": "https://vendorA.com/launch_url",
+            "mimetypes": ["application/vnd.oasis.opendocument.text"],
+        }
+    }
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach="restricted",
+        mimetype="application/vnd.oasis.opendocument.text",
+    )
+    item.upload_state = models.ItemUploadStateChoices.UPLOADED
+    item.save()
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["is_wopi_supported"] is True

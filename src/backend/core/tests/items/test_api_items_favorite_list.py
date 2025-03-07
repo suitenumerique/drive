@@ -13,7 +13,7 @@ def test_api_item_favorite_list_anonymous():
 
     client = APIClient()
 
-    response = client.get(f"/api/v1.0/items/favorite_list/")
+    response = client.get("/api/v1.0/items/favorite_list/")
 
     assert response.status_code == 401
 
@@ -27,7 +27,7 @@ def test_api_item_favorite_list_authenticated_no_favorite():
 
     client.force_login(user)
 
-    response = client.get(f"/api/v1.0/items/favorite_list/")
+    response = client.get("/api/v1.0/items/favorite_list/")
 
     assert response.status_code == 200
 
@@ -83,6 +83,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "upload_state": item.upload_state,
                 "url": None,
                 "user_roles": ["reader"],
+                "is_wopi_supported": False,
             }
         ],
     }

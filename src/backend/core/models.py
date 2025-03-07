@@ -483,7 +483,6 @@ class Item(TreeModel, BaseModel):
     label_size = 7
 
     objects = ItemManager()
-    
 
     class Meta:
         db_table = "drive_item"
