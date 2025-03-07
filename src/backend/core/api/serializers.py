@@ -131,6 +131,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
     creator = UserLiteSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
+    is_wopi_supported = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Item
@@ -160,6 +161,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "description",
             "deleted_at",
             "hard_delete_at",
+            "is_wopi_supported",
         ]
         read_only_fields = [
             "id",
@@ -185,6 +187,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "description",
             "deleted_at",
             "hard_delete_at",
+            "is_wopi_supported",
         ]
 
     def get_abilities(self, item) -> dict:
@@ -229,6 +232,19 @@ class ListItemSerializer(serializers.ModelSerializer):
 
         hard_delete_at = item.deleted_at + timedelta(days=settings.TRASHBIN_CUTOFF_DAYS)
         return hard_delete_at.isoformat()
+    
+    def get_is_wopi_supported(self, item):
+        """Return whether the item is supported by WOPI protocol."""
+        if item.type != models.ItemTypeChoices.FILE:
+            return False
+
+        if item.upload_state != models.ItemUploadStateChoices.UPLOADED:
+            return False
+
+        for _, client_config in settings.WOPI_CLIENTS_CONFIGURATION.items():
+            if item.mimetype in client_config["mimetypes"]:
+                return True
+        return False
 
 
 class ItemSerializer(ListItemSerializer):
@@ -262,6 +278,7 @@ class ItemSerializer(ListItemSerializer):
             "description",
             "deleted_at",
             "hard_delete_at",
+            "is_wopi_supported",
         ]
         read_only_fields = [
             "id",
@@ -286,6 +303,7 @@ class ItemSerializer(ListItemSerializer):
             "size",
             "deleted_at",
             "hard_delete_at",
+            "is_wopi_supported",
         ]
 
     def create(self, validated_data):

@@ -112,6 +112,7 @@ def test_api_items_list_format():
             "description": None,
             "deleted_at": None,
             "hard_delete_at": None,
+            "is_wopi_supported": False,
         },
         {
             "id": str(item.id),
@@ -172,6 +173,7 @@ def test_api_items_list_format():
             "description": None,
             "deleted_at": None,
             "hard_delete_at": None,
+            "is_wopi_supported": False,
         },
     ]
 
