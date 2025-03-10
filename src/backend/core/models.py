@@ -774,6 +774,7 @@ class Item(TreeModel, BaseModel):
             "partial_update": is_owner_or_admin if self.is_root else can_update,
             "update": is_owner_or_admin if self.is_root else can_update,
             "upload_ended": can_update and user.is_authenticated,
+            "wopi": can_get,
         }
 
     def send_email(self, subject, emails, context=None, language=None):
