@@ -5,7 +5,7 @@ export enum ItemType {
 
 export type Item = {
   id: string;
-  name: string;
+  title: string;
   type: ItemType;
   lastUpdate: string;
 };
