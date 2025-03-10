@@ -70,7 +70,7 @@ class AccessUserItemService:
         """Generate a random access token"""
         return token_urlsafe()
 
-    def insert_new_access(self, item: Item, user: AbstractUser) -> str:
+    def insert_new_access(self, item: Item, user: AbstractUser) -> tuple[str, int]:
         """
         Insert a new access token for the user and item. Return an access_token and access_token_ttl
         access_token_ttl must be a timestamp in milliseconds
