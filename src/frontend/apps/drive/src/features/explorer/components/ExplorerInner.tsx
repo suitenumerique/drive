@@ -1,16 +1,14 @@
 import SelectionArea, { SelectionEvent } from "@viselect/react";
-import { database } from "./database";
 import { ExplorerGrid } from "./ExplorerGrid";
 import { ExplorerBreadcrumbs } from "./ExplorerBreadcrumbs";
-import { useExplorer } from "./Explorer";
+import { useExplorer } from "./ExplorerContext";
 import { ExplorerSelectionBar } from "./ExplorerSelectionBar";
 
 export const ExplorerInner = () => {
   const {
-    selectedItems,
-    setSelectedItems,
+    setSelectedItemIds: setSelectedItems,
     displayMode,
-    selectedItemsEntities,
+    selectedItems: selectedItemsEntities,
   } = useExplorer();
 
   const onSelectionStart = ({ event, selection }: SelectionEvent) => {

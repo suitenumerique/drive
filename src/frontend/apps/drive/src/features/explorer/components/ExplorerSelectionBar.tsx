@@ -1,13 +1,13 @@
 import { Button } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
-import { useExplorer } from "./Explorer";
+import { useExplorer } from "./ExplorerContext";
 
 export const ExplorerSelectionBar = () => {
   const { t } = useTranslation();
-  const { selectedItemsEntities, setSelectedItems } = useExplorer();
+  const { selectedItems, setSelectedItemIds } = useExplorer();
 
   const handleClearSelection = () => {
-    setSelectedItems({});
+    setSelectedItemIds({});
   };
 
   return (
@@ -15,7 +15,7 @@ export const ExplorerSelectionBar = () => {
       <div className="explorer__selection-bar__left">
         <div className="explorer__selection-bar__caption">
           {t("explorer.selectionBar.caption", {
-            count: selectedItemsEntities.length,
+            count: selectedItems.length,
           })}
         </div>
         <div className="explorer__selection-bar__actions">

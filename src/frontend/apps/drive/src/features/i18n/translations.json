@@ -24,6 +24,17 @@
           "delete": "Delete",
           "reset_selection": "Reset selection"
         }
+      },
+      "actions": {
+        "createFolder": {
+          "modal": {
+            "title": "Create folder",
+            "label": "Folder name",
+            "placeholder": "Enter folder name",
+            "cancel": "Cancel",
+            "submit": "Create"
+          }
+        }
       }
     }
   },
@@ -51,6 +62,17 @@
           "move": "Déplacer",
           "delete": "Supprimer",
           "reset_selection": "Réinitialiser la sélection"
+        },
+        "actions": {
+          "createFolder": {
+            "modal": {
+              "title": "Créer un dossier",
+              "label": "Nom du dossier",
+              "placeholder": "Entrez le nom du dossier",
+              "cancel": "Annuler",
+              "submit": "Créer"
+            }
+          }
         }
       }
     }

@@ -1,22 +1,42 @@
 import { useQuery } from "@tanstack/react-query";
 import { getDriver } from "@/features/config/config";
-import { Button } from "@openfun/cunningham-react";
+import {
+  Button,
+  Input,
+  Modal,
+  ModalProps,
+  ModalSize,
+  useModal,
+} from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
+import { SubmitHandler, useForm } from "react-hook-form";
+import { useExplorer } from "./ExplorerContext";
+
+type Inputs = {
+  title: string;
+};
+
 export const ExplorerTree = () => {
   const { t } = useTranslation();
   const driver = getDriver();
-  console.log("ExplorerTree", driver);
+  // itemId is the id of the current item
+  const { itemId, item } = useExplorer();
+
   const { data } = useQuery({
-    queryKey: ["explorer-tree"],
+    queryKey: ["items"],
     queryFn: () => driver.getItems(),
   });
-  console.log("ExplorerTree", data);
+
+  const createFolderModal = useModal();
 
   return (
     <div>
       <div className="explorer__tree__actions">
         <div className="explorer__tree__actions__left">
-          <Button icon={<span className="material-icons">add</span>}>
+          <Button
+            icon={<span className="material-icons">add</span>}
+            onClick={createFolderModal.open}
+          >
             {t("explorer.tree.createFolder")}
           </Button>
           <Button color="secondary">{t("explorer.tree.import")}</Button>
@@ -29,10 +49,59 @@ export const ExplorerTree = () => {
       </div>
       <h4>Explorer Tree</h4>
       <div>
+        Current item: {itemId} ( {item?.title} )
         {data?.map((item) => (
-          <div key={item.id}>{item.name}</div>
+          <div key={item.id}>{item.title}</div>
         ))}
       </div>
+      <ExplorerCreateFolderModal {...createFolderModal} />
     </div>
+  );
+};
+
+const ExplorerCreateFolderModal = (
+  props: Pick<ModalProps, "isOpen" | "onClose">
+) => {
+  const { itemId } = useExplorer();
+  const { t } = useTranslation();
+  const driver = getDriver();
+
+  const { register, handleSubmit } = useForm<Inputs>();
+  const onSubmit: SubmitHandler<Inputs> = async (data) => {
+    const item = await driver.createFolder({
+      ...data,
+      parentId: itemId,
+    });
+    props.onClose();
+  };
+
+  return (
+    <Modal
+      {...props}
+      size={ModalSize.SMALL}
+      title={t("explorer.actions.createFolder.modal.title")}
+      rightActions={
+        <>
+          <Button color="secondary" onClick={props.onClose}>
+            {t("explorer.actions.createFolder.modal.cancel")}
+          </Button>
+          <Button type="submit" form="create-folder-form">
+            {t("explorer.actions.createFolder.modal.submit")}
+          </Button>
+        </>
+      }
+    >
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        id="create-folder-form"
+        className="mt-s"
+      >
+        <Input
+          label={t("explorer.actions.createFolder.modal.label")}
+          fullWidth={true}
+          {...register("title")}
+        />
+      </form>
+    </Modal>
   );
 };

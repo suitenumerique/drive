@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-table";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useExplorer } from "./Explorer";
+import { useExplorer } from "./ExplorerContext";
 import { database } from "./database";
 import { FolderIcon } from "@/features/ui/components/icon/Icon";
 import { FileIcon } from "@/features/ui/components/icon/Icon";
@@ -21,17 +21,20 @@ export const ExplorerGrid = () => {
   const { t } = useTranslation();
   const lastSelectedRowRef = useRef<string | null>(null);
   const columnHelper = createColumnHelper<Item>();
-  const { setSelectedItems, selectedItems } = useExplorer();
+  const {
+    setSelectedItemIds: setSelectedItems,
+    selectedItemIds: selectedItems,
+  } = useExplorer();
   const router = useRouter();
   const columns = [
-    columnHelper.accessor("name", {
+    columnHelper.accessor("title", {
       header: t("explorer.grid.name"),
       cell: (params) => (
         <div className="explorer__grid__item__name">
           {params.row.original.type === ItemType.FOLDER && <FolderIcon />}
           {params.row.original.type === ItemType.FILE && <FileIcon />}
           <span className="explorer__grid__item__name__text">
-            {params.row.original.name}
+            {params.row.original.title}
           </span>
         </div>
       ),
