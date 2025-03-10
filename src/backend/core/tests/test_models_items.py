@@ -137,6 +137,7 @@ def test_models_items_get_abilities_forbidden(
         "tree": False,
         "update": False,
         "upload_ended": False,
+        "wopi": False,
     }
     nb_queries = 1 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
@@ -180,6 +181,7 @@ def test_models_items_get_abilities_reader(
         "tree": True,
         "update": False,
         "upload_ended": False,
+        "wopi": True,
     }
     nb_queries = 1 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
@@ -223,6 +225,7 @@ def test_models_items_get_abilities_editor(
         "tree": True,
         "update": True,
         "upload_ended": False,
+        "wopi": True,
     }
     nb_queries = 1 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
@@ -253,6 +256,7 @@ def test_models_items_get_abilities_owner(django_assert_num_queries):
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "wopi": True,
     }
     with django_assert_num_queries(1):
         assert item.get_abilities(user) == expected_abilities
@@ -283,6 +287,7 @@ def test_models_items_get_abilities_administrator(django_assert_num_queries):
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "wopi": True,
     }
     with django_assert_num_queries(1):
         assert item.get_abilities(user) == expected_abilities
@@ -312,6 +317,7 @@ def test_models_items_get_abilities_editor_user(django_assert_num_queries):
         "tree": True,
         "update": True,
         "upload_ended": False,
+        "wopi": True,
     }
     with django_assert_num_queries(1):
         assert item.get_abilities(user) == expected_abilities
@@ -342,6 +348,7 @@ def test_models_items_get_abilities_reader_user(django_assert_num_queries):
         "tree": True,
         "update": access_from_link,
         "upload_ended": False,
+        "wopi": True,
     }
     with django_assert_num_queries(1):
         assert item.get_abilities(user) == expected_abilities
@@ -375,6 +382,7 @@ def test_models_items_get_abilities_preset_role(django_assert_num_queries):
         "tree": True,
         "update": False,
         "upload_ended": False,
+        "wopi": True,
     }
 
 

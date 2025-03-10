@@ -84,6 +84,7 @@ def test_api_items_trashbin_format():
             "tree": True,
             "update": True,
             "upload_ended": True,
+            "wopi": True,
         },
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": str(item.creator.id),

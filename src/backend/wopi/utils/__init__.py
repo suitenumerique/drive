@@ -19,3 +19,19 @@ def is_item_wopi_supported(item):
         if item.mimetype in client_config["mimetypes"]:
             return True
     return False
+
+
+def get_wopi_client_config(item):
+    """
+    Get the WOPI client configuration for an item.
+    """
+    if item.type != models.ItemTypeChoices.FILE:
+        return False
+
+    if item.upload_state != models.ItemUploadStateChoices.UPLOADED:
+        return False
+
+    for _, client_config in settings.WOPI_CLIENTS_CONFIGURATION.items():
+        if item.mimetype in client_config["mimetypes"]:
+            return client_config
+    return None

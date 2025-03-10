@@ -681,6 +681,7 @@ class Item(TreeModel, BaseModel):
             "media_auth": can_get,
             "update": can_update,
             "upload_ended": is_owner_or_admin,
+            "wopi": can_get,
         }
 
     def send_email(self, subject, emails, context=None, language=None):
