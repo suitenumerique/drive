@@ -4,15 +4,19 @@ import { useTranslation } from "next-i18next";
 import { DefaultLayout } from "@/features/layouts/components/default/DefaultLayout";
 import { ProConnectButton } from "@lasuite/ui-kit";
 import { login, useAuth } from "@/features/auth/Auth";
-import { useRouter } from "next/router";
-
+import { gotoLastVisitedItem } from "@/features/explorer/utils/utils";
+import { useEffect } from "react";
 export default function HomePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const router = useRouter();
+
+  useEffect(() => {
+    if (user) {
+      gotoLastVisitedItem();
+    }
+  }, [user]);
 
   if (user) {
-    router.push("/explorer/items/truc");
     return null;
   }
 

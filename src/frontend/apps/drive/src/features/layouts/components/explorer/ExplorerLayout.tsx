@@ -3,6 +3,8 @@ import { ExplorerTree } from "@/features/explorer/components/ExplorerTree";
 import { MainLayout } from "@lasuite/ui-kit";
 import logo from "@/assets/logo.svg";
 import { HeaderRight } from "../header/Header";
+import { ExplorerProvider } from "@/features/explorer/components/ExplorerContext";
+import { useRouter } from "next/router";
 
 /**
  * This layout is used for the explorer page.
@@ -10,19 +12,23 @@ import { HeaderRight } from "../header/Header";
  */
 export const ExplorerLayout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
+  const router = useRouter();
+
   if (!user) {
     login();
     return null;
   }
 
   return (
-    <MainLayout
-      enableResize
-      leftPanelContent={<ExplorerTree />}
-      icon={<img src={logo.src} alt="logo" />}
-      rightHeaderContent={<HeaderRight />}
-    >
-      {children}
-    </MainLayout>
+    <ExplorerProvider itemId={router.query.id as string} displayMode="app">
+      <MainLayout
+        enableResize
+        leftPanelContent={<ExplorerTree />}
+        icon={<img src={logo.src} alt="logo" />}
+        rightHeaderContent={<HeaderRight />}
+      >
+        {children}
+      </MainLayout>
+    </ExplorerProvider>
   );
 };
