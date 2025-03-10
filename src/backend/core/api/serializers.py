@@ -11,6 +11,7 @@ from rest_framework import exceptions, serializers
 
 from core import models
 from core.api import utils
+from wopi import utils as wopi_utils
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -236,16 +237,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     
     def get_is_wopi_supported(self, item):
         """Return whether the item is supported by WOPI protocol."""
-        if item.type != models.ItemTypeChoices.FILE:
-            return False
-
-        if item.upload_state != models.ItemUploadStateChoices.UPLOADED:
-            return False
-
-        for _, client_config in settings.WOPI_CLIENTS_CONFIGURATION.items():
-            if item.mimetype in client_config["mimetypes"]:
-                return True
-        return False
+        return wopi_utils.is_item_wopi_supported(item)
 
 
 class ItemSerializer(ListItemSerializer):
