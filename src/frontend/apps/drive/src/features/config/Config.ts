@@ -4,8 +4,8 @@ import { DummyDriver } from "../drivers/implementations/DummyDriver";
 export const getConfig = () => {
   // TODO: Later, be based on URL query params for instance.
   return {
-    driver: new DummyDriver(),
-    // driver: new StandardDriver(),
+    // driver: new DummyDriver(),
+    driver: new StandardDriver(),
   };
 };
 

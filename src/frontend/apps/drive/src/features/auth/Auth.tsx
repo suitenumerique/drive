@@ -46,6 +46,7 @@ export const Auth = ({
 
   useEffect(() => {
     void init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (user === undefined) {
