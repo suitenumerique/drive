@@ -527,6 +527,11 @@ class Base(Configuration):
     )
     WOPI_CLIENTS_CONFIGURATION = {}
 
+    # We recommend using an access_token_ttl value that makes the access token valid for 10 hours.
+    WOPI_ACCESS_TOKEN_TIMEOUT = values.IntegerValue(
+        60 * 60 * 10, environ_name="WOPI_ACCESS_TOKEN_TIMEOUT", environ_prefix=None
+    )
+
     # pylint: disable=invalid-name
     @property
     def ENVIRONMENT(self):
