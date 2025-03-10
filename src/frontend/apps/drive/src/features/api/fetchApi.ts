@@ -20,10 +20,15 @@ export interface fetchAPIOptions {
 
 export const fetchAPI = async (
   input: string,
-  init?: RequestInit,
+  init?: RequestInit & { params?: Record<string, string> },
   options?: fetchAPIOptions
 ) => {
-  const apiUrl = `${baseApiUrl("1.0")}${input}`;
+  const apiUrl = new URL(`${baseApiUrl("1.0")}${input}`);
+  if (init?.params) {
+    Object.entries(init.params).forEach(([key, value]) => {
+      apiUrl.searchParams.set(key, value);
+    });
+  }
   const csrfToken = getCSRFToken();
 
   const response = await fetch(apiUrl, {
