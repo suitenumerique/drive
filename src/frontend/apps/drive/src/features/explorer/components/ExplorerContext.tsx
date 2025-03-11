@@ -3,7 +3,6 @@ import { Dispatch } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Item } from "@/features/drivers/types";
 import { createContext } from "react";
-import { database } from "./database";
 import { getDriver } from "@/features/config/Config";
 
 export interface ExplorerContextType {
@@ -13,6 +12,8 @@ export interface ExplorerContextType {
   selectedItems: Item[];
   itemId: string;
   item: Item | undefined;
+  children: Item[] | undefined;
+  tree: Item | undefined;
   onNavigate: (event: NavigationEvent) => void;
 }
 
@@ -52,14 +53,26 @@ export const ExplorerProvider = ({
     Record<string, boolean>
   >({});
 
-  const getSelectedItems = () => {
-    return database.filter((item) => selectedItemIds[item.id]);
-  };
-
   const { data: item } = useQuery({
     queryKey: ["items", itemId],
     queryFn: () => getDriver().getItem(itemId),
   });
+
+  const { data: itemChildren } = useQuery({
+    queryKey: ["items", itemId, "children"],
+    queryFn: () => getDriver().getChildren(itemId),
+  });
+
+  const { data: tree } = useQuery({
+    queryKey: ["items", itemId, "tree"],
+    queryFn: () => getDriver().getTree(itemId),
+  });
+
+  const getSelectedItems = () => {
+    return itemChildren
+      ? itemChildren.filter((item) => selectedItemIds[item.id])
+      : [];
+  };
 
   return (
     <ExplorerContext.Provider
@@ -70,6 +83,8 @@ export const ExplorerProvider = ({
         selectedItems: getSelectedItems(),
         itemId,
         item,
+        tree,
+        children: itemChildren,
         onNavigate,
       }}
     >
