@@ -7,5 +7,6 @@ export type Item = {
   id: string;
   title: string;
   type: ItemType;
-  lastUpdate: string;
+  updated_at: Date;
+  children?: Item[];
 };
