@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDriver } from "@/features/config/config";
 import {
   Button,
@@ -10,7 +10,8 @@ import {
 } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { SubmitHandler, useForm } from "react-hook-form";
-import { useExplorer } from "./ExplorerContext";
+import { NavigationEventType, useExplorer } from "./ExplorerContext";
+import { Item } from "@/features/drivers/types";
 
 type Inputs = {
   title: string;
@@ -18,16 +19,39 @@ type Inputs = {
 
 export const ExplorerTree = () => {
   const { t } = useTranslation();
-  const driver = getDriver();
-  // itemId is the id of the current item
-  const { itemId, item } = useExplorer();
 
-  const { data } = useQuery({
-    queryKey: ["items"],
-    queryFn: () => driver.getItems(),
-  });
+  // itemId is the id of the current item
+  const { item, tree, onNavigate } = useExplorer();
 
   const createFolderModal = useModal();
+
+  const drawTreeDuPauvre = (treeItem: Item) => {
+    return (
+      <div key={treeItem.id}>
+        <div
+          style={{
+            fontWeight: treeItem.id === item?.id ? "bold" : "normal",
+            cursor: "pointer",
+          }}
+          onClick={() =>
+            onNavigate({
+              type: NavigationEventType.ITEM,
+              item: treeItem,
+            })
+          }
+        >
+          {treeItem.title}
+        </div>
+        <div
+          style={{
+            paddingLeft: "2rem",
+          }}
+        >
+          {treeItem.children?.map((child) => drawTreeDuPauvre(child))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div>
@@ -47,12 +71,12 @@ export const ExplorerTree = () => {
           icon={<span className="material-icons">search</span>}
         ></Button>
       </div>
-      <h4>Explorer Tree</h4>
-      <div>
-        Current item: {itemId} ( {item?.title} )
-        {data?.map((item) => (
-          <div key={item.id}>{item.title}</div>
-        ))}
+      <div
+        style={{
+          padding: "12px",
+        }}
+      >
+        {tree && drawTreeDuPauvre(tree)}
       </div>
       <ExplorerCreateFolderModal {...createFolderModal} />
     </div>
@@ -65,10 +89,22 @@ const ExplorerCreateFolderModal = (
   const { itemId } = useExplorer();
   const { t } = useTranslation();
   const driver = getDriver();
-
   const { register, handleSubmit } = useForm<Inputs>();
+
+  const queryClient = useQueryClient();
+  const createFolder = useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.createFolder>) => {
+      return driver.createFolder(...payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["items", itemId],
+      });
+    },
+  });
+
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
-    const item = await driver.createFolder({
+    createFolder.mutate({
       ...data,
       parentId: itemId,
     });
