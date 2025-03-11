@@ -9,24 +9,24 @@ import {
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavigationEventType, useExplorer } from "./ExplorerContext";
-import { database } from "./database";
 import { FolderIcon } from "@/features/ui/components/icon/Icon";
 import { FileIcon } from "@/features/ui/components/icon/Icon";
 import clsx from "clsx";
-import { useRouter } from "next/router";
 import { DropdownMenu } from "@lasuite/ui-kit";
-import { Button } from "@openfun/cunningham-react";
+import { Button, Loader, useCunningham } from "@openfun/cunningham-react";
+import gridEmpty from "@/assets/grid_empty.png";
 
 export const ExplorerGrid = () => {
   const { t } = useTranslation();
+  const { t: tc } = useCunningham();
   const lastSelectedRowRef = useRef<string | null>(null);
   const columnHelper = createColumnHelper<Item>();
   const {
     setSelectedItemIds: setSelectedItems,
     selectedItemIds: selectedItems,
     onNavigate,
+    children,
   } = useExplorer();
-  const router = useRouter();
   const columns = [
     columnHelper.accessor("title", {
       header: t("explorer.grid.name"),
@@ -40,11 +40,11 @@ export const ExplorerGrid = () => {
         </div>
       ),
     }),
-    columnHelper.accessor("lastUpdate", {
+    columnHelper.accessor("updated_at", {
       header: t("explorer.grid.last_update"),
       cell: (info) => (
         <div className="explorer__grid__item__last-update">
-          {info.row.original.lastUpdate}
+          {info.row.original.updated_at.toDateString()}
         </div>
       ),
     }),
@@ -55,7 +55,7 @@ export const ExplorerGrid = () => {
   ];
 
   const table = useReactTable({
-    data: database,
+    data: children ?? [],
     columns,
     getCoreRowModel: getCoreRowModel(),
     enableRowSelection: true,
@@ -64,8 +64,34 @@ export const ExplorerGrid = () => {
     },
   });
 
-  return (
-    <div className="c__datagrid explorer__grid">
+  const isLoading = children === undefined;
+  const isEmpty = table.getRowModel().rows.length === 0;
+
+  const getContent = () => {
+    if (isLoading) {
+      return (
+        <div className="c__datagrid__loader">
+          <div className="c__datagrid__loader__background" />
+          <Loader aria-label={tc("components.datagrid.loader_aria")} />
+        </div>
+      );
+    }
+    if (isEmpty) {
+      return (
+        <div className="c__datagrid__empty-placeholder fs-h3 clr-greyscale-900 fw-bold">
+          <img src={gridEmpty.src} alt={t("components.datagrid.empty_alt")} />
+          <div className="explorer__grid__empty">
+            <div className="explorer__grid__empty__caption">
+              {t("explorer.grid.empty.caption")}
+            </div>
+            <div className="explorer__grid__empty__cta">
+              {t("explorer.grid.empty.cta")}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return (
       <div className="c__datagrid__table__container">
         <table>
           <thead>
@@ -170,6 +196,17 @@ export const ExplorerGrid = () => {
           </tbody>
         </table>
       </div>
+    );
+  };
+
+  return (
+    <div
+      className={clsx("c__datagrid explorer__grid", {
+        "c__datagrid--empty": isEmpty,
+        "c__datagrid--loading": isLoading,
+      })}
+    >
+      {getContent()}
     </div>
   );
 };

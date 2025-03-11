@@ -8,7 +8,7 @@ export const ExplorerInner = () => {
   const {
     setSelectedItemIds: setSelectedItems,
     displayMode,
-    selectedItems: selectedItemsEntities,
+    selectedItems,
   } = useExplorer();
 
   const onSelectionStart = ({ event, selection }: SelectionEvent) => {
@@ -56,7 +56,7 @@ export const ExplorerInner = () => {
     >
       <div className={`explorer explorer--${displayMode}`}>
         <div className="explorer__container">
-          {selectedItemsEntities.length > 0 ? (
+          {selectedItems.length > 0 ? (
             <ExplorerSelectionBar />
           ) : (
             <div className="explorer__filters">Filters</div>

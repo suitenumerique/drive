@@ -9,7 +9,11 @@
       "explorer": {
         "grid": {
           "name": "Name",
-          "last_update": "Last Update"
+          "last_update": "Last Update",
+          "empty": {
+            "caption": "Drop your files here",
+            "cta": "Or click \"Create\""
+          }
         },
         "tree": {
           "createFolder": "Create",
@@ -48,7 +52,11 @@
       "explorer": {
         "grid": {
           "name": "Nom",
-          "last_update": "Dernière modification"
+          "last_update": "Dernière modification",
+          "empty": {
+            "caption": "Déposez vos fichiers ici",
+            "cta": "Ou cliquez sur \"Créer\""
+          }
         },
         "tree": {
           "createFolder": "Créer",

@@ -76,6 +76,32 @@
       }
     }
 
+    &.c__datagrid--empty {
+      border: none;
+    }
+
+    .c__datagrid__empty-placeholder img {
+      border: none;
+    }
+
+    &__empty {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      &__caption {
+        font-size: 14px;
+        color: var(--c--theme--colors--greyscale-1000);
+        font-weight: 700;
+      }
+      &__cta {
+        font-size: 12px;
+        color: var(--c--theme--colors--greyscale-600);
+        font-weight: 400;
+      }
+    }
+
     table {
       tr td:first-child,
       tr th:first-child {
