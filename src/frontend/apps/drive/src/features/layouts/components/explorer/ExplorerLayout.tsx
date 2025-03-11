@@ -3,7 +3,10 @@ import { ExplorerTree } from "@/features/explorer/components/ExplorerTree";
 import { MainLayout } from "@lasuite/ui-kit";
 import logo from "@/assets/logo.svg";
 import { HeaderRight } from "../header/Header";
-import { ExplorerProvider } from "@/features/explorer/components/ExplorerContext";
+import {
+  ExplorerProvider,
+  NavigationEvent,
+} from "@/features/explorer/components/ExplorerContext";
 import { useRouter } from "next/router";
 
 /**
@@ -19,8 +22,16 @@ export const ExplorerLayout = ({ children }: { children: React.ReactNode }) => {
     return null;
   }
 
+  const onNavigate = (e: NavigationEvent) => {
+    router.push(`/explorer/items/${e.item.id}`);
+  };
+
   return (
-    <ExplorerProvider itemId={router.query.id as string} displayMode="app">
+    <ExplorerProvider
+      itemId={router.query.id as string}
+      displayMode="app"
+      onNavigate={onNavigate}
+    >
       <MainLayout
         enableResize
         leftPanelContent={<ExplorerTree />}

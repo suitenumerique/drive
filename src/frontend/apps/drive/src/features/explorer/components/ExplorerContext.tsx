@@ -13,6 +13,7 @@ export interface ExplorerContextType {
   selectedItems: Item[];
   itemId: string;
   item: Item | undefined;
+  onNavigate: (event: NavigationEvent) => void;
 }
 
 export const ExplorerContext = createContext<ExplorerContextType | undefined>(
@@ -27,20 +28,25 @@ export const useExplorer = () => {
   return context;
 };
 
-/**
- *
- * TODO:
- * - make router external as props onNavigate = {type, itemid}
- *J
- */
+export enum NavigationEventType {
+  ITEM,
+}
+
+export type NavigationEvent = {
+  type: NavigationEventType.ITEM;
+  item: Item;
+};
+
 export const ExplorerProvider = ({
   children,
   displayMode = "app",
   itemId,
+  onNavigate,
 }: {
   children: React.ReactNode;
   displayMode: "sdk" | "app";
   itemId: string;
+  onNavigate: (event: NavigationEvent) => void;
 }) => {
   const [selectedItemIds, setSelectedItemIds] = useState<
     Record<string, boolean>
@@ -64,6 +70,7 @@ export const ExplorerProvider = ({
         selectedItems: getSelectedItems(),
         itemId,
         item,
+        onNavigate,
       }}
     >
       {children}

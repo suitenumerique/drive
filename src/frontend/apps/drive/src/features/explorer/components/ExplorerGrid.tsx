@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-table";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useExplorer } from "./ExplorerContext";
+import { NavigationEventType, useExplorer } from "./ExplorerContext";
 import { database } from "./database";
 import { FolderIcon } from "@/features/ui/components/icon/Icon";
 import { FileIcon } from "@/features/ui/components/icon/Icon";
@@ -24,6 +24,7 @@ export const ExplorerGrid = () => {
   const {
     setSelectedItemIds: setSelectedItems,
     selectedItemIds: selectedItems,
+    onNavigate,
   } = useExplorer();
   const router = useRouter();
   const columns = [
@@ -141,7 +142,10 @@ export const ExplorerGrid = () => {
 
                     // Double click to open the item
                     if (e.detail === 2) {
-                      router.push(`/explorer/items/${row.id}`);
+                      onNavigate({
+                        type: NavigationEventType.ITEM,
+                        item: row.original,
+                      });
                     }
                   }}
                 >
