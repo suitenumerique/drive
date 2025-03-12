@@ -61,17 +61,19 @@ def test_api_items_list_format():
     item2.filename = "logo.png"
     item2.save()
 
+    item3 = user.get_main_workspace()
+
     response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
     content = response.json()
     results = content.pop("results")
     assert content == {
-        "count": 2,
+        "count": 3,
         "next": None,
         "previous": None,
     }
-    assert len(results) == 2
+    assert len(results) == 3
     assert results == [
         {
             "id": str(item2.id),
@@ -93,6 +95,7 @@ def test_api_items_list_format():
             "upload_state": models.ItemUploadStateChoices.UPLOADED,
             "url": f"http://localhost:8083/media/item/{item2.id!s}/logo.png",
             "mimetype": None,
+            "main_workspace": False,
         },
         {
             "id": str(item.id),
@@ -114,6 +117,28 @@ def test_api_items_list_format():
             "upload_state": None,
             "url": None,
             "mimetype": None,
+            "main_workspace": False,
+        },
+        {
+            "id": str(item3.id),
+            "abilities": item3.get_abilities(user),
+            "created_at": item3.created_at.isoformat().replace("+00:00", "Z"),
+            "creator": str(item3.creator.id),
+            "depth": 1,
+            "is_favorite": False,
+            "link_reach": item3.link_reach,
+            "link_role": item3.link_role,
+            "nb_accesses": 1,
+            "numchild": 0,
+            "numchild_folder": 0,
+            "path": str(item3.path),
+            "title": item3.title,
+            "updated_at": item3.updated_at.isoformat().replace("+00:00", "Z"),
+            "user_roles": ["owner"],
+            "type": models.ItemTypeChoices.FOLDER,
+            "upload_state": None,
+            "url": None,
+            "main_workspace": True,
         },
     ]
 
@@ -197,9 +222,10 @@ def test_api_items_list_authenticated_direct(django_assert_num_queries):
         str(item2.id),
         str(child3_with_access.id),
         str(child4_with_access.id),
+        str(user.get_main_workspace().id),
     }
 
-    with django_assert_num_queries(8):
+    with django_assert_num_queries(9):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
@@ -239,9 +265,11 @@ def test_api_items_list_authenticated_via_team(
         )
     ]
 
-    expected_ids = {str(item.id) for item in items_team1 + items_team2}
+    expected_ids = {
+        str(item.id) for item in items_team1 + items_team2 + [user.get_main_workspace()]
+    }
 
-    with django_assert_num_queries(9):
+    with django_assert_num_queries(10):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
@@ -250,7 +278,7 @@ def test_api_items_list_authenticated_via_team(
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 5
+    assert len(results) == 6
     results_id = {result["id"] for result in results}
     assert expected_ids == results_id
 
@@ -278,7 +306,7 @@ def test_api_items_list_authenticated_link_reach_restricted(
     )
     models.LinkTrace.objects.create(item=other_item, user=user)
 
-    with django_assert_num_queries(5):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
@@ -289,8 +317,9 @@ def test_api_items_list_authenticated_link_reach_restricted(
     results = response.json()["results"]
     # Only the other item is returned but not the restricted item even though the user
     # visited it earlier (probably b/c it previously had public or authenticated reach...)
-    assert len(results) == 1
+    assert len(results) == 2
     assert results[0]["id"] == str(other_item.id)
+    assert results[1]["id"] == str(user.get_main_workspace().id)
 
 
 def test_api_items_list_authenticated_link_reach_public_or_authenticated(
@@ -329,9 +358,14 @@ def test_api_items_list_authenticated_link_reach_public_or_authenticated(
         type=models.ItemTypeChoices.FILE,
     )
 
-    expected_ids = {str(item1.id), str(item2.id), str(visible_child.id)}
+    expected_ids = {
+        str(item1.id),
+        str(item2.id),
+        str(visible_child.id),
+        str(user.get_main_workspace().id),
+    }
 
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(8):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
@@ -357,7 +391,7 @@ def test_api_items_list_pagination(
     item_ids = [
         str(access.item_id)
         for access in factories.UserItemAccessFactory.create_batch(3, user=user)
-    ]
+    ] + [str(user.get_main_workspace().id)]
 
     # Get page 1
     response = client.get(
@@ -367,7 +401,7 @@ def test_api_items_list_pagination(
     assert response.status_code == 200
     content = response.json()
 
-    assert content["count"] == 3
+    assert content["count"] == 4
     assert content["next"] == "http://testserver/api/v1.0/items/?page=2"
     assert content["previous"] is None
 
@@ -383,12 +417,13 @@ def test_api_items_list_pagination(
     assert response.status_code == 200
     content = response.json()
 
-    assert content["count"] == 3
+    assert content["count"] == 4
     assert content["next"] is None
     assert content["previous"] == "http://testserver/api/v1.0/items/"
 
-    assert len(content["results"]) == 1
-    item_ids.remove(content["results"][0]["id"])
+    assert len(content["results"]) == 2
+    for item in content["results"]:
+        item_ids.remove(item["id"])
     assert item_ids == []
 
 
@@ -409,8 +444,9 @@ def test_api_items_list_authenticated_distinct():
 
     assert response.status_code == 200
     content = response.json()
-    assert len(content["results"]) == 1
+    assert len(content["results"]) == 2
     assert content["results"][0]["id"] == str(item.id)
+    assert content["results"][1]["id"] == str(user.get_main_workspace().id)
 
 
 def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
@@ -430,7 +466,7 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
     )
 
     url = "/api/v1.0/items/"
-    with django_assert_num_queries(9):
+    with django_assert_num_queries(10):
         response = client.get(url)
 
     # nb_accesses should now be cached
@@ -439,7 +475,7 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 5
+    assert len(results) == 6
 
     assert all(result["is_favorite"] is False for result in results)
 
@@ -452,7 +488,7 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 5
+    assert len(results) == 6
 
     # Check if the "is_favorite" annotation is correctly set for the favorited items
     favorited_ids = {str(doc.id) for doc in special_items}

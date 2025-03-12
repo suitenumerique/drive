@@ -59,16 +59,20 @@ def test_models_items_soft_delete(depth):
     """Trying to delete an item that is already deleted or is a descendant of
     a deleted item should raise an error.
     """
+    # Creating a user also creates a main workspace
+    # So we create a user and reuse it to avoid having many items created for nothing and polluting
+    # the assertion counting the number of Item created
+    user = factories.UserFactory()
     items = []
     for i in range(depth + 1):
         items.append(
-            factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+            factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, creator=user)
             if i == 0
             else factories.ItemFactory(
-                parent=items[-1], type=models.ItemTypeChoices.FOLDER
+                parent=items[-1], type=models.ItemTypeChoices.FOLDER, creator=user
             )
         )
-    assert models.Item.objects.count() == depth + 1
+    assert models.Item.objects.count() == depth + 1 + 1  # +1 for the main workspace
 
     # Delete any one of the items...
     deleted_item = random.choice(items)

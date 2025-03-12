@@ -14,13 +14,14 @@ pytestmark = pytest.mark.django_db
 def test_api_items_delete_anonymous():
     """Anonymous users should not be allowed to destroy a item."""
     item = factories.ItemFactory()
+    existing_items = models.Item.objects.all().count()
 
     response = APIClient().delete(
         f"/api/v1.0/items/{item.id!s}/",
     )
 
     assert response.status_code == 401
-    assert models.Item.objects.count() == 1
+    assert models.Item.objects.count() == existing_items
 
 
 @pytest.mark.parametrize("reach", models.LinkReachChoices.values)
@@ -30,19 +31,20 @@ def test_api_items_delete_authenticated_unrelated(reach, role):
     Authenticated users should not be allowed to delete a item to which
     they are not related.
     """
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
 
     client = APIClient()
     client.force_login(user)
 
     item = factories.ItemFactory(link_reach=reach, link_role=role)
+    existing_items = models.Item.objects.all().count()
 
     response = client.delete(
         f"/api/v1.0/items/{item.id!s}/",
     )
 
     assert response.status_code == 403
-    assert models.Item.objects.count() == 2
+    assert models.Item.objects.count() == existing_items
 
 
 @pytest.mark.parametrize("role", ["reader", "editor", "administrator"])
@@ -52,7 +54,7 @@ def test_api_items_delete_authenticated_not_owner(via, role, mock_user_teams):
     Authenticated users should not be allowed to delete a item for which they are
     only a reader, editor or administrator.
     """
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
 
     client = APIClient()
     client.force_login(user)
@@ -64,6 +66,7 @@ def test_api_items_delete_authenticated_not_owner(via, role, mock_user_teams):
         mock_user_teams.return_value = ["lasuite", "unknown"]
         factories.TeamItemAccessFactory(item=item, team="lasuite", role=role)
 
+    existing_items = models.Item.objects.all().count()
     response = client.delete(
         f"/api/v1.0/items/{item.id}/",
     )
@@ -72,7 +75,7 @@ def test_api_items_delete_authenticated_not_owner(via, role, mock_user_teams):
     assert response.json() == {
         "detail": "You do not have permission to perform this action."
     }
-    assert models.Item.objects.count() == 2
+    assert models.Item.objects.count() == existing_items
 
 
 @pytest.mark.parametrize("depth", [1, 2, 3])
@@ -89,14 +92,19 @@ def test_api_items_delete_authenticated_owner_of_ancestor(depth):
     for i in range(depth):
         items.append(
             factories.UserItemAccessFactory(
-                role="owner", user=user, item__type=models.ItemTypeChoices.FOLDER
+                role="owner",
+                user=user,
+                item__type=models.ItemTypeChoices.FOLDER,
+                item__creator=user,
             ).item
             if i == 0
             else factories.ItemFactory(
-                parent=items[-1], type=models.ItemTypeChoices.FOLDER
+                parent=items[-1],
+                type=models.ItemTypeChoices.FOLDER,
+                creator=user,
             )
         )
-    assert models.Item.objects.count() == depth
+    assert models.Item.objects.count() == depth + 1
 
     response = client.delete(
         f"/api/v1.0/items/{items[-1].id}/",
@@ -105,8 +113,8 @@ def test_api_items_delete_authenticated_owner_of_ancestor(depth):
     assert response.status_code == 204
 
     # Make sure it is only a soft delete
-    assert models.Item.objects.count() == depth
-    assert models.Item.objects.filter(deleted_at__isnull=True).count() == depth - 1
+    assert models.Item.objects.count() == depth + 1
+    assert models.Item.objects.filter(deleted_at__isnull=True).count() == depth
     assert models.Item.objects.filter(deleted_at__isnull=False).count() == 1
 
 
@@ -134,6 +142,5 @@ def test_api_items_delete_authenticated_owner(via, mock_user_teams):
     assert response.status_code == 204
 
     # Make sure it is only a soft delete
-    assert models.Item.objects.count() == 1
-    assert models.Item.objects.filter(deleted_at__isnull=True).exists() is False
-    assert models.Item.objects.filter(deleted_at__isnull=False).count() == 1
+    item.refresh_from_db()
+    assert item.deleted_at is not None

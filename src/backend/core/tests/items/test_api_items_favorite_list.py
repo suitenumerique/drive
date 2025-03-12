@@ -84,6 +84,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "url": None,
                 "mimetype": None,
                 "user_roles": ["reader"],
+                "main_workspace": False,
             }
         ],
     }

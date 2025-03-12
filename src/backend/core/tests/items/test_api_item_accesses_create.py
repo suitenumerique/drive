@@ -21,6 +21,7 @@ def test_api_item_accesses_create_anonymous():
     item = factories.ItemFactory()
 
     other_user = factories.UserFactory()
+    assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
     response = APIClient().post(
         f"/api/v1.0/items/{item.id!s}/accesses/",
         {
@@ -35,7 +36,7 @@ def test_api_item_accesses_create_anonymous():
     assert response.json() == {
         "detail": "Authentication credentials were not provided."
     }
-    assert models.ItemAccess.objects.exists() is False
+    assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
 
 
 def test_api_item_accesses_create_authenticated_unrelated():
@@ -43,14 +44,14 @@ def test_api_item_accesses_create_authenticated_unrelated():
     Authenticated users should not be allowed to create item accesses for a item to
     which they are not related.
     """
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
 
     client = APIClient()
     client.force_login(user)
 
     other_user = factories.UserFactory()
     item = factories.ItemFactory()
-
+    assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/accesses/",
         {
@@ -60,7 +61,7 @@ def test_api_item_accesses_create_authenticated_unrelated():
     )
 
     assert response.status_code == 403
-    assert not models.ItemAccess.objects.filter(user=other_user).exists()
+    assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
 
 
 @pytest.mark.parametrize("role", ["reader", "editor"])
@@ -68,8 +69,8 @@ def test_api_item_accesses_create_authenticated_unrelated():
 def test_api_item_accesses_create_authenticated_reader_or_editor(
     via, role, mock_user_teams
 ):
-    """Readers or editors of a item should not be allowed to create item accesses."""
-    user = factories.UserFactory(with_owned_item=True)
+    """Readers or editors of an item should not be allowed to create item accesses."""
+    user = factories.UserFactory()
 
     client = APIClient()
     client.force_login(user)
@@ -82,7 +83,7 @@ def test_api_item_accesses_create_authenticated_reader_or_editor(
         factories.TeamItemAccessFactory(item=item, team="lasuite", role=role)
 
     other_user = factories.UserFactory()
-
+    assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
     for new_role in [role[0] for role in models.RoleChoices.choices]:
         response = client.post(
             f"/api/v1.0/items/{item.id!s}/accesses/",
@@ -95,17 +96,17 @@ def test_api_item_accesses_create_authenticated_reader_or_editor(
 
         assert response.status_code == 403
 
-    assert not models.ItemAccess.objects.filter(user=other_user).exists()
+    assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
 
 
 @pytest.mark.parametrize("via", VIA)
 def test_api_item_accesses_create_authenticated_administrator(via, mock_user_teams):
     """
-    Administrators of a item should be able to create item accesses
+    Administrators of an item should be able to create item accesses
     except for the "owner" role.
     An email should be sent to the accesses to notify them of the adding.
     """
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
 
     client = APIClient()
     client.force_login(user)
@@ -118,7 +119,7 @@ def test_api_item_accesses_create_authenticated_administrator(via, mock_user_tea
         factories.TeamItemAccessFactory(item=item, team="lasuite", role="administrator")
 
     other_user = factories.UserFactory()
-
+    assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
     # It should not be allowed to create an owner access
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/accesses/",
@@ -133,6 +134,7 @@ def test_api_item_accesses_create_authenticated_administrator(via, mock_user_tea
     assert response.json() == {
         "detail": "Only owners of a resource can assign other users as owners."
     }
+    assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
 
     # It should be allowed to create a lower access
     role = random.choice(
@@ -151,8 +153,8 @@ def test_api_item_accesses_create_authenticated_administrator(via, mock_user_tea
     )
 
     assert response.status_code == 201
-    assert models.ItemAccess.objects.filter(user=other_user).count() == 1
-    new_item_access = models.ItemAccess.objects.filter(user=other_user).get()
+    assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 1
+    new_item_access = models.ItemAccess.objects.filter(user=other_user, item=item).get()
     other_user = serializers.UserSerializer(instance=other_user).data
     assert response.json() == {
         "abilities": new_item_access.get_abilities(user),
@@ -192,7 +194,7 @@ def test_api_item_accesses_create_authenticated_owner(via, mock_user_teams):
         factories.TeamItemAccessFactory(item=item, team="lasuite", role="owner")
 
     other_user = factories.UserFactory()
-
+    assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
     role = random.choice([role[0] for role in models.RoleChoices.choices])
 
     assert len(mail.outbox) == 0
@@ -207,8 +209,8 @@ def test_api_item_accesses_create_authenticated_owner(via, mock_user_teams):
     )
 
     assert response.status_code == 201
-    assert models.ItemAccess.objects.filter(user=other_user).count() == 1
-    new_item_access = models.ItemAccess.objects.filter(user=other_user).get()
+    assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 1
+    new_item_access = models.ItemAccess.objects.filter(user=other_user, item=item).get()
     other_user = serializers.UserSerializer(instance=other_user).data
     assert response.json() == {
         "id": str(new_item_access.id),

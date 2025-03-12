@@ -749,7 +749,7 @@ def test_api_item_invitations_delete_anonymous():
 
 def test_api_item_invitations_delete_authenticated_outsider():
     """Members unrelated to a item should not be allowed to cancel invitations."""
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
 
     item = factories.ItemFactory()
     invitation = factories.InvitationFactory(item=item)
@@ -790,7 +790,7 @@ def test_api_item_invitations_delete_privileged_members(role, via, mock_user_tea
 @pytest.mark.parametrize("via", VIA)
 def test_api_item_invitations_delete_readers_or_editors(via, role, mock_user_teams):
     """Readers or editors should not be able to cancel invitation."""
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
     item = factories.ItemFactory()
     if via == USER:
         factories.UserItemAccessFactory(item=item, user=user, role=role)

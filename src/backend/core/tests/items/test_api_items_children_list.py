@@ -52,6 +52,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 else None,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -75,6 +76,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 else None,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
         ],
     }
@@ -135,6 +137,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "upload_state": models.ItemUploadStateChoices.PENDING,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -156,6 +159,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "upload_state": models.ItemUploadStateChoices.UPLOADED,
                 "url": f"http://localhost:8083/media/item/{child2.id!s}/logo.png",
                 "mimetype": None,
+                "main_workspace": False,
             },
         ],
     }
@@ -224,6 +228,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 else None,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -247,6 +252,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 else None,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
         ],
     }
@@ -307,6 +313,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 else None,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -330,6 +337,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 else None,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
         ],
     }
@@ -340,7 +348,7 @@ def test_api_items_children_list_authenticated_unrelated_restricted():
     Authenticated users should not be allowed to retrieve the children of a item that is
     restricted and to which they are not related.
     """
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
 
     client = APIClient()
     client.force_login(user)
@@ -408,6 +416,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 else None,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -431,6 +440,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 else None,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
         ],
     }
@@ -492,6 +502,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 else None,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -515,6 +526,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 else None,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
         ],
     }
@@ -554,7 +566,7 @@ def test_api_items_children_list_authenticated_related_team_none(mock_user_teams
     """
     mock_user_teams.return_value = []
 
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
 
     client = APIClient()
     client.force_login(user)
@@ -625,6 +637,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 else None,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -648,6 +661,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 else None,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
         ],
     }
@@ -705,6 +719,7 @@ def test_api_items_children_list_filter_type():
                 else None,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
         ],
     }
@@ -741,6 +756,7 @@ def test_api_items_children_list_filter_type():
                 else None,
                 "url": None,
                 "mimetype": None,
+                "main_workspace": False,
             },
         ],
     }

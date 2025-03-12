@@ -28,6 +28,7 @@ def test_items_api_tree_anonymous_to_a_non_public_tree_structure():
         title="root",
         type=models.ItemTypeChoices.FOLDER,
         link_reach=models.LinkReachChoices.AUTHENTICATED,
+        main_workspace=True,
     )
 
     # Other root, with link_reach set to public. This one should not be visible in the returned tree
@@ -72,11 +73,14 @@ def test_items_api_tree_anonymous_to_a_non_public_tree_structure():
 
 def test_items_api_anonymous_to_a_public_tree_structure():
     """Anonymous user can access a public tree structure."""
+    user = factories.UserFactory()
     # root, should not be visible in the returned tree
     root = factories.ItemFactory(
         title="root",
         type=models.ItemTypeChoices.FOLDER,
         link_reach=models.LinkReachChoices.AUTHENTICATED,
+        creator=user,
+        main_workspace=True,
     )
 
     # Other root, with link_reach set to public. This one should not be visible in the returned tree
@@ -84,6 +88,8 @@ def test_items_api_anonymous_to_a_public_tree_structure():
         title="root_alone",
         type=models.ItemTypeChoices.FOLDER,
         link_reach=models.LinkReachChoices.PUBLIC,
+        creator=user,
+        main_workspace=True,
     )
 
     # child of level1 are not link_reach set to public
@@ -92,12 +98,14 @@ def test_items_api_anonymous_to_a_public_tree_structure():
         title="level1_1",
         type=models.ItemTypeChoices.FOLDER,
         link_reach=models.LinkReachChoices.PUBLIC,
+        creator=user,
     )
     level1_2 = factories.ItemFactory(
         parent=root,
         title="level1_2",
         type=models.ItemTypeChoices.FOLDER,
         link_reach=models.LinkReachChoices.PUBLIC,
+        creator=user,
     )
 
     # Populare level1_1 with authenticated link_reach
@@ -105,6 +113,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
         3,
         parent=level1_1,
         type=models.ItemTypeChoices.FILE,
+        creator=user,
     )
 
     # level 2 have one item with link_reach set to public and an other set to authenticated
@@ -113,12 +122,14 @@ def test_items_api_anonymous_to_a_public_tree_structure():
         parent=level1_2,
         type=models.ItemTypeChoices.FOLDER,
         link_reach=models.LinkReachChoices.RESTRICTED,
+        creator=user,
     )
     # No matter the linnk_reach of this item, it must be visible in the returned tree
     level2_2 = factories.ItemFactory(
         title="level2_2",
         parent=level1_2,
         type=models.ItemTypeChoices.FOLDER,
+        creator=user,
     )
 
     response = APIClient().get(f"/api/v1.0/items/{level2_1.id}/tree/")
@@ -140,7 +151,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "nb_accesses": 0,
                 "numchild": 0,
                 "numchild_folder": 0,
-                "path": "0000000.0000001.0000000",
+                "path": "0000001.0000001.0000000",
                 "title": "level2_1",
                 "type": level2_1.type,
                 "updated_at": level2_1.updated_at.isoformat().replace("+00:00", "Z"),
@@ -148,6 +159,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "url": None,
                 "mimetype": None,
                 "user_roles": [],
+                "main_workspace": False,
             },
             {
                 "abilities": level2_2.get_abilities(AnonymousUser()),
@@ -162,7 +174,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "nb_accesses": 0,
                 "numchild": 0,
                 "numchild_folder": 0,
-                "path": "0000000.0000001.0000001",
+                "path": "0000001.0000001.0000001",
                 "title": "level2_2",
                 "type": level2_2.type,
                 "updated_at": level2_2.updated_at.isoformat().replace("+00:00", "Z"),
@@ -170,6 +182,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "url": None,
                 "mimetype": None,
                 "user_roles": [],
+                "main_workspace": False,
             },
         ],
         "created_at": level1_2.created_at.isoformat().replace("+00:00", "Z"),
@@ -182,7 +195,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
         "nb_accesses": 0,
         "numchild": 2,
         "numchild_folder": 2,
-        "path": "0000000.0000001",
+        "path": "0000001.0000001",
         "title": "level1_2",
         "type": level1_2.type,
         "updated_at": level1_2.updated_at.isoformat().replace("+00:00", "Z"),
@@ -190,6 +203,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
         "url": None,
         "mimetype": None,
         "user_roles": [],
+        "main_workspace": False,
     }
 
 
@@ -200,11 +214,17 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
     client.force_login(user)
 
     root = factories.UserItemAccessFactory(
-        user=user, item__title="root", item__type=models.ItemTypeChoices.FOLDER
+        user=user,
+        item__title="root",
+        item__type=models.ItemTypeChoices.FOLDER,
+        item__main_workspace=True,
     )
     # another root alone, not visible in the returned tree
     factories.UserItemAccessFactory(
-        user=user, item__title="root_alone", item__type=models.ItemTypeChoices.FOLDER
+        user=user,
+        item__title="root_alone",
+        item__type=models.ItemTypeChoices.FOLDER,
+        item__main_workspace=True,
     )
 
     level1_1 = factories.UserItemAccessFactory(
@@ -312,7 +332,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "nb_accesses": 3,
                         "numchild": 0,
                         "numchild_folder": 0,
-                        "path": "0000000.0000000.0000003",
+                        "path": "0000002.0000000.0000003",
                         "title": "level2_1",
                         "type": level2_1.item.type,
                         "updated_at": level2_1.item.updated_at.isoformat().replace(
@@ -322,6 +342,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "url": None,
                         "mimetype": None,
                         "user_roles": list(level2_1.item.get_roles(user)),
+                        "main_workspace": False,
                     },
                     {
                         "abilities": level2_2.item.get_abilities(user),
@@ -341,7 +362,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                                 "nb_accesses": 4,
                                 "numchild": 0,
                                 "numchild_folder": 0,
-                                "path": "0000000.0000000.0000004.0000004",
+                                "path": "0000002.0000000.0000004.0000004",
                                 "title": "level3_1",
                                 "type": level3_1.item.type,
                                 "updated_at": level3_1.item.updated_at.isoformat().replace(
@@ -351,6 +372,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                                 "url": None,
                                 "mimetype": None,
                                 "user_roles": list(level3_1.item.get_roles(user)),
+                                "main_workspace": False,
                             },
                         ],
                         "created_at": level2_2.item.created_at.isoformat().replace(
@@ -365,7 +387,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "nb_accesses": 3,
                         "numchild": 5,
                         "numchild_folder": 1,
-                        "path": "0000000.0000000.0000004",
+                        "path": "0000002.0000000.0000004",
                         "title": "level2_2",
                         "type": level2_2.item.type,
                         "updated_at": level2_2.item.updated_at.isoformat().replace(
@@ -375,6 +397,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "url": None,
                         "mimetype": None,
                         "user_roles": list(level2_2.item.get_roles(user)),
+                        "main_workspace": False,
                     },
                 ],
                 "created_at": level1_1.item.created_at.isoformat().replace(
@@ -389,7 +412,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "nb_accesses": 2,
                 "numchild": 5,
                 "numchild_folder": 2,
-                "path": "0000000.0000000",
+                "path": "0000002.0000000",
                 "title": "level1_1",
                 "type": level1_1.item.type,
                 "updated_at": level1_1.item.updated_at.isoformat().replace(
@@ -399,6 +422,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "url": None,
                 "mimetype": None,
                 "user_roles": list(level1_1.item.get_roles(user)),
+                "main_workspace": False,
             },
             {
                 "abilities": level1_2.item.get_abilities(user),
@@ -415,7 +439,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "nb_accesses": 2,
                 "numchild": 2,
                 "numchild_folder": 2,
-                "path": "0000000.0000001",
+                "path": "0000002.0000001",
                 "title": "level1_2",
                 "type": level1_2.item.type,
                 "updated_at": level1_2.item.updated_at.isoformat().replace(
@@ -425,6 +449,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "url": None,
                 "mimetype": None,
                 "user_roles": list(level1_2.item.get_roles(user)),
+                "main_workspace": False,
             },
             {
                 "abilities": level1_3.item.get_abilities(user),
@@ -441,7 +466,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "nb_accesses": 2,
                 "numchild": 1,
                 "numchild_folder": 1,
-                "path": "0000000.0000002",
+                "path": "0000002.0000002",
                 "title": "level1_3",
                 "type": level1_3.item.type,
                 "updated_at": level1_3.item.updated_at.isoformat().replace(
@@ -451,6 +476,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "url": None,
                 "mimetype": None,
                 "user_roles": list(level1_3.item.get_roles(user)),
+                "main_workspace": False,
             },
         ],
         "created_at": root.item.created_at.isoformat().replace("+00:00", "Z"),
@@ -463,7 +489,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
         "nb_accesses": 1,
         "numchild": 5,
         "numchild_folder": 3,
-        "path": "0000000",
+        "path": "0000002",
         "title": "root",
         "type": root.item.type,
         "updated_at": root.item.updated_at.isoformat().replace("+00:00", "Z"),
@@ -471,6 +497,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
         "url": None,
         "mimetype": None,
         "user_roles": list(root.item.get_roles(user)),
+        "main_workspace": True,
     }
 
 
@@ -485,6 +512,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
         title="root",
         type=models.ItemTypeChoices.FOLDER,
         link_reach=models.LinkReachChoices.RESTRICTED,
+        main_workspace=True,
     )
 
     # Other root, with link_reach set to public. This one should not be visible in the returned tree
@@ -492,6 +520,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
         title="root_alone",
         type=models.ItemTypeChoices.FOLDER,
         link_reach=models.LinkReachChoices.PUBLIC,
+        main_workspace=True,
     )
 
     # first level are set to AUTHENTICATED, only level1_1 should be visible in the returned tree
@@ -564,7 +593,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
         "nb_accesses": 0,
         "numchild": 2,
         "numchild_folder": 2,
-        "path": "0000000.0000000",
+        "path": "0000002.0000000",
         "title": "level1_1",
         "type": "folder",
         "updated_at": level1_1.updated_at.isoformat().replace("+00:00", "Z"),
@@ -572,6 +601,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
         "url": None,
         "mimetype": None,
         "user_roles": [],
+        "main_workspace": False,
         "abilities": level1_1.get_abilities(user),
         "children": [
             {
@@ -587,7 +617,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "nb_accesses": 0,
                 "numchild": 0,
                 "numchild_folder": 0,
-                "path": "0000000.0000000.0000000",
+                "path": "0000002.0000000.0000000",
                 "title": "level2_1",
                 "type": "folder",
                 "updated_at": level2_1.updated_at.isoformat().replace("+00:00", "Z"),
@@ -595,6 +625,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "url": None,
                 "mimetype": None,
                 "user_roles": [],
+                "main_workspace": False,
             },
             {
                 "abilities": level2_2.get_abilities(user),
@@ -609,7 +640,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "nb_accesses": 0,
                 "numchild": 4,
                 "numchild_folder": 0,
-                "path": "0000000.0000000.0000001",
+                "path": "0000002.0000000.0000001",
                 "title": "level2_2",
                 "type": "folder",
                 "updated_at": level2_2.updated_at.isoformat().replace("+00:00", "Z"),
@@ -617,6 +648,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "url": None,
                 "mimetype": None,
                 "user_roles": [],
+                "main_workspace": False,
             },
         ],
     }

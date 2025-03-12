@@ -142,7 +142,7 @@ def test_api_items_media_auth_authenticated_restricted():
     """
     item = factories.ItemFactory(link_reach="restricted")
 
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
 

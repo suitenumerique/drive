@@ -536,7 +536,9 @@ def test_authentication_verify_claims_success(django_assert_num_queries, monkeyp
 
     monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
 
-    with django_assert_num_queries(6):
+    with django_assert_num_queries(
+        6 + 15
+    ):  # 6 for user creation, 15 for workspace creation
         user = klass.get_or_create_user(
             access_token="test-token", id_token=None, payload=None
         )

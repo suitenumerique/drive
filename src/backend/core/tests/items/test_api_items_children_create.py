@@ -28,6 +28,8 @@ def test_api_items_children_create_anonymous(reach, role, depth):
         else:
             item = factories.ItemFactory(parent=item, type=ItemTypeChoices.FOLDER)
 
+    items_created = Item.objects.all().count()
+
     response = APIClient().post(
         f"/api/v1.0/items/{item.id!s}/children/",
         {
@@ -36,7 +38,7 @@ def test_api_items_children_create_anonymous(reach, role, depth):
         },
     )
 
-    assert Item.objects.count() == depth
+    assert Item.objects.count() == items_created
     assert response.status_code == 401
     assert response.json() == {
         "detail": "Authentication credentials were not provided."
@@ -73,6 +75,7 @@ def test_api_items_children_create_authenticated_forbidden(reach, role, depth):
                 parent=item, link_role="reader", type=ItemTypeChoices.FOLDER
             )
 
+    items_created = Item.objects.all().count()
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/children/",
         {
@@ -82,7 +85,7 @@ def test_api_items_children_create_authenticated_forbidden(reach, role, depth):
     )
 
     assert response.status_code == 403
-    assert Item.objects.count() == depth
+    assert Item.objects.count() == items_created
 
 
 @pytest.mark.parametrize("depth", [1, 2, 3])
@@ -132,7 +135,7 @@ def test_api_items_children_create_authenticated_success(reach, role, depth):
 @pytest.mark.parametrize("depth", [1, 2, 3])
 def test_api_items_children_create_related_forbidden(depth):
     """
-    Authenticated users with a specific read access on a item should not be allowed
+    Authenticated users with a specific read access on an item should not be allowed
     to create a nested item.
     """
     user = factories.UserFactory()
@@ -151,6 +154,7 @@ def test_api_items_children_create_related_forbidden(depth):
                 parent=item, link_reach="restricted", type=ItemTypeChoices.FOLDER
             )
 
+    items_created = Item.objects.all().count()
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/children/",
         {
@@ -160,7 +164,7 @@ def test_api_items_children_create_related_forbidden(depth):
     )
 
     assert response.status_code == 403
-    assert Item.objects.count() == depth
+    assert Item.objects.count() == items_created
 
 
 @pytest.mark.parametrize("depth", [1, 2, 3])
@@ -241,7 +245,6 @@ def test_api_items_children_create_force_id_success():
     )
 
     assert response.status_code == 201
-    assert Item.objects.count() == 2
     assert response.json()["id"] == str(forced_id)
 
 

@@ -103,6 +103,7 @@ def test_api_items_trashbin_format():
         else None,
         "url": None,
         "mimetype": None,
+        "main_workspace": False,
     }
 
 

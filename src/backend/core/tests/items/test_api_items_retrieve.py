@@ -64,6 +64,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         else None,
         "url": None,
         "mimetype": None,
+        "main_workspace": False,
     }
 
 
@@ -124,6 +125,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         else None,
         "url": None,
         "mimetype": None,
+        "main_workspace": False,
     }
 
 
@@ -214,6 +216,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         else None,
         "url": None,
         "mimetype": None,
+        "main_workspace": False,
     }
     assert models.LinkTrace.objects.filter(item=item, user=user).exists() is True
 
@@ -279,6 +282,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         else None,
         "url": None,
         "mimetype": None,
+        "main_workspace": False,
     }
 
 
@@ -335,7 +339,7 @@ def test_api_items_retrieve_authenticated_unrelated_restricted():
     Authenticated users should not be allowed to retrieve an item that is restricted and
     to which they are not related.
     """
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
 
     client = APIClient()
     client.force_login(user)
@@ -391,6 +395,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         else None,
         "url": None,
         "mimetype": None,
+        "main_workspace": False,
     }
 
 
@@ -458,6 +463,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         else None,
         "url": None,
         "mimetype": None,
+        "main_workspace": False,
     }
 
 
@@ -529,7 +535,7 @@ def test_api_items_retrieve_authenticated_related_team_none(mock_user_teams):
     """
     mock_user_teams.return_value = []
 
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
 
     client = APIClient()
     client.force_login(user)
@@ -612,6 +618,7 @@ def test_api_items_retrieve_authenticated_related_team_members(
         else None,
         "url": None,
         "mimetype": None,
+        "main_workspace": False,
     }
 
 
@@ -674,6 +681,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
         else None,
         "url": None,
         "mimetype": None,
+        "main_workspace": False,
     }
 
 
@@ -736,6 +744,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(
         else None,
         "url": None,
         "mimetype": None,
+        "main_workspace": False,
     }
 
 
@@ -808,16 +817,19 @@ def test_api_items_retrieve_soft_deleted_anonymous(reach, depth):
     A soft/permanently deleted public item should not be accessible via its
     detail endpoint for anonymous users, and should return a 404.
     """
+    user = factories.UserFactory()
     items = []
     for i in range(depth):
         items.append(
-            factories.ItemFactory(link_reach=reach, type=models.ItemTypeChoices.FOLDER)
+            factories.ItemFactory(
+                link_reach=reach, type=models.ItemTypeChoices.FOLDER, creator=user
+            )
             if i == 0
             else factories.ItemFactory(
-                parent=items[-1], type=models.ItemTypeChoices.FOLDER
+                parent=items[-1], type=models.ItemTypeChoices.FOLDER, creator=user
             )
         )
-    assert models.Item.objects.count() == depth
+    assert models.Item.objects.count() == depth + 1  # +1 for the main workspace
 
     response = APIClient().get(f"/api/v1.0/items/{items[-1].id!s}/")
 
@@ -857,13 +869,15 @@ def test_api_items_retrieve_soft_deleted_authenticated(reach, depth):
     items = []
     for i in range(depth):
         items.append(
-            factories.ItemFactory(link_reach=reach, type=models.ItemTypeChoices.FOLDER)
+            factories.ItemFactory(
+                link_reach=reach, type=models.ItemTypeChoices.FOLDER, creator=user
+            )
             if i == 0
             else factories.ItemFactory(
-                parent=items[-1], type=models.ItemTypeChoices.FOLDER
+                parent=items[-1], type=models.ItemTypeChoices.FOLDER, creator=user
             )
         )
-    assert models.Item.objects.count() == depth
+    assert models.Item.objects.count() == depth + 1  # +1 for the main workspace
 
     response = client.get(f"/api/v1.0/items/{items[-1].id!s}/")
 
@@ -904,14 +918,17 @@ def test_api_items_retrieve_soft_deleted_related(role, depth):
     for i in range(depth):
         items.append(
             factories.UserItemAccessFactory(
-                role=role, user=user, item__type=models.ItemTypeChoices.FOLDER
+                role=role,
+                user=user,
+                item__type=models.ItemTypeChoices.FOLDER,
+                item__creator=user,
             ).item
             if i == 0
             else factories.ItemFactory(
-                parent=items[-1], type=models.ItemTypeChoices.FOLDER
+                parent=items[-1], type=models.ItemTypeChoices.FOLDER, creator=user
             )
         )
-    assert models.Item.objects.count() == depth
+    assert models.Item.objects.count() == depth + 1  # +1 for the main workspace
     item = items[-1]
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
@@ -947,14 +964,17 @@ def test_api_items_retrieve_permanently_deleted_related(role, depth):
     for i in range(depth):
         items.append(
             factories.UserItemAccessFactory(
-                role=role, user=user, item__type=models.ItemTypeChoices.FOLDER
+                role=role,
+                user=user,
+                item__type=models.ItemTypeChoices.FOLDER,
+                item__creator=user,
             ).item
             if i == 0
             else factories.ItemFactory(
-                parent=items[-1], type=models.ItemTypeChoices.FOLDER
+                parent=items[-1], type=models.ItemTypeChoices.FOLDER, creator=user
             )
         )
-    assert models.Item.objects.count() == depth
+    assert models.Item.objects.count() == depth + 1  # +1 for the main workspace
     item = items[-1]
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
@@ -1011,4 +1031,5 @@ def test_api_items_retrieve_file_uploaded():
         "upload_state": models.ItemUploadStateChoices.UPLOADED,
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
         "mimetype": "image/png",
+        "main_workspace": False,
     }

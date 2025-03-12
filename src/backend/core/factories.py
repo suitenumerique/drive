@@ -28,15 +28,6 @@ class UserFactory(factory.django.DjangoModelFactory):
     language = factory.fuzzy.FuzzyChoice([lang[0] for lang in settings.LANGUAGES])
     password = make_password("password")
 
-    @factory.post_generation
-    def with_owned_item(self, create, extracted, **kwargs):
-        """
-        Create a item for which the user is owner to check
-        that there is no interference
-        """
-        if create and (extracted is True):
-            UserItemAccessFactory(user=self, role="owner")
-
 
 class ParentNodeFactory(factory.declarations.ParameteredAttribute):
     """Custom factory attribute for setting the parent node."""

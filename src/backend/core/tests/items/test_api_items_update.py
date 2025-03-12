@@ -78,7 +78,7 @@ def test_api_items_update_authenticated_unrelated_forbidden(reach, role, via_par
     Authenticated users should not be allowed to update a item to which
     they are not related if the link configuration does not allow it.
     """
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
 
     client = APIClient()
     client.force_login(user)
@@ -133,7 +133,7 @@ def test_api_items_update_anonymous_or_authenticated_unrelated(
     client = APIClient()
 
     if is_authenticated:
-        user = factories.UserFactory(with_owned_item=True)
+        user = factories.UserFactory()
         client.force_login(user)
     else:
         user = AnonymousUser()
@@ -189,7 +189,7 @@ def test_api_items_update_authenticated_reader(via, via_parent, mock_user_teams)
     """
     Users who are reader of a item should not be allowed to update it.
     """
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
 
     client = APIClient()
     client.force_login(user)
@@ -241,7 +241,7 @@ def test_api_items_update_authenticated_editor_administrator_or_owner(
     via, role, via_parent, mock_user_teams
 ):
     """A user who is editor, administrator or owner of a item should be allowed to update it."""
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
 
     client = APIClient()
     client.force_login(user)
@@ -306,7 +306,7 @@ def test_api_items_update_administrator_or_owner_of_another(via, mock_user_teams
     Being administrator or owner of a item should not grant authorization to update
     another item.
     """
-    user = factories.UserFactory(with_owned_item=True)
+    user = factories.UserFactory()
 
     client = APIClient()
     client.force_login(user)

@@ -47,6 +47,7 @@ def test_api_items_list_filter_and_access_rights():
             favorited_by=random_favorited_by(),
             creator=random.choice([user, other_user]),
         ),
+        user.get_main_workspace(),
     ]
     listed_ids = [str(doc.id) for doc in listed_items]
     word_list = [word for doc in listed_items for word in doc.title.split(" ")]
@@ -115,7 +116,7 @@ def test_api_items_list_ordering_default():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory.create_batch(5, users=[user])
+    factories.ItemFactory.create_batch(4, users=[user])
 
     response = client.get("/api/v1.0/items/")
 
@@ -134,7 +135,7 @@ def test_api_items_list_ordering_by_fields():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory.create_batch(5, users=[user])
+    factories.ItemFactory.create_batch(4, users=[user])
 
     for parameter in [
         "created_at",
@@ -158,7 +159,17 @@ def test_api_items_list_ordering_by_fields():
         # Check that results are sorted by the field in querystring as expected
         compare = operator.ge if is_descending else operator.le
         for i in range(4):
-            assert compare(results[i][field], results[i + 1][field])
+            operator1 = (
+                results[i][field].lower()
+                if isinstance(results[i][field], str)
+                else results[i][field]
+            )
+            operator2 = (
+                results[i + 1][field].lower()
+                if isinstance(results[i + 1][field], str)
+                else results[i + 1][field]
+            )
+            assert compare(operator1, operator2)
 
 
 # Filters: unknown field
@@ -176,12 +187,13 @@ def test_api_items_list_filter_unknown_field():
     expected_ids = {
         str(item.id) for item in factories.ItemFactory.create_batch(2, users=[user])
     }
+    expected_ids.add(str(user.get_main_workspace().id))
 
     response = client.get("/api/v1.0/items/?unknown=true")
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 2
+    assert len(results) == 3
     assert {result["id"] for result in results} == expected_ids
 
 
@@ -196,7 +208,7 @@ def test_api_items_list_filter_is_creator_me_true():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory.create_batch(3, users=[user], creator=user)
+    factories.ItemFactory.create_batch(2, users=[user], creator=user)
     factories.ItemFactory.create_batch(2, users=[user])
 
     response = client.get("/api/v1.0/items/?is_creator_me=true")
@@ -245,7 +257,7 @@ def test_api_items_list_filter_is_creator_me_invalid():
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 5
+    assert len(results) == 6
 
 
 # Filters: is_favorite
@@ -288,7 +300,7 @@ def test_api_items_list_filter_is_favorite_false():
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 2
+    assert len(results) == 3
 
     # Ensure all results are not marked as favorite by the current user
     for result in results:
@@ -308,7 +320,7 @@ def test_api_items_list_filter_is_favorite_invalid():
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 5
+    assert len(results) == 6
 
 
 # Filters: title
@@ -322,7 +334,7 @@ def test_api_items_list_filter_is_favorite_invalid():
         ("Guide", 1),  # Word match within a title
         ("Special", 0),  # No match (nonexistent keyword)
         ("2024", 2),  # Match by numeric keyword
-        ("", 5),  # Empty string
+        ("", 6),  # Empty string
     ],
 )
 def test_api_items_list_filter_title(query, nb_results):
@@ -368,11 +380,13 @@ def test_api_items_list_filter_type():
     client = APIClient()
     client.force_login(user)
 
-    # create 3 folders
+    # create 2 folders, main workspace is already a folder, means 3 folders in total
     folders = factories.UserItemAccessFactory.create_batch(
-        3, user=user, item__type=models.ItemTypeChoices.FOLDER
+        2, user=user, item__type=models.ItemTypeChoices.FOLDER
     )
-    folders_ids = [str(folder.item.id) for folder in folders]
+    folders_ids = [str(folder.item.id) for folder in folders] + [
+        str(user.get_main_workspace().id)
+    ]
 
     # create 2 files
     files = factories.UserItemAccessFactory.create_batch(
