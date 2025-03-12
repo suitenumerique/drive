@@ -1,4 +1,4 @@
-import SelectionArea, { SelectionEvent } from "@viselect/react";
+import { SelectionArea, SelectionEvent } from "@viselect/react";
 import { ExplorerGrid } from "./ExplorerGrid";
 import { ExplorerBreadcrumbs } from "./ExplorerBreadcrumbs";
 import { useExplorer } from "./ExplorerContext";
