@@ -22,7 +22,7 @@ from django.db import models, transaction
 from django.db.models.expressions import RawSQL
 from django.template.loader import render_to_string
 from django.utils import timezone
-from django.utils.functional import cached_property, lazy
+from django.utils.functional import cached_property
 from django.utils.translation import get_language, override
 from django.utils.translation import gettext_lazy as _
 
@@ -207,7 +207,7 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
 
     language = models.CharField(
         max_length=10,
-        choices=lazy(lambda: settings.LANGUAGES, tuple)(),
+        choices=settings.LANGUAGES,
         default=settings.LANGUAGE_CODE,
         verbose_name=_("language"),
         help_text=_("The language in which the user wants to see the interface."),

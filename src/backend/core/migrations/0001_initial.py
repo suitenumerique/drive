@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                 ('short_name', models.CharField(blank=True, max_length=20, null=True, verbose_name='short name')),
                 ('email', models.EmailField(blank=True, max_length=254, null=True, verbose_name='identity email address')),
                 ('admin_email', models.EmailField(blank=True, max_length=254, null=True, unique=True, verbose_name='admin email address')),
-                ('language', models.CharField(choices="(('en-us', 'English'), ('fr-fr', 'French'), ('de-de', 'German'))", default='en-us', help_text='The language in which the user wants to see the interface.', max_length=10, verbose_name='language')),
+                ('language', models.CharField(choices=settings.LANGUAGES, default='en-us', help_text='The language in which the user wants to see the interface.', max_length=10, verbose_name='language')),
                 ('timezone', timezone_field.fields.TimeZoneField(choices_display='WITH_GMT_OFFSET', default='UTC', help_text='The timezone in which the user wants to see times.', use_pytz=False)),
                 ('is_device', models.BooleanField(default=False, help_text='Whether the user is a device or a real user.', verbose_name='device')),
                 ('is_staff', models.BooleanField(default=False, help_text='Whether the user can log into this admin site.', verbose_name='staff status')),

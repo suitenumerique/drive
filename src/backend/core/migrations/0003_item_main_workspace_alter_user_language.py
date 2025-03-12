@@ -15,9 +15,4 @@ class Migration(migrations.Migration):
             name='main_workspace',
             field=models.BooleanField(default=False),
         ),
-        migrations.AlterField(
-            model_name='user',
-            name='language',
-            field=models.CharField(choices="(('en-us', 'English'), ('fr-fr', 'French'), ('de-de', 'German'))", default='en-us', help_text='The language in which the user wants to see the interface.', max_length=10, verbose_name='language'),
-        ),
     ]
