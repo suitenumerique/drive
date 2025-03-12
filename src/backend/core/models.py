@@ -479,6 +479,7 @@ class Item(TreeModel, BaseModel):
     numchild = models.PositiveIntegerField(default=0)
     numchild_folder = models.PositiveIntegerField(default=0)
     mimetype = models.CharField(max_length=255, null=True, blank=True)
+    main_workspace = models.BooleanField(default=False)
 
     label_size = 7
 
@@ -521,6 +522,8 @@ class Item(TreeModel, BaseModel):
         return super().save(*args, **kwargs)
 
     def delete(self, using=None, keep_parents=False):
+        if self.main_workspace:
+            raise RuntimeError("The main workspace cannot be deleted.")
         delete = super().delete(using, keep_parents)
         if self.depth > 1:
             parent = self.parent()
@@ -747,6 +750,9 @@ class Item(TreeModel, BaseModel):
         """
         if self.deleted_at or self.ancestors_deleted_at:
             raise RuntimeError("This item is already deleted or has deleted ancestors.")
+
+        if self.main_workspace:
+            raise RuntimeError("The main workspace cannot be deleted.")
 
         # Check if any ancestors are deleted
         if self.ancestors().filter(deleted_at__isnull=False).exists():

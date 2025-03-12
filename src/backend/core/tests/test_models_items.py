@@ -808,3 +808,19 @@ def test_models_items_restore_complex_bis():
     assert item.ancestors_deleted_at == item.deleted_at
     assert child1.ancestors_deleted_at == item.deleted_at
     assert child2.ancestors_deleted_at == item.deleted_at
+
+
+def test_models_items_delete_main_workspace():
+    """The "delete' method should fail if the item is the main workspace."""
+    item = factories.ItemFactory(main_workspace=True)
+    with pytest.raises(RuntimeError) as excinfo:
+        item.delete()
+    assert str(excinfo.value) == "The main workspace cannot be deleted."
+
+
+def test_models_items_soft_delete_main_workspace():
+    """The "soft_delete' method should fail if the item is the main workspace."""
+    item = factories.ItemFactory(main_workspace=True)
+    with pytest.raises(RuntimeError) as excinfo:
+        item.soft_delete()
+    assert str(excinfo.value) == "The main workspace cannot be deleted."
