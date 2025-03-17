@@ -38,6 +38,19 @@
             "cancel": "Cancel",
             "submit": "Create"
           }
+        },
+        "upload": {
+          "toast": "Drop your files here to transfer them in {{title}}",
+          "files": {
+            "description_one": "{{count}} file being transferred",
+            "description_other": "{{count}} files being transferred",
+            "description_done_one": "{{count}} file transferred",
+            "description_done_other": "{{count}} files transferred"
+          }
+        },
+        "delete": {
+          "toast_one": "{{count}} item deleted",
+          "toast_other": "{{count}} items deleted"
         }
       }
     }
@@ -80,6 +93,19 @@
               "cancel": "Annuler",
               "submit": "Créer"
             }
+          },
+          "upload": {
+            "toast": "Déposez vos fichiers ici pour les transférer dans {{title}}",
+            "files": {
+              "description_one": "{{count}} fichier en cours de transfert",
+              "description_other": "{{count}} fichiers en cours de transfert",
+              "description_done_one": "{{count}} fichier transféré",
+              "description_done_other": "{{count}} fichiers transférés"
+            }
+          },
+          "delete": {
+            "toast_one": "{{count}} élément supprimé",
+            "toast_other": "{{count}} éléments supprimés"
           }
         }
       }
