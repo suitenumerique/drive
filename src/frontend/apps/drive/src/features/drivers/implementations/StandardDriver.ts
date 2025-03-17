@@ -18,7 +18,11 @@ export class StandardDriver extends Driver {
   }
 
   async getChildren(id: string): Promise<Item[]> {
-    const response = await fetchAPI(`items/${id}/children/`);
+    const response = await fetchAPI(`items/${id}/children/`, {
+      params: {
+        page_size: "100000",
+      },
+    });
     const data = await response.json();
     return jsonToItems(data.results);
   }
@@ -44,6 +48,61 @@ export class StandardDriver extends Driver {
     const item = await response.json();
     return jsonToItem(item);
   }
+
+  async createFile(data: {
+    parentId: string;
+    file: File;
+    filename: string;
+    progressHandler?: (progress: number) => void;
+  }): Promise<Item> {
+    const { parentId, file, progressHandler, ...rest } = data;
+    let response = await fetchAPI(`items/${parentId}/children/`, {
+      method: "POST",
+      body: JSON.stringify({
+        type: ItemType.FILE,
+        ...rest,
+      }),
+    });
+    const item = jsonToItem(await response.json());
+    if (!item.policy) {
+      throw new Error("No policy found");
+    }
+
+    const { url, fields } = item.policy!;
+    const formData = new FormData();
+
+    // Add all the policy fields to the form data
+    Object.entries(fields).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+    formData.append("file", file);
+
+    let urlObject = new URL(url);
+    if (process.env["NEXT_PUBLIC_S3_DOMAIN_REPLACE"]) {
+      urlObject = new URL(
+        urlObject.pathname,
+        process.env["NEXT_PUBLIC_S3_DOMAIN_REPLACE"]
+      );
+    }
+
+    await uploadFile(urlObject.toString(), formData, (progress) => {
+      progressHandler?.(progress);
+    });
+
+    response = await fetchAPI(`items/${item.id}/upload-ended/`, {
+      method: "POST",
+    });
+
+    return item;
+  }
+
+  async deleteItems(ids: string[]): Promise<void> {
+    for (const id of ids) {
+      await fetchAPI(`items/${id}/`, {
+        method: "DELETE",
+      });
+    }
+  }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,3 +122,41 @@ const jsonToItem = (data: any): Item => {
   }
   return item;
 };
+
+/**
+ * Upload a file, using XHR so we can report on progress through a handler.
+ * @param url The URL to POST the file to.
+ * @param formData The multi-part request form data body to send (includes the file).
+ * @param progressHandler A handler that receives progress updates as a single integer `0 <= x <= 100`.
+ */
+export const uploadFile = (
+  url: string,
+  formData: FormData,
+  progressHandler: (progress: number) => void
+) =>
+  new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+
+    xhr.addEventListener("error", reject);
+    xhr.addEventListener("abort", reject);
+
+    xhr.addEventListener("readystatechange", () => {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 204) {
+          return resolve(true);
+        }
+        reject(new Error(`Failed to perform the upload on ${url}.`));
+      }
+    });
+
+    xhr.upload.addEventListener("progress", (progressEvent) => {
+      if (progressEvent.lengthComputable) {
+        progressHandler(
+          Math.floor((progressEvent.loaded / progressEvent.total) * 100)
+        );
+      }
+    });
+
+    xhr.send(formData);
+  });

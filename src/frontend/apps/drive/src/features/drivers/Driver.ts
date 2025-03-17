@@ -6,4 +6,9 @@ export abstract class Driver {
   abstract getChildren(id: string): Promise<Item[]>;
   abstract getTree(id: string): Promise<Item>;
   abstract createFolder(data: { title: string }): Promise<Item>;
+  abstract createFile(data: {
+    parentId: string;
+    filename: string;
+  }): Promise<Item>;
+  abstract deleteItems(ids: string[]): Promise<void>;
 }
