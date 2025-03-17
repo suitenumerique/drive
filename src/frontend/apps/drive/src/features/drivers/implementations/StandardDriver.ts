@@ -17,11 +17,13 @@ export class StandardDriver extends Driver {
     return jsonToItem(data);
   }
 
-  async getChildren(id: string): Promise<Item[]> {
+  async getChildren(id: string, type?: ItemType): Promise<Item[]> {
+    const params = {
+      page_size: "100000",
+      ...(type ? { type } : {}),
+    };
     const response = await fetchAPI(`items/${id}/children/`, {
-      params: {
-        page_size: "100000",
-      },
+      params,
     });
     const data = await response.json();
     return jsonToItems(data.results);

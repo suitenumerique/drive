@@ -1,3 +1,5 @@
+import { TreeViewNodeTypeEnum } from "@gouvfr-lasuite/ui-kit";
+
 export enum ItemType {
   FILE = "file",
   FOLDER = "folder",
@@ -10,6 +12,8 @@ export type Item = {
   upload_state: string;
   updated_at: Date;
   children?: Item[];
+  numchild?: number;
+  numchild_folder?: number;
   url?: string;
   policy?: {
     url: string;
@@ -21,4 +25,10 @@ export type Item = {
       signature: string;
     };
   };
+};
+
+export type ItemTreeItem = Omit<Item, "children"> & {
+  childrenCount?: number;
+  children?: ItemTreeItem[];
+  nodeType: TreeViewNodeTypeEnum;
 };

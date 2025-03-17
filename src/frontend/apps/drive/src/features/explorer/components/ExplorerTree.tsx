@@ -11,47 +11,96 @@ import {
 import { useTranslation } from "react-i18next";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { NavigationEventType, useExplorer } from "./ExplorerContext";
-import { Item } from "@/features/drivers/types";
+import { Item, ItemTreeItem, ItemType } from "@/features/drivers/types";
+import {
+  TreeView,
+  TreeViewDataType,
+  TreeViewItem,
+  TreeViewNodeTypeEnum,
+  useTree,
+} from "@gouvfr-lasuite/ui-kit";
+import { useEffect } from "react";
 
 type Inputs = {
   title: string;
 };
 
+const serialize = (item: Item): ItemTreeItem => {
+  const children = item.children ?? [];
+  return {
+    ...item,
+    childrenCount: item.numchild_folder ?? 0,
+    children: children.map(serialize),
+    nodeType: TreeViewNodeTypeEnum.NODE,
+  };
+};
 export const ExplorerTree = () => {
   const { t } = useTranslation();
+  const driver = getDriver();
 
   // itemId is the id of the current item
-  const { item, tree, onNavigate } = useExplorer();
+  const { item, tree: treeItem, onNavigate } = useExplorer();
+  const treeData = useTree<ItemTreeItem>([], undefined, async (id) => {
+    const children = await driver.getChildren(id, ItemType.FOLDER);
+    return children.map((child) => serialize(child));
+  });
+
+  useEffect(() => {
+    if (!treeItem) {
+      return;
+    }
+    const data: ItemTreeItem = serialize(treeItem);
+    const firstNode: TreeViewDataType<ItemTreeItem> = {
+      id: "PERSONAL_SPACE",
+      nodeType: TreeViewNodeTypeEnum.TITLE,
+      title: "Espace personnel",
+    };
+
+    const separator: TreeViewDataType<ItemTreeItem> = {
+      id: "SEPARATOR",
+      nodeType: TreeViewNodeTypeEnum.SEPARATOR,
+    };
+
+    const sharedSpace: TreeViewDataType<ItemTreeItem> = {
+      id: "SHARED_SPACE",
+      nodeType: TreeViewNodeTypeEnum.TITLE,
+      title: "Espace partagé",
+    };
+
+    treeData.resetTree([firstNode, data, separator, sharedSpace]);
+  }, [treeItem]);
+
+  console.log(treeData.nodes);
 
   const createFolderModal = useModal();
 
-  const drawTreeDuPauvre = (treeItem: Item) => {
-    return (
-      <div key={treeItem.id}>
-        <div
-          style={{
-            fontWeight: treeItem.id === item?.id ? "bold" : "normal",
-            cursor: "pointer",
-          }}
-          onClick={() =>
-            onNavigate({
-              type: NavigationEventType.ITEM,
-              item: treeItem,
-            })
-          }
-        >
-          {treeItem.title}
-        </div>
-        <div
-          style={{
-            paddingLeft: "2rem",
-          }}
-        >
-          {treeItem.children?.map((child) => drawTreeDuPauvre(child))}
-        </div>
-      </div>
-    );
-  };
+  // const drawTreeDuPauvre = (treeItem: Item) => {
+  //   return (
+  //     <div key={treeItem.id}>
+  //       <div
+  //         style={{
+  //           fontWeight: treeItem.id === item?.id ? "bold" : "normal",
+  //           cursor: "pointer",
+  //         }}
+  //         onClick={() =>
+  //           onNavigate({
+  //             type: NavigationEventType.ITEM,
+  //             item: treeItem,
+  //           })
+  //         }
+  //       >
+  //         {treeItem.title}
+  //       </div>
+  //       <div
+  //         style={{
+  //           paddingLeft: "2rem",
+  //         }}
+  //       >
+  //         {treeItem.children?.map((child) => drawTreeDuPauvre(child))}
+  //       </div>
+  //     </div>
+  //   );
+  // };
 
   return (
     <div>
@@ -71,12 +120,29 @@ export const ExplorerTree = () => {
           icon={<span className="material-icons">search</span>}
         ></Button>
       </div>
-      <div
-        style={{
-          padding: "12px",
-        }}
-      >
-        {tree && drawTreeDuPauvre(tree)}
+      <div>
+        {/* {treeItem && drawTreeDuPauvre(treeItem)} */}
+        <TreeView
+          treeData={treeData.nodes}
+          renderNode={(props) => {
+            console.log(props);
+            return (
+              <TreeViewItem
+                {...props}
+                loadChildren={(node) => treeData.handleLoadChildren(node.id)}
+                onClick={() => {
+                  onNavigate({
+                    type: NavigationEventType.ITEM,
+                    item: props.node.data.value as Item,
+                  });
+                }}
+              >
+                <div>{props.node.data.value.title}</div>
+              </TreeViewItem>
+            );
+          }}
+          rootNodeId={"root"}
+        />
       </div>
       <ExplorerCreateFolderModal {...createFolderModal} />
     </div>

@@ -1,7 +1,7 @@
-import { SetStateAction, useContext, useState } from "react";
+import { SetStateAction, useContext, useEffect, useState } from "react";
 import { Dispatch } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Item } from "@/features/drivers/types";
+import { Item, ItemTreeItem } from "@/features/drivers/types";
 import { createContext } from "react";
 import { getDriver } from "@/features/config/Config";
 
@@ -15,6 +15,7 @@ export interface ExplorerContextType {
   children: Item[] | undefined;
   tree: Item | undefined;
   onNavigate: (event: NavigationEvent) => void;
+  initialId: string | undefined;
 }
 
 export const ExplorerContext = createContext<ExplorerContextType | undefined>(
@@ -35,7 +36,7 @@ export enum NavigationEventType {
 
 export type NavigationEvent = {
   type: NavigationEventType.ITEM;
-  item: Item;
+  item: Item | ItemTreeItem;
 };
 
 export const ExplorerProvider = ({
@@ -53,6 +54,14 @@ export const ExplorerProvider = ({
     Record<string, boolean>
   >({});
 
+  const [initialId, setInitialId] = useState<string | undefined>(itemId);
+
+  useEffect(() => {
+    if (!initialId) {
+      setInitialId(itemId);
+    }
+  }, [itemId]);
+
   const { data: item } = useQuery({
     queryKey: ["items", itemId],
     queryFn: () => getDriver().getItem(itemId),
@@ -64,8 +73,13 @@ export const ExplorerProvider = ({
   });
 
   const { data: tree } = useQuery({
-    queryKey: ["items", itemId, "tree"],
-    queryFn: () => getDriver().getTree(itemId),
+    queryKey: ["items", initialId, "tree"],
+    queryFn: () => {
+      if (!initialId) {
+        return undefined;
+      }
+      return getDriver().getTree(initialId);
+    },
   });
 
   const getSelectedItems = () => {
@@ -82,6 +96,7 @@ export const ExplorerProvider = ({
         displayMode,
         selectedItems: getSelectedItems(),
         itemId,
+        initialId,
         item,
         tree,
         children: itemChildren,
