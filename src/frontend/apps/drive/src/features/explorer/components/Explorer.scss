@@ -169,3 +169,61 @@
     }
   }
 }
+
+.file-upload-toast {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+
+  &__item {
+    padding: 8px !important;
+  }
+
+  &__files {
+    background-color: var(--c--theme--colors--greyscale-000);
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--c--theme--colors--primary-200);
+    overflow-y: auto;
+    margin-bottom: 8px;
+    transition: all 0.2s ease-in-out;
+    max-height: 250px;
+
+    &--closed {
+      margin-bottom: 0;
+      max-height: 0;
+      padding: 0 12px;
+      opacity: 0;
+    }
+
+    &__item {
+      font-size: 14px;
+      color: var(--c--theme--colors--greyscale-1000);
+      font-weight: 500;
+      display: flex;
+      justify-content: space-between;
+      height: 40px;
+      align-items: center;
+
+      &__size {
+        font-size: 14px;
+        font-weight: 400;
+        color: var(--c--theme--colors--greyscale-600);
+      }
+
+      &__name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    }
+  }
+
+  &__description {
+    height: 32px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px 0 8px;
+    justify-content: space-between;
+  }
+}
