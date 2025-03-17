@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getDriver } from "@/features/config/config";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { getDriver } from "@/features/config/Config";
 import {
   Button,
   Input,
@@ -83,6 +83,9 @@ export const ExplorerTree = () => {
   );
 };
 
+/**
+ * TODO: Create dedicated file.
+ */
 const ExplorerCreateFolderModal = (
   props: Pick<ModalProps, "isOpen" | "onClose">
 ) => {
