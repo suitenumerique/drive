@@ -4,6 +4,7 @@
   background-color: var(--c--theme--colors--greyscale-050);
   justify-content: center;
   align-items: flex-start;
+  position: relative;
 
   &--app {
     padding: 16px;
@@ -34,6 +35,24 @@
     color: var(--c--theme--colors--greyscale-600);
   }
 
+  &--drop-zone--drag-accept {
+    .explorer__content {
+      background-color: var(--c--theme--colors--primary-050);
+      box-shadow: var(--c--theme--colors--primary-500) 0 0 0 3px inset;
+      border-radius: 2px;
+
+      table {
+        tbody {
+          background-color: var(--c--theme--colors--primary-050);
+        }
+      }
+    }
+  }
+
+  &--drop-zone--drag-reject {
+    background-color: var(--c--theme--colors--error-050);
+  }
+
   &__content {
     flex: 1;
     background-color: #fff;
@@ -42,6 +61,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    box-sizing: content-box;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
 
     &__breadcrumbs {
       display: flex;
@@ -103,23 +124,27 @@
     }
 
     table {
-      tr td:first-child,
-      tr th:first-child {
-        padding-left: 6px;
-      }
+      tbody {
+        transition: background-color 0.3s ease;
 
-      tr td:last-child,
-      tr th:last-child {
-        padding-right: 6px;
-      }
+        tr td:first-child,
+        tr th:first-child {
+          padding-left: 6px;
+        }
 
-      tr.selected {
-        background-color: var(--c--theme--colors--primary-100);
-      }
+        tr td:last-child,
+        tr th:last-child {
+          padding-right: 6px;
+        }
 
-      tr {
-        cursor: default;
-        user-select: none;
+        tr.selected {
+          background-color: var(--c--theme--colors--primary-100);
+        }
+
+        tr {
+          cursor: default;
+          user-select: none;
+        }
       }
     }
   }
