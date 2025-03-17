@@ -110,7 +110,7 @@ services:
     ports:
       - "8083:8083"
     volumes:
-      - ./docker/files/etc/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/files/development/etc/nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
       - keycloak
       - app-dev

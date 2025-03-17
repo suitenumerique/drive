@@ -158,7 +158,7 @@ def test_api_items_update_anonymous_or_authenticated_unrelated(
         new_item_values,
         format="json",
     )
-    print(response.json())
+
     assert response.status_code == 200
 
     item = models.Item.objects.get(pk=item.pk)
