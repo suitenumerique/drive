@@ -23,6 +23,7 @@
     "react-dom": "19.0.0",
     "react-hook-form": "7.54.2",
     "react-i18next": "15.4.1",
+    "react-toastify": "11.0.5",
     "sass": "1.85.0"
   },
   "devDependencies": {

@@ -5,6 +5,7 @@
 @use "./../features/explorer/components/Explorer.scss";
 @use "./../features/layouts/components/header/index.scss";
 @use "./../features/ui/components/breadcrumbs";
+@use "./../features/ui/components/toaster";
 body {
   margin: 0;
 }
