@@ -146,6 +146,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "updated_at": level2_1.updated_at.isoformat().replace("+00:00", "Z"),
                 "upload_state": None,
                 "url": None,
+                "mimetype": None,
                 "user_roles": [],
             },
             {
@@ -167,6 +168,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "updated_at": level2_2.updated_at.isoformat().replace("+00:00", "Z"),
                 "upload_state": None,
                 "url": None,
+                "mimetype": None,
                 "user_roles": [],
             },
         ],
@@ -186,6 +188,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
         "updated_at": level1_2.updated_at.isoformat().replace("+00:00", "Z"),
         "upload_state": None,
         "url": None,
+        "mimetype": None,
         "user_roles": [],
     }
 
@@ -317,6 +320,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         ),
                         "upload_state": None,
                         "url": None,
+                        "mimetype": None,
                         "user_roles": list(level2_1.item.get_roles(user)),
                     },
                     {
@@ -345,6 +349,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                                 ),
                                 "upload_state": None,
                                 "url": None,
+                                "mimetype": None,
                                 "user_roles": list(level3_1.item.get_roles(user)),
                             },
                         ],
@@ -368,6 +373,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         ),
                         "upload_state": None,
                         "url": None,
+                        "mimetype": None,
                         "user_roles": list(level2_2.item.get_roles(user)),
                     },
                 ],
@@ -391,6 +397,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 ),
                 "upload_state": None,
                 "url": None,
+                "mimetype": None,
                 "user_roles": list(level1_1.item.get_roles(user)),
             },
             {
@@ -416,6 +423,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 ),
                 "upload_state": None,
                 "url": None,
+                "mimetype": None,
                 "user_roles": list(level1_2.item.get_roles(user)),
             },
             {
@@ -441,6 +449,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 ),
                 "upload_state": None,
                 "url": None,
+                "mimetype": None,
                 "user_roles": list(level1_3.item.get_roles(user)),
             },
         ],
@@ -460,6 +469,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
         "updated_at": root.item.updated_at.isoformat().replace("+00:00", "Z"),
         "upload_state": None,
         "url": None,
+        "mimetype": None,
         "user_roles": list(root.item.get_roles(user)),
     }
 
@@ -560,6 +570,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
         "updated_at": level1_1.updated_at.isoformat().replace("+00:00", "Z"),
         "upload_state": None,
         "url": None,
+        "mimetype": None,
         "user_roles": [],
         "abilities": level1_1.get_abilities(user),
         "children": [
@@ -582,6 +593,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "updated_at": level2_1.updated_at.isoformat().replace("+00:00", "Z"),
                 "upload_state": None,
                 "url": None,
+                "mimetype": None,
                 "user_roles": [],
             },
             {
@@ -603,6 +615,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "updated_at": level2_2.updated_at.isoformat().replace("+00:00", "Z"),
                 "upload_state": None,
                 "url": None,
+                "mimetype": None,
                 "user_roles": [],
             },
         ],

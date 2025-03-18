@@ -102,3 +102,5 @@ def test_api_item_upload_ended_success():
     item.refresh_from_db()
     assert item.upload_state == ItemUploadStateChoices.UPLOADED
     assert item.mimetype == "text/plain"
+
+    assert response.json()["mimetype"] == "text/plain"

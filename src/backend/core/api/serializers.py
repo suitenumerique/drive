@@ -140,6 +140,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "type",
             "upload_state",
             "url",
+            "mimetype",
         ]
         read_only_fields = [
             "id",
@@ -159,6 +160,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "type",
             "upload_state",
             "url",
+            "mimetype",
         ]
 
     def get_abilities(self, item) -> dict:
@@ -221,6 +223,7 @@ class ItemSerializer(ListItemSerializer):
             "type",
             "upload_state",
             "url",
+            "mimetype",
         ]
         read_only_fields = [
             "id",
@@ -240,6 +243,7 @@ class ItemSerializer(ListItemSerializer):
             "type",
             "upload_state",
             "url",
+            "mimetype",
         ]
 
     def create(self, validated_data):

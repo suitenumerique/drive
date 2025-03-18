@@ -102,6 +102,7 @@ def test_api_items_trashbin_format():
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "mimetype": None,
     }
 
 

@@ -51,6 +51,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "mimetype": None,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -73,6 +74,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "mimetype": None,
             },
         ],
     }
@@ -132,6 +134,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "type": models.ItemTypeChoices.FILE,
                 "upload_state": models.ItemUploadStateChoices.PENDING,
                 "url": None,
+                "mimetype": None,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -152,6 +155,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "type": models.ItemTypeChoices.FILE,
                 "upload_state": models.ItemUploadStateChoices.UPLOADED,
                 "url": f"http://localhost:8083/media/item/{child2.id!s}/logo.png",
+                "mimetype": None,
             },
         ],
     }
@@ -219,6 +223,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "mimetype": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -241,6 +246,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "mimetype": None,
             },
         ],
     }
@@ -300,6 +306,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "mimetype": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -322,6 +329,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "mimetype": None,
             },
         ],
     }
@@ -399,6 +407,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "mimetype": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -421,6 +430,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "mimetype": None,
             },
         ],
     }
@@ -481,6 +491,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "mimetype": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -503,6 +514,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "mimetype": None,
             },
         ],
     }
@@ -612,6 +624,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "mimetype": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -634,6 +647,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "mimetype": None,
             },
         ],
     }
@@ -690,6 +704,7 @@ def test_api_items_children_list_filter_type():
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "mimetype": None,
             },
         ],
     }
@@ -725,6 +740,7 @@ def test_api_items_children_list_filter_type():
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "mimetype": None,
             },
         ],
     }

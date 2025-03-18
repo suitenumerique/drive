@@ -92,6 +92,7 @@ def test_api_items_list_format():
             "type": models.ItemTypeChoices.FILE,
             "upload_state": models.ItemUploadStateChoices.UPLOADED,
             "url": f"http://localhost:8083/media/item/{item2.id!s}/logo.png",
+            "mimetype": None,
         },
         {
             "id": str(item.id),
@@ -112,6 +113,7 @@ def test_api_items_list_format():
             "type": models.ItemTypeChoices.FOLDER,
             "upload_state": None,
             "url": None,
+            "mimetype": None,
         },
     ]
 

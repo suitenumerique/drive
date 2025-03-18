@@ -63,6 +63,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "mimetype": None,
     }
 
 
@@ -122,6 +123,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "mimetype": None,
     }
 
 
@@ -211,6 +213,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "mimetype": None,
     }
     assert models.LinkTrace.objects.filter(item=item, user=user).exists() is True
 
@@ -275,6 +278,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "mimetype": None,
     }
 
 
@@ -386,6 +390,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "mimetype": None,
     }
 
 
@@ -452,6 +457,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "mimetype": None,
     }
 
 
@@ -605,6 +611,7 @@ def test_api_items_retrieve_authenticated_related_team_members(
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "mimetype": None,
     }
 
 
@@ -666,6 +673,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "mimetype": None,
     }
 
 
@@ -727,6 +735,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "mimetype": None,
     }
 
 
@@ -976,6 +985,7 @@ def test_api_items_retrieve_file_uploaded():
     item = factories.ItemFactory(type=models.ItemTypeChoices.FILE, link_reach="public")
     item.upload_state = models.ItemUploadStateChoices.UPLOADED
     item.filename = "logo.png"
+    item.mimetype = "image/png"
     item.save()
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
@@ -1000,4 +1010,5 @@ def test_api_items_retrieve_file_uploaded():
         "type": models.ItemTypeChoices.FILE,
         "upload_state": models.ItemUploadStateChoices.UPLOADED,
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
+        "mimetype": "image/png",
     }

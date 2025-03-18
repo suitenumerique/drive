@@ -13,7 +13,7 @@ def test_api_item_favorite_list_anonymous():
 
     client = APIClient()
 
-    response = client.get(f"/api/v1.0/items/favorite_list/")
+    response = client.get("/api/v1.0/items/favorite_list/")
 
     assert response.status_code == 401
 
@@ -27,7 +27,7 @@ def test_api_item_favorite_list_authenticated_no_favorite():
 
     client.force_login(user)
 
-    response = client.get(f"/api/v1.0/items/favorite_list/")
+    response = client.get("/api/v1.0/items/favorite_list/")
 
     assert response.status_code == 200
 
@@ -82,6 +82,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
                 "upload_state": item.upload_state,
                 "url": None,
+                "mimetype": None,
                 "user_roles": ["reader"],
             }
         ],
