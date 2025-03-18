@@ -376,7 +376,7 @@ class ItemViewSet(
 
     metadata_class = ItemMetadata
     ordering = ["-updated_at"]
-    ordering_fields = ["created_at", "updated_at", "title"]
+    ordering_fields = ["created_at", "updated_at", "title", "type"]
     pagination_class = Pagination
     permission_classes = [
         permissions.ItemAccessPermission,
@@ -734,6 +734,11 @@ class ItemViewSet(
         if not filterset.is_valid():
             raise drf.exceptions.ValidationError(filterset.errors)
         queryset = filterset.qs
+
+        # Apply ordering only now that everyting is filtered and annotated
+        queryset = filters.OrderingFilter().filter_queryset(
+            self.request, queryset, self
+        )
         return self.get_response_for_queryset(queryset)
 
     @drf.decorators.action(detail=True, methods=["get"])
