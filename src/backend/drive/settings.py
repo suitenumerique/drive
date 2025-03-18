@@ -146,79 +146,6 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
-    item_UNSAFE_MIME_TYPES = [
-        # Executable Files
-        "application/x-msdownload",
-        "application/x-bat",
-        "application/x-dosexec",
-        "application/x-sh",
-        "application/x-ms-dos-executable",
-        "application/x-msi",
-        "application/java-archive",
-        "application/octet-stream",
-        # Dynamic Web Pages
-        "application/x-httpd-php",
-        "application/x-asp",
-        "application/x-aspx",
-        "application/jsp",
-        "application/xhtml+xml",
-        "application/x-python-code",
-        "application/x-perl",
-        "text/html",
-        "text/javascript",
-        "text/x-php",
-        # System Files
-        "application/x-msdownload",
-        "application/x-sys",
-        "application/x-drv",
-        "application/cpl",
-        "application/x-apple-diskimage",
-        # Script Files
-        "application/javascript",
-        "application/x-vbscript",
-        "application/x-powershell",
-        "application/x-shellscript",
-        # Compressed/Archive Files
-        "application/zip",
-        "application/x-tar",
-        "application/gzip",
-        "application/x-bzip2",
-        "application/x-7z-compressed",
-        "application/x-rar",
-        "application/x-rar-compressed",
-        "application/x-compress",
-        "application/x-lzma",
-        # Macros in items
-        "application/vnd.ms-word",
-        "application/vnd.ms-excel",
-        "application/vnd.ms-powerpoint",
-        "application/vnd.ms-word.item.macroenabled.12",
-        "application/vnd.ms-excel.sheet.macroenabled.12",
-        "application/vnd.ms-powerpoint.presentation.macroenabled.12",
-        # Disk Images & Virtual Disk Files
-        "application/x-iso9660-image",
-        "application/x-vmdk",
-        "application/x-apple-diskimage",
-        "application/x-dmg",
-        # Other Dangerous MIME Types
-        "application/x-ms-application",
-        "application/x-msdownload",
-        "application/x-shockwave-flash",
-        "application/x-silverlight-app",
-        "application/x-java-vm",
-        "application/x-bittorrent",
-        "application/hta",
-        "application/x-csh",
-        "application/x-ksh",
-        "application/x-ms-regedit",
-        "application/x-msdownload",
-        "application/xml",
-        "image/svg+xml",
-    ]
-
-    # item versions
-    item_VERSIONS_PAGE_SIZE = 50
-
     # Internationalization
     # https://docs.djangoproject.com/en/3.1/topics/i18n/
 
@@ -294,6 +221,7 @@ class Base(Configuration):
     # Django applications from the highest priority to the lowest
     INSTALLED_APPS = [
         "core",
+        "wopi",
         "drf_spectacular",
         # Third party apps
         "corsheaders",
@@ -534,6 +462,26 @@ class Base(Configuration):
         },
     }
 
+    # WOPI
+
+    # WOPI_CLIENTS contains a list of client name. These client names will be used in the post_setup
+    # to configure the settings related to the client.
+    # Example :
+    # WOPI_CLIENTS = ["vendorA"]
+    # Then these settings will be cheked in the post_setup:
+    # WOPI_VENDORA_MIMETYPES="application/vnd.oasis.opendocument.text"
+    # WOPI_VENDORA_LAUNCH_URL="https://vendorA.com/launch_url"
+    # If they are missing, a ValueError will be raised.
+    WOPI_CLIENTS = values.ListValue(
+        [], environ_name="WOPI_CLIENTS", environ_prefix=None
+    )
+    WOPI_CLIENTS_CONFIGURATION = {}
+
+    # We recommend using an access_token_ttl value that makes the access token valid for 10 hours.
+    WOPI_ACCESS_TOKEN_TIMEOUT = values.IntegerValue(
+        60 * 60 * 10, environ_name="WOPI_ACCESS_TOKEN_TIMEOUT", environ_prefix=None
+    )
+
     # pylint: disable=invalid-name
     @property
     def ENVIRONMENT(self):
@@ -590,6 +538,22 @@ class Base(Configuration):
                 "Both OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION and "
                 "OIDC_ALLOW_DUPLICATE_EMAILS cannot be set to True simultaneously. "
             )
+
+        if cls.WOPI_CLIENTS:
+            for wopi_client in cls.WOPI_CLIENTS:
+                wopi_client_upper = wopi_client.upper()
+                cls.WOPI_CLIENTS_CONFIGURATION[wopi_client] = {
+                    "mimetypes": values.ListValue(
+                        environ_name=f"WOPI_{wopi_client_upper}_MIMETYPES",
+                        environ_prefix=None,
+                        environ_required=True,
+                    ),
+                    "launch_url": values.Value(
+                        environ_name=f"WOPI_{wopi_client_upper}_LAUNCH_URL",
+                        environ_prefix=None,
+                        environ_required=True,
+                    ),
+                }
 
 
 class Build(Base):

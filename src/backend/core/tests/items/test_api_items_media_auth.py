@@ -24,17 +24,11 @@ def test_api_items_media_auth_anonymous_public():
     """Anonymous users should be able to retrieve attachments linked to a public item"""
     item = factories.ItemFactory(link_reach="public", type=models.ItemTypeChoices.FILE)
 
-    filename = f"{uuid.uuid4()!s}.jpg"
-    key = f"item/{item.pk!s}/{filename:s}"
-
-    default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
     )
-
-    original_url = f"http://localhost/media/{key:s}"
+    original_url = f"http://localhost/media/{item.file_key:s}"
     response = APIClient().get(
         "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
     )
@@ -50,7 +44,7 @@ def test_api_items_media_auth_anonymous_public():
     assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
 
     s3_url = urlparse(settings.AWS_S3_ENDPOINT_URL)
-    file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{key:s}"
+    file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{item.file_key:s}"
     response = requests.get(
         file_url,
         headers={
@@ -89,23 +83,18 @@ def test_api_items_media_auth_authenticated_public_or_authenticated(reach):
     Authenticated users who are not related to an item should be able to retrieve
     attachments related to an item with public or authenticated link reach.
     """
-    item = factories.ItemFactory(link_reach=reach)
+    item = factories.ItemFactory(link_reach=reach, type=models.ItemTypeChoices.FILE)
 
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
 
-    filename = f"{uuid.uuid4()!s}.jpg"
-    key = f"item/{item.pk!s}/{filename:s}"
-
-    default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
     )
 
-    original_url = f"http://localhost/media/{key:s}"
+    original_url = f"http://localhost/media/{item.file_key:s}"
     response = client.get(
         "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
     )
@@ -121,7 +110,7 @@ def test_api_items_media_auth_authenticated_public_or_authenticated(reach):
     assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
 
     s3_url = urlparse(settings.AWS_S3_ENDPOINT_URL)
-    file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{key:s}"
+    file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{item.file_key:s}"
     response = requests.get(
         file_url,
         headers={
@@ -158,31 +147,26 @@ def test_api_items_media_auth_authenticated_restricted():
 @pytest.mark.parametrize("via", VIA)
 def test_api_items_media_auth_related(via, mock_user_teams):
     """
-    Users who have a specific access to a item, whatever the role, should be able to
+    Users who have a specific access to an item, whatever the role, should be able to
     retrieve related attachments.
     """
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory()
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FILE)
     if via == USER:
         factories.UserItemAccessFactory(item=item, user=user)
     elif via == TEAM:
         mock_user_teams.return_value = ["lasuite", "unknown"]
         factories.TeamItemAccessFactory(item=item, team="lasuite")
 
-    filename = f"{uuid.uuid4()!s}.jpg"
-    key = f"item/{item.pk!s}/{filename:s}"
-
-    default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
     )
 
-    original_url = f"http://localhost/media/{key:s}"
+    original_url = f"http://localhost/media/{item.file_key:s}"
     response = client.get(
         "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
     )
@@ -198,7 +182,7 @@ def test_api_items_media_auth_related(via, mock_user_teams):
     assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
 
     s3_url = urlparse(settings.AWS_S3_ENDPOINT_URL)
-    file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{key:s}"
+    file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{item.file_key:s}"
     response = requests.get(
         file_url,
         headers={

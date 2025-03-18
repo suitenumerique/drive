@@ -10,16 +10,20 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.search import TrigramSimilarity
 from django.core.exceptions import ValidationError
+from django.core.files.storage import default_storage
 from django.db import models as db
 from django.db import transaction
 from django.db.models.expressions import RawSQL
 
+import magic
 import rest_framework as drf
 from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
 from rest_framework.permissions import AllowAny
 
 from core import enums, models
+from wopi.services import access as access_service
+from wopi.utils import get_wopi_client_config
 
 from . import permissions, serializers, utils
 from .filters import ItemFilter, ListItemFilter
@@ -30,7 +34,7 @@ ITEM_FOLDER = "item"
 UUID_REGEX = (
     r"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
 )
-FILE_EXT_REGEX = r"\.[a-zA-Z]{3,4}"
+FILE_EXT_REGEX = '[^.\\/:*?&"<>|\r\n]+'
 MEDIA_STORAGE_URL_PATTERN = re.compile(
     f"{settings.MEDIA_URL:s}"
     f"(?P<key>{ITEM_FOLDER:s}/(?P<pk>{UUID_REGEX:s})/.*{FILE_EXT_REGEX:s})$"
@@ -576,8 +580,14 @@ class ItemViewSet(
                 {"item": "This action is only available for items in PENDING state."}
             )
 
+        mime_detector = magic.Magic(mime=True)
+        file = default_storage.open(item.file_key)
+        mimetype = mime_detector.from_buffer(file.read(2048))
+        file.close()
+
         item.upload_state = models.ItemUploadStateChoices.UPLOADED
-        item.save(update_fields=["upload_state"])
+        item.mimetype = mimetype
+        item.save(update_fields=["upload_state", "mimetype"])
 
         serializer = self.get_serializer(item)
         return drf_response.Response(serializer.data, status=status.HTTP_200_OK)
@@ -957,6 +967,31 @@ class ItemViewSet(
         request = utils.generate_s3_authorization_headers(f"{url_params.get('key'):s}")
 
         return drf.response.Response("authorized", headers=request.headers, status=200)
+
+    @drf.decorators.action(detail=True, methods=["get"], url_path="wopi")
+    def wopi(self, request, *args, **kwargs):
+        """
+        This view is used to generate an access token and access token ttl in order to start
+        a WOPI session for the item and the current user.
+        """
+        item = self.get_object()
+
+        if not (wopi_client := get_wopi_client_config(item)):
+            raise drf.exceptions.ValidationError(
+                {"detail": "This item does not suport WOPI integration."}
+            )
+
+        service = access_service.AccessUserItemService()
+        access_token, access_token_ttl = service.insert_new_access(item, request.user)
+
+        return drf.response.Response(
+            {
+                "access_token": access_token,
+                "access_token_ttl": access_token_ttl,
+                "launch_url": wopi_client["launch_url"],
+            },
+            status=drf.status.HTTP_200_OK,
+        )
 
 
 class ItemAccessViewSet(

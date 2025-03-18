@@ -478,6 +478,7 @@ class Item(TreeModel, BaseModel):
     )
     numchild = models.PositiveIntegerField(default=0)
     numchild_folder = models.PositiveIntegerField(default=0)
+    mimetype = models.CharField(max_length=255, null=True, blank=True)
 
     label_size = 7
 
@@ -680,6 +681,7 @@ class Item(TreeModel, BaseModel):
             "media_auth": can_get,
             "update": can_update,
             "upload_ended": is_owner_or_admin,
+            "wopi": can_get,
         }
 
     def send_email(self, subject, emails, context=None, language=None):
