@@ -13,7 +13,8 @@
           "empty": {
             "caption": "Drop your files here",
             "cta": "Or click \"Create\""
-          }
+          },
+          "no_url": "This resource does not have an URL"
         },
         "tree": {
           "createFolder": "Create",
@@ -52,6 +53,21 @@
           "toast_one": "{{count}} item deleted",
           "toast_other": "{{count}} items deleted"
         }
+      },
+      "time": {
+        "years_ago_one": "{{count}} year ago",
+        "years_ago_other": "{{count}} years ago",
+        "months_ago_one": "{{count}} month ago",
+        "months_ago_other": "{{count}} months ago",
+        "weeks_ago_one": "{{count}} week ago",
+        "weeks_ago_other": "{{count}} weeks ago",
+        "days_ago_one": "{{count}} day ago",
+        "days_ago_other": "{{count}} days ago",
+        "hours_ago_one": "{{count}} hour ago",
+        "hours_ago_other": "{{count}} hours ago",
+        "minutes_ago_one": "{{count}} minute ago",
+        "minutes_ago_other": "{{count}} minutes ago",
+        "seconds_ago": "few seconds ago"
       }
     }
   },
@@ -69,7 +85,8 @@
           "empty": {
             "caption": "Déposez vos fichiers ici",
             "cta": "Ou cliquez sur \"Créer\""
-          }
+          },
+          "no_url": "Cette ressource n'a pas d'URL"
         },
         "tree": {
           "createFolder": "Créer",
@@ -108,6 +125,21 @@
             "toast_other": "{{count}} éléments supprimés"
           }
         }
+      },
+      "time": {
+        "years_ago_one": "il y a {{count}} an",
+        "years_ago_other": "il y a {{count}} ans",
+        "months_ago_one": "il y a {{count}} mois",
+        "months_ago_other": "il y a {{count}} mois",
+        "weeks_ago_one": "il y a {{count}} semaine",
+        "weeks_ago_other": "il y a {{count}} semaines",
+        "days_ago_one": "il y a {{count}} jour",
+        "days_ago_other": "il y a {{count}} jours",
+        "hours_ago_one": "il y a {{count}} heure",
+        "hours_ago_other": "il y a {{count}} heures",
+        "minutes_ago_one": "il y a {{count}} minute",
+        "minutes_ago_other": "il y a {{count}} minutes",
+        "seconds_ago": "il y a quelques secondes"
       }
     }
   }

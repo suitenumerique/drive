@@ -15,6 +15,9 @@ import clsx from "clsx";
 import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
 import { Button, Loader, useCunningham } from "@openfun/cunningham-react";
 import gridEmpty from "@/assets/grid_empty.png";
+import { timeAgo } from "../utils/utils";
+import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
+import { addToast } from "@/features/ui/components/toaster/Toaster";
 
 export const ExplorerGrid = () => {
   const { t } = useTranslation();
@@ -44,7 +47,7 @@ export const ExplorerGrid = () => {
       header: t("explorer.grid.last_update"),
       cell: (info) => (
         <div className="explorer__grid__item__last-update">
-          {info.row.original.updated_at.toDateString()}
+          {timeAgo(info.row.original.updated_at)}
         </div>
       ),
     }),
@@ -174,7 +177,15 @@ export const ExplorerGrid = () => {
                           item: row.original,
                         });
                       } else {
-                        window.open(row.original.url, "_blank");
+                        if (row.original.url) {
+                          window.open(row.original.url, "_blank");
+                        } else {
+                          addToast(
+                            <ToasterItem>
+                              {t("explorer.grid.no_url")}
+                            </ToasterItem>
+                          );
+                        }
                       }
                     }
                   }}
