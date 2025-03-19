@@ -58,7 +58,7 @@ export const ExplorerInner = () => {
   const queryClient = useQueryClient();
   const createFile = useMutation({
     mutationFn: async (...payload: Parameters<typeof driver.createFile>) => {
-      await driver.createFile(...payload);
+      return driver.createFile(...payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -113,9 +113,14 @@ export const ExplorerInner = () => {
 
   useEffect(() => {
     if (fileUploadsToastId.current) {
-      toast.update(fileUploadsToastId.current, {
-        render: <FileUploadToast uploadingState={uploadingState} />,
-      });
+      if (Object.keys(uploadingState).length === 0) {
+        toast.dismiss(fileUploadsToastId.current);
+        fileUploadsToastId.current = null;
+      } else {
+        toast.update(fileUploadsToastId.current, {
+          render: <FileUploadToast uploadingState={uploadingState} />,
+        });
+      }
     }
   }, [uploadingState]);
 
@@ -179,21 +184,48 @@ export const ExplorerInner = () => {
 
         // Then, upload all the files sequentially. We are not uploading them in parallel because the backend
         // does not support it, it causes concurrency issues.
+        const promises = [];
         for (const file of acceptedFiles) {
-          await createFile.mutateAsync({
-            filename: file.name,
-            file,
-            parentId: item!.id,
-            progressHandler: (progress) => {
-              setUploadingState((prev) => {
-                const newState = {
-                  ...prev,
-                  [file.name]: { file, progress },
-                };
-                return newState;
-              });
-            },
-          });
+          // We do not using "createFile.mutateAsync" because it causes unhandled errors.
+          // Instead, we use a promise that we can await to run all the uploads sequentially.
+          // Using "createFile.mutate" makes the error handled by the mutation hook itself.
+          promises.push(
+            () =>
+              new Promise<void>((resolve) => {
+                createFile.mutate(
+                  {
+                    filename: file.name,
+                    file,
+                    parentId: item!.id,
+                    progressHandler: (progress) => {
+                      setUploadingState((prev) => {
+                        const newState = {
+                          ...prev,
+                          [file.name]: { file, progress },
+                        };
+                        return newState;
+                      });
+                    },
+                  },
+                  {
+                    onError: () => {
+                      setUploadingState((prev) => {
+                        // Remove the file from the uploading state on error
+                        const newState = { ...prev };
+                        delete newState[file.name];
+                        return newState;
+                      });
+                    },
+                    onSettled: () => {
+                      resolve();
+                    },
+                  }
+                );
+              })
+          );
+        }
+        for (const promise of promises) {
+          await promise();
         }
       },
     });
