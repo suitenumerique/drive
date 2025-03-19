@@ -3,6 +3,7 @@ import React, { PropsWithChildren, useEffect, useState } from "react";
 import { fetchAPI } from "@/features/api/fetchApi";
 import { User } from "@/features/auth/types";
 import { baseApiUrl } from "../api/utils";
+import { APIError } from "../api/APIError";
 
 export const logout = () => {
   window.location.replace(new URL("logout/", baseApiUrl()).href);
@@ -28,20 +29,21 @@ export const Auth = ({
   const [user, setUser] = useState<User | null>();
 
   const init = async () => {
-    const response = await fetchAPI(`users/me/`, undefined, {
-      logoutOn401: false,
-    });
-    if (!response.ok) {
-      if (redirect) {
+    try {
+      const response = await fetchAPI(`users/me/`, undefined, {
+        logoutOn401: false,
+      });
+      const data = (await response.json()) as User;
+      setUser(data);
+      return data;
+    } catch (error) {
+      if (redirect && error instanceof APIError && error.code === 401) {
         login();
       } else {
         setUser(null);
       }
       return null;
     }
-    const data = (await response.json()) as User;
-    setUser(data);
-    return data;
   };
 
   useEffect(() => {
