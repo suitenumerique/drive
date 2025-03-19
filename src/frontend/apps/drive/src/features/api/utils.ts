@@ -23,3 +23,13 @@ export const baseApiUrl = (apiVersion: string = "1.0") => {
     (typeof window !== "undefined" ? window.location.origin : "");
   return `${origin}/api/v${apiVersion}/`;
 };
+
+export const isJson = (str: string) => {
+  try {
+    JSON.parse(str);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (e) {
+    return false;
+  }
+  return true;
+};

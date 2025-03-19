@@ -1,5 +1,6 @@
 import { logout } from "@/features/auth/Auth";
-import { baseApiUrl } from "./utils";
+import { baseApiUrl, isJson } from "./utils";
+import { APIError } from "./APIError";
 
 /**
  * Retrieves the CSRF token from the document's cookies.
@@ -45,5 +46,13 @@ export const fetchAPI = async (
     logout();
   }
 
-  return response;
+  if (response.ok) {
+    return response;
+  }
+
+  const data = await response.text();
+  if (isJson(data)) {
+    throw new APIError(response.status, JSON.parse(data));
+  }
+  throw new APIError(response.status);
 };
