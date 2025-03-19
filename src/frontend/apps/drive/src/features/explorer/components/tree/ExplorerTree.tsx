@@ -11,10 +11,10 @@ import {
 import { useTranslation } from "react-i18next";
 import { SubmitHandler, useForm } from "react-hook-form";
 import {
-  itemToTreeItem,
+  itemsToTreeItems,
   NavigationEventType,
   useExplorer,
-} from "./ExplorerContext";
+} from "../ExplorerContext";
 import { Item, ItemTreeItem } from "@/features/drivers/types";
 import {
   TreeView,
@@ -23,6 +23,7 @@ import {
   TreeViewNodeTypeEnum,
 } from "@gouvfr-lasuite/ui-kit";
 import { useEffect } from "react";
+import { ExplorerTreeItem } from "./ExplorerTreeItem";
 
 type Inputs = {
   title: string;
@@ -31,13 +32,30 @@ type Inputs = {
 export const ExplorerTree = () => {
   const { t } = useTranslation();
 
-  const { tree: treeItem, onNavigate, treeObject, treeApiRef } = useExplorer();
+  const {
+    tree: treeItem,
+    firstLevelItems,
+    treeObject,
+    treeApiRef,
+    onNavigate,
+  } = useExplorer();
 
   useEffect(() => {
     if (!treeItem) {
       return;
     }
-    const data: ItemTreeItem[] = [itemToTreeItem(treeItem)];
+    const treeItems: Item[] = firstLevelItems ?? [];
+    // Trouver l'élément treeItem dans treeItems et le remplacer
+    const treeItemIndex = treeItems.findIndex(
+      (item) => item.id === treeItem.id
+    );
+    if (treeItemIndex !== -1) {
+      treeItems[treeItemIndex] = treeItem;
+    } else {
+      treeItems.unshift(treeItem);
+    }
+
+    const data: ItemTreeItem[] = itemsToTreeItems(treeItems);
     const items: TreeViewDataType<ItemTreeItem>[] = [];
 
     const firstNode: TreeViewDataType<ItemTreeItem> = {
@@ -47,7 +65,7 @@ export const ExplorerTree = () => {
     };
 
     items.push(firstNode);
-    items.push(...data);
+    items.push(data[0]);
 
     if (data.length > 1) {
       const separator: TreeViewDataType<ItemTreeItem> = {
@@ -63,10 +81,11 @@ export const ExplorerTree = () => {
 
       items.push(separator);
       items.push(sharedSpace);
+      items.push(...data.slice(1));
     }
 
     treeObject.resetTree(items);
-  }, [treeItem]);
+  }, [treeItem, firstLevelItems]);
 
   const createFolderModal = useModal();
 
@@ -122,6 +141,9 @@ export const ExplorerTree = () => {
           treeApiRef={treeApiRef}
           treeData={treeObject.nodes}
           handleMove={treeObject.handleMove}
+          canDrag={(node) => {
+            return node.value.title !== "Titi";
+          }}
           renderNode={(props) => {
             return (
               <TreeViewItem
@@ -134,7 +156,9 @@ export const ExplorerTree = () => {
                   });
                 }}
               >
-                <div>{props.node.data.value.title}</div>
+                <ExplorerTreeItem
+                  item={props.node.data.value as ItemTreeItem}
+                />
               </TreeViewItem>
             );
           }}

@@ -1,0 +1,11 @@
+.explorer__tree__item {
+  display: flex;
+  align-items: center;
+  gap: var(--c--theme--spacings--xs);
+
+  &__title {
+    font-size: var(--c--theme--font--sizes--sm);
+    font-weight: 500;
+    color: var(--c--theme--colors--greyscale-1000);
+  }
+}

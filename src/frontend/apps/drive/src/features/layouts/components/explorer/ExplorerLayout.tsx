@@ -1,5 +1,5 @@
 import { login, useAuth } from "@/features/auth/Auth";
-import { ExplorerTree } from "@/features/explorer/components/ExplorerTree";
+import { ExplorerTree } from "@/features/explorer/components/tree/ExplorerTree";
 import { MainLayout } from "@gouvfr-lasuite/ui-kit";
 import logo from "@/assets/logo.svg";
 import { HeaderRight } from "../header/Header";

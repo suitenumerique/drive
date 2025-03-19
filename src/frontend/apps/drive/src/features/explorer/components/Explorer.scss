@@ -132,6 +132,10 @@
           padding-left: 6px;
         }
 
+        tr {
+          border: 2px solid transparent;
+        }
+
         tr td:last-child,
         tr th:last-child {
           padding-right: 6px;
@@ -139,6 +143,11 @@
 
         tr.selected {
           background-color: var(--c--theme--colors--primary-100);
+        }
+
+        tr.over {
+          background-color: var(--c--theme--colors--primary-100);
+          border: 2px solid var(--c--theme--colors--primary-500) !important;
         }
 
         tr {
@@ -192,6 +201,18 @@
       font-weight: 500;
       color: var(--c--theme--colors--primary-800);
     }
+  }
+
+  &__drag-overlay {
+    cursor: grabbing;
+    padding: var(--c--theme--spacings--3xs, 4px)
+      calc(var(--c--theme--spacings--2xs, 6px) + 10px);
+    background-color: #5858d3;
+    border-radius: 12px;
+    color: var(--c--theme--colors--greyscale-000, #fff);
+    font-weight: 700;
+    font-size: 11px;
+    width: fit-content;
   }
 }
 

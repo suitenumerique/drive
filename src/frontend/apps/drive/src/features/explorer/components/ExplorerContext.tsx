@@ -18,11 +18,12 @@ export interface ExplorerContextType {
   selectedItems: Item[];
   itemId: string;
   item: Item | undefined;
+  firstLevelItems: Item[] | undefined;
   children: Item[] | undefined;
   tree: Item | undefined;
   onNavigate: (event: NavigationEvent) => void;
   initialId: string | undefined;
-  treeApiRef: React.RefObject<TreeApi<TreeDataItem<ItemTreeItem>>>;
+  treeApiRef?: React.RefObject<TreeApi<TreeDataItem<ItemTreeItem>> | undefined>;
 }
 
 export const ExplorerContext = createContext<ExplorerContextType | undefined>(
@@ -58,7 +59,7 @@ export const ExplorerProvider = ({
   onNavigate: (event: NavigationEvent) => void;
 }) => {
   const driver = getDriver();
-  const ref = useRef<TreeApi<TreeDataItem<ItemTreeItem>>>();
+  const ref = useRef<TreeApi<TreeDataItem<ItemTreeItem>>>(undefined);
   const [selectedItemIds, setSelectedItemIds] = useState<
     Record<string, boolean>
   >({});
@@ -79,12 +80,12 @@ export const ExplorerProvider = ({
 
   const handleNavigate = async (event: NavigationEvent) => {
     onNavigate(event);
-    const parentId = treeObject.getParentId(event.item.id);
+    // const parentId = treeObject.getParentId(event.item.id);
 
-    if (parentId) {
-      await treeObject.handleLoadChildren(parentId as string);
-      ref.current?.openParents(parentId as string);
-    }
+    // if (parentId) {
+    //   await treeObject.handleLoadChildren(parentId as string);
+    //   ref.current?.openParents(parentId as string);
+    // }
   };
   useEffect(() => {
     if (!initialId) {
@@ -100,6 +101,11 @@ export const ExplorerProvider = ({
   const { data: itemChildren } = useQuery({
     queryKey: ["items", itemId, "children"],
     queryFn: () => getDriver().getChildren(itemId),
+  });
+
+  const { data: firstLevelItems } = useQuery({
+    queryKey: ["firstLevelItems"],
+    queryFn: () => getDriver().getItems(),
   });
 
   const { data: tree } = useQuery({
@@ -124,7 +130,7 @@ export const ExplorerProvider = ({
         treeObject,
         selectedItemIds,
         setSelectedItemIds,
-
+        firstLevelItems,
         displayMode,
         selectedItems: getSelectedItems(),
         itemId,
@@ -148,4 +154,8 @@ export const itemToTreeItem = (item: Item): ItemTreeItem => {
     children: item.children?.map(itemToTreeItem),
     nodeType: TreeViewNodeTypeEnum.NODE,
   };
+};
+
+export const itemsToTreeItems = (items: Item[]): ItemTreeItem[] => {
+  return items.map(itemToTreeItem);
 };

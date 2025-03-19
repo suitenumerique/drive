@@ -19,7 +19,9 @@ import { Id, toast } from "react-toastify";
 import { FileUploadToast } from "./toasts/FileUploadToast";
 import {
   DndContext,
+  DragEndEvent,
   DragOverlay,
+  DragStartEvent,
   KeyboardSensor,
   Modifier,
   MouseSensor,
@@ -29,17 +31,20 @@ import {
 } from "@dnd-kit/core";
 import { getEventCoordinates } from "@dnd-kit/utilities";
 import { Item } from "@/features/drivers/types";
+import { ExplorerDragOverlay } from "./tree/ExploreDragOverlay";
+import { useMoveItems } from "../api/useMoveItem";
 export type FileUploadMeta = { file: File; progress: number };
 
 export const ExplorerInner = () => {
   const { t } = useTranslation();
   const {
     setSelectedItemIds: setSelectedItems,
-
+    itemId,
     item,
     displayMode,
     selectedItems,
   } = useExplorer();
+  const moveItems = useMoveItems(itemId);
   const ref = useRef<Item[]>([]);
   const driver = getDriver();
   ref.current = selectedItems;
@@ -98,7 +103,7 @@ export const ExplorerInner = () => {
   const keyboardSensor = useSensor(KeyboardSensor, {});
 
   const sensors = useSensors(mouseSensor, touchSensor, keyboardSensor);
-  // Debug
+
   // const [uploadingState, setUploadingState] = useState<
   //   Record<string, FileUploadMeta>
   // >({
@@ -135,6 +140,12 @@ export const ExplorerInner = () => {
   //     });
   //   }, 1000);
   // }, []);
+
+  useEffect(() => {
+    if (itemId) {
+      setSelectedItems({});
+    }
+  }, [itemId]);
 
   useEffect(() => {
     if (fileUploadsToastId.current) {
@@ -255,55 +266,104 @@ export const ExplorerInner = () => {
       },
     });
 
-  const toto = (target: HTMLElement): boolean => {
+  const beforeDrag = (target: HTMLElement): boolean => {
+    const isName = target.closest(".explorer__grid__item__name");
+    const isTitle = target.classList.contains("c__datagrid__row__cell--title");
+    if (isName || isTitle) {
+      return false;
+    }
+
     const parent = target.closest(".selectable");
-    console.log("----selectable", ref.current);
     if (parent) {
-      // Vérifier si l'élément parent a la classe "selected"
       const isSelected = parent.classList.contains("selected");
-      console.log("isSelected", isSelected);
       return !isSelected;
     }
     return true;
   };
 
-  console.log("rerender", ref.current);
+  const handleDragStart = (ev: DragStartEvent) => {
+    document.body.style.cursor = "grabbing";
+    const item = ev.active.data.current?.item as Item;
+    if (!item) {
+      return;
+    }
+
+    if (selectedItems.length > 0) {
+      return;
+    }
+
+    setSelectedItems({
+      [item.id]: true,
+    });
+  };
+
+  const handleDragEnd = async ({ active, over }: DragEndEvent) => {
+    document.body.style.cursor = "default";
+    const activeItem = active.data.current?.item as Item;
+    const overItem = over?.data.current?.item as Item;
+
+    if (!activeItem || !overItem) {
+      return;
+    }
+    if (activeItem.id === overItem.id) {
+      return;
+    }
+
+    await moveItems.mutateAsync({
+      ids: selectedItems.map((item) => item.id),
+      parentId: overItem.id,
+    });
+  };
 
   return (
-    <SelectionArea
-      onBeforeDrag={(ev) => {
-        return toto(ev.event?.target as HTMLElement);
-      }}
-      onStart={onSelectionStart}
-      onMove={onSelectionMove}
-      selectables=".selectable"
-      className="selection-area__container"
-      features={{
-        range: true,
-        touch: true,
-        singleTap: {
-          // We do not want to allow singleTap to select items, otherwise it overrides the onClick event of the TR
-          // element, and also blocks the click on the action dropdown menu. We rather implement it by ourselves.
-          allow: false,
-          intersect: "native",
-        },
-      }}
+    <DndContext
+      sensors={sensors}
+      modifiers={[snapToTopLeft]}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
     >
-      <DndContext
-        sensors={sensors}
-        modifiers={[snapToTopLeft]}
-        onDragStart={() => console.log("drag start")}
+      <SelectionArea
+        onBeforeDrag={(ev) => {
+          return beforeDrag(ev.event?.target as HTMLElement);
+        }}
+        onBeforeStart={({ event, selection }) => {
+          if (!event?.target) {
+            return;
+          }
+          const target = event.target as HTMLElement;
+
+          const classesToCheck = [
+            "explorer__content",
+            "explorer--app",
+            "c__breadcrumbs__button",
+            "explorer__content__breadcrumbs",
+            "explorer__content__filters",
+          ];
+          const hasAnyClass = classesToCheck.some((className) =>
+            target.classList.contains(className)
+          );
+          if (hasAnyClass) {
+            selection.clearSelection();
+            setSelectedItems({});
+          }
+        }}
+        onStart={onSelectionStart}
+        onMove={onSelectionMove}
+        selectables=".selectable"
+        className="selection-area__container"
+        features={{
+          range: true,
+          touch: true,
+          singleTap: {
+            // We do not want to allow singleTap to select items, otherwise it overrides the onClick event of the TR
+            // element, and also blocks the click on the action dropdown menu. We rather implement it by ourselves.
+            allow: false,
+            intersect: "native",
+          },
+        }}
       >
         <DragOverlay>
-          <div
-            style={{
-              backgroundColor: "red",
-              color: "white",
-              padding: "10px",
-            }}
-          >
-            {selectedItems.length} Fichiers sélectionnés
-          </div>
+          <ExplorerDragOverlay count={selectedItems.length} />
         </DragOverlay>
         <div
           {...getRootProps({
@@ -329,8 +389,8 @@ export const ExplorerInner = () => {
           </div>
           <Toaster />
         </div>
-      </DndContext>
-    </SelectionArea>
+      </SelectionArea>
+    </DndContext>
   );
 };
 

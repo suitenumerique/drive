@@ -6,7 +6,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavigationEventType, useExplorer } from "./ExplorerContext";
 import { FolderIcon } from "@/features/ui/components/icon/Icon";
@@ -21,6 +21,7 @@ import {
 } from "@openfun/cunningham-react";
 import gridEmpty from "@/assets/grid_empty.png";
 import { Draggable } from "./Draggable";
+import { Droppable } from "./Droppable";
 import { timeAgo } from "../utils/utils";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
@@ -30,6 +31,9 @@ export const ExplorerGrid = () => {
   const { t: tc } = useCunningham();
   const lastSelectedRowRef = useRef<string | null>(null);
   const columnHelper = createColumnHelper<Item>();
+  const [overedItemIds, setOveredItemIds] = useState<Record<string, boolean>>(
+    {}
+  );
   const {
     setSelectedItemIds: setSelectedItems,
     selectedItemIds: selectedItems,
@@ -65,8 +69,19 @@ export const ExplorerGrid = () => {
     }),
   ];
 
+  const dataTable = useMemo(() => {
+    return (children ?? []).sort((a, b) => {
+      // Trier d'abord par type (dossiers en premier)
+      if (a.type !== b.type) {
+        return a.type === ItemType.FOLDER ? -1 : 1;
+      }
+      // Ensuite trier par date de mise à jour (du plus récent au plus ancien)
+      return b.updated_at.getTime() - a.updated_at.getTime();
+    });
+  }, [children]);
+
   const table = useReactTable({
-    data: children ?? [],
+    data: dataTable,
     columns,
     getCoreRowModel: getCoreRowModel(),
     enableRowSelection: true,
@@ -123,11 +138,13 @@ export const ExplorerGrid = () => {
           <tbody>
             {table.getRowModel().rows.map((row) => {
               const isSelected = !!selectedItems[row.original.id];
+              const isOvered = !!overedItemIds[row.original.id];
               return (
                 <tr
                   key={row.original.id}
                   className={clsx("selectable", {
                     selected: isSelected,
+                    over: isOvered,
                   })}
                   data-id={row.original.id}
                   tabIndex={0}
@@ -198,23 +215,43 @@ export const ExplorerGrid = () => {
                     }
                   }}
                 >
-                  {row.getVisibleCells().map((cell, index, array) => (
-                    <td
-                      key={cell.id}
-                      className={
-                        index === array.length - 1
-                          ? "c__datagrid__row__cell--actions"
-                          : ""
-                      }
-                    >
-                      <Draggable id={cell.id} disabled={!isSelected}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </Draggable>
-                    </td>
-                  ))}
+                  {row.getVisibleCells().map((cell, index, array) => {
+                    const isLastCell = index === array.length - 1;
+                    const isFirstCell = index === 0;
+                    return (
+                      <td
+                        key={cell.id}
+                        className={clsx("", {
+                          "c__datagrid__row__cell--actions": isLastCell,
+                          "c__datagrid__row__cell--title": isFirstCell,
+                        })}
+                      >
+                        <Droppable
+                          id={cell.id}
+                          item={row.original}
+                          disabled={row.original.type !== ItemType.FOLDER}
+                          onOver={(isOver, item) => {
+                            console.log("isOver", isOver, item.id);
+                            setOveredItemIds((prev) => ({
+                              ...prev,
+                              [item.id]: isOver,
+                            }));
+                          }}
+                        >
+                          <Draggable
+                            id={cell.id}
+                            disabled={index === 0 ? false : !isSelected}
+                            item={row.original}
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </Draggable>
+                        </Droppable>
+                      </td>
+                    );
+                  })}
                 </tr>
               );
             })}

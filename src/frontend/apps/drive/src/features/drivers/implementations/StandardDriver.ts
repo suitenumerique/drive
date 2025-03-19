@@ -35,6 +35,20 @@ export class StandardDriver extends Driver {
     return jsonToItem(data);
   }
 
+  async moveItem(id: string, parentId: string): Promise<void> {
+    await fetchAPI(`items/${id}/move/`, {
+      method: "POST",
+      body: JSON.stringify({ target_item_id: parentId }),
+    });
+  }
+
+
+  async moveItems(ids: string[], parentId: string): Promise<void> {
+    for (const id of ids) {
+      await this.moveItem(id, parentId);
+    }
+  }
+
   async createFolder(data: {
     title: string;
     parentId?: string;
@@ -105,6 +119,8 @@ export class StandardDriver extends Driver {
       });
     }
   }
+
+
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
