@@ -1,4 +1,4 @@
-import { DropdownMenu, Header as KitHeader } from "@lasuite/ui-kit";
+import { DropdownMenu, Header as KitHeader } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@openfun/cunningham-react";
 import logo from "@/assets/logo.svg";
 import { useAuth, logout } from "@/features/auth/Auth";

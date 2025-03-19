@@ -10,7 +10,7 @@
     "build-theme": "cunningham -g css -o src/styles"
   },
   "dependencies": {
-    "@lasuite/ui-kit": "../../../design-system",
+    "@gouvfr-lasuite/ui-kit": "0.1.3",
     "@openfun/cunningham-react": "3.0.0",
     "@tanstack/react-query": "5.66.9",
     "@tanstack/react-table": "8.20.6",

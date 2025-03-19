@@ -12,7 +12,7 @@ import { NavigationEventType, useExplorer } from "./ExplorerContext";
 import { FolderIcon } from "@/features/ui/components/icon/Icon";
 import { FileIcon } from "@/features/ui/components/icon/Icon";
 import clsx from "clsx";
-import { DropdownMenu } from "@lasuite/ui-kit";
+import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
 import { Button, Loader, useCunningham } from "@openfun/cunningham-react";
 import gridEmpty from "@/assets/grid_empty.png";
 

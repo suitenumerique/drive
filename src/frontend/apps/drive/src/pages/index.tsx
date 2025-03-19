@@ -2,7 +2,7 @@ import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout"
 import Head from "next/head";
 import { useTranslation } from "next-i18next";
 import { DefaultLayout } from "@/features/layouts/components/default/DefaultLayout";
-import { ProConnectButton } from "@lasuite/ui-kit";
+import { ProConnectButton } from "@gouvfr-lasuite/ui-kit";
 import { login, useAuth } from "@/features/auth/Auth";
 import { gotoLastVisitedItem } from "@/features/explorer/utils/utils";
 import { useEffect } from "react";

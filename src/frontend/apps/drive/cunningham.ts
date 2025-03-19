@@ -1,4 +1,4 @@
-import { cunninghamConfig } from "@lasuite/ui-kit";
+import { cunninghamConfig } from "@gouvfr-lasuite/ui-kit";
 
 export default {
   ...cunninghamConfig,

@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
 import type { NextPage } from "next";
 import type { AppProps } from "next/app";
-import { CunninghamProvider } from "@lasuite/ui-kit";
+import { CunninghamProvider } from "@gouvfr-lasuite/ui-kit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "../styles/globals.scss";
