@@ -10,6 +10,7 @@ export type Item = {
   upload_state: string;
   updated_at: Date;
   children?: Item[];
+  url?: string;
   policy?: {
     url: string;
     fields: {

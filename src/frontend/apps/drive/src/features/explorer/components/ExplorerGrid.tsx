@@ -168,10 +168,14 @@ export const ExplorerGrid = () => {
 
                     // Double click to open the item
                     if (e.detail === 2) {
-                      onNavigate({
-                        type: NavigationEventType.ITEM,
-                        item: row.original,
-                      });
+                      if (row.original.type === ItemType.FOLDER) {
+                        onNavigate({
+                          type: NavigationEventType.ITEM,
+                          item: row.original,
+                        });
+                      } else {
+                        window.open(row.original.url, "_blank");
+                      }
                     }
                   }}
                 >
