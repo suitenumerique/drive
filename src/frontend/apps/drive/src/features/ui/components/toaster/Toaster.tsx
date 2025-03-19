@@ -11,13 +11,21 @@ export const ToasterItem = ({
   closeToast,
   closeButton = false,
   className,
+  type = "info",
 }: {
   children: React.ReactNode;
   closeButton?: boolean;
   className?: string;
+  type?: "error" | "info";
 } & Partial<ToastContentProps>) => {
   return (
-    <div className={clsx("suite__toaster__item", className)}>
+    <div
+      className={clsx(
+        "suite__toaster__item",
+        "suite__toaster__item--" + type,
+        className
+      )}
+    >
       <div className="suite__toaster__item__content">{children}</div>
       {closeButton && (
         <Button
@@ -40,6 +48,7 @@ export const addToast = (
     closeButton: false,
     className: "suite__toaster__wrapper",
     autoClose: 8000,
+    hideProgressBar: true,
     ...options,
   });
 };

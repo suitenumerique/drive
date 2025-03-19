@@ -7,16 +7,13 @@
 
   &__item {
     padding: 12px;
-    background-color: var(--c--theme--colors--primary-050);
     border-radius: 4px;
-    border: 1px solid var(--c--theme--colors--primary-300);
     min-width: 400px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-shadow: 0px 6px 18px 0px #0000910d;
     font-size: 14px;
-    color: var(--c--theme--colors--primary-800);
     font-weight: 500;
     font-family: var(--c--theme--font--families--base);
 
@@ -26,9 +23,22 @@
       align-items: center;
       flex-grow: 1;
     }
+
+    &--info {
+      background-color: var(--c--theme--colors--primary-050);
+      border: 1px solid var(--c--theme--colors--primary-300);
+      color: var(--c--theme--colors--primary-800);
+      --toastify-color-progress-light: var(--c--theme--colors--primary-800);
+    }
+
+    &--error {
+      background-color: var(--c--theme--colors--danger-050);
+      border: 1px solid var(--c--theme--colors--danger-300);
+      color: var(--c--theme--colors--danger-600);
+      --toastify-color-progress-light: var(--c--theme--colors--danger-800);
+    }
   }
 }
 
 :root {
-  --toastify-color-progress-light: var(--c--theme--colors--primary-800);
 }
