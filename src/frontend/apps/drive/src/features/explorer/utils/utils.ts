@@ -1,5 +1,5 @@
 import { getDriver } from "@/features/config/Config";
-import { ItemType } from "@/features/drivers/types";
+import { Item, ItemType } from "@/features/drivers/types";
 import i18n from "@/features/i18n/initI18n";
 /**
  * Temporary solution to redirect to the last visited item, by default the personal root folder.
@@ -44,4 +44,15 @@ export const timeAgo = (date: Date) => {
     return i18n.t("time.minutes_ago", { count: minutes > 0 ? minutes : 1 });
   }
   return i18n.t("time.seconds_ago");
+};
+
+export const getExtension = (item: Item) => {
+  if (!item.filename) {
+    return null;
+  }
+  const parts = item.filename.split(".");
+  if (parts.length === 1) {
+    return null;
+  }
+  return parts.pop()!;
 };

@@ -1,16 +1,15 @@
 import { ItemType } from "@/features/drivers/types";
 import { Item } from "@/features/drivers/types";
 import {
+  CellContext,
   createColumnHelper,
   flexRender,
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavigationEventType, useExplorer } from "./ExplorerContext";
-import { FolderIcon } from "@/features/ui/components/icon/Icon";
-import { FileIcon } from "@/features/ui/components/icon/Icon";
 import clsx from "clsx";
 import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
 import {
@@ -23,12 +22,28 @@ import gridEmpty from "@/assets/grid_empty.png";
 import { timeAgo } from "../utils/utils";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
+import { ItemIcon } from "./ItemIcon";
 
 export const ExplorerGrid = () => {
   const { t } = useTranslation();
   const { t: tc } = useCunningham();
   const lastSelectedRowRef = useRef<string | null>(null);
   const columnHelper = createColumnHelper<Item>();
+
+  // Memorize this callback is used to avoid flickering on this cell, especially with the
+  // icon as <img> which get re-fetched on every render.
+  const nameCellRenderer = useCallback(
+    (params: CellContext<Item, string>) => (
+      <div className="explorer__grid__item__name">
+        <ItemIcon item={params.row.original} />
+        <span className="explorer__grid__item__name__text">
+          {params.row.original.title}
+        </span>
+      </div>
+    ),
+    []
+  );
+
   const {
     setSelectedItemIds: setSelectedItems,
     selectedItemIds: selectedItems,
@@ -38,15 +53,7 @@ export const ExplorerGrid = () => {
   const columns = [
     columnHelper.accessor("title", {
       header: t("explorer.grid.name"),
-      cell: (params) => (
-        <div className="explorer__grid__item__name">
-          {params.row.original.type === ItemType.FOLDER && <FolderIcon />}
-          {params.row.original.type === ItemType.FILE && <FileIcon />}
-          <span className="explorer__grid__item__name__text">
-            {params.row.original.title}
-          </span>
-        </div>
-      ),
+      cell: nameCellRenderer,
     }),
     columnHelper.accessor("updated_at", {
       header: t("explorer.grid.last_update"),
@@ -69,9 +76,6 @@ export const ExplorerGrid = () => {
     columns,
     getCoreRowModel: getCoreRowModel(),
     enableRowSelection: true,
-    state: {
-      rowSelection: selectedItems,
-    },
   });
 
   const isLoading = children === undefined;

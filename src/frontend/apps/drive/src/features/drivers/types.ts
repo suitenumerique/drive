@@ -6,11 +6,13 @@ export enum ItemType {
 export type Item = {
   id: string;
   title: string;
+  filename: string;
   type: ItemType;
   upload_state: string;
   updated_at: Date;
   children?: Item[];
   url?: string;
+  mimetype?: string;
   policy?: {
     url: string;
     fields: {
