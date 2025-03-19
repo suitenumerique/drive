@@ -334,6 +334,7 @@ const ItemActions = () => {
         onClick={() => setIsOpen(!isOpen)}
         color="primary-text"
         className="c__language-picker"
+        size="medium"
         icon={<span className="material-icons">more_horiz</span>}
       ></Button>
     </DropdownMenu>

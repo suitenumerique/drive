@@ -17,6 +17,7 @@ import {
 } from "../ExplorerContext";
 import { Item, ItemTreeItem } from "@/features/drivers/types";
 import {
+  HorizontalSeparator,
   TreeView,
   TreeViewDataType,
   TreeViewItem,
@@ -135,6 +136,7 @@ export const ExplorerTree = () => {
           icon={<span className="material-icons">search</span>}
         ></Button>
       </div>
+      <HorizontalSeparator withPadding={false} />
       <div>
         {/* {treeItem && drawTreeDuPauvre(treeItem)} */}
         <TreeView

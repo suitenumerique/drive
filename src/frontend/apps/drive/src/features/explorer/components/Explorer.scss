@@ -124,6 +124,9 @@
     }
 
     table {
+      border-collapse: separate;
+      border-spacing: 0px 2px;
+
       tbody {
         transition: background-color 0.3s ease;
 
@@ -132,8 +135,8 @@
           padding-left: 6px;
         }
 
-        tr {
-          border: 2px solid transparent;
+        td {
+          border-radius: 4px;
         }
 
         tr td:last-child,
@@ -141,13 +144,20 @@
           padding-right: 6px;
         }
 
+        tr {
+          border-radius: 4px;
+        }
+
         tr.selected {
+          box-shadow: inset 0 0 0 1px var(--c--theme--colors--primary-200);
+          border-radius: 4px;
           background-color: var(--c--theme--colors--primary-100);
         }
 
         tr.over {
           background-color: var(--c--theme--colors--primary-100);
-          border: 2px solid var(--c--theme--colors--primary-500) !important;
+          border-radius: 4px;
+          box-shadow: inset 0 0 0 2px var(--c--theme--colors--primary-500);
         }
 
         tr {
