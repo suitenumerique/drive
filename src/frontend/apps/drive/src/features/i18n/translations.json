@@ -6,6 +6,11 @@
       "welcome": "Welcome",
       "logout": "Logout",
       "my_account": "My Account",
+      "api": {
+        "error": {
+          "unexpected": "An unexpected error occurred."
+        }
+      },
       "explorer": {
         "grid": {
           "name": "Name",
@@ -62,6 +67,11 @@
       "welcome": "Bienvenue",
       "logout": "Déconnexion",
       "my_account": "Mon Compte",
+      "api": {
+        "error": {
+          "unexpected": "Une erreur inattendue est survenue."
+        }
+      },
       "explorer": {
         "grid": {
           "name": "Nom",
