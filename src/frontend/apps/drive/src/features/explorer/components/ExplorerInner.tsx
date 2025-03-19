@@ -17,17 +17,32 @@ import {
 import { useTranslation } from "react-i18next";
 import { Id, toast } from "react-toastify";
 import { FileUploadToast } from "./toasts/FileUploadToast";
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  Modifier,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { getEventCoordinates } from "@dnd-kit/utilities";
+import { Item } from "@/features/drivers/types";
 export type FileUploadMeta = { file: File; progress: number };
 
 export const ExplorerInner = () => {
   const { t } = useTranslation();
   const {
     setSelectedItemIds: setSelectedItems,
+
     item,
     displayMode,
     selectedItems,
   } = useExplorer();
+  const ref = useRef<Item[]>([]);
   const driver = getDriver();
+  ref.current = selectedItems;
 
   const onSelectionStart = ({ event, selection }: SelectionEvent) => {
     if (!event?.ctrlKey && !event?.metaKey) {
@@ -73,6 +88,16 @@ export const ExplorerInner = () => {
     Record<string, FileUploadMeta>
   >({});
 
+  const mouseSensor = useSensor(MouseSensor, {
+    activationConstraint,
+  });
+
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint,
+  });
+  const keyboardSensor = useSensor(KeyboardSensor, {});
+
+  const sensors = useSensors(mouseSensor, touchSensor, keyboardSensor);
   // Debug
   // const [uploadingState, setUploadingState] = useState<
   //   Record<string, FileUploadMeta>
@@ -230,8 +255,25 @@ export const ExplorerInner = () => {
       },
     });
 
+  const toto = (target: HTMLElement): boolean => {
+    const parent = target.closest(".selectable");
+    console.log("----selectable", ref.current);
+    if (parent) {
+      // Vérifier si l'élément parent a la classe "selected"
+      const isSelected = parent.classList.contains("selected");
+      console.log("isSelected", isSelected);
+      return !isSelected;
+    }
+    return true;
+  };
+
+  console.log("rerender", ref.current);
+
   return (
     <SelectionArea
+      onBeforeDrag={(ev) => {
+        return toto(ev.event?.target as HTMLElement);
+      }}
       onStart={onSelectionStart}
       onMove={onSelectionMove}
       selectables=".selectable"
@@ -247,30 +289,76 @@ export const ExplorerInner = () => {
         },
       }}
     >
-      <div
-        {...getRootProps({
-          className: clsx(`explorer explorer--${displayMode}`, {
-            "explorer--drop-zone--focused": isFocused,
-            "explorer--drop-zone--drag-accept": isDragAccept,
-            "explorer--drop-zone--drag-reject": isDragReject,
-          }),
-        })}
+      <DndContext
+        sensors={sensors}
+        modifiers={[snapToTopLeft]}
+        onDragStart={() => console.log("drag start")}
       >
-        <input {...getInputProps()} />
-        <div className="explorer__container">
-          {selectedItems.length > 0 ? (
-            <ExplorerSelectionBar />
-          ) : (
-            <div className="explorer__filters">Filters</div>
-          )}
-
-          <div className="explorer__content">
-            <ExplorerBreadcrumbs />
-            <ExplorerGrid />
+        <DragOverlay>
+          <div
+            style={{
+              backgroundColor: "red",
+              color: "white",
+              padding: "10px",
+            }}
+          >
+            {selectedItems.length} Fichiers sélectionnés
           </div>
+        </DragOverlay>
+        <div
+          {...getRootProps({
+            className: clsx(`explorer explorer--${displayMode}`, {
+              "explorer--drop-zone--focused": isFocused,
+              "explorer--drop-zone--drag-accept": isDragAccept,
+              "explorer--drop-zone--drag-reject": isDragReject,
+            }),
+          })}
+        >
+          <input {...getInputProps()} />
+          <div className="explorer__container">
+            {selectedItems.length > 0 ? (
+              <ExplorerSelectionBar />
+            ) : (
+              <div className="explorer__filters">Filters</div>
+            )}
+
+            <div className="explorer__content">
+              <ExplorerBreadcrumbs />
+              <ExplorerGrid />
+            </div>
+          </div>
+          <Toaster />
         </div>
-        <Toaster />
-      </div>
+      </DndContext>
     </SelectionArea>
   );
+};
+
+export const snapToTopLeft: Modifier = ({
+  activatorEvent,
+  draggingNodeRect,
+  transform,
+}) => {
+  if (draggingNodeRect && activatorEvent) {
+    const activatorCoordinates = getEventCoordinates(activatorEvent);
+
+    if (!activatorCoordinates) {
+      return transform;
+    }
+
+    const offsetX = activatorCoordinates.x - draggingNodeRect.left;
+    const offsetY = activatorCoordinates.y - draggingNodeRect.top;
+
+    return {
+      ...transform,
+      x: transform.x + offsetX - 3,
+      y: transform.y + offsetY - 3,
+    };
+  }
+
+  return transform;
+};
+
+const activationConstraint = {
+  distance: 20,
 };

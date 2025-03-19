@@ -2,18 +2,21 @@ import { Breadcrumbs } from "@/features/ui/components/breadcrumbs/Breadcrumbs";
 import { Button } from "@openfun/cunningham-react";
 import workspaceLogo from "@/assets/workspace_logo.svg";
 import { NavigationEventType, useExplorer } from "./ExplorerContext";
-import { getAncestors } from "../utils/tree";
 import { useMemo } from "react";
+import { getAncestors } from "../utils/tree";
 
 export const ExplorerBreadcrumbs = () => {
-  const { tree, item, onNavigate } = useExplorer();
+  const { tree, item, onNavigate, treeObject } = useExplorer();
 
   const getBreadcrumbsItems = () => {
     if (!tree || !item) {
       return [];
     }
 
-    const ancestors = getAncestors(tree, item);
+    const nodes = treeObject.nodes;
+
+    // const ancestors = [];
+    const ancestors = nodes.length > 0 ? getAncestors(nodes[1], item) : [];
     return ancestors.map((ancestor, index) => {
       return {
         content: (

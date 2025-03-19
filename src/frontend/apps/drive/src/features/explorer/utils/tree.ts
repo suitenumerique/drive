@@ -1,14 +1,16 @@
-import { Item } from "@/features/drivers/types";
+import { Item, ItemTreeItem } from "@/features/drivers/types";
+import { TreeDataItem, TreeViewDataType } from "@gouvfr-lasuite/ui-kit";
 
 /**
  * From a tree and a given currentItem, it returns the list of ancestors of the currentItem.
  * If the currentItem is not found in the tree, it throws an error.
  */
-export const getAncestors = (tree: Item, currentItem: Item): Item[] => {
-  const aux = (treeItem: Item, ancestors: Item[]): Item[] | undefined => {
+export const getAncestors = (tree: TreeDataItem<TreeViewDataType<ItemTreeItem>>, currentItem: Item): Item[] => {
+  const aux = (treeItem: TreeDataItem<TreeViewDataType<ItemTreeItem>>, ancestors: ItemTreeItem[]): ItemTreeItem[] | undefined => {
     ancestors = [...ancestors];
-    ancestors.push(treeItem);
-    if (treeItem.id === currentItem.id) {
+    
+    ancestors.push(treeItem.value as ItemTreeItem);
+    if (treeItem.value.id === currentItem.id) {
       return ancestors;
     }
     if (treeItem.children) {
@@ -22,7 +24,7 @@ export const getAncestors = (tree: Item, currentItem: Item): Item[] => {
   };
   const ancestors = aux(tree, []);
   if (!ancestors) {
-    throw new Error("Ancestors not found");
+    return []
   }
   return ancestors;
 };

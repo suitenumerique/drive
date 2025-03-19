@@ -3,7 +3,11 @@ import { ExplorerLayout } from "@/features/layouts/components/explorer/ExplorerL
 import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
 
 export default function ItemPage() {
-  return <Explorer />;
+  return (
+    <div>
+      <Explorer />
+    </div>
+  );
 }
 
 ItemPage.getLayout = function getLayout(page: React.ReactElement) {

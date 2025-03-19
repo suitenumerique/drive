@@ -10,14 +10,17 @@ import {
 } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { SubmitHandler, useForm } from "react-hook-form";
-import { NavigationEventType, useExplorer } from "./ExplorerContext";
-import { Item, ItemTreeItem, ItemType } from "@/features/drivers/types";
+import {
+  itemToTreeItem,
+  NavigationEventType,
+  useExplorer,
+} from "./ExplorerContext";
+import { Item, ItemTreeItem } from "@/features/drivers/types";
 import {
   TreeView,
   TreeViewDataType,
   TreeViewItem,
   TreeViewNodeTypeEnum,
-  useTree,
 } from "@gouvfr-lasuite/ui-kit";
 import { useEffect } from "react";
 
@@ -25,52 +28,45 @@ type Inputs = {
   title: string;
 };
 
-const serialize = (item: Item): ItemTreeItem => {
-  const children = item.children ?? [];
-  return {
-    ...item,
-    childrenCount: item.numchild_folder ?? 0,
-    children: children.map(serialize),
-    nodeType: TreeViewNodeTypeEnum.NODE,
-  };
-};
 export const ExplorerTree = () => {
   const { t } = useTranslation();
-  const driver = getDriver();
 
-  // itemId is the id of the current item
-  const { item, tree: treeItem, onNavigate } = useExplorer();
-  const treeData = useTree<ItemTreeItem>([], undefined, async (id) => {
-    const children = await driver.getChildren(id, ItemType.FOLDER);
-    return children.map((child) => serialize(child));
-  });
+  const { tree: treeItem, onNavigate, treeObject, treeApiRef } = useExplorer();
 
   useEffect(() => {
     if (!treeItem) {
       return;
     }
-    const data: ItemTreeItem = serialize(treeItem);
+    const data: ItemTreeItem[] = [itemToTreeItem(treeItem)];
+    const items: TreeViewDataType<ItemTreeItem>[] = [];
+
     const firstNode: TreeViewDataType<ItemTreeItem> = {
       id: "PERSONAL_SPACE",
       nodeType: TreeViewNodeTypeEnum.TITLE,
       title: "Espace personnel",
     };
 
-    const separator: TreeViewDataType<ItemTreeItem> = {
-      id: "SEPARATOR",
-      nodeType: TreeViewNodeTypeEnum.SEPARATOR,
-    };
+    items.push(firstNode);
+    items.push(...data);
 
-    const sharedSpace: TreeViewDataType<ItemTreeItem> = {
-      id: "SHARED_SPACE",
-      nodeType: TreeViewNodeTypeEnum.TITLE,
-      title: "Espace partagé",
-    };
+    if (data.length > 1) {
+      const separator: TreeViewDataType<ItemTreeItem> = {
+        id: "SEPARATOR",
+        nodeType: TreeViewNodeTypeEnum.SEPARATOR,
+      };
 
-    treeData.resetTree([firstNode, data, separator, sharedSpace]);
+      const sharedSpace: TreeViewDataType<ItemTreeItem> = {
+        id: "SHARED_SPACE",
+        nodeType: TreeViewNodeTypeEnum.TITLE,
+        title: "Espace partagé",
+      };
+
+      items.push(separator);
+      items.push(sharedSpace);
+    }
+
+    treeObject.resetTree(items);
   }, [treeItem]);
-
-  console.log(treeData.nodes);
 
   const createFolderModal = useModal();
 
@@ -123,13 +119,14 @@ export const ExplorerTree = () => {
       <div>
         {/* {treeItem && drawTreeDuPauvre(treeItem)} */}
         <TreeView
-          treeData={treeData.nodes}
+          treeApiRef={treeApiRef}
+          treeData={treeObject.nodes}
+          handleMove={treeObject.handleMove}
           renderNode={(props) => {
-            console.log(props);
             return (
               <TreeViewItem
                 {...props}
-                loadChildren={(node) => treeData.handleLoadChildren(node.id)}
+                loadChildren={(node) => treeObject.handleLoadChildren(node.id)}
                 onClick={() => {
                   onNavigate({
                     type: NavigationEventType.ITEM,

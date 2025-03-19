@@ -1,11 +1,17 @@
-import { SetStateAction, useContext, useEffect, useState } from "react";
+import { SetStateAction, useContext, useEffect, useRef, useState } from "react";
 import { Dispatch } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Item, ItemTreeItem } from "@/features/drivers/types";
+import { Item, ItemTreeItem, ItemType } from "@/features/drivers/types";
 import { createContext } from "react";
 import { getDriver } from "@/features/config/Config";
-
+import {
+  TreeApi,
+  TreeDataItem,
+  TreeViewNodeTypeEnum,
+  useTree,
+} from "@gouvfr-lasuite/ui-kit";
 export interface ExplorerContextType {
+  treeObject: ReturnType<typeof useTree<ItemTreeItem>>;
   selectedItemIds: Record<string, boolean>;
   setSelectedItemIds: Dispatch<SetStateAction<Record<string, boolean>>>;
   displayMode: "sdk" | "app";
@@ -16,6 +22,7 @@ export interface ExplorerContextType {
   tree: Item | undefined;
   onNavigate: (event: NavigationEvent) => void;
   initialId: string | undefined;
+  treeApiRef: React.RefObject<TreeApi<TreeDataItem<ItemTreeItem>>>;
 }
 
 export const ExplorerContext = createContext<ExplorerContextType | undefined>(
@@ -50,12 +57,35 @@ export const ExplorerProvider = ({
   itemId: string;
   onNavigate: (event: NavigationEvent) => void;
 }) => {
+  const driver = getDriver();
+  const ref = useRef<TreeApi<TreeDataItem<ItemTreeItem>>>();
   const [selectedItemIds, setSelectedItemIds] = useState<
     Record<string, boolean>
   >({});
 
   const [initialId, setInitialId] = useState<string | undefined>(itemId);
 
+  const treeObject = useTree<ItemTreeItem>(
+    [],
+    async (id) => {
+      const item = await driver.getItem(id);
+      return itemToTreeItem(item);
+    },
+    async (id) => {
+      const children = await driver.getChildren(id, ItemType.FOLDER);
+      return children.map(itemToTreeItem);
+    }
+  );
+
+  const handleNavigate = async (event: NavigationEvent) => {
+    onNavigate(event);
+    const parentId = treeObject.getParentId(event.item.id);
+
+    if (parentId) {
+      await treeObject.handleLoadChildren(parentId as string);
+      ref.current?.openParents(parentId as string);
+    }
+  };
   useEffect(() => {
     if (!initialId) {
       setInitialId(itemId);
@@ -91,8 +121,10 @@ export const ExplorerProvider = ({
   return (
     <ExplorerContext.Provider
       value={{
+        treeObject,
         selectedItemIds,
         setSelectedItemIds,
+
         displayMode,
         selectedItems: getSelectedItems(),
         itemId,
@@ -100,10 +132,20 @@ export const ExplorerProvider = ({
         item,
         tree,
         children: itemChildren,
-        onNavigate,
+        onNavigate: handleNavigate,
+        treeApiRef: ref,
       }}
     >
       {children}
     </ExplorerContext.Provider>
   );
+};
+
+export const itemToTreeItem = (item: Item): ItemTreeItem => {
+  return {
+    ...item,
+    childrenCount: item.numchild_folder ?? 0,
+    children: item.children?.map(itemToTreeItem),
+    nodeType: TreeViewNodeTypeEnum.NODE,
+  };
 };

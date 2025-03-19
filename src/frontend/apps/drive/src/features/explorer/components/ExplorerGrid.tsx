@@ -20,6 +20,7 @@ import {
   useCunningham,
 } from "@openfun/cunningham-react";
 import gridEmpty from "@/assets/grid_empty.png";
+import { Draggable } from "./Draggable";
 import { timeAgo } from "../utils/utils";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
@@ -206,10 +207,12 @@ export const ExplorerGrid = () => {
                           : ""
                       }
                     >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      <Draggable id={cell.id} disabled={!isSelected}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </Draggable>
                     </td>
                   ))}
                 </tr>
