@@ -143,8 +143,8 @@ export const ExplorerTree = () => {
           treeApiRef={treeApiRef}
           treeData={treeObject.nodes}
           handleMove={treeObject.handleMove}
-          canDrag={(node) => {
-            return node.value.title !== "Titi";
+          canDrag={() => {
+            return false;
           }}
           renderNode={(props) => {
             return (
