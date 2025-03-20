@@ -17,22 +17,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { Id, toast } from "react-toastify";
 import { FileUploadToast } from "./toasts/FileUploadToast";
-import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-  KeyboardSensor,
-  Modifier,
-  MouseSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import { getEventCoordinates } from "@dnd-kit/utilities";
 import { Item } from "@/features/drivers/types";
-import { ExplorerDragOverlay } from "./tree/ExploreDragOverlay";
-import { useMoveItems } from "../api/useMoveItem";
 export type FileUploadMeta = { file: File; progress: number };
 
 export const ExplorerInner = () => {
@@ -44,7 +29,7 @@ export const ExplorerInner = () => {
     displayMode,
     selectedItems,
   } = useExplorer();
-  const moveItems = useMoveItems(itemId);
+
   const ref = useRef<Item[]>([]);
   const driver = getDriver();
   ref.current = selectedItems;
@@ -92,54 +77,6 @@ export const ExplorerInner = () => {
   const [uploadingState, setUploadingState] = useState<
     Record<string, FileUploadMeta>
   >({});
-
-  const mouseSensor = useSensor(MouseSensor, {
-    activationConstraint,
-  });
-
-  const touchSensor = useSensor(TouchSensor, {
-    activationConstraint,
-  });
-  const keyboardSensor = useSensor(KeyboardSensor, {});
-
-  const sensors = useSensors(mouseSensor, touchSensor, keyboardSensor);
-
-  // const [uploadingState, setUploadingState] = useState<
-  //   Record<string, FileUploadMeta>
-  // >({
-  //   "image.png": { file: new File([], "image.png"), progress: 0 },
-  //   "video.mp4": { file: new File([], "video.mp4"), progress: 0 },
-  //   "audio.mp3": { file: new File([], "audio.mp3"), progress: 0 },
-  //   "document.pdf": { file: new File([], "document.pdf"), progress: 0 },
-  //   "image2.png": { file: new File([], "image2.png"), progress: 0 },
-  //   "image3.png": { file: new File([], "image3.png"), progress: 0 },
-  //   "image4.png": { file: new File([], "image4.png"), progress: 0 },
-  //   "image5.png": { file: new File([], "image5.png"), progress: 0 },
-  // });
-  // useEffect(() => {
-  //   if (fileUploadsToastId.current) {
-  //     return;
-  //   }
-  //   fileUploadsToastId.current = addToast(
-  //     <FileUploadToast uploadingState={uploadingState} />,
-  //     {
-  //       autoClose: false,
-  //     }
-  //   );
-  //   const interval = setInterval(() => {
-  //     setUploadingState((prev) => {
-  //       return Object.fromEntries(
-  //         Object.entries(prev).map(([key, meta]) => [
-  //           key,
-  //           {
-  //             ...meta,
-  //             progress: meta.progress + Math.floor(Math.random() * 21) + 10,
-  //           },
-  //         ])
-  //       );
-  //     });
-  //   }, 1000);
-  // }, []);
 
   useEffect(() => {
     if (itemId) {
@@ -267,9 +204,10 @@ export const ExplorerInner = () => {
     });
 
   const beforeDrag = (target: HTMLElement): boolean => {
-    const isName = target.closest(".explorer__grid__item__name");
-    const isTitle = target.classList.contains("c__datagrid__row__cell--title");
-    if (isName || isTitle) {
+    const isName = target.closest(".explorer__grid__item__name__text");
+
+    if (isName) {
+      console.log("isName");
       return false;
     }
 
@@ -281,144 +219,71 @@ export const ExplorerInner = () => {
     return true;
   };
 
-  const handleDragStart = (ev: DragStartEvent) => {
-    document.body.style.cursor = "grabbing";
-    const item = ev.active.data.current?.item as Item;
-    if (!item) {
-      return;
-    }
-
-    if (selectedItems.length > 0) {
-      return;
-    }
-
-    setSelectedItems({
-      [item.id]: true,
-    });
-  };
-
-  const handleDragEnd = async ({ active, over }: DragEndEvent) => {
-    document.body.style.cursor = "default";
-    const activeItem = active.data.current?.item as Item;
-    const overItem = over?.data.current?.item as Item;
-
-    if (!activeItem || !overItem) {
-      return;
-    }
-    if (activeItem.id === overItem.id) {
-      return;
-    }
-
-    await moveItems.mutateAsync({
-      ids: selectedItems.map((item) => item.id),
-      parentId: overItem.id,
-    });
-  };
-
   return (
-    <DndContext
-      sensors={sensors}
-      modifiers={[snapToTopLeft]}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
+    <SelectionArea
+      onBeforeDrag={(ev) => {
+        return beforeDrag(ev.event?.target as HTMLElement);
+      }}
+      onBeforeStart={({ event, selection }) => {
+        if (!event?.target) {
+          return;
+        }
+        const target = event.target as HTMLElement;
+
+        const classesToCheck = [
+          "explorer__content",
+          "explorer--app",
+          "c__breadcrumbs__button",
+          "explorer__content__breadcrumbs",
+          "explorer__content__filters",
+        ];
+        const hasAnyClass = classesToCheck.some((className) =>
+          target.classList.contains(className)
+        );
+        if (hasAnyClass) {
+          selection.clearSelection();
+          setSelectedItems({});
+        }
+      }}
+      onStart={onSelectionStart}
+      onMove={onSelectionMove}
+      selectables=".selectable"
+      className="selection-area__container"
+      features={{
+        range: true,
+        touch: true,
+        singleTap: {
+          // We do not want to allow singleTap to select items, otherwise it overrides the onClick event of the TR
+          // element, and also blocks the click on the action dropdown menu. We rather implement it by ourselves.
+          allow: false,
+          intersect: "native",
+        },
+      }}
     >
-      <SelectionArea
-        onBeforeDrag={(ev) => {
-          return beforeDrag(ev.event?.target as HTMLElement);
-        }}
-        onBeforeStart={({ event, selection }) => {
-          if (!event?.target) {
-            return;
-          }
-          const target = event.target as HTMLElement;
-
-          const classesToCheck = [
-            "explorer__content",
-            "explorer--app",
-            "c__breadcrumbs__button",
-            "explorer__content__breadcrumbs",
-            "explorer__content__filters",
-          ];
-          const hasAnyClass = classesToCheck.some((className) =>
-            target.classList.contains(className)
-          );
-          if (hasAnyClass) {
-            selection.clearSelection();
-            setSelectedItems({});
-          }
-        }}
-        onStart={onSelectionStart}
-        onMove={onSelectionMove}
-        selectables=".selectable"
-        className="selection-area__container"
-        features={{
-          range: true,
-          touch: true,
-          singleTap: {
-            // We do not want to allow singleTap to select items, otherwise it overrides the onClick event of the TR
-            // element, and also blocks the click on the action dropdown menu. We rather implement it by ourselves.
-            allow: false,
-            intersect: "native",
-          },
-        }}
+      <div
+        {...getRootProps({
+          className: clsx(`explorer explorer--${displayMode}`, {
+            "explorer--drop-zone--focused": isFocused,
+            "explorer--drop-zone--drag-accept": isDragAccept,
+            "explorer--drop-zone--drag-reject": isDragReject,
+          }),
+        })}
       >
-        <DragOverlay>
-          <ExplorerDragOverlay count={selectedItems.length} />
-        </DragOverlay>
-        <div
-          {...getRootProps({
-            className: clsx(`explorer explorer--${displayMode}`, {
-              "explorer--drop-zone--focused": isFocused,
-              "explorer--drop-zone--drag-accept": isDragAccept,
-              "explorer--drop-zone--drag-reject": isDragReject,
-            }),
-          })}
-        >
-          <input {...getInputProps()} />
-          <div className="explorer__container">
-            {selectedItems.length > 0 ? (
-              <ExplorerSelectionBar />
-            ) : (
-              <div className="explorer__filters">Filters</div>
-            )}
+        <input {...getInputProps()} />
+        <div className="explorer__container">
+          {selectedItems.length > 0 ? (
+            <ExplorerSelectionBar />
+          ) : (
+            <div className="explorer__filters">Filters</div>
+          )}
 
-            <div className="explorer__content">
-              <ExplorerBreadcrumbs />
-              <ExplorerGrid />
-            </div>
+          <div className="explorer__content">
+            <ExplorerBreadcrumbs />
+            <ExplorerGrid />
           </div>
-          <Toaster />
         </div>
-      </SelectionArea>
-    </DndContext>
+        <Toaster />
+      </div>
+    </SelectionArea>
   );
-};
-
-export const snapToTopLeft: Modifier = ({
-  activatorEvent,
-  draggingNodeRect,
-  transform,
-}) => {
-  if (draggingNodeRect && activatorEvent) {
-    const activatorCoordinates = getEventCoordinates(activatorEvent);
-
-    if (!activatorCoordinates) {
-      return transform;
-    }
-
-    const offsetX = activatorCoordinates.x - draggingNodeRect.left;
-    const offsetY = activatorCoordinates.y - draggingNodeRect.top;
-
-    return {
-      ...transform,
-      x: transform.x + offsetX - 3,
-      y: transform.y + offsetY - 3,
-    };
-  }
-
-  return transform;
-};
-
-const activationConstraint = {
-  distance: 20,
 };

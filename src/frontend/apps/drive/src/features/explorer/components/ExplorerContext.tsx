@@ -10,6 +10,7 @@ import {
   TreeViewNodeTypeEnum,
   useTree,
 } from "@gouvfr-lasuite/ui-kit";
+import { ExplorerDndProvider } from "./ExplorerDndProvider";
 export interface ExplorerContextType {
   treeObject: ReturnType<typeof useTree<ItemTreeItem>>;
   selectedItemIds: Record<string, boolean>;
@@ -110,6 +111,7 @@ export const ExplorerProvider = ({
 
   const { data: tree } = useQuery({
     queryKey: ["items", initialId, "tree"],
+    refetchOnWindowFocus: false,
     queryFn: () => {
       if (!initialId) {
         return undefined;
@@ -142,20 +144,24 @@ export const ExplorerProvider = ({
         treeApiRef: ref,
       }}
     >
-      {children}
+      <ExplorerDndProvider>{children}</ExplorerDndProvider>
     </ExplorerContext.Provider>
   );
 };
 
-export const itemToTreeItem = (item: Item): ItemTreeItem => {
+export const itemToTreeItem = (item: Item, parentId?: string): ItemTreeItem => {
   return {
     ...item,
+    parentId: parentId,
     childrenCount: item.numchild_folder ?? 0,
-    children: item.children?.map(itemToTreeItem),
+    children: item.children?.map((child) => itemToTreeItem(child, item.id)),
     nodeType: TreeViewNodeTypeEnum.NODE,
   };
 };
 
-export const itemsToTreeItems = (items: Item[]): ItemTreeItem[] => {
-  return items.map(itemToTreeItem);
+export const itemsToTreeItems = (
+  items: Item[],
+  parentId?: string
+): ItemTreeItem[] => {
+  return items.map((item) => itemToTreeItem(item, parentId));
 };

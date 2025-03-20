@@ -14,6 +14,7 @@ export type Item = {
   children?: Item[];
   numchild?: number;
   numchild_folder?: number;
+  path: string;
   url?: string;
   policy?: {
     url: string;
@@ -31,4 +32,5 @@ export type ItemTreeItem = Omit<Item, "children"> & {
   childrenCount?: number;
   children?: ItemTreeItem[];
   nodeType: TreeViewNodeTypeEnum;
+  parentId?: string;
 };

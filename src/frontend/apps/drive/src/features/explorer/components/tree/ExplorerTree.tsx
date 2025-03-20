@@ -21,10 +21,13 @@ import {
   TreeView,
   TreeViewDataType,
   TreeViewItem,
+  TreeViewMoveResult,
   TreeViewNodeTypeEnum,
 } from "@gouvfr-lasuite/ui-kit";
 import { useEffect } from "react";
 import { ExplorerTreeItem } from "./ExplorerTreeItem";
+import { DroppableNodeTree } from "./DroppableNodeTree";
+import { useMoveItems } from "../../api/useMoveItem";
 
 type Inputs = {
   title: string;
@@ -32,10 +35,12 @@ type Inputs = {
 
 export const ExplorerTree = () => {
   const { t } = useTranslation();
+  const move = useMoveItems();
 
   const {
     tree: treeItem,
     firstLevelItems,
+    itemId,
     treeObject,
     treeApiRef,
     onNavigate,
@@ -62,7 +67,7 @@ export const ExplorerTree = () => {
     const firstNode: TreeViewDataType<ItemTreeItem> = {
       id: "PERSONAL_SPACE",
       nodeType: TreeViewNodeTypeEnum.TITLE,
-      title: "Espace personnel",
+      headerTitle: "Espace personnel",
     };
 
     items.push(firstNode);
@@ -77,7 +82,7 @@ export const ExplorerTree = () => {
       const sharedSpace: TreeViewDataType<ItemTreeItem> = {
         id: "SHARED_SPACE",
         nodeType: TreeViewNodeTypeEnum.TITLE,
-        title: "Espace partagé",
+        headerTitle: "Espace partagé",
       };
 
       items.push(separator);
@@ -90,33 +95,14 @@ export const ExplorerTree = () => {
 
   const createFolderModal = useModal();
 
-  // const drawTreeDuPauvre = (treeItem: Item) => {
-  //   return (
-  //     <div key={treeItem.id}>
-  //       <div
-  //         style={{
-  //           fontWeight: treeItem.id === item?.id ? "bold" : "normal",
-  //           cursor: "pointer",
-  //         }}
-  //         onClick={() =>
-  //           onNavigate({
-  //             type: NavigationEventType.ITEM,
-  //             item: treeItem,
-  //           })
-  //         }
-  //       >
-  //         {treeItem.title}
-  //       </div>
-  //       <div
-  //         style={{
-  //           paddingLeft: "2rem",
-  //         }}
-  //       >
-  //         {treeItem.children?.map((child) => drawTreeDuPauvre(child))}
-  //       </div>
-  //     </div>
-  //   );
-  // };
+  const handleMove = (result: TreeViewMoveResult) => {
+    treeObject.handleMove(result);
+    move.mutate({
+      ids: [result.sourceId],
+      parentId: result.targetModeId,
+      oldParentId: result.oldParentId ?? itemId,
+    });
+  };
 
   return (
     <div>
@@ -142,26 +128,37 @@ export const ExplorerTree = () => {
         <TreeView
           treeApiRef={treeApiRef}
           treeData={treeObject.nodes}
-          handleMove={treeObject.handleMove}
-          canDrag={() => {
-            return false;
+          handleMove={handleMove}
+          canDrop={(args) => {
+            return (
+              args.index === 0 && args.parentNode?.willReceiveDrop === true
+            );
           }}
           renderNode={(props) => {
+            // console.log("renderNode", props);
             return (
-              <TreeViewItem
-                {...props}
-                loadChildren={(node) => treeObject.handleLoadChildren(node.id)}
-                onClick={() => {
-                  onNavigate({
-                    type: NavigationEventType.ITEM,
-                    item: props.node.data.value as Item,
-                  });
-                }}
+              <DroppableNodeTree
+                id={props.node.id}
+                item={props.node.data.value}
+                nodeTree={props}
               >
-                <ExplorerTreeItem
-                  item={props.node.data.value as ItemTreeItem}
-                />
-              </TreeViewItem>
+                <TreeViewItem
+                  {...props}
+                  loadChildren={(node) =>
+                    treeObject.handleLoadChildren(node.id)
+                  }
+                  onClick={() => {
+                    onNavigate({
+                      type: NavigationEventType.ITEM,
+                      item: props.node.data.value as Item,
+                    });
+                  }}
+                >
+                  <ExplorerTreeItem
+                    item={props.node.data.value as ItemTreeItem}
+                  />
+                </TreeViewItem>
+              </DroppableNodeTree>
             );
           }}
           rootNodeId={"root"}

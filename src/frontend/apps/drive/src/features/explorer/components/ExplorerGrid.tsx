@@ -40,6 +40,7 @@ export const ExplorerGrid = () => {
     onNavigate,
     children,
   } = useExplorer();
+
   const columns = [
     columnHelper.accessor("title", {
       header: t("explorer.grid.name"),
@@ -47,8 +48,9 @@ export const ExplorerGrid = () => {
         <div className="explorer__grid__item__name">
           {params.row.original.type === ItemType.FOLDER && <FolderIcon />}
           {params.row.original.type === ItemType.FILE && <FileIcon />}
+
           <span className="explorer__grid__item__name__text">
-            {params.row.original.title}
+            {params.row.original.title} -- {params.row.original.path}
           </span>
         </div>
       ),
@@ -242,6 +244,12 @@ export const ExplorerGrid = () => {
                             id={cell.id}
                             disabled={index === 0 ? false : !isSelected}
                             item={row.original}
+                            style={{
+                              width:
+                                index === 0 && !isSelected
+                                  ? "fit-content"
+                                  : "100%",
+                            }}
                           >
                             {flexRender(
                               cell.column.columnDef.cell,

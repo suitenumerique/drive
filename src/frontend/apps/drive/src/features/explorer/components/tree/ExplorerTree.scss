@@ -8,4 +8,13 @@
     font-weight: 500;
     color: var(--c--theme--colors--greyscale-1000);
   }
+
+  &__droppable {
+    border: 1.5px solid transparent;
+    border-radius: 4px;
+    &.over {
+      background-color: var(--c--theme--colors--primary-100);
+      border: 1.5px solid var(--c--theme--colors--primary-500);
+    }
+  }
 }

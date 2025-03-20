@@ -6,6 +6,8 @@ type DraggableProps = {
   item: Item;
   children: React.ReactNode;
   id: string;
+  style?: React.CSSProperties;
+  className?: string;
 };
 export const Draggable = (props: DraggableProps) => {
   const { attributes, listeners, setNodeRef } = useDraggable({
@@ -17,7 +19,13 @@ export const Draggable = (props: DraggableProps) => {
   });
 
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes}>
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={props.className}
+      style={props.style}
+    >
       {props.children}
     </div>
   );
