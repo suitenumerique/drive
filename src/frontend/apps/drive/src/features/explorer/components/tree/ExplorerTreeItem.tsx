@@ -15,9 +15,7 @@ export const ExplorerTreeItem = ({ item }: ExplorerTreeItemProps) => {
   return (
     <div className="explorer__tree__item">
       <FolderTreeIcon />
-      <span className="explorer__tree__item__title">
-        {item.title} -- {item.path}
-      </span>
+      <span className="explorer__tree__item__title">{item.title}</span>
     </div>
   );
 };

@@ -50,7 +50,7 @@ export const ExplorerGrid = () => {
           {params.row.original.type === ItemType.FILE && <FileIcon />}
 
           <span className="explorer__grid__item__name__text">
-            {params.row.original.title} -- {params.row.original.path}
+            {params.row.original.title}
           </span>
         </div>
       ),
@@ -233,7 +233,6 @@ export const ExplorerGrid = () => {
                           item={row.original}
                           disabled={row.original.type !== ItemType.FOLDER}
                           onOver={(isOver, item) => {
-                            console.log("isOver", isOver, item.id);
                             setOveredItemIds((prev) => ({
                               ...prev,
                               [item.id]: isOver,
