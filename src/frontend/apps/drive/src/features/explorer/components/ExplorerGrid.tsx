@@ -24,6 +24,7 @@ import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { ItemIcon } from "./ItemIcon";
 import { useMutationDeleteItems } from "../hooks/useMutations";
+import { useTableKeyboardNavigation } from "../hooks/useTableKeyboardNavigation";
 
 export const ExplorerGrid = () => {
   const { t } = useTranslation();
@@ -78,6 +79,12 @@ export const ExplorerGrid = () => {
   const isLoading = children === undefined;
   const isEmpty = table.getRowModel().rows.length === 0;
 
+  const tableRef = useRef<HTMLTableElement>(null);
+  const { onKeyDown } = useTableKeyboardNavigation({
+    table,
+    tableRef,
+  });
+
   const getContent = () => {
     if (isLoading) {
       return (
@@ -104,7 +111,7 @@ export const ExplorerGrid = () => {
     }
     return (
       <div className="c__datagrid__table__container">
-        <table>
+        <table ref={tableRef} tabIndex={0} onKeyDown={onKeyDown}>
           <thead>
             <tr>
               <th style={{ width: "50%" }}>
