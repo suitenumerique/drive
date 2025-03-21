@@ -1,61 +1,20 @@
 import { Button } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { useExplorer } from "./ExplorerContext";
-import { getDriver } from "@/features/config/Config";
-import { useQueryClient } from "@tanstack/react-query";
-import { useMutation } from "@tanstack/react-query";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
-import { Item } from "@/features/drivers/types";
+import { useMutationDeleteItems } from "../hooks/useMutations";
+import { useEffect } from "react";
 
 export const ExplorerSelectionBar = () => {
   const { t } = useTranslation();
-  const { selectedItems, setSelectedItemIds, item } = useExplorer();
-  const driver = getDriver();
+  const { selectedItems, setSelectedItemIds } = useExplorer();
 
   const handleClearSelection = () => {
     setSelectedItemIds({});
   };
 
-  const queryClient = useQueryClient();
-  const deleteItems = useMutation({
-    mutationFn: async (...payload: Parameters<typeof driver.deleteItems>) => {
-      await driver.deleteItems(...payload);
-    },
-    onMutate: async (itemIds) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({
-        queryKey: ["items", item!.id, "children"],
-      });
-
-      // Snapshot the previous value
-      const previousItems = queryClient.getQueryData([
-        "items",
-        item!.id,
-        "children",
-      ]);
-
-      // Optimistically update to the new value
-      queryClient.setQueryData(["items", item!.id, "children"], (old: Item[]) =>
-        old ? old.filter((i: Item) => !itemIds.includes(i.id)) : old
-      );
-
-      // Return a context object with the snapshotted value
-      return { previousItems };
-    },
-    onError: (err, variables, context) => {
-      // If the mutation fails, use the context returned from onMutate to roll back
-      queryClient.setQueryData(
-        ["items", item!.id, "children"],
-        context?.previousItems
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["items", item!.id],
-      });
-    },
-  });
+  const deleteItems = useMutationDeleteItems();
 
   const handleDelete = async () => {
     addToast(
@@ -69,6 +28,22 @@ export const ExplorerSelectionBar = () => {
     await deleteItems.mutateAsync(selectedItems.map((item) => item.id));
     setSelectedItemIds({});
   };
+
+  // Add event listener when component mounts and remove when unmounts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === "Backspace") {
+        event.preventDefault();
+        handleDelete();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedItems]);
 
   return (
     <div className="explorer__selection-bar">
