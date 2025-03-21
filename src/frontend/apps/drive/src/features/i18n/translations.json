@@ -55,7 +55,7 @@
           }
         },
         "delete": {
-          "toast_one": "{{count}} item deleted",
+          "toast_one": "Item deleted",
           "toast_other": "{{count}} items deleted"
         }
       },
@@ -131,7 +131,7 @@
             }
           },
           "delete": {
-            "toast_one": "{{count}} élément supprimé",
+            "toast_one": "Élément supprimé",
             "toast_other": "{{count}} éléments supprimés"
           }
         }
