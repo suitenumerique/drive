@@ -13,11 +13,11 @@ type DroppableProps = {
   item: Item;
   nodeTree?: NodeRendererProps<TreeDataItem<TreeViewDataType<Item>>>;
   children: React.ReactNode;
-  onOver?: (isOver: boolean, item: Item) => void;
+  onOver?: (isOver: boolean, fromItem: Item) => void;
 };
 
 export const Droppable = (props: DroppableProps) => {
-  const { isOver, setNodeRef } = useDroppable({
+  const { isOver, setNodeRef, active } = useDroppable({
     id: props.id,
     disabled: props.disabled,
     data: {
@@ -28,10 +28,10 @@ export const Droppable = (props: DroppableProps) => {
   const style = {};
 
   useEffect(() => {
-    if (!props.disabled && props.onOver) {
-      props.onOver(isOver, props.item);
+    if (!props.disabled && props.onOver && active?.data.current?.item) {
+      props.onOver(isOver, active?.data.current?.item as Item);
     }
-  }, [isOver, props.item]);
+  }, [isOver, props.item, active]);
 
   return (
     <div ref={setNodeRef} style={style} className="droppable">

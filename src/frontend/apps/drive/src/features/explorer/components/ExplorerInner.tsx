@@ -205,17 +205,19 @@ export const ExplorerInner = () => {
 
   const beforeDrag = (target: HTMLElement): boolean => {
     const isName = target.closest(".explorer__grid__item__name__text");
-
-    if (isName) {
-      console.log("isName");
+    const isTitle = target.closest(".explorer__tree__item__title");
+    // const isFolder = target.closest(".explorer__grid__item__name");
+    if (isName || isTitle) {
       return false;
     }
 
     const parent = target.closest(".selectable");
     if (parent) {
+      console.log("parent", parent);
       const isSelected = parent.classList.contains("selected");
       return !isSelected;
     }
+    console.log("true");
     return true;
   };
 

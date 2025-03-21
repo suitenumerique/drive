@@ -44,16 +44,29 @@ export const ExplorerGrid = () => {
   const columns = [
     columnHelper.accessor("title", {
       header: t("explorer.grid.name"),
-      cell: (params) => (
-        <div className="explorer__grid__item__name">
-          {params.row.original.type === ItemType.FOLDER && <FolderIcon />}
-          {params.row.original.type === ItemType.FILE && <FileIcon />}
+      cell: (params) => {
+        const isSelected = !!selectedItems[params.row.original.id];
 
-          <span className="explorer__grid__item__name__text">
-            {params.row.original.title}
-          </span>
-        </div>
-      ),
+        return (
+          <div className="explorer__grid__item__name">
+            {params.row.original.type === ItemType.FOLDER && <FolderIcon />}
+            {params.row.original.type === ItemType.FILE && <FileIcon />}
+
+            {!isSelected && (
+              <Draggable id={params.cell.id} item={params.row.original}>
+                <span className="explorer__grid__item__name__text">
+                  {params.row.original.title}
+                </span>
+              </Draggable>
+            )}
+            {isSelected && (
+              <span className="explorer__grid__item__name__text">
+                {params.row.original.title}
+              </span>
+            )}
+          </div>
+        );
+      },
     }),
     columnHelper.accessor("updated_at", {
       header: t("explorer.grid.last_update"),
@@ -233,28 +246,41 @@ export const ExplorerGrid = () => {
                           item={row.original}
                           disabled={row.original.type !== ItemType.FOLDER}
                           onOver={(isOver, item) => {
+                            console.log("isOver", isOver, item.title);
                             setOveredItemIds((prev) => ({
                               ...prev,
-                              [item.id]: isOver,
+                              [row.original.id]:
+                                item.id === row.original.id ? false : isOver,
                             }));
                           }}
                         >
-                          <Draggable
-                            id={cell.id}
-                            disabled={index === 0 ? false : !isSelected}
-                            item={row.original}
-                            style={{
-                              width:
-                                index === 0 && !isSelected
-                                  ? "fit-content"
-                                  : "100%",
-                            }}
-                          >
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </Draggable>
+                          {(index > 0 || (index === 0 && isSelected)) && (
+                            <Draggable
+                              id={cell.id}
+                              disabled={index === 0 ? false : !isSelected}
+                              item={row.original}
+                              style={{
+                                width:
+                                  index === 0 && !isSelected
+                                    ? "fit-content"
+                                    : "100%",
+                              }}
+                            >
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </Draggable>
+                          )}
+
+                          {index === 0 && !isSelected && (
+                            <>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </>
+                          )}
                         </Droppable>
                       </td>
                     );

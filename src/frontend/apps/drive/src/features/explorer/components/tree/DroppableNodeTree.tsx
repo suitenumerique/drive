@@ -22,6 +22,7 @@ type DroppableNodeTreeProps = {
 export const DroppableNodeTree = (props: DroppableNodeTreeProps) => {
   const { treeObject } = useExplorer();
   const { active } = useDndContext();
+
   const canDropItem = active
     ? canDrop(active?.data?.current?.item, props.item as ItemTreeItem)
     : false;
