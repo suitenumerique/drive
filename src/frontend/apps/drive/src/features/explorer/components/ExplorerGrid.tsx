@@ -23,6 +23,7 @@ import { timeAgo } from "../utils/utils";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { ItemIcon } from "./ItemIcon";
+import { useMutationDeleteItems } from "../hooks/useMutations";
 
 export const ExplorerGrid = () => {
   const { t } = useTranslation();
@@ -44,12 +45,8 @@ export const ExplorerGrid = () => {
     []
   );
 
-  const {
-    setSelectedItemIds: setSelectedItems,
-    selectedItemIds: selectedItems,
-    onNavigate,
-    children,
-  } = useExplorer();
+  const { setSelectedItemIds, selectedItemIds, onNavigate, children } =
+    useExplorer();
   const columns = [
     columnHelper.accessor("title", {
       header: t("explorer.grid.name"),
@@ -67,7 +64,7 @@ export const ExplorerGrid = () => {
     }),
     columnHelper.display({
       id: "actions",
-      cell: () => <ItemActions />,
+      cell: (params) => <ItemActions item={params.row.original} />,
     }),
   ];
 
@@ -125,7 +122,7 @@ export const ExplorerGrid = () => {
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => {
-              const isSelected = !!selectedItems[row.original.id];
+              const isSelected = !!selectedItemIds[row.original.id];
               return (
                 <tr
                   key={row.original.id}
@@ -157,23 +154,23 @@ export const ExplorerGrid = () => {
                             currentIndex
                           );
 
-                          const newSelection = { ...selectedItems };
+                          const newSelection = { ...selectedItemIds };
                           for (let i = startIndex; i <= endIndex; i++) {
                             newSelection[rows[i].original.id] = true;
                           }
 
-                          setSelectedItems(newSelection);
+                          setSelectedItemIds(newSelection);
                         }
                       } else if (e.metaKey || e.ctrlKey) {
-                        setSelectedItems({
-                          ...selectedItems,
+                        setSelectedItemIds({
+                          ...selectedItemIds,
                           [row.original.id]: !isSelected,
                         });
                         if (!isSelected) {
                           lastSelectedRowRef.current = row.id;
                         }
                       } else {
-                        setSelectedItems({
+                        setSelectedItemIds({
                           [row.original.id]: true,
                         });
                         lastSelectedRowRef.current = row.id;
@@ -237,9 +234,21 @@ export const ExplorerGrid = () => {
   );
 };
 
-const ItemActions = () => {
+const ItemActions = ({ item }: { item: Item }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
+  const deleteItems = useMutationDeleteItems();
+
+  const handleDelete = async () => {
+    addToast(
+      <ToasterItem>
+        <span className="material-icons">delete</span>
+        <span>{t("explorer.actions.delete.toast", { count: 1 })}</span>
+      </ToasterItem>
+    );
+    await deleteItems.mutateAsync([item.id]);
+  };
+
   return (
     <DropdownMenu
       options={[
@@ -289,6 +298,7 @@ const ItemActions = () => {
           label: "Supprimer",
           value: "delete",
           showSeparator: true,
+          callback: handleDelete,
         },
       ]}
       isOpen={isOpen}
