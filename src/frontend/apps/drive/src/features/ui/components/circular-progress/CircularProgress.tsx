@@ -1,5 +1,4 @@
-import { CheckIcon } from "../icon/Icon";
-
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 interface CircularProgressProps {
   progress: number;
   size?: number;
@@ -84,7 +83,13 @@ export const CircularProgress = ({
         </svg>
       )}
       {/* Check mark when complete */}
-      {isComplete && <CheckIcon />}
+      {isComplete && (
+        <DotLottieReact
+          src="http://localhost:3000/uploader.lottie"
+          autoplay={true}
+          style={{ width: fixedSize, height: fixedSize }}
+        />
+      )}
     </div>
   );
 };
