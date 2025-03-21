@@ -140,6 +140,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "type",
             "upload_state",
             "url",
+            "filename",
             "mimetype",
         ]
         read_only_fields = [
@@ -223,6 +224,7 @@ class ItemSerializer(ListItemSerializer):
             "type",
             "upload_state",
             "url",
+            "filename",
             "mimetype",
         ]
         read_only_fields = [
