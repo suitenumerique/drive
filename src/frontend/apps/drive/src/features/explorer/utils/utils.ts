@@ -16,6 +16,7 @@ export const gotoLastVisitedItem = async () => {
   window.location.href = `/explorer/items/${items[0].id}`;
 };
 
+/** TODO: test */
 export const timeAgo = (date: Date) => {
   if (!date) {
     return "";
@@ -46,11 +47,13 @@ export const timeAgo = (date: Date) => {
   return i18n.t("time.seconds_ago");
 };
 
-export const getExtension = (item: Item) => {
-  if (!item.filename) {
+/** TODO: test */
+export const getExtension = (item: Item, useTitle = false) => {
+  const str = useTitle ? item.title : item.filename;
+  if (!str) {
     return null;
   }
-  const parts = item.filename.split(".");
+  const parts = str.split(".");
   if (parts.length === 1) {
     return null;
   }
