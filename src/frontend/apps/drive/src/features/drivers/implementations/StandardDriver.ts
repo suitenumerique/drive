@@ -17,6 +17,14 @@ export class StandardDriver extends Driver {
     return jsonToItem(data);
   }
 
+  async updateItem(item: Partial<Item>): Promise<Item> {
+    const response = await fetchAPI(`items/${item.id}/`, {
+      method: "PATCH",
+      body: JSON.stringify(item),
+    });
+    const data = await response.json();
+    return jsonToItem(data);
+  }
   async getChildren(id: string): Promise<Item[]> {
     const response = await fetchAPI(`items/${id}/children/`, {
       params: {
