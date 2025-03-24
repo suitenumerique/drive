@@ -7,7 +7,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavigationEventType, useExplorer } from "./ExplorerContext";
 import clsx from "clsx";
@@ -34,12 +34,7 @@ export const ExplorerGrid = () => {
   // icon as <img> which get re-fetched on every render.
   const nameCellRenderer = useCallback(
     (params: CellContext<Item, string>) => (
-      <div className="explorer__grid__item__name">
-        <ItemIcon item={params.row.original} />
-        <span className="explorer__grid__item__name__text">
-          {params.row.original.title}
-        </span>
-      </div>
+      <ItemTitle item={params.row.original} />
     ),
     []
   );
@@ -301,5 +296,48 @@ const ItemActions = () => {
         icon={<span className="material-icons">more_horiz</span>}
       ></Button>
     </DropdownMenu>
+  );
+};
+
+const ItemTitle = ({ item }: { item: Item }) => {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [isOverflown, setIsOverflown] = useState(false);
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      const element = ref.current;
+      // Should always be defined, but just in case.
+      if (element) {
+        setIsOverflown(element.scrollWidth > element.clientWidth);
+      }
+    };
+    checkOverflow();
+
+    window.addEventListener("resize", checkOverflow);
+    return () => {
+      window.removeEventListener("resize", checkOverflow);
+    };
+  }, [item.title]);
+
+  const renderTitle = () => {
+    // We need to have the element holding the ref nested because the Tooltip component
+    // seems to make the top-most children ref null.
+    return (
+      <div style={{ display: "flex", overflow: "hidden" }}>
+        <span className="explorer__grid__item__name__text" ref={ref}>
+          {item.title}
+        </span>
+      </div>
+    );
+  };
+  return (
+    <div className="explorer__grid__item__name">
+      <ItemIcon item={item} />
+      {isOverflown ? (
+        <Tooltip content={item.title}>{renderTitle()}</Tooltip>
+      ) : (
+        renderTitle()
+      )}
+    </div>
   );
 };

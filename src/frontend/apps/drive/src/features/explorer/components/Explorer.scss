@@ -83,10 +83,25 @@
         text-decoration: none;
         color: var(--c--theme--colors--greyscale-700);
 
+        .c__tooltip {
+          max-width: 100%;
+        }
+
+        > img {
+          // Need to set width and height to prevent layout shift
+          // and to make overflow calculations work correctly before
+          // the image is loaded
+          width: 32px;
+          height: 32px;
+        }
+
         &__text {
           font-size: 14px;
           font-weight: 400;
           color: var(--c--theme--colors--greyscale-1000);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
       }
 
