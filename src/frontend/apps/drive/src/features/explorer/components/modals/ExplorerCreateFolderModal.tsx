@@ -1,7 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import {
   Button,
-  Input,
   Modal,
   ModalProps,
   ModalSize,
@@ -9,8 +8,9 @@ import {
 import { useExplorer } from "../ExplorerContext";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import { SubmitHandler, useForm } from "react-hook-form";
+import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { getDriver } from "@/features/config/Config";
+import { RhfInput } from "@/features/forms/components/RhfInput";
 
 type Inputs = {
   title: string;
@@ -22,7 +22,7 @@ export const ExplorerCreateFolderModal = (
   const { itemId } = useExplorer();
   const { t } = useTranslation();
   const driver = getDriver();
-  const { register, handleSubmit } = useForm<Inputs>();
+  const form = useForm<Inputs>();
 
   const queryClient = useQueryClient();
   const createFolder = useMutation({
@@ -37,6 +37,7 @@ export const ExplorerCreateFolderModal = (
   });
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
+    form.reset();
     createFolder.mutate({
       ...data,
       parentId: itemId,
@@ -60,17 +61,20 @@ export const ExplorerCreateFolderModal = (
         </>
       }
     >
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        id="create-folder-form"
-        className="mt-s"
-      >
-        <Input
-          label={t("explorer.actions.createFolder.modal.label")}
-          fullWidth={true}
-          {...register("title")}
-        />
-      </form>
+      <FormProvider {...form}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          id="create-folder-form"
+          className="mt-s"
+        >
+          <RhfInput
+            label={t("explorer.actions.createFolder.modal.label")}
+            fullWidth={true}
+            autoFocus={true}
+            {...form.register("title")}
+          />
+        </form>
+      </FormProvider>
     </Modal>
   );
 };
