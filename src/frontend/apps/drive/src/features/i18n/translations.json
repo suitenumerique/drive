@@ -19,7 +19,16 @@
             "caption": "Drop your files here",
             "cta": "Or click \"Create\""
           },
-          "no_url": "This resource does not have an URL"
+          "no_url": "This resource does not have an URL",
+          "actions": {
+            "info": "Info",
+            "share": "Share",
+            "download": "Download",
+            "rename": "Rename",
+            "move": "Move",
+            "duplicate": "Duplicate",
+            "delete": "Delete"
+          }
         },
         "tree": {
           "createFolder": "Create",
@@ -96,7 +105,16 @@
             "caption": "Déposez vos fichiers ici",
             "cta": "Ou cliquez sur \"Créer\""
           },
-          "no_url": "Cette ressource n'a pas d'URL"
+          "no_url": "Cette ressource n'a pas d'URL",
+          "actions": {
+            "info": "Informations",
+            "share": "Partager",
+            "download": "Télécharger",
+            "rename": "Renommer",
+            "move": "Déplacer",
+            "duplicate": "Dupliquer",
+            "delete": "Supprimer"
+          }
         },
         "tree": {
           "createFolder": "Créer",
@@ -133,6 +151,15 @@
           "delete": {
             "toast_one": "Élément supprimé",
             "toast_other": "{{count}} éléments supprimés"
+          },
+          "rename": {
+            "modal": {
+              "title": "Renommer",
+              "label": "Nouveau nom",
+              "placeholder": "Entrez le nouveau nom",
+              "cancel": "Annuler",
+              "submit": "Renommer"
+            }
           }
         }
       },

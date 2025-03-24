@@ -17,6 +17,7 @@ import {
   Loader,
   Tooltip,
   useCunningham,
+  useModal,
 } from "@openfun/cunningham-react";
 import gridEmpty from "@/assets/grid_empty.png";
 import { timeAgo } from "../utils/utils";
@@ -25,6 +26,7 @@ import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { ItemIcon } from "./ItemIcon";
 import { useMutationDeleteItems } from "../hooks/useMutations";
 import { useTableKeyboardNavigation } from "../hooks/useTableKeyboardNavigation";
+import { ExplorerRenameItemModal } from "./modals/ExplorerRenameItemModal";
 
 export const ExplorerGrid = () => {
   const { t } = useTranslation();
@@ -41,8 +43,24 @@ export const ExplorerGrid = () => {
     []
   );
 
-  const { setSelectedItemIds, selectedItemIds, onNavigate, children } =
+  const { setSelectedItemIds, selectedItemIds, onNavigate, children, item } =
     useExplorer();
+
+  const [renameItem, setRenameItem] = useState<Item>();
+  const renameModal = useModal();
+
+  const actionsCell = useCallback((params: CellContext<Item, unknown>) => {
+    return (
+      <ItemActions
+        item={params.row.original}
+        onRename={() => {
+          setRenameItem(params.row.original);
+          renameModal.open();
+        }}
+      />
+    );
+  }, []);
+
   const columns = [
     columnHelper.accessor("title", {
       header: t("explorer.grid.name"),
@@ -60,7 +78,7 @@ export const ExplorerGrid = () => {
     }),
     columnHelper.display({
       id: "actions",
-      cell: (params) => <ItemActions item={params.row.original} />,
+      cell: actionsCell,
     }),
   ];
 
@@ -232,11 +250,28 @@ export const ExplorerGrid = () => {
       })}
     >
       {getContent()}
+      {renameItem && (
+        <ExplorerRenameItemModal
+          {...renameModal}
+          item={renameItem}
+          key={renameItem.id}
+          onClose={() => {
+            setRenameItem(undefined);
+            renameModal.close();
+          }}
+        />
+      )}
     </div>
   );
 };
 
-const ItemActions = ({ item }: { item: Item }) => {
+const ItemActions = ({
+  item,
+  onRename,
+}: {
+  item: Item;
+  onRename: () => void;
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
   const deleteItems = useMutationDeleteItems();
@@ -252,67 +287,61 @@ const ItemActions = ({ item }: { item: Item }) => {
   };
 
   return (
-    <DropdownMenu
-      options={[
-        {
-          icon: <span className="material-icons">info</span>,
-          label: "Informations",
-          value: "info",
-        },
-        {
-          icon: <span className="material-icons">group</span>,
-          label: "Partager",
-          callback: () => alert("Partager"),
-        },
-        {
-          icon: <span className="material-icons">download</span>,
-          label: "Télécharger",
-          value: "download",
-
-          showSeparator: true,
-        },
-        {
-          icon: <span className="material-icons">edit</span>,
-          label: "Renommer",
-          value: "rename",
-
-          showSeparator: true,
-        },
-        {
-          icon: <span className="material-icons">arrow_forward</span>,
-          label: "Déplacer",
-          value: "move",
-        },
-        {
-          icon: <span className="material-icons">arrow_back</span>,
-          label: "Dupliquer",
-          value: "duplicate",
-        },
-        {
-          icon: <span className="material-icons">add</span>,
-          isDisabled: true,
-          label: "Crééer un raccourci",
-          value: "create-shortcut",
-          showSeparator: true,
-        },
-        {
-          icon: <span className="material-icons">delete</span>,
-          label: "Supprimer",
-          value: "delete",
-          showSeparator: true,
-          callback: handleDelete,
-        },
-      ]}
-      isOpen={isOpen}
-      onOpenChange={setIsOpen}
-    >
-      <Button
-        onClick={() => setIsOpen(!isOpen)}
-        color="primary-text"
-        className="c__language-picker"
-        icon={<span className="material-icons">more_horiz</span>}
-      ></Button>
-    </DropdownMenu>
+    <>
+      <DropdownMenu
+        options={[
+          {
+            icon: <span className="material-icons">info</span>,
+            label: t("explorer.grid.actions.info"),
+            value: "info",
+          },
+          {
+            icon: <span className="material-icons">group</span>,
+            label: t("explorer.grid.actions.share"),
+            callback: () => alert("Partager"),
+          },
+          {
+            icon: <span className="material-icons">download</span>,
+            label: t("explorer.grid.actions.download"),
+            value: "download",
+            showSeparator: true,
+          },
+          {
+            icon: <span className="material-icons">edit</span>,
+            label: t("explorer.grid.actions.rename"),
+            value: "rename",
+            callback: onRename,
+            showSeparator: true,
+          },
+          {
+            icon: <span className="material-icons">arrow_forward</span>,
+            label: t("explorer.grid.actions.move"),
+            value: "move",
+          },
+          {
+            icon: <span className="material-icons">arrow_back</span>,
+            label: t("explorer.grid.actions.duplicate"),
+            value: "duplicate",
+          },
+          {
+            icon: <span className="material-icons">delete</span>,
+            label: t("explorer.grid.actions.delete"),
+            value: "delete",
+            showSeparator: true,
+            callback: handleDelete,
+          },
+        ]}
+        isOpen={isOpen}
+        onOpenChange={setIsOpen}
+      >
+        <Button
+          onClick={() => setIsOpen(!isOpen)}
+          color="primary-text"
+          className="c__language-picker"
+          icon={<span className="material-icons">more_horiz</span>}
+        ></Button>
+      </DropdownMenu>
+    </>
   );
 };
 
