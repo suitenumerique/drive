@@ -45,3 +45,43 @@ export const useMutationDeleteItems = () => {
     },
   });
 };
+
+export const useMutationRenameItem = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  const { item } = useExplorer();
+  return useMutation({
+    mutationFn: async (...payload: Parameters<typeof driver.updateItem>) => {
+      await driver.updateItem(...payload);
+    },
+    onMutate: async (itemUpdated) => {
+      await queryClient.cancelQueries({
+        queryKey: ["items", item!.id, "children"],
+      });
+      const previousItems = queryClient.getQueryData([
+        "items",
+        item!.id,
+        "children",
+      ]);
+      queryClient.setQueryData(["items", item!.id, "children"], (old: Item[]) =>
+        old
+          ? old.map((i: Item) =>
+              i.id === itemUpdated.id ? { ...i, ...itemUpdated } : i
+            )
+          : old
+      );
+      return { previousItems };
+    },
+    onError: (err, variables, context) => {
+      queryClient.setQueryData(
+        ["items", item!.id, "children"],
+        context?.previousItems
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["items", item!.id, "children"],
+      });
+    },
+  });
+};
