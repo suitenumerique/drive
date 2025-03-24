@@ -1,21 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { getDriver } from "@/features/config/Config";
-import {
-  Button,
-  Input,
-  Modal,
-  ModalProps,
-  ModalSize,
-  useModal,
-} from "@openfun/cunningham-react";
+import { Button, useModal } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
-import { SubmitHandler, useForm } from "react-hook-form";
 import { NavigationEventType, useExplorer } from "./ExplorerContext";
 import { Item } from "@/features/drivers/types";
-
-type Inputs = {
-  title: string;
-};
+import { ExplorerCreateFolderModal } from "./modals/ExplorerCreateFolderModal";
 
 export const ExplorerTree = () => {
   const { t } = useTranslation();
@@ -80,67 +67,5 @@ export const ExplorerTree = () => {
       </div>
       <ExplorerCreateFolderModal {...createFolderModal} />
     </div>
-  );
-};
-
-/**
- * TODO: Create dedicated file.
- */
-const ExplorerCreateFolderModal = (
-  props: Pick<ModalProps, "isOpen" | "onClose">
-) => {
-  const { itemId } = useExplorer();
-  const { t } = useTranslation();
-  const driver = getDriver();
-  const { register, handleSubmit } = useForm<Inputs>();
-
-  const queryClient = useQueryClient();
-  const createFolder = useMutation({
-    mutationFn: (...payload: Parameters<typeof driver.createFolder>) => {
-      return driver.createFolder(...payload);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["items", itemId],
-      });
-    },
-  });
-
-  const onSubmit: SubmitHandler<Inputs> = async (data) => {
-    createFolder.mutate({
-      ...data,
-      parentId: itemId,
-    });
-    props.onClose();
-  };
-
-  return (
-    <Modal
-      {...props}
-      size={ModalSize.SMALL}
-      title={t("explorer.actions.createFolder.modal.title")}
-      rightActions={
-        <>
-          <Button color="secondary" onClick={props.onClose}>
-            {t("explorer.actions.createFolder.modal.cancel")}
-          </Button>
-          <Button type="submit" form="create-folder-form">
-            {t("explorer.actions.createFolder.modal.submit")}
-          </Button>
-        </>
-      }
-    >
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        id="create-folder-form"
-        className="mt-s"
-      >
-        <Input
-          label={t("explorer.actions.createFolder.modal.label")}
-          fullWidth={true}
-          {...register("title")}
-        />
-      </form>
-    </Modal>
   );
 };
