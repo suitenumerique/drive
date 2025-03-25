@@ -32,6 +32,10 @@
         },
         "tree": {
           "createFolder": "Create",
+          "createFolderDropdown": {
+            "createFolder": "New folder",
+            "createWorkspace": "New workspace"
+          },
           "import": "Import",
           "search": "Search"
         },
@@ -118,6 +122,10 @@
         },
         "tree": {
           "createFolder": "Créer",
+          "createFolderDropdown": {
+            "createFolder": "Nouveau dossier",
+            "createWorkspace": "Nouvel espace"
+          },
           "import": "Importer",
           "search": "Rechercher"
         },

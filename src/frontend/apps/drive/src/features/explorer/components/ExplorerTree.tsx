@@ -3,6 +3,10 @@ import { useTranslation } from "react-i18next";
 import { NavigationEventType, useExplorer } from "./ExplorerContext";
 import { Item } from "@/features/drivers/types";
 import { ExplorerCreateFolderModal } from "./modals/ExplorerCreateFolderModal";
+import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
+import { useState } from "react";
+import folderSvg from "@/assets/icons/folder.svg";
+import workspaceSvg from "@/assets/icons/workspace.svg";
 
 export const ExplorerTree = () => {
   const { t } = useTranslation();
@@ -40,16 +44,37 @@ export const ExplorerTree = () => {
     );
   };
 
+  const [isCreateDropdownOpen, setIsCreateDropdownOpen] = useState(false);
+
   return (
     <div>
       <div className="explorer__tree__actions">
         <div className="explorer__tree__actions__left">
-          <Button
-            icon={<span className="material-icons">add</span>}
-            onClick={createFolderModal.open}
+          <DropdownMenu
+            options={[
+              {
+                icon: <img src={folderSvg.src} alt="" />,
+                label: t("explorer.tree.createFolderDropdown.createFolder"),
+                value: "info",
+                callback: createFolderModal.open,
+              },
+              {
+                icon: <img src={workspaceSvg.src} alt="" />,
+                label: t("explorer.tree.createFolderDropdown.createWorkspace"),
+                value: "info",
+                callback: createFolderModal.open,
+              },
+            ]}
+            isOpen={isCreateDropdownOpen}
+            onOpenChange={setIsCreateDropdownOpen}
           >
-            {t("explorer.tree.createFolder")}
-          </Button>
+            <Button
+              icon={<span className="material-icons">add</span>}
+              onClick={() => setIsCreateDropdownOpen(!isCreateDropdownOpen)}
+            >
+              {t("explorer.tree.createFolder")}
+            </Button>
+          </DropdownMenu>
           <Button color="secondary">{t("explorer.tree.import")}</Button>
         </div>
         <Button
