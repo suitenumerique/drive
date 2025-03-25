@@ -319,11 +319,6 @@ const ItemActions = ({
             value: "move",
           },
           {
-            icon: <span className="material-icons">arrow_back</span>,
-            label: t("explorer.grid.actions.duplicate"),
-            value: "duplicate",
-          },
-          {
             icon: <span className="material-icons">delete</span>,
             label: t("explorer.grid.actions.delete"),
             value: "delete",
