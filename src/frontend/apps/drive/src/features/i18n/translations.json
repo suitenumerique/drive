@@ -118,8 +118,12 @@
         },
         "tree": {
           "createFolder": "Créer",
-          "import": "Importer",
-          "search": "Rechercher"
+          "search": "Rechercher",
+          "import": {
+            "label": "Importer",
+            "files": "Importer des fichiers",
+            "folders": "Importer des dossiers"
+          }
         },
         "selectionBar": {
           "caption_one": "1 élément sélectionné",

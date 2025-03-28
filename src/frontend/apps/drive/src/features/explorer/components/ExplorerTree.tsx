@@ -3,12 +3,16 @@ import { useTranslation } from "react-i18next";
 import { NavigationEventType, useExplorer } from "./ExplorerContext";
 import { Item } from "@/features/drivers/types";
 import { ExplorerCreateFolderModal } from "./modals/ExplorerCreateFolderModal";
+import { useState } from "react";
+import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
+import uploadFileSvg from "@/assets/icons/upload_file.svg";
+import uploadFolderSvg from "@/assets/icons/upload_folder.svg";
 
 export const ExplorerTree = () => {
   const { t } = useTranslation();
 
   // itemId is the id of the current item
-  const { item, tree, onNavigate } = useExplorer();
+  const { item, tree, onNavigate, dropZone } = useExplorer();
 
   const createFolderModal = useModal();
 
@@ -40,6 +44,8 @@ export const ExplorerTree = () => {
     );
   };
 
+  const [isImportDropdownOpen, setIsImportDropdownOpen] = useState(false);
+
   return (
     <div>
       <div className="explorer__tree__actions">
@@ -50,7 +56,36 @@ export const ExplorerTree = () => {
           >
             {t("explorer.tree.createFolder")}
           </Button>
-          <Button color="secondary">{t("explorer.tree.import")}</Button>
+
+          <DropdownMenu
+            options={[
+              {
+                icon: <img src={uploadFileSvg.src} alt="" />,
+                label: t("explorer.tree.import.files"),
+                value: "info",
+                callback: () => {
+                  document.getElementById("import-files")?.click();
+                },
+              },
+              {
+                icon: <img src={uploadFolderSvg.src} alt="" />,
+                label: t("explorer.tree.import.folders"),
+                value: "info",
+                callback: () => {
+                  document.getElementById("import-folders")?.click();
+                },
+              },
+            ]}
+            isOpen={isImportDropdownOpen}
+            onOpenChange={setIsImportDropdownOpen}
+          >
+            <Button
+              color="secondary"
+              onClick={() => setIsImportDropdownOpen(true)}
+            >
+              {t("explorer.tree.import.label")}
+            </Button>
+          </DropdownMenu>
         </div>
         <Button
           color="primary-text"
