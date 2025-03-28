@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { getDriver } from "@/features/config/Config";
 import { RhfInput } from "@/features/forms/components/RhfInput";
+import { useMutationCreateFolder } from "../../hooks/useMutations";
 
 type Inputs = {
   title: string;
@@ -19,22 +20,10 @@ type Inputs = {
 export const ExplorerCreateFolderModal = (
   props: Pick<ModalProps, "isOpen" | "onClose">
 ) => {
-  const { itemId } = useExplorer();
+  const { item, itemId } = useExplorer();
   const { t } = useTranslation();
-  const driver = getDriver();
   const form = useForm<Inputs>();
-
-  const queryClient = useQueryClient();
-  const createFolder = useMutation({
-    mutationFn: (...payload: Parameters<typeof driver.createFolder>) => {
-      return driver.createFolder(...payload);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["items", itemId],
-      });
-    },
-  });
+  const createFolder = useMutationCreateFolder();
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     form.reset();

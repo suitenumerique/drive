@@ -2,6 +2,7 @@ import { getDriver } from "@/features/config/Config";
 import { Item } from "@/features/drivers/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useExplorer } from "../components/ExplorerContext";
+
 export const useMutationDeleteItems = () => {
   const driver = getDriver();
   const queryClient = useQueryClient();
@@ -82,6 +83,24 @@ export const useMutationRenameItem = () => {
       queryClient.invalidateQueries({
         queryKey: ["items", item!.id, "children"],
       });
+    },
+  });
+};
+
+export const useMutationCreateFolder = () => {
+  const queryClient = useQueryClient();
+  const driver = getDriver();
+
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.createFolder>) => {
+      return driver.createFolder(...payload);
+    },
+    onSuccess: (data, variables) => {
+      if (variables.parentId) {
+        queryClient.invalidateQueries({
+          queryKey: ["items", variables.parentId],
+        });
+      }
     },
   });
 };
