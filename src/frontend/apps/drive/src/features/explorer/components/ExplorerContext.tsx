@@ -4,6 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Item } from "@/features/drivers/types";
 import { createContext } from "react";
 import { getDriver } from "@/features/config/Config";
+import { Toaster } from "@/features/ui/components/toaster/Toaster";
+import { useDropzone } from "react-dropzone";
+import { useUploadZone } from "../hooks/useUpload";
 
 export interface ExplorerContextType {
   selectedItemIds: Record<string, boolean>;
@@ -15,6 +18,7 @@ export interface ExplorerContextType {
   children: Item[] | undefined;
   tree: Item | undefined;
   onNavigate: (event: NavigationEvent) => void;
+  dropZone: ReturnType<typeof useDropzone>;
 }
 
 export const ExplorerContext = createContext<ExplorerContextType | undefined>(
@@ -74,6 +78,8 @@ export const ExplorerProvider = ({
       : [];
   };
 
+  const { dropZone } = useUploadZone({ item: item! });
+
   return (
     <ExplorerContext.Provider
       value={{
@@ -86,9 +92,22 @@ export const ExplorerProvider = ({
         tree,
         children: itemChildren,
         onNavigate,
+        dropZone,
       }}
     >
+      <input
+        {...dropZone.getInputProps({
+          webkitdirectory: "true",
+          id: "import-folders",
+        })}
+      />
+      <input
+        {...dropZone.getInputProps({
+          id: "import-files",
+        })}
+      />
       {children}
+      <Toaster />
     </ExplorerContext.Provider>
   );
 };
