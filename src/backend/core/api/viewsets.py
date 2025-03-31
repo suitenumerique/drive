@@ -3,7 +3,7 @@
 
 import logging
 import re
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from django.conf import settings
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -908,7 +908,7 @@ class ItemViewSet(
             logger.debug("Missing HTTP_X_ORIGINAL_URL header in subrequest")
             raise drf.exceptions.PermissionDenied()
 
-        parsed_url = urlparse(original_url)
+        parsed_url = urlparse(unquote(original_url))
         match = pattern.search(parsed_url.path)
 
         # If the path does not match the pattern, try to extract the parameters from the query

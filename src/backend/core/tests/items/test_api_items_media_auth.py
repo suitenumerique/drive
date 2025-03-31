@@ -4,7 +4,7 @@ Test file uploads API endpoint for users in drive's core app.
 
 import uuid
 from io import BytesIO
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -183,6 +183,59 @@ def test_api_items_media_auth_related(via, mock_user_teams):
     )
 
     original_url = f"http://localhost/media/{key:s}"
+    response = client.get(
+        "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
+    )
+
+    assert response.status_code == 200
+
+    authorization = response["Authorization"]
+    assert "AWS4-HMAC-SHA256 Credential=" in authorization
+    assert (
+        "SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature="
+        in authorization
+    )
+    assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
+
+    s3_url = urlparse(settings.AWS_S3_ENDPOINT_URL)
+    file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{key:s}"
+    response = requests.get(
+        file_url,
+        headers={
+            "authorization": authorization,
+            "x-amz-date": response["x-amz-date"],
+            "x-amz-content-sha256": response["x-amz-content-sha256"],
+            "Host": f"{s3_url.hostname:s}:{s3_url.port:d}",
+        },
+        timeout=1,
+    )
+    assert response.content.decode("utf-8") == "my prose"
+
+
+def test_api_items_media_auth_related_filename_with_espaces():
+    """
+    Users who have a specific access to a item, whatever the role, should be able to
+    retrieve related attachments.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory()
+
+    factories.UserItemAccessFactory(item=item, user=user)
+
+    filename = "image with & spaces.txt"
+    key = f"item/{item.pk!s}/{filename:s}"
+
+    default_storage.connection.meta.client.put_object(
+        Bucket=default_storage.bucket_name,
+        Key=key,
+        Body=BytesIO(b"my prose"),
+        ContentType="text/plain",
+    )
+
+    original_url = quote(f"http://localhost/media/{key:s}")
     response = client.get(
         "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
     )
