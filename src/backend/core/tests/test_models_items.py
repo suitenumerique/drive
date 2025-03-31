@@ -644,6 +644,47 @@ def test_models_items_unique_title_in_current_path():
         }
 
 
+def test_models_items_unique_title_in_current_path_soft_deleted():
+    """Check title unicity in the current path even if the item is soft-deleted."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, title="folder")
+    parent2 = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, title="an other one"
+    )
+
+    # Create a child item with the same title should work
+    factories.ItemFactory(
+        parent=parent, title="folder", type=models.ItemTypeChoices.FOLDER
+    )
+    # Create a child item with a title already existing in an other tree should work
+    factories.ItemFactory(
+        parent=parent, title="an other one", type=models.ItemTypeChoices.FOLDER
+    )
+    factories.ItemFactory(
+        parent=parent2, title="folder", type=models.ItemTypeChoices.FOLDER
+    )
+
+    factories.ItemFactory(
+        parent=parent,
+        title="file.txt",
+        type=models.ItemTypeChoices.FILE,
+        filename="file.txt",
+    )
+
+    # Create an item children of parent
+    child = factories.ItemFactory(
+        parent=parent, title="child1", type=models.ItemTypeChoices.FOLDER
+    )
+    factories.ItemFactory(
+        parent=child, title="grand child 1", type=models.ItemTypeChoices.FOLDER
+    )
+    child.soft_delete()
+
+    # Create a new item with the same title should work
+    factories.ItemFactory(
+        parent=parent, title="child1", type=models.ItemTypeChoices.FOLDER
+    )
+
+
 def test_models_items_numchild():
     """The numchild property should return the number of children."""
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)

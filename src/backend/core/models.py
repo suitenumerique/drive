@@ -440,7 +440,17 @@ class ItemManager(TreeManager):
             if parent.type != ItemTypeChoices.FOLDER:
                 raise ValidationError({"type": _("Only folders can have children.")})
 
-            if self.children(parent.path).filter(title=kwargs.get("title")).exists():
+            if (
+                self.children(parent.path)
+                .filter(title=kwargs.get("title"))
+                .filter(
+                    models.Q(
+                        models.Q(deleted_at__isnull=True)
+                        | models.Q(ancestors_deleted_at__isnull=True)
+                    )
+                )
+                .exists()
+            ):
                 raise ValidationError(
                     {"title": _("title already exists in this folder.")}
                 )

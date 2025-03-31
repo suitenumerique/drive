@@ -305,3 +305,33 @@ def test_api_items_children_create_title_already_existing_at_the_same_level():
 
     assert response.status_code == 400
     assert response.json() == {"title": ["title already exists in this folder."]}
+
+
+def test_api_items_children_create_item_soft_deleted_with_same_title_exists():
+    """
+    It should be possible to create a new nested item with the same title as a soft-deleted item.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    access = factories.UserItemAccessFactory(
+        user=user, role="editor", item__type=ItemTypeChoices.FOLDER
+    )
+    item = factories.ItemFactory(
+        parent=access.item, title="my item", type=ItemTypeChoices.FOLDER
+    )
+    item.soft_delete()
+
+    response = client.post(
+        f"/api/v1.0/items/{access.item.id!s}/children/",
+        {
+            "title": "my item",
+            "type": ItemTypeChoices.FOLDER,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert response.json()["title"] == "my item"
+    assert response.json()["type"] == ItemTypeChoices.FOLDER.value
