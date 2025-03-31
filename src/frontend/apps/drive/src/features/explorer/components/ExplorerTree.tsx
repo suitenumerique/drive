@@ -4,7 +4,7 @@ import { NavigationEventType, useExplorer } from "./ExplorerContext";
 import { Item } from "@/features/drivers/types";
 import { ExplorerCreateFolderModal } from "./modals/ExplorerCreateFolderModal";
 import { useState } from "react";
-import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
+import { DropdownMenu, useDropdownMenu } from "@gouvfr-lasuite/ui-kit";
 import uploadFileSvg from "@/assets/icons/upload_file.svg";
 import uploadFolderSvg from "@/assets/icons/upload_folder.svg";
 
@@ -12,7 +12,7 @@ export const ExplorerTree = () => {
   const { t } = useTranslation();
 
   // itemId is the id of the current item
-  const { item, tree, onNavigate, dropZone } = useExplorer();
+  const { item, tree, onNavigate } = useExplorer();
 
   const createFolderModal = useModal();
 
@@ -44,7 +44,7 @@ export const ExplorerTree = () => {
     );
   };
 
-  const [isImportDropdownOpen, setIsImportDropdownOpen] = useState(false);
+  const dropdownMenu = useDropdownMenu();
 
   return (
     <div>
@@ -76,12 +76,12 @@ export const ExplorerTree = () => {
                 },
               },
             ]}
-            isOpen={isImportDropdownOpen}
-            onOpenChange={setIsImportDropdownOpen}
+            {...dropdownMenu}
+            onOpenChange={dropdownMenu.setIsOpen}
           >
             <Button
               color="secondary"
-              onClick={() => setIsImportDropdownOpen(true)}
+              onClick={() => dropdownMenu.setIsOpen(true)}
             >
               {t("explorer.tree.import.label")}
             </Button>

@@ -2,9 +2,8 @@ import { useEffect } from "react";
 import { toast } from "react-toastify";
 import { Item } from "@/features/drivers/types";
 import { FileWithPath, useDropzone } from "react-dropzone";
-import { useMutationCreateFolder } from "./useMutations";
+import { useMutationCreateFolder, useMutationCreateFile } from "./useMutations";
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { getDriver } from "@/features/config/Config";
 import { useTranslation } from "react-i18next";
@@ -174,18 +173,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const createFile = useMutation({
-    mutationFn: async (...payload: Parameters<typeof driver.createFile>) => {
-      return driver.createFile(...payload);
-    },
-    onSuccess: (data, variables) => {
-      if (variables.parentId) {
-        queryClient.invalidateQueries({
-          queryKey: ["items", variables.parentId],
-        });
-      }
-    },
-  });
+  const createFile = useMutationCreateFile();
 
   const fileDragToastId = useRef<Id | null>(null);
   const fileUploadsToastId = useRef<Id | null>(null);

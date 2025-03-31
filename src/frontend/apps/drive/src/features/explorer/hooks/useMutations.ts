@@ -3,6 +3,23 @@ import { Item } from "@/features/drivers/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useExplorer } from "../components/ExplorerContext";
 
+export const useMutationCreateFile = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (...payload: Parameters<typeof driver.createFile>) => {
+      return driver.createFile(...payload);
+    },
+    onSuccess: (data, variables) => {
+      if (variables.parentId) {
+        queryClient.invalidateQueries({
+          queryKey: ["items", variables.parentId],
+        });
+      }
+    },
+  });
+};
+
 export const useMutationDeleteItems = () => {
   const driver = getDriver();
   const queryClient = useQueryClient();
