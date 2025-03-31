@@ -351,3 +351,65 @@ def test_api_items_update_administrator_or_owner_of_another(via, mock_user_teams
     other_item.refresh_from_db()
     other_item_values = serializers.ItemSerializer(instance=other_item).data
     assert other_item_values == old_item_values
+
+
+def test_api_items_update_title_unique_in_current_path():
+    """
+    The title of an item should be unique in the current path.
+    """
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(
+        title="item1", type=models.ItemTypeChoices.FOLDER, users=[user]
+    )
+    child = factories.ItemFactory(
+        title="child1", type=models.ItemTypeChoices.FOLDER, parent=root, users=[user]
+    )
+
+    factories.ItemFactory(
+        title="child2", type=models.ItemTypeChoices.FOLDER, parent=root, users=[user]
+    )
+
+    # update child1 to rename it to child2 should fails
+    response = client.put(
+        f"/api/v1.0/items/{child.id!s}/",
+        {"title": "child2"},
+        format="json",
+    )
+    assert response.status_code == 400
+    assert response.json() == {
+        "title": "An item with this title already exists in the current path."
+    }
+
+
+def test_api_items_update_title_unique_in_current_path_soft_deleted():
+    """
+    Reusing a title of a soft-deleted item should be allowed.
+    """
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(
+        title="item1", type=models.ItemTypeChoices.FOLDER, users=[user]
+    )
+    child = factories.ItemFactory(
+        title="child1", type=models.ItemTypeChoices.FOLDER, parent=root, users=[user]
+    )
+    child.soft_delete()
+
+    child2 = factories.ItemFactory(
+        title="child2", type=models.ItemTypeChoices.FOLDER, parent=root, users=[user]
+    )
+
+    # update child 2 title using child 1 title is allowed
+    response = client.put(
+        f"/api/v1.0/items/{child2.id!s}/",
+        {"title": "child1"},
+        format="json",
+    )
+    assert response.status_code == 200

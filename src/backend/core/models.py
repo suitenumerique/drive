@@ -417,6 +417,20 @@ class ItemQuerySet(TreeQuerySet):
         return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC))
 
 
+def _is_item_title_existing(queryset, title):
+    """Check if the title is unique in the same path."""
+    return (
+        queryset.filter(title=title)
+        .filter(
+            models.Q(
+                models.Q(deleted_at__isnull=True)
+                | models.Q(ancestors_deleted_at__isnull=True)
+            )
+        )
+        .exists()
+    )
+
+
 class ItemManager(TreeManager):
     """Custom manager for Item model overriding create_child method."""
 
@@ -440,16 +454,9 @@ class ItemManager(TreeManager):
             if parent.type != ItemTypeChoices.FOLDER:
                 raise ValidationError({"type": _("Only folders can have children.")})
 
-            if (
-                self.children(parent.path)
-                .filter(title=kwargs.get("title"))
-                .filter(
-                    models.Q(
-                        models.Q(deleted_at__isnull=True)
-                        | models.Q(ancestors_deleted_at__isnull=True)
-                    )
-                )
-                .exists()
+            if _is_item_title_existing(
+                self.children(parent.path),
+                kwargs.get("title"),
             ):
                 raise ValidationError(
                     {"title": _("title already exists in this folder.")}
@@ -602,6 +609,13 @@ class Item(TreeModel, BaseModel):
     def get_nb_accesses_cache_key(self):
         """Generate a unique cache key for each item."""
         return f"item_{self.id!s}_nb_accesses"
+
+    def is_item_title_existing(self, title):
+        """Check if the title is unique in the same path."""
+        return _is_item_title_existing(
+            self.siblings(),
+            title,
+        )
 
     @property
     def nb_accesses(self):

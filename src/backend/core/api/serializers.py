@@ -255,6 +255,23 @@ class ItemSerializer(ListItemSerializer):
     def create(self, validated_data):
         raise NotImplementedError("Create method can not be used.")
 
+    def update(self, instance, validated_data):
+        """Validate that the title is unique in the current path."""
+        if (
+            instance.title != validated_data.get("title")
+            and instance.depth > 1
+            and instance.is_item_title_existing(validated_data.get("title"))
+        ):
+            raise serializers.ValidationError(
+                {
+                    "title": _(
+                        "An item with this title already exists in the current path."
+                    )
+                }
+            )
+
+        return super().update(instance, validated_data)
+
 
 class CreateItemSerializer(ItemSerializer):
     """Serializer used to create a new item"""
