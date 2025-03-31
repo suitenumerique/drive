@@ -32,7 +32,7 @@ ITEM_FOLDER = "item"
 UUID_REGEX = (
     r"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
 )
-FILE_EXT_REGEX = r"\.[a-zA-Z]{3,4}"
+FILE_EXT_REGEX = r"(\.[a-zA-Z0-9]+)?$"
 MEDIA_STORAGE_URL_PATTERN = re.compile(
     f"{settings.MEDIA_URL:s}"
     f"(?P<key>{ITEM_FOLDER:s}/(?P<pk>{UUID_REGEX:s})/.*{FILE_EXT_REGEX:s})$"
