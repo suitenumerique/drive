@@ -2,10 +2,9 @@ name: Release Chart
 run-name: Release Chart
 
 on:
-  gollum
-  # push:
-  #   paths:
-  #     - src/helm/drive/**
+  push:
+    paths:
+      - src/helm/drive/**
 
 jobs:
   release:
