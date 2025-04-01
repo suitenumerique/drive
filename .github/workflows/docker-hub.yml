@@ -27,7 +27,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: lasuite/impress-backend
+          images: lasuite/drive-backend
       -
         name: Login to DockerHub
         if: github.event_name != 'pull_request'
@@ -37,8 +37,7 @@ jobs:
         uses: numerique-gouv/action-trivy-cache@main
         with:
           docker-build-args: '--target backend-production -f Dockerfile'
-          docker-image-name: 'docker.io/lasuite/impress-backend:${{ github.sha }}'
-        continue-on-error: true
+          docker-image-name: 'docker.io/lasuite/drive-backend:${{ github.sha }}'
       -
         name: Build and push
         uses: docker/build-push-action@v6
@@ -61,7 +60,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: lasuite/impress-frontend
+          images: lasuite/drive-frontend
       -
         name: Login to DockerHub
         if: github.event_name != 'pull_request'
@@ -71,8 +70,7 @@ jobs:
         uses: numerique-gouv/action-trivy-cache@main
         with:
           docker-build-args: '-f src/frontend/Dockerfile --target frontend-production'
-          docker-image-name: 'docker.io/lasuite/impress-frontend:${{ github.sha }}'
-        continue-on-error: true
+          docker-image-name: 'docker.io/lasuite/drive-frontend:${{ github.sha }}'
       -
         name: Build and push
         uses: docker/build-push-action@v6
@@ -85,55 +83,16 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-  build-and-push-y-provider:
-    runs-on: ubuntu-latest
-    steps:
-      -
-        name: Checkout repository
-        uses: actions/checkout@v4
-      -
-        name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: lasuite/impress-y-provider
-      -
-        name: Login to DockerHub
-        if: github.event_name != 'pull_request'
-        run: echo "${{ secrets.DOCKER_HUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_HUB_USER }}" --password-stdin
-      -
-        name: Run trivy scan
-        uses: numerique-gouv/action-trivy-cache@main
-        with:
-          docker-build-args: '-f src/frontend/servers/y-provider/Dockerfile --target y-provider'
-          docker-image-name: 'docker.io/lasuite/impress-frontend:${{ github.sha }}'
-        continue-on-error: true
-      -
-        name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./src/frontend/servers/y-provider/Dockerfile
-          target: y-provider
-          build-args: DOCKER_USER=${{ env.DOCKER_USER }}:-1000
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
   notify-argocd:
     needs:
       - build-and-push-frontend
       - build-and-push-backend
     runs-on: ubuntu-latest
-    if: |
-      github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request'
     steps:
-      -
-        name: Checkout repository
-        uses: actions/checkout@v4
-      -
-        name: Call argocd github webhook
-        run: |
-          data='{"ref": "'$GITHUB_REF'","repository": {"html_url":"'$GITHUB_SERVER_URL'/'$GITHUB_REPOSITORY'"}}'
-          sig=$(echo -n ${data} | openssl dgst -sha1 -hmac ''${{ secrets.ARGOCD_PREPROD_WEBHOOK_SECRET}}'' | awk '{print "X-Hub-Signature: sha1="$2}')
-          curl -X POST -H 'X-GitHub-Event:push' -H "Content-Type: application/json" -H "${sig}" --data "${data}" ${{ vars.ARGOCD_PREPROD_WEBHOOK_URL }}
+      - uses: numerique-gouv/action-argocd-webhook-notification@main
+        id: notify
+        with:
+          deployment_repo_path: "${{ secrets.DEPLOYMENT_REPO_URL }}"
+          argocd_webhook_secret: "${{ secrets.ARGOCD_PREPROD_WEBHOOK_SECRET }}"
+          argocd_url: "${{ vars.ARGOCD_PREPROD_WEBHOOK_URL }}"
