@@ -38,7 +38,7 @@ ENV NEXT_PUBLIC_API_ORIGIN=${API_ORIGIN}
 ARG S3_DOMAIN_REPLACE
 ENV NEXT_PUBLIC_S3_DOMAIN_REPLACE=${S3_DOMAIN_REPLACE}
 
-RUN yarn build
+RUN yarn build --no-lint
 
 # ---- Front-end image ----
 FROM nginxinc/nginx-unprivileged:1.26-alpine AS frontend-production
