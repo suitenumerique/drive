@@ -1,0 +1,14 @@
+{{- $fullName := include "drive.fullname" . -}}
+{{- $component := "media" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-media
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "drive.common.labels" (list . $component) | nindent 4 }}
+  annotations:
+    {{- toYaml $.Values.serviceMedia.annotations | nindent 4 }}
+spec:
+  type: ExternalName
+  externalName: {{ $.Values.serviceMedia.host }}

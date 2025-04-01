@@ -1,0 +1,416 @@
+# Default values for drive.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+## @section General configuration
+
+## @param image.repository Repository to use to pull drive's container image
+## @param image.tag drive's container tag
+## @param image.pullPolicy Container image pull policy
+## @extra image.credentials.username Username for container registry authentication
+## @extra image.credentials.password Password for container registry authentication
+## @extra image.credentials.registry Registry url for which the credentials are specified
+## @extra image.credentials.name Name of the generated secret for imagePullSecrets
+image:
+  repository: lasuite/drive-backend
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+## @param nameOverride Override the chart name
+## @param fullnameOverride Override the full application name
+nameOverride: ""
+fullnameOverride: ""
+
+## @skip commonEnvVars
+commonEnvVars: &commonEnvVars
+  <<: []
+
+## @param ingress.enabled whether to enable the Ingress or not
+## @param ingress.className IngressClass to use for the Ingress
+## @param ingress.host Host for the Ingress
+## @param ingress.path Path to use for the Ingress
+ingress:
+  enabled: false
+  className: null
+  host: drive.example.com
+  path: /
+  ## @param ingress.hosts Additional host to configure for the Ingress
+  hosts: []
+  #  - chart-example.local
+  ## @param ingress.tls.enabled Weather to enable TLS for the Ingress
+  ## @param ingress.tls.secretName Secret name for TLS config
+  ## @skip ingress.tls.additional
+  ## @extra ingress.tls.additional[].secretName Secret name for additional TLS config
+  ## @extra ingress.tls.additional[].hosts[] Hosts for additional TLS config
+  tls:
+    enabled: true
+    secretName: null
+    additional: []
+
+  ## @param ingress.customBackends Add custom backends to ingress
+  customBackends: []
+
+
+## @param ingressAdmin.enabled whether to enable the Ingress or not
+## @param ingressAdmin.className IngressClass to use for the Ingress
+## @param ingressAdmin.host Host for the Ingress
+## @param ingressAdmin.path Path to use for the Ingress
+ingressAdmin:
+  enabled: false
+  className: null
+  host: drive.example.com
+  path: /admin
+  ## @param ingressAdmin.hosts Additional host to configure for the Ingress
+  hosts: [ ]
+  #  - chart-example.local
+  ## @param ingressAdmin.tls.enabled Weather to enable TLS for the Ingress
+  ## @param ingressAdmin.tls.secretName Secret name for TLS config
+  ## @skip ingressAdmin.tls.additional
+  ## @extra ingressAdmin.tls.additional[].secretName Secret name for additional TLS config
+  ## @extra ingressAdmin.tls.additional[].hosts[] Hosts for additional TLS config
+  tls:
+    enabled: true
+    secretName: null
+    additional: []
+
+## @param ingressMedia.enabled whether to enable the Ingress or not
+## @param ingressMedia.className IngressClass to use for the Ingress
+## @param ingressMedia.host Host for the Ingress
+## @param ingressMedia.path Path to use for the Ingress
+ingressMedia:
+  enabled: false
+  className: null
+  host: drive.example.com
+  path: /media/(.*)
+  ## @param ingressMedia.hosts Additional host to configure for the Ingress
+  hosts: [ ]
+  #  - chart-example.local
+  ## @param ingressMedia.tls.enabled Weather to enable TLS for the Ingress
+  ## @param ingressMedia.tls.secretName Secret name for TLS config
+  ## @skip ingressMedia.tls.additional
+  ## @extra ingressMedia.tls.additional[].secretName Secret name for additional TLS config
+  ## @extra ingressMedia.tls.additional[].hosts[] Hosts for additional TLS config
+  tls:
+    enabled: true
+    secretName: null
+    additional: []
+
+  ## @param ingressMedia.annotations.nginx.ingress.kubernetes.io/auth-url
+  ## @param ingressMedia.annotations.nginx.ingress.kubernetes.io/auth-response-headers
+  ## @param ingressMedia.annotations.nginx.ingress.kubernetes.io/upstream-vhost
+  ## @param ingressMedia.annotations.nginx.ingress.kubernetes.io/configuration-snippet
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: https://drive.example.com/api/v1.0/items/media-auth/
+    nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
+    nginx.ingress.kubernetes.io/upstream-vhost: minio.drive.svc.cluster.local:9000
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header Content-Security-Policy "default-src 'none'" always;
+
+## @param serviceMedia.host
+## @param serviceMedia.port
+## @param serviceMedia.annotations
+serviceMedia:
+  host: minio.drive.svc.cluster.local
+  port: 9000
+  annotations: {}
+
+
+## @section backend
+
+backend:
+
+  ## @param backend.command Override the backend container command
+  command: []
+
+  ## @param backend.args Override the backend container args
+  args: []
+
+  ## @param backend.replicas Amount of backend replicas
+  replicas: 3
+
+  ## @param backend.shareProcessNamespace Enable share process namespace between containers
+  shareProcessNamespace: false
+
+  ## @param backend.sidecars Add sidecars containers to backend deployment
+  sidecars: []
+
+  ## @param backend.migrateJobAnnotations Annotations for the migrate job
+  migrateJobAnnotations: {}
+
+  ## @param backend.securityContext Configure backend Pod security context
+  securityContext: null
+
+  ## @param backend.envVars Configure backend container environment variables
+  ## @extra backend.envVars.BY_VALUE Example environment variable by setting value directly
+  ## @extra backend.envVars.FROM_CONFIGMAP.configMapKeyRef.name Name of a ConfigMap when configuring env vars from a ConfigMap
+  ## @extra backend.envVars.FROM_CONFIGMAP.configMapKeyRef.key Key within a ConfigMap when configuring env vars from a ConfigMap
+  ## @extra backend.envVars.FROM_SECRET.secretKeyRef.name Name of a Secret when configuring env vars from a Secret
+  ## @extra backend.envVars.FROM_SECRET.secretKeyRef.key Key within a Secret when configuring env vars from a Secret
+  ## @skip backend.envVars
+  envVars:
+    <<: *commonEnvVars
+
+  ## @param backend.podAnnotations Annotations to add to the backend Pod
+  podAnnotations: {}
+
+  ## @param backend.dpAnnotations Annotations to add to the backend Deployment
+  dpAnnotations: {}
+
+  ## @param backend.service.type backend Service type
+  ## @param backend.service.port backend Service listening port
+  ## @param backend.service.targetPort backend container listening port
+  ## @param backend.service.annotations Annotations to add to the backend Service
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8000
+    annotations: {}
+
+ ## @param backend.migrate.command backend migrate command
+ ## @param backend.migrate.restartPolicy backend migrate job restart policy
+  migrate:
+    command:
+      - "python"
+      - "manage.py"
+      - "migrate"
+      - "--no-input"
+    restartPolicy: Never
+
+ ## @param backend.createsuperuser.command backend migrate command
+ ## @param backend.createsuperuser.restartPolicy backend migrate job restart policy
+  createsuperuser:
+    command:
+      - "/bin/sh"
+      - "-c"
+      - |
+        python manage.py createsuperuser --email $DJANGO_SUPERUSER_EMAIL --password $DJANGO_SUPERUSER_PASSWORD
+    restartPolicy: Never
+
+  ## @extra backend.job job dedicated to run a random management command, for example after a deployment
+  ## @param backend.job.name The name to use to describe this job
+  ## @param backend.job.command The management command to execute
+  ## @param backend.job.restartPolicy The restart policy for the job.
+  ## @extra backend.job.annotations Annotations to add to the job [default: argocd.argoproj.io/hook: PostSync]
+  ## @skip backend.job.annotations.argocd.argoproj.io/hook
+  job:
+    name: ""
+    command: []
+    restartPolicy: Never
+    annotations: 
+      argocd.argoproj.io/hook: PostSync
+
+  ## @param backend.probes.liveness.path [nullable] Configure path for backend HTTP liveness probe
+  ## @param backend.probes.liveness.targetPort [nullable] Configure port for backend HTTP liveness probe
+  ## @param backend.probes.liveness.initialDelaySeconds [nullable] Configure initial delay for backend liveness probe
+  ## @param backend.probes.liveness.initialDelaySeconds [nullable] Configure timeout for backend liveness probe
+  ## @param backend.probes.startup.path [nullable] Configure path for backend HTTP startup probe
+  ## @param backend.probes.startup.targetPort [nullable] Configure port for backend HTTP startup probe
+  ## @param backend.probes.startup.initialDelaySeconds [nullable] Configure initial delay for backend startup probe
+  ## @param backend.probes.startup.initialDelaySeconds [nullable] Configure timeout for backend startup probe
+  ## @param backend.probes.readiness.path [nullable] Configure path for backend HTTP readiness probe
+  ## @param backend.probes.readiness.targetPort [nullable] Configure port for backend HTTP readiness probe
+  ## @param backend.probes.readiness.initialDelaySeconds [nullable] Configure initial delay for backend readiness probe
+  ## @param backend.probes.readiness.initialDelaySeconds [nullable] Configure timeout for backend readiness probe
+  probes:
+    liveness:
+      path: /__heartbeat__
+      initialDelaySeconds: 10
+    readiness:
+      path: /__lbheartbeat__
+      initialDelaySeconds: 10
+
+  ## @param backend.resources Resource requirements for the backend container
+  resources: {}
+
+  ## @param backend.nodeSelector Node selector for the backend Pod
+  nodeSelector: {}
+
+  ## @param backend.tolerations Tolerations for the backend Pod
+  tolerations: []
+
+  ## @param backend.affinity Affinity for the backend Pod
+  affinity: {}
+
+  ## @param backend.persistence Additional volumes to create and mount on the backend. Used for debugging purposes
+  ## @extra backend.persistence.volume-name.size Size of the additional volume
+  ## @extra backend.persistence.volume-name.type Type of the additional volume, persistentVolumeClaim or emptyDir
+  ## @extra backend.persistence.volume-name.mountPath Path where the volume should be mounted to
+  persistence: {}
+
+  ## @param backend.extraVolumeMounts Additional volumes to mount on the backend.
+  extraVolumeMounts: []
+
+  ## @param backend.extraVolumes Additional volumes to mount on the backend.
+  extraVolumes: []
+
+  ## @param backend.pdb.enabled Enable pdb on backend
+  pdb:
+    enabled: true
+
+## @section frontend
+
+frontend:
+  ## @param frontend.image.repository Repository to use to pull drive's frontend container image
+  ## @param frontend.image.tag drive's frontend container tag
+  ## @param frontend.image.pullPolicy frontend container image pull policy
+  image:
+    repository: lasuite/drive-frontend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  ## @param frontend.command Override the frontend container command
+  command: []
+
+  ## @param frontend.args Override the frontend container args
+  args: []
+
+  ## @param frontend.replicas Amount of frontend replicas
+  replicas: 3
+
+  ## @param frontend.shareProcessNamespace Enable share process namefrontend between containers
+  shareProcessNamespace: false
+
+  ## @param frontend.sidecars Add sidecars containers to frontend deployment
+  sidecars: []
+
+  ## @param frontend.securityContext Configure frontend Pod security context
+  securityContext: null
+
+  ## @param frontend.envVars Configure frontend container environment variables
+  ## @extra frontend.envVars.BY_VALUE Example environment variable by setting value directly
+  ## @extra frontend.envVars.FROM_CONFIGMAP.configMapKeyRef.name Name of a ConfigMap when configuring env vars from a ConfigMap
+  ## @extra frontend.envVars.FROM_CONFIGMAP.configMapKeyRef.key Key within a ConfigMap when configuring env vars from a ConfigMap
+  ## @extra frontend.envVars.FROM_SECRET.secretKeyRef.name Name of a Secret when configuring env vars from a Secret
+  ## @extra frontend.envVars.FROM_SECRET.secretKeyRef.key Key within a Secret when configuring env vars from a Secret
+  ## @skip frontend.envVars
+  envVars:
+    <<: *commonEnvVars
+
+  ## @param frontend.podAnnotations Annotations to add to the frontend Pod
+  podAnnotations: {}
+
+  ## @param frontend.dpAnnotations Annotations to add to the frontend Deployment
+  dpAnnotations: {}
+
+  ## @param frontend.service.type frontend Service type
+  ## @param frontend.service.port frontend Service listening port
+  ## @param frontend.service.targetPort frontend container listening port
+  ## @param frontend.service.annotations Annotations to add to the frontend Service
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+    annotations: {}
+
+  ## @param frontend.probes Configure probe for frontend
+  ## @extra frontend.probes.liveness.path Configure path for frontend HTTP liveness probe
+  ## @extra frontend.probes.liveness.targetPort Configure port for frontend HTTP liveness probe
+  ## @extra frontend.probes.liveness.initialDelaySeconds Configure initial delay for frontend liveness probe
+  ## @extra frontend.probes.liveness.initialDelaySeconds Configure timeout for frontend liveness probe
+  ## @extra frontend.probes.startup.path Configure path for frontend HTTP startup probe
+  ## @extra frontend.probes.startup.targetPort Configure port for frontend HTTP startup probe
+  ## @extra frontend.probes.startup.initialDelaySeconds Configure initial delay for frontend startup probe
+  ## @extra frontend.probes.startup.initialDelaySeconds Configure timeout for frontend startup probe
+  ## @extra frontend.probes.readiness.path Configure path for frontend HTTP readiness probe
+  ## @extra frontend.probes.readiness.targetPort Configure port for frontend HTTP readiness probe
+  ## @extra frontend.probes.readiness.initialDelaySeconds Configure initial delay for frontend readiness probe
+  ## @extra frontend.probes.readiness.initialDelaySeconds Configure timeout for frontend readiness probe
+  probes: {}
+
+  ## @param frontend.resources Resource requirements for the frontend container
+  resources: {}
+
+  ## @param frontend.nodeSelector Node selector for the frontend Pod
+  nodeSelector: {}
+
+  ## @param frontend.tolerations Tolerations for the frontend Pod
+  tolerations: []
+
+  ## @param frontend.affinity Affinity for the frontend Pod
+  affinity: {}
+
+  ## @param frontend.persistence Additional volumes to create and mount on the frontend. Used for debugging purposes
+  ## @extra frontend.persistence.volume-name.size Size of the additional volume
+  ## @extra frontend.persistence.volume-name.type Type of the additional volume, persistentVolumeClaim or emptyDir
+  ## @extra frontend.persistence.volume-name.mountPath Path where the volume should be mounted to
+  persistence: {}
+
+  ## @param frontend.extraVolumeMounts Additional volumes to mount on the frontend.
+  extraVolumeMounts: []
+
+  ## @param frontend.extraVolumes Additional volumes to mount on the frontend.
+  extraVolumes: []
+
+  ## @param frontend.pdb.enabled Enable pdb on frontend
+  pdb:
+    enabled: true
+
+## @section posthog
+
+posthog:
+
+  ## @param posthog.ingress.enabled Enable or disable the ingress resource creation
+  ## @param posthog.ingress.className Kubernetes ingress class name to use (e.g., nginx, traefik)
+  ## @param posthog.ingress.host Primary hostname for the ingress resource
+  ## @param posthog.ingress.path URL path prefix for the ingress routes (e.g., /)
+  ## @param posthog.ingress.hosts Additional hostnames array to be included in the ingress
+  ## @param posthog.ingress.tls.enabled Enable or disable TLS/HTTPS for the ingress
+  ## @param posthog.ingress.tls.additional Additional TLS configurations for extra hosts/certificates
+  ## @param posthog.ingress.customBackends Custom backend service configurations for the ingress
+  ## @param posthog.ingress.annotations Additional Kubernetes annotations to apply to the ingress
+  ingress:
+    enabled: false
+    className: null
+    host: drive.example.com
+    path: /
+    hosts: [ ]
+    tls:
+      enabled: true
+      additional: [ ]
+
+    customBackends: [ ]
+    annotations: {}
+
+  ## @param posthog.ingressAssets.enabled Enable or disable the ingress resource creation
+  ## @param posthog.ingressAssets.className Kubernetes ingress class name to use (e.g., nginx, traefik)
+  ## @param posthog.ingressAssets.host Primary hostname for the ingress resource
+  ## @param posthog.ingressAssets.paths URL paths prefix for the ingress routes (e.g., /static)
+  ## @param posthog.ingressAssets.hosts Additional hostnames array to be included in the ingress
+  ## @param posthog.ingressAssets.tls.enabled Enable or disable TLS/HTTPS for the ingress
+  ## @param posthog.ingressAssets.tls.additional Additional TLS configurations for extra hosts/certificates
+  ## @param posthog.ingressAssets.customBackends Custom backend service configurations for the ingress
+  ## @param posthog.ingressAssets.annotations Additional Kubernetes annotations to apply to the ingress
+  ingressAssets:
+    enabled: false
+    className: null
+    host: drive.example.com
+    paths:
+    - /static
+    - /array
+    hosts: [ ]
+    tls:
+      enabled: true
+      additional: [ ]
+
+    customBackends: [ ]
+    annotations: {}
+
+  ## @param posthog.service.type Service type (e.g. ExternalName, ClusterIP, LoadBalancer)
+  ## @param posthog.service.externalName External service hostname when type is ExternalName
+  ## @param posthog.service.port Port number for the service
+  ## @param posthog.service.annotations Additional annotations to apply to the service
+  service:
+    type: ExternalName
+    externalName: eu.i.posthog.com
+    port: 443
+    annotations: {}
+
+  ## @param posthog.assetsService.type Service type (e.g. ExternalName, ClusterIP, LoadBalancer)
+  ## @param posthog.assetsService.externalName External service hostname when type is ExternalName
+  ## @param posthog.assetsService.port Port number for the service
+  ## @param posthog.assetsService.annotations Additional annotations to apply to the service
+  assetsService:
+    type: ExternalName
+    externalName: eu-assets.i.posthog.com
+    port: 443
+    annotations: {}

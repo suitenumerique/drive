@@ -1,0 +1,141 @@
+djangoSecretKey: &djangoSecretKey "lkjsdlfkjsldkfjslkdfjslkdjfslkdjf"
+djangoSuperUserEmail: admin@example.com
+djangoSuperUserPass: admin
+oidc:
+    clientId: drive
+    clientSecret: ThisIsAnExampleKeyForDevPurposeOnly
+
+image:
+  repository: localhost:5001/drive-backend
+  pullPolicy: Always
+  tag: "latest"
+
+backend:
+  replicas: 1
+  envVars:
+    DJANGO_CSRF_TRUSTED_ORIGINS: https://drive.127.0.0.1.nip.io
+    DJANGO_CONFIGURATION: Feature
+    DJANGO_ALLOWED_HOSTS: drive.127.0.0.1.nip.io
+    DJANGO_SERVER_TO_SERVER_API_TOKENS: secret-api-key
+    DJANGO_SECRET_KEY: *djangoSecretKey
+    DJANGO_SETTINGS_MODULE: drive.settings
+    DJANGO_SUPERUSER_PASSWORD: admin
+    DJANGO_EMAIL_BRAND_NAME: "La Suite Numérique"
+    DJANGO_EMAIL_HOST: "mailcatcher"
+    DJANGO_EMAIL_LOGO_IMG: https://drive.127.0.0.1.nip.io/assets/logo-suite-numerique.png
+    DJANGO_EMAIL_PORT: 1025
+    DJANGO_EMAIL_USE_SSL: False
+    LOGGING_LEVEL_LOGGERS_ROOT: INFO
+    LOGGING_LEVEL_LOGGERS_APP: INFO
+    USER_OIDC_FIELD_TO_SHORTNAME: "given_name"
+    USER_OIDC_FIELDS_TO_FULLNAME: "given_name,usual_name"
+    OIDC_OP_JWKS_ENDPOINT: https://keycloak.127.0.0.1.nip.io/realms/drive/protocol/openid-connect/certs
+    OIDC_OP_AUTHORIZATION_ENDPOINT: https://keycloak.127.0.0.1.nip.io/realms/drive/protocol/openid-connect/auth
+    OIDC_OP_TOKEN_ENDPOINT: https://keycloak.127.0.0.1.nip.io/realms/drive/protocol/openid-connect/token
+    OIDC_OP_USER_ENDPOINT: https://keycloak.127.0.0.1.nip.io/realms/drive/protocol/openid-connect/userinfo
+    OIDC_OP_LOGOUT_ENDPOINT: https://keycloak.127.0.0.1.nip.io/realms/drive/protocol/openid-connect/logout
+    OIDC_RP_CLIENT_ID: drive
+    OIDC_RP_CLIENT_SECRET: ThisIsAnExampleKeyForDevPurposeOnly
+    OIDC_RP_SIGN_ALGO: RS256
+    OIDC_RP_SCOPES: "openid email"
+    LOGIN_REDIRECT_URL: https://drive.127.0.0.1.nip.io
+    LOGIN_REDIRECT_URL_FAILURE: https://drive.127.0.0.1.nip.io
+    LOGOUT_REDIRECT_URL: https://drive.127.0.0.1.nip.io
+    DB_HOST: postgres-postgresql
+    DB_NAME: drive
+    DB_USER: dinum
+    DB_PASSWORD: pass
+    DB_PORT: 5432
+    POSTGRES_DB: drive
+    POSTGRES_USER: dinum
+    POSTGRES_PASSWORD: pass
+    REDIS_URL: redis://default:pass@redis-master:6379/1
+    AWS_S3_ENDPOINT_URL: http://minio.drive.svc.cluster.local:9000
+    AWS_S3_ACCESS_KEY_ID: root
+    AWS_S3_SECRET_ACCESS_KEY: password
+    AWS_STORAGE_BUCKET_NAME: drive-media-storage
+    STORAGES_STATICFILES_BACKEND: django.contrib.staticfiles.storage.StaticFilesStorage
+    MEDIA_BASE_URL: https://drive.127.0.0.1.nip.io
+  migrate:
+    command:
+      - "/bin/sh"
+      - "-c"
+      - |
+        python manage.py migrate --no-input
+    restartPolicy: Never
+
+  command:
+    - "gunicorn"
+    - "-c"
+    - "/usr/local/etc/gunicorn/drive.py"
+    - "drive.wsgi:application"
+    - "--reload"
+
+  createsuperuser:
+    command:
+      - "/bin/sh"
+      - "-c"
+      - |
+        python manage.py createsuperuser --email admin@example.com --password admin
+    restartPolicy: Never
+
+  # Extra volume mounts to manage our local custom CA and avoid to set ssl_verify: false
+  extraVolumeMounts:
+    - name: certs
+      mountPath: /usr/local/lib/python3.12/site-packages/certifi/cacert.pem
+      subPath: cacert.pem
+
+  # Exra volumes to manage our local custom CA and avoid to set ssl_verify: false
+  extraVolumes:
+    - name: certs
+      configMap:
+        name: certifi
+        items:
+        - key: cacert.pem
+          path: cacert.pem
+
+frontend:
+  envVars:
+    PORT: 8080
+    NEXT_PUBLIC_API_ORIGIN: https://drive.127.0.0.1.nip.io
+    NEXT_PUBLIC_S3_DOMAIN_REPLACE: https://minio.127.0.0.1.nip.io
+
+  replicas: 1
+  command:
+    - yarn
+    - dev
+
+  image:
+    repository: localhost:5001/drive-frontend
+    pullPolicy: Always
+    tag: "latest"
+
+
+ingress:
+  enabled: true
+  host: drive.127.0.0.1.nip.io
+
+ingressAdmin:
+  enabled: true
+  host: drive.127.0.0.1.nip.io
+
+posthog:
+  ingress:
+    enabled: false
+
+  ingressAssets:
+    enabled: false
+
+ingressMedia:
+  enabled: true
+  host: drive.127.0.0.1.nip.io
+
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: https://drive.127.0.0.1.nip.io/api/v1.0/items/media-auth/
+    nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
+    nginx.ingress.kubernetes.io/upstream-vhost: minio.drive.svc.cluster.local:9000
+    nginx.ingress.kubernetes.io/rewrite-target: /drive-media-storage/$1
+
+serviceMedia:
+  host: minio.drive.svc.cluster.local
+  port: 9000

@@ -1,0 +1,24 @@
+{{- if .Values.posthog.ingressAssets.enabled -}}
+{{- $envVars := include "drive.common.env" (list . .Values.posthog) -}}
+{{- $fullName := include "drive.posthog.fullname" . -}}
+{{- $component := "posthog" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullName }}-assets-proxy
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "drive.common.labels" (list . $component) | nindent 4 }}
+  annotations:
+    {{- toYaml $.Values.posthog.assetsService.annotations | nindent 4 }}
+spec:
+  type: {{ .Values.posthog.assetsService.type }}
+  externalName: {{ .Values.posthog.assetsService.externalName }}
+  ports:
+    - port: {{ .Values.posthog.assetsService.port }}
+      targetPort: {{ .Values.posthog.assetsService.targetPort }}
+      protocol: TCP
+      name: https
+  selector:
+    {{- include "drive.common.selectorLabels" (list . $component) | nindent 4 }}
+{{- end }}
