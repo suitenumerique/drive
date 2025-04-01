@@ -87,7 +87,7 @@ bootstrap: \
 build: cache ?= --no-cache
 build: ## build the project containers
 	@$(MAKE) build-backend cache=$(cache)
-#	@$(MAKE) build-frontend cache=$(cache)
+	@$(MAKE) build-frontend-dev cache=$(cache)
 .PHONY: build
 
 build-backend: cache ?=
@@ -95,10 +95,15 @@ build-backend: ## build the app-dev container
 	@$(COMPOSE) build app-dev $(cache)
 .PHONY: build-backend
 
-# build-frontend: cache ?=
-# build-frontend: ## build the frontend container
-# 	@$(COMPOSE) build frontend-dev $(cache)
-# .PHONY: build-frontend
+build-frontend-dev: cache ?=
+build-frontend-dev: ## build the frontend container
+	@$(COMPOSE) build frontend-dev $(cache)
+.PHONY: build-frontend-dev
+
+build-frontend: cache ?=
+build-frontend: ## build the frontend container
+	@$(COMPOSE) build frontend $(cache)
+.PHONY: build-frontend
 
 down: ## stop and remove containers, networks, images, and volumes
 	@$(COMPOSE) down

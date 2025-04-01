@@ -115,19 +115,33 @@ services:
       - keycloak
       - app-dev
 
-  # frontend-dev:
-  #   user: "${DOCKER_USER:-1000}"
-  #   build:
-  #     context: .
-  #     dockerfile: ./src/frontend/Dockerfile
-  #     target: frontend-production
-  #     args:
-  #       API_ORIGIN: "http://localhost:8071"
-  #       MEDIA_URL: "http://localhost:8083"
-  #       SW_DEACTIVATED: "true"
-  #   image: drive:frontend-development
-  #   ports:
-  #     - "4000:3000"
+  frontend-dev:
+    user: "${DOCKER_USER:-1000}"
+    build:
+      context: .
+      dockerfile: ./src/frontend/Dockerfile
+      target: drive-dev
+      args:
+        API_ORIGIN: "http://localhost:8071"
+        S3_DOMAIN_REPLACE: "http://localhost:9000"
+    image: drive:frontend-development
+    volumes:
+      - ./src/frontend/:/home/frontend/
+    ports:
+      - "3000:3000"
+
+  frontend:
+    user: "${DOCKER_USER:-1000}"
+    build: 
+      context: .
+      dockerfile: ./src/frontend/Dockerfile
+      target: frontend-production
+      args:
+        API_ORIGIN: "http://localhost:8071"
+        S3_DOMAIN_REPLACE: "http://localhost:9000"
+    image: drive:frontend-production
+    ports:
+      - "3001:3000"
 
   crowdin:
     image: crowdin/cli:3.16.0
