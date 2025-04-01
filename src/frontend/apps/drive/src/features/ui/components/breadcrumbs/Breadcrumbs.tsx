@@ -1,5 +1,5 @@
 import { Button } from "@openfun/cunningham-react";
-import React, { ReactNode } from "react";
+import React, { ReactElement, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 export interface BreadcrumbsProps {
@@ -36,9 +36,13 @@ export const Breadcrumbs = ({
                 chevron_right
               </span>
             )}
-            {React.cloneElement(item.content as React.ReactElement, {
+            {React.cloneElement(item.content as ReactElement<HTMLDivElement>, {
               className: `${
-                (item.content as React.ReactElement).props.className
+                (
+                  (item.content as ReactElement<HTMLDivElement>).props as {
+                    className?: string;
+                  }
+                ).className || ""
               } ${index === items.length - 1 ? "active" : ""}`,
             })}
           </React.Fragment>

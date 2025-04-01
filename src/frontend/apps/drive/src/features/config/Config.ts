@@ -1,5 +1,5 @@
 import { StandardDriver } from "../drivers/implementations/StandardDriver";
-import { DummyDriver } from "../drivers/implementations/DummyDriver";
+// import { DummyDriver } from "../drivers/implementations/DummyDriver";
 
 export const getConfig = () => {
   // TODO: Later, be based on URL query params for instance.
