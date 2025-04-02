@@ -121,3 +121,71 @@ export const useMutationCreateFolder = () => {
     },
   });
 };
+
+export const useMutationUpdateItem = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  const { item } = useExplorer();
+  return useMutation({
+    mutationFn: async (...payload: Parameters<typeof driver.updateItem>) => {
+      await driver.updateItem(...payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["items", item!.id],
+        exact: true,
+      });
+    },
+  });
+};
+
+export const useMutationCreateWorskpace = () => {
+  const queryClient = useQueryClient();
+  const driver = getDriver();
+
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.createWorkspace>) => {
+      return driver.createWorkspace(...payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["items"],
+      });
+    },
+  });
+};
+
+// TODO: Make optimistic once the tree is implemented
+export const useMutationUpdateWorkspace = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      ...payload: Parameters<typeof driver.updateWorkspace>
+    ) => {
+      await driver.updateWorkspace(...payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["items"],
+      });
+    },
+  });
+};
+
+// TODO: Make optimistic once the tree is implemented
+export const useMutationDeleteWorskpace = () => {
+  const queryClient = useQueryClient();
+  const driver = getDriver();
+
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.deleteWorkspace>) => {
+      return driver.deleteWorkspace(...payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["items"],
+      });
+    },
+  });
+};
