@@ -18,8 +18,7 @@ type Inputs = {
 export const ExplorerCreateFolderModal = (
   props: Pick<ModalProps, "isOpen" | "onClose">
 ) => {
-  const { item, itemId } = useExplorer();
-  const treeContext = useTreeContext();
+  const { itemId } = useExplorer();
   const { t } = useTranslation();
   const form = useForm<Inputs>();
   const createFolder = useMutationCreateFolder();
