@@ -517,6 +517,7 @@ class Item(TreeModel, BaseModel):
     numchild_folder = models.PositiveIntegerField(default=0)
     mimetype = models.CharField(max_length=255, null=True, blank=True)
     main_workspace = models.BooleanField(default=False)
+    size = models.BigIntegerField(null=True, blank=True)
 
     label_size = 7
 

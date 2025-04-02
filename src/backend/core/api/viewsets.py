@@ -585,7 +585,9 @@ class ItemViewSet(
 
         item.upload_state = models.ItemUploadStateChoices.UPLOADED
         item.mimetype = mimetype
-        item.save(update_fields=["upload_state", "mimetype"])
+        item.size = file.size
+
+        item.save(update_fields=["upload_state", "mimetype", "size"])
 
         serializer = self.get_serializer(item)
         return drf_response.Response(serializer.data, status=status.HTTP_200_OK)

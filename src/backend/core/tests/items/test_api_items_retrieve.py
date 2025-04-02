@@ -66,6 +66,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
+        "size": None,
     }
 
 
@@ -128,6 +129,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
+        "size": None,
     }
 
 
@@ -220,6 +222,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
+        "size": None,
     }
     assert models.LinkTrace.objects.filter(item=item, user=user).exists() is True
 
@@ -287,6 +290,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
+        "size": None,
     }
 
 
@@ -401,6 +405,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
+        "size": None,
     }
 
 
@@ -470,6 +475,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
+        "size": None,
     }
 
 
@@ -626,6 +632,7 @@ def test_api_items_retrieve_authenticated_related_team_members(
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
+        "size": None,
     }
 
 
@@ -690,6 +697,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
+        "size": None,
     }
 
 
@@ -754,6 +762,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
+        "size": None,
     }
 
 
@@ -1015,6 +1024,7 @@ def test_api_items_retrieve_file_uploaded():
     item.upload_state = models.ItemUploadStateChoices.UPLOADED
     item.filename = "logo.png"
     item.mimetype = "image/png"
+    item.size = 8
     item.save()
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
@@ -1042,4 +1052,5 @@ def test_api_items_retrieve_file_uploaded():
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,
+        "size": 8,
     }
