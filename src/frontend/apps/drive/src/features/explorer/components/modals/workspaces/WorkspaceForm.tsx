@@ -41,13 +41,13 @@ export const WorkspaceForm = ({
         className="mt-b"
       >
         <RhfInput
-          label={t("explorer.actions.createWorkspace.modal.form.title")}
+          label={t("explorer.workspaces.form.title")}
           fullWidth={true}
           autoFocus={true}
           {...form.register("title")}
         />
         <RhfTextarea
-          label={t("explorer.actions.createWorkspace.modal.form.description")}
+          label={t("explorer.workspaces.form.description")}
           fullWidth={true}
           className="mt-b"
           {...form.register("description")}

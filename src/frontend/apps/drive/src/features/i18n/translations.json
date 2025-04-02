@@ -60,8 +60,24 @@
           }
         },
         "tree": {
+          "create": {
+            "label": "Create",
+            "folder": "New folder",
+            "workspace": "New workspace"
+          },
+          "import": {
+            "label": "Import",
+            "files": "Import files",
+            "folders": "Import folders"
+          },
+          "workspace": {
+            "options": {
+              "info": "Information",
+              "settings": "Workspace settings",
+              "delete": "Delete workspace"
+            }
+          },
           "createFolder": "Create",
-          "import": "Import",
           "search": "Search",
           "personalSpace": "Personal Space",
           "sharedSpace": "Shared Space"
@@ -73,6 +89,25 @@
           "move": "Move",
           "delete": "Delete",
           "reset_selection": "Reset selection"
+        },
+        "workspaces": {
+          "form": {
+            "title": "Workspace name",
+            "description": "Description",
+            "settings": "Workspace settings"
+          },
+          "create": {
+            "title": "New workspace",
+            "description": "A workspace allows you to organize your files in a team.",
+            "cancel": "Cancel",
+            "submit": "Create workspace"
+          },
+          "edit": {
+            "title": "Edit workspace",
+            "description": "Edit workspace information",
+            "cancel": "Cancel",
+            "submit": "Edit"
+          }
         }
       },
       "actions": {
@@ -183,6 +218,18 @@
             "label": "Importer",
             "files": "Importer des fichiers",
             "folders": "Importer des dossiers"
+          },
+          "create": {
+            "label": "Créer",
+            "folder": "Nouveau dossier",
+            "workspace": "Nouvel espace"
+          },
+          "workspace": {
+            "options": {
+              "info": "Informations",
+              "settings": "Paramètre de l'espace",
+              "delete": "Supprimer l'espace"
+            }
           }
         },
         "selectionBar": {
@@ -192,6 +239,25 @@
           "move": "Déplacer",
           "delete": "Supprimer",
           "reset_selection": "Réinitialiser la sélection"
+        },
+        "workspaces": {
+          "form": {
+            "title": "Nom de l'espace",
+            "description": "Description",
+            "settings": "Paramètres de l'espace"
+          },
+          "create": {
+            "title": "Nouvel espace",
+            "description": "Un espace vous permet d'organiser vos fichiers en équipe.",
+            "cancel": "Annuler",
+            "submit": "Créer l'espace"
+          },
+          "edit": {
+            "title": "Modifier l'espace",
+            "description": "Modifier les informations de l'espace",
+            "cancel": "Annuler",
+            "submit": "Mettre à jour"
+          }
         },
         "actions": {
           "createFolder": {

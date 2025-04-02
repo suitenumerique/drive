@@ -22,6 +22,7 @@ export interface ExplorerContextType {
   itemId: string;
   item: Item | undefined;
   firstLevelItems: Item[] | undefined;
+  items: Item[] | undefined;
   children: Item[] | undefined;
   tree: Item | undefined;
   onNavigate: (event: NavigationEvent) => void;
@@ -85,6 +86,11 @@ export const ExplorerProvider = ({
     }
   }, [itemId, initialId]);
 
+  const { data: items } = useQuery({
+    queryKey: ["items"],
+    queryFn: () => getDriver().getItems(),
+  });
+
   const { data: item } = useQuery({
     queryKey: ["items", itemId],
     queryFn: () => getDriver().getItem(itemId),
@@ -145,6 +151,7 @@ export const ExplorerProvider = ({
         itemId,
         initialId,
         item,
+        items,
         tree,
         children: itemChildren,
         onNavigate,

@@ -31,20 +31,20 @@ export const ExplorerEditWorkspaceModal = (
     <Modal
       {...props}
       size={ModalSize.MEDIUM}
-      title={t("explorer.actions.createWorkspace.modal.title")}
+      title={t("explorer.workspaces.edit.title")}
       rightActions={
         <>
           <Button color="secondary" onClick={props.onClose}>
-            {t("explorer.actions.createWorkspace.modal.cancel")}
+            {t("explorer.workspaces.edit.cancel")}
           </Button>
           <Button type="submit" form="workspace-form">
-            {t("explorer.actions.createWorkspace.modal.submit")}
+            {t("explorer.workspaces.edit.submit")}
           </Button>
         </>
       }
     >
       <div className="clr-greyscale-600 fs-s m-0">
-        {t("explorer.actions.createWorkspace.modal.description")}
+        {t("explorer.workspaces.edit.description")}
       </div>
       <WorkspaceForm item={props.item} onSubmit={onSubmit} />
     </Modal>
