@@ -1,3 +1,0 @@
-include LICENSE
-include README.md
-recursive-include src/backend/drive *.html *.png *.gif *.css *.ico *.jpg *.jpeg *.po *.mo *.eot *.svg *.ttf *.woff *.woff2
