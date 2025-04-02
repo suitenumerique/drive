@@ -15,6 +15,12 @@ export abstract class Driver {
   abstract getChildren(id: string, filters?: ItemFilters): Promise<Item[]>;
   abstract getTree(id: string): Promise<Item>;
   abstract createFolder(data: { title: string }): Promise<Item>;
+  abstract createWorkspace(data: {
+    title: string;
+    description: string;
+  }): Promise<Item>;
+  abstract updateWorkspace(item: Partial<Item>): Promise<Item>;
+  abstract deleteWorkspace(id: string): Promise<void>;
   abstract createFile(data: {
     parentId: string;
     filename: string;

@@ -38,6 +38,6 @@ export type TreeItemData = Omit<Item, "children"> & {
   parentId?: string;
 }
 
-export type TreeItem = TreeViewDataType<TreeItemData> 
+export type TreeItem = TreeViewDataType<TreeItemData>
 
 

@@ -75,6 +75,29 @@ export class StandardDriver extends Driver {
     return jsonToItem(item);
   }
 
+  async createWorkspace(data: {
+    title: string;
+    description: string;
+  }): Promise<Item> {
+    const response = await fetchAPI(`items/`, {
+      method: "POST",
+      body: JSON.stringify({
+        ...data,
+        type: ItemType.FOLDER,
+      }),
+    });
+    const item = await response.json();
+    return jsonToItem(item);
+  }
+
+  async updateWorkspace(item: Partial<Item>): Promise<Item> {
+    return this.updateItem(item);
+  }
+
+  async deleteWorkspace(id: string): Promise<void> {
+    return this.deleteItems([id]);
+  }
+
   async createFile(data: {
     parentId: string;
     file: File;
