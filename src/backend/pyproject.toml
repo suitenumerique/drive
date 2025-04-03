@@ -27,7 +27,7 @@ requires-python = ">=3.12"
 dependencies = [
     "boto3==1.36.7",
     "Brotli==1.1.0",
-    "django==5.1.7",
+    "django==5.1.8",
     "django-configurations==2.5.1",
     "django-cors-headers==4.6.0",
     "django-countries==7.6.1",
