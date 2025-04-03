@@ -10,6 +10,8 @@ import { Item } from "@/features/drivers/types";
 import { WorkspaceForm, WorkspaceFormInputs } from "./WorkspaceForm";
 import { useMutationUpdateWorkspace } from "@/features/explorer/hooks/useMutations";
 import { SubmitHandler } from "react-hook-form";
+import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import { useExplorer } from "../../ExplorerContext";
 
 export const ExplorerEditWorkspaceModal = (
   props: Pick<ModalProps, "isOpen" | "onClose"> & {
@@ -17,20 +19,39 @@ export const ExplorerEditWorkspaceModal = (
   }
 ) => {
   const { t } = useTranslation();
+  const treeContext = useTreeContext<Item>();
+  const { setRightPanelForcedItem, rightPanelForcedItem, rightPanelOpen } =
+    useExplorer();
   const updateWorkspace = useMutationUpdateWorkspace();
 
   const onSubmit: SubmitHandler<WorkspaceFormInputs> = async (data) => {
-    updateWorkspace.mutate({
-      id: props.item.id,
-      ...data,
-    });
-    props.onClose();
+    updateWorkspace.mutate(
+      {
+        id: props.item.id,
+        ...data,
+      },
+      {
+        onSuccess: () => {
+          const updatedItem = {
+            ...props.item,
+            title: data.title,
+            description: data.description,
+          };
+          treeContext?.treeData.updateNode(props.item.id, updatedItem);
+          if (rightPanelOpen && rightPanelForcedItem?.id === props.item.id) {
+            setRightPanelForcedItem(updatedItem);
+          }
+          props.onClose();
+        },
+      }
+    );
   };
 
   return (
     <Modal
       {...props}
       size={ModalSize.MEDIUM}
+      closeOnClickOutside
       title={t("explorer.workspaces.edit.title")}
       rightActions={
         <>

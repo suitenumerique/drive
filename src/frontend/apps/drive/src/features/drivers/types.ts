@@ -13,6 +13,7 @@ export type Item = {
   type: ItemType;
   upload_state: string;
   updated_at: Date;
+  description: string;
   created_at: Date;
   children?: Item[];
   numchild?: number;

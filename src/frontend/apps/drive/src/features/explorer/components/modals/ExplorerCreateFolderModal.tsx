@@ -9,7 +9,6 @@ import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationCreateFolder } from "../../hooks/useMutations";
-import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
 
 type Inputs = {
   title: string;
@@ -31,7 +30,8 @@ export const ExplorerCreateFolderModal = (
         parentId: itemId,
       },
       {
-        onSuccess: (data) => {
+        onSuccess: () => {
+          form.reset();
           props.onClose();
         },
       }

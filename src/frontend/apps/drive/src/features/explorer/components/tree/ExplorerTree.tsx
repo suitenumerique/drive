@@ -1,9 +1,8 @@
-import { Button, useModal } from "@openfun/cunningham-react";
+import { useModal } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { itemsToTreeItems, useExplorer } from "../ExplorerContext";
 import { Item, TreeItem } from "@/features/drivers/types";
 import {
-  DropdownMenu,
   HorizontalSeparator,
   OpenMap,
   TreeView,
@@ -17,8 +16,8 @@ import { useEffect, useState } from "react";
 import { ExplorerTreeItem } from "./ExplorerTreeItem";
 import { useMoveItems } from "../../api/useMoveItem";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
-import uploadFileSvg from "@/assets/icons/upload_file.svg";
-import uploadFolderSvg from "@/assets/icons/upload_folder.svg";
+import { ExplorerCreateWorkspaceModal } from "../modals/workspaces/ExplorerCreateWorkspaceModal";
+import { ExplorerTreeActions } from "./ExplorerTreeActions";
 
 export const ExplorerTree = () => {
   const { t } = useTranslation();
@@ -34,7 +33,6 @@ export const ExplorerTree = () => {
     tree: treeItem,
     firstLevelItems,
     itemId,
-
     setTreeIsInitialized,
     treeIsInitialized,
   } = useExplorer();
@@ -135,7 +133,7 @@ export const ExplorerTree = () => {
   }, [initialOpenState, setTreeIsInitialized, treeIsInitialized]);
 
   const createFolderModal = useModal();
-
+  const createWorkspaceModal = useModal();
   const handleMove = (result: TreeViewMoveResult) => {
     move.mutate({
       ids: [result.sourceId],
@@ -146,50 +144,10 @@ export const ExplorerTree = () => {
 
   return (
     <div className="explorer__tree">
-      <div className="explorer__tree__actions">
-        <div className="explorer__tree__actions__left">
-          <Button
-            icon={<span className="material-icons">add</span>}
-            onClick={createFolderModal.open}
-          >
-            {t("explorer.tree.createFolder")}
-          </Button>
-          <DropdownMenu
-            options={[
-              {
-                icon: <img src={uploadFileSvg.src} alt="" />,
-                label: t("explorer.tree.import.files"),
-                value: "info",
-                callback: () => {
-                  document.getElementById("import-files")?.click();
-                },
-              },
-              {
-                icon: <img src={uploadFolderSvg.src} alt="" />,
-                label: t("explorer.tree.import.folders"),
-                value: "info",
-                callback: () => {
-                  document.getElementById("import-folders")?.click();
-                },
-              },
-            ]}
-            {...dropdownMenu}
-            onOpenChange={dropdownMenu.setIsOpen}
-          >
-            <Button
-              color="secondary"
-              onClick={() => dropdownMenu.setIsOpen(true)}
-            >
-              {t("explorer.tree.import.label")}
-            </Button>
-          </DropdownMenu>
-        </div>
-        <Button
-          color="primary-text"
-          aria-label={t("explorer.tree.search")}
-          icon={<span className="material-icons">search</span>}
-        ></Button>
-      </div>
+      <ExplorerTreeActions
+        openCreateFolderModal={createFolderModal.open}
+        openCreateWorkspaceModal={createWorkspaceModal.open}
+      />
       <HorizontalSeparator withPadding={false} />
 
       {initialOpenState && (
@@ -209,6 +167,7 @@ export const ExplorerTree = () => {
       )}
 
       <ExplorerCreateFolderModal {...createFolderModal} />
+      <ExplorerCreateWorkspaceModal {...createWorkspaceModal} />
     </div>
   );
 };

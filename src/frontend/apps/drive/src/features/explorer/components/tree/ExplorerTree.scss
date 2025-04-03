@@ -1,6 +1,8 @@
 .explorer__tree__item {
+  width: 100%;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--c--theme--spacings--xs);
   overflow: hidden;
 
@@ -20,6 +22,37 @@
     &.over {
       background-color: var(--c--theme--colors--primary-100);
       border: 1.5px solid var(--c--theme--colors--primary-500);
+    }
+  }
+  &:hover {
+    .explorer__tree__item__actions {
+      opacity: 1;
+    }
+  }
+
+  &__content {
+    display: flex;
+    align-items: center;
+    gap: var(--c--theme--spacings--xs);
+    flex: 1;
+  }
+
+  &__actions {
+    opacity: 0;
+    display: flex;
+    align-items: center;
+
+    .c__dropdown-menu-trigger {
+      display: flex;
+      align-items: center;
+    }
+
+    &--open {
+      opacity: 1;
+    }
+
+    .material-icons {
+      font-size: 20px;
     }
   }
 }

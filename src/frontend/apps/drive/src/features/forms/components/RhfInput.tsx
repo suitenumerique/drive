@@ -1,5 +1,4 @@
 import { Controller, useFormContext } from "react-hook-form";
-import React from "react";
 import { Input, TextArea, TextAreaProps } from "@openfun/cunningham-react";
 import { InputProps } from "@openfun/cunningham-react";
 
