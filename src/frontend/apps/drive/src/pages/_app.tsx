@@ -17,6 +17,7 @@ import {
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
 import { errorToString } from "@/features/api/APIError";
+import Head from "next/head";
 
 export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;
@@ -55,10 +56,28 @@ export default function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   const getLayout = Component.getLayout ?? ((page) => page);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <CunninghamProvider>
-        {getLayout(<Component {...pageProps} />)}
-      </CunninghamProvider>
-    </QueryClientProvider>
+    <>
+      <Head>
+        <title>Drive</title>
+        <link rel="icon" href="/images/favicon-light.png" type="image/png" />
+        <link
+          rel="icon"
+          href="/images/favicon-light.png"
+          type="image/png"
+          media="(prefers-color-scheme: light)"
+        />
+        <link
+          rel="icon"
+          href="/images/favicon-dark.png"
+          type="image/png"
+          media="(prefers-color-scheme: dark)"
+        />
+      </Head>
+      <QueryClientProvider client={queryClient}>
+        <CunninghamProvider>
+          {getLayout(<Component {...pageProps} />)}
+        </CunninghamProvider>
+      </QueryClientProvider>
+    </>
   );
 }
