@@ -67,6 +67,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "main_workspace": False,
         "filename": item.filename,
         "size": None,
+        "description": None,
     }
 
 
@@ -130,6 +131,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "main_workspace": False,
         "filename": item.filename,
         "size": None,
+        "description": None,
     }
 
 
@@ -223,6 +225,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "main_workspace": False,
         "filename": item.filename,
         "size": None,
+        "description": None,
     }
     assert models.LinkTrace.objects.filter(item=item, user=user).exists() is True
 
@@ -291,6 +294,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "main_workspace": False,
         "filename": item.filename,
         "size": None,
+        "description": None,
     }
 
 
@@ -406,6 +410,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "main_workspace": False,
         "filename": item.filename,
         "size": None,
+        "description": None,
     }
 
 
@@ -476,6 +481,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "main_workspace": False,
         "filename": item.filename,
         "size": None,
+        "description": None,
     }
 
 
@@ -633,6 +639,7 @@ def test_api_items_retrieve_authenticated_related_team_members(
         "main_workspace": False,
         "filename": item.filename,
         "size": None,
+        "description": None,
     }
 
 
@@ -698,6 +705,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
         "main_workspace": False,
         "filename": item.filename,
         "size": None,
+        "description": None,
     }
 
 
@@ -763,6 +771,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(
         "main_workspace": False,
         "filename": item.filename,
         "size": None,
+        "description": None,
     }
 
 
@@ -1053,4 +1062,5 @@ def test_api_items_retrieve_file_uploaded():
         "main_workspace": False,
         "filename": item.filename,
         "size": 8,
+        "description": None,
     }

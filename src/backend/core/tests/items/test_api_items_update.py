@@ -413,3 +413,49 @@ def test_api_items_update_title_unique_in_current_path_soft_deleted():
         format="json",
     )
     assert response.status_code == 200
+
+
+def test_api_items_update_description():
+    """
+    Test the description of an item can be updated.
+    """
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(description="Old description", users=[user])
+
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/",
+        {"description": "New description"},
+        format="json",
+    )
+    assert response.status_code == 200
+    assert response.json()["description"] == "New description"
+
+    item.refresh_from_db()
+    assert item.description == "New description"
+
+
+def test_api_items_update_empty_description():
+    """
+    Empty description should be allowed.
+    """
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(description="Old description", users=[user])
+
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/",
+        {"description": ""},
+        format="json",
+    )
+    assert response.status_code == 200
+    assert response.json()["description"] == ""
+
+    item.refresh_from_db()
+    assert item.description == ""

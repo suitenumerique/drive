@@ -98,6 +98,7 @@ def test_api_items_list_format():
             "main_workspace": False,
             "filename": item2.filename,
             "size": None,
+            "description": None,
         },
         {
             "id": str(item.id),
@@ -122,6 +123,7 @@ def test_api_items_list_format():
             "main_workspace": False,
             "filename": item.filename,
             "size": None,
+            "description": None,
         },
         {
             "id": str(item3.id),
@@ -146,6 +148,7 @@ def test_api_items_list_format():
             "main_workspace": True,
             "filename": item3.filename,
             "size": None,
+            "description": None,
         },
     ]
 

@@ -106,6 +106,7 @@ def test_api_items_trashbin_format():
         "main_workspace": False,
         "filename": item.filename,
         "size": None,
+        "description": None,
     }
 
 

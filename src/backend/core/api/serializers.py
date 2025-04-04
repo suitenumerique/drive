@@ -144,6 +144,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "mimetype",
             "main_workspace",
             "size",
+            "description",
         ]
         read_only_fields = [
             "id",
@@ -166,6 +167,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "mimetype",
             "main_workspace",
             "size",
+            "description",
         ]
 
     def get_abilities(self, item) -> dict:
@@ -232,6 +234,7 @@ class ItemSerializer(ListItemSerializer):
             "mimetype",
             "main_workspace",
             "size",
+            "description",
         ]
         read_only_fields = [
             "id",
@@ -310,6 +313,7 @@ class CreateItemSerializer(ItemSerializer):
             "policy",
             "main_workspace",
             "size",
+            "description",
         ]
         read_only_fields = [
             "abilities",

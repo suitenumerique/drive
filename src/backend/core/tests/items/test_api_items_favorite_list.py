@@ -87,6 +87,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "main_workspace": False,
                 "filename": item.filename,
                 "size": None,
+                "description": None,
             }
         ],
     }

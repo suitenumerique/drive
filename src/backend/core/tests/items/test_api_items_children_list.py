@@ -55,6 +55,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "main_workspace": False,
                 "filename": child1.filename,
                 "size": None,
+                "description": None,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -81,6 +82,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "main_workspace": False,
                 "filename": child2.filename,
                 "size": None,
+                "description": None,
             },
         ],
     }
@@ -144,6 +146,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "main_workspace": False,
                 "filename": child1.filename,
                 "size": None,
+                "description": None,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -168,6 +171,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "main_workspace": False,
                 "filename": child2.filename,
                 "size": None,
+                "description": None,
             },
         ],
     }
@@ -239,6 +243,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "main_workspace": False,
                 "filename": child1.filename,
                 "size": None,
+                "description": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -265,6 +270,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "main_workspace": False,
                 "filename": child2.filename,
                 "size": None,
+                "description": None,
             },
         ],
     }
@@ -328,6 +334,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "main_workspace": False,
                 "filename": child1.filename,
                 "size": None,
+                "description": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -354,6 +361,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "main_workspace": False,
                 "filename": child2.filename,
                 "size": None,
+                "description": None,
             },
         ],
     }
@@ -435,6 +443,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "main_workspace": False,
                 "filename": child1.filename,
                 "size": None,
+                "description": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -461,6 +470,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "main_workspace": False,
                 "filename": child2.filename,
                 "size": None,
+                "description": None,
             },
         ],
     }
@@ -525,6 +535,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "main_workspace": False,
                 "filename": child1.filename,
                 "size": None,
+                "description": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -551,6 +562,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "main_workspace": False,
                 "filename": child2.filename,
                 "size": None,
+                "description": None,
             },
         ],
     }
@@ -664,6 +676,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "main_workspace": False,
                 "filename": child1.filename,
                 "size": None,
+                "description": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -690,6 +703,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "main_workspace": False,
                 "filename": child2.filename,
                 "size": None,
+                "description": None,
             },
         ],
     }
@@ -750,6 +764,7 @@ def test_api_items_children_list_filter_type():
                 "main_workspace": False,
                 "filename": child1.filename,
                 "size": None,
+                "description": None,
             },
         ],
     }
@@ -789,6 +804,7 @@ def test_api_items_children_list_filter_type():
                 "main_workspace": False,
                 "filename": child2.filename,
                 "size": None,
+                "description": None,
             },
         ],
     }

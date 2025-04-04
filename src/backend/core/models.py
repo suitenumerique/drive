@@ -518,6 +518,7 @@ class Item(TreeModel, BaseModel):
     mimetype = models.CharField(max_length=255, null=True, blank=True)
     main_workspace = models.BooleanField(default=False)
     size = models.BigIntegerField(null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
 
     label_size = 7
 
