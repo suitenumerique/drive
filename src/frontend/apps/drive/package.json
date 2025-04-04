@@ -17,7 +17,7 @@
     "@viselect/react": "3.9.0",
     "clsx": "2.1.1",
     "i18next": "24.2.2",
-    "next": "15.1.7",
+    "next": "15.2.3",
     "next-i18next": "15.4.2",
     "pretty-bytes": "6.1.1",
     "react": "19.0.0",
