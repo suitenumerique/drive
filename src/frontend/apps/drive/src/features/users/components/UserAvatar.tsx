@@ -1,11 +1,11 @@
-import { User as UserType } from "../types";
+import { User } from "@/features/drivers/types";
 
 interface UserAvatarProps {
-  user: UserType;
+  user: User;
 }
 
 export const UserAvatar = ({ user }: UserAvatarProps) => {
-  const initials = user.name
+  const initials = user.full_name
     .split(" ")
     .map((name) => name[0])
     .join("")

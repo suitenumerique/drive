@@ -14,6 +14,7 @@ import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWor
 import clsx from "clsx";
 import { useExplorer } from "../ExplorerContext";
 import { useRouter } from "next/router";
+import { ShareWorkspaceModal } from "../modals/share/ShareWorkspaceModal";
 export type ExplorerTreeItemActionsProps = {
   item: Item;
 };
@@ -27,6 +28,7 @@ export const ExplorerTreeItemActions = ({
   const router = useRouter();
   const deleteWorkspaceModal = useMutationDeleteWorskpace();
   const editWorkspaceModal = useModal();
+  const shareWorkspaceModal = useModal();
   return (
     <>
       <div
@@ -45,6 +47,12 @@ export const ExplorerTreeItemActions = ({
                   explorerContext.setRightPanelForcedItem(item);
                   explorerContext.setRightPanelOpen(true);
                 },
+              },
+              {
+                icon: <img src={settingsSvg.src} alt="" />,
+                label: t("explorer.tree.workspace.options.share"),
+                value: "share",
+                callback: shareWorkspaceModal.open,
               },
               {
                 icon: <img src={settingsSvg.src} alt="" />,
@@ -96,6 +104,9 @@ export const ExplorerTreeItemActions = ({
             editWorkspaceModal.close();
           }}
         />
+      )}
+      {shareWorkspaceModal.isOpen && (
+        <ShareWorkspaceModal {...shareWorkspaceModal} item={item as Item} />
       )}
     </>
   );

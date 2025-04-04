@@ -1,6 +1,6 @@
 import { fetchAPI } from "@/features/api/fetchApi";
-import { Driver, ItemFilters } from "../Driver";
-import { Item, ItemType } from "../types";
+import { Driver, ItemFilters, UserFilters } from "../Driver";
+import { Access, Invitation, Item, ItemType, User } from "../types";
 
 export class StandardDriver extends Driver {
   async getItems(filters = {}): Promise<Item[]> {
@@ -24,6 +24,14 @@ export class StandardDriver extends Driver {
       });
       const data = await response.json();
       return jsonToItem(data);
+  }
+
+  async getUsers(filters?: UserFilters): Promise<User[]> {
+    const response = await fetchAPI(`users/`, {
+      params: filters,
+    });
+    const data = await response.json();
+    return data.results;
   }
 
   async getChildren(id: string, filters?: ItemFilters): Promise<Item[]> {
@@ -52,6 +60,17 @@ export class StandardDriver extends Driver {
     });
   }
 
+  async getItemAccesses(itemId: string): Promise<Access[]> {
+    const response = await fetchAPI(`items/${itemId}/accesses/`);
+    const data = await response.json();
+    return data.results;
+  }
+  
+  async getItemInvitations(itemId: string): Promise<Invitation[]> {
+    const response = await fetchAPI(`items/${itemId}/invitations/`);
+    const data = await response.json();
+    return data.results;
+  }
 
   async moveItems(ids: string[], parentId: string): Promise<void> {
     for (const id of ids) {
@@ -144,6 +163,7 @@ export class StandardDriver extends Driver {
 
     return item;
   }
+  
 
   async deleteItems(ids: string[]): Promise<void> {
     for (const id of ids) {

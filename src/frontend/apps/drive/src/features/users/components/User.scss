@@ -20,4 +20,14 @@
     font-weight: 500;
     color: var(--c--theme--colors--greyscale-1000);
   }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__email {
+    font-size: 12px;
+    color: var(--c--theme--colors--greyscale-600);
+  }
 }

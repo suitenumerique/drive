@@ -22,6 +22,12 @@
         "video": "Video",
         "archive": "Archive"
       },
+      "roles": {
+        "administrator": "Administrator",
+        "editor": "Editor",
+        "reader": "Reader",
+        "owner": "Owner"
+      },
       "explorer": {
         "rightPanel": {
           "multipleSelection": {
@@ -74,7 +80,8 @@
             "options": {
               "info": "Information",
               "settings": "Workspace settings",
-              "delete": "Delete workspace"
+              "delete": "Delete workspace",
+              "share": "Share workspace"
             }
           },
           "createFolder": "Create",
@@ -163,6 +170,12 @@
           "unexpected": "Une erreur inattendue est survenue."
         }
       },
+      "roles": {
+        "administrator": "Administrateur",
+        "editor": "Éditeur",
+        "reader": "Lecteur",
+        "owner": "Propriétaire"
+      },
       "mime": {
         "calc": "Tableur",
         "doc": "Document",
@@ -228,7 +241,8 @@
             "options": {
               "info": "Informations",
               "settings": "Paramètre de l'espace",
-              "delete": "Supprimer l'espace"
+              "delete": "Supprimer l'espace",
+              "share": "Partager"
             }
           }
         },

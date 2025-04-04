@@ -42,3 +42,49 @@ export type TreeItemData = Omit<Item, "children"> & {
 export type TreeItem = TreeViewDataType<TreeItemData>
 
 
+export type Access = {
+  id: string;
+  role: Role;
+  team: string;
+  user: User;
+  abilities: {
+    destroy: boolean;
+    partial_update: boolean;
+    retrieve: boolean;
+    set_role_to: Role[];
+    update: boolean;
+  };
+}
+
+export type Invitation = {
+  team: string;
+  user: User;
+  id: string;
+  role: Role;
+  document: string;
+  created_at: string;
+  is_expired: boolean;
+  issuer: string;
+  email: string;
+  abilities: {
+    destroy: boolean;
+    retrieve: boolean;
+    partial_update: boolean;
+    update: boolean;
+  };
+}
+
+export enum Role {
+  READER = 'reader',
+  EDITOR = 'editor',
+  ADMIN = 'administrator',
+  OWNER = 'owner',
+}
+
+export type User = {
+  id: string;
+  email: string;
+  full_name: string;
+  short_name: string;
+  language: string;
+}
