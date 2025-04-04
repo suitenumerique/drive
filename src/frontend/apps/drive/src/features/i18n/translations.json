@@ -11,6 +11,10 @@
           "unexpected": "An unexpected error occurred."
         }
       },
+      "home": {
+        "title": "Easy storage and sharing",
+        "subtitle": "Store and share your files easily in a cloud collaborative space."
+      },
       "mime": {
         "calc": "Spreadsheet",
         "doc": "Document",
@@ -163,6 +167,10 @@
           "unexpected": "Une erreur inattendue est survenue."
         }
       },
+      "home": {
+        "title": "Stockage et partage faciles",
+        "subtitle": "Stockez et partagez vos fichiers simplement dans un espace cloud collaboratif synchronisé."
+      },
       "mime": {
         "calc": "Tableur",
         "doc": "Document",
@@ -189,7 +197,7 @@
           "created_at": "Création",
           "size": "Poids",
           "created_by": "Créé par",
-            "description": "Description"
+          "description": "Description"
         },
         "grid": {
           "name": "Nom",

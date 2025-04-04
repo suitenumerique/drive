@@ -1,4 +1,8 @@
-import { DropdownMenu, Header as KitHeader } from "@gouvfr-lasuite/ui-kit";
+import {
+  DropdownMenu,
+  Header as KitHeader,
+  LaGaufre,
+} from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@openfun/cunningham-react";
 import logo from "@/assets/logo.svg";
 import { useAuth, logout } from "@/features/auth/Auth";
@@ -19,7 +23,7 @@ export const HeaderRight = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
   return (
-    <div className="c__header-right">
+    <>
       {user && (
         <DropdownMenu
           options={[
@@ -47,17 +51,18 @@ export const HeaderRight = () => {
         </DropdownMenu>
       )}
       <LanguagePicker />
-    </div>
+      <LaGaufre />
+    </>
   );
 };
 
-const LanguagePicker = () => {
+export const LanguagePicker = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { i18n } = useTranslation();
   const [selectedValues, setSelectedValues] = useState([i18n.language]);
   const languages = [
-    { label: "FR", value: "fr" },
-    { label: "EN", value: "en" },
+    { label: "Français", value: "fr" },
+    { label: "English", value: "en" },
   ];
   return (
     <DropdownMenu

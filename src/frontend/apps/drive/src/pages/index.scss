@@ -1,0 +1,63 @@
+@use "sass:map";
+@use "@/styles/cunningham-tokens-sass" as *;
+
+$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+
+.drive__home {
+  .c__header {
+    height: 91px;
+    min-height: 91px;
+    max-height: 91px;
+    border: none;
+  }
+
+  .c__main-layout__content {
+    margin-top: 91px;
+  }
+
+  .c__hero {
+    height: calc(100vh - 91px);
+  }
+
+  @media (max-width: $tablet) {
+    .c__header {
+      height: 52px;
+      min-height: 52px;
+      max-height: 52px;
+
+      .drive__header__left {
+        img:first-child {
+          display: none;
+        }
+      }
+
+      .c__header__right {
+        > * {
+          display: none !important;
+        }
+      }
+    }
+
+    .c__main-layout__content {
+      margin-top: 52px;
+    }
+
+    .c__hero {
+      height: calc(100vh - 52px);
+    }
+  }
+
+  &__left-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 0;
+  }
+}
+
+.drive__header__left {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
