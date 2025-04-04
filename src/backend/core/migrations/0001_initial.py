@@ -182,4 +182,8 @@ class Migration(migrations.Migration):
             "CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;",
             reverse_sql="DROP EXTENSION IF EXISTS fuzzystrmatch;",
         ),
+        migrations.RunSQL(
+            "CREATE EXTENSION IF NOT EXISTS pg_trgm;",
+            reverse_sql="DROP EXTENSION IF EXISTS pg_trgm;",
+        ),
     ]
