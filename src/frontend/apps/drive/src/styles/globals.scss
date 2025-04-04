@@ -10,6 +10,7 @@
 @use "./../features/ui/components/toaster";
 @use "./../features/explorer/components/tree/ExplorerTree.scss";
 @use "./../features/ui/components/info/InfoRow.scss";
+@use "./../pages/index.scss" as *;
 body {
   margin: 0;
 }
