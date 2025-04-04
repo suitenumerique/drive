@@ -219,7 +219,10 @@ def test_api_items_list_filter_is_creator_me_true():
 
     # Ensure all results are created by the current user
     for result in results:
-        assert result["creator"] == str(user.id)
+        assert result["creator"] == {
+            "full_name": user.full_name,
+            "short_name": user.short_name,
+        }
 
 
 def test_api_items_list_filter_is_creator_me_false():
@@ -241,7 +244,10 @@ def test_api_items_list_filter_is_creator_me_false():
 
     # Ensure all results are created by other users
     for result in results:
-        assert result["creator"] != str(user.id)
+        assert result["creator"] != {
+            "full_name": user.full_name,
+            "short_name": user.short_name,
+        }
 
 
 def test_api_items_list_filter_is_creator_me_invalid():

@@ -452,7 +452,7 @@ class ItemViewSet(
     def get_queryset(self):
         """Get queryset performing all annotation and filtering on the item tree structure."""
         user = self.request.user
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().select_related("creator")
         # Only list views need filtering and annotation
         if self.detail:
             return queryset
@@ -642,7 +642,7 @@ class ItemViewSet(
         The selected items are those deleted within the cutoff period defined in the
         settings (see TRASHBIN_CUTOFF_DAYS), before they are considered permanently deleted.
         """
-        queryset = self.queryset.filter(
+        queryset = self.queryset.select_related("creator").filter(
             deleted_at__isnull=False,
             deleted_at__gte=models.get_trashbin_cutoff(),
         )
@@ -832,9 +832,11 @@ class ItemViewSet(
             )
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
-        tree = self.queryset.filter(
-            clause, type=models.ItemTypeChoices.FOLDER, deleted_at__isnull=True
-        ).order_by("path")
+        tree = (
+            self.queryset.select_related("creator")
+            .filter(clause, type=models.ItemTypeChoices.FOLDER, deleted_at__isnull=True)
+            .order_by("path")
+        )
 
         tree = self.annotate_user_roles(tree)
         tree = self.annotate_is_favorite(tree)
