@@ -142,7 +142,10 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "abilities": level2_1.get_abilities(AnonymousUser()),
                 "children": [],
                 "created_at": level2_1.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(level2_1.creator.id),
+                "creator": {
+                    "full_name": level2_1.creator.full_name,
+                    "short_name": level2_1.creator.short_name,
+                },
                 "depth": 3,
                 "id": str(level2_1.id),
                 "is_favorite": False,
@@ -168,7 +171,10 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "abilities": level2_2.get_abilities(AnonymousUser()),
                 "children": [],
                 "created_at": level2_2.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(level2_2.creator.id),
+                "creator": {
+                    "full_name": level2_2.creator.full_name,
+                    "short_name": level2_2.creator.short_name,
+                },
                 "depth": 3,
                 "id": str(level2_2.id),
                 "is_favorite": False,
@@ -192,7 +198,10 @@ def test_items_api_anonymous_to_a_public_tree_structure():
             },
         ],
         "created_at": level1_2.created_at.isoformat().replace("+00:00", "Z"),
-        "creator": str(level1_2.creator.id),
+        "creator": {
+            "full_name": level1_2.creator.full_name,
+            "short_name": level1_2.creator.short_name,
+        },
         "depth": 2,
         "id": str(level1_2.id),
         "is_favorite": False,
@@ -332,7 +341,10 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "created_at": level2_1.item.created_at.isoformat().replace(
                             "+00:00", "Z"
                         ),
-                        "creator": str(level2_1.item.creator.id),
+                        "creator": {
+                            "full_name": level2_1.item.creator.full_name,
+                            "short_name": level2_1.item.creator.short_name,
+                        },
                         "depth": 3,
                         "id": str(level2_1.item.id),
                         "is_favorite": False,
@@ -365,7 +377,10 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                                 "created_at": level3_1.item.created_at.isoformat().replace(
                                     "+00:00", "Z"
                                 ),
-                                "creator": str(level3_1.item.creator.id),
+                                "creator": {
+                                    "full_name": level3_1.item.creator.full_name,
+                                    "short_name": level3_1.item.creator.short_name,
+                                },
                                 "depth": 4,
                                 "id": str(level3_1.item.id),
                                 "is_favorite": False,
@@ -393,7 +408,10 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "created_at": level2_2.item.created_at.isoformat().replace(
                             "+00:00", "Z"
                         ),
-                        "creator": str(level2_2.item.creator.id),
+                        "creator": {
+                            "full_name": level2_2.item.creator.full_name,
+                            "short_name": level2_2.item.creator.short_name,
+                        },
                         "depth": 3,
                         "id": str(level2_2.item.id),
                         "is_favorite": False,
@@ -421,7 +439,10 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "created_at": level1_1.item.created_at.isoformat().replace(
                     "+00:00", "Z"
                 ),
-                "creator": str(level1_1.item.creator.id),
+                "creator": {
+                    "full_name": level1_1.item.creator.full_name,
+                    "short_name": level1_1.item.creator.short_name,
+                },
                 "depth": 2,
                 "id": str(level1_1.item.id),
                 "is_favorite": False,
@@ -451,7 +472,10 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "created_at": level1_2.item.created_at.isoformat().replace(
                     "+00:00", "Z"
                 ),
-                "creator": str(level1_2.item.creator.id),
+                "creator": {
+                    "full_name": level1_2.item.creator.full_name,
+                    "short_name": level1_2.item.creator.short_name,
+                },
                 "depth": 2,
                 "id": str(level1_2.item.id),
                 "is_favorite": False,
@@ -481,7 +505,10 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "created_at": level1_3.item.created_at.isoformat().replace(
                     "+00:00", "Z"
                 ),
-                "creator": str(level1_3.item.creator.id),
+                "creator": {
+                    "full_name": level1_3.item.creator.full_name,
+                    "short_name": level1_3.item.creator.short_name,
+                },
                 "depth": 2,
                 "id": str(level1_3.item.id),
                 "is_favorite": False,
@@ -507,7 +534,10 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
             },
         ],
         "created_at": root.item.created_at.isoformat().replace("+00:00", "Z"),
-        "creator": str(root.item.creator.id),
+        "creator": {
+            "full_name": root.item.creator.full_name,
+            "short_name": root.item.creator.short_name,
+        },
         "depth": 1,
         "id": str(root.item.id),
         "is_favorite": False,
@@ -614,7 +644,10 @@ def test_api_items_tree_authenticated_with_access_authenticated():
     assert response.status_code == 200
     assert response.json() == {
         "created_at": level1_1.created_at.isoformat().replace("+00:00", "Z"),
-        "creator": str(level1_1.creator.id),
+        "creator": {
+            "full_name": level1_1.creator.full_name,
+            "short_name": level1_1.creator.short_name,
+        },
         "depth": 2,
         "id": str(level1_1.id),
         "is_favorite": False,
@@ -641,7 +674,10 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "abilities": level2_1.get_abilities(user),
                 "children": [],
                 "created_at": level2_1.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(level2_1.creator.id),
+                "creator": {
+                    "full_name": level2_1.creator.full_name,
+                    "short_name": level2_1.creator.short_name,
+                },
                 "depth": 3,
                 "id": str(level2_1.id),
                 "is_favorite": False,
@@ -667,7 +703,10 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "abilities": level2_2.get_abilities(user),
                 "children": [],
                 "created_at": level2_2.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(level2_2.creator.id),
+                "creator": {
+                    "full_name": level2_2.creator.full_name,
+                    "short_name": level2_2.creator.short_name,
+                },
                 "depth": 3,
                 "id": str(level2_2.id),
                 "is_favorite": False,

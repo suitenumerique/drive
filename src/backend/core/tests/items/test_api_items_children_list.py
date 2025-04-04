@@ -33,7 +33,10 @@ def test_api_items_children_list_anonymous_public_standalone():
             {
                 "abilities": child1.get_abilities(AnonymousUser()),
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child1.creator.id),
+                "creator": {
+                    "full_name": child1.creator.full_name,
+                    "short_name": child1.creator.short_name,
+                },
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
@@ -60,7 +63,10 @@ def test_api_items_children_list_anonymous_public_standalone():
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child2.creator.id),
+                "creator": {
+                    "full_name": child2.creator.full_name,
+                    "short_name": child2.creator.short_name,
+                },
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,
@@ -126,7 +132,10 @@ def test_api_items_children_list_anonymous_public_parent():
             {
                 "abilities": child1.get_abilities(AnonymousUser()),
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child1.creator.id),
+                "creator": {
+                    "full_name": child1.creator.full_name,
+                    "short_name": child1.creator.short_name,
+                },
                 "depth": 4,
                 "id": str(child1.id),
                 "is_favorite": False,
@@ -151,7 +160,10 @@ def test_api_items_children_list_anonymous_public_parent():
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child2.creator.id),
+                "creator": {
+                    "full_name": child2.creator.full_name,
+                    "short_name": child2.creator.short_name,
+                },
                 "depth": 4,
                 "id": str(child2.id),
                 "is_favorite": False,
@@ -221,7 +233,10 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
             {
                 "abilities": child1.get_abilities(user),
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child1.creator.id),
+                "creator": {
+                    "full_name": child1.creator.full_name,
+                    "short_name": child1.creator.short_name,
+                },
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
@@ -248,7 +263,10 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
             {
                 "abilities": child2.get_abilities(user),
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child2.creator.id),
+                "creator": {
+                    "full_name": child2.creator.full_name,
+                    "short_name": child2.creator.short_name,
+                },
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,
@@ -312,7 +330,10 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
             {
                 "abilities": child1.get_abilities(user),
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child1.creator.id),
+                "creator": {
+                    "full_name": child1.creator.full_name,
+                    "short_name": child1.creator.short_name,
+                },
                 "depth": 4,
                 "id": str(child1.id),
                 "is_favorite": False,
@@ -339,7 +360,10 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
             {
                 "abilities": child2.get_abilities(user),
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child2.creator.id),
+                "creator": {
+                    "full_name": child2.creator.full_name,
+                    "short_name": child2.creator.short_name,
+                },
                 "depth": 4,
                 "id": str(child2.id),
                 "is_favorite": False,
@@ -421,7 +445,10 @@ def test_api_items_children_list_authenticated_related_direct():
             {
                 "abilities": child1.get_abilities(user),
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child1.creator.id),
+                "creator": {
+                    "full_name": child1.creator.full_name,
+                    "short_name": child1.creator.short_name,
+                },
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
@@ -448,7 +475,10 @@ def test_api_items_children_list_authenticated_related_direct():
             {
                 "abilities": child2.get_abilities(user),
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child2.creator.id),
+                "creator": {
+                    "full_name": child2.creator.full_name,
+                    "short_name": child2.creator.short_name,
+                },
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,
@@ -513,7 +543,10 @@ def test_api_items_children_list_authenticated_related_parent():
             {
                 "abilities": child1.get_abilities(user),
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child1.creator.id),
+                "creator": {
+                    "full_name": child1.creator.full_name,
+                    "short_name": child1.creator.short_name,
+                },
                 "depth": 4,
                 "id": str(child1.id),
                 "is_favorite": False,
@@ -540,7 +573,10 @@ def test_api_items_children_list_authenticated_related_parent():
             {
                 "abilities": child2.get_abilities(user),
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child2.creator.id),
+                "creator": {
+                    "full_name": child2.creator.full_name,
+                    "short_name": child2.creator.short_name,
+                },
                 "depth": 4,
                 "id": str(child2.id),
                 "is_favorite": False,
@@ -654,7 +690,10 @@ def test_api_items_children_list_authenticated_related_team_members(
             {
                 "abilities": child1.get_abilities(user),
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child1.creator.id),
+                "creator": {
+                    "full_name": child1.creator.full_name,
+                    "short_name": child1.creator.short_name,
+                },
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
@@ -681,7 +720,10 @@ def test_api_items_children_list_authenticated_related_team_members(
             {
                 "abilities": child2.get_abilities(user),
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child2.creator.id),
+                "creator": {
+                    "full_name": child2.creator.full_name,
+                    "short_name": child2.creator.short_name,
+                },
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,
@@ -742,7 +784,10 @@ def test_api_items_children_list_filter_type():
             {
                 "abilities": child1.get_abilities(user),
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child1.creator.id),
+                "creator": {
+                    "full_name": child1.creator.full_name,
+                    "short_name": child1.creator.short_name,
+                },
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
@@ -782,7 +827,10 @@ def test_api_items_children_list_filter_type():
             {
                 "abilities": child2.get_abilities(user),
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
-                "creator": str(child2.creator.id),
+                "creator": {
+                    "full_name": child2.creator.full_name,
+                    "short_name": child2.creator.short_name,
+                },
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,

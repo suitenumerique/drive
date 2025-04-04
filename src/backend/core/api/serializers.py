@@ -19,6 +19,15 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "email", "full_name", "short_name"]
 
 
+class UserLiteSerializer(UserSerializer):
+    """Serialize users with limited fields."""
+
+    class Meta:
+        model = models.User
+        fields = ["full_name", "short_name"]
+        read_only_fields = ["full_name", "short_name"]
+
+
 class BaseAccessSerializer(serializers.ModelSerializer):
     """Serialize template accesses."""
 
@@ -118,6 +127,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     nb_accesses = serializers.IntegerField(read_only=True)
     user_roles = serializers.SerializerMethodField()
     url = serializers.SerializerMethodField()
+    creator = UserLiteSerializer(read_only=True)
 
     class Meta:
         model = models.Item
