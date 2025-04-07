@@ -4,27 +4,35 @@
 $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 
 .drive__home {
+  --header-height: 91px;
+
   .c__header {
-    height: 91px;
-    min-height: 91px;
-    max-height: 91px;
+    height: var(--header-height);
+    min-height: var(--header-height);
+    max-height: var(--header-height);
     border: none;
   }
 
   .c__main-layout__content {
-    margin-top: 91px;
+    margin-top: var(--header-height);
+
+    .c__main-layout__content__center__children {
+      height: calc(100dvh - var(--header-height));
+    }
+
+    .c__right-panel {
+      height: calc(100dvh - var(--header-height));
+    }
   }
 
   .c__hero {
-    height: calc(100vh - 91px);
+    height: calc(100vh - var(--header-height));
   }
 
   @media (max-width: $tablet) {
-    .c__header {
-      height: 52px;
-      min-height: 52px;
-      max-height: 52px;
+    --header-height: 52px;
 
+    .c__header {
       .drive__header__left {
         img:first-child {
           display: none;
@@ -36,14 +44,6 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
           display: none !important;
         }
       }
-    }
-
-    .c__main-layout__content {
-      margin-top: 52px;
-    }
-
-    .c__hero {
-      height: calc(100vh - 52px);
     }
   }
 
