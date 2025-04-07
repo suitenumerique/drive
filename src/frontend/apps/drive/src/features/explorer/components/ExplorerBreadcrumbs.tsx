@@ -7,9 +7,15 @@ import { TreeViewNodeTypeEnum, useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import { TreeItem } from "@/features/drivers/types";
 
 export const ExplorerBreadcrumbs = () => {
-    const treeContext = useTreeContext<TreeItem>();
-  const { tree, item, onNavigate, setRightPanelOpen, setRightPanelForcedItem } =
-    useExplorer();
+  const treeContext = useTreeContext<TreeItem>();
+  const {
+    tree,
+    item,
+    onNavigate,
+    setRightPanelOpen,
+    setRightPanelForcedItem,
+    treeIsInitialized,
+  } = useExplorer();
 
   const getBreadcrumbsItems = () => {
     if (!tree || !item) {
@@ -50,9 +56,12 @@ export const ExplorerBreadcrumbs = () => {
     });
   };
 
-  const breadcrumbsItems = useMemo(() => getBreadcrumbsItems(), [item]);
+  const breadcrumbsItems = useMemo(
+    () => getBreadcrumbsItems(),
+    [item, treeIsInitialized]
+  );
 
-  if (!item) {
+  if (!item || !treeIsInitialized) {
     return null;
   }
 

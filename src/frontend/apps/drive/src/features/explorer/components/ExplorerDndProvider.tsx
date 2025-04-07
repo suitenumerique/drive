@@ -84,7 +84,7 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
     selectedItems
       .map((item) => item.id)
       .forEach((id) => {
-        treeContext?.treeData.moveNode(id, overItem.id, 0, itemId);
+        treeContext?.treeData.moveNode(id, overItem.id, 0);
       });
 
     await moveItems.mutateAsync({
