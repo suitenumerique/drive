@@ -58,7 +58,7 @@ def filter_root_paths(paths, skip_sorting=False):
     return root_paths
 
 
-def generate_s3_authorization_headers(key):
+def generate_s3_authorization_headers(key, content_disposition=None):
     """
     Generate authorization headers for an s3 object.
     These headers can be used as an alternative to signed urls with many benefits:
@@ -68,10 +68,17 @@ def generate_s3_authorization_headers(key):
     - access control is truly realtime
     - the object storage service does not need to be exposed on internet
     """
+    params = {
+        "Bucket": default_storage.bucket_name,
+        "Key": key,
+    }
+    if content_disposition:
+        params["ResponseContentDisposition"] = "attachment"
+
     url = default_storage.unsigned_connection.meta.client.generate_presigned_url(
         "get_object",
         ExpiresIn=0,
-        Params={"Bucket": default_storage.bucket_name, "Key": key},
+        Params=params,
     )
     request = botocore.awsrequest.AWSRequest(method="get", url=url)
 
@@ -82,7 +89,7 @@ def generate_s3_authorization_headers(key):
     region = s3_client.meta.region_name
     auth = botocore.auth.S3SigV4Auth(frozen_credentials, "s3", region)
     auth.add_auth(request)
-
+    
     return request
 
 

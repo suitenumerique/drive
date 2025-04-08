@@ -993,9 +993,12 @@ class ItemViewSet(
             request, MEDIA_STORAGE_URL_PATTERN
         )
         # Generate S3 authorization headers using the extracted URL parameters
-        request = utils.generate_s3_authorization_headers(f"{url_params.get('key'):s}")
-
-        return drf.response.Response("authorized", headers=request.headers, status=200)
+        request = utils.generate_s3_authorization_headers(f"{url_params.get('key'):s}", True)
+    
+        query_params = urlparse(request.url).query
+        headers = {**request.headers, "S3_QUERY": query_params}
+        print(headers)
+        return drf.response.Response("authorized", headers=headers, status=200)
 
 
 class ItemAccessViewSet(
