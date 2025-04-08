@@ -44,7 +44,6 @@ export const ExplorerSelectionBar = () => {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedItems]);
 
   return (
@@ -56,13 +55,13 @@ export const ExplorerSelectionBar = () => {
           })}
         </div>
         <div className="explorer__selection-bar__actions">
-          <Button
+          {/* <Button
             onClick={handleClearSelection}
             icon={<span className="material-icons">download</span>}
             color="primary-text"
             size="small"
             aria-label={t("explorer.selectionBar.download")}
-          />
+          /> */}
           <Button
             onClick={handleClearSelection}
             icon={<span className="material-icons">arrow_forward</span>}

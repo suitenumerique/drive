@@ -34,6 +34,16 @@ export const ExplorerGridActionsCell = (
     await deleteItems.mutateAsync([item.id]);
   };
 
+  const handleDownload = async () => {
+    // Temporary solution, waiting for a proper download_url attribute.
+    const a = document.createElement("a");
+    a.style.display = "none";
+    a.href = item.url!;
+    a.download = item.filename;
+    document.body.appendChild(a);
+    a.click();
+  };
+
   return (
     <>
       <DropdownMenu
@@ -57,6 +67,7 @@ export const ExplorerGridActionsCell = (
             label: t("explorer.grid.actions.download"),
             value: "download",
             showSeparator: true,
+            callback: handleDownload,
           },
           {
             icon: <span className="material-icons">edit</span>,
