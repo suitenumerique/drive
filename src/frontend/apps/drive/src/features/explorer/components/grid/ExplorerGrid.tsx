@@ -37,6 +37,7 @@ export const ExplorerGrid = () => {
     children,
     setRightPanelForcedItem,
     itemId,
+    gridActionsCell,
   } = useExplorer();
   const treeContext = useTreeContext();
   const columnHelper = createColumnHelper<Item>();
@@ -68,7 +69,7 @@ export const ExplorerGrid = () => {
   }, [children]);
 
   useEffect(() => {
-    if (treeIsInitialized) {
+    if (treeIsInitialized && itemId) {
       treeContext?.treeApiRef.current?.open(itemId);
       treeContext?.treeApiRef.current?.openParents(itemId);
     }

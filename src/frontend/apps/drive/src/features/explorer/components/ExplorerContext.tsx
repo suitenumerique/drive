@@ -14,6 +14,10 @@ import {
   TreeViewNodeTypeEnum,
 } from "@gouvfr-lasuite/ui-kit";
 import { ExplorerDndProvider } from "./ExplorerDndProvider";
+import {
+  ExplorerGridActionsCell,
+  ExplorerGridActionsCellProps,
+} from "./grid/ExplorerGridActionsCell";
 export interface ExplorerContextType {
   selectedItemIds: Record<string, boolean>;
   setSelectedItemIds: Dispatch<SetStateAction<Record<string, boolean>>>;
@@ -34,6 +38,7 @@ export interface ExplorerContextType {
   setRightPanelForcedItem: (item: Item | undefined) => void;
   rightPanelOpen: boolean;
   setRightPanelOpen: (open: boolean) => void;
+  gridActionsCell: (params: ExplorerGridActionsCellProps) => JSX.Element;
 }
 
 export const ExplorerContext = createContext<ExplorerContextType | undefined>(
@@ -57,17 +62,23 @@ export type NavigationEvent = {
   item: Item | TreeItem;
 };
 
+interface ExplorerProviderProps {
+  children: React.ReactNode;
+  displayMode: "sdk" | "app";
+  itemId: string;
+  onNavigate: (event: NavigationEvent) => void;
+  childrenItems?: Item[];
+  gridActionsCell?: (params: ExplorerGridActionsCellProps) => JSX.Element;
+}
+
 export const ExplorerProvider = ({
   children,
   displayMode = "app",
   itemId,
   onNavigate,
-}: {
-  children: React.ReactNode;
-  displayMode: "sdk" | "app";
-  itemId: string;
-  onNavigate: (event: NavigationEvent) => void;
-}) => {
+  childrenItems = [],
+  gridActionsCell = ExplorerGridActionsCell,
+}: ExplorerProviderProps) => {
   const driver = getDriver();
 
   const [selectedItemIds, setSelectedItemIds] = useState<
@@ -94,12 +105,13 @@ export const ExplorerProvider = ({
   const { data: item } = useQuery({
     queryKey: ["items", itemId],
     queryFn: () => getDriver().getItem(itemId),
+    enabled: !!itemId,
   });
 
-  const { data: itemChildren } = useQuery({
-    queryKey: ["items", itemId, "children"],
-    queryFn: () => getDriver().getChildren(itemId),
-  });
+  // const { data: itemChildren } = useQuery({
+  //   queryKey: ["items", itemId, "children"],
+  //   queryFn: () => getDriver().getChildren(itemId),
+  // });
 
   const { data: firstLevelItems } = useQuery({
     queryKey: ["firstLevelItems"],
@@ -121,8 +133,8 @@ export const ExplorerProvider = ({
   });
 
   const getSelectedItems = () => {
-    return itemChildren
-      ? itemChildren.filter((item) => selectedItemIds[item.id])
+    return childrenItems
+      ? childrenItems.filter((item) => selectedItemIds[item.id])
       : [];
   };
 
@@ -153,13 +165,14 @@ export const ExplorerProvider = ({
         item,
         items,
         tree,
-        children: itemChildren,
+        children: childrenItems,
         onNavigate,
         dropZone,
         rightPanelForcedItem,
         setRightPanelForcedItem,
         rightPanelOpen,
         setRightPanelOpen,
+        gridActionsCell,
       }}
     >
       <TreeProvider

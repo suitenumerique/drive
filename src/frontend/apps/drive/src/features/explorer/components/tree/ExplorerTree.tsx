@@ -38,23 +38,28 @@ export const ExplorerTree = () => {
   } = useExplorer();
 
   useEffect(() => {
-    if (!treeItem || !firstLevelItems) {
+    console.log("treeItem", treeItem, "firstLevelItems", firstLevelItems);
+
+    if (!firstLevelItems) {
       return;
     }
 
     const firstLevelItems_: Item[] = firstLevelItems ?? [];
 
-    const treeItemIndex = firstLevelItems_.findIndex(
-      (item) => item.id === treeItem.id
-    );
+    // On some route no treeItem is provided, like on the trash route.
+    if (treeItem) {
+      const treeItemIndex = firstLevelItems_.findIndex(
+        (item) => item.id === treeItem.id
+      );
 
-    if (treeItemIndex !== -1) {
-      // as we need to make two requests to retrieve the items and the minimal tree based
-      // on where we invoke the tree, we replace the root of the invoked tree in the array
-      firstLevelItems_[treeItemIndex] = treeItem;
-    } else {
-      // Otherwise we add it to the beginning of the array
-      firstLevelItems_.unshift(treeItem);
+      if (treeItemIndex !== -1) {
+        // as we need to make two requests to retrieve the items and the minimal tree based
+        // on where we invoke the tree, we replace the root of the invoked tree in the array
+        firstLevelItems_[treeItemIndex] = treeItem;
+      } else {
+        // Otherwise we add it to the beginning of the array
+        firstLevelItems_.unshift(treeItem);
+      }
     }
 
     const firstLevelTreeItems_: TreeItem[] = itemsToTreeItems(firstLevelItems_);

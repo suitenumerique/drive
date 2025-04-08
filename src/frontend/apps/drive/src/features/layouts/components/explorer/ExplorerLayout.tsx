@@ -10,6 +10,8 @@ import {
 } from "@/features/explorer/components/ExplorerContext";
 import { useRouter } from "next/router";
 import { ExplorerRightPanelContent } from "@/features/explorer/components/right-panel/ExplorerRightPanelContent";
+import { useQuery, useSuspenseQueries } from "@tanstack/react-query";
+import { getDriver } from "@/features/config/Config";
 
 /**
  * This layout is used for the explorer page.
@@ -19,8 +21,13 @@ export const ExplorerLayout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const router = useRouter();
 
-  if (!user) {
-    login();
+  const itemId = router.query.id as string;
+  const { data: itemChildren } = useQuery({
+    queryKey: ["items", itemId, "children"],
+    queryFn: () => getDriver().getChildren(itemId),
+  });
+
+  if (!useEnsureAuth()) {
     return null;
   }
 
@@ -30,16 +37,31 @@ export const ExplorerLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <ExplorerProvider
-      itemId={router.query.id as string}
+      itemId={itemId}
       displayMode="app"
       onNavigate={onNavigate}
+      childrenItems={itemChildren}
     >
       <MainExplorerLayout>{children}</MainExplorerLayout>
     </ExplorerProvider>
   );
 };
 
-const MainExplorerLayout = ({ children }: { children: React.ReactNode }) => {
+export const useEnsureAuth = () => {
+  const { user } = useAuth();
+
+  if (!user) {
+    login();
+  }
+
+  return !!user;
+};
+
+export const MainExplorerLayout = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   const {
     rightPanelOpen,
     setRightPanelOpen,
