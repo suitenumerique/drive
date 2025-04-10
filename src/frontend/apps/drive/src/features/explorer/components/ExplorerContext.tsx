@@ -1,4 +1,10 @@
-import { SetStateAction, useContext, useEffect, useState } from "react";
+import {
+  SetStateAction,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Dispatch } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Item, ItemType, TreeItem } from "@/features/drivers/types";
@@ -14,16 +20,19 @@ import {
   TreeViewNodeTypeEnum,
 } from "@gouvfr-lasuite/ui-kit";
 import { ExplorerDndProvider } from "./ExplorerDndProvider";
+import {
+  ExplorerGridActionsCell,
+  ExplorerGridActionsCellProps,
+} from "./grid/ExplorerGridActionsCell";
 export interface ExplorerContextType {
-  selectedItemIds: Record<string, boolean>;
-  setSelectedItemIds: Dispatch<SetStateAction<Record<string, boolean>>>;
   displayMode: "sdk" | "app";
   selectedItems: Item[];
+  selectedItemsMap: Record<string, Item>;
+  setSelectedItems: Dispatch<SetStateAction<Item[]>>;
   itemId: string;
   item: Item | undefined;
   firstLevelItems: Item[] | undefined;
   items: Item[] | undefined;
-  children: Item[] | undefined;
   tree: Item | undefined;
   onNavigate: (event: NavigationEvent) => void;
   initialId: string | undefined;
@@ -34,6 +43,7 @@ export interface ExplorerContextType {
   setRightPanelForcedItem: (item: Item | undefined) => void;
   rightPanelOpen: boolean;
   setRightPanelOpen: (open: boolean) => void;
+  gridActionsCell: (params: ExplorerGridActionsCellProps) => JSX.Element;
 }
 
 export const ExplorerContext = createContext<ExplorerContextType | undefined>(
@@ -57,22 +67,37 @@ export type NavigationEvent = {
   item: Item | TreeItem;
 };
 
+interface ExplorerProviderProps {
+  children: React.ReactNode;
+  displayMode: "sdk" | "app";
+  itemId: string;
+  onNavigate: (event: NavigationEvent) => void;
+  // childrenItems?: Item[];
+  gridActionsCell?: (params: ExplorerGridActionsCellProps) => JSX.Element;
+}
+
 export const ExplorerProvider = ({
   children,
   displayMode = "app",
   itemId,
   onNavigate,
-}: {
-  children: React.ReactNode;
-  displayMode: "sdk" | "app";
-  itemId: string;
-  onNavigate: (event: NavigationEvent) => void;
-}) => {
+  // childrenItems = [],
+  gridActionsCell = ExplorerGridActionsCell,
+}: ExplorerProviderProps) => {
   const driver = getDriver();
 
-  const [selectedItemIds, setSelectedItemIds] = useState<
-    Record<string, boolean>
-  >({});
+  const [selectedItems, setSelectedItems] = useState<Item[]>([]);
+
+  // Avoid inifinite rerendering
+  const selectedItemsMap = useMemo(() => {
+    console.log("selectedItems", selectedItems);
+    const map: Record<string, Item> = {};
+    selectedItems.forEach((item) => {
+      map[item.id] = item;
+    });
+    return map;
+  }, [selectedItems]);
+
   const [rightPanelForcedItem, setRightPanelForcedItem] = useState<Item>();
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
 
@@ -94,12 +119,13 @@ export const ExplorerProvider = ({
   const { data: item } = useQuery({
     queryKey: ["items", itemId],
     queryFn: () => getDriver().getItem(itemId),
+    enabled: !!itemId,
   });
 
-  const { data: itemChildren } = useQuery({
-    queryKey: ["items", itemId, "children"],
-    queryFn: () => getDriver().getChildren(itemId),
-  });
+  // const { data: itemChildren } = useQuery({
+  //   queryKey: ["items", itemId, "children"],
+  //   queryFn: () => getDriver().getChildren(itemId),
+  // });
 
   const { data: firstLevelItems } = useQuery({
     queryKey: ["firstLevelItems"],
@@ -114,25 +140,22 @@ export const ExplorerProvider = ({
     refetchOnMount: false,
     queryFn: () => {
       if (!initialId) {
-        return undefined;
+        return null;
       }
       return getDriver().getTree(initialId);
     },
   });
 
-  const getSelectedItems = () => {
-    return itemChildren
-      ? itemChildren.filter((item) => selectedItemIds[item.id])
-      : [];
-  };
+  // const getSelectedItems = () => {
+  //   return childrenItems
+  //     ? childrenItems.filter((item) => selectedItemIds[item.id])
+  //     : [];
+  // };
 
   useEffect(() => {
-    // If the right panel item is the same as the current item, we need to clear the selected items because the right panel
-    // will be open and we don't want to show the selected items in the right panel
-    if (!rightPanelForcedItem || rightPanelForcedItem.id === itemId) {
-      setSelectedItemIds({});
-    } else {
-      setSelectedItemIds({ [rightPanelForcedItem.id]: true });
+    // If we open the right panel and we have a selection, we need to clear it.
+    if (rightPanelForcedItem?.id === itemId) {
+      setSelectedItems([]);
     }
   }, [rightPanelForcedItem]);
 
@@ -141,25 +164,26 @@ export const ExplorerProvider = ({
   return (
     <ExplorerContext.Provider
       value={{
-        selectedItemIds,
-        setSelectedItemIds,
         treeIsInitialized,
         setTreeIsInitialized,
         firstLevelItems,
         displayMode,
-        selectedItems: getSelectedItems(),
+        selectedItems,
+        selectedItemsMap,
+        setSelectedItems,
         itemId,
         initialId,
         item,
         items,
         tree,
-        children: itemChildren,
+        // children: childrenItems,
         onNavigate,
         dropZone,
         rightPanelForcedItem,
         setRightPanelForcedItem,
         rightPanelOpen,
         setRightPanelOpen,
+        gridActionsCell,
       }}
     >
       <TreeProvider

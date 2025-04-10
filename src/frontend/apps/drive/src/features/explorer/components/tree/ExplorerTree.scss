@@ -59,4 +59,12 @@
 
 .explorer__tree {
   height: 100%;
+
+  &__nav {
+    padding: 0 12px;
+  }
+}
+
+.explorer__tree__item-standalone {
+  padding-left: 4px;
 }

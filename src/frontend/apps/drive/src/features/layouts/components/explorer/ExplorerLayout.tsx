@@ -10,6 +10,27 @@ import {
 } from "@/features/explorer/components/ExplorerContext";
 import { useRouter } from "next/router";
 import { ExplorerRightPanelContent } from "@/features/explorer/components/right-panel/ExplorerRightPanelContent";
+import { useQuery } from "@tanstack/react-query";
+import { getDriver } from "@/features/config/Config";
+import { useEffect } from "react";
+import { GlobalLayout } from "../global/GlobalLayout";
+
+export const getGlobalExplorerLayout = (page: React.ReactElement) => {
+  return <GlobalExplorerLayout>{page}</GlobalExplorerLayout>;
+};
+
+export const GlobalExplorerLayout = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
+  // TODO: Handle auth redirect here maybe ?
+  return (
+    <GlobalLayout>
+      <ExplorerLayout>{children}</ExplorerLayout>
+    </GlobalLayout>
+  );
+};
 
 /**
  * This layout is used for the explorer page.
@@ -19,27 +40,41 @@ export const ExplorerLayout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const router = useRouter();
 
-  if (!user) {
-    login();
-    return null;
-  }
+  useEffect(() => {
+    console.log("COUCOU PANPAN");
 
+    return () => {
+      console.log("BYE BYE PANPAN");
+    };
+  }, []);
+
+  const itemId = router.query.id as string;
   const onNavigate = (e: NavigationEvent) => {
     router.push(`/explorer/items/${e.item.id}`);
   };
 
   return (
-    <ExplorerProvider
-      itemId={router.query.id as string}
-      displayMode="app"
-      onNavigate={onNavigate}
-    >
-      <MainExplorerLayout>{children}</MainExplorerLayout>
+    <ExplorerProvider itemId={itemId} displayMode="app" onNavigate={onNavigate}>
+      <ExplorerPanelsLayout>{children}</ExplorerPanelsLayout>
     </ExplorerProvider>
   );
 };
 
-const MainExplorerLayout = ({ children }: { children: React.ReactNode }) => {
+export const useEnsureAuth = () => {
+  const { user } = useAuth();
+
+  if (!user) {
+    login();
+  }
+
+  return !!user;
+};
+
+export const ExplorerPanelsLayout = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   const {
     rightPanelOpen,
     setRightPanelOpen,

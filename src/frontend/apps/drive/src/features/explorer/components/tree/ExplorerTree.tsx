@@ -18,11 +18,14 @@ import { useMoveItems } from "../../api/useMoveItem";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
 import { ExplorerCreateWorkspaceModal } from "../modals/workspaces/ExplorerCreateWorkspaceModal";
 import { ExplorerTreeActions } from "./ExplorerTreeActions";
+import trashIcon from "@/assets/icons/trash.svg";
+import { useRouter } from "next/router";
 
 export const ExplorerTree = () => {
   const { t } = useTranslation();
   const move = useMoveItems();
   const dropdownMenu = useDropdownMenu();
+  const router = useRouter();
 
   const treeContext = useTreeContext<TreeItem>();
   const [initialOpenState, setInitialOpenState] = useState<OpenMap | undefined>(
@@ -38,23 +41,26 @@ export const ExplorerTree = () => {
   } = useExplorer();
 
   useEffect(() => {
-    if (!treeItem || !firstLevelItems) {
+    if (!firstLevelItems) {
       return;
     }
 
     const firstLevelItems_: Item[] = firstLevelItems ?? [];
 
-    const treeItemIndex = firstLevelItems_.findIndex(
-      (item) => item.id === treeItem.id
-    );
+    // On some route no treeItem is provided, like on the trash route.
+    if (treeItem) {
+      const treeItemIndex = firstLevelItems_.findIndex(
+        (item) => item.id === treeItem.id
+      );
 
-    if (treeItemIndex !== -1) {
-      // as we need to make two requests to retrieve the items and the minimal tree based
-      // on where we invoke the tree, we replace the root of the invoked tree in the array
-      firstLevelItems_[treeItemIndex] = treeItem;
-    } else {
-      // Otherwise we add it to the beginning of the array
-      firstLevelItems_.unshift(treeItem);
+      if (treeItemIndex !== -1) {
+        // as we need to make two requests to retrieve the items and the minimal tree based
+        // on where we invoke the tree, we replace the root of the invoked tree in the array
+        firstLevelItems_[treeItemIndex] = treeItem;
+      } else {
+        // Otherwise we add it to the beginning of the array
+        firstLevelItems_.unshift(treeItem);
+      }
     }
 
     const firstLevelTreeItems_: TreeItem[] = itemsToTreeItems(firstLevelItems_);
@@ -149,6 +155,25 @@ export const ExplorerTree = () => {
         openCreateWorkspaceModal={createWorkspaceModal.open}
       />
       <HorizontalSeparator withPadding={false} />
+
+      <div className="explorer__tree__nav">
+        <div className="c__tree-view--node">
+          <div
+            className="explorer__tree__item explorer__tree__item-standalone"
+            onClick={() => {
+              router.push("/explorer/trash");
+            }}
+          >
+            <div className="explorer__tree__item__content">
+              <img src={trashIcon.src} alt="" />
+              <span className="explorer__tree__item__title">
+                {t("explorer.tree.trash")}
+              </span>
+            </div>
+            <div></div>
+          </div>
+        </div>
+      </div>
 
       {initialOpenState && (
         <TreeView

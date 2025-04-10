@@ -26,11 +26,7 @@ type ExplorerDndProviderProps = {
 };
 
 export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
-  const {
-    setSelectedItemIds: setSelectedItems,
-    itemId,
-    selectedItems,
-  } = useExplorer();
+  const { itemId, selectedItems, setSelectedItems } = useExplorer();
 
   const treeContext = useTreeContext<TreeItem>();
 
@@ -57,9 +53,7 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
       return;
     }
 
-    setSelectedItems({
-      [item.id]: true,
-    });
+    setSelectedItems([item]);
   };
 
   const handleDragEnd = async ({ active, over }: DragEndEvent) => {
