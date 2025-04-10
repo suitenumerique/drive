@@ -90,14 +90,13 @@ export const ExplorerProvider = ({
 
   // Avoid inifinite rerendering
   const selectedItemsMap = useMemo(() => {
+    console.log("selectedItems", selectedItems);
     const map: Record<string, Item> = {};
     selectedItems.forEach((item) => {
       map[item.id] = item;
     });
     return map;
   }, [selectedItems]);
-
-  console.log("ExplorerProvider");
 
   const [rightPanelForcedItem, setRightPanelForcedItem] = useState<Item>();
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
@@ -154,18 +153,13 @@ export const ExplorerProvider = ({
   // };
 
   useEffect(() => {
-    // If the right panel item is the same as the current item, we need to clear the selected items because the right panel
-    // will be open and we don't want to show the selected items in the right panel
-    if (!rightPanelForcedItem || rightPanelForcedItem.id === itemId) {
+    // If we open the right panel and we have a selection, we need to clear it.
+    if (rightPanelForcedItem?.id === itemId) {
       setSelectedItems([]);
-    } else {
-      setSelectedItemIds({ [rightPanelForcedItem.id]: true });
     }
   }, [rightPanelForcedItem]);
 
   const { dropZone } = useUploadZone({ item: item! });
-
-  console.log("ExplorerContext");
 
   return (
     <ExplorerContext.Provider

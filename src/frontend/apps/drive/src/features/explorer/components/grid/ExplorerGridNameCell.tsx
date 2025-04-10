@@ -12,8 +12,8 @@ export const ExplorerGridNameCell = (params: ExplorerGridNameCellProps) => {
   const item = params.row.original;
   const ref = useRef<HTMLSpanElement>(null);
   const [isOverflown, setIsOverflown] = useState(false);
-  const { selectedItemIds } = useExplorer();
-  const isSelected = !!selectedItemIds[item.id];
+  const { selectedItemsMap } = useExplorer();
+  const isSelected = !!selectedItemsMap[item.id];
 
   const renderTitle = () => {
     // We need to have the element holding the ref nested because the Tooltip component

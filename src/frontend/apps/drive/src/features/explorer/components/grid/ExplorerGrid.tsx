@@ -26,12 +26,15 @@ import { ExplorerGridUpdatedAtCell } from "./ExplorerGridUpdatedAtCell";
 import { ExplorerGridActionsCell } from "./ExplorerGridActionsCell";
 import { ExplorerProps } from "../Explorer";
 
+const EMPTY_ARRAY: Item[] = [];
+
 export const ExplorerGrid = (props: ExplorerProps) => {
   const { t } = useTranslation();
   const { t: tc } = useCunningham();
   const lastSelectedRowRef = useRef<string | null>(null);
   const {
     setSelectedItems,
+    selectedItems,
     selectedItemsMap,
     treeIsInitialized,
     onNavigate,
@@ -61,7 +64,6 @@ export const ExplorerGrid = (props: ExplorerProps) => {
   ];
 
   const folders = useMemo(() => {
-    console.log("A");
     if (!props.childrenItems) {
       return [];
     }
@@ -70,7 +72,6 @@ export const ExplorerGrid = (props: ExplorerProps) => {
   }, [props.childrenItems]);
 
   useEffect(() => {
-    console.log("B");
     if (treeIsInitialized && itemId) {
       treeContext?.treeApiRef.current?.open(itemId);
       treeContext?.treeApiRef.current?.openParents(itemId);
@@ -78,7 +79,6 @@ export const ExplorerGrid = (props: ExplorerProps) => {
   }, [itemId, treeIsInitialized]);
 
   useEffect(() => {
-    console.log("C");
     if (!treeIsInitialized || !itemId) {
       return;
     }
@@ -106,22 +106,15 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     treeContext?.treeData.setChildren(itemId, childrens);
   }, [folders, treeIsInitialized]);
 
-  useEffect(() => {
-    console.log("CHILDREN ITEMS");
-  }, [props.childrenItems]);
-
-  console.log("grid", props.childrenItems);
   const table = useReactTable({
-    data: props.childrenItems ?? [],
+    data: props.childrenItems ?? EMPTY_ARRAY,
     columns,
     getCoreRowModel: getCoreRowModel(),
     enableRowSelection: true,
   });
-  console.log("table", table);
 
   const isLoading = props.childrenItems === undefined;
   const isEmpty = table.getRowModel().rows.length === 0;
-  return <div>GRID</div>;
   const tableRef = useRef<HTMLTableElement>(null);
   const { onKeyDown } = useTableKeyboardNavigation({
     table,
@@ -210,25 +203,35 @@ export const ExplorerGrid = (props: ExplorerProps) => {
                             currentIndex
                           );
 
-                          const newSelection = { ...selectedItemIds };
+                          const newSelection = [...selectedItems];
                           for (let i = startIndex; i <= endIndex; i++) {
-                            newSelection[rows[i].original.id] = true;
+                            if (!selectedItemsMap[rows[i].original.id]) {
+                              newSelection.push(rows[i].original);
+                            }
                           }
 
-                          setSelectedItemIds(newSelection);
+                          setSelectedItems(newSelection);
                         }
                       } else if (e.metaKey || e.ctrlKey) {
-                        setSelectedItemIds({
-                          ...selectedItemIds,
-                          [row.original.id]: !isSelected,
+                        // Toggle the selected item.
+                        setSelectedItems((value) => {
+                          let newValue = [...value];
+                          if (
+                            newValue.find((item) => item.id == row.original.id)
+                          ) {
+                            newValue = newValue.filter(
+                              (item) => item.id !== row.original.id
+                            );
+                          } else {
+                            newValue.push(row.original);
+                          }
+                          return newValue;
                         });
                         if (!isSelected) {
                           lastSelectedRowRef.current = row.id;
                         }
                       } else {
-                        setSelectedItemIds({
-                          [row.original.id]: true,
-                        });
+                        setSelectedItems([row.original]);
                         lastSelectedRowRef.current = row.id;
                         setRightPanelForcedItem(row.original);
                       }

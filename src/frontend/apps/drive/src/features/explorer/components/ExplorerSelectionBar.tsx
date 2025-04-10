@@ -8,11 +8,11 @@ import { useEffect } from "react";
 
 export const ExplorerSelectionBar = () => {
   const { t } = useTranslation();
-  const { selectedItems, setSelectedItemIds, setRightPanelForcedItem } =
+  const { selectedItems, setSelectedItems, setRightPanelForcedItem } =
     useExplorer();
 
   const handleClearSelection = () => {
-    setSelectedItemIds({});
+    setSelectedItems([]);
     setRightPanelForcedItem(undefined);
   };
 
@@ -28,7 +28,7 @@ export const ExplorerSelectionBar = () => {
       </ToasterItem>
     );
     await deleteItems.mutateAsync(selectedItems.map((item) => item.id));
-    setSelectedItemIds({});
+    setSelectedItems([]);
   };
 
   // Add event listener when component mounts and remove when unmounts
@@ -44,7 +44,6 @@ export const ExplorerSelectionBar = () => {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedItems]);
 
   return (

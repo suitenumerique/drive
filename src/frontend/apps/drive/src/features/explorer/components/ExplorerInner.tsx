@@ -31,21 +31,25 @@ export const ExplorerInner = (props: ExplorerProps) => {
   };
 
   const getChildItem = (id: string): Item => {
-    const child = props.childrenItems.find((childItem) => childItem.id === id);
+    const child = props.childrenItems?.find((childItem) => childItem.id === id);
+    console.log(props.childrenItems);
     if (!child) {
       throw new Error("Cannot find child with id " + id);
     }
     return child;
   };
 
+  console.log("ExplorerInner", props.childrenItems);
+
   const onSelectionMove = ({
     store: {
       changed: { added, removed },
     },
   }: SelectionEvent) => {
+    console.log("onSelectionMove", props.childrenItems);
     setRightPanelForcedItem(undefined);
     setSelectedItems((prev) => {
-      let next = { ...prev };
+      let next = [...prev];
 
       added.forEach((element) => {
         const id = element.getAttribute("data-id");
@@ -64,6 +68,10 @@ export const ExplorerInner = (props: ExplorerProps) => {
       return next;
     });
   };
+
+  // See below in <SelectionArea> for more details on why we need to use a ref here.
+  const onSelectionMoveRef = useRef(onSelectionMove);
+  onSelectionMoveRef.current = onSelectionMove;
 
   /**
    * We prevent the the range selection if the target is not a name or a title
@@ -117,8 +125,6 @@ export const ExplorerInner = (props: ExplorerProps) => {
     }
   }, [itemId]);
 
-  console.log("ExplorerInner");
-
   return (
     <SelectionArea
       onBeforeDrag={(ev) => {
@@ -126,7 +132,12 @@ export const ExplorerInner = (props: ExplorerProps) => {
       }}
       onBeforeStart={onBeforeStart}
       onStart={onSelectionStart}
-      onMove={onSelectionMove}
+      onMove={(params) => {
+        // This pattern might seem weird, but SelectionArea memorizes the first passed params, even if the callbacks
+        // are updated. In order to be able to query the most recent props, we need to use a ref.
+        // Related to this: https://github.com/simonwep/viselect/blob/9d902cd32405d0a9a26f6adb8aacbf5c18b0a3f9/packages/react/src/SelectionArea.tsx#L23-L44
+        onSelectionMoveRef.current(params);
+      }}
       selectables=".selectable"
       className="selection-area__container"
       features={{
@@ -158,7 +169,7 @@ export const ExplorerInner = (props: ExplorerProps) => {
 
           <div className="explorer__content">
             <ExplorerBreadcrumbs />
-            <ExplorerGrid />
+            <ExplorerGrid {...props} />
           </div>
         </div>
       </div>

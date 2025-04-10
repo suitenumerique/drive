@@ -41,8 +41,6 @@ export const ExplorerTree = () => {
   } = useExplorer();
 
   useEffect(() => {
-    console.log("treeItem", treeItem, "firstLevelItems", firstLevelItems);
-
     if (!firstLevelItems) {
       return;
     }
