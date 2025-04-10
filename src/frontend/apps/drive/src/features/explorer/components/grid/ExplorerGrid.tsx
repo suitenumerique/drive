@@ -24,17 +24,17 @@ import { useTableKeyboardNavigation } from "../../hooks/useTableKeyboardNavigati
 import { ExplorerGridNameCell } from "./ExplorerGridNameCell";
 import { ExplorerGridUpdatedAtCell } from "./ExplorerGridUpdatedAtCell";
 import { ExplorerGridActionsCell } from "./ExplorerGridActionsCell";
+import { ExplorerProps } from "../Explorer";
 
-export const ExplorerGrid = () => {
+export const ExplorerGrid = (props: ExplorerProps) => {
   const { t } = useTranslation();
   const { t: tc } = useCunningham();
   const lastSelectedRowRef = useRef<string | null>(null);
   const {
-    setSelectedItemIds,
+    setSelectedItems,
+    selectedItemsMap,
     treeIsInitialized,
-    selectedItemIds,
     onNavigate,
-    children,
     setRightPanelForcedItem,
     itemId,
     gridActionsCell,
@@ -61,14 +61,16 @@ export const ExplorerGrid = () => {
   ];
 
   const folders = useMemo(() => {
-    if (!children) {
+    console.log("A");
+    if (!props.childrenItems) {
       return [];
     }
 
-    return children.filter((item) => item.type === ItemType.FOLDER);
-  }, [children]);
+    return props.childrenItems.filter((item) => item.type === ItemType.FOLDER);
+  }, [props.childrenItems]);
 
   useEffect(() => {
+    console.log("B");
     if (treeIsInitialized && itemId) {
       treeContext?.treeApiRef.current?.open(itemId);
       treeContext?.treeApiRef.current?.openParents(itemId);
@@ -76,7 +78,8 @@ export const ExplorerGrid = () => {
   }, [itemId, treeIsInitialized]);
 
   useEffect(() => {
-    if (!treeIsInitialized) {
+    console.log("C");
+    if (!treeIsInitialized || !itemId) {
       return;
     }
     // We merge the existing children with the new folders or we create the children
@@ -103,16 +106,22 @@ export const ExplorerGrid = () => {
     treeContext?.treeData.setChildren(itemId, childrens);
   }, [folders, treeIsInitialized]);
 
+  useEffect(() => {
+    console.log("CHILDREN ITEMS");
+  }, [props.childrenItems]);
+
+  console.log("grid", props.childrenItems);
   const table = useReactTable({
-    data: children ?? [],
+    data: props.childrenItems ?? [],
     columns,
     getCoreRowModel: getCoreRowModel(),
     enableRowSelection: true,
   });
+  console.log("table", table);
 
-  const isLoading = children === undefined;
+  const isLoading = props.childrenItems === undefined;
   const isEmpty = table.getRowModel().rows.length === 0;
-
+  return <div>GRID</div>;
   const tableRef = useRef<HTMLTableElement>(null);
   const { onKeyDown } = useTableKeyboardNavigation({
     table,
@@ -159,7 +168,7 @@ export const ExplorerGrid = () => {
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => {
-              const isSelected = !!selectedItemIds[row.original.id];
+              const isSelected = !!selectedItemsMap[row.original.id];
               const isOvered = !!overedItemIds[row.original.id];
               return (
                 <tr

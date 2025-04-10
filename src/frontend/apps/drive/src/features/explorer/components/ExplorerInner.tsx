@@ -6,11 +6,12 @@ import { ExplorerSelectionBar } from "./ExplorerSelectionBar";
 import clsx from "clsx";
 import { Item } from "@/features/drivers/types";
 import { useEffect, useRef } from "react";
+import { ExplorerProps } from "./Explorer";
 export type FileUploadMeta = { file: File; progress: number };
 
-export const ExplorerInner = () => {
+export const ExplorerInner = (props: ExplorerProps) => {
   const {
-    setSelectedItemIds: setSelectedItems,
+    setSelectedItems,
     itemId,
     setRightPanelForcedItem,
     displayMode,
@@ -24,9 +25,17 @@ export const ExplorerInner = () => {
   const onSelectionStart = ({ event, selection }: SelectionEvent) => {
     if (!event?.ctrlKey && !event?.metaKey) {
       selection.clearSelection();
-      setSelectedItems({});
+      setSelectedItems([]);
     }
     setRightPanelForcedItem(undefined);
+  };
+
+  const getChildItem = (id: string): Item => {
+    const child = props.childrenItems.find((childItem) => childItem.id === id);
+    if (!child) {
+      throw new Error("Cannot find child with id " + id);
+    }
+    return child;
   };
 
   const onSelectionMove = ({
@@ -36,15 +45,22 @@ export const ExplorerInner = () => {
   }: SelectionEvent) => {
     setRightPanelForcedItem(undefined);
     setSelectedItems((prev) => {
-      const next = { ...prev };
+      let next = { ...prev };
+
       added.forEach((element) => {
         const id = element.getAttribute("data-id");
-        if (id) next[id] = true;
+        if (id) {
+          next.push(getChildItem(id)!);
+        }
       });
+
       removed.forEach((element) => {
         const id = element.getAttribute("data-id");
-        if (id) delete next[id];
+        if (id) {
+          next = next.filter((item) => item.id !== id);
+        }
       });
+
       return next;
     });
   };
@@ -90,16 +106,18 @@ export const ExplorerInner = () => {
     );
     if (hasAnyClass) {
       selection.clearSelection();
-      setSelectedItems({});
+      setSelectedItems([]);
     }
   };
 
   // We clear the selection when the itemId changes
   useEffect(() => {
     if (itemId) {
-      setSelectedItems({});
+      setSelectedItems([]);
     }
   }, [itemId]);
+
+  console.log("ExplorerInner");
 
   return (
     <SelectionArea

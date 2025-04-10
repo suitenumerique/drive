@@ -1,4 +1,10 @@
-import { SetStateAction, useContext, useEffect, useState } from "react";
+import {
+  SetStateAction,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Dispatch } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Item, ItemType, TreeItem } from "@/features/drivers/types";
@@ -19,15 +25,14 @@ import {
   ExplorerGridActionsCellProps,
 } from "./grid/ExplorerGridActionsCell";
 export interface ExplorerContextType {
-  selectedItemIds: Record<string, boolean>;
-  setSelectedItemIds: Dispatch<SetStateAction<Record<string, boolean>>>;
   displayMode: "sdk" | "app";
   selectedItems: Item[];
+  selectedItemsMap: Record<string, Item>;
+  setSelectedItems: Dispatch<SetStateAction<Item[]>>;
   itemId: string;
   item: Item | undefined;
   firstLevelItems: Item[] | undefined;
   items: Item[] | undefined;
-  children: Item[] | undefined;
   tree: Item | undefined;
   onNavigate: (event: NavigationEvent) => void;
   initialId: string | undefined;
@@ -67,7 +72,7 @@ interface ExplorerProviderProps {
   displayMode: "sdk" | "app";
   itemId: string;
   onNavigate: (event: NavigationEvent) => void;
-  childrenItems?: Item[];
+  // childrenItems?: Item[];
   gridActionsCell?: (params: ExplorerGridActionsCellProps) => JSX.Element;
 }
 
@@ -76,14 +81,24 @@ export const ExplorerProvider = ({
   displayMode = "app",
   itemId,
   onNavigate,
-  childrenItems = [],
+  // childrenItems = [],
   gridActionsCell = ExplorerGridActionsCell,
 }: ExplorerProviderProps) => {
   const driver = getDriver();
 
-  const [selectedItemIds, setSelectedItemIds] = useState<
-    Record<string, boolean>
-  >({});
+  const [selectedItems, setSelectedItems] = useState<Item[]>([]);
+
+  // Avoid inifinite rerendering
+  const selectedItemsMap = useMemo(() => {
+    const map: Record<string, Item> = {};
+    selectedItems.forEach((item) => {
+      map[item.id] = item;
+    });
+    return map;
+  }, [selectedItems]);
+
+  console.log("ExplorerProvider");
+
   const [rightPanelForcedItem, setRightPanelForcedItem] = useState<Item>();
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
 
@@ -126,23 +141,23 @@ export const ExplorerProvider = ({
     refetchOnMount: false,
     queryFn: () => {
       if (!initialId) {
-        return undefined;
+        return null;
       }
       return getDriver().getTree(initialId);
     },
   });
 
-  const getSelectedItems = () => {
-    return childrenItems
-      ? childrenItems.filter((item) => selectedItemIds[item.id])
-      : [];
-  };
+  // const getSelectedItems = () => {
+  //   return childrenItems
+  //     ? childrenItems.filter((item) => selectedItemIds[item.id])
+  //     : [];
+  // };
 
   useEffect(() => {
     // If the right panel item is the same as the current item, we need to clear the selected items because the right panel
     // will be open and we don't want to show the selected items in the right panel
     if (!rightPanelForcedItem || rightPanelForcedItem.id === itemId) {
-      setSelectedItemIds({});
+      setSelectedItems([]);
     } else {
       setSelectedItemIds({ [rightPanelForcedItem.id]: true });
     }
@@ -150,22 +165,24 @@ export const ExplorerProvider = ({
 
   const { dropZone } = useUploadZone({ item: item! });
 
+  console.log("ExplorerContext");
+
   return (
     <ExplorerContext.Provider
       value={{
-        selectedItemIds,
-        setSelectedItemIds,
         treeIsInitialized,
         setTreeIsInitialized,
         firstLevelItems,
         displayMode,
-        selectedItems: getSelectedItems(),
+        selectedItems,
+        selectedItemsMap,
+        setSelectedItems,
         itemId,
         initialId,
         item,
         items,
         tree,
-        children: childrenItems,
+        // children: childrenItems,
         onNavigate,
         dropZone,
         rightPanelForcedItem,

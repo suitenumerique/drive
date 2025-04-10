@@ -64,6 +64,7 @@
           }
         },
         "tree": {
+          "trash": "Trash",
           "create": {
             "label": "Create",
             "folder": "New folder",
@@ -218,6 +219,7 @@
           }
         },
         "tree": {
+          "trash": "Corbeille",
           "createFolder": "Créer",
           "personalSpace": "Espace personnel",
           "sharedSpace": "Espace partagé",
