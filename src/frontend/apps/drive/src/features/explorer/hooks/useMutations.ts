@@ -139,6 +139,36 @@ export const useMutationUpdateItem = () => {
   });
 };
 
+export const useMutationRestoreItems = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (...payload: Parameters<typeof driver.restoreItems>) => {
+      await driver.restoreItems(...payload);
+    },
+    onMutate: async (ids) => {
+      await queryClient.cancelQueries({ queryKey: ["items", "trash"] });
+      const previousItems = queryClient.getQueryData<Item[]>([
+        "items",
+        "trash",
+      ]);
+      queryClient.setQueryData<Item[]>(["items", "trash"], (old) => {
+        return old?.filter((item) => !ids.includes(item.id)) ?? [];
+      });
+      return { previousItems };
+    },
+    onError: (err, variables, context) => {
+      queryClient.setQueryData(["items", "trash"], context?.previousItems);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["items", "trash"],
+        exact: true,
+      });
+    },
+  });
+};
+
 export const useMutationCreateWorskpace = () => {
   const queryClient = useQueryClient();
   const driver = getDriver();
