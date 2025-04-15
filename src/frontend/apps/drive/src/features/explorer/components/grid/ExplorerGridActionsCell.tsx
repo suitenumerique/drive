@@ -12,7 +12,7 @@ import { Button, useModal } from "@openfun/cunningham-react";
 import { ExplorerRenameItemModal } from "../modals/ExplorerRenameItemModal";
 import { useExplorer } from "../ExplorerContext";
 
-type ExplorerGridActionsCellProps = CellContext<Item, unknown>;
+export type ExplorerGridActionsCellProps = CellContext<Item, unknown>;
 
 export const ExplorerGridActionsCell = (
   params: ExplorerGridActionsCellProps

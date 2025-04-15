@@ -67,9 +67,25 @@
     &__breadcrumbs {
       display: flex;
       justify-content: space-between;
+      align-items: center;
 
       &__actions {
         padding-right: 6px;
+      }
+    }
+
+    &__header {
+      &__title {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--c--theme--colors--greyscale-1000);
+        padding-left: 6px;
+      }
+
+      &__description {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--c--theme--colors--greyscale-600);
       }
     }
   }
