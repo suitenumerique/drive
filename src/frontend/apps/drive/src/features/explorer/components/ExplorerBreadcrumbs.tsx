@@ -18,7 +18,7 @@ export const ExplorerBreadcrumbs = () => {
   } = useExplorer();
 
   const getBreadcrumbsItems = () => {
-    if (!tree || !item) {
+    if (!item) {
       return [];
     }
 
