@@ -60,10 +60,13 @@
             "rename": "Rename",
             "move": "Move",
             "duplicate": "Duplicate",
-            "delete": "Delete"
+            "delete": "Delete",
+            "restore": "Restore",
+            "hard_delete": "Delete forever"
           }
         },
         "tree": {
+          "trash": "Trash",
           "create": {
             "label": "Create",
             "folder": "New folder",
@@ -85,6 +88,10 @@
           "search": "Search",
           "personalSpace": "Personal Space",
           "sharedSpace": "Shared Space"
+        },
+        "trash": {
+          "title": "Trash",
+          "description": "Automatic deletion after 30 days"
         },
         "selectionBar": {
           "caption_one": "1 item selected",
@@ -214,10 +221,13 @@
             "rename": "Renommer",
             "move": "Déplacer",
             "duplicate": "Dupliquer",
-            "delete": "Supprimer"
+            "delete": "Supprimer",
+            "restore": "Restaurer",
+            "hard_delete": "Supprimer définitivement"
           }
         },
         "tree": {
+          "trash": "Corbeille",
           "createFolder": "Créer",
           "personalSpace": "Espace personnel",
           "sharedSpace": "Espace partagé",
@@ -239,6 +249,10 @@
               "delete": "Supprimer l'espace"
             }
           }
+        },
+        "trash": {
+          "title": "Corbeille",
+          "description": "Suppression automatique après 30 jours"
         },
         "selectionBar": {
           "caption_one": "1 élément sélectionné",
@@ -289,6 +303,10 @@
           "delete": {
             "toast_one": "Élément supprimé",
             "toast_other": "{{count}} éléments supprimés"
+          },
+          "restore": {
+            "toast_one": "Élément restauré",
+            "toast_other": "{{count}} éléments restaurés"
           },
           "rename": {
             "modal": {
