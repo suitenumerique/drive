@@ -1,4 +1,10 @@
-import { SetStateAction, useContext, useEffect, useState } from "react";
+import {
+  SetStateAction,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Dispatch } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Item, ItemType, TreeItem } from "@/features/drivers/types";
@@ -15,16 +21,15 @@ import {
 } from "@gouvfr-lasuite/ui-kit";
 import { ExplorerDndProvider } from "./ExplorerDndProvider";
 export interface ExplorerContextType {
-  selectedItemIds: Record<string, boolean>;
-  setSelectedItemIds: Dispatch<SetStateAction<Record<string, boolean>>>;
   displayMode: "sdk" | "app";
   selectedItems: Item[];
+  selectedItemsMap: Record<string, Item>;
+  setSelectedItems: Dispatch<SetStateAction<Item[]>>;
   itemId: string;
   item: Item | undefined;
   firstLevelItems: Item[] | undefined;
   items: Item[] | undefined;
-  children: Item[] | undefined;
-  tree: Item | undefined;
+  tree: Item | null | undefined;
   onNavigate: (event: NavigationEvent) => void;
   initialId: string | undefined;
   treeIsInitialized: boolean;
@@ -57,34 +62,37 @@ export type NavigationEvent = {
   item: Item | TreeItem;
 };
 
+interface ExplorerProviderProps {
+  children: React.ReactNode;
+  displayMode: "sdk" | "app";
+  itemId: string;
+  onNavigate: (event: NavigationEvent) => void;
+}
+
 export const ExplorerProvider = ({
   children,
   displayMode = "app",
   itemId,
   onNavigate,
-}: {
-  children: React.ReactNode;
-  displayMode: "sdk" | "app";
-  itemId: string;
-  onNavigate: (event: NavigationEvent) => void;
-}) => {
+}: ExplorerProviderProps) => {
   const driver = getDriver();
 
-  const [selectedItemIds, setSelectedItemIds] = useState<
-    Record<string, boolean>
-  >({});
+  const [selectedItems, setSelectedItems] = useState<Item[]>([]);
+
+  // Avoid inifinite rerendering
+  const selectedItemsMap = useMemo(() => {
+    const map: Record<string, Item> = {};
+    selectedItems.forEach((item) => {
+      map[item.id] = item;
+    });
+    return map;
+  }, [selectedItems]);
+
   const [rightPanelForcedItem, setRightPanelForcedItem] = useState<Item>();
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
 
-  const [initialId, setInitialId] = useState<string | undefined>(itemId);
+  const [initialId] = useState<string | undefined>(itemId);
   const [treeIsInitialized, setTreeIsInitialized] = useState<boolean>(false);
-
-  useEffect(() => {
-    // if the initialId is not set, we set it to the itemId to initialize the tree
-    if (!initialId) {
-      setInitialId(itemId);
-    }
-  }, [itemId, initialId]);
 
   const { data: items } = useQuery({
     queryKey: ["items"],
@@ -94,11 +102,7 @@ export const ExplorerProvider = ({
   const { data: item } = useQuery({
     queryKey: ["items", itemId],
     queryFn: () => getDriver().getItem(itemId),
-  });
-
-  const { data: itemChildren } = useQuery({
-    queryKey: ["items", itemId, "children"],
-    queryFn: () => getDriver().getChildren(itemId),
+    enabled: !!itemId,
   });
 
   const { data: firstLevelItems } = useQuery({
@@ -112,27 +116,20 @@ export const ExplorerProvider = ({
     queryKey: ["initialTreeItem", initialId],
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    // The logic behind is simple: we want to execute the tree query ONLY if the first url is an
+    // item url. Otherwise, it is not needed to perform the query because no there is no current
+    // item ( like on the /trash page ). Even when landing first on /trash page, the tree will be
+    // constructed during further navigation, so no need to perform the tree request too.
+    enabled: !!initialId,
     queryFn: () => {
-      if (!initialId) {
-        return undefined;
-      }
-      return getDriver().getTree(initialId);
+      return getDriver().getTree(initialId!);
     },
   });
 
-  const getSelectedItems = () => {
-    return itemChildren
-      ? itemChildren.filter((item) => selectedItemIds[item.id])
-      : [];
-  };
-
   useEffect(() => {
-    // If the right panel item is the same as the current item, we need to clear the selected items because the right panel
-    // will be open and we don't want to show the selected items in the right panel
-    if (!rightPanelForcedItem || rightPanelForcedItem.id === itemId) {
-      setSelectedItemIds({});
-    } else {
-      setSelectedItemIds({ [rightPanelForcedItem.id]: true });
+    // If we open the right panel and we have a selection, we need to clear it.
+    if (rightPanelForcedItem?.id === itemId) {
+      setSelectedItems([]);
     }
   }, [rightPanelForcedItem]);
 
@@ -141,19 +138,18 @@ export const ExplorerProvider = ({
   return (
     <ExplorerContext.Provider
       value={{
-        selectedItemIds,
-        setSelectedItemIds,
         treeIsInitialized,
         setTreeIsInitialized,
         firstLevelItems,
         displayMode,
-        selectedItems: getSelectedItems(),
+        selectedItems,
+        selectedItemsMap,
+        setSelectedItems,
         itemId,
         initialId,
         item,
         items,
         tree,
-        children: itemChildren,
         onNavigate,
         dropZone,
         rightPanelForcedItem,

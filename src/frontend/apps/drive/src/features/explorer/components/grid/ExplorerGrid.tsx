@@ -24,17 +24,20 @@ import { useTableKeyboardNavigation } from "../../hooks/useTableKeyboardNavigati
 import { ExplorerGridNameCell } from "./ExplorerGridNameCell";
 import { ExplorerGridUpdatedAtCell } from "./ExplorerGridUpdatedAtCell";
 import { ExplorerGridActionsCell } from "./ExplorerGridActionsCell";
+import { ExplorerProps } from "../Explorer";
 
-export const ExplorerGrid = () => {
+const EMPTY_ARRAY: Item[] = [];
+
+export const ExplorerGrid = (props: ExplorerProps) => {
   const { t } = useTranslation();
   const { t: tc } = useCunningham();
   const lastSelectedRowRef = useRef<string | null>(null);
   const {
-    setSelectedItemIds,
+    setSelectedItems,
+    selectedItems,
+    selectedItemsMap,
     treeIsInitialized,
-    selectedItemIds,
     onNavigate,
-    children,
     setRightPanelForcedItem,
     itemId,
   } = useExplorer();
@@ -55,27 +58,27 @@ export const ExplorerGrid = () => {
     }),
     columnHelper.display({
       id: "actions",
-      cell: ExplorerGridActionsCell,
+      cell: props.gridActionsCell ?? ExplorerGridActionsCell,
     }),
   ];
 
   const folders = useMemo(() => {
-    if (!children) {
+    if (!props.childrenItems) {
       return [];
     }
 
-    return children.filter((item) => item.type === ItemType.FOLDER);
-  }, [children]);
+    return props.childrenItems.filter((item) => item.type === ItemType.FOLDER);
+  }, [props.childrenItems]);
 
   useEffect(() => {
-    if (treeIsInitialized) {
+    if (treeIsInitialized && itemId) {
       treeContext?.treeApiRef.current?.open(itemId);
       treeContext?.treeApiRef.current?.openParents(itemId);
     }
   }, [itemId, treeIsInitialized]);
 
   useEffect(() => {
-    if (!treeIsInitialized) {
+    if (!treeIsInitialized || !itemId) {
       return;
     }
     // We merge the existing children with the new folders or we create the children
@@ -103,15 +106,14 @@ export const ExplorerGrid = () => {
   }, [folders, treeIsInitialized]);
 
   const table = useReactTable({
-    data: children ?? [],
+    data: props.childrenItems ?? EMPTY_ARRAY,
     columns,
     getCoreRowModel: getCoreRowModel(),
     enableRowSelection: true,
   });
 
-  const isLoading = children === undefined;
+  const isLoading = props.childrenItems === undefined;
   const isEmpty = table.getRowModel().rows.length === 0;
-
   const tableRef = useRef<HTMLTableElement>(null);
   const { onKeyDown } = useTableKeyboardNavigation({
     table,
@@ -158,7 +160,7 @@ export const ExplorerGrid = () => {
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => {
-              const isSelected = !!selectedItemIds[row.original.id];
+              const isSelected = !!selectedItemsMap[row.original.id];
               const isOvered = !!overedItemIds[row.original.id];
               return (
                 <tr
@@ -200,25 +202,35 @@ export const ExplorerGrid = () => {
                             currentIndex
                           );
 
-                          const newSelection = { ...selectedItemIds };
+                          const newSelection = [...selectedItems];
                           for (let i = startIndex; i <= endIndex; i++) {
-                            newSelection[rows[i].original.id] = true;
+                            if (!selectedItemsMap[rows[i].original.id]) {
+                              newSelection.push(rows[i].original);
+                            }
                           }
 
-                          setSelectedItemIds(newSelection);
+                          setSelectedItems(newSelection);
                         }
                       } else if (e.metaKey || e.ctrlKey) {
-                        setSelectedItemIds({
-                          ...selectedItemIds,
-                          [row.original.id]: !isSelected,
+                        // Toggle the selected item.
+                        setSelectedItems((value) => {
+                          let newValue = [...value];
+                          if (
+                            newValue.find((item) => item.id == row.original.id)
+                          ) {
+                            newValue = newValue.filter(
+                              (item) => item.id !== row.original.id
+                            );
+                          } else {
+                            newValue.push(row.original);
+                          }
+                          return newValue;
                         });
                         if (!isSelected) {
                           lastSelectedRowRef.current = row.id;
                         }
                       } else {
-                        setSelectedItemIds({
-                          [row.original.id]: true,
-                        });
+                        setSelectedItems([row.original]);
                         lastSelectedRowRef.current = row.id;
                         setRightPanelForcedItem(row.original);
                       }

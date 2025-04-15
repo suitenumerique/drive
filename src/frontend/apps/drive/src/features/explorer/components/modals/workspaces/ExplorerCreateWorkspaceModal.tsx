@@ -32,7 +32,6 @@ export const ExplorerCreateWorkspaceModal = (
       },
       {
         onSuccess: (data) => {
-          console.log("data", data);
           treeContext?.treeData.addRootNode(itemToTreeItem(data), 4);
           props.onClose();
         },
