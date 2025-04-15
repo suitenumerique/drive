@@ -143,7 +143,7 @@ def test_models_invitationd_new_user_filter_expired_invitations():
     ).exists()
 
 
-@pytest.mark.parametrize("num_invitations, num_queries", [(0, 18), (1, 22), (20, 22)])
+@pytest.mark.parametrize("num_invitations, num_queries", [(0, 21), (1, 25), (20, 25)])
 def test_models_invitations_new_userd_user_creation_constant_num_queries(
     django_assert_num_queries, num_invitations, num_queries
 ):

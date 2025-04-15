@@ -2,6 +2,8 @@
 Tests for items API endpoint in drive's core app: create
 """
 
+from concurrent.futures import ThreadPoolExecutor
+from random import randint
 from uuid import uuid4
 
 from django.conf import settings
@@ -335,3 +337,42 @@ def test_api_items_children_create_item_soft_deleted_with_same_title_exists():
     assert response.status_code == 201
     assert response.json()["title"] == "my item"
     assert response.json()["type"] == ItemTypeChoices.FOLDER.value
+
+
+@pytest.mark.django_db(transaction=True)
+def test_api_items_create_item_children_race_condition():
+    """
+    It should be possible to create several items at the same time
+    without causing any race conditions or data integrity issues.
+    """
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=ItemTypeChoices.FOLDER)
+
+    factories.UserItemAccessFactory(user=user, item=item, role="owner")
+
+    def create_item():
+        return client.post(
+            f"/api/v1.0/items/{item.id}/children/",
+            {
+                "title": f"my child {randint(1, 1000)}",
+                "type": ItemTypeChoices.FOLDER,
+            },
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future1 = executor.submit(create_item)
+        future2 = executor.submit(create_item)
+
+        response1 = future1.result()
+        response2 = future2.result()
+
+        assert response1.status_code == 201
+        assert response2.status_code == 201
+
+        item.refresh_from_db()
+        assert item.numchild == 2

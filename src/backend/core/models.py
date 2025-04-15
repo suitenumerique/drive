@@ -18,7 +18,7 @@ from django.core import mail, validators
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
-from django.db import models, transaction
+from django.db import connection, models, transaction
 from django.db.models.expressions import RawSQL
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -445,6 +445,7 @@ class ItemManager(TreeManager):
         """
         return self.get_queryset().readable_per_se(user)
 
+    @transaction.atomic
     def create_child(self, parent=None, **kwargs):
         """
         Check if the item can have children before adding one and if the title is
@@ -462,7 +463,12 @@ class ItemManager(TreeManager):
                     {"title": _("title already exists in this folder.")}
                 )
 
-        item = super().create_child(parent=parent, **kwargs)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f'LOCK TABLE "{Item._meta.db_table}" '  # noqa: SLF001
+                "IN SHARE ROW EXCLUSIVE MODE;"
+            )
+            item = super().create_child(parent=parent, **kwargs)
 
         if parent:
             update = {

@@ -2,6 +2,7 @@
 Tests for items API endpoint in drive's core app: create
 """
 
+from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
 from django.conf import settings
@@ -181,3 +182,34 @@ def test_api_items_create_force_id_existing():
     assert response.json() == {
         "id": ["An item with this ID already exists. You cannot override it."]
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_api_items_create_item_race_condition():
+    """
+    It should be possible to create several items at the same time
+    without causing any race conditions or data integrity issues.
+    """
+
+    def create_item(title):
+        user = factories.UserFactory()
+        client = APIClient()
+        client.force_login(user)
+        return client.post(
+            "/api/v1.0/items/",
+            {
+                "title": title,
+                "type": ItemTypeChoices.FOLDER,
+            },
+            format="json",
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future1 = executor.submit(create_item, "my item 1")
+        future2 = executor.submit(create_item, "my item 2")
+
+        response1 = future1.result()
+        response2 = future2.result()
+
+        assert response1.status_code == 201
+        assert response2.status_code == 201
