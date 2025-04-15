@@ -1,5 +1,7 @@
 """Client serializers for the drive core app."""
 
+from datetime import timedelta
+
 from django.conf import settings
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
@@ -128,6 +130,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     user_roles = serializers.SerializerMethodField()
     url = serializers.SerializerMethodField()
     creator = UserLiteSerializer(read_only=True)
+    hard_delete_at = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = models.Item
@@ -155,6 +158,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "main_workspace",
             "size",
             "description",
+            "hard_delete_at",
         ]
         read_only_fields = [
             "id",
@@ -178,6 +182,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "main_workspace",
             "size",
             "description",
+            "hard_delete_at",
         ]
 
     def get_abilities(self, item) -> dict:
@@ -215,6 +220,14 @@ class ListItemSerializer(serializers.ModelSerializer):
 
         return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{item.file_key}"
 
+    def get_hard_delete_at(self, item):
+        """Return the hard delete date of the item."""
+        if item.deleted_at is None:
+            return None
+
+        hard_delete_at = item.deleted_at + timedelta(days=settings.TRASHBIN_CUTOFF_DAYS)
+        return hard_delete_at.isoformat()
+
 
 class ItemSerializer(ListItemSerializer):
     """Serialize items with all fields for display in detail views."""
@@ -245,6 +258,7 @@ class ItemSerializer(ListItemSerializer):
             "main_workspace",
             "size",
             "description",
+            "hard_delete_at",
         ]
         read_only_fields = [
             "id",
@@ -267,6 +281,7 @@ class ItemSerializer(ListItemSerializer):
             "mimetype",
             "main_workspace",
             "size",
+            "hard_delete_at",
         ]
 
     def create(self, validated_data):
@@ -324,6 +339,7 @@ class CreateItemSerializer(ItemSerializer):
             "main_workspace",
             "size",
             "description",
+            "hard_delete_at",
         ]
         read_only_fields = [
             "abilities",
@@ -344,6 +360,7 @@ class CreateItemSerializer(ItemSerializer):
             "policy",
             "main_workspace",
             "size",
+            "hard_delete_at",
         ]
 
     def get_fields(self):
