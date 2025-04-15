@@ -11,6 +11,12 @@ export class StandardDriver extends Driver {
     return jsonToItems(data.results);
   }
 
+  async getTrashItems(): Promise<Item[]> {
+    const response = await fetchAPI(`items/trashbin/?page_size=100000`);
+    const data = await response.json();
+    return jsonToItems(data.results);
+  }
+
   async getItem(id: string): Promise<Item> {
     const response = await fetchAPI(`items/${id}/`);
     const data = await response.json();
@@ -18,12 +24,20 @@ export class StandardDriver extends Driver {
   }
 
   async updateItem(item: Partial<Item>): Promise<Item> {
-      const response = await fetchAPI(`items/${item.id}/`, {
-          method: "PATCH",
-          body: JSON.stringify(item),
+    const response = await fetchAPI(`items/${item.id}/`, {
+      method: "PATCH",
+      body: JSON.stringify(item),
+    });
+    const data = await response.json();
+    return jsonToItem(data);
+  }
+
+  async restoreItems(ids: string[]): Promise<void> {
+    for (const id of ids) {
+      await fetchAPI(`items/${id}/restore/`, {
+        method: "POST",
       });
-      const data = await response.json();
-      return jsonToItem(data);
+    }
   }
 
   async getChildren(id: string, filters?: ItemFilters): Promise<Item[]> {
@@ -51,7 +65,6 @@ export class StandardDriver extends Driver {
       body: JSON.stringify({ target_item_id: parentId }),
     });
   }
-
 
   async moveItems(ids: string[], parentId: string): Promise<void> {
     for (const id of ids) {
