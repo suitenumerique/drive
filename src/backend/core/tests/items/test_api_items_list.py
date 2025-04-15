@@ -103,6 +103,7 @@ def test_api_items_list_format():
             "size": None,
             "description": None,
             "deleted_at": None,
+            "hard_delete_at": None,
         },
         {
             "id": str(item.id),
@@ -132,6 +133,7 @@ def test_api_items_list_format():
             "size": None,
             "description": None,
             "deleted_at": None,
+            "hard_delete_at": None,
         },
         {
             "id": str(item3.id),
@@ -161,6 +163,7 @@ def test_api_items_list_format():
             "size": None,
             "description": None,
             "deleted_at": None,
+            "hard_delete_at": None,
         },
     ]
 

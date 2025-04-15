@@ -38,15 +38,17 @@ def test_api_items_trashbin_anonymous(reach, role):
     }
 
 
-def test_api_items_trashbin_format():
+def test_api_items_trashbin_format(settings):
     """Validate the format of items as returned by the trashbin view."""
+    settings.TRASHBIN_CUTOFF_DAYS = 30
+
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
-
+    now = timezone.now()
     other_users = factories.UserFactory.create_batch(3)
     item = factories.ItemFactory(
-        deleted_at=timezone.now(),
+        deleted_at=now,
         users=factories.UserFactory.create_batch(2),
         favorited_by=[user, *other_users],
         link_traces=other_users,
@@ -111,6 +113,7 @@ def test_api_items_trashbin_format():
         "filename": item.filename,
         "size": None,
         "description": None,
+        "hard_delete_at": ((now + timedelta(days=30)).isoformat()),
     }
 
 

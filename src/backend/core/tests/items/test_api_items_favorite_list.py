@@ -92,6 +92,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             }
         ],
     }

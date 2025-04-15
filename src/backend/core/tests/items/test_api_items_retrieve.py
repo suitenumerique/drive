@@ -72,6 +72,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "size": None,
         "description": None,
         "deleted_at": None,
+        "hard_delete_at": None,
     }
 
 
@@ -140,6 +141,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "size": None,
         "description": None,
         "deleted_at": None,
+        "hard_delete_at": None,
     }
 
 
@@ -239,6 +241,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "size": None,
         "description": None,
         "deleted_at": None,
+        "hard_delete_at": None,
     }
     assert models.LinkTrace.objects.filter(item=item, user=user).exists() is True
 
@@ -312,6 +315,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "size": None,
         "description": None,
         "deleted_at": None,
+        "hard_delete_at": None,
     }
 
 
@@ -432,6 +436,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "size": None,
         "description": None,
         "deleted_at": None,
+        "hard_delete_at": None,
     }
 
 
@@ -507,6 +512,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "size": None,
         "description": None,
         "deleted_at": None,
+        "hard_delete_at": None,
     }
 
 
@@ -669,6 +675,7 @@ def test_api_items_retrieve_authenticated_related_team_members(
         "size": None,
         "description": None,
         "deleted_at": None,
+        "hard_delete_at": None,
     }
 
 
@@ -739,6 +746,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
         "size": None,
         "description": None,
         "deleted_at": None,
+        "hard_delete_at": None,
     }
 
 
@@ -809,6 +817,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(
         "size": None,
         "description": None,
         "deleted_at": None,
+        "hard_delete_at": None,
     }
 
 
@@ -1104,4 +1113,5 @@ def test_api_items_retrieve_file_uploaded():
         "size": 8,
         "description": None,
         "deleted_at": None,
+        "hard_delete_at": None,
     }

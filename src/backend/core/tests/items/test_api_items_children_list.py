@@ -60,6 +60,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -91,6 +92,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
         ],
     }
@@ -159,6 +161,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -188,6 +191,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
         ],
     }
@@ -264,6 +268,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -295,6 +300,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
         ],
     }
@@ -363,6 +369,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -394,6 +401,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
         ],
     }
@@ -480,6 +488,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -511,6 +520,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
         ],
     }
@@ -580,6 +590,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -611,6 +622,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
         ],
     }
@@ -729,6 +741,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -760,6 +773,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
         ],
     }
@@ -825,6 +839,7 @@ def test_api_items_children_list_filter_type():
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
         ],
     }
@@ -869,6 +884,7 @@ def test_api_items_children_list_filter_type():
                 "size": None,
                 "description": None,
                 "deleted_at": None,
+                "hard_delete_at": None,
             },
         ],
     }
