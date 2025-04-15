@@ -17,11 +17,13 @@ import { useMoveItems } from "../../api/useMoveItem";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
 import { ExplorerCreateWorkspaceModal } from "../modals/workspaces/ExplorerCreateWorkspaceModal";
 import { ExplorerTreeActions } from "./ExplorerTreeActions";
+import trashIcon from "@/assets/icons/trash.svg";
+import { useRouter } from "next/router";
 
 export const ExplorerTree = () => {
   const { t } = useTranslation();
   const move = useMoveItems();
-  const dropdownMenu = useDropdownMenu();
+  const router = useRouter();
 
   const treeContext = useTreeContext<TreeItem>();
   const [initialOpenState, setInitialOpenState] = useState<OpenMap | undefined>(
@@ -154,6 +156,25 @@ export const ExplorerTree = () => {
         openCreateWorkspaceModal={createWorkspaceModal.open}
       />
       <HorizontalSeparator withPadding={false} />
+
+      <div className="explorer__tree__nav">
+        <div className="c__tree-view--node">
+          <div
+            className="explorer__tree__item explorer__tree__item-standalone"
+            onClick={() => {
+              router.push("/explorer/trash");
+            }}
+          >
+            <div className="explorer__tree__item__content">
+              <img src={trashIcon.src} alt="" />
+              <span className="explorer__tree__item__title">
+                {t("explorer.tree.trash")}
+              </span>
+            </div>
+            <div></div>
+          </div>
+        </div>
+      </div>
 
       {initialOpenState && (
         <TreeView
