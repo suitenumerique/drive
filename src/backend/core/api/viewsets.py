@@ -23,6 +23,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.throttling import UserRateThrottle
 
 from core import enums, models
+from core.tasks.item import process_item_deletion
 
 from . import permissions, serializers, utils
 from .filters import ItemFilter, ListItemFilter
@@ -544,6 +545,7 @@ class ItemViewSet(
         """
         instance = self.get_object()
         instance.hard_delete()
+        process_item_deletion.delay(instance.id)
         return drf.response.Response(status=status.HTTP_204_NO_CONTENT)
 
     def list(self, request, *args, **kwargs):
