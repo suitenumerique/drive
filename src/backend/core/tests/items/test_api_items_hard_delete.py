@@ -56,8 +56,7 @@ def test_api_items_hard_delete_authenticated_owner():
     response = client.delete(f"/api/v1.0/items/{item.id!s}/hard-delete/")
     assert response.status_code == 204
 
-    item.refresh_from_db()
-    assert item.hard_deleted_at is not None
+    assert not models.Item.objects.filter(id=item.id).exists()
 
 
 def test_api_items_hard_delete_authenticated_owner_not_soft_deleted_should_fails():
