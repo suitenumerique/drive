@@ -414,6 +414,10 @@ class Base(Configuration):
     THUMBNAIL_DEFAULT_STORAGE_ALIAS = "default"
     THUMBNAIL_ALIASES = {}
 
+     # Celery
+    CELERY_BROKER_URL = values.Value("redis://redis:6379/0")
+    CELERY_BROKER_TRANSPORT_OPTIONS = values.DictValue({})
+
     # Session
     SESSION_ENGINE = "django.contrib.sessions.backends.cache"
     SESSION_CACHE_ALIAS = "default"

@@ -82,6 +82,21 @@ services:
         condition: service_started
       createbuckets:
         condition: service_started
+      celery-dev:
+        condition: service_started
+
+  celery-dev:
+    user: ${DOCKER_USER:-1000}
+    image: drive:backend-development
+    command: ["celery", "-A", "drive.celery_app", "worker", "-l", "DEBUG"]
+    environment:
+      - DJANGO_CONFIGURATION=Development
+    env_file:
+      - env.d/development/common
+      - env.d/development/postgresql
+    volumes:
+      - ./src/backend:/app
+      - ./data/static:/data/static
 
   app:
     build:
