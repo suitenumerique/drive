@@ -736,6 +736,7 @@ class Item(TreeModel, BaseModel):
             "children_list": can_get,
             "children_create": can_update and user.is_authenticated,
             "destroy": can_destroy,
+            "hard_delete": can_destroy,
             "favorite": can_get and user.is_authenticated,
             "link_configuration": is_owner_or_admin,
             "invite_owner": is_owner,
@@ -841,6 +842,31 @@ class Item(TreeModel, BaseModel):
             self.descendants().filter(ancestors_deleted_at__isnull=True).update(
                 ancestors_deleted_at=self.ancestors_deleted_at,
             )
+
+    def hard_delete(self):
+        """
+        Hard delete the item, marking the deletion on descendants.
+        We still keep the .delete() method untouched for programmatic purposes.
+        """
+        if self.hard_deleted_at:
+            raise ValidationError(
+                {"hard_deleted_at": [_("This item is already hard deleted.")]}
+            )
+
+        if self.deleted_at is None:
+            raise ValidationError(
+                {
+                    "hard_deleted_at": [
+                        _("To hard delete an item, it must first be soft deleted.")
+                    ]
+                }
+            )
+
+        self.hard_deleted_at = timezone.now()
+        self.save(update_fields=["hard_deleted_at"])
+
+        # Mark all descendants as hard deleted
+        self.descendants().update(hard_deleted_at=self.hard_deleted_at)
 
     @transaction.atomic
     def restore(self):

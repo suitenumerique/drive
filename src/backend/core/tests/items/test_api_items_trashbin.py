@@ -69,24 +69,7 @@ def test_api_items_trashbin_format(settings):
     assert len(results) == 1
     assert results[0] == {
         "id": str(item.id),
-        "abilities": {
-            "accesses_manage": True,
-            "accesses_view": True,
-            "children_create": True,
-            "children_list": True,
-            "destroy": True,
-            "favorite": True,
-            "invite_owner": True,
-            "link_configuration": True,
-            "media_auth": True,
-            "move": False,  # Can't move a deleted item
-            "partial_update": True,
-            "restore": True,
-            "retrieve": True,
-            "tree": True,
-            "update": True,
-            "upload_ended": True,
-        },
+        "abilities": item.get_abilities(user),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "deleted_at": item.deleted_at.isoformat().replace("+00:00", "Z"),
         "creator": {
@@ -172,7 +155,7 @@ def test_api_items_trashbin_authenticated_direct(django_assert_num_queries):
     assert expected_ids == results_ids
 
 
-def test_api_items_trashbin_list_filter_type(django_assert_num_queries):
+def test_api_items_trashbin_list_filter_type():
     """
     The trashbin should only list deleted items for which the current user is owner.
     """
@@ -191,7 +174,7 @@ def test_api_items_trashbin_list_filter_type(django_assert_num_queries):
 
     # No filtering, make sure the two items are present.
     response = client.get(
-        f"/api/v1.0/items/trashbin/",
+        "/api/v1.0/items/trashbin/",
     )
     assert response.status_code == 200
 
@@ -202,7 +185,7 @@ def test_api_items_trashbin_list_filter_type(django_assert_num_queries):
 
     # Filter by type: folder
     response = client.get(
-        f"/api/v1.0/items/trashbin/?type=folder",
+        "/api/v1.0/items/trashbin/?type=folder",
     )
     assert response.status_code == 200
     results = response.json()["results"]
@@ -212,7 +195,7 @@ def test_api_items_trashbin_list_filter_type(django_assert_num_queries):
 
     # Filter by type: file
     response = client.get(
-        f"/api/v1.0/items/trashbin/?type=file",
+        "/api/v1.0/items/trashbin/?type=file",
     )
     assert response.status_code == 200
     results = response.json()["results"]

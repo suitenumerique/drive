@@ -28,10 +28,10 @@ def test_api_item_upload_ended_no_permissions(role):
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory()
-
     if role:
-        factories.UserItemAccessFactory(item=item, user=user, role=role)
+        item = factories.ItemFactory(users=[(user, role)])
+    else:
+        item = factories.ItemFactory()
 
     response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
