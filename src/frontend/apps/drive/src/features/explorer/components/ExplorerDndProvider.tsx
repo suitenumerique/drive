@@ -16,6 +16,7 @@ import { useExplorer } from "./ExplorerContext";
 import { Item, TreeItem } from "@/features/drivers/types";
 import { ExplorerDragOverlay } from "./tree/ExploreDragOverlay";
 import { TreeViewNodeTypeEnum, useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import { addItemsMovedToast } from "./toasts/addItemsMovedToast";
 
 const activationConstraint = {
   distance: 20,
@@ -81,11 +82,19 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
         treeContext?.treeData.moveNode(id, overItem.id, 0);
       });
 
-    await moveItems.mutateAsync({
-      ids: selectedItems.map((item) => item.id),
-      parentId: overItem.id,
-      oldParentId: itemId,
-    });
+    const ids = selectedItems.map((item) => item.id);
+    await moveItems.mutateAsync(
+      {
+        ids: ids,
+        parentId: overItem.id,
+        oldParentId: itemId,
+      },
+      {
+        onSuccess: () => {
+          addItemsMovedToast(ids.length);
+        },
+      }
+    );
   };
 
   return (

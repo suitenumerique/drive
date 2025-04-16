@@ -143,6 +143,10 @@
         "delete": {
           "toast_one": "Item deleted",
           "toast_other": "{{count}} items deleted"
+        },
+        "move": {
+          "toast_one": "{{count}} item moved",
+          "toast_other": "{{count}} items moved"
         }
       },
       "time": {
@@ -307,6 +311,10 @@
           "restore": {
             "toast_one": "Élément restauré",
             "toast_other": "{{count}} éléments restaurés"
+          },
+          "move": {
+            "toast_one": "{{count}} élément déplacé",
+            "toast_other": "{{count}} éléments déplacés"
           },
           "rename": {
             "modal": {

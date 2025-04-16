@@ -17,13 +17,12 @@ import { useMoveItems } from "../../api/useMoveItem";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
 import { ExplorerCreateWorkspaceModal } from "../modals/workspaces/ExplorerCreateWorkspaceModal";
 import { ExplorerTreeActions } from "./ExplorerTreeActions";
-import { useRouter } from "next/router";
 import { ExplorerTreeNav } from "./nav/ExplorerTreeNav";
+import { addItemsMovedToast } from "../toasts/addItemsMovedToast";
 
 export const ExplorerTree = () => {
   const { t } = useTranslation();
   const move = useMoveItems();
-  const router = useRouter();
 
   const treeContext = useTreeContext<TreeItem>();
   const [initialOpenState, setInitialOpenState] = useState<OpenMap | undefined>(
@@ -142,11 +141,18 @@ export const ExplorerTree = () => {
   const createFolderModal = useModal();
   const createWorkspaceModal = useModal();
   const handleMove = (result: TreeViewMoveResult) => {
-    move.mutate({
-      ids: [result.sourceId],
-      parentId: result.targetModeId,
-      oldParentId: result.oldParentId ?? itemId,
-    });
+    move.mutate(
+      {
+        ids: [result.sourceId],
+        parentId: result.targetModeId,
+        oldParentId: result.oldParentId ?? itemId,
+      },
+      {
+        onSuccess: () => {
+          addItemsMovedToast(1);
+        },
+      }
+    );
   };
 
   return (
@@ -174,25 +180,6 @@ export const ExplorerTree = () => {
       )}
 
       <ExplorerTreeNav />
-
-      {/* <div className="explorer__tree__nav">
-        <div className="c__tree-view--node">
-          <div
-            className="explorer__tree__item explorer__tree__item-standalone"
-            onClick={() => {
-              router.push("/explorer/trash");
-            }}
-          >
-            <div className="explorer__tree__item__content">
-              <img src={trashIcon.src} alt="" />
-              <span className="explorer__tree__item__title">
-                {t("explorer.tree.trash")}
-              </span>
-            </div>
-            <div></div>
-          </div>
-        </div>
-      </div> */}
 
       <ExplorerCreateFolderModal {...createFolderModal} />
       <ExplorerCreateWorkspaceModal {...createWorkspaceModal} />
