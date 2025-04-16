@@ -506,6 +506,7 @@ class Item(TreeModel, BaseModel):
     )
     deleted_at = models.DateTimeField(null=True, blank=True)
     ancestors_deleted_at = models.DateTimeField(null=True, blank=True)
+    hard_deleted_at = models.DateTimeField(null=True, blank=True)
 
     filename = models.CharField(max_length=255, null=True, blank=True)
     type = models.CharField(

@@ -1115,3 +1115,22 @@ def test_api_items_retrieve_file_uploaded():
         "deleted_at": None,
         "hard_delete_at": None,
     }
+
+
+def test_api_items_retrieve_hard_deleted_item_should_not_work():
+    """
+    Hard deleted items should not be accessible via their detail endpoint.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        hard_deleted_at=timezone.now(),
+    )
+    factories.UserItemAccessFactory(item=item, user=user)
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 404

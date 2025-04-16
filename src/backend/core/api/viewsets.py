@@ -403,7 +403,7 @@ class ItemViewSet(
     permission_classes = [
         permissions.ItemAccessPermission,
     ]
-    queryset = models.Item.objects.all()
+    queryset = models.Item.objects.filter(hard_deleted_at__isnull=True)
     serializer_class = serializers.ItemSerializer
     list_serializer_class = serializers.ListItemSerializer
     trashbin_serializer_class = serializers.ListItemSerializer

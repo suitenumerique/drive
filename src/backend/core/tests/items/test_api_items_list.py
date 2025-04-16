@@ -57,6 +57,14 @@ def test_api_items_list_format():
     access = factories.UserItemAccessFactory(item=item, user=user)
     access2 = factories.UserItemAccessFactory(item=item2, user=user)
 
+    # hard deleted item should not appear
+    hard_deleted_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        hard_deleted_at=timezone.now(),
+        title="hard deleted item",
+    )
+    factories.UserItemAccessFactory(item=hard_deleted_item, user=user)
+
     item2.upload_state = models.ItemUploadStateChoices.UPLOADED
     item2.filename = "logo.png"
     item2.save()
