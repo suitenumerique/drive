@@ -970,13 +970,15 @@ class ItemViewSet(
         user_abilities = item.get_abilities(request.user)
 
         if not user_abilities.get(self.action, False):
-            logger.debug("User '%s' lacks permission for item '%s'", request.user, pk)
+            logger.debug(
+                "User '%s' lacks permission for item '%s'", request.user.id, pk
+            )
             raise drf.exceptions.PermissionDenied()
 
         logger.debug(
             "Subrequest authorization successful. Extracted parameters: %s", url_params
         )
-        return url_params, user_abilities, request.user.id
+        return url_params, user_abilities, request.user.id, item
 
     @drf.decorators.action(detail=False, methods=["get"], url_path="media-auth")
     def media_auth(self, request, *args, **kwargs):
@@ -989,9 +991,17 @@ class ItemViewSet(
         annotation. The request will then be proxied to the object storage backend who will
         respond with the file after checking the signature included in headers.
         """
-        url_params, _, _ = self._authorize_subrequest(
+        url_params, _, _, item = self._authorize_subrequest(
             request, MEDIA_STORAGE_URL_PATTERN
         )
+        if item.type != models.ItemTypeChoices.FILE:
+            logger.debug("Item '%s' is not a file", item.id)
+            raise drf.exceptions.PermissionDenied()
+
+        if item.upload_state != models.ItemUploadStateChoices.UPLOADED:
+            logger.debug("Item '%s' is not uploaded", item.id)
+            raise drf.exceptions.PermissionDenied()
+
         # Generate S3 authorization headers using the extracted URL parameters
         request = utils.generate_s3_authorization_headers(f"{url_params.get('key'):s}")
 

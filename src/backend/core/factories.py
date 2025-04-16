@@ -71,24 +71,7 @@ class ItemFactory(factory.django.DjangoModelFactory):
         if o.type == models.ItemTypeChoices.FILE
         else None
     )
-
-    # @classmethod
-    # def _create(cls, model_class, *args, **kwargs):
-    #     """
-    #     Custom creation logic for the factory: creates an item as a child node if
-    #     a parent is provided; otherwise, creates it as a root node.
-    #     """
-    #     parent = kwargs.pop("parent", None)
-
-    #     if parent:
-    #         # Add as a child node
-    #         kwargs["ancestors_deleted_at"] = (
-    #             kwargs.get("ancestors_deleted_at") or parent.ancestors_deleted_at
-    #         )
-    #         return parent.add_child(**kwargs)
-
-    #     # Add as a root node
-    #     return model_class.add_root(**kwargs)
+    upload_state = None
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
@@ -98,6 +81,13 @@ class ItemFactory(factory.django.DjangoModelFactory):
     def ancestors_deleted_at(self):
         """Should always be set when "deleted_at" is set."""
         return self.deleted_at
+
+    @factory.post_generation
+    def update_upload_state(self, create, extracted, **kwargs):
+        """Set the upload state to uploaded."""
+        if create and extracted and self.type == models.ItemTypeChoices.FILE:
+            self.upload_state = extracted
+            self.save()
 
     @factory.post_generation
     def users(self, create, extracted, **kwargs):

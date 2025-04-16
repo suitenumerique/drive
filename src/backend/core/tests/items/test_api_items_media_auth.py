@@ -22,7 +22,11 @@ pytestmark = pytest.mark.django_db
 
 def test_api_items_media_auth_anonymous_public():
     """Anonymous users should be able to retrieve attachments linked to a public item"""
-    item = factories.ItemFactory(link_reach="public", type=models.ItemTypeChoices.FILE)
+    item = factories.ItemFactory(
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+    )
 
     filename = f"{uuid.uuid4()!s}.jpg"
     key = f"item/{item.pk!s}/{filename:s}"
@@ -89,7 +93,11 @@ def test_api_items_media_auth_authenticated_public_or_authenticated(reach):
     Authenticated users who are not related to an item should be able to retrieve
     attachments related to an item with public or authenticated link reach.
     """
-    item = factories.ItemFactory(link_reach=reach)
+    item = factories.ItemFactory(
+        link_reach=reach,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+    )
 
     user = factories.UserFactory()
     client = APIClient()
@@ -137,10 +145,14 @@ def test_api_items_media_auth_authenticated_public_or_authenticated(reach):
 
 def test_api_items_media_auth_authenticated_restricted():
     """
-    Authenticated users who are not related to a item should not be allowed to
-    retrieve attachments linked to a item that is restricted.
+    Authenticated users who are not related to an item should not be allowed to
+    retrieve attachments linked to an item that is restricted.
     """
-    item = factories.ItemFactory(link_reach="restricted")
+    item = factories.ItemFactory(
+        link_reach="restricted",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+    )
 
     user = factories.UserFactory()
     client = APIClient()
@@ -158,14 +170,17 @@ def test_api_items_media_auth_authenticated_restricted():
 @pytest.mark.parametrize("via", VIA)
 def test_api_items_media_auth_related(via, mock_user_teams):
     """
-    Users who have a specific access to a item, whatever the role, should be able to
+    Users who have a specific access to an item, whatever the role, should be able to
     retrieve related attachments.
     """
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+    )
     if via == USER:
         factories.UserItemAccessFactory(item=item, user=user)
     elif via == TEAM:
@@ -214,14 +229,17 @@ def test_api_items_media_auth_related(via, mock_user_teams):
 
 def test_api_items_media_auth_related_filename_with_espaces():
     """
-    Users who have a specific access to a item, whatever the role, should be able to
+    Users who have a specific access to an item, whatever the role, should be able to
     retrieve related attachments.
     """
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+    )
 
     factories.UserItemAccessFactory(item=item, user=user)
 
@@ -263,3 +281,51 @@ def test_api_items_media_auth_related_filename_with_espaces():
         timeout=1,
     )
     assert response.content.decode("utf-8") == "my prose"
+
+
+def test_api_items_media_auth_item_not_a_file():
+    """
+    Users who have a specific access to an item, whatever the role, should not be able to
+    retrieve related attachments if the item is not a file.
+    """
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+
+    factories.UserItemAccessFactory(item=item, user=user)
+
+    filename = "foo.txt"
+    key = f"item/{item.pk!s}/{filename:s}"
+
+    original_url = quote(f"http://localhost/media/{key:s}")
+    response = client.get(
+        "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
+    )
+
+    assert response.status_code == 403
+
+
+def test_api_items_media_auth_item_not_uploaded():
+    """
+    Users who have a specific access to an item, whatever the role, should not be able to
+    retrieve related attachments if the item is not uploaded.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FILE)
+    factories.UserItemAccessFactory(item=item, user=user)
+
+    filename = "foo.txt"
+    key = f"item/{item.pk!s}/{filename:s}"
+
+    original_url = quote(f"http://localhost/media/{key:s}")
+    response = client.get(
+        "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
+    )
+
+    assert response.status_code == 403
