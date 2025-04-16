@@ -64,7 +64,6 @@ def test_api_items_list_format():
         title="hard deleted item",
     )
     factories.UserItemAccessFactory(item=hard_deleted_item, user=user)
-    
 
     item2.upload_state = models.ItemUploadStateChoices.UPLOADED
     item2.filename = "logo.png"

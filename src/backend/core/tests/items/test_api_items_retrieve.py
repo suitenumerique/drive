@@ -1105,6 +1105,7 @@ def test_api_items_retrieve_file_uploaded():
         "hard_delete_at": None,
     }
 
+
 def test_api_items_retrieve_hard_deleted_item_should_not_work():
     """
     Hard deleted items should not be accessible via their detail endpoint.
