@@ -4,7 +4,6 @@ import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
-from core.tests.conftest import TEAM, USER, VIA
 
 pytestmark = pytest.mark.django_db
 
