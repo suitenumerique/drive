@@ -389,7 +389,7 @@ class ItemViewSet(
 
     ### Annotations:
     1. **is_favorite**: Indicates whether the item is marked as favorite by the current user.
-    2. **user_roles**: Roles the current user has on the item or its ancestors.
+    2. *`*user_roles**: Roles the current user has on the item or its ancestors.
 
     ### Notes:
     - Only the highest ancestor in a item hierarchy is shown in list views.
@@ -536,6 +536,15 @@ class ItemViewSet(
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
         instance.soft_delete()
+
+    @drf.decorators.action(detail=True, methods=["delete"], url_path="hard-delete")
+    def hard_delete(self, request, *args, **kwargs):
+        """
+        Hard delete an item.
+        """
+        instance = self.get_object()
+        instance.hard_delete()
+        return drf.response.Response(status=status.HTTP_204_NO_CONTENT)
 
     def list(self, request, *args, **kwargs):
         """List items with pagination and filtering."""

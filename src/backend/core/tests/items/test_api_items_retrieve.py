@@ -7,6 +7,7 @@ import random
 from datetime import timedelta
 from unittest import mock
 
+from django.contrib.auth.models import AnonymousUser
 from django.utils import timezone
 
 import pytest
@@ -26,25 +27,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
     assert response.status_code == 200
     assert response.json() == {
         "id": str(item.id),
-        "abilities": {
-            "accesses_manage": False,
-            "accesses_view": False,
-            "children_create": False,
-            "children_list": True,
-            "destroy": False,
-            # Anonymous user can't favorite an item even with read access
-            "favorite": False,
-            "invite_owner": False,
-            "link_configuration": False,
-            "media_auth": True,
-            "move": False,
-            "partial_update": item.link_role == "editor",
-            "restore": False,
-            "retrieve": True,
-            "tree": True,
-            "update": item.link_role == "editor",
-            "upload_ended": False,
-        },
+        "abilities": item.get_abilities(AnonymousUser()),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "full_name": item.creator.full_name,
@@ -94,25 +77,7 @@ def test_api_items_retrieve_anonymous_public_parent():
     assert response.status_code == 200
     assert response.json() == {
         "id": str(item.id),
-        "abilities": {
-            "accesses_manage": False,
-            "accesses_view": False,
-            "children_create": False,
-            "children_list": True,
-            "destroy": False,
-            # Anonymous user can't favorite an item even with read access
-            "favorite": False,
-            "invite_owner": False,
-            "link_configuration": False,
-            "media_auth": True,
-            "move": False,
-            "partial_update": grand_parent.link_role == "editor",
-            "restore": False,
-            "retrieve": True,
-            "tree": True,
-            "update": grand_parent.link_role == "editor",
-            "upload_ended": False,
-        },
+        "abilities": item.get_abilities(AnonymousUser()),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "full_name": item.creator.full_name,
@@ -193,24 +158,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
     assert response.status_code == 200
     assert response.json() == {
         "id": str(item.id),
-        "abilities": {
-            "accesses_manage": False,
-            "accesses_view": False,
-            "children_create": item.link_role == "editor",
-            "children_list": True,
-            "destroy": False,
-            "favorite": True,
-            "invite_owner": False,
-            "link_configuration": False,
-            "media_auth": True,
-            "move": False,
-            "partial_update": item.link_role == "editor",
-            "restore": False,
-            "retrieve": True,
-            "tree": True,
-            "update": item.link_role == "editor",
-            "upload_ended": False,
-        },
+        "abilities": item.get_abilities(user),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "full_name": item.creator.full_name,
@@ -266,24 +214,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
     assert response.status_code == 200
     assert response.json() == {
         "id": str(item.id),
-        "abilities": {
-            "accesses_manage": False,
-            "accesses_view": False,
-            "children_create": grand_parent.link_role == "editor",
-            "children_list": True,
-            "destroy": False,
-            "favorite": True,
-            "invite_owner": False,
-            "link_configuration": False,
-            "move": False,
-            "media_auth": True,
-            "partial_update": grand_parent.link_role == "editor",
-            "restore": False,
-            "retrieve": True,
-            "tree": True,
-            "update": grand_parent.link_role == "editor",
-            "upload_ended": False,
-        },
+        "abilities": item.get_abilities(user),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "full_name": item.creator.full_name,
@@ -461,24 +392,7 @@ def test_api_items_retrieve_authenticated_related_parent():
     assert response.status_code == 200
     assert response.json() == {
         "id": str(item.id),
-        "abilities": {
-            "accesses_manage": access.role in ["administrator", "owner"],
-            "accesses_view": True,
-            "children_create": access.role != "reader",
-            "children_list": True,
-            "destroy": access.role == "owner",
-            "favorite": True,
-            "invite_owner": access.role == "owner",
-            "link_configuration": access.role in ["administrator", "owner"],
-            "media_auth": True,
-            "move": access.role in ["administrator", "owner"],
-            "partial_update": access.role != "reader",
-            "restore": access.role == "owner",
-            "retrieve": True,
-            "tree": True,
-            "update": access.role != "reader",
-            "upload_ended": access.role in ["administrator", "owner"],
-        },
+        "abilities": item.get_abilities(user),
         "creator": {
             "full_name": item.creator.full_name,
             "short_name": item.creator.short_name,

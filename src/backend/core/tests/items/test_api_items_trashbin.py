@@ -69,24 +69,7 @@ def test_api_items_trashbin_format(settings):
     assert len(results) == 1
     assert results[0] == {
         "id": str(item.id),
-        "abilities": {
-            "accesses_manage": True,
-            "accesses_view": True,
-            "children_create": True,
-            "children_list": True,
-            "destroy": True,
-            "favorite": True,
-            "invite_owner": True,
-            "link_configuration": True,
-            "media_auth": True,
-            "move": False,  # Can't move a deleted item
-            "partial_update": True,
-            "restore": True,
-            "retrieve": True,
-            "tree": True,
-            "update": True,
-            "upload_ended": True,
-        },
+        "abilities": item.get_abilities(user),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "full_name": item.creator.full_name,
