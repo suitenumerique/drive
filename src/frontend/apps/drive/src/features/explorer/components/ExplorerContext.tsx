@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import { Dispatch } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Item, ItemType, TreeItem } from "@/features/drivers/types";
 import { createContext } from "react";
 import { getDriver } from "@/features/config/Config";
@@ -77,6 +77,7 @@ export const ExplorerProvider = ({
 }: ExplorerProviderProps) => {
   const driver = getDriver();
 
+  const queryClient = useQueryClient();
   const [selectedItems, setSelectedItems] = useState<Item[]>([]);
 
   // Avoid inifinite rerendering
@@ -133,6 +134,16 @@ export const ExplorerProvider = ({
     }
   }, [rightPanelForcedItem]);
 
+  /**
+   * When the right panel is open, we need to force the new item to be displayed in the right panel.
+   */
+  useEffect(() => {
+    if (item && rightPanelOpen) {
+      setRightPanelForcedItem(item);
+      setSelectedItems([]);
+    }
+  }, [item, rightPanelOpen]);
+
   const { dropZone } = useUploadZone({ item: item! });
 
   return (
@@ -165,6 +176,8 @@ export const ExplorerProvider = ({
           const children = await driver.getChildren(id, {
             type: ItemType.FOLDER,
           });
+
+          queryClient.setQueryData(["items", id, "children"], children);
           const result = children.map((item) =>
             itemToTreeItem(item, id)
           ) as TreeViewDataType<Item>[];

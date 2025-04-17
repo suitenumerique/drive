@@ -17,13 +17,11 @@ import { useMoveItems } from "../../api/useMoveItem";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
 import { ExplorerCreateWorkspaceModal } from "../modals/workspaces/ExplorerCreateWorkspaceModal";
 import { ExplorerTreeActions } from "./ExplorerTreeActions";
-import { useRouter } from "next/router";
 import { ExplorerTreeNav } from "./nav/ExplorerTreeNav";
 
 export const ExplorerTree = () => {
   const { t } = useTranslation();
   const move = useMoveItems();
-  const router = useRouter();
 
   const treeContext = useTreeContext<TreeItem>();
   const [initialOpenState, setInitialOpenState] = useState<OpenMap | undefined>(

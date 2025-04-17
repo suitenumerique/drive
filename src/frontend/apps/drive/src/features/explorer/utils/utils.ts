@@ -59,3 +59,17 @@ export const getExtension = (item: Item, useTitle = false) => {
   }
   return parts.pop()!;
 };
+
+
+export const formatSize = (size: number) => {
+  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  let convertedSize = size;
+  let unitIndex = 0;
+  
+  while (convertedSize >= 1024 && unitIndex < units.length - 1) {
+    convertedSize /= 1024;
+    unitIndex++;
+  }
+  
+  return `${convertedSize < 10 ? convertedSize.toFixed(2) : convertedSize < 100 ? convertedSize.toFixed(1) : Math.round(convertedSize)} ${units[unitIndex]}`;
+};

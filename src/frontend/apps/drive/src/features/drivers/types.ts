@@ -9,7 +9,10 @@ export type Item = {
   id: string;
   title: string;
   filename: string;
-  creator: string;
+  creator: {
+    full_name: string;
+    short_name: string;
+  };
   type: ItemType;
   upload_state: string;
   updated_at: Date;
@@ -17,10 +20,12 @@ export type Item = {
   created_at: Date;
   children?: Item[];
   numchild?: number;
+  nb_accesses?: number;
   numchild_folder?: number;
   main_workspace?: boolean;
   path: string;
   url?: string;
+  size?: number;
   mimetype?: string;
   policy?: {
     url: string;
@@ -42,3 +47,57 @@ export type TreeItemData = Omit<Item, "children"> & {
 export type TreeItem = TreeViewDataType<TreeItemData>
 
 
+export type Access = {
+  id: string;
+  role: string;
+  team: string;
+  user: User;
+  abilities: {
+    destroy: boolean;
+    partial_update: boolean;
+    retrieve: boolean;
+    set_role_to: Role[];
+    update: boolean;
+  };
+}
+
+export type Invitation = {
+  team: string;
+  user: User;
+  id: string;
+  role: Role;
+  document: string;
+  created_at: string;
+  is_expired: boolean;
+  issuer: string;
+  email: string;
+  abilities: {
+    destroy: boolean;
+    retrieve: boolean;
+    partial_update: boolean;
+    update: boolean;
+  };
+}
+
+export enum Role {
+  READER = 'reader',
+  EDITOR = 'editor',
+  ADMIN = 'administrator',
+  OWNER = 'owner',
+}
+
+export type User = {
+  id: string;
+  email: string;
+  full_name: string;
+  short_name: string;
+  language: string;
+}
+
+
+export interface APIList<T> {
+  count: number;
+  next?: string | null;
+  previous?: string | null;
+  results: T[];
+}

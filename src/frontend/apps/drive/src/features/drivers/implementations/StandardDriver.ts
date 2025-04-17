@@ -1,8 +1,13 @@
 import { fetchAPI } from "@/features/api/fetchApi";
-import { Driver, ItemFilters } from "../Driver";
-import { Item, ItemType } from "../types";
+import { Driver, ItemFilters, UserFilters } from "../Driver";
+import { DTODeleteInvitation, DTOCreateInvitation, DTOUpdateInvitation } from "../DTOs/InvitationDTO";
+import { DTOCreateAccess } from "../DTOs/AccessesDTO";
+import { DTOUpdateAccess } from "../DTOs/AccessesDTO";
+import { Access, APIList, Invitation, Item, ItemType, User } from "../types";
+import { DTODeleteAccess } from "../DTOs/AccessesDTO";
 
 export class StandardDriver extends Driver {
+
   async getItems(filters = {}): Promise<Item[]> {
     const response = await fetchAPI(`items/`, {
       params: filters,
@@ -40,6 +45,14 @@ export class StandardDriver extends Driver {
     }
   }
 
+  async getUsers(filters?: UserFilters): Promise<User[]> {
+    const response = await fetchAPI(`users/`, {
+      params: filters,
+    });
+    const data = await response.json();
+    return data;
+  }
+
   async getChildren(id: string, filters?: ItemFilters): Promise<Item[]> {
     const params = {
       page_size: "100000",
@@ -64,6 +77,71 @@ export class StandardDriver extends Driver {
       method: "POST",
       body: JSON.stringify({ target_item_id: parentId }),
     });
+  }
+
+  async getItemAccesses(itemId: string): Promise<APIList<Access>> {
+    const response = await fetchAPI(`items/${itemId}/accesses/`);
+    const data = await response.json();
+    return data;
+  }
+
+
+  async createAccess(data: DTOCreateAccess): Promise<void> {
+    await fetchAPI(`items/${data.itemId}/accesses/`, {
+      method: "POST",
+      body: JSON.stringify({
+        user_id: data.userId,
+        role: data.role,
+      }),
+    });
+  }
+
+  async deleteAccess(payload: DTODeleteAccess): Promise<void> {
+    await fetchAPI(`items/${payload.itemId}/accesses/${payload.accessId}/`, {
+      method: "DELETE",
+    });
+  }
+
+  async updateAccess({itemId, accessId, ...payload}: DTOUpdateAccess): Promise<Access> {
+    const response = await fetchAPI(`items/${itemId}/accesses/${accessId}/`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    return data;
+  }
+
+  async createInvitation(payload: DTOCreateInvitation): Promise<Invitation> {
+    const response = await fetchAPI(`items/${payload.itemId}/invitations/`, {
+      method: "POST",
+      body: JSON.stringify({
+        email: payload.email,
+        role: payload.role,
+      }),
+    });
+    const data = await response.json();
+    return data;
+  }
+
+  async deleteInvitation(payload: DTODeleteInvitation): Promise<void> {
+    await fetchAPI(`items/${payload.itemId}/invitations/${payload.invitationId}/`, {
+      method: "DELETE",
+    });
+  }
+
+  async updateInvitation(payload: DTOUpdateInvitation): Promise<Invitation> {
+    const response = await fetchAPI(`items/${payload.itemId}/invitations/${payload.invitationId}/`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    return data;
+  }
+
+  async getItemInvitations(itemId: string): Promise<APIList<Invitation>> {
+    const response = await fetchAPI(`items/${itemId}/invitations/`);
+    const data = await response.json();
+    return data;
   }
 
   async moveItems(ids: string[], parentId: string): Promise<void> {

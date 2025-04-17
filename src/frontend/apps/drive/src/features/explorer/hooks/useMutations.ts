@@ -219,3 +219,86 @@ export const useMutationDeleteWorskpace = () => {
     },
   });
 };
+
+
+export const useMutationCreateAccess = () => {
+  const driver = getDriver();
+  
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.createAccess>) => {
+      return driver.createAccess(...payload);
+    },
+    
+  });
+};
+
+export const useMutationCreateInvitation = () => {
+  const driver = getDriver();
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.createInvitation>) => {
+    
+      return driver.createInvitation(...payload);
+    },
+  });
+};
+
+export const useMutationUpdateInvitation = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.updateInvitation>) => {
+      return driver.updateInvitation(...payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["itemInvitations", variables.itemId],
+      });
+    },
+  });
+};
+
+export const useMutationUpdateAccess = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.updateAccess>) => {
+      return driver.updateAccess(...payload);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["itemAccesses", variables.itemId],
+      });
+    },
+  });
+};
+
+
+export const useMutationDeleteAccess = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.deleteAccess>) => {
+      return driver.deleteAccess(...payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["itemAccesses", variables.itemId],
+      });
+    },
+  });
+};
+
+export const useMutationDeleteInvitation = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.deleteInvitation>) => {
+      return driver.deleteInvitation(...payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["itemInvitations", variables.itemId],
+      });
+    },
+  });
+};

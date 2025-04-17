@@ -1,6 +1,10 @@
 {
   "en": {
     "translation": {
+      "clipboard": {
+        "success": "Copied to clipboard",
+        "error": "Failed to copy to clipboard"
+      },
       "app_title": "Files",
       "app_description": "Files management",
       "welcome": "Welcome",
@@ -25,6 +29,12 @@
         "audio": "Audio",
         "video": "Video",
         "archive": "Archive"
+      },
+      "roles": {
+        "administrator": "Administrator",
+        "editor": "Editor",
+        "reader": "Reader",
+        "owner": "Owner"
       },
       "explorer": {
         "rightPanel": {
@@ -81,7 +91,8 @@
             "options": {
               "info": "Information",
               "settings": "Workspace settings",
-              "delete": "Delete workspace"
+              "delete": "Delete workspace",
+              "share": "Share workspace"
             }
           },
           "createFolder": "Create",
@@ -164,6 +175,10 @@
   },
   "fr": {
     "translation": {
+      "clipboard": {
+        "success": "Copié dans le presse-papiers",
+        "error": "Échec de la copie dans le presse-papiers"
+      },
       "app_title": "Fichiers",
       "app_description": "Gestion de fichiers",
       "welcome": "Bienvenue",
@@ -188,6 +203,12 @@
         "audio": "Audio",
         "video": "Vidéo",
         "archive": "Archive"
+      },
+      "roles": {
+        "administrator": "Administrateur",
+        "editor": "Éditeur",
+        "reader": "Lecteur",
+        "owner": "Propriétaire"
       },
       "explorer": {
         "rightPanel": {
@@ -246,7 +267,8 @@
             "options": {
               "info": "Informations",
               "settings": "Paramètre de l'espace",
-              "delete": "Supprimer l'espace"
+              "delete": "Supprimer l'espace",
+              "share": "Partager"
             }
           }
         },

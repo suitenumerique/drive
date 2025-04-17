@@ -8,8 +8,7 @@ import { useTranslation } from "react-i18next";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { WorkspaceForm } from "./WorkspaceForm";
 import { useMutationCreateWorskpace } from "@/features/explorer/hooks/useMutations";
-import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
-import { itemToTreeItem } from "../../ExplorerContext";
+import { useAddWorkspaceNode } from "@/features/explorer/components/tree/hooks/useAddTreeNode";
 
 type Inputs = {
   title: string;
@@ -22,8 +21,8 @@ export const ExplorerCreateWorkspaceModal = (
   const { t } = useTranslation();
   const form = useForm<Inputs>();
   const createWorkspace = useMutationCreateWorskpace();
-  const treeContext = useTreeContext();
 
+  const { addWorkspaceNode } = useAddWorkspaceNode();
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     form.reset();
     createWorkspace.mutate(
@@ -32,7 +31,7 @@ export const ExplorerCreateWorkspaceModal = (
       },
       {
         onSuccess: (data) => {
-          treeContext?.treeData.addRootNode(itemToTreeItem(data), 4);
+          addWorkspaceNode(data);
           props.onClose();
         },
       }
