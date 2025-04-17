@@ -68,3 +68,36 @@
 .explorer__tree__item-standalone {
   padding-left: 4px;
 }
+
+.explorer__tree__nav {
+  margin-top: 0.75rem;
+  padding: 0 12px;
+
+  &__item {
+    cursor: pointer;
+    display: flex;
+    border-radius: 4px;
+    align-items: center;
+    gap: var(--c--theme--spacings--xs);
+    height: 34px;
+    padding-left: 22px;
+    font-size: var(--c--theme--font--sizes--sm);
+    color: var(--c--theme--colors--greyscale-1000);
+    font-weight: 500;
+
+    &.active {
+      background-color: var(--c--theme--colors--greyscale-100);
+      font-weight: 700;
+    }
+
+    &:hover {
+      background-color: var(--c--theme--colors--greyscale-100);
+    }
+
+    &__icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
