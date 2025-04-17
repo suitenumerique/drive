@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@openfun/cunningham-react";
 import undoIcon from "@/assets/icons/undo.svg";
-import deleteIcon from "@/assets/icons/delete_filled.svg";
+
 import { ExplorerGridActionsCellProps } from "./ExplorerGridActionsCell";
 
 export const ExplorerGridTrashActionsCell = (

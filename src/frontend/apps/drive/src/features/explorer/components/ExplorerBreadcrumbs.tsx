@@ -9,7 +9,6 @@ import { TreeItem } from "@/features/drivers/types";
 export const ExplorerBreadcrumbs = () => {
   const treeContext = useTreeContext<TreeItem>();
   const {
-    tree,
     item,
     onNavigate,
     setRightPanelOpen,

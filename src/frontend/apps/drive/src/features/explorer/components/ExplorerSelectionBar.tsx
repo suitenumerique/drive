@@ -79,7 +79,6 @@ export const ExplorerSelectionBarActions = () => {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedItems]);
 
   return (

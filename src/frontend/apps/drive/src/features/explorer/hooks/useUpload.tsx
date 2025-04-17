@@ -4,8 +4,6 @@ import { Item } from "@/features/drivers/types";
 import { FileWithPath, useDropzone } from "react-dropzone";
 import { useMutationCreateFolder, useMutationCreateFile } from "./useMutations";
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { getDriver } from "@/features/config/Config";
 import { useTranslation } from "react-i18next";
 import { useRef } from "react";
 import { Id } from "react-toastify";
@@ -169,10 +167,7 @@ const pathNicefy = (path: string) => {
 };
 
 export const useUploadZone = ({ item }: { item: Item }) => {
-  const driver = getDriver();
-
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
   const createFile = useMutationCreateFile();
 
   const fileDragToastId = useRef<Id | null>(null);

@@ -1,7 +1,6 @@
 import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
 import Head from "next/head";
 import { useTranslation } from "next-i18next";
-import { DefaultLayout } from "@/features/layouts/components/default/DefaultLayout";
 import {
   Hero,
   ProConnectButton,
