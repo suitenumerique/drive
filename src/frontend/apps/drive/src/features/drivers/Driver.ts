@@ -14,7 +14,7 @@ export type UserFilters = {
 
 export abstract class Driver {
   abstract getItems(filters?: ItemFilters): Promise<Item[]>;
-  abstract getTrashItems(): Promise<Item[]>;
+  abstract getTrashItems(filters?: ItemFilters): Promise<Item[]>;
   abstract getItem(id: string): Promise<Item>;
   abstract updateItem(item: Partial<Item>): Promise<Item>;
   abstract restoreItems(ids: string[]): Promise<void>;

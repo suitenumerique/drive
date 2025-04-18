@@ -16,8 +16,10 @@ export class StandardDriver extends Driver {
     return jsonToItems(data.results);
   }
 
-  async getTrashItems(): Promise<Item[]> {
-    const response = await fetchAPI(`items/trashbin/?page_size=100000`);
+  async getTrashItems(filters?: ItemFilters): Promise<Item[]> {
+    const response = await fetchAPI(`items/trashbin/`, {
+      params: { ...filters, page_size: "100000" },
+    });
     const data = await response.json();
     return jsonToItems(data.results);
   }

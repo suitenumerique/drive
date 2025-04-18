@@ -163,7 +163,6 @@ export const useMutationRestoreItems = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["items", "trash"],
-        exact: true,
       });
     },
   });
@@ -220,15 +219,13 @@ export const useMutationDeleteWorskpace = () => {
   });
 };
 
-
 export const useMutationCreateAccess = () => {
   const driver = getDriver();
-  
+
   return useMutation({
     mutationFn: (...payload: Parameters<typeof driver.createAccess>) => {
       return driver.createAccess(...payload);
     },
-    
   });
 };
 
@@ -236,7 +233,6 @@ export const useMutationCreateInvitation = () => {
   const driver = getDriver();
   return useMutation({
     mutationFn: (...payload: Parameters<typeof driver.createInvitation>) => {
-    
       return driver.createInvitation(...payload);
     },
   });
@@ -271,7 +267,6 @@ export const useMutationUpdateAccess = () => {
     },
   });
 };
-
 
 export const useMutationDeleteAccess = () => {
   const driver = getDriver();
