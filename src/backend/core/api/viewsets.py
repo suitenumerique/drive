@@ -648,6 +648,10 @@ class ItemViewSet(
         )
         queryset = self.annotate_user_roles(queryset)
         queryset = queryset.filter(user_roles__contains=[models.RoleChoices.OWNER])
+        filterset = ItemFilter(request.GET, queryset=queryset)
+        if not filterset.is_valid():
+            raise drf.exceptions.ValidationError(filterset.errors)
+        queryset = filterset.qs
 
         return self.get_response_for_queryset(queryset)
 

@@ -168,6 +168,55 @@ def test_api_items_trashbin_authenticated_direct(django_assert_num_queries):
     assert expected_ids == results_ids
 
 
+def test_api_items_trashbin_list_filter_type(django_assert_num_queries):
+    """
+    The trashbin should only list deleted items for which the current user is owner.
+    """
+    now = timezone.now()
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item_folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, deleted_at=now
+    )
+    factories.UserItemAccessFactory(item=item_folder, user=user, role="owner")
+
+    item_file = factories.ItemFactory(type=models.ItemTypeChoices.FILE, deleted_at=now)
+    factories.UserItemAccessFactory(item=item_file, user=user, role="owner")
+
+    # No filtering, make sure the two items are present.
+    response = client.get(
+        f"/api/v1.0/items/trashbin/",
+    )
+    assert response.status_code == 200
+
+    results = response.json()["results"]
+    results_ids = {result["id"] for result in results}
+    assert len(results) == 2
+    assert results_ids == {str(item_folder.id), str(item_file.id)}
+
+    # Filter by type: folder
+    response = client.get(
+        f"/api/v1.0/items/trashbin/?type=folder",
+    )
+    assert response.status_code == 200
+    results = response.json()["results"]
+    results_ids = {result["id"] for result in results}
+    assert len(results) == 1
+    assert results_ids == {str(item_folder.id)}
+
+    # Filter by type: file
+    response = client.get(
+        f"/api/v1.0/items/trashbin/?type=file",
+    )
+    assert response.status_code == 200
+    results = response.json()["results"]
+    results_ids = {result["id"] for result in results}
+    assert len(results) == 1
+    assert results_ids == {str(item_file.id)}
+
+
 def test_api_items_trashbin_authenticated_via_team(
     django_assert_num_queries, mock_user_teams
 ):
