@@ -10,11 +10,18 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import undoIcon from "@/assets/icons/undo_blue.svg";
 import { useExplorer } from "@/features/explorer/components/ExplorerContext";
+import { ItemFilters } from "@/features/drivers/Driver";
+import { useState } from "react";
 export default function TrashPage() {
   const { t } = useTranslation();
+  const [filters, setFilters] = useState<ItemFilters>({});
   const { data: trashItems } = useQuery({
-    queryKey: ["items", "trash"],
-    queryFn: () => getDriver().getTrashItems(),
+    queryKey: [
+      "items",
+      "trash",
+      ...(Object.keys(filters).length ? [JSON.stringify(filters)] : []),
+    ],
+    queryFn: () => getDriver().getTrashItems(filters),
   });
 
   return (
@@ -33,6 +40,8 @@ export default function TrashPage() {
         </div>
       }
       selectionBarActions={<TrashPageSelectionBarActions />}
+      filters={filters}
+      onFiltersChange={setFilters}
     />
   );
 }
