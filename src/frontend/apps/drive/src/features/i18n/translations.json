@@ -75,6 +75,16 @@
             "hard_delete": "Delete forever"
           }
         },
+        "filters": {
+          "type": {
+            "label": "Type",
+            "options": {
+              "all": "All",
+              "file": "File",
+              "folder": "Folder"
+            }
+          }
+        },
         "tree": {
           "trash": "Trash",
           "create": {
@@ -249,6 +259,16 @@
             "delete": "Supprimer",
             "restore": "Restaurer",
             "hard_delete": "Supprimer définitivement"
+          }
+        },
+        "filters": {
+          "type": {
+            "label": "Type",
+            "options": {
+              "all": "Tous",
+              "file": "Fichier",
+              "folder": "Dossier"
+            }
           }
         },
         "tree": {

@@ -28,10 +28,8 @@
 
   &__filters {
     height: 32px;
-    background-color: #fff;
     display: flex;
     align-items: center;
-    justify-content: center;
     color: var(--c--theme--colors--greyscale-600);
   }
 
@@ -57,6 +55,7 @@
     flex: 1;
     background-color: #fff;
     border: 1px var(--c--theme--colors--greyscale-200) solid;
+    border-radius: 4px;
     padding: 24px;
     display: flex;
     flex-direction: column;

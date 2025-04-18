@@ -7,6 +7,8 @@ import clsx from "clsx";
 import { Item } from "@/features/drivers/types";
 import { useEffect, useRef } from "react";
 import { ExplorerProps } from "./Explorer";
+import { useTranslation } from "react-i18next";
+import { ExplorerFilters } from "./ExplorerFilters";
 export type FileUploadMeta = { file: File; progress: number };
 
 export const ExplorerInner = (props: ExplorerProps) => {
@@ -18,6 +20,8 @@ export const ExplorerInner = (props: ExplorerProps) => {
     selectedItems,
     dropZone,
   } = useExplorer();
+
+  const { t } = useTranslation();
 
   const ref = useRef<Item[]>([]);
   ref.current = selectedItems;
@@ -160,7 +164,7 @@ export const ExplorerInner = (props: ExplorerProps) => {
           {selectedItems.length > 0 ? (
             <ExplorerSelectionBar />
           ) : (
-            <div className="explorer__filters">Filters</div>
+            <ExplorerFilters />
           )}
 
           <div className="explorer__content">
