@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.urls import include, path, re_path
 
+from debug_toolbar.toolbar import debug_toolbar_urls
 from drf_spectacular.views import (
     SpectacularJSONAPIView,
     SpectacularRedocView,
@@ -46,3 +47,5 @@ if settings.USE_SWAGGER or settings.DEBUG:
             name="redoc-schema",
         ),
     ]
+
+urlpatterns += debug_toolbar_urls()
