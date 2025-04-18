@@ -2,6 +2,7 @@ import { Item } from "@/features/drivers/types";
 import { ExplorerInner } from "./ExplorerInner";
 import { ExplorerGridActionsCellProps } from "./grid/ExplorerGridActionsCell";
 import { createContext, useContext } from "react";
+import { ItemFilters } from "@/features/drivers/Driver";
 
 export interface ExplorerProps {
   childrenItems?: Item[];
@@ -9,6 +10,8 @@ export interface ExplorerProps {
   disableItemDragAndDrop?: boolean;
   gridHeader?: JSX.Element;
   selectionBarActions?: JSX.Element;
+  filters?: ItemFilters;
+  onFiltersChange?: (filters: ItemFilters) => void;
 }
 
 export type ExplorerInnerType = ExplorerProps;
