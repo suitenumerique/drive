@@ -23,6 +23,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.throttling import UserRateThrottle
 
 from core import enums, models
+from core.tasks.item import process_item_deletion
 
 from . import permissions, serializers, utils
 from .filters import ItemFilter, ListItemFilter
@@ -389,7 +390,7 @@ class ItemViewSet(
 
     ### Annotations:
     1. **is_favorite**: Indicates whether the item is marked as favorite by the current user.
-    2. **user_roles**: Roles the current user has on the item or its ancestors.
+    2. *`*user_roles**: Roles the current user has on the item or its ancestors.
 
     ### Notes:
     - Only the highest ancestor in a item hierarchy is shown in list views.
@@ -403,7 +404,7 @@ class ItemViewSet(
     permission_classes = [
         permissions.ItemAccessPermission,
     ]
-    queryset = models.Item.objects.all()
+    queryset = models.Item.objects.filter(hard_deleted_at__isnull=True)
     serializer_class = serializers.ItemSerializer
     list_serializer_class = serializers.ListItemSerializer
     trashbin_serializer_class = serializers.ListItemSerializer
@@ -536,6 +537,16 @@ class ItemViewSet(
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
         instance.soft_delete()
+
+    @drf.decorators.action(detail=True, methods=["delete"], url_path="hard-delete")
+    def hard_delete(self, request, *args, **kwargs):
+        """
+        Hard delete an item.
+        """
+        instance = self.get_object()
+        instance.hard_delete()
+        process_item_deletion.delay(instance.id)
+        return drf.response.Response(status=status.HTTP_204_NO_CONTENT)
 
     def list(self, request, *args, **kwargs):
         """List items with pagination and filtering."""

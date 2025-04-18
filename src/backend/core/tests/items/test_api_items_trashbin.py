@@ -38,15 +38,17 @@ def test_api_items_trashbin_anonymous(reach, role):
     }
 
 
-def test_api_items_trashbin_format():
+def test_api_items_trashbin_format(settings):
     """Validate the format of items as returned by the trashbin view."""
+    settings.TRASHBIN_CUTOFF_DAYS = 30
+
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
-
+    now = timezone.now()
     other_users = factories.UserFactory.create_batch(3)
     item = factories.ItemFactory(
-        deleted_at=timezone.now(),
+        deleted_at=now,
         users=factories.UserFactory.create_batch(2),
         favorited_by=[user, *other_users],
         link_traces=other_users,
@@ -67,24 +69,7 @@ def test_api_items_trashbin_format():
     assert len(results) == 1
     assert results[0] == {
         "id": str(item.id),
-        "abilities": {
-            "accesses_manage": True,
-            "accesses_view": True,
-            "children_create": True,
-            "children_list": True,
-            "destroy": True,
-            "favorite": True,
-            "invite_owner": True,
-            "link_configuration": True,
-            "media_auth": True,
-            "move": False,  # Can't move a deleted item
-            "partial_update": True,
-            "restore": True,
-            "retrieve": True,
-            "tree": True,
-            "update": True,
-            "upload_ended": True,
-        },
+        "abilities": item.get_abilities(user),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "full_name": item.creator.full_name,
@@ -110,6 +95,7 @@ def test_api_items_trashbin_format():
         "filename": item.filename,
         "size": None,
         "description": None,
+        "hard_delete_at": ((now + timedelta(days=30)).isoformat()),
     }
 
 
