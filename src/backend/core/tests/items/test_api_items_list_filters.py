@@ -440,5 +440,12 @@ def test_api_items_list_filter_unknown_type():
 
     assert response.status_code == 400
     assert response.json() == {
-        "type": ["Select a valid choice. unknown is not one of the available choices."]
+        "errors": [
+            {
+                "attr": "type",
+                "code": "invalid",
+                "detail": "Select a valid choice. unknown is not one of the available choices.",
+            },
+        ],
+        "type": "validation_error",
     }

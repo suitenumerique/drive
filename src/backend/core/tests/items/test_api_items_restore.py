@@ -22,7 +22,16 @@ def test_api_items_restore_anonymous_user():
     response = APIClient().post(f"/api/v1.0/items/{item.id!s}/restore/")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Not found."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_found",
+                "detail": "Not found.",
+            },
+        ],
+        "type": "client_error",
+    }
 
     item.refresh_from_db()
     assert item.deleted_at == now
@@ -49,7 +58,16 @@ def test_api_items_restore_authenticated_no_permission(role):
     response = client.post(f"/api/v1.0/items/{item.id!s}/restore/")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Not found."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_found",
+                "detail": "Not found.",
+            },
+        ],
+        "type": "client_error",
+    }
 
     item.refresh_from_db()
     assert item.deleted_at == now
@@ -125,4 +143,13 @@ def test_api_items_restore_authenticated_owner_expired():
     response = client.post(f"/api/v1.0/items/{item.id!s}/restore/")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Not found."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_found",
+                "detail": "Not found.",
+            },
+        ],
+        "type": "client_error",
+    }

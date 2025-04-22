@@ -460,7 +460,12 @@ class ItemManager(TreeManager):
                 kwargs.get("title"),
             ):
                 raise ValidationError(
-                    {"title": _("title already exists in this folder.")}
+                    {
+                        "title": ValidationError(
+                            _("title already exists in this folder."),
+                            code="item_create_child_title_already_exists",
+                        )
+                    }
                 )
 
         with connection.cursor() as cursor:
@@ -923,7 +928,12 @@ class Item(TreeModel, BaseModel):
         """
         if target.type != ItemTypeChoices.FOLDER:
             raise ValidationError(
-                {"target": _("Only folders can be targeted when moving an item")}
+                {
+                    "target": ValidationError(
+                        _("Only folders can be targeted when moving an item"),
+                        code="item_move_target_not_a_folder",
+                    )
+                }
             )
 
         # compute next path in the target folder
@@ -1110,7 +1120,8 @@ class Invitation(BaseModel):
         verbose_name_plural = _("Item invitations")
         constraints = [
             models.UniqueConstraint(
-                fields=["email", "item"], name="email_and_item_unique_together"
+                fields=["email", "item"],
+                name="email_and_item_unique_together",
             )
         ]
 
@@ -1127,7 +1138,12 @@ class Invitation(BaseModel):
             and not settings.OIDC_ALLOW_DUPLICATE_EMAILS
         ):
             raise ValidationError(
-                {"email": [_("This email is already associated to a registered user.")]}
+                {
+                    "email": ValidationError(
+                        "This email is already associated to a registered user.",
+                        code="invitation_email_already_registered",
+                    )
+                }
             )
 
     @property

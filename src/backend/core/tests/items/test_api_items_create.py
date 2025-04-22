@@ -73,7 +73,16 @@ def test_api_items_create_file_authenticated_no_filename():
         format="json",
     )
     assert response.status_code == 400
-    assert response.json() == {"filename": ["This field is required for files."]}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "filename",
+                "code": "item_create_file_filename_required",
+                "detail": "This field is required for files.",
+            },
+        ],
+        "type": "validation_error",
+    }
 
 
 def test_api_items_create_file_authenticated_success():
@@ -131,7 +140,16 @@ def test_api_items_create_authenticated_title_null():
     )
 
     assert response.status_code == 400
-    assert response.json() == {"title": ["This field is required for folders."]}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "title",
+                "code": "item_create_folder_title_required",
+                "detail": "This field is required for folders.",
+            },
+        ],
+        "type": "validation_error",
+    }
 
 
 def test_api_items_create_force_id_success():
@@ -180,7 +198,14 @@ def test_api_items_create_force_id_existing():
 
     assert response.status_code == 400
     assert response.json() == {
-        "id": ["An item with this ID already exists. You cannot override it."]
+        "errors": [
+            {
+                "attr": "id",
+                "code": "item_create_existing_id",
+                "detail": "An item with this ID already exists. You cannot override it.",
+            },
+        ],
+        "type": "validation_error",
     }
 
 

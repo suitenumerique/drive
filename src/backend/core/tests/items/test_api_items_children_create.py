@@ -43,7 +43,14 @@ def test_api_items_children_create_anonymous(reach, role, depth):
     assert Item.objects.count() == items_created
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "type": "client_error",
+        "errors": [
+            {
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+                "attr": None,
+            }
+        ],
     }
 
 
@@ -276,7 +283,14 @@ def test_api_items_children_create_force_id_existing():
 
     assert response.status_code == 400
     assert response.json() == {
-        "id": ["An item with this ID already exists. You cannot override it."]
+        "type": "validation_error",
+        "errors": [
+            {
+                "code": "item_create_existing_id",
+                "detail": "An item with this ID already exists. You cannot override it.",
+                "attr": "id",
+            }
+        ],
     }
 
 
@@ -306,7 +320,16 @@ def test_api_items_children_create_title_already_existing_at_the_same_level():
     )
 
     assert response.status_code == 400
-    assert response.json() == {"title": ["title already exists in this folder."]}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "title",
+                "code": "item_create_child_title_already_exists",
+                "detail": "title already exists in this folder.",
+            },
+        ],
+        "type": "validation_error",
+    }
 
 
 def test_api_items_children_create_item_soft_deleted_with_same_title_exists():

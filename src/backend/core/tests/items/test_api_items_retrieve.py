@@ -124,7 +124,14 @@ def test_api_items_retrieve_anonymous_public_child():
 
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
 
 
@@ -137,7 +144,14 @@ def test_api_items_retrieve_anonymous_restricted_or_authenticated(reach):
 
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
 
 
@@ -268,7 +282,14 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_child(reach):
 
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
 
@@ -314,7 +335,14 @@ def test_api_items_retrieve_authenticated_unrelated_restricted():
     )
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
 
@@ -486,7 +514,14 @@ def test_api_items_retrieve_authenticated_related_child():
     )
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
 
@@ -516,7 +551,14 @@ def test_api_items_retrieve_authenticated_related_team_none(mock_user_teams):
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
 
@@ -828,7 +870,16 @@ def test_api_items_retrieve_soft_deleted_anonymous(reach, depth):
     response = APIClient().get(f"/api/v1.0/items/{items[-1].id!s}/")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Not found."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_found",
+                "detail": "Not found.",
+            },
+        ],
+        "type": "client_error",
+    }
 
     fourty_days_ago = timezone.now() - timedelta(days=40)
     deleted_item.deleted_at = fourty_days_ago
@@ -838,7 +889,16 @@ def test_api_items_retrieve_soft_deleted_anonymous(reach, depth):
     response = APIClient().get(f"/api/v1.0/items/{items[-1].id!s}/")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Not found."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_found",
+                "detail": "Not found.",
+            },
+        ],
+        "type": "client_error",
+    }
 
 
 @pytest.mark.parametrize("depth", [1, 2, 3])
@@ -876,7 +936,16 @@ def test_api_items_retrieve_soft_deleted_authenticated(reach, depth):
     response = client.get(f"/api/v1.0/items/{items[-1].id!s}/")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Not found."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_found",
+                "detail": "Not found.",
+            },
+        ],
+        "type": "client_error",
+    }
 
     fourty_days_ago = timezone.now() - timedelta(days=40)
     deleted_item.deleted_at = fourty_days_ago
@@ -886,7 +955,16 @@ def test_api_items_retrieve_soft_deleted_authenticated(reach, depth):
     response = client.get(f"/api/v1.0/items/{items[-1].id!s}/")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Not found."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_found",
+                "detail": "Not found.",
+            },
+        ],
+        "type": "client_error",
+    }
 
 
 @pytest.mark.parametrize("depth", [1, 2, 3])
@@ -932,7 +1010,16 @@ def test_api_items_retrieve_soft_deleted_related(role, depth):
         assert response.json()["id"] == str(item.id)
     else:
         assert response.status_code == 404
-        assert response.json() == {"detail": "Not found."}
+        assert response.json() == {
+            "errors": [
+                {
+                    "attr": None,
+                    "code": "not_found",
+                    "detail": "Not found.",
+                },
+            ],
+            "type": "client_error",
+        }
 
 
 @pytest.mark.parametrize("depth", [1, 2, 3])
@@ -976,7 +1063,16 @@ def test_api_items_retrieve_permanently_deleted_related(role, depth):
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Not found."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_found",
+                "detail": "Not found.",
+            },
+        ],
+        "type": "client_error",
+    }
 
 
 def test_api_items_retrieve_file_uploaded():

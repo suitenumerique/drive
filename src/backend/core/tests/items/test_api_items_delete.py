@@ -73,7 +73,14 @@ def test_api_items_delete_authenticated_not_owner(via, role, mock_user_teams):
 
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
     assert models.Item.objects.count() == existing_items
 

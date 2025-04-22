@@ -295,6 +295,7 @@ class Base(Configuration):
     INSTALLED_APPS = [
         "core",
         "drf_spectacular",
+        "drf_standardized_errors",
         # Third party apps
         "corsheaders",
         "django_filters",
