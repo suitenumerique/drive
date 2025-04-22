@@ -25,7 +25,14 @@ def test_api_item_favorite_anonymous_user(method, reach):
 
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
 
     # Verify in database
@@ -78,7 +85,14 @@ def test_api_item_favorite_authenticated_post_forbidden():
 
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
     # Verify in database
@@ -133,7 +147,14 @@ def test_api_item_favorite_authenticated_post_already_favorited_forbidden():
 
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
     # Verify in database
@@ -184,7 +205,14 @@ def test_api_item_favorite_authenticated_delete_forbidden():
 
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
     # Verify in database
@@ -237,7 +265,14 @@ def test_api_item_favorite_authenticated_delete_not_favorited_forbidden():
 
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
     # Verify in database

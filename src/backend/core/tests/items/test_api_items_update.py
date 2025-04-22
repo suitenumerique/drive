@@ -55,7 +55,14 @@ def test_api_items_update_anonymous_forbidden(reach, role, via_parent):
     )
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
 
     item.refresh_from_db()
@@ -106,7 +113,14 @@ def test_api_items_update_authenticated_unrelated_forbidden(reach, role, via_par
 
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
     item.refresh_from_db()
@@ -226,7 +240,14 @@ def test_api_items_update_authenticated_reader(via, via_parent, mock_user_teams)
 
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
     item.refresh_from_db()
@@ -394,7 +415,14 @@ def test_api_items_update_title_unique_in_current_path():
     )
     assert response.status_code == 400
     assert response.json() == {
-        "title": "An item with this title already exists in the current path."
+        "errors": [
+            {
+                "attr": "title",
+                "code": "item_update_title_already_exists",
+                "detail": "An item with this title already exists in the current path.",
+            },
+        ],
+        "type": "validation_error",
     }
 
 

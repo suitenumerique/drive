@@ -453,14 +453,26 @@ class ItemManager(TreeManager):
         """
         if parent:
             if parent.type != ItemTypeChoices.FOLDER:
-                raise ValidationError({"type": _("Only folders can have children.")})
+                raise ValidationError(
+                    {
+                        "type": ValidationError(
+                            _("Only folders can have children."),
+                            code="item_create_child_type_folder_only",
+                        )
+                    }
+                )
 
             if _is_item_title_existing(
                 self.children(parent.path),
                 kwargs.get("title"),
             ):
                 raise ValidationError(
-                    {"title": _("title already exists in this folder.")}
+                    {
+                        "title": ValidationError(
+                            _("title already exists in this folder."),
+                            code="item_create_child_title_already_exists",
+                        )
+                    }
                 )
 
         with connection.cursor() as cursor:
@@ -850,15 +862,21 @@ class Item(TreeModel, BaseModel):
         """
         if self.hard_deleted_at:
             raise ValidationError(
-                {"hard_deleted_at": [_("This item is already hard deleted.")]}
+                {
+                    "hard_deleted_at": ValidationError(
+                        _("This item is already hard deleted."),
+                        code="item_hard_delete_already_effective",
+                    )
+                }
             )
 
         if self.deleted_at is None:
             raise ValidationError(
                 {
-                    "hard_deleted_at": [
-                        _("To hard delete an item, it must first be soft deleted.")
-                    ]
+                    "hard_deleted_at": ValidationError(
+                        _("To hard delete an item, it must first be soft deleted."),
+                        code="item_hard_delete_should_soft_delete_first",
+                    )
                 }
             )
 
@@ -873,14 +891,22 @@ class Item(TreeModel, BaseModel):
         """Cancelling a soft delete with checks."""
         # This should not happen
         if self.deleted_at is None:
-            raise ValidationError({"deleted_at": [_("This item is not deleted.")]})
+            raise ValidationError(
+                {
+                    "deleted_at": ValidationError(
+                        _("This item is not deleted."),
+                        code="item_restore_not_deleted",
+                    )
+                }
+            )
 
         if self.deleted_at < get_trashbin_cutoff():
             raise ValidationError(
                 {
-                    "deleted_at": [
-                        _("This item was permanently deleted and cannot be restored.")
-                    ]
+                    "deleted_at": ValidationError(
+                        _("This item was permanently deleted and cannot be restored."),
+                        code="item_restore_hard_deleted",
+                    )
                 }
             )
 
@@ -923,7 +949,12 @@ class Item(TreeModel, BaseModel):
         """
         if target.type != ItemTypeChoices.FOLDER:
             raise ValidationError(
-                {"target": _("Only folders can be targeted when moving an item")}
+                {
+                    "target": ValidationError(
+                        _("Only folders can be targeted when moving an item"),
+                        code="item_move_target_not_a_folder",
+                    )
+                }
             )
 
         # compute next path in the target folder
@@ -1110,7 +1141,8 @@ class Invitation(BaseModel):
         verbose_name_plural = _("Item invitations")
         constraints = [
             models.UniqueConstraint(
-                fields=["email", "item"], name="email_and_item_unique_together"
+                fields=["email", "item"],
+                name="email_and_item_unique_together",
             )
         ]
 
@@ -1127,7 +1159,12 @@ class Invitation(BaseModel):
             and not settings.OIDC_ALLOW_DUPLICATE_EMAILS
         ):
             raise ValidationError(
-                {"email": [_("This email is already associated to a registered user.")]}
+                {
+                    "email": ValidationError(
+                        "This email is already associated to a registered user.",
+                        code="invitation_email_already_registered",
+                    )
+                }
             )
 
     @property

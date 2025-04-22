@@ -22,7 +22,16 @@ def test_api_items_restore_anonymous_user():
     response = APIClient().post(f"/api/v1.0/items/{item.id!s}/restore/")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Not found."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_found",
+                "detail": "Not found.",
+            },
+        ],
+        "type": "client_error",
+    }
 
     item.refresh_from_db()
     assert item.deleted_at == now
@@ -49,7 +58,16 @@ def test_api_items_restore_authenticated_no_permission(role):
     response = client.post(f"/api/v1.0/items/{item.id!s}/restore/")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Not found."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_found",
+                "detail": "Not found.",
+            },
+        ],
+        "type": "client_error",
+    }
 
     item.refresh_from_db()
     assert item.deleted_at == now
@@ -70,6 +88,34 @@ def test_api_items_restore_authenticated_owner_success():
 
     assert response.status_code == 200
     assert response.json() == {"detail": "item has been successfully restored."}
+
+    item.refresh_from_db()
+    assert item.deleted_at is None
+    assert item.ancestors_deleted_at is None
+
+
+def test_api_items_restore_authenticated_owner_not_deleted():
+    """An error should be raised when trying to restore an item that is not deleted."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/restore/")
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "deleted_at",
+                "code": "item_restore_not_deleted",
+                "detail": "This item is not deleted.",
+            },
+        ],
+        "type": "validation_error",
+    }
 
     item.refresh_from_db()
     assert item.deleted_at is None
@@ -113,7 +159,7 @@ def test_api_items_restore_authenticated_owner_ancestor_deleted():
 
 
 def test_api_items_restore_authenticated_owner_expired():
-    """It should not be possible to restore a item beyond the allowed time limit."""
+    """It should not be possible to restore an item beyond the allowed time limit."""
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
@@ -125,4 +171,13 @@ def test_api_items_restore_authenticated_owner_expired():
     response = client.post(f"/api/v1.0/items/{item.id!s}/restore/")
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Not found."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_found",
+                "detail": "Not found.",
+            },
+        ],
+        "type": "client_error",
+    }

@@ -27,7 +27,14 @@ def test_api_items_link_configuration_update_anonymous(reach, role):
     )
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
 
     item.refresh_from_db()
@@ -61,7 +68,14 @@ def test_api_items_link_configuration_update_authenticated_unrelated(reach, role
 
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
     item.refresh_from_db()
@@ -103,7 +117,14 @@ def test_api_items_link_configuration_update_authenticated_related_forbidden(
 
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
     item.refresh_from_db()

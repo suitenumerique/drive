@@ -18,7 +18,14 @@ def test_api_users_list_anonymous():
     response = client.get("/api/v1.0/users/")
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
 
 
@@ -229,7 +236,14 @@ def test_api_users_retrieve_me_anonymous():
     response = client.get("/api/v1.0/users/me/")
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
 
 
@@ -262,7 +276,14 @@ def test_api_users_retrieve_anonymous():
 
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
 
 
@@ -280,7 +301,16 @@ def test_api_users_retrieve_authenticated_self():
         f"/api/v1.0/users/{user.id!s}/",
     )
     assert response.status_code == 405
-    assert response.json() == {"detail": 'Method "GET" not allowed.'}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "method_not_allowed",
+                "detail": 'Method "GET" not allowed.',
+            },
+        ],
+        "type": "client_error",
+    }
 
 
 def test_api_users_retrieve_authenticated_other():
@@ -299,7 +329,16 @@ def test_api_users_retrieve_authenticated_other():
         f"/api/v1.0/users/{other_user.id!s}/",
     )
     assert response.status_code == 405
-    assert response.json() == {"detail": 'Method "GET" not allowed.'}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "method_not_allowed",
+                "detail": 'Method "GET" not allowed.',
+            },
+        ],
+        "type": "client_error",
+    }
 
 
 def test_api_users_create_anonymous():
@@ -313,8 +352,16 @@ def test_api_users_create_anonymous():
     )
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
+
     assert models.User.objects.exists() is False
 
 
@@ -334,7 +381,17 @@ def test_api_users_create_authenticated():
         format="json",
     )
     assert response.status_code == 405
-    assert response.json() == {"detail": 'Method "POST" not allowed.'}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "method_not_allowed",
+                "detail": 'Method "POST" not allowed.',
+            },
+        ],
+        "type": "client_error",
+    }
+
     assert models.User.objects.exclude(id=user.id).exists() is False
 
 
@@ -353,7 +410,14 @@ def test_api_users_update_anonymous():
 
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
 
     user.refresh_from_db()
@@ -434,7 +498,14 @@ def test_api_users_patch_anonymous():
         )
         assert response.status_code == 401
         assert response.json() == {
-            "detail": "Authentication credentials were not provided."
+            "errors": [
+                {
+                    "attr": None,
+                    "code": "not_authenticated",
+                    "detail": "Authentication credentials were not provided.",
+                },
+            ],
+            "type": "client_error",
         }
 
     user.refresh_from_db()

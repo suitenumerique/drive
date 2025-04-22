@@ -4,6 +4,7 @@ Unit tests for the item model
 
 import random
 import smtplib
+from datetime import timedelta
 from logging import Logger
 from unittest import mock
 
@@ -11,6 +12,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.core import mail
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 import pytest
 
@@ -99,6 +101,50 @@ def test_models_items_soft_delete(depth):
         assert parent.ancestors_deleted_at is None
 
     assert len(ancestors) + len(descendants) == depth
+
+
+def test_models_items_restore_cutoff_expired():
+    """It should not be possible to restore an item beyond the allowed time limit."""
+    now = timezone.now() - timedelta(days=40)
+    deleted_item = factories.ItemFactory(deleted_at=now)
+
+    with pytest.raises(ValidationError) as exc_info:
+        deleted_item.restore()
+
+    error = exc_info.value
+    field_error = error.error_dict["deleted_at"][0]
+    assert "deleted_at" in error.error_dict
+    assert field_error.code == "item_restore_hard_deleted"
+    assert (
+        field_error.message
+        == "This item was permanently deleted and cannot be restored."
+    )
+
+    deleted_item.refresh_from_db()
+    assert deleted_item.deleted_at == now
+
+
+def test_models_items_hard_delete():
+    """Trying to hard delete an item that is already hard deleted."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type="folder", creator=user)
+    item = factories.ItemFactory(parent=parent, type="file", creator=user)
+
+    # Hard delete the parent
+    parent.soft_delete()
+    parent.hard_delete()
+
+    with pytest.raises(ValidationError) as exc_info:
+        parent.hard_delete()
+
+    error = exc_info.value
+    field_error = error.error_dict["hard_deleted_at"][0]
+    assert "hard_deleted_at" in error.error_dict
+    assert field_error.code == "item_hard_delete_already_effective"
+    assert field_error.message == "This item is already hard deleted."
+
+    item.refresh_from_db()
+    assert item.hard_deleted_at is not None
 
 
 # get_abilities

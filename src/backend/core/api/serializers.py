@@ -303,7 +303,8 @@ class ItemSerializer(ListItemSerializer):
                     "title": _(
                         "An item with this title already exists in the current path."
                     )
-                }
+                },
+                code="item_update_title_already_exists",
             )
 
         return super().update(instance, validated_data)
@@ -382,7 +383,8 @@ class CreateItemSerializer(ItemSerializer):
         if request:
             if models.Item.objects.filter(id=value).exists():
                 raise serializers.ValidationError(
-                    "An item with this ID already exists. You cannot override it."
+                    "An item with this ID already exists. You cannot override it.",
+                    code="item_create_existing_id",
                 )
 
         return value
@@ -392,7 +394,8 @@ class CreateItemSerializer(ItemSerializer):
         if attrs["type"] == models.ItemTypeChoices.FILE:
             if attrs.get("filename") is None:
                 raise serializers.ValidationError(
-                    {"filename": _("This field is required for files.")}
+                    {"filename": _("This field is required for files.")},
+                    code="item_create_file_filename_required",
                 )
 
             # When it's a file we force the title with the filename
@@ -403,7 +406,8 @@ class CreateItemSerializer(ItemSerializer):
             and attrs.get("title") is None
         ):
             raise serializers.ValidationError(
-                {"title": _("This field is required for folders.")}
+                {"title": _("This field is required for folders.")},
+                code="item_create_folder_title_required",
             )
 
         return super().validate(attrs)
@@ -501,7 +505,8 @@ class InvitationSerializer(serializers.ModelSerializer):
                 role=models.RoleChoices.OWNER,
             ).exists():
                 raise serializers.ValidationError(
-                    "Only owners of a item can invite other users as owners."
+                    "Only owners of a item can invite other users as owners.",
+                    code="invitation_role_owner_limited_to_owners",
                 )
 
         return role

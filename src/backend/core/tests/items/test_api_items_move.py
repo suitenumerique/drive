@@ -27,7 +27,14 @@ def test_api_items_move_anonymous_user():
 
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
 
 
@@ -56,7 +63,14 @@ def test_api_items_move_authenticated_item_no_permission(role):
 
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
 
@@ -77,7 +91,16 @@ def test_api_items_move_invalid_target_string():
     )
 
     assert response.status_code == 400
-    assert response.json() == {"target_item_id": ["Must be a valid UUID."]}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "target_item_id",
+                "code": "invalid",
+                "detail": "Must be a valid UUID.",
+            },
+        ],
+        "type": "validation_error",
+    }
 
 
 def test_api_items_move_invalid_target_uuid():
@@ -97,7 +120,16 @@ def test_api_items_move_invalid_target_uuid():
     )
 
     assert response.status_code == 400
-    assert response.json() == {"target_item_id": "Target parent item does not exist."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "target_item_id",
+                "code": "item_move_target_does_not_exist",
+                "detail": "Target parent item does not exist.",
+            },
+        ],
+        "type": "validation_error",
+    }
 
 
 @pytest.mark.parametrize("target_parent_role", models.RoleChoices.values)
@@ -158,10 +190,19 @@ def test_api_tems_move_file_authenticated_target_roles_mocked(
         assert list(target.children()) == target_children + [item]
     else:
         assert response.status_code == 400
-        assert (
+        message = (
             "You do not have permission to move items as a child to this target item."
-            in response.json()["target_item_id"]
         )
+        assert response.json() == {
+            "errors": [
+                {
+                    "attr": "target_item_id",
+                    "code": "item_move_missing_permission",
+                    "detail": message,
+                },
+            ],
+            "type": "validation_error",
+        }
 
 
 @pytest.mark.parametrize("target_parent_role", models.RoleChoices.values)
@@ -233,10 +274,19 @@ def test_api_items_move_authenticated_target_roles_mocked(
 
     else:
         assert response.status_code == 400
-        assert (
+        message = (
             "You do not have permission to move items as a child to this target item."
-            in response.json()["target_item_id"]
         )
+        assert response.json() == {
+            "errors": [
+                {
+                    "attr": "target_item_id",
+                    "code": "item_move_missing_permission",
+                    "detail": message,
+                },
+            ],
+            "type": "validation_error",
+        }
 
 
 def test_api_items_move_authenticated_deleted_item():
@@ -264,7 +314,14 @@ def test_api_items_move_authenticated_deleted_item():
     )
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
     # Verify that the item has not moved
@@ -278,7 +335,14 @@ def test_api_items_move_authenticated_deleted_item():
     )
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
     # Verify that the child has not moved
@@ -308,7 +372,14 @@ def test_api_items_move_authenticated_target_not_folder_should_fail():
 
     assert response.status_code == 400
     assert response.json() == {
-        "target": ["Only folders can be targeted when moving an item"]
+        "errors": [
+            {
+                "attr": "target",
+                "code": "item_move_target_not_a_folder",
+                "detail": "Only folders can be targeted when moving an item",
+            },
+        ],
+        "type": "validation_error",
     }
 
 
@@ -342,7 +413,16 @@ def test_api_items_move_authenticated_deleted_target_as_child():
     )
 
     assert response.status_code == 400
-    assert response.json() == {"target_item_id": "Target parent item does not exist."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "target_item_id",
+                "code": "item_move_target_does_not_exist",
+                "detail": "Target parent item does not exist.",
+            },
+        ],
+        "type": "validation_error",
+    }
 
     # Verify that the item has not moved
     item.refresh_from_db()
@@ -354,7 +434,16 @@ def test_api_items_move_authenticated_deleted_target_as_child():
         data={"target_item_id": str(child.id)},
     )
     assert response.status_code == 400
-    assert response.json() == {"target_item_id": "Target parent item does not exist."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "target_item_id",
+                "code": "item_move_target_does_not_exist",
+                "detail": "Target parent item does not exist.",
+            },
+        ],
+        "type": "validation_error",
+    }
 
     # Verify that the item has not moved
     item.refresh_from_db()
@@ -389,7 +478,16 @@ def test_api_items_move_authenticated_deleted_target_as_sibling():
     )
 
     assert response.status_code == 400
-    assert response.json() == {"target_item_id": "Target parent item does not exist."}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "target_item_id",
+                "code": "item_move_target_does_not_exist",
+                "detail": "Target parent item does not exist.",
+            },
+        ],
+        "type": "validation_error",
+    }
 
     # Verify that the item has not moved
     item.refresh_from_db()

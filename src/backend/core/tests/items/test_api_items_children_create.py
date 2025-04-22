@@ -3,7 +3,7 @@ Tests for items API endpoint in drive's core app: create
 """
 
 from concurrent.futures import ThreadPoolExecutor
-from random import randint
+from random import choice, randint
 from uuid import uuid4
 
 from django.conf import settings
@@ -43,7 +43,14 @@ def test_api_items_children_create_anonymous(reach, role, depth):
     assert Item.objects.count() == items_created
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "type": "client_error",
+        "errors": [
+            {
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+                "attr": None,
+            }
+        ],
     }
 
 
@@ -276,7 +283,53 @@ def test_api_items_children_create_force_id_existing():
 
     assert response.status_code == 400
     assert response.json() == {
-        "id": ["An item with this ID already exists. You cannot override it."]
+        "type": "validation_error",
+        "errors": [
+            {
+                "code": "item_create_existing_id",
+                "detail": "An item with this ID already exists. You cannot override it.",
+                "attr": "id",
+            }
+        ],
+    }
+
+
+def test_api_items_children_create_not_a_folder():
+    """
+    It should not be possible to create a nested item below an item
+    of type other than folder.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    access = factories.UserItemAccessFactory(
+        user=user,
+        role="editor",
+        item__type=choice(
+            [type for type in ItemTypeChoices.values if type != ItemTypeChoices.FOLDER]
+        ),
+    )
+
+    response = client.post(
+        f"/api/v1.0/items/{access.item.id!s}/children/",
+        {
+            "type": "file",
+            "filename": "file.txt",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "type",
+                "code": "item_create_child_type_folder_only",
+                "detail": "Only folders can have children.",
+            },
+        ],
+        "type": "validation_error",
     }
 
 
@@ -306,7 +359,16 @@ def test_api_items_children_create_title_already_existing_at_the_same_level():
     )
 
     assert response.status_code == 400
-    assert response.json() == {"title": ["title already exists in this folder."]}
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "title",
+                "code": "item_create_child_title_already_exists",
+                "detail": "title already exists in this folder.",
+            },
+        ],
+        "type": "validation_error",
+    }
 
 
 def test_api_items_children_create_item_soft_deleted_with_same_title_exists():

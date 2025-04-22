@@ -29,7 +29,9 @@ def test_api_item_upload_ended_no_permissions(role):
     client.force_login(user)
 
     if role:
-        item = factories.ItemFactory(users=[(user, role)], link_role=LinkRoleChoices.READER)
+        item = factories.ItemFactory(
+            users=[(user, role)], link_role=LinkRoleChoices.READER
+        )
     else:
         item = factories.ItemFactory(link_role=LinkRoleChoices.READER)
 
@@ -51,11 +53,17 @@ def test_api_item_upload_ended_on_none_file_item(item_type):
     factories.UserItemAccessFactory(item=item, user=user, role="owner")
 
     response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
-
-    assert response.json() == {
-        "item": "This action is only available for items of type FILE."
-    }
     assert response.status_code == 400
+    assert response.json() == {
+        "type": "validation_error",
+        "errors": [
+            {
+                "code": "item_upload_type_unavailable",
+                "detail": "This action is only available for items of type FILE.",
+                "attr": "item",
+            }
+        ],
+    }
 
 
 def test_api_item_upload_ended_on_wrong_upload_state():
@@ -75,7 +83,14 @@ def test_api_item_upload_ended_on_wrong_upload_state():
 
     assert response.status_code == 400
     assert response.json() == {
-        "item": "This action is only available for items in PENDING state."
+        "type": "validation_error",
+        "errors": [
+            {
+                "code": "item_upload_state_not_pending",
+                "detail": "This action is only available for items in PENDING state.",
+                "attr": "item",
+            }
+        ],
     }
 
 
