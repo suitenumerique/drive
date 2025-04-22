@@ -1,11 +1,53 @@
-# Drive
+<p align="center">
+  <a href="https://github.com/suitenumerique/drive">
+    <img alt="Drive Logo" src="/docs/assets/banner-drive.png" width="100%" />
+  </a>
+</p>
+<p align="center">
+  <img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/m/suitenumerique/drive"/>
+  <img alt="GitHub closed issues" src="https://img.shields.io/github/issues-closed/suitenumerique/drive"/>
+  <a href="https://github.com/suitenumerique/drive/blob/main/LICENSE">
+    <img alt="GitHub closed issues" src="https://img.shields.io/github/license/suitenumerique/drive"/>
+  </a>    
+</p>
 
-Drive is an application for managing files in a collaborative way
+<p align="center">
+  <a href="https://matrix.to/#/#drive-official:matrix.org">
+    Chat on Matrix
+  </a> - <a href="/docs/">
+    Documentation
+  </a> - <a href="#getting-started-">
+    Getting started
+  </a> - <a href="mailto:drive@numerique.gouv.fr">
+    Reach out
+  </a>
+</p>
 
-It is built on top of [Django Rest
-Framework](https://www.django-rest-framework.org/).
+# La Suite Drive : Collaborative File Sharing
+Drive where your files become collaborative assets through seamless teamwork.
 
-## Getting started
+<img src="/docs/assets/drive.gif" width="100%" align="center"/>
+
+
+## Why use Drive ❓
+Drive empowers teams to securely store, share, and collaborate on files while maintaining full control over their data through a user-friendly, open-source platform.
+
+### Store
+- 🔐 Store your files securely in a centralized location
+- 🌐 Access your files from anywhere with our web-based interface
+
+### Find
+- 🔍 Powerful search capabilities to quickly locate files and folders
+- 📂 Organized file structure with intuitive navigation and filtering
+
+### Collaborate
+- 🤝 Share files and folders with your team members  
+- 👥 Granular access control to ensure your information is secure and only shared with the right people
+- 🏢 Create workspaces to organize team collaboration and manage shared resources
+### Self-host
+*   🚀 Easy to install, scalable, and secure file storage solution
+
+## Getting started 🔧
 
 ### Prerequisite
 
@@ -76,12 +118,21 @@ Then access [http://localhost:3000](http://localhost:3000) with :
 user: drive
 password: drive
 
-## Contributing
+## Feedback 🙋‍♂️🙋‍♀️
 
-This project is intended to be community-driven, so please, do not hesitate to
-get in touch if you have any question related to our implementation or design
+We'd love to hear your thoughts and hear about your experiments, so come and say hi on [Matrix](https://matrix.to/#/#drive-official:matrix.org).
+
+## Contributing 🙌
+
+This project is intended to be community-driven, so please, do not hesitate to get in touch if you have any question related to our implementation or design
 decisions.
 
-## License
+## License 📝
 
 This work is released under the MIT License (see [LICENSE](./LICENSE)).
+
+While Drive is a public driven initiative our licence choice is an invitation for private sector actors to use, sell and contribute to the project. 
+
+## Credits ❤️
+
+Docs is built on top of [Django Rest Framework](https://www.django-rest-framework.org/), [Next.js](https://nextjs.org/)
