@@ -32,7 +32,6 @@ dependencies = [
     "django-configurations==2.5.1",
     "django-cors-headers==4.6.0",
     "django-countries==7.6.1",
-    "django-debug-toolbar==5.1.0",
     "django-filter==24.3",
     "django-ltree@git+https://github.com/mariocesar/django-ltree@5d955bc82021a50c522ee524106f6709e3b414e4",
     "django-parler==2.3",
@@ -68,6 +67,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "django-debug-toolbar==5.1.0",
     "django-extensions==3.2.3",
     "drf-spectacular-sidecar==2024.12.1",
     "freezegun==1.5.1",
