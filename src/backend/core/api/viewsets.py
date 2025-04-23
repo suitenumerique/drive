@@ -680,8 +680,7 @@ class ItemViewSet(
             )
 
         message = None
-
-        if not target_item.get_abilities(user).get("move"):
+        if not target_item.get_abilities(user).get("children_create"):
             message = (
                 "You do not have permission to move items "
                 "as a child to this target item."
