@@ -170,9 +170,17 @@ export const canDrop = (activeItem: Item, overItem: Item | TreeItem) => {
     return false;
   }
 
-  const result =
-    activePathSegments[activePathSegments.length - 2] !==
-    overPathSegments[overPathSegments.length - 1];
+  // Check if the active item is a direct child of the over item
+  // by removing the last segment from active path and comparing with over path
+  const activePathWithoutLastSegment = activePathSegments
+    .slice(0, -1)
+    .join(".");
+  const overPathFull = overPathSegments.join(".");
 
-  return result;
+  // Cannot drop an item into its direct parent--
+  if (activePathWithoutLastSegment === overPathFull) {
+    return false;
+  }
+
+  return true;
 };

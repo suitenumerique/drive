@@ -45,6 +45,19 @@ export const useMoveItems = () => {
 
       const newNextItems = [...movedItems, ...nextItems];
 
+      // Sort newNextItems by type first (folders first), then by creation date in descending order
+      newNextItems.sort((a, b) => {
+        // First sort by type (folders first)
+        if (a.type !== b.type) {
+          return a.type === "folder" ? -1 : 1;
+        }
+
+        // Then sort by creation date in descending order (newest first)
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
+
       // Optimistically update to the new value
       queryClient.setQueryData(
         ["items", payload.oldParentId, "children"],

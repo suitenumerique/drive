@@ -19,6 +19,7 @@ import { ExplorerCreateWorkspaceModal } from "../modals/workspaces/ExplorerCreat
 import { ExplorerTreeActions } from "./ExplorerTreeActions";
 import { ExplorerTreeNav } from "./nav/ExplorerTreeNav";
 import { addItemsMovedToast } from "../toasts/addItemsMovedToast";
+import { canDrop } from "../ExplorerDndProvider";
 
 export const ExplorerTree = () => {
   const { t } = useTranslation();
@@ -171,7 +172,12 @@ export const ExplorerTree = () => {
           canDrop={(args) => {
             // To only allow dropping on a node and not between nodes
             return (
-              args.index === 0 && args.parentNode?.willReceiveDrop === true
+              args.index === 0 &&
+              args.parentNode?.willReceiveDrop === true &&
+              canDrop(
+                args.dragNodes[0].data.value as Item,
+                args.parentNode?.data.value as Item
+              )
             );
           }}
           renderNode={ExplorerTreeItem}

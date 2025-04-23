@@ -40,6 +40,7 @@ export const ExplorerLayout = ({ children }: { children: React.ReactNode }) => {
 
   const itemId = router.query.id as string;
   const onNavigate = (e: NavigationEvent) => {
+    console.log("onNavigate", e);
     router.push(`/explorer/items/${e.item.id}`);
   };
 

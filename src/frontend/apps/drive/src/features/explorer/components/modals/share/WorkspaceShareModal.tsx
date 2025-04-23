@@ -152,14 +152,18 @@ export const WorkspaceShareModal = ({
           role: role as Role,
         })
       }
-      onUpdateAccess={(access, role) =>
+      onUpdateAccess={(access, role) => {
+        if (role === access.role) {
+          return;
+        }
+
         updateAccess({
           itemId: item.id,
           accessId: access.id,
           role: role as Role,
           user_id: access.user.id,
-        })
-      }
+        });
+      }}
       onSearchUsers={onSearch}
       hasNextMembers={hasNextMembers}
       hasNextInvitations={hasNextInvitations}
