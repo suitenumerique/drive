@@ -66,10 +66,13 @@ def test_api_items_move_invalid_target_string():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.UserItemAccessFactory(user=user, role="owner").item
+    item = factories.UserItemAccessFactory(
+        user=user, role="owner", item__type=models.ItemTypeChoices.FOLDER
+    ).item
+    item_child = factories.ItemFactory(users=[(user, "owner")], parent=item)
 
     response = client.post(
-        f"/api/v1.0/items/{item.id!s}/move/",
+        f"/api/v1.0/items/{item_child.id!s}/move/",
         data={"target_item_id": "non-existent-id"},
     )
 
@@ -83,10 +86,13 @@ def test_api_items_move_invalid_target_uuid():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.UserItemAccessFactory(user=user, role="owner").item
+    item = factories.UserItemAccessFactory(
+        user=user, role="owner", item__type=models.ItemTypeChoices.FOLDER
+    ).item
+    item_child = factories.ItemFactory(users=[(user, "owner")], parent=item)
 
     response = client.post(
-        f"/api/v1.0/items/{item.id!s}/move/",
+        f"/api/v1.0/items/{item_child.id!s}/move/",
         data={"target_item_id": str(uuid4())},
     )
 
@@ -107,17 +113,34 @@ def test_api_tems_move_file_authenticated_target_roles_mocked(
     client = APIClient()
     client.force_login(user)
 
-    power_roles = ["administrator", "owner"]
+    power_roles = ["administrator", "owner", "editor"]
 
+    item_parent = factories.ItemFactory(
+        users=[(user, random.choice(power_roles))],
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
+    )
     item = factories.ItemFactory(
-        users=[(user, random.choice(power_roles))], type=models.ItemTypeChoices.FILE
+        users=[(user, random.choice(power_roles))],
+        type=models.ItemTypeChoices.FILE,
+        parent=item_parent,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
     )
 
     target_parent = factories.ItemFactory(
-        users=[(user, target_parent_role)], type=models.ItemTypeChoices.FOLDER
+        users=[(user, target_parent_role)],
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
     )
     _sibling1, target, _sibling2 = factories.ItemFactory.create_batch(
-        3, parent=target_parent, type=models.ItemTypeChoices.FOLDER
+        3,
+        parent=target_parent,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
     )
     models.ItemAccess.objects.create(item=target, user=user, role=target_role)
     target_children = factories.ItemFactory.create_batch(2, parent=target)
@@ -155,24 +178,44 @@ def test_api_items_move_authenticated_target_roles_mocked(
     client = APIClient()
     client.force_login(user)
 
-    power_roles = ["administrator", "owner"]
+    power_roles = ["administrator", "owner", "editor"]
 
-    item = factories.ItemFactory(
-        users=[(user, random.choice(power_roles))], type=models.ItemTypeChoices.FOLDER
+    item_parent = factories.ItemFactory(
+        users=[(user, random.choice(power_roles))],
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
     )
+    item = factories.ItemFactory(
+        users=[(user, random.choice(power_roles))],
+        type=models.ItemTypeChoices.FOLDER,
+        parent=item_parent,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
+    )
+
     # children
     factories.ItemFactory.create_batch(
         3, parent=item, type=models.ItemTypeChoices.FOLDER
     )
 
     target_parent = factories.ItemFactory(
-        users=[(user, target_parent_role)], type=models.ItemTypeChoices.FOLDER
+        users=[(user, target_parent_role)],
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
     )
     _sibling1, target, _sibling2 = factories.ItemFactory.create_batch(
-        3, parent=target_parent, type=models.ItemTypeChoices.FOLDER
+        3,
+        parent=target_parent,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
     )
+
     models.ItemAccess.objects.create(item=target, user=user, role=target_role)
     target_children = factories.ItemFactory.create_batch(2, parent=target)
+
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/move/",
         data={"target_item_id": str(target.id)},
@@ -250,15 +293,16 @@ def test_api_items_move_authenticated_target_not_folder_should_fail():
     client.force_login(user)
 
     item = factories.ItemFactory(
-        users=[(user, "owner")], type=models.ItemTypeChoices.FILE
+        users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER
     )
+    item_child = factories.ItemFactory(users=[(user, "owner")], parent=item)
     target = factories.ItemFactory(
         users=[(user, "owner")], type=models.ItemTypeChoices.FILE
     )
 
     # trying to move the item to a not folder target
     response = client.post(
-        f"/api/v1.0/items/{item.id!s}/move/",
+        f"/api/v1.0/items/{item_child.id!s}/move/",
         data={"target_item_id": str(target.id)},
     )
 
@@ -277,7 +321,10 @@ def test_api_items_move_authenticated_deleted_target_as_child():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(users=[(user, "owner")])
+    item = factories.ItemFactory(
+        users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER
+    )
+    item_child = factories.ItemFactory(users=[(user, "owner")], parent=item)
 
     target = factories.ItemFactory(
         users=[(user, "owner")],
@@ -290,7 +337,7 @@ def test_api_items_move_authenticated_deleted_target_as_child():
 
     # Try moving the item to the deleted target
     response = client.post(
-        f"/api/v1.0/items/{item.id!s}/move/",
+        f"/api/v1.0/items/{item_child.id!s}/move/",
         data={"target_item_id": str(target.id)},
     )
 
@@ -303,7 +350,7 @@ def test_api_items_move_authenticated_deleted_target_as_child():
 
     # Try moving the item to the child of the deleted target
     response = client.post(
-        f"/api/v1.0/items/{item.id!s}/move/",
+        f"/api/v1.0/items/{item_child.id!s}/move/",
         data={"target_item_id": str(child.id)},
     )
     assert response.status_code == 400
@@ -323,7 +370,10 @@ def test_api_items_move_authenticated_deleted_target_as_sibling():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(users=[(user, "owner")])
+    item = factories.ItemFactory(
+        users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER
+    )
+    item_child = factories.ItemFactory(users=[(user, "owner")], parent=item)
 
     target_parent = factories.ItemFactory(
         users=[(user, "owner")],
@@ -334,7 +384,7 @@ def test_api_items_move_authenticated_deleted_target_as_sibling():
 
     # Try moving the item as a sibling of the target
     response = client.post(
-        f"/api/v1.0/items/{item.id!s}/move/",
+        f"/api/v1.0/items/{item_child.id!s}/move/",
         data={"target_item_id": str(target.id)},
     )
 

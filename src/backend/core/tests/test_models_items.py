@@ -221,12 +221,12 @@ def test_models_items_get_abilities_editor(
         "link_configuration": False,
         "media_auth": True,
         "move": False,
-        "partial_update": True,
+        "partial_update": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
-        "update": True,
-        "upload_ended": False,
+        "update": False,
+        "upload_ended": is_authenticated,
     }
     nb_queries = 1 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
@@ -236,10 +236,13 @@ def test_models_items_get_abilities_editor(
     assert all(value is False for value in item.get_abilities(user).values())
 
 
-def test_models_items_get_abilities_owner(django_assert_num_queries):
+def test_models_items_not_root_get_abilities_owner(django_assert_num_queries):
     """Check abilities returned for the owner of a item."""
     user = factories.UserFactory()
-    item = factories.ItemFactory(users=[(user, "owner")])
+    parent = factories.ItemFactory(
+        users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER
+    )
+    item = factories.ItemFactory(parent=parent)
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -258,7 +261,7 @@ def test_models_items_get_abilities_owner(django_assert_num_queries):
         "update": True,
         "upload_ended": True,
     }
-    with django_assert_num_queries(1):
+    with django_assert_num_queries(2):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
@@ -266,16 +269,19 @@ def test_models_items_get_abilities_owner(django_assert_num_queries):
     assert item.get_abilities(user) == expected_abilities
 
 
-def test_models_items_get_abilities_administrator(django_assert_num_queries):
+def test_models_items_not_root_get_abilities_administrator(django_assert_num_queries):
     """Check abilities returned for the administrator of a item."""
     user = factories.UserFactory()
-    item = factories.ItemFactory(users=[(user, "administrator")])
+    parent = factories.ItemFactory(
+        users=[(user, "administrator")], type=models.ItemTypeChoices.FOLDER
+    )
+    item = factories.ItemFactory(parent=parent)
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
         "children_create": True,
         "children_list": True,
-        "destroy": False,
+        "destroy": True,
         "favorite": True,
         "invite_owner": False,
         "link_configuration": True,
@@ -288,66 +294,75 @@ def test_models_items_get_abilities_administrator(django_assert_num_queries):
         "update": True,
         "upload_ended": True,
     }
-    with django_assert_num_queries(1):
+    with django_assert_num_queries(2):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
     assert all(value is False for value in item.get_abilities(user).values())
 
 
-def test_models_items_get_abilities_editor_user(django_assert_num_queries):
+def test_models_items_not_root_get_abilities_editor_user(django_assert_num_queries):
     """Check abilities returned for the editor of a item."""
     user = factories.UserFactory()
-    item = factories.ItemFactory(users=[(user, "editor")])
+    parent = factories.ItemFactory(
+        users=[(user, "editor")], type=models.ItemTypeChoices.FOLDER
+    )
+    item = factories.ItemFactory(parent=parent)
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": True,
         "children_create": True,
         "children_list": True,
-        "destroy": False,
+        "destroy": True,
         "favorite": True,
         "invite_owner": False,
         "link_configuration": False,
         "media_auth": True,
-        "move": False,
+        "move": True,
         "partial_update": True,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": True,
-        "upload_ended": False,
+        "upload_ended": True,
     }
-    with django_assert_num_queries(1):
+    with django_assert_num_queries(2):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
     assert all(value is False for value in item.get_abilities(user).values())
 
 
-def test_models_items_get_abilities_reader_user(django_assert_num_queries):
+def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queries):
     """Check abilities returned for the reader of a item."""
     user = factories.UserFactory()
-    item = factories.ItemFactory(users=[(user, "reader")])
+    parent = factories.ItemFactory(
+        users=[(user, "reader")],
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach="restricted",
+        link_role="reader",
+    )
+    item = factories.ItemFactory(parent=parent)
     access_from_link = item.link_reach != "restricted" and item.link_role == "editor"
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": True,
         "children_create": access_from_link,
         "children_list": True,
-        "destroy": False,
+        "destroy": access_from_link,
         "favorite": True,
         "invite_owner": False,
         "link_configuration": False,
         "media_auth": True,
-        "move": False,
+        "move": access_from_link,
         "partial_update": access_from_link,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": access_from_link,
-        "upload_ended": False,
+        "upload_ended": access_from_link,
     }
-    with django_assert_num_queries(1):
+    with django_assert_num_queries(2):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()

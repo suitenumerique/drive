@@ -639,6 +639,11 @@ class Item(TreeModel, BaseModel):
 
         return nb_accesses
 
+    @property
+    def is_root(self):
+        """Return True if the item is the root of the tree."""
+        return len(self.path) == 1
+
     def invalidate_nb_accesses_cache(self):
         """
         Invalidate the cache for number of accesses, including on affected descendants.
@@ -718,24 +723,29 @@ class Item(TreeModel, BaseModel):
         can_update = (
             is_owner_or_admin or RoleChoices.EDITOR in roles
         ) and not is_deleted
+        can_destroy = is_owner if self.is_root else can_update
+        # A workspace cannot be moved
+        can_move = (
+            False if self.is_root else can_update and not self.ancestors_deleted_at
+        )
 
         return {
             "accesses_manage": is_owner_or_admin,
             "accesses_view": has_access_role,
             "children_list": can_get,
             "children_create": can_update and user.is_authenticated,
-            "destroy": is_owner,
+            "destroy": can_destroy,
             "favorite": can_get and user.is_authenticated,
             "link_configuration": is_owner_or_admin,
             "invite_owner": is_owner,
-            "move": is_owner_or_admin and not self.ancestors_deleted_at,
+            "move": can_move,
             "restore": is_owner,
             "retrieve": can_get,
             "tree": can_get,
             "media_auth": can_get,
-            "partial_update": can_update,
-            "update": can_update,
-            "upload_ended": is_owner_or_admin,
+            "partial_update": is_owner_or_admin if self.is_root else can_update,
+            "update": is_owner_or_admin if self.is_root else can_update,
+            "upload_ended": can_update and user.is_authenticated,
         }
 
     def send_email(self, subject, emails, context=None, language=None):

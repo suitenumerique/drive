@@ -21,7 +21,7 @@ def test_api_item_upload_ended_anonymous():
     assert response.status_code == 401
 
 
-@pytest.mark.parametrize("role", [None, "reader", "editor"])
+@pytest.mark.parametrize("role", [None, "reader"])
 def test_api_item_upload_ended_no_permissions(role):
     """Users without write permissions should not be allowed to end an upload."""
     user = factories.UserFactory()

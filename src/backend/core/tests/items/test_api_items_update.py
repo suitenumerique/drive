@@ -114,7 +114,6 @@ def test_api_items_update_authenticated_unrelated_forbidden(reach, role, via_par
     assert item_values == old_item_values
 
 
-@pytest.mark.parametrize("via_parent", [True, False])
 @pytest.mark.parametrize(
     "is_authenticated,reach,role",
     [
@@ -124,7 +123,7 @@ def test_api_items_update_authenticated_unrelated_forbidden(reach, role, via_par
     ],
 )
 def test_api_items_update_anonymous_or_authenticated_unrelated(
-    is_authenticated, reach, role, via_parent
+    is_authenticated, reach, role
 ):
     """
     Anonymous and authenticated users should be able to update an item to which
@@ -138,22 +137,17 @@ def test_api_items_update_anonymous_or_authenticated_unrelated(
     else:
         user = AnonymousUser()
 
-    if via_parent:
-        grand_parent = factories.ItemFactory(
-            link_reach=reach, link_role=role, type=models.ItemTypeChoices.FOLDER
-        )
-        parent = factories.ItemFactory(
-            parent=grand_parent,
-            link_reach="restricted",
-            type=models.ItemTypeChoices.FOLDER,
-        )
-        item = factories.ItemFactory(
-            parent=parent, link_reach="restricted", type=models.ItemTypeChoices.FOLDER
-        )
-    else:
-        item = factories.ItemFactory(
-            link_reach=reach, link_role=role, type=models.ItemTypeChoices.FOLDER
-        )
+    grand_parent = factories.ItemFactory(
+        link_reach=reach, link_role=role, type=models.ItemTypeChoices.FOLDER
+    )
+    parent = factories.ItemFactory(
+        parent=grand_parent,
+        link_reach="restricted",
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    item = factories.ItemFactory(
+        parent=parent, link_reach="restricted", type=models.ItemTypeChoices.FOLDER
+    )
 
     old_item_values = serializers.ItemSerializer(instance=item).data
     new_item_values = serializers.ItemSerializer(
@@ -246,7 +240,10 @@ def test_api_items_update_authenticated_reader(via, via_parent, mock_user_teams)
 def test_api_items_update_authenticated_editor_administrator_or_owner(
     via, role, via_parent, mock_user_teams
 ):
-    """A user who is editor, administrator or owner of a item should be allowed to update it."""
+    """
+    A user who is administrator or owner of a item should be allowed to update it via parent or not.
+    A user who is editor of a item should be allowed to update it only via parent.
+    """
     user = factories.UserFactory()
 
     client = APIClient()
@@ -287,6 +284,11 @@ def test_api_items_update_authenticated_editor_administrator_or_owner(
         new_item_values,
         format="json",
     )
+
+    if role == "editor" and not via_parent:
+        assert response.status_code == 403
+        return
+
     assert response.status_code == 200
 
     item = models.Item.objects.get(pk=item.pk)

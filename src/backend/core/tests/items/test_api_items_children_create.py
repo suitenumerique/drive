@@ -131,7 +131,7 @@ def test_api_items_children_create_authenticated_success(reach, role, depth):
     child = Item.objects.get(id=response.json()["id"])
     assert child.title == "file.txt"
     assert child.link_reach == "restricted"
-    assert child.accesses.filter(role="owner", user=user).exists()
+    assert not child.accesses.filter(role="owner", user=user).exists()
 
 
 @pytest.mark.parametrize("depth", [1, 2, 3])
@@ -204,7 +204,7 @@ def test_api_items_children_create_related_success(role, depth):
     child = Item.objects.get(id=response.json()["id"])
     assert child.title == "file.txt"
     assert child.link_reach == "restricted"
-    assert child.accesses.filter(role="owner", user=user).exists()
+    assert not child.accesses.filter(role="owner", user=user).exists()
 
     assert response.json().get("policy") is not None
 
