@@ -130,6 +130,13 @@
               "title": "This folder is in the trash",
               "description": "To display this folder, you need to restore it first."
             }
+          },
+          "hard_delete": {
+            "title": "Delete forever",
+            "content_one": "Are you sure you want to delete this item forever?",
+            "content_other": "Are you sure you want to delete these {{count}} items forever?",
+            "cancel": "Cancel",
+            "confirm": "Delete forever"
           }
         },
         "search": {
@@ -192,7 +199,6 @@
           },
           "upload": {
             "toast": "Drop your files here to transfer them in {{title}}",
-            "toast_no_rights": "You don't have the necessary rights to transfer files in {{title}}",
             "files": {
               "description_one": "{{count}} file being transferred",
               "description_other": "{{count}} files being transferred",
@@ -202,21 +208,11 @@
           },
           "delete": {
             "toast_one": "Item deleted",
-            "toast_other": "{{count}} items deleted",
-            "low_rights_toast": "Vous ne pouvez pas restaurer ces éléments car vous n'avez pas les droits nécessaires."
+            "toast_other": "{{count}} items deleted"
           },
-          "rename": {
-            "modal": {
-              "cancel": "Cancel",
-              "label": "New name",
-              "placeholder": "Enter the new name",
-              "submit": "Rename",
-              "title": "Rename"
-            }
-          },
-          "restore": {
-            "toast_one": "Item restored",
-            "toast_other": "{{count}} items restored"
+          "hard_delete": {
+            "toast_one": "Item deleted forever",
+            "toast_other": "{{count}} items deleted forever"
           },
           "move": {
             "toast_one": "{{count}} item moved",
@@ -372,6 +368,13 @@
               "title": "Ce dossier est dans la corbeille",
               "description": "Pour afficher ce dossier, vous devez d'abord le restaurer."
             }
+          },
+          "hard_delete": {
+            "title": "Supprimer définitivement",
+            "content_one": "Êtes-vous sûr de vouloir supprimer cet élément définitivement?",
+            "content_other": "Êtes-vous sûr de vouloir supprimer ces {{count}} éléments définitivement?",
+            "cancel": "Annuler",
+            "confirm": "Supprimer définitivement"
           }
         },
         "search": {
@@ -446,6 +449,10 @@
             "toast_one": "Élément supprimé",
             "toast_other": "{{count}} éléments supprimés",
             "low_rights_toast": "Vous ne pouvez pas restaurer ces éléments car vous n'avez pas les droits nécessaires."
+          },
+          "hard_delete": {
+            "toast_one": "Élément supprimé définitivement",
+            "toast_other": "{{count}} éléments supprimés définitivement"
           },
           "restore": {
             "toast_one": "Élément restauré",

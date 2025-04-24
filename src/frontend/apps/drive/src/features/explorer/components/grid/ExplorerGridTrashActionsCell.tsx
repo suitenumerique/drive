@@ -2,14 +2,19 @@ import {
   addToast,
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
-import { useMutationRestoreItems } from "../../hooks/useMutations";
+import {
+  useMutationHardDeleteItems,
+  useMutationRestoreItems,
+} from "../../hooks/useMutations";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
-import { Button } from "@openfun/cunningham-react";
+import { Button, Decision, useModal } from "@openfun/cunningham-react";
 import undoIcon from "@/assets/icons/undo.svg";
+import cancelIcon from "@/assets/icons/cancel.svg";
 
 import { ExplorerGridActionsCellProps } from "./ExplorerGridActionsCell";
+import { HardDeleteConfirmationModal } from "../modals/HardDeleteConfirmationModal";
 
 export const ExplorerGridTrashActionsCell = (
   params: ExplorerGridActionsCellProps
@@ -18,6 +23,8 @@ export const ExplorerGridTrashActionsCell = (
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
   const restoreItem = useMutationRestoreItems();
+  const hardDeleteConfirmationModal = useModal();
+  const hardDeleteItem = useMutationHardDeleteItems();
 
   const handleRestore = async () => {
     addToast(
@@ -29,9 +36,18 @@ export const ExplorerGridTrashActionsCell = (
     await restoreItem.mutateAsync([item.id]);
   };
 
-  if (!item.abilities.restore) {
-    return null;
-  }
+  const handleHardDelete = async (decision: Decision) => {
+    if (!decision) {
+      return;
+    }
+    addToast(
+      <ToasterItem>
+        <span className="material-icons">delete</span>
+        <span>{t("explorer.actions.hard_delete.toast", { count: 1 })}</span>
+      </ToasterItem>
+    );
+    await hardDeleteItem.mutateAsync([item.id]);
+  };
 
   return (
     <>
@@ -43,14 +59,14 @@ export const ExplorerGridTrashActionsCell = (
             value: "restore",
             callback: handleRestore,
           },
-          //   {
-          //     icon: (
-          //       <img src={deleteIcon.src} alt="info" width={24} height={24} />
-          //     ),
-          //     label: t("explorer.grid.actions.hard_delete"),
-          //     value: "hard_delete",
-          //     callback: () => alert("Partager"),
-          //   },
+          {
+            icon: (
+              <img src={cancelIcon.src} alt="info" width={24} height={24} />
+            ),
+            label: t("explorer.grid.actions.hard_delete"),
+            value: "hard_delete",
+            callback: () => hardDeleteConfirmationModal.open(),
+          },
         ]}
         isOpen={isOpen}
         onOpenChange={setIsOpen}
@@ -62,6 +78,12 @@ export const ExplorerGridTrashActionsCell = (
           icon={<span className="material-icons">more_horiz</span>}
         ></Button>
       </DropdownMenu>
+      {hardDeleteConfirmationModal.isOpen && (
+        <HardDeleteConfirmationModal
+          {...hardDeleteConfirmationModal}
+          onDecide={handleHardDelete}
+        />
+      )}
     </>
   );
 };
