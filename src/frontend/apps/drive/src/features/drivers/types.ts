@@ -27,6 +27,25 @@ export type Item = {
   url?: string;
   size?: number;
   mimetype?: string;
+  user_roles?: Role[];
+  abilities?: {
+    accesses_manage: boolean;
+    accesses_view: boolean;
+    children_create: boolean;
+    children_list: boolean;
+    destroy: boolean;
+    favorite: boolean;
+    invite_owner: boolean;
+    link_configuration: boolean;
+    media_auth: boolean;  
+    move: boolean;
+    partial_update: boolean;
+    restore: boolean;
+    retrieve: boolean;
+    tree: boolean;
+    update: boolean;
+    upload_ended: boolean;
+  };
   policy?: {
     url: string;
     fields: {

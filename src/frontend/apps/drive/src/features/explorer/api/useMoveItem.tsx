@@ -1,5 +1,5 @@
 import { getDriver } from "@/features/config/Config";
-import { Item } from "@/features/drivers/types";
+import { Item, ItemType } from "@/features/drivers/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const useMoveItems = () => {
@@ -44,6 +44,19 @@ export const useMoveItems = () => {
       );
 
       const newNextItems = [...movedItems, ...nextItems];
+
+      // Sort newNextItems by type first (folders first), then by creation date in descending order
+      newNextItems.sort((a, b) => {
+        // First sort by type (folders first)
+        if (a.type !== b.type) {
+          return a.type === ItemType.FOLDER ? -1 : 1;
+        }
+
+        // Then sort by creation date in descending order (newest first)
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
 
       // Optimistically update to the new value
       queryClient.setQueryData(
