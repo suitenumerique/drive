@@ -64,6 +64,45 @@ export const useMutationDeleteItems = () => {
   });
 };
 
+export const useMutationHardDeleteItems = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (
+      ...payload: Parameters<typeof driver.hardDeleteItems>
+    ) => {
+      await driver.hardDeleteItems(...payload);
+    },
+    onMutate: async (itemIds) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({
+        queryKey: ["items", "trash"],
+      });
+
+      // Snapshot the previous value
+      const previousItems = queryClient.getQueryData(["items", "trash"]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(["items", "trash"], (old: Item[]) =>
+        old ? old.filter((i: Item) => !itemIds.includes(i.id)) : old
+      );
+
+      // Return a context object with the snapshotted value
+      return { previousItems };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      queryClient.setQueryData(["items", "trash"], context?.previousItems);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["items", "trash"],
+      });
+    },
+  });
+};
+
 export const useMutationRenameItem = () => {
   const driver = getDriver();
   const queryClient = useQueryClient();
