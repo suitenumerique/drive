@@ -1,13 +1,16 @@
 import { fetchAPI } from "@/features/api/fetchApi";
 import { Driver, ItemFilters, UserFilters } from "../Driver";
-import { DTODeleteInvitation, DTOCreateInvitation, DTOUpdateInvitation } from "../DTOs/InvitationDTO";
+import {
+  DTODeleteInvitation,
+  DTOCreateInvitation,
+  DTOUpdateInvitation,
+} from "../DTOs/InvitationDTO";
 import { DTOCreateAccess } from "../DTOs/AccessesDTO";
 import { DTOUpdateAccess } from "../DTOs/AccessesDTO";
 import { Access, APIList, Invitation, Item, ItemType, User } from "../types";
 import { DTODeleteAccess } from "../DTOs/AccessesDTO";
 
 export class StandardDriver extends Driver {
-
   async getItems(filters = {}): Promise<Item[]> {
     const response = await fetchAPI(`items/`, {
       params: filters,
@@ -87,7 +90,6 @@ export class StandardDriver extends Driver {
     return data;
   }
 
-
   async createAccess(data: DTOCreateAccess): Promise<void> {
     await fetchAPI(`items/${data.itemId}/accesses/`, {
       method: "POST",
@@ -104,7 +106,11 @@ export class StandardDriver extends Driver {
     });
   }
 
-  async updateAccess({itemId, accessId, ...payload}: DTOUpdateAccess): Promise<Access> {
+  async updateAccess({
+    itemId,
+    accessId,
+    ...payload
+  }: DTOUpdateAccess): Promise<Access> {
     const response = await fetchAPI(`items/${itemId}/accesses/${accessId}/`, {
       method: "PATCH",
       body: JSON.stringify(payload),
@@ -126,16 +132,22 @@ export class StandardDriver extends Driver {
   }
 
   async deleteInvitation(payload: DTODeleteInvitation): Promise<void> {
-    await fetchAPI(`items/${payload.itemId}/invitations/${payload.invitationId}/`, {
-      method: "DELETE",
-    });
+    await fetchAPI(
+      `items/${payload.itemId}/invitations/${payload.invitationId}/`,
+      {
+        method: "DELETE",
+      }
+    );
   }
 
   async updateInvitation(payload: DTOUpdateInvitation): Promise<Invitation> {
-    const response = await fetchAPI(`items/${payload.itemId}/invitations/${payload.invitationId}/`, {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-    });
+    const response = await fetchAPI(
+      `items/${payload.itemId}/invitations/${payload.invitationId}/`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      }
+    );
     const data = await response.json();
     return data;
   }
@@ -241,6 +253,14 @@ export class StandardDriver extends Driver {
   async deleteItems(ids: string[]): Promise<void> {
     for (const id of ids) {
       await fetchAPI(`items/${id}/`, {
+        method: "DELETE",
+      });
+    }
+  }
+
+  async hardDeleteItems(ids: string[]): Promise<void> {
+    for (const id of ids) {
+      await fetchAPI(`items/${id}/hard-delete/`, {
         method: "DELETE",
       });
     }

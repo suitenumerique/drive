@@ -1,12 +1,18 @@
-import { DTOCreateAccess, DTODeleteAccess, DTOUpdateAccess } from "./DTOs/AccessesDTO";
-import { DTOCreateInvitation, DTODeleteInvitation, DTOUpdateInvitation } from "./DTOs/InvitationDTO";
+import {
+  DTOCreateAccess,
+  DTODeleteAccess,
+  DTOUpdateAccess,
+} from "./DTOs/AccessesDTO";
+import {
+  DTOCreateInvitation,
+  DTODeleteInvitation,
+  DTOUpdateInvitation,
+} from "./DTOs/InvitationDTO";
 import { Access, APIList, Invitation, Item, ItemType, User } from "./types";
-
 
 export type ItemFilters = {
   type?: ItemType;
 };
-
 
 export type UserFilters = {
   q?: string;
@@ -48,4 +54,5 @@ export abstract class Driver {
     filename: string;
   }): Promise<Item>;
   abstract deleteItems(ids: string[]): Promise<void>;
+  abstract hardDeleteItems(ids: string[]): Promise<void>;
 }
