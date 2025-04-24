@@ -5,7 +5,7 @@ import { useMutationRestoreItems } from "@/features/explorer/hooks/useMutations"
 import { getGlobalExplorerLayout } from "@/features/layouts/components/explorer/ExplorerLayout";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
-import { Button } from "@openfun/cunningham-react";
+import { Button, useModals } from "@openfun/cunningham-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import undoIcon from "@/assets/icons/undo_blue.svg";
@@ -23,6 +23,8 @@ export default function TrashPage() {
     ],
     queryFn: () => getDriver().getTrashItems(filters),
   });
+
+  const modals = useModals();
 
   return (
     <Explorer
@@ -42,6 +44,16 @@ export default function TrashPage() {
       selectionBarActions={<TrashPageSelectionBarActions />}
       filters={filters}
       onFiltersChange={setFilters}
+      onNavigate={() => {
+        modals.messageModal({
+          title: t("explorer.trash.navigate.modal.title"),
+          children: (
+            <div className="clr-greyscale-600">
+              {t("explorer.trash.navigate.modal.description")}
+            </div>
+          ),
+        });
+      }}
     />
   );
 }

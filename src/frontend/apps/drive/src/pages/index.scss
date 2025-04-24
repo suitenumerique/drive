@@ -61,3 +61,7 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
   align-items: center;
   gap: 2rem;
 }
+
+.c__modal__content__text {
+  text-align: left;
+}

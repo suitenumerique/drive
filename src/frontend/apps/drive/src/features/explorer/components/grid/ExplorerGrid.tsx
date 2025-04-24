@@ -41,6 +41,9 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     setRightPanelForcedItem,
     itemId,
   } = useExplorer();
+
+  const effectiveOnNavigate = props.onNavigate ?? onNavigate;
+
   const treeContext = useTreeContext();
   const columnHelper = createColumnHelper<Item>();
   const [overedItemIds, setOveredItemIds] = useState<Record<string, boolean>>(
@@ -239,7 +242,7 @@ export const ExplorerGrid = (props: ExplorerProps) => {
                     // Double click to open the item
                     if (e.detail === 2) {
                       if (row.original.type === ItemType.FOLDER) {
-                        onNavigate({
+                        effectiveOnNavigate({
                           type: NavigationEventType.ITEM,
                           item: row.original,
                         });

@@ -3,6 +3,7 @@ import { ExplorerInner } from "./ExplorerInner";
 import { ExplorerGridActionsCellProps } from "./grid/ExplorerGridActionsCell";
 import { createContext, useContext } from "react";
 import { ItemFilters } from "@/features/drivers/Driver";
+import { NavigationEvent } from "./ExplorerContext";
 
 export interface ExplorerProps {
   childrenItems?: Item[];
@@ -12,6 +13,8 @@ export interface ExplorerProps {
   selectionBarActions?: JSX.Element;
   filters?: ItemFilters;
   onFiltersChange?: (filters: ItemFilters) => void;
+  // Override the default onNavigate from ExplorerContext
+  onNavigate?: (event: NavigationEvent) => void;
 }
 
 export type ExplorerInnerType = ExplorerProps;

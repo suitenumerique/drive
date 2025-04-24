@@ -112,7 +112,13 @@
         },
         "trash": {
           "title": "Trash",
-          "description": "Automatic deletion after 30 days"
+          "description": "Automatic deletion after 30 days",
+          "navigate": {
+            "modal": {
+              "title": "This folder is in the trash",
+              "description": "To display this folder, you need to restore it first."
+            }
+          }
         },
         "selectionBar": {
           "caption_one": "1 item selected",
@@ -298,7 +304,13 @@
         },
         "trash": {
           "title": "Corbeille",
-          "description": "Suppression automatique après 30 jours"
+          "description": "Suppression automatique après 30 jours",
+          "navigate": {
+            "modal": {
+              "title": "Ce dossier est dans la corbeille",
+              "description": "Pour afficher ce dossier, vous devez d'abord le restaurer."
+            }
+          }
         },
         "selectionBar": {
           "caption_one": "1 élément sélectionné",
