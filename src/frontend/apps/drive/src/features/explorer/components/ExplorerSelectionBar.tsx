@@ -54,16 +54,33 @@ export const ExplorerSelectionBarActions = () => {
   const deleteItems = useMutationDeleteItems();
 
   const handleDelete = async () => {
-    addToast(
-      <ToasterItem>
-        <span className="material-icons">delete</span>
-        <span>
-          {t("explorer.actions.delete.toast", { count: selectedItems.length })}
-        </span>
-      </ToasterItem>
-    );
-    await deleteItems.mutateAsync(selectedItems.map((item) => item.id));
-    setSelectedItems([]);
+    let canDelete = true;
+    for (const item of selectedItems) {
+      if (!item.abilities.destroy) {
+        canDelete = false;
+      }
+    }
+    if (canDelete) {
+      addToast(
+        <ToasterItem>
+          <span className="material-icons">delete</span>
+          <span>
+            {t("explorer.actions.delete.toast", {
+              count: selectedItems.length,
+            })}
+          </span>
+        </ToasterItem>
+      );
+      setSelectedItems([]);
+      await deleteItems.mutateAsync(selectedItems.map((item) => item.id));
+    } else {
+      addToast(
+        <ToasterItem type="error">
+          <span className="material-icons">delete</span>
+          <span>{t("explorer.actions.delete.low_rights_toast")}</span>
+        </ToasterItem>
+      );
+    }
   };
 
   // Add event listener when component mounts and remove when unmounts

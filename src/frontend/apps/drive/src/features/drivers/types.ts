@@ -28,7 +28,7 @@ export type Item = {
   size?: number;
   mimetype?: string;
   user_roles?: Role[];
-  abilities?: {
+  abilities: {
     accesses_manage: boolean;
     accesses_view: boolean;
     children_create: boolean;

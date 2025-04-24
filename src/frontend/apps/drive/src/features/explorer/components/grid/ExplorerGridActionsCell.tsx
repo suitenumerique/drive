@@ -1,5 +1,5 @@
 import { CellContext } from "@tanstack/react-table";
-import { Item } from "@/features/drivers/types";
+import { Item, ItemType } from "@/features/drivers/types";
 import {
   addToast,
   ToasterItem,
@@ -11,6 +11,10 @@ import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
 import { Button, useModal } from "@openfun/cunningham-react";
 import { ExplorerRenameItemModal } from "../modals/ExplorerRenameItemModal";
 import { useExplorer } from "../ExplorerContext";
+import { Draggable } from "../Draggable";
+import { WorkspaceShareModal } from "../modals/share/WorkspaceShareModal";
+import { itemIsWorkspace } from "@/features/drivers/utils";
+import { useDisableDragGridItem } from "./hooks";
 
 export type ExplorerGridActionsCellProps = CellContext<Item, unknown>;
 
@@ -19,7 +23,11 @@ export const ExplorerGridActionsCell = (
 ) => {
   const item = params.row.original;
   const { setRightPanelForcedItem, setRightPanelOpen } = useExplorer();
+  const disableDrag = useDisableDragGridItem(item);
+  const shareModal = useModal();
+
   const [isOpen, setIsOpen] = useState(false);
+  const isWorkspace = itemIsWorkspace(item);
   const { t } = useTranslation();
   const deleteItems = useMutationDeleteItems();
   const renameModal = useModal();
@@ -42,66 +50,78 @@ export const ExplorerGridActionsCell = (
     a.download = item.filename;
     document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
   };
 
   return (
     <>
-      <DropdownMenu
-        options={[
-          {
-            icon: <span className="material-icons">info</span>,
-            label: t("explorer.grid.actions.info"),
-            value: "info",
-            callback: () => {
-              setRightPanelForcedItem(item);
-              setRightPanelOpen(true);
-            },
-          },
-          {
-            icon: <span className="material-icons">group</span>,
-            label: t("explorer.grid.actions.share"),
-            callback: () => alert("Partager"),
-          },
-          {
-            icon: <span className="material-icons">download</span>,
-            label: t("explorer.grid.actions.download"),
-            value: "download",
-            showSeparator: true,
-            callback: handleDownload,
-          },
-          {
-            icon: <span className="material-icons">edit</span>,
-            label: t("explorer.grid.actions.rename"),
-            value: "rename",
-            callback: renameModal.open,
-            showSeparator: true,
-          },
-          {
-            icon: <span className="material-icons">arrow_forward</span>,
-            label: t("explorer.grid.actions.move"),
-            value: "move",
-          },
-          {
-            icon: <span className="material-icons">delete</span>,
-            label: t("explorer.grid.actions.delete"),
-            value: "delete",
-            showSeparator: true,
-            callback: handleDelete,
-          },
-        ]}
-        isOpen={isOpen}
-        onOpenChange={setIsOpen}
+      <Draggable
+        id={params.cell.id}
+        item={item}
+        className="explorer__grid__item__actions"
+        disabled={disableDrag}
       >
-        <Button
-          onClick={() => setIsOpen(!isOpen)}
-          color="primary-text"
-          className="c__language-picker"
-          icon={<span className="material-icons">more_horiz</span>}
-        ></Button>
-      </DropdownMenu>
-      {renameModal.isOpen && (
-        <ExplorerRenameItemModal {...renameModal} item={item} key={item.id} />
-      )}
+        <DropdownMenu
+          options={[
+            {
+              icon: <span className="material-icons">info</span>,
+              label: t("explorer.grid.actions.info"),
+              value: "info",
+              callback: () => {
+                setRightPanelForcedItem(item);
+                setRightPanelOpen(true);
+              },
+            },
+            {
+              icon: <span className="material-icons">group</span>,
+              label: item.abilities.accesses_manage
+                ? t("explorer.tree.workspace.options.share")
+                : t("explorer.tree.workspace.options.share_view"),
+              isHidden: !isWorkspace,
+              callback: shareModal.open,
+            },
+            {
+              icon: <span className="material-icons">download</span>,
+              label: t("explorer.grid.actions.download"),
+              isHidden: item.type === ItemType.FOLDER,
+              value: "download",
+              showSeparator: true,
+              callback: handleDownload,
+            },
+            {
+              icon: <span className="material-icons">edit</span>,
+              label: t("explorer.grid.actions.rename"),
+              isHidden: !item.abilities.update,
+              value: "rename",
+              callback: renameModal.open,
+              showSeparator: true,
+            },
+            {
+              icon: <span className="material-icons">delete</span>,
+              label: t("explorer.grid.actions.delete"),
+              value: "delete",
+              showSeparator: true,
+              isHidden: !item.abilities.destroy,
+              callback: handleDelete,
+            },
+          ]}
+          isOpen={isOpen}
+          onOpenChange={setIsOpen}
+        >
+          <Button
+            onClick={() => setIsOpen(!isOpen)}
+            color="primary-text"
+            className="explorer__grid__item__actions__button"
+            icon={<span className="material-icons">more_horiz</span>}
+          />
+        </DropdownMenu>
+        {renameModal.isOpen && (
+          <ExplorerRenameItemModal {...renameModal} item={item} key={item.id} />
+        )}
+        {isWorkspace && shareModal.isOpen && (
+          <WorkspaceShareModal {...shareModal} item={item} key={item.id} />
+        )}
+      </Draggable>
     </>
   );
 };

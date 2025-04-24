@@ -11,7 +11,7 @@ import {
   TreeViewNodeTypeEnum,
   useTreeContext,
 } from "@gouvfr-lasuite/ui-kit";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ExplorerTreeItem } from "./ExplorerTreeItem";
 import { useMoveItems } from "../../api/useMoveItem";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
@@ -19,10 +19,18 @@ import { ExplorerCreateWorkspaceModal } from "../modals/workspaces/ExplorerCreat
 import { ExplorerTreeActions } from "./ExplorerTreeActions";
 import { ExplorerTreeNav } from "./nav/ExplorerTreeNav";
 import { addItemsMovedToast } from "../toasts/addItemsMovedToast";
+import { ExplorerTreeMoveConfirmationModal } from "./ExplorerTreeMoveConfirmationModal";
 
 export const ExplorerTree = () => {
   const { t } = useTranslation();
   const move = useMoveItems();
+  const moveCallbackRef = useRef<() => void>(null);
+  const moveConfirmationModal = useModal();
+  const [moveState, setMoveState] = useState<{
+    moveCallback: () => void;
+    sourceItem: Item;
+    targetItem: Item;
+  }>();
 
   const treeContext = useTreeContext<TreeItem>();
   const [initialOpenState, setInitialOpenState] = useState<OpenMap | undefined>(
@@ -107,6 +115,10 @@ export const ExplorerTree = () => {
 
     // We add the personal workspace node and the main workspace node
     items.push(personalWorkspaceNode);
+    const mainWorkspace = firstLevelTreeItems_[mainWorkspaceIndex] as Item;
+
+    mainWorkspace.title = t("explorer.workspaces.mainWorkspace");
+
     items.push(firstLevelTreeItems_[mainWorkspaceIndex]);
 
     if (firstLevelTreeItems_.length > 1) {
@@ -140,6 +152,7 @@ export const ExplorerTree = () => {
 
   const createFolderModal = useModal();
   const createWorkspaceModal = useModal();
+
   const handleMove = (result: TreeViewMoveResult) => {
     move.mutate(
       {
@@ -168,10 +181,58 @@ export const ExplorerTree = () => {
           selectedNodeId={itemId}
           initialOpenState={initialOpenState}
           afterMove={handleMove}
+          beforeMove={(moveResult, moveCallback) => {
+            // TODO: this comes from the tree in the ui-kit, it needs to be explained in the documentation
+            if (!moveResult.newParentId || !moveResult.oldParentId) {
+              return;
+            }
+
+            const parent = treeContext?.treeData.getNode(
+              moveResult.newParentId
+            ) as Item | undefined;
+            const oldParent = treeContext?.treeData.getNode(
+              moveResult.oldParentId
+            ) as Item | undefined;
+
+            if (!parent || !oldParent) {
+              return;
+            }
+
+            const oldParentPath = oldParent.path.split(".");
+            const parentPath = parent.path.split(".");
+
+            // If the workspace is the same as the old workspace, we don't need to confirm the move
+            if (parentPath[0] === oldParentPath[0]) {
+              moveCallback();
+              return;
+            }
+
+            setMoveState({
+              moveCallback,
+              sourceItem: oldParent,
+              targetItem: parent,
+            });
+            moveConfirmationModal.open();
+          }}
+          canDrag={(args) => {
+            const item = args.value as TreeItem;
+            if (item.nodeType !== TreeViewNodeTypeEnum.NODE) {
+              return false;
+            }
+
+            return item.abilities.move;
+          }}
           canDrop={(args) => {
-            // To only allow dropping on a node and not between nodes
+            const parent = args.parentNode?.data.value as Item | undefined;
+            const canDropOnParent = parent?.abilities.children_create ?? false;
+            const activeItem = args.dragNodes[0].data.value as Item;
+            const canDropActiveItem = activeItem.abilities.move;
+            const canDropItem = canDropOnParent && canDropActiveItem;
+
             return (
-              args.index === 0 && args.parentNode?.willReceiveDrop === true
+              args.index === 0 &&
+              args.parentNode?.willReceiveDrop === true &&
+              canDropItem
             );
           }}
           renderNode={ExplorerTreeItem}
@@ -183,6 +244,21 @@ export const ExplorerTree = () => {
 
       <ExplorerCreateFolderModal {...createFolderModal} />
       <ExplorerCreateWorkspaceModal {...createWorkspaceModal} />
+      {moveState && moveConfirmationModal.isOpen && (
+        <ExplorerTreeMoveConfirmationModal
+          isOpen={moveConfirmationModal.isOpen}
+          onClose={() => {
+            moveConfirmationModal.close();
+            setMoveState(undefined);
+          }}
+          sourceItem={moveState.sourceItem}
+          targetItem={moveState.targetItem}
+          onMove={() => {
+            moveState.moveCallback();
+            moveConfirmationModal.close();
+          }}
+        />
+      )}
     </div>
   );
 };

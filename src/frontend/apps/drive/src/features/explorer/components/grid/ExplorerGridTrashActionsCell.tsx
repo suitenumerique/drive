@@ -29,6 +29,10 @@ export const ExplorerGridTrashActionsCell = (
     await restoreItem.mutateAsync([item.id]);
   };
 
+  if (!item.abilities.restore) {
+    return null;
+  }
+
   return (
     <>
       <DropdownMenu

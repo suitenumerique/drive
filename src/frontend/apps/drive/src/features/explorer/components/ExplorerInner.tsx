@@ -15,6 +15,7 @@ export const ExplorerInner = (props: ExplorerProps) => {
   const {
     setSelectedItems,
     itemId,
+    item,
     setRightPanelForcedItem,
     displayMode,
     selectedItems,
@@ -98,9 +99,13 @@ export const ExplorerInner = (props: ExplorerProps) => {
    */
   const onBeforeStart = ({ event, selection }: SelectionEvent) => {
     if (!event?.target) {
-      return;
+      return false;
     }
+
     const target = event.target as HTMLElement;
+    if (!beforeDrag(target)) {
+      return false;
+    }
 
     const classesToCheck = [
       "explorer__content",
@@ -127,9 +132,6 @@ export const ExplorerInner = (props: ExplorerProps) => {
 
   return (
     <SelectionArea
-      onBeforeDrag={(ev) => {
-        return beforeDrag(ev.event?.target as HTMLElement);
-      }}
       onBeforeStart={onBeforeStart}
       onStart={onSelectionStart}
       onMove={(params) => {

@@ -26,6 +26,10 @@ export const ExplorerTreeItemActions = ({
   const isWorkspace = itemIsWorkspace(item);
   const { deleteTreeNode } = useDeleteTreeNode();
 
+  if (item.main_workspace) {
+    return null;
+  }
+
   return (
     <>
       <div
@@ -40,6 +44,7 @@ export const ExplorerTreeItemActions = ({
                 icon: <img src={infoSvg.src} alt="" />,
                 label: t("explorer.tree.workspace.options.info"),
                 value: "info",
+                isHidden: item.main_workspace,
                 callback: () => {
                   explorerContext.setRightPanelForcedItem(item);
                   explorerContext.setRightPanelOpen(true);
@@ -47,21 +52,26 @@ export const ExplorerTreeItemActions = ({
               },
               {
                 icon: <span className="material-icons">group</span>,
-                label: t("explorer.tree.workspace.options.share"),
+                label: item.abilities.accesses_manage
+                  ? t("explorer.tree.workspace.options.share")
+                  : t("explorer.tree.workspace.options.share_view"),
                 value: "share",
-                isHidden: !isWorkspace,
+                isHidden: !isWorkspace || item.main_workspace,
                 callback: shareWorkspaceModal.open,
               },
               {
                 icon: <img src={settingsSvg.src} alt="" />,
                 label: t("explorer.tree.workspace.options.settings"),
+
                 value: "settings",
+                isHidden: !item.abilities.update || item.main_workspace,
                 callback: editWorkspaceModal.open,
               },
               {
                 icon: <span className="material-icons">delete</span>,
                 label: t("explorer.tree.workspace.options.delete"),
                 value: "delete",
+                isHidden: !item.abilities.destroy || item.main_workspace,
                 callback: () =>
                   deleteWorkspaceModal.mutate(item.id, {
                     onSuccess: () => {

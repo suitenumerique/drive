@@ -111,15 +111,22 @@
         }
 
         &__text {
+          padding: 8px 0px; // To have a margin of error when doing drag and drop
           font-size: 14px;
           font-weight: 400;
-
           color: var(--c--theme--colors--greyscale-1000);
-
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }
+      }
+
+      &__actions {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
       }
 
       &__last-update {
@@ -131,6 +138,16 @@
 
     &.c__datagrid--empty {
       border: none;
+    }
+
+    .c__datagrid__row__cell--actions {
+      .droppable {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+      }
     }
 
     &.c__datagrid--loading {

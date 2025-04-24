@@ -13,7 +13,11 @@ import {
 } from "@/features/explorer/hooks/useQueries";
 import { useUsers } from "@/features/users/hooks/useUserQueries";
 import { useClipboard } from "@/hooks/useCopyToClipboard";
-import { ShareModal, ShareModalCopyLinkFooter } from "@gouvfr-lasuite/ui-kit";
+import {
+  HorizontalSeparator,
+  ShareModal,
+  ShareModalCopyLinkFooter,
+} from "@gouvfr-lasuite/ui-kit";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -130,6 +134,7 @@ export const WorkspaceShareModal = ({
       loading={isLoadingUsers ?? false}
       onClose={onClose}
       modalTitle={t("Share workspace")}
+      canUpdate={item.abilities.accesses_manage}
       accesses={accessesData}
       invitations={invitationsData}
       invitationRoles={rolesOptions}
@@ -152,14 +157,18 @@ export const WorkspaceShareModal = ({
           role: role as Role,
         })
       }
-      onUpdateAccess={(access, role) =>
+      onUpdateAccess={(access, role) => {
+        if (role === access.role) {
+          return;
+        }
+
         updateAccess({
           itemId: item.id,
           accessId: access.id,
           role: role as Role,
           user_id: access.user.id,
-        })
-      }
+        });
+      }}
       onSearchUsers={onSearch}
       hasNextMembers={hasNextMembers}
       hasNextInvitations={hasNextInvitations}
@@ -177,6 +186,8 @@ export const WorkspaceShareModal = ({
           }}
         />
       }
-    />
+    >
+      {!item.abilities.accesses_manage && <HorizontalSeparator />}
+    </ShareModal>
   );
 };

@@ -188,11 +188,18 @@ export const useUploadZone = ({ item }: { item: Item }) => {
       if (fileDragToastId.current) {
         return;
       }
+
+      const canUpload = item?.abilities.children_create;
       fileDragToastId.current = addToast(
-        <ToasterItem>
+        <ToasterItem type={canUpload ? "info" : "error"}>
           <span className="material-icons">cloud_upload</span>
           <span>
-            {t("explorer.actions.upload.toast", { title: item?.title })}
+            {t(
+              `explorer.actions.upload.toast${canUpload ? "_no_rights" : ""}`,
+              {
+                title: item?.title,
+              }
+            )}
           </span>
         </ToasterItem>,
         { autoClose: false }
@@ -205,13 +212,21 @@ export const useUploadZone = ({ item }: { item: Item }) => {
       }
     },
     onDrop: async (acceptedFiles) => {
+      const dismissToast = () => {
+        if (fileDragToastId.current) {
+          toast.dismiss(fileDragToastId.current);
+          fileDragToastId.current = null;
+        }
+      };
+
+      if (!item?.abilities.children_create) {
+        dismissToast();
+        return;
+      }
       const upload = filesToUpload(acceptedFiles);
       await handleHierarchy(upload);
 
-      if (fileDragToastId.current) {
-        toast.dismiss(fileDragToastId.current);
-        fileDragToastId.current = null;
-      }
+      dismissToast();
 
       if (!fileUploadsToastId.current) {
         fileUploadsToastId.current = addToast(

@@ -102,7 +102,17 @@
               "info": "Information",
               "settings": "Workspace settings",
               "delete": "Delete workspace",
-              "share": "Share workspace"
+              "share": "Share workspace",
+              "share_view": "View shares"
+            },
+            "move": {
+              "confirmation_modal": {
+                "title": "Transfer rights",
+                "description": "You are about to move the element <strong>{{sourceItem}}</strong> to the folder <strong>{{targetItem}}</strong>, your document will inherit the share of the target folder.",
+                "description_multiple": "You are about to move <strong>{{count}}</strong> elements to the folder <strong>{{targetItem}}</strong>, your documents will inherit the share of the target folder.",
+                "confirm_button": "Move anyway",
+                "cancel_button": "Cancel"
+              }
             }
           },
           "createFolder": "Create",
@@ -129,6 +139,7 @@
           "reset_selection": "Reset selection"
         },
         "workspaces": {
+          "mainWorkspace": "My workspace",
           "form": {
             "title": "Workspace name",
             "description": "Description",
@@ -160,6 +171,7 @@
         },
         "upload": {
           "toast": "Drop your files here to transfer them in {{title}}",
+          "toast_no_rights": "You don't have the necessary rights to transfer files in {{title}}",
           "files": {
             "description_one": "{{count}} file being transferred",
             "description_other": "{{count}} files being transferred",
@@ -169,7 +181,12 @@
         },
         "delete": {
           "toast_one": "Item deleted",
-          "toast_other": "{{count}} items deleted"
+          "toast_other": "{{count}} items deleted",
+          "low_rights_toast": "Vous ne pouvez pas restaurer ces éléments car vous n'avez pas les droits nécessaires."
+        },
+        "restore": {
+          "toast_one": "Item restored",
+          "toast_other": "{{count}} items restored"
         },
         "move": {
           "toast_one": "{{count}} item moved",
@@ -298,7 +315,17 @@
               "info": "Informations",
               "settings": "Paramètre de l'espace",
               "delete": "Supprimer l'espace",
-              "share": "Partager"
+              "share": "Partager",
+              "share_view": "Voir les accès"
+            },
+            "move": {
+              "confirmation_modal": {
+                "title": "Transfert de droits",
+                "description": "Vous êtes sur le point de déplacer l'élément <strong>{{sourceItem}}</strong> vers le dossier <strong>{{targetItem}}</strong>, votre document héritera du partage du dossier cible.",
+                "description_multiple": "Vous êtes sur le point de déplacer <strong>{{count}}</strong> éléments vers le dossier <strong>{{targetItem}}</strong>, vos documents hériteront du partage du dossier cible.",
+                "confirm_button": "Déplacer quand même",
+                "cancel_button": "Annuler"
+              }
             }
           }
         },
@@ -321,6 +348,7 @@
           "reset_selection": "Réinitialiser la sélection"
         },
         "workspaces": {
+          "mainWorkspace": "Mon espace",
           "form": {
             "title": "Nom de l'espace",
             "description": "Description",
@@ -351,6 +379,7 @@
           },
           "upload": {
             "toast": "Déposez vos fichiers ici pour les transférer dans {{title}}",
+            "toast_no_rights": "Vous n'avez pas les droits nécessaires pour transférer des fichiers dans {{title}}",
             "files": {
               "description_one": "{{count}} fichier en cours de transfert",
               "description_other": "{{count}} fichiers en cours de transfert",
@@ -360,7 +389,8 @@
           },
           "delete": {
             "toast_one": "Élément supprimé",
-            "toast_other": "{{count}} éléments supprimés"
+            "toast_other": "{{count}} éléments supprimés",
+            "low_rights_toast": "Vous ne pouvez pas restaurer ces éléments car vous n'avez pas les droits nécessaires."
           },
           "restore": {
             "toast_one": "Élément restauré",

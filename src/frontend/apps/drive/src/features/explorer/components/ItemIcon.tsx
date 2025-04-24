@@ -15,8 +15,15 @@ export const ItemIcon = ({
   type = "normal",
 }: ItemIconProps) => {
   const mimeIcon = getItemIcon(item, type);
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={mimeIcon.src} alt="" className={`item-icon ${size}`} />;
+
+  return (
+    <img
+      src={mimeIcon.src}
+      alt=""
+      className={`item-icon ${size}`}
+      draggable="false"
+    />
+  );
 };
 
 export const getItemIcon = (item: Item, type: "normal" | "mini") => {

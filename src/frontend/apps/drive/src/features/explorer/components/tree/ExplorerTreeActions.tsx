@@ -17,7 +17,7 @@ export const ExplorerTreeActions = ({
   openCreateWorkspaceModal,
 }: ExplorerTreeActionsProps) => {
   const { t } = useTranslation();
-  const { treeIsInitialized } = useExplorer();
+  const { treeIsInitialized, item } = useExplorer();
   const importMenu = useDropdownMenu();
   const createMenu = useDropdownMenu();
 
@@ -33,6 +33,7 @@ export const ExplorerTreeActions = ({
               icon: <img src={createFolderSvg.src} alt="" />,
               label: t("explorer.tree.create.folder"),
               value: "info",
+              isHidden: !item?.abilities.children_create,
               callback: openCreateFolderModal,
             },
             {
@@ -75,7 +76,11 @@ export const ExplorerTreeActions = ({
           {...importMenu}
           onOpenChange={importMenu.setIsOpen}
         >
-          <Button color="secondary" onClick={() => importMenu.setIsOpen(true)}>
+          <Button
+            color="secondary"
+            disabled={!item?.abilities.children_create}
+            onClick={() => importMenu.setIsOpen(true)}
+          >
             {t("explorer.tree.import.label")}
           </Button>
         </DropdownMenu>

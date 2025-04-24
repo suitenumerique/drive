@@ -24,7 +24,7 @@ import { useTableKeyboardNavigation } from "../../hooks/useTableKeyboardNavigati
 import { ExplorerGridNameCell } from "./ExplorerGridNameCell";
 import { ExplorerGridUpdatedAtCell } from "./ExplorerGridUpdatedAtCell";
 import { ExplorerGridActionsCell } from "./ExplorerGridActionsCell";
-import { ExplorerProps } from "../Explorer";
+import { ExplorerProps, useExplorerInner } from "../Explorer";
 
 const EMPTY_ARRAY: Item[] = [];
 
@@ -41,6 +41,8 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     setRightPanelForcedItem,
     itemId,
   } = useExplorer();
+
+  const { filters } = useExplorerInner();
 
   const effectiveOnNavigate = props.onNavigate ?? onNavigate;
 
@@ -81,9 +83,12 @@ export const ExplorerGrid = (props: ExplorerProps) => {
   }, [itemId, treeIsInitialized]);
 
   useEffect(() => {
-    if (!treeIsInitialized || !itemId) {
+    const itemFilters = filters ?? {};
+
+    if (!treeIsInitialized || !itemId || Object.keys(itemFilters).length > 0) {
       return;
     }
+
     // We merge the existing children with the new folders or we create the children
     const childrens = folders.map((folder) => {
       const folderNode = treeContext?.treeData.getNode(folder.id);
@@ -274,7 +279,10 @@ export const ExplorerGrid = (props: ExplorerProps) => {
                         <Droppable
                           id={cell.id}
                           item={row.original}
-                          disabled={row.original.type !== ItemType.FOLDER}
+                          disabled={
+                            row.original.type !== ItemType.FOLDER ||
+                            !row.original.abilities.children_create
+                          }
                           onOver={(isOver, item) => {
                             setOveredItemIds((prev) => ({
                               ...prev,

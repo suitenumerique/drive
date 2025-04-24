@@ -17,6 +17,12 @@ import { Item, TreeItem } from "@/features/drivers/types";
 import { ExplorerDragOverlay } from "./tree/ExploreDragOverlay";
 import { TreeViewNodeTypeEnum, useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import { addItemsMovedToast } from "./toasts/addItemsMovedToast";
+import { useModal } from "@openfun/cunningham-react";
+import { useState } from "react";
+import {
+  ConfirmationMoveState,
+  ExplorerTreeMoveConfirmationModal,
+} from "./tree/ExplorerTreeMoveConfirmationModal";
 
 const activationConstraint = {
   distance: 20,
@@ -27,6 +33,10 @@ type ExplorerDndProviderProps = {
 };
 
 export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
+  const moveConfirmationModal = useModal();
+  const [moveState, setMoveState] = useState<ConfirmationMoveState | undefined>(
+    undefined
+  );
   const { itemId, selectedItems, setSelectedItems } = useExplorer();
 
   const treeContext = useTreeContext<TreeItem>();
@@ -57,6 +67,28 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
     setSelectedItems([item]);
   };
 
+  const handleMoveConfirmation = async (newParentId: string) => {
+    selectedItems
+      .map((item) => item.id)
+      .forEach((id) => {
+        treeContext?.treeData.moveNode(id, newParentId, 0);
+      });
+
+    const ids = selectedItems.map((item) => item.id);
+    await moveItems.mutateAsync(
+      {
+        ids: ids,
+        parentId: newParentId,
+        oldParentId: itemId,
+      },
+      {
+        onSuccess: () => {
+          addItemsMovedToast(ids.length);
+        },
+      }
+    );
+  };
+
   const handleDragEnd = async ({ active, over }: DragEndEvent) => {
     document.body.style.cursor = "default";
 
@@ -76,39 +108,51 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
       return;
     }
 
-    selectedItems
-      .map((item) => item.id)
-      .forEach((id) => {
-        treeContext?.treeData.moveNode(id, overItem.id, 0);
-      });
+    const pathActiveItemSegments = activeItem.path.split(".");
+    const pathOverItemSegments = overItem.path.split(".");
 
-    const ids = selectedItems.map((item) => item.id);
-    await moveItems.mutateAsync(
-      {
-        ids: ids,
-        parentId: overItem.id,
-        oldParentId: itemId,
-      },
-      {
-        onSuccess: () => {
-          addItemsMovedToast(ids.length);
-        },
-      }
-    );
+    if (pathActiveItemSegments[0] !== pathOverItemSegments[0]) {
+      setMoveState({
+        sourceItem: activeItem,
+        targetItem: overItem,
+      });
+      moveConfirmationModal.open();
+      return;
+    }
+
+    await handleMoveConfirmation(overItem.id);
   };
 
   return (
-    <DndContext
-      sensors={sensors}
-      modifiers={[snapToTopLeft]}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <DragOverlay dropAnimation={null}>
-        <ExplorerDragOverlay count={selectedItems.length} />
-      </DragOverlay>
-      {children}
-    </DndContext>
+    <>
+      <DndContext
+        sensors={sensors}
+        modifiers={[snapToTopLeft]}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <DragOverlay dropAnimation={null}>
+          <ExplorerDragOverlay count={selectedItems.length} />
+        </DragOverlay>
+        {children}
+      </DndContext>
+      {moveState && moveConfirmationModal.isOpen && (
+        <ExplorerTreeMoveConfirmationModal
+          itemsCount={selectedItems.length}
+          isOpen={moveConfirmationModal.isOpen}
+          onClose={() => {
+            moveConfirmationModal.close();
+            setMoveState(undefined);
+          }}
+          sourceItem={moveState.sourceItem}
+          targetItem={moveState.targetItem}
+          onMove={() => {
+            handleMoveConfirmation(moveState.targetItem.id);
+            moveConfirmationModal.close();
+          }}
+        />
+      )}
+    </>
   );
 };
 
@@ -151,6 +195,13 @@ export const canDrop = (activeItem: Item, overItem: Item | TreeItem) => {
   const activePath = activeItem.path;
   const overPath = overItem.path;
 
+  const canDrop = overItem.abilities.children_create;
+  const canMove = activeItem.abilities.move;
+
+  if (!canDrop || !canMove) {
+    return false;
+  }
+
   if (!activePath || !overPath) {
     return false;
   }
@@ -170,9 +221,16 @@ export const canDrop = (activeItem: Item, overItem: Item | TreeItem) => {
     return false;
   }
 
-  const result =
-    activePathSegments[activePathSegments.length - 2] !==
-    overPathSegments[overPathSegments.length - 1];
+  // Check if the active item is a direct child of the over item
+  // by removing the last segment from active path and comparing with over path
+  const activePathWithoutLastSegment = activePathSegments
+    .slice(0, -1)
+    .join(".");
 
-  return result;
+  // Cannot drop an item into its direct parent
+  if (activePathWithoutLastSegment === overPath) {
+    return false;
+  }
+
+  return true;
 };

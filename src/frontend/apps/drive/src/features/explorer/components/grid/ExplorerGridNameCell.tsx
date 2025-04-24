@@ -6,6 +6,7 @@ import { Tooltip } from "@openfun/cunningham-react";
 import { useExplorer } from "../ExplorerContext";
 import { ItemIcon } from "../ItemIcon";
 import { useExplorerInner } from "../Explorer";
+import { useDisableDragGridItem } from "./hooks";
 type ExplorerGridNameCellProps = CellContext<Item, string>;
 
 export const ExplorerGridNameCell = (params: ExplorerGridNameCellProps) => {
@@ -15,6 +16,8 @@ export const ExplorerGridNameCell = (params: ExplorerGridNameCellProps) => {
   const { selectedItemsMap } = useExplorer();
   const { disableItemDragAndDrop } = useExplorerInner();
   const isSelected = !!selectedItemsMap[item.id];
+  const canMove = item.abilities.move;
+  const disableDrag = useDisableDragGridItem(item);
 
   const renderTitle = () => {
     // We need to have the element holding the ref nested because the Tooltip component
@@ -24,7 +27,7 @@ export const ExplorerGridNameCell = (params: ExplorerGridNameCellProps) => {
         id={params.cell.id + "-title"}
         item={item}
         style={{ display: "flex", overflow: "hidden" }}
-        disabled={disableItemDragAndDrop || isSelected} // If it's selected then we can drag on the entire cell
+        disabled={disableItemDragAndDrop || isSelected || !canMove} // If it's selected then we can drag on the entire cell
       >
         <div style={{ display: "flex", overflow: "hidden" }}>
           <span className="explorer__grid__item__name__text" ref={ref}>
@@ -52,11 +55,7 @@ export const ExplorerGridNameCell = (params: ExplorerGridNameCellProps) => {
   }, [item.title]);
 
   return (
-    <Draggable
-      id={params.cell.id}
-      item={item}
-      disabled={disableItemDragAndDrop || !isSelected}
-    >
+    <Draggable id={params.cell.id} item={item} disabled={disableDrag}>
       <div className="explorer__grid__item__name">
         <ItemIcon key={item.id} item={item} />
         {isOverflown ? (
