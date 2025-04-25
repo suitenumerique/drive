@@ -112,7 +112,8 @@ export const ExplorerInner = (props: ExplorerProps) => {
     const hasAnyClass = classesToCheck.some((className) =>
       target.classList.contains(className)
     );
-    if (hasAnyClass) {
+
+    if (hasAnyClass && !event?.ctrlKey && !event?.metaKey) {
       selection.clearSelection();
       setSelectedItems([]);
     }
