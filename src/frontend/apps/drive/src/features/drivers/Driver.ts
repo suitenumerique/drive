@@ -5,6 +5,7 @@ import { Access, APIList, Invitation, Item, ItemType, User } from "./types";
 
 export type ItemFilters = {
   type?: ItemType;
+  title?: string;
 };
 
 

@@ -37,6 +37,11 @@
         "owner": "Owner"
       },
       "explorer": {
+        "search": {
+          "groupName": "Select a document or folder",
+          "empty": "No results found",
+          "title": "Search a document or folder"
+        },
         "rightPanel": {
           "multipleSelection": {
             "text": "Multiple files selected",
@@ -231,6 +236,11 @@
         "owner": "Propriétaire"
       },
       "explorer": {
+        "search": {
+          "groupName": "Sélectionnez un document ou un dossier",
+          "empty": "Aucun résultat trouvé",
+          "title": "Rechercher un document ou un dossier"
+        },
         "rightPanel": {
           "multipleSelection": {
             "text": "Plusieurs fichiers sélectionnés"

@@ -8,7 +8,7 @@ import { DTODeleteAccess } from "../DTOs/AccessesDTO";
 
 export class StandardDriver extends Driver {
 
-  async getItems(filters = {}): Promise<Item[]> {
+  async getItems(filters: ItemFilters = {}): Promise<Item[]> {
     const response = await fetchAPI(`items/`, {
       params: filters,
     });
