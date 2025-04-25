@@ -10,8 +10,8 @@ export interface ExplorerProps {
   childrenItems?: Item[];
   gridActionsCell?: (params: ExplorerGridActionsCellProps) => React.ReactNode;
   disableItemDragAndDrop?: boolean;
-  gridHeader?: JSX.Element;
-  selectionBarActions?: JSX.Element;
+  gridHeader?: React.ReactNode;
+  selectionBarActions?: React.ReactNode;
   filters?: ItemFilters;
   onFiltersChange?: (filters: ItemFilters) => void;
   // Override the default onNavigate from ExplorerContext
