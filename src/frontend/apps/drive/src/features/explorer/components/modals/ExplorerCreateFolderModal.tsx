@@ -15,9 +15,10 @@ type Inputs = {
 };
 
 export const ExplorerCreateFolderModal = (
-  props: Pick<ModalProps, "isOpen" | "onClose">
+  props: Pick<ModalProps, "isOpen" | "onClose"> & {
+    parentId: string;
+  }
 ) => {
-  const { itemId } = useExplorer();
   const { t } = useTranslation();
   const form = useForm<Inputs>();
   const createFolder = useMutationCreateFolder();
@@ -27,7 +28,7 @@ export const ExplorerCreateFolderModal = (
     createFolder.mutate(
       {
         ...data,
-        parentId: itemId,
+        parentId: props.parentId,
       },
       {
         onSuccess: () => {
