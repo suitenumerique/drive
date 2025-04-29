@@ -5,6 +5,7 @@
   justify-content: space-between;
   gap: var(--c--theme--spacings--xs);
   overflow: hidden;
+  height: 24px;
 
   &__title {
     font-size: var(--c--theme--font--sizes--sm);
@@ -26,7 +27,7 @@
   }
   &:hover {
     .explorer__tree__item__actions {
-      opacity: 1;
+      display: flex;
     }
   }
 
@@ -35,11 +36,14 @@
     align-items: center;
     gap: var(--c--theme--spacings--xs);
     flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__actions {
-    opacity: 0;
-    display: flex;
+    display: none;
+
     align-items: center;
     padding-right: 4px;
 
@@ -49,7 +53,7 @@
     }
 
     &--open {
-      opacity: 1;
+      display: flex;
     }
 
     &__button-more {
