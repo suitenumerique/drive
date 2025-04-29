@@ -913,7 +913,6 @@ class Item(TreeModel, BaseModel):
         if self.depth > 1:
             # Store old parent id in order to update its numchild and numchild_folder
             old_parent_id = self.parent().id
-
         self.path = next(path_generator)
         self.save(update_fields=["path"])
         target_update = {
@@ -924,7 +923,7 @@ class Item(TreeModel, BaseModel):
             # https://patshaughnessy.net/2017/12/14/manipulating-trees-using-sql-and-the-postgres-ltree-extension
             self._meta.model.objects.filter(path__descendants=old_path).update(
                 path=RawSQL(
-                    "%s || subpath(path, nlevel(%s)-1)", (str(self.path), str(old_path))
+                    "%s || subpath(path, nlevel(%s))", (str(self.path), str(old_path))
                 )
             )
             target_update["numchild_folder"] = models.F("numchild_folder") + 1

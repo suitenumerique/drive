@@ -394,3 +394,87 @@ def test_api_items_move_authenticated_deleted_target_as_sibling():
     # Verify that the item has not moved
     item.refresh_from_db()
     assert item.parent() is None
+
+
+def test_api_items_move_with_descendants():
+    """
+    Moving an item with descendants should move the descendants as well.
+    """
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item_parent = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
+    )
+    item = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+        parent=item_parent,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
+    )
+
+    item_child_folder = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+        parent=item,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
+    )
+    item_child_file = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FILE,
+        parent=item,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
+    )
+
+    item_sub_child_file = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FILE,
+        parent=item_child_folder,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
+    )
+
+    target = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
+    )
+
+    assert len(target.children()) == 0
+    assert len(target.descendants()) == 0
+
+    assert len(item_parent.children()) == 1
+
+    assert len(item.children()) == 2
+    assert len(item.descendants()) == 3
+
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/move/",
+        data={"target_item_id": str(target.id)},
+    )
+
+    item_parent.refresh_from_db()
+    item.refresh_from_db()
+    item_child_folder.refresh_from_db()
+    item_child_file.refresh_from_db()
+    item_sub_child_file.refresh_from_db()
+    target.refresh_from_db()
+    assert response.status_code == 200
+    assert response.json() == {"message": "item moved successfully."}
+
+    assert len(target.children()) == 1
+    assert len(target.descendants()) == 4
+
+    assert len(item_parent.children()) == 0
+
+    assert len(item.children()) == 2
+    assert len(item.descendants()) == 3
