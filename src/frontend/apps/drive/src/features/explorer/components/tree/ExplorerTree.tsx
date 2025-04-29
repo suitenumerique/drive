@@ -242,7 +242,7 @@ export const ExplorerTree = () => {
 
       <ExplorerTreeNav />
 
-      <ExplorerCreateFolderModal {...createFolderModal} />
+      <ExplorerCreateFolderModal {...createFolderModal} parentId={itemId} />
       <ExplorerCreateWorkspaceModal {...createWorkspaceModal} />
       {moveState && moveConfirmationModal.isOpen && (
         <ExplorerTreeMoveConfirmationModal

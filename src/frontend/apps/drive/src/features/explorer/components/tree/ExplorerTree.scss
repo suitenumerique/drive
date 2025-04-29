@@ -41,6 +41,7 @@
     opacity: 0;
     display: flex;
     align-items: center;
+    padding-right: 4px;
 
     .c__dropdown-menu-trigger {
       display: flex;
@@ -51,8 +52,17 @@
       opacity: 1;
     }
 
-    .material-icons {
-      font-size: 20px;
+    &__button-more {
+      .material-icons {
+        font-size: 20px;
+      }
+    }
+
+    &__button-add {
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      border-radius: 2px;
     }
   }
 }

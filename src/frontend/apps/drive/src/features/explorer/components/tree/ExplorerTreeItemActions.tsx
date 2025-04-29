@@ -11,6 +11,7 @@ import { useExplorer } from "../ExplorerContext";
 import { WorkspaceShareModal } from "../modals/share/WorkspaceShareModal";
 import { itemIsWorkspace } from "@/features/drivers/utils";
 import { useDeleteTreeNode } from "./hooks/useDeleteTreeNode";
+import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
 export type ExplorerTreeItemActionsProps = {
   item: Item;
 };
@@ -25,10 +26,7 @@ export const ExplorerTreeItemActions = ({
   const shareWorkspaceModal = useModal();
   const isWorkspace = itemIsWorkspace(item);
   const { deleteTreeNode } = useDeleteTreeNode();
-
-  if (item.main_workspace) {
-    return null;
-  }
+  const createFolderModal = useModal();
 
   return (
     <>
@@ -37,7 +35,7 @@ export const ExplorerTreeItemActions = ({
           "explorer__tree__item__actions--open": menu.isOpen,
         })}
       >
-        <div>
+        {!item.main_workspace && (
           <DropdownMenu
             options={[
               {
@@ -87,11 +85,22 @@ export const ExplorerTreeItemActions = ({
             <Button
               size="nano"
               color="tertiary-text"
+              className="explorer__tree__item__actions__button-more"
               onClick={() => menu.setIsOpen(true)}
               icon={<span className="material-icons more">more_horiz</span>}
             />
           </DropdownMenu>
-        </div>
+        )}
+        <Button
+          size="nano"
+          color="primary"
+          className="explorer__tree__item__actions__button-add"
+          icon={<span className="material-icons">add</span>}
+          onClick={(e) => {
+            e.stopPropagation();
+            createFolderModal.open();
+          }}
+        ></Button>
       </div>
       {editWorkspaceModal.isOpen && (
         <ExplorerEditWorkspaceModal
@@ -104,6 +113,9 @@ export const ExplorerTreeItemActions = ({
       )}
       {shareWorkspaceModal.isOpen && (
         <WorkspaceShareModal {...shareWorkspaceModal} item={item as Item} />
+      )}
+      {createFolderModal.isOpen && (
+        <ExplorerCreateFolderModal {...createFolderModal} parentId={item.id} />
       )}
     </>
   );
