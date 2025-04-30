@@ -97,14 +97,17 @@ export const ExplorerGrid = (props: ExplorerProps) => {
           ...folder,
           children: children,
         });
-        item.hasLoadedChildren = true;
+        item.hasLoadedChildren =
+          folder.numchild_folder !== undefined &&
+          folder.numchild_folder > 0 &&
+          children.length > 0;
         return item;
       } else {
         const children = itemToTreeItem({
           ...folder,
           children: [],
         });
-
+        children.hasLoadedChildren = false;
         return children;
       }
     });

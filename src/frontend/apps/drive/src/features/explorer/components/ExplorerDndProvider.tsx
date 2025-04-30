@@ -237,6 +237,11 @@ export const canDrop = (activeItem: Item, overItem: Item | TreeItem) => {
   const activePathSegments = activePath.split(".");
   const overPathSegments = overPath.split(".");
 
+  // Cannot drop an item into its children
+  if (overPath.startsWith(activePath)) {
+    return false;
+  }
+
   if (activePathSegments.length === 1 && overPathSegments.length === 1) {
     return activePathSegments[0] === overPathSegments[0];
   }

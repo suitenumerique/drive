@@ -11,6 +11,7 @@ import { FileUploadMeta } from "../components/ExplorerInner";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { FileUploadToast } from "../components/toasts/FileUploadToast";
+import { useQueryClient } from "@tanstack/react-query";
 
 type FileUpload = FileWithPath & {
   parentId?: string;
@@ -32,6 +33,7 @@ type Upload = {
 
 const useUpload = ({ item }: { item: Item }) => {
   const createFolder = useMutationCreateFolder();
+  const queryClient = useQueryClient();
 
   /**
    * TODO: Test.
@@ -129,6 +131,9 @@ const useUpload = ({ item }: { item: Item }) => {
               },
               {
                 onSuccess: async (createdFolder) => {
+                  queryClient.invalidateQueries({
+                    queryKey: ["items", parentItem.id],
+                  });
                   folder.files.forEach((file) => {
                     file.parentId = createdFolder.id;
                   });
@@ -195,7 +200,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
           <span className="material-icons">cloud_upload</span>
           <span>
             {t(
-              `explorer.actions.upload.toast${canUpload ? "_no_rights" : ""}`,
+              `explorer.actions.upload.toast${canUpload ? "" : "_no_rights"}`,
               {
                 title: item?.title,
               }

@@ -21,6 +21,7 @@ import { ExplorerTreeNav } from "./nav/ExplorerTreeNav";
 import { addItemsMovedToast } from "../toasts/addItemsMovedToast";
 import { ExplorerTreeMoveConfirmationModal } from "./ExplorerTreeMoveConfirmationModal";
 import { ExplorerSearchModal } from "../modals/search/ExplorerSearchModal";
+import { canDrop } from "../ExplorerDndProvider";
 
 export const ExplorerTree = () => {
   const { t, i18n } = useTranslation();
@@ -237,15 +238,13 @@ export const ExplorerTree = () => {
           }}
           canDrop={(args) => {
             const parent = args.parentNode?.data.value as Item | undefined;
-            const canDropOnParent = parent?.abilities.children_create ?? false;
             const activeItem = args.dragNodes[0].data.value as Item;
-            const canDropActiveItem = activeItem.abilities.move;
-            const canDropItem = canDropOnParent && canDropActiveItem;
+            const canDropResult = parent ? canDrop(activeItem, parent) : true;
 
             return (
               args.index === 0 &&
               args.parentNode?.willReceiveDrop === true &&
-              canDropItem
+              canDropResult
             );
           }}
           renderNode={ExplorerTreeItem}
