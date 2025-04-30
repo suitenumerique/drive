@@ -11,7 +11,7 @@ import {
   TreeViewNodeTypeEnum,
   useTreeContext,
 } from "@gouvfr-lasuite/ui-kit";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ExplorerTreeItem } from "./ExplorerTreeItem";
 import { useMoveItems } from "../../api/useMoveItem";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
@@ -22,9 +22,8 @@ import { addItemsMovedToast } from "../toasts/addItemsMovedToast";
 import { ExplorerTreeMoveConfirmationModal } from "./ExplorerTreeMoveConfirmationModal";
 
 export const ExplorerTree = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const move = useMoveItems();
-  const moveCallbackRef = useRef<() => void>(null);
   const moveConfirmationModal = useModal();
   const [moveState, setMoveState] = useState<{
     moveCallback: () => void;
@@ -149,6 +148,17 @@ export const ExplorerTree = () => {
       setTreeIsInitialized(true);
     }
   }, [initialOpenState, setTreeIsInitialized, treeIsInitialized]);
+
+  // When the language changes, we update the tree titles to be sure they are translated
+  useEffect(() => {
+    treeContext?.treeData.updateNode("PERSONAL_SPACE", {
+      headerTitle: t("explorer.workspaces.mainWorkspace"),
+    });
+
+    treeContext?.treeData.updateNode("SHARED_SPACE", {
+      headerTitle: t("explorer.tree.sharedSpace"),
+    });
+  }, [i18n.language, t]);
 
   const createFolderModal = useModal();
   const createWorkspaceModal = useModal();
