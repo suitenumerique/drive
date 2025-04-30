@@ -6,7 +6,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   itemToTreeItem,
@@ -25,6 +25,7 @@ import { ExplorerGridNameCell } from "./ExplorerGridNameCell";
 import { ExplorerGridUpdatedAtCell } from "./ExplorerGridUpdatedAtCell";
 import { ExplorerGridActionsCell } from "./ExplorerGridActionsCell";
 import { ExplorerProps, useExplorerInner } from "../Explorer";
+import { useDragItemContext } from "../ExplorerDndProvider";
 
 const EMPTY_ARRAY: Item[] = [];
 
@@ -43,14 +44,12 @@ export const ExplorerGrid = (props: ExplorerProps) => {
   } = useExplorer();
 
   const { filters } = useExplorerInner();
+  const { overedItemIds, setOveredItemIds } = useDragItemContext();
 
   const effectiveOnNavigate = props.onNavigate ?? onNavigate;
 
   const treeContext = useTreeContext();
   const columnHelper = createColumnHelper<Item>();
-  const [overedItemIds, setOveredItemIds] = useState<Record<string, boolean>>(
-    {}
-  );
 
   const columns = [
     columnHelper.accessor("title", {

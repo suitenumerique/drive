@@ -18,7 +18,7 @@ import { ExplorerDragOverlay } from "./tree/ExploreDragOverlay";
 import { TreeViewNodeTypeEnum, useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import { addItemsMovedToast } from "./toasts/addItemsMovedToast";
 import { useModal } from "@openfun/cunningham-react";
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import {
   ConfirmationMoveState,
   ExplorerTreeMoveConfirmationModal,
@@ -32,8 +32,28 @@ type ExplorerDndProviderProps = {
   children: React.ReactNode;
 };
 
+type DndContextType = {
+  overedItemIds: Record<string, boolean>;
+  setOveredItemIds: React.Dispatch<
+    React.SetStateAction<Record<string, boolean>>
+  >;
+};
+
+const DragItemContext = createContext<DndContextType | undefined>(undefined);
+
+export const useDragItemContext = () => {
+  const context = useContext(DragItemContext);
+  if (!context) {
+    throw new Error("useDndContext must be used within an ExplorerDndProvider");
+  }
+  return context;
+};
+
 export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
   const moveConfirmationModal = useModal();
+  const [overedItemIds, setOveredItemIds] = useState<Record<string, boolean>>(
+    {}
+  );
   const [moveState, setMoveState] = useState<ConfirmationMoveState | undefined>(
     undefined
   );
@@ -74,6 +94,7 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
         treeContext?.treeData.moveNode(id, newParentId, 0);
       });
 
+    setOveredItemIds({});
     const ids = selectedItems.map((item) => item.id);
     await moveItems.mutateAsync(
       {
@@ -134,7 +155,14 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
         <DragOverlay dropAnimation={null}>
           <ExplorerDragOverlay count={selectedItems.length} />
         </DragOverlay>
-        {children}
+        <DragItemContext.Provider
+          value={{
+            overedItemIds,
+            setOveredItemIds,
+          }}
+        >
+          {children}
+        </DragItemContext.Provider>
       </DndContext>
       {moveState && moveConfirmationModal.isOpen && (
         <ExplorerTreeMoveConfirmationModal
