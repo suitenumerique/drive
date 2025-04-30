@@ -100,8 +100,10 @@
           "workspace": {
             "options": {
               "info": "Information",
-              "settings": "Workspace settings",
-              "delete": "Delete workspace",
+              "settings_workspace": "Workspace settings",
+              "settings_folder": "Folder settings",
+              "delete_workspace": "Delete workspace",
+              "delete_folder": "Delete folder",
               "share": "Share workspace",
               "share_view": "View shares"
             },
@@ -138,6 +140,20 @@
           "delete": "Delete",
           "reset_selection": "Reset selection"
         },
+        "folders": {
+          "edit": {
+            "title": "Edit folder",
+            "description": "Edit folder information",
+            "cancel": "Cancel",
+            "submit": "Edit"
+          },
+          "form": {
+            "title": "Folder name",
+            "description": "Description",
+            "cancel": "Cancel",
+            "submit": "Edit"
+          }
+        },
         "workspaces": {
           "mainWorkspace": "My workspace",
           "form": {
@@ -157,40 +173,49 @@
             "cancel": "Cancel",
             "submit": "Edit"
           }
-        }
-      },
-      "actions": {
-        "createFolder": {
-          "modal": {
-            "title": "Create folder",
-            "label": "Folder name",
-            "placeholder": "Enter folder name",
-            "cancel": "Cancel",
-            "submit": "Create"
+        },
+        "actions": {
+          "createFolder": {
+            "modal": {
+              "title": "Create folder",
+              "label": "Folder name",
+              "placeholder": "Enter folder name",
+              "cancel": "Cancel",
+              "submit": "Create"
+            }
+          },
+          "upload": {
+            "toast": "Drop your files here to transfer them in {{title}}",
+            "toast_no_rights": "You don't have the necessary rights to transfer files in {{title}}",
+            "files": {
+              "description_one": "{{count}} file being transferred",
+              "description_other": "{{count}} files being transferred",
+              "description_done_one": "{{count}} file transferred",
+              "description_done_other": "{{count}} files transferred"
+            }
+          },
+          "delete": {
+            "toast_one": "Item deleted",
+            "toast_other": "{{count}} items deleted",
+            "low_rights_toast": "Vous ne pouvez pas restaurer ces éléments car vous n'avez pas les droits nécessaires."
+          },
+          "rename": {
+            "modal": {
+              "cancel": "Cancel",
+              "label": "New name",
+              "placeholder": "Enter the new name",
+              "submit": "Rename",
+              "title": "Rename"
+            }
+          },
+          "restore": {
+            "toast_one": "Item restored",
+            "toast_other": "{{count}} items restored"
+          },
+          "move": {
+            "toast_one": "{{count}} item moved",
+            "toast_other": "{{count}} items moved"
           }
-        },
-        "upload": {
-          "toast": "Drop your files here to transfer them in {{title}}",
-          "toast_no_rights": "You don't have the necessary rights to transfer files in {{title}}",
-          "files": {
-            "description_one": "{{count}} file being transferred",
-            "description_other": "{{count}} files being transferred",
-            "description_done_one": "{{count}} file transferred",
-            "description_done_other": "{{count}} files transferred"
-          }
-        },
-        "delete": {
-          "toast_one": "Item deleted",
-          "toast_other": "{{count}} items deleted",
-          "low_rights_toast": "Vous ne pouvez pas restaurer ces éléments car vous n'avez pas les droits nécessaires."
-        },
-        "restore": {
-          "toast_one": "Item restored",
-          "toast_other": "{{count}} items restored"
-        },
-        "move": {
-          "toast_one": "{{count}} item moved",
-          "toast_other": "{{count}} items moved"
         }
       },
       "time": {
@@ -250,10 +275,12 @@
       "explorer": {
         "rightPanel": {
           "multipleSelection": {
-            "text": "Plusieurs fichiers sélectionnés"
+            "text": "Plusieurs fichiers sélectionnés",
+            "alt": "Image de plusieurs fichiers sélectionnés"
           },
           "empty": {
-            "text": "Aucun fichier sélectionné"
+            "text": "Aucun fichier sélectionné",
+            "alt": "Image d'un fichier sélectionné"
           },
           "sharing": "Partage",
           "share": "Partager",
@@ -313,8 +340,10 @@
           "workspace": {
             "options": {
               "info": "Informations",
-              "settings": "Paramètre de l'espace",
-              "delete": "Supprimer l'espace",
+              "settings_workspace": "Paramètre de l'espace",
+              "settings_folder": "Paramètres du dossier",
+              "delete_workspace": "Supprimer l'espace",
+              "delete_folder": "Supprimer le dossier",
               "share": "Partager",
               "share_view": "Voir les accès"
             },
@@ -346,6 +375,20 @@
           "move": "Déplacer",
           "delete": "Supprimer",
           "reset_selection": "Réinitialiser la sélection"
+        },
+        "folders": {
+          "edit": {
+            "title": "Modifier le dossier",
+            "description": "Modifier les informations du dossier",
+            "cancel": "Annuler",
+            "submit": "Mettre à jour"
+          },
+          "form": {
+            "title": "Nom du dossier",
+            "description": "Description",
+            "cancel": "Annuler",
+            "submit": "Mettre à jour"
+          }
         },
         "workspaces": {
           "mainWorkspace": "Mon espace",

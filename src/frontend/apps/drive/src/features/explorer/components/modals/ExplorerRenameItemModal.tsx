@@ -11,6 +11,7 @@ import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationRenameItem } from "../../hooks/useMutations";
 import { useRef } from "react";
 import { getExtension } from "../../utils/utils";
+import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
 
 type Inputs = {
   title: string;
@@ -21,6 +22,7 @@ export const ExplorerRenameItemModal = (
     item: Item;
   }
 ) => {
+  const treeContext = useTreeContext<Item>();
   const { t } = useTranslation();
   const form = useForm<Inputs>({
     defaultValues: {
@@ -31,10 +33,20 @@ export const ExplorerRenameItemModal = (
   const updateItem = useMutationRenameItem();
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
-    updateItem.mutate({
-      ...data,
-      id: props.item.id,
-    });
+    await updateItem.mutateAsync(
+      {
+        ...data,
+        id: props.item.id,
+      },
+      {
+        onSuccess: () => {
+          treeContext?.treeData.updateNode(props.item.id, {
+            title: data.title,
+          });
+        },
+      }
+    );
+
     props.onClose();
   };
 

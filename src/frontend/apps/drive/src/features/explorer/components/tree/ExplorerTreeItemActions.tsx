@@ -12,6 +12,7 @@ import { WorkspaceShareModal } from "../modals/share/WorkspaceShareModal";
 import { itemIsWorkspace } from "@/features/drivers/utils";
 import { useDeleteTreeNode } from "./hooks/useDeleteTreeNode";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
+import { ExplorerRenameItemModal } from "../modals/ExplorerRenameItemModal";
 export type ExplorerTreeItemActionsProps = {
   item: Item;
 };
@@ -27,7 +28,7 @@ export const ExplorerTreeItemActions = ({
   const isWorkspace = itemIsWorkspace(item);
   const { deleteTreeNode } = useDeleteTreeNode();
   const createFolderModal = useModal();
-
+  const renameModal = useModal();
   return (
     <>
       <div
@@ -59,15 +60,24 @@ export const ExplorerTreeItemActions = ({
               },
               {
                 icon: <img src={settingsSvg.src} alt="" />,
-                label: t("explorer.tree.workspace.options.settings"),
-
+                label: isWorkspace
+                  ? t("explorer.tree.workspace.options.settings_workspace")
+                  : t("explorer.grid.actions.rename"),
                 value: "settings",
                 isHidden: !item.abilities.update || item.main_workspace,
-                callback: editWorkspaceModal.open,
+                callback: () => {
+                  if (isWorkspace) {
+                    editWorkspaceModal.open();
+                  } else {
+                    renameModal.open();
+                  }
+                },
               },
               {
                 icon: <span className="material-icons">delete</span>,
-                label: t("explorer.tree.workspace.options.delete"),
+                label: !isWorkspace
+                  ? t("explorer.tree.workspace.options.delete_folder")
+                  : t("explorer.tree.workspace.options.delete_workspace"),
                 value: "delete",
                 isHidden: !item.abilities.destroy || item.main_workspace,
                 callback: () =>
@@ -116,6 +126,10 @@ export const ExplorerTreeItemActions = ({
       )}
       {createFolderModal.isOpen && (
         <ExplorerCreateFolderModal {...createFolderModal} parentId={item.id} />
+      )}
+
+      {renameModal.isOpen && (
+        <ExplorerRenameItemModal {...renameModal} item={item} key={item.id} />
       )}
     </>
   );

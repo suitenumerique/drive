@@ -11,9 +11,9 @@ import {
 import { DroppableNodeTree } from "./DroppableNodeTree";
 import { NavigationEventType, useExplorer } from "../ExplorerContext";
 import { useModal } from "@openfun/cunningham-react";
-import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWorkspaceModal";
 import { ExplorerTreeItemActions } from "./ExplorerTreeItemActions";
 import { itemIsWorkspace } from "@/features/drivers/utils";
+import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWorkspaceModal";
 
 type ExplorerTreeItemProps = NodeRendererProps<TreeDataItem<TreeItem>>;
 
