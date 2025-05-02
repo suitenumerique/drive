@@ -91,6 +91,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "filename": item.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             }
         ],
     }

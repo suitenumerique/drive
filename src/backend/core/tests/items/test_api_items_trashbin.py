@@ -86,6 +86,7 @@ def test_api_items_trashbin_format():
             "upload_ended": True,
         },
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
+        "deleted_at": item.deleted_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "full_name": item.creator.full_name,
             "short_name": item.creator.short_name,

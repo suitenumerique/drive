@@ -59,6 +59,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "filename": child1.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -89,6 +90,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "filename": child2.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
         ],
     }
@@ -156,6 +158,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "filename": child1.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -184,6 +187,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "filename": child2.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
         ],
     }
@@ -259,6 +263,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "filename": child1.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -289,6 +294,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "filename": child2.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
         ],
     }
@@ -356,6 +362,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "filename": child1.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -386,6 +393,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "filename": child2.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
         ],
     }
@@ -471,6 +479,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "filename": child1.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -501,6 +510,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "filename": child2.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
         ],
     }
@@ -569,6 +579,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "filename": child1.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -599,6 +610,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "filename": child2.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
         ],
     }
@@ -716,6 +728,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "filename": child1.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -746,6 +759,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "filename": child2.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
         ],
     }
@@ -810,6 +824,7 @@ def test_api_items_children_list_filter_type():
                 "filename": child1.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
         ],
     }
@@ -853,6 +868,7 @@ def test_api_items_children_list_filter_type():
                 "filename": child2.filename,
                 "size": None,
                 "description": None,
+                "deleted_at": None,
             },
         ],
     }

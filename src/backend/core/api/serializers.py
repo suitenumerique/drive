@@ -155,6 +155,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "main_workspace",
             "size",
             "description",
+            "deleted_at",
         ]
         read_only_fields = [
             "id",
@@ -178,6 +179,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "main_workspace",
             "size",
             "description",
+            "deleted_at",
         ]
 
     def get_abilities(self, item) -> dict:
@@ -245,6 +247,7 @@ class ItemSerializer(ListItemSerializer):
             "main_workspace",
             "size",
             "description",
+            "deleted_at",
         ]
         read_only_fields = [
             "id",
@@ -267,6 +270,7 @@ class ItemSerializer(ListItemSerializer):
             "mimetype",
             "main_workspace",
             "size",
+            "deleted_at",
         ]
 
     def create(self, validated_data):
