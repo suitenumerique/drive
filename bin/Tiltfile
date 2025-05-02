@@ -7,7 +7,7 @@ docker_build(
     context='..',
     dockerfile='../Dockerfile',
     only=['./src/backend', './src/mail', './docker'],
-    target = 'backend-production',
+    target='backend-production',
     live_update=[
         sync('../src/backend', '/app'),
         run(
@@ -22,14 +22,15 @@ docker_build(
     context='..',
     dockerfile='../src/frontend/Dockerfile',
     only=['./src/frontend', './docker', './.dockerignore'],
-    target = 'drive',
+    target='drive',
     live_update=[
         sync('../src/frontend', '/home/frontend'),
     ]
 )
 
 k8s_resource('drive-backend-migrate', resource_deps=['postgres-postgresql'])
-k8s_resource('drive-backend-createsuperuser', resource_deps=['drive-backend-migrate'])
+k8s_resource('drive-backend-createsuperuser', 
+             resource_deps=['drive-backend-migrate'])
 k8s_resource('drive-backend', resource_deps=['drive-backend-migrate'])
 k8s_yaml(local('cd ../src/helm && helmfile -n drive -e dev template .'))
 
@@ -39,11 +40,13 @@ set -eu
 POD_NAME="$(tilt get kubernetesdiscovery drive-backend -ojsonpath='{.status.pods[0].name}')"
 kubectl -n drive exec "$POD_NAME" -- python manage.py makemigrations
 '''
-cmd_button('Make migration',
-           argv=['sh', '-c', migration],
-           resource='drive-backend',
-           icon_name='developer_board',
-           text='Run makemigration',
+
+cmd_button(
+    'Make migration',
+    argv=['sh', '-c', migration],
+    resource='drive-backend',
+    icon_name='developer_board',
+    text='Run makemigration',
 )
 
 pod_migrate = '''
@@ -52,6 +55,12 @@ set -eu
 POD_NAME="$(tilt get kubernetesdiscovery drive-backend -ojsonpath='{.status.pods[0].name}')"
 kubectl -n drive exec "$POD_NAME" -- python manage.py migrate --no-input
 '''
+
+cmd_button(
+    'Migrate db',
+    argv=['sh', '-c', pod_migrate],
+    resource='drive-backend',
+    icon_name='developer_board',
 cmd_button('Migrate db',
            argv=['sh', '-c', pod_migrate],
            resource='drive-backend',
