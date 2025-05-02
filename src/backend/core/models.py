@@ -468,7 +468,13 @@ class ItemManager(TreeManager):
                 f'LOCK TABLE "{Item._meta.db_table}" '  # noqa: SLF001
                 "IN SHARE ROW EXCLUSIVE MODE;"
             )
-            item = super().create_child(parent=parent, **kwargs)
+
+            # item = super().create_child(parent=parent, **kwargs)
+
+            item = self.create(**kwargs)
+            if parent:
+                item.path = str(parent.path) + "." + str(item.id)
+                item.save()
 
         if parent:
             update = {
@@ -482,7 +488,6 @@ class ItemManager(TreeManager):
             self.filter(pk=parent.id).update(**update)
 
         return item
-
 
 # pylint: disable=too-many-public-methods
 class Item(TreeModel, BaseModel):
@@ -563,6 +568,9 @@ class Item(TreeModel, BaseModel):
         """Set the upload state to pending if it's the first save and it's a file"""
         if self.created_at is None and self.type == ItemTypeChoices.FILE:
             self.upload_state = ItemUploadStateChoices.PENDING
+
+        if not self.path:
+            self.path = str(self.id)
 
         return super().save(*args, **kwargs)
 
