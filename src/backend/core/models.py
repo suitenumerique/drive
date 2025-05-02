@@ -18,7 +18,7 @@ from django.core import mail, validators
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
-from django.db import connection, models, transaction
+from django.db import models, transaction
 from django.db.models.expressions import RawSQL
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -28,7 +28,6 @@ from django.utils.translation import gettext_lazy as _
 
 from django_ltree.managers import TreeManager, TreeQuerySet
 from django_ltree.models import TreeModel
-from django_ltree.paths import PathGenerator
 from timezone_field import TimeZoneField
 
 logger = getLogger(__name__)
@@ -435,7 +434,7 @@ class ItemManager(TreeManager):
     """Custom manager for Item model overriding create_child method."""
 
     def get_queryset(self):
-        return ItemQuerySet(model=self.model, using=self._db).order_by("path")
+        return ItemQuerySet(model=self.model, using=self._db)
 
     def readable_per_se(self, user):
         """
@@ -445,7 +444,6 @@ class ItemManager(TreeManager):
         """
         return self.get_queryset().readable_per_se(user)
 
-    @transaction.atomic
     def create_child(self, parent=None, **kwargs):
         """
         Check if the item can have children before adding one and if the title is
@@ -475,12 +473,15 @@ class ItemManager(TreeManager):
                     }
                 )
 
-        with connection.cursor() as cursor:
-            cursor.execute(
-                f'LOCK TABLE "{Item._meta.db_table}" '  # noqa: SLF001
-                "IN SHARE ROW EXCLUSIVE MODE;"
-            )
-            item = super().create_child(parent=parent, **kwargs)
+        if not kwargs.get("id"):
+            kwargs["id"] = str(uuid.uuid4())
+
+        kwargs["path"] = str(kwargs["id"])
+
+        if parent:
+            kwargs["path"] = f"{parent.path!s}.{kwargs['id']!s}"
+
+        item = self.create(**kwargs)
 
         if parent:
             update = {
@@ -547,6 +548,7 @@ class Item(TreeModel, BaseModel):
         db_table = "drive_item"
         verbose_name = _("Item")
         verbose_name_plural = _("Items")
+        ordering = ("created_at",)
         constraints = [
             models.CheckConstraint(
                 condition=(
@@ -576,6 +578,9 @@ class Item(TreeModel, BaseModel):
         """Set the upload state to pending if it's the first save and it's a file"""
         if self.created_at is None and self.type == ItemTypeChoices.FILE:
             self.upload_state = ItemUploadStateChoices.PENDING
+
+        if not self.path:
+            self.path = str(self.id)
 
         return super().save(*args, **kwargs)
 
@@ -963,21 +968,12 @@ class Item(TreeModel, BaseModel):
                 }
             )
 
-        # compute next path in the target folder
-        paths_in_use = target.children()
-        prefix = target.path
-        path_generator = PathGenerator(
-            prefix,
-            skip=paths_in_use.values_list("path", flat=True),
-            label_size=self.label_size,
-        )
-
         old_path = self.path
         old_parent_id = None
         if self.depth > 1:
             # Store old parent id in order to update its numchild and numchild_folder
             old_parent_id = self.parent().id
-        self.path = next(path_generator)
+        self.path = f"{target.path!s}.{self.id!s}"
         self.save(update_fields=["path"])
         target_update = {
             "numchild": models.F("numchild") + 1,

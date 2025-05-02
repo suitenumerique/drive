@@ -20,6 +20,8 @@ from core import factories, models
 
 pytestmark = pytest.mark.django_db
 
+# pylint: disable=too-many-lines
+
 
 def test_models_items_str():
     """The str representation should be the title of the item."""
@@ -33,7 +35,23 @@ def test_models_items_id_unique():
     with pytest.raises(ValidationError) as exc_info:
         factories.ItemFactory(id=item.id)
 
-    assert exc_info.value.message_dict == {"id": ["Item with this Id already exists."]}
+    assert exc_info.value.message_dict == {
+        "id": ["Item with this Id already exists."],
+        "path": ["Item with this Path already exists."],
+    }
+
+
+def test_models_items_root_path_should_be_item_id():
+    """The root path should be the item id."""
+    item = factories.ItemFactory()
+    assert str(item.path) == str(item.id)
+
+
+def test_models_items_path_for_children_contains_parent_path():
+    """The path for a child should contain the parent path."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    child = factories.ItemFactory(parent=parent)
+    assert str(child.path) == f"{parent.id!s}.{child.id!s}"
 
 
 def test_models_items_title_max_length():

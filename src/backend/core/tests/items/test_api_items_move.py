@@ -187,7 +187,7 @@ def test_api_tems_move_file_authenticated_target_roles_mocked(
         assert response.status_code == 200
         assert response.json() == {"message": "item moved successfully."}
 
-        assert list(target.children()) == target_children + [item]
+        assert list(target.children()) == [item] + target_children
     else:
         assert response.status_code == 400
         message = (
@@ -267,9 +267,10 @@ def test_api_items_move_authenticated_target_roles_mocked(
         assert response.status_code == 200
         assert response.json() == {"message": "item moved successfully."}
 
-        assert list(target.children()) == target_children + [item]
-        assert list(target.descendants()) == target_children + [item] + list(
-            item.descendants()
+        assert list(target.children()) == [item] + target_children
+        assert (
+            list(target.descendants())
+            == [item] + list(item.descendants()) + target_children
         )
 
     else:

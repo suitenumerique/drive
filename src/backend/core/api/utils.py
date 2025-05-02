@@ -1,5 +1,7 @@
 """Util to generate S3 authorization headers for object storage access control"""
 
+from datetime import datetime
+
 from django.conf import settings
 from django.core.files.storage import default_storage
 
@@ -14,8 +16,13 @@ def flat_to_nested(items):
     node_dict = {}
     roots = []
 
+    def sort_key(serialized_item):
+        return serialized_item["depth"], datetime.fromisoformat(
+            serialized_item["created_at"]
+        )
+
     # Sort the flat list by path to ensure parent nodes are processed first
-    items.sort(key=lambda x: x["path"])
+    items.sort(key=sort_key)
 
     for item in items:
         item["children"] = []  # Initialize children list

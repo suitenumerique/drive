@@ -733,7 +733,7 @@ class ItemViewSet(
     @drf.decorators.action(
         detail=True,
         methods=["get", "post"],
-        ordering=["path"],
+        ordering=["created_at"],
         url_path="children",
     )
     def children(self, request, *args, **kwargs):
@@ -846,7 +846,7 @@ class ItemViewSet(
         tree = (
             self.queryset.select_related("creator")
             .filter(clause, type=models.ItemTypeChoices.FOLDER, deleted_at__isnull=True)
-            .order_by("path")
+            .order_by("created_at")
         )
 
         tree = self.annotate_user_roles(tree)

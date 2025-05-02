@@ -6,7 +6,7 @@ services:
     ports:
       - "6434:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
       interval: 1s
       timeout: 2s
       retries: 300
