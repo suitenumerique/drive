@@ -20,6 +20,7 @@ import { ExplorerTreeActions } from "./ExplorerTreeActions";
 import { ExplorerTreeNav } from "./nav/ExplorerTreeNav";
 import { addItemsMovedToast } from "../toasts/addItemsMovedToast";
 import { ExplorerTreeMoveConfirmationModal } from "./ExplorerTreeMoveConfirmationModal";
+import { ExplorerSearchModal } from "../modals/search/ExplorerSearchModal";
 
 export const ExplorerTree = () => {
   const { t, i18n } = useTranslation();
@@ -162,6 +163,7 @@ export const ExplorerTree = () => {
 
   const createFolderModal = useModal();
   const createWorkspaceModal = useModal();
+  const searchModal = useModal();
 
   const handleMove = (result: TreeViewMoveResult) => {
     move.mutate(
@@ -183,6 +185,7 @@ export const ExplorerTree = () => {
       <ExplorerTreeActions
         openCreateFolderModal={createFolderModal.open}
         openCreateWorkspaceModal={createWorkspaceModal.open}
+        openSearchModal={searchModal.open}
       />
       <HorizontalSeparator withPadding={false} />
 
@@ -252,6 +255,7 @@ export const ExplorerTree = () => {
 
       <ExplorerTreeNav />
 
+      <ExplorerSearchModal {...searchModal} />
       <ExplorerCreateFolderModal {...createFolderModal} parentId={itemId} />
       <ExplorerCreateWorkspaceModal {...createWorkspaceModal} />
       {moveState && moveConfirmationModal.isOpen && (

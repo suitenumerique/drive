@@ -369,3 +369,16 @@
     height: 64px;
   }
 }
+
+.explorer__search__modal {
+  p {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--c--theme--colors--greyscale-600);
+  }
+
+  img {
+    margin: auto;
+    display: block;
+  }
+}

@@ -10,11 +10,13 @@ import { useTranslation } from "react-i18next";
 type ExplorerTreeActionsProps = {
   openCreateFolderModal: () => void;
   openCreateWorkspaceModal: () => void;
+  openSearchModal: () => void;
 };
 
 export const ExplorerTreeActions = ({
   openCreateFolderModal,
   openCreateWorkspaceModal,
+  openSearchModal,
 }: ExplorerTreeActionsProps) => {
   const { t } = useTranslation();
   const { treeIsInitialized, item } = useExplorer();
@@ -89,6 +91,7 @@ export const ExplorerTreeActions = ({
         color="primary-text"
         aria-label={t("explorer.tree.search")}
         icon={<span className="material-icons">search</span>}
+        onClick={openSearchModal}
       />
     </div>
   );

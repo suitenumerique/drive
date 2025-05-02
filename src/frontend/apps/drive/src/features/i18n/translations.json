@@ -132,6 +132,12 @@
             }
           }
         },
+        "search": {
+          "modal": {
+            "title": "Search",
+            "description": "The search function is under development and will be available soon."
+          }
+        },
         "selectionBar": {
           "caption_one": "1 item selected",
           "caption_other": "{{count}} items selected",
@@ -366,6 +372,12 @@
               "title": "Ce dossier est dans la corbeille",
               "description": "Pour afficher ce dossier, vous devez d'abord le restaurer."
             }
+          }
+        },
+        "search": {
+          "modal": {
+            "title": "Rechercher",
+            "description": "La fonction de recherche est en cours de développement et sera bientôt disponible."
           }
         },
         "selectionBar": {
