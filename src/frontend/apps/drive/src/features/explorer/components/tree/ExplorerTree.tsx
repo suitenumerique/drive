@@ -153,6 +153,10 @@ export const ExplorerTree = () => {
 
   // When the language changes, we update the tree titles to be sure they are translated
   useEffect(() => {
+    if (!treeIsInitialized) {
+      return;
+    }
+
     treeContext?.treeData.updateNode("PERSONAL_SPACE", {
       headerTitle: t("explorer.workspaces.mainWorkspace"),
     });
@@ -160,7 +164,7 @@ export const ExplorerTree = () => {
     treeContext?.treeData.updateNode("SHARED_SPACE", {
       headerTitle: t("explorer.tree.sharedSpace"),
     });
-  }, [i18n.language, t]);
+  }, [i18n.language, t, treeIsInitialized]);
 
   const createFolderModal = useModal();
   const createWorkspaceModal = useModal();
