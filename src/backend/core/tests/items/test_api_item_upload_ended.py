@@ -8,7 +8,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from core import factories
-from core.models import ItemTypeChoices, ItemUploadStateChoices
+from core.models import ItemTypeChoices, ItemUploadStateChoices, LinkRoleChoices
 
 pytestmark = pytest.mark.django_db
 
@@ -29,9 +29,9 @@ def test_api_item_upload_ended_no_permissions(role):
     client.force_login(user)
 
     if role:
-        item = factories.ItemFactory(users=[(user, role)])
+        item = factories.ItemFactory(users=[(user, role)], link_role=LinkRoleChoices.READER)
     else:
-        item = factories.ItemFactory()
+        item = factories.ItemFactory(link_role=LinkRoleChoices.READER)
 
     response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
