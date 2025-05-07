@@ -5,6 +5,7 @@ import mainWorkspaceIcon from "@/assets/tree/main-workspace.svg";
 import {
   NodeRendererProps,
   TreeDataItem,
+  TreeViewDataType,
   TreeViewItem,
   TreeViewNodeTypeEnum,
 } from "@gouvfr-lasuite/ui-kit";
@@ -21,9 +22,6 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
   const { onNavigate } = useExplorer();
   const item = props.node.data.value;
   const editModal = useModal();
-  const isMainWorkspace =
-    item.nodeType === TreeViewNodeTypeEnum.NODE && item.main_workspace;
-  const isWorkspace = itemIsWorkspace(item as Item);
 
   return (
     <>
@@ -39,21 +37,7 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
         >
           <div className="explorer__tree__item">
             <div className="explorer__tree__item__content">
-              {isMainWorkspace && (
-                <img src={mainWorkspaceIcon.src} alt="folder" />
-              )}
-              {isWorkspace && (
-                <img
-                  src={workspaceIcon.src}
-                  width={16}
-                  height={16}
-                  style={{ marginTop: "2px" }}
-                  alt="folder"
-                />
-              )}
-              {!isMainWorkspace && !isWorkspace && (
-                <img src={folderIcon.src} alt="folder" />
-              )}
+              <ExplorerTreeItemIcon item={item} size={16} />
               {/* 
                 We need to check the nodeType because the generic type T in TreeViewDataType 
                 is only available for nodes of type NODE
@@ -79,4 +63,34 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
       </DroppableNodeTree>
     </>
   );
+};
+
+export const ExplorerTreeItemIcon = ({
+  item,
+  size = 16,
+}: {
+  item: TreeViewDataType<TreeItem>;
+  size?: number;
+}) => {
+  const isMainWorkspace =
+    item.nodeType === TreeViewNodeTypeEnum.NODE && item.main_workspace;
+  const isWorkspace = itemIsWorkspace(item as Item);
+  if (isMainWorkspace) {
+    return (
+      <img
+        width={size}
+        height={size}
+        src={mainWorkspaceIcon.src}
+        alt="folder"
+      />
+    );
+  }
+
+  if (isWorkspace) {
+    return (
+      <img width={size} height={size} src={workspaceIcon.src} alt="folder" />
+    );
+  }
+
+  return <img width={size} height={size} src={folderIcon.src} alt="folder" />;
 };
