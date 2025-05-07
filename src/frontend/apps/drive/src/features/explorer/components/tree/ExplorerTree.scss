@@ -1,3 +1,8 @@
+@use "sass:map";
+@use "@/styles/cunningham-tokens-sass" as *;
+
+$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+
 .explorer__tree__item {
   width: 100%;
   display: flex;
@@ -71,14 +76,6 @@
   }
 }
 
-.explorer__tree {
-  height: 100%;
-
-  &__nav {
-    padding: 0 12px;
-  }
-}
-
 .explorer__tree__item-standalone {
   padding-left: 4px;
 }
@@ -112,6 +109,118 @@
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+  }
+}
+
+.explorer__tree {
+  height: 100%;
+
+  &__nav {
+    padding: 0 12px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+
+    &__left {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    @media (max-width: $tablet) {
+      .explorer__search__button {
+        display: none;
+      }
+
+      .explorer__tree__actions__left {
+        flex-grow: 1;
+
+        .c__dropdown-menu-trigger {
+          flex-grow: 1;
+
+          button {
+            flex-grow: 1;
+            justify-content: center;
+          }
+        }
+      }
+    }
+  }
+
+  .c__tree-view--container {
+    @media (max-width: $tablet) {
+      display: none;
+    }
+  }
+
+  &__mobile {
+    display: none;
+    flex-direction: column;
+    padding: 12px 0;
+
+    @media (max-width: $tablet) {
+      display: flex;
+    }
+
+    &__item {
+      font-size: 14px;
+      margin: 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      span {
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+    }
+
+    &__title {
+      font-weight: 700;
+      height: 30px;
+    }
+
+    &__node {
+      height: 40px;
+      font-weight: 500;
+      padding: 0 6px;
+      border-radius: 4px;
+      border: none;
+      outline: none;
+      background-color: transparent;
+      font-family: inherit;
+      flex-grow: 1;
+
+      &--selected {
+        background-color: var(--c--theme--colors--greyscale-100);
+      }
+    }
+  }
+
+  .explorer__tree__mobile-navs {
+    display: none;
+  }
+
+  @media (max-width: $tablet) {
+    .explorer__tree__mobile-navs {
+      display: block;
+
+      &__inner {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .c__dropdown-menu-trigger {
+        width: 100%;
+      }
     }
   }
 }
