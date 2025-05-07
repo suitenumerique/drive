@@ -39,6 +39,8 @@ export interface ExplorerContextType {
   setRightPanelForcedItem: (item: Item | undefined) => void;
   rightPanelOpen: boolean;
   setRightPanelOpen: (open: boolean) => void;
+  isLeftPanelOpen: boolean;
+  setIsLeftPanelOpen: (isLeftPanelOpen: boolean) => void;
 }
 
 export const ExplorerContext = createContext<ExplorerContextType | undefined>(
@@ -91,6 +93,7 @@ export const ExplorerProvider = ({
 
   const [rightPanelForcedItem, setRightPanelForcedItem] = useState<Item>();
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
+  const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(false);
 
   const [initialId] = useState<string | undefined>(itemId);
   const [treeIsInitialized, setTreeIsInitialized] = useState<boolean>(false);
@@ -167,6 +170,8 @@ export const ExplorerProvider = ({
         setRightPanelForcedItem,
         rightPanelOpen,
         setRightPanelOpen,
+        isLeftPanelOpen,
+        setIsLeftPanelOpen,
       }}
     >
       <TreeProvider
