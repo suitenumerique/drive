@@ -4,7 +4,10 @@ import workspaceLogo from "@/assets/workspace_logo.svg";
 import { NavigationEventType, useExplorer } from "./ExplorerContext";
 import { useMemo } from "react";
 import { TreeViewNodeTypeEnum, useTreeContext } from "@gouvfr-lasuite/ui-kit";
-import { TreeItem } from "@/features/drivers/types";
+import { Item, TreeItem } from "@/features/drivers/types";
+import workspaceIcon from "@/assets/tree/workspace.svg";
+import mainWorkspaceIcon from "@/assets/tree/main-workspace.svg";
+import { ExplorerTreeItemIcon } from "./tree/ExplorerTreeItem";
 
 export const ExplorerBreadcrumbs = () => {
   const treeContext = useTreeContext<TreeItem>();
@@ -77,6 +80,83 @@ export const ExplorerBreadcrumbs = () => {
           }}
         />
       </div>
+    </div>
+  );
+};
+
+export const ExplorerBreadcrumbsMobile = () => {
+  const treeContext = useTreeContext<TreeItem>();
+  const { item, onNavigate, treeIsInitialized } = useExplorer();
+
+  const getItems = () => {
+    if (!item) {
+      return null;
+    }
+
+    const nodes = treeContext?.treeData.nodes ?? [];
+
+    const ancestors: Item[] =
+      nodes.length > 0
+        ? (treeContext?.treeData.getAncestors(item.id) as Item[])
+        : [];
+
+    if (ancestors.length === 0) {
+      return null;
+    }
+
+    const workspace = ancestors[0];
+    const current = item.id === workspace.id ? null : item;
+    const parent = current ? ancestors[ancestors.length - 2] : null;
+    return {
+      workspace,
+      current,
+      parent,
+    };
+  };
+
+  if (!item || !treeIsInitialized) {
+    return null;
+  }
+
+  const items = getItems();
+  if (!items) {
+    return null;
+  }
+
+  const { workspace, parent, current } = items;
+
+  return (
+    <div className="explorer__content__breadcrumbs--mobile">
+      {current ? (
+        <div className="explorer__content__breadcrumbs--mobile__container">
+          <div className="explorer__content__breadcrumbs--mobile__container__actions">
+            <Button
+              color="tertiary"
+              icon={<span className="material-icons">chevron_left</span>}
+              onClick={() => {
+                onNavigate({
+                  type: NavigationEventType.ITEM,
+                  item: parent as Item,
+                });
+              }}
+            />
+          </div>
+          <div className="explorer__content__breadcrumbs--mobile__container__info">
+            <div className="explorer__content__breadcrumbs--mobile__container__info__title">
+              <ExplorerTreeItemIcon item={workspace} size={16} />
+              <span>{workspace.title}</span>
+            </div>
+            <div className="explorer__content__breadcrumbs--mobile__container__info__folder">
+              {current.title}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="explorer__content__breadcrumbs--mobile__workspace">
+          <ExplorerTreeItemIcon item={workspace} size={24} />
+          <span>{workspace.title}</span>
+        </div>
+      )}
     </div>
   );
 };

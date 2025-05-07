@@ -1,6 +1,9 @@
 import { SelectionArea, SelectionEvent } from "@viselect/react";
 import { ExplorerGrid } from "./grid/ExplorerGrid";
-import { ExplorerBreadcrumbs } from "./ExplorerBreadcrumbs";
+import {
+  ExplorerBreadcrumbs,
+  ExplorerBreadcrumbsMobile,
+} from "./ExplorerBreadcrumbs";
 import { useExplorer } from "./ExplorerContext";
 import { ExplorerSelectionBar } from "./ExplorerSelectionBar";
 import clsx from "clsx";
@@ -153,6 +156,7 @@ export const ExplorerInner = (props: ExplorerProps) => {
         },
       }}
     >
+      <ExplorerBreadcrumbsMobile />
       <div
         {...dropZone.getRootProps({
           className: clsx(`explorer explorer--${displayMode}`, {
