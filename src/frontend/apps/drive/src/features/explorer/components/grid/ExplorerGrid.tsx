@@ -26,6 +26,8 @@ import { ExplorerGridUpdatedAtCell } from "./ExplorerGridUpdatedAtCell";
 import { ExplorerGridActionsCell } from "./ExplorerGridActionsCell";
 import { ExplorerProps, useExplorerInner } from "../Explorer";
 import { useDragItemContext } from "../ExplorerDndProvider";
+import { ExplorerGridMobileCell } from "./ExplorerGridMobileCell";
+import { isTablet } from "@/features/ui/components/responsive/ResponsiveDivs";
 
 const EMPTY_ARRAY: Item[] = [];
 
@@ -52,6 +54,10 @@ export const ExplorerGrid = (props: ExplorerProps) => {
   const columnHelper = createColumnHelper<Item>();
 
   const columns = [
+    columnHelper.display({
+      id: "mobile",
+      cell: ExplorerGridMobileCell,
+    }),
     columnHelper.accessor("title", {
       header: t("explorer.grid.name"),
       cell: ExplorerGridNameCell,
@@ -155,6 +161,8 @@ export const ExplorerGrid = (props: ExplorerProps) => {
         <table ref={tableRef} tabIndex={0} onKeyDown={onKeyDown}>
           <thead>
             <tr>
+              {/* This one stands for the mobile column */}
+              <th></th>
               <th style={{ width: "50%" }}>
                 <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable">
                   {t("explorer.grid.name")}
@@ -190,8 +198,10 @@ export const ExplorerGrid = (props: ExplorerProps) => {
                       return;
                     }
 
+                    const isMobile = isTablet();
+
                     // Single click to select/deselect the item
-                    if (e.detail === 1) {
+                    if (!isMobile && e.detail === 1) {
                       if (e.shiftKey && lastSelectedRowRef.current) {
                         // Get all rows between last selected and current
                         const rows = table.getRowModel().rows;
@@ -247,7 +257,7 @@ export const ExplorerGrid = (props: ExplorerProps) => {
                     }
 
                     // Double click to open the item
-                    if (e.detail === 2) {
+                    if (isMobile || e.detail === 2) {
                       if (row.original.type === ItemType.FOLDER) {
                         effectiveOnNavigate({
                           type: NavigationEventType.ITEM,
