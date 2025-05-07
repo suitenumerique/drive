@@ -6,17 +6,16 @@ import uploadFileSvg from "@/assets/icons/upload_file.svg";
 import uploadFolderSvg from "@/assets/icons/upload_folder.svg";
 import { Button } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
+import { ExplorerSearchButton } from "../ExplorerSearchButton";
 
 type ExplorerTreeActionsProps = {
   openCreateFolderModal: () => void;
   openCreateWorkspaceModal: () => void;
-  openSearchModal: () => void;
 };
 
 export const ExplorerTreeActions = ({
   openCreateFolderModal,
   openCreateWorkspaceModal,
-  openSearchModal,
 }: ExplorerTreeActionsProps) => {
   const { t } = useTranslation();
   const { treeIsInitialized, item } = useExplorer();
@@ -87,12 +86,7 @@ export const ExplorerTreeActions = ({
           </Button>
         </DropdownMenu>
       </div>
-      <Button
-        color="primary-text"
-        aria-label={t("explorer.tree.search")}
-        icon={<span className="material-icons">search</span>}
-        onClick={openSearchModal}
-      />
+      <ExplorerSearchButton />
     </div>
   );
 };

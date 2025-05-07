@@ -1,5 +1,34 @@
-.c__header-right {
+@use "sass:map";
+@use "@/styles/cunningham-tokens-sass" as *;
+
+$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+
+@media (max-width: $tablet) {
+  .c__header {
+    border-bottom: 0;
+  }
+}
+
+.c__header__right {
   display: flex;
   align-items: center;
   gap: 1rem;
+
+  .explorer__search__button {
+    display: none;
+  }
+
+  @media (max-width: $tablet) {
+    .c__dropdown-menu-trigger {
+      display: none;
+    }
+
+    .explorer__search__button {
+      display: flex;
+    }
+
+    .lasuite-gaufre-btn {
+      display: none !important;
+    }
+  }
 }

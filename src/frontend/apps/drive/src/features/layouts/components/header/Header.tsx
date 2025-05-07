@@ -8,6 +8,7 @@ import logo from "@/assets/logo.svg";
 import { useAuth, logout } from "@/features/auth/Auth";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ExplorerSearchButton } from "@/features/explorer/components/ExplorerSearchButton";
 
 export const Header = () => {
   return (
@@ -52,6 +53,7 @@ export const HeaderRight = () => {
       )}
       <LanguagePicker />
       <LaGaufre />
+      <ExplorerSearchButton />
     </>
   );
 };
