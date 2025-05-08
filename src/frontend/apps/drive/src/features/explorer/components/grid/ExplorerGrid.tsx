@@ -270,6 +270,8 @@ export const ExplorerGrid = (props: ExplorerProps) => {
                   {row.getVisibleCells().map((cell, index, array) => {
                     const isLastCell = index === array.length - 1;
                     const isFirstCell = index === 0;
+                    // Check if the item is selected, if so, we can't drop an item inside it
+                    const isSelected = !!selectedItemsMap[row.original.id];
                     return (
                       <td
                         key={cell.id}
@@ -282,6 +284,7 @@ export const ExplorerGrid = (props: ExplorerProps) => {
                           id={cell.id}
                           item={row.original}
                           disabled={
+                            isSelected ||
                             row.original.type !== ItemType.FOLDER ||
                             !row.original.abilities.children_create
                           }
