@@ -295,7 +295,14 @@ def test_api_item_invitations_create_anonymous():
 
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
 
 
@@ -394,9 +401,14 @@ def test_api_item_invitations_create_privileged_members(
 
     if response_code == 400:
         assert response.json() == {
-            "role": [
-                "Only owners of a item can invite other users as owners.",
+            "errors": [
+                {
+                    "attr": "role",
+                    "code": "invitation_role_owner_limited_to_owners",
+                    "detail": "Only owners of a item can invite other users as owners.",
+                },
             ],
+            "type": "validation_error",
         }
 
 
@@ -572,7 +584,14 @@ def test_api_item_invitations_create_cannot_duplicate_invitation():
 
     assert response.status_code == 400
     assert response.json() == {
-        "__all__": ["Item invitation with this Email address and Item already exists."]
+        "errors": [
+            {
+                "attr": "__all__",
+                "code": "unique_together",
+                "detail": "Item invitation with this Email address and Item already exists.",
+            },
+        ],
+        "type": "validation_error",
     }
 
 
@@ -601,7 +620,14 @@ def test_api_item_invitations_create_cannot_invite_existing_users():
 
     assert response.status_code == 400
     assert response.json() == {
-        "email": ["This email is already associated to a registered user."]
+        "type": "validation_error",
+        "errors": [
+            {
+                "code": "invitation_email_already_registered",
+                "detail": "This email is already associated to a registered user.",
+                "attr": "email",
+            }
+        ],
     }
 
 
@@ -687,8 +713,13 @@ def test_api_item_invitations_update_authenticated_privileged_role(
         assert response.status_code == 400
         assert invitation.role == old_role
         assert response.json() == {
-            "role": [
-                "Only owners of a item can invite other users as owners.",
+            "type": "validation_error",
+            "errors": [
+                {
+                    "code": "invitation_role_owner_limited_to_owners",
+                    "detail": "Only owners of a item can invite other users as owners.",
+                    "attr": "role",
+                }
             ],
         }
     else:
@@ -807,7 +838,13 @@ def test_api_item_invitations_delete_readers_or_editors(via, role, mock_user_tea
         f"/api/v1.0/items/{item.id!s}/invitations/{invitation.id!s}/",
     )
     assert response.status_code == 403
-    assert (
-        response.json()["detail"]
-        == "You do not have permission to perform this action."
-    )
+    assert response.json() == {
+        "type": "client_error",
+        "errors": [
+            {
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+                "attr": None,
+            }
+        ],
+    }

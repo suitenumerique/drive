@@ -23,7 +23,14 @@ def test_api_item_accesses_list_anonymous():
     response = APIClient().get(f"/api/v1.0/items/{item.id!s}/accesses/")
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
 
 
@@ -140,7 +147,14 @@ def test_api_item_accesses_retrieve_anonymous():
 
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
 
 
@@ -162,7 +176,14 @@ def test_api_item_accesses_retrieve_authenticated_unrelated():
     )
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "You do not have permission to perform this action."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
     }
 
     # Accesses related to another item should be excluded even if the user is related to it
@@ -175,7 +196,16 @@ def test_api_item_accesses_retrieve_authenticated_unrelated():
         )
 
         assert response.status_code == 404
-        assert response.json() == {"detail": "No ItemAccess matches the given query."}
+        assert response.json() == {
+            "errors": [
+                {
+                    "attr": None,
+                    "code": "not_found",
+                    "detail": "Not found.",
+                },
+            ],
+            "type": "client_error",
+        }
 
 
 @pytest.mark.parametrize("via", VIA)

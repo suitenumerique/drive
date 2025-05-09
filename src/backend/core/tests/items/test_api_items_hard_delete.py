@@ -73,11 +73,18 @@ def test_api_items_hard_delete_authenticated_owner_not_soft_deleted_should_fails
     response = client.delete(f"/api/v1.0/items/{item.id!s}/hard-delete/")
     assert response.status_code == 400
     assert response.json() == {
-        "hard_deleted_at": ["To hard delete an item, it must first be soft deleted."]
+        "errors": [
+            {
+                "attr": "hard_deleted_at",
+                "code": "item_hard_delete_should_soft_delete_first",
+                "detail": "To hard delete an item, it must first be soft deleted.",
+            },
+        ],
+        "type": "validation_error",
     }
 
 
-def test_api_items_hard_delete_authenticated_owner_already_hard_deleted_should_fails():
+def test_api_items_hard_delete_authenticated_owner_already_hard_deleted_should_fail():
     """
     Authenticated users should not be allowed to hard delete an item if it is already hard deleted.
     """

@@ -34,8 +34,16 @@ def test_api_item_accesses_create_anonymous():
 
     assert response.status_code == 401
     assert response.json() == {
-        "detail": "Authentication credentials were not provided."
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
     }
+
     assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
 
 
@@ -132,8 +140,16 @@ def test_api_item_accesses_create_authenticated_administrator(via, mock_user_tea
 
     assert response.status_code == 403
     assert response.json() == {
-        "detail": "Only owners of a resource can assign other users as owners."
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "Only owners of a resource can assign other users as owners.",
+            },
+        ],
+        "type": "client_error",
     }
+
     assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
 
     # It should be allowed to create a lower access
