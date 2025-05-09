@@ -453,7 +453,14 @@ class ItemManager(TreeManager):
         """
         if parent:
             if parent.type != ItemTypeChoices.FOLDER:
-                raise ValidationError({"type": _("Only folders can have children.")})
+                raise ValidationError(
+                    {
+                        "type": ValidationError(
+                            _("Only folders can have children."),
+                            code="item_create_child_type_folder_only",
+                        )
+                    }
+                )
 
             if _is_item_title_existing(
                 self.children(parent.path),
@@ -855,15 +862,21 @@ class Item(TreeModel, BaseModel):
         """
         if self.hard_deleted_at:
             raise ValidationError(
-                {"hard_deleted_at": [_("This item is already hard deleted.")]}
+                {
+                    "hard_deleted_at": ValidationError(
+                        _("This item is already hard deleted."),
+                        code="item_hard_delete_already_effective",
+                    )
+                }
             )
 
         if self.deleted_at is None:
             raise ValidationError(
                 {
-                    "hard_deleted_at": [
-                        _("To hard delete an item, it must first be soft deleted.")
-                    ]
+                    "hard_deleted_at": ValidationError(
+                        _("To hard delete an item, it must first be soft deleted."),
+                        code="item_hard_delete_should_soft_delete_first",
+                    )
                 }
             )
 
@@ -878,14 +891,22 @@ class Item(TreeModel, BaseModel):
         """Cancelling a soft delete with checks."""
         # This should not happen
         if self.deleted_at is None:
-            raise ValidationError({"deleted_at": [_("This item is not deleted.")]})
+            raise ValidationError(
+                {
+                    "deleted_at": ValidationError(
+                        _("This item is not deleted."),
+                        code="item_restore_not_deleted",
+                    )
+                }
+            )
 
         if self.deleted_at < get_trashbin_cutoff():
             raise ValidationError(
                 {
-                    "deleted_at": [
-                        _("This item was permanently deleted and cannot be restored.")
-                    ]
+                    "deleted_at": ValidationError(
+                        _("This item was permanently deleted and cannot be restored."),
+                        code="item_restore_hard_deleted",
+                    )
                 }
             )
 

@@ -29,7 +29,9 @@ def test_api_item_upload_ended_no_permissions(role):
     client.force_login(user)
 
     if role:
-        item = factories.ItemFactory(users=[(user, role)], link_role=LinkRoleChoices.READER)
+        item = factories.ItemFactory(
+            users=[(user, role)], link_role=LinkRoleChoices.READER
+        )
     else:
         item = factories.ItemFactory(link_role=LinkRoleChoices.READER)
 

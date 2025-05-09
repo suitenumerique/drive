@@ -94,6 +94,34 @@ def test_api_items_restore_authenticated_owner_success():
     assert item.ancestors_deleted_at is None
 
 
+def test_api_items_restore_authenticated_owner_not_deleted():
+    """An error should be raised when trying to restore an item that is not deleted."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/restore/")
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "deleted_at",
+                "code": "item_restore_not_deleted",
+                "detail": "This item is not deleted.",
+            },
+        ],
+        "type": "validation_error",
+    }
+
+    item.refresh_from_db()
+    assert item.deleted_at is None
+    assert item.ancestors_deleted_at is None
+
+
 def test_api_items_restore_authenticated_owner_ancestor_deleted():
     """
     The restored item should still be marked as deleted if one of its
@@ -131,7 +159,7 @@ def test_api_items_restore_authenticated_owner_ancestor_deleted():
 
 
 def test_api_items_restore_authenticated_owner_expired():
-    """It should not be possible to restore a item beyond the allowed time limit."""
+    """It should not be possible to restore an item beyond the allowed time limit."""
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)

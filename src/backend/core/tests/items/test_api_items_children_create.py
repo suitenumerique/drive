@@ -3,7 +3,7 @@ Tests for items API endpoint in drive's core app: create
 """
 
 from concurrent.futures import ThreadPoolExecutor
-from random import randint
+from random import choice, randint
 from uuid import uuid4
 
 from django.conf import settings
@@ -291,6 +291,45 @@ def test_api_items_children_create_force_id_existing():
                 "attr": "id",
             }
         ],
+    }
+
+
+def test_api_items_children_create_not_a_folder():
+    """
+    It should not be possible to create a nested item below an item
+    of type other than folder.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    access = factories.UserItemAccessFactory(
+        user=user,
+        role="editor",
+        item__type=choice(
+            [type for type in ItemTypeChoices.values if type != ItemTypeChoices.FOLDER]
+        ),
+    )
+
+    response = client.post(
+        f"/api/v1.0/items/{access.item.id!s}/children/",
+        {
+            "type": "file",
+            "filename": "file.txt",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "type",
+                "code": "item_create_child_type_folder_only",
+                "detail": "Only folders can have children.",
+            },
+        ],
+        "type": "validation_error",
     }
 
 
