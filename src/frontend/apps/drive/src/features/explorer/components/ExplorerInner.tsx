@@ -12,6 +12,7 @@ import { useEffect, useRef } from "react";
 import { ExplorerProps } from "./Explorer";
 import { useTranslation } from "react-i18next";
 import { ExplorerFilters } from "./ExplorerFilters";
+import { useResponsive } from "@gouvfr-lasuite/ui-kit";
 export type FileUploadMeta = { file: File; progress: number };
 
 export const ExplorerInner = (props: ExplorerProps) => {
@@ -133,6 +134,42 @@ export const ExplorerInner = (props: ExplorerProps) => {
     }
   }, [itemId]);
 
+  const { isTablet } = useResponsive();
+
+  const renderContent = () => {
+    return (
+      <>
+        <ExplorerBreadcrumbsMobile />
+        <div
+          {...dropZone.getRootProps({
+            className: clsx(`explorer explorer--${displayMode}`, {
+              "explorer--drop-zone--focused": dropZone.isFocused,
+              "explorer--drop-zone--drag-accept": dropZone.isDragAccept,
+              "explorer--drop-zone--drag-reject": dropZone.isDragReject,
+            }),
+          })}
+        >
+          <div className="explorer__container">
+            {selectedItems.length > 0 ? (
+              <ExplorerSelectionBar />
+            ) : (
+              <ExplorerFilters />
+            )}
+
+            <div className="explorer__content">
+              {props.gridHeader ? props.gridHeader : <ExplorerBreadcrumbs />}
+              <ExplorerGrid {...props} />
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  if (isTablet) {
+    return renderContent();
+  }
+
   return (
     <SelectionArea
       onBeforeStart={onBeforeStart}
@@ -156,29 +193,7 @@ export const ExplorerInner = (props: ExplorerProps) => {
         },
       }}
     >
-      <ExplorerBreadcrumbsMobile />
-      <div
-        {...dropZone.getRootProps({
-          className: clsx(`explorer explorer--${displayMode}`, {
-            "explorer--drop-zone--focused": dropZone.isFocused,
-            "explorer--drop-zone--drag-accept": dropZone.isDragAccept,
-            "explorer--drop-zone--drag-reject": dropZone.isDragReject,
-          }),
-        })}
-      >
-        <div className="explorer__container">
-          {selectedItems.length > 0 ? (
-            <ExplorerSelectionBar />
-          ) : (
-            <ExplorerFilters />
-          )}
-
-          <div className="explorer__content">
-            {props.gridHeader ? props.gridHeader : <ExplorerBreadcrumbs />}
-            <ExplorerGrid {...props} />
-          </div>
-        </div>
-      </div>
+      {renderContent()}
     </SelectionArea>
   );
 };
