@@ -900,7 +900,13 @@ class Item(TreeModel, BaseModel):
                 }
             )
 
-        if self.deleted_at < get_trashbin_cutoff():
+        if (
+            self.deleted_at < get_trashbin_cutoff()
+            or Item.objects.filter(
+                path__ancestors=self.path,
+                hard_deleted_at__isnull=False,
+            ).exists()
+        ):
             raise ValidationError(
                 {
                     "deleted_at": ValidationError(

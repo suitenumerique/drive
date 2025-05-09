@@ -124,6 +124,58 @@ def test_models_items_restore_cutoff_expired():
     assert deleted_item.deleted_at == now
 
 
+def test_models_items_restore_hard_deleted_self():
+    """Trying to restore an item that was hard deleted should raise an error."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(type="file", creator=user)
+
+    # Hard delete the item
+    item.soft_delete()
+    item.hard_delete()
+
+    with pytest.raises(ValidationError) as exc_info:
+        item.restore()
+
+    error = exc_info.value
+    field_error = error.error_dict["deleted_at"][0]
+    assert "deleted_at" in error.error_dict
+    assert field_error.code == "item_restore_hard_deleted"
+    assert (
+        field_error.message
+        == "This item was permanently deleted and cannot be restored."
+    )
+
+    item.refresh_from_db()
+    assert item.deleted_at is not None
+
+
+def test_models_items_restore_hard_deleted_parent():
+    """Trying to restore an item, an ancestor of which was hard deleted should raise an error."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type="folder", creator=user)
+    item = factories.ItemFactory(parent=parent, type="file", creator=user)
+
+    # Hard delete the parent
+    item.soft_delete()
+    parent.soft_delete()
+    parent.hard_delete()
+
+    with pytest.raises(ValidationError) as exc_info:
+        item.restore()
+
+    error = exc_info.value
+    field_error = error.error_dict["deleted_at"][0]
+    assert "deleted_at" in error.error_dict
+    assert field_error.code == "item_restore_hard_deleted"
+    assert (
+        field_error.message
+        == "This item was permanently deleted and cannot be restored."
+    )
+
+    item.refresh_from_db()
+    assert item.deleted_at is not None
+
+
 def test_models_items_hard_delete():
     """Trying to hard delete an item that is already hard deleted."""
     user = factories.UserFactory()
