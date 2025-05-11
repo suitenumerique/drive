@@ -75,6 +75,8 @@ export const ExplorerPanelsLayout = ({
     rightPanelOpen,
     setRightPanelOpen,
     rightPanelForcedItem: rightPanelItem,
+    isLeftPanelOpen,
+    setIsLeftPanelOpen,
   } = useExplorer();
 
   return (
@@ -84,6 +86,8 @@ export const ExplorerPanelsLayout = ({
       rightPanelIsOpen={rightPanelOpen}
       onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
       leftPanelContent={<ExplorerTree />}
+      isLeftPanelOpen={isLeftPanelOpen}
+      setIsLeftPanelOpen={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
       icon={<img src={logo.src} alt="logo" />}
       rightHeaderContent={<HeaderRight />}
     >

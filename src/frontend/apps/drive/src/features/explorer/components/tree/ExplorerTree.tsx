@@ -1,10 +1,15 @@
 import { useModal } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
-import { itemsToTreeItems, useExplorer } from "../ExplorerContext";
+import {
+  itemsToTreeItems,
+  NavigationEventType,
+  useExplorer,
+} from "../ExplorerContext";
 import { Item, TreeItem } from "@/features/drivers/types";
 import {
   HorizontalSeparator,
   OpenMap,
+  TreeDataItem,
   TreeView,
   TreeViewDataType,
   TreeViewMoveResult,
@@ -12,7 +17,7 @@ import {
   useTreeContext,
 } from "@gouvfr-lasuite/ui-kit";
 import { useEffect, useState } from "react";
-import { ExplorerTreeItem } from "./ExplorerTreeItem";
+import { ExplorerTreeItem, ExplorerTreeItemIcon } from "./ExplorerTreeItem";
 import { useMoveItems } from "../../api/useMoveItem";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
 import { ExplorerCreateWorkspaceModal } from "../modals/workspaces/ExplorerCreateWorkspaceModal";
@@ -22,6 +27,10 @@ import { addItemsMovedToast } from "../toasts/addItemsMovedToast";
 import { ExplorerTreeMoveConfirmationModal } from "./ExplorerTreeMoveConfirmationModal";
 import { ExplorerSearchModal } from "../modals/search/ExplorerSearchModal";
 import { canDrop } from "../ExplorerDndProvider";
+import { LanguagePicker } from "@/features/layouts/components/header/Header";
+import { LogoutButton } from "@/features/auth/components/LogoutButton";
+import React from "react";
+import clsx from "clsx";
 
 export const ExplorerTree = () => {
   const { t, i18n } = useTranslation();
@@ -190,9 +199,10 @@ export const ExplorerTree = () => {
       <ExplorerTreeActions
         openCreateFolderModal={createFolderModal.open}
         openCreateWorkspaceModal={createWorkspaceModal.open}
-        openSearchModal={searchModal.open}
       />
       <HorizontalSeparator withPadding={false} />
+
+      <ExplorerTreeMobile />
 
       {initialOpenState && (
         <TreeView
@@ -258,6 +268,15 @@ export const ExplorerTree = () => {
 
       <ExplorerTreeNav />
 
+      <div className="explorer__tree__mobile-navs">
+        <HorizontalSeparator />
+
+        <div className="explorer__tree__mobile-navs__inner">
+          <LogoutButton />
+          <LanguagePicker />
+        </div>
+      </div>
+
       <ExplorerSearchModal {...searchModal} />
       <ExplorerCreateFolderModal {...createFolderModal} parentId={itemId} />
       <ExplorerCreateWorkspaceModal {...createWorkspaceModal} />
@@ -276,6 +295,67 @@ export const ExplorerTree = () => {
           }}
         />
       )}
+    </div>
+  );
+};
+
+export const ExplorerTreeMobile = () => {
+  const treeContext = useTreeContext<TreeItem>();
+  const { item, onNavigate, setIsLeftPanelOpen } = useExplorer();
+
+  const nodes = treeContext?.treeData.nodes;
+
+  if (!nodes) {
+    return null;
+  }
+
+  const renderNode = (node: TreeDataItem<TreeItem>) => {
+    const isSelected = item?.id === node.value.id;
+    const type = node.value.nodeType;
+    if (type === TreeViewNodeTypeEnum.NODE) {
+      return (
+        <div
+          className={clsx(
+            "explorer__tree__mobile__item",
+            "explorer__tree__mobile__node",
+            {
+              "explorer__tree__mobile__node--selected": isSelected,
+            }
+          )}
+          onClick={() => {
+            onNavigate({
+              type: NavigationEventType.ITEM,
+              item: node.value as Item,
+            });
+            setIsLeftPanelOpen(false);
+          }}
+        >
+          <ExplorerTreeItemIcon item={node.value} size={24} />
+          <span>{node.value.title}</span>
+        </div>
+      );
+    }
+
+    if (type === TreeViewNodeTypeEnum.TITLE) {
+      return (
+        <div className="explorer__tree__mobile__item explorer__tree__mobile__title">
+          {node.value.headerTitle}
+        </div>
+      );
+    }
+
+    if (type === TreeViewNodeTypeEnum.SEPARATOR) {
+      return <HorizontalSeparator withPadding={true} />;
+    }
+
+    return null;
+  };
+
+  return (
+    <div className="explorer__tree__mobile">
+      {nodes.map((node) => (
+        <React.Fragment key={node.key}>{renderNode(node)}</React.Fragment>
+      ))}
     </div>
   );
 };

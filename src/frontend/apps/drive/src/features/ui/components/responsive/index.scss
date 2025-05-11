@@ -1,0 +1,12 @@
+@use "sass:map";
+@use "@/styles/cunningham-tokens-sass" as *;
+
+$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+
+#responsive-tablet {
+  display: none;
+
+  @media (max-width: $tablet) {
+    display: block;
+  }
+}

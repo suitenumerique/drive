@@ -1,3 +1,8 @@
+@use "sass:map";
+@use "@/styles/cunningham-tokens-sass" as *;
+
+$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+
 .explorer {
   display: flex;
   min-height: calc(100vh - 52px);
@@ -8,6 +13,10 @@
 
   &--app {
     padding: 16px;
+
+    @media (max-width: $tablet) {
+      padding: 0;
+    }
 
     .explorer__container {
       width: 992px;
@@ -24,6 +33,10 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+
+    @media (max-width: $tablet) {
+      gap: 0;
+    }
   }
 
   &__filters {
@@ -31,6 +44,11 @@
     display: flex;
     align-items: center;
     color: var(--c--theme--colors--greyscale-600);
+
+    @media (max-width: $tablet) {
+      padding: 8px;
+      height: auto;
+    }
   }
 
   &--drop-zone--drag-accept {
@@ -68,8 +86,86 @@
       justify-content: space-between;
       align-items: center;
 
+      @media (max-width: $tablet) {
+        display: none;
+      }
+
       &__actions {
         padding-right: 6px;
+      }
+
+      &--mobile {
+        display: none;
+        padding: 0 12px;
+        border-bottom: 1px solid var(--c--theme--colors--greyscale-200);
+        border-top: 2px solid var(--c--theme--colors--primary-500);
+        background: linear-gradient(
+          180deg,
+          rgba(106, 106, 244, 0.05) 0%,
+          rgba(106, 106, 244, 0) 100%
+        );
+        align-items: center;
+        height: 64px;
+
+        @media (max-width: $tablet) {
+          display: flex;
+        }
+
+        &__container {
+          display: flex;
+          gap: 12px;
+          overflow: hidden;
+
+          &__info {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+
+            &__title {
+              font-size: 14px;
+              line-height: 20px;
+              font-weight: 500;
+              color: var(--c--theme--colors--greyscale-600);
+              display: flex;
+              align-items: center;
+              gap: 6px;
+
+              span {
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                overflow: hidden;
+              }
+            }
+
+            &__folder {
+              font-size: 16px;
+              line-height: 18px;
+              font-weight: 600;
+              color: var(--c--theme--colors--greyscale-900);
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              overflow: hidden;
+            }
+          }
+        }
+
+        &__workspace {
+          font-size: 16px;
+          font-weight: 600;
+          color: var(--c--theme--colors--greyscale-900);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 0 8px;
+          overflow: hidden;
+
+          span {
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+          }
+        }
       }
     }
 
@@ -91,6 +187,35 @@
 
   &__grid {
     &__item {
+      &__mobile {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 48px;
+
+        &__info {
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+
+          &__title {
+            display: flex;
+            overflow: hidden;
+          }
+
+          span {
+            padding: 0;
+            line-height: 18px;
+            font-weight: 500;
+          }
+
+          &__meta {
+            font-size: 12px;
+            color: var(--c--theme--colors--greyscale-600);
+          }
+        }
+      }
+
       &__name {
         display: flex;
         align-items: center;
@@ -186,8 +311,28 @@
         outline: none;
       }
 
+      // mobile column.
+      th:nth-child(1) {
+        display: none;
+      }
+
+      tr td:first-child,
+      tr th:first-child {
+        padding-left: 6px;
+      }
+
+      tr td:last-child,
+      tr th:last-child {
+        padding-right: 6px;
+      }
+
       tbody {
         transition: background-color 0.3s ease;
+
+        // mobile column.
+        td:nth-child(1) {
+          display: none;
+        }
 
         tr td:first-child {
           border-top-left-radius: 4px;
@@ -196,16 +341,6 @@
         tr td:last-child {
           border-top-right-radius: 4px;
           border-bottom-right-radius: 4px;
-        }
-
-        tr td:first-child,
-        tr th:first-child {
-          padding-left: 6px;
-        }
-
-        tr td:last-child,
-        tr th:last-child {
-          padding-right: 6px;
         }
 
         tr {
@@ -228,22 +363,6 @@
           cursor: default;
           user-select: none;
         }
-      }
-    }
-  }
-
-  &__tree {
-    &__actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px;
-
-      &__left {
-        display: flex;
-        gap: 8px;
-        align-items: center;
       }
     }
   }
@@ -380,5 +499,66 @@
   img {
     margin: auto;
     display: block;
+  }
+}
+
+@media (max-width: $tablet) {
+  .explorer {
+    background-color: var(--c--theme--colors--greyscale-000);
+
+    &__content {
+      border: none;
+      padding: 0 8px;
+
+      table {
+        tr td:first-child,
+        tr th:first-child {
+          padding-left: 0;
+        }
+
+        tr td:last-child,
+        tr th:last-child {
+          padding-right: 0;
+        }
+
+        thead {
+          // We can't just simply hide the columns because the table
+          // column will not size properly. We want the first column
+          // to grow to fill the space.
+          th {
+            height: 0;
+          }
+
+          th:nth-child(1) {
+            display: table-cell;
+          }
+
+          th:nth-child(2),
+          th:nth-child(3) {
+            display: none;
+          }
+
+          th:nth-child(4) {
+            display: table-cell;
+            width: 40px;
+          }
+        }
+
+        tbody {
+          td:nth-child(1) {
+            display: table-cell;
+          }
+
+          td:nth-child(2),
+          td:nth-child(3) {
+            display: none;
+          }
+
+          td:nth-child(4) {
+            height: 48px;
+          }
+        }
+      }
+    }
   }
 }
