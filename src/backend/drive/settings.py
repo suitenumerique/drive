@@ -428,7 +428,7 @@ class Base(Configuration):
     THUMBNAIL_ALIASES = {}
 
     # Celery
-    CELERY_BROKER_URL = values.Value("redis://redis:6379/0")
+    CELERY_BROKER_URL = values.Value("redis://redis:6379/0", environ_name="REDIS_URL", environ_prefix=None)
     CELERY_BROKER_TRANSPORT_OPTIONS = values.DictValue({})
 
     # Session
