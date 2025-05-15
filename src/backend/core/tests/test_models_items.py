@@ -898,8 +898,9 @@ def test_models_items_restore_complex():
     )
     item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
 
-    child1 = factories.ItemFactory(parent=item)
-    child2 = factories.ItemFactory(parent=item)
+    child1, child2 = factories.ItemFactory.create_batch(2, parent=item)
+
+    assert item.parent() == parent
 
     # Soft delete first the item
     item.soft_delete()
@@ -934,10 +935,10 @@ def test_models_items_restore_complex():
     child2.refresh_from_db()
     grand_parent.refresh_from_db()
     assert item.deleted_at is None
-    assert item.ancestors_deleted_at == grand_parent.deleted_at
-    # child 1 and child 2 should now have the same ancestors_deleted_at as the grand parent
-    assert child1.ancestors_deleted_at == grand_parent.deleted_at
-    assert child2.ancestors_deleted_at == grand_parent.deleted_at
+    assert item.ancestors_deleted_at is None
+    assert child1.ancestors_deleted_at is None
+    assert child2.ancestors_deleted_at is None
+    assert item.parent() == grand_parent
 
 
 def test_models_items_restore_complex_bis():

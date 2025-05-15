@@ -923,27 +923,30 @@ class Item(TreeModel, BaseModel):
 
         # save the current deleted_at value to exclude it from the descendants update
         current_deleted_at = self.deleted_at
+        has_ancestors_deleted = False
+
+        if self.depth > 1:
+            has_ancestors_deleted = (
+                self.ancestors().filter(deleted_at__isnull=False).exists()
+            )
+
+            if has_ancestors_deleted:
+                # if it has ancestors deleted, try to move it to the top level ancestor
+                highest_ancestor = self.ancestors().filter(path__depth=1).get()
+                self.move(highest_ancestor, ignore_parent_numchild_update=True)
 
         # Restore the current item
         self.deleted_at = None
+        self.ancestors_deleted_at = None
 
-        # Calculate the minimum `deleted_at` among all ancestors
-        ancestors_deleted_at = (
-            self.ancestors()
-            .filter(deleted_at__isnull=False)
-            .order_by("deleted_at")
-            .values_list("deleted_at", flat=True)
-            .first()
-        )
-        self.ancestors_deleted_at = ancestors_deleted_at
         self.save(update_fields=["deleted_at", "ancestors_deleted_at"])
 
         self.descendants().exclude(
             models.Q(deleted_at__isnull=False)
             | models.Q(ancestors_deleted_at__lt=current_deleted_at)
-        ).update(ancestors_deleted_at=self.ancestors_deleted_at)
+        ).update(ancestors_deleted_at=None)
 
-        if self.depth > 1 and self.ancestors_deleted_at is None:
+        if self.depth > 1 and not has_ancestors_deleted:
             # Update parent numchild and numchild_folder
             parent = self.parent()
             update = {
@@ -954,7 +957,7 @@ class Item(TreeModel, BaseModel):
             self._meta.model.objects.filter(pk=parent.id).update(**update)
 
     @transaction.atomic
-    def move(self, target):
+    def move(self, target, ignore_parent_numchild_update=False):
         """
         Move an item to a new position in the tree.
         """
@@ -992,7 +995,7 @@ class Item(TreeModel, BaseModel):
         self._meta.model.objects.filter(pk=target.id).update(**target_update)
 
         # update old parent numchild and numchild_folder
-        if old_parent_id:
+        if old_parent_id and not ignore_parent_numchild_update:
             update = {"numchild": models.F("numchild") - 1}
             if self.type == ItemTypeChoices.FOLDER:
                 update["numchild_folder"] = models.F("numchild_folder") - 1
