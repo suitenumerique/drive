@@ -124,8 +124,8 @@ def test_api_items_restore_authenticated_owner_not_deleted():
 
 def test_api_items_restore_authenticated_owner_ancestor_deleted():
     """
-    The restored item should still be marked as deleted if one of its
-    ancestors is soft deleted as well.
+    The restored item should be moved to the top level ancestor if one of its
+    ancestors is soft deleted.
     """
     user = factories.UserFactory()
     client = APIClient()
@@ -135,16 +135,23 @@ def test_api_items_restore_authenticated_owner_ancestor_deleted():
     parent = factories.ItemFactory(
         parent=grand_parent, type=models.ItemTypeChoices.FOLDER
     )
-    item = factories.ItemFactory(parent=parent)
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
     factories.UserItemAccessFactory(item=item, user=user, role="owner")
+    child1, child2 = factories.ItemFactory.create_batch(2, parent=item)
+
+    assert item.parent() == parent
 
     item.soft_delete()
     item_deleted_at = item.deleted_at
     assert item_deleted_at is not None
+    child1.refresh_from_db()
+    child2.refresh_from_db()
+    assert child1.ancestors_deleted_at == item_deleted_at
+    assert child2.ancestors_deleted_at == item_deleted_at
 
-    grand_parent.soft_delete()
-    grand_parent_deleted_at = grand_parent.deleted_at
-    assert grand_parent_deleted_at is not None
+    parent.soft_delete()
+    parent_deleted_at = parent.deleted_at
+    assert parent_deleted_at is not None
 
     response = client.post(f"/api/v1.0/items/{item.id!s}/restore/")
 
@@ -152,10 +159,13 @@ def test_api_items_restore_authenticated_owner_ancestor_deleted():
     assert response.json() == {"detail": "item has been successfully restored."}
 
     item.refresh_from_db()
+    child1.refresh_from_db()
+    child2.refresh_from_db()
     assert item.deleted_at is None
-    # item is still marked as deleted
-    assert item.ancestors_deleted_at == grand_parent_deleted_at
-    assert grand_parent_deleted_at > item_deleted_at
+    assert item.ancestors_deleted_at is None
+    assert child1.ancestors_deleted_at is None
+    assert child2.ancestors_deleted_at is None
+    assert item.parent() == grand_parent
 
 
 def test_api_items_restore_authenticated_owner_expired():
