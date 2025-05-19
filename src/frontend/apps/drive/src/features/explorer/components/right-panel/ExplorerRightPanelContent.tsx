@@ -107,7 +107,7 @@ export const ExplorerRightPanelContent = ({
                     {firstSelectedItem?.nb_accesses}
                   </Button>
                 ) : (
-                  <Button color="primary-text">
+                  <Button color="primary-text" onClick={shareModal.open}>
                     {t("explorer.rightPanel.share")}
                   </Button>
                 )
@@ -122,13 +122,25 @@ export const ExplorerRightPanelContent = ({
           />
           <InfoRow
             label={t("explorer.rightPanel.updated_at")}
-            rightContent={firstSelectedItem.updated_at.toLocaleString()}
+            rightContent={firstSelectedItem.updated_at.toLocaleString(
+              undefined,
+              {
+                dateStyle: "short",
+                timeStyle: "short",
+              }
+            )}
           />
           <InfoRow
             label={t("explorer.rightPanel.created_at")}
             rightContent={
               firstSelectedItem.created_at
-                ? new Date(firstSelectedItem?.created_at).toLocaleString()
+                ? new Date(firstSelectedItem?.created_at).toLocaleString(
+                    undefined,
+                    {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    }
+                  )
                 : ""
             }
           />
