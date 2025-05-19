@@ -30,30 +30,32 @@ GREEN := \033[1;32m
 
 # -- Database
 
-DB_HOST            = postgresql
-DB_PORT            = 5432
+DB_HOST                 = postgresql
+DB_PORT                 = 5432
 
 # -- Docker
 # Get the current user ID to use for docker run and docker exec commands
-DOCKER_UID          = $(shell id -u)
-DOCKER_GID          = $(shell id -g)
-DOCKER_USER         = $(DOCKER_UID):$(DOCKER_GID)
-COMPOSE             = DOCKER_USER=$(DOCKER_USER) docker compose
-COMPOSE_EXEC        = $(COMPOSE) exec
-COMPOSE_EXEC_APP    = $(COMPOSE_EXEC) app-dev
-COMPOSE_RUN         = $(COMPOSE) run --rm
-COMPOSE_RUN_APP     = $(COMPOSE_RUN) app-dev
-COMPOSE_RUN_CROWDIN = $(COMPOSE_RUN) crowdin crowdin
+DOCKER_UID              = $(shell id -u)
+DOCKER_GID              = $(shell id -g)
+DOCKER_USER             = $(DOCKER_UID):$(DOCKER_GID)
+COMPOSE                 = DOCKER_USER=$(DOCKER_USER) docker compose
+COMPOSE_EXEC            = $(COMPOSE) exec
+COMPOSE_EXEC_APP        = $(COMPOSE_EXEC) app-dev
+COMPOSE_RUN             = $(COMPOSE) run --rm
+COMPOSE_RUN_APP         = $(COMPOSE_RUN) app-dev
+COMPOSE_RUN_APP_NO_DEPS = $(COMPOSE_RUN) --no-deps app-dev 
+
+COMPOSE_RUN_CROWDIN     = $(COMPOSE_RUN) crowdin crowdin
 
 # -- Backend
-MANAGE              = $(COMPOSE_RUN_APP) python manage.py
-MANAGE_EXEC         = $(COMPOSE_EXEC_APP) python manage.py
-MAIL_YARN           = $(COMPOSE_RUN) -w /app/src/mail node yarn
-PSQL_E2E = ./bin/postgres_e2e
+MANAGE              	= $(COMPOSE_RUN_APP) python manage.py
+MANAGE_EXEC         	= $(COMPOSE_EXEC_APP) python manage.py
+MAIL_YARN           	= $(COMPOSE_RUN) -w /app/src/mail node yarn
+PSQL_E2E 				= ./bin/postgres_e2e
 
 # -- Frontend
-PATH_FRONT          = ./src/frontend
-PATH_FRONT_DRIVE  = $(PATH_FRONT)/apps/drive
+PATH_FRONT          	= ./src/frontend
+PATH_FRONT_DRIVE  		= $(PATH_FRONT)/apps/drive
 
 # ==============================================================================
 # RULES
@@ -184,12 +186,12 @@ lint: \
 
 lint-ruff-format: ## format back-end python sources with ruff
 	@echo 'lint:ruff-format started…'
-	@$(COMPOSE_RUN_APP) ruff format .
+	@$(COMPOSE_RUN_APP_NO_DEPS) ruff format .
 .PHONY: lint-ruff-format
 
 lint-ruff-check: ## lint back-end python sources with ruff
 	@echo 'lint:ruff-check started…'
-	@$(COMPOSE_RUN_APP) ruff check . --fix
+	@$(COMPOSE_RUN_APP_NO_DEPS) ruff check . --fix
 .PHONY: lint-ruff-check
 
 lint-pylint: ## lint back-end python sources with pylint only on changed files from main
