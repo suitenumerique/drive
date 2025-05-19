@@ -19,7 +19,7 @@ import {
   ShareModalCopyLinkFooter,
 } from "@gouvfr-lasuite/ui-kit";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 type WorkspaceShareModalProps = {
@@ -36,8 +36,10 @@ export const WorkspaceShareModal = ({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const copyToClipboard = useClipboard();
+
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [queryValue, setQueryValue] = useState("");
+  const previousSearchResult = useRef<User[]>([]);
   const { data, hasNextPage: hasNextMembers } = useInfiniteItemAccesses(
     item.id
   );
@@ -60,10 +62,26 @@ export const WorkspaceShareModal = ({
     [t]
   );
 
+  /**
+   * Keep previous search result when changing the query value to avoid flickering
+   * Because when it's the first time we have this value, the queryKey changes and by default react-query returns undefined
+   */
   const { data: users, isLoading: isLoadingUsers } = useUsers(
     { q: queryValue },
-    { enabled: !!queryValue && queryValue !== "" }
+    {
+      enabled: queryValue !== undefined && queryValue !== "",
+      placeholderData: (previousData) => previousData,
+    }
   );
+
+  // Used for the initial data
+  useEffect(() => {
+    if (users) {
+      previousSearchResult.current = users;
+    } else {
+      previousSearchResult.current = [];
+    }
+  }, [users]);
 
   const onInviteUser = async (users: User[], role: Role) => {
     const inviteByEmail = users.filter((user) => user.email === user.id);
@@ -172,7 +190,7 @@ export const WorkspaceShareModal = ({
       onSearchUsers={onSearch}
       hasNextMembers={hasNextMembers}
       hasNextInvitations={hasNextInvitations}
-      searchUsersResult={queryValue === "" ? [] : users}
+      searchUsersResult={queryValue === "" ? undefined : users}
       onInviteUser={(users, role) => onInviteUser(users, role as Role)}
       outsideSearchContent={
         <ShareModalCopyLinkFooter

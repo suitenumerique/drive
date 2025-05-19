@@ -10,6 +10,7 @@ export const ExplorerSearchModal = (
   return (
     <Modal
       {...props}
+      closeOnClickOutside
       size={ModalSize.SMALL}
       title={t("explorer.search.modal.title")}
     >
