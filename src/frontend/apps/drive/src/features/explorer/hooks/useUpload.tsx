@@ -183,9 +183,21 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
   const { filesToUpload, handleHierarchy } = useUpload({ item: item! });
 
+  const validateDrop = () => {
+    const canUpload = item?.abilities.children_create;
+    if (!canUpload) {
+      return {
+        code: "no-upload-rights",
+        message: t("explorer.actions.upload.toast_no_rights"),
+      };
+    }
+    return null;
+  };
+
   const dropZone = useDropzone({
     noClick: true,
     useFsAccessApi: false,
+    validator: validateDrop,
     // If we do not set this, the click on the "..." menu of each items does not work, also click + select on items
     // does not work too. It might seems related to onFocus and onBlur events.
     noKeyboard: true,

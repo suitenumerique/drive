@@ -1,4 +1,4 @@
-import { Filter } from "@gouvfr-lasuite/ui-kit";
+import { Filter, FilterOption } from "@gouvfr-lasuite/ui-kit";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import folderIcon from "@/assets/folder/folder.svg";
@@ -10,18 +10,8 @@ import { ItemType } from "@/features/drivers/types";
 export const ExplorerFilters = () => {
   const { t } = useTranslation();
 
-  const typeOptions = useMemo(
+  const typeOptions: FilterOption[] = useMemo(
     () => [
-      {
-        label: t("explorer.filters.type.options.all"),
-        render: () => (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5em" }}>
-            <span className="material-icons">check</span>
-            {t("explorer.filters.type.options.all")}
-          </div>
-        ),
-        value: "all",
-      },
       {
         label: t("explorer.filters.type.options.folder"),
         value: "folder",
@@ -41,6 +31,23 @@ export const ExplorerFilters = () => {
           </div>
         ),
         value: "file",
+        showSeparator: true,
+      },
+      {
+        label: t("explorer.filters.type.options.reset"),
+        render: () => (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5em",
+            }}
+          >
+            <span className="material-icons">undo</span>
+            {t("explorer.filters.type.options.reset")}
+          </div>
+        ),
+        value: "all",
       },
     ],
     [t]

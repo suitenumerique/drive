@@ -65,10 +65,6 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     }
   }
 
-  &--drop-zone--drag-reject {
-    background-color: var(--c--theme--colors--error-050);
-  }
-
   &__content {
     flex: 1;
     background-color: #fff;
