@@ -276,6 +276,22 @@
 	--c--components--forms-select--box-shadow--color--focus: var(--c--theme--colors--primary-800);
 	--c--components--forms-select--value-color: var(--c--theme--colors--greyscale-950);
 	--c--components--forms-select--font-size: 14px;
+	--c--components--badge--font-size: var(--c--theme--font--sizes--xs);
+	--c--components--badge--border-radius: 4px;
+	--c--components--badge--padding-inline: var(--c--theme--spacings--xs);
+	--c--components--badge--padding-block: var(--c--theme--spacings--2xs);
+	--c--components--badge--accent--background-color: var(--c--theme--colors--primary-100);
+	--c--components--badge--accent--color: var(--c--theme--colors--primary-600);
+	--c--components--badge--neutral--background-color: var(--c--theme--colors--greyscale-100);
+	--c--components--badge--neutral--color: var(--c--theme--colors--greyscale-600);
+	--c--components--badge--danger--background-color: var(--c--theme--colors--danger-100);
+	--c--components--badge--danger--color: var(--c--theme--colors--danger-600);
+	--c--components--badge--success--background-color: var(--c--theme--colors--success-100);
+	--c--components--badge--success--color: var(--c--theme--colors--success-600);
+	--c--components--badge--warning--background-color: var(--c--theme--colors--warning-100);
+	--c--components--badge--warning--color: var(--c--theme--colors--warning-600);
+	--c--components--badge--info--background-color: var(--c--theme--colors--info-100);
+	--c--components--badge--info--color: var(--c--theme--colors--info-600);
 }
 .cunningham-theme--dark{
 	--c--theme--colors--greyscale-100: #182536;
