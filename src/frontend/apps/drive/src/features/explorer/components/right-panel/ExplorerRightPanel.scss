@@ -7,7 +7,7 @@
     border-bottom: 1px solid var(--c--theme--colors--greyscale-200);
 
     &--info {
-      gap: var(--c--theme--spacings--sm);
+      gap: 22px;
     }
   }
 
@@ -19,7 +19,7 @@
     padding-bottom: var(--c--theme--spacings--sm);
 
     &__icon {
-      margin-top: 4px;
+      margin-top: 2px;
     }
 
     &__close {
