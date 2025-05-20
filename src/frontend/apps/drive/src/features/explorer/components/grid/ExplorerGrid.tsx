@@ -6,10 +6,11 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useEffect, useMemo, useRef } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   itemToTreeItem,
+  NavigationEvent,
   NavigationEventType,
   useExplorer,
 } from "../ExplorerContext";
@@ -131,11 +132,6 @@ export const ExplorerGrid = (props: ExplorerProps) => {
 
   const isLoading = props.childrenItems === undefined;
   const isEmpty = table.getRowModel().rows.length === 0;
-  const tableRef = useRef<HTMLTableElement>(null);
-  const { onKeyDown } = useTableKeyboardNavigation({
-    table,
-    tableRef,
-  });
 
   const canCreateChildren = item?.abilities?.children_create;
   const getContent = () => {
@@ -163,170 +159,184 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     }
 
     return (
-      <div className="c__datagrid__table__container">
-        <table ref={tableRef} tabIndex={0} onKeyDown={onKeyDown}>
-          <thead>
-            <tr>
-              {/* This one stands for the mobile column */}
-              <th></th>
-              <th style={{ width: "50%" }}>
-                <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable">
-                  {t("explorer.grid.name")}
-                </div>
-              </th>
-              <th>
-                <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable">
-                  {t("explorer.grid.last_update")}
-                </div>
-              </th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.map((row) => {
-              const isSelected = !!selectedItemsMap[row.original.id];
-              const isOvered = !!overedItemIds[row.original.id];
-              return (
-                <tr
-                  key={row.original.id}
-                  className={clsx("selectable", {
-                    selected: isSelected,
-                    over: isOvered,
-                  })}
-                  data-id={row.original.id}
-                  tabIndex={0}
-                  onClick={(e) => {
-                    const target = e.target as HTMLElement;
-                    const closest = target.closest("tr");
-                    // Because if we use modals or other components, even with a Portal, React triggers events on the original parent.
-                    // So we check that the clicked element is indeed an element of the table.
-                    if (!closest) {
-                      return;
-                    }
-
-                    const isMobile = isTablet();
-
-                    // Single click to select/deselect the item
-                    if (!isMobile && e.detail === 1) {
-                      if (e.shiftKey && lastSelectedRowRef.current) {
-                        // Get all rows between last selected and current
-                        const rows = table.getRowModel().rows;
-                        const lastSelectedIndex = rows.findIndex(
-                          (r) => r.id === lastSelectedRowRef.current
-                        );
-                        const currentIndex = rows.findIndex(
-                          (r) => r.id === row.id
-                        );
-
-                        if (lastSelectedIndex !== -1 && currentIndex !== -1) {
-                          const startIndex = Math.min(
-                            lastSelectedIndex,
-                            currentIndex
-                          );
-                          const endIndex = Math.max(
-                            lastSelectedIndex,
-                            currentIndex
-                          );
-
-                          const newSelection = [...selectedItems];
-                          for (let i = startIndex; i <= endIndex; i++) {
-                            if (!selectedItemsMap[rows[i].original.id]) {
-                              newSelection.push(rows[i].original);
-                            }
-                          }
-
-                          setSelectedItems(newSelection);
-                        }
-                      } else if (e.metaKey || e.ctrlKey) {
-                        // Toggle the selected item.
-                        setSelectedItems((value) => {
-                          let newValue = [...value];
-                          if (
-                            newValue.find((item) => item.id == row.original.id)
-                          ) {
-                            newValue = newValue.filter(
-                              (item) => item.id !== row.original.id
-                            );
-                          } else {
-                            newValue.push(row.original);
-                          }
-                          return newValue;
-                        });
-                        if (!isSelected) {
-                          lastSelectedRowRef.current = row.id;
-                        }
-                      } else {
-                        setSelectedItems([row.original]);
-                        lastSelectedRowRef.current = row.id;
-                        setRightPanelForcedItem(undefined);
-                      }
-                    }
-
-                    // Double click to open the item
-                    if (isMobile || e.detail === 2) {
-                      if (row.original.type === ItemType.FOLDER) {
-                        effectiveOnNavigate({
-                          type: NavigationEventType.ITEM,
-                          item: row.original,
-                        });
-                      } else {
-                        if (row.original.url) {
-                          window.open(row.original.url, "_blank");
-                        } else {
-                          addToast(
-                            <ToasterItem>
-                              {t("explorer.grid.no_url")}
-                            </ToasterItem>
-                          );
-                        }
-                      }
-                    }
-                  }}
-                >
-                  {row.getVisibleCells().map((cell, index, array) => {
-                    const isLastCell = index === array.length - 1;
-                    const isFirstCell = index === 0;
-                    // Check if the item is selected, if so, we can't drop an item inside it
-                    const isSelected = !!selectedItemsMap[row.original.id];
-                    return (
-                      <td
-                        key={cell.id}
-                        className={clsx("", {
-                          "c__datagrid__row__cell--actions": isLastCell,
-                          "c__datagrid__row__cell--title": isFirstCell,
-                        })}
-                      >
-                        <Droppable
-                          id={cell.id}
-                          item={row.original}
-                          disabled={
-                            isSelected ||
-                            row.original.type !== ItemType.FOLDER ||
-                            !row.original.abilities.children_create
-                          }
-                          onOver={(isOver, item) => {
-                            setOveredItemIds((prev) => ({
-                              ...prev,
-                              [row.original.id]:
-                                item.id === row.original.id ? false : isOver,
-                            }));
-                          }}
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </Droppable>
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <ExplorerGridItemsList
+        items={props.childrenItems}
+        gridActionsCell={props.gridActionsCell}
+        selectedItemsMap={selectedItemsMap}
+        overedItemIds={overedItemIds}
+        selectedItems={selectedItems}
+        setSelectedItems={setSelectedItems}
+        setOveredItemIds={setOveredItemIds}
+        onNavigate={effectiveOnNavigate}
+        setRightPanelForcedItem={setRightPanelForcedItem}
+      />
     );
+
+    // return (
+    //   <div className="c__datagrid__table__container">
+    //     <table ref={tableRef} tabIndex={0} onKeyDown={onKeyDown}>
+    //       <thead>
+    //         <tr>
+    //           {/* This one stands for the mobile column */}
+    //           <th></th>
+    //           <th style={{ width: "50%" }}>
+    //             <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable">
+    //               {t("explorer.grid.name")}
+    //             </div>
+    //           </th>
+    //           <th>
+    //             <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable">
+    //               {t("explorer.grid.last_update")}
+    //             </div>
+    //           </th>
+    //           <th></th>
+    //         </tr>
+    //       </thead>
+    //       <tbody>
+    //         {table.getRowModel().rows.map((row) => {
+    //           const isSelected = !!selectedItemsMap[row.original.id];
+    //           const isOvered = !!overedItemIds[row.original.id];
+    //           return (
+    //             <tr
+    //               key={row.original.id}
+    //               className={clsx("selectable", {
+    //                 selected: isSelected,
+    //                 over: isOvered,
+    //               })}
+    //               data-id={row.original.id}
+    //               tabIndex={0}
+    //               onClick={(e) => {
+    //                 const target = e.target as HTMLElement;
+    //                 const closest = target.closest("tr");
+    //                 // Because if we use modals or other components, even with a Portal, React triggers events on the original parent.
+    //                 // So we check that the clicked element is indeed an element of the table.
+    //                 if (!closest) {
+    //                   return;
+    //                 }
+
+    //                 const isMobile = isTablet();
+
+    //                 // Single click to select/deselect the item
+    //                 if (!isMobile && e.detail === 1) {
+    //                   if (e.shiftKey && lastSelectedRowRef.current) {
+    //                     // Get all rows between last selected and current
+    //                     const rows = table.getRowModel().rows;
+    //                     const lastSelectedIndex = rows.findIndex(
+    //                       (r) => r.id === lastSelectedRowRef.current
+    //                     );
+    //                     const currentIndex = rows.findIndex(
+    //                       (r) => r.id === row.id
+    //                     );
+
+    //                     if (lastSelectedIndex !== -1 && currentIndex !== -1) {
+    //                       const startIndex = Math.min(
+    //                         lastSelectedIndex,
+    //                         currentIndex
+    //                       );
+    //                       const endIndex = Math.max(
+    //                         lastSelectedIndex,
+    //                         currentIndex
+    //                       );
+
+    //                       const newSelection = [...selectedItems];
+    //                       for (let i = startIndex; i <= endIndex; i++) {
+    //                         if (!selectedItemsMap[rows[i].original.id]) {
+    //                           newSelection.push(rows[i].original);
+    //                         }
+    //                       }
+
+    //                       setSelectedItems(newSelection);
+    //                     }
+    //                   } else if (e.metaKey || e.ctrlKey) {
+    //                     // Toggle the selected item.
+    //                     setSelectedItems((value) => {
+    //                       let newValue = [...value];
+    //                       if (
+    //                         newValue.find((item) => item.id == row.original.id)
+    //                       ) {
+    //                         newValue = newValue.filter(
+    //                           (item) => item.id !== row.original.id
+    //                         );
+    //                       } else {
+    //                         newValue.push(row.original);
+    //                       }
+    //                       return newValue;
+    //                     });
+    //                     if (!isSelected) {
+    //                       lastSelectedRowRef.current = row.id;
+    //                     }
+    //                   } else {
+    //                     setSelectedItems([row.original]);
+    //                     lastSelectedRowRef.current = row.id;
+    //                     setRightPanelForcedItem(undefined);
+    //                   }
+    //                 }
+
+    //                 // Double click to open the item
+    //                 if (isMobile || e.detail === 2) {
+    //                   if (row.original.type === ItemType.FOLDER) {
+    //                     effectiveOnNavigate({
+    //                       type: NavigationEventType.ITEM,
+    //                       item: row.original,
+    //                     });
+    //                   } else {
+    //                     if (row.original.url) {
+    //                       window.open(row.original.url, "_blank");
+    //                     } else {
+    //                       addToast(
+    //                         <ToasterItem>
+    //                           {t("explorer.grid.no_url")}
+    //                         </ToasterItem>
+    //                       );
+    //                     }
+    //                   }
+    //                 }
+    //               }}
+    //             >
+    //               {row.getVisibleCells().map((cell, index, array) => {
+    //                 const isLastCell = index === array.length - 1;
+    //                 const isFirstCell = index === 0;
+    //                 // Check if the item is selected, if so, we can't drop an item inside it
+    //                 const isSelected = !!selectedItemsMap[row.original.id];
+    //                 return (
+    //                   <td
+    //                     key={cell.id}
+    //                     className={clsx("", {
+    //                       "c__datagrid__row__cell--actions": isLastCell,
+    //                       "c__datagrid__row__cell--title": isFirstCell,
+    //                     })}
+    //                   >
+    //                     <Droppable
+    //                       id={cell.id}
+    //                       item={row.original}
+    //                       disabled={
+    //                         isSelected ||
+    //                         row.original.type !== ItemType.FOLDER ||
+    //                         !row.original.abilities.children_create
+    //                       }
+    //                       onOver={(isOver, item) => {
+    //                         setOveredItemIds((prev) => ({
+    //                           ...prev,
+    //                           [row.original.id]:
+    //                             item.id === row.original.id ? false : isOver,
+    //                         }));
+    //                       }}
+    //                     >
+    //                       {flexRender(
+    //                         cell.column.columnDef.cell,
+    //                         cell.getContext()
+    //                       )}
+    //                     </Droppable>
+    //                   </td>
+    //                 );
+    //               })}
+    //             </tr>
+    //           );
+    //         })}
+    //       </tbody>
+    //     </table>
+    //   </div>
+    // );
   };
 
   return (
@@ -337,6 +347,235 @@ export const ExplorerGrid = (props: ExplorerProps) => {
       })}
     >
       {getContent()}
+    </div>
+  );
+};
+
+export type ExplorerGridItemsListProps = {
+  isCompact?: boolean;
+  setRightPanelForcedItem?: (item: Item | undefined) => void;
+  items: ExplorerProps["childrenItems"];
+  gridActionsCell?: ExplorerProps["gridActionsCell"];
+  selectedItemsMap?: Record<string, Item>;
+  onNavigate: (event: NavigationEvent) => void;
+  overedItemIds?: Record<string, boolean>;
+  setOveredItemIds?: Dispatch<SetStateAction<Record<string, boolean>>>;
+  selectedItems?: Item[];
+  setSelectedItems?: Dispatch<SetStateAction<Item[]>>;
+};
+
+export const ExplorerGridItemsList = ({
+  items,
+  isCompact,
+  gridActionsCell,
+  selectedItemsMap = {},
+  overedItemIds = {},
+  selectedItems = [],
+  setSelectedItems,
+  setOveredItemIds,
+  onNavigate,
+  setRightPanelForcedItem,
+}: ExplorerGridItemsListProps) => {
+  const { t } = useTranslation();
+  const lastSelectedRowRef = useRef<string | null>(null);
+  const columnHelper = createColumnHelper<Item>();
+  const columns = [
+    columnHelper.display({
+      id: "mobile",
+      cell: ExplorerGridMobileCell,
+    }),
+    columnHelper.accessor("title", {
+      header: t("explorer.grid.name"),
+      cell: ExplorerGridNameCell,
+    }),
+    columnHelper.accessor("updated_at", {
+      header: t("explorer.grid.last_update"),
+      cell: ExplorerGridUpdatedAtCell,
+    }),
+    ...(isCompact
+      ? []
+      : [
+          columnHelper.display({
+            id: "actions",
+            cell: gridActionsCell ?? ExplorerGridActionsCell,
+          }),
+        ]),
+  ];
+
+  const table = useReactTable({
+    data: items ?? EMPTY_ARRAY,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    enableRowSelection: true,
+  });
+
+  const tableRef = useRef<HTMLTableElement>(null);
+  const { onKeyDown } = useTableKeyboardNavigation({
+    table,
+    tableRef,
+  });
+
+  return (
+    <div className="c__datagrid__table__container">
+      <table ref={tableRef} tabIndex={0} onKeyDown={onKeyDown}>
+        <thead>
+          <tr>
+            {/* This one stands for the mobile column */}
+            <th></th>
+            <th style={{ width: "50%" }}>
+              <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable">
+                {t("explorer.grid.name")}
+              </div>
+            </th>
+            <th>
+              <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable">
+                {t("explorer.grid.last_update")}
+              </div>
+            </th>
+            {!isCompact && <th></th>}
+          </tr>
+        </thead>
+        <tbody>
+          {table.getRowModel().rows.map((row) => {
+            const isSelected = !!selectedItemsMap[row.original.id];
+            const isOvered = !!overedItemIds[row.original.id];
+            return (
+              <tr
+                key={row.original.id}
+                className={clsx("selectable", {
+                  selected: isSelected,
+                  over: isOvered,
+                })}
+                data-id={row.original.id}
+                tabIndex={0}
+                onClick={(e) => {
+                  const target = e.target as HTMLElement;
+                  const closest = target.closest("tr");
+                  // Because if we use modals or other components, even with a Portal, React triggers events on the original parent.
+                  // So we check that the clicked element is indeed an element of the table.
+                  if (!closest) {
+                    return;
+                  }
+
+                  const isMobile = isTablet();
+
+                  // Single click to select/deselect the item
+                  if (!isMobile && e.detail === 1) {
+                    if (e.shiftKey && lastSelectedRowRef.current) {
+                      // Get all rows between last selected and current
+                      const rows = table.getRowModel().rows;
+                      const lastSelectedIndex = rows.findIndex(
+                        (r) => r.id === lastSelectedRowRef.current
+                      );
+                      const currentIndex = rows.findIndex(
+                        (r) => r.id === row.id
+                      );
+
+                      if (lastSelectedIndex !== -1 && currentIndex !== -1) {
+                        const startIndex = Math.min(
+                          lastSelectedIndex,
+                          currentIndex
+                        );
+                        const endIndex = Math.max(
+                          lastSelectedIndex,
+                          currentIndex
+                        );
+
+                        const newSelection = [...selectedItems];
+                        for (let i = startIndex; i <= endIndex; i++) {
+                          if (!selectedItemsMap[rows[i].original.id]) {
+                            newSelection.push(rows[i].original);
+                          }
+                        }
+
+                        setSelectedItems?.(newSelection);
+                      }
+                    } else if (e.metaKey || e.ctrlKey) {
+                      // Toggle the selected item.
+                      setSelectedItems?.((value) => {
+                        let newValue = [...value];
+                        if (
+                          newValue.find((item) => item.id == row.original.id)
+                        ) {
+                          newValue = newValue.filter(
+                            (item) => item.id !== row.original.id
+                          );
+                        } else {
+                          newValue.push(row.original);
+                        }
+                        return newValue;
+                      });
+                      if (!isSelected) {
+                        lastSelectedRowRef.current = row.id;
+                      }
+                    } else {
+                      setSelectedItems?.((value) => [...value, row.original]);
+                      lastSelectedRowRef.current = row.id;
+                      setRightPanelForcedItem?.(undefined);
+                    }
+                  }
+
+                  // Double click to open the item
+                  if (isMobile || e.detail === 2) {
+                    if (row.original.type === ItemType.FOLDER) {
+                      onNavigate({
+                        type: NavigationEventType.ITEM,
+                        item: row.original,
+                      });
+                    } else {
+                      if (row.original.url) {
+                        window.open(row.original.url, "_blank");
+                      } else {
+                        addToast(
+                          <ToasterItem>{t("explorer.grid.no_url")}</ToasterItem>
+                        );
+                      }
+                    }
+                  }
+                }}
+              >
+                {row.getVisibleCells().map((cell, index, array) => {
+                  const isLastCell = index === array.length - 1;
+                  const isFirstCell = index === 0;
+                  // Check if the item is selected, if so, we can't drop an item inside it
+                  const isSelected = !!selectedItemsMap[row.original.id];
+                  return (
+                    <td
+                      key={cell.id}
+                      className={clsx("", {
+                        "c__datagrid__row__cell--actions": isLastCell,
+                        "c__datagrid__row__cell--title": isFirstCell,
+                      })}
+                    >
+                      <Droppable
+                        id={cell.id}
+                        item={row.original}
+                        disabled={
+                          isSelected ||
+                          row.original.type !== ItemType.FOLDER ||
+                          !row.original.abilities.children_create
+                        }
+                        onOver={(isOver, item) => {
+                          setOveredItemIds?.((prev) => ({
+                            ...prev,
+                            [row.original.id]:
+                              item.id === row.original.id ? false : isOver,
+                          }));
+                        }}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </Droppable>
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 };

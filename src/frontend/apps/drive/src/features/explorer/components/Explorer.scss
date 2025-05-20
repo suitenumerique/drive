@@ -558,3 +558,21 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     }
   }
 }
+
+.explorer__compact {
+  thead {
+    height: 0;
+    line-height: 0;
+
+    tr {
+      th {
+        height: 0;
+        line-height: 0;
+        div {
+          height: 0;
+          line-height: 0;
+        }
+      }
+    }
+  }
+}
