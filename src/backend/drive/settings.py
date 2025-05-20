@@ -24,7 +24,7 @@ from sentry_sdk.integrations.django import DjangoIntegration
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+DATA_DIR = os.environ.get("DATA_DIR", os.path.join("/", "data"))
 
 def get_release():
     """
@@ -94,10 +94,6 @@ class Base(Configuration):
         }
     }
     DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
-
-    DATA_DIR = values.Value(
-        os.path.join("/", "data"), environ_name="DJANGO_DATA_DIR", environ_prefix=None
-    )
 
     # Static files (CSS, JavaScript, Images)
     STATIC_URL = "/static/"
@@ -428,7 +424,7 @@ class Base(Configuration):
     THUMBNAIL_ALIASES = {}
 
     # Celery
-    CELERY_BROKER_URL = values.Value("redis://redis:6379/0", environ_name="REDIS_URL", environ_prefix=None)
+    CELERY_BROKER_URL = values.Value("redis://redis:6379/0")
     CELERY_BROKER_TRANSPORT_OPTIONS = values.DictValue({})
 
     # Session
