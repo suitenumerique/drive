@@ -2,8 +2,12 @@ import { Button } from "@openfun/cunningham-react";
 import React, { ReactElement, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+export type BreadcrumbItem = {
+  content: ReactNode;
+};
+
 export interface BreadcrumbsProps {
-  items: { content: ReactNode }[];
+  items: BreadcrumbItem[];
   onBack?: () => void;
   displayBack?: boolean;
 }
