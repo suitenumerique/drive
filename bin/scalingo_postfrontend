@@ -11,3 +11,5 @@ mv src/frontend/apps/drive/out build/frontend-out
 
 mv src/backend/* ./
 mv src/nginx/* ./
+
+echo "3.13" > .python-version
