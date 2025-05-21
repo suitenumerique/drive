@@ -56,10 +56,9 @@ export const ExplorerBreadcrumbs = () => {
     });
   };
 
-  const breadcrumbsItems = useMemo(
-    () => getBreadcrumbsItems(),
-    [item, treeIsInitialized]
-  );
+  const breadcrumbsItems = useMemo(() => {
+    return getBreadcrumbsItems();
+  }, [item, treeIsInitialized, treeContext?.treeData.nodes]);
 
   if (!item || !treeIsInitialized) {
     return null;
