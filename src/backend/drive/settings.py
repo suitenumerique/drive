@@ -20,6 +20,7 @@ import dj_database_url
 import posthog
 import sentry_sdk
 from configurations import Configuration, values
+from lasuite.configuration.values import SecretFileValue
 from sentry_sdk.integrations.django import DjangoIntegration
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -67,7 +68,7 @@ class Base(Configuration):
 
     # Security
     ALLOWED_HOSTS = values.ListValue([])
-    SECRET_KEY = values.Value(None)
+    SECRET_KEY = SecretFileValue(None)
     SERVER_TO_SERVER_API_TOKENS = values.ListValue([])
 
     # Application definition
@@ -86,7 +87,7 @@ class Base(Configuration):
             ),
             "NAME": values.Value("drive", environ_name="DB_NAME", environ_prefix=None),
             "USER": values.Value("dinum", environ_name="DB_USER", environ_prefix=None),
-            "PASSWORD": values.Value(
+            "PASSWORD": SecretFileValue(
                 "pass", environ_name="DB_PASSWORD", environ_prefix=None
             ),
             "HOST": values.Value(
@@ -125,7 +126,7 @@ class Base(Configuration):
     )
 
     # Posthog
-    POSTHOG_KEY = values.Value(None, environ_name="POSTHOG_KEY", environ_prefix=None)
+    POSTHOG_KEY = SecretFileValue(None, environ_name="POSTHOG_KEY", environ_prefix=None)
     POSTHOG_HOST = values.Value(
         "https://eu.i.posthog.com", environ_name="POSTHOG_HOST", environ_prefix=None
     )
@@ -134,10 +135,10 @@ class Base(Configuration):
     AWS_S3_ENDPOINT_URL = values.Value(
         environ_name="AWS_S3_ENDPOINT_URL", environ_prefix=None
     )
-    AWS_S3_ACCESS_KEY_ID = values.Value(
+    AWS_S3_ACCESS_KEY_ID = SecretFileValue(
         environ_name="AWS_S3_ACCESS_KEY_ID", environ_prefix=None
     )
-    AWS_S3_SECRET_ACCESS_KEY = values.Value(
+    AWS_S3_SECRET_ACCESS_KEY = SecretFileValue(
         environ_name="AWS_S3_SECRET_ACCESS_KEY", environ_prefix=None
     )
     AWS_S3_REGION_NAME = values.Value(
@@ -436,7 +437,7 @@ class Base(Configuration):
     EMAIL_BRAND_NAME = values.Value(None)
     EMAIL_HOST = values.Value(None)
     EMAIL_HOST_USER = values.Value(None)
-    EMAIL_HOST_PASSWORD = values.Value(None)
+    EMAIL_HOST_PASSWORD = SecretFileValue(None)
     EMAIL_LOGO_IMG = values.Value(None)
     EMAIL_PORT = values.PositiveIntegerValue(None)
     EMAIL_USE_TLS = values.BooleanValue(False)
@@ -520,7 +521,7 @@ class Base(Configuration):
     OIDC_RP_CLIENT_ID = values.Value(
         "drive", environ_name="OIDC_RP_CLIENT_ID", environ_prefix=None
     )
-    OIDC_RP_CLIENT_SECRET = values.Value(
+    OIDC_RP_CLIENT_SECRET = SecretFileValue(
         None,
         environ_name="OIDC_RP_CLIENT_SECRET",
         environ_prefix=None,
