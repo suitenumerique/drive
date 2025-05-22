@@ -134,7 +134,7 @@ export const ExplorerGridActionsCell = (
         {moveModal.isOpen && (
           <ExplorerMoveFolder
             {...moveModal}
-            itemToMove={item}
+            itemsToMove={[item]}
             key={item.id}
             isOpen={moveModal.isOpen}
             onClose={moveModal.close}

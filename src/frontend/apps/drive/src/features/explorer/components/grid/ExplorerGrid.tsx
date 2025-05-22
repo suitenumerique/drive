@@ -509,7 +509,7 @@ export const ExplorerGridItemsList = ({
                         lastSelectedRowRef.current = row.id;
                       }
                     } else {
-                      setSelectedItems?.((value) => [...value, row.original]);
+                      setSelectedItems?.([row.original]);
                       lastSelectedRowRef.current = row.id;
                       setRightPanelForcedItem?.(undefined);
                     }

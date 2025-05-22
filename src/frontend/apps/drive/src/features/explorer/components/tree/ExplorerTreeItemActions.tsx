@@ -141,7 +141,7 @@ export const ExplorerTreeItemActions = ({
         <ExplorerRenameItemModal {...renameModal} item={item} key={item.id} />
       )}
       {moveModal.isOpen && (
-        <ExplorerMoveFolder {...moveModal} itemToMove={item} key={item.id} />
+        <ExplorerMoveFolder {...moveModal} itemsToMove={[item]} key={item.id} />
       )}
     </>
   );

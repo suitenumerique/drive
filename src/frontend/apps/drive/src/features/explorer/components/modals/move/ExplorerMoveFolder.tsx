@@ -3,68 +3,48 @@ import { Item, ItemType } from "@/features/drivers/types";
 import { Button, Modal, ModalSize } from "@openfun/cunningham-react";
 import { useQuery } from "@tanstack/react-query";
 import { ExplorerGridItemsList } from "../../grid/ExplorerGrid";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import workspaceLogo from "@/assets/workspace_logo.svg";
 import { NavigationEvent } from "../../ExplorerContext";
-import { HorizontalSeparator } from "@gouvfr-lasuite/ui-kit";
+import {
+  HorizontalSeparator,
+  useResponsive,
+  useTreeContext,
+} from "@gouvfr-lasuite/ui-kit";
 import {
   BreadcrumbItem,
   Breadcrumbs,
 } from "@/features/ui/components/breadcrumbs/Breadcrumbs";
+import { Trans, useTranslation } from "react-i18next";
+import clsx from "clsx";
+import { useMoveItems } from "@/features/explorer/api/useMoveItem";
+import { addItemsMovedToast } from "../../toasts/addItemsMovedToast";
 
 interface ExplorerMoveFolderProps {
   isOpen: boolean;
   onClose: () => void;
-  itemToMove: Item;
+  initialFolderId?: string;
+  itemsToMove: Item[];
 }
 
 export const ExplorerMoveFolder = ({
   isOpen,
   onClose,
-  itemToMove,
+  initialFolderId,
+  itemsToMove,
 }: ExplorerMoveFolderProps) => {
-  return (
-    <Modal
-      isOpen={isOpen}
-      title="Déplacer"
-      onClose={onClose}
-      size={ModalSize.LARGE}
-      rightActions={
-        <>
-          <Button color="secondary" onClick={onClose}>
-            Annuler
-          </Button>
-          <Button color="primary" onClick={onClose}>
-            Déplacer ici
-          </Button>
-        </>
-      }
-    >
-      <div className="modal__move">
-        <span className="modal__move__description">
-          Choisissez le nouvel emplacement pour
-          <strong> Notes réunion de lundi 17 sept.</strong>
-        </span>
-        <HorizontalSeparator />
-      </div>
-      <ExplorerMoveFolderContent itemToMove={itemToMove} />
-      <HorizontalSeparator />
-    </Modal>
-  );
-};
-
-interface ExplorerMoveFolderContentProps {
-  itemToMove: Item;
-}
-
-export const ExplorerMoveFolderContent = ({
-  itemToMove,
-}: ExplorerMoveFolderContentProps) => {
-  const [itemId, setItemId] = useState<string | null>(null);
+  const { isDesktop } = useResponsive();
+  const { t } = useTranslation();
+  const treeContext = useTreeContext<Item>();
+  const isInitRef = useRef(false);
+  const [itemId, setItemId] = useState<string | null>(initialFolderId ?? null);
   const [history, setHistory] = useState<Item[]>([]);
-
+  const moveItems = useMoveItems();
+  const [selectedItems, setSelectedItems] = useState<Item[]>([]);
   // Update history when navigating
   const onNavigate = (event: NavigationEvent) => {
     const item = event.item as Item;
+    setSelectedItems([]);
     setItemId(item.id);
     setHistory((prev) => [...prev, item]);
   };
@@ -80,6 +60,7 @@ export const ExplorerMoveFolderContent = ({
       {
         content: (
           <div
+            className="c__breadcrumbs__button"
             onClick={() => {
               setItemId(null);
               setHistory([]);
@@ -91,14 +72,25 @@ export const ExplorerMoveFolderContent = ({
       },
     ];
 
-    history.forEach((item, index) => {
+    let breadcrumbsData = history;
+    if (initialFolderId && !isInitRef.current) {
+      breadcrumbsData =
+        (treeContext?.treeData.getAncestors(initialFolderId) as Item[]) ?? [];
+      setHistory(breadcrumbsData);
+      isInitRef.current = true;
+    }
+
+    breadcrumbsData.forEach((item, index) => {
       breadcrumbsItems.push({
         content: (
           <button
             className="c__breadcrumbs__button"
             onClick={() => goBackToItem(item)}
           >
-            {item.title}
+            {index === 0 && <img src={workspaceLogo.src} alt="Lasuite" />}
+            {item.main_workspace
+              ? t("explorer.workspaces.mainWorkspace")
+              : item.title}
           </button>
         ),
       });
@@ -109,7 +101,7 @@ export const ExplorerMoveFolderContent = ({
 
   const breadcrumbsItems = useMemo(() => {
     return getBreadcrumbsItems();
-  }, [history]);
+  }, [history, initialFolderId]);
 
   const { data: firstLevelItems } = useQuery({
     queryKey: ["firstLevelItems"],
@@ -136,26 +128,158 @@ export const ExplorerMoveFolderContent = ({
     }
 
     // Filter out the itemToMove from the items list
-    items = items.filter((item) => item.id !== itemToMove.id);
+
+    items = items
+      .filter((item) => !itemsToMove.some((i) => i.id === item.id))
+      .sort((a, b) => {
+        // Always put main_workspace first
+        if (a.main_workspace) return -1;
+        if (b.main_workspace) return 1;
+
+        // Then sort other items by name
+        return a.title.localeCompare(b.title, undefined, {
+          sensitivity: "base",
+        });
+      })
+      .map((item) => {
+        if (item.main_workspace) {
+          return {
+            ...item,
+            title: t("explorer.workspaces.mainWorkspace"),
+          };
+        }
+        return item;
+      });
+
     return items;
   }, [itemId, firstLevelItems, itemChildren]);
 
+  useEffect(() => {
+    if (initialFolderId) {
+      setItemId(initialFolderId);
+    }
+  }, [initialFolderId]);
+
+  const onCloseModal = () => {
+    onClose();
+    setSelectedItems([]);
+    setItemId(null);
+    setHistory([]);
+    isInitRef.current = false;
+  };
+
+  const selectedItemsMap = useMemo(() => {
+    return selectedItems.reduce((acc, item) => {
+      acc[item.id] = item;
+      return acc;
+    }, {} as Record<string, Item>);
+  }, [selectedItems]);
+
+  const onMove = () => {
+    if (!itemId && selectedItems.length === 0) {
+      return;
+    }
+    const ids = itemsToMove.map((item) => item.id);
+    const pathSegments = itemsToMove[0].path.split(".");
+    const oldParentId = pathSegments[pathSegments.length - 2];
+    moveItems.mutateAsync(
+      {
+        ids: ids,
+        parentId: selectedItems.length === 1 ? selectedItems[0].id : itemId,
+        oldParentId: oldParentId,
+      },
+      {
+        onSuccess: () => {
+          onCloseModal();
+          addItemsMovedToast(ids.length);
+        },
+      }
+    );
+  };
+
   return (
-    <div
-      style={{ display: "flex", flexDirection: "column", maxHeight: "500px" }}
+    <Modal
+      isOpen={isOpen}
+      closeOnClickOutside
+      title={
+        <div className="modal__move__header">
+          <span className="modal__move__title">Déplacer</span>
+          <span className="modal__move__description">
+            <Trans
+              i18nKey={
+                itemsToMove.length === 1
+                  ? "explorer.modal.move.description_one_item"
+                  : "explorer.modal.move.description_multiple_items"
+              }
+              values={{
+                count: itemsToMove.length,
+                name: itemsToMove[0].title,
+              }}
+            />
+          </span>
+        </div>
+      }
+      onClose={onCloseModal}
+      size={isDesktop ? ModalSize.LARGE : ModalSize.FULL}
+      rightActions={
+        <div className="modal__move__footer">
+          <Button color="secondary" onClick={onCloseModal}>
+            {t("common.cancel")}
+          </Button>
+          <Button color="primary" disabled={!itemId} onClick={onMove}>
+            {t("explorer.modal.move.move_button")}
+          </Button>
+        </div>
+      }
     >
-      <div className="">
-        <Breadcrumbs items={breadcrumbsItems} />
+      <div className="noPadding">
+        <div className="modal__move">
+          <HorizontalSeparator />
+        </div>
+        <div
+          className="modal__move__content"
+          style={{ height: isDesktop ? "300px" : "100%" }}
+        >
+          <div
+            className="modal__move__content__container"
+            onClick={(e) => {
+              const target = e.target as HTMLElement;
+              const isList = target.closest(".c__datagrid__table__container");
+              const isBreadcrumb = target.closest(".modal__move__breadcrumbs");
+              if (isList || isBreadcrumb) {
+                return;
+              }
+              setSelectedItems([]);
+            }}
+          >
+            <div className="modal__move__breadcrumbs">
+              <Breadcrumbs items={breadcrumbsItems} />
+            </div>
+            <div
+              className={clsx("c__datagrid explorer__grid explorer__compact", {
+                modal__move__empty: items.length === 0,
+              })}
+            >
+              {items.length > 0 ? (
+                <ExplorerGridItemsList
+                  isCompact
+                  items={items}
+                  gridActionsCell={() => <div />}
+                  onNavigate={onNavigate}
+                  selectedItems={selectedItems}
+                  setSelectedItems={setSelectedItems}
+                  selectedItemsMap={selectedItemsMap}
+                />
+              ) : (
+                <div className="modal__move__empty">
+                  <span>{t("explorer.modal.move.empty_folder")}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <HorizontalSeparator />
       </div>
-      <div className="c__datagrid explorer__grid explorer__compact">
-        <ExplorerGridItemsList
-          isCompact
-          items={items}
-          gridActionsCell={() => <div />}
-          onNavigate={onNavigate}
-          //   gridHeader={<div>coucou</div>}
-        />
-      </div>
-    </div>
+    </Modal>
   );
 };
