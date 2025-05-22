@@ -10,6 +10,8 @@ and this project adheres to
 
 ## Added
 
+- 🔧(backend) support _FILE for secret environment variables #196 
+
 ## Changed
 
 ## Deleted
