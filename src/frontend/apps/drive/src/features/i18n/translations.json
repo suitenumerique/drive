@@ -65,7 +65,9 @@
           "last_update": "Last Update",
           "empty": {
             "caption": "Drop your files here",
-            "cta": "Or click \"Create\""
+            "caption_no_create": "You do not have permission to add files",
+            "cta": "Or click \"Create\"",
+            "cta_no_create": "Readers cannot add files or create folders"
           },
           "no_url": "This resource does not have an URL",
           "actions": {
@@ -86,7 +88,8 @@
             "options": {
               "all": "All",
               "file": "File",
-              "folder": "Folder"
+              "folder": "Folder",
+              "reset": "Reset"
             }
           }
         },
@@ -308,7 +311,9 @@
           "last_update": "Dernière modification",
           "empty": {
             "caption": "Déposez vos fichiers ici",
-            "cta": "Ou cliquez sur \"Créer\""
+            "caption_no_create": "Vous n'avez pas les droits pour ajouter des fichiers",
+            "cta": "Ou cliquez sur \"Créer\"",
+            "cta_no_create": "Les lecteurs ne peuvent pas ajouter de fichiers ou créer de dossiers"
           },
           "no_url": "Cette ressource n'a pas d'URL",
           "actions": {
@@ -329,7 +334,8 @@
             "options": {
               "all": "Tous",
               "file": "Fichier",
-              "folder": "Dossier"
+              "folder": "Dossier",
+              "reset": "Réinitialiser"
             }
           }
         },
