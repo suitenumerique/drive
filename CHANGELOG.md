@@ -12,4 +12,6 @@ and this project adheres to
 
 ## Changed
 
+- 🔧(backend) allow `DATA_DIR` to be configurable #200 
+
 ## Deleted
