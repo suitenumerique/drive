@@ -129,7 +129,7 @@ def test_api_items_retrieve_anonymous_public_child():
 
     response = APIClient().get(f"/api/v1.0/items/{item.id!s}/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {
@@ -149,7 +149,7 @@ def test_api_items_retrieve_anonymous_restricted_or_authenticated(reach):
 
     response = APIClient().get(f"/api/v1.0/items/{item.id!s}/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {
@@ -889,7 +889,7 @@ def test_api_items_retrieve_soft_deleted_anonymous(reach, depth):
 
     response = APIClient().get(f"/api/v1.0/items/{items[-1].id!s}/")
 
-    assert response.status_code == 200 if reach == "public" else 401
+    assert response.status_code == 200 if reach == "public" else 403
 
     # Delete any one of the items...
     deleted_item = random.choice(items)

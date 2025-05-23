@@ -9,13 +9,13 @@ pytestmark = pytest.mark.django_db
 
 
 def test_api_item_favorite_list_anonymous():
-    """Anonymous users should receive a 401 error."""
+    """Anonymous users should receive a 403 error."""
 
     client = APIClient()
 
     response = client.get("/api/v1.0/items/favorite_list/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_api_item_favorite_list_authenticated_no_favorite():

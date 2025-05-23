@@ -27,7 +27,7 @@ def test_api_items_create_anonymous():
         },
     )
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert not Item.objects.exists()
 
 

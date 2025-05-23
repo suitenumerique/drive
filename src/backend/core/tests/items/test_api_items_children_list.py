@@ -222,7 +222,7 @@ def test_api_items_children_list_anonymous_restricted_or_authenticated(reach):
 
     response = APIClient().get(f"/api/v1.0/items/{item.id!s}/children/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {

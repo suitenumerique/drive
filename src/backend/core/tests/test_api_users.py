@@ -16,7 +16,7 @@ def test_api_users_list_anonymous():
     factories.UserFactory()
     client = APIClient()
     response = client.get("/api/v1.0/users/")
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {
@@ -234,7 +234,7 @@ def test_api_users_retrieve_me_anonymous():
     factories.UserFactory.create_batch(2)
     client = APIClient()
     response = client.get("/api/v1.0/users/me/")
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {
@@ -275,7 +275,7 @@ def test_api_users_retrieve_anonymous():
     user = factories.UserFactory()
     response = client.get(f"/api/v1.0/users/{user.id!s}/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {
@@ -351,7 +351,7 @@ def test_api_users_create_anonymous():
             "password": "mypassword",
         },
     )
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {
@@ -409,7 +409,7 @@ def test_api_users_update_anonymous():
         format="json",
     )
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {
@@ -497,7 +497,7 @@ def test_api_users_patch_anonymous():
             {key: new_value},
             format="json",
         )
-        assert response.status_code == 401
+        assert response.status_code == 403
         assert response.json() == {
             "errors": [
                 {
@@ -581,7 +581,7 @@ def test_api_users_delete_list_anonymous():
     client = APIClient()
     response = client.delete("/api/v1.0/users/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert models.User.objects.count() == 2
 
 
@@ -607,7 +607,7 @@ def test_api_users_delete_anonymous():
 
     response = APIClient().delete(f"/api/v1.0/users/{user.id!s}/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert models.User.objects.count() == 1
 
 
