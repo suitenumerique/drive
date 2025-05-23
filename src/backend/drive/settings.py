@@ -537,6 +537,72 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # OIDC - Drive as a resource server
+    OIDC_OP_URL = values.Value(
+        default=None, environ_name="OIDC_OP_URL", environ_prefix=None
+    )
+    OIDC_OP_INTROSPECTION_ENDPOINT = values.Value(
+        environ_name="OIDC_OP_INTROSPECTION_ENDPOINT", environ_prefix=None
+    )
+    OIDC_VERIFY_SSL = values.BooleanValue(
+        default=True, environ_name="OIDC_VERIFY_SSL", environ_prefix=None
+    )
+    OIDC_TIMEOUT = values.IntegerValue(
+        default=3, environ_name="OIDC_TIMEOUT", environ_prefix=None
+    )
+    OIDC_PROXY = values.Value(None, environ_name="OIDC_PROXY", environ_prefix=None)
+
+    OIDC_RESOURCE_SERVER_ENABLED = values.BooleanValue(
+        default=False, environ_name="OIDC_RESOURCE_SERVER_ENABLED", environ_prefix=None
+    )
+    OIDC_RS_BACKEND_CLASS = values.Value(
+        default="lasuite.oidc_resource_server.backend.ResourceServerBackend",
+        environ_name="OIDC_RS_BACKEND_CLASS",
+        environ_prefix=None,
+    )
+    OIDC_RS_AUDIENCE_CLAIM = values.Value(  # The claim used to identify the audience
+        default="client_id", environ_name="OIDC_RS_AUDIENCE_CLAIM", environ_prefix=None
+    )
+    OIDC_RS_PRIVATE_KEY_STR = values.Value(
+        default=None,
+        environ_name="OIDC_RS_PRIVATE_KEY_STR",
+        environ_prefix=None,
+    )
+    OIDC_RS_ENCRYPTION_KEY_TYPE = values.Value(
+        default="RSA",
+        environ_name="OIDC_RS_ENCRYPTION_KEY_TYPE",
+        environ_prefix=None,
+    )
+    OIDC_RS_ENCRYPTION_ALGO = values.Value(
+        default="RSA-OAEP",
+        environ_name="OIDC_RS_ENCRYPTION_ALGO",
+        environ_prefix=None,
+    )
+    OIDC_RS_ENCRYPTION_ENCODING = values.Value(
+        default="A256GCM",
+        environ_name="OIDC_RS_ENCRYPTION_ENCODING",
+        environ_prefix=None,
+    )
+    OIDC_RS_CLIENT_ID = values.Value(
+        None, environ_name="OIDC_RS_CLIENT_ID", environ_prefix=None
+    )
+    OIDC_RS_CLIENT_SECRET = values.Value(
+        None,
+        environ_name="OIDC_RS_CLIENT_SECRET",
+        environ_prefix=None,
+    )
+    OIDC_RS_SIGNING_ALGO = values.Value(
+        default="ES256", environ_name="OIDC_RS_SIGNING_ALGO", environ_prefix=None
+    )
+    OIDC_RS_SCOPES = values.ListValue(
+        [], environ_name="OIDC_RS_SCOPES", environ_prefix=None
+    )
+    OIDC_RS_ALLOWED_AUDIENCES = values.ListValue(
+        default=[],
+        environ_name="OIDC_RS_ALLOWED_AUDIENCES",
+        environ_prefix=None,
+    )
+
     ALLOW_LOGOUT_GET_METHOD = values.BooleanValue(
         default=True, environ_name="ALLOW_LOGOUT_GET_METHOD", environ_prefix=None
     )
@@ -730,6 +796,7 @@ class Test(Base):
     USE_SWAGGER = True
 
     CELERY_TASK_ALWAYS_EAGER = values.BooleanValue(True)
+    OIDC_RESOURCE_SERVER_ENABLED = True
 
     def __init__(self):
         # pylint: disable=invalid-name
