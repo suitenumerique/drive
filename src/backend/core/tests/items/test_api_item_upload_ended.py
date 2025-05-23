@@ -18,7 +18,7 @@ def test_api_item_upload_ended_anonymous():
     item = factories.ItemFactory()
     response = APIClient().post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 @pytest.mark.parametrize("role", [None, "reader"])

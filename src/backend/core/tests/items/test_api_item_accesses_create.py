@@ -33,7 +33,7 @@ def test_api_item_accesses_create_anonymous():
         format="json",
     )
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {

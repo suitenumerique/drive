@@ -20,7 +20,7 @@ def test_api_items_delete_anonymous():
         f"/api/v1.0/items/{item.id!s}/",
     )
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert models.Item.objects.count() == existing_items
 
 

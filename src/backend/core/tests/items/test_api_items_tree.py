@@ -68,7 +68,7 @@ def test_items_api_tree_anonymous_to_a_non_public_tree_structure():
 
     response = APIClient().get(f"/api/v1.0/items/{level2_1.id}/tree/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_items_api_anonymous_to_a_public_tree_structure():

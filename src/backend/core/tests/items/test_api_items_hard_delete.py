@@ -14,7 +14,7 @@ def test_api_items_hard_delete_anonymous():
     """
     item = factories.ItemFactory()
     response = APIClient().delete(f"/api/v1.0/items/{item.id!s}/hard-delete/")
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 @pytest.mark.parametrize(

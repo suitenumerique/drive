@@ -41,7 +41,7 @@ def test_api_items_children_create_anonymous(reach, role, depth):
     )
 
     assert Item.objects.count() == items_created
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "type": "client_error",
         "errors": [
