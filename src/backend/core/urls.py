@@ -91,6 +91,6 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
                         include(external_api_item_related_router.urls),
                     ),
                 ]
-            )
+            ),
         )
     )

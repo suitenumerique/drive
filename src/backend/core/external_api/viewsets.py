@@ -14,6 +14,7 @@ class ResourceServerItemViewSet(ItemViewSet):
 
     permission_classes = [ResourceServerClientPermission & ItemAccessPermission]
 
+
 class ResourceServerItemAccessViewSet(ItemAccessViewSet):
     """Resource Server Viewset for the Drive app."""
 

@@ -123,6 +123,7 @@ def test_api_items_retrieve_fetch_api_using_access_token(user_token, user_specif
 
     assert response.status_code == 403
 
+
 def test_api_items_accesses_retrieve_anonymous_public_standalone():
     """Anonymous users should not be allowed to retrieve an item."""
     item = factories.ItemFactory(link_reach="public")
@@ -188,7 +189,9 @@ def test_api_items_accesses_retrieve_connected_resource_server_with_wrong_abilit
     assert response.status_code == 200
 
 
-def test_api_items_accesses_retrieve_fetch_api_using_access_token(user_token, user_specific_sub):
+def test_api_items_accesses_retrieve_fetch_api_using_access_token(
+    user_token, user_specific_sub
+):
     """
     User with an access token should not be allowed to retrieve an item from
     the api endpoint.
