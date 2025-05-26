@@ -1154,6 +1154,7 @@ def test_api_items_retrieve_hard_deleted_item_should_not_work():
 
     assert response.status_code == 404
 
+
 def test_api_items_retrieve_wopi_supported(settings):
     """
     The `is_wopi_supported` field should be true if the item is a file and the
