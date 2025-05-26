@@ -1,7 +1,5 @@
 """Permissions related to WOPI API."""
 
-from django.core.cache import cache
-
 from rest_framework.permissions import BasePermission
 
 
