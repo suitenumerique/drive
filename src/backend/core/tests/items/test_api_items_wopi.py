@@ -1,6 +1,5 @@
 """Test for items API endpoint managing wopi init request."""
 
-from django.contrib.auth.models import AnonymousUser
 from django.utils import timezone
 
 import pytest
@@ -11,26 +10,27 @@ from core import factories, models
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
-def timestamp_now():
+@pytest.fixture(name="timestamp_now")
+def fixture_timestamp_now():
     """Timestamp now in milliseconds."""
     return int(round(timezone.now().timestamp())) * 1000
 
 
-@pytest.fixture
-def valid_mimetype():
+@pytest.fixture(name="valid_mimetype")
+def fixture_valid_mimetype():
     """Valid mimetype for testing."""
     return "application/vnd.oasis.opendocument.text"
 
 
-@pytest.fixture
-def valid_wopi_launch_url():
+@pytest.fixture(name="valid_wopi_launch_url")
+def fixture_valid_wopi_launch_url():
     """Valid WOPI launch URL for testing."""
     return "https://vendorA.com/launch_url"
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture(autouse=True, name="configure_wopi_settings")
 def configure_wopi_settings(settings, valid_mimetype, valid_wopi_launch_url):
+    """Configure WOPI settings for testing."""
     settings.WOPI_CLIENTS = ["vendorA"]
     settings.WOPI_CLIENTS_CONFIGURATION = {
         "vendorA": {

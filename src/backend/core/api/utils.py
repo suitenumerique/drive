@@ -131,3 +131,12 @@ def generate_upload_policy(item):
     )
 
     return policy
+
+
+def get_item_file_head_object(item):
+    """
+    Get the head object of an item file.
+    """
+    return default_storage.connection.meta.client.head_object(
+        Bucket=default_storage.bucket_name, Key=item.file_key
+    )

@@ -235,7 +235,7 @@ class ListItemSerializer(serializers.ModelSerializer):
 
         hard_delete_at = item.deleted_at + timedelta(days=settings.TRASHBIN_CUTOFF_DAYS)
         return hard_delete_at.isoformat()
-    
+
     def get_is_wopi_supported(self, item):
         """Return whether the item is supported by WOPI protocol."""
         return wopi_utils.is_item_wopi_supported(item)

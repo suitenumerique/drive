@@ -205,7 +205,7 @@ def test_models_items_root_get_abilities_reader_user(django_assert_num_queries):
         "tree": True,
         "update": False,
         "upload_ended": access_from_link,
-        "wopi": access_from_link,
+        "wopi": True,
     }
     with django_assert_num_queries(1):
         assert item.get_abilities(user) == expected_abilities

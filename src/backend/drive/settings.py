@@ -714,7 +714,7 @@ class Base(Configuration):
         if cls.POSTHOG_KEY is not None:
             posthog.api_key = cls.POSTHOG_KEY
             posthog.host = cls.POSTHOG_HOST
-        
+
         if cls.WOPI_CLIENTS:
             for wopi_client in cls.WOPI_CLIENTS:
                 wopi_client_upper = wopi_client.upper()
