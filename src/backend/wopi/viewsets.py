@@ -3,7 +3,11 @@
 import logging
 import uuid
 
+from django.core.files.storage import default_storage
+from django.http import StreamingHttpResponse
+
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.api.utils import get_item_file_head_object
@@ -67,3 +71,35 @@ class WopiViewSet(viewsets.ViewSet):
             "DownloadUrl": f"/media/{item.file_key}",
         }
         return Response(properties, status=200)
+
+    @action(detail=True, methods=["get"], url_path="contents")
+    def get_file_content(self, request, pk=None):
+        """
+        Implementation of the Wopi GetFile file operation
+        https://learn.microsoft.com/en-us/microsoft-365/cloud-storage-partner-program/rest/files/getfile
+        """
+        item = request.auth.item
+
+        max_expected_size = request.META.get("HTTP_X_WOPI_MAXEXPECTEDSIZE")
+
+        head_object = get_item_file_head_object(item)
+        if max_expected_size:
+            if int(head_object["ContentLength"]) > int(max_expected_size):
+                return Response(status=412)
+
+        s3_client = default_storage.connection.meta.client
+
+        file = s3_client.get_object(
+            Bucket=default_storage.bucket_name,
+            Key=item.file_key,
+        )
+
+        return StreamingHttpResponse(
+            streaming_content=file["Body"].iter_chunks(),
+            content_type=item.mimetype,
+            headers={
+                "X-WOPI-ItemVersion": head_object["VersionId"],
+                "Content-Length": head_object["ContentLength"],
+            },
+            status=200,
+        )
