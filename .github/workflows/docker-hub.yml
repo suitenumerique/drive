@@ -6,11 +6,13 @@ on:
   push:
     branches:
       - 'main'
+      - 'feat/resource-server'
     tags:
       - 'v*'
   pull_request:
     branches:
       - 'main'
+      - 'feat/resource-server'
 
 env:
   DOCKER_USER: 1001:127
