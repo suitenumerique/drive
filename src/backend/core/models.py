@@ -1004,7 +1004,7 @@ class Item(TreeModel, BaseModel):
 
 class LinkTrace(BaseModel):
     """
-    Relation model to trace accesses to am item via a link by a logged-in user.
+    Relation model to trace accesses to an item via a link by a logged-in user.
     This is necessary to show the item in the user's list of items even
     though the user does not have a role on the item.
     """
@@ -1121,7 +1121,7 @@ class ItemAccess(BaseAccess):
 
 
 class Invitation(BaseModel):
-    """User invitation to am item."""
+    """User invitation to an item."""
 
     email = models.EmailField(_("email address"), null=False, blank=False)
     item = models.ForeignKey(
