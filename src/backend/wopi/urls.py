@@ -3,11 +3,10 @@
 from django.conf import settings
 from django.urls import include, path
 
-from rest_framework.routers import DefaultRouter
-
+from wopi.routers import WopiRouter
 from wopi.viewsets import WopiViewSet
 
-router = DefaultRouter()
+router = WopiRouter()
 router.register("files", WopiViewSet, basename="files")
 
 urlpatterns = [
