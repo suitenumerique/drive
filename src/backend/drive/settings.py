@@ -636,6 +636,9 @@ class Base(Configuration):
     WOPI_ACCESS_TOKEN_TIMEOUT = values.IntegerValue(
         60 * 60 * 10, environ_name="WOPI_ACCESS_TOKEN_TIMEOUT", environ_prefix=None
     )
+    WOPI_LOCK_TIMEOUT = values.IntegerValue(
+        30 * 60, environ_name="WOPI_LOCK_TIMEOUT", environ_prefix=None
+    )
 
     # Malware detection
     MALWARE_DETECTION = {
@@ -652,7 +655,6 @@ class Base(Configuration):
             environ_prefix=None,
         ),
     }
-    
 
     # pylint: disable=invalid-name
     @property
