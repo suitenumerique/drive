@@ -532,6 +532,10 @@ class Base(Configuration):
         60 * 60 * 10, environ_name="WOPI_ACCESS_TOKEN_TIMEOUT", environ_prefix=None
     )
 
+    WOPI_LOCK_TIMEOUT = values.IntegerValue(
+        30 * 60, environ_name="WOPI_LOCK_TIMEOUT", environ_prefix=None
+    )
+
     # pylint: disable=invalid-name
     @property
     def ENVIRONMENT(self):
