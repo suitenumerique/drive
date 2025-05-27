@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'feat/resource-server'
     tags:
       - 'v*'
   pull_request:
