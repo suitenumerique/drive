@@ -11,6 +11,7 @@ on:
   pull_request:
     branches:
       - 'main'
+      - 'feat/resource-server'
 
 env:
   DOCKER_USER: 1001:127
