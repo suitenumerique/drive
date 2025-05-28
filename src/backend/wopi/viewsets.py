@@ -2,15 +2,18 @@
 
 import logging
 import uuid
+from os.path import splitext
 
 from django.core.exceptions import RequestDataTooBig
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.db import transaction
 from django.http import StreamingHttpResponse
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from sentry_sdk import capture_exception
 
 from core.api.utils import get_item_file_head_object
 from core.models import Item
@@ -25,6 +28,7 @@ HTTP_X_WOPI_LOCK = "HTTP_X_WOPI_LOCK"
 HTTP_X_WOPI_OLD_LOCK = "HTTP_X_WOPI_OLDLOCK"
 HTTP_X_WOPI_OVERRIDE = "HTTP_X_WOPI_OVERRIDE"
 
+X_WOPI_INVALIDFILENAMERROR = "X-WOPI-InvalidFileNameError"
 X_WOPI_ITEMVERSION = "X-WOPI-ItemVersion"
 X_WOPI_LOCK = "X-WOPI-Lock"
 
@@ -314,4 +318,77 @@ class WopiViewSet(viewsets.ViewSet):
         """
         Rename the file
         """
-        pass
+        item = request.auth.item
+        abilities = item.get_abilities(request.user)
+
+        if not abilities["update"]:
+            return Response(status=401)
+
+        new_filename = request.META.get("HTTP_X_WOPI_REQUESTEDNAME")
+        if not new_filename:
+            return Response(
+                status=400,
+                headers={X_WOPI_INVALIDFILENAMERROR: "No filename provided"},
+            )
+
+        lock_service = LockService(item)
+        if lock_service.is_locked():
+            current_lock_value = lock_service.get_lock(default="")
+            lock_value = request.META.get(HTTP_X_WOPI_LOCK)
+            if current_lock_value != lock_value:
+                return Response(status=409, headers={X_WOPI_LOCK: current_lock_value})
+
+        _, current_extension = splitext(item.filename)
+        new_filename_with_extension = f"{new_filename}{current_extension}"
+
+        parent_path = item.path[:-1]
+        # Filter on siblings with the desired filename
+        queryset = (
+            Item.objects.filter(path__descendants=".".join(parent_path))
+            .filter(path__depth=item.depth)
+            .filter(filename=new_filename_with_extension)
+            .exclude(id=item.id)
+        )
+
+        if queryset.exists():
+            return Response(
+                status=400,
+                headers={X_WOPI_INVALIDFILENAMERROR: "Filename already exists"},
+            )
+        head_object = get_item_file_head_object(item)
+
+        file_key = item.file_key
+        item.filename = new_filename_with_extension
+
+        # ensure renaming the file in the database and on the storage are done atomically
+        with transaction.atomic():
+            item.save(update_fields=["filename"])
+
+            # Rename the file in the storage
+            s3_client = default_storage.connection.meta.client
+            # Don't catch any s3 error, if failing let the exception raises to sentry
+            # the transaction will be rolled back
+            s3_client.copy_object(
+                Bucket=default_storage.bucket_name,
+                CopySource={
+                    "Bucket": default_storage.bucket_name,
+                    "Key": file_key,
+                },
+                Key=item.file_key,
+                MetadataDirective="COPY",
+            )
+
+        try:
+            s3_client.delete_object(
+                Bucket=default_storage.bucket_name,
+                Key=file_key,
+                VersionId=head_object["VersionId"],
+            )
+        # pylint: disable=broad-exception-caught
+        except Exception as e:  # noqa
+            capture_exception(e)
+            logger.warning(
+                "Error deleting old file for item %s in the storage: %s", item.id, e
+            )
+
+        return Response(status=200)
