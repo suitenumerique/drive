@@ -3,6 +3,8 @@
 import logging
 import uuid
 
+from django.core.exceptions import RequestDataTooBig
+from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.http import StreamingHttpResponse
 
@@ -18,9 +20,13 @@ from wopi.services.lock import LockService
 
 logger = logging.getLogger(__name__)
 
-X_WOPI_LOCK = "X-WOPI-Lock"
+
 HTTP_X_WOPI_LOCK = "HTTP_X_WOPI_LOCK"
 HTTP_X_WOPI_OLD_LOCK = "HTTP_X_WOPI_OLDLOCK"
+HTTP_X_WOPI_OVERRIDE = "HTTP_X_WOPI_OVERRIDE"
+
+X_WOPI_ITEMVERSION = "X-WOPI-ItemVersion"
+X_WOPI_LOCK = "X-WOPI-Lock"
 
 
 class WopiViewSet(viewsets.ViewSet):
@@ -85,8 +91,19 @@ class WopiViewSet(viewsets.ViewSet):
         }
         return Response(properties, status=200)
 
-    @action(detail=True, methods=["get"], url_path="contents")
-    def get_file_content(self, request, pk=None):
+    @action(detail=True, methods=["get", "post"], url_path="contents")
+    def file_content(self, request, pk=None):
+        """
+        Operations to get or put the file content.
+        """
+        if request.method == "GET":
+            return self._get_file_content(request, pk)
+        if request.method == "POST":
+            return self._put_file_content(request, pk)
+
+        return Response(status=405)
+
+    def _get_file_content(self, request, pk=None):
         """
         Implementation of the Wopi GetFile file operation
         https://learn.microsoft.com/en-us/microsoft-365/cloud-storage-partner-program/rest/files/getfile
@@ -117,6 +134,51 @@ class WopiViewSet(viewsets.ViewSet):
             status=200,
         )
 
+    def _put_file_content(self, request, pk=None):
+        """
+        Implementation of the Wopi PutFile file operation
+        https://learn.microsoft.com/en-us/microsoft-365/cloud-storage-partner-program/rest/files/putfile
+        """
+
+        if request.META.get(HTTP_X_WOPI_OVERRIDE) != "PUT":
+            return Response(status=404)
+
+        item = request.auth.item
+        abilities = item.get_abilities(request.user)
+
+        if not abilities["update"]:
+            return Response(status=401)
+
+        lock_value = request.META.get(HTTP_X_WOPI_LOCK)
+
+        if lock_value:
+            lock_service = LockService(item)
+            current_lock_value = lock_service.get_lock(default="")
+            if current_lock_value != lock_value:
+                return Response(status=409, headers={X_WOPI_LOCK: current_lock_value})
+        else:
+            # Check if the body is 0 bytes
+            body_size = int(request.META.get("CONTENT_LENGTH") or 0)
+            if body_size > 0:
+                return Response(status=409, headers={X_WOPI_LOCK: ""})
+
+        try:
+            file = ContentFile(request.body)
+        except RequestDataTooBig:
+            return Response(status=413)
+
+        s3_client = default_storage.connection.meta.client
+        updated_file = s3_client.put_object(
+            Bucket=default_storage.bucket_name,
+            Key=item.file_key,
+            Body=file,
+        )
+        item.size = file.size
+        item.save(update_fields=["size"])
+        return Response(
+            status=200, headers={X_WOPI_ITEMVERSION: updated_file["VersionId"]}
+        )
+
     def detail_post(self, request, pk=None):
         """
         A details view acessible using a POST request.
@@ -129,16 +191,16 @@ class WopiViewSet(viewsets.ViewSet):
         - UNLOCK: Release a lock on the file
         - RENAME_FILE: Rename the file
         """
-        if not request.META.get("HTTP_X_WOPI_OVERRIDE") in self.detail_post_actions:
+        if not request.META.get(HTTP_X_WOPI_OVERRIDE) in self.detail_post_actions:
             return Response(status=404)
 
         item = request.auth.item
         abilities = item.get_abilities(request.user)
 
         if not abilities["update"]:
-            return Response(status=403)
+            return Response(status=401)
 
-        post_action = self.detail_post_actions[request.META.get("HTTP_X_WOPI_OVERRIDE")]
+        post_action = self.detail_post_actions[request.META.get(HTTP_X_WOPI_OVERRIDE)]
         return getattr(self, post_action)(request, pk)
 
     def _lock(self, request, pk=None):

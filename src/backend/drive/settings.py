@@ -164,10 +164,12 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
-    # item images
-    ITEM_FILE_MAX_SIZE = values.PositiveIntegerValue(
-        5 * (2**30),  # 5GB
-        environ_name="ITEM_FILE_MAX_SIZE",
+    # Maximum size of the request body in memory.
+    # This is used to limit the size of the request body in memory.
+    # This also limits the size of the file that can be uploaded to the server.
+    DATA_UPLOAD_MAX_MEMORY_SIZE = values.PositiveIntegerValue(
+        2 * (2**30),  # 2GB
+        environ_name="DATA_UPLOAD_MAX_MEMORY_SIZE",
         environ_prefix=None,
     )
 
