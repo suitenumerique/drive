@@ -7,13 +7,13 @@ import i18n from "@/features/i18n/initI18n";
  *
  * TODO: Use localStorage maybe
  */
-export const gotoLastVisitedItem = async () => {
+export const gotoLastVisitedItem = async (prefix: string = "") => {
   const items = await getDriver().getItems({ type: ItemType.FOLDER });
   if (!items.length) {
     console.error("No items found, so cannot redirect to last visited item");
     return;
   }
-  window.location.href = `/explorer/items/${items[0].id}`;
+  window.location.href = `${prefix}/explorer/items/${items[0].id}`;
 };
 
 /** TODO: test */
@@ -60,16 +60,21 @@ export const getExtension = (item: Item, useTitle = false) => {
   return parts.pop()!;
 };
 
-
 export const formatSize = (size: number) => {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
   let convertedSize = size;
   let unitIndex = 0;
-  
+
   while (convertedSize >= 1024 && unitIndex < units.length - 1) {
     convertedSize /= 1024;
     unitIndex++;
   }
-  
-  return `${convertedSize < 10 ? convertedSize.toFixed(2) : convertedSize < 100 ? convertedSize.toFixed(1) : Math.round(convertedSize)} ${units[unitIndex]}`;
+
+  return `${
+    convertedSize < 10
+      ? convertedSize.toFixed(2)
+      : convertedSize < 100
+      ? convertedSize.toFixed(1)
+      : Math.round(convertedSize)
+  } ${units[unitIndex]}`;
 };

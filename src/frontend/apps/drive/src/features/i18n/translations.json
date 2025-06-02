@@ -239,6 +239,11 @@
         "minutes_ago_one": "{{count}} minute ago",
         "minutes_ago_other": "{{count}} minutes ago",
         "seconds_ago": "few seconds ago"
+      },
+      "sdk": {
+        "explorer": {
+          "choose": "Choose"
+        }
       }
     }
   },
@@ -497,6 +502,11 @@
         "minutes_ago_one": "il y a {{count}} minute",
         "minutes_ago_other": "il y a {{count}} minutes",
         "seconds_ago": "il y a quelques secondes"
+      },
+      "sdk": {
+        "explorer": {
+          "choose": "Choisir"
+        }
       }
     }
   }

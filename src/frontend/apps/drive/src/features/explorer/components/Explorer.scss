@@ -562,3 +562,28 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     }
   }
 }
+
+/**
+ * SDK
+ */
+
+.explorer__footer {
+  display: flex;
+  justify-content: flex-end;
+  position: sticky;
+  bottom: 0;
+  padding: 1rem;
+  background-color: white;
+  border-top: 1px solid #e5e7eb;
+  z-index: 10;
+}
+
+.explorer--sdk {
+  .explorer__filters {
+    display: none;
+  }
+
+  .explorer__selection-bar {
+    display: none;
+  }
+}
