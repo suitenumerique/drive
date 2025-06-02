@@ -29,6 +29,7 @@ from django.utils.translation import gettext_lazy as _
 from django_ltree.managers import TreeManager, TreeQuerySet
 from django_ltree.models import TreeModel
 from timezone_field import TimeZoneField
+from pgvector.django import VectorField
 
 logger = getLogger(__name__)
 
@@ -1207,3 +1208,10 @@ class Invitation(BaseModel):
             "partial_update": is_admin_or_owner,
             "retrieve": is_admin_or_owner,
         }
+
+
+class TextChunk(BaseModel):
+    item = models.ForeignKey(Item, on_delete=models.CASCADE)
+    text = models.TextField()
+    order = models.PositiveIntegerField()
+    embedding = VectorField(dimensions=1024)
