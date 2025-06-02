@@ -37,6 +37,7 @@ dependencies = [
     "django-ltree@git+https://github.com/mariocesar/django-ltree@5d955bc82021a50c522ee524106f6709e3b414e4",
     "django-parler==2.3",
     "django-redis==5.4.0",
+    "django-rest-knox==5.0.2",
     "django-storages[s3]==1.14.4",
     "django-timezone-field>=5.1",
     "djangorestframework==3.15.2",

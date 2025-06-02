@@ -2,6 +2,7 @@
 
 from django.conf import settings
 
+from knox.auth import TokenAuthentication
 from lasuite.oidc_resource_server.authentication import ResourceServerAuthentication
 from rest_framework import permissions
 
@@ -21,9 +22,10 @@ class ResourceServerClientPermission(permissions.BasePermission):
         provides an authorized Service Provider.
         """
         if not isinstance(
-            request.successful_authenticator, ResourceServerAuthentication
+            request.successful_authenticator,
+            (ResourceServerAuthentication, TokenAuthentication),
         ):
-            # Not a resource server request
+            # Not a resource server request or token authenticated request
             return False
 
         # Check if the user is authenticated
@@ -37,5 +39,9 @@ class ResourceServerClientPermission(permissions.BasePermission):
 
         # When used as a resource server, the request has a token audience
         return (
-            request.resource_server_token_audience in settings.OIDC_RS_ALLOWED_AUDIENCES
+            getattr(request, "resource_server_token_audience", None)
+            in settings.OIDC_RS_ALLOWED_AUDIENCES
+        ) or isinstance(
+            request.successful_authenticator,
+            TokenAuthentication,  # Token are forcibly allowed
         )

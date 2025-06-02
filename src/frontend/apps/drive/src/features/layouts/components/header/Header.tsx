@@ -4,6 +4,7 @@ import {
   LaGaufre,
 } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@openfun/cunningham-react";
+import { useRouter } from 'next/navigation';
 import logo from "@/assets/logo.svg";
 import { useAuth, logout } from "@/features/auth/Auth";
 import { useState } from "react";
@@ -22,6 +23,7 @@ export const Header = () => {
 
 export const HeaderRight = () => {
   const { user } = useAuth();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
   return (
@@ -38,6 +40,13 @@ export const HeaderRight = () => {
           isOpen={isOpen}
           onOpenChange={setIsOpen}
         >
+          <Button
+            onClick={() => router.push(`/user-tokens`)}
+            aria-label={t('API Tokens', 'API Tokens')}
+            color="primary-text"
+          >
+            {t('API Tokens', 'API Tokens')}
+          </Button>
           <Button
             color="primary-text"
             onClick={() => setIsOpen(!isOpen)}

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
+import datetime
 import os
 import tomllib
 from socket import gethostbyname, gethostname
@@ -312,6 +313,7 @@ class Base(Configuration):
         "django_filters",
         "dockerflow.django",
         "rest_framework",
+        "knox",
         "parler",
         "django_ltree",
         "easy_thumbnails",
@@ -337,6 +339,7 @@ class Base(Configuration):
     REST_FRAMEWORK = {
         "DEFAULT_AUTHENTICATION_CLASSES": (
             "rest_framework.authentication.SessionAuthentication",
+            "knox.auth.TokenAuthentication",
         ),
         "DEFAULT_PARSER_CLASSES": [
             "rest_framework.parsers.JSONParser",
@@ -602,6 +605,18 @@ class Base(Configuration):
         environ_name="OIDC_RS_ALLOWED_AUDIENCES",
         environ_prefix=None,
     )
+
+    # User token (knox)
+    REST_KNOX = {
+        "SECURE_HASH_ALGORITHM": "hashlib.sha512",
+        "AUTH_TOKEN_CHARACTER_LENGTH": 64,
+        "TOKEN_TTL": datetime.timedelta(hours=24 * 7),
+        "TOKEN_LIMIT_PER_USER": None,
+        "AUTO_REFRESH": False,
+        "AUTO_REFRESH_MAX_TTL": None,
+        "MIN_REFRESH_INTERVAL": 60,
+        "AUTH_HEADER_PREFIX": "Token",
+    }
 
     ALLOW_LOGOUT_GET_METHOD = values.BooleanValue(
         default=True, environ_name="ALLOW_LOGOUT_GET_METHOD", environ_prefix=None

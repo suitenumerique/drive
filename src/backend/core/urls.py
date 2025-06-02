@@ -9,11 +9,17 @@ from rest_framework.routers import DefaultRouter
 
 from core.api import viewsets
 from core.external_api import viewsets as external_api_viewsets
+from core.user_token import viewsets as user_token_viewsets
 
 # - Main endpoints
 router = DefaultRouter()
 router.register("items", viewsets.ItemViewSet, basename="items")
 router.register("users", viewsets.UserViewSet, basename="users")
+router.register(
+    "user-tokens",
+    user_token_viewsets.UserTokenViewset,
+    basename="user_tokens",
+)
 
 # - Routes nested under a item
 item_related_router = DefaultRouter()

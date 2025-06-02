@@ -1,5 +1,6 @@
 """Resource Server Viewsets for the Drive app."""
 
+from knox.auth import TokenAuthentication
 from lasuite.oidc_resource_server.authentication import ResourceServerAuthentication
 
 from ..api.permissions import AccessPermission, ItemAccessPermission
@@ -12,7 +13,7 @@ from .permissions import ResourceServerClientPermission
 class ResourceServerItemViewSet(ItemViewSet):
     """Resource Server Viewset for the Drive app."""
 
-    authentication_classes = [ResourceServerAuthentication]
+    authentication_classes = [TokenAuthentication, ResourceServerAuthentication]
 
     permission_classes = [ResourceServerClientPermission & ItemAccessPermission]
 
