@@ -60,7 +60,7 @@ class Base(Configuration):
     """
 
     DEBUG = False
-    USE_SWAGGER = False
+    USE_SWAGGER = values.BooleanValue(False, environ_name="USE_SWAGGER", environ_prefix=None)
 
     API_VERSION = "v1.0"
 
@@ -329,6 +329,7 @@ class Base(Configuration):
         "django.contrib.staticfiles",
         # OIDC third party
         "mozilla_django_oidc",
+        "drf_spectacular_sidecar",
     ]
 
     # Cache
@@ -722,6 +723,8 @@ class Build(Base):
     settings.
     """
 
+    USE_SWAGGER = True
+
     SECRET_KEY = values.Value("DummyKey")
     STORAGES = {
         "default": {
@@ -784,7 +787,6 @@ class Development(Base):
         # pylint: disable=invalid-name
         self.INSTALLED_APPS += [
             "django_extensions",
-            "drf_spectacular_sidecar",
             "debug_toolbar",
         ]
 
@@ -799,10 +801,6 @@ class Test(Base):
 
     CELERY_TASK_ALWAYS_EAGER = values.BooleanValue(True)
     OIDC_RESOURCE_SERVER_ENABLED = True
-
-    def __init__(self):
-        # pylint: disable=invalid-name
-        self.INSTALLED_APPS += ["drf_spectacular_sidecar"]
 
 
 class ContinuousIntegration(Test):
