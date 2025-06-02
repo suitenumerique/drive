@@ -1,15 +1,15 @@
 # Django drive
 
 # ---- base image to inherit from ----
-FROM python:3.12.6-alpine3.20 AS base
+FROM python:3.12.6-slim AS base
 
 # Upgrade pip to its latest release to speed up dependencies installation
 RUN python -m pip install --upgrade pip setuptools
 
 # Upgrade system packages to install security updates
-RUN apk update && \
-  apk upgrade && \
-  apk add git
+RUN apt update && \
+  apt upgrade -y && \
+  apt install git -y
 
 # ---- Back-end builder image ----
 FROM base AS back-builder
@@ -37,8 +37,8 @@ FROM base AS link-collector
 ARG DRIVE_STATIC_ROOT=/data/static
 
 # Install pango & rdfind
-RUN apk add \
-  pango \
+RUN apt install -y \
+  libpango-1.0-0 \
   rdfind
 
 # Copy installed python dependencies
@@ -63,17 +63,15 @@ FROM base AS core
 ENV PYTHONUNBUFFERED=1
 
 # Install required system libs
-RUN apk add \
-  cairo \
+RUN apt install -y \
+  libpangocairo-1.0-0 \
   file \
-  font-noto \
-  font-noto-emoji \
   gettext \
-  gdk-pixbuf \
+  libgdk-pixbuf-2.0-0 \
   libffi-dev \
   pandoc \
-  pango \
-  shared-mime-info
+  shared-mime-info \
+  wget
 
 RUN wget https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types -O /etc/mime.types
 
@@ -110,7 +108,7 @@ FROM core AS backend-development
 USER root:root
 
 # Install psql
-RUN apk add postgresql-client
+RUN apt install -y postgresql-client
 
 # Uninstall drive and re-install it in editable mode along with development
 # dependencies
