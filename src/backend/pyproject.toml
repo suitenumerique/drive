@@ -67,7 +67,7 @@ dependencies = [
     "multidict==6.4.2",
     "langchain==0.3.25",
     "langchain-community==0.3.24",
-    "openai==1.82.1"
+    "openai==1.82.1",
     "markitdown==0.1.2",
 ]
 
