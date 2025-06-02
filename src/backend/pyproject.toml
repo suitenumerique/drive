@@ -5,6 +5,10 @@
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
+[tool.poetry.dependencies]
+python = "^3.12"
+
+
 [project]
 name = "drive"
 version = "0.0.1"
@@ -60,7 +64,10 @@ dependencies = [
     "url-normalize==1.4.3",
     "whitenoise==6.8.2",
     "pgvector==0.4.1",
-    "langchain",
+    "multidict==6.4.2",
+    "langchain==0.3.25",
+    "langchain-community==0.3.24",
+    "openai==1.82.1",
     "markitdown==0.1.2",
 ]
 

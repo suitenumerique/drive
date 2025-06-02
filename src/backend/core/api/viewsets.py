@@ -25,11 +25,18 @@ from rest_framework.throttling import UserRateThrottle
 from core import enums, models
 from core.tasks.item import process_item_deletion
 
+
 from . import permissions, serializers, utils
 from .filters import ItemFilter, ListItemFilter
 from ..models import TextChunk
+from openai import AzureOpenAI
 
 logger = logging.getLogger(__name__)
+client = AzureOpenAI(
+  api_key = settings.AZURE_OPENAI_API_KEY,
+  api_version = "2024-10-21",
+  azure_endpoint =settings.AZURE_OPENAI_ENDPOINT
+)
 
 ITEM_FOLDER = "item"
 UUID_REGEX = (
@@ -620,12 +627,17 @@ class ItemViewSet(
         file.close()
 
         file = default_storage.open(item.file_key)
-        for i in range(4):
+        extracted_texts = [f"some content goes here {i}" for i in range(4)]
+
+
+        model = "text-embedding-3-large"
+        response = client.embeddings.create(input=extracted_texts, model=model).data
+        for i, (extracted_text, embedding) in enumerate(zip(extracted_texts, response)):
             text_chunk = TextChunk(
                 item=item,
-                text=f"some content goes here {i}",
+                text=extracted_text,
                 order=i,
-                embedding = list(range(1024)),
+                embedding=embedding.embedding,
             )
             text_chunk.save()
         file.close()
