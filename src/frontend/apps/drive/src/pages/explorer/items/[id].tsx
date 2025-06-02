@@ -4,7 +4,7 @@ import { Explorer } from "@/features/explorer/components/Explorer";
 import { getGlobalExplorerLayout } from "@/features/layouts/components/explorer/ExplorerLayout";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function ItemPage() {
   const router = useRouter();
@@ -19,6 +19,7 @@ export default function ItemPage() {
     ],
     queryFn: () => getDriver().getChildren(itemId, filters),
   });
+
   return (
     <Explorer
       childrenItems={itemChildren}

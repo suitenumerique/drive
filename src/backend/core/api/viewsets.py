@@ -15,6 +15,7 @@ from django.db import models as db
 from django.db import transaction
 from django.db.models.expressions import RawSQL
 
+from core.services.sdk_relay import SDKRelayManager
 import magic
 import posthog
 import rest_framework as drf
@@ -1207,3 +1208,31 @@ class ConfigView(drf.views.APIView):
                 dict_settings[setting] = getattr(settings, setting)
 
         return drf.response.Response(dict_settings)
+
+
+
+class SDKRelayEventView(drf.views.APIView):
+    """API View for SDK relay interactions."""
+    permission_classes = []
+    
+    def get(self, request, token):
+        """
+        GET /api/v1.0/sdk-relay/events/<token>/
+        """
+        sdk_relay = SDKRelayManager()
+        event = sdk_relay.get_event(token)
+        return drf.response.Response(event)
+
+class SDKRelayEventCreateView(drf.views.APIView):
+    """API View for SDK relay interactions."""
+    permission_classes = []
+    
+    def post(self, request):
+        """
+        POST /api/v1.0/sdk-relay/events/
+        """
+        token = request.data.get("token")
+        event = request.data.get("event")
+        sdk_relay = SDKRelayManager()
+        sdk_relay.register_event(token, event)
+        return drf.response.Response(status=status.HTTP_201_CREATED)

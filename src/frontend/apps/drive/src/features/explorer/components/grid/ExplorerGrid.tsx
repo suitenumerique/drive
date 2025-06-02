@@ -89,6 +89,7 @@ export const ExplorerGrid = (props: ExplorerProps) => {
   const isLoading = props.childrenItems === undefined;
   const isEmpty = props.childrenItems?.length === 0;
   const canCreateChildren = item?.abilities?.children_create;
+  const canSelect = props.canSelect ?? (() => true);
 
   const getContent = () => {
     if (isLoading) {

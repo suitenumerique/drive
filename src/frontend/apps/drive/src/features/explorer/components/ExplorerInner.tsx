@@ -163,7 +163,7 @@ export const ExplorerInner = (props: ExplorerProps) => {
     );
   };
 
-  if (isTablet) {
+  if (isTablet || props.disableAreaSelection) {
     return renderContent();
   }
 

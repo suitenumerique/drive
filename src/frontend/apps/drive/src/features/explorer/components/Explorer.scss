@@ -6,13 +6,14 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 .explorer {
   display: flex;
   min-height: calc(100vh - 52px);
-  background-color: var(--c--theme--colors--greyscale-050);
+
   justify-content: center;
   align-items: flex-start;
   position: relative;
 
   &--app {
     padding: 16px;
+    background-color: var(--c--theme--colors--greyscale-050);
 
     @media (max-width: $tablet) {
       padding: 0;
@@ -21,11 +22,19 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     .explorer__container {
       width: 992px;
     }
+
+    .explorer__content {
+      border: 1px var(--c--theme--colors--greyscale-200) solid;
+    }
   }
 
   &--sdk {
     .explorer__container {
       width: 100%;
+    }
+
+    .explorer__content {
+      padding: 16px 24px;
     }
   }
 
@@ -68,7 +77,7 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
   &__content {
     flex: 1;
     background-color: #fff;
-    border: 1px var(--c--theme--colors--greyscale-200) solid;
+
     border-radius: 4px;
     padding: 24px;
     display: flex;
@@ -575,4 +584,51 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
       }
     }
   }
+}
+
+/**
+ * SDK
+ */
+
+.explorer__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  bottom: 0;
+  padding: 0 24px;
+  background-color: white;
+  border-top: 1px solid #e5e7eb;
+  height: 72px;
+  z-index: 10;
+
+  &__caption {
+    font-size: 14px;
+    color: var(--c--theme--colors--greyscale-600);
+  }
+
+  &__actions {
+    display: flex;
+    gap: 12px;
+  }
+}
+
+.explorer--sdk {
+  .explorer__filters {
+    display: none;
+  }
+
+  .explorer__selection-bar {
+    display: none;
+  }
+}
+
+.explorer__sdk__header {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  font-size: 14px;
+  color: var(--c--theme--colors--greyscale-600);
+  border-bottom: 1px solid var(--c--theme--colors--greyscale-100);
 }
