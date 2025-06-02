@@ -12,6 +12,12 @@ import { ItemFilters } from "@/features/drivers/Driver";
 import { getDriver } from "@/features/config/Config";
 import { Button } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
+import { LinkReach } from "@/features/drivers/types";
+import { LinkRole } from "@/features/drivers/types";
+
+export enum ClientMessageType {
+  ITEMS_SELECTED = "ITEMS_SELECTED",
+}
 
 /**
  * This route is gonna be used later for SKD integration as iframe.
@@ -20,7 +26,6 @@ export default function ItemPage() {
   const router = useRouter();
   const itemId = router.query.id as string;
   const [filters, setFilters] = useState<ItemFilters>({});
-  const { t } = useTranslation();
 
   const onNavigate = (e: NavigationEvent) => {
     router.push(`/sdk/explorer/items/${e.item.id}`);
@@ -51,15 +56,27 @@ export default function ItemPage() {
 ItemPage.getLayout = function getLayout(page: React.ReactElement) {
   return <GlobalLayout>{page}</GlobalLayout>;
 };
+
 const Footer = () => {
   const { t } = useTranslation();
 
   const { selectedItems } = useExplorer();
+  const driver = getDriver();
 
-  const onChoose = () => {
+  const onChoose = async () => {
+    const promises = selectedItems.map((item) => {
+      return driver.updateItem({
+        id: item.id,
+        link_reach: LinkReach.PUBLIC,
+        link_role: LinkRole.READER,
+      });
+    });
+
+    await Promise.all(promises);
+
     window.opener.postMessage(
       {
-        type: "items-selected",
+        type: ClientMessageType.ITEMS_SELECTED,
         data: {
           items: selectedItems,
         },

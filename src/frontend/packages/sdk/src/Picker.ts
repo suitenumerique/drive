@@ -1,5 +1,5 @@
 import { DEFAULT_CONFIG } from "./Config";
-import { Item } from "./Types";
+import { ClientMessageType, Item } from "./Types";
 
 export const openPicker = (
   customConfig?: Partial<typeof DEFAULT_CONFIG>,
@@ -30,8 +30,7 @@ export const openPicker = (
 
       const { type, data } = event.data;
 
-      if (type === "items-selected") {
-        console.log("ITEMS SELECTED", data);
+      if (type === ClientMessageType.ITEMS_SELECTED) {
         window.removeEventListener("message", onMessage);
         resolve(data);
         popupWindow?.close();

@@ -20,7 +20,8 @@ function App() {
           <ul>
             {items?.map((item) => (
               <li key={item.id}>
-                {item.title} - {item.size} bytes
+                {item.title} - {item.size} bytes{" "}
+                <a href={item.url}>{item.url}</a>
               </li>
             ))}
           </ul>
