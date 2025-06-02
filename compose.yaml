@@ -2,7 +2,7 @@ name: drive
 
 services:
   postgresql:
-    image: postgres:16
+    image: ankane/pgvector
     ports:
       - "6434:5432"
     healthcheck:
