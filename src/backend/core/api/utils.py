@@ -115,30 +115,3 @@ def generate_upload_policy(item):
     )
 
     return policy
-
-
-def list_bucket_root():
-    """
-    List objects and directories at the root of the S3 bucket.
-    """
-    s3_client = default_storage.connection.meta.client
-    bucket_name = default_storage.bucket_name
-    paginator = s3_client.get_paginator("list_objects_v2")
-    root_items = []
-
-    pages = paginator.paginate(Bucket=bucket_name, Delimiter="/", Prefix="")
-
-    for page in pages:
-        # Add files at the root
-        if "Contents" in page:
-            for obj in page["Contents"]:
-                # Exclude objects that are effectively directories themselves if empty
-                if obj["Key"] and not obj["Key"].endswith("/"):
-                    root_items.append(obj["Key"])
-
-        # Add directories at the root
-        if "CommonPrefixes" in page:
-            for prefix in page["CommonPrefixes"]:
-                root_items.append(prefix["Prefix"])
-
-    return root_items

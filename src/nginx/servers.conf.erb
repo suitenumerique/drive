@@ -50,6 +50,7 @@ server {
         # Get resource from Object Storage
         proxy_pass <%= ENV["AWS_S3_BUCKET_INTERNAL_URL"] %>;
         proxy_set_header Host <%= ENV["AWS_S3_BUCKET_INTERNAL_HOST"] %>;
+        add_header Content-Security-Policy "default-src 'none'" always;
     }
 
     location /media-auth {
