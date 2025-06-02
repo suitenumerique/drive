@@ -62,7 +62,7 @@ class Base(Configuration):
 
     DEBUG = False
     LOAD_E2E_URLS = False
-    USE_SWAGGER = False
+    USE_SWAGGER = values.BooleanValue(False, environ_name="USE_SWAGGER", environ_prefix=None)
 
     API_VERSION = "v1.0"
 
@@ -284,6 +284,7 @@ class Base(Configuration):
         # OIDC third party
         "mozilla_django_oidc",
         "lasuite.malware_detection",
+        "drf_spectacular_sidecar",
     ]
 
     # Cache
@@ -881,6 +882,8 @@ class Build(Base):
     CACHES = {
         "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
     }
+    USE_SWAGGER = True
+
     SECRET_KEY = values.Value("DummyKey")
     STORAGES = {
         "default": {
@@ -922,7 +925,6 @@ class Development(Base):
         # pylint: disable=invalid-name
         self.INSTALLED_APPS += [
             "django_extensions",
-            "drf_spectacular_sidecar",
             "debug_toolbar",
             "e2e",
         ]
@@ -946,7 +948,7 @@ class Test(Base):
 
     def __init__(self):
         # pylint: disable=invalid-name
-        self.INSTALLED_APPS += ["drf_spectacular_sidecar", "e2e"]
+        self.INSTALLED_APPS += ["e2e"]
 
 
 class ContinuousIntegration(Test):

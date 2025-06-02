@@ -45,6 +45,7 @@ dependencies = [
     "djangorestframework==3.16.1",
     "dockerflow==2024.4.2",
     "drf_spectacular==0.28.0",
+    "drf-spectacular-sidecar==2025.10.1",
     "drf-standardized-errors==0.15.0",
     "easy_thumbnails==2.10.1",
     "factory_boy==3.3.3",
@@ -72,10 +73,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "django-debug-toolbar==6.0.0",
-    "django-extensions==4.1",
-    "drf-spectacular-sidecar==2025.10.1",
-    "freezegun==1.5.5",
+    "django-debug-toolbar==5.1.0",
+    "django-extensions==3.2.3",
+    "freezegun==1.5.1",
     "ipdb==0.13.13",
     "ipython==9.6.0",
     "pyfakefs==5.9.3",
