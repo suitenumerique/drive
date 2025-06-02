@@ -1215,3 +1215,6 @@ class TextChunk(BaseModel):
     text = models.TextField()
     order = models.PositiveIntegerField()
     embedding = VectorField(dimensions=1024)
+
+    def __str__(self):
+        return f"{self.item}-{self.order}"

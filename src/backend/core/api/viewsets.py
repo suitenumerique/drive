@@ -25,6 +25,8 @@ from rest_framework.throttling import UserRateThrottle
 from core import enums, models
 from core.tasks.item import process_item_deletion
 
+from langchain_core.embeddings import FakeEmbeddings
+
 from . import permissions, serializers, utils
 from .filters import ItemFilter, ListItemFilter
 from ..models import TextChunk
@@ -620,12 +622,16 @@ class ItemViewSet(
         file.close()
 
         file = default_storage.open(item.file_key)
-        for i in range(4):
+        extracted_texts = [f"some content goes here {i}" for i in range(4)]
+
+        embedder = FakeEmbeddings(size=1024)
+        embeddings = embedder.embed_documents(extracted_texts)
+        for i, (extracted_text, embedding) in enumerate(zip(extracted_texts, embeddings)):
             text_chunk = TextChunk(
                 item=item,
-                text=f"some content goes here {i}",
+                text=extracted_text,
                 order=i,
-                embedding = list(range(1024)),
+                embedding = embedding,
             )
             text_chunk.save()
         file.close()

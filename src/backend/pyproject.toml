@@ -60,7 +60,9 @@ dependencies = [
     "url-normalize==1.4.3",
     "whitenoise==6.8.2",
     "pgvector==0.4.1",
-    "langchain"
+    "langchain",
+    "langchain-community",
+#    "langchain-openai"
 ]
 
 [project.urls]
