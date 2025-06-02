@@ -181,3 +181,8 @@ class InvitationAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         obj.issuer = request.user
         obj.save()
+
+
+@admin.register(models.TextChunk)
+class TextChunkAdmin(admin.ModelAdmin):
+    pass
