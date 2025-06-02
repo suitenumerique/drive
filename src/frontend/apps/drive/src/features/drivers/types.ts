@@ -5,6 +5,17 @@ export enum ItemType {
   FOLDER = "folder",
 }
 
+export enum LinkReach {
+  RESTRICTED = "restricted",
+  AUTHENTICATED = "authenticated",
+  PUBLIC = "public",
+}
+
+export enum LinkRole {
+  READER = "reader",
+  EDITOR = "editor",
+}
+
 export type Item = {
   id: string;
   title: string;
@@ -28,6 +39,8 @@ export type Item = {
   size?: number;
   mimetype?: string;
   user_roles?: Role[];
+  link_reach?: LinkReach;
+  link_role?: LinkRole;
   abilities: {
     accesses_manage: boolean;
     accesses_view: boolean;
@@ -37,7 +50,7 @@ export type Item = {
     favorite: boolean;
     invite_owner: boolean;
     link_configuration: boolean;
-    media_auth: boolean;  
+    media_auth: boolean;
     move: boolean;
     partial_update: boolean;
     restore: boolean;
@@ -58,13 +71,11 @@ export type Item = {
   };
 };
 
-
 export type TreeItemData = Omit<Item, "children"> & {
   parentId?: string;
-}
+};
 
-export type TreeItem = TreeViewDataType<TreeItemData>
-
+export type TreeItem = TreeViewDataType<TreeItemData>;
 
 export type Access = {
   id: string;
@@ -78,7 +89,7 @@ export type Access = {
     set_role_to: Role[];
     update: boolean;
   };
-}
+};
 
 export type Invitation = {
   team: string;
@@ -96,13 +107,13 @@ export type Invitation = {
     partial_update: boolean;
     update: boolean;
   };
-}
+};
 
 export enum Role {
-  READER = 'reader',
-  EDITOR = 'editor',
-  ADMIN = 'administrator',
-  OWNER = 'owner',
+  READER = "reader",
+  EDITOR = "editor",
+  ADMIN = "administrator",
+  OWNER = "owner",
 }
 
 export type User = {
@@ -111,8 +122,7 @@ export type User = {
   full_name: string;
   short_name: string;
   language: string;
-}
-
+};
 
 export interface APIList<T> {
   count: number;

@@ -138,6 +138,8 @@ export const ExplorerGrid = (props: ExplorerProps) => {
   });
 
   const canCreateChildren = item?.abilities?.children_create;
+  const canSelect = props.canSelect ?? (() => true);
+
   const getContent = () => {
     if (isLoading) {
       return <Loader aria-label={tc("components.datagrid.loader_aria")} />;
@@ -208,6 +210,10 @@ export const ExplorerGrid = (props: ExplorerProps) => {
 
                     // Single click to select/deselect the item
                     if (!isMobile && e.detail === 1) {
+                      if (!canSelect(row.original)) {
+                        return;
+                      }
+
                       if (e.shiftKey && lastSelectedRowRef.current) {
                         // Get all rows between last selected and current
                         const rows = table.getRowModel().rows;
