@@ -1214,7 +1214,7 @@ class TextChunk(BaseModel):
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
     text = models.TextField()
     order = models.PositiveIntegerField()
-    embedding = VectorField(dimensions=1024)
+    embedding = VectorField(dimensions=3072)
 
     def __str__(self):
         return f"{self.item}-{self.order}"

@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True, help_text='date and time at which a record was last updated', verbose_name='updated on')),
                 ('text', models.TextField()),
                 ('order', models.PositiveIntegerField()),
-                ('embedding', pgvector.django.vector.VectorField(dimensions=1024)),
+                ('embedding', pgvector.django.vector.VectorField(dimensions=3072)),
                 ('item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.item')),
             ],
             options={
