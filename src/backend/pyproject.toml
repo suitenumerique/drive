@@ -59,6 +59,7 @@ dependencies = [
     "sentry-sdk==2.20.0",
     "url-normalize==1.4.3",
     "whitenoise==6.8.2",
+    "pgvector==0.4.1",
 ]
 
 [project.urls]
