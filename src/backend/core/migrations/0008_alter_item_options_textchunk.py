@@ -4,6 +4,8 @@ import django.db.models.deletion
 import pgvector.django.vector
 import uuid
 from django.db import migrations, models
+from pgvector.django import VectorExtension
+from pgvector.django import VectorField
 
 
 class Migration(migrations.Migration):
@@ -13,6 +15,7 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        VectorExtension(),
         migrations.AlterModelOptions(
             name='item',
             options={'ordering': ('created_at',), 'verbose_name': 'Item', 'verbose_name_plural': 'Items'},

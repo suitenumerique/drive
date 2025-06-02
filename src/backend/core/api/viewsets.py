@@ -27,6 +27,7 @@ from core.tasks.item import process_item_deletion
 
 from . import permissions, serializers, utils
 from .filters import ItemFilter, ListItemFilter
+from ..models import TextChunk
 
 logger = logging.getLogger(__name__)
 
@@ -617,6 +618,18 @@ class ItemViewSet(
         file = default_storage.open(item.file_key)
         mimetype = mime_detector.from_buffer(file.read(2048))
         file.close()
+
+        file = default_storage.open(item.file_key)
+        for i in range(4):
+            text_chunk = TextChunk(
+                item=item,
+                text=f"some content goes here {i}",
+                order=i,
+                embedding = list(range(1024)),
+            )
+            text_chunk.save()
+        file.close()
+
 
         item.upload_state = models.ItemUploadStateChoices.UPLOADED
         item.mimetype = mimetype
