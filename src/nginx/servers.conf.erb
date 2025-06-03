@@ -14,16 +14,16 @@ server {
     
     error_page 404 /404.html;
 
-    # Django rest framework
-    location ^~ /api/ {
+    # Django rest framework and external API
+    location ~ ^/(api|external_api)/ {
         proxy_set_header X-Forwarded-Proto https;
         proxy_set_header Host $http_host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
         proxy_redirect off;
-		proxy_pass http://backend_server;
-	}
-    
+        proxy_pass http://backend_server;
+    }
+
     # Django admin
     location ^~ /admin/ {
         proxy_set_header X-Forwarded-Proto https;
