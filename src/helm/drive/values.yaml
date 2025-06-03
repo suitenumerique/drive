@@ -176,8 +176,8 @@ backend:
       - "--no-input"
     restartPolicy: Never
 
- ## @param backend.createsuperuser.command backend migrate command
- ## @param backend.createsuperuser.restartPolicy backend migrate job restart policy
+  ## @param backend.createsuperuser.command backend migrate command
+  ## @param backend.createsuperuser.restartPolicy backend migrate job restart policy
   createsuperuser:
     command:
       - "/bin/sh"
@@ -185,6 +185,18 @@ backend:
       - |
         python manage.py createsuperuser --email $DJANGO_SUPERUSER_EMAIL --password $DJANGO_SUPERUSER_PASSWORD
     restartPolicy: Never
+
+  ## @param backend.configureWopi.command backend configure wopi command
+  ## @param backend.configureWopi.restartPolicy backend configure wopi job restart policy
+  configureWopi:
+    command:
+      - "/bin/sh"
+      - "-c"
+      - |
+        python manage.py trigger_wopi_configuration
+    restartPolicy: Never
+    annotations:
+      argocd.argoproj.io/hook: PostSync
 
   ## @extra backend.job job dedicated to run a random management command, for example after a deployment
   ## @param backend.job.name The name to use to describe this job
