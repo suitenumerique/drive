@@ -1,11 +1,13 @@
 """Test for items API endpoint managing wopi init request."""
 
+from django.core.cache import cache
 from django.utils import timezone
 
 import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
+from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
 
 pytestmark = pytest.mark.django_db
 
@@ -29,15 +31,17 @@ def fixture_valid_wopi_launch_url():
 
 
 @pytest.fixture(autouse=True, name="configure_wopi_settings")
-def configure_wopi_settings(settings, valid_mimetype, valid_wopi_launch_url):
+def configure_wopi_settings(valid_mimetype, valid_wopi_launch_url):
     """Configure WOPI settings for testing."""
-    settings.WOPI_CLIENTS = ["vendorA"]
-    settings.WOPI_CLIENTS_CONFIGURATION = {
-        "vendorA": {
-            "launch_url": valid_wopi_launch_url,
-            "mimetypes": [valid_mimetype],
-        }
-    }
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            "mimetypes": {
+                valid_mimetype: valid_wopi_launch_url,
+            },
+            "extensions": {},
+        },
+    )
 
 
 def test_api_items_wopi_not_existing_item():

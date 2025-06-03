@@ -8,12 +8,14 @@ from datetime import timedelta
 from unittest import mock
 
 from django.contrib.auth.models import AnonymousUser
+from django.core.cache import cache
 from django.utils import timezone
 
 import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
+from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
 
 pytestmark = pytest.mark.django_db
 
@@ -1349,18 +1351,21 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "hard_delete_at": None,
     }
 
-def test_api_items_retrieve_wopi_supported(settings):
+def test_api_items_retrieve_wopi_supported():
     """
     The `is_wopi_supported` field should be true if the item is a file and the
     `WopiEnabled` setting is true.
     """
-    settings.WOPI_CLIENTS = ["vendorA"]
-    settings.WOPI_CLIENTS_CONFIGURATION = {
-        "vendorA": {
-            "launch_url": "https://vendorA.com/launch_url",
-            "mimetypes": ["application/vnd.oasis.opendocument.text"],
-        }
-    }
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            "mimetypes": {
+                "application/vnd.oasis.opendocument.text": "https://vendorA.com/launch_url",
+            },
+            "extensions": {},
+        },
+    )
+
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)

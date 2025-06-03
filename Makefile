@@ -118,6 +118,7 @@ logs: ## display app-dev logs (follow mode)
 run-backend: ## start the backend container
 	@$(COMPOSE) up --force-recreate -d celery-dev
 	@$(COMPOSE) up --force-recreate -d nginx
+	@$(MAKE) configure-wopi
 .PHONY: run-backend
 
 bootstrap-e2e: ## bootstrap the backend container for e2e tests, without frontend
@@ -221,6 +222,10 @@ superuser: ## Create an admin superuser with password "admin"
 	@echo "$(BOLD)Creating a Django superuser$(RESET)"
 	@$(MANAGE) createsuperuser --email admin@example.com --password admin
 .PHONY: superuser
+
+configure-wopi: ## configure the wopi settings
+	@$(MANAGE) trigger_wopi_configuration
+.PHONY: configure-wopi
 
 back-i18n-compile: ## compile the gettext files
 	@$(MANAGE) compilemessages --ignore="venv/**/*"

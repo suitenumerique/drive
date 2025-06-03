@@ -8,13 +8,11 @@ from drive.settings import Base
 def test_valid_wopi_configuration(monkeypatch):
     """Valid WOPI configuration should be correctly loaded."""
     monkeypatch.setenv(
-        "WOPI_VENDORA_MIMETYPES",
-        "application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet",
+        "WOPI_VENDORA_DISCOVERY_URL", "https://vendorA.com/hosting/discovery"
     )
 
-    monkeypatch.setenv("WOPI_VENDORB_LAUNCH_URL", "https://vendorB.com/launch_url")
     monkeypatch.setenv(
-        "WOPI_VENDORB_MIMETYPES", "application/vnd.oasis.opendocument.presentation"
+        "WOPI_VENDORB_DISCOVERY_URL", "https://vendorB.com/hosting/discovery"
     )
 
     class TestSettings(Base):
@@ -27,25 +25,23 @@ def test_valid_wopi_configuration(monkeypatch):
 
     assert TestSettings.WOPI_CLIENTS_CONFIGURATION == {
         "vendorA": {
-            "launch_url": "https://vendorA.com/launch_url",
-            "mimetypes": [
-                "application/vnd.oasis.opendocument.text",
-                "application/vnd.oasis.opendocument.spreadsheet",
-            ],
+            "discovery_url": "https://vendorA.com/hosting/discovery",
+            "mimetypes": {},
+            "extensions": {},
         },
         "vendorB": {
-            "launch_url": "https://vendorB.com/launch_url",
-            "mimetypes": ["application/vnd.oasis.opendocument.presentation"],
+            "discovery_url": "https://vendorB.com/hosting/discovery",
+            "mimetypes": {},
+            "extensions": {},
         },
     }
 
 
-def test_wopi_configuration_missing_mimetypes(monkeypatch):
+def test_wopi_configuration_missing_discovery_url():
     """
-    When a WOPI client is missing the mimetypes configuration, a ValueError should be
+    When a WOPI client is missing the discovery url configuration, a ValueError should be
     raised.
     """
-    monkeypatch.setenv("WOPI_VENDORA_LAUNCH_URL", "https://vendorA.com/launch_url")
 
     class TestSettings(Base):
         """Fake test settings."""
@@ -57,32 +53,8 @@ def test_wopi_configuration_missing_mimetypes(monkeypatch):
         TestSettings().post_setup()
 
     assert str(excinfo.value) == (
-        "Value 'WOPI_VENDORA_MIMETYPES' is required to be set as the environment"
-        " variable 'WOPI_VENDORA_MIMETYPES'"
-    )
-
-
-def test_wopi_configuration_missing_launch_url(monkeypatch):
-    """
-    When a WOPI client is missing the launch url configuration, a ValueError should be
-    raised.
-    """
-    monkeypatch.setenv(
-        "WOPI_VENDORA_MIMETYPES", "application/vnd.oasis.opendocument.text"
-    )
-
-    class TestSettings(Base):
-        """Fake test settings."""
-
-        WOPI_CLIENTS = ["vendorA"]
-        WOPI_CLIENTS_CONFIGURATION = {}
-
-    with pytest.raises(ValueError) as excinfo:
-        TestSettings().post_setup()
-
-    assert str(excinfo.value) == (
-        "Value 'WOPI_VENDORA_LAUNCH_URL' is required to be set as the environment"
-        " variable 'WOPI_VENDORA_LAUNCH_URL'"
+        "Value 'WOPI_VENDORA_DISCOVERY_URL' is required to be set as the environment"
+        " variable 'WOPI_VENDORA_DISCOVERY_URL'"
     )
 
 

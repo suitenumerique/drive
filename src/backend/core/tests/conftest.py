@@ -2,11 +2,20 @@
 
 from unittest import mock
 
+from django.core.cache import cache
+
 import pytest
 
 USER = "user"
 TEAM = "team"
 VIA = [USER, TEAM]
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    """Fixture to clear the cache after each test."""
+    yield
+    cache.clear()
 
 
 @pytest.fixture
