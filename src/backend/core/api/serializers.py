@@ -270,8 +270,6 @@ class ItemSerializer(ListItemSerializer):
             "creator",
             "depth",
             "is_favorite",
-            "link_role",
-            "link_reach",
             "nb_accesses",
             "numchild",
             "numchild_folder",
