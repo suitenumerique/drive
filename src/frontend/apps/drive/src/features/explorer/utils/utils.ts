@@ -8,12 +8,20 @@ import i18n from "@/features/i18n/initI18n";
  * TODO: Use localStorage maybe
  */
 export const gotoLastVisitedItem = async (prefix: string = "") => {
-  const items = await getDriver().getItems({ type: ItemType.FOLDER });
-  if (!items.length) {
+  const item = await getLastVisitedItem();
+  if (!item) {
     console.error("No items found, so cannot redirect to last visited item");
     return;
   }
-  window.location.href = `${prefix}/explorer/items/${items[0].id}`;
+  window.location.href = `${prefix}/explorer/items/${item.id}`;
+};
+
+export const getLastVisitedItem = async () => {
+  const items = await getDriver().getItems({ type: ItemType.FOLDER });
+  if (!items.length) {
+    return null;
+  }
+  return items[0];
 };
 
 /** TODO: test */
@@ -74,7 +82,7 @@ export const formatSize = (size: number) => {
     convertedSize < 10
       ? convertedSize.toFixed(2)
       : convertedSize < 100
-      ? convertedSize.toFixed(1)
-      : Math.round(convertedSize)
+        ? convertedSize.toFixed(1)
+        : Math.round(convertedSize)
   } ${units[unitIndex]}`;
 };

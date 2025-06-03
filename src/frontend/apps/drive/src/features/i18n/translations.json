@@ -242,7 +242,9 @@
       },
       "sdk": {
         "explorer": {
-          "choose": "Choose"
+          "choose": "Choose",
+          "save_label": "Choose a destination for the file",
+          "save": "Save"
         }
       }
     }
@@ -505,7 +507,9 @@
       },
       "sdk": {
         "explorer": {
-          "choose": "Choisir"
+          "choose": "Choisir",
+          "save_label": "Choisissez une destination pour le fichier",
+          "save": "Enregistrer"
         }
       }
     }

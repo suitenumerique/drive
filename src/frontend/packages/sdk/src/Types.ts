@@ -1,9 +1,14 @@
-import { DEFAULT_CONFIG } from '@/Config'
+import { DEFAULT_CONFIG } from "@/Config";
 
-export type ConfigType = typeof DEFAULT_CONFIG
+export type ConfigType = typeof DEFAULT_CONFIG;
 
 export enum ClientMessageType {
-  ITEMS_SELECTED = 'ITEMS_SELECTED',
+  // Picker.
+  ITEMS_SELECTED = "ITEMS_SELECTED",
+  // Saver
+  SAVER_READY = "SAVER_READY",
+  SAVER_PAYLOAD = "SAVER_PAYLOAD",
+  ITEM_SAVED = "ITEM_SAVED",
 }
 
 export interface Item {
