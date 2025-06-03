@@ -263,7 +263,22 @@ class Base(Configuration):
 
     # Cache
     CACHES = {
-        "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": values.Value(
+                "redis://redis:6379/0",
+                environ_name="REDIS_URL",
+                environ_prefix=None,
+            ),
+            "TIMEOUT": values.IntegerValue(
+                30,  # timeout in seconds
+                environ_name="CACHES_DEFAULT_TIMEOUT",
+                environ_prefix=None,
+            ),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+        },
     }
 
     REST_FRAMEWORK = {
@@ -526,11 +541,43 @@ class Base(Configuration):
     # Then these settings will be cheked in the post_setup:
     # WOPI_VENDORA_MIMETYPES="application/vnd.oasis.opendocument.text"
     # WOPI_VENDORA_LAUNCH_URL="https://vendorA.com/launch_url"
+    # WOPI_VENDORA_DISCOVERY_URL = https://vendorA.com/hosting/discovery
     # If they are missing, a ValueError will be raised.
     WOPI_CLIENTS = values.ListValue(
         [], environ_name="WOPI_CLIENTS", environ_prefix=None
     )
     WOPI_CLIENTS_CONFIGURATION = {}
+    WOPI_EXCLUDED_MIMETYPES = values.ListValue(
+        [
+            "image/svg+xml",
+            "image/png",
+            "image/jpg",
+            "image/jpeg",
+            "image/gif",
+            "image/bmp",
+            "image/tiff",
+            "image/webp",
+            "application/pdf",
+            "image/x-wpg",
+            "image/cgm",
+            "image/vnd.dxf",
+            "image/x-emf",
+            "image/x-wmf",
+            "image/x-freehand",
+        ],
+        environ_name="WOPI_EXCLUDED_MIMETYPES",
+        environ_prefix=None,
+    )
+    WOPI_EXCLUDED_EXTENSIONS = values.ListValue(
+        ["svg", "png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "pdf"],
+        environ_name="WOPI_EXCLUDED_EXTENSIONS",
+        environ_prefix=None,
+    )
+    WOPI_CONFIGURATION_CACHE_EXPIRATION = values.IntegerValue(
+        60 * 60 * 24,
+        environ_name="WOPI_CONFIGURATION_CACHE_EXPIRATION",
+        environ_prefix=None,
+    )
 
     # We recommend using an access_token_ttl value that makes the access token valid for 10 hours.
     WOPI_ACCESS_TOKEN_TIMEOUT = values.IntegerValue(
@@ -606,16 +653,14 @@ class Base(Configuration):
             for wopi_client in cls.WOPI_CLIENTS:
                 wopi_client_upper = wopi_client.upper()
                 cls.WOPI_CLIENTS_CONFIGURATION[wopi_client] = {
-                    "mimetypes": values.ListValue(
-                        environ_name=f"WOPI_{wopi_client_upper}_MIMETYPES",
+                    "discovery_url": values.Value(
+                        None,
+                        environ_name=f"WOPI_{wopi_client_upper}_DISCOVERY_URL",
                         environ_prefix=None,
                         environ_required=True,
                     ),
-                    "launch_url": values.Value(
-                        environ_name=f"WOPI_{wopi_client_upper}_LAUNCH_URL",
-                        environ_prefix=None,
-                        environ_required=True,
-                    ),
+                    "mimetypes": {},
+                    "extensions": {},
                 }
 
 
@@ -655,28 +700,6 @@ class Development(Base):
     SESSION_COOKIE_NAME = "drive_sessionid"
 
     USE_SWAGGER = True
-    SESSION_CACHE_ALIAS = "session"
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.dummy.DummyCache",
-        },
-        "session": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": values.Value(
-                "redis://redis:6379/2",
-                environ_name="REDIS_URL",
-                environ_prefix=None,
-            ),
-            "TIMEOUT": values.IntegerValue(
-                30,  # timeout in seconds
-                environ_name="CACHES_DEFAULT_TIMEOUT",
-                environ_prefix=None,
-            ),
-            "OPTIONS": {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            },
-        },
-    }
 
     DEBUG_TOOLBAR_CONFIG = {
         "SHOW_TOOLBAR_CALLBACK": lambda request: True,
@@ -695,6 +718,10 @@ class Development(Base):
 
 class Test(Base):
     """Test environment settings"""
+
+    CACHES = {
+        "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
+    }
 
     PASSWORD_HASHERS = [
         "django.contrib.auth.hashers.MD5PasswordHasher",

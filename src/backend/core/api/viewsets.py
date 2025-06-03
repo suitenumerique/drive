@@ -14,6 +14,7 @@ from django.core.files.storage import default_storage
 from django.db import models as db
 from django.db import transaction
 from django.db.models.expressions import RawSQL
+from django.urls import reverse
 
 import magic
 import rest_framework as drf
@@ -1040,7 +1041,8 @@ class ItemViewSet(
             {
                 "access_token": access_token,
                 "access_token_ttl": access_token_ttl,
-                "launch_url": wopi_client["launch_url"],
+                "launch_url": wopi_client,
+                "getFileInfo": reverse("files-detail", kwargs={"pk": item.id}),
             },
             status=drf.status.HTTP_200_OK,
         )

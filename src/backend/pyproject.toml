@@ -29,6 +29,7 @@ dependencies = [
     "Brotli==1.1.0",
     "dj-database-url==2.3.0",
     "celery[redis]==5.5.0",
+    "defusedxml==0.7.1",
     "django==5.1.9",
     "django-configurations==2.5.1",
     "django-cors-headers==4.6.0",
