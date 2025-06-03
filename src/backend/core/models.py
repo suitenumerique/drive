@@ -8,6 +8,7 @@ import uuid
 from collections import defaultdict
 from datetime import timedelta
 from logging import getLogger
+from os.path import splitext
 
 from django.conf import settings
 from django.contrib.auth import models as auth_models
@@ -614,6 +615,21 @@ class Item(TreeModel, BaseModel):
     def descendants(self):
         """Return the descendants of the item excluding the item itself."""
         return super().descendants().exclude(id=self.id)
+
+    @property
+    def extension(self):
+        """Return the extension related to the filename."""
+        if self.filename is None:
+            raise RuntimeError(
+                "The item must have a filename to compute its extension."
+            )
+
+        _, extension = splitext(self.filename)
+
+        if extension:
+            return extension.lstrip(".")
+
+        return None
 
     @property
     def key_base(self):
