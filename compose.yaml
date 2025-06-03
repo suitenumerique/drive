@@ -89,6 +89,8 @@ services:
         condition: service_started
       celery-dev:
         condition: service_started
+      collabora:
+        condition: service_started
 
   celery-dev:
     user: ${DOCKER_USER:-1000}
@@ -188,3 +190,12 @@ services:
       - "8080:8080"
     depends_on:
       - kc_postgresql
+
+  collabora:
+    image: collabora/code:latest
+    ports:
+      - "9980:9980"
+    environment:
+      - extra_params=--o:ssl.enable=false
+      - username=drive
+      - password=password
