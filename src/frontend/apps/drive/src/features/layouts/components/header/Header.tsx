@@ -24,6 +24,7 @@ export const HeaderRight = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
+  const src = process.env["NEXT_GAUFREJS_URL"]
   return (
     <>
       {user && (
@@ -53,7 +54,7 @@ export const HeaderRight = () => {
         </DropdownMenu>
       )}
       <LanguagePicker />
-      <LaGaufre />
+      <LaGaufre src={src} />
       <ExplorerSearchButton />
     </>
   );
