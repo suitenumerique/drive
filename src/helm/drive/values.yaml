@@ -246,6 +246,33 @@ backend:
         initialDelaySeconds: 15
         timeoutSeconds: 5
 
+  ## @param backend.celeryBeat.replicas Amount of celery replicas
+  ## @param backend.celeryBeat.command Override the celery container command
+  ## @param backend.celeryBeat.args Override the celery container args
+  ## @param backend.celeryBeat.resources Resource requirements for the celery container
+  ## @param backend.celeryBeat.probes.liveness.exec.command Override the celery container liveness probe command
+  ## @param backend.celeryBeat.probes.liveness.initialDelaySeconds Initial delay for the celery container liveness probe
+  ## @param backend.celeryBeat.probes.liveness.timeoutSeconds Timeout for the celery container liveness probe
+  ## @param backend.celeryBeat.probes.readiness.exec.command Override the celery container readiness probe command
+  ## @param backend.celeryBeat.probes.readiness.initialDelaySeconds Initial delay for the celery container readiness probe
+  ## @param backend.celeryBeat.probes.readiness.timeoutSeconds Timeout for the celery container readiness probe
+  celeryBeat:
+    replicas: 1
+    command: []
+    args: ["celery", "-A", "drive.celery_app", "beat", "-l", "INFO"]
+    resources: {}
+    probes:
+      liveness:
+        exec: 
+          command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping"]
+        initialDelaySeconds: 60
+        timeoutSeconds: 5
+      readiness:
+        exec: 
+          command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping"]
+        initialDelaySeconds: 15
+        timeoutSeconds: 5
+
 
   ## @param backend.probes.liveness.path [nullable] Configure path for backend HTTP liveness probe
   ## @param backend.probes.liveness.targetPort [nullable] Configure port for backend HTTP liveness probe
