@@ -49,7 +49,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
 
     response = APIClient().get(f"/external_api/v1.0/items/{item.id!s}/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_api_items_retrieve_connected_not_resource_server():
@@ -64,7 +64,7 @@ def test_api_items_retrieve_connected_not_resource_server():
 
     response = client.get(f"/external_api/v1.0/items/{item.id!s}/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_api_items_retrieve_connected_resource_server(
@@ -90,7 +90,7 @@ def test_api_items_retrieve_connected_resource_server_with_invalid_token(
 
     response = client.get(f"/external_api/v1.0/items/{item.id!s}/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_api_items_retrieve_connected_resource_server_with_wrong_abilities(
@@ -130,7 +130,7 @@ def test_api_items_accesses_retrieve_anonymous_public_standalone():
 
     response = APIClient().get(f"/external_api/v1.0/items/{item.id!s}/accesses/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_api_items_accesses_retrieve_connected_not_resource_server():
@@ -145,7 +145,7 @@ def test_api_items_accesses_retrieve_connected_not_resource_server():
 
     response = client.get(f"/external_api/v1.0/items/{item.id!s}/accesses/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_api_items_accesses_retrieve_connected_resource_server(
@@ -171,7 +171,7 @@ def test_api_items_accesses_retrieve_connected_resource_server_with_invalid_toke
 
     response = client.get(f"/external_api/v1.0/items/{item.id!s}/accesses/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_api_items_accesses_retrieve_connected_resource_server_with_wrong_abilities(
