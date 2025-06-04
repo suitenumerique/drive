@@ -4,6 +4,7 @@ from lasuite.oidc_resource_server.authentication import ResourceServerAuthentica
 
 from ..api.permissions import AccessPermission, ItemAccessPermission
 from ..api.viewsets import ItemAccessViewSet, ItemViewSet
+from .authentication import JWTAuthentication
 from .permissions import ResourceServerClientPermission
 
 # pylint: disable=too-many-ancestors
@@ -12,7 +13,7 @@ from .permissions import ResourceServerClientPermission
 class ResourceServerItemViewSet(ItemViewSet):
     """Resource Server Viewset for the Drive app."""
 
-    authentication_classes = [ResourceServerAuthentication]
+    authentication_classes = [JWTAuthentication, ResourceServerAuthentication]
 
     permission_classes = [ResourceServerClientPermission & ItemAccessPermission]
 
@@ -20,6 +21,6 @@ class ResourceServerItemViewSet(ItemViewSet):
 class ResourceServerItemAccessViewSet(ItemAccessViewSet):
     """Resource Server Viewset for the Drive app."""
 
-    authentication_classes = [ResourceServerAuthentication]
+    authentication_classes = [JWTAuthentication, ResourceServerAuthentication]
 
     permission_classes = [ResourceServerClientPermission & AccessPermission]

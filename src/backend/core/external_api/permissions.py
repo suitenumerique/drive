@@ -5,6 +5,8 @@ from django.conf import settings
 from lasuite.oidc_resource_server.authentication import ResourceServerAuthentication
 from rest_framework import permissions
 
+from .authentication import JWTAuthentication
+
 
 class ResourceServerClientPermission(permissions.BasePermission):
     """
@@ -21,7 +23,8 @@ class ResourceServerClientPermission(permissions.BasePermission):
         provides an authorized Service Provider.
         """
         if not isinstance(
-            request.successful_authenticator, ResourceServerAuthentication
+            request.successful_authenticator,
+            (JWTAuthentication, ResourceServerAuthentication),
         ):
             # Not a resource server request
             return False
@@ -37,5 +40,9 @@ class ResourceServerClientPermission(permissions.BasePermission):
 
         # When used as a resource server, the request has a token audience
         return (
-            request.resource_server_token_audience in settings.OIDC_RS_ALLOWED_AUDIENCES
+            getattr(request, "resource_server_token_audience", None)
+            in settings.OIDC_RS_ALLOWED_AUDIENCES
+        ) or isinstance(
+            request.successful_authenticator,
+            JWTAuthentication,  # JWT Token are forcibly allowed
         )
