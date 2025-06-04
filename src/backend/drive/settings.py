@@ -62,7 +62,9 @@ class Base(Configuration):
 
     DEBUG = False
     LOAD_E2E_URLS = False
-    USE_SWAGGER = values.BooleanValue(False, environ_name="USE_SWAGGER", environ_prefix=None)
+    USE_SWAGGER = values.BooleanValue(
+        False, environ_name="USE_SWAGGER", environ_prefix=None
+    )
 
     API_VERSION = "v1.0"
 
@@ -794,6 +796,22 @@ class Base(Configuration):
             environ_prefix=None,
         ),
     }
+
+    JWT_SECRET_KEY = values.Value(
+        default="",
+        environ_name="JWT_SECRET_KEY",
+        environ_prefix=None,
+    )
+    JWT_ALGORITHM = values.Value(
+        default="HS256",
+        environ_name="JWT_ALGORITHM",
+        environ_prefix=None,
+    )
+    JWT_REQUIRED_CLAIMS = values.ListValue(
+        default=["exp", "sub", "email"],
+        environ_name="JWT_REQUIRED_CLAIMS",
+        environ_prefix=None,
+    )
 
     # pylint: disable=invalid-name
     @property
