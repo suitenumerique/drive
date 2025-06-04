@@ -59,7 +59,9 @@ class Base(Configuration):
     """
 
     DEBUG = False
-    USE_SWAGGER = values.BooleanValue(False, environ_name="USE_SWAGGER", environ_prefix=None)
+    USE_SWAGGER = values.BooleanValue(
+        False, environ_name="USE_SWAGGER", environ_prefix=None
+    )
 
     API_VERSION = "v1.0"
 
@@ -648,6 +650,17 @@ class Base(Configuration):
     API_USERS_LIST_LIMIT = values.PositiveIntegerValue(
         default=5,
         environ_name="API_USERS_LIST_LIMIT",
+        environ_prefix=None,
+    )
+
+    JWT_SECRET_KEY = values.Value(
+        default=None,
+        environ_name="JWT_SECRET_KEY",
+        environ_prefix=None,
+    )
+    JWT_ALGORITHM = values.Value(
+        default="HS256",
+        environ_name="JWT_ALGORITHM",
         environ_prefix=None,
     )
 

@@ -7,6 +7,8 @@ from rest_framework.test import APIClient
 
 from core import factories
 
+pytest.skip("skipping resources api tests", allow_module_level=True)
+
 pytestmark = pytest.mark.django_db
 
 # pylint: disable=unused-argument

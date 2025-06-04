@@ -32,15 +32,15 @@ item_related_router.register(
 external_api_router = DefaultRouter()
 external_api_router.register(
     "items",
-    external_api_viewsets.ResourceServerItemViewSet,
-    basename="resource_server_items",
+    external_api_viewsets.ExternalItemViewSet,
+    basename="external_api_items",
 )
 
 external_api_item_related_router = DefaultRouter()
 external_api_item_related_router.register(
     "accesses",
-    external_api_viewsets.ResourceServerItemAccessViewSet,
-    basename="resource_server_item_accesses",
+    external_api_viewsets.ExternalItemAccessViewSet,
+    basename="external_api_item_accesses",
 )
 
 urls = [
