@@ -141,7 +141,7 @@ services:
         S3_DOMAIN_REPLACE: "http://localhost:9000"
     image: drive:frontend-development
     volumes:
-      - ./src/frontend/:/home/frontend/
+      - ./src/frontend/apps/drive:/home/frontend/apps/drive
     ports:
       - "3000:3000"
 
