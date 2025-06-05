@@ -39,7 +39,7 @@ class JWTAuthentication(authentication.BaseAuthentication):
                 token,
                 settings.JWT_SECRET_KEY,
                 options={"require": settings.JWT_REQUIRED_CLAIMS},
-                algorithms=[settings.JWT_ALGORITHM]
+                algorithms=[settings.JWT_ALGORITHM],
             )
         except jwt.InvalidTokenError as e:
             logger.error("Invalid JWT token: %s", e)
@@ -53,7 +53,12 @@ class JWTAuthentication(authentication.BaseAuthentication):
             payload.get("sub"), payload.get("email")
         )
         if not user:
-            logger.warning("User not found")
-            return None
+            if settings.JWT_CREATE_USER:
+                user = User(sub=payload.get("sub"), email=payload.get("email"))
+                user.set_unusable_password()
+                user.save()
+            else:
+                logger.warning("User not found")
+                return None
 
         return user, None
