@@ -656,6 +656,11 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    JWT_AUTH_ENABLED = values.BooleanValue(
+        default=False,
+        environ_name="JWT_AUTH_ENABLED",
+        environ_prefix=None,
+    )
     JWT_SECRET_KEY = values.Value(
         default="",
         environ_name="JWT_SECRET_KEY",
@@ -669,6 +674,11 @@ class Base(Configuration):
     JWT_REQUIRED_CLAIMS = values.ListValue(
         default=["exp", "sub", "email"],
         environ_name="JWT_REQUIRED_CLAIMS",
+        environ_prefix=None,
+    )
+    JWT_CREATE_USER = values.BooleanValue(
+        default=False,
+        environ_name="JWT_CREATE_USER",
         environ_prefix=None,
     )
 
@@ -819,6 +829,7 @@ class Test(Base):
 
     CELERY_TASK_ALWAYS_EAGER = values.BooleanValue(True)
     OIDC_RESOURCE_SERVER_ENABLED = True
+    JWT_AUTH_ENABLED = True
 
 
 class ContinuousIntegration(Test):

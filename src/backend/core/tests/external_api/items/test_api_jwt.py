@@ -2,11 +2,14 @@
 
 from datetime import datetime, timedelta, timezone
 
+from django.test import override_settings
+
 import jwt
 import pytest
 from rest_framework.test import APIClient
 
 from core import factories
+from core.models import Item, User
 
 pytestmark = pytest.mark.django_db
 
@@ -212,3 +215,53 @@ def test_api_items_accesses_retrieve_fetch_api_using_jwt_token(
     )
 
     assert response.status_code == 403
+
+
+@override_settings(JWT_CREATE_USER=False)
+def test_api_items_accesses_retrieve_new_user_and_create_user_disabled(
+    jwt_token, user_specific_sub
+):
+    """New users should not be allowed to retrieve an item if JWT_CREATE_USER=False."""
+
+    # Delete the user and its workspace
+    Item.objects.filter(creator__sub=user_specific_sub.sub).delete()
+    user_specific_sub.delete()
+
+    client = APIClient()
+    item = factories.ItemFactory(link_reach="public")
+
+    response = client.get(
+        f"/external_api/v1.0/items/{item.id!s}/accesses/",
+        HTTP_AUTHORIZATION=f"Bearer {jwt_token}",
+    )
+
+    assert response.status_code == 403
+    assert not User.objects.filter(
+        sub=user_specific_sub.sub, email=user_specific_sub.email
+    ).exists()
+
+
+@override_settings(JWT_CREATE_USER=True)
+def test_api_items_accesses_retrieve_new_user_and_create_user_enabled(
+    jwt_token, user_specific_sub
+):
+    """New users should be allowed to retrieve an item if JWT_CREATE_USER=True."""
+
+    # Delete the user and its workspace
+    Item.objects.filter(creator__sub=user_specific_sub.sub).delete()
+    user_specific_sub.delete()
+
+    client = APIClient()
+    item = factories.ItemFactory(link_reach="public")
+
+    response = client.get(
+        f"/external_api/v1.0/items/{item.id!s}/accesses/",
+        HTTP_AUTHORIZATION=f"Bearer {jwt_token}",
+    )
+
+    assert response.status_code == 200
+
+    # User should have been created again from the JWT token only.
+    assert User.objects.filter(
+        sub=user_specific_sub.sub, email=user_specific_sub.email
+    ).exists()
