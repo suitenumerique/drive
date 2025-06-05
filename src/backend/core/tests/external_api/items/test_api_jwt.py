@@ -1,5 +1,7 @@
 """Tests for the Resource Server API for items."""
 
+from datetime import datetime, timedelta, timezone
+
 import jwt
 import pytest
 from rest_framework.test import APIClient
@@ -27,8 +29,13 @@ def fixture_jwt_token(settings, user_specific_sub):
     """
     settings.JWT_SECRET_KEY = "test-secret"
     settings.JWT_ALGORITHM = "HS256"
+    expired_at = datetime.now(timezone.utc) + timedelta(minutes=1)
     yield jwt.encode(
-        {"sub": user_specific_sub.sub, "email": user_specific_sub.email},
+        {
+            "sub": user_specific_sub.sub,
+            "email": user_specific_sub.email,
+            "exp": expired_at.timestamp(),
+        },
         settings.JWT_SECRET_KEY,
         algorithm=settings.JWT_ALGORITHM,
     )

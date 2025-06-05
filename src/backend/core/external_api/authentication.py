@@ -36,7 +36,10 @@ class JWTAuthentication(authentication.BaseAuthentication):
         # Validate the token
         try:
             payload = jwt.decode(
-                token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+                token,
+                settings.JWT_SECRET_KEY,
+                options={"require": settings.JWT_REQUIRED_CLAIMS},
+                algorithms=[settings.JWT_ALGORITHM]
             )
         except jwt.InvalidTokenError as e:
             logger.error("Invalid JWT token: %s", e)

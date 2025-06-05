@@ -666,6 +666,11 @@ class Base(Configuration):
         environ_name="JWT_ALGORITHM",
         environ_prefix=None,
     )
+    JWT_REQUIRED_CLAIMS = values.ListValue(
+        default=["exp", "sub", "email"],
+        environ_name="JWT_REQUIRED_CLAIMS",
+        environ_prefix=None,
+    )
 
     # pylint: disable=invalid-name
     @property
