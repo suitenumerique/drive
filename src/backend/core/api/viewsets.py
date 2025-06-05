@@ -36,7 +36,7 @@ from core import enums, models
 from core.services.sdk_relay import SDKRelayManager
 from core.tasks.item import process_item_deletion
 from wopi.services import access as access_service
-from wopi.utils import get_wopi_client_config
+from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
 
 from . import permissions, serializers, utils
 from .filters import ItemFilter, ListItemFilter, SearchItemFilter
@@ -1204,12 +1204,14 @@ class ItemViewSet(
         service = access_service.AccessUserItemService()
         access_token, access_token_ttl = service.insert_new_access(item, request.user)
 
+        get_file_info = reverse("files-detail", kwargs={"pk": item.id})
+        launch_url = compute_wopi_launch_url(wopi_client, get_file_info)
+
         return drf.response.Response(
             {
                 "access_token": access_token,
                 "access_token_ttl": access_token_ttl,
-                "launch_url": wopi_client,
-                "getFileInfo": reverse("files-detail", kwargs={"pk": item.id}),
+                "launch_url": launch_url,
             },
             status=drf.status.HTTP_200_OK,
         )

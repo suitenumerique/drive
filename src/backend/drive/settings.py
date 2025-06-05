@@ -627,8 +627,6 @@ class Base(Configuration):
     # Example :
     # WOPI_CLIENTS = ["vendorA"]
     # Then these settings will be cheked in the post_setup:
-    # WOPI_VENDORA_MIMETYPES="application/vnd.oasis.opendocument.text"
-    # WOPI_VENDORA_LAUNCH_URL="https://vendorA.com/launch_url"
     # WOPI_VENDORA_DISCOVERY_URL = https://vendorA.com/hosting/discovery
     # If they are missing, a ValueError will be raised.
     WOPI_CLIENTS = values.ListValue(
@@ -664,6 +662,11 @@ class Base(Configuration):
     WOPI_CONFIGURATION_CACHE_EXPIRATION = values.IntegerValue(
         60 * 60 * 24,
         environ_name="WOPI_CONFIGURATION_CACHE_EXPIRATION",
+        environ_prefix=None,
+    )
+    WOPI_SRC_BASE_URL = values.Value(
+        None,
+        environ_name="WOPI_SRC_BASE_URL",
         environ_prefix=None,
     )
 

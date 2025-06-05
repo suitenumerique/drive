@@ -6,6 +6,10 @@ from rest_framework.routers import DefaultRouter, DynamicRoute, Route
 class WopiRouter(DefaultRouter):
     """Router for the WOPI app."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.trailing_slash = "/?"
+
     routes = [
         # List route.
         Route(

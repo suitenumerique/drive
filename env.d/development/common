@@ -54,3 +54,8 @@ FRONTEND_MORE_LINK=https://docs.numerique.gouv.fr/docs/fa0aba15-e119-4185-b466-a
 FRONTEND_FEEDBACK_BUTTON_SHOW=True
 FRONTEND_FEEDBACK_BUTTON_IDLE=False
 FRONTEND_FEEDBACK_ITEMS={"form":{"url": "https://tally.so/r/w2YaWL"}, "tchap":{"url": "https://tchap.gouv.fr/#/room/#fichiers:agent.dinum.tchap.gouv.fr"}, "visio":{"url": "https://cal.com/robin-lecomte-eyul9w/fichiers"}}
+
+# WOPI
+WOPI_CLIENTS="collabora"
+WOPI_COLLABORA_DISCOVERY_URL="http://collabora:9980/hosting/discovery"
+WOPI_SRC_BASE_URL=http://app-dev:8000

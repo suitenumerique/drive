@@ -1,5 +1,8 @@
 """Utils for WOPI"""
 
+from urllib.parse import quote_plus
+
+from django.conf import settings
 from django.core.cache import cache
 
 from core import models
@@ -17,7 +20,7 @@ def is_item_wopi_supported(item):
 
 
 def get_wopi_client_config(item):
-    """
+    """make
     Get the WOPI client configuration for an item.
     """
     if item.type != models.ItemTypeChoices.FILE:
@@ -39,3 +42,16 @@ def get_wopi_client_config(item):
         return wopi_configuration["mimetypes"][item.mimetype]
 
     return None
+
+
+def compute_wopi_launch_url(launch_url, get_file_info_path):
+    """
+    Compute the WOPI launch URL for an item.
+    """
+    launch_url = launch_url.rstrip("?")
+
+    wopi_src_base_url = settings.WOPI_SRC_BASE_URL
+    wopi_src = get_file_info_path
+    if wopi_src_base_url:
+        wopi_src = f"{wopi_src_base_url}{get_file_info_path}"
+    return f"{launch_url}?WOPISrc={quote_plus(wopi_src)}"

@@ -1,5 +1,7 @@
 """Tests for the wopi utils."""
 
+from urllib.parse import quote_plus
+
 from django.core.cache import cache
 
 import pytest
@@ -7,7 +9,11 @@ import pytest
 from core import models
 from core.factories import ItemFactory
 from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
-from wopi.utils import get_wopi_client_config, is_item_wopi_supported
+from wopi.utils import (
+    compute_wopi_launch_url,
+    get_wopi_client_config,
+    is_item_wopi_supported,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -139,3 +145,20 @@ def test_get_wopi_client_config_no_configuration():
         update_upload_state=models.ItemUploadStateChoices.UPLOADED,
     )
     assert get_wopi_client_config(item) is None
+
+
+def test_compute_wopi_launch_url(settings):
+    """Test the compute_wopi_launch_url function."""
+    settings.WOPI_SRC_BASE_URL = "http://app-dev:8000"
+    launch_url = "https://vendorA.com/launch_url"
+    get_file_info_path = "/api/v1.0/wopi/files/123"
+    assert (
+        compute_wopi_launch_url(launch_url, get_file_info_path)
+        == f"{launch_url}?WOPISrc={quote_plus(f'{settings.WOPI_SRC_BASE_URL}{get_file_info_path}')}"
+    )
+
+    settings.WOPI_SRC_BASE_URL = None
+    assert (
+        compute_wopi_launch_url(launch_url, get_file_info_path)
+        == f"{launch_url}?WOPISrc={quote_plus(get_file_info_path)}"
+    )

@@ -1,5 +1,7 @@
 """Test for items API endpoint managing wopi init request."""
 
+from urllib.parse import quote_plus
+
 from django.core.cache import cache
 from django.utils import timezone
 
@@ -56,12 +58,12 @@ def test_api_items_wopi_not_existing_item():
 
 
 def test_api_items_wopi_anonymous_user_item_public(
-    timestamp_now, valid_mimetype, valid_wopi_launch_url
+    timestamp_now, valid_mimetype, valid_wopi_launch_url, settings
 ):
     """
     Anonymous user can generate wopi access token for public item.
     """
-
+    settings.WOPI_SRC_BASE_URL = "http://app-dev:8000"
     item = factories.ItemFactory(
         link_reach=models.LinkReachChoices.PUBLIC,
         type=models.ItemTypeChoices.FILE,
@@ -72,12 +74,12 @@ def test_api_items_wopi_anonymous_user_item_public(
 
     client = APIClient()
     response = client.get(f"/api/v1.0/items/{item.id!s}/wopi/")
-
+    wopi_src = quote_plus(f"http://app-dev:8000/api/v1.0/wopi/files/{item.id!s}")
     assert response.status_code == 200
     data = response.json()
     assert data["access_token"] is not None
     assert data["access_token_ttl"] > timestamp_now
-    assert data["launch_url"] == valid_wopi_launch_url
+    assert data["launch_url"] == f"{valid_wopi_launch_url}?WOPISrc={wopi_src}"
 
 
 @pytest.mark.parametrize(
@@ -179,9 +181,10 @@ def test_api_items_wopi_authenticated_user_item_not_accessible():
 
 
 def test_api_items_wopi_authenticated_can_access_retricted_item(
-    timestamp_now, valid_mimetype, valid_wopi_launch_url
+    timestamp_now, valid_mimetype, valid_wopi_launch_url, settings
 ):
     """Authenticated user can access item that is accessible."""
+    settings.WOPI_SRC_BASE_URL = "http://app-dev:8000"
     user = factories.UserFactory()
     item = factories.ItemFactory(
         link_reach=models.LinkReachChoices.RESTRICTED,
@@ -195,12 +198,13 @@ def test_api_items_wopi_authenticated_can_access_retricted_item(
     client = APIClient()
     client.force_login(user)
     response = client.get(f"/api/v1.0/items/{item.id!s}/wopi/")
+    wopi_src = quote_plus(f"http://app-dev:8000/api/v1.0/wopi/files/{item.id!s}")
 
     assert response.status_code == 200
     data = response.json()
     assert data["access_token"] is not None
     assert data["access_token_ttl"] > timestamp_now
-    assert data["launch_url"] == valid_wopi_launch_url
+    assert data["launch_url"] == f"{valid_wopi_launch_url}?WOPISrc={wopi_src}"
 
 
 def test_api_items_wopi_authenticated_user_item_not_file():
