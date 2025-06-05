@@ -35,4 +35,4 @@ fi
 
 # Fix docker vs local path when project sources are mounted as a volume
 read -ra paths <<< "$(echo "${paths[@]}" | sed "s|src/backend/||g")"
-_dc_run app-dev pylint "${paths[@]}" "${args[@]}"
+_dc_run --no-deps app-dev pylint "${paths[@]}" "${args[@]}"
