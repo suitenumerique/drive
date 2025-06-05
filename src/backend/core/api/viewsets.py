@@ -14,6 +14,7 @@ from django.core.files.storage import default_storage
 from django.db import models as db
 from django.db import transaction
 from django.db.models.expressions import RawSQL
+from django.urls import reverse
 
 import magic
 import rest_framework as drf
@@ -24,6 +25,8 @@ from rest_framework.throttling import UserRateThrottle
 
 from core import enums, models
 from core.tasks.item import process_item_deletion
+from wopi.services import access as access_service
+from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
 
 from . import permissions, serializers, utils
 from .filters import ItemFilter, ListItemFilter
@@ -34,7 +37,7 @@ ITEM_FOLDER = "item"
 UUID_REGEX = (
     r"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
 )
-FILE_EXT_REGEX = r"(\.[a-zA-Z0-9]+)?$"
+FILE_EXT_REGEX = '[^.\\/:*?&"<>|\r\n]+'
 MEDIA_STORAGE_URL_PATTERN = re.compile(
     f"{settings.MEDIA_URL:s}"
     f"(?P<key>{ITEM_FOLDER:s}/(?P<pk>{UUID_REGEX:s})/.*{FILE_EXT_REGEX:s})$"
@@ -1017,6 +1020,34 @@ class ItemViewSet(
         request = utils.generate_s3_authorization_headers(f"{url_params.get('key'):s}")
 
         return drf.response.Response("authorized", headers=request.headers, status=200)
+
+    @drf.decorators.action(detail=True, methods=["get"], url_path="wopi")
+    def wopi(self, request, *args, **kwargs):
+        """
+        This view is used to generate an access token and access token ttl in order to start
+        a WOPI session for the item and the current user.
+        """
+        item = self.get_object()
+
+        if not (wopi_client := get_wopi_client_config(item)):
+            raise drf.exceptions.ValidationError(
+                {"detail": "This item does not suport WOPI integration."}
+            )
+
+        service = access_service.AccessUserItemService()
+        access_token, access_token_ttl = service.insert_new_access(item, request.user)
+
+        get_file_info = reverse("files-detail", kwargs={"pk": item.id})
+        launch_url = compute_wopi_launch_url(wopi_client, get_file_info)
+
+        return drf.response.Response(
+            {
+                "access_token": access_token,
+                "access_token_ttl": access_token_ttl,
+                "launch_url": launch_url,
+            },
+            status=drf.status.HTTP_200_OK,
+        )
 
 
 class ItemAccessViewSet(

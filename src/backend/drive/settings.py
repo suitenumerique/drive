@@ -153,85 +153,14 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
-    # item images
-    ITEM_FILE_MAX_SIZE = values.PositiveIntegerValue(
-        5 * (2**30),  # 5GB
-        environ_name="ITEM_FILE_MAX_SIZE",
+    # Maximum size of the request body in memory.
+    # This is used to limit the size of the request body in memory.
+    # This also limits the size of the file that can be uploaded to the server.
+    DATA_UPLOAD_MAX_MEMORY_SIZE = values.PositiveIntegerValue(
+        2 * (2**30),  # 2GB
+        environ_name="DATA_UPLOAD_MAX_MEMORY_SIZE",
         environ_prefix=None,
     )
-
-    item_UNSAFE_MIME_TYPES = [
-        # Executable Files
-        "application/x-msdownload",
-        "application/x-bat",
-        "application/x-dosexec",
-        "application/x-sh",
-        "application/x-ms-dos-executable",
-        "application/x-msi",
-        "application/java-archive",
-        "application/octet-stream",
-        # Dynamic Web Pages
-        "application/x-httpd-php",
-        "application/x-asp",
-        "application/x-aspx",
-        "application/jsp",
-        "application/xhtml+xml",
-        "application/x-python-code",
-        "application/x-perl",
-        "text/html",
-        "text/javascript",
-        "text/x-php",
-        # System Files
-        "application/x-msdownload",
-        "application/x-sys",
-        "application/x-drv",
-        "application/cpl",
-        "application/x-apple-diskimage",
-        # Script Files
-        "application/javascript",
-        "application/x-vbscript",
-        "application/x-powershell",
-        "application/x-shellscript",
-        # Compressed/Archive Files
-        "application/zip",
-        "application/x-tar",
-        "application/gzip",
-        "application/x-bzip2",
-        "application/x-7z-compressed",
-        "application/x-rar",
-        "application/x-rar-compressed",
-        "application/x-compress",
-        "application/x-lzma",
-        # Macros in items
-        "application/vnd.ms-word",
-        "application/vnd.ms-excel",
-        "application/vnd.ms-powerpoint",
-        "application/vnd.ms-word.item.macroenabled.12",
-        "application/vnd.ms-excel.sheet.macroenabled.12",
-        "application/vnd.ms-powerpoint.presentation.macroenabled.12",
-        # Disk Images & Virtual Disk Files
-        "application/x-iso9660-image",
-        "application/x-vmdk",
-        "application/x-apple-diskimage",
-        "application/x-dmg",
-        # Other Dangerous MIME Types
-        "application/x-ms-application",
-        "application/x-msdownload",
-        "application/x-shockwave-flash",
-        "application/x-silverlight-app",
-        "application/x-java-vm",
-        "application/x-bittorrent",
-        "application/hta",
-        "application/x-csh",
-        "application/x-ksh",
-        "application/x-ms-regedit",
-        "application/x-msdownload",
-        "application/xml",
-        "image/svg+xml",
-    ]
-
-    # item versions
-    item_VERSIONS_PAGE_SIZE = 50
 
     # Internationalization
     # https://docs.djangoproject.com/en/3.1/topics/i18n/
@@ -308,6 +237,7 @@ class Base(Configuration):
     # Django applications from the highest priority to the lowest
     INSTALLED_APPS = [
         "core",
+        "wopi",
         "drf_spectacular",
         "drf_standardized_errors",
         # Third party apps
@@ -333,7 +263,22 @@ class Base(Configuration):
 
     # Cache
     CACHES = {
-        "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": values.Value(
+                "redis://redis:6379/0",
+                environ_name="REDIS_URL",
+                environ_prefix=None,
+            ),
+            "TIMEOUT": values.IntegerValue(
+                30,  # timeout in seconds
+                environ_name="CACHES_DEFAULT_TIMEOUT",
+                environ_prefix=None,
+            ),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+        },
     }
 
     REST_FRAMEWORK = {
@@ -587,6 +532,64 @@ class Base(Configuration):
         environ_name="API_USERS_LIST_LIMIT",
         environ_prefix=None,
     )
+    # WOPI
+
+    # WOPI_CLIENTS contains a list of client name. These client names will be used in the post_setup
+    # to configure the settings related to the client.
+    # Example :
+    # WOPI_CLIENTS = ["vendorA"]
+    # Then these settings will be cheked in the post_setup:
+    # WOPI_VENDORA_DISCOVERY_URL = https://vendorA.com/hosting/discovery
+    # If they are missing, a ValueError will be raised.
+    WOPI_CLIENTS = values.ListValue(
+        [], environ_name="WOPI_CLIENTS", environ_prefix=None
+    )
+    WOPI_CLIENTS_CONFIGURATION = {}
+    WOPI_EXCLUDED_MIMETYPES = values.ListValue(
+        [
+            "image/svg+xml",
+            "image/png",
+            "image/jpg",
+            "image/jpeg",
+            "image/gif",
+            "image/bmp",
+            "image/tiff",
+            "image/webp",
+            "application/pdf",
+            "image/x-wpg",
+            "image/cgm",
+            "image/vnd.dxf",
+            "image/x-emf",
+            "image/x-wmf",
+            "image/x-freehand",
+        ],
+        environ_name="WOPI_EXCLUDED_MIMETYPES",
+        environ_prefix=None,
+    )
+    WOPI_EXCLUDED_EXTENSIONS = values.ListValue(
+        ["svg", "png", "jpg", "jpeg", "gif", "bmp", "tiff", "webp", "pdf"],
+        environ_name="WOPI_EXCLUDED_EXTENSIONS",
+        environ_prefix=None,
+    )
+    WOPI_CONFIGURATION_CACHE_EXPIRATION = values.IntegerValue(
+        60 * 60 * 24,
+        environ_name="WOPI_CONFIGURATION_CACHE_EXPIRATION",
+        environ_prefix=None,
+    )
+    WOPI_SRC_BASE_URL = values.Value(
+        None,
+        environ_name="WOPI_SRC_BASE_URL",
+        environ_prefix=None,
+    )
+
+    # We recommend using an access_token_ttl value that makes the access token valid for 10 hours.
+    WOPI_ACCESS_TOKEN_TIMEOUT = values.IntegerValue(
+        60 * 60 * 10, environ_name="WOPI_ACCESS_TOKEN_TIMEOUT", environ_prefix=None
+    )
+
+    WOPI_LOCK_TIMEOUT = values.IntegerValue(
+        30 * 60, environ_name="WOPI_LOCK_TIMEOUT", environ_prefix=None
+    )
 
     # pylint: disable=invalid-name
     @property
@@ -649,6 +652,20 @@ class Base(Configuration):
             posthog.api_key = cls.POSTHOG_KEY
             posthog.host = cls.POSTHOG_HOST
 
+        if cls.WOPI_CLIENTS:
+            for wopi_client in cls.WOPI_CLIENTS:
+                wopi_client_upper = wopi_client.upper()
+                cls.WOPI_CLIENTS_CONFIGURATION[wopi_client] = {
+                    "discovery_url": values.Value(
+                        None,
+                        environ_name=f"WOPI_{wopi_client_upper}_DISCOVERY_URL",
+                        environ_prefix=None,
+                        environ_required=True,
+                    ),
+                    "mimetypes": {},
+                    "extensions": {},
+                }
+
 
 class Build(Base):
     """Settings used when the application is built.
@@ -686,28 +703,6 @@ class Development(Base):
     SESSION_COOKIE_NAME = "drive_sessionid"
 
     USE_SWAGGER = True
-    SESSION_CACHE_ALIAS = "session"
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.dummy.DummyCache",
-        },
-        "session": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": values.Value(
-                "redis://redis:6379/2",
-                environ_name="REDIS_URL",
-                environ_prefix=None,
-            ),
-            "TIMEOUT": values.IntegerValue(
-                30,  # timeout in seconds
-                environ_name="CACHES_DEFAULT_TIMEOUT",
-                environ_prefix=None,
-            ),
-            "OPTIONS": {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            },
-        },
-    }
 
     DEBUG_TOOLBAR_CONFIG = {
         "SHOW_TOOLBAR_CALLBACK": lambda request: True,
@@ -726,6 +721,10 @@ class Development(Base):
 
 class Test(Base):
     """Test environment settings"""
+
+    CACHES = {
+        "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
+    }
 
     PASSWORD_HASHERS = [
         "django.contrib.auth.hashers.MD5PasswordHasher",

@@ -109,9 +109,18 @@ def generate_upload_policy(item):
         Fields={"acl": "private"},
         Conditions=[
             {"acl": "private"},
-            ["content-length-range", 0, settings.ITEM_FILE_MAX_SIZE],
+            ["content-length-range", 0, settings.DATA_UPLOAD_MAX_MEMORY_SIZE],
         ],
         ExpiresIn=settings.AWS_S3_UPLOAD_POLICY_EXPIRATION,
     )
 
     return policy
+
+
+def get_item_file_head_object(item):
+    """
+    Get the head object of an item file.
+    """
+    return default_storage.connection.meta.client.head_object(
+        Bucket=default_storage.bucket_name, Key=item.file_key
+    )
