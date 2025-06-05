@@ -176,9 +176,10 @@ export const ExplorerMoveFolder = ({
   }, [selectedItems]);
 
   const onMove = () => {
-    if (!itemId && selectedItems.length === 0) {
+    if (!itemId || (itemId === null && selectedItems.length === 0)) {
       return;
     }
+
     const ids = itemsToMove.map((item) => item.id);
     const pathSegments = itemsToMove[0].path.split(".");
     const oldParentId = pathSegments[pathSegments.length - 2];

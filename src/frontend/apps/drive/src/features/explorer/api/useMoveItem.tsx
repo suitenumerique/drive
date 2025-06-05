@@ -16,7 +16,6 @@ export const useMoveItems = () => {
       await driver.moveItems(payload.ids, payload.parentId);
     },
     onMutate: async (payload: MoveItemPayload) => {
-      console.log("onMutate", payload);
       const itemIds = payload.ids;
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({

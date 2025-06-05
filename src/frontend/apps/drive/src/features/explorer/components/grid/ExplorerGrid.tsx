@@ -35,7 +35,7 @@ const EMPTY_ARRAY: Item[] = [];
 export const ExplorerGrid = (props: ExplorerProps) => {
   const { t } = useTranslation();
   const { t: tc } = useCunningham();
-  const lastSelectedRowRef = useRef<string | null>(null);
+
   const {
     setSelectedItems,
     selectedItems,
@@ -91,6 +91,7 @@ export const ExplorerGrid = (props: ExplorerProps) => {
 
   useEffect(() => {
     const itemFilters = filters ?? {};
+    console.log("JFKDNKFJDn");
 
     if (!treeIsInitialized || !itemId || Object.keys(itemFilters).length > 0) {
       return;
