@@ -115,6 +115,7 @@ logs: ## display app-dev logs (follow mode)
 
 run: ## start the wsgi (production) and development server
 	@$(COMPOSE) up --force-recreate -d nginx
+	@$(MAKE) configure-wopi
 .PHONY: run
 
 run-with-frontend: ## Start all the containers needed (backend to frontend)
@@ -190,6 +191,10 @@ superuser: ## Create an admin superuser with password "admin"
 	@echo "$(BOLD)Creating a Django superuser$(RESET)"
 	@$(MANAGE) createsuperuser --email admin@example.com --password admin
 .PHONY: superuser
+
+configure-wopi: ## configure the wopi settings
+	@$(MANAGE) trigger_wopi_configuration
+.PHONY: configure-wopi
 
 back-i18n-compile: ## compile the gettext files
 	@$(MANAGE) compilemessages --ignore="venv/**/*"
