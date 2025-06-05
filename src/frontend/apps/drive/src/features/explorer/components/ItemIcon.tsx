@@ -2,6 +2,8 @@ import { Item, ItemType } from "@/features/drivers/types";
 import folderIcon from "@/assets/folder/folder.svg";
 
 import { getMimeCategory, ICONS } from "../utils/mimeTypes";
+import { itemIsWorkspace } from "@/features/drivers/utils";
+import { ExplorerItemIcon } from "./ExplorerFolderIcon";
 
 type ItemIconProps = {
   item: Item;
@@ -14,6 +16,12 @@ export const ItemIcon = ({
   size = "medium",
   type = "normal",
 }: ItemIconProps) => {
+  const isWorkspace = itemIsWorkspace(item) || item.main_workspace;
+
+  if (isWorkspace) {
+    return <ExplorerItemIcon item={item} />;
+  }
+
   const mimeIcon = getItemIcon(item, type);
 
   return (

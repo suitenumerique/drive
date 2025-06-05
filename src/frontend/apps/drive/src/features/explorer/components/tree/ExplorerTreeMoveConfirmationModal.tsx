@@ -64,3 +64,57 @@ export const ExplorerTreeMoveConfirmationModal = ({
     </Modal>
   );
 };
+
+type ExplorerTreeMoveConfirmationModalProps2 = {
+  isOpen: boolean;
+  onClose: () => void;
+  onMove: () => void;
+  itemsCount?: number;
+};
+
+export const ExplorerTreeMoveConfirmationModal2 = ({
+  isOpen,
+  onClose,
+
+  itemsCount = 1,
+  onMove,
+}: ExplorerTreeMoveConfirmationModalProps2) => {
+  const { t } = useTranslation();
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size={ModalSize.MEDIUM}
+      rightActions={
+        <>
+          <Button color="secondary" onClick={onClose}>
+            {t("explorer.tree.workspace.move.confirmation_modal.cancel_button")}
+          </Button>
+          <Button color="danger" onClick={onMove}>
+            {t(
+              "explorer.tree.workspace.move.confirmation_modal.confirm_button"
+            )}
+          </Button>
+        </>
+      }
+      title={t("explorer.tree.workspace.move.confirmation_modal.title")}
+    >
+      <div>
+        <p>
+          <Trans
+            i18nKey={
+              itemsCount > 1
+                ? "explorer.tree.workspace.move.confirmation_modal.description_multiple"
+                : "explorer.tree.workspace.move.confirmation_modal.description"
+            }
+            values={{
+              count: itemsCount,
+              sourceItem: sourceItem.title,
+              targetItem: targetItem.title,
+            }}
+          />
+        </p>
+      </div>
+    </Modal>
+  );
+};
