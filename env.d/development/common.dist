@@ -45,3 +45,7 @@ LOGOUT_REDIRECT_URL=http://localhost:3000
 
 OIDC_REDIRECT_ALLOWED_HOSTS=["http://localhost:8083", "http://localhost:3000"]
 OIDC_AUTH_REQUEST_EXTRA_PARAMS={"acr_values": "eidas1"}
+
+WOPI_CLIENTS="collabora"
+WOPI_COLLABORA_DISCOVERY_URL="http://collabora:9980/hosting/discovery"
+WOPI_SRC_BASE_URL=http://app-dev:8000
