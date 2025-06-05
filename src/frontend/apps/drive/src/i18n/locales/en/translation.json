@@ -1,0 +1,8 @@
+{
+  "explorer": {
+    "wopi": {
+      "loading": "Loading document editor...",
+      "error": "Failed to load document editor. Please try again."
+    }
+  }
+} 

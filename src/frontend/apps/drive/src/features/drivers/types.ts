@@ -28,6 +28,7 @@ export type Item = {
   size?: number;
   mimetype?: string;
   user_roles?: Role[];
+  is_wopi_supported?: boolean;
   abilities: {
     accesses_manage: boolean;
     accesses_view: boolean;
@@ -64,6 +65,12 @@ export type TreeItemData = Omit<Item, "children"> & {
 }
 
 export type TreeItem = TreeViewDataType<TreeItemData>
+
+export type WopiInfo = {
+  access_token: string;
+  access_token_ttl: number;
+  launch_url: string;
+}
 
 
 export type Access = {

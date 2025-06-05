@@ -8,7 +8,7 @@ import {
   DTODeleteInvitation,
   DTOUpdateInvitation,
 } from "./DTOs/InvitationDTO";
-import { Access, APIList, Invitation, Item, ItemType, User } from "./types";
+import { Access, APIList, Invitation, Item, ItemType, User, WopiInfo } from "./types";
 
 export type ItemFilters = {
   type?: ItemType;
@@ -56,4 +56,5 @@ export abstract class Driver {
   }): Promise<Item>;
   abstract deleteItems(ids: string[]): Promise<void>;
   abstract hardDeleteItems(ids: string[]): Promise<void>;
+  abstract getWopiInfo(itemId: string): Promise<WopiInfo>;
 }

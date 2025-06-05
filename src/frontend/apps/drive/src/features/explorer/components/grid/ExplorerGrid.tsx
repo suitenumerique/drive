@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-table";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useRouter } from "next/router";
 import {
   itemToTreeItem,
   NavigationEventType,
@@ -34,6 +35,7 @@ const EMPTY_ARRAY: Item[] = [];
 export const ExplorerGrid = (props: ExplorerProps) => {
   const { t } = useTranslation();
   const { t: tc } = useCunningham();
+  const router = useRouter();
   const lastSelectedRowRef = useRef<string | null>(null);
   const {
     setSelectedItems,
@@ -270,7 +272,9 @@ export const ExplorerGrid = (props: ExplorerProps) => {
                           item: row.original,
                         });
                       } else {
-                        if (row.original.url) {
+                        if (row.original.is_wopi_supported) {
+                          router.push(`/explorer/items/${row.original.id}/wopi`);
+                        } else if (row.original.url) {
                           window.open(row.original.url, "_blank");
                         } else {
                           addToast(

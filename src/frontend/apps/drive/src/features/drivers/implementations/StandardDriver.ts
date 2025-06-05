@@ -7,7 +7,7 @@ import {
 } from "../DTOs/InvitationDTO";
 import { DTOCreateAccess } from "../DTOs/AccessesDTO";
 import { DTOUpdateAccess } from "../DTOs/AccessesDTO";
-import { Access, APIList, Invitation, Item, ItemType, User } from "../types";
+import { Access, APIList, Invitation, Item, ItemType, User, WopiInfo } from "../types";
 import { DTODeleteAccess } from "../DTOs/AccessesDTO";
 
 export class StandardDriver extends Driver {
@@ -273,6 +273,12 @@ export class StandardDriver extends Driver {
         method: "DELETE",
       });
     }
+  }
+
+  async getWopiInfo(itemId: string): Promise<WopiInfo> {
+    const response = await fetchAPI(`items/${itemId}/wopi/`);
+    const data = await response.json();
+    return data;
   }
 }
 
