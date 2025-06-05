@@ -9,6 +9,7 @@ server {
 	
 	listen <%= ENV["PORT"] %>;
 	server_name _;
+    server_tokens off;
 
     root /app/build/frontend-out;
     
