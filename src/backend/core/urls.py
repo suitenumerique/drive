@@ -35,6 +35,11 @@ external_api_router.register(
     external_api_viewsets.ResourceServerItemViewSet,
     basename="resource_server_items",
 )
+external_api_router.register(
+    "users",
+    external_api_viewsets.ResourceServerUserViewSet,
+    basename="resource_server_users",
+)
 
 external_api_item_related_router = DefaultRouter()
 external_api_item_related_router.register(
@@ -42,24 +47,6 @@ external_api_item_related_router.register(
     external_api_viewsets.ResourceServerItemAccessViewSet,
     basename="resource_server_item_accesses",
 )
-
-urls = [
-    path(
-        f"api/{settings.API_VERSION}/",
-        include(
-            [
-                *router.urls,
-                *oidc_urls,
-                *resource_server_urls,
-                re_path(
-                    r"^items/(?P<resource_id>[0-9a-z-]*)/",
-                    include(item_related_router.urls),
-                ),
-            ]
-        ),
-    ),
-    path(f"api/{settings.API_VERSION}/config/", viewsets.ConfigView.as_view()),
-]
 
 urlpatterns = [
     path(
