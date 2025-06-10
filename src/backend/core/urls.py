@@ -42,6 +42,11 @@ external_api_router.register(
     external_api_viewsets.ResourceServerItemViewSet,
     basename="resource_server_items",
 )
+external_api_router.register(
+    "users",
+    external_api_viewsets.ResourceServerUserViewSet,
+    basename="resource_server_users",
+)
 
 external_api_item_related_router = DefaultRouter()
 external_api_item_related_router.register(
