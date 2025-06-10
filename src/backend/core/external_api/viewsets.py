@@ -4,8 +4,18 @@ from django.conf import settings
 
 from lasuite.oidc_resource_server.authentication import ResourceServerAuthentication
 
-from ..api.permissions import AccessPermission, IsSelf, ItemAccessPermission
-from ..api.viewsets import ItemAccessViewSet, ItemViewSet, UserViewSet
+from ..api.permissions import (
+    AccessPermission,
+    CanCreateInvitationPermission,
+    IsSelf,
+    ItemAccessPermission,
+)
+from ..api.viewsets import (
+    InvitationViewset,
+    ItemAccessViewSet,
+    ItemViewSet,
+    UserViewSet,
+)
 from .authentication import JWTAuthentication
 from .permissions import ResourceServerClientPermission
 
@@ -32,6 +42,16 @@ class ResourceServerItemAccessViewSet(ItemAccessViewSet):
     authentication_classes = EXTERNAL_API_AUTH_CLASSES
 
     permission_classes = [ResourceServerClientPermission & AccessPermission]
+
+
+class ResourceServerInvitationViewSet(InvitationViewset):
+    """Resource Server Viewset for the Drive app."""
+
+    authentication_classes = EXTERNAL_API_AUTH_CLASSES
+
+    permission_classes = [
+        ResourceServerClientPermission & CanCreateInvitationPermission
+    ]
 
 
 class ResourceServerUserViewSet(UserViewSet):

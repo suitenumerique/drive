@@ -54,6 +54,11 @@ external_api_item_related_router.register(
     external_api_viewsets.ResourceServerItemAccessViewSet,
     basename="resource_server_item_accesses",
 )
+external_api_item_related_router.register(
+    "invitations",
+    external_api_viewsets.ResourceServerInvitationViewSet,
+    basename="resource_server_invitations",
+)
 
 urlpatterns = [
     path(

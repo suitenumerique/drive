@@ -129,7 +129,9 @@ def test_api_items_accesses_retrieve_anonymous_public_standalone():
     item = factories.ItemFactory(link_reach="public")
 
     response = APIClient().get(f"/external_api/v1.0/items/{item.id!s}/accesses/")
+    assert response.status_code == 403
 
+    response = APIClient().get(f"/external_api/v1.0/items/{item.id!s}/invitations/")
     assert response.status_code == 403
 
 
@@ -157,7 +159,9 @@ def test_api_items_accesses_retrieve_connected_resource_server(
     item = factories.ItemFactory(link_reach="public")
 
     response = client.get(f"/external_api/v1.0/items/{item.id!s}/accesses/")
+    assert response.status_code == 200
 
+    response = client.get(f"/external_api/v1.0/items/{item.id!s}/invitations/")
     assert response.status_code == 200
 
 
