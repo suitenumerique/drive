@@ -802,6 +802,11 @@ class Item(TreeModel, BaseModel):
 
     def send_email(self, subject, emails, context=None, language=None):
         """Generate and send email from a template."""
+
+        if not settings.EMAIL_HOST:
+            logger.debug("EMAIL_HOST host is not set, skipping email sending")
+            return
+
         context = context or {}
         domain = Site.objects.get_current().domain
         language = language or get_language()

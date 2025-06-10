@@ -639,6 +639,41 @@ def test_models_items__email_invitation__failed(mock_logger, _mock_send_mail):
     assert isinstance(exception, smtplib.SMTPException)
 
 
+@mock.patch("core.models.send_mail")
+def test_models_items__email_invitation__skipped_when_email_host_missing(
+    mock_send_mail, caplog, settings
+):
+    """
+    The email invitation is skipped when EMAIL_HOST is not configured.
+    """
+    settings.EMAIL_HOST = None
+    item = factories.ItemFactory()
+
+    # pylint: disable-next=no-member
+    assert len(mail.outbox) == 0
+
+    sender = factories.UserFactory()
+    with caplog.at_level("DEBUG", logger="core.models"):
+        item.send_invitation_email(
+            "guest4@example.com",
+            models.RoleChoices.EDITOR,
+            sender,
+            "en",
+        )
+
+    # No email has been sent
+    # pylint: disable-next=no-member
+    assert len(mail.outbox) == 0
+    mock_send_mail.assert_not_called()
+
+    # Logger should be called to indicate skipping
+    assert len(caplog.records) == 1
+    assert (
+        caplog.records[0].message
+        == "EMAIL_HOST host is not set, skipping email sending"
+    )
+
+
 # item number of accesses
 
 

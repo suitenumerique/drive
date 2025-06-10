@@ -149,6 +149,7 @@ jobs:
       DJANGO_SETTINGS_MODULE: drive.settings
       DJANGO_SECRET_KEY: ThisIsAnExampleKeyForTestPurposeOnly
       OIDC_OP_JWKS_ENDPOINT: /endpoint-for-test-purpose-only
+      DJANGO_EMAIL_HOST: mailcatcher
       DB_HOST: localhost
       DB_NAME: drive
       DB_USER: dinum

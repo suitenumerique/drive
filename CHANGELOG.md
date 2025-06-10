@@ -16,6 +16,7 @@ and this project adheres to
 ### Changed
 
 - ✨(api) modify items/search endpoint to use indexed items in Find
+- 🐛(email) avoid trying to send emails if no provider is configured
 
 ### Fixed
 
