@@ -21,7 +21,7 @@ def test_api_item_accesses_list_anonymous():
     factories.UserItemAccessFactory.create_batch(2, item=item)
 
     response = APIClient().get(f"/api/v1.0/items/{item.id!s}/accesses/")
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {
@@ -145,7 +145,7 @@ def test_api_item_accesses_retrieve_anonymous():
         f"/api/v1.0/items/{access.item_id!s}/accesses/{access.id!s}/",
     )
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {
@@ -262,7 +262,7 @@ def test_api_item_accesses_update_anonymous():
             {**old_values, field: value},
             format="json",
         )
-        assert response.status_code == 401
+        assert response.status_code == 403
 
     access.refresh_from_db()
     updated_values = serializers.ItemAccessSerializer(instance=access).data
@@ -631,7 +631,7 @@ def test_api_item_accesses_delete_anonymous():
         f"/api/v1.0/items/{item.id!s}/accesses/{access.id!s}/",
     )
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert models.ItemAccess.objects.count() == 1
 
 
