@@ -1,4 +1,4 @@
-import { Button } from "@openfun/cunningham-react";
+import { Button, useModal } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { useExplorer } from "./ExplorerContext";
 import { useExplorerInner } from "./Explorer";
@@ -6,6 +6,7 @@ import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
 import { useMutationDeleteItems } from "../hooks/useMutations";
 import { useEffect } from "react";
+import { ExplorerMoveFolder } from "./modals/move/ExplorerMoveFolderModal";
 
 export const ExplorerSelectionBar = () => {
   const { t } = useTranslation();
@@ -49,7 +50,8 @@ export const ExplorerSelectionBar = () => {
 
 export const ExplorerSelectionBarActions = () => {
   const { t } = useTranslation();
-  const { selectedItems, setSelectedItems } = useExplorer();
+  const { selectedItems, setSelectedItems, item } = useExplorer();
+  const moveModal = useModal();
 
   const deleteItems = useMutationDeleteItems();
 
@@ -107,13 +109,13 @@ export const ExplorerSelectionBarActions = () => {
         size="small"
         aria-label={t("explorer.selectionBar.download")}
       /> */}
-      {/* <Button
-        onClick={handleClearSelection}
+      <Button
+        onClick={moveModal.open}
         icon={<span className="material-icons">arrow_forward</span>}
         color="primary-text"
         size="small"
         aria-label={t("explorer.selectionBar.move")}
-      /> */}
+      />
       <Button
         onClick={handleDelete}
         icon={<span className="material-icons">delete</span>}
@@ -121,6 +123,13 @@ export const ExplorerSelectionBarActions = () => {
         size="small"
         aria-label={t("explorer.selectionBar.delete")}
       />
+      {moveModal.isOpen && (
+        <ExplorerMoveFolder
+          {...moveModal}
+          itemsToMove={selectedItems}
+          initialFolderId={item?.id}
+        />
+      )}
     </>
   );
 };

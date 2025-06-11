@@ -4,13 +4,14 @@
 @use "./../features/layouts/components/explorer/ExplorerLayout.scss";
 @use "./../features/explorer/components/Explorer.scss";
 @use "./../features/explorer/components/right-panel/ExplorerRightPanel.scss";
+@use "./../features/explorer/components/modals/move/ExplorerMoveFolderModal.scss";
 @use "./../features/layouts/components/header/index.scss";
 @use "./../features/ui/components/breadcrumbs";
 @use "./../features/ui/components/toaster";
 @use "./../features/explorer/components/tree/ExplorerTree.scss";
 @use "./../features/ui/components/info/InfoRow.scss";
 @use "./../features/ui/components/responsive";
-@use "./../features/ui/components/workspaces/icon/WorkspaceIcon.scss";
+@use "./../features/explorer/components/icons/ItemIcon.scss";
 @use "./../pages/index.scss" as *;
 body {
   margin: 0;

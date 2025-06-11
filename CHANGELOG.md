@@ -10,6 +10,8 @@ and this project adheres to
 
 ## Added
 
+    - (frontend) add move modal #213
+
 ## Changed
 
 ## Deleted

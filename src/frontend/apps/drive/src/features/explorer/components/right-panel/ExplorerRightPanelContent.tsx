@@ -1,5 +1,5 @@
 import { Item } from "@/features/drivers/types";
-import { ItemIcon } from "../ItemIcon";
+import { ItemIcon } from "../icons/ItemIcon";
 import { Button, useModal } from "@openfun/cunningham-react";
 import { useExplorer } from "../ExplorerContext";
 import { InfoRow } from "@/features/ui/components/info/InfoRow";
@@ -9,7 +9,7 @@ import multipleSelection from "@/assets/mutliple-selection.png";
 import emptySelection from "@/assets/empty-selection.png";
 import { getFormatTranslationKey } from "../../utils/mimeTypes";
 import { itemIsWorkspace } from "@/features/drivers/utils";
-import { UserRow } from "@gouvfr-lasuite/ui-kit";
+import { IconSize, UserRow } from "@gouvfr-lasuite/ui-kit";
 import { formatSize } from "../../utils/utils";
 import { WorkspaceShareModal } from "../modals/share/WorkspaceShareModal";
 
@@ -84,14 +84,18 @@ export const ExplorerRightPanelContent = ({
               />
             </div>
             <div className="explorer__right-panel__item-title__icon">
-              <ItemIcon item={firstSelectedItem} size="small" type="mini" />
+              <ItemIcon
+                item={firstSelectedItem}
+                size={IconSize.SMALL}
+                type="mini"
+              />
             </div>
             <div className="explorer__right-panel__item-title__text">
               {firstSelectedItem.title}
             </div>
           </div>
           <div className="explorer__right-panel__item-type">
-            <ItemIcon item={firstSelectedItem} size="xlarge" />
+            <ItemIcon item={firstSelectedItem} size={IconSize.X_LARGE} />
           </div>
           {isWorkspace && (
             <InfoRow

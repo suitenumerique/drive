@@ -1,8 +1,6 @@
 import { Item, TreeItem } from "@/features/drivers/types";
-import folderIcon from "@/assets/tree/folder.svg";
-import workspaceIcon from "@/assets/tree/workspace.svg";
-import mainWorkspaceIcon from "@/assets/tree/main-workspace.svg";
 import {
+  IconSize,
   NodeRendererProps,
   TreeDataItem,
   TreeViewDataType,
@@ -13,8 +11,8 @@ import { DroppableNodeTree } from "./DroppableNodeTree";
 import { NavigationEventType, useExplorer } from "../ExplorerContext";
 import { useModal } from "@openfun/cunningham-react";
 import { ExplorerTreeItemActions } from "./ExplorerTreeItemActions";
-import { itemIsWorkspace } from "@/features/drivers/utils";
 import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWorkspaceModal";
+import { ItemIcon } from "../icons/ItemIcon";
 
 type ExplorerTreeItemProps = NodeRendererProps<TreeDataItem<TreeItem>>;
 
@@ -37,7 +35,7 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
         >
           <div className="explorer__tree__item">
             <div className="explorer__tree__item__content">
-              <ExplorerTreeItemIcon item={item} size={16} />
+              <ExplorerTreeItemIcon item={item} size={IconSize.SMALL} />
               {/* 
                 We need to check the nodeType because the generic type T in TreeViewDataType 
                 is only available for nodes of type NODE
@@ -67,30 +65,20 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
 
 export const ExplorerTreeItemIcon = ({
   item,
-  size = 16,
 }: {
   item: TreeViewDataType<TreeItem>;
-  size?: number;
+  size?: IconSize;
 }) => {
-  const isMainWorkspace =
-    item.nodeType === TreeViewNodeTypeEnum.NODE && item.main_workspace;
-  const isWorkspace = itemIsWorkspace(item as Item);
-  if (isMainWorkspace) {
+  if (item.nodeType === TreeViewNodeTypeEnum.NODE) {
     return (
-      <img
-        width={size}
-        height={size}
-        src={mainWorkspaceIcon.src}
-        alt="folder"
+      <ItemIcon
+        item={item as Item}
+        type="mini"
+        isTree
+        size={IconSize.X_SMALL}
       />
     );
   }
 
-  if (isWorkspace) {
-    return (
-      <img width={size} height={size} src={workspaceIcon.src} alt="folder" />
-    );
-  }
-
-  return <img width={size} height={size} src={folderIcon.src} alt="folder" />;
+  return null;
 };

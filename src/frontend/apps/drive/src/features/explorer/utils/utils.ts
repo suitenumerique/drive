@@ -73,3 +73,12 @@ export const formatSize = (size: number) => {
   
   return `${convertedSize < 10 ? convertedSize.toFixed(2) : convertedSize < 100 ? convertedSize.toFixed(1) : Math.round(convertedSize)} ${units[unitIndex]}`;
 };
+
+
+export const getParentIdFromPath = (path: string) => {
+  const parts = path.split(".");
+  if (parts.length === 1) {
+    return undefined;
+  }
+  return parts[parts.length - 2];
+};

@@ -8,6 +8,7 @@ import {
 import { Item, TreeItem } from "@/features/drivers/types";
 import {
   HorizontalSeparator,
+  IconSize,
   OpenMap,
   TreeDataItem,
   TreeView,
@@ -330,7 +331,7 @@ export const ExplorerTreeMobile = () => {
             setIsLeftPanelOpen(false);
           }}
         >
-          <ExplorerTreeItemIcon item={node.value} size={24} />
+          <ExplorerTreeItemIcon item={node.value} size={IconSize.X_SMALL} />
           <span>{node.value.title}</span>
         </div>
       );

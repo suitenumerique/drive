@@ -15,6 +15,7 @@ import { Draggable } from "../Draggable";
 import { WorkspaceShareModal } from "../modals/share/WorkspaceShareModal";
 import { itemIsWorkspace } from "@/features/drivers/utils";
 import { useDisableDragGridItem } from "./hooks";
+import { useExplorerGridItems } from "./ExplorerGridItems";
 
 export type ExplorerGridActionsCellProps = CellContext<Item, unknown>;
 
@@ -23,6 +24,7 @@ export const ExplorerGridActionsCell = (
 ) => {
   const item = params.row.original;
   const { setRightPanelForcedItem, setRightPanelOpen } = useExplorer();
+  const { openMoveModal, setMoveItem } = useExplorerGridItems();
   const disableDrag = useDisableDragGridItem(item);
   const shareModal = useModal();
 
@@ -53,8 +55,17 @@ export const ExplorerGridActionsCell = (
     document.body.removeChild(a);
   };
 
+  const handleMove = () => {
+    setMoveItem(item);
+    openMoveModal();
+  };
+
   return (
-    <>
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+      }}
+    >
       <Draggable
         id={params.cell.id}
         item={item}
@@ -79,6 +90,12 @@ export const ExplorerGridActionsCell = (
                 : t("explorer.tree.workspace.options.share_view"),
               isHidden: !isWorkspace,
               callback: shareModal.open,
+            },
+            {
+              icon: <span className="material-icons">group</span>,
+              label: t("explorer.grid.actions.move"),
+              isHidden: !item.abilities.move,
+              callback: handleMove,
             },
             {
               icon: <span className="material-icons">download</span>,
@@ -122,6 +139,6 @@ export const ExplorerGridActionsCell = (
           <WorkspaceShareModal {...shareModal} item={item} key={item.id} />
         )}
       </Draggable>
-    </>
+    </div>
   );
 };

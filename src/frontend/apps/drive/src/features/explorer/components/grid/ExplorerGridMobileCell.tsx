@@ -1,6 +1,6 @@
 import { CellContext } from "@tanstack/react-table";
 import { Item } from "@/features/drivers/types";
-import { ItemIcon } from "../ItemIcon";
+import { ItemIcon } from "../icons/ItemIcon";
 import { timeAgo } from "../../utils/utils";
 type ExplorerGridNameCellProps = CellContext<Item, unknown>;
 

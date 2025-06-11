@@ -3,18 +3,16 @@ import { Item } from "@/features/drivers/types";
 import { useEffect, useRef, useState } from "react";
 import { Draggable } from "../Draggable";
 import { Tooltip } from "@openfun/cunningham-react";
-import { useExplorer } from "../ExplorerContext";
-import { ItemIcon } from "../ItemIcon";
-import { useExplorerInner } from "../Explorer";
+import { ItemIcon } from "../icons/ItemIcon";
 import { useDisableDragGridItem } from "./hooks";
+import { useExplorerGridItems } from "./ExplorerGridItems";
 type ExplorerGridNameCellProps = CellContext<Item, string>;
 
 export const ExplorerGridNameCell = (params: ExplorerGridNameCellProps) => {
   const item = params.row.original;
   const ref = useRef<HTMLSpanElement>(null);
   const [isOverflown, setIsOverflown] = useState(false);
-  const { selectedItemsMap } = useExplorer();
-  const { disableItemDragAndDrop } = useExplorerInner();
+  const { selectedItemsMap, disableItemDragAndDrop } = useExplorerGridItems();
   const isSelected = !!selectedItemsMap[item.id];
   const canMove = item.abilities.move;
   const disableDrag = useDisableDragGridItem(item);

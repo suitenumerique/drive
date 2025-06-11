@@ -1,6 +1,9 @@
 {
   "en": {
     "translation": {
+      "common": {
+        "cancel": "Cancel"
+      },
       "clipboard": {
         "success": "Copied to clipboard",
         "error": "Failed to copy to clipboard"
@@ -42,6 +45,18 @@
         "owner": "Owner"
       },
       "explorer": {
+        "breadcrumbs": {
+          "spaces": "Spaces"
+        },
+        "modal": {
+          "move": {
+            "title": "Move",
+            "move_button": "Move here",
+            "description_one_item": "Choose the new location for <strong>{{name}}</strong>",
+            "description_multiple_items": "Choose the new location for the <strong>{{count}}</strong> selected elements",
+            "empty_folder": "No folder found in the selected folder"
+          }
+        },
         "rightPanel": {
           "multipleSelection": {
             "text": "Multiple files selected",
@@ -247,6 +262,9 @@
   },
   "fr": {
     "translation": {
+      "common": {
+        "cancel": "Annuler"
+      },
       "clipboard": {
         "success": "Copié dans le presse-papiers",
         "error": "Échec de la copie dans le presse-papiers"
@@ -288,6 +306,18 @@
         "owner": "Propriétaire"
       },
       "explorer": {
+        "breadcrumbs": {
+          "spaces": "Espaces"
+        },
+        "modal": {
+          "move": {
+            "title": "Déplacer",
+            "move_button": "Déplacer ici",
+            "description_one_item": "Choisissez le nouvel emplacement pour <strong>{{name}}</strong>",
+            "description_multiple_items": "Choisissez le nouvel emplacement pour les <strong>{{count}}</strong> éléments sélectionnés",
+            "empty_folder": "Aucun dossier trouvé dans le dossier sélectionné"
+          }
+        },
         "rightPanel": {
           "multipleSelection": {
             "text": "Plusieurs fichiers sélectionnés",

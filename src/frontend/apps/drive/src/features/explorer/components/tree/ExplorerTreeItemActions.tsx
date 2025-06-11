@@ -13,6 +13,8 @@ import { itemIsWorkspace } from "@/features/drivers/utils";
 import { useDeleteTreeNode } from "./hooks/useDeleteTreeNode";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
 import { ExplorerRenameItemModal } from "../modals/ExplorerRenameItemModal";
+import { ExplorerMoveFolder } from "../modals/move/ExplorerMoveFolderModal";
+import { getParentIdFromPath } from "../../utils/utils";
 export type ExplorerTreeItemActionsProps = {
   item: Item;
 };
@@ -29,6 +31,7 @@ export const ExplorerTreeItemActions = ({
   const { deleteTreeNode } = useDeleteTreeNode();
   const createFolderModal = useModal();
   const renameModal = useModal();
+  const moveModal = useModal();
   return (
     <>
       <div
@@ -57,6 +60,13 @@ export const ExplorerTreeItemActions = ({
                 value: "share",
                 isHidden: !isWorkspace || item.main_workspace,
                 callback: shareWorkspaceModal.open,
+              },
+              {
+                icon: <span className="material-icons">group</span>,
+                label: t("explorer.grid.actions.move"),
+                value: "move",
+                isHidden: !item.abilities.move,
+                callback: moveModal.open,
               },
               {
                 icon: <img src={settingsSvg.src} alt="" />,
@@ -130,6 +140,14 @@ export const ExplorerTreeItemActions = ({
 
       {renameModal.isOpen && (
         <ExplorerRenameItemModal {...renameModal} item={item} key={item.id} />
+      )}
+      {moveModal.isOpen && (
+        <ExplorerMoveFolder
+          {...moveModal}
+          itemsToMove={[item]}
+          key={item.id}
+          initialFolderId={getParentIdFromPath(item.path)}
+        />
       )}
     </>
   );
