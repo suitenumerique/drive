@@ -1,0 +1,11 @@
+.workspace-icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background-color: #000091;
+  border-radius: 4px;
+  background-color: var(--c--theme--colors--primary-500);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
