@@ -10,6 +10,7 @@
 @use "./../features/explorer/components/tree/ExplorerTree.scss";
 @use "./../features/ui/components/info/InfoRow.scss";
 @use "./../features/ui/components/responsive";
+@use "./../features/ui/components/workspaces/icon/WorkspaceIcon.scss";
 @use "./../pages/index.scss" as *;
 body {
   margin: 0;
