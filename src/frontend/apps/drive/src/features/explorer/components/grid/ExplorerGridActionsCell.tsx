@@ -15,6 +15,7 @@ import { Draggable } from "../Draggable";
 import { WorkspaceShareModal } from "../modals/share/WorkspaceShareModal";
 import { itemIsWorkspace } from "@/features/drivers/utils";
 import { useDisableDragGridItem } from "./hooks";
+import { ExplorerMoveFolder } from "../modals/move/ExplorerMoveFolder";
 
 export type ExplorerGridActionsCellProps = CellContext<Item, unknown>;
 
@@ -31,7 +32,7 @@ export const ExplorerGridActionsCell = (
   const { t } = useTranslation();
   const deleteItems = useMutationDeleteItems();
   const renameModal = useModal();
-
+  const moveModal = useModal();
   const handleDelete = async () => {
     addToast(
       <ToasterItem>
@@ -54,7 +55,11 @@ export const ExplorerGridActionsCell = (
   };
 
   return (
-    <>
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+      }}
+    >
       <Draggable
         id={params.cell.id}
         item={item}
@@ -79,6 +84,11 @@ export const ExplorerGridActionsCell = (
                 : t("explorer.tree.workspace.options.share_view"),
               isHidden: !isWorkspace,
               callback: shareModal.open,
+            },
+            {
+              icon: <span className="material-icons">group</span>,
+              label: "Déplacer",
+              callback: moveModal.open,
             },
             {
               icon: <span className="material-icons">download</span>,
@@ -121,7 +131,16 @@ export const ExplorerGridActionsCell = (
         {isWorkspace && shareModal.isOpen && (
           <WorkspaceShareModal {...shareModal} item={item} key={item.id} />
         )}
+        {moveModal.isOpen && (
+          <ExplorerMoveFolder
+            {...moveModal}
+            itemsToMove={[item]}
+            key={item.id}
+            isOpen={moveModal.isOpen}
+            onClose={moveModal.close}
+          />
+        )}
       </Draggable>
-    </>
+    </div>
   );
 };

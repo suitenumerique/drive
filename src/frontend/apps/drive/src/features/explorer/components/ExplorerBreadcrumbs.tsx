@@ -3,9 +3,13 @@ import { Button } from "@openfun/cunningham-react";
 import workspaceLogo from "@/assets/workspace_logo.svg";
 import { NavigationEventType, useExplorer } from "./ExplorerContext";
 import { useMemo } from "react";
-import { TreeViewNodeTypeEnum, useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import {
+  IconSize,
+  TreeViewNodeTypeEnum,
+  useTreeContext,
+} from "@gouvfr-lasuite/ui-kit";
 import { Item, TreeItem } from "@/features/drivers/types";
-import { ExplorerTreeItemIcon } from "./tree/ExplorerTreeItem";
+import { ItemIcon } from "./ItemIcon";
 
 export const ExplorerBreadcrumbs = () => {
   const treeContext = useTreeContext<TreeItem>();
@@ -140,7 +144,7 @@ export const ExplorerBreadcrumbsMobile = () => {
           </div>
           <div className="explorer__content__breadcrumbs--mobile__container__info">
             <div className="explorer__content__breadcrumbs--mobile__container__info__title">
-              <ExplorerTreeItemIcon item={workspace} size={16} />
+              <ItemIcon item={workspace} size={IconSize.SMALL} />
               <span>{workspace.title}</span>
             </div>
             <div className="explorer__content__breadcrumbs--mobile__container__info__folder">
@@ -150,7 +154,7 @@ export const ExplorerBreadcrumbsMobile = () => {
         </div>
       ) : (
         <div className="explorer__content__breadcrumbs--mobile__workspace">
-          <ExplorerTreeItemIcon item={workspace} size={24} />
+          <ItemIcon item={workspace as Item} size={IconSize.SMALL} />
           <span>{workspace.title}</span>
         </div>
       )}
