@@ -12,6 +12,7 @@ and this project adheres to
 
 - ✨(back) allow theme customnization using a configuration file #299
 - ✨(front) use theme_customization to configure the footer #299
+- ✨(back) implement lasuite.malware_detection app #212
 
 ### Fixed
 
