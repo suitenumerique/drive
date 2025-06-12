@@ -25,7 +25,7 @@ def test_api_items_media_auth_anonymous_public():
     item = factories.ItemFactory(
         link_reach="public",
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     filename = f"{uuid.uuid4()!s}.jpg"
@@ -96,7 +96,7 @@ def test_api_items_media_auth_authenticated_public_or_authenticated(reach):
     item = factories.ItemFactory(
         link_reach=reach,
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     user = factories.UserFactory()
@@ -151,7 +151,7 @@ def test_api_items_media_auth_authenticated_restricted():
     item = factories.ItemFactory(
         link_reach="restricted",
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     user = factories.UserFactory()
@@ -179,7 +179,7 @@ def test_api_items_media_auth_related(via, mock_user_teams):
 
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     if via == USER:
         factories.UserItemAccessFactory(item=item, user=user)
@@ -238,7 +238,7 @@ def test_api_items_media_auth_related_filename_with_espaces():
 
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     factories.UserItemAccessFactory(item=item, user=user)
@@ -308,10 +308,10 @@ def test_api_items_media_auth_item_not_a_file():
     assert response.status_code == 403
 
 
-def test_api_items_media_auth_item_not_uploaded():
+def test_api_items_media_auth_item_not_ready():
     """
     Users who have a specific access to an item, whatever the role, should not be able to
-    retrieve related attachments if the item is not uploaded.
+    retrieve related attachments if the item is not ready.
     """
     user = factories.UserFactory()
     client = APIClient()

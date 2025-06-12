@@ -1075,9 +1075,9 @@ def test_api_items_retrieve_permanently_deleted_related(role, depth):
     }
 
 
-def test_api_items_retrieve_file_uploaded():
+def test_api_items_retrieve_file_ready():
     """
-    The `url` property should not be none if the item is a file and has been uploaded.
+    The `url` property should not be none if the item is a ready file.
     """
 
     user = factories.UserFactory()
@@ -1085,7 +1085,7 @@ def test_api_items_retrieve_file_uploaded():
     client.force_login(user)
 
     item = factories.ItemFactory(type=models.ItemTypeChoices.FILE, link_reach="public")
-    item.upload_state = models.ItemUploadStateChoices.UPLOADED
+    item.upload_state = models.ItemUploadStateChoices.READY
     item.filename = "logo.png"
     item.mimetype = "image/png"
     item.size = 8
@@ -1114,7 +1114,7 @@ def test_api_items_retrieve_file_uploaded():
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
         "user_roles": [],
         "type": models.ItemTypeChoices.FILE,
-        "upload_state": models.ItemUploadStateChoices.UPLOADED,
+        "upload_state": models.ItemUploadStateChoices.READY,
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
         "mimetype": "image/png",
         "main_workspace": False,

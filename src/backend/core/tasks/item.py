@@ -34,7 +34,7 @@ def process_item_deletion(item_id):
 
     if (
         item.type == ItemTypeChoices.FILE
-        and item.upload_state == ItemUploadStateChoices.UPLOADED
+        and item.upload_state == ItemUploadStateChoices.READY
     ):
         logger.info("Deleting file %s", item.file_key)
         default_storage.delete(item.file_key)

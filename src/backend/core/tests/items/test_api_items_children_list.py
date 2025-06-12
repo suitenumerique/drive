@@ -121,7 +121,7 @@ def test_api_items_children_list_anonymous_public_parent():
     )
     factories.UserItemAccessFactory(item=child1)
 
-    child2.upload_state = models.ItemUploadStateChoices.UPLOADED
+    child2.upload_state = models.ItemUploadStateChoices.READY
     child2.filename = "logo.png"
     child2.save()
 
@@ -183,7 +183,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
                 "user_roles": [],
                 "type": models.ItemTypeChoices.FILE,
-                "upload_state": models.ItemUploadStateChoices.UPLOADED,
+                "upload_state": models.ItemUploadStateChoices.READY,
                 "url": f"http://localhost:8083/media/item/{child2.id!s}/logo.png",
                 "mimetype": None,
                 "main_workspace": False,

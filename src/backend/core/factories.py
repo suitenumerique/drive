@@ -83,7 +83,7 @@ class ItemFactory(factory.django.DjangoModelFactory):
 
     @factory.post_generation
     def update_upload_state(self, create, extracted, **kwargs):
-        """Set the upload state to uploaded."""
+        """Change the upload state of an item."""
         if create and extracted and self.type == models.ItemTypeChoices.FILE:
             self.upload_state = extracted
             self.save()
