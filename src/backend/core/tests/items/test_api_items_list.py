@@ -65,7 +65,7 @@ def test_api_items_list_format():
     )
     factories.UserItemAccessFactory(item=hard_deleted_item, user=user)
 
-    item2.upload_state = models.ItemUploadStateChoices.UPLOADED
+    item2.upload_state = models.ItemUploadStateChoices.READY
     item2.filename = "logo.png"
     item2.save()
 
@@ -103,7 +103,7 @@ def test_api_items_list_format():
             "updated_at": item2.updated_at.isoformat().replace("+00:00", "Z"),
             "user_roles": [access2.role],
             "type": models.ItemTypeChoices.FILE,
-            "upload_state": models.ItemUploadStateChoices.UPLOADED,
+            "upload_state": models.ItemUploadStateChoices.READY,
             "url": f"http://localhost:8083/media/item/{item2.id!s}/logo.png",
             "mimetype": None,
             "main_workspace": False,

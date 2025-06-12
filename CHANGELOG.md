@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(back) implement lasuite.malware_detection app #212
+- ✅(front) add e2e testing #317
+
 ### Changed
 
 - 🔧(back) customize cache config #321
@@ -18,7 +23,6 @@ and this project adheres to
 
 - ✨(back) allow theme customization using a configuration file #299
 - ✨(front) use theme_customization to configure the footer #299
-- ✅(front) add e2e testing #317
 
 
 ### Fixed

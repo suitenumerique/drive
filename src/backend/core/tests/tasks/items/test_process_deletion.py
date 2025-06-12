@@ -36,8 +36,8 @@ def test_process_item_deletion_item_does_not_exist(caplog):
     assert "Item 1 does not exist" in caplog.records[0].message
 
 
-def test_process_item_deletion_item_file_is_not_uploaded():
-    """Test the process deletion task when the item file is not uploaded."""
+def test_process_item_deletion_item_file_is_not_ready():
+    """Test the process deletion task when the item file is not ready."""
     item = factories.ItemFactory(type=models.ItemTypeChoices.FILE)
     item.soft_delete()
     item.hard_delete()
@@ -47,11 +47,11 @@ def test_process_item_deletion_item_file_is_not_uploaded():
     assert not models.Item.objects.filter(id=item.id).exists()
 
 
-def test_process_item_deletion_item_file_is_uploaded():
-    """Test the process deletion task when the item file is uploaded."""
+def test_process_item_deletion_item_file_is_ready():
+    """Test the process deletion task when the item file is ready."""
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         filename="foo.txt",
     )
     item.soft_delete()
@@ -94,14 +94,14 @@ def test_process_item_deletion_in_cascade():
         parent=child,
         creator=user,
         users=[user],
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     child2_file = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
         parent=child2,
         creator=user,
         users=[user],
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     default_storage.save(child_file.file_key, BytesIO(b"my prose"))
@@ -138,14 +138,14 @@ def test_process_item_deletion_item_subfolder_in_cascade():
         parent=child,
         creator=user,
         users=[user],
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     child2_file = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
         parent=child2,
         creator=user,
         users=[user],
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     default_storage.save(child_file.file_key, BytesIO(b"my prose"))
