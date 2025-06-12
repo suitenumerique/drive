@@ -2,13 +2,18 @@ import "./App.css";
 import { openPicker, openSaver, type Item } from "@gouvfr-lasuite/drive-sdk";
 import { useState } from "react";
 
+const CONFIG = {
+  url: "https://fichiers.sardinepq.fr/sdk",
+  apiUrl: "https://fichiers.sardinepq.fr/api/v1.0",
+};
+
 function App() {
   const [items, setItems] = useState<Item[]>([]);
   const [picking, setPicking] = useState(false);
 
   const pick = async () => {
     setPicking(true);
-    const { items } = await openPicker();
+    const { items } = await openPicker(CONFIG);
     console.log("Selected items:", items);
     setItems(items);
     setPicking(false);
