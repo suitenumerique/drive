@@ -25,6 +25,7 @@ from corsheaders.middleware import (
     ACCESS_CONTROL_ALLOW_METHODS,
     ACCESS_CONTROL_ALLOW_ORIGIN,
 )
+from lasuite.malware_detection import malware_detection
 from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
 from rest_framework.permissions import AllowAny
@@ -606,7 +607,7 @@ class ItemViewSet(
     @drf.decorators.action(detail=True, methods=["post"], url_path="upload-ended")
     def upload_ended(self, request, *args, **kwargs):
         """
-        Set an item state to uploaded after a successful upload.
+        Start the analysis of an item after a successful upload.
         """
 
         item = self.get_object()
@@ -628,11 +629,13 @@ class ItemViewSet(
         mimetype = mime_detector.from_buffer(file.read(2048))
         file.close()
 
-        item.upload_state = models.ItemUploadStateChoices.UPLOADED
+        item.upload_state = models.ItemUploadStateChoices.ANALYZING
         item.mimetype = mimetype
         item.size = file.size
 
         item.save(update_fields=["upload_state", "mimetype", "size"])
+
+        malware_detection.analyse_file(item.file_key, item_id=item.id)
 
         serializer = self.get_serializer(item)
 
@@ -1055,8 +1058,8 @@ class ItemViewSet(
             logger.debug("Item '%s' is not a file", item.id)
             raise drf.exceptions.PermissionDenied()
 
-        if item.upload_state != models.ItemUploadStateChoices.UPLOADED:
-            logger.debug("Item '%s' is not uploaded", item.id)
+        if item.upload_state != models.ItemUploadStateChoices.READY:
+            logger.debug("Item '%s' is not ready", item.id)
             raise drf.exceptions.PermissionDenied()
 
         # Generate S3 authorization headers using the extracted URL parameters

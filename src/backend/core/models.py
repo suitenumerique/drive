@@ -93,7 +93,10 @@ class ItemUploadStateChoices(models.TextChoices):
     """Defines the possible states of an item."""
 
     PENDING = "pending", _("Pending")
-    UPLOADED = "uploaded", _("Uploaded")
+    ANALYZING = "analyzing", _("Analyzing")
+    SUSPICIOUS = "suspicious", _("Suspicious")
+    FILE_TOO_LARGE_TO_ANALYZE = "file_too_large_to_analyze", _("File too large to analyze")
+    READY = "ready", _("Ready")
 
 
 class DuplicateEmailError(Exception):
@@ -518,7 +521,7 @@ class Item(TreeModel, BaseModel):
         default=ItemTypeChoices.FOLDER,
     )
     upload_state = models.CharField(
-        max_length=20,
+        max_length=25,
         choices=ItemUploadStateChoices.choices,
         null=True,
         blank=True,
