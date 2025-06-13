@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { getDriver } from "@/features/config/Config";
-import { Button } from "@openfun/cunningham-react";
+import { Button, Loader } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { ItemType, LinkReach } from "@/features/drivers/types";
 import { LinkRole } from "@/features/drivers/types";
@@ -18,6 +18,7 @@ import { useSearchParams } from "next/navigation";
 import { useMutationCreateFile } from "@/features/explorer/hooks/useMutations";
 import { ExplorerTree } from "@/features/explorer/components/tree/ExplorerTree";
 import { fetchAPI } from "@/features/api/fetchApi";
+import { Spinner } from "@gouvfr-lasuite/ui-kit";
 
 export enum ClientMessageType {
   // Picker.
@@ -125,6 +126,8 @@ const PickerFooter = ({ token }: { token: string }) => {
   const { selectedItems } = useExplorer();
   const driver = getDriver();
 
+  const [waitForClosing, setWaitForClosing] = useState(false);
+
   const onChoose = async () => {
     const promises = selectedItems.map((item) => {
       return driver.updateItem({
@@ -143,7 +146,7 @@ const PickerFooter = ({ token }: { token: string }) => {
       },
     });
     console.log("response", response);
-    window.close();
+    setWaitForClosing(true);
   };
 
   const onCancel = () => {
@@ -158,10 +161,20 @@ const PickerFooter = ({ token }: { token: string }) => {
         })}
       </div>
       <div className="explorer__footer__actions">
-        <Button color="primary-text" onClick={onCancel}>
+        <Button
+          color="primary-text"
+          onClick={onCancel}
+          disabled={waitForClosing}
+        >
           {t("sdk.explorer.cancel")}
         </Button>
-        <Button onClick={onChoose}>{t("sdk.explorer.choose")}</Button>
+        <Button
+          onClick={onChoose}
+          disabled={waitForClosing}
+          icon={waitForClosing ? <Spinner size="sm" /> : undefined}
+        >
+          {t("sdk.explorer.choose")}
+        </Button>
       </div>
     </div>
   );

@@ -2,12 +2,14 @@ import { DEFAULT_CONFIG } from "./Config";
 import { ClientMessageType, Item, SDKRelayEvent } from "./Types";
 import { randomToken } from "./utils";
 
+export interface PickerResult {
+  type: "picked" | "cancelled";
+  items?: Item[];
+}
+
 export const openPicker = async (
-  customConfig?: Partial<typeof DEFAULT_CONFIG>,
-  onFailure?: () => void
-): Promise<{
-  items: Item[];
-}> => {
+  customConfig?: Partial<typeof DEFAULT_CONFIG>
+): Promise<PickerResult> => {
   const config = { ...DEFAULT_CONFIG, ...customConfig };
 
   const token = randomToken();
@@ -21,17 +23,58 @@ export const openPicker = async (
   if (popupWindow) {
     popupWindow.focus();
   } else {
-    onFailure?.();
+    return {
+      type: "cancelled",
+    };
   }
 
-  const result = await startPollingForEvent(config, token);
+  return new Promise((resolve) => {
+    const { stop } = startPollingForEvent(config, token, (event) => {
+      if (event?.type === ClientMessageType.ITEMS_SELECTED) {
+        stopWatchingForClosing();
+        popupWindow?.close();
+        resolve({
+          type: "picked",
+          items: event.data.items,
+        });
+      } else {
+        console.error("Unexpected event", event);
+        throw new Error("Unexpected event");
+      }
+    });
 
-  if (result?.type === ClientMessageType.ITEMS_SELECTED) {
-    return result.data;
-  }
+    const { stop: stopWatchingForClosing } = watchForClosing(
+      popupWindow,
+      () => {
+        console.log("Popup closed");
+        stop();
+        resolve({
+          type: "cancelled",
+        });
+      }
+    );
+  });
+};
 
-  console.error("Unexpected event", result);
-  throw new Error("Unexpected event");
+const watchForClosing = (popupWindow: Window, onClosed: () => void) => {
+  let timeout: NodeJS.Timeout;
+  const check = () => {
+    if (popupWindow.closed) {
+      onClosed();
+      clearTimeout(timeout);
+    } else {
+      timeout = setTimeout(check, 100);
+    }
+  };
+
+  check();
+
+  return {
+    stop: () => {
+      console.log("Stop watching for closing");
+      clearTimeout(timeout);
+    },
+  };
 };
 
 /**
@@ -42,25 +85,31 @@ export const openPicker = async (
  */
 const startPollingForEvent = (
   config: typeof DEFAULT_CONFIG,
-  token: string
-): Promise<SDKRelayEvent> => {
-  return new Promise((resolve) => {
-    const poll = async () => {
-      const response = await fetch(
-        `${config.apiUrl}/sdk-relay/events/${token}/`
-      );
-      const data = await response.json();
-      console.log("Event", data);
+  token: string,
+  onEvent: (event: SDKRelayEvent) => void
+) => {
+  let interval: NodeJS.Timeout;
 
-      if (data?.type) {
-        console.log("Event resolved", data);
-        resolve(data);
-        return;
-      }
-      setTimeout(poll, 2000);
-    };
+  const poll = async () => {
+    const response = await fetch(`${config.apiUrl}/sdk-relay/events/${token}/`);
+    const data = await response.json();
+    console.log("Event", data);
 
-    // Start polling
-    poll();
-  });
+    if (data?.type) {
+      console.log("Event resolved", data);
+      onEvent(data);
+      return;
+    }
+    interval = setTimeout(poll, 1000);
+  };
+
+  // Start polling
+  poll();
+
+  return {
+    stop: () => {
+      console.log("Stop polling");
+      clearInterval(interval);
+    },
+  };
 };

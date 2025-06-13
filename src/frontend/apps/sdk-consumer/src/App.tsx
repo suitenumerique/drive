@@ -1,21 +1,26 @@
 import "./App.css";
-import { openPicker, openSaver, type Item } from "@gouvfr-lasuite/drive-sdk";
+import {
+  openPicker,
+  openSaver,
+  type Item,
+  type PickerResult,
+} from "@gouvfr-lasuite/drive-sdk";
 import { useState } from "react";
 
 const CONFIG = {
-  url: "https://fichiers.sardinepq.fr/sdk",
-  apiUrl: "https://fichiers.sardinepq.fr/api/v1.0",
+  // url: "https://fichiers.sardinepq.fr/sdk",
+  // apiUrl: "https://fichiers.sardinepq.fr/api/v1.0",
 };
 
 function App() {
-  const [items, setItems] = useState<Item[]>([]);
+  const [pickerResult, setPickerResult] = useState<PickerResult | null>(null);
   const [picking, setPicking] = useState(false);
 
   const pick = async () => {
     setPicking(true);
-    const { items } = await openPicker(CONFIG);
-    console.log("Selected items:", items);
-    setItems(items);
+    const result = await openPicker(CONFIG);
+    console.log("Picker result:", result);
+    setPickerResult(result);
     setPicking(false);
   };
 
@@ -49,11 +54,16 @@ function App() {
       }}
     >
       <button onClick={pick}>{picking ? "Picking..." : "Open picker"}</button>
-      {items.length > 0 && (
+      {pickerResult?.type === "cancelled" && (
+        <div>
+          <h3>Cancelled :(</h3>
+        </div>
+      )}
+      {pickerResult?.type === "picked" && (
         <div>
           <h3>Selected items:</h3>
           <ul>
-            {items?.map((item) => (
+            {pickerResult.items?.map((item) => (
               <li key={item.id}>
                 {item.title} - {item.size} bytes{" "}
                 <a href={item.url}>{item.url}</a>

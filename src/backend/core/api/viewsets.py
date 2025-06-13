@@ -1215,6 +1215,8 @@ class SDKRelayEventView(drf.views.APIView):
     """API View for SDK relay interactions."""
     permission_classes = []
     
+    throttle_scope = 'sdk_event_relay'
+    
     def get(self, request, token):
         """
         GET /api/v1.0/sdk-relay/events/<token>/
