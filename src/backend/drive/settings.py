@@ -333,7 +333,22 @@ class Base(Configuration):
 
     # Cache
     CACHES = {
-        "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": values.Value(
+                "redis://redis:6379/1",
+                environ_name="REDIS_URL",
+                environ_prefix=None,
+            ),
+            "TIMEOUT": values.IntegerValue(
+                30,  # timeout in seconds
+                environ_name="CACHES_DEFAULT_TIMEOUT",
+                environ_prefix=None,
+            ),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+        },
     }
 
     REST_FRAMEWORK = {
@@ -350,6 +365,9 @@ class Base(Configuration):
         "PAGE_SIZE": 20,
         "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
         "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+        "DEFAULT_THROTTLE_CLASSES": [
+            "rest_framework.throttling.ScopedRateThrottle"
+        ],
         "DEFAULT_THROTTLE_RATES": {
             "user_list_sustained": values.Value(
                 default="180/hour",
@@ -359,6 +377,11 @@ class Base(Configuration):
             "user_list_burst": values.Value(
                 default="30/minute",
                 environ_name="API_USERS_LIST_THROTTLE_RATE_BURST",
+                environ_prefix=None,
+            ),
+            "sdk_event_relay": values.Value(
+                default="100/minute",
+                environ_name="API_SDK_EVENT_RELAY_THROTTLE_RATE",
                 environ_prefix=None,
             ),
         },
@@ -465,6 +488,9 @@ class Base(Configuration):
     OIDC_OP_LOGOUT_ENDPOINT = values.Value(
         None, environ_name="OIDC_OP_LOGOUT_ENDPOINT", environ_prefix=None
     )
+    OIDC_REDIRECT_FIELD_NAME = values.Value(
+        "returnTo", environ_name="OIDC_REDIRECT_FIELD_NAME", environ_prefix=None
+    )
     OIDC_AUTH_REQUEST_EXTRA_PARAMS = values.DictValue(
         {}, environ_name="OIDC_AUTH_REQUEST_EXTRA_PARAMS", environ_prefix=None
     )
@@ -487,7 +513,9 @@ class Base(Configuration):
         default=False, environ_name="OIDC_REDIRECT_REQUIRE_HTTPS", environ_prefix=None
     )
     OIDC_REDIRECT_ALLOWED_HOSTS = values.ListValue(
-        default=[], environ_name="OIDC_REDIRECT_ALLOWED_HOSTS", environ_prefix=None
+        default=["localhost", "127.0.0.1"],
+        environ_name="OIDC_REDIRECT_ALLOWED_HOSTS",
+        environ_prefix=None,
     )
     OIDC_STORE_ID_TOKEN = values.BooleanValue(
         default=True, environ_name="OIDC_STORE_ID_TOKEN", environ_prefix=None
@@ -537,6 +565,13 @@ class Base(Configuration):
     OIDC_USERINFO_SHORTNAME_FIELD = values.Value(
         default="first_name",
         environ_name="OIDC_USERINFO_SHORTNAME_FIELD",
+        environ_prefix=None,
+    )
+
+    # SDK Relay
+    SDK_RELAY_CACHE_TIMEOUT = values.PositiveIntegerValue(
+        600,  # 10 minutes
+        environ_name="SDK_RELAY_CACHE_TIMEOUT",
         environ_prefix=None,
     )
 
@@ -686,28 +721,6 @@ class Development(Base):
     SESSION_COOKIE_NAME = "drive_sessionid"
 
     USE_SWAGGER = True
-    SESSION_CACHE_ALIAS = "session"
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.dummy.DummyCache",
-        },
-        "session": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": values.Value(
-                "redis://redis:6379/2",
-                environ_name="REDIS_URL",
-                environ_prefix=None,
-            ),
-            "TIMEOUT": values.IntegerValue(
-                30,  # timeout in seconds
-                environ_name="CACHES_DEFAULT_TIMEOUT",
-                environ_prefix=None,
-            ),
-            "OPTIONS": {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            },
-        },
-    }
 
     DEBUG_TOOLBAR_CONFIG = {
         "SHOW_TOOLBAR_CALLBACK": lambda request: True,
@@ -794,25 +807,6 @@ class Production(Base):
 
     # Privacy
     SECURE_REFERRER_POLICY = "same-origin"
-
-    CACHES = {
-        "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": values.Value(
-                "redis://redis:6379/1",
-                environ_name="REDIS_URL",
-                environ_prefix=None,
-            ),
-            "TIMEOUT": values.IntegerValue(
-                30,  # timeout in seconds
-                environ_name="CACHES_DEFAULT_TIMEOUT",
-                environ_prefix=None,
-            ),
-            "OPTIONS": {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            },
-        },
-    }
 
 
 class Feature(Production):
