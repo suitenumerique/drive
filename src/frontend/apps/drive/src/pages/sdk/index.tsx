@@ -12,14 +12,15 @@ export default function SDKPage() {
   const token = searchParams.get("token");
 
   const redirect = async () => {
-    const item = await getLastVisitedItem();
-    if (item) {
-      let url = `/sdk/explorer/items/${item.id}`;
-      if (mode) {
-        url += `?mode=${mode}`;
-      }
-      window.location.href = url;
+    // const item = await getLastVisitedItem();
+    // if (item) {
+    // let url = `/sdk/explorer/items/${item.id}`;
+    let url = `/sdk/explorer/workspaces`;
+    if (mode) {
+      url += `?mode=${mode}`;
     }
+    window.location.href = url;
+    // }
   };
 
   useEffect(() => {
@@ -33,7 +34,6 @@ export default function SDKPage() {
       redirect();
     } else {
       const returnTo = window.location.href;
-      console.log("returnTo", returnTo);
       login(returnTo);
     }
   }, [user]);

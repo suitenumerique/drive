@@ -17,7 +17,7 @@ export const openPicker = async (
   const popupWindow = window.open(
     `${config.url}?token=${token}`,
     "CreatePopupWindow",
-    `popup=yes,status=no,location=no,toolbar=no,menubar=no,width=1300,height=600,left=100,top=100, resizable=yes,scrollbars=yes`
+    `popup=yes,status=no,location=no,toolbar=no,menubar=no,width=1000,height=600,left=100,top=100, resizable=yes,scrollbars=yes`
   );
 
   if (popupWindow) {

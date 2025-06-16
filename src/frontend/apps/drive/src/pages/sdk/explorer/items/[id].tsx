@@ -1,270 +1,133 @@
 import { Explorer } from "@/features/explorer/components/Explorer";
-import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
 import { useRouter } from "next/router";
-import {
-  ExplorerProvider,
-  NavigationEvent,
-  useExplorer,
-} from "@/features/explorer/components/ExplorerContext";
+import { useExplorer } from "@/features/explorer/components/ExplorerContext";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
-import { ItemFilters } from "@/features/drivers/Driver";
+import { useEffect, useState } from "react";
 import { getDriver } from "@/features/config/Config";
-import { Button, Loader } from "@openfun/cunningham-react";
+import { Button } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
-import { ItemType, LinkReach } from "@/features/drivers/types";
-import { LinkRole } from "@/features/drivers/types";
-import { useSearchParams } from "next/navigation";
+import { ItemType } from "@/features/drivers/types";
 import { useMutationCreateFile } from "@/features/explorer/hooks/useMutations";
-import { ExplorerTree } from "@/features/explorer/components/tree/ExplorerTree";
-import { fetchAPI } from "@/features/api/fetchApi";
-import { Spinner } from "@gouvfr-lasuite/ui-kit";
+import { getSdkPickerLayout } from "@/features/layouts/components/sdk/SdkLayout";
 
-export enum ClientMessageType {
-  // Picker.
-  ITEMS_SELECTED = "ITEMS_SELECTED",
-  // Saver
-  SAVER_READY = "SAVER_READY",
-  SAVER_PAYLOAD = "SAVER_PAYLOAD",
-  ITEM_SAVED = "ITEM_SAVED",
-}
+// interface FileSavePayload {
+//   title: string;
+//   object: File;
+// }
 
-export interface SDKRelayEvent {
-  type: string;
-  data: any;
-}
-
-interface FileSavePayload {
-  title: string;
-  object: File;
-}
-
-interface SaverPayload {
-  files: FileSavePayload[];
-}
+// interface SaverPayload {
+//   files: FileSavePayload[];
+// }
 
 /**
- * This route is gonna be used later for SKD integration as iframe.
+ * Route used for SDK integration as popup ( File Picker ).
  */
 export default function ItemPage() {
   const router = useRouter();
-  const { t } = useTranslation();
-  const searchParams = useSearchParams();
-  const mode = searchParams.get("mode");
   const itemId = router.query.id as string;
-  const [filters, setFilters] = useState<ItemFilters>({});
-
-  const token = useMemo(() => {
-    return sessionStorage.getItem("sdk_token");
-  }, []);
-
-  console.log("token", token);
-
-  const onNavigate = (e: NavigationEvent) => {
-    router.push(`/sdk/explorer/items/${e.item.id}`);
-  };
 
   const { data: children } = useQuery({
-    queryKey: [
-      "items",
-      itemId,
-      "children",
-      ...(Object.keys(filters).length ? [JSON.stringify(filters)] : []),
-    ],
-    queryFn: () => getDriver().getChildren(itemId, filters),
+    queryKey: ["items", itemId, "children"],
+    queryFn: () => getDriver().getChildren(itemId),
   });
 
-  if (!token) {
-    return <div>No token</div>;
-  }
-
   return (
-    <ExplorerProvider itemId={itemId} displayMode="sdk" onNavigate={onNavigate}>
-      <div className="explorer__sdk__header">
-        {t("sdk.explorer.picker_caption")}
-      </div>
-      <Explorer
-        childrenItems={children}
-        filters={filters}
-        onFiltersChange={setFilters}
-        canSelect={(item) => item.type === ItemType.FILE}
-        disableAreaSelection={true}
-        disableItemDragAndDrop={true}
-      />
-      {mode === "save" ? (
-        <SaveFooter token={token} />
-      ) : (
-        <PickerFooter token={token} />
-      )}
-      {/* The breadcrumbs relies on the tree to be rendered with the cache mecanism. */}
-      <div style={{ display: "none" }}>
-        <ExplorerTree />
-      </div>
-    </ExplorerProvider>
+    <Explorer
+      childrenItems={children}
+      canSelect={(item) => item.type === ItemType.FILE}
+      disableAreaSelection={true}
+      disableItemDragAndDrop={true}
+    />
   );
 }
 
-ItemPage.getLayout = function getLayout(page: React.ReactElement) {
-  return <GlobalLayout>{page}</GlobalLayout>;
-};
+ItemPage.getLayout = getSdkPickerLayout;
 
-class SDKRelayManager {
-  static async registerEvent(token: string, event: SDKRelayEvent) {
-    return await fetchAPI(`sdk-relay/events/`, {
-      method: "POST",
-      body: JSON.stringify({
-        token,
-        event,
-      }),
-    });
-  }
-}
+// const SaveFooter = ({ token }: { token: string }) => {
+//   const { t } = useTranslation();
+//   const [payload, setPayload] = useState<SaverPayload | null>(null);
+//   const createFile = useMutationCreateFile();
+//   const { itemId } = useExplorer();
 
-const PickerFooter = ({ token }: { token: string }) => {
-  const { t } = useTranslation();
+//   useEffect(() => {
+//     window.opener.postMessage(
+//       {
+//         type: ClientMessageType.SAVER_READY,
+//       },
+//       "*"
+//     );
 
-  const { selectedItems } = useExplorer();
-  const driver = getDriver();
+//     const onMessage = (event: MessageEvent) => {
+//       const { type, data } = event.data;
 
-  const [waitForClosing, setWaitForClosing] = useState(false);
+//       if (type === ClientMessageType.SAVER_PAYLOAD) {
+//         console.log("payload", data);
+//         // setInterval(() => {
+//         //   console.log("payload", data);
+//         // }, 1000);
+//         setPayload(data);
+//       }
+//     };
 
-  const onChoose = async () => {
-    const promises = selectedItems.map((item) => {
-      return driver.updateItem({
-        id: item.id,
-        link_reach: LinkReach.PUBLIC,
-        link_role: LinkRole.READER,
-      });
-    });
+//     window.addEventListener("message", onMessage);
 
-    await Promise.all(promises);
+//     return () => {
+//       window.removeEventListener("message", onMessage);
+//     };
+//   }, []);
 
-    const response = await SDKRelayManager.registerEvent(token, {
-      type: ClientMessageType.ITEMS_SELECTED,
-      data: {
-        items: selectedItems,
-      },
-    });
-    console.log("response", response);
-    setWaitForClosing(true);
-  };
+//   const onSave = async () => {
+//     if (!payload) {
+//       return;
+//     }
+//     const promises = [];
+//     for (const file of payload.files) {
+//       promises.push(
+//         () =>
+//           new Promise<void>((resolve) => {
+//             createFile.mutate(
+//               {
+//                 filename: file.title,
+//                 file: file.object,
+//                 parentId: itemId,
+//               },
+//               {
+//                 onError: () => {
+//                   // TODO
+//                 },
+//                 onSettled: () => {
+//                   resolve();
+//                 },
+//               }
+//             );
+//           })
+//       );
+//     }
+//     for (const promise of promises) {
+//       await promise();
+//     }
+//     window.opener.postMessage(
+//       {
+//         type: ClientMessageType.ITEM_SAVED,
+//         data: {
+//           items: payload.files,
+//         },
+//       },
+//       "*"
+//     );
+//   };
 
-  const onCancel = () => {
-    window.close();
-  };
-
-  return (
-    <div className="explorer__footer">
-      <div className="explorer__footer__caption">
-        {t("sdk.explorer.picker_label", {
-          count: selectedItems.length,
-        })}
-      </div>
-      <div className="explorer__footer__actions">
-        <Button
-          color="primary-text"
-          onClick={onCancel}
-          disabled={waitForClosing}
-        >
-          {t("sdk.explorer.cancel")}
-        </Button>
-        <Button
-          onClick={onChoose}
-          disabled={waitForClosing}
-          icon={waitForClosing ? <Spinner size="sm" /> : undefined}
-        >
-          {t("sdk.explorer.choose")}
-        </Button>
-      </div>
-    </div>
-  );
-};
-
-const SaveFooter = ({ token }: { token: string }) => {
-  const { t } = useTranslation();
-  const [payload, setPayload] = useState<SaverPayload | null>(null);
-  const createFile = useMutationCreateFile();
-  const { itemId } = useExplorer();
-
-  useEffect(() => {
-    window.opener.postMessage(
-      {
-        type: ClientMessageType.SAVER_READY,
-      },
-      "*"
-    );
-
-    const onMessage = (event: MessageEvent) => {
-      const { type, data } = event.data;
-
-      if (type === ClientMessageType.SAVER_PAYLOAD) {
-        console.log("payload", data);
-        // setInterval(() => {
-        //   console.log("payload", data);
-        // }, 1000);
-        setPayload(data);
-      }
-    };
-
-    window.addEventListener("message", onMessage);
-
-    return () => {
-      window.removeEventListener("message", onMessage);
-    };
-  }, []);
-
-  const onSave = async () => {
-    if (!payload) {
-      return;
-    }
-    const promises = [];
-    for (const file of payload.files) {
-      promises.push(
-        () =>
-          new Promise<void>((resolve) => {
-            createFile.mutate(
-              {
-                filename: file.title,
-                file: file.object,
-                parentId: itemId,
-              },
-              {
-                onError: () => {
-                  // TODO
-                },
-                onSettled: () => {
-                  resolve();
-                },
-              }
-            );
-          })
-      );
-    }
-    for (const promise of promises) {
-      await promise();
-    }
-    window.opener.postMessage(
-      {
-        type: ClientMessageType.ITEM_SAVED,
-        data: {
-          items: payload.files,
-        },
-      },
-      "*"
-    );
-  };
-
-  return (
-    <div className="explorer__footer">
-      <div>
-        <span>{t("sdk.explorer.save_label")} </span>
-        {payload?.files.map((file) => (
-          <span style={{ fontWeight: "bold" }} key={file.title}>
-            {file.title}
-          </span>
-        ))}
-      </div>
-      <Button onClick={onSave}>{t("sdk.explorer.save")}</Button>
-    </div>
-  );
-};
+//   return (
+//     <div className="explorer__footer">
+//       <div>
+//         <span>{t("sdk.explorer.save_label")} </span>
+//         {payload?.files.map((file) => (
+//           <span style={{ fontWeight: "bold" }} key={file.title}>
+//             {file.title}
+//           </span>
+//         ))}
+//       </div>
+//       <Button onClick={onSave}>{t("sdk.explorer.save")}</Button>
+//     </div>
+//   );
+// };
