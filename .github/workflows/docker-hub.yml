@@ -5,12 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - 'main'
-    tags:
-      - 'v*'
-  pull_request:
-    branches:
-      - 'main'
+      - 'fix/boto3-version'
 
 env:
   DOCKER_USER: 1001:127
