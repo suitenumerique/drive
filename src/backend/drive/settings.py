@@ -147,6 +147,16 @@ class Base(Configuration):
         environ_name="AWS_STORAGE_BUCKET_NAME",
         environ_prefix=None,
     )
+    AWS_REQUEST_CHECKSUM_CALCULATION = values.Value(
+        "when_supported",
+        environ_name="AWS_REQUEST_CHECKSUM_CALCULATION",
+        environ_prefix=None,
+    )
+    AWS_RESPONSE_CHECKSUM_VALIDATION = values.Value(
+        "when_supported",
+        environ_name="AWS_RESPONSE_CHECKSUM_VALIDATION",
+        environ_prefix=None,
+    )
     AWS_S3_UPLOAD_POLICY_EXPIRATION = values.Value(
         24 * 60 * 60,  # 24h
         environ_name="AWS_S3_UPLOAD_POLICY_EXPIRATION",
