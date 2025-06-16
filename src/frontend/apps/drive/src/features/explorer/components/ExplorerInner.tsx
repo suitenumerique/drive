@@ -136,7 +136,7 @@ export const ExplorerInner = (props: ExplorerProps) => {
   const renderContent = () => {
     return (
       <>
-        <ExplorerBreadcrumbsMobile />
+        {displayMode === "app" && <ExplorerBreadcrumbsMobile />}
         <div
           {...dropZone.getRootProps({
             className: clsx(`explorer explorer--${displayMode}`, {

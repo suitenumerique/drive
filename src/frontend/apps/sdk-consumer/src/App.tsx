@@ -8,8 +8,8 @@ import {
 import { useState } from "react";
 
 const CONFIG = {
-  // url: "https://fichiers.sardinepq.fr/sdk",
-  // apiUrl: "https://fichiers.sardinepq.fr/api/v1.0",
+  url: "https://fichiers.sardinepq.fr/sdk",
+  apiUrl: "https://fichiers.sardinepq.fr/api/v1.0",
 };
 
 function App() {

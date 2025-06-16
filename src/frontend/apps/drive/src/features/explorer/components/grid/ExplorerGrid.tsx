@@ -29,6 +29,7 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     setRightPanelForcedItem,
     item,
     itemId,
+    displayMode,
   } = useExplorer();
 
   const { filters, disableItemDragAndDrop } = useExplorerInner();

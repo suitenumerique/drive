@@ -75,6 +75,10 @@ server {
         try_files $uri /sdk/explorer/items/[id].html;
     }
 
+    location ~ "^/sdk/explorer/workspaces/?$" {
+        try_files $uri /sdk/explorer/workspaces.html;
+    }
+
     location ~ "^/sdk/?$" {
         try_files $uri /sdk.html;
     }

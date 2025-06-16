@@ -25,6 +25,12 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 
     .explorer__content {
       border: 1px var(--c--theme--colors--greyscale-200) solid;
+
+      &__breadcrumbs {
+        @media (max-width: $tablet) {
+          display: none;
+        }
+      }
     }
   }
 
@@ -35,6 +41,14 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 
     .explorer__content {
       padding: 16px 24px;
+    }
+
+    .explorer__filters {
+      display: none;
+    }
+
+    .explorer__selection-bar {
+      display: none;
     }
   }
 
@@ -90,10 +104,6 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
       display: flex;
       justify-content: space-between;
       align-items: center;
-
-      @media (max-width: $tablet) {
-        display: none;
-      }
 
       &__actions {
         padding-right: 6px;
@@ -508,7 +518,7 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 }
 
 @media (max-width: $tablet) {
-  .explorer {
+  .explorer-app {
     background-color: var(--c--theme--colors--greyscale-000);
 
     &__content {
@@ -610,16 +620,6 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
   &__actions {
     display: flex;
     gap: 12px;
-  }
-}
-
-.explorer--sdk {
-  .explorer__filters {
-    display: none;
-  }
-
-  .explorer__selection-bar {
-    display: none;
   }
 }
 
