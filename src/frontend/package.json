@@ -7,8 +7,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "cd apps/drive && yarn build"
+    "dev": "yarn workspace drive run dev",
+    "build": "yarn workspace drive run build",
+    "lint": "yarn workspace drive run lint"
   },
   "resolutions": {},
   "devDependencies": {
