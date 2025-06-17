@@ -67,7 +67,7 @@ export default function HomePage() {
           banner={banner.src}
           title={t("home.title")}
           subtitle={t("home.subtitle")}
-          mainButton={<ProConnectButton onClick={login} />}
+          mainButton={<ProConnectButton onClick={() => login()} />}
         />
       </HomeGutter>
       <Footer />

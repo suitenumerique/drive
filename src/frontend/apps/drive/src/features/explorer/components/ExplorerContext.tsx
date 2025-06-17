@@ -20,6 +20,7 @@ import {
   TreeViewNodeTypeEnum,
 } from "@gouvfr-lasuite/ui-kit";
 import { ExplorerDndProvider } from "./ExplorerDndProvider";
+import { useFirstLevelItems } from "../hooks/useQueries";
 export interface ExplorerContextType {
   displayMode: "sdk" | "app";
   selectedItems: Item[];
@@ -109,12 +110,7 @@ export const ExplorerProvider = ({
     enabled: !!itemId,
   });
 
-  const { data: firstLevelItems } = useQuery({
-    queryKey: ["firstLevelItems"],
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    queryFn: () => getDriver().getItems(),
-  });
+  const { data: firstLevelItems } = useFirstLevelItems();
 
   const { data: tree } = useQuery({
     queryKey: ["initialTreeItem", initialId],

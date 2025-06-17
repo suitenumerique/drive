@@ -44,7 +44,10 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     setRightPanelForcedItem,
     item,
     itemId,
+    displayMode,
   } = useExplorer();
+
+  console.log("displayMode", displayMode);
 
   const { filters } = useExplorerInner();
   const { overedItemIds, setOveredItemIds } = useDragItemContext();
@@ -138,6 +141,8 @@ export const ExplorerGrid = (props: ExplorerProps) => {
   });
 
   const canCreateChildren = item?.abilities?.children_create;
+  const canSelect = props.canSelect ?? (() => true);
+
   const getContent = () => {
     if (isLoading) {
       return <Loader aria-label={tc("components.datagrid.loader_aria")} />;
@@ -204,10 +209,16 @@ export const ExplorerGrid = (props: ExplorerProps) => {
                       return;
                     }
 
-                    const isMobile = isTablet();
+                    // In SDK mode we want the popup to behave like desktop. For instance we want the simple click to
+                    // trigger selection, not to open a file as it is the case on mobile.
+                    const isMobile = isTablet() && displayMode === "app";
 
                     // Single click to select/deselect the item
                     if (!isMobile && e.detail === 1) {
+                      if (!canSelect(row.original)) {
+                        return;
+                      }
+
                       if (e.shiftKey && lastSelectedRowRef.current) {
                         // Get all rows between last selected and current
                         const rows = table.getRowModel().rows;
@@ -237,7 +248,11 @@ export const ExplorerGrid = (props: ExplorerProps) => {
 
                           setSelectedItems(newSelection);
                         }
-                      } else if (e.metaKey || e.ctrlKey) {
+                      } else if (
+                        e.metaKey ||
+                        e.ctrlKey ||
+                        displayMode === "sdk" // Select is sticky with SDK picker mode.
+                      ) {
                         // Toggle the selected item.
                         setSelectedItems((value) => {
                           let newValue = [...value];

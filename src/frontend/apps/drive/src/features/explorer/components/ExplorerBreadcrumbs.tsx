@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { TreeViewNodeTypeEnum, useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import { Item, TreeItem } from "@/features/drivers/types";
 import { ExplorerTreeItemIcon } from "./tree/ExplorerTreeItem";
+import { useExplorerInner } from "./Explorer";
 
 export const ExplorerBreadcrumbs = () => {
   const treeContext = useTreeContext<TreeItem>();
