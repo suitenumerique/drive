@@ -10,6 +10,14 @@
 @use "./../features/explorer/components/tree/ExplorerTree.scss";
 @use "./../features/ui/components/info/InfoRow.scss";
 @use "./../features/ui/components/responsive";
+@use "./../features/ui/preview/audio-player/audio-player.scss";
+@use "./../features/ui/preview/pdf-preview/pdf-preview.scss";
+@use "./../features/ui/preview/files-preview/files-preview.scss";
+@use "./../features/ui/preview/image-viewer/ImageViewer.scss";
+@use "./../features/ui/preview/video-player/VideoPlayer.scss";
+@use "./../features/ui/preview/components/duration-bar/DurationBar.scss";
+@use "./../features/ui/preview/components/volume-bar/VolumeBar.scss";
+@use "./../features/ui/preview/components/controls/PreviewControls.scss";
 @use "./../pages/index.scss" as *;
 body {
   margin: 0;
@@ -48,4 +56,16 @@ body {
 
 .p-base {
   padding: var(--c--theme--spacings--base);
+}
+
+.pdf-container {
+  #title {
+    display: none;
+  }
+  &__object {
+    // background-color: red;
+    #title {
+      display: none !important;
+    }
+  }
 }

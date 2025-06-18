@@ -28,6 +28,7 @@ import { ExplorerProps, useExplorerInner } from "../Explorer";
 import { useDragItemContext } from "../ExplorerDndProvider";
 import { ExplorerGridMobileCell } from "./ExplorerGridMobileCell";
 import { isTablet } from "@/features/ui/components/responsive/ResponsiveDivs";
+import { FilePreviewExample } from "@/features/ui/preview/files-preview/example";
 
 const EMPTY_ARRAY: Item[] = [];
 
@@ -337,6 +338,27 @@ export const ExplorerGrid = (props: ExplorerProps) => {
       })}
     >
       {getContent()}
+      {/*<AudioPlayerExample /> */}
+      {/* <div className="pdf-container">
+        <object
+          data="http://localhost:8083/media/item/b5e8124e-135a-448f-8720-25dd43efbecf/Proposition%20de%20dates.pdf"
+          type="application/pdf"
+          width="900px"
+          height="1100px"
+          id="toto"
+          className="pdf-container__object"
+        >
+          <p>
+            Alternative text - include a link{" "}
+            <a href="myfile.pdf">to the PDF!</a>
+          </p>
+        </object>
+      </div> */}
+
+      {/* <VideoPlayerExample /> */}
+      {/* <ImageViewerExample /> */}
+      <FilePreviewExample />
+      {/* <PreviewPdf /> */}
     </div>
   );
 };
