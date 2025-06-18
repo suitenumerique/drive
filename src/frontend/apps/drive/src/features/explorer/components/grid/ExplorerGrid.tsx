@@ -8,6 +8,7 @@ import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import { Loader, useCunningham } from "@openfun/cunningham-react";
 import gridEmpty from "@/assets/grid_empty.png";
 import { ExplorerProps, useExplorerInner } from "../Explorer";
+import { FilePreviewExample } from "@/features/ui/preview/files-preview/example";
 import { ExplorerGridItems } from "./ExplorerGridItems";
 
 /**
@@ -136,6 +137,27 @@ export const ExplorerGrid = (props: ExplorerProps) => {
       })}
     >
       {getContent()}
+      {/*<AudioPlayerExample /> */}
+      {/* <div className="pdf-container">
+        <object
+          data="http://localhost:8083/media/item/b5e8124e-135a-448f-8720-25dd43efbecf/Proposition%20de%20dates.pdf"
+          type="application/pdf"
+          width="900px"
+          height="1100px"
+          id="toto"
+          className="pdf-container__object"
+        >
+          <p>
+            Alternative text - include a link{" "}
+            <a href="myfile.pdf">to the PDF!</a>
+          </p>
+        </object>
+      </div> */}
+
+      {/* <VideoPlayerExample /> */}
+      {/* <ImageViewerExample /> */}
+      <FilePreviewExample />
+      {/* <PreviewPdf /> */}
     </div>
   );
 };

@@ -1,0 +1,21 @@
+.suite-preview-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  &__btn {
+    background: transparent !important;
+    color: #5e5e5e !important;
+    padding: 8px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    border-radius: 6px !important;
+    transition: all 0.2s ease !important;
+
+    &:hover {
+      background: #e9ecef !important;
+      border-color: #adb5bd !important;
+    }
+  }
+}
