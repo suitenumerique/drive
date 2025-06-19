@@ -1182,6 +1182,7 @@ class ConfigView(drf.views.APIView):
             "FRONTEND_THEME",
             "MEDIA_BASE_URL",
             "POSTHOG_KEY",
+            "POSTHOG_HOST",
             "LANGUAGES",
             "LANGUAGE_CODE",
             "SENTRY_DSN",
