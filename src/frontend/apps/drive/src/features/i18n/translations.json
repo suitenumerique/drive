@@ -5,7 +5,7 @@
         "success": "Copied to clipboard",
         "error": "Failed to copy to clipboard"
       },
-      "app_title": "Files",
+      "app_title": "Drive",
       "app_description": "Files management",
       "welcome": "Welcome",
       "logout": "Logout",

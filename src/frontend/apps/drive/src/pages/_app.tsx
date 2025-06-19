@@ -18,6 +18,7 @@ import {
 } from "@/features/ui/components/toaster/Toaster";
 import { errorToString } from "@/features/api/APIError";
 import Head from "next/head";
+import { useTranslation } from "react-i18next";
 
 export type NextPageWithLayout<P = object, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;
@@ -54,11 +55,12 @@ const queryClient = new QueryClient({
 export default function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   // Use the layout defined at the page level, if available
   const getLayout = Component.getLayout ?? ((page) => page);
+  const { t } = useTranslation();
 
   return (
     <>
       <Head>
-        <title>Drive</title>
+        <title>{t("app_title")}</title>
         <link rel="icon" href="/images/favicon-light.png" type="image/png" />
         <link
           rel="icon"
