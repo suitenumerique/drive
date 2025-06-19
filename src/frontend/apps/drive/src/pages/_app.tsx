@@ -19,6 +19,7 @@ import {
 import { errorToString } from "@/features/api/APIError";
 import Head from "next/head";
 import { useTranslation } from "react-i18next";
+import { AnalyticsProvider } from "@/features/analytics/AnalyticsProvider";
 
 export type NextPageWithLayout<P = object, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;
@@ -76,9 +77,11 @@ export default function MyApp({ Component, pageProps }: AppPropsWithLayout) {
         />
       </Head>
       <QueryClientProvider client={queryClient}>
-        <CunninghamProvider>
-          {getLayout(<Component {...pageProps} />)}
-        </CunninghamProvider>
+        <AnalyticsProvider>
+          <CunninghamProvider>
+            {getLayout(<Component {...pageProps} />)}
+          </CunninghamProvider>
+        </AnalyticsProvider>
       </QueryClientProvider>
     </>
   );

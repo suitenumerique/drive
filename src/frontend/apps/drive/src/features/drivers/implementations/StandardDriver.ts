@@ -7,10 +7,24 @@ import {
 } from "../DTOs/InvitationDTO";
 import { DTOCreateAccess } from "../DTOs/AccessesDTO";
 import { DTOUpdateAccess } from "../DTOs/AccessesDTO";
-import { Access, APIList, Invitation, Item, ItemType, User } from "../types";
+import {
+  Access,
+  ApiConfig,
+  APIList,
+  Invitation,
+  Item,
+  ItemType,
+  User,
+} from "../types";
 import { DTODeleteAccess } from "../DTOs/AccessesDTO";
 
 export class StandardDriver extends Driver {
+  async getConfig(): Promise<ApiConfig> {
+    const response = await fetchAPI(`config/`);
+    const data = await response.json();
+    return data;
+  }
+
   async getItems(filters = {}): Promise<Item[]> {
     const response = await fetchAPI(`items/`, {
       params: filters,
