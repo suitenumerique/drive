@@ -13,7 +13,7 @@ import { DTODeleteAccess } from "../DTOs/AccessesDTO";
 export class StandardDriver extends Driver {
   async getItems(filters = {}): Promise<Item[]> {
     const response = await fetchAPI(`items/`, {
-      params: filters,
+      params: { ...filters, page_size: "100000" },
     });
     const data = await response.json();
     return jsonToItems(data.results);
