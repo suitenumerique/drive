@@ -1,5 +1,13 @@
 {
     "extends": ["github>numerique-gouv/renovate-configuration"],
     "dependencyDashboard": true,
-    "labels": ["dependencies", "noChangeLog"]
+    "labels": ["dependencies", "noChangeLog"],
+    "packageRules": [
+        {
+        "groupName": "allowed redis versions",
+        "matchManagers": ["pep621"],
+        "matchPackageNames": ["redis"],
+        "allowedVersions": "<6.0.0"
+        }
+    ]
 }
