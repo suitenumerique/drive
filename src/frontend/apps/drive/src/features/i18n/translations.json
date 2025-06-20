@@ -1,6 +1,13 @@
 {
   "en": {
     "translation": {
+      "file_preview": {
+        "unsupported": {
+          "title": "File type not supported for preview",
+          "description": "To view the file, download it to your device.",
+          "download": "Download file"
+        }
+      },
       "clipboard": {
         "success": "Copied to clipboard",
         "error": "Failed to copy to clipboard"
@@ -247,6 +254,13 @@
   },
   "fr": {
     "translation": {
+      "file_preview": {
+        "unsupported": {
+          "title": "Type de fichier non supporté pour la prévisualisation",
+          "description": "Pour visualiser le fichier, téléchargez-le sur votre appareil.",
+          "download": "Télécharger le fichier"
+        }
+      },
       "clipboard": {
         "success": "Copié dans le presse-papiers",
         "error": "Échec de la copie dans le presse-papiers"

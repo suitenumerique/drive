@@ -4,14 +4,16 @@ import {
 } from "@/features/explorer/utils/mimeTypes";
 import { Icon } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@openfun/cunningham-react";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ImageViewer } from "../image-viewer/ImageViewer";
 import { VideoPlayer } from "../video-player/VideoPlayer";
 import { AudioPlayer } from "../audio-player";
 import { PreviewPdf } from "../pdf-preview/PreviewPdf";
 import { getIconByMimeType } from "@/features/explorer/components/ItemIcon";
+import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
 
-type FilePreviewType = {
+export type FilePreviewType = {
+  id: string;
   title: string;
   mimetype: string;
   url: string;
@@ -27,7 +29,9 @@ interface FilePreviewProps {
   title?: string;
   files?: FilePreviewType[];
   initialIndexFile?: number;
+  openedFileId?: string;
   headerRightContent?: React.ReactNode;
+  sidebarContent?: React.ReactNode;
 }
 
 export const FilePreview: React.FC<FilePreviewProps> = ({
@@ -36,8 +40,11 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   title = "File Preview",
   files = [],
   initialIndexFile = 0,
+  openedFileId,
+  sidebarContent,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndexFile);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const data: FilePreviewData[] = useMemo(() => {
     return files?.map((file) => ({
@@ -90,17 +97,16 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
       case MimeCategory.PDF:
         return <PreviewPdf src={currentFile.url} />;
       default:
-        return (
-          <div className="file-preview-unsupported">
-            <p>Type de fichier non supporté pour la prévisualisation</p>
-            <p>Type: {currentFile.mimetype}</p>
-            <a href={currentFile.url} target="_blank" rel="noopener noreferrer">
-              Télécharger le fichier
-            </a>
-          </div>
-        );
+        return <NotSupportedPreview file={currentFile} />;
     }
   };
+
+  useEffect(() => {
+    if (openedFileId) {
+      const index = data.findIndex((file) => file.id === openedFileId);
+      setCurrentIndex(index > -1 ? index : 0);
+    }
+  }, [openedFileId]);
 
   if (!isOpen) {
     return null;
@@ -108,7 +114,11 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
 
   return (
     <div className="file-preview-overlay">
-      <div className="file-preview-container">
+      <div
+        className={`file-preview-container ${
+          isSidebarOpen ? "sidebar-open" : ""
+        }`}
+      >
         <div className="file-preview-header">
           <div className="file-preview-header__content">
             <div className="file-preview-header__content-left">
@@ -141,29 +151,24 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
               />
             </div>
             <div className="file-preview-header__content-right">
-              <button
-                className="file-preview-close-button"
-                onClick={onClose}
-                aria-label="Close preview"
-              >
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
+              <Button
+                color="tertiary-text"
+                size="small"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                icon={<Icon name={isSidebarOpen ? "close" : "more_vert"} />}
+              />
             </div>
           </div>
         </div>
-        <div className="file-preview-content">{renderViewer()}</div>
+        <div className="file-preview-content">
+          <div className="file-preview-main">{renderViewer()}</div>
+
+          <div
+            className={`file-preview-sidebar ${isSidebarOpen ? "open" : ""}`}
+          >
+            {sidebarContent}
+          </div>
+        </div>
       </div>
     </div>
   );

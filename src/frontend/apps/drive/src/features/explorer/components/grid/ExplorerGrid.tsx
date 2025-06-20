@@ -6,7 +6,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   itemToTreeItem,
@@ -28,7 +28,10 @@ import { ExplorerProps, useExplorerInner } from "../Explorer";
 import { useDragItemContext } from "../ExplorerDndProvider";
 import { ExplorerGridMobileCell } from "./ExplorerGridMobileCell";
 import { isTablet } from "@/features/ui/components/responsive/ResponsiveDivs";
-import { FilePreviewExample } from "@/features/ui/preview/files-preview/example";
+import {
+  FilePreview,
+  FilePreviewType,
+} from "@/features/ui/preview/files-preview";
 
 const EMPTY_ARRAY: Item[] = [];
 
@@ -47,6 +50,10 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     itemId,
   } = useExplorer();
 
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [openedFileId, setOpenedFileId] = useState<string | undefined>(
+    undefined
+  );
   const { filters } = useExplorerInner();
   const { overedItemIds, setOveredItemIds } = useDragItemContext();
 
@@ -73,6 +80,11 @@ export const ExplorerGrid = (props: ExplorerProps) => {
       cell: props.gridActionsCell ?? ExplorerGridActionsCell,
     }),
   ];
+
+  const handleClosePreview = () => {
+    setIsPreviewOpen(false);
+    setOpenedFileId(undefined);
+  };
 
   const folders = useMemo(() => {
     if (!props.childrenItems) {
@@ -272,7 +284,9 @@ export const ExplorerGrid = (props: ExplorerProps) => {
                         });
                       } else {
                         if (row.original.url) {
-                          window.open(row.original.url, "_blank");
+                          setOpenedFileId(row.original.id);
+                          setIsPreviewOpen(true);
+                          // window.open(row.original.url, "_blank");
                         } else {
                           addToast(
                             <ToasterItem>
@@ -330,6 +344,17 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     );
   };
 
+  const previewItems: FilePreviewType[] = useMemo(() => {
+    const items =
+      props.childrenItems?.filter((item) => item.type === ItemType.FILE) ?? [];
+    return items?.map((item) => ({
+      id: item.id,
+      title: item.title,
+      mimetype: item.mimetype ?? "",
+      url: item.url ?? "",
+    }));
+  }, [props.childrenItems]);
+
   return (
     <div
       className={clsx("c__datagrid explorer__grid", {
@@ -357,7 +382,14 @@ export const ExplorerGrid = (props: ExplorerProps) => {
 
       {/* <VideoPlayerExample /> */}
       {/* <ImageViewerExample /> */}
-      <FilePreviewExample />
+
+      <FilePreview
+        isOpen={isPreviewOpen}
+        onClose={handleClosePreview}
+        title="Prévisualisation de fichiers"
+        files={previewItems}
+        openedFileId={openedFileId}
+      />
       {/* <PreviewPdf /> */}
     </div>
   );

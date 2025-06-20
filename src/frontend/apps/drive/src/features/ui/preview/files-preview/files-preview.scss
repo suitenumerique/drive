@@ -4,7 +4,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-
+  overflow: hidden;
   z-index: 9999;
   display: flex;
   flex-direction: column;
@@ -117,6 +117,7 @@
   position: relative;
   background-color: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(14px);
+  display: flex;
 
   // Effet de blur sur le contenu
   &::before {
@@ -129,6 +130,38 @@
     background: inherit;
     filter: blur(2px);
     z-index: -1;
+  }
+}
+
+.file-preview-main {
+  flex: 1;
+  min-width: 0;
+  transition: transform 0.3s ease-in-out;
+}
+
+.file-preview-sidebar {
+  position: fixed;
+  top: 52px; // Below header
+  right: -300px; // Start off-screen
+  width: 300px;
+  max-width: 300px;
+  height: calc(100vh - 52px);
+  background-color: white;
+  border-left: 1px solid #e5e7eb;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease-in-out;
+  z-index: 9998;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  &.open {
+    transform: translateX(-300px);
+  }
+}
+
+.file-preview-container.sidebar-open {
+  .file-preview-main {
+    transform: translateX(-300px);
   }
 }
 

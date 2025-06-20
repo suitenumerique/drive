@@ -13,6 +13,29 @@ type ItemIconProps = {
   type?: "mini" | "normal";
 };
 
+type IconFromMimeTypeProps = {
+  mimeType: string;
+  size?: "small" | "medium" | "large" | "xlarge";
+  type?: "mini" | "normal";
+};
+
+export const IconFromMimeType = ({
+  mimeType,
+  size = "medium",
+  type = "normal",
+}: IconFromMimeTypeProps) => {
+  const mimeIcon = getIconByMimeType(mimeType, type);
+
+  return (
+    <img
+      src={mimeIcon.src}
+      alt=""
+      className={`item-icon ${size}`}
+      draggable="false"
+    />
+  );
+};
+
 export const ItemIcon = ({
   item,
   size = "medium",
