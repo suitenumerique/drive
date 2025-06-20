@@ -19,6 +19,8 @@
 @use "./../features/ui/preview/components/duration-bar/DurationBar.scss";
 @use "./../features/ui/preview/components/volume-bar/VolumeBar.scss";
 @use "./../features/ui/preview/components/controls/PreviewControls.scss";
+@use "./../features/ui/preview/not-supported/NotSupportedPreview.scss";
+
 @use "./../features/explorer/components/icons/ItemIcon.scss";
 @use "./../pages/index.scss" as *;
 body {

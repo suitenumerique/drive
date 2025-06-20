@@ -1,6 +1,6 @@
 import { ItemType } from "@/features/drivers/types";
 import { Item } from "@/features/drivers/types";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { itemToTreeItem, useExplorer } from "../ExplorerContext";
 import clsx from "clsx";
@@ -10,6 +10,13 @@ import gridEmpty from "@/assets/grid_empty.png";
 import { ExplorerProps, useExplorerInner } from "../Explorer";
 import { FilePreviewExample } from "@/features/ui/preview/files-preview/example";
 import { ExplorerGridItems } from "./ExplorerGridItems";
+import { useDragItemContext } from "../ExplorerDndProvider";
+import { ExplorerGridMobileCell } from "./ExplorerGridMobileCell";
+import { isTablet } from "@/features/ui/components/responsive/ResponsiveDivs";
+import {
+  FilePreview,
+  FilePreviewType,
+} from "@/features/ui/preview/files-preview";
 
 /**
  * ExplorerGridItems wrapper around ExplorerGridItems to display a list of items in a table.
@@ -32,9 +39,20 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     itemId,
   } = useExplorer();
 
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [openedFileId, setOpenedFileId] = useState<string | undefined>(
+    undefined
+  );
+  const { overedItemIds, setOveredItemIds } = useDragItemContext();
+
   const { filters, disableItemDragAndDrop } = useExplorerInner();
   const effectiveOnNavigate = props.onNavigate ?? onNavigate;
   const treeContext = useTreeContext();
+
+  const handleClosePreview = () => {
+    setIsPreviewOpen(false);
+    setOpenedFileId(undefined);
+  };
 
   const folders = useMemo(() => {
     if (!props.childrenItems) {
@@ -129,6 +147,17 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     );
   };
 
+  const previewItems: FilePreviewType[] = useMemo(() => {
+    const items =
+      props.childrenItems?.filter((item) => item.type === ItemType.FILE) ?? [];
+    return items?.map((item) => ({
+      id: item.id,
+      title: item.title,
+      mimetype: item.mimetype ?? "",
+      url: item.url ?? "",
+    }));
+  }, [props.childrenItems]);
+
   return (
     <div
       className={clsx("c__datagrid explorer__grid", {
@@ -156,7 +185,14 @@ export const ExplorerGrid = (props: ExplorerProps) => {
 
       {/* <VideoPlayerExample /> */}
       {/* <ImageViewerExample /> */}
-      <FilePreviewExample />
+
+      <FilePreview
+        isOpen={isPreviewOpen}
+        onClose={handleClosePreview}
+        title="Prévisualisation de fichiers"
+        files={previewItems}
+        openedFileId={openedFileId}
+      />
       {/* <PreviewPdf /> */}
     </div>
   );
