@@ -240,6 +240,11 @@
           "move": {
             "toast_one": "{{count}} item moved",
             "toast_other": "{{count}} items moved"
+          },
+          "share": {
+            "modal": {
+              "title": "Share workspace"
+            }
           }
         }
       },
@@ -507,6 +512,11 @@
           "move": {
             "toast_one": "{{count}} élément déplacé",
             "toast_other": "{{count}} éléments déplacés"
+          },
+          "share": {
+            "modal": {
+              "title": "Partager l'espace"
+            }
           },
           "rename": {
             "modal": {

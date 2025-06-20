@@ -2,7 +2,7 @@ import {
   BASE_LANGUAGE,
   LANGUAGES_ALLOWED,
   LANGUAGE_LOCAL_STORAGE,
-} from './conf';
+} from "./conf";
 
 export const splitLocaleCode = (language: string) => {
   const locale = language.split(/[-_]/);
@@ -13,7 +13,7 @@ export const splitLocaleCode = (language: string) => {
 };
 
 export const getLanguage = () => {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return BASE_LANGUAGE;
   }
 
@@ -23,4 +23,9 @@ export const getLanguage = () => {
   const language = splitLocaleCode(languageStore).language;
 
   return LANGUAGES_ALLOWED.includes(language) ? language : BASE_LANGUAGE;
+};
+
+export const capitalizeRegion = (language: string) => {
+  const { language: lang, region } = splitLocaleCode(language);
+  return lang + (region ? "-" + region.toUpperCase() : "");
 };

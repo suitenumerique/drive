@@ -20,6 +20,7 @@ import { errorToString } from "@/features/api/APIError";
 import Head from "next/head";
 import { useTranslation } from "react-i18next";
 import { AnalyticsProvider } from "@/features/analytics/AnalyticsProvider";
+import { capitalizeRegion } from "@/features/i18n/utils";
 
 export type NextPageWithLayout<P = object, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;
@@ -56,7 +57,7 @@ const queryClient = new QueryClient({
 export default function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   // Use the layout defined at the page level, if available
   const getLayout = Component.getLayout ?? ((page) => page);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <>
@@ -78,7 +79,7 @@ export default function MyApp({ Component, pageProps }: AppPropsWithLayout) {
       </Head>
       <QueryClientProvider client={queryClient}>
         <AnalyticsProvider>
-          <CunninghamProvider>
+          <CunninghamProvider currentLocale={capitalizeRegion(i18n.language)}>
             {getLayout(<Component {...pageProps} />)}
           </CunninghamProvider>
         </AnalyticsProvider>
