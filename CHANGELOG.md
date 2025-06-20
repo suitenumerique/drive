@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+# - 🔧(frontend) fix bind-mount that hid node_modules in frontend-dev container #XYZ
+
 ## Added
 
     - (frontend) add move modal #213
