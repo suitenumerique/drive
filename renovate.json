@@ -1,0 +1,5 @@
+{
+    "extends": ["github>numerique-gouv/renovate-configuration"],
+    "dependencyDashboard": true,
+    "labels": ["dependencies", "noChangeLog"]
+}
