@@ -28,7 +28,7 @@ def test_api_item_invitations_list_anonymous_user():
     """Anonymous users should not be able to list invitations."""
     invitation = factories.InvitationFactory()
     response = APIClient().get(f"/api/v1.0/items/{invitation.item.id!s}/invitations/")
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 @pytest.mark.parametrize("via", VIA)
@@ -190,7 +190,7 @@ def test_api_item_invitations_retrieve_anonymous_user():
         f"/api/v1.0/items/{invitation.item.id!s}/invitations/{invitation.id!s}/",
     )
 
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_api_item_invitations_retrieve_unrelated_user():
@@ -294,7 +294,7 @@ def test_api_item_invitations_create_anonymous():
         format="json",
     )
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {
@@ -699,7 +699,7 @@ def test_api_item_invitations_delete_anonymous():
     response = APIClient().delete(
         f"/api/v1.0/items/{invitation.item.id!s}/invitations/{invitation.id!s}/",
     )
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_api_item_invitations_delete_authenticated_outsider():
