@@ -11,6 +11,9 @@ os.environ.setdefault("DJANGO_CONFIGURATION", "Development")
 
 install(check_options=True)
 
+# Can be loaded only after install call.
+from django.conf import settings  # pylint: disable=wrong-import-position
+
 app = Celery("drive")
 
 # Using a string here means the worker doesn't have to serialize
@@ -20,4 +23,4 @@ app = Celery("drive")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
 # Load task modules from all registered Django apps.
-app.autodiscover_tasks()
+app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
