@@ -699,7 +699,7 @@ def test_models_items_creating_file_without_filename_should_fail():
         factories.ItemFactory(type=models.ItemTypeChoices.FILE, filename=None)
 
     assert exc_info.value.message_dict == {
-        "__all__": ["Constraint “check_filename_set_for_files” is violated."]
+        "filename": ["Filename is required for files."]
     }
 
 
@@ -717,7 +717,7 @@ def test_models_items_creating_non_file_with_filename_should_fail(item_type):
         factories.ItemFactory(type=item_type, filename="file.txt")
 
     assert exc_info.value.message_dict == {
-        "__all__": ["Constraint “check_filename_set_for_files” is violated."]
+        "filename": ["Filename is only allowed for files."]
     }
 
 

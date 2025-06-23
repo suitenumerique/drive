@@ -556,16 +556,7 @@ class Item(TreeModel, BaseModel):
                     | models.Q(deleted_at=models.F("ancestors_deleted_at"))
                 ),
                 name="check_deleted_at_matches_ancestors_deleted_at_when_set",
-            ),
-            models.CheckConstraint(
-                condition=models.Q(
-                    models.Q(type=ItemTypeChoices.FILE, filename__isnull=False)
-                    | models.Q(
-                        ~models.Q(type=ItemTypeChoices.FILE), filename__isnull=True
-                    )
-                ),
-                name="check_filename_set_for_files",
-            ),
+            )
         ]
         indexes = [
             GistIndex(fields=["path"]),
@@ -576,6 +567,27 @@ class Item(TreeModel, BaseModel):
 
     def save(self, *args, **kwargs):
         """Set the upload state to pending if it's the first save and it's a file"""
+        # Validate filename requirements based on item type
+        if self.type == ItemTypeChoices.FILE:
+            if self.filename is None:
+                raise ValidationError(
+                    {
+                        "filename": ValidationError(
+                            _("Filename is required for files."),
+                            code="item_filename_required_for_files",
+                        )
+                    }
+                )
+        elif self.filename is not None:
+            raise ValidationError(
+                {
+                    "filename": ValidationError(
+                        _("Filename is only allowed for files."),
+                        code="item_filename_only_allowed_for_files",
+                    )
+                }
+            )
+
         if self.created_at is None and self.type == ItemTypeChoices.FILE:
             self.upload_state = ItemUploadStateChoices.PENDING
 
