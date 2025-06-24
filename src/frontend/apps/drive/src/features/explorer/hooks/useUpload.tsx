@@ -171,6 +171,17 @@ const pathNicefy = (path: string) => {
   return path.replace(/^[./]+/, "");
 };
 
+/**
+ * This function removes the file extension from the filename.
+ */
+const removeFileExtension = (filename: string) => {
+  const lastDotIndex = filename.lastIndexOf(".");
+  if (lastDotIndex === -1) {
+    return filename; // No extension found
+  }
+  return filename.substring(0, lastDotIndex);
+};
+
 export const useUploadZone = ({ item }: { item: Item }) => {
   const { t } = useTranslation();
   const createFile = useMutationCreateFile();
@@ -274,6 +285,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
       // Then, upload all the files sequentially. We are not uploading them in parallel because the backend
       // does not support it, it causes concurrency issues.
       const promises = [];
+      console.log("upload.files", upload.files);
       for (const file of upload.files) {
         // We do not using "createFile.mutateAsync" because it causes unhandled errors.
         // Instead, we use a promise that we can await to run all the uploads sequentially.
@@ -283,7 +295,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
             new Promise<void>((resolve) => {
               createFile.mutate(
                 {
-                  filename: file.name,
+                  filename: removeFileExtension(file.name),
                   file,
                   parentId: file.parentId!,
                   progressHandler: (progress) => {

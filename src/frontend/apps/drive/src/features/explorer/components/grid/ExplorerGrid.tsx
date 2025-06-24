@@ -8,15 +8,7 @@ import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import { Loader, useCunningham } from "@openfun/cunningham-react";
 import gridEmpty from "@/assets/grid_empty.png";
 import { ExplorerProps, useExplorerInner } from "../Explorer";
-import { FilePreviewExample } from "@/features/ui/preview/files-preview/example";
 import { ExplorerGridItems } from "./ExplorerGridItems";
-import { useDragItemContext } from "../ExplorerDndProvider";
-import { ExplorerGridMobileCell } from "./ExplorerGridMobileCell";
-import { isTablet } from "@/features/ui/components/responsive/ResponsiveDivs";
-import {
-  FilePreview,
-  FilePreviewType,
-} from "@/features/ui/preview/files-preview";
 
 /**
  * ExplorerGridItems wrapper around ExplorerGridItems to display a list of items in a table.
@@ -43,7 +35,6 @@ export const ExplorerGrid = (props: ExplorerProps) => {
   const [openedFileId, setOpenedFileId] = useState<string | undefined>(
     undefined
   );
-  const { overedItemIds, setOveredItemIds } = useDragItemContext();
 
   const { filters, disableItemDragAndDrop } = useExplorerInner();
   const effectiveOnNavigate = props.onNavigate ?? onNavigate;
@@ -147,53 +138,15 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     );
   };
 
-  const previewItems: FilePreviewType[] = useMemo(() => {
-    const items =
-      props.childrenItems?.filter((item) => item.type === ItemType.FILE) ?? [];
-    return items?.map((item) => ({
-      id: item.id,
-      title: item.title,
-      mimetype: item.mimetype ?? "",
-      url: item.url ?? "",
-    }));
-  }, [props.childrenItems]);
-
   return (
     <div
+      style={{ position: "static" }}
       className={clsx("c__datagrid explorer__grid", {
         "c__datagrid--empty": isEmpty,
         "c__datagrid--loading": isLoading,
       })}
     >
       {getContent()}
-      {/*<AudioPlayerExample /> */}
-      {/* <div className="pdf-container">
-        <object
-          data="http://localhost:8083/media/item/b5e8124e-135a-448f-8720-25dd43efbecf/Proposition%20de%20dates.pdf"
-          type="application/pdf"
-          width="900px"
-          height="1100px"
-          id="toto"
-          className="pdf-container__object"
-        >
-          <p>
-            Alternative text - include a link{" "}
-            <a href="myfile.pdf">to the PDF!</a>
-          </p>
-        </object>
-      </div> */}
-
-      {/* <VideoPlayerExample /> */}
-      {/* <ImageViewerExample /> */}
-
-      <FilePreview
-        isOpen={isPreviewOpen}
-        onClose={handleClosePreview}
-        title="Prévisualisation de fichiers"
-        files={previewItems}
-        openedFileId={openedFileId}
-      />
-      {/* <PreviewPdf /> */}
     </div>
   );
 };

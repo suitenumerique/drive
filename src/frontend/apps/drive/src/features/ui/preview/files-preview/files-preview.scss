@@ -1,6 +1,8 @@
 .file-preview-overlay {
-  position: fixed;
+  position: absolute;
   top: 0;
+  bottom: 0;
+  right: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
@@ -21,11 +23,13 @@
 
 .file-preview-header {
   height: 52px;
-  background-color: white;
+  // background-color: white;
   border-bottom: 1px solid #e5e7eb;
   flex-shrink: 0;
   z-index: 10000;
   position: relative;
+  background-color: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(14px);
 
   &__content {
     height: 100%;
@@ -113,7 +117,8 @@
 
 .file-preview-content {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
+  max-width: 100dvw;
   position: relative;
   background-color: rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(14px);
@@ -136,32 +141,34 @@
 .file-preview-main {
   flex: 1;
   min-width: 0;
-  transition: transform 0.3s ease-in-out;
+  transition: all 0.3s ease-in-out;
+  width: 100%;
 }
 
 .file-preview-sidebar {
   position: fixed;
-  top: 52px; // Below header
   right: -300px; // Start off-screen
   width: 300px;
   max-width: 300px;
   height: calc(100vh - 52px);
-  background-color: white;
+
   border-left: 1px solid #e5e7eb;
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease-in-out;
   z-index: 9998;
   overflow-y: auto;
   overflow-x: hidden;
 
   &.open {
+    background-color: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(14px);
     transform: translateX(-300px);
   }
 }
 
 .file-preview-container.sidebar-open {
   .file-preview-main {
-    transform: translateX(-300px);
+    width: calc(100% - 300px);
+    margin-right: 300px;
   }
 }
 

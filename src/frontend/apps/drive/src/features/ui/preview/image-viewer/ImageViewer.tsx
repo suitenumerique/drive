@@ -47,6 +47,69 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
+  // Preload image to get dimensions before displaying
+  useEffect(() => {
+    const preloadImage = new Image();
+
+    preloadImage.onload = () => {
+      if (containerRef.current) {
+        const { naturalWidth, naturalHeight } = preloadImage;
+        const containerRect = containerRef.current.getBoundingClientRect();
+
+        // Calculate if original size fits in container
+        const fitsHorizontally = naturalWidth <= containerRect.width;
+        const fitsVertically = naturalHeight <= containerRect.height;
+
+        let calculatedZoom = 1;
+        let displayWidth = naturalWidth;
+        let displayHeight = naturalHeight;
+
+        if (fitsHorizontally && fitsVertically) {
+          // Original size fits, zoom = 1 corresponds to original size
+          calculatedZoom = 1;
+          displayWidth = naturalWidth;
+          displayHeight = naturalHeight;
+        } else {
+          // Original size doesn't fit, calculate zoom to fit
+          const containerAspectRatio =
+            containerRect.width / containerRect.height;
+          const imageAspectRatio = naturalWidth / naturalHeight;
+
+          if (imageAspectRatio > containerAspectRatio) {
+            // Image is wider than container
+            calculatedZoom = containerRect.width / naturalWidth;
+            displayWidth = containerRect.width;
+            displayHeight = containerRect.width / imageAspectRatio;
+          } else {
+            // Image is taller than container
+            calculatedZoom = containerRect.height / naturalHeight;
+            displayHeight = containerRect.height;
+            displayWidth = containerRect.height * imageAspectRatio;
+          }
+        }
+
+        setImageDimensions({
+          width: displayWidth,
+          height: displayHeight,
+          naturalWidth,
+          naturalHeight,
+          originalZoom: calculatedZoom,
+        });
+
+        // Set initial zoom based on calculated zoom
+        setZoom(calculatedZoom);
+        setImageLoaded(true);
+      }
+    };
+
+    preloadImage.onerror = () => {
+      // Handle error if image fails to load
+      setImageLoaded(true); // Still set to true to hide loading spinner
+    };
+
+    preloadImage.src = src;
+  }, [src]);
+
   // Calculate if image exceeds container bounds
   const isImageExceedingBounds = useCallback(() => {
     if (!containerRef.current || !imageRef.current) return false;
@@ -82,57 +145,6 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
     },
     [zoom, imageDimensions]
   );
-
-  // Handle image load to get natural dimensions and calculate initial zoom
-  const handleImageLoad = useCallback(() => {
-    if (imageRef.current && containerRef.current) {
-      const { naturalWidth, naturalHeight } = imageRef.current;
-      const containerRect = containerRef.current.getBoundingClientRect();
-
-      // Calculate if original size fits in container
-      const fitsHorizontally = naturalWidth <= containerRect.width;
-      const fitsVertically = naturalHeight <= containerRect.height;
-
-      let calculatedZoom = 1;
-      let displayWidth = naturalWidth;
-      let displayHeight = naturalHeight;
-
-      if (fitsHorizontally && fitsVertically) {
-        // Original size fits, zoom = 1 corresponds to original size
-        calculatedZoom = 1;
-        displayWidth = naturalWidth;
-        displayHeight = naturalHeight;
-      } else {
-        // Original size doesn't fit, calculate zoom to fit
-        const containerAspectRatio = containerRect.width / containerRect.height;
-        const imageAspectRatio = naturalWidth / naturalHeight;
-
-        if (imageAspectRatio > containerAspectRatio) {
-          // Image is wider than container
-          calculatedZoom = containerRect.width / naturalWidth;
-          displayWidth = containerRect.width;
-          displayHeight = containerRect.width / imageAspectRatio;
-        } else {
-          // Image is taller than container
-          calculatedZoom = containerRect.height / naturalHeight;
-          displayHeight = containerRect.height;
-          displayWidth = containerRect.height * imageAspectRatio;
-        }
-      }
-
-      setImageDimensions({
-        width: displayWidth,
-        height: displayHeight,
-        naturalWidth,
-        naturalHeight,
-        originalZoom: calculatedZoom,
-      });
-
-      // Set initial zoom based on calculated zoom
-      setZoom(calculatedZoom);
-      setImageLoaded(true);
-    }
-  }, []);
 
   // Zoom in
   const zoomIn = useCallback(() => {
@@ -266,25 +278,26 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
           cursor: getCursorStyle(),
         }}
       >
-        <div
-          className="image-viewer__image-wrapper"
-          style={{
-            transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
-          }}
-        >
-          <img
-            ref={imageRef}
-            src={src}
-            alt={alt}
-            className="image-viewer__image"
-            onLoad={handleImageLoad}
-            draggable={false}
+        {imageLoaded && (
+          <div
+            className="image-viewer__image-wrapper"
             style={{
-              width: imageDimensions.naturalWidth,
-              height: imageDimensions.naturalHeight,
+              transform: `translate(${position.x}px, ${position.y}px) scale(${zoom})`,
             }}
-          />
-        </div>
+          >
+            <img
+              ref={imageRef}
+              src={src}
+              alt={alt}
+              className="image-viewer__image"
+              draggable={false}
+              style={{
+                width: imageDimensions.naturalWidth,
+                height: imageDimensions.naturalHeight,
+              }}
+            />
+          </div>
+        )}
 
         {!imageLoaded && (
           <div className="image-viewer__loading">
@@ -294,15 +307,13 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         )}
       </div>
 
-      <div className="image-viewer__help">
-        <div className="image-viewer__controls">
-          <ZoomControl
-            zoomOut={zoomOut}
-            zoomIn={zoomIn}
-            zoom={zoom}
-            resetView={resetView}
-          />
-        </div>
+      <div className="image-viewer__controls">
+        <ZoomControl
+          zoomOut={zoomOut}
+          zoomIn={zoomIn}
+          zoom={zoom}
+          resetView={resetView}
+        />
       </div>
     </div>
   );

@@ -1,8 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { FilePreviewType } from "../files-preview";
-import { IconFromMimeType } from "@/features/explorer/components/ItemIcon";
+
 import { Button } from "@openfun/cunningham-react";
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
+import { IconFromMimeType } from "@/features/explorer/components/icons/ItemIcon";
 
 interface NotSupportedPreviewProps {
   file: FilePreviewType;

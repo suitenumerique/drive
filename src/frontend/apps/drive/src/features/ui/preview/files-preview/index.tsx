@@ -2,15 +2,16 @@ import {
   getMimeCategory,
   MimeCategory,
 } from "@/features/explorer/utils/mimeTypes";
-import { Icon } from "@gouvfr-lasuite/ui-kit";
+import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@openfun/cunningham-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { ImageViewer } from "../image-viewer/ImageViewer";
 import { VideoPlayer } from "../video-player/VideoPlayer";
 import { AudioPlayer } from "../audio-player";
 import { PreviewPdf } from "../pdf-preview/PreviewPdf";
-import { getIconByMimeType } from "@/features/explorer/components/ItemIcon";
+
 import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
+import { getIconByMimeType } from "@/features/explorer/components/icons/ItemIcon";
 
 export type FilePreviewType = {
   id: string;
@@ -32,6 +33,7 @@ interface FilePreviewProps {
   openedFileId?: string;
   headerRightContent?: React.ReactNode;
   sidebarContent?: React.ReactNode;
+  onChangeFile?: (file?: FilePreviewType) => void;
 }
 
 export const FilePreview: React.FC<FilePreviewProps> = ({
@@ -42,6 +44,8 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   initialIndexFile = 0,
   openedFileId,
   sidebarContent,
+  headerRightContent,
+  onChangeFile,
 }) => {
   const [currentIndex, setCurrentIndex] = useState(initialIndexFile);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -54,6 +58,19 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
   }, [files]);
 
   const currentFile: FilePreviewData | null = data[currentIndex] || null;
+
+  const handleDownload = async () => {
+    // Temporary solution, waiting for a proper download_url attribute.
+    const a = document.createElement("a");
+    a.style.display = "none";
+    a.href = currentFile.url;
+    a.target = "_blank";
+
+    a.download = currentFile.title;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   // Render the appropriate viewer based on file category
   const renderViewer = () => {
@@ -108,6 +125,10 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
     }
   }, [openedFileId]);
 
+  useEffect(() => {
+    onChangeFile?.(currentFile);
+  }, [currentFile]);
+
   if (!isOpen) {
     return null;
   }
@@ -151,11 +172,17 @@ export const FilePreview: React.FC<FilePreviewProps> = ({
               />
             </div>
             <div className="file-preview-header__content-right">
+              {headerRightContent}
               <Button
                 color="tertiary-text"
-                size="small"
+                onClick={handleDownload}
+                icon={<Icon type={IconType.OUTLINED} name={"file_download"} />}
+              />
+
+              <Button
+                color="tertiary-text"
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                icon={<Icon name={isSidebarOpen ? "close" : "more_vert"} />}
+                icon={<Icon name={"info_outline"} />}
               />
             </div>
           </div>
