@@ -4,9 +4,11 @@ import { fetchAPI } from "@/features/api/fetchApi";
 import { User } from "@/features/auth/types";
 import { baseApiUrl } from "../api/utils";
 import { APIError } from "../api/APIError";
+import { posthog } from "posthog-js";
 
 export const logout = () => {
   window.location.replace(new URL("logout/", baseApiUrl()).href);
+  posthog.reset();
 };
 
 export const login = () => {
@@ -49,6 +51,14 @@ export const Auth = ({
   useEffect(() => {
     void init();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      posthog.identify(user.email, {
+        email: user.email,
+      });
+    }
+  }, [user]);
 
   if (user === undefined) {
     return (
