@@ -7,11 +7,10 @@ import { useTranslation } from "react-i18next";
 
 import multipleSelection from "@/assets/mutliple-selection.png";
 import emptySelection from "@/assets/empty-selection.png";
-import { getFormatTranslationKey } from "../../utils/mimeTypes";
 import { itemIsWorkspace } from "@/features/drivers/utils";
-import { IconSize, UserRow } from "@gouvfr-lasuite/ui-kit";
-import { formatSize } from "../../utils/utils";
+import { IconSize } from "@gouvfr-lasuite/ui-kit";
 import { WorkspaceShareModal } from "../modals/share/WorkspaceShareModal";
+import { ItemInfo } from "@/features/items/components/ItemInfo";
 
 type ExplorerRightPanelContentProps = {
   item?: Item;
@@ -119,48 +118,7 @@ export const ExplorerRightPanelContent = ({
             />
           )}
         </div>
-        <div className="explorer__right-panel__section explorer__right-panel__section--info">
-          <InfoRow
-            label={t("explorer.rightPanel.format")}
-            rightContent={t(getFormatTranslationKey(firstSelectedItem))}
-          />
-          <InfoRow
-            label={t("explorer.rightPanel.updated_at")}
-            rightContent={firstSelectedItem.updated_at.toLocaleString(
-              undefined,
-              {
-                dateStyle: "short",
-                timeStyle: "short",
-              }
-            )}
-          />
-          <InfoRow
-            label={t("explorer.rightPanel.created_at")}
-            rightContent={
-              firstSelectedItem.created_at
-                ? new Date(firstSelectedItem?.created_at).toLocaleString(
-                    undefined,
-                    {
-                      dateStyle: "short",
-                      timeStyle: "short",
-                    }
-                  )
-                : ""
-            }
-          />
-          {firstSelectedItem.size && (
-            <InfoRow
-              label={t("explorer.rightPanel.size")}
-              rightContent={formatSize(firstSelectedItem.size)}
-            />
-          )}
-          <InfoRow
-            label={t("explorer.rightPanel.created_by")}
-            rightContent={
-              <UserRow fullName={firstSelectedItem.creator.full_name} />
-            }
-          />
-        </div>
+        <ItemInfo item={firstSelectedItem} />
       </div>
       {firstSelectedItem && isWorkspace && shareModal.isOpen && (
         <WorkspaceShareModal

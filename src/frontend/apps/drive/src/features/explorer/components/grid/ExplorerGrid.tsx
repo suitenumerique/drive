@@ -1,6 +1,6 @@
 import { ItemType } from "@/features/drivers/types";
 import { Item } from "@/features/drivers/types";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { itemToTreeItem, useExplorer } from "../ExplorerContext";
 import clsx from "clsx";
@@ -31,9 +31,19 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     itemId,
   } = useExplorer();
 
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [openedFileId, setOpenedFileId] = useState<string | undefined>(
+    undefined
+  );
+
   const { filters, disableItemDragAndDrop } = useExplorerInner();
   const effectiveOnNavigate = props.onNavigate ?? onNavigate;
   const treeContext = useTreeContext();
+
+  const handleClosePreview = () => {
+    setIsPreviewOpen(false);
+    setOpenedFileId(undefined);
+  };
 
   const folders = useMemo(() => {
     if (!props.childrenItems) {
@@ -130,6 +140,7 @@ export const ExplorerGrid = (props: ExplorerProps) => {
 
   return (
     <div
+      style={{ position: "static" }}
       className={clsx("c__datagrid explorer__grid", {
         "c__datagrid--empty": isEmpty,
         "c__datagrid--loading": isLoading,

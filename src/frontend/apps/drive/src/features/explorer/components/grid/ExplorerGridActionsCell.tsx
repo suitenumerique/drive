@@ -46,9 +46,11 @@ export const ExplorerGridActionsCell = (
 
   const handleDownload = async () => {
     // Temporary solution, waiting for a proper download_url attribute.
+    console.log("item", item);
     const a = document.createElement("a");
     a.style.display = "none";
     a.href = item.url!;
+
     a.download = item.filename;
     document.body.appendChild(a);
     a.click();
