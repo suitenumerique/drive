@@ -16,6 +16,7 @@ from django.db import transaction
 from django.db.models.expressions import RawSQL
 
 import magic
+import posthog
 import rest_framework as drf
 from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
@@ -625,6 +626,19 @@ class ItemViewSet(
         item.save(update_fields=["upload_state", "mimetype", "size"])
 
         serializer = self.get_serializer(item)
+
+        if settings.POSTHOG_KEY:
+            posthog.capture(
+                request.user.email,
+                "item_uploaded",
+                properties={
+                    "id": item.id,
+                    "title": item.title,
+                    "size": item.size,
+                    "mimetype": item.mimetype,
+                },
+            )
+
         return drf_response.Response(serializer.data, status=status.HTTP_200_OK)
 
     @drf.decorators.action(
