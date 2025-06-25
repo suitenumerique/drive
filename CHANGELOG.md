@@ -10,7 +10,8 @@ and this project adheres to
 
 ## Added
 
-    - (frontend) add move modal #213
+- ✨(front) add move modal #213
+- ✨(front) update the homepage to alpha #234
 
 ## Changed
 
