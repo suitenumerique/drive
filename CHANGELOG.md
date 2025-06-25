@@ -14,4 +14,6 @@ and this project adheres to
 
 ## Changed
 
+- 🐛(email) add missing email logo
+
 ## Deleted
