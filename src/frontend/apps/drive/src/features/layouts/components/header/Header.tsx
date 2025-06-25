@@ -4,17 +4,23 @@ import {
   LaGaufre,
 } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@openfun/cunningham-react";
-import logo from "@/assets/logo.svg";
+import logo from "@/assets/logo_alpha.svg";
 import { useAuth, logout } from "@/features/auth/Auth";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExplorerSearchButton } from "@/features/explorer/components/ExplorerSearchButton";
 import { getDriver } from "@/features/config/Config";
+import { Feedback } from "@/features/feedback/Feedback";
 
 export const Header = () => {
   return (
     <KitHeader
-      leftIcon={<img src={logo.src} alt="logo" />}
+      leftIcon={
+        <div>
+          <img src={logo.src} alt="logo" />
+          <Feedback />
+        </div>
+      }
       rightIcon={<HeaderRight />}
     />
   );

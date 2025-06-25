@@ -3,16 +3,17 @@ import Head from "next/head";
 import { useTranslation } from "next-i18next";
 import {
   Hero,
-  ProConnectButton,
   Footer,
   MainLayout,
   HomeGutter,
+  Icon,
+  IconType,
 } from "@gouvfr-lasuite/ui-kit";
 import { login, useAuth } from "@/features/auth/Auth";
 import { gotoLastVisitedItem } from "@/features/explorer/utils/utils";
 import { useEffect } from "react";
-import logoIcon from "@/assets/logo-icon.svg";
-import logo from "@/assets/logo.svg";
+import logoIcon from "@/assets/logo-icon_alpha.svg";
+import logo from "@/assets/logo_alpha.svg";
 import logoGouv from "@/assets/logo-gouv.svg";
 import banner from "@/assets/home/banner.png";
 import {
@@ -24,6 +25,8 @@ import {
   Toaster,
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
+import { Button } from "@openfun/cunningham-react";
+import { Feedback } from "@/features/feedback/Feedback";
 export default function HomePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -67,7 +70,32 @@ export default function HomePage() {
           banner={banner.src}
           title={t("home.title")}
           subtitle={t("home.subtitle")}
-          mainButton={<ProConnectButton onClick={login} />}
+          mainButton={
+            <div className="c__hero__buttons">
+              <div>
+                <Button
+                  color="primary"
+                  onClick={login}
+                  icon={<Icon name="arrow_forward" />}
+                  fullWidth
+                >
+                  {t("home.main_button")}
+                </Button>
+              </div>
+
+              <div>
+                <Button
+                  color="secondary"
+                  icon={<Icon name="info" type={IconType.OUTLINED} />}
+                  fullWidth
+                  href={process.env.NEXT_PUBLIC_ALPHA_MORE}
+                  target="_blank"
+                >
+                  {t("home.more")}
+                </Button>
+              </div>
+            </div>
+          }
         />
       </HomeGutter>
       <Footer />
@@ -91,6 +119,7 @@ HomePage.getLayout = function getLayout(page: React.ReactElement) {
             <div className="drive__header__left">
               <img src={logoGouv.src} alt="" />
               <img src={logo.src} alt="" />
+              <Feedback />
             </div>
           }
           rightHeaderContent={<HeaderRight />}

@@ -20,7 +20,30 @@
       },
       "home": {
         "title": "Easy storage and sharing",
-        "subtitle": "Store and share your files easily in a cloud collaborative space."
+        "subtitle": "You access to an alpha version of the service, tested internally. It has a limited scope, little storage, may contain bugs, and does not yet integrate an antivirus. Your feedback is essential to help us improve.",
+        "main_button": "Participate to the alpha",
+        "more": "Learn more"
+      },
+      "feedback": {
+        "button": "Give feedback",
+        "modal": {
+          "title": "New feedback",
+          "description": "This application is in alpha. You can help us in several ways:",
+          "buttons": {
+            "form": {
+              "title": "Fill out a questionnaire",
+              "description": "For a structured feedback"
+            },
+            "tchap": {
+              "title": "Chat on Tchap",
+              "description": "For a quick remark or discuss with the community"
+            },
+            "visio": {
+              "title": "Chat on Visio",
+              "description": "For a deep discussion with a LaSuite member"
+            }
+          }
+        }
       },
       "authentication": {
         "error": {
@@ -285,8 +308,31 @@
         }
       },
       "home": {
-        "title": "Stockage et partage faciles",
-        "subtitle": "Stockez et partagez vos fichiers simplement dans un espace cloud collaboratif synchronisé."
+        "title": "Stocker et partager facilement",
+        "subtitle": "Vous accédez à une version alpha du service, testée en interne. Elle propose un périmètre limité, peu de stockage, peut contenir des bugs, et n’intègre pas encore d’antivirus. Vos retours sont essentiels pour nous aider à l’améliorer.",
+        "main_button": "Participer à l'alpha",
+        "more": "En savoir plus"
+      },
+      "feedback": {
+        "button": "Faire un retour",
+        "modal": {
+          "title": "Nouveau retour",
+          "description": "Cette application est en cours de développement. Vous pouvez nous aider de plusieurs façons :",
+          "buttons": {
+            "form": {
+              "title": "Remplir un questionnaire",
+              "description": "Pour un retour structuré"
+            },
+            "tchap": {
+              "title": "Échanger sur le canal Tchap",
+              "description": "Pour une remarque rapide ou discuter avec la communauté"
+            },
+            "visio": {
+              "title": "Échanger en visio",
+              "description": "Pour discuter en profondeur de Fichiers avec un membre de LaSuite"
+            }
+          }
+        }
       },
       "authentication": {
         "error": {

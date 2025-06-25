@@ -27,6 +27,40 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 
   .c__hero {
     height: calc(100vh - var(--header-height));
+
+    &__display {
+      &__captions {
+        align-items: flex-start;
+        max-width: 600px;
+
+        > h2 {
+          text-align: left;
+          font-size: 48px;
+          line-height: 50px;
+        }
+
+        > span {
+          color: var(--c--theme--colors--greyscale-500);
+          text-align: left;
+        }
+      }
+
+      > img {
+        @media (max-width: $tablet) {
+          display: none;
+        }
+      }
+    }
+
+    &__buttons {
+      display: flex;
+      gap: 1rem;
+      width: 100%;
+
+      @media (max-width: $tablet) {
+        flex-direction: column;
+      }
+    }
   }
 
   @media (max-width: $tablet) {
@@ -64,4 +98,12 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 
 .c__modal__content__text {
   text-align: left;
+}
+
+@media (max-width: $tablet) {
+  .c__header {
+    .c__feedback__button {
+      display: none;
+    }
+  }
 }

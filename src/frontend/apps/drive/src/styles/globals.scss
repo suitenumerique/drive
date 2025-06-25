@@ -3,6 +3,7 @@
 @use "./../features/layouts/components/global/GlobalLayout.scss";
 @use "./../features/layouts/components/explorer/ExplorerLayout.scss";
 @use "./../features/explorer/components/Explorer.scss";
+@use "./../features/feedback/Feedback.scss";
 @use "./../features/explorer/components/right-panel/ExplorerRightPanel.scss";
 @use "./../features/explorer/components/modals/move/ExplorerMoveFolderModal.scss";
 @use "./../features/layouts/components/header/index.scss";
