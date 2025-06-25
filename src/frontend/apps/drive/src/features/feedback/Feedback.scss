@@ -1,0 +1,51 @@
+.c__feedback {
+  &__button {
+    color: var(--c--theme--colors--info-600);
+    background-color: var(--c--theme--colors--info-100);
+
+    &:hover {
+      color: var(--c--theme--colors--info-600);
+      background-color: var(--c--theme--colors--info-200);
+    }
+
+    &:active {
+      color: var(--c--theme--colors--info-800);
+      background-color: var(--c--theme--colors--info-200);
+    }
+  }
+
+  &__modal {
+    &__buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    &__button {
+      display: flex;
+      padding: 20px;
+      border-radius: 4px;
+      border: 1px solid var(--c--theme--colors--greyscale-100);
+      color: var(--c--theme--colors--greyscale-600);
+      gap: 20px;
+      text-decoration: none;
+      align-items: center;
+
+      &__title {
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      &__description {
+        font-size: 14px;
+        font-weight: 400;
+      }
+
+      &:hover {
+        border-color: #b6d7fb;
+        background-color: #e7f2fd;
+        color: var(--c--theme--colors--info-600);
+      }
+    }
+  }
+}
