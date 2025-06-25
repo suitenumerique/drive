@@ -19,6 +19,10 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
   }
 
   @media (max-width: $tablet) {
+    .c__feedback__button {
+      display: none;
+    }
+
     .c__dropdown-menu-trigger {
       display: none;
     }

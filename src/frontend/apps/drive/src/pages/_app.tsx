@@ -21,6 +21,7 @@ import Head from "next/head";
 import { useTranslation } from "react-i18next";
 import { AnalyticsProvider } from "@/features/analytics/AnalyticsProvider";
 import { capitalizeRegion } from "@/features/i18n/utils";
+import { FeedbackFooterMobile } from "@/features/feedback/Feedback";
 
 export type NextPageWithLayout<P = object, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;
@@ -81,6 +82,7 @@ export default function MyApp({ Component, pageProps }: AppPropsWithLayout) {
         <AnalyticsProvider>
           <CunninghamProvider currentLocale={capitalizeRegion(i18n.language)}>
             {getLayout(<Component {...pageProps} />)}
+            <FeedbackFooterMobile />
           </CunninghamProvider>
         </AnalyticsProvider>
       </QueryClientProvider>

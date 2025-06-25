@@ -105,7 +105,7 @@ export default function HomePage() {
 
 HomePage.getLayout = function getLayout(page: React.ReactElement) {
   return (
-    <div className="drive__home">
+    <div className="drive__home drive__home--feedback">
       <GlobalLayout>
         <MainLayout
           enableResize

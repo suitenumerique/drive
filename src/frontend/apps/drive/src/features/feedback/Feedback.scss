@@ -1,3 +1,8 @@
+@use "sass:map";
+@use "@/styles/cunningham-tokens-sass" as *;
+
+$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+
 .c__feedback {
   &__button {
     color: var(--c--theme--colors--info-600);
@@ -11,6 +16,24 @@
     &:active {
       color: var(--c--theme--colors--info-800);
       background-color: var(--c--theme--colors--info-200);
+    }
+  }
+
+  &__footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+
+    justify-content: center;
+    align-items: center;
+    padding: 8px;
+    background-color: white;
+    border-top: 1px solid var(--c--theme--colors--greyscale-200);
+    display: none;
+
+    @media (max-width: $tablet) {
+      display: flex;
     }
   }
 
@@ -48,4 +71,13 @@
       }
     }
   }
+}
+
+/**
+ * This is made to avoid having the feedback footer to hide the content.
+ * To remove when the feedback footer is removed.
+ */
+.drive__home--feedback,
+.c__main-layout__content__center__children {
+  padding-bottom: 57px;
 }

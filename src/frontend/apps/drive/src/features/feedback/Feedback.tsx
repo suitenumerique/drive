@@ -1,9 +1,15 @@
 import { Icon } from "@gouvfr-lasuite/ui-kit";
-import { Button, Modal, ModalSize, useModal } from "@openfun/cunningham-react";
+import {
+  Button,
+  ButtonProps,
+  Modal,
+  ModalSize,
+  useModal,
+} from "@openfun/cunningham-react";
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-export const Feedback = () => {
+export const Feedback = (props: { buttonProps?: Partial<ButtonProps> }) => {
   const { t } = useTranslation();
   const modal = useModal();
 
@@ -38,6 +44,7 @@ export const Feedback = () => {
         icon={<Icon name="info" />}
         className="c__feedback__button"
         onClick={modal.open}
+        {...props.buttonProps}
       >
         {t("feedback.button")}
       </Button>
@@ -60,6 +67,14 @@ export const Feedback = () => {
         </div>
       </Modal>
     </>
+  );
+};
+
+export const FeedbackFooterMobile = () => {
+  return (
+    <div className="c__feedback__footer">
+      <Feedback buttonProps={{ fullWidth: true }} />
+    </div>
   );
 };
 
