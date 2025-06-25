@@ -18,14 +18,13 @@
 
   &__content {
     height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 0 var(--c--theme--spacings--md);
 
     @media (min-width: 1024px) {
       height: 300px;
     }
-
-    display: flex;
-    flex-direction: column;
-    padding: 0 var(--c--theme--spacings--md);
 
     &__container {
       display: flex;
