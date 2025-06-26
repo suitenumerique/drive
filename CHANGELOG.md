@@ -16,4 +16,8 @@ and this project adheres to
 
 - 🐛(email) add missing email logo
 
+## Fixed
+
+- 🐛(i18n) fix language detection and rendering
+
 ## Deleted
