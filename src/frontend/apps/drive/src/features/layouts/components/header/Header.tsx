@@ -6,7 +6,7 @@ import {
 import { Button } from "@openfun/cunningham-react";
 import logo from "@/assets/logo.svg";
 import { useAuth, logout } from "@/features/auth/Auth";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExplorerSearchButton } from "@/features/explorer/components/ExplorerSearchButton";
 import { getDriver } from "@/features/config/Config";
@@ -64,13 +64,23 @@ export const LanguagePicker = () => {
   const { i18n } = useTranslation();
   const { user } = useAuth();
   const driver = getDriver();
+  // We must set the language to lowercase because django does not use "en-US", but "en-us".
   const [selectedValues, setSelectedValues] = useState([
-    user?.language || i18n.language,
+    user?.language || i18n.language.toLowerCase(),
   ]);
   const languages = [
     { label: "Français", value: "fr-fr" },
     { label: "English", value: "en-us" },
   ];
+
+  // Make sure the language of the ui is in the same language as the user.
+  useEffect(() => {
+    if (user?.language) {
+      i18n.changeLanguage(user.language).catch((err) => {
+        console.error("Error changing language", err);
+      });
+    }
+  }, [user?.language]);
 
   return (
     <DropdownMenu
