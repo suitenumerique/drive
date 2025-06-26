@@ -5,6 +5,7 @@ import { User } from "@/features/auth/types";
 import { baseApiUrl } from "../api/utils";
 import { APIError } from "../api/APIError";
 import { posthog } from "posthog-js";
+import { Spinner } from "@gouvfr-lasuite/ui-kit";
 
 export const logout = () => {
   window.location.replace(new URL("logout/", baseApiUrl()).href);
@@ -70,7 +71,7 @@ export const Auth = ({
           height: "100vh",
         }}
       >
-        <div>LOADING</div>
+        <Spinner size="xl" />
       </div>
     );
   }
