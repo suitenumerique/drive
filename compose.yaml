@@ -159,7 +159,7 @@ services:
       - "3001:3000"
 
   crowdin:
-    image: crowdin/cli:3.16.0
+    image: crowdin/cli:4.8.0
     volumes:
       - ".:/app"
     env_file:

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lasuite-docs\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-05-19 15:10+0000\n"
+"POT-Creation-Date: 2025-06-27 12:38+0000\n"
 "PO-Revision-Date: 2025-01-27 09:27\n"
 "Last-Translator: \n"
 "Language-Team: English\n"
@@ -171,192 +171,177 @@ msgstr ""
 msgid "The language in which the user wants to see the interface."
 msgstr ""
 
-#: core/models.py:218
+#: core/models.py:220
 msgid "The timezone in which the user wants to see times."
 msgstr ""
 
-#: core/models.py:221
+#: core/models.py:223
 msgid "device"
 msgstr ""
 
-#: core/models.py:223
+#: core/models.py:225
 msgid "Whether the user is a device or a real user."
 msgstr ""
 
-#: core/models.py:226
+#: core/models.py:228
 msgid "staff status"
 msgstr ""
 
-#: core/models.py:228
+#: core/models.py:230
 msgid "Whether the user can log into this admin site."
 msgstr ""
 
-#: core/models.py:231
+#: core/models.py:233
 msgid "active"
 msgstr ""
 
-#: core/models.py:234
+#: core/models.py:236
 msgid ""
 "Whether this user should be treated as active. Unselect this instead of "
 "deleting accounts."
 msgstr ""
 
-#: core/models.py:246
+#: core/models.py:248
 msgid "user"
 msgstr ""
 
-#: core/models.py:247
+#: core/models.py:249
 msgid "users"
 msgstr ""
 
-#: core/models.py:269
+#: core/models.py:271
 msgid "Workspace"
 msgstr ""
 
-#: core/models.py:457
+#: core/models.py:459
 msgid "Only folders can have children."
 msgstr ""
 
-#: core/models.py:470
+#: core/models.py:472
 msgid "title already exists in this folder."
 msgstr ""
 
-#: core/models.py:504
+#: core/models.py:506
 msgid "title"
 msgstr ""
 
-#: core/models.py:549
+#: core/models.py:551
 msgid "Item"
 msgstr ""
 
-#: core/models.py:550
+#: core/models.py:552
 msgid "Items"
 msgstr ""
 
-#: core/models.py:815
+#: core/models.py:578
+msgid "Filename is required for files."
+msgstr ""
+
+#: core/models.py:587
+msgid "Filename is only allowed for files."
+msgstr ""
+
+#: core/models.py:829
 #, python-brace-format
 msgid "{name} shared an item with you!"
 msgstr ""
 
-#: core/models.py:817
+#: core/models.py:831
 #, python-brace-format
 msgid "{name} invited you with the role \"{role}\" on the following item:"
 msgstr ""
 
-#: core/models.py:820
+#: core/models.py:834
 #, python-brace-format
 msgid "{name} shared an item with you: {title}"
 msgstr ""
 
-#: core/models.py:872
+#: core/models.py:886
 msgid "This item is already hard deleted."
 msgstr ""
 
-#: core/models.py:882
+#: core/models.py:896
 msgid "To hard delete an item, it must first be soft deleted."
 msgstr ""
 
-#: core/models.py:902
+#: core/models.py:916
 msgid "This item is not deleted."
 msgstr ""
 
-#: core/models.py:918
+#: core/models.py:932
 msgid "This item was permanently deleted and cannot be restored."
 msgstr ""
 
-#: core/models.py:968
+#: core/models.py:982
 msgid "Only folders can be targeted when moving an item"
 msgstr ""
 
-#: core/models.py:1021
+#: core/models.py:1035
 msgid "Item/user link trace"
 msgstr ""
 
-#: core/models.py:1022
+#: core/models.py:1036
 msgid "Item/user link traces"
 msgstr ""
 
-#: core/models.py:1028
+#: core/models.py:1042
 msgid "A link trace already exists for this item/user."
 msgstr ""
 
-#: core/models.py:1051
+#: core/models.py:1065
 msgid "Item favorite"
 msgstr ""
 
-#: core/models.py:1052
+#: core/models.py:1066
 msgid "Item favorites"
 msgstr ""
 
-#: core/models.py:1058
+#: core/models.py:1072
 msgid ""
 "This item is already targeted by a favorite relation instance for the same "
 "user."
 msgstr ""
 
-#: core/models.py:1080
+#: core/models.py:1094
 msgid "Item/user relation"
 msgstr ""
 
-#: core/models.py:1081
+#: core/models.py:1095
 msgid "Item/user relations"
 msgstr ""
 
-#: core/models.py:1087
+#: core/models.py:1101
 msgid "This user is already in this item."
 msgstr ""
 
-#: core/models.py:1093
+#: core/models.py:1107
 msgid "This team is already in this item."
 msgstr ""
 
-#: core/models.py:1099
+#: core/models.py:1113
 msgid "Either user or team must be set, not both."
 msgstr ""
 
-#: core/models.py:1126
+#: core/models.py:1140
 msgid "email address"
 msgstr ""
 
-#: core/models.py:1145
+#: core/models.py:1159
 msgid "Item invitation"
 msgstr ""
 
-#: core/models.py:1146
+#: core/models.py:1160
 msgid "Item invitations"
 msgstr ""
 
-#: core/templates/mail/html/invitation.html:162
-#: core/templates/mail/text/invitation.txt:3
-msgid "Logo email"
-msgstr ""
-
-#: core/templates/mail/html/invitation.html:209
-#: core/templates/mail/text/invitation.txt:10
-msgid "Open"
-msgstr ""
-
-#: core/templates/mail/html/invitation.html:226
-#: core/templates/mail/text/invitation.txt:14
-msgid ""
-" Drive, your new essential tool for organizing, sharing and collaborating as "
-"a team. "
-msgstr ""
-
-#: core/templates/mail/html/invitation.html:233
-#: core/templates/mail/text/invitation.txt:16
-#, python-format
-msgid " Brought to you by %(brandname)s "
-msgstr ""
-
-#: drive/settings.py:250
+#: drive/settings.py:253
 msgid "English"
 msgstr ""
 
-#: drive/settings.py:251
+#: drive/settings.py:254
 msgid "French"
 msgstr ""
 
-#: drive/settings.py:252
+#: drive/settings.py:255
 msgid "German"
 msgstr ""

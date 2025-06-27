@@ -10,7 +10,7 @@ jobs:
   install-front:
     uses: ./.github/workflows/front-dependencies-installation.yml
     with:
-      node_version: '20.x'
+      node_version: '22.x'
 
   synchronize-with-crowdin:
     runs-on: ubuntu-latest
