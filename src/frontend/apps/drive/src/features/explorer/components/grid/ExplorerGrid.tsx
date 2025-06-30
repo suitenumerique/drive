@@ -124,6 +124,7 @@ export const ExplorerGrid = (props: ExplorerProps) => {
         disableItemDragAndDrop={disableItemDragAndDrop}
         selectedItems={selectedItems}
         setSelectedItems={setSelectedItems}
+        enableMetaKeySelection={true}
       />
     );
   };
