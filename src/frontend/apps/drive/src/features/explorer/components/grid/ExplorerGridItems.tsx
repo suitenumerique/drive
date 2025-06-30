@@ -13,7 +13,11 @@ import { createColumnHelper, flexRender } from "@tanstack/react-table";
 import { useReactTable } from "@tanstack/react-table";
 import { getCoreRowModel } from "@tanstack/react-table";
 import { ExplorerProps } from "../Explorer";
-import { NavigationEvent, NavigationEventType } from "../ExplorerContext";
+import {
+  ExplorerContextType,
+  NavigationEvent,
+  NavigationEventType,
+} from "../ExplorerContext";
 import { ExplorerGridMobileCell } from "./ExplorerGridMobileCell";
 import { ExplorerGridNameCell } from "./ExplorerGridNameCell";
 import { ExplorerGridUpdatedAtCell } from "./ExplorerGridUpdatedAtCell";
@@ -41,6 +45,8 @@ export type ExplorerGridItemsProps = {
   selectedItems?: Item[];
   setSelectedItems?: Dispatch<SetStateAction<Item[]>>;
   parentItem?: Item;
+  displayMode?: ExplorerContextType["displayMode"];
+  canSelect?: (item: Item) => boolean;
 };
 
 const EMPTY_ARRAY: Item[] = [];
@@ -138,6 +144,8 @@ export const ExplorerGridItems = (props: ExplorerGridItemsProps) => {
     setMoveItem(null);
   };
 
+  const canSelect = props.canSelect ?? (() => true);
+
   return (
     <ExplorerGridItemsContext.Provider
       value={{
@@ -193,10 +201,16 @@ export const ExplorerGridItems = (props: ExplorerGridItemsProps) => {
                       return;
                     }
 
-                    const isMobile = isTablet();
+                    // In SDK mode we want the popup to behave like desktop. For instance we want the simple click to
+                    // trigger selection, not to open a file as it is the case on mobile.
+                    const isMobile = isTablet() && props.displayMode !== "sdk";
 
                     // Single click to select/deselect the item
                     if (!isMobile && e.detail === 1) {
+                      if (!canSelect(row.original)) {
+                        return;
+                      }
+
                       if (
                         props.enableMetaKeySelection &&
                         e.shiftKey &&
@@ -232,7 +246,7 @@ export const ExplorerGridItems = (props: ExplorerGridItemsProps) => {
                         }
                       } else if (
                         props.enableMetaKeySelection &&
-                        (e.metaKey || e.ctrlKey)
+                        (e.metaKey || e.ctrlKey || props.displayMode === "sdk")
                       ) {
                         // Toggle the selected item.
                         props.setSelectedItems?.((value) => {
