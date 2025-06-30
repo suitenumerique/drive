@@ -20,5 +20,6 @@ and this project adheres to
 ## Fixed
 
 - 🐛(i18n) fix language detection and rendering
+- 🌐(front) add english translation for rename modal
 
 ## Deleted
