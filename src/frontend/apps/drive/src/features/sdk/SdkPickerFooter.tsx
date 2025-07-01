@@ -1,16 +1,20 @@
 import { useTranslation } from "react-i18next";
-import { useExplorer } from "../explorer/components/ExplorerContext";
 import { getDriver } from "../config/Config";
 import { useState } from "react";
-import { LinkReach, LinkRole } from "../drivers/types";
+import { Item, LinkReach, LinkRole } from "../drivers/types";
 import { Button } from "@openfun/cunningham-react";
 import { Spinner } from "@gouvfr-lasuite/ui-kit";
 import { ClientMessageType, SDKRelayManager } from "./SdkRelayManager";
 
-export const PickerFooter = ({ token }: { token: string }) => {
+export const PickerFooter = ({
+  token,
+  selectedItems,
+}: {
+  token: string;
+  selectedItems: Item[];
+}) => {
   const { t } = useTranslation();
 
-  const { selectedItems } = useExplorer();
   const driver = getDriver();
 
   const [waitForClosing, setWaitForClosing] = useState(false);

@@ -1,14 +1,21 @@
-import { Explorer } from "@/features/explorer/components/Explorer";
 import { useRouter } from "next/router";
-import { useExplorer } from "@/features/explorer/components/ExplorerContext";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { getDriver } from "@/features/config/Config";
-import { Button } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
-import { ItemType } from "@/features/drivers/types";
-import { useMutationCreateFile } from "@/features/explorer/hooks/useMutations";
-import { getSdkPickerLayout } from "@/features/layouts/components/sdk/SdkLayout";
+import { Item, ItemType } from "@/features/drivers/types";
+import {
+  getSdkPickerLayout,
+  useSdkContext,
+} from "@/features/layouts/components/sdk/SdkLayout";
+import { ExplorerGridItems } from "@/features/explorer/components/grid/ExplorerGridItems";
+import clsx from "clsx";
+import {
+  ExplorerGridBreadcrumbs,
+  useBreadcrumbs,
+} from "@/features/explorer/components/breadcrumbs/ExplorerGridBreadcrumbs";
+import { PickerFooter } from "@/features/sdk/SdkPickerFooter";
+import { Spinner } from "@gouvfr-lasuite/ui-kit";
 
 // interface FileSavePayload {
 //   title: string;
@@ -25,19 +32,82 @@ import { getSdkPickerLayout } from "@/features/layouts/components/sdk/SdkLayout"
 export default function ItemPage() {
   const router = useRouter();
   const itemId = router.query.id as string;
+  const { token } = useSdkContext();
+  const [selectedItems, setSelectedItems] = useState<Item[]>([]);
+  const { t } = useTranslation();
+  const [init, setInit] = useState(false);
 
   const { data: children } = useQuery({
     queryKey: ["items", itemId, "children"],
     queryFn: () => getDriver().getChildren(itemId),
   });
 
+  const onNavigate = (item?: Item) => {
+    if (item) {
+      router.push(`/sdk/explorer/items/${item.id}`);
+    } else {
+      router.push(`/sdk/explorer/workspaces`);
+    }
+  };
+
+  const breadcrumbs = useBreadcrumbs({
+    handleNavigate: onNavigate,
+  });
+
+  // Init the breadcrumbs by putting the current workspace as the first item.
+  const initBreadcrumbs = async () => {
+    const workspace = await getDriver().getTree(itemId);
+    breadcrumbs.update(workspace);
+    // We want to prevent navigation until the breadcrumbs are initialized.
+    setInit(true);
+  };
+
+  useEffect(() => {
+    initBreadcrumbs();
+  }, []);
+
+  if (!init) {
+    return <Spinner size="xl" />;
+  }
+
   return (
-    <Explorer
-      childrenItems={children}
-      canSelect={(item) => item.type === ItemType.FILE}
-      disableAreaSelection={true}
-      disableItemDragAndDrop={true}
-    />
+    <div>
+      <ExplorerGridBreadcrumbs
+        {...breadcrumbs}
+        showSpacesItem={true}
+        buildWithTreeContext={false}
+      />
+      <div
+        className={clsx("explorer__grid ", {
+          modal__move__empty: children?.length === 0,
+        })}
+      >
+        {children && children.length > 0 ? (
+          <ExplorerGridItems
+            isCompact
+            items={children}
+            gridActionsCell={() => <div />}
+            onNavigate={(e) => {
+              const item = e.item as Item;
+              breadcrumbs.update(item);
+              onNavigate(item);
+            }}
+            selectedItems={selectedItems}
+            setSelectedItems={setSelectedItems}
+            canSelect={(item) => item.type === ItemType.FILE}
+            disableItemDragAndDrop={true}
+            displayMode="sdk"
+            enableMetaKeySelection={true}
+          />
+        ) : (
+          <div className="modal__move__empty">
+            <span>{t("explorer.modal.move.empty_folder")}</span>
+          </div>
+        )}
+      </div>
+
+      <PickerFooter token={token} selectedItems={selectedItems} />
+    </div>
   );
 }
 

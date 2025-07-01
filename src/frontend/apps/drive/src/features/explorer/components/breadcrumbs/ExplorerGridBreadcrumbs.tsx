@@ -126,46 +126,47 @@ const BaseBreadcrumbs = ({
  * useBreadcrumbs is a hook that manages the breadcrumbs state.
  * It is used in the controlled mode.
  */
-export const useBreadcrumbs = (initialItemId?: string) => {
+export const useBreadcrumbs = ({
+  handleNavigate: handleNavigateFromProps,
+}: {
+  handleNavigate: (item?: Item) => void;
+}) => {
   const [ancestors, setAncestors] = useState<Item[]>([]);
-  const [currentItemId, setCurrentItemId] = useState<string | null>(
-    initialItemId ?? null
-  );
 
-  const handleNavigate = (item: Item) => {
+  const update = (item: Item) => {
     setAncestors((prev) => {
       return [...prev, item];
     });
-    setCurrentItemId(item.id);
+    handleNavigateFromProps(item);
   };
 
   const onGoBack = (item: Item) => {
     setAncestors((prev) => prev.slice(0, prev.indexOf(item) + 1));
-    setCurrentItemId(item.id);
+    handleNavigateFromProps(item);
   };
 
   const resetAncestors = (items: Item[] = []) => {
     if (items?.length === 0) {
       setAncestors([]);
-      setCurrentItemId(null);
+      handleNavigateFromProps(undefined);
     } else {
       setAncestors(items);
-      setCurrentItemId(items[items.length - 1].id);
+      handleNavigateFromProps(items[items.length - 1]);
     }
   };
 
   const goToSpaces = () => {
     resetAncestors();
-    setCurrentItemId(null);
+    handleNavigateFromProps(undefined);
   };
 
   return {
-    ancestors,
-    handleNavigate,
-    onGoBack,
+    // Methods to be used by the parent.
+    update,
     resetAncestors,
-    currentItemId,
-    setCurrentItemId,
+    // Props to be passed to the component.
+    ancestors,
+    onGoBack,
     goToSpaces,
   };
 };

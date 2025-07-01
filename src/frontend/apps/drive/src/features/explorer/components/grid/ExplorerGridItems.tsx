@@ -98,6 +98,7 @@ export const ExplorerGridItems = (props: ExplorerGridItemsProps) => {
     });
     return map;
   }, [selectedItems]);
+  // TODO: This hook makes use of the ExplorerContext to manage the overred items. So, this component is not really standalone as it should be.
   const { overedItemIds, setOveredItemIds } = useDragItemContext();
 
   const { t } = useTranslation();

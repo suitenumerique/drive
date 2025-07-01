@@ -1,7 +1,6 @@
-import { Loader } from "@openfun/cunningham-react";
+import { Spinner } from "@gouvfr-lasuite/ui-kit";
 import { useEffect } from "react";
 import { login, useAuth } from "@/features/auth/Auth";
-import { getLastVisitedItem } from "@/features/explorer/utils/utils";
 import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
 import { useSearchParams } from "next/navigation";
 
@@ -12,15 +11,11 @@ export default function SDKPage() {
   const token = searchParams.get("token");
 
   const redirect = async () => {
-    // const item = await getLastVisitedItem();
-    // if (item) {
-    // let url = `/sdk/explorer/items/${item.id}`;
     let url = `/sdk/explorer/workspaces`;
     if (mode) {
       url += `?mode=${mode}`;
     }
     window.location.href = url;
-    // }
   };
 
   useEffect(() => {
@@ -40,7 +35,7 @@ export default function SDKPage() {
 
   return (
     <div className="sdk__page">
-      <Loader />
+      <Spinner size="xl" />
     </div>
   );
 }

@@ -1,23 +1,44 @@
 import { Auth } from "@/features/auth/Auth";
 import {
+  ExplorerContext,
   ExplorerProvider,
-  NavigationEvent,
 } from "@/features/explorer/components/ExplorerContext";
-import { ExplorerTree } from "@/features/explorer/components/tree/ExplorerTree";
+import { ExplorerDndProvider } from "@/features/explorer/components/ExplorerDndProvider";
 import { PickerFooter } from "@/features/sdk/SdkPickerFooter";
-import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export const getSdkLayout = (page: React.ReactElement) => {
   return <SdkLayout>{page}</SdkLayout>;
 };
 
+/**
+ * Picker.
+ */
+
 export const getSdkPickerLayout = (page: React.ReactElement) => {
-  return <SdkSaveLayout>{page}</SdkSaveLayout>;
+  return <SdkPickerLayout>{page}</SdkPickerLayout>;
 };
 
-export const SdkSaveLayout = ({ children }: { children: React.ReactNode }) => {
+export const SdkContext = createContext<{
+  token: string;
+}>({
+  token: "",
+});
+
+export const useSdkContext = () => {
+  const context = useContext(SdkContext);
+  if (!context) {
+    throw new Error("useSdkContext must be used within a SdkContext");
+  }
+  return context;
+};
+
+export const SdkPickerLayout = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,33 +50,22 @@ export const SdkSaveLayout = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <SdkLayout>
-      {children}
-      <PickerFooter token={token} />
-      {/* The breadcrumbs relies on the tree to be rendered with the cache mecanism. */}
-      <div style={{ display: "none" }}>
-        <ExplorerTree />
-      </div>
-    </SdkLayout>
+    <SdkContext.Provider value={{ token }}>
+      <SdkLayout>{children}</SdkLayout>
+    </SdkContext.Provider>
   );
 };
 
-export const SdkLayout = ({ children }: { children: React.ReactNode }) => {
-  const router = useRouter();
-  const itemId = router.query.id as string;
-  const { t } = useTranslation();
+/**
+ * SDK.
+ */
 
-  const onNavigate = (e: NavigationEvent) => {
-    router.push(`/sdk/explorer/items/${e.item.id}`);
-  };
+export const SdkLayout = ({ children }: { children: React.ReactNode }) => {
+  const { t } = useTranslation();
 
   return (
     <Auth>
-      <ExplorerProvider
-        itemId={itemId}
-        displayMode="sdk"
-        onNavigate={onNavigate}
-      >
+      <ExplorerProvider displayMode="sdk" itemId="" onNavigate={() => {}}>
         <div className="explorer__sdk__header">
           {t("sdk.explorer.picker_caption")}
         </div>

@@ -40,7 +40,6 @@ export const Explorer = (props: ExplorerProps) => {
   return (
     <ExplorerInnerContext.Provider value={props}>
       <ExplorerInner {...props} />
-      <ResponsiveDivs />
     </ExplorerInnerContext.Provider>
   );
 };
