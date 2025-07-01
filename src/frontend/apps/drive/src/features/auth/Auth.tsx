@@ -12,8 +12,12 @@ export const logout = () => {
   posthog.reset();
 };
 
-export const login = () => {
-  window.location.replace(new URL("authenticate/", baseApiUrl()).href);
+export const login = (returnTo?: string) => {
+  const url = new URL("authenticate/", baseApiUrl());
+  if (returnTo) {
+    url.searchParams.set("returnTo", returnTo);
+  }
+  window.location.replace(url.href);
 };
 
 interface AuthContextInterface {

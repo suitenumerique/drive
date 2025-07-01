@@ -16,6 +16,8 @@ export interface ExplorerProps {
   onFiltersChange?: (filters: ItemFilters) => void;
   // Override the default onNavigate from ExplorerContext
   onNavigate?: (event: NavigationEvent) => void;
+  disableAreaSelection?: boolean;
+  canSelect?: (item: Item) => boolean;
 }
 
 export type ExplorerInnerType = ExplorerProps;
@@ -38,7 +40,6 @@ export const Explorer = (props: ExplorerProps) => {
   return (
     <ExplorerInnerContext.Provider value={props}>
       <ExplorerInner {...props} />
-      <ResponsiveDivs />
     </ExplorerInnerContext.Provider>
   );
 };

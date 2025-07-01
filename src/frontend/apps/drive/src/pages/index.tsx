@@ -75,7 +75,7 @@ export default function HomePage() {
               <div>
                 <Button
                   color="primary"
-                  onClick={login}
+                  onClick={() => login()}
                   icon={<Icon name="arrow_forward" />}
                   fullWidth
                 >

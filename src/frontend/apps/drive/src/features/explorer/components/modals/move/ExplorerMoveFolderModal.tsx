@@ -37,8 +37,15 @@ export const ExplorerMoveFolder = ({
 }: ExplorerMoveFolderProps) => {
   const { isDesktop } = useResponsive();
   const { t } = useTranslation();
-  const breadcrumbs = useBreadcrumbs(initialFolderId);
-  const itemId = breadcrumbs.currentItemId;
+
+  const [currentItemId, setCurrentItemId] = useState<string | null>(
+    initialFolderId ?? null
+  );
+  const breadcrumbs = useBreadcrumbs({
+    handleNavigate: (item) => {
+      setCurrentItemId(item?.id ?? null);
+    },
+  });
   const treeContext = useTreeContext<Item>();
 
   const moveItems = useMoveItems();
@@ -50,7 +57,7 @@ export const ExplorerMoveFolder = ({
   const onNavigate = (event: NavigationEvent) => {
     const item = event.item as Item;
     setSelectedItems([]);
-    breadcrumbs.handleNavigate(item);
+    breadcrumbs.update(item);
   };
 
   const { data: rootItems } = useQuery({
@@ -59,26 +66,26 @@ export const ExplorerMoveFolder = ({
   });
 
   const { data: item } = useQuery({
-    queryKey: ["item", itemId],
-    queryFn: () => getDriver().getItem(itemId!),
-    enabled: itemId !== null,
+    queryKey: ["item", currentItemId],
+    queryFn: () => getDriver().getItem(currentItemId!),
+    enabled: currentItemId !== null,
   });
 
   const { data: itemChildren } = useQuery({
-    queryKey: ["items", itemId, "children", []],
-    enabled: itemId !== null,
+    queryKey: ["items", currentItemId, "children", []],
+    enabled: currentItemId !== null,
     queryFn: () => {
-      if (itemId === null) {
+      if (currentItemId === null) {
         return Promise.resolve(undefined);
       }
-      return getDriver().getChildren(itemId, { type: ItemType.FOLDER });
+      return getDriver().getChildren(currentItemId, { type: ItemType.FOLDER });
     },
   });
 
   const items = useMemo(() => {
     let items = [];
     // If no itemId, we are in the root, we explorer spaces
-    if (itemId === null) {
+    if (currentItemId === null) {
       items = rootItems ?? [];
       // Sort items to put main_workspace first
       items = items.sort((a, b) => {
@@ -109,7 +116,7 @@ export const ExplorerMoveFolder = ({
       });
 
     return items;
-  }, [itemId, rootItems, itemChildren]);
+  }, [currentItemId, rootItems, itemChildren]);
 
   const onCloseModal = () => {
     onClose();
@@ -123,7 +130,7 @@ export const ExplorerMoveFolder = ({
     const oldParentId = pathSegments[pathSegments.length - 2];
     const oldRootParentId = pathSegments[0];
     const newParentId =
-      selectedItems.length === 1 ? selectedItems[0].id : itemId!;
+      selectedItems.length === 1 ? selectedItems[0].id : currentItemId!;
     const newParentItem = selectedItems.length === 1 ? selectedItems[0] : item;
 
     const newRootId = newParentItem?.path.split(".")[0];
@@ -166,12 +173,12 @@ export const ExplorerMoveFolder = ({
 
   const onMove = () => {
     // If we are in the root, and no item is selected, we can't move
-    if (itemId === null && selectedItems.length === 0) {
+    if (currentItemId === null && selectedItems.length === 0) {
       return;
     }
 
     // If we are in a folder, and the item is not found, we can't move
-    if (itemId && item === undefined) {
+    if (currentItemId && item === undefined) {
       return;
     }
     const data = getMoveData();
@@ -226,7 +233,7 @@ export const ExplorerMoveFolder = ({
             </Button>
             <Button
               color="primary"
-              disabled={!itemId && selectedItems.length === 0}
+              disabled={!currentItemId && selectedItems.length === 0}
               onClick={onMove}
             >
               {t("explorer.modal.move.move_button")}
@@ -260,7 +267,7 @@ export const ExplorerMoveFolder = ({
                   buildWithTreeContext={false}
                 />
 
-                {itemId && (
+                {currentItemId && (
                   <Button
                     size="small"
                     color="primary-text"
@@ -296,8 +303,11 @@ export const ExplorerMoveFolder = ({
           <HorizontalSeparator />
         </div>
       </Modal>
-      {createFolderModal.isOpen && itemId && (
-        <ExplorerCreateFolderModal {...createFolderModal} parentId={itemId} />
+      {createFolderModal.isOpen && currentItemId && (
+        <ExplorerCreateFolderModal
+          {...createFolderModal}
+          parentId={currentItemId}
+        />
       )}
       {moveConfirmationModal.isOpen && (
         <ExplorerTreeMoveConfirmationModal

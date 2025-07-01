@@ -285,6 +285,16 @@
         "minutes_ago_one": "{{count}} minute ago",
         "minutes_ago_other": "{{count}} minutes ago",
         "seconds_ago": "few seconds ago"
+      },
+      "sdk": {
+        "explorer": {
+          "choose": "Choose",
+          "picker_label_zero": "No files selected",
+          "picker_label_one": "{{count}} file selected",
+          "picker_label_other": "{{count}} files selected",
+          "save_label": "Choose a destination for the file",
+          "save": "Save"
+        }
       }
     }
   },
@@ -589,6 +599,18 @@
         "minutes_ago_one": "il y a {{count}} minute",
         "minutes_ago_other": "il y a {{count}} minutes",
         "seconds_ago": "il y a quelques secondes"
+      },
+      "sdk": {
+        "explorer": {
+          "choose": "Choisir",
+          "cancel": "Annuler",
+          "picker_caption": "Sélectionnez un ou plusieurs fichiers",
+          "picker_label_zero": "Aucun fichier sélectionné",
+          "picker_label_one": "{{count}} fichier sélectionné",
+          "picker_label_other": "{{count}} fichiers sélectionnés",
+          "save_label": "Choisissez une destination pour le fichier",
+          "save": "Enregistrer"
+        }
       }
     }
   }

@@ -29,6 +29,7 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     setRightPanelForcedItem,
     item,
     itemId,
+    displayMode,
   } = useExplorer();
 
   const { filters, disableItemDragAndDrop } = useExplorerInner();
@@ -124,6 +125,8 @@ export const ExplorerGrid = (props: ExplorerProps) => {
         disableItemDragAndDrop={disableItemDragAndDrop}
         selectedItems={selectedItems}
         setSelectedItems={setSelectedItems}
+        displayMode={displayMode}
+        canSelect={props.canSelect}
       />
     );
   };

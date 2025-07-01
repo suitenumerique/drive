@@ -38,8 +38,18 @@ urlpatterns = [
                     r"^items/(?P<resource_id>[0-9a-z-]*)/",
                     include(item_related_router.urls),
                 ),
+                re_path(
+                    r"^sdk-relay/events/(?P<token>[0-9a-zA-Z-]*)/",
+                    viewsets.SDKRelayEventView.as_view(),
+                ),
+                re_path(
+                    r"^sdk-relay/events/",
+                    viewsets.SDKRelayEventCreateView.as_view(),
+                ),
             ]
         ),
     ),
     path(f"api/{settings.API_VERSION}/config/", viewsets.ConfigView.as_view()),
+    # path(r"api/{settings.API_VERSION}/sdk-relay/events/(?P<token>[0-9a-z-]*)/", viewsets.SDKRelayEventView.as_view()),
+    # path(r"api/{settings.API_VERSION}/sdk-relay/events/", viewsets.SDKRelayEventCreateView.as_view()),
 ]

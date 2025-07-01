@@ -136,7 +136,7 @@ export const ExplorerInner = (props: ExplorerProps) => {
   const renderContent = () => {
     return (
       <>
-        <ExplorerBreadcrumbsMobile />
+        {displayMode === "app" && <ExplorerBreadcrumbsMobile />}
         <div
           {...dropZone.getRootProps({
             className: clsx(`explorer explorer--${displayMode}`, {
@@ -163,7 +163,7 @@ export const ExplorerInner = (props: ExplorerProps) => {
     );
   };
 
-  if (isTablet) {
+  if (isTablet || props.disableAreaSelection) {
     return renderContent();
   }
 
