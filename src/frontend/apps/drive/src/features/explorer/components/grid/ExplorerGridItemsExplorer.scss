@@ -1,0 +1,50 @@
+@use "sass:map";
+@use "@/styles/cunningham-tokens-sass" as *;
+
+$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+
+.explorer__grid__items__explorer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--c--theme--spacings--md);
+
+  @media (min-width: $tablet) {
+    height: 300px;
+  }
+
+  &__container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--c--theme--spacings--xs);
+    flex: 1;
+  }
+
+  &__breadcrumbs {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0px;
+  }
+
+  &--compact {
+    td:has(.explorer__grid__item__name) {
+      padding-left: var(--c--theme--spacings--2xs);
+    }
+
+    .c__datagrid__row__cell--actions {
+      .droppable {
+        justify-content: flex-start;
+      }
+    }
+
+    .explorer__grid {
+      flex-grow: 1;
+    }
+
+    .c__datagrid {
+      min-height: auto;
+    }
+  }
+}

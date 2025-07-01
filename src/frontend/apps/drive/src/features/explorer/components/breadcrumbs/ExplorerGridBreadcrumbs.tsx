@@ -137,7 +137,7 @@ export const useBreadcrumbs = ({
     setAncestors((prev) => {
       return [...prev, item];
     });
-    handleNavigateFromProps(item);
+    // handleNavigateFromProps(item);
   };
 
   const onGoBack = (item: Item) => {

@@ -11,7 +11,7 @@ export default function SDKPage() {
   const token = searchParams.get("token");
 
   const redirect = async () => {
-    let url = `/sdk/explorer/workspaces`;
+    let url = `/sdk/explorer`;
     if (mode) {
       url += `?mode=${mode}`;
     }

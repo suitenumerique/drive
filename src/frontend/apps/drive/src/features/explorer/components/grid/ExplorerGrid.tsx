@@ -131,6 +131,8 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     );
   };
 
+  // TODO: Refactor using ExplorerGridItemsExplorer
+
   return (
     <div
       className={clsx("c__datagrid explorer__grid", {
