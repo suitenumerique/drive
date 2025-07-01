@@ -5,19 +5,12 @@ import {
 } from "@/features/explorer/components/ExplorerContext";
 import { ExplorerDndProvider } from "@/features/explorer/components/ExplorerDndProvider";
 import { PickerFooter } from "@/features/sdk/SdkPickerFooter";
+import { HorizontalSeparator, Spinner } from "@gouvfr-lasuite/ui-kit";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export const getSdkLayout = (page: React.ReactElement) => {
   return <SdkLayout>{page}</SdkLayout>;
-};
-
-/**
- * Picker.
- */
-
-export const getSdkPickerLayout = (page: React.ReactElement) => {
-  return <SdkPickerLayout>{page}</SdkPickerLayout>;
 };
 
 export const SdkContext = createContext<{
@@ -34,6 +27,34 @@ export const useSdkContext = () => {
   return context;
 };
 
+/**
+ * SDK.
+ */
+
+export const SdkLayout = ({ children }: { children: React.ReactNode }) => {
+  const { t } = useTranslation();
+
+  return (
+    <Auth>
+      <ExplorerProvider displayMode="sdk" itemId="" onNavigate={() => {}}>
+        <div className="sdk__explorer__header">
+          {t("sdk.explorer.picker_caption")}
+        </div>
+        <HorizontalSeparator />
+        {children}
+      </ExplorerProvider>
+    </Auth>
+  );
+};
+
+/**
+ * Picker.
+ */
+
+export const getSdkPickerLayout = (page: React.ReactElement) => {
+  return <SdkPickerLayout>{page}</SdkPickerLayout>;
+};
+
 export const SdkPickerLayout = ({
   children,
 }: {
@@ -46,31 +67,12 @@ export const SdkPickerLayout = ({
   }, [token]);
 
   if (!token) {
-    return null;
+    return <Spinner size="xl" />;
   }
 
   return (
     <SdkContext.Provider value={{ token }}>
       <SdkLayout>{children}</SdkLayout>
     </SdkContext.Provider>
-  );
-};
-
-/**
- * SDK.
- */
-
-export const SdkLayout = ({ children }: { children: React.ReactNode }) => {
-  const { t } = useTranslation();
-
-  return (
-    <Auth>
-      <ExplorerProvider displayMode="sdk" itemId="" onNavigate={() => {}}>
-        <div className="explorer__sdk__header">
-          {t("sdk.explorer.picker_caption")}
-        </div>
-        {children}
-      </ExplorerProvider>
-    </Auth>
   );
 };

@@ -76,8 +76,7 @@
             "title": "Move",
             "move_button": "Move here",
             "description_one_item": "Choose the new location for <strong>{{name}}</strong>",
-            "description_multiple_items": "Choose the new location for the <strong>{{count}}</strong> selected elements",
-            "empty_folder": "No folder found in the selected folder"
+            "description_multiple_items": "Choose the new location for the <strong>{{count}}</strong> selected elements"
           }
         },
         "rightPanel": {
@@ -102,6 +101,7 @@
           "name": "Name",
           "last_update": "Last Update",
           "empty": {
+            "default": "No folder found in the selected folder",
             "caption": "Drop your files here",
             "caption_no_create": "You do not have permission to add files",
             "cta": "Or click \"Create\"",
@@ -375,8 +375,7 @@
             "title": "Déplacer",
             "move_button": "Déplacer ici",
             "description_one_item": "Choisissez le nouvel emplacement pour <strong>{{name}}</strong>",
-            "description_multiple_items": "Choisissez le nouvel emplacement pour les <strong>{{count}}</strong> éléments sélectionnés",
-            "empty_folder": "Aucun dossier trouvé dans le dossier sélectionné"
+            "description_multiple_items": "Choisissez le nouvel emplacement pour les <strong>{{count}}</strong> éléments sélectionnés"
           }
         },
         "rightPanel": {
@@ -401,6 +400,7 @@
           "name": "Nom",
           "last_update": "Dernière modification",
           "empty": {
+            "default": "Aucun dossier trouvé dans le dossier sélectionné",
             "caption": "Déposez vos fichiers ici",
             "caption_no_create": "Vous n'avez pas les droits pour ajouter des fichiers",
             "cta": "Ou cliquez sur \"Créer\"",

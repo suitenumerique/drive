@@ -214,6 +214,8 @@ export const ExplorerGridItems = (props: ExplorerGridItemsProps) => {
                         return;
                       }
 
+                      console.log("props.displayMode", props.displayMode);
+
                       if (
                         props.enableMetaKeySelection &&
                         e.shiftKey &&

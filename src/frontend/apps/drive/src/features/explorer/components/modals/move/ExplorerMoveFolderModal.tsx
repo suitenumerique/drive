@@ -1,5 +1,5 @@
 import { getDriver } from "@/features/config/Config";
-import { Item } from "@/features/drivers/types";
+import { Item, ItemType } from "@/features/drivers/types";
 import { Button, Modal, ModalSize, useModal } from "@openfun/cunningham-react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -43,6 +43,9 @@ export const ExplorerMoveFolder = ({
       enableMetaKeySelection: false,
       gridActionsCell: () => <div />,
     },
+    itemsFilters: {
+      type: ItemType.FOLDER,
+    },
     itemsFilter: (items) => {
       return items.filter(
         (itemFiltered) =>
@@ -61,7 +64,6 @@ export const ExplorerMoveFolder = ({
           <img src={add_folder.src} alt="add" />
         </Button>
       ) : null,
-    emptyContent: () => <span>{t("explorer.modal.move.empty_folder")}</span>,
   });
 
   const moveConfirmationModal = useModal();
@@ -198,10 +200,10 @@ export const ExplorerMoveFolder = ({
         }
       >
         <div className="noPadding">
-          <div className="modal__move">
-            <HorizontalSeparator />
+          <HorizontalSeparator />
+          <div className="modal__move__explorer">
+            <ExplorerGridItemsExplorer {...itemsExplorer} />
           </div>
-          <ExplorerGridItemsExplorer {...itemsExplorer} />
           <HorizontalSeparator />
         </div>
       </Modal>

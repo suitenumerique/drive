@@ -23,6 +23,8 @@ import { AnalyticsProvider } from "@/features/analytics/AnalyticsProvider";
 import { capitalizeRegion } from "@/features/i18n/utils";
 import { FeedbackFooterMobile } from "@/features/feedback/Feedback";
 import { ResponsiveDivs } from "@/features/ui/components/responsive/ResponsiveDivs";
+import { useRouter } from "next/router";
+import { useEffect, useMemo } from "react";
 
 export type NextPageWithLayout<P = object, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;
@@ -60,7 +62,11 @@ export default function MyApp({ Component, pageProps }: AppPropsWithLayout) {
   // Use the layout defined at the page level, if available
   const getLayout = Component.getLayout ?? ((page) => page);
   const { t, i18n } = useTranslation();
-
+  const router = useRouter();
+  const isSdk = useMemo(
+    () => router.pathname.startsWith("/sdk"),
+    [router.pathname]
+  );
   return (
     <>
       <Head>
@@ -84,7 +90,7 @@ export default function MyApp({ Component, pageProps }: AppPropsWithLayout) {
           <CunninghamProvider currentLocale={capitalizeRegion(i18n.language)}>
             {getLayout(<Component {...pageProps} />)}
             <ResponsiveDivs />
-            <FeedbackFooterMobile />
+            {!isSdk && <FeedbackFooterMobile />}
           </CunninghamProvider>
         </AnalyticsProvider>
       </QueryClientProvider>

@@ -4,10 +4,8 @@
 $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 
 .explorer__grid__items__explorer {
-  height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 0 var(--c--theme--spacings--md);
 
   @media (min-width: $tablet) {
     height: 300px;
@@ -26,6 +24,12 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     justify-content: space-between;
     align-items: center;
     padding: 0 0px;
+  }
+
+  &__empty {
+    color: var(--c--theme--colors--greyscale-800);
+    font-weight: var(--c--theme--font--weights--regular);
+    font-size: var(--c--theme--font--sizes--m);
   }
 
   &--compact {

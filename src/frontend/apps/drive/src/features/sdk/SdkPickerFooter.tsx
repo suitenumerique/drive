@@ -45,13 +45,13 @@ export const PickerFooter = ({
   };
 
   return (
-    <div className="explorer__footer">
-      <div className="explorer__footer__caption">
+    <div className="sdk__explorer__footer">
+      <div className="sdk__explorer__footer__caption">
         {t("sdk.explorer.picker_label", {
           count: selectedItems.length,
         })}
       </div>
-      <div className="explorer__footer__actions">
+      <div className="sdk__explorer__footer__actions">
         <Button
           color="primary-text"
           onClick={onCancel}
@@ -61,7 +61,7 @@ export const PickerFooter = ({
         </Button>
         <Button
           onClick={onChoose}
-          disabled={waitForClosing}
+          disabled={waitForClosing || selectedItems.length === 0}
           icon={waitForClosing ? <Spinner size="sm" /> : undefined}
         >
           {t("sdk.explorer.choose")}

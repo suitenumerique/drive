@@ -98,7 +98,9 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     flex-direction: column;
     gap: 8px;
     box-sizing: content-box;
-    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    transition:
+      background-color 0.3s ease,
+      box-shadow 0.3s ease;
 
     &__breadcrumbs {
       display: flex;
@@ -594,41 +596,4 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
       }
     }
   }
-}
-
-/**
- * SDK
- */
-
-.explorer__footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: sticky;
-  bottom: 0;
-  padding: 0 24px;
-  background-color: white;
-  border-top: 1px solid #e5e7eb;
-  height: 72px;
-  z-index: 10;
-
-  &__caption {
-    font-size: 14px;
-    color: var(--c--theme--colors--greyscale-600);
-  }
-
-  &__actions {
-    display: flex;
-    gap: 12px;
-  }
-}
-
-.explorer__sdk__header {
-  height: 50px;
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  font-size: 14px;
-  color: var(--c--theme--colors--greyscale-600);
-  border-bottom: 1px solid var(--c--theme--colors--greyscale-100);
 }

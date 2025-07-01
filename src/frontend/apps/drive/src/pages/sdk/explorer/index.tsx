@@ -1,25 +1,36 @@
+import { ItemType } from "@/features/drivers/types";
 import {
   ExplorerGridItemsExplorer,
   useExplorerGridItemsExplorer,
 } from "@/features/explorer/components/grid/ExplorerGridItemsExplorer";
-import { getSdkPickerLayout } from "@/features/layouts/components/sdk/SdkLayout";
-import { useTranslation } from "react-i18next";
+import {
+  getSdkPickerLayout,
+  useSdkContext,
+} from "@/features/layouts/components/sdk/SdkLayout";
+import { PickerFooter } from "@/features/sdk/SdkPickerFooter";
 
 export default function SdkExplorerPage() {
-  const { t } = useTranslation();
+  const { token } = useSdkContext();
 
   const itemsExplorer = useExplorerGridItemsExplorer({
     isCompact: true,
     gridProps: {
-      enableMetaKeySelection: false,
+      enableMetaKeySelection: true,
       disableItemDragAndDrop: true,
       gridActionsCell: () => <div />,
       displayMode: "sdk",
+      canSelect: (item) => item.type === ItemType.FILE,
     },
-    emptyContent: () => <span>{t("explorer.modal.move.empty_folder")}</span>,
   });
 
-  return <ExplorerGridItemsExplorer {...itemsExplorer} />;
+  return (
+    <div className="sdk__explorer__page">
+      <div className="sdk__explorer">
+        <ExplorerGridItemsExplorer {...itemsExplorer} />
+      </div>
+      <PickerFooter token={token} selectedItems={itemsExplorer.selectedItems} />
+    </div>
+  );
 }
 
 SdkExplorerPage.getLayout = getSdkPickerLayout;

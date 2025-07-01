@@ -25,4 +25,8 @@
     padding: 0 var(--c--theme--spacings--base);
     padding-bottom: var(--c--theme--spacings--base);
   }
+
+  &__explorer {
+    padding: 0 var(--c--theme--spacings--md);
+  }
 }

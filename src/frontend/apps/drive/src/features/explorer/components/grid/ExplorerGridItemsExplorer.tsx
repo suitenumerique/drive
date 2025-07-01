@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { ExplorerGridItems, ExplorerGridItemsProps } from "./ExplorerGridItems";
-import { Item, ItemType } from "@/features/drivers/types";
+import { Item } from "@/features/drivers/types";
 import { useTranslation } from "react-i18next";
 import {
   ExplorerGridBreadcrumbs,
@@ -11,6 +11,7 @@ import { NavigationEvent } from "../ExplorerContext";
 import { useQuery } from "@tanstack/react-query";
 import { getDriver } from "@/features/config/Config";
 import { Spinner, useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import { ItemFilters } from "@/features/drivers/Driver";
 
 export type ExplorerGridItemsExplorerProps = {
   breadcrumbsRight?: () => React.ReactNode;
@@ -21,6 +22,7 @@ export type ExplorerGridItemsExplorerProps = {
   itemsFilter?: (items: Item[]) => Item[];
   currentItemId?: string | null;
   setCurrentItemId?: (itemId: string | null) => void;
+  itemsFilters?: ItemFilters;
 };
 
 export const useExplorerGridItemsExplorer = (
@@ -62,7 +64,7 @@ export const ExplorerGridItemsExplorer = (
   // Update breadcrumbs when navigating
   const onNavigate = (event: NavigationEvent) => {
     const item = event.item as Item;
-    // setSelectedItems([]);
+    props.gridProps?.setSelectedItems?.([]);
     breadcrumbs.update(item);
     props.setCurrentItemId?.(item?.id ?? null);
   };
@@ -73,7 +75,14 @@ export const ExplorerGridItemsExplorer = (
   });
 
   const { data: itemChildren } = useQuery({
-    queryKey: ["items", props.currentItemId, "children", []],
+    queryKey: [
+      "items",
+      props.currentItemId,
+      "children",
+      ...(Object.keys(props.itemsFilters ?? {}).length
+        ? [JSON.stringify(props.itemsFilters)]
+        : []),
+    ],
     enabled: props.currentItemId !== null,
     queryFn: () => {
       if (props.currentItemId === null) {
@@ -81,7 +90,7 @@ export const ExplorerGridItemsExplorer = (
       }
       // TODO: Customize
       return getDriver().getChildren(props.currentItemId!, {
-        type: ItemType.FOLDER,
+        ...props.itemsFilters,
       });
     },
   });
@@ -141,7 +150,17 @@ export const ExplorerGridItemsExplorer = (
       return <Spinner />;
     }
     if (isEmpty) {
-      return <>{props.emptyContent ? props.emptyContent() : "empty"}</>;
+      return (
+        <>
+          {props.emptyContent ? (
+            props.emptyContent()
+          ) : (
+            <span className="explorer__grid__items__explorer__empty">
+              {t("explorer.grid.empty.default")}
+            </span>
+          )}
+        </>
+      );
     }
     return (
       <ExplorerGridItems
