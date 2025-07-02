@@ -8,34 +8,67 @@ import {
 } from "@openfun/cunningham-react";
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useApiConfig } from "../config/useApiConfig";
 
 export const Feedback = (props: { buttonProps?: Partial<ButtonProps> }) => {
   const { t } = useTranslation();
   const modal = useModal();
+  const { data: config } = useApiConfig();
 
-  const FEEDBACK_BUTTONS = useMemo(
-    () => [
-      {
-        icon: <FormIcon />,
-        title: "feedback.modal.buttons.form.title",
-        description: "feedback.modal.buttons.form.description",
-        href: process.env.NEXT_PUBLIC_ALPHA_FEEDBACK_FORM,
-      },
-      {
-        icon: <TchapIcon />,
-        title: "feedback.modal.buttons.tchap.title",
-        description: "feedback.modal.buttons.tchap.description",
-        href: process.env.NEXT_PUBLIC_ALPHA_FEEDBACK_TCHAP,
-      },
-      {
-        icon: <VisioIcon />,
-        title: "feedback.modal.buttons.visio.title",
-        description: "feedback.modal.buttons.visio.description",
-        href: process.env.NEXT_PUBLIC_ALPHA_FEEDBACK_VISIO,
-      },
-    ],
-    []
-  );
+  const FEEDBACK_BUTTONS = useMemo(() => {
+    return config?.FRONTEND_FEEDBACK_ITEMS
+      ? Object.entries(config.FRONTEND_FEEDBACK_ITEMS).map(([key, value]) => {
+          let Icon: React.ReactElement;
+          switch (key) {
+            case "form":
+              Icon = <FormIcon />;
+              break;
+            case "tchap":
+              Icon = <TchapIcon />;
+              break;
+            case "visio":
+              Icon = <VisioIcon />;
+              break;
+            default:
+              Icon = <FormIcon />;
+              break;
+          }
+          return {
+            icon: Icon,
+            title: `feedback.modal.buttons.${key}.title`,
+            description: `feedback.modal.buttons.${key}.description`,
+            href: value.url,
+          };
+        })
+      : [];
+  }, []);
+
+  const showFeedbackButton = () => {
+    if (!config?.FRONTEND_FEEDBACK_BUTTON_SHOW) {
+      return false;
+    }
+
+    // For idle mode, there is no feedback buttons displayed as the modal will never show up,
+    // so we show the button even if there is no href.
+    if (
+      !config?.FRONTEND_FEEDBACK_BUTTON_IDLE &&
+      FEEDBACK_BUTTONS.filter((button) => !!button.href).length === 0
+    ) {
+      return false;
+    }
+    return true;
+  };
+
+  const onClick = () => {
+    if (config?.FRONTEND_FEEDBACK_BUTTON_IDLE) {
+      return;
+    }
+    modal.open();
+  };
+
+  if (!showFeedbackButton()) {
+    return null;
+  }
 
   return (
     <>
@@ -43,7 +76,7 @@ export const Feedback = (props: { buttonProps?: Partial<ButtonProps> }) => {
         color="tertiary"
         icon={<Icon name="info" />}
         className="c__feedback__button"
-        onClick={modal.open}
+        onClick={onClick}
         {...props.buttonProps}
       >
         {t("feedback.button")}
@@ -57,7 +90,7 @@ export const Feedback = (props: { buttonProps?: Partial<ButtonProps> }) => {
           {t("feedback.modal.description")}
         </p>
         <div className="c__feedback__modal__buttons">
-          {FEEDBACK_BUTTONS.map((button) => (
+          {FEEDBACK_BUTTONS.filter((button) => !!button.href).map((button) => (
             <FeedbackButton
               key={button.title}
               {...button}

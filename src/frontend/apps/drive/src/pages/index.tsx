@@ -27,9 +27,11 @@ import {
 } from "@/features/ui/components/toaster/Toaster";
 import { Button } from "@openfun/cunningham-react";
 import { Feedback } from "@/features/feedback/Feedback";
+import { useApiConfig } from "@/features/config/useApiConfig";
 export default function HomePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { data: config } = useApiConfig();
 
   useEffect(() => {
     if (user) {
@@ -88,7 +90,7 @@ export default function HomePage() {
                   color="secondary"
                   icon={<Icon name="info" type={IconType.OUTLINED} />}
                   fullWidth
-                  href={process.env.NEXT_PUBLIC_ALPHA_MORE}
+                  href={config?.FRONTEND_MORE_LINK}
                   target="_blank"
                 >
                   {t("home.more")}
