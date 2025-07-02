@@ -6,5 +6,6 @@ export function useApiConfig() {
   return useQuery({
     queryKey: ["config"],
     queryFn: () => driver.getConfig(),
+    staleTime: 1000,
   });
 }

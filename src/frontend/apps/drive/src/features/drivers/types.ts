@@ -114,6 +114,10 @@ export type User = {
 export type ApiConfig = {
   POSTHOG_KEY?: string;
   POSTHOG_HOST?: string;
+  FRONTEND_MORE_LINK?: string;
+  FRONTEND_FEEDBACK_BUTTON_SHOW?: boolean;
+  FRONTEND_FEEDBACK_BUTTON_IDLE?: boolean;
+  FRONTEND_FEEDBACK_ITEMS?: Record<string, { url: string }>;
 };
 
 export interface APIList<T> {
