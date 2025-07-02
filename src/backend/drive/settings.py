@@ -418,7 +418,22 @@ class Base(Configuration):
     FRONTEND_THEME = values.Value(
         None, environ_name="FRONTEND_THEME", environ_prefix=None
     )
-
+    FRONTEND_MORE_LINK = values.Value(
+        None,
+        environ_name="FRONTEND_MORE_LINK",
+        environ_prefix=None,
+    )
+    FRONTEND_FEEDBACK_BUTTON_SHOW = values.BooleanValue(
+        default=False, environ_name="FRONTEND_FEEDBACK_BUTTON_SHOW", environ_prefix=None
+    )
+    # For instance, you might want to bind this button to an external library like
+    # Posthog to trigger survey instead of the build in feedback modal.
+    FRONTEND_FEEDBACK_BUTTON_IDLE = values.BooleanValue(
+        default=False, environ_name="FRONTEND_FEEDBACK_BUTTON_IDLE", environ_prefix=None
+    )
+    FRONTEND_FEEDBACK_ITEMS = values.DictValue(
+        {}, environ_name="FRONTEND_FEEDBACK_ITEMS", environ_prefix=None
+    )
     # Crisp
     CRISP_WEBSITE_ID = values.Value(
         None, environ_name="CRISP_WEBSITE_ID", environ_prefix=None
