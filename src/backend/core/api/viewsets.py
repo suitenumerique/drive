@@ -629,8 +629,8 @@ class ItemViewSet(
 
         if settings.POSTHOG_KEY:
             posthog.capture(
-                request.user.email,
                 "item_uploaded",
+                distinct_id=request.user.email,
                 properties={
                     "id": item.id,
                     "title": item.title,
