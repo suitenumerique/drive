@@ -18,6 +18,7 @@ from django.db.models.expressions import RawSQL
 import magic
 import posthog
 import rest_framework as drf
+from lasuite.malware_detection import malware_detection
 from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
 from rest_framework.permissions import AllowAny
@@ -619,11 +620,13 @@ class ItemViewSet(
         mimetype = mime_detector.from_buffer(file.read(2048))
         file.close()
 
-        item.upload_state = models.ItemUploadStateChoices.UPLOADED
+        item.upload_state = models.ItemUploadStateChoices.ANALYZING
         item.mimetype = mimetype
         item.size = file.size
 
         item.save(update_fields=["upload_state", "mimetype", "size"])
+
+        malware_detection.analyse_file(item.file_key, item_id=item.id)
 
         serializer = self.get_serializer(item)
 
