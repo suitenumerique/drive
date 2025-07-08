@@ -1,0 +1,221 @@
+.image-viewer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+
+  &__controls {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+  }
+
+  &__container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    user-select: none;
+
+    // Smooth cursor transitions
+    cursor: default;
+    transition: cursor 0.2s ease;
+
+    &.draggable {
+      cursor: grab;
+    }
+
+    &.dragging {
+      cursor: grabbing;
+    }
+  }
+
+  &__image-wrapper {
+    position: relative;
+    transition: transform 0.1s ease-out;
+    transform-origin: center center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    will-change: transform;
+  }
+
+  &__image {
+    object-fit: contain;
+    user-select: none;
+    pointer-events: none;
+    max-width: none;
+    max-height: none;
+    box-shadow: 0px 4px 32px 0px rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+    border: 1px solid #f0f0f0;
+  }
+
+  &__loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    color: #6c757d;
+    font-size: 14px;
+  }
+
+  &__spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e9ecef;
+    border-top: 3px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+}
+
+// Animation for spinner
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .image-viewer {
+    &__controls {
+      padding: 12px;
+      gap: 8px;
+    }
+
+    &__control-btn {
+      width: 36px;
+      height: 36px;
+    }
+
+    &__zoom-level {
+      min-width: 50px;
+      font-size: 13px;
+    }
+  }
+}
+
+// Dark mode support (if needed)
+@media (prefers-color-scheme: dark) {
+  .image-viewer {
+    background-color: #2d3748;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+    &__controls {
+      background-color: #4a5568;
+      border-bottom-color: #718096;
+    }
+
+    &__control-btn {
+      background-color: #4a5568;
+      border-color: #718096;
+      color: #e2e8f0;
+
+      &:hover:not(:disabled) {
+        background-color: #718096;
+        border-color: #a0aec0;
+        color: #ffffff;
+      }
+
+      &:active:not(:disabled) {
+        background-color: #2d3748;
+      }
+    }
+
+    &__zoom-level {
+      color: #e2e8f0;
+    }
+
+    &__container {
+      background-color: #2d3748;
+    }
+
+    &__loading {
+      color: #a0aec0;
+    }
+
+    &__spinner {
+      border-color: #4a5568;
+      border-top-color: #63b3ed;
+    }
+  }
+}
+
+// High contrast mode support
+@media (prefers-contrast: high) {
+  .image-viewer {
+    border: 2px solid #000000;
+
+    &__controls {
+      border-bottom-width: 2px;
+    }
+
+    &__control-btn {
+      border-width: 2px;
+    }
+  }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+  .image-viewer {
+    &__image-wrapper {
+      transition: none;
+    }
+
+    &__control-btn {
+      transition: none;
+
+      svg {
+        transition: none;
+      }
+    }
+
+    &__container {
+      transition: none;
+    }
+
+    &__spinner {
+      animation: none;
+    }
+  }
+}
+
+.zoom-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--c--theme--spacings--3xs, 4px);
+  border-radius: var(--xxxs, 4px);
+  padding: var(--c--theme--spacings--3xs, 4px);
+  border: 1px solid var(--Border-Neutral-Secondary, #e2e2e2);
+  background: var(--White-800, rgba(255, 255, 255, 0.8));
+  box-shadow: 0px 2px 8px 0px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
+
+  &__value {
+    text-align: center;
+    min-width: 35px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 4px 0;
+  }
+}
