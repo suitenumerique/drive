@@ -12,6 +12,16 @@
 @use "./../features/explorer/components/tree/ExplorerTree.scss";
 @use "./../features/ui/components/info/InfoRow.scss";
 @use "./../features/ui/components/responsive";
+@use "./../features/ui/preview/audio-player/audio-player.scss";
+@use "./../features/ui/preview/pdf-preview/pdf-preview.scss";
+@use "./../features/ui/preview/files-preview/files-preview.scss";
+@use "./../features/ui/preview/image-viewer/ImageViewer.scss";
+@use "./../features/ui/preview/video-player/VideoPlayer.scss";
+@use "./../features/ui/preview/components/duration-bar/DurationBar.scss";
+@use "./../features/ui/preview/components/volume-bar/VolumeBar.scss";
+@use "./../features/ui/preview/components/controls/PreviewControls.scss";
+@use "./../features/ui/preview/not-supported/NotSupportedPreview.scss";
+@use "./../features/items/components/ItemInfo.scss";
 @use "./../features/explorer/components/icons/ItemIcon.scss";
 @use "./../pages/index.scss" as *;
 body {
