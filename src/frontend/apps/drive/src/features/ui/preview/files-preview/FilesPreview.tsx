@@ -116,7 +116,7 @@ export const FilePreview = ({
           </div>
         );
       case MimeCategory.PDF:
-        return <PreviewPdf src={currentFile.url} title={currentFile.title} />;
+        return <PreviewPdf src={currentFile.url} />;
       default:
         return <NotSupportedPreview file={currentFile} />;
     }
@@ -205,7 +205,7 @@ export const FilePreview = ({
   );
 
   // Use Portal to render the preview outside the component hierarchy
-  return createPortal(previewContent, document.body);
+  return <>{createPortal(previewContent, document.body)}</>;
 };
 
 interface FilePreviewNavProps {

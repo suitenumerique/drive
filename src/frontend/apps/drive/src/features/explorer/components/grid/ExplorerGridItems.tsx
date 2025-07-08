@@ -29,6 +29,11 @@ import { Droppable } from "../Droppable";
 import { useDragItemContext } from "../ExplorerDndProvider";
 import { useModal } from "@openfun/cunningham-react";
 import { ExplorerMoveFolder } from "../modals/move/ExplorerMoveFolderModal";
+import {
+  FilePreview,
+  FilePreviewType,
+} from "@/features/ui/preview/files-preview/FilesPreview";
+import { ItemInfo } from "@/features/items/components/ItemInfo";
 
 export type ExplorerGridItemsProps = {
   isCompact?: boolean;
@@ -81,8 +86,22 @@ export const useExplorerGridItems = () => {
  * - Right panel support
  */
 export const ExplorerGridItems = (props: ExplorerGridItemsProps) => {
+  const { t } = useTranslation();
+
   const [moveItem, setMoveItem] = useState<Item | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [openedFileId, setOpenedFileId] = useState<string | undefined>(
+    undefined
+  );
+  const [currentPreviewItem, setCurrentPreviewItem] = useState<
+    Item | undefined
+  >(undefined);
   const moveModal = useModal();
+
+  const handleClosePreview = () => {
+    setIsPreviewOpen(false);
+    setOpenedFileId(undefined);
+  };
 
   const selectedItems = props.selectedItems ?? [];
   const selectedItemsMap = useMemo(() => {
@@ -94,7 +113,6 @@ export const ExplorerGridItems = (props: ExplorerGridItemsProps) => {
   }, [selectedItems]);
   const { overedItemIds, setOveredItemIds } = useDragItemContext();
 
-  const { t } = useTranslation();
   const lastSelectedRowRef = useRef<string | null>(null);
   const columnHelper = createColumnHelper<Item>();
   const columns = [
@@ -138,190 +156,227 @@ export const ExplorerGridItems = (props: ExplorerGridItemsProps) => {
     setMoveItem(null);
   };
 
+  const handleChangePreviewItem = (file?: FilePreviewType) => {
+    if (file) {
+      const item = props.items?.find((item) => file?.id === item.id);
+      setCurrentPreviewItem(item);
+    } else {
+      setCurrentPreviewItem(undefined);
+    }
+  };
+
+  const previewItems: FilePreviewType[] = useMemo(() => {
+    const items =
+      props.items?.filter((item) => item.type === ItemType.FILE) ?? [];
+    return items?.map((item) => ({
+      id: item.id,
+      title: item.title,
+      mimetype: item.mimetype ?? "",
+      url: item.url ?? "",
+    }));
+  }, [props.items]);
+
   return (
-    <ExplorerGridItemsContext.Provider
-      value={{
-        ...props,
-        selectedItemsMap,
-        openMoveModal: moveModal.open,
-        closeMoveModal: moveModal.close,
-        setMoveItem,
-      }}
-    >
-      <div
-        className={clsx("c__datagrid__table__container", {
-          explorer__compact: props.isCompact,
-        })}
+    <>
+      <ExplorerGridItemsContext.Provider
+        value={{
+          ...props,
+          selectedItemsMap,
+          openMoveModal: moveModal.open,
+          closeMoveModal: moveModal.close,
+          setMoveItem,
+        }}
       >
-        <table ref={tableRef} tabIndex={0} onKeyDown={onKeyDown}>
-          <thead>
-            <tr>
-              {/* This one stands for the mobile column */}
-              <th></th>
-              <th style={{ width: "50%" }}>
-                <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable">
-                  {t("explorer.grid.name")}
-                </div>
-              </th>
-              <th>
-                <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable">
-                  {t("explorer.grid.last_update")}
-                </div>
-              </th>
-              {!props.isCompact && <th></th>}
-            </tr>
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.map((row) => {
-              const isSelected = !!selectedItemsMap[row.original.id];
-              const isOvered = !!overedItemIds[row.original.id];
-              return (
-                <tr
-                  key={row.original.id}
-                  className={clsx("selectable", {
-                    selected: isSelected,
-                    over: isOvered,
-                  })}
-                  data-id={row.original.id}
-                  tabIndex={0}
-                  onClick={(e) => {
-                    const target = e.target as HTMLElement;
-                    const closest = target.closest("tr");
-                    // Because if we use modals or other components, even with a Portal, React triggers events on the original parent.
-                    // So we check that the clicked element is indeed an element of the table.
-                    if (!closest) {
-                      return;
-                    }
+        <div
+          className={clsx("c__datagrid__table__container", {
+            explorer__compact: props.isCompact,
+          })}
+        >
+          <table ref={tableRef} tabIndex={0} onKeyDown={onKeyDown}>
+            <thead>
+              <tr>
+                {/* This one stands for the mobile column */}
+                <th></th>
+                <th style={{ width: "50%" }}>
+                  <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable">
+                    {t("explorer.grid.name")}
+                  </div>
+                </th>
+                <th>
+                  <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable">
+                    {t("explorer.grid.last_update")}
+                  </div>
+                </th>
+                {!props.isCompact && <th></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.map((row) => {
+                const isSelected = !!selectedItemsMap[row.original.id];
+                const isOvered = !!overedItemIds[row.original.id];
+                return (
+                  <tr
+                    key={row.original.id}
+                    className={clsx("selectable", {
+                      selected: isSelected,
+                      over: isOvered,
+                    })}
+                    data-id={row.original.id}
+                    tabIndex={0}
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      const closest = target.closest("tr");
+                      // Because if we use modals or other components, even with a Portal, React triggers events on the original parent.
+                      // So we check that the clicked element is indeed an element of the table.
+                      if (!closest) {
+                        return;
+                      }
 
-                    const isMobile = isTablet();
+                      const isMobile = isTablet();
 
-                    // Single click to select/deselect the item
-                    if (!isMobile && e.detail === 1) {
-                      if (
-                        props.enableMetaKeySelection &&
-                        e.shiftKey &&
-                        lastSelectedRowRef.current
-                      ) {
-                        // Get all rows between last selected and current
-                        const rows = table.getRowModel().rows;
-                        const lastSelectedIndex = rows.findIndex(
-                          (r) => r.id === lastSelectedRowRef.current
-                        );
-                        const currentIndex = rows.findIndex(
-                          (r) => r.id === row.id
-                        );
-
-                        if (lastSelectedIndex !== -1 && currentIndex !== -1) {
-                          const startIndex = Math.min(
-                            lastSelectedIndex,
-                            currentIndex
+                      // Single click to select/deselect the item
+                      if (!isMobile && e.detail === 1) {
+                        if (
+                          props.enableMetaKeySelection &&
+                          e.shiftKey &&
+                          lastSelectedRowRef.current
+                        ) {
+                          // Get all rows between last selected and current
+                          const rows = table.getRowModel().rows;
+                          const lastSelectedIndex = rows.findIndex(
+                            (r) => r.id === lastSelectedRowRef.current
                           );
-                          const endIndex = Math.max(
-                            lastSelectedIndex,
-                            currentIndex
+                          const currentIndex = rows.findIndex(
+                            (r) => r.id === row.id
                           );
 
-                          const newSelection = [...selectedItems];
-                          for (let i = startIndex; i <= endIndex; i++) {
-                            if (!selectedItemsMap[rows[i].original.id]) {
-                              newSelection.push(rows[i].original);
-                            }
-                          }
-
-                          props.setSelectedItems?.(newSelection);
-                        }
-                      } else if (
-                        props.enableMetaKeySelection &&
-                        (e.metaKey || e.ctrlKey)
-                      ) {
-                        // Toggle the selected item.
-                        props.setSelectedItems?.((value) => {
-                          let newValue = [...value];
-                          if (
-                            newValue.find((item) => item.id == row.original.id)
-                          ) {
-                            newValue = newValue.filter(
-                              (item) => item.id !== row.original.id
+                          if (lastSelectedIndex !== -1 && currentIndex !== -1) {
+                            const startIndex = Math.min(
+                              lastSelectedIndex,
+                              currentIndex
                             );
-                          } else {
-                            newValue.push(row.original);
-                          }
-                          return newValue;
-                        });
-                        if (!isSelected) {
-                          lastSelectedRowRef.current = row.id;
-                        }
-                      } else {
-                        props.setSelectedItems?.([row.original]);
-                        lastSelectedRowRef.current = row.id;
-                        props.setRightPanelForcedItem?.(undefined);
-                      }
-                    }
+                            const endIndex = Math.max(
+                              lastSelectedIndex,
+                              currentIndex
+                            );
 
-                    // Double click to open the item
-                    if (isMobile || e.detail === 2) {
-                      if (row.original.type === ItemType.FOLDER) {
-                        props.onNavigate({
-                          type: NavigationEventType.ITEM,
-                          item: row.original,
-                        });
-                      } else {
-                        if (row.original.url) {
-                          window.open(row.original.url, "_blank");
+                            const newSelection = [...selectedItems];
+                            for (let i = startIndex; i <= endIndex; i++) {
+                              if (!selectedItemsMap[rows[i].original.id]) {
+                                newSelection.push(rows[i].original);
+                              }
+                            }
+
+                            props.setSelectedItems?.(newSelection);
+                          }
+                        } else if (
+                          props.enableMetaKeySelection &&
+                          (e.metaKey || e.ctrlKey)
+                        ) {
+                          // Toggle the selected item.
+                          props.setSelectedItems?.((value) => {
+                            let newValue = [...value];
+                            if (
+                              newValue.find(
+                                (item) => item.id == row.original.id
+                              )
+                            ) {
+                              newValue = newValue.filter(
+                                (item) => item.id !== row.original.id
+                              );
+                            } else {
+                              newValue.push(row.original);
+                            }
+                            return newValue;
+                          });
+                          if (!isSelected) {
+                            lastSelectedRowRef.current = row.id;
+                          }
                         } else {
-                          addToast(
-                            <ToasterItem>
-                              {t("explorer.grid.no_url")}
-                            </ToasterItem>
-                          );
+                          props.setSelectedItems?.([row.original]);
+                          lastSelectedRowRef.current = row.id;
+                          props.setRightPanelForcedItem?.(undefined);
                         }
                       }
-                    }
-                  }}
-                >
-                  {row.getVisibleCells().map((cell, index, array) => {
-                    const isLastCell = index === array.length - 1;
-                    const isFirstCell = index === 0;
-                    // Check if the item is selected, if so, we can't drop an item inside it
-                    const isSelected = !!selectedItemsMap[row.original.id];
-                    return (
-                      <td
-                        key={cell.id}
-                        className={clsx("", {
-                          "c__datagrid__row__cell--actions": isLastCell,
-                          "c__datagrid__row__cell--title": isFirstCell,
-                        })}
-                      >
-                        <Droppable
-                          id={cell.id}
-                          item={row.original}
-                          disabled={
-                            isSelected ||
-                            row.original.type !== ItemType.FOLDER ||
-                            !row.original.abilities.children_create
+
+                      // Double click to open the item
+                      if (isMobile || e.detail === 2) {
+                        if (row.original.type === ItemType.FOLDER) {
+                          props.onNavigate({
+                            type: NavigationEventType.ITEM,
+                            item: row.original,
+                          });
+                        } else {
+                          if (row.original.url) {
+                            setIsPreviewOpen(true);
+                            setOpenedFileId(row.original.id);
+                            // window.open(row.original.url, "_blank");
+                          } else {
+                            addToast(
+                              <ToasterItem>
+                                {t("explorer.grid.no_url")}
+                              </ToasterItem>
+                            );
                           }
-                          onOver={(isOver, item) => {
-                            setOveredItemIds?.((prev) => ({
-                              ...prev,
-                              [row.original.id]:
-                                item.id === row.original.id ? false : isOver,
-                            }));
-                          }}
+                        }
+                      }
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell, index, array) => {
+                      const isLastCell = index === array.length - 1;
+                      const isFirstCell = index === 0;
+                      // Check if the item is selected, if so, we can't drop an item inside it
+                      const isSelected = !!selectedItemsMap[row.original.id];
+                      return (
+                        <td
+                          key={cell.id}
+                          className={clsx("", {
+                            "c__datagrid__row__cell--actions": isLastCell,
+                            "c__datagrid__row__cell--title": isFirstCell,
+                          })}
                         >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </Droppable>
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                          <Droppable
+                            id={cell.id}
+                            item={row.original}
+                            disabled={
+                              isSelected ||
+                              row.original.type !== ItemType.FOLDER ||
+                              !row.original.abilities.children_create
+                            }
+                            onOver={(isOver, item) => {
+                              setOveredItemIds?.((prev) => ({
+                                ...prev,
+                                [row.original.id]:
+                                  item.id === row.original.id ? false : isOver,
+                              }));
+                            }}
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </Droppable>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </ExplorerGridItemsContext.Provider>
+      <FilePreview
+        isOpen={isPreviewOpen}
+        onClose={handleClosePreview}
+        title={t("file_preview.title")}
+        files={previewItems ?? []}
+        onChangeFile={handleChangePreviewItem}
+        openedFileId={openedFileId}
+        sidebarContent={
+          currentPreviewItem && <ItemInfo item={currentPreviewItem} />
+        }
+      />
       {moveModal.isOpen && moveItem && (
         <ExplorerMoveFolder
           {...moveModal}
@@ -330,6 +385,6 @@ export const ExplorerGridItems = (props: ExplorerGridItemsProps) => {
           initialFolderId={props.parentItem?.id}
         />
       )}
-    </ExplorerGridItemsContext.Provider>
+    </>
   );
 };
