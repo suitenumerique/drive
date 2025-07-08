@@ -1,7 +1,20 @@
 import { cunninghamConfig } from "@gouvfr-lasuite/ui-kit";
 
+
+// TODO: Temporary solution to override the default button tertiary text color, waiting for the new ui-kit to be released
+const ButtonTertiaryText = {
+  "background--color-disabled": "var(--c--theme--colors--greyscale-000)",
+  "color-disabled": "var(--c--theme--colors--greyscale-100)",
+};
+
+cunninghamConfig.themes.default.components.button["tertiary-text"] = {
+  ...ButtonTertiaryText,
+  ...cunninghamConfig.themes.default.components.button["tertiary-text"]
+};
+
+ 
 const config = {
-  ...cunninghamConfig,
+  ...cunninghamConfig, 
   themes: {
     ...cunninghamConfig.themes,
     default: {
@@ -36,3 +49,5 @@ const config = {
 };
 
 export default config;
+
+
