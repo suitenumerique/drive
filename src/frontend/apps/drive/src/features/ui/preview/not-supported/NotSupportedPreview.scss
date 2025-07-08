@@ -1,0 +1,29 @@
+.file-preview-unsupported {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--c--theme--spacings--xs, 8px);
+
+  &__title {
+    color: var(--Content-Neutral-Primary, #252525);
+    text-align: center;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: var(--line-height-md, 22px); /* 137.5% */
+  }
+
+  &__description {
+    color: var(--Content-Neutral-Secondary, #5e5e5e);
+    text-align: center;
+    font-size: 12px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: var(--line-height-xs, 16px); /* 133.333% */
+  }
+
+  &__download-button {
+    margin-top: var(--c--theme--spacings--md, 24px);
+  }
+}
