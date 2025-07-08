@@ -131,6 +131,7 @@ export const ExplorerGrid = (props: ExplorerProps) => {
 
   return (
     <div
+      style={{ position: "static" }}
       className={clsx("c__datagrid explorer__grid", {
         "c__datagrid--empty": isEmpty,
         "c__datagrid--loading": isLoading,
