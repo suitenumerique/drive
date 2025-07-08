@@ -130,36 +130,60 @@ Object.entries(MIME_MAP).forEach(([category, mimes]) => {
   
 export const CALC_EXTENSIONS = ["numbers", "xlsx", "xls"];
 
-export const getMimeCategory = (item: Item): MimeCategory => {
-// Special case: some calc files have application/zip mimetype. For those we should check their extension too.
-// Otherwise they will be shown as zip files.
-const extension = getExtension(item);
-if (
-    item.mimetype === "application/zip" &&
-    extension &&
-    CALC_EXTENSIONS.includes(extension)
-) {
-    return MimeCategory.CALC;
-}
+export const getMimeCategory = (mimetype: string, extension?: string | null): MimeCategory => {
+  // Special case: some calc files have application/zip mimetype. For those we should check their extension too.
+  // Otherwise they will be shown as zip files.
+  if (
+      mimetype === "application/zip" &&
+      extension &&
+      CALC_EXTENSIONS.includes(extension)
+  ) {
+      return MimeCategory.CALC;
+  }
 
-if (MIME_TO_CATEGORY[item.mimetype!]) {
-    return MIME_TO_CATEGORY[item.mimetype!];
-}
-if (item.mimetype?.startsWith("image/")) {
-    return MimeCategory.IMAGE;
-}
-if (item.mimetype?.startsWith("audio/")) {
-    return MimeCategory.AUDIO;
-}
-if (item.mimetype?.startsWith("video/")) {
-    return MimeCategory.VIDEO;
-}
 
-return MimeCategory.OTHER;
+  
+  if (MIME_TO_CATEGORY[mimetype]) {
+      return MIME_TO_CATEGORY[mimetype];
+  }
+  if (mimetype?.startsWith("image/")) {
+      return MimeCategory.IMAGE;
+  }
+  if (mimetype?.startsWith("audio/")) {
+      return MimeCategory.AUDIO;
+  }
+  if (mimetype?.startsWith("video/")) {
+      return MimeCategory.VIDEO;
+  }
+  
+  return MimeCategory.OTHER;
+  };
+
+export const getItemMimeCategory = (item: Item): MimeCategory => {
+  const mimetype = item.mimetype;
+  const extension = getExtension(item);
+
+  if (!mimetype) {
+    return MimeCategory.OTHER;
+  }
+
+  return getMimeCategory(mimetype, extension);
 };
   
 
 export const getFormatTranslationKey = (item: Item) => {
-  const category = getMimeCategory(item);
+  const category = getItemMimeCategory(item);
   return MIME_TO_FORMAT_TRANSLATION_KEY[category];
+};
+
+
+/**
+ * This function removes the file extension from the filename.
+ */
+export const removeFileExtension = (filename: string) => {
+  const lastDotIndex = filename.lastIndexOf(".");
+  if (lastDotIndex === -1) {
+    return filename; // No extension found
+  }
+  return filename.substring(0, lastDotIndex);
 };

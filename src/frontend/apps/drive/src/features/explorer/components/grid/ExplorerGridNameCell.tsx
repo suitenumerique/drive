@@ -6,6 +6,7 @@ import { Tooltip } from "@openfun/cunningham-react";
 import { ItemIcon } from "../icons/ItemIcon";
 import { useDisableDragGridItem } from "./hooks";
 import { useExplorerGridItems } from "./ExplorerGridItems";
+import { removeFileExtension } from "../../utils/mimeTypes";
 type ExplorerGridNameCellProps = CellContext<Item, string>;
 
 export const ExplorerGridNameCell = (params: ExplorerGridNameCellProps) => {
@@ -29,7 +30,7 @@ export const ExplorerGridNameCell = (params: ExplorerGridNameCellProps) => {
       >
         <div style={{ display: "flex", overflow: "hidden" }}>
           <span className="explorer__grid__item__name__text" ref={ref}>
-            {item.title}
+            {removeFileExtension(item.title)}
           </span>
         </div>
       </Draggable>

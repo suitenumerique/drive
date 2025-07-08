@@ -1,7 +1,11 @@
 import { Item, ItemType } from "@/features/drivers/types";
 import folderIcon from "@/assets/folder/folder.svg";
 import folderIconTree from "@/assets/tree/folder.svg";
-import { getMimeCategory, ICONS } from "../../utils/mimeTypes";
+import {
+  getItemMimeCategory,
+  getMimeCategory,
+  ICONS,
+} from "../../utils/mimeTypes";
 import { itemIsWorkspace } from "@/features/drivers/utils";
 import {
   getContainerSize,
@@ -87,6 +91,37 @@ export const getItemIcon = (
   if (item.type === ItemType.FOLDER) {
     return isTree ? folderIconTree : folderIcon;
   }
-  const category = getMimeCategory(item);
+  const category = getItemMimeCategory(item);
   return ICONS[type][category];
+};
+
+export const getIconByMimeType = (
+  mimeType: string,
+  type: "mini" | "normal"
+) => {
+  const category = getMimeCategory(mimeType);
+  return ICONS[type][category];
+};
+
+type IconFromMimeTypeProps = {
+  mimeType: string;
+  size?: "small" | "medium" | "large" | "xlarge";
+  type?: "mini" | "normal";
+};
+
+export const IconFromMimeType = ({
+  mimeType,
+  size = "medium",
+  type = "normal",
+}: IconFromMimeTypeProps) => {
+  const mimeIcon = getIconByMimeType(mimeType, type);
+
+  return (
+    <img
+      src={mimeIcon.src}
+      alt=""
+      className={`item-icon ${size}`}
+      draggable="false"
+    />
+  );
 };
