@@ -1,5 +1,5 @@
 import { Button, useModal } from "@openfun/cunningham-react";
-import { ExplorerSearchModal } from "./modals/search/ExplorerSearchModal";
+import { ExplorerSearchModal } from "@/features/explorer/components/modals/search/ExplorerSearchModal";
 import { useTranslation } from "react-i18next";
 export const ExplorerSearchButton = () => {
   const searchModal = useModal();

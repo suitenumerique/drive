@@ -2,13 +2,16 @@ import { ItemType } from "@/features/drivers/types";
 import { Item } from "@/features/drivers/types";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { itemToTreeItem, useExplorer } from "../ExplorerContext";
+import { itemToTreeItem, useGlobalExplorer } from "../GlobalExplorerContext";
 import clsx from "clsx";
 import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import { Loader, useCunningham } from "@openfun/cunningham-react";
 import gridEmpty from "@/assets/grid_empty.png";
-import { ExplorerProps, useExplorerInner } from "../Explorer";
-import { ExplorerGridItems } from "./ExplorerGridItems";
+import {
+  AppExplorerProps,
+  useAppExplorer,
+} from "@/features/explorer/components/app-view/AppExplorer";
+import { EmbeddedExplorerGrid } from "../embedded-explorer/EmbeddedExplorerGrid";
 
 /**
  * ExplorerGridItems wrapper around ExplorerGridItems to display a list of items in a table.
@@ -16,8 +19,10 @@ import { ExplorerGridItems } from "./ExplorerGridItems";
  * It provides:
  * - Runtime tree lazy loading support
  *
+ * TODO: Refactor using ExplorerGridItemsExplorer
+ *
  */
-export const ExplorerGrid = (props: ExplorerProps) => {
+export const AppExplorerGrid = (props: AppExplorerProps) => {
   const { t } = useTranslation();
   const { t: tc } = useCunningham();
 
@@ -30,9 +35,9 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     item,
     itemId,
     displayMode,
-  } = useExplorer();
+  } = useGlobalExplorer();
 
-  const { filters, disableItemDragAndDrop } = useExplorerInner();
+  const { filters, disableItemDragAndDrop } = useAppExplorer();
   const effectiveOnNavigate = props.onNavigate ?? onNavigate;
   const treeContext = useTreeContext();
 
@@ -116,7 +121,7 @@ export const ExplorerGrid = (props: ExplorerProps) => {
     }
 
     return (
-      <ExplorerGridItems
+      <EmbeddedExplorerGrid
         items={props.childrenItems}
         parentItem={item}
         gridActionsCell={props.gridActionsCell}
@@ -130,8 +135,6 @@ export const ExplorerGrid = (props: ExplorerProps) => {
       />
     );
   };
-
-  // TODO: Refactor using ExplorerGridItemsExplorer
 
   return (
     <div

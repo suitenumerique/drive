@@ -8,7 +8,10 @@ import {
   TreeViewNodeTypeEnum,
 } from "@gouvfr-lasuite/ui-kit";
 import { DroppableNodeTree } from "./DroppableNodeTree";
-import { NavigationEventType, useExplorer } from "../ExplorerContext";
+import {
+  NavigationEventType,
+  useGlobalExplorer,
+} from "../GlobalExplorerContext";
 import { useModal } from "@openfun/cunningham-react";
 import { ExplorerTreeItemActions } from "./ExplorerTreeItemActions";
 import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWorkspaceModal";
@@ -17,7 +20,7 @@ import { ItemIcon } from "../icons/ItemIcon";
 type ExplorerTreeItemProps = NodeRendererProps<TreeDataItem<TreeItem>>;
 
 export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
-  const { onNavigate } = useExplorer();
+  const { onNavigate } = useGlobalExplorer();
   const item = props.node.data.value;
   const editModal = useModal();
 

@@ -1,8 +1,9 @@
 import { Item } from "@/features/drivers/types";
-import { useExplorerGridItems } from "./ExplorerGridItems";
+import { useEmbeddedExplorerGirdContext } from "./EmbeddedExplorerGrid";
 
 export const useDisableDragGridItem = (item: Item) => {
-  const { selectedItemsMap, disableItemDragAndDrop } = useExplorerGridItems();
+  const { selectedItemsMap, disableItemDragAndDrop } =
+    useEmbeddedExplorerGirdContext();
   const isSelected = !!selectedItemsMap[item.id];
   return disableItemDragAndDrop || !isSelected || !item.abilities.move;
 };

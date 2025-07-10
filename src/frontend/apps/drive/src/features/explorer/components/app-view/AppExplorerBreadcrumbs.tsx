@@ -1,18 +1,21 @@
 import { Button } from "@openfun/cunningham-react";
-import { NavigationEventType, useExplorer } from "./ExplorerContext";
+import {
+  NavigationEventType,
+  useGlobalExplorer,
+} from "@/features/explorer/components/GlobalExplorerContext";
 import { IconSize, useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import { Item, TreeItem } from "@/features/drivers/types";
-import { ItemIcon } from "./icons/ItemIcon";
-import { ExplorerGridBreadcrumbs } from "./breadcrumbs/ExplorerGridBreadcrumbs";
+import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
+import { EmbeddedExplorerGridBreadcrumbs } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridBreadcrumbs";
 
-export const ExplorerBreadcrumbs = () => {
+export const AppExplorerBreadcrumbs = () => {
   const {
     item,
     onNavigate,
     setRightPanelOpen,
     setRightPanelForcedItem,
     treeIsInitialized,
-  } = useExplorer();
+  } = useGlobalExplorer();
 
   if (!item || !treeIsInitialized) {
     return null;
@@ -20,7 +23,7 @@ export const ExplorerBreadcrumbs = () => {
 
   return (
     <div className="explorer__content__breadcrumbs">
-      <ExplorerGridBreadcrumbs
+      <EmbeddedExplorerGridBreadcrumbs
         buildWithTreeContext
         currentItemId={item.id}
         onGoBack={(item) => {
@@ -47,7 +50,7 @@ export const ExplorerBreadcrumbs = () => {
 
 export const ExplorerBreadcrumbsMobile = () => {
   const treeContext = useTreeContext<TreeItem>();
-  const { item, onNavigate, treeIsInitialized } = useExplorer();
+  const { item, onNavigate, treeIsInitialized } = useGlobalExplorer();
 
   const getItems = () => {
     if (!item) {

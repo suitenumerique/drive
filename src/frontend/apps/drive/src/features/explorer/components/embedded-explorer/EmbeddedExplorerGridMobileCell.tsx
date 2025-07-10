@@ -1,10 +1,12 @@
 import { CellContext } from "@tanstack/react-table";
 import { Item } from "@/features/drivers/types";
-import { ItemIcon } from "../icons/ItemIcon";
-import { timeAgo } from "../../utils/utils";
-type ExplorerGridNameCellProps = CellContext<Item, unknown>;
+import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
+import { timeAgo } from "@/features/explorer/utils/utils";
+type EmbeddedExplorerGridMobileCellProps = CellContext<Item, unknown>;
 
-export const ExplorerGridMobileCell = (params: ExplorerGridNameCellProps) => {
+export const EmbeddedExplorerGridMobileCell = (
+  params: EmbeddedExplorerGridMobileCellProps
+) => {
   const item = params.row.original;
 
   return (

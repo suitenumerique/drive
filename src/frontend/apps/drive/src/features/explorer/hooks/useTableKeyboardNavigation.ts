@@ -1,7 +1,7 @@
 import { Item } from "@/features/drivers/types";
 import { Table } from "@tanstack/react-table";
 import { KeyboardEvent, useEffect, useState } from "react";
-import { useExplorer } from "../components/ExplorerContext";
+import { useGlobalExplorer } from "../components/GlobalExplorerContext";
 
 export const useTableKeyboardNavigation = ({
   table,
@@ -11,7 +11,7 @@ export const useTableKeyboardNavigation = ({
   tableRef: React.RefObject<HTMLTableElement | null>;
 }) => {
   const { setSelectedItems, selectedItemsMap, selectedItems, itemId } =
-    useExplorer();
+    useGlobalExplorer();
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
     null
   );

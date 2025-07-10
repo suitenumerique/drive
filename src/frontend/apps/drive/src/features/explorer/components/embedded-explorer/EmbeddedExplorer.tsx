@@ -1,33 +1,34 @@
 import clsx from "clsx";
-import { ExplorerGridItems, ExplorerGridItemsProps } from "./ExplorerGridItems";
 import { Item } from "@/features/drivers/types";
 import { useTranslation } from "react-i18next";
 import {
-  ExplorerGridBreadcrumbs,
+  EmbeddedExplorerGridBreadcrumbs,
   useBreadcrumbs,
-} from "../breadcrumbs/ExplorerGridBreadcrumbs";
+} from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridBreadcrumbs";
 import { useEffect, useMemo, useState } from "react";
-import { NavigationEvent } from "../ExplorerContext";
+import { NavigationEvent } from "@/features/explorer/components/GlobalExplorerContext";
 import { useQuery } from "@tanstack/react-query";
 import { getDriver } from "@/features/config/Config";
 import { Spinner, useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import { ItemFilters } from "@/features/drivers/Driver";
+import {
+  EmbeddedExplorerGrid,
+  EmbeddedExplorerGridProps,
+} from "./EmbeddedExplorerGrid";
 
-export type ExplorerGridItemsExplorerProps = {
+export type EmbeddedExplorerProps = {
   breadcrumbsRight?: () => React.ReactNode;
   emptyContent?: () => React.ReactNode;
   initialFolderId?: string;
   isCompact?: boolean;
-  gridProps?: Partial<ExplorerGridItemsProps>;
+  gridProps?: Partial<EmbeddedExplorerGridProps>;
   itemsFilter?: (items: Item[]) => Item[];
   currentItemId?: string | null;
   setCurrentItemId?: (itemId: string | null) => void;
   itemsFilters?: ItemFilters;
 };
 
-export const useExplorerGridItemsExplorer = (
-  props: ExplorerGridItemsExplorerProps
-) => {
+export const useEmbeddedExplorer = (props: EmbeddedExplorerProps) => {
   const [selectedItems, setSelectedItems] = useState<Item[]>([]);
   const [currentItemId, setCurrentItemId] = useState<string | null>(
     props.initialFolderId ?? null
@@ -48,12 +49,20 @@ export const useExplorerGridItemsExplorer = (
 };
 
 /**
+ * Standalone component to display the embedded explorer with:
+ * - Breadcrumbs
+ * - Grid
+ * - Loader
+ * - Empty state
+ * - Compact mode
+ * - Custom navigation
+ * - Handles initial itemId or start directly from the workspaces
+ *
+ *
  * TODO:
  * - Add props custom navigation.
  */
-export const ExplorerGridItemsExplorer = (
-  props: ExplorerGridItemsExplorerProps
-) => {
+export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
   const { t } = useTranslation();
 
   // TODO: Should not use tree.
@@ -159,7 +168,7 @@ export const ExplorerGridItemsExplorer = (
           {props.emptyContent ? (
             props.emptyContent()
           ) : (
-            <span className="explorer__grid__items__explorer__empty">
+            <span className="embedded-explorer__empty">
               {t("explorer.grid.empty.default")}
             </span>
           )}
@@ -167,7 +176,7 @@ export const ExplorerGridItemsExplorer = (
       );
     }
     return (
-      <ExplorerGridItems
+      <EmbeddedExplorerGrid
         {...props.gridProps}
         isCompact={props.isCompact}
         items={items}
@@ -178,13 +187,13 @@ export const ExplorerGridItemsExplorer = (
 
   return (
     <div
-      className={clsx("explorer__grid__items__explorer", {
-        "explorer__grid__items__explorer--compact": props.isCompact,
+      className={clsx("embedded-explorer", {
+        "embedded-explorer--compact": props.isCompact,
       })}
     >
-      <div className="explorer__grid__items__explorer__container">
-        <div className="explorer__grid__items__explorer__breadcrumbs">
-          <ExplorerGridBreadcrumbs
+      <div className="embedded-explorer__container">
+        <div className="embedded-explorer__breadcrumbs">
+          <EmbeddedExplorerGridBreadcrumbs
             {...breadcrumbs}
             showSpacesItem={true}
             buildWithTreeContext={false}

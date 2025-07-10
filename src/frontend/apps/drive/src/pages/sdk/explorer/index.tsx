@@ -1,18 +1,17 @@
 import { Item, ItemType, LinkReach } from "@/features/drivers/types";
 import {
-  ExplorerGridItemsExplorer,
-  useExplorerGridItemsExplorer,
-} from "@/features/explorer/components/grid/ExplorerGridItemsExplorer";
+  EmbeddedExplorer,
+  useEmbeddedExplorer,
+} from "@/features/explorer/components/embedded-explorer/EmbeddedExplorer";
 import {
-  ExplorerGridNameCell,
-  ExplorerGridNameCellProps,
-} from "@/features/explorer/components/grid/ExplorerGridNameCell";
+  EmbeddedExplorerGridNameCell,
+  EmbeddedExplorerGridNameCellProps,
+} from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridNameCell";
 import {
   getSdkPickerLayout,
   useSdkContext,
 } from "@/features/layouts/components/sdk/SdkLayout";
 import { PickerFooter } from "@/features/sdk/SdkPickerFooter";
-import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
 import { Tooltip } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
 
@@ -34,7 +33,7 @@ function canPickItem(item: Item) {
 export default function SdkExplorerPage() {
   const { token } = useSdkContext();
 
-  const itemsExplorer = useExplorerGridItemsExplorer({
+  const itemsExplorer = useEmbeddedExplorer({
     isCompact: true,
     gridProps: {
       enableMetaKeySelection: true,
@@ -49,25 +48,25 @@ export default function SdkExplorerPage() {
   return (
     <div className="sdk__explorer__page">
       <div className="sdk__explorer">
-        <ExplorerGridItemsExplorer {...itemsExplorer} />
+        <EmbeddedExplorer {...itemsExplorer} />
       </div>
       <PickerFooter token={token} selectedItems={itemsExplorer.selectedItems} />
     </div>
   );
 }
 
-const SdkGridNameCell = (props: ExplorerGridNameCellProps) => {
+const SdkGridNameCell = (props: EmbeddedExplorerGridNameCellProps) => {
   const item = props.row.original;
   const { t } = useTranslation();
 
   if (item.type === ItemType.FOLDER || canPickItem(item)) {
-    return <ExplorerGridNameCell {...props} />;
+    return <EmbeddedExplorerGridNameCell {...props} />;
   }
   return (
     <Tooltip content={t("sdk.explorer.cannot_pick")}>
       {/* Nested div is needed to make the tooltip work */}
       <div>
-        <ExplorerGridNameCell {...props}>
+        <EmbeddedExplorerGridNameCell {...props}>
           <svg
             width="16"
             height="16"
@@ -80,7 +79,7 @@ const SdkGridNameCell = (props: ExplorerGridNameCellProps) => {
               fill="#777777"
             />
           </svg>
-        </ExplorerGridNameCell>
+        </EmbeddedExplorerGridNameCell>
       </div>
     </Tooltip>
   );

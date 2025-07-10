@@ -1,12 +1,12 @@
 import { DropdownMenu, useDropdownMenu } from "@gouvfr-lasuite/ui-kit";
-import { useExplorer } from "../ExplorerContext";
+import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import createFolderSvg from "@/assets/icons/create_folder.svg";
 import createWorkspaceSvg from "@/assets/icons/create_workspace.svg";
 import uploadFileSvg from "@/assets/icons/upload_file.svg";
 import uploadFolderSvg from "@/assets/icons/upload_folder.svg";
 import { Button } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
-import { ExplorerSearchButton } from "../ExplorerSearchButton";
+import { ExplorerSearchButton } from "@/features/explorer/components/app-view/ExplorerSearchButton";
 
 type ExplorerTreeActionsProps = {
   openCreateFolderModal: () => void;
@@ -18,7 +18,7 @@ export const ExplorerTreeActions = ({
   openCreateWorkspaceModal,
 }: ExplorerTreeActionsProps) => {
   const { t } = useTranslation();
-  const { treeIsInitialized, item } = useExplorer();
+  const { treeIsInitialized, item } = useGlobalExplorer();
   const importMenu = useDropdownMenu();
   const createMenu = useDropdownMenu();
 

@@ -13,9 +13,9 @@ import { addItemsMovedToast } from "../../toasts/addItemsMovedToast";
 import { ExplorerTreeMoveConfirmationModal } from "../../tree/ExplorerTreeMoveConfirmationModal";
 import { ExplorerCreateFolderModal } from "../ExplorerCreateFolderModal";
 import {
-  ExplorerGridItemsExplorer,
-  useExplorerGridItemsExplorer,
-} from "../../grid/ExplorerGridItemsExplorer";
+  EmbeddedExplorer,
+  useEmbeddedExplorer,
+} from "@/features/explorer/components/embedded-explorer/EmbeddedExplorer";
 import add_folder from "@/assets/icons/folder-tiny-plus.svg";
 
 interface ExplorerMoveFolderProps {
@@ -36,7 +36,7 @@ export const ExplorerMoveFolder = ({
   const treeContext = useTreeContext<Item>();
   const moveItems = useMoveItems();
 
-  const itemsExplorer = useExplorerGridItemsExplorer({
+  const itemsExplorer = useEmbeddedExplorer({
     initialFolderId: initialFolderId,
     isCompact: true,
     gridProps: {
@@ -202,7 +202,7 @@ export const ExplorerMoveFolder = ({
         <div className="noPadding">
           <HorizontalSeparator />
           <div className="modal__move__explorer">
-            <ExplorerGridItemsExplorer {...itemsExplorer} />
+            <EmbeddedExplorer {...itemsExplorer} />
           </div>
           <HorizontalSeparator />
         </div>

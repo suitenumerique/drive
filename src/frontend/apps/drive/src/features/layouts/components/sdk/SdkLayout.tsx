@@ -1,5 +1,5 @@
 import { Auth } from "@/features/auth/Auth";
-import { ExplorerProvider } from "@/features/explorer/components/ExplorerContext";
+import { GlobalExplorerProvider } from "@/features/explorer/components/GlobalExplorerContext";
 import { HorizontalSeparator, Spinner } from "@gouvfr-lasuite/ui-kit";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -31,13 +31,13 @@ export const SdkLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <Auth>
-      <ExplorerProvider displayMode="sdk" itemId="" onNavigate={() => {}}>
+      <GlobalExplorerProvider displayMode="sdk" itemId="" onNavigate={() => {}}>
         <div className="sdk__explorer__header">
           {t("sdk.explorer.picker_caption")}
         </div>
         <HorizontalSeparator />
         {children}
-      </ExplorerProvider>
+      </GlobalExplorerProvider>
     </Auth>
   );
 };

@@ -24,7 +24,7 @@ import { capitalizeRegion } from "@/features/i18n/utils";
 import { FeedbackFooterMobile } from "@/features/feedback/Feedback";
 import { ResponsiveDivs } from "@/features/ui/components/responsive/ResponsiveDivs";
 import { useRouter } from "next/router";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 
 export type NextPageWithLayout<P = object, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;

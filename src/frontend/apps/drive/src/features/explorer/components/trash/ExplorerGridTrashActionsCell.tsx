@@ -5,7 +5,7 @@ import {
 import {
   useMutationHardDeleteItems,
   useMutationRestoreItems,
-} from "../../hooks/useMutations";
+} from "@/features/explorer/hooks/useMutations";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
@@ -13,8 +13,8 @@ import { Button, Decision, useModal } from "@openfun/cunningham-react";
 import undoIcon from "@/assets/icons/undo.svg";
 import cancelIcon from "@/assets/icons/cancel.svg";
 
-import { ExplorerGridActionsCellProps } from "./ExplorerGridActionsCell";
-import { HardDeleteConfirmationModal } from "../modals/HardDeleteConfirmationModal";
+import { ExplorerGridActionsCellProps } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridActionsCell";
+import { HardDeleteConfirmationModal } from "@/features/explorer/components/modals/HardDeleteConfirmationModal";
 
 export const ExplorerGridTrashActionsCell = (
   params: ExplorerGridActionsCellProps

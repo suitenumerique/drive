@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import folderIcon from "@/assets/folder/folder.svg";
 import mimeOther from "@/assets/files/icons/mime-other.svg";
 import { Key } from "react-aria-components";
-import { useExplorerInner } from "./Explorer";
+import { useAppExplorer } from "./AppExplorer";
 import { ItemType } from "@/features/drivers/types";
 
 export const ExplorerFilters = () => {
@@ -53,9 +53,9 @@ export const ExplorerFilters = () => {
     [t]
   );
 
-  const { filters, onFiltersChange } = useExplorerInner();
+  const { filters, onFiltersChange } = useAppExplorer();
 
-  const onTypeChange = (value: Key) => {
+  const onTypeChange = (value: Key | null) => {
     if (value === "all") {
       const newFilters = { ...filters };
       delete newFilters.type;

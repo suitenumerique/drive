@@ -11,7 +11,7 @@ import { WorkspaceForm, WorkspaceFormInputs } from "./WorkspaceForm";
 import { useMutationUpdateWorkspace } from "@/features/explorer/hooks/useMutations";
 import { SubmitHandler } from "react-hook-form";
 import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
-import { useExplorer } from "../../ExplorerContext";
+import { useGlobalExplorer } from "../../GlobalExplorerContext";
 
 export const ExplorerEditWorkspaceModal = (
   props: Pick<ModalProps, "isOpen" | "onClose"> & {
@@ -21,7 +21,7 @@ export const ExplorerEditWorkspaceModal = (
   const { t } = useTranslation();
   const treeContext = useTreeContext<Item>();
   const { setRightPanelForcedItem, rightPanelForcedItem, rightPanelOpen } =
-    useExplorer();
+    useGlobalExplorer();
   const updateWorkspace = useMutationUpdateWorkspace();
 
   const onSubmit: SubmitHandler<WorkspaceFormInputs> = async (data) => {

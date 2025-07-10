@@ -34,7 +34,7 @@ type GridBreadcrumbsFromTreeProps = Omit<
  *
  * For the uncontrolled mode, if buildWithTreeContext is true, it will use the tree context to get the ancestors.
  */
-export const ExplorerGridBreadcrumbs = ({
+export const EmbeddedExplorerGridBreadcrumbs = ({
   buildWithTreeContext = false,
   ...props
 }: GridBreadcrumbsProps) => {

@@ -1,7 +1,7 @@
 import { getDriver } from "@/features/config/Config";
 import { Item } from "@/features/drivers/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useExplorer } from "../components/ExplorerContext";
+import { useGlobalExplorer } from "../components/GlobalExplorerContext";
 
 export const useMutationCreateFile = () => {
   const driver = getDriver();
@@ -23,7 +23,7 @@ export const useMutationCreateFile = () => {
 export const useMutationDeleteItems = () => {
   const driver = getDriver();
   const queryClient = useQueryClient();
-  const { item } = useExplorer();
+  const { item } = useGlobalExplorer();
   return useMutation({
     mutationFn: async (...payload: Parameters<typeof driver.deleteItems>) => {
       await driver.deleteItems(...payload);
@@ -42,8 +42,10 @@ export const useMutationDeleteItems = () => {
       ]);
 
       // Optimistically update to the new value
-      queryClient.setQueryData(["items", item!.id, "children"], (old: Item[]) =>
-        old ? old.filter((i: Item) => !itemIds.includes(i.id)) : old
+      queryClient.setQueryData(
+        ["items", item!.id, "children"],
+        (old: Item[]) =>
+          old ? old.filter((i: Item) => !itemIds.includes(i.id)) : old
       );
 
       // Return a context object with the snapshotted value
@@ -106,7 +108,7 @@ export const useMutationHardDeleteItems = () => {
 export const useMutationRenameItem = () => {
   const driver = getDriver();
   const queryClient = useQueryClient();
-  const { item } = useExplorer();
+  const { item } = useGlobalExplorer();
   return useMutation({
     mutationFn: async (...payload: Parameters<typeof driver.updateItem>) => {
       await driver.updateItem(...payload);
@@ -120,12 +122,14 @@ export const useMutationRenameItem = () => {
         item!.id,
         "children",
       ]);
-      queryClient.setQueryData(["items", item!.id, "children"], (old: Item[]) =>
-        old
-          ? old.map((i: Item) =>
-              i.id === itemUpdated.id ? { ...i, ...itemUpdated } : i
-            )
-          : old
+      queryClient.setQueryData(
+        ["items", item!.id, "children"],
+        (old: Item[]) =>
+          old
+            ? old.map((i: Item) =>
+                i.id === itemUpdated.id ? { ...i, ...itemUpdated } : i
+              )
+            : old
       );
       return { previousItems };
     },
@@ -164,7 +168,7 @@ export const useMutationCreateFolder = () => {
 export const useMutationUpdateItem = () => {
   const driver = getDriver();
   const queryClient = useQueryClient();
-  const { item } = useExplorer();
+  const { item } = useGlobalExplorer();
   return useMutation({
     mutationFn: async (...payload: Parameters<typeof driver.updateItem>) => {
       await driver.updateItem(...payload);
