@@ -1,6 +1,13 @@
 {
   "en": {
     "translation": {
+      "file_preview": {
+        "unsupported": {
+          "title": "File type not supported for preview",
+          "description": "To view the file, download it to your device.",
+          "download": "Download file"
+        }
+      },
       "common": {
         "cancel": "Cancel"
       },
@@ -299,6 +306,13 @@
   },
   "fr": {
     "translation": {
+      "file_preview": {
+        "unsupported": {
+          "title": "Type de fichier non supporté pour la prévisualisation",
+          "description": "Pour visualiser le fichier, téléchargez-le sur votre appareil.",
+          "download": "Télécharger le fichier"
+        }
+      },
       "common": {
         "cancel": "Annuler"
       },

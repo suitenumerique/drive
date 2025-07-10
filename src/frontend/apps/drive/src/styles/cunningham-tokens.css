@@ -207,6 +207,8 @@
 	--c--components--button--tertiary--background--disabled: var(--c--theme--colors--primary-050);
 	--c--components--button--tertiary--color: var(--c--theme--colors--primary-800);
 	--c--components--button--tertiary--disabled: var(--c--theme--colors--primary-300);
+	--c--components--button--tertiary-text--background--color-disabled: var(--c--theme--colors--greyscale-000);
+	--c--components--button--tertiary-text--color-disabled: var(--c--theme--colors--greyscale-100);
 	--c--components--button--tertiary-text--background--color-hover: var(--c--theme--colors--greyscale-100);
 	--c--components--button--tertiary-text--color-hover: var(--c--theme--colors--primary-text);
 	--c--components--button--tertiary-text--color: var(--c--theme--colors--primary-600);

@@ -243,6 +243,8 @@ $themes: (
           'disabled': #CACAFB
         ),
         'tertiary-text': (
+          'background--color-disabled': var(--c--theme--colors--greyscale-000),
+          'color-disabled': var(--c--theme--colors--greyscale-100),
           'background--color-hover': #eee,
           'color-hover': #000091,
           'color': #313178

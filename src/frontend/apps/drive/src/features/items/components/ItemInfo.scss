@@ -1,0 +1,6 @@
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--c--theme--spacings--xs, 0.5rem);
+  padding: var(--c--theme--spacings--base, 1rem);
+}

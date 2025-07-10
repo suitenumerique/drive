@@ -2,6 +2,7 @@ import { CellContext } from "@tanstack/react-table";
 import { Item } from "@/features/drivers/types";
 import { ItemIcon } from "../icons/ItemIcon";
 import { timeAgo } from "../../utils/utils";
+import { removeFileExtension } from "../../utils/mimeTypes";
 type ExplorerGridNameCellProps = CellContext<Item, unknown>;
 
 export const ExplorerGridMobileCell = (params: ExplorerGridNameCellProps) => {
@@ -12,7 +13,9 @@ export const ExplorerGridMobileCell = (params: ExplorerGridNameCellProps) => {
       <ItemIcon key={item.id} item={item} />
       <div className="explorer__grid__item__mobile__info">
         <div className="explorer__grid__item__mobile__info__title">
-          <span className="explorer__grid__item__name__text">{item.title}</span>
+          <span className="explorer__grid__item__name__text">
+            {removeFileExtension(item.title)}
+          </span>
         </div>
         <div className="explorer__grid__item__mobile__info__meta">
           <span>{timeAgo(params.row.original.updated_at)}</span>
