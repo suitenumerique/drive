@@ -16,6 +16,7 @@ import { WorkspaceShareModal } from "../modals/share/WorkspaceShareModal";
 import { itemIsWorkspace } from "@/features/drivers/utils";
 import { useDisableDragGridItem } from "./hooks";
 import { useExplorerGridItems } from "./ExplorerGridItems";
+import { FileShareModal } from "../modals/share/FileShareModal";
 
 export type ExplorerGridActionsCellProps = CellContext<Item, unknown>;
 
@@ -26,10 +27,13 @@ export const ExplorerGridActionsCell = (
   const { setRightPanelForcedItem, setRightPanelOpen } = useExplorer();
   const { openMoveModal, setMoveItem } = useExplorerGridItems();
   const disableDrag = useDisableDragGridItem(item);
-  const shareModal = useModal();
+  const shareWorkspaceModal = useModal();
+  const shareFileModal = useModal();
 
   const [isOpen, setIsOpen] = useState(false);
   const isWorkspace = itemIsWorkspace(item);
+  const canShareWorkspace = isWorkspace;
+  const canShareFile = item.type === ItemType.FILE;
   const { t } = useTranslation();
   const deleteItems = useMutationDeleteItems();
   const renameModal = useModal();
@@ -88,8 +92,16 @@ export const ExplorerGridActionsCell = (
               label: item.abilities.accesses_manage
                 ? t("explorer.tree.workspace.options.share")
                 : t("explorer.tree.workspace.options.share_view"),
-              isHidden: !isWorkspace,
-              callback: shareModal.open,
+              isHidden: !canShareWorkspace,
+              callback: shareWorkspaceModal.open,
+            },
+            {
+              icon: <span className="material-icons">group</span>,
+              label: item.abilities.accesses_manage
+                ? t("explorer.tree.workspace.options.share")
+                : t("explorer.tree.workspace.options.share_view"),
+              isHidden: !canShareFile,
+              callback: shareFileModal.open,
             },
             {
               icon: <span className="material-icons">group</span>,
@@ -135,8 +147,15 @@ export const ExplorerGridActionsCell = (
         {renameModal.isOpen && (
           <ExplorerRenameItemModal {...renameModal} item={item} key={item.id} />
         )}
-        {isWorkspace && shareModal.isOpen && (
-          <WorkspaceShareModal {...shareModal} item={item} key={item.id} />
+        {canShareWorkspace && (
+          <WorkspaceShareModal
+            {...shareWorkspaceModal}
+            item={item}
+            key={item.id}
+          />
+        )}
+        {canShareFile && (
+          <FileShareModal {...shareFileModal} item={item} key={item.id} />
         )}
       </Draggable>
     </div>

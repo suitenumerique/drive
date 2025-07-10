@@ -4,7 +4,7 @@ import { Explorer } from "@/features/explorer/components/Explorer";
 import { getGlobalExplorerLayout } from "@/features/layouts/components/explorer/ExplorerLayout";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 
 export default function ItemPage() {
   const router = useRouter();

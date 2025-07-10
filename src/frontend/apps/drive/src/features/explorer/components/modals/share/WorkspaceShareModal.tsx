@@ -147,7 +147,7 @@ export const WorkspaceShareModal = ({
   };
 
   return (
-    <ShareModal<User, Invitation, Access>
+    <ShareModal
       isOpen={isOpen}
       loading={isLoadingUsers ?? false}
       onClose={onClose}
@@ -176,6 +176,7 @@ export const WorkspaceShareModal = ({
         })
       }
       onUpdateAccess={(access, role) => {
+        // TODO: This should be added in the ui kit directly?
         if (role === access.role) {
           return;
         }

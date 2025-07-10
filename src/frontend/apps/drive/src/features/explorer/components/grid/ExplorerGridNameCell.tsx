@@ -6,7 +6,9 @@ import { Tooltip } from "@openfun/cunningham-react";
 import { ItemIcon } from "../icons/ItemIcon";
 import { useDisableDragGridItem } from "./hooks";
 import { useExplorerGridItems } from "./ExplorerGridItems";
-type ExplorerGridNameCellProps = CellContext<Item, string>;
+export type ExplorerGridNameCellProps = CellContext<Item, string> & {
+  children?: React.ReactNode;
+};
 
 export const ExplorerGridNameCell = (params: ExplorerGridNameCellProps) => {
   const item = params.row.original;
@@ -30,6 +32,7 @@ export const ExplorerGridNameCell = (params: ExplorerGridNameCellProps) => {
         <div style={{ display: "flex", overflow: "hidden" }}>
           <span className="explorer__grid__item__name__text" ref={ref}>
             {item.title}
+            {params.children}
           </span>
         </div>
       </Draggable>

@@ -1,10 +1,5 @@
 import { Auth } from "@/features/auth/Auth";
-import {
-  ExplorerContext,
-  ExplorerProvider,
-} from "@/features/explorer/components/ExplorerContext";
-import { ExplorerDndProvider } from "@/features/explorer/components/ExplorerDndProvider";
-import { PickerFooter } from "@/features/sdk/SdkPickerFooter";
+import { ExplorerProvider } from "@/features/explorer/components/ExplorerContext";
 import { HorizontalSeparator, Spinner } from "@gouvfr-lasuite/ui-kit";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";

@@ -19,7 +19,10 @@ import {
   NavigationEventType,
 } from "../ExplorerContext";
 import { ExplorerGridMobileCell } from "./ExplorerGridMobileCell";
-import { ExplorerGridNameCell } from "./ExplorerGridNameCell";
+import {
+  ExplorerGridNameCell,
+  ExplorerGridNameCellProps,
+} from "./ExplorerGridNameCell";
 import { ExplorerGridUpdatedAtCell } from "./ExplorerGridUpdatedAtCell";
 import { ExplorerGridActionsCell } from "./ExplorerGridActionsCell";
 import { useTableKeyboardNavigation } from "../../hooks/useTableKeyboardNavigation";
@@ -41,6 +44,7 @@ export type ExplorerGridItemsProps = {
   setRightPanelForcedItem?: (item: Item | undefined) => void;
   items: ExplorerProps["childrenItems"];
   gridActionsCell?: ExplorerProps["gridActionsCell"];
+  gridNameCell?: (params: ExplorerGridNameCellProps) => React.ReactNode;
   onNavigate: (event: NavigationEvent) => void;
   selectedItems?: Item[];
   setSelectedItems?: Dispatch<SetStateAction<Item[]>>;
@@ -111,7 +115,7 @@ export const ExplorerGridItems = (props: ExplorerGridItemsProps) => {
     }),
     columnHelper.accessor("title", {
       header: t("explorer.grid.name"),
-      cell: ExplorerGridNameCell,
+      cell: props.gridNameCell ?? ExplorerGridNameCell,
     }),
     columnHelper.accessor("updated_at", {
       header: t("explorer.grid.last_update"),

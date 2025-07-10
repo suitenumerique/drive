@@ -47,6 +47,10 @@ export const useExplorerGridItemsExplorer = (
   };
 };
 
+/**
+ * TODO:
+ * - Add props custom navigation.
+ */
 export const ExplorerGridItemsExplorer = (
   props: ExplorerGridItemsExplorerProps
 ) => {

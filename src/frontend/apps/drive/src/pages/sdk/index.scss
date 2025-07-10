@@ -19,6 +19,12 @@
   .explorer__grid__items__explorer {
     flex-grow: 1;
   }
+
+  .explorer__grid__item__name__text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 }
 
 .sdk__explorer__header {

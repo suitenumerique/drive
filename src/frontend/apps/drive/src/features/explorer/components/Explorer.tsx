@@ -4,7 +4,6 @@ import { ExplorerGridActionsCellProps } from "./grid/ExplorerGridActionsCell";
 import { createContext, useContext } from "react";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { NavigationEvent } from "./ExplorerContext";
-import { ResponsiveDivs } from "@/features/ui/components/responsive/ResponsiveDivs";
 
 export interface ExplorerProps {
   childrenItems?: Item[];

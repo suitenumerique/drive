@@ -293,7 +293,8 @@
           "picker_label_one": "{{count}} file selected",
           "picker_label_other": "{{count}} files selected",
           "save_label": "Choose a destination for the file",
-          "save": "Save"
+          "save": "Save",
+          "cannot_pick": "You don’t have permission to share this file because you’re only a viewer."
         }
       }
     }
@@ -609,7 +610,8 @@
           "picker_label_one": "{{count}} fichier sélectionné",
           "picker_label_other": "{{count}} fichiers sélectionnés",
           "save_label": "Choisissez une destination pour le fichier",
-          "save": "Enregistrer"
+          "save": "Enregistrer",
+          "cannot_pick": "Vous n'avez pas les droits pour partager ce fichier car vous n'êtes qu'un lecteur."
         }
       }
     }
