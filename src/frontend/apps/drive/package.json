@@ -7,7 +7,7 @@
     "build": "next build --no-lint",
     "start": "next start",
     "lint": "next lint",
-    "build-theme": "cunningham -g css,scss -o src/styles && mv src/styles/cunningham-tokens.scss src/styles/cunningham-tokens-sass.scss"
+    "build-theme": "cunningham -g css,scss,ts -o src/styles && mv src/styles/cunningham-tokens.scss src/styles/cunningham-tokens-sass.scss"
   },
   "engines": {
     "node": ">=22.0.0 <23.0.0"
