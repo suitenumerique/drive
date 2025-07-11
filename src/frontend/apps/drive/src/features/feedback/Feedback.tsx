@@ -8,12 +8,12 @@ import {
 } from "@openfun/cunningham-react";
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useApiConfig } from "../config/useApiConfig";
+import { useConfig } from "../config/ConfigProvider";
 
 export const Feedback = (props: { buttonProps?: Partial<ButtonProps> }) => {
   const { t } = useTranslation();
   const modal = useModal();
-  const { data: config } = useApiConfig();
+  const { config } = useConfig();
 
   const FEEDBACK_BUTTONS = useMemo(() => {
     return config?.FRONTEND_FEEDBACK_ITEMS

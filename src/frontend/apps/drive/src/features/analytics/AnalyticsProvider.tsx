@@ -1,4 +1,4 @@
-import { useApiConfig } from "../config/useApiConfig";
+import { useConfig } from "../config/ConfigProvider";
 import { PostHogProvider } from "posthog-js/react";
 
 export const AnalyticsProvider = ({
@@ -6,7 +6,7 @@ export const AnalyticsProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const { data: config } = useApiConfig();
+  const { config } = useConfig();
 
   if (!config?.POSTHOG_KEY) {
     return children;

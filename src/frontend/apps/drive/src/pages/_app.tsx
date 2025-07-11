@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from "react";
+import { createContext, useContext, useState, type ReactElement, type ReactNode } from "react";
 import type { NextPage } from "next";
 import type { AppProps } from "next/app";
 import { CunninghamProvider } from "@gouvfr-lasuite/ui-kit";
@@ -22,6 +22,8 @@ import { useTranslation } from "react-i18next";
 import { AnalyticsProvider } from "@/features/analytics/AnalyticsProvider";
 import { capitalizeRegion } from "@/features/i18n/utils";
 import { FeedbackFooterMobile } from "@/features/feedback/Feedback";
+import { ConfigProvider } from "@/features/config/ConfigProvider";
+import { removeQuotes, useCunninghamTheme } from "@/features/ui/cunningham/useCunninghamTheme";
 
 export type NextPageWithLayout<P = object, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;
@@ -55,36 +57,53 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function MyApp({ Component, pageProps }: AppPropsWithLayout) {
+export interface AppContextType {
+  theme: string;
+  setTheme: (theme: string) => void;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export const useAppContext = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error("useAppContext must be used within an AppContextProvider");
+  }
+  return context;
+};
+
+export default function MyApp({ Component, pageProps, router }: AppPropsWithLayout) {
+  const [theme, setTheme] = useState<string>("default");
+
+  return (
+    <AppContext.Provider value={{ theme, setTheme }}>
+      <MyAppInner Component={Component} pageProps={pageProps} router={router} />
+    </AppContext.Provider>
+  );
+}
+
+const MyAppInner = ({ Component, pageProps }: AppPropsWithLayout) => {
   // Use the layout defined at the page level, if available
   const getLayout = Component.getLayout ?? ((page) => page);
   const { t, i18n } = useTranslation();
+  const { theme } = useAppContext();
+  const themeTokens = useCunninghamTheme();
 
   return (
     <>
       <Head>
         <title>{t("app_title")}</title>
-        <link rel="icon" href="/images/favicon-light.png" type="image/png" />
-        <link
-          rel="icon"
-          href="/images/favicon-light.png"
-          type="image/png"
-          media="(prefers-color-scheme: light)"
-        />
-        <link
-          rel="icon"
-          href="/images/favicon-dark.png"
-          type="image/png"
-          media="(prefers-color-scheme: dark)"
-        />
+        <link rel="icon" href={removeQuotes(themeTokens.components.favicon.src)} type="image/png" />
       </Head>
       <QueryClientProvider client={queryClient}>
-        <AnalyticsProvider>
-          <CunninghamProvider currentLocale={capitalizeRegion(i18n.language)}>
-            {getLayout(<Component {...pageProps} />)}
-            <FeedbackFooterMobile />
-          </CunninghamProvider>
-        </AnalyticsProvider>
+        <CunninghamProvider currentLocale={capitalizeRegion(i18n.language)} theme={theme}>
+          <ConfigProvider>
+            <AnalyticsProvider>
+              {getLayout(<Component {...pageProps} />)}
+              <FeedbackFooterMobile />
+            </AnalyticsProvider>
+          </ConfigProvider>
+        </CunninghamProvider>
       </QueryClientProvider>
     </>
   );

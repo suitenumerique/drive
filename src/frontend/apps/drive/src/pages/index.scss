@@ -107,3 +107,11 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     }
   }
 }
+
+.global-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
