@@ -1198,6 +1198,7 @@ class ConfigView(drf.views.APIView):
             "FRONTEND_FEEDBACK_BUTTON_SHOW",
             "FRONTEND_FEEDBACK_BUTTON_IDLE",
             "FRONTEND_FEEDBACK_ITEMS",
+            "FRONTEND_HIDE_GAUFRE",
             "MEDIA_BASE_URL",
             "POSTHOG_KEY",
             "POSTHOG_HOST",

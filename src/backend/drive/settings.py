@@ -434,6 +434,9 @@ class Base(Configuration):
     FRONTEND_FEEDBACK_ITEMS = values.DictValue(
         {}, environ_name="FRONTEND_FEEDBACK_ITEMS", environ_prefix=None
     )
+    FRONTEND_HIDE_GAUFRE = values.BooleanValue(
+        default=False, environ_name="FRONTEND_HIDE_GAUFRE", environ_prefix=None
+    )
     # Crisp
     CRISP_WEBSITE_ID = values.Value(
         None, environ_name="CRISP_WEBSITE_ID", environ_prefix=None
