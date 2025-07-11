@@ -118,6 +118,8 @@ export type ApiConfig = {
   FRONTEND_FEEDBACK_BUTTON_SHOW?: boolean;
   FRONTEND_FEEDBACK_BUTTON_IDLE?: boolean;
   FRONTEND_FEEDBACK_ITEMS?: Record<string, { url: string }>;
+  FRONTEND_THEME?: string;
+  FRONTEND_HIDE_GAUFRE?: boolean;
 };
 
 export interface APIList<T> {
