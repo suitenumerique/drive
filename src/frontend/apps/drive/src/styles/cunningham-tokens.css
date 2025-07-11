@@ -292,6 +292,9 @@
 	--c--components--badge--warning--color: var(--c--theme--colors--warning-600);
 	--c--components--badge--info--background-color: var(--c--theme--colors--info-100);
 	--c--components--badge--info--color: var(--c--theme--colors--info-600);
+	--c--components--favicon--src: '/assets/favicon.png';
+	--c--components--logo--src: url('/assets/logo_alpha.svg');
+	--c--components--logo-icon--src: url('/assets/logo-icon_alpha.svg');
 }
 .cunningham-theme--dark{
 	--c--theme--colors--greyscale-100: #182536;
@@ -340,4 +343,9 @@
 	--c--theme--colors--danger-700: #C36666;
 	--c--theme--colors--danger-800: #AE6666;
 	--c--theme--colors--danger-900: #9D6666;
+}
+.cunningham-theme--anct{
+	--c--components--favicon--src: '/assets/anct_favicon.png';
+	--c--components--logo--src: url('/assets/anct_logo_alpha.svg');
+	--c--components--logo-icon--src: url('/assets/anct_logo-icon.svg');
 }

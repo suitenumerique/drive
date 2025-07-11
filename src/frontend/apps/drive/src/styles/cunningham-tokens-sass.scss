@@ -361,6 +361,15 @@ $themes: (
           'background-color': #E8EDFF,
           'color': #0063CB
         )
+      ),
+      'favicon': (
+        'src': '/assets/favicon.png'
+      ),
+      'logo': (
+        'src': url('/assets/logo_alpha.svg')
+      ),
+      'logo-icon': (
+        'src': url('/assets/logo-icon_alpha.svg')
       )
     )
   ),
@@ -413,6 +422,19 @@ $themes: (
         'danger-700': #C36666,
         'danger-800': #AE6666,
         'danger-900': #9D6666
+      )
+    )
+  ),
+  'anct': (
+    'components': (
+      'favicon': (
+        'src': '/assets/anct_favicon.png'
+      ),
+      'logo': (
+        'src': url('/assets/anct_logo_alpha.svg')
+      ),
+      'logo-icon': (
+        'src': url('/assets/anct_logo-icon.svg')
       )
     )
   )
