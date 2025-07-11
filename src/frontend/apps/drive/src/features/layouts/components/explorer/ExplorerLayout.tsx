@@ -1,7 +1,6 @@
 import { login, useAuth } from "@/features/auth/Auth";
 import { ExplorerTree } from "@/features/explorer/components/tree/ExplorerTree";
 import { MainLayout } from "@gouvfr-lasuite/ui-kit";
-import logo from "@/assets/logo_alpha.svg";
 import { HeaderRight } from "../header/Header";
 import {
   ExplorerProvider,
@@ -91,7 +90,7 @@ export const ExplorerPanelsLayout = ({
       setIsLeftPanelOpen={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
       icon={
         <div className="drive__header__left">
-          <img src={logo.src} alt="logo" />
+          <div className="drive__header__logo" />
           <Feedback />
         </div>
       }

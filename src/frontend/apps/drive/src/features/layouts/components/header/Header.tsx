@@ -4,20 +4,20 @@ import {
   LaGaufre,
 } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@openfun/cunningham-react";
-import logo from "@/assets/logo_alpha.svg";
 import { useAuth, logout } from "@/features/auth/Auth";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExplorerSearchButton } from "@/features/explorer/components/ExplorerSearchButton";
 import { getDriver } from "@/features/config/Config";
 import { Feedback } from "@/features/feedback/Feedback";
+import { useConfig } from "@/features/config/ConfigProvider";
 
 export const Header = () => {
   return (
     <KitHeader
       leftIcon={
         <div>
-          <img src={logo.src} alt="logo" />
+          <div className="drive__header__logo" />
           <Feedback />
         </div>
       }
@@ -30,6 +30,7 @@ export const HeaderRight = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
+  const { config } = useConfig();
   return (
     <>
       {user && (
@@ -59,7 +60,7 @@ export const HeaderRight = () => {
         </DropdownMenu>
       )}
       <LanguagePicker />
-      <LaGaufre />
+      {!config?.FRONTEND_HIDE_GAUFRE && <LaGaufre />}
       <ExplorerSearchButton />
     </>
   );

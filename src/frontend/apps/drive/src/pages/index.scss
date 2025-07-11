@@ -115,3 +115,20 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
   height: 100vh;
 }
 
+.drive__header__logo {
+  background-image: var(--c--components--logo--src);
+  width: 142px;
+  height: 32px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.drive__logo-icon {
+  background-image: var(--c--components--logo-icon--src);
+  width: 64px;
+  height: 64px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}

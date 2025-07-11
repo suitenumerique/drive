@@ -12,8 +12,6 @@ import {
 import { login, useAuth } from "@/features/auth/Auth";
 import { gotoLastVisitedItem } from "@/features/explorer/utils/utils";
 import { useEffect } from "react";
-import logoIcon from "@/assets/logo-icon_alpha.svg";
-import logo from "@/assets/logo_alpha.svg";
 import logoGouv from "@/assets/logo-gouv.svg";
 import banner from "@/assets/home/banner.png";
 import {
@@ -27,11 +25,11 @@ import {
 } from "@/features/ui/components/toaster/Toaster";
 import { Button } from "@openfun/cunningham-react";
 import { Feedback } from "@/features/feedback/Feedback";
-import { useApiConfig } from "@/features/config/useApiConfig";
+import { useConfig } from "@/features/config/ConfigProvider";
 export default function HomePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { data: config } = useApiConfig();
+  const { config } = useConfig();
 
   useEffect(() => {
     if (user) {
@@ -68,7 +66,7 @@ export default function HomePage() {
 
       <HomeGutter>
         <Hero
-          logo={<img src={logoIcon.src} alt="DocLogo" width={64} />}
+          logo={<div className="drive__logo-icon" />}
           banner={banner.src}
           title={t("home.title")}
           subtitle={t("home.subtitle")}
@@ -120,7 +118,7 @@ HomePage.getLayout = function getLayout(page: React.ReactElement) {
           icon={
             <div className="drive__header__left">
               <img src={logoGouv.src} alt="" />
-              <img src={logo.src} alt="" />
+              <div className="drive__header__logo" />
               <Feedback />
             </div>
           }
