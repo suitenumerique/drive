@@ -6,7 +6,7 @@
 
   &__btn {
     background: transparent;
-    color: #5e5e5e;
+    color: var(--c--theme--colors--greyscale-600);
     padding: 8px;
     min-width: 40px;
     height: 40px;
@@ -14,9 +14,9 @@
     transition: all 0.2s ease !important;
 
     &:hover {
-      color: #5e5e5e;
-      background: #e9ecef !important;
-      border-color: #adb5bd !important;
+      color: var(--c--theme--colors--greyscale-600);
+      background: var(--c--theme--colors--greyscale-100);
+      border-color: var(--c--theme--colors--greyscale-200);
     }
   }
 }

@@ -3,27 +3,27 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--c--theme--spacings--xs, 8px);
+  gap: var(--c--theme--spacings--xs);
 
   &__title {
-    color: var(--Content-Neutral-Primary, #252525);
+    color: var(--c--theme--colors--greyscale-800);
     text-align: center;
     font-size: 16px;
     font-style: normal;
     font-weight: 700;
-    line-height: var(--line-height-md, 22px); /* 137.5% */
+    line-height: 22px;
   }
 
   &__description {
-    color: var(--Content-Neutral-Secondary, #5e5e5e);
+    color: var(--c--theme--colors--greyscale-600);
     text-align: center;
     font-size: 12px;
     font-style: normal;
     font-weight: 400;
-    line-height: var(--line-height-xs, 16px); /* 133.333% */
+    line-height: 16px;
   }
 
   &__download-button {
-    margin-top: var(--c--theme--spacings--md, 24px);
+    margin-top: var(--c--theme--spacings--md);
   }
 }

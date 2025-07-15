@@ -1,0 +1,9 @@
+@use "./audio-player/audio-player.scss";
+@use "./pdf-preview/pdf-preview.scss";
+@use "./files-preview/files-preview.scss";
+@use "./image-viewer/ImageViewer.scss";
+@use "./video-player/VideoPlayer.scss";
+@use "./components/duration-bar/DurationBar.scss";
+@use "./components/volume-bar/VolumeBar.scss";
+@use "./components/controls/PreviewControls.scss";
+@use "./not-supported/NotSupportedPreview.scss";

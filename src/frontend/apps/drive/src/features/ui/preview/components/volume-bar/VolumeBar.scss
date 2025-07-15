@@ -14,8 +14,8 @@
     -webkit-appearance: none;
     background: linear-gradient(
       to right,
-      var(--Content-Neutral-Tertiary, #777) 0%,
-      var(--Content-Neutral-Tertiary, #777) var(--volume-percentage, 0%),
+      var(--c--theme--colors--greyscale-600) 0%,
+      var(--c--theme--colors--greyscale-600) var(--volume-percentage, 0%),
       #e9ecef var(--volume-percentage, 0%),
       #e9ecef 100%
     );
@@ -23,18 +23,22 @@
     &:hover {
       background: linear-gradient(
         to right,
-        var(--Content-Brand-1-Primary, #000091) 0%,
-        var(--Content-Brand-1-Primary, #000091) var(--volume-percentage, 0%),
+        var(--c--theme--colors--primary-800) 0%,
+        var(--c--theme--colors--primary-800) var(--volume-percentage, 0%),
         #e9ecef var(--volume-percentage, 0%),
         #e9ecef 100%
       );
       &::-webkit-slider-thumb {
         transform: scale(1.8);
-        background: var(--Content-Brand-1-Primary, #000091);
+        background: var(
+          --c--theme--colors--primary-800
+        ); // TODO: Replace with new ui-kit color
       }
       &::-moz-range-thumb:hover {
         transform: scale(1.8);
-        background: var(--Content-Brand-1-Primary, #000091);
+        background: var(
+          --c--theme--colors--primary-800
+        ); // TODO: Replace with new ui-kit color
       }
     }
 
@@ -43,7 +47,9 @@
       -webkit-appearance: none;
       width: 8px;
       height: 8px;
-      background: var(--Content-Neutral-Tertiary, #777);
+      background: var(
+        --c--theme--colors--greyscale-600
+      ); // TODO: Replace with new ui-kit color
       border-radius: 50%;
       cursor: pointer;
       transition: transform 0.2s ease;
@@ -53,7 +59,9 @@
     &::-moz-range-thumb {
       width: 14px;
       height: 14px;
-      background: #000091;
+      background: var(
+        --c--theme--colors--primary-800
+      ); // TODO: Replace with new ui-kit color
       border-radius: 50%;
       cursor: pointer;
       border: none;
@@ -64,7 +72,7 @@
 
   &__btn-mute {
     background: transparent;
-    color: #5e5e5e !important;
+    color: var(--c--theme--colors--greyscale-600) !important;
     padding: 8px;
     min-width: 40px;
     height: 40px;
@@ -72,8 +80,8 @@
     transition: all 0.2s ease !important;
 
     &:hover {
-      background: #e9ecef !important;
-      border-color: #adb5bd !important;
+      background: var(--c--theme--colors--greyscale-100) !important;
+      border-color: var(--c--theme--colors--greyscale-200) !important;
     }
   }
 }

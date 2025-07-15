@@ -1,10 +1,6 @@
 .audio-player {
-  background: var(--c--theme--colors--background-500);
-  border: 1px solid var(--c--theme--colors--border-500);
-  border-radius: 12px;
   padding: 16px;
   width: 100%;
-
   transition: all 0.3s ease;
 
   &__container {
@@ -20,7 +16,6 @@
   &__title {
     font-size: 16px;
     font-weight: 600;
-    color: var(--c--theme--colors--text-500);
     margin-bottom: 4px;
     line-height: 1.2;
   }
@@ -30,13 +25,5 @@
 @media (max-width: 768px) {
   .audio-player {
     padding: 12px;
-  }
-}
-
-// Dark mode support
-@media (prefers-color-scheme: dark) {
-  .audio-player {
-    background: var(--c--theme--colors--background-600);
-    border-color: var(--c--theme--colors--border-600);
   }
 }
