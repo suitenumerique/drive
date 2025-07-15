@@ -5,6 +5,17 @@ export enum ItemType {
   FOLDER = "folder",
 }
 
+export enum LinkReach {
+  RESTRICTED = "restricted",
+  AUTHENTICATED = "authenticated",
+  PUBLIC = "public",
+}
+
+export enum LinkRole {
+  READER = "reader",
+  EDITOR = "editor",
+}
+
 export type Item = {
   id: string;
   title: string;
@@ -28,6 +39,8 @@ export type Item = {
   size?: number;
   mimetype?: string;
   user_roles?: Role[];
+  link_reach?: LinkReach;
+  link_role?: LinkRole;
   abilities: {
     accesses_manage: boolean;
     accesses_view: boolean;
