@@ -9,3 +9,25 @@
   background-color: var(--c--theme--colors--primary-500);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
+
+.item-icon {
+  &.small {
+    width: 18px;
+    height: 18px;
+  }
+
+  &.medium {
+    width: 32px;
+    height: 32px;
+  }
+
+  &.large {
+    width: 48px;
+    height: 48px;
+  }
+
+  &.xlarge {
+    width: 64px;
+    height: 64px;
+  }
+}
