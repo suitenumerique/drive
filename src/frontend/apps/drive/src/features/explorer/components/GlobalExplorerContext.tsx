@@ -20,7 +20,8 @@ import {
   TreeViewNodeTypeEnum,
 } from "@gouvfr-lasuite/ui-kit";
 import { ExplorerDndProvider } from "./ExplorerDndProvider";
-export interface ExplorerContextType {
+import { useFirstLevelItems } from "../hooks/useQueries";
+export interface GlobalExplorerContextType {
   displayMode: "sdk" | "app";
   selectedItems: Item[];
   selectedItemsMap: Record<string, Item>;
@@ -28,6 +29,7 @@ export interface ExplorerContextType {
   itemId: string;
   item: Item | undefined;
   firstLevelItems: Item[] | undefined;
+  // TODO: Still used?
   items: Item[] | undefined;
   tree: Item | null | undefined;
   onNavigate: (event: NavigationEvent) => void;
@@ -43,14 +45,16 @@ export interface ExplorerContextType {
   setIsLeftPanelOpen: (isLeftPanelOpen: boolean) => void;
 }
 
-export const ExplorerContext = createContext<ExplorerContextType | undefined>(
-  undefined
-);
+export const GlobalExplorerContext = createContext<
+  GlobalExplorerContextType | undefined
+>(undefined);
 
-export const useExplorer = () => {
-  const context = useContext(ExplorerContext);
+export const useGlobalExplorer = () => {
+  const context = useContext(GlobalExplorerContext);
   if (!context) {
-    throw new Error("useExplorer must be used within an ExplorerProvider");
+    throw new Error(
+      "useGlobalExplorer must be used within an ExplorerProvider"
+    );
   }
   return context;
 };
@@ -71,7 +75,15 @@ interface ExplorerProviderProps {
   onNavigate: (event: NavigationEvent) => void;
 }
 
-export const ExplorerProvider = ({
+/**
+ * - Handles the selection of items
+ * - Handles the right panel states
+ * - Handles the left panel states
+ * - Sets TreeProvider
+ * - Sets ExplorerDndProvider
+ * - Sets Toaster
+ */
+export const GlobalExplorerProvider = ({
   children,
   displayMode = "app",
   itemId,
@@ -109,12 +121,7 @@ export const ExplorerProvider = ({
     enabled: !!itemId,
   });
 
-  const { data: firstLevelItems } = useQuery({
-    queryKey: ["firstLevelItems"],
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    queryFn: () => getDriver().getItems(),
-  });
+  const { data: firstLevelItems } = useFirstLevelItems();
 
   const { data: tree } = useQuery({
     queryKey: ["initialTreeItem", initialId],
@@ -150,7 +157,7 @@ export const ExplorerProvider = ({
   const { dropZone } = useUploadZone({ item: item! });
 
   return (
-    <ExplorerContext.Provider
+    <GlobalExplorerContext.Provider
       value={{
         treeIsInitialized,
         setTreeIsInitialized,
@@ -209,7 +216,7 @@ export const ExplorerProvider = ({
       />
 
       <Toaster />
-    </ExplorerContext.Provider>
+    </GlobalExplorerContext.Provider>
   );
 };
 

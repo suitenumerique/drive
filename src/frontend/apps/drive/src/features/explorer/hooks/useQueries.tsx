@@ -1,5 +1,5 @@
 import { getDriver } from "@/features/config/Config";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 export const useInfiniteItemAccesses = (itemId: string) => {
   const driver = getDriver();
@@ -22,5 +22,14 @@ export const useInfiniteItemInvitations = (itemId: string) => {
     getNextPageParam(lastPage, allPages) {
       return lastPage.next ? allPages.length + 1 : undefined;
     },
+  });
+};
+
+export const useFirstLevelItems = () => {
+  return useQuery({
+    queryKey: ["firstLevelItems"],
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    queryFn: () => getDriver().getItems(),
   });
 };

@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRef } from "react";
 import { Id } from "react-toastify";
-import { FileUploadMeta } from "../components/ExplorerInner";
+import { FileUploadMeta } from "@/features/explorer/components/app-view/AppExplorerInner";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { FileUploadToast } from "../components/toasts/FileUploadToast";

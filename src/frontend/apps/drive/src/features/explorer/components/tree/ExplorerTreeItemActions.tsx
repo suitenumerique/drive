@@ -7,7 +7,7 @@ import { useMutationDeleteWorskpace } from "../../hooks/useMutations";
 import { Item } from "@/features/drivers/types";
 import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWorkspaceModal";
 import clsx from "clsx";
-import { useExplorer } from "../ExplorerContext";
+import { useGlobalExplorer } from "../GlobalExplorerContext";
 import { WorkspaceShareModal } from "../modals/share/WorkspaceShareModal";
 import { itemIsWorkspace } from "@/features/drivers/utils";
 import { useDeleteTreeNode } from "./hooks/useDeleteTreeNode";
@@ -23,7 +23,7 @@ export const ExplorerTreeItemActions = ({
 }: ExplorerTreeItemActionsProps) => {
   const { t } = useTranslation();
   const menu = useDropdownMenu();
-  const explorerContext = useExplorer();
+  const explorerContext = useGlobalExplorer();
   const deleteWorkspaceModal = useMutationDeleteWorskpace();
   const editWorkspaceModal = useModal();
   const shareWorkspaceModal = useModal();

@@ -1,7 +1,7 @@
 import { Item } from "@/features/drivers/types";
 import { ItemIcon } from "../icons/ItemIcon";
 import { Button, useModal } from "@openfun/cunningham-react";
-import { useExplorer } from "../ExplorerContext";
+import { useGlobalExplorer } from "../GlobalExplorerContext";
 import { InfoRow } from "@/features/ui/components/info/InfoRow";
 import { useTranslation } from "react-i18next";
 
@@ -19,7 +19,7 @@ type ExplorerRightPanelContentProps = {
 export const ExplorerRightPanelContent = ({
   item,
 }: ExplorerRightPanelContentProps) => {
-  const { setRightPanelOpen, selectedItems } = useExplorer();
+  const { setRightPanelOpen, selectedItems } = useGlobalExplorer();
   const shareModal = useModal();
   const { t } = useTranslation();
 

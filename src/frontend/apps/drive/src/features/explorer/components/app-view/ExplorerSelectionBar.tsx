@@ -1,18 +1,18 @@
 import { Button, useModal } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
-import { useExplorer } from "./ExplorerContext";
-import { useExplorerInner } from "./Explorer";
+import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
+import { useAppExplorer } from "@/features/explorer/components/app-view/AppExplorer";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
-import { useMutationDeleteItems } from "../hooks/useMutations";
+import { useMutationDeleteItems } from "@/features/explorer/hooks/useMutations";
 import { useEffect } from "react";
-import { ExplorerMoveFolder } from "./modals/move/ExplorerMoveFolderModal";
+import { ExplorerMoveFolder } from "@/features/explorer/components/modals/move/ExplorerMoveFolderModal";
 
 export const ExplorerSelectionBar = () => {
   const { t } = useTranslation();
   const { selectedItems, setSelectedItems, setRightPanelForcedItem } =
-    useExplorer();
-  const { selectionBarActions } = useExplorerInner();
+    useGlobalExplorer();
+  const { selectionBarActions } = useAppExplorer();
 
   const handleClearSelection = () => {
     setSelectedItems([]);
@@ -50,7 +50,7 @@ export const ExplorerSelectionBar = () => {
 
 export const ExplorerSelectionBarActions = () => {
   const { t } = useTranslation();
-  const { selectedItems, setSelectedItems, item } = useExplorer();
+  const { selectedItems, setSelectedItems, item } = useGlobalExplorer();
   const moveModal = useModal();
 
   const deleteItems = useMutationDeleteItems();

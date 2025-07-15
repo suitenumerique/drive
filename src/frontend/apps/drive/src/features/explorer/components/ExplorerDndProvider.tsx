@@ -12,7 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { getEventCoordinates } from "@dnd-kit/utilities";
 import { useMoveItems } from "../api/useMoveItem";
-import { useExplorer } from "./ExplorerContext";
+import { useGlobalExplorer } from "./GlobalExplorerContext";
 import { Item, TreeItem } from "@/features/drivers/types";
 import { ExplorerDragOverlay } from "./tree/ExploreDragOverlay";
 import { TreeViewNodeTypeEnum, useTreeContext } from "@gouvfr-lasuite/ui-kit";
@@ -57,7 +57,7 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
   const [moveState, setMoveState] = useState<ConfirmationMoveState | undefined>(
     undefined
   );
-  const { itemId, selectedItems, setSelectedItems } = useExplorer();
+  const { itemId, selectedItems, setSelectedItems } = useGlobalExplorer();
 
   const treeContext = useTreeContext<TreeItem>();
 

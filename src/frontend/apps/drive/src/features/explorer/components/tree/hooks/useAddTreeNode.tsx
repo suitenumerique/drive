@@ -5,7 +5,7 @@ import {
   useTreeContext,
 } from "@gouvfr-lasuite/ui-kit";
 import { useTranslation } from "react-i18next";
-import { itemToTreeItem } from "../../ExplorerContext";
+import { itemToTreeItem } from "../../GlobalExplorerContext";
 
 export const useAddWorkspaceNode = () => {
   const treeContext = useTreeContext<TreeItem>();

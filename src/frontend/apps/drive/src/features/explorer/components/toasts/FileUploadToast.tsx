@@ -1,7 +1,7 @@
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
 import { Button } from "@openfun/cunningham-react";
 import { useEffect, useState } from "react";
-import { FileUploadMeta } from "../ExplorerInner";
+import { FileUploadMeta } from "@/features/explorer/components/app-view/AppExplorerInner";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
 import { CircularProgress } from "@/features/ui/components/circular-progress/CircularProgress";
@@ -38,8 +38,7 @@ export const FileUploadToast = (
             "file-upload-toast__files--closed": !isOpen,
           })}
         >
-          {Object.entries(props.uploadingState)
-          .map(([name, meta]) => (
+          {Object.entries(props.uploadingState).map(([name, meta]) => (
             <div key={name} className="file-upload-toast__files__item">
               <div className="file-upload-toast__files__item__name">
                 <span>{name}</span>
@@ -60,10 +59,10 @@ export const FileUploadToast = (
                   count: pendingFilesCount,
                 })
               : doneFilesCount > 0
-              ? t("explorer.actions.upload.files.description_done", {
-                  count: doneFilesCount,
-                })
-              : null}
+                ? t("explorer.actions.upload.files.description_done", {
+                    count: doneFilesCount,
+                  })
+                : null}
           </div>
           <div>
             <Button

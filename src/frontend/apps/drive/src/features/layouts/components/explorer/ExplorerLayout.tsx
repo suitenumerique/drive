@@ -3,10 +3,10 @@ import { ExplorerTree } from "@/features/explorer/components/tree/ExplorerTree";
 import { MainLayout } from "@gouvfr-lasuite/ui-kit";
 import { HeaderRight } from "../header/Header";
 import {
-  ExplorerProvider,
+  GlobalExplorerProvider,
   NavigationEvent,
-  useExplorer,
-} from "@/features/explorer/components/ExplorerContext";
+  useGlobalExplorer,
+} from "@/features/explorer/components/GlobalExplorerContext";
 import { useRouter } from "next/router";
 import { ExplorerRightPanelContent } from "@/features/explorer/components/right-panel/ExplorerRightPanelContent";
 import { GlobalLayout } from "../global/GlobalLayout";
@@ -44,9 +44,13 @@ export const ExplorerLayout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <ExplorerProvider itemId={itemId} displayMode="app" onNavigate={onNavigate}>
+    <GlobalExplorerProvider
+      itemId={itemId}
+      displayMode="app"
+      onNavigate={onNavigate}
+    >
       <ExplorerPanelsLayout>{children}</ExplorerPanelsLayout>
-    </ExplorerProvider>
+    </GlobalExplorerProvider>
   );
 };
 
@@ -77,7 +81,7 @@ export const ExplorerPanelsLayout = ({
     rightPanelForcedItem: rightPanelItem,
     isLeftPanelOpen,
     setIsLeftPanelOpen,
-  } = useExplorer();
+  } = useGlobalExplorer();
 
   return (
     <MainLayout

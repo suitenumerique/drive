@@ -7,7 +7,7 @@ import { Button } from "@openfun/cunningham-react";
 import { useAuth, logout } from "@/features/auth/Auth";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ExplorerSearchButton } from "@/features/explorer/components/ExplorerSearchButton";
+import { ExplorerSearchButton } from "@/features/explorer/components/app-view/ExplorerSearchButton";
 import { getDriver } from "@/features/config/Config";
 import { Feedback } from "@/features/feedback/Feedback";
 import { useConfig } from "@/features/config/ConfigProvider";

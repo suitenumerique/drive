@@ -3,8 +3,8 @@ import { useTranslation } from "react-i18next";
 import {
   itemsToTreeItems,
   NavigationEventType,
-  useExplorer,
-} from "../ExplorerContext";
+  useGlobalExplorer,
+} from "../GlobalExplorerContext";
 import { Item, TreeItem } from "@/features/drivers/types";
 import {
   HorizontalSeparator,
@@ -54,7 +54,7 @@ export const ExplorerTree = () => {
     itemId,
     setTreeIsInitialized,
     treeIsInitialized,
-  } = useExplorer();
+  } = useGlobalExplorer();
 
   useEffect(() => {
     if (!firstLevelItems) {
@@ -306,7 +306,7 @@ export const ExplorerTree = () => {
 
 export const ExplorerTreeMobile = () => {
   const treeContext = useTreeContext<TreeItem>();
-  const { item, onNavigate, setIsLeftPanelOpen } = useExplorer();
+  const { item, onNavigate, setIsLeftPanelOpen } = useGlobalExplorer();
 
   const nodes = treeContext?.treeData.nodes;
 

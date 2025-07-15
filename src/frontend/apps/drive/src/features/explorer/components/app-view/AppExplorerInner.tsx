@@ -1,20 +1,26 @@
 import { SelectionArea, SelectionEvent } from "@viselect/react";
-import { ExplorerGrid } from "./grid/ExplorerGrid";
-import {
-  ExplorerBreadcrumbs,
-  ExplorerBreadcrumbsMobile,
-} from "./ExplorerBreadcrumbs";
-import { useExplorer } from "./ExplorerContext";
-import { ExplorerSelectionBar } from "./ExplorerSelectionBar";
+
 import clsx from "clsx";
 import { Item } from "@/features/drivers/types";
 import { useEffect, useRef } from "react";
-import { ExplorerProps } from "./Explorer";
-import { ExplorerFilters } from "./ExplorerFilters";
+import { AppExplorerProps } from "./AppExplorer";
 import { useResponsive } from "@gouvfr-lasuite/ui-kit";
+import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
+import {
+  AppExplorerBreadcrumbs,
+  ExplorerBreadcrumbsMobile,
+} from "@/features/explorer/components/app-view/AppExplorerBreadcrumbs";
+import { ExplorerSelectionBar } from "@/features/explorer/components/app-view/ExplorerSelectionBar";
+import { ExplorerFilters } from "@/features/explorer/components/app-view/ExplorerFilters";
+import { AppExplorerGrid } from "@/features/explorer/components/app-view/AppExplorerGrid";
 export type FileUploadMeta = { file: File; progress: number };
 
-export const ExplorerInner = (props: ExplorerProps) => {
+/**
+ * - Handles the area selection of items
+ * - Selection bar
+ * - Filters
+ */
+export const AppExplorerInner = (props: AppExplorerProps) => {
   const {
     setSelectedItems,
     itemId,
@@ -22,7 +28,7 @@ export const ExplorerInner = (props: ExplorerProps) => {
     displayMode,
     selectedItems,
     dropZone,
-  } = useExplorer();
+  } = useGlobalExplorer();
 
   const ref = useRef<Item[]>([]);
   ref.current = selectedItems;
@@ -136,7 +142,7 @@ export const ExplorerInner = (props: ExplorerProps) => {
   const renderContent = () => {
     return (
       <>
-        <ExplorerBreadcrumbsMobile />
+        {displayMode === "app" && <ExplorerBreadcrumbsMobile />}
         <div
           {...dropZone.getRootProps({
             className: clsx(`explorer explorer--${displayMode}`, {
@@ -154,8 +160,8 @@ export const ExplorerInner = (props: ExplorerProps) => {
             )}
 
             <div className="explorer__content">
-              {props.gridHeader ? props.gridHeader : <ExplorerBreadcrumbs />}
-              <ExplorerGrid {...props} />
+              {props.gridHeader ? props.gridHeader : <AppExplorerBreadcrumbs />}
+              <AppExplorerGrid {...props} />
             </div>
           </div>
         </div>
@@ -163,7 +169,7 @@ export const ExplorerInner = (props: ExplorerProps) => {
     );
   };
 
-  if (isTablet) {
+  if (isTablet || props.disableAreaSelection) {
     return renderContent();
   }
 

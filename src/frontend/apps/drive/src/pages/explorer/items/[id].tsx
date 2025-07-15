@@ -1,6 +1,6 @@
 import { getDriver } from "@/features/config/Config";
 import { ItemFilters } from "@/features/drivers/Driver";
-import { Explorer } from "@/features/explorer/components/Explorer";
+import { AppExplorer } from "@/features/explorer/components/app-view/AppExplorer";
 import { getGlobalExplorerLayout } from "@/features/layouts/components/explorer/ExplorerLayout";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/router";
@@ -19,8 +19,9 @@ export default function ItemPage() {
     ],
     queryFn: () => getDriver().getChildren(itemId, filters),
   });
+
   return (
-    <Explorer
+    <AppExplorer
       childrenItems={itemChildren}
       filters={filters}
       onFiltersChange={setFilters}

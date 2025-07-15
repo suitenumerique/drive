@@ -6,13 +6,14 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 .explorer {
   display: flex;
   min-height: calc(100vh - 52px);
-  background-color: var(--c--theme--colors--greyscale-050);
+
   justify-content: center;
   align-items: flex-start;
   position: relative;
 
   &--app {
     padding: 16px;
+    background-color: var(--c--theme--colors--greyscale-050);
 
     @media (max-width: $tablet) {
       padding: 0;
@@ -21,11 +22,15 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     .explorer__container {
       width: 992px;
     }
-  }
 
-  &--sdk {
-    .explorer__container {
-      width: 100%;
+    .explorer__content {
+      border: 1px var(--c--theme--colors--greyscale-200) solid;
+
+      &__breadcrumbs {
+        @media (max-width: $tablet) {
+          display: none;
+        }
+      }
     }
   }
 
@@ -68,23 +73,21 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
   &__content {
     flex: 1;
     background-color: #fff;
-    border: 1px var(--c--theme--colors--greyscale-200) solid;
+
     border-radius: 4px;
     padding: 24px;
     display: flex;
     flex-direction: column;
     gap: 8px;
     box-sizing: content-box;
-    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    transition:
+      background-color 0.3s ease,
+      box-shadow 0.3s ease;
 
     &__breadcrumbs {
       display: flex;
       justify-content: space-between;
       align-items: center;
-
-      @media (max-width: $tablet) {
-        display: none;
-      }
 
       &__actions {
         padding-right: 6px;
@@ -177,188 +180,6 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
         font-size: 12px;
         font-weight: 400;
         color: var(--c--theme--colors--greyscale-600);
-      }
-    }
-  }
-
-  &__grid {
-    &__item {
-      &__mobile {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        height: 48px;
-
-        &__info {
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-
-          &__title {
-            display: flex;
-            overflow: hidden;
-          }
-
-          span {
-            padding: 0;
-            line-height: 18px;
-            font-weight: 500;
-          }
-
-          &__meta {
-            font-size: 12px;
-            color: var(--c--theme--colors--greyscale-600);
-          }
-        }
-      }
-
-      &__name {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        text-decoration: none;
-        color: var(--c--theme--colors--greyscale-700);
-
-        .c__tooltip {
-          max-width: 100%;
-        }
-
-        > img {
-          // Need to set width and height to prevent layout shift
-          // and to make overflow calculations work correctly before
-          // the image is loaded
-          width: 32px;
-          height: 32px;
-        }
-
-        &__text {
-          padding: 8px 0px; // To have a margin of error when doing drag and drop
-          font-size: 14px;
-          font-weight: 400;
-          color: var(--c--theme--colors--greyscale-1000);
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-      }
-
-      &__actions {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-      }
-
-      &__last-update {
-        font-size: 12px;
-        font-weight: 400;
-        color: var(--c--theme--colors--greyscale-600);
-      }
-    }
-
-    &.c__datagrid--empty {
-      border: none;
-    }
-
-    .c__datagrid__row__cell--actions {
-      .droppable {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-      }
-    }
-
-    &.c__datagrid--loading {
-      min-height: 400px;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .c__datagrid__empty-placeholder img {
-      border: none;
-    }
-
-    &__empty {
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-
-      &__caption {
-        font-size: 14px;
-        color: var(--c--theme--colors--greyscale-1000);
-        font-weight: 700;
-      }
-      &__cta {
-        font-size: 12px;
-        color: var(--c--theme--colors--greyscale-600);
-        font-weight: 400;
-      }
-    }
-
-    table {
-      border-collapse: separate;
-      border-spacing: 0 2px;
-
-      &:focus-within {
-        outline: none;
-      }
-
-      // mobile column.
-      th:nth-child(1) {
-        display: none;
-      }
-
-      tr td:first-child,
-      tr th:first-child {
-        padding-left: 6px;
-      }
-
-      tr td:last-child,
-      tr th:last-child {
-        padding-right: 6px;
-      }
-
-      tbody {
-        transition: background-color 0.3s ease;
-
-        // mobile column.
-        td:nth-child(1) {
-          display: none;
-        }
-
-        tr td:first-child {
-          border-top-left-radius: 4px;
-          border-bottom-left-radius: 4px;
-        }
-        tr td:last-child {
-          border-top-right-radius: 4px;
-          border-bottom-right-radius: 4px;
-        }
-
-        tr {
-          border-radius: 4px;
-        }
-
-        tr.selected {
-          box-shadow: inset 0 0 0 1px var(--c--theme--colors--primary-200);
-          border-radius: 4px;
-          background-color: var(--c--theme--colors--primary-100);
-        }
-
-        tr.over {
-          background-color: var(--c--theme--colors--primary-100);
-          border-radius: 4px;
-          box-shadow: inset 0 0 0 2px var(--c--theme--colors--primary-500);
-        }
-
-        tr {
-          cursor: default;
-          user-select: none;
-        }
       }
     }
   }
@@ -463,28 +284,6 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
   }
 }
 
-.item-icon {
-  &.small {
-    width: 18px;
-    height: 18px;
-  }
-
-  &.medium {
-    width: 32px;
-    height: 32px;
-  }
-
-  &.large {
-    width: 48px;
-    height: 48px;
-  }
-
-  &.xlarge {
-    width: 64px;
-    height: 64px;
-  }
-}
-
 .explorer__search__modal {
   p {
     font-size: 14px;
@@ -499,7 +298,7 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 }
 
 @media (max-width: $tablet) {
-  .explorer {
+  .explorer-app {
     background-color: var(--c--theme--colors--greyscale-000);
 
     &__content {
@@ -553,24 +352,6 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
           td:nth-child(4) {
             height: 48px;
           }
-        }
-      }
-    }
-  }
-}
-
-.explorer__compact {
-  thead {
-    height: 0;
-    line-height: 0;
-
-    tr {
-      th {
-        height: 0;
-        line-height: 0;
-        div {
-          height: 0;
-          line-height: 0;
         }
       }
     }

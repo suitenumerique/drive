@@ -1,6 +1,6 @@
 import { getDriver } from "@/features/config/Config";
-import { Explorer } from "@/features/explorer/components/Explorer";
-import { ExplorerGridTrashActionsCell } from "@/features/explorer/components/grid/ExplorerGridTrashActionsCell";
+import { AppExplorer } from "@/features/explorer/components/app-view/AppExplorer";
+import { ExplorerGridTrashActionsCell } from "@/features/explorer/components/trash/ExplorerGridTrashActionsCell";
 import {
   useMutationHardDeleteItems,
   useMutationRestoreItems,
@@ -18,7 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import undoIcon from "@/assets/icons/undo_blue.svg";
 import cancelIcon from "@/assets/icons/cancel_blue.svg";
-import { useExplorer } from "@/features/explorer/components/ExplorerContext";
+import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { useState } from "react";
 import { HardDeleteConfirmationModal } from "@/features/explorer/components/modals/HardDeleteConfirmationModal";
@@ -37,7 +37,7 @@ export default function TrashPage() {
   const modals = useModals();
 
   return (
-    <Explorer
+    <AppExplorer
       childrenItems={trashItems}
       gridActionsCell={ExplorerGridTrashActionsCell}
       disableItemDragAndDrop={true}
@@ -71,7 +71,7 @@ export default function TrashPage() {
 TrashPage.getLayout = getGlobalExplorerLayout;
 
 export const TrashPageSelectionBarActions = () => {
-  const { selectedItems, setSelectedItems } = useExplorer();
+  const { selectedItems, setSelectedItems } = useGlobalExplorer();
   const restoreItem = useMutationRestoreItems();
   const hardDeleteConfirmationModal = useModal();
   const hardDeleteItem = useMutationHardDeleteItems();
