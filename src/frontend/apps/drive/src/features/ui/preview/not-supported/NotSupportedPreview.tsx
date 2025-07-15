@@ -4,6 +4,8 @@ import { FilePreviewType } from "../files-preview/FilesPreview";
 import { Button } from "@openfun/cunningham-react";
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
 import { IconFromMimeType } from "@/features/explorer/components/icons/ItemIcon";
+import { downloadFile } from "@/features/items/utils";
+import { useCallback } from "react";
 
 interface NotSupportedPreviewProps {
   file: FilePreviewType;
@@ -12,16 +14,9 @@ interface NotSupportedPreviewProps {
 export const NotSupportedPreview = ({ file }: NotSupportedPreviewProps) => {
   const { t } = useTranslation();
 
-  const handleDownload = async () => {
-    // Temporary solution, waiting for a proper download_url attribute.
-    const a = document.createElement("a");
-    a.style.display = "none";
-    a.href = file.url!;
-    a.download = file.title;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
+  const handleDownload = useCallback(() => {
+    downloadFile(file.url!, file.title);
+  }, [file]);
 
   return (
     <div className="file-preview-unsupported">

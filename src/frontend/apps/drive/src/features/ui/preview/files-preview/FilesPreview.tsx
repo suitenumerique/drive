@@ -15,6 +15,7 @@ import { PreviewPdf } from "../pdf-preview/PreviewPdf";
 import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
 import { getIconByMimeType } from "@/features/explorer/components/icons/ItemIcon";
 import { useTranslation } from "react-i18next";
+import { downloadFile } from "@/features/items/utils";
 
 export type FilePreviewType = {
   id: string;
@@ -64,16 +65,7 @@ export const FilePreview = ({
   const currentFile: FilePreviewData | null = data[currentIndex] || null;
 
   const handleDownload = async () => {
-    // Temporary solution, waiting for a proper download_url attribute.
-    const a = document.createElement("a");
-    a.style.display = "none";
-    a.href = currentFile.url;
-    a.target = "_blank";
-
-    a.download = `${currentFile.title}.${currentFile.mimetype}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    downloadFile(currentFile.url, currentFile.title);
   };
 
   // Render the appropriate viewer based on file category
