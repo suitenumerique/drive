@@ -16,45 +16,6 @@
     font-weight: 400;
   }
 
-  &__content {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    padding: 0 var(--c--theme--spacings--md);
-
-    @media (min-width: 1024px) {
-      height: 300px;
-    }
-
-    &__container {
-      display: flex;
-      height: 100%;
-
-      flex-direction: column;
-      gap: var(--c--theme--spacings--xs);
-      flex: 1;
-    }
-
-    .c__datagrid__row__cell--actions {
-      .droppable {
-        justify-content: flex-start;
-        padding: 40%;
-      }
-    }
-
-    td:has(.explorer__grid__item__name) {
-      padding-left: var(--c--theme--spacings--2xs);
-    }
-  }
-
-  &__empty {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-    height: 100%;
-  }
-
   &__footer {
     width: 100%;
     display: flex;
@@ -65,11 +26,7 @@
     padding-bottom: var(--c--theme--spacings--base);
   }
 
-  &__breadcrumbs {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 0px;
+  &__explorer {
+    padding: 0 var(--c--theme--spacings--md);
   }
 }
