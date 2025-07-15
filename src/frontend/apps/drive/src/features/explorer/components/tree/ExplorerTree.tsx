@@ -167,13 +167,17 @@ export const ExplorerTree = () => {
       return;
     }
 
-    treeContext?.treeData.updateNode("PERSONAL_SPACE", {
+    const treeData = treeContext?.treeData;
+
+    treeData?.updateNode("PERSONAL_SPACE", {
       headerTitle: t("explorer.workspaces.mainWorkspace"),
     });
 
-    treeContext?.treeData.updateNode("SHARED_SPACE", {
-      headerTitle: t("explorer.tree.sharedSpace"),
-    });
+    if (treeData?.nodes.length && treeData.nodes.length > 2) {
+      treeData.updateNode("SHARED_SPACE", {
+        headerTitle: t("explorer.tree.sharedSpace"),
+      });
+    }
   }, [i18n.language, t, treeIsInitialized]);
 
   const createFolderModal = useModal();
