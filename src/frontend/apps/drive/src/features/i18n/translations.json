@@ -83,8 +83,7 @@
             "title": "Move",
             "move_button": "Move here",
             "description_one_item": "Choose the new location for <strong>{{name}}</strong>",
-            "description_multiple_items": "Choose the new location for the <strong>{{count}}</strong> selected elements",
-            "empty_folder": "No folder found in the selected folder"
+            "description_multiple_items": "Choose the new location for the <strong>{{count}}</strong> selected elements"
           }
         },
         "rightPanel": {
@@ -109,6 +108,7 @@
           "name": "Name",
           "last_update": "Last Update",
           "empty": {
+            "default": "No folder found in the selected folder",
             "caption": "Drop your files here",
             "caption_no_create": "You do not have permission to add files",
             "cta": "Or click \"Create\"",
@@ -301,6 +301,17 @@
         "minutes_ago_one": "{{count}} minute ago",
         "minutes_ago_other": "{{count}} minutes ago",
         "seconds_ago": "few seconds ago"
+      },
+      "sdk": {
+        "explorer": {
+          "choose": "Choose",
+          "picker_label_zero": "No files selected",
+          "picker_label_one": "{{count}} file selected",
+          "picker_label_other": "{{count}} files selected",
+          "save_label": "Choose a destination for the file",
+          "save": "Save",
+          "cannot_pick": "You don’t have permission to share this file because you’re only a viewer."
+        }
       }
     }
   },
@@ -388,8 +399,7 @@
             "title": "Déplacer",
             "move_button": "Déplacer ici",
             "description_one_item": "Choisissez le nouvel emplacement pour <strong>{{name}}</strong>",
-            "description_multiple_items": "Choisissez le nouvel emplacement pour les <strong>{{count}}</strong> éléments sélectionnés",
-            "empty_folder": "Aucun dossier trouvé dans le dossier sélectionné"
+            "description_multiple_items": "Choisissez le nouvel emplacement pour les <strong>{{count}}</strong> éléments sélectionnés"
           }
         },
         "rightPanel": {
@@ -414,6 +424,7 @@
           "name": "Nom",
           "last_update": "Dernière modification",
           "empty": {
+            "default": "Aucun dossier trouvé dans le dossier sélectionné",
             "caption": "Déposez vos fichiers ici",
             "caption_no_create": "Vous n'avez pas les droits pour ajouter des fichiers",
             "cta": "Ou cliquez sur \"Créer\"",
@@ -612,6 +623,19 @@
         "minutes_ago_one": "il y a {{count}} minute",
         "minutes_ago_other": "il y a {{count}} minutes",
         "seconds_ago": "il y a quelques secondes"
+      },
+      "sdk": {
+        "explorer": {
+          "choose": "Choisir",
+          "cancel": "Annuler",
+          "picker_caption": "Sélectionnez un ou plusieurs fichiers",
+          "picker_label_zero": "Aucun fichier sélectionné",
+          "picker_label_one": "{{count}} fichier sélectionné",
+          "picker_label_other": "{{count}} fichiers sélectionnés",
+          "save_label": "Choisissez une destination pour le fichier",
+          "save": "Enregistrer",
+          "cannot_pick": "Vous n'avez pas les droits pour partager ce fichier car vous n'êtes qu'un lecteur."
+        }
       }
     }
   }
