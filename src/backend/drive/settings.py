@@ -356,6 +356,7 @@ class Base(Configuration):
         "PAGE_SIZE": 20,
         "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
         "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+        "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.ScopedRateThrottle"],
         "DEFAULT_THROTTLE_RATES": {
             "user_list_sustained": values.Value(
                 default="180/hour",
@@ -365,6 +366,11 @@ class Base(Configuration):
             "user_list_burst": values.Value(
                 default="30/minute",
                 environ_name="API_USERS_LIST_THROTTLE_RATE_BURST",
+                environ_prefix=None,
+            ),
+            "sdk_event_relay": values.Value(
+                default="100/minute",
+                environ_name="API_SDK_EVENT_RELAY_THROTTLE_RATE",
                 environ_prefix=None,
             ),
         },
@@ -561,6 +567,13 @@ class Base(Configuration):
     OIDC_USERINFO_SHORTNAME_FIELD = values.Value(
         default="first_name",
         environ_name="OIDC_USERINFO_SHORTNAME_FIELD",
+        environ_prefix=None,
+    )
+
+    # SDK Relay
+    SDK_RELAY_CACHE_TIMEOUT = values.PositiveIntegerValue(
+        600,  # 10 minutes
+        environ_name="SDK_RELAY_CACHE_TIMEOUT",
         environ_prefix=None,
     )
 
