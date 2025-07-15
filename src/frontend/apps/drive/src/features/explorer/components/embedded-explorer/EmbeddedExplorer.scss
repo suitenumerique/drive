@@ -1,0 +1,254 @@
+@use "sass:map";
+@use "@/styles/cunningham-tokens-sass" as *;
+
+$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+
+.embedded-explorer {
+  display: flex;
+  flex-direction: column;
+
+  @media (min-width: $tablet) {
+    height: 300px;
+  }
+
+  &__container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--c--theme--spacings--xs);
+    flex: 1;
+  }
+
+  &__breadcrumbs {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 0px;
+  }
+
+  &__empty {
+    color: var(--c--theme--colors--greyscale-800);
+    font-weight: var(--c--theme--font--weights--regular);
+    font-size: var(--c--theme--font--sizes--m);
+  }
+
+  &--compact {
+    td:has(.explorer__grid__item__name) {
+      padding-left: var(--c--theme--spacings--2xs);
+    }
+
+    .c__datagrid__row__cell--actions {
+      .droppable {
+        justify-content: flex-start;
+      }
+    }
+
+    .explorer__grid {
+      flex-grow: 1;
+    }
+
+    .c__datagrid {
+      min-height: auto;
+    }
+  }
+}
+
+.explorer__grid {
+  &__item {
+    &__mobile {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 48px;
+
+      &__info {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        &__title {
+          display: flex;
+          overflow: hidden;
+        }
+
+        span {
+          padding: 0;
+          line-height: 18px;
+          font-weight: 500;
+        }
+
+        &__meta {
+          font-size: 12px;
+          color: var(--c--theme--colors--greyscale-600);
+        }
+      }
+    }
+
+    &__name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: var(--c--theme--colors--greyscale-700);
+
+      .c__tooltip {
+        max-width: 100%;
+      }
+
+      > img {
+        // Need to set width and height to prevent layout shift
+        // and to make overflow calculations work correctly before
+        // the image is loaded
+        width: 32px;
+        height: 32px;
+      }
+
+      &__text {
+        padding: 8px 0px; // To have a margin of error when doing drag and drop
+        font-size: 14px;
+        font-weight: 400;
+        color: var(--c--theme--colors--greyscale-1000);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    &__actions {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    &__last-update {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--c--theme--colors--greyscale-600);
+    }
+  }
+
+  &.c__datagrid--empty {
+    border: none;
+  }
+
+  .c__datagrid__row__cell--actions {
+    .droppable {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+  }
+
+  &.c__datagrid--loading {
+    min-height: 400px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .c__datagrid__empty-placeholder img {
+    border: none;
+  }
+
+  &__empty {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    &__caption {
+      font-size: 14px;
+      color: var(--c--theme--colors--greyscale-1000);
+      font-weight: 700;
+    }
+    &__cta {
+      font-size: 12px;
+      color: var(--c--theme--colors--greyscale-600);
+      font-weight: 400;
+    }
+  }
+
+  table {
+    border-collapse: separate;
+    border-spacing: 0 2px;
+
+    &:focus-within {
+      outline: none;
+    }
+
+    // mobile column.
+    th:nth-child(1) {
+      display: none;
+    }
+
+    tr td:first-child,
+    tr th:first-child {
+      padding-left: 6px;
+    }
+
+    tr td:last-child,
+    tr th:last-child {
+      padding-right: 6px;
+    }
+
+    tbody {
+      transition: background-color 0.3s ease;
+
+      // mobile column.
+      td:nth-child(1) {
+        display: none;
+      }
+
+      tr td:first-child {
+        border-top-left-radius: 4px;
+        border-bottom-left-radius: 4px;
+      }
+      tr td:last-child {
+        border-top-right-radius: 4px;
+        border-bottom-right-radius: 4px;
+      }
+
+      tr {
+        border-radius: 4px;
+      }
+
+      tr.selected {
+        box-shadow: inset 0 0 0 1px var(--c--theme--colors--primary-200);
+        border-radius: 4px;
+        background-color: var(--c--theme--colors--primary-100);
+      }
+
+      tr.over {
+        background-color: var(--c--theme--colors--primary-100);
+        border-radius: 4px;
+        box-shadow: inset 0 0 0 2px var(--c--theme--colors--primary-500);
+      }
+
+      tr {
+        cursor: default;
+        user-select: none;
+      }
+    }
+  }
+}
+
+.explorer__compact {
+  thead {
+    height: 0;
+    line-height: 0;
+
+    tr {
+      th {
+        height: 0;
+        line-height: 0;
+        div {
+          height: 0;
+          line-height: 0;
+        }
+      }
+    }
+  }
+}

@@ -1,19 +1,24 @@
 import { CellContext } from "@tanstack/react-table";
 import { Item } from "@/features/drivers/types";
 import { useEffect, useRef, useState } from "react";
-import { Draggable } from "../Draggable";
+import { Draggable } from "@/features/explorer/components/Draggable";
 import { Tooltip } from "@openfun/cunningham-react";
-import { ItemIcon } from "../icons/ItemIcon";
-import { useDisableDragGridItem } from "./hooks";
-import { useExplorerGridItems } from "./ExplorerGridItems";
+import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
+import { useDisableDragGridItem } from "@/features/explorer/components/embedded-explorer/hooks";
+import { useEmbeddedExplorerGirdContext } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGrid";
 import { removeFileExtension } from "../../utils/mimeTypes";
-type ExplorerGridNameCellProps = CellContext<Item, string>;
+export type EmbeddedExplorerGridNameCellProps = CellContext<Item, string> & {
+  children?: React.ReactNode;
+};
 
-export const ExplorerGridNameCell = (params: ExplorerGridNameCellProps) => {
+export const EmbeddedExplorerGridNameCell = (
+  params: EmbeddedExplorerGridNameCellProps
+) => {
   const item = params.row.original;
   const ref = useRef<HTMLSpanElement>(null);
   const [isOverflown, setIsOverflown] = useState(false);
-  const { selectedItemsMap, disableItemDragAndDrop } = useExplorerGridItems();
+  const { selectedItemsMap, disableItemDragAndDrop } =
+    useEmbeddedExplorerGirdContext();
   const isSelected = !!selectedItemsMap[item.id];
   const canMove = item.abilities.move;
   const disableDrag = useDisableDragGridItem(item);
@@ -31,6 +36,7 @@ export const ExplorerGridNameCell = (params: ExplorerGridNameCellProps) => {
         <div style={{ display: "flex", overflow: "hidden" }}>
           <span className="explorer__grid__item__name__text" ref={ref}>
             {removeFileExtension(item.title)}
+            {params.children}
           </span>
         </div>
       </Draggable>

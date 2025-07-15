@@ -4,33 +4,37 @@ import {
   addToast,
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
-import { useMutationDeleteItems } from "../../hooks/useMutations";
+import { useMutationDeleteItems } from "@/features/explorer/hooks/useMutations";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
 import { Button, useModal } from "@openfun/cunningham-react";
-import { ExplorerRenameItemModal } from "../modals/ExplorerRenameItemModal";
-import { useExplorer } from "../ExplorerContext";
-import { Draggable } from "../Draggable";
-import { WorkspaceShareModal } from "../modals/share/WorkspaceShareModal";
+import { ExplorerRenameItemModal } from "@/features/explorer/components/modals/ExplorerRenameItemModal";
+import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
+import { Draggable } from "@/features/explorer/components/Draggable";
+import { WorkspaceShareModal } from "@/features/explorer/components/modals/share/WorkspaceShareModal";
 import { itemIsWorkspace } from "@/features/drivers/utils";
+import { useEmbeddedExplorerGirdContext } from "./EmbeddedExplorerGrid";
+import { FileShareModal } from "@/features/explorer/components/modals/share/FileShareModal";
 import { useDisableDragGridItem } from "./hooks";
-import { useExplorerGridItems } from "./ExplorerGridItems";
 import { downloadFile } from "@/features/items/utils";
 
-export type ExplorerGridActionsCellProps = CellContext<Item, unknown>;
+export type EmbeddedExplorerGridActionsCellProps = CellContext<Item, unknown>;
 
-export const ExplorerGridActionsCell = (
-  params: ExplorerGridActionsCellProps
+export const EmbeddedExplorerGridActionsCell = (
+  params: EmbeddedExplorerGridActionsCellProps
 ) => {
   const item = params.row.original;
-  const { setRightPanelForcedItem, setRightPanelOpen } = useExplorer();
-  const { openMoveModal, setMoveItem } = useExplorerGridItems();
+  const { setRightPanelForcedItem, setRightPanelOpen } = useGlobalExplorer();
+  const { openMoveModal, setMoveItem } = useEmbeddedExplorerGirdContext();
   const disableDrag = useDisableDragGridItem(item);
-  const shareModal = useModal();
+  const shareWorkspaceModal = useModal();
+  const shareFileModal = useModal();
 
   const [isOpen, setIsOpen] = useState(false);
   const isWorkspace = itemIsWorkspace(item);
+  const canShareWorkspace = isWorkspace;
+  const canShareFile = item.type === ItemType.FILE;
   const { t } = useTranslation();
   const deleteItems = useMutationDeleteItems();
   const renameModal = useModal();
@@ -82,8 +86,16 @@ export const ExplorerGridActionsCell = (
               label: item.abilities.accesses_manage
                 ? t("explorer.tree.workspace.options.share")
                 : t("explorer.tree.workspace.options.share_view"),
-              isHidden: !isWorkspace,
-              callback: shareModal.open,
+              isHidden: !canShareWorkspace,
+              callback: shareWorkspaceModal.open,
+            },
+            {
+              icon: <span className="material-icons">group</span>,
+              label: item.abilities.accesses_manage
+                ? t("explorer.tree.workspace.options.share")
+                : t("explorer.tree.workspace.options.share_view"),
+              isHidden: !canShareFile,
+              callback: shareFileModal.open,
             },
             {
               icon: <span className="material-icons">group</span>,
@@ -129,8 +141,15 @@ export const ExplorerGridActionsCell = (
         {renameModal.isOpen && (
           <ExplorerRenameItemModal {...renameModal} item={item} key={item.id} />
         )}
-        {isWorkspace && shareModal.isOpen && (
-          <WorkspaceShareModal {...shareModal} item={item} key={item.id} />
+        {canShareWorkspace && (
+          <WorkspaceShareModal
+            {...shareWorkspaceModal}
+            item={item}
+            key={item.id}
+          />
+        )}
+        {canShareFile && (
+          <FileShareModal {...shareFileModal} item={item} key={item.id} />
         )}
       </Draggable>
     </div>
