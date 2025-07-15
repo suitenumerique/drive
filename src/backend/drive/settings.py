@@ -495,6 +495,9 @@ class Base(Configuration):
     OIDC_OP_LOGOUT_ENDPOINT = values.Value(
         None, environ_name="OIDC_OP_LOGOUT_ENDPOINT", environ_prefix=None
     )
+    OIDC_REDIRECT_FIELD_NAME = values.Value(
+        "returnTo", environ_name="OIDC_REDIRECT_FIELD_NAME", environ_prefix=None
+    )
     OIDC_AUTH_REQUEST_EXTRA_PARAMS = values.DictValue(
         {}, environ_name="OIDC_AUTH_REQUEST_EXTRA_PARAMS", environ_prefix=None
     )
