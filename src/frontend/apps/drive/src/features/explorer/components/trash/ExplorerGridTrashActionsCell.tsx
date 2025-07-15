@@ -13,11 +13,11 @@ import { Button, Decision, useModal } from "@openfun/cunningham-react";
 import undoIcon from "@/assets/icons/undo.svg";
 import cancelIcon from "@/assets/icons/cancel.svg";
 
-import { ExplorerGridActionsCellProps } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridActionsCell";
+import { EmbeddedExplorerGridActionsCellProps } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridActionsCell";
 import { HardDeleteConfirmationModal } from "@/features/explorer/components/modals/HardDeleteConfirmationModal";
 
 export const ExplorerGridTrashActionsCell = (
-  params: ExplorerGridActionsCellProps
+  params: EmbeddedExplorerGridActionsCellProps
 ) => {
   const item = params.row.original;
   const [isOpen, setIsOpen] = useState(false);

@@ -1,13 +1,15 @@
 import { Item } from "@/features/drivers/types";
 import { createContext, useContext } from "react";
 import { ItemFilters } from "@/features/drivers/Driver";
-import { ExplorerGridActionsCellProps } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridActionsCell";
+import { EmbeddedExplorerGridActionsCellProps } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridActionsCell";
 import { NavigationEvent } from "@/features/explorer/components/GlobalExplorerContext";
 import { AppExplorerInner } from "./AppExplorerInner";
 
 export interface AppExplorerProps {
   childrenItems?: Item[];
-  gridActionsCell?: (params: ExplorerGridActionsCellProps) => React.ReactNode;
+  gridActionsCell?: (
+    params: EmbeddedExplorerGridActionsCellProps
+  ) => React.ReactNode;
   disableItemDragAndDrop?: boolean;
   gridHeader?: React.ReactNode;
   selectionBarActions?: React.ReactNode;
