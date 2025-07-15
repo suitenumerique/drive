@@ -12,6 +12,6 @@
 
 5. Run `npx @changesets/cli publish`. It will publish the new version of the package to NPM and create a git tag.
 
-6. Run `git push origin tag @gouvfr-lasuite/visio-sdk@<VERSION>`
+6. Run `git push origin tag @gouvfr-lasuite/drive-sdk@<VERSION>`
 
 7. Tell everyone 🎉 !

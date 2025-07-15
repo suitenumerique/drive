@@ -7,6 +7,14 @@ export interface PickerResult {
   items?: Item[];
 }
 
+const DEBUG = import.meta.env.VITE_SDK_DEBUG === "True";
+
+const log = (...args: any[]) => {
+  if (DEBUG) {
+    console.log(...args);
+  }
+};
+
 export const openPicker = async (
   customConfig?: Partial<typeof DEFAULT_CONFIG>
 ): Promise<PickerResult> => {
@@ -101,10 +109,10 @@ const startPollingForEvent = (
   const poll = async () => {
     const response = await fetch(`${config.apiUrl}/sdk-relay/events/${token}/`);
     const data = await response.json();
-    console.log("Event", data);
+    log("Event", data);
 
     if (data?.type) {
-      console.log("Event resolved", data);
+      log("Event resolved", data);
       onEvent(data);
       return;
     }
@@ -116,7 +124,7 @@ const startPollingForEvent = (
 
   return {
     stop: () => {
-      console.log("Stop polling");
+      log("Stop polling");
       clearInterval(interval);
     },
   };
