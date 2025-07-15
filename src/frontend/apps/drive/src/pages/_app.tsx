@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, type ReactElement, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import type { NextPage } from "next";
 import type { AppProps } from "next/app";
 import { CunninghamProvider } from "@gouvfr-lasuite/ui-kit";
@@ -23,7 +29,13 @@ import { AnalyticsProvider } from "@/features/analytics/AnalyticsProvider";
 import { capitalizeRegion } from "@/features/i18n/utils";
 import { FeedbackFooterMobile } from "@/features/feedback/Feedback";
 import { ConfigProvider } from "@/features/config/ConfigProvider";
-import { removeQuotes, useCunninghamTheme } from "@/features/ui/cunningham/useCunninghamTheme";
+import {
+  removeQuotes,
+  useCunninghamTheme,
+} from "@/features/ui/cunningham/useCunninghamTheme";
+import { ResponsiveDivs } from "@/features/ui/components/responsive/ResponsiveDivs";
+import { useRouter } from "next/router";
+import { useMemo } from "react";
 
 export type NextPageWithLayout<P = object, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;
@@ -72,7 +84,11 @@ export const useAppContext = () => {
   return context;
 };
 
-export default function MyApp({ Component, pageProps, router }: AppPropsWithLayout) {
+export default function MyApp({
+  Component,
+  pageProps,
+  router,
+}: AppPropsWithLayout) {
   const [theme, setTheme] = useState<string>("default");
 
   return (
@@ -89,22 +105,35 @@ const MyAppInner = ({ Component, pageProps }: AppPropsWithLayout) => {
   const { theme } = useAppContext();
   const themeTokens = useCunninghamTheme();
 
+  const router = useRouter();
+  const isSdk = useMemo(
+    () => router.pathname.startsWith("/sdk"),
+    [router.pathname]
+  );
   return (
     <>
       <Head>
         <title>{t("app_title")}</title>
-        <link rel="icon" href={removeQuotes(themeTokens.components.favicon.src)} type="image/png" />
+        <link
+          rel="icon"
+          href={removeQuotes(themeTokens.components.favicon.src)}
+          type="image/png"
+        />
       </Head>
       <QueryClientProvider client={queryClient}>
-        <CunninghamProvider currentLocale={capitalizeRegion(i18n.language)} theme={theme}>
+        <CunninghamProvider
+          currentLocale={capitalizeRegion(i18n.language)}
+          theme={theme}
+        >
           <ConfigProvider>
             <AnalyticsProvider>
               {getLayout(<Component {...pageProps} />)}
-              <FeedbackFooterMobile />
+              <ResponsiveDivs />
+              {!isSdk && <FeedbackFooterMobile />}
             </AnalyticsProvider>
           </ConfigProvider>
         </CunninghamProvider>
       </QueryClientProvider>
     </>
   );
-}
+};

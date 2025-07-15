@@ -2,7 +2,10 @@ import "./App.css";
 import { openPicker, type PickerResult } from "@gouvfr-lasuite/drive-sdk";
 import { useState } from "react";
 
-const CONFIG = {};
+const CONFIG = {
+  // url: "http://localhost:3000/sdk",
+  // apiUrl: "http://localhost:8071/api/v1.0",
+};
 
 function App() {
   const [pickerResult, setPickerResult] = useState<PickerResult | null>(null);
