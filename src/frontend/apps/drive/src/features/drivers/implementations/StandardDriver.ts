@@ -252,6 +252,9 @@ export class StandardDriver extends Driver {
     Object.entries(fields).forEach(([key, value]) => {
       formData.append(key, value);
     });
+    // IMPORTANT !!! The Content-Type must be BEFORE file, otherwise it will be ignored by
+    // Scaleway object storage. Order matters !!!
+    formData.append("Content-Type", file.type);
     formData.append("file", file);
 
     let urlObject = new URL(url);

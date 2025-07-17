@@ -110,6 +110,7 @@ def generate_upload_policy(item):
         Conditions=[
             {"acl": "private"},
             ["content-length-range", 0, settings.ITEM_FILE_MAX_SIZE],
+            ["starts-with", "$Content-Type", ""],
         ],
         ExpiresIn=settings.AWS_S3_UPLOAD_POLICY_EXPIRATION,
     )

@@ -24,5 +24,6 @@ and this project adheres to
 
 - 🐛(i18n) fix language detection and rendering
 - 🌐(front) add english translation for rename modal
+- 🐛(global) fix wrong Content-Type on specific s3 implementations
 
 ## Deleted
