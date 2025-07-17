@@ -71,12 +71,8 @@ server {
         try_files $uri /explorer/items/[id].html;
     }
 
-    location ~ "^/sdk/explorer/items/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/?$" {
-        try_files $uri /sdk/explorer/items/[id].html;
-    }
-
-    location ~ "^/sdk/explorer/workspaces/?$" {
-        try_files $uri /sdk/explorer/workspaces.html;
+    location ~ "^/sdk/explorer/?$" {
+        try_files $uri /sdk/explorer.html;
     }
 
     location ~ "^/sdk/?$" {
