@@ -42,6 +42,33 @@ MEDIA_STORAGE_URL_PATTERN = re.compile(
     f"(?P<key>{ITEM_FOLDER:s}/(?P<pk>{UUID_REGEX:s})/.*{FILE_EXT_REGEX:s})$"
 )
 
+
+class CORSAllowAllMixin:
+    """Mixin to add CORS headers allowing all origins for specific views."""
+
+    CORS_HEADERS = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
+    }
+
+    def _add_cors_headers(self, response):
+        """Add CORS headers to a response."""
+        for header, value in self.CORS_HEADERS.items():
+            response[header] = value
+        return response
+
+    def finalize_response(self, request, response, *args, **kwargs):
+        """Add CORS headers to the response."""
+        response = super().finalize_response(request, response, *args, **kwargs)
+        return self._add_cors_headers(response)
+
+    def options(self, request, *args, **kwargs):
+        """Handle OPTIONS requests for CORS preflight."""
+        response = drf.response.Response(status=status.HTTP_200_OK)
+        return self._add_cors_headers(response)
+
+
 # pylint: disable=too-many-ancestors
 
 
@@ -1215,7 +1242,7 @@ class ConfigView(drf.views.APIView):
         return drf.response.Response(dict_settings)
 
 
-class SDKRelayEventView(drf.views.APIView):
+class SDKRelayEventView(CORSAllowAllMixin, drf.views.APIView):
     """API View for SDK relay interactions."""
 
     permission_classes = []
@@ -1231,7 +1258,7 @@ class SDKRelayEventView(drf.views.APIView):
         return drf.response.Response(event)
 
 
-class SDKRelayEventCreateView(drf.views.APIView):
+class SDKRelayEventCreateView(CORSAllowAllMixin, drf.views.APIView):
     """API View for SDK relay interactions."""
 
     permission_classes = []
