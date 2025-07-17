@@ -15,6 +15,7 @@ and this project adheres to
 - ✨(global) add customization to feedbacks
 - ✨(front) add PDF, Audio, Video, Image viewers
 - ✨(front) make frontend themable
+- ✨(global) Add File Picker SDK
 
 ## Changed
 
