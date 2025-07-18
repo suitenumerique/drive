@@ -16,6 +16,7 @@ and this project adheres to
 - ✨(front) add PDF, Audio, Video, Image viewers
 - ✨(front) make frontend themable
 - ✨(global) Add File Picker SDK
+- 🔧(cron) add pgdump cron on scalingo deployment #264
 
 ## Changed
 
