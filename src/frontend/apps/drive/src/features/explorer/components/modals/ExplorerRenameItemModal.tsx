@@ -10,7 +10,6 @@ import { Item } from "@/features/drivers/types";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationRenameItem } from "../../hooks/useMutations";
 import { useRef } from "react";
-import { getExtension } from "../../utils/utils";
 import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
 
 type Inputs = {
@@ -83,12 +82,7 @@ export const ExplorerRenameItemModal = (
               inputRegister.ref(e);
               if (!inputRef.current) {
                 e?.focus();
-                const ext = getExtension(props.item, true);
-                if (ext) {
-                  e?.setSelectionRange(0, e.value.length - ext.length - 1);
-                } else {
-                  e?.setSelectionRange(0, e.value.length);
-                }
+                e?.setSelectionRange(0, e.value.length);
                 // We only set the ref once because it sometimes call this function with e === null, don't know why,
                 // but it causes setSelectionRange to be called frenetically.
                 inputRef.current = e;

@@ -141,14 +141,14 @@ export const EmbeddedExplorerGridActionsCell = (
         {renameModal.isOpen && (
           <ExplorerRenameItemModal {...renameModal} item={item} key={item.id} />
         )}
-        {canShareWorkspace && (
+        {canShareWorkspace && shareWorkspaceModal.isOpen && (
           <WorkspaceShareModal
             {...shareWorkspaceModal}
             item={item}
             key={item.id}
           />
         )}
-        {canShareFile && (
+        {canShareFile && shareFileModal.isOpen && (
           <FileShareModal {...shareFileModal} item={item} key={item.id} />
         )}
       </Draggable>
