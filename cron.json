@@ -1,0 +1,7 @@
+{
+  "jobs": [
+    {
+      "command": "0 0 * * * bin/scalingo_pgdump.sh"
+    }
+  ]
+}
