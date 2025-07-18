@@ -42,8 +42,8 @@
               "description": "For a structured feedback"
             },
             "tchap": {
-              "title": "Chat on Tchap",
-              "description": "For a quick remark or discuss with the community"
+              "title": "Write a message on Tchap",
+              "description": "To send us your feedback directly via message"
             },
             "visio": {
               "title": "Chat on Visio",
@@ -358,8 +358,8 @@
               "description": "Pour un retour structuré"
             },
             "tchap": {
-              "title": "Échanger sur le canal Tchap",
-              "description": "Pour une remarque rapide ou discuter avec la communauté"
+              "title": "Écrire un message sur Tchap",
+              "description": "Pour nous faire vos remarques directement par message"
             },
             "visio": {
               "title": "Échanger en visio",
