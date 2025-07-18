@@ -11,6 +11,7 @@ import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationRenameItem } from "../../hooks/useMutations";
 import { useRef } from "react";
 import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import { removeFileExtension } from "../../utils/mimeTypes";
 
 type Inputs = {
   title: string;
@@ -25,7 +26,7 @@ export const ExplorerRenameItemModal = (
   const { t } = useTranslation();
   const form = useForm<Inputs>({
     defaultValues: {
-      title: props.item.title,
+      title: removeFileExtension(props.item.title),
     },
   });
 
