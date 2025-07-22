@@ -25,7 +25,7 @@ license = { file = "LICENSE" }
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "boto3==1.39.3",
+    "boto3==1.39.10",
     "Brotli==1.1.0",
     "dj-database-url==3.0.1",
     "celery[redis]==5.5.3",
@@ -34,7 +34,7 @@ dependencies = [
     "django-cors-headers==4.7.0",
     "django-countries==7.6.1",
     "django-filter==25.1",
-    "django-lasuite==0.0.10",
+    "django-lasuite==0.0.11",
     "django-ltree@git+https://github.com/mariocesar/django-ltree@5d955bc82021a50c522ee524106f6709e3b414e4",
     "django-parler==2.3",
     "django-redis==6.0.0",
@@ -47,17 +47,17 @@ dependencies = [
     "easy_thumbnails==2.10",
     "factory_boy==3.3.3",
     "gunicorn==23.0.0",
-    "jsonschema==4.24.0",
+    "jsonschema==4.25.0",
     "markdown==3.8.2",
     "mozilla-django-oidc==4.0.1",
     "nested-multipart-parser==1.5.0",
-    "posthog==6.0.3",
+    "posthog==6.2.1",
     "psycopg[binary]==3.2.9",
     "PyJWT==2.10.1",
     "python-magic==0.4.27",
     "redis<6.0.0",
     "requests==2.32.4",
-    "sentry-sdk==2.32.0",
+    "sentry-sdk==2.33.2",
     "url-normalize==2.2.1",
     "whitenoise==6.9.0",
 ]
@@ -73,7 +73,7 @@ dev = [
     "django-debug-toolbar==5.2.0",
     "django-extensions==4.1",
     "drf-spectacular-sidecar==2025.7.1",
-    "freezegun==1.5.2",
+    "freezegun==1.5.3",
     "ipdb==0.13.13",
     "ipython==9.4.0",
     "pyfakefs==5.9.1",
@@ -85,7 +85,7 @@ dev = [
     "pytest-icdiff==0.9",
     "pytest-xdist==3.8.0",
     "responses==0.25.7",
-    "ruff==0.12.2",
+    "ruff==0.12.4",
     "types-requests==2.32.4.20250611",
 ]
 
