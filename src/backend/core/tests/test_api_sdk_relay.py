@@ -86,3 +86,20 @@ def test_api_sdk_relay_register_event_invalid_token():
         ],
         "type": "validation_error",
     }
+
+def test_api_sdk_relay_preflight_request():
+    """Preflight request should return a 200 status code."""
+    client = APIClient()
+    response = client.options(
+        "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/",
+    )
+    assert response.status_code == 200
+    assert response["Access-Control-Allow-Origin"] == "*"
+    assert (
+        response["Access-Control-Allow-Methods"]
+        == "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    )
+    assert (
+        response["Access-Control-Allow-Headers"]
+        == "Content-Type, Authorization, X-Requested-With"
+    )
