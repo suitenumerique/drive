@@ -12,6 +12,7 @@ and this project adheres to
 
 - 🐛(backend) stop decreasing twice the numchild in deletion process #284
 - ⚡️(backend) optimize trashbin endpoint #276 
+- ♻️(backend) modify sdk-relay to use DRF viewset and serializers #269
 
 ## [v0.1.0] - 2025-07-25
 

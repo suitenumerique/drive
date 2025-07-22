@@ -532,3 +532,10 @@ class MoveItemSerializer(serializers.Serializer):
     """
 
     target_item_id = serializers.UUIDField(required=True)
+
+
+class SDKRelayEventSerializer(serializers.Serializer):
+    """Serializer for SDK relay events."""
+
+    token = serializers.RegexField(regex=r"^[0-9a-zA-Z]{32}$", required=True)
+    event = serializers.JSONField(required=True)

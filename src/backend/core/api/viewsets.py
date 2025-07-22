@@ -1265,33 +1265,30 @@ class ConfigView(drf.views.APIView):
         return drf.response.Response(dict_settings)
 
 
-class SDKRelayEventView(CORSAllowAllMixin, drf.views.APIView):
+class SDKRelayEventViewset(CORSAllowAllMixin, drf.viewsets.ViewSet):
     """API View for SDK relay interactions."""
 
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     throttle_scope = "sdk_event_relay"
 
-    def get(self, request, token):
+    def retrieve(self, request, pk=None):
         """
         GET /api/v1.0/sdk-relay/events/<token>/
         """
         sdk_relay = SDKRelayManager()
-        event = sdk_relay.get_event(token)
+        event = sdk_relay.get_event(pk)
         return drf.response.Response(event)
 
-
-class SDKRelayEventCreateView(CORSAllowAllMixin, drf.views.APIView):
-    """API View for SDK relay interactions."""
-
-    permission_classes = []
-
-    def post(self, request):
+    def create(self, request):
         """
         POST /api/v1.0/sdk-relay/events/
         """
-        token = request.data.get("token")
-        event = request.data.get("event")
+        serializer = serializers.SDKRelayEventSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         sdk_relay = SDKRelayManager()
-        sdk_relay.register_event(token, event)
+        sdk_relay.register_event(
+            serializer.validated_data.get("token"),
+            serializer.validated_data.get("event"),
+        )
         return drf.response.Response(status=status.HTTP_201_CREATED)
