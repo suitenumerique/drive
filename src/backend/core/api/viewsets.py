@@ -1028,9 +1028,10 @@ class ItemViewSet(
             raise drf.exceptions.PermissionDenied()
 
         # Generate S3 authorization headers using the extracted URL parameters
-        request = utils.generate_s3_authorization_headers(f"{url_params.get('key'):s}")
-
-        return drf.response.Response("authorized", headers=request.headers, status=200)
+        url = utils.generate_item_presigned_url(f"{url_params.get('key'):s}")
+        print(url)
+        print({"x_s3_location": url})
+        return drf.response.Response("authorized", headers={"x_s3_location": url}, status=200)
 
 
 class ItemAccessViewSet(

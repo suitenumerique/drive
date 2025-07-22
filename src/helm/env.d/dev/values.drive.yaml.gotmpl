@@ -133,9 +133,11 @@ ingressMedia:
 
   annotations:
     nginx.ingress.kubernetes.io/auth-url: https://drive.127.0.0.1.nip.io/api/v1.0/items/media-auth/
-    nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
     nginx.ingress.kubernetes.io/upstream-vhost: minio.drive.svc.cluster.local:9000
-    nginx.ingress.kubernetes.io/rewrite-target: /drive-media-storage/$1
+    nginx.ingress.kubernetes.io/rewrite-target: /$s3_location
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header Content-Security-Policy "default-src 'none'" always;
+      auth_request_set $s3_location $upstream_http_x_s3_location;
 
 serviceMedia:
   host: minio.drive.svc.cluster.local

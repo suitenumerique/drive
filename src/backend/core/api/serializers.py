@@ -129,6 +129,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     nb_accesses = serializers.IntegerField(read_only=True)
     user_roles = serializers.SerializerMethodField()
     url = serializers.SerializerMethodField()
+    download_url = serializers.SerializerMethodField()
     creator = UserLiteSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
 
@@ -153,6 +154,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "type",
             "upload_state",
             "url",
+            "download_url",
             "filename",
             "mimetype",
             "main_workspace",
@@ -179,6 +181,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "type",
             "upload_state",
             "url",
+            "download_url",
             "mimetype",
             "main_workspace",
             "size",
@@ -213,6 +216,17 @@ class ListItemSerializer(serializers.ModelSerializer):
 
     def get_url(self, item):
         """Return the URL of the item."""
+        if (
+            item.type != models.ItemTypeChoices.FILE
+            or item.upload_state != models.ItemUploadStateChoices.UPLOADED
+            or item.filename is None
+        ):
+            return None
+
+        return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{item.file_key}"
+
+    def get_download_url(self, item):
+        """Return the download URL of the item."""
         if (
             item.type != models.ItemTypeChoices.FILE
             or item.upload_state != models.ItemUploadStateChoices.UPLOADED

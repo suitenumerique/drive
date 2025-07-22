@@ -71,6 +71,9 @@ releases:
     chart: bitnami/minio
     version: 16.0.0
     values: 
+      - extraEnvVars:
+        - name: MINIO_LOG_LEVEL
+          value: DEBUG
       - auth:
           rootUser: root
           rootPassword: password
