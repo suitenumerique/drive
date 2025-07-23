@@ -25,7 +25,7 @@ license = { file = "LICENSE" }
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "boto3==1.39.10",
+    "boto3==1.39.11",
     "Brotli==1.1.0",
     "dj-database-url==3.0.1",
     "celery[redis]==5.5.3",
@@ -34,7 +34,7 @@ dependencies = [
     "django-cors-headers==4.7.0",
     "django-countries==7.6.1",
     "django-filter==25.1",
-    "django-lasuite==0.0.11",
+    "django-lasuite==0.0.12",
     "django-ltree@git+https://github.com/mariocesar/django-ltree@5d955bc82021a50c522ee524106f6709e3b414e4",
     "django-parler==2.3",
     "django-redis==6.0.0",
@@ -51,7 +51,7 @@ dependencies = [
     "markdown==3.8.2",
     "mozilla-django-oidc==4.0.1",
     "nested-multipart-parser==1.5.0",
-    "posthog==6.2.1",
+    "posthog==6.3.0",
     "psycopg[binary]==3.2.9",
     "PyJWT==2.10.1",
     "python-magic==0.4.27",
