@@ -1048,8 +1048,10 @@ class ItemViewSet(
             raise drf.exceptions.PermissionDenied()
 
         # Fetch the item and check if the user has access
+        queryset = models.Item.objects.all()
+        queryset = self._filter_suspicious_items(queryset, request.user)
         try:
-            item = models.Item.objects.get(pk=pk)
+            item = queryset.get(pk=pk)
         except models.Item.DoesNotExist as exc:
             logger.debug("item with ID '%s' does not exist", pk)
             raise drf.exceptions.PermissionDenied() from exc
@@ -1085,7 +1087,7 @@ class ItemViewSet(
             logger.debug("Item '%s' is not a file", item.id)
             raise drf.exceptions.PermissionDenied()
 
-        if item.upload_state != models.ItemUploadStateChoices.READY:
+        if item.upload_state == models.ItemUploadStateChoices.PENDING:
             logger.debug("Item '%s' is not ready", item.id)
             raise drf.exceptions.PermissionDenied()
 
