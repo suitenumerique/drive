@@ -461,10 +461,35 @@ class ItemViewSet(
             user_roles=db.Value([], output_field=output_field),
         )
 
+    def _filter_suspicious_items(self, queryset, user):
+        """
+        Filter out items with SUSPICIOUS upload_state for non-creators.
+
+        Args:
+            queryset: The queryset to filter
+            user: The current user
+
+        Returns:
+            Filtered queryset excluding suspicious items from non-creators
+        """
+        # For authenticated users, exclude suspicious items they didn't create
+        # For unauthenticated users, exclude all suspicious items
+        if user.is_authenticated:
+            return queryset.exclude(
+                db.Q(upload_state=models.ItemUploadStateChoices.SUSPICIOUS)
+                & ~db.Q(creator=user)
+            )
+
+        return queryset.exclude(upload_state=models.ItemUploadStateChoices.SUSPICIOUS)
+
     def get_queryset(self):
         """Get queryset performing all annotation and filtering on the item tree structure."""
         user = self.request.user
         queryset = super().get_queryset().select_related("creator")
+
+        # Remove items with upload_state SUSPICIOUS for non-creators
+        queryset = self._filter_suspicious_items(queryset, user)
+
         # Only list views need filtering and annotation
         if self.detail:
             return queryset
@@ -813,6 +838,7 @@ class ItemViewSet(
 
         # GET: List children
         queryset = item.children().filter(deleted_at__isnull=True)
+        queryset = self._filter_suspicious_items(queryset, request.user)
         queryset = self.filter_queryset(queryset)
         filterset = ItemFilter(request.GET, queryset=queryset)
         if not filterset.is_valid():
@@ -900,6 +926,7 @@ class ItemViewSet(
 
         tree = self.annotate_user_roles(tree)
         tree = self.annotate_is_favorite(tree)
+        tree = self._filter_suspicious_items(tree, request.user)
 
         serializer = self.get_serializer(
             tree,

@@ -591,3 +591,26 @@ def test_api_items_update_empty_title():
 
     item.refresh_from_db()
     assert item.title is not None
+
+
+def test_api_items_update_suspicious_item_should_not_work_for_non_creator():
+    """
+    Suspicious items should not be updated for non creator.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    suspicious_item = factories.ItemFactory(
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FILE,
+        filename="suspicious.txt",
+    )
+
+    response = client.put(
+        f"/api/v1.0/items/{suspicious_item.id!s}/",
+        {"title": "New title"},
+        format="json",
+    )
+    assert response.status_code == 404

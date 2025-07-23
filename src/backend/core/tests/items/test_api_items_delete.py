@@ -151,3 +151,51 @@ def test_api_items_delete_authenticated_owner(via, mock_user_teams):
     # Make sure it is only a soft delete
     item.refresh_from_db()
     assert item.deleted_at is not None
+
+
+def test_api_items_delete_suspicious_item_should_not_work_for_non_creator():
+    """
+    Non-creators should not be able to delete suspicious items.
+    """
+    creator = factories.UserFactory()
+    other_user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(other_user)
+
+    suspicious_item = factories.ItemFactory(
+        creator=creator,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[
+            (creator, models.RoleChoices.OWNER),
+            (other_user, models.RoleChoices.ADMIN),
+        ],
+        type=models.ItemTypeChoices.FILE,
+        filename="suspicious.txt",
+    )
+
+    response = client.delete(f"/api/v1.0/items/{suspicious_item.id}/")
+    assert response.status_code == 404
+
+
+def test_api_items_delete_suspicious_item_should_work_for_creator():
+    """
+    Creators should be able to delete their own suspicious items.
+    """
+    creator = factories.UserFactory()
+    client = APIClient()
+    client.force_login(creator)
+
+    suspicious_item = factories.ItemFactory(
+        creator=creator,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[(creator, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FILE,
+        filename="suspicious.txt",
+    )
+
+    response = client.delete(f"/api/v1.0/items/{suspicious_item.id}/")
+    assert response.status_code == 204
+
+    # Make sure it is only a soft delete
+    suspicious_item.refresh_from_db()
+    assert suspicious_item.deleted_at is not None

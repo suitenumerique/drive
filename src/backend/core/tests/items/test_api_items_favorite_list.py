@@ -96,3 +96,55 @@ def test_api_item_favorite_list_authenticated_with_favorite():
             }
         ],
     }
+
+
+def test_api_item_favorite_list_with_suspicious_items():
+    """
+    Suspicious items should not be listed in favorite list for non creator.
+    """
+    creator = factories.UserFactory()
+    other_user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(other_user)
+
+    # Create suspicious item and mark it as favorite by non-creator
+    suspicious_item = factories.ItemFactory(
+        creator=creator,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[creator, other_user],
+        type=models.ItemTypeChoices.FILE,
+        filename="suspicious.txt",
+        favorited_by=[other_user, creator],
+    )
+
+    # Create normal item and mark it as favorite by non-creator
+    normal_item = factories.ItemFactory(
+        creator=creator,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        users=[creator, other_user],
+        type=models.ItemTypeChoices.FILE,
+        filename="normal.txt",
+        favorited_by=[other_user, creator],
+    )
+
+    # Non-creator should only see normal item in favorite list, not suspicious one
+    response = client.get("/api/v1.0/items/favorite_list/")
+    assert response.status_code == 200
+    content = response.json()
+
+    # Should only see 1 normal item, not the suspicious one
+    assert content["count"] == 1
+    item_ids = [item["id"] for item in content["results"]]
+    assert str(suspicious_item.id) not in item_ids
+    assert str(normal_item.id) in item_ids
+
+    # Creator should see all their favorited items including suspicious one
+    client.force_login(creator)
+    response = client.get("/api/v1.0/items/favorite_list/")
+    assert response.status_code == 200
+    content = response.json()
+
+    assert content["count"] == 2
+    item_ids = [item["id"] for item in content["results"]]
+    assert str(suspicious_item.id) in item_ids
+    assert str(normal_item.id) in item_ids
