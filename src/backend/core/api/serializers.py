@@ -216,7 +216,7 @@ class ListItemSerializer(serializers.ModelSerializer):
         """Return the URL of the item."""
         if (
             item.type != models.ItemTypeChoices.FILE
-            or item.upload_state != models.ItemUploadStateChoices.READY
+            or item.upload_state == models.ItemUploadStateChoices.PENDING
             or item.filename is None
         ):
             return None

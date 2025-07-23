@@ -179,7 +179,7 @@ def test_api_items_media_auth_authenticated_restricted():
 def test_api_items_media_auth_related(via, mock_user_teams, upload_state):
     """
     Users who have a specific access to an item, whatever the role, should be able to
-    retrieve related attachments.
+    retrieve related attachments if not pending.
     """
     user = factories.UserFactory()
     client = APIClient()
@@ -187,7 +187,7 @@ def test_api_items_media_auth_related(via, mock_user_teams, upload_state):
 
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.READY,
+        update_upload_state=upload_state,
     )
     if via == USER:
         factories.UserItemAccessFactory(item=item, user=user)
@@ -235,7 +235,7 @@ def test_api_items_media_auth_related(via, mock_user_teams, upload_state):
     assert response.content.decode("utf-8") == "my prose"
 
 
-def test_api_items_media_auth_related_filename_with_espaces():
+def test_api_items_media_auth_related_filename_with_spaces():
     """
     Users who have a specific access to an item, whatever the role, should be able to
     retrieve related attachments.
@@ -316,7 +316,7 @@ def test_api_items_media_auth_item_not_a_file():
     assert response.status_code == 403
 
 
-def test_api_items_media_auth_item_not_ready():
+def test_api_items_media_auth_item_pending():
     """
     Users who have a specific access to an item, whatever the role, should not be able to
     retrieve related attachments if the item is not ready.
@@ -325,7 +325,10 @@ def test_api_items_media_auth_item_not_ready():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(type=models.ItemTypeChoices.FILE)
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        upload_state=models.ItemUploadStateChoices.PENDING,
+    )
     factories.UserItemAccessFactory(item=item, user=user)
 
     filename = "foo.txt"
@@ -337,3 +340,64 @@ def test_api_items_media_auth_item_not_ready():
     )
 
     assert response.status_code == 403
+
+
+def test_api_items_media_auth_suspicious_item_non_creator():
+    """
+    Users who have a specific access to an item, whatever the role, should not be able to
+    retrieve related attachments if the item is suspicious and they are not the creator.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    filename = "foo.txt"
+    key = f"item/{item.pk!s}/{filename:s}"
+
+    original_url = quote(f"http://localhost/media/{key:s}")
+    response = client.get(
+        "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
+    )
+
+    assert response.status_code == 403
+
+
+def test_api_items_media_auth_suspicious_item_creator():
+    """
+    Users who have a specific access to an item, whatever the role, should be able to
+    retrieve related attachments if the item is suspicious and they are the creator.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        creator=user,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    filename = "foo.txt"
+    key = f"item/{item.pk!s}/{filename:s}"
+
+    original_url = quote(f"http://localhost/media/{key:s}")
+    response = client.get(
+        "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
+    )
+
+    assert response.status_code == 200
+
+    authorization = response["Authorization"]
+    assert "AWS4-HMAC-SHA256 Credential=" in authorization
+    assert (
+        "SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature="
+        in authorization
+    )
+    assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")

@@ -1085,19 +1085,23 @@ def test_api_items_retrieve_permanently_deleted_related(role, depth):
 )
 def test_api_items_retrieve_file_with_url_property(upload_state):
     """
-    The `url` property should not be none if the item is a ready file.
+    The `url` property should not be none if the item is not pending.
     """
 
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(type=models.ItemTypeChoices.FILE, link_reach="public")
-    item.upload_state = models.ItemUploadStateChoices.READY
-    item.filename = "logo.png"
-    item.mimetype = "image/png"
-    item.size = 8
-    item.save()
+    item = factories.ItemFactory(
+        creator=user,
+        type=models.ItemTypeChoices.FILE,
+        link_reach="public",
+        update_upload_state=upload_state,
+        filename="logo.png",
+        mimetype="image/png",
+        size=8,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
 
@@ -1114,15 +1118,15 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "is_favorite": False,
         "link_reach": "public",
         "link_role": item.link_role,
-        "nb_accesses": 0,
+        "nb_accesses": 1,
         "numchild": 0,
         "numchild_folder": 0,
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": [],
+        "user_roles": [models.RoleChoices.OWNER],
         "type": models.ItemTypeChoices.FILE,
-        "upload_state": models.ItemUploadStateChoices.READY,
+        "upload_state": upload_state,
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
         "mimetype": "image/png",
         "main_workspace": False,
