@@ -23,7 +23,6 @@ def test_api_items_retrieve_anonymous_public_standalone():
     item = factories.ItemFactory(link_reach="public")
 
     response = APIClient().get(f"/api/v1.0/items/{item.id!s}/")
-
     assert response.status_code == 200
     assert response.json() == {
         "id": str(item.id),
@@ -1141,5 +1140,67 @@ def test_api_items_retrieve_hard_deleted_item_should_not_work():
     factories.UserItemAccessFactory(item=item, user=user)
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 404
+
+
+def test_api_items_retrieve_suspicious_item_should_not_work_for_non_creator():
+    """
+    Suspicious items should not be accessible via their detail endpoint for non creator.
+    """
+    creator = factories.UserFactory()
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        creator=creator,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[user],
+        filename="suspicious.txt",
+    )
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 404
+
+
+def test_api_items_retrieve_suspicious_item_should_work_for_creator():
+    """
+    Suspicious items should be accessible via their detail endpoint for creator.
+    """
+    creator = factories.UserFactory()
+    client = APIClient()
+    client.force_login(creator)
+
+    item = factories.ItemFactory(
+        creator=creator,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[creator],
+        filename="suspicious.txt",
+    )
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+
+
+def test_api_items_retrieve_suspicious_item_should_not_work_for_anonymous():
+    """
+    Suspicious items should not be accessible via their detail endpoint for anonymous users.
+    """
+    creator = factories.UserFactory()
+    item = factories.ItemFactory(
+        creator=creator,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[creator],
+        filename="suspicious.txt",
+        link_reach="public",
+    )
+
+    response = APIClient().get(f"/api/v1.0/items/{item.id!s}/")
 
     assert response.status_code == 404
