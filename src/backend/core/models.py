@@ -91,7 +91,10 @@ class ItemUploadStateChoices(models.TextChoices):
     """Defines the possible states of an item."""
 
     PENDING = "pending", _("Pending")
-    UPLOADED = "uploaded", _("Uploaded")
+    ANALYZING = "analyzing", _("Analyzing")
+    SUSPICIOUS = "suspicious", _("Suspicious")
+    FILE_TOO_LARGE = "file_too_large", _("File too large")
+    READY = "ready", _("Ready")
 
 
 class DuplicateEmailError(Exception):

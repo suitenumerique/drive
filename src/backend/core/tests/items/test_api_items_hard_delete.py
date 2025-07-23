@@ -98,3 +98,51 @@ def test_api_items_hard_delete_authenticated_owner_already_hard_deleted_should_f
 
     response = client.delete(f"/api/v1.0/items/{item.id!s}/hard-delete/")
     assert response.status_code == 404
+
+
+def test_api_items_hard_delete_suspicious_item_should_not_work_for_non_creator():
+    """
+    Non-creators should not be able to hard delete suspicious items.
+    """
+    creator = factories.UserFactory()
+    other_user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(other_user)
+
+    suspicious_item = factories.ItemFactory(
+        creator=creator,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[
+            (creator, models.RoleChoices.OWNER),
+            (other_user, models.RoleChoices.ADMIN),
+        ],
+        type=models.ItemTypeChoices.FILE,
+        filename="suspicious.txt",
+    )
+    suspicious_item.soft_delete()
+
+    response = client.delete(f"/api/v1.0/items/{suspicious_item.id!s}/hard-delete/")
+    assert response.status_code == 404
+
+
+def test_api_items_hard_delete_suspicious_item_should_work_for_creator():
+    """
+    Creators should be able to hard delete their own suspicious items.
+    """
+    creator = factories.UserFactory()
+    client = APIClient()
+    client.force_login(creator)
+
+    suspicious_item = factories.ItemFactory(
+        creator=creator,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[(creator, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FILE,
+        filename="suspicious.txt",
+    )
+    suspicious_item.soft_delete()
+
+    response = client.delete(f"/api/v1.0/items/{suspicious_item.id!s}/hard-delete/")
+    assert response.status_code == 204
+
+    assert not models.Item.objects.filter(id=suspicious_item.id).exists()

@@ -13,6 +13,8 @@ from core import factories, models
 
 pytestmark = pytest.mark.django_db
 
+# pylint: disable=too-many-lines
+
 
 def test_api_items_children_list_anonymous_public_standalone():
     """Anonymous users should be allowed to retrieve the children of a public item."""
@@ -121,7 +123,7 @@ def test_api_items_children_list_anonymous_public_parent():
     )
     factories.UserItemAccessFactory(item=child1)
 
-    child2.upload_state = models.ItemUploadStateChoices.UPLOADED
+    child2.upload_state = models.ItemUploadStateChoices.READY
     child2.filename = "logo.png"
     child2.save()
 
@@ -183,7 +185,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
                 "user_roles": [],
                 "type": models.ItemTypeChoices.FILE,
-                "upload_state": models.ItemUploadStateChoices.UPLOADED,
+                "upload_state": models.ItemUploadStateChoices.READY,
                 "url": f"http://localhost:8083/media/item/{child2.id!s}/logo.png",
                 "mimetype": None,
                 "main_workspace": False,
@@ -952,3 +954,97 @@ def test_api_items_children_list_filter_wrong_type():
         ],
         "type": "validation_error",
     }
+
+
+def test_api_items_children_list_with_suspicious_items():
+    """
+    Suspicious items should not be listed in children list for non creator.
+    """
+    creator = factories.UserFactory()
+    other_user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(other_user)
+
+    parent_item = factories.ItemFactory(
+        creator=creator,
+        type=models.ItemTypeChoices.FOLDER,
+        users=[creator, other_user],
+    )
+
+    # Create suspicious item as child
+    suspicious_item = factories.ItemFactory(
+        creator=creator,
+        parent=parent_item,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[creator, other_user],
+        type=models.ItemTypeChoices.FILE,
+        filename="suspicious.txt",
+    )
+
+    # Create normal items as children
+    normal_item1, normal_item2 = factories.ItemFactory.create_batch(
+        2,
+        creator=creator,
+        parent=parent_item,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        users=[creator, other_user],
+        type=models.ItemTypeChoices.FILE,
+        filename="normal.txt",
+    )
+
+    # Non-creator should not see suspicious item
+    response = client.get(f"/api/v1.0/items/{parent_item.id!s}/children/")
+    assert response.status_code == 200
+    content = response.json()
+
+    # Should only see 2 normal items, not the suspicious one
+    assert content["count"] == 2
+    item_ids = [item["id"] for item in content["results"]]
+    assert str(suspicious_item.id) not in item_ids
+    assert str(normal_item1.id) in item_ids
+    assert str(normal_item2.id) in item_ids
+
+    # Creator should see all items including suspicious one
+    client.force_login(creator)
+    response = client.get(f"/api/v1.0/items/{parent_item.id!s}/children/")
+    assert response.status_code == 200
+    content = response.json()
+
+    # Should see all 3 items including suspicious one
+    assert content["count"] == 3
+    item_ids = [item["id"] for item in content["results"]]
+    assert str(suspicious_item.id) in item_ids
+    assert str(normal_item1.id) in item_ids
+    assert str(normal_item2.id) in item_ids
+
+
+def test_api_items_children_list_suspicious_item_should_not_work_for_anonymous():
+    """
+    Suspicious items should not be accessible via children endpoint for anonymous users.
+    """
+    creator = factories.UserFactory()
+
+    parent_item = factories.ItemFactory(
+        creator=creator,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach="public",
+    )
+
+    suspicious_item = factories.ItemFactory(
+        creator=creator,
+        parent=parent_item,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        type=models.ItemTypeChoices.FILE,
+        filename="suspicious.txt",
+        link_reach="public",
+    )
+
+    # Anonymous user should not see suspicious item
+    response = APIClient().get(f"/api/v1.0/items/{parent_item.id!s}/children/")
+    assert response.status_code == 200
+    content = response.json()
+
+    # Should not see the suspicious item
+    assert content["count"] == 0
+    item_ids = [item["id"] for item in content["results"]]
+    assert str(suspicious_item.id) not in item_ids
