@@ -322,3 +322,57 @@ def test_api_item_favorite_authenticated_post_unmark_then_mark_again_allowed(
     # Verify item format
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
     assert response.json()["is_favorite"] is True
+
+
+def test_api_item_favorite_suspicious_item_should_not_work_for_non_creator():
+    """
+    Non-creators should not be able to favorite suspicious items.
+    """
+    creator = factories.UserFactory()
+    other_user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(other_user)
+
+    suspicious_item = factories.ItemFactory(
+        creator=creator,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[
+            (creator, models.RoleChoices.OWNER),
+            (other_user, models.RoleChoices.ADMIN),
+        ],
+        type=models.ItemTypeChoices.FILE,
+        filename="suspicious.txt",
+    )
+
+    response = client.post(f"/api/v1.0/items/{suspicious_item.id!s}/favorite/")
+    assert response.status_code == 404
+
+
+def test_api_item_favorite_suspicious_item_should_work_for_creator():
+    """
+    Creators should be able to favorite their own suspicious items.
+    """
+    creator = factories.UserFactory()
+    client = APIClient()
+    client.force_login(creator)
+
+    suspicious_item = factories.ItemFactory(
+        creator=creator,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[(creator, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FILE,
+        filename="suspicious.txt",
+    )
+
+    response = client.post(f"/api/v1.0/items/{suspicious_item.id!s}/favorite/")
+    assert response.status_code == 201
+    assert response.json() == {"detail": "item marked as favorite"}
+
+    # Verify in database
+    assert models.ItemFavorite.objects.filter(
+        item=suspicious_item, user=creator
+    ).exists()
+
+    # Verify item format
+    response = client.get(f"/api/v1.0/items/{suspicious_item.id!s}/")
+    assert response.json()["is_favorite"] is True

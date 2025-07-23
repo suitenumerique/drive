@@ -23,7 +23,6 @@ def test_api_items_retrieve_anonymous_public_standalone():
     item = factories.ItemFactory(link_reach="public")
 
     response = APIClient().get(f"/api/v1.0/items/{item.id!s}/")
-
     assert response.status_code == 200
     assert response.json() == {
         "id": str(item.id),
@@ -1152,3 +1151,120 @@ def test_api_items_retrieve_hard_deleted_item_should_not_work():
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
 
     assert response.status_code == 404
+
+
+def test_api_items_retrieve_suspicious_item_should_not_work_for_non_creator():
+    """
+    Suspicious items should not be accessible via their detail endpoint for non creator.
+    """
+    creator = factories.UserFactory()
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        creator=creator,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[user],
+        filename="suspicious.txt",
+    )
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 404
+
+
+def test_api_items_retrieve_suspicious_item_should_work_for_creator():
+    """
+    Suspicious items should be accessible via their detail endpoint for creator.
+    """
+    creator = factories.UserFactory()
+    client = APIClient()
+    client.force_login(creator)
+
+    item = factories.ItemFactory(
+        creator=creator,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[creator],
+        filename="suspicious.txt",
+    )
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+
+
+def test_api_items_retrieve_suspicious_item_should_not_work_for_anonymous():
+    """
+    Suspicious items should not be accessible via their detail endpoint for anonymous users.
+    """
+    creator = factories.UserFactory()
+    item = factories.ItemFactory(
+        creator=creator,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[creator],
+        filename="suspicious.txt",
+        link_reach="public",
+    )
+
+    response = APIClient().get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 404
+
+
+def test_api_items_retrieve_file_analysing_not_creator():
+    """
+    The `url` property should not be none if the item is not pending.
+    """
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach="public",
+        update_upload_state=models.ItemUploadStateChoices.ANALYZING,
+        filename="logo.png",
+        mimetype="image/png",
+        size=8,
+    )
+    access = factories.UserItemAccessFactory(item=item, user=user)
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": str(item.id),
+        "abilities": item.get_abilities(user),
+        "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
+        "creator": {
+            "id": str(item.creator.id),
+            "full_name": item.creator.full_name,
+            "short_name": item.creator.short_name,
+        },
+        "depth": 1,
+        "is_favorite": False,
+        "link_reach": "public",
+        "link_role": item.link_role,
+        "nb_accesses": 1,
+        "numchild": 0,
+        "numchild_folder": 0,
+        "path": str(item.path),
+        "title": item.title,
+        "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
+        "user_roles": [access.role],
+        "type": models.ItemTypeChoices.FILE,
+        "upload_state": models.ItemUploadStateChoices.ANALYZING,
+        "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
+        "mimetype": "image/png",
+        "main_workspace": False,
+        "filename": item.filename,
+        "size": 8,
+        "description": None,
+        "deleted_at": None,
+        "hard_delete_at": None,
+    }

@@ -191,3 +191,55 @@ def test_api_items_restore_authenticated_owner_expired():
         ],
         "type": "client_error",
     }
+
+
+def test_api_items_restore_suspicious_item_should_not_work_for_non_creator():
+    """
+    Non-creators should not be able to restore suspicious items.
+    """
+    creator = factories.UserFactory()
+    other_user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(other_user)
+
+    suspicious_item = factories.ItemFactory(
+        creator=creator,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[
+            (creator, models.RoleChoices.OWNER),
+            (other_user, models.RoleChoices.ADMIN),
+        ],
+        type=models.ItemTypeChoices.FILE,
+        filename="suspicious.txt",
+    )
+    suspicious_item.soft_delete()
+
+    response = client.post(f"/api/v1.0/items/{suspicious_item.id!s}/restore/")
+    assert response.status_code == 404
+
+
+def test_api_items_restore_suspicious_item_should_work_for_creator():
+    """
+    Creators should be able to restore their own suspicious items.
+    """
+    creator = factories.UserFactory()
+    client = APIClient()
+    client.force_login(creator)
+
+    suspicious_item = factories.ItemFactory(
+        creator=creator,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[(creator, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FILE,
+        filename="suspicious.txt",
+    )
+    suspicious_item.soft_delete()
+
+    response = client.post(f"/api/v1.0/items/{suspicious_item.id!s}/restore/")
+    assert response.status_code == 200
+    assert response.json() == {"detail": "item has been successfully restored."}
+
+    # Verify that the item has been restored
+    suspicious_item.refresh_from_db()
+    assert suspicious_item.deleted_at is None
+    assert suspicious_item.ancestors_deleted_at is None
