@@ -117,7 +117,11 @@ and this project adheres to
 - ✨(front) make frontend themable
 - ✨(global) Add File Picker SDK
 - 🔧(cron) add pgdump cron on scalingo deployment #264
+<<<<<<< HEAD
 - ✨(back) implement lasuite.malware_detection app #212
+=======
+- ✨(front) add grist and sqlite mimeTypes #275
+>>>>>>> 42fba11 (✨(front) create Grist file type)
 
 ### Changed
 
