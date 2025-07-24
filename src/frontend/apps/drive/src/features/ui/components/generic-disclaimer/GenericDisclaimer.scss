@@ -1,0 +1,25 @@
+.drive__generic-disclaimer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(100vh - var(--header-height));
+  padding: 0 0.5rem;
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+
+    &__image {
+      max-width: 100%;
+    }
+
+    > p {
+      margin: 0;
+      color: var(--c--theme--colors--primary-800);
+      text-align: center;
+    }
+  }
+}
