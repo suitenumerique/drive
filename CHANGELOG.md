@@ -11,6 +11,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(backend) stop decreasing twice the numchild in deletion process #284
+- ⚡️(backend) optimize trashbin endpoint #276 
 
 ## [v0.1.0] - 2025-07-25
 
