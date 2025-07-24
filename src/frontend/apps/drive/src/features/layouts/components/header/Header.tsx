@@ -1,28 +1,20 @@
-import {
-  DropdownMenu,
-  Header as KitHeader,
-  LaGaufre,
-} from "@gouvfr-lasuite/ui-kit";
+import { DropdownMenu, LaGaufre } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@openfun/cunningham-react";
 import { useAuth, logout } from "@/features/auth/Auth";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExplorerSearchButton } from "@/features/explorer/components/app-view/ExplorerSearchButton";
 import { getDriver } from "@/features/config/Config";
-import { Feedback } from "@/features/feedback/Feedback";
 import { useConfig } from "@/features/config/ConfigProvider";
+import { Feedback } from "@/features/feedback/Feedback";
+import { LoginButton } from "@/features/auth/components/LoginButton";
 
-export const Header = () => {
+export const HeaderIcon = () => {
   return (
-    <KitHeader
-      leftIcon={
-        <div>
-          <div className="drive__header__logo" />
-          <Feedback />
-        </div>
-      }
-      rightIcon={<HeaderRight />}
-    />
+    <div className="drive__header__left">
+      <div className="drive__header__logo" />
+      <Feedback />
+    </div>
   );
 };
 
@@ -33,7 +25,7 @@ export const HeaderRight = () => {
   const { config } = useConfig();
   return (
     <>
-      {user && (
+      {user ? (
         <DropdownMenu
           options={[
             {
@@ -58,6 +50,8 @@ export const HeaderRight = () => {
             {t("my_account")}
           </Button>
         </DropdownMenu>
+      ) : (
+        <LoginButton />
       )}
       <LanguagePicker />
       {!config?.FRONTEND_HIDE_GAUFRE && <LaGaufre />}
