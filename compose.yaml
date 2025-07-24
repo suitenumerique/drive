@@ -66,6 +66,7 @@ services:
     environment:
       - PYLINTHOME=/app/.pylint.d
       - DJANGO_CONFIGURATION=Development
+      - CORS_ALLOW_ALL_ORIGINS=true
     env_file:
       - env.d/development/common
       - env.d/development/postgresql
