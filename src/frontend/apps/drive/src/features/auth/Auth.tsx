@@ -5,7 +5,7 @@ import { User } from "@/features/auth/types";
 import { baseApiUrl } from "../api/utils";
 import { APIError } from "../api/APIError";
 import { posthog } from "posthog-js";
-import { Spinner } from "@gouvfr-lasuite/ui-kit";
+import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
 
 export const logout = () => {
   window.location.replace(new URL("logout/", baseApiUrl()).href);
@@ -38,7 +38,7 @@ export const Auth = ({
   const init = async () => {
     try {
       const response = await fetchAPI(`users/me/`, undefined, {
-        logoutOn401: false,
+        redirectOn40x: false,
       });
       const data = (await response.json()) as User;
       setUser(data);
@@ -66,18 +66,7 @@ export const Auth = ({
   }, [user]);
 
   if (user === undefined) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-        }}
-      >
-        <Spinner size="xl" />
-      </div>
-    );
+    return <SpinnerPage />;
   }
 
   return (

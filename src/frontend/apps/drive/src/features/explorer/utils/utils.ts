@@ -1,5 +1,5 @@
 import { getDriver } from "@/features/config/Config";
-import { Item, ItemType } from "@/features/drivers/types";
+import { Item, ItemType, LinkReach, WorkspaceType } from "@/features/drivers/types";
 import i18n from "@/features/i18n/initI18n";
 /**
  * Temporary solution to redirect to the last visited item, by default the personal root folder.
@@ -20,6 +20,10 @@ export const getLastVisitedItem = async () => {
   const items = await getDriver().getItems({ type: ItemType.FOLDER });
   if (!items.length) {
     return null;
+  }
+  const main = items.find((item) => item.main_workspace);
+  if (main) {
+    return main;
   }
   return items[0];
 };
@@ -94,4 +98,14 @@ export const getParentIdFromPath = (path: string) => {
     return undefined;
   }
   return parts[parts.length - 2];
+};
+
+export const getWorkspaceType = (item: Item): WorkspaceType => {
+  if (item.main_workspace) {
+    return WorkspaceType.MAIN;
+  }
+  if (item.link_reach === LinkReach.PUBLIC && item.user_roles?.length === 0) {
+    return WorkspaceType.PUBLIC;
+  }
+  return WorkspaceType.SHARED;
 };

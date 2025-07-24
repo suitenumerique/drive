@@ -141,3 +141,9 @@ export interface APIList<T> {
   previous?: string | null;
   results: T[];
 }
+
+export enum WorkspaceType {
+  MAIN = "main",
+  PUBLIC = "public",
+  SHARED = "shared",
+}

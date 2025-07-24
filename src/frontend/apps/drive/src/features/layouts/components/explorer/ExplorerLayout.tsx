@@ -1,7 +1,7 @@
-import { login, useAuth } from "@/features/auth/Auth";
+import { useAuth } from "@/features/auth/Auth";
 import { ExplorerTree } from "@/features/explorer/components/tree/ExplorerTree";
 import { MainLayout } from "@gouvfr-lasuite/ui-kit";
-import { HeaderRight } from "../header/Header";
+import { HeaderIcon, HeaderRight } from "../header/Header";
 import {
   GlobalExplorerProvider,
   NavigationEvent,
@@ -10,8 +10,7 @@ import {
 import { useRouter } from "next/router";
 import { ExplorerRightPanelContent } from "@/features/explorer/components/right-panel/ExplorerRightPanelContent";
 import { GlobalLayout } from "../global/GlobalLayout";
-import { useEffect } from "react";
-import { Feedback } from "@/features/feedback/Feedback";
+import { LeftPanelMobile } from "../left-panel/LeftPanelMobile";
 
 export const getGlobalExplorerLayout = (page: React.ReactElement) => {
   return <GlobalExplorerLayout>{page}</GlobalExplorerLayout>;
@@ -24,9 +23,7 @@ export const GlobalExplorerLayout = ({
 }) => {
   return (
     <GlobalLayout>
-      <AuthLayout>
-        <ExplorerLayout>{children}</ExplorerLayout>
-      </AuthLayout>
+      <ExplorerLayout>{children}</ExplorerLayout>
     </GlobalLayout>
   );
 };
@@ -54,22 +51,6 @@ export const ExplorerLayout = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-export const AuthLayout = ({ children }: { children: React.ReactNode }) => {
-  const { user } = useAuth();
-
-  useEffect(() => {
-    if (user === null) {
-      login();
-    }
-  }, [user]);
-
-  if (!user) {
-    return null;
-  }
-
-  return children;
-};
-
 export const ExplorerPanelsLayout = ({
   children,
 }: {
@@ -83,21 +64,19 @@ export const ExplorerPanelsLayout = ({
     setIsLeftPanelOpen,
   } = useGlobalExplorer();
 
+  const { user } = useAuth();
+
   return (
     <MainLayout
       enableResize
       rightPanelContent={<ExplorerRightPanelContent item={rightPanelItem} />}
       rightPanelIsOpen={rightPanelOpen}
       onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
-      leftPanelContent={<ExplorerTree />}
+      leftPanelContent={user ? <ExplorerTree /> : <LeftPanelMobile />}
       isLeftPanelOpen={isLeftPanelOpen}
+      hideLeftPanelOnDesktop={!user}
       setIsLeftPanelOpen={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
-      icon={
-        <div className="drive__header__left">
-          <div className="drive__header__logo" />
-          <Feedback />
-        </div>
-      }
+      icon={<HeaderIcon />}
       rightHeaderContent={<HeaderRight />}
     >
       {children}

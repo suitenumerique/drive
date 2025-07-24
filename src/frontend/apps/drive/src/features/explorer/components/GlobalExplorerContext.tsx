@@ -7,7 +7,12 @@ import {
 } from "react";
 import { Dispatch } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Item, ItemType, TreeItem } from "@/features/drivers/types";
+import {
+  Item,
+  ItemType,
+  TreeItem,
+  WorkspaceType,
+} from "@/features/drivers/types";
 import { createContext } from "react";
 import { getDriver } from "@/features/config/Config";
 import { Toaster } from "@/features/ui/components/toaster/Toaster";
@@ -18,9 +23,14 @@ import {
   TreeProvider,
   TreeViewDataType,
   TreeViewNodeTypeEnum,
+  useTreeContext,
 } from "@gouvfr-lasuite/ui-kit";
 import { ExplorerDndProvider } from "./ExplorerDndProvider";
 import { useFirstLevelItems } from "../hooks/useQueries";
+import { useTranslation } from "react-i18next";
+import { getWorkspaceType } from "../utils/utils";
+import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
+
 export interface GlobalExplorerContextType {
   displayMode: "sdk" | "app";
   selectedItems: Item[];
@@ -29,8 +39,6 @@ export interface GlobalExplorerContextType {
   itemId: string;
   item: Item | undefined;
   firstLevelItems: Item[] | undefined;
-  // TODO: Still used?
-  items: Item[] | undefined;
   tree: Item | null | undefined;
   onNavigate: (event: NavigationEvent) => void;
   initialId: string | undefined;
@@ -82,6 +90,13 @@ interface ExplorerProviderProps {
  * - Sets TreeProvider
  * - Sets ExplorerDndProvider
  * - Sets Toaster
+ *
+ * Behavior:
+ *
+ * We first try to request the current item if it exists, if so, we enable the
+ * next queries ( /tree and /items ). We don't start all the queries at once just
+ * to make sure the item is accessible. If the item is not accessible, the backend
+ * returns 401 or 403 errors and the we let the handler redirect to the 401 or 403 page.
  */
 export const GlobalExplorerProvider = ({
   children,
@@ -108,18 +123,27 @@ export const GlobalExplorerProvider = ({
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(false);
 
   const [initialId] = useState<string | undefined>(itemId);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [treeIsInitialized, setTreeIsInitialized] = useState<boolean>(false);
-
-  const { data: items } = useQuery({
-    queryKey: ["items"],
-    queryFn: () => getDriver().getItems(),
-  });
 
   const { data: item } = useQuery({
     queryKey: ["items", itemId],
     queryFn: () => getDriver().getItem(itemId),
     enabled: !!itemId,
   });
+
+  useEffect(() => {
+    if (isInitialized) {
+      return;
+    }
+    if (!initialId) {
+      setIsInitialized(true);
+      return;
+    }
+    if (item) {
+      setIsInitialized(true);
+    }
+  }, [item]);
 
   const { data: firstLevelItems } = useFirstLevelItems();
 
@@ -169,7 +193,6 @@ export const GlobalExplorerProvider = ({
         itemId,
         initialId,
         item,
-        items,
         tree,
         onNavigate,
         dropZone,
@@ -201,7 +224,11 @@ export const GlobalExplorerProvider = ({
           return itemToTreeItem(item) as TreeViewDataType<Item>;
         }}
       >
-        <ExplorerDndProvider>{children}</ExplorerDndProvider>
+        <TreeProviderInitializer>
+          <ExplorerDndProvider>
+            {isInitialized ? children : <SpinnerPage />}
+          </ExplorerDndProvider>
+        </TreeProviderInitializer>
       </TreeProvider>
       <input
         {...dropZone.getInputProps({
@@ -218,6 +245,119 @@ export const GlobalExplorerProvider = ({
       <Toaster />
     </GlobalExplorerContext.Provider>
   );
+};
+
+const TreeProviderInitializer = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
+  const {
+    tree: treeItem,
+    firstLevelItems,
+    itemId,
+    setTreeIsInitialized,
+  } = useGlobalExplorer();
+  const { t } = useTranslation();
+
+  const treeContext = useTreeContext<TreeItem>();
+
+  // TODO: Move to global tree context?
+  useEffect(() => {
+    if (!firstLevelItems) {
+      return;
+    }
+    // If we are on an item page, we want to wait for the tree request to be resolved in order to build the tree.
+    if (itemId && !treeItem) {
+      return;
+    }
+
+    const firstLevelItems_: Item[] = firstLevelItems ?? [];
+
+    // On some route no treeItem is provided, like on the trash route.
+    if (treeItem) {
+      const treeItemIndex = firstLevelItems_.findIndex(
+        (item) => item.id === treeItem.id
+      );
+
+      if (treeItemIndex !== -1) {
+        // as we need to make two requests to retrieve the items and the minimal tree based
+        // on where we invoke the tree, we replace the root of the invoked tree in the array
+        firstLevelItems_[treeItemIndex] = treeItem;
+      } else {
+        // Otherwise we add it to the beginning of the array, example: when landing on a public
+        // workspace, the public workspace is not present in firstLevelItems but it is in the treeItem.
+        firstLevelItems_.unshift(treeItem);
+      }
+    }
+
+    const firstLevelTreeItems_: TreeItem[] = itemsToTreeItems(firstLevelItems_);
+    const items: TreeViewDataType<TreeItem>[] = [];
+
+    const getWorkspacesByType = (type: WorkspaceType) => {
+      return firstLevelTreeItems_.filter((item) => {
+        return getWorkspaceType(item as Item) === type;
+      });
+    };
+
+    const mainWorkspaces = getWorkspacesByType(WorkspaceType.MAIN);
+
+    // Arriving on a public workspace, we don't have any main workspace.
+    if (mainWorkspaces.length > 0) {
+      const mainWorkspace = mainWorkspaces[0] as Item;
+      // We start to build the tree
+      const personalWorkspaceNode: TreeViewDataType<TreeItem> = {
+        id: "PERSONAL_SPACE",
+        nodeType: TreeViewNodeTypeEnum.TITLE,
+        headerTitle: t("explorer.tree.personalSpace"),
+      };
+      // We add the personal workspace node and the main workspace node
+      items.push(personalWorkspaceNode);
+
+      mainWorkspace.title = t("explorer.workspaces.mainWorkspace");
+      items.push(mainWorkspace);
+    }
+
+    const sharedWorkspaces = getWorkspacesByType(WorkspaceType.SHARED);
+    const publicWorkspaces = getWorkspacesByType(WorkspaceType.PUBLIC);
+
+    if (sharedWorkspaces.length > 0) {
+      // We add a separator and the shared space node
+      const separator: TreeViewDataType<TreeItem> = {
+        id: "SEPARATOR",
+        nodeType: TreeViewNodeTypeEnum.SEPARATOR,
+      };
+
+      const sharedSpace: TreeViewDataType<TreeItem> = {
+        id: "SHARED_SPACE",
+        nodeType: TreeViewNodeTypeEnum.TITLE,
+        headerTitle: t("explorer.tree.shared_space"),
+      };
+
+      items.push(separator);
+      items.push(sharedSpace);
+      items.push(...sharedWorkspaces);
+    }
+
+    if (publicWorkspaces.length > 0) {
+      const separator: TreeViewDataType<TreeItem> = {
+        id: "SEPARATOR_PUBLIC",
+        nodeType: TreeViewNodeTypeEnum.SEPARATOR,
+      };
+      const publicSpace: TreeViewDataType<TreeItem> = {
+        id: "PUBLIC_SPACE",
+        nodeType: TreeViewNodeTypeEnum.TITLE,
+        headerTitle: t("explorer.tree.public_space"),
+      };
+      items.push(separator);
+      items.push(publicSpace);
+      items.push(...publicWorkspaces);
+    }
+
+    treeContext?.treeData.resetTree(items);
+    setTreeIsInitialized(true);
+  }, [treeItem, firstLevelItems]);
+  return children;
 };
 
 export const itemToTreeItem = (item: Item, parentId?: string): TreeItem => {
