@@ -100,7 +100,10 @@ class AccessPermission(permissions.BasePermission):
     """Permission class for access objects."""
 
     def has_permission(self, request, view):
-        return request.user.is_authenticated or view.action != "create"
+        return request.user.is_authenticated or view.action not in [
+            "create",
+            "trashbin",
+        ]
 
     def has_object_permission(self, request, view, obj):
         """Check permission for a given object."""
