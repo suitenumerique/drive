@@ -22,7 +22,7 @@ import {
   addToast,
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
-import { errorToString } from "@/features/api/APIError";
+import { APIError, errorToString } from "@/features/api/APIError";
 import Head from "next/head";
 import { useTranslation } from "react-i18next";
 import { AnalyticsProvider } from "@/features/analytics/AnalyticsProvider";
@@ -48,6 +48,14 @@ const onError = (error: Error, query: unknown) => {
   if ((query as Query).meta?.noGlobalError) {
     return;
   }
+
+  // Don't show toast for 401/403 errors because the app handles them by
+  // redirecting to the 401/403 page. So we don't want to show a toast before
+  // the redirect, it would feels buggy.
+  if (error instanceof APIError && (error.code === 401 || error.code === 403)) {
+    return;
+  }
+
   addToast(
     <ToasterItem type="error">
       <span>{errorToString(error)}</span>
@@ -57,7 +65,9 @@ const onError = (error: Error, query: unknown) => {
 
 const queryClient = new QueryClient({
   mutationCache: new MutationCache({
-    onError: (error, variables, context, mutation) => onError(error, mutation),
+    onError: (error, variables, context, mutation) => {
+      onError(error, mutation);
+    },
   }),
   queryCache: new QueryCache({
     onError: (error, query) => onError(error, query),
