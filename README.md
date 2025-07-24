@@ -108,6 +108,13 @@ You can then login with sub `admin@example.com` and password `admin`.
 
 ### Run frontend
 
+#### Locally
+To run the frontend locally :
+
+`cd src/frontend/apps/drive && yarn && yarn build-theme && yarn dev`
+
+#### With Docker
+
 Run the front with:
 
 ```bash

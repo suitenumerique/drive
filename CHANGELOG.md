@@ -30,6 +30,7 @@ and this project adheres to
 ### Changed
 
 - 🐛(email) add missing email logo
+- 📝(devexp) fix and document how to run the project locally
 
 ### Fixed
 
