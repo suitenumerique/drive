@@ -1,4 +1,11 @@
-import { Access, Invitation, Item, Role, User } from "@/features/drivers/types";
+import {
+  Access,
+  Invitation,
+  Item,
+  LinkReach,
+  Role,
+  User,
+} from "@/features/drivers/types";
 import {
   useMutationCreateAccess,
   useMutationCreateInvitation,
@@ -6,6 +13,7 @@ import {
   useMutationDeleteInvitation,
   useMutationUpdateAccess,
   useMutationUpdateInvitation,
+  useMutationUpdateItem,
 } from "@/features/explorer/hooks/useMutations";
 import {
   useInfiniteItemAccesses,
@@ -146,6 +154,8 @@ export const WorkspaceShareModal = ({
     }, 500);
   };
 
+  const updateItem = useMutationUpdateItem();
+
   return (
     <ShareModal
       isOpen={isOpen}
@@ -205,6 +215,23 @@ export const WorkspaceShareModal = ({
           }}
         />
       }
+      linkSettings={true}
+      linkReachChoices={[
+        {
+          value: LinkReach.PUBLIC,
+        },
+        {
+          value: LinkReach.RESTRICTED,
+        },
+      ]}
+      linkReach={item.link_reach}
+      onUpdateLinkReach={(value) => {
+        updateItem.mutate({
+          id: item.id,
+          link_reach: value as LinkReach,
+        });
+      }}
+      canView={item.abilities.accesses_view}
     >
       {!item.abilities.accesses_manage && <HorizontalSeparator />}
     </ShareModal>
