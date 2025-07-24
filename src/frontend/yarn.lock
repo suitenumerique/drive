@@ -684,17 +684,17 @@
   resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/integration/-/integration-1.0.2.tgz#ed0000f4b738c5a19bb60f5b80a9a2f5d9414234"
   integrity sha512-npOotZQSyu6SffHiPP+jQVOkJ3qW2KE2cANhEK92sNLX9uZqQaCqljO5GhzsBmh0lB76fiXnrr9i8SIpnDUSZg==
 
-"@gouvfr-lasuite/ui-kit@0.9.0":
-  version "0.9.0"
-  resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/ui-kit/-/ui-kit-0.9.0.tgz#656dddf1e2715a6b6bad073bc859bd36d83a1009"
-  integrity sha512-eyOxAjYWOYlA2ThnwLL6lV9yBKElMxs/NZ55wZ7mw/utrvFI7BFoxeH/wku78UnPbwb8lFBjOxhIfvK37qu7Fg==
+"@gouvfr-lasuite/ui-kit@0.11.0":
+  version "0.11.0"
+  resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/ui-kit/-/ui-kit-0.11.0.tgz#0478beae59347769b4954dff593e34d507702bfe"
+  integrity sha512-amggPl5sfVcqIUjwhntHIdamNb5UbhTWAQAsRcUC2tyo9icQKhwJxfX3D5olr8fIINiMEzbg7wxUtRj6Bmr6yA==
   dependencies:
     "@dnd-kit/core" "6.3.1"
     "@dnd-kit/modifiers" "9.0.0"
     "@dnd-kit/sortable" "10.0.0"
     "@fontsource/material-icons" "5.2.5"
     "@gouvfr-lasuite/integration" "1.0.2"
-    "@openfun/cunningham-react" "3.1.0"
+    "@openfun/cunningham-react" "3.2.1"
     "@types/node" "22.10.7"
     clsx "2.1.1"
     cmdk "1.0.4"
@@ -1058,10 +1058,10 @@
   resolved "https://registry.yarnpkg.com/@nolyfill/is-core-module/-/is-core-module-1.0.39.tgz#3dc35ba0f1e66b403c00b39344f870298ebb1c8e"
   integrity sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==
 
-"@openfun/cunningham-react@3.1.0":
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/@openfun/cunningham-react/-/cunningham-react-3.1.0.tgz#c5684b99457107792589eacf8603c0a142ac408b"
-  integrity sha512-gTTRr4mQqMhN2DdxQeukUXHNrJ8kFY4b4+HA10lH9GBT73lbIVP66SG1uSqhBAGlXGmMSKEk8uUHOKgBKa9xEQ==
+"@openfun/cunningham-react@3.2.1":
+  version "3.2.1"
+  resolved "https://registry.yarnpkg.com/@openfun/cunningham-react/-/cunningham-react-3.2.1.tgz#19e1530d3e0b622d119265ef3f605f8f5e57b73a"
+  integrity sha512-nNbiae8P2lYQczzK8PC4QzYYmdbeGcjzTB7JoAXKsJv4Ep2XqFgNO9nVLVtIOs8W54zJEzDEw8mr1wuuse6Rjw==
   dependencies:
     "@fontsource-variable/roboto-flex" "5.2.5"
     "@fontsource/material-icons-outlined" "5.2.5"
