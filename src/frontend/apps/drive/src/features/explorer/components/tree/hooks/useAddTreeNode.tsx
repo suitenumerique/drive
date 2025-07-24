@@ -21,7 +21,7 @@ export const useAddWorkspaceNode = () => {
       const sharedSpace: TreeViewDataType<TreeItem> = {
         id: "SHARED_SPACE",
         nodeType: TreeViewNodeTypeEnum.TITLE,
-        headerTitle: t("explorer.tree.sharedSpace"),
+        headerTitle: t("explorer.tree.shared_space"),
       };
 
       treeContext?.treeData.addRootNodes([
