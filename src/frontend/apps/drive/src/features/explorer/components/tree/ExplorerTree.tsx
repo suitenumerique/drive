@@ -1,7 +1,6 @@
 import { useModal } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
 import {
-  itemsToTreeItems,
   NavigationEventType,
   useGlobalExplorer,
 } from "../GlobalExplorerContext";
@@ -28,10 +27,9 @@ import { addItemsMovedToast } from "../toasts/addItemsMovedToast";
 import { ExplorerTreeMoveConfirmationModal } from "./ExplorerTreeMoveConfirmationModal";
 import { ExplorerSearchModal } from "../modals/search/ExplorerSearchModal";
 import { canDrop } from "../ExplorerDndProvider";
-import { LanguagePicker } from "@/features/layouts/components/header/Header";
-import { LogoutButton } from "@/features/auth/components/LogoutButton";
 import React from "react";
 import clsx from "clsx";
+import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
 
 export const ExplorerTree = () => {
   const { t, i18n } = useTranslation();
@@ -48,118 +46,42 @@ export const ExplorerTree = () => {
     undefined
   );
 
-  const {
-    tree: treeItem,
-    firstLevelItems,
-    itemId,
-    setTreeIsInitialized,
-    treeIsInitialized,
-  } = useGlobalExplorer();
+  const { itemId, treeIsInitialized } = useGlobalExplorer();
 
+  // Initialize the opened nodes when the tree is initialized.
   useEffect(() => {
-    if (!firstLevelItems) {
+    if (!treeIsInitialized) {
       return;
     }
-    // If we are on an item page, we want to wait for the tree request to be resolved in order to build the tree.
-    if (itemId && !treeItem) {
+    if (initialOpenState) {
       return;
     }
-
-    const firstLevelItems_: Item[] = firstLevelItems ?? [];
-
-    // On some route no treeItem is provided, like on the trash route.
-    if (treeItem) {
-      const treeItemIndex = firstLevelItems_.findIndex(
-        (item) => item.id === treeItem.id
-      );
-
-      if (treeItemIndex !== -1) {
-        // as we need to make two requests to retrieve the items and the minimal tree based
-        // on where we invoke the tree, we replace the root of the invoked tree in the array
-        firstLevelItems_[treeItemIndex] = treeItem;
-      } else {
-        // Otherwise we add it to the beginning of the array
-        firstLevelItems_.unshift(treeItem);
-      }
-    }
-
-    const firstLevelTreeItems_: TreeItem[] = itemsToTreeItems(firstLevelItems_);
-
-    const mainWorkspaceIndex = firstLevelTreeItems_.findIndex((item) => {
-      if (item.nodeType === TreeViewNodeTypeEnum.NODE) {
-        return item.main_workspace;
-      }
-      return false;
-    });
-
-    const items: TreeViewDataType<TreeItem>[] = [];
-
     const initialOpenedNodes: OpenMap = {};
 
     // Browse the data to initialize the opened nodes
-    const openLoadedNodes = (items: TreeItem[]) => {
+    const openLoadedNodes = (
+      items: TreeDataItem<TreeViewDataType<TreeItem>>[]
+    ) => {
       items.forEach((item) => {
         if (
-          item.childrenCount &&
-          item.childrenCount > 0 &&
-          item.children &&
-          item.children.length > 0
+          item.value.childrenCount &&
+          item.value.childrenCount > 0 &&
+          item.value.children &&
+          item.value.children.length > 0
         ) {
-          initialOpenedNodes[item.id] = true;
+          initialOpenedNodes[item.value.id] = true;
 
-          if (item.children) {
-            openLoadedNodes(item.children);
+          if (item.value.children) {
+            openLoadedNodes(item.children!);
           }
         }
       });
     };
 
-    openLoadedNodes(firstLevelTreeItems_);
+    const treeData = treeContext!.treeData.nodes;
+    openLoadedNodes(treeData);
     setInitialOpenState(initialOpenedNodes);
-
-    // We start to build the tree
-    const personalWorkspaceNode: TreeViewDataType<TreeItem> = {
-      id: "PERSONAL_SPACE",
-      nodeType: TreeViewNodeTypeEnum.TITLE,
-      headerTitle: t("explorer.tree.personalSpace"),
-    };
-
-    // We add the personal workspace node and the main workspace node
-    items.push(personalWorkspaceNode);
-    const mainWorkspace = firstLevelTreeItems_[mainWorkspaceIndex] as Item;
-
-    mainWorkspace.title = t("explorer.workspaces.mainWorkspace");
-
-    items.push(firstLevelTreeItems_[mainWorkspaceIndex]);
-
-    if (firstLevelTreeItems_.length > 1) {
-      // We add a separator and the shared space node
-      const separator: TreeViewDataType<TreeItem> = {
-        id: "SEPARATOR",
-        nodeType: TreeViewNodeTypeEnum.SEPARATOR,
-      };
-
-      const sharedSpace: TreeViewDataType<TreeItem> = {
-        id: "SHARED_SPACE",
-        nodeType: TreeViewNodeTypeEnum.TITLE,
-        headerTitle: t("explorer.tree.sharedSpace"),
-      };
-
-      items.push(separator);
-      items.push(sharedSpace);
-
-      // We remove the main workspace node and add the rest of the nodes
-      firstLevelTreeItems_.splice(mainWorkspaceIndex, 1);
-      items.push(...firstLevelTreeItems_);
-    }
-    treeContext?.treeData.resetTree(items);
-  }, [treeItem, firstLevelItems]);
-
-  useEffect(() => {
-    if (initialOpenState && !treeIsInitialized) {
-      setTreeIsInitialized(true);
-    }
-  }, [initialOpenState, setTreeIsInitialized, treeIsInitialized]);
+  }, [treeContext?.treeData.nodes]);
 
   // When the language changes, we update the tree titles to be sure they are translated
   useEffect(() => {
@@ -169,13 +91,22 @@ export const ExplorerTree = () => {
 
     const treeData = treeContext?.treeData;
 
-    treeData?.updateNode("PERSONAL_SPACE", {
-      headerTitle: t("explorer.workspaces.mainWorkspace"),
-    });
+    // No main workspace when being anon on a public workspace.
+    if (treeData?.getNode("PERSONAL_SPACE")) {
+      treeData?.updateNode("PERSONAL_SPACE", {
+        headerTitle: t("explorer.workspaces.mainWorkspace"),
+      });
+    }
 
-    if (treeData?.nodes.length && treeData.nodes.length > 2) {
+    if (treeData?.getNode("SHARED_SPACE")) {
       treeData.updateNode("SHARED_SPACE", {
-        headerTitle: t("explorer.tree.sharedSpace"),
+        headerTitle: t("explorer.tree.shared_space"),
+      });
+    }
+
+    if (treeData?.getNode("PUBLIC_SPACE")) {
+      treeData.updateNode("PUBLIC_SPACE", {
+        headerTitle: t("explorer.tree.public_space"),
       });
     }
   }, [i18n.language, t, treeIsInitialized]);
@@ -275,11 +206,7 @@ export const ExplorerTree = () => {
 
       <div className="explorer__tree__mobile-navs">
         <HorizontalSeparator />
-
-        <div className="explorer__tree__mobile-navs__inner">
-          <LogoutButton />
-          <LanguagePicker />
-        </div>
+        <LeftPanelMobile />
       </div>
 
       <ExplorerSearchModal {...searchModal} />

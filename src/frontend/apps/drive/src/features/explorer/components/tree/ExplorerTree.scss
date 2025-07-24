@@ -212,12 +212,6 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     .explorer__tree__mobile-navs {
       display: block;
 
-      &__inner {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
       .c__dropdown-menu-trigger {
         width: 100%;
       }
