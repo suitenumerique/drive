@@ -1,4 +1,3 @@
-import { logout } from "@/features/auth/Auth";
 import { baseApiUrl, isJson } from "./utils";
 import { APIError } from "./APIError";
 
@@ -15,8 +14,21 @@ function getCSRFToken() {
     .pop();
 }
 
+export const SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL =
+  "redirect_after_login_url";
+
+const redirect = (url: string, saveRedirectAfterLoginUrl = true) => {
+  if (saveRedirectAfterLoginUrl) {
+    sessionStorage.setItem(
+      SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL,
+      window.location.href
+    );
+  }
+  window.location.href = url;
+};
+
 export interface fetchAPIOptions {
-  logoutOn401?: boolean;
+  redirectOn40x?: boolean;
 }
 
 export const fetchAPI = async (
@@ -42,8 +54,20 @@ export const fetchAPI = async (
     },
   });
 
-  if ((options?.logoutOn401 ?? true) && response.status === 401) {
-    logout();
+  const redirectOn40x = options?.redirectOn40x ?? true;
+  if (response.status === 401 && redirectOn40x) {
+    redirect("/401");
+    // So that the app can handle the error and not show a toast by verifying the error code.
+    throw new APIError(response.status);
+  }
+
+  if (response.status === 403 && redirectOn40x) {
+    // We don't want to save the attempted url when having a 403 error because
+    // it would be a redirect loop and it means we know that the user is not
+    // allowed to access the page.
+    redirect("/403", false);
+    // So that the app can handle the error and not show a toast by verifying the error code.
+    throw new APIError(response.status);
   }
 
   if (response.ok) {
