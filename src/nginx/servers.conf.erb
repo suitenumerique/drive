@@ -78,6 +78,14 @@ server {
     location ~ "^/sdk/?$" {
         try_files $uri /sdk.html;
     }
+
+    location ~ "^/401/?$" {
+        try_files $uri /401.html;
+    }
+
+    location ~ "^/403/?$" {
+        try_files $uri /403.html;
+    }
     
     location = /404.html {
         internal;
