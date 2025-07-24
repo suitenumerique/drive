@@ -7,6 +7,7 @@ import mimePdf from "@/assets/files/icons/mime-pdf.svg";
 import mimePowerpoint from "@/assets/files/icons/mime-powerpoint.svg";
 import mimeAudio from "@/assets/files/icons/mime-audio.svg";
 import mimeVideo from "@/assets/files/icons/mime-video.svg";
+import mimeSQLite from "@/assets/files/icons/mime-sqlite.svg";
 
 import mimeCalcMini from "@/assets/files/icons/mime-calc-mini.svg";
 import mimeDocMini from "@/assets/files/icons/mime-doc-mini.svg";
@@ -17,6 +18,7 @@ import mimePowerpointMini from "@/assets/files/icons/mime-powerpoint-mini.svg";
 import mimeAudioMini from "@/assets/files/icons/mime-audio-mini.svg";
 import mimeVideoMini from "@/assets/files/icons/mime-video-mini.svg";
 import mimeArchiveMini from "@/assets/files/icons/mime-archive-mini.svg";
+import mimeSQLiteMini from "@/assets/files/icons/mime-sqlite-mini.svg";
 
 
 import mimeArchive from "@/assets/files/icons/mime-archive.svg";
@@ -32,6 +34,7 @@ export enum MimeCategory {
   AUDIO = "audio",
   VIDEO = "video",
   ARCHIVE = "archive",
+  SQLITE = "sqlite",
 }
 
 export const MIME_TO_ICON = {
@@ -44,7 +47,7 @@ export const MIME_TO_ICON = {
   [MimeCategory.AUDIO]: mimeAudio,
   [MimeCategory.VIDEO]: mimeVideo,
   [MimeCategory.ARCHIVE]: mimeArchive,
-
+  [MimeCategory.SQLITE]: mimeSQLite,
 };
 
 export const MIME_TO_ICON_MINI = {
@@ -57,6 +60,7 @@ export const MIME_TO_ICON_MINI = {
   [MimeCategory.AUDIO]: mimeAudioMini,
   [MimeCategory.VIDEO]: mimeVideoMini,
   [MimeCategory.ARCHIVE]: mimeArchiveMini,
+  [MimeCategory.SQLITE]: mimeSQLiteMini,
 };
 
 export const ICONS = {
@@ -70,6 +74,7 @@ export const ICONS = {
     [MimeCategory.AUDIO]: mimeAudioMini,
     [MimeCategory.VIDEO]: mimeVideoMini,
     [MimeCategory.ARCHIVE]: mimeArchiveMini,
+    [MimeCategory.SQLITE]: mimeSQLiteMini,
 	},
 	"normal": {
     [MimeCategory.CALC]: mimeCalc,
@@ -81,6 +86,7 @@ export const ICONS = {
     [MimeCategory.AUDIO]: mimeAudio,
     [MimeCategory.VIDEO]: mimeVideo,
     [MimeCategory.ARCHIVE]: mimeArchive,
+    [MimeCategory.SQLITE]: mimeSQLite,
 	}
 }
 
@@ -95,6 +101,7 @@ export const MIME_TO_FORMAT_TRANSLATION_KEY = {
   [MimeCategory.AUDIO]: "mime.audio",
   [MimeCategory.VIDEO]: "mime.video",
   [MimeCategory.ARCHIVE]: "mime.archive",
+  [MimeCategory.SQLITE]: "mime.sqlite",
 };
 
 
@@ -117,6 +124,10 @@ export const MIME_MAP = {
       "application/x-tar",
       "application/x-rar",
       "application/octet-stream",
+    ],
+    [MimeCategory.SQLITE]: [
+      "application/x-sqlite3", // deprecated but still exists
+      "application/vnd.sqlite3",
     ],
 };
 
