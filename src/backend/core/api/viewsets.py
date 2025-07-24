@@ -479,6 +479,27 @@ class ItemViewSet(
             user_roles=db.Value([], output_field=output_field),
         )
 
+    def annotate_has_owner_role(self, queryset):
+        """
+        Optimized annotation to check if user has owner role on item or ancestors.
+        This is more efficient than the full user_roles annotation when we only
+        need to check for owner access.
+        """
+        user = self.request.user
+
+        if user.is_authenticated:
+            user_teams = user.teams if hasattr(user, "teams") else []
+
+            owner_access_exists = models.ItemAccess.objects.filter(
+                db.Q(user=user) | db.Q(team__in=user_teams),
+                role=models.RoleChoices.OWNER,
+                item__path__ancestors=db.OuterRef("path"),
+            )
+
+            return queryset.annotate(has_owner_role=db.Exists(owner_access_exists))
+
+        return queryset.annotate(has_owner_role=db.Value(False))
+
     def get_queryset(self):
         """Get queryset performing all annotation and filtering on the item tree structure."""
         user = self.request.user
@@ -696,17 +717,40 @@ class ItemViewSet(
 
         The selected items are those deleted within the cutoff period defined in the
         settings (see TRASHBIN_CUTOFF_DAYS), before they are considered permanently deleted.
+
+        Optimized version that uses EXISTS instead of expensive subqueries to check
+        owner access on items or their ancestors.
         """
-        queryset = self.queryset.select_related("creator").filter(
-            deleted_at__isnull=False,
-            deleted_at__gte=models.get_trashbin_cutoff(),
+        user = request.user
+
+        # Build the EXISTS subquery to check if user has owner access
+        # to the item or any of its ancestors
+        owner_access_exists = models.ItemAccess.objects.filter(
+            db.Q(user=user) | db.Q(team__in=user.teams),
+            role=models.RoleChoices.OWNER,
+            item__path__ancestors=db.OuterRef("path"),
         )
-        queryset = self.annotate_user_roles(queryset)
-        queryset = queryset.filter(user_roles__contains=[models.RoleChoices.OWNER])
+
+        # Filter trashbin items to only those where user has owner access
+        # Before we were filtering on the user_roles annotation, but it was too slow
+        # Here the optimization is to filter on the owner_access_exists subquery
+        # which is much faster.
+        queryset = (
+            self.queryset.select_related("creator")
+            .filter(
+                deleted_at__gte=models.get_trashbin_cutoff(),
+            )
+            .filter(db.Exists(owner_access_exists))
+        )
+
+        # Apply filtering similar to children method
         filterset = ItemFilter(request.GET, queryset=queryset)
         if not filterset.is_valid():
             raise drf.exceptions.ValidationError(filterset.errors)
         queryset = filterset.qs
+
+        # Only annotate with user roles for the filtered set if needed by serializer
+        queryset = self.annotate_user_roles(queryset)
 
         return self.get_response_for_queryset(queryset)
 
