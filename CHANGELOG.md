@@ -16,6 +16,9 @@ and this project adheres to
 - ✨(front) add PDF, Audio, Video, Image viewers
 - ✨(front) make frontend themable
 - ✨(global) Add File Picker SDK
+- Add public workspaces
+- Add 401, 403 pages
+- Add redirect after login logic
 
 ## Changed
 
