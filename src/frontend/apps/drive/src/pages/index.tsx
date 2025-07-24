@@ -14,10 +14,7 @@ import { gotoLastVisitedItem } from "@/features/explorer/utils/utils";
 import { useEffect } from "react";
 import logoGouv from "@/assets/logo-gouv.svg";
 import banner from "@/assets/home/banner.png";
-import {
-  HeaderRight,
-  LanguagePicker,
-} from "@/features/layouts/components/header/Header";
+import { HeaderRight } from "@/features/layouts/components/header/Header";
 import {
   addToast,
   Toaster,
@@ -26,14 +23,26 @@ import {
 import { Button } from "@openfun/cunningham-react";
 import { Feedback } from "@/features/feedback/Feedback";
 import { useConfig } from "@/features/config/ConfigProvider";
+import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
+import { SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL } from "@/features/api/fetchApi";
+
 export default function HomePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { config } = useConfig();
 
+  // Redirect to the attempted url if it exists, otherwise redirect to the last visited item.
   useEffect(() => {
     if (user) {
-      gotoLastVisitedItem();
+      const attemptedUrl = sessionStorage.getItem(
+        SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL
+      );
+      if (attemptedUrl) {
+        sessionStorage.removeItem(SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL);
+        window.location.href = attemptedUrl;
+      } else {
+        gotoLastVisitedItem();
+      }
     }
   }, [user]);
 
@@ -110,11 +119,7 @@ HomePage.getLayout = function getLayout(page: React.ReactElement) {
         <MainLayout
           enableResize
           hideLeftPanelOnDesktop={true}
-          leftPanelContent={
-            <div className="drive__home__left-panel">
-              <LanguagePicker />
-            </div>
-          }
+          leftPanelContent={<LeftPanelMobile />}
           icon={
             <div className="drive__header__left">
               <img src={logoGouv.src} alt="" />

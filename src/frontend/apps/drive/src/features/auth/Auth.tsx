@@ -38,7 +38,7 @@ export const Auth = ({
   const init = async () => {
     try {
       const response = await fetchAPI(`users/me/`, undefined, {
-        logoutOn401: false,
+        redirectOn40x: false,
       });
       const data = (await response.json()) as User;
       setUser(data);
