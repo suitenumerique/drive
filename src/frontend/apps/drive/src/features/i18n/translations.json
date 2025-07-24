@@ -1,6 +1,14 @@
 {
   "en": {
     "translation": {
+      "401": {
+        "title": "You need to be logged in to access the documents.",
+        "button": "Login"
+      },
+      "403": {
+        "title": "You don't have the necessary permissions to access this page.",
+        "button": "Home"
+      },
       "file_preview": {
         "unsupported": {
           "title": "File type not supported for preview",
@@ -19,6 +27,7 @@
       "app_description": "Files management",
       "welcome": "Welcome",
       "logout": "Logout",
+      "login": "Login",
       "my_account": "My Account",
       "api": {
         "error": {
@@ -173,7 +182,8 @@
           "createFolder": "Create",
           "search": "Search",
           "personalSpace": "Personal Space",
-          "sharedSpace": "Shared Space"
+          "shared_space": "Shared Space",
+          "public_space": "Public Space"
         },
         "trash": {
           "title": "Trash",
@@ -317,6 +327,14 @@
   },
   "fr": {
     "translation": {
+      "401": {
+        "title": "Connectez-vous pour accéder aux documents.",
+        "button": "Se connecter"
+      },
+      "403": {
+        "title": "Vous n'avez pas les permissions nécessaires pour accéder à cette page.",
+        "button": "Accueil"
+      },
       "file_preview": {
         "unsupported": {
           "title": "Type de fichier non supporté pour la prévisualisation",
@@ -335,6 +353,7 @@
       "app_description": "Gestion de fichiers",
       "welcome": "Bienvenue",
       "logout": "Déconnexion",
+      "login": "Connexion",
       "my_account": "Mon Compte",
       "api": {
         "error": {
@@ -458,7 +477,8 @@
           "trash": "Corbeille",
           "createFolder": "Créer",
           "personalSpace": "Espace personnel",
-          "sharedSpace": "Espace partagé",
+          "shared_space": "Espace partagé",
+          "public_space": "Espace public",
           "search": "Rechercher",
           "import": {
             "label": "Importer",
