@@ -8,12 +8,18 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(front) Add public workspaces
+- ✨(front) Add 401, 403 pages
+- ✨(front) Add redirect after login logic
+
 ## [v0.1.1] - 2025-07-30
 
 ### Fixed
 
 - 🐛(backend) stop decreasing twice the numchild in deletion process #284
-- ⚡️(backend) optimize trashbin endpoint #276 
+- ⚡️(backend) optimize trashbin endpoint #276
 - ♻️(backend) modify sdk-relay to use DRF viewset and serializers #269
 
 ## [v0.1.0] - 2025-07-25
@@ -39,7 +45,6 @@ and this project adheres to
 - 🐛(i18n) fix language detection and rendering
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
-
 
 [unreleased]: https://github.com/suitenumerique/drive/compare/v0.1.1...main
 [0.1.1]: https://github.com/suitenumerique/drive/releases/v0.1.1
