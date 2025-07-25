@@ -49,6 +49,9 @@ COMPOSE_RUN_CROWDIN = $(COMPOSE_RUN) crowdin crowdin
 MANAGE              = $(COMPOSE_RUN_APP) python manage.py
 MAIL_YARN           = $(COMPOSE_RUN) -w /app/src/mail node yarn
 
+# -- Frontend
+PATH_FRONT          = ./src/frontend
+PATH_FRONT_DRIVE  = $(PATH_FRONT)/apps/drive
 
 # ==============================================================================
 # RULES
@@ -174,13 +177,13 @@ test-back-parallel: ## run all back-end tests in parallel
 	bin/pytest -n auto $${args:-${1}}
 .PHONY: test-back-parallel
 
-makemigrations:  ## run django makemigrations for the impress project.
+makemigrations:  ## run django makemigrations for the drive project.
 	@echo "$(BOLD)Running makemigrations$(RESET)"
 	@$(COMPOSE) up -d postgresql
 	@$(MANAGE) makemigrations
 .PHONY: makemigrations
 
-migrate:  ## run django migrations for the impress project.
+migrate:  ## run django migrations for the drive project.
 	@echo "$(BOLD)Running migrations$(RESET)"
 	@$(COMPOSE) up -d postgresql
 	@$(MANAGE) migrate
@@ -295,14 +298,14 @@ clean-media: ## remove all media files
 .PHONY: clean-media
 
 help:
-	@echo "$(BOLD)impress Makefile"
+	@echo "$(BOLD)drive Makefile"
 	@echo "Please use 'make $(BOLD)target$(RESET)' where $(BOLD)target$(RESET) is one of:"
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(firstword $(MAKEFILE_LIST)) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(GREEN)%-30s$(RESET) %s\n", $$1, $$2}'
 .PHONY: help
 
 # Front
 frontend-install: ## install the frontend locally
-	cd $(PATH_FRONT_IMPRESS) && yarn
+	cd $(PATH_FRONT_DRIVE) && yarn
 .PHONY: frontend-install
 
 frontend-lint: ## run the frontend linter
@@ -311,7 +314,7 @@ frontend-lint: ## run the frontend linter
 
 run-frontend-development: ## Run the frontend in development mode
 	@$(COMPOSE) stop frontend-dev
-	cd $(PATH_FRONT_IMPRESS) && yarn dev
+	cd $(PATH_FRONT_DRIVE) && yarn dev
 .PHONY: run-frontend-development
 
 frontend-i18n-extract: ## Extract the frontend translation inside a json to be used for crowdin
