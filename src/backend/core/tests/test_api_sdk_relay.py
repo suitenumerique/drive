@@ -25,16 +25,7 @@ def test_api_sdk_relay_register_event():
     response = client.get(
         "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/"
     )
-    assert response.status_code == 200
-    assert response["Access-Control-Allow-Origin"] == "*"
-    assert (
-        response["Access-Control-Allow-Methods"]
-        == "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-    )
-    assert (
-        response["Access-Control-Allow-Headers"]
-        == "Content-Type, Authorization, X-Requested-With"
-    )
+    assert "Access-Control-Allow-Origin" not in response
     assert response.json() == {}
 
     response = client.post(
@@ -48,15 +39,7 @@ def test_api_sdk_relay_register_event():
         "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/"
     )
     assert response.status_code == 200
-    assert response["Access-Control-Allow-Origin"] == "*"
-    assert (
-        response["Access-Control-Allow-Methods"]
-        == "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-    )
-    assert (
-        response["Access-Control-Allow-Headers"]
-        == "Content-Type, Authorization, X-Requested-With"
-    )
+    assert "Access-Control-Allow-Origin" not in response
     assert response.json() == {"type": "test"}
 
     # The event should be removed after it is retrieved
@@ -87,23 +70,6 @@ def test_api_sdk_relay_register_event_invalid_token():
         "type": "validation_error",
     }
 
-def test_api_sdk_relay_preflight_request():
-    """Preflight request should return a 200 status code."""
-    client = APIClient()
-    response = client.options(
-        "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/",
-    )
-    assert response.status_code == 200
-    assert response["Access-Control-Allow-Origin"] == "*"
-    assert (
-        response["Access-Control-Allow-Methods"]
-        == "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-    )
-    assert (
-        response["Access-Control-Allow-Headers"]
-        == "Content-Type, Authorization, X-Requested-With"
-    )
-
 
 def test_api_sdk_relay_register_event_too_long():
     """Event data exceeding maximum length should return a 400 error."""
@@ -118,19 +84,17 @@ def test_api_sdk_relay_register_event_too_long():
                     "id": str(i),
                     "title": "x" * 900,  # Long title to help exceed limit
                     "size": 1000,
-                    "url": "http://example.com/" + ("y" * 100)
-                } for i in range(200)  # Many items to exceed limit
+                    "url": "http://example.com/" + ("y" * 100),
+                }
+                for i in range(200)  # Many items to exceed limit
             ]
-        }
+        },
     }
 
     response = client.post(
         "/api/v1.0/sdk-relay/events/",
-        {
-            "token": "1Az6SO4CE7JAl9hE96dXl7145nghwZNP",
-            "event": large_event
-        },
-        format="json"
+        {"token": "1Az6SO4CE7JAl9hE96dXl7145nghwZNP", "event": large_event},
+        format="json",
     )
 
     assert response.status_code == 400
@@ -139,8 +103,56 @@ def test_api_sdk_relay_register_event_too_long():
             {
                 "attr": "event",
                 "code": "invalid",
-                "detail": "Event data exceeds maximum length of 100000 characters."
+                "detail": "Event data exceeds maximum length of 100000 characters.",
             }
         ],
-        "type": "validation_error"
+        "type": "validation_error",
     }
+
+
+def test_api_sdk_relay_preflight_request(settings):
+    """Preflight request should return a 200 status code."""
+    settings.SDK_CORS_ALLOWED_ORIGINS = ["http://allowed-domain.com"]
+    client = APIClient()
+    response = client.options(
+        "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/",
+    )
+    assert response.status_code == 200
+    assert "Access-Control-Allow-Origin" not in response
+
+    response = client.options(
+        "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/",
+        HTTP_ORIGIN="http://allowed-domain.com",
+    )
+    assert response.status_code == 200
+    assert response["Access-Control-Allow-Origin"] == "http://allowed-domain.com"
+    assert response["Access-Control-Allow-Methods"] == "GET, OPTIONS"
+
+
+def test_api_sdk_relay_allowed_origins(settings):
+    """Test that SDK relay requests are only allowed from configured origins."""
+    settings.SDK_CORS_ALLOWED_ORIGINS = ["http://allowed-domain.com"]
+    client = APIClient()
+
+    # Test request from allowed origin
+    response = client.get(
+        "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/",
+        HTTP_ORIGIN="http://allowed-domain.com",
+    )
+    assert response["Access-Control-Allow-Origin"] == "http://allowed-domain.com"
+    assert response["Access-Control-Allow-Methods"] == "GET, OPTIONS"
+
+    # Test request from disallowed origin
+    response = client.get(
+        "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/",
+        HTTP_ORIGIN="http://disallowed-domain.com",
+    )
+    assert "Access-Control-Allow-Origin" not in response
+    assert "Access-Control-Allow-Methods" not in response
+
+    # Test request with no origin header
+    response = client.get(
+        "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/"
+    )
+    assert "Access-Control-Allow-Origin" not in response
+    assert "Access-Control-Allow-Methods" not in response

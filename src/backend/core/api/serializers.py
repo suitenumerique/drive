@@ -1,7 +1,7 @@
 """Client serializers for the drive core app."""
 
-from datetime import timedelta
 import json
+from datetime import timedelta
 
 from django.conf import settings
 from django.db.models import Q
@@ -543,16 +543,16 @@ class SDKRelayEventSerializer(serializers.Serializer):
 
     def validate_event(self, value):
         """Validate that the event JSON data doesn't exceed maximum length."""
-        
+
         # Convert the JSON data to a string to check its length
         json_string = json.dumps(value)
         # One selected file could use up to 1000 characters, this limit is set to
         # avoid DDOS attacks to fullfill the redis.
         max_length = 1000 * 100
-        
+
         if len(json_string) > max_length:
             raise serializers.ValidationError(
                 f"Event data exceeds maximum length of {max_length} characters."
             )
-        
+
         return value

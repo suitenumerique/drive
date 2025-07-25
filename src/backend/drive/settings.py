@@ -579,6 +579,11 @@ class Base(Configuration):
         environ_name="SDK_RELAY_CACHE_TIMEOUT",
         environ_prefix=None,
     )
+    SDK_CORS_ALLOWED_ORIGINS = values.ListValue(
+        default=[],
+        environ_name="SDK_CORS_ALLOWED_ORIGINS",
+        environ_prefix=None,
+    )
 
     ALLOW_LOGOUT_GET_METHOD = values.BooleanValue(
         default=True, environ_name="ALLOW_LOGOUT_GET_METHOD", environ_prefix=None

@@ -45,7 +45,7 @@ urlpatterns = [
                     r"^items/(?P<resource_id>[0-9a-z-]*)/",
                     include(item_related_router.urls),
                 ),
-                *sdk_relay_router.urls
+                *sdk_relay_router.urls,
             ]
         ),
     ),
