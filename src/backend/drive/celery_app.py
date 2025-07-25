@@ -1,4 +1,4 @@
-"""Impress celery configuration file."""
+"""Drive celery configuration file."""
 
 import os
 
