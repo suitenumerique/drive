@@ -8,8 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
-## Added
+## [v0.1.0] - 2025-07-25
 
+### Added
+
+- 🚀 Drive, A collaborative file sharing and document management platform
 - ✨(front) add move modal #213
 - ✨(front) update the homepage to alpha #234
 - ✨(global) add customization to feedbacks
@@ -18,14 +21,16 @@ and this project adheres to
 - ✨(global) Add File Picker SDK
 - 🔧(cron) add pgdump cron on scalingo deployment #264
 
-## Changed
+### Changed
 
 - 🐛(email) add missing email logo
 
-## Fixed
+### Fixed
 
 - 🐛(i18n) fix language detection and rendering
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-## Deleted
+
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.1.0...main
+[0.1.0]: https://github.com/suitenumerique/drive/releases/v0.1.0
