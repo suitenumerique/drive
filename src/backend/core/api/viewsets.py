@@ -43,32 +43,6 @@ MEDIA_STORAGE_URL_PATTERN = re.compile(
 )
 
 
-class CORSAllowAllMixin:
-    """Mixin to add CORS headers allowing all origins for specific views."""
-
-    CORS_HEADERS = {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
-    }
-
-    def _add_cors_headers(self, response):
-        """Add CORS headers to a response."""
-        for header, value in self.CORS_HEADERS.items():
-            response[header] = value
-        return response
-
-    def finalize_response(self, request, response, *args, **kwargs):
-        """Add CORS headers to the response."""
-        response = super().finalize_response(request, response, *args, **kwargs)
-        return self._add_cors_headers(response)
-
-    def options(self, request, *args, **kwargs):
-        """Handle OPTIONS requests for CORS preflight."""
-        response = drf.response.Response(status=status.HTTP_200_OK)
-        return self._add_cors_headers(response)
-
-
 # pylint: disable=too-many-ancestors
 
 
@@ -1242,33 +1216,51 @@ class ConfigView(drf.views.APIView):
         return drf.response.Response(dict_settings)
 
 
-class SDKRelayEventView(CORSAllowAllMixin, drf.views.APIView):
+class SDKRelayEventViewset(drf.viewsets.ViewSet):
     """API View for SDK relay interactions."""
 
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     throttle_scope = "sdk_event_relay"
 
-    def get(self, request, token):
+    def handle_cors(self, request, response):
+        """Handle CORS preflight requests."""
+        # Same approach as here:
+        # https://github.com/adamchainz/django-cors-headers/blob/b04460f37cbf458984bb377d8e6afb56776c3465/src/corsheaders/middleware.py#L96
+        origin = request.headers.get("origin")
+        if origin and origin in settings.SDK_ALLOWED_ORIGINS:
+            response["Access-Control-Allow-Origin"] = origin
+            response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+
+    def retrieve(self, request, pk=None):
         """
         GET /api/v1.0/sdk-relay/events/<token>/
         """
         sdk_relay = SDKRelayManager()
-        event = sdk_relay.get_event(token)
-        return drf.response.Response(event)
+        event = sdk_relay.get_event(pk)
 
+        response = drf.response.Response(event)
+        self.handle_cors(request, response)
+        return response
 
-class SDKRelayEventCreateView(CORSAllowAllMixin, drf.views.APIView):
-    """API View for SDK relay interactions."""
-
-    permission_classes = []
-
-    def post(self, request):
+    def create(self, request):
         """
         POST /api/v1.0/sdk-relay/events/
         """
-        token = request.data.get("token")
-        event = request.data.get("event")
+        serializer = serializers.SDKRelayEventSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         sdk_relay = SDKRelayManager()
-        sdk_relay.register_event(token, event)
+        sdk_relay.register_event(
+            serializer.validated_data.get("token"),
+            serializer.validated_data.get("event"),
+        )
         return drf.response.Response(status=status.HTTP_201_CREATED)
+
+    def options(self, request, *args, **kwargs):
+        """
+        OPTIONS /api/v1.0/sdk-relay/events/<token>/
+        Handle CORS preflight requests.
+        """
+        response = drf.response.Response(status=status.HTTP_200_OK)
+        self.handle_cors(request, response)
+        return response
