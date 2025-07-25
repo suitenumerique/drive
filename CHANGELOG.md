@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) search endpoint for ItemViewSet #312
+- 🔧(cron) pgdump: fix restic repository #282
 
 ## [v0.4.0] - 2025-09-02
 
