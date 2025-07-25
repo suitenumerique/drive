@@ -601,16 +601,11 @@ class Item(TreeModel, BaseModel):
     def delete(self, using=None, keep_parents=False):
         if self.main_workspace:
             raise RuntimeError("The main workspace cannot be deleted.")
-        delete = super().delete(using, keep_parents)
-        if self.depth > 1:
-            parent = self.parent()
-            update = {
-                "numchild": models.F("numchild") - 1,
-            }
-            if self.type == ItemTypeChoices.FOLDER:
-                update["numchild_folder"] = models.F("numchild_folder") - 1
-            self._meta.model.objects.filter(pk=parent.id).update(**update)
-        return delete
+
+        if self.deleted_at is None and self.ancestors_deleted_at is None:
+            raise RuntimeError("The item must be soft deleted before being deleted.")
+
+        return super().delete(using, keep_parents)
 
     def ancestors(self):
         """Return the ancestors of the item excluding the item itself."""

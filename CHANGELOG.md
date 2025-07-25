@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(backend) stop decreasing twice the numchild in deletion process #284
+
 ## [v0.1.0] - 2025-07-25
 
 ### Added

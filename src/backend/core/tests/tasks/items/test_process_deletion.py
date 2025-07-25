@@ -117,3 +117,51 @@ def test_process_item_deletion_in_cascade():
     assert models.Item.objects.all().count() == 1  # the user's workspace
     assert not default_storage.exists(child_file.file_key)
     assert not default_storage.exists(child2_file.file_key)
+
+
+def test_process_item_deletion_item_subfolder_in_cascade():
+    """Test the process deletion task when the item subfolder is hard deleted."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, creator=user, users=[user]
+    )
+
+    child = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, parent=parent, creator=user, users=[user]
+    )
+    child2 = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, parent=parent, creator=user, users=[user]
+    )
+
+    child_file = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        parent=child,
+        creator=user,
+        users=[user],
+        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+    )
+    child2_file = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        parent=child2,
+        creator=user,
+        users=[user],
+        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+    )
+
+    default_storage.save(child_file.file_key, BytesIO(b"my prose"))
+    default_storage.save(child2_file.file_key, BytesIO(b"my prose"))
+    parent.refresh_from_db()
+    assert parent.numchild == 2
+
+    child.soft_delete()
+    child.hard_delete()
+
+    assert models.Item.objects.all().count() == 5 + 1  # +1 for the user's workspace
+    parent.refresh_from_db()
+    assert parent.numchild == 1
+
+    process_item_deletion(child.id)
+
+    assert models.Item.objects.all().count() == 3 + 1  # the user's workspace
+    assert not default_storage.exists(child_file.file_key)
+    assert default_storage.exists(child2_file.file_key)
