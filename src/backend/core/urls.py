@@ -28,7 +28,7 @@ item_related_router.register(
 
 sdk_relay_router = DefaultRouter()
 sdk_relay_router.register(
-    "events",
+    "sdk-relay/events",
     viewsets.SDKRelayEventViewset,
     basename="sdk_relay_events",
 )
@@ -45,10 +45,7 @@ urlpatterns = [
                     r"^items/(?P<resource_id>[0-9a-z-]*)/",
                     include(item_related_router.urls),
                 ),
-                path(
-                    "sdk-relay/",
-                    include(sdk_relay_router.urls),
-                ),
+                *sdk_relay_router.urls
             ]
         ),
     ),
