@@ -28,7 +28,7 @@ pg_dump --clean --if-exists --format c --dbname "${SCALINGO_POSTGRESQL_URL}" --n
 export AWS_ACCESS_KEY_ID=${BACKUP_PGSQL_S3_KEY}
 export AWS_SECRET_ACCESS_KEY=${BACKUP_PGSQL_S3_SECRET}
 export RESTIC_PASSWORD=${BACKUP_PGSQL_ENCRYPTION_PASS}
-export RESTIC_REPOSITORY=s3:https://s3.fr-par.scw.cloud/${BACKUP_PGSQL_S3_BUCKET}/${APP}
+export RESTIC_REPOSITORY=s3:${BACKUP_PGSQL_S3_REPOSITORY}/${APP}
 
 ./restic snapshots -q || ./restic init
 
