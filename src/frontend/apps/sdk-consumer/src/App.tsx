@@ -3,8 +3,8 @@ import { openPicker, type PickerResult } from "@gouvfr-lasuite/drive-sdk";
 import { useState } from "react";
 
 const CONFIG = {
-  // url: "http://localhost:3000/sdk",
-  // apiUrl: "http://localhost:8071/api/v1.0",
+  url: "http://localhost:3000/sdk",
+  apiUrl: "http://localhost:8071/api/v1.0",
 };
 
 function App() {

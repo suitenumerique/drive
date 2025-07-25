@@ -103,3 +103,44 @@ def test_api_sdk_relay_preflight_request():
         response["Access-Control-Allow-Headers"]
         == "Content-Type, Authorization, X-Requested-With"
     )
+
+
+def test_api_sdk_relay_register_event_too_long():
+    """Event data exceeding maximum length should return a 400 error."""
+    client = APIClient()
+
+    # Create a large event payload that exceeds the max length
+    large_event = {
+        "type": "test",
+        "data": {
+            "items": [
+                {
+                    "id": str(i),
+                    "title": "x" * 900,  # Long title to help exceed limit
+                    "size": 1000,
+                    "url": "http://example.com/" + ("y" * 100)
+                } for i in range(200)  # Many items to exceed limit
+            ]
+        }
+    }
+
+    response = client.post(
+        "/api/v1.0/sdk-relay/events/",
+        {
+            "token": "1Az6SO4CE7JAl9hE96dXl7145nghwZNP",
+            "event": large_event
+        },
+        format="json"
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "event",
+                "code": "invalid",
+                "detail": "Event data exceeds maximum length of 100000 characters."
+            }
+        ],
+        "type": "validation_error"
+    }
