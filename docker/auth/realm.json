@@ -1,3 +1,8 @@
+[{
+  "realm": "master",
+  "sslRequired": "none",
+  "enabled" : true
+},
 {
   "id": "ccf4fd40-4286-474d-854a-4714282a8bec",
   "realm": "drive",
@@ -26,7 +31,7 @@
   "oauth2DeviceCodeLifespan": 600,
   "oauth2DevicePollingInterval": 5,
   "enabled": true,
-  "sslRequired": "external",
+  "sslRequired": "none",
   "registrationAllowed": true,
   "registrationEmailAsUsername": false,
   "rememberMe": true,
@@ -2278,4 +2283,4 @@
   "clientPolicies": {
     "policies": []
   }
-}
+}]

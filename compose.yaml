@@ -190,7 +190,7 @@ services:
       - env.d/development/kc_postgresql
 
   keycloak:
-    image: quay.io/keycloak/keycloak:20.0.1
+    image: quay.io/keycloak/keycloak:26.3.2
     volumes:
       - ./docker/auth/realm.json:/opt/keycloak/data/import/realm.json
     command:
@@ -198,10 +198,8 @@ services:
       - --features=preview
       - --import-realm
       - --proxy=edge
-      - --hostname-url=http://localhost:8083
-      - --hostname-admin-url=http://localhost:8083/
+      - --hostname=http://localhost:8083
       - --hostname-strict=false
-      - --hostname-strict-https=false
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
