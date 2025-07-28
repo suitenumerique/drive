@@ -17,6 +17,7 @@ import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
 import { getIconByMimeType } from "@/features/explorer/components/icons/ItemIcon";
 import { useTranslation } from "react-i18next";
 import { downloadFile } from "@/features/items/utils";
+import { PreviewCsv } from "../csv-preview/CsvPreview";
 
 export type FilePreviewType = {
   id: string;
@@ -115,6 +116,9 @@ export const FilePreview = ({
       case MimeCategory.GRIST:
         console.log(currentFile.url);
         return <PreviewGrist src={currentFile.url} title={currentFile.title}/>;
+      case MimeCategory.CALC:
+        // TODO: separate between CSV and Excel-like files
+        return <PreviewCsv src={currentFile.url} title={currentFile.title}/>;
       default:
         return <NotSupportedPreview file={currentFile} />;
     }
