@@ -5,6 +5,8 @@ Test SDK relay API endpoints.
 import pytest
 from rest_framework.test import APIClient
 
+from core import factories
+
 pytestmark = pytest.mark.django_db
 
 
@@ -18,6 +20,17 @@ def test_api_sdk_relay_get_event_anonymous():
     assert response.json() == {}
 
 
+def test_api_sdk_relay_register_event_anonymous():
+    """Anonymous users should not be allowed to register an event."""
+    client = APIClient()
+    response = client.post(
+        "/api/v1.0/sdk-relay/events/",
+        {"token": "1Az6SO4CE7JAl9hE96dXl7145nghwZNP", "event": {"type": "test"}},
+        format="json",
+    )
+    assert response.status_code == 401
+
+
 def test_api_sdk_relay_register_event():
     """Anonymous users should be allowed to register an event."""
     client = APIClient()
@@ -28,6 +41,8 @@ def test_api_sdk_relay_register_event():
     assert "Access-Control-Allow-Origin" not in response
     assert response.json() == {}
 
+    user = factories.UserFactory()
+    client.force_authenticate(user)
     response = client.post(
         "/api/v1.0/sdk-relay/events/",
         {"token": "1Az6SO4CE7JAl9hE96dXl7145nghwZNP", "event": {"type": "test"}},
@@ -52,7 +67,9 @@ def test_api_sdk_relay_register_event():
 
 def test_api_sdk_relay_register_event_invalid_token():
     """Invalid token should return a 400 error."""
+    user = factories.UserFactory()
     client = APIClient()
+    client.force_authenticate(user)
     response = client.post(
         "/api/v1.0/sdk-relay/events/",
         {"token": "123", "event": {"type": "test"}},
@@ -73,7 +90,9 @@ def test_api_sdk_relay_register_event_invalid_token():
 
 def test_api_sdk_relay_register_event_too_long():
     """Event data exceeding maximum length should return a 400 error."""
+    user = factories.UserFactory()
     client = APIClient()
+    client.force_authenticate(user)
 
     # Create a large event payload that exceeds the max length
     large_event = {

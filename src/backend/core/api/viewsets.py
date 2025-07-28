@@ -1250,6 +1250,14 @@ class SDKRelayEventViewset(drf.viewsets.ViewSet):
 
     throttle_scope = "sdk_event_relay"
 
+    def get_permissions(self):
+        """
+        Return the list of permissions that this view requires.
+        """
+        if self.action == "create":
+            return [permissions.IsAuthenticated()]
+        return super().get_permissions()
+
     def handle_cors(self, request, response):
         """Handle CORS preflight requests."""
         # Same approach as here:
