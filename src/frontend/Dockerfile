@@ -22,12 +22,10 @@ FROM frontend-deps AS drive-dev
 
 WORKDIR /home/frontend/apps/drive
 
-# Add local node_modules/.bin to PATH
-ENV PATH="/home/frontend/apps/drive/node_modules/.bin:$PATH"
-
 EXPOSE 3000
 
-RUN yarn && yarn build-theme && yarn dev
+RUN yarn build-theme
+CMD ["yarn", "dev"]
 
 # Tilt will rebuild drive target so, we dissociate drive and drive-builder 
 # to avoid rebuilding the app at every changes.

@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "yarn workspace drive run dev",
     "build": "yarn workspace drive run build",
-    "lint": "yarn workspace drive run lint"
+    "lint": "yarn workspace drive run lint",
+    "build-theme": "yarn workspace drive build-theme"
   },
   "resolutions": {},
   "devDependencies": {
