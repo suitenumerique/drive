@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- ♻️(back) manage title uniqueness by generating new one if existing #296 
+
 ### Fixed
 
 - 🐛(backend) stop decreasing twice the numchild in deletion process #284
