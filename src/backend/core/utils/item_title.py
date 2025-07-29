@@ -1,5 +1,6 @@
 """Module to manage item title uniqueness."""
 
+import re
 from os.path import splitext
 
 from django.db import models
@@ -28,10 +29,10 @@ def _extract_number_from_title(title):
 
 def _build_numbered_title_regex(base_title, ext):
     """Build a regex pattern to match numbered versions of a title."""
-    escaped_base = base_title.replace("(", r"\(").replace(")", r"\)")
+    escaped_base = re.escape(base_title)
     pattern = rf"^{escaped_base}_\d+"
     if ext:
-        escaped_ext = ext.replace(".", r"\.")
+        escaped_ext = re.escape(ext)
         pattern += rf"{escaped_ext}$"
     else:
         pattern += r"$"
