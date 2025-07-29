@@ -14,6 +14,10 @@ and this project adheres to
 - ✨(front) Add 401, 403 pages
 - ✨(front) Add redirect after login logic
 
+### Changed
+
+- ♻️(back) manage title uniqueness by generating new one if existing #296 
+
 ## [v0.1.1] - 2025-07-30
 
 ### Fixed

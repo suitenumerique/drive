@@ -335,8 +335,8 @@ def test_api_items_children_create_not_a_folder():
 
 def test_api_items_children_create_title_already_existing_at_the_same_level():
     """
-    It should not be possible to create a nested item with a title that already exists
-    at the same level.
+    Creating a nested item with a title that already exists at the same level should
+    automatically add a number to the title.
     """
     user = factories.UserFactory()
     client = APIClient()
@@ -358,17 +358,8 @@ def test_api_items_children_create_title_already_existing_at_the_same_level():
         format="json",
     )
 
-    assert response.status_code == 400
-    assert response.json() == {
-        "errors": [
-            {
-                "attr": "title",
-                "code": "item_create_child_title_already_exists",
-                "detail": "title already exists in this folder.",
-            },
-        ],
-        "type": "validation_error",
-    }
+    assert response.status_code == 201
+    assert response.json()["title"] == "my item_01"
 
 
 def test_api_items_children_create_item_soft_deleted_with_same_title_exists():

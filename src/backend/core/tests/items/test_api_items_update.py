@@ -403,23 +403,14 @@ def test_api_items_update_title_unique_in_current_path():
         users=[(user, models.RoleChoices.OWNER)],
     )
 
-    # update child1 to rename it to child2 should fails
+    # update child1 to rename it to child2 should automatically add a number to the title
     response = client.put(
         f"/api/v1.0/items/{child.id!s}/",
         {"title": "child2"},
         format="json",
     )
-    assert response.status_code == 400
-    assert response.json() == {
-        "errors": [
-            {
-                "attr": "title",
-                "code": "item_update_title_already_exists",
-                "detail": "An item with this title already exists in the current path.",
-            },
-        ],
-        "type": "validation_error",
-    }
+    assert response.status_code == 200
+    assert response.json()["title"] == "child2_01"
 
 
 def test_api_items_update_title_unique_in_current_path_soft_deleted():

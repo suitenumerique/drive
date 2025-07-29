@@ -292,18 +292,9 @@ class ItemSerializer(ListItemSerializer):
 
     def update(self, instance, validated_data):
         """Validate that the title is unique in the current path."""
-        if (
-            instance.title != validated_data.get("title")
-            and instance.depth > 1
-            and instance.is_item_title_existing(validated_data.get("title"))
-        ):
-            raise serializers.ValidationError(
-                {
-                    "title": _(
-                        "An item with this title already exists in the current path."
-                    )
-                },
-                code="item_update_title_already_exists",
+        if instance.title != validated_data.get("title") and instance.depth > 1:
+            validated_data["title"] = instance.manage_unique_title(
+                validated_data.get("title")
             )
 
         return super().update(instance, validated_data)

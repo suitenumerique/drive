@@ -30,6 +30,8 @@ from django_ltree.managers import TreeManager, TreeQuerySet
 from django_ltree.models import TreeModel
 from timezone_field import TimeZoneField
 
+from core.utils.item_title import manage_unique_title as manage_unique_title_utils
+
 logger = getLogger(__name__)
 
 
@@ -417,19 +419,15 @@ class ItemQuerySet(TreeQuerySet):
 
         return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC))
 
-
-def _is_item_title_existing(queryset, title):
-    """Check if the title is unique in the same path."""
-    return (
-        queryset.filter(title=title)
-        .filter(
+    def filter_non_deleted(self, **kwargs):
+        """Filter the non deleted items"""
+        return self.filter(
             models.Q(
                 models.Q(deleted_at__isnull=True)
-                | models.Q(ancestors_deleted_at__isnull=True)
-            )
+                | models.Q(ancestors_deleted_at__isnull=True),
+            ),
+            **kwargs,
         )
-        .exists()
-    )
 
 
 class ItemManager(TreeManager):
@@ -461,19 +459,9 @@ class ItemManager(TreeManager):
                         )
                     }
                 )
-
-            if _is_item_title_existing(
-                self.children(parent.path),
-                kwargs.get("title"),
-            ):
-                raise ValidationError(
-                    {
-                        "title": ValidationError(
-                            _("title already exists in this folder."),
-                            code="item_create_child_title_already_exists",
-                        )
-                    }
-                )
+            kwargs["title"] = manage_unique_title_utils(
+                self.children(parent.path), kwargs.get("title")
+            )
 
         if not kwargs.get("id"):
             kwargs["id"] = str(uuid.uuid4())
@@ -645,9 +633,9 @@ class Item(TreeModel, BaseModel):
         """Generate a unique cache key for each item."""
         return f"item_{self.id!s}_nb_accesses"
 
-    def is_item_title_existing(self, title):
-        """Check if the title is unique in the same path."""
-        return _is_item_title_existing(
+    def manage_unique_title(self, title):
+        """Manage the unique title in the same path."""
+        return manage_unique_title_utils(
             self.siblings(),
             title,
         )

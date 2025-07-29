@@ -735,7 +735,7 @@ def test_models_items_title_must_be_set():
 
 
 def test_models_items_unique_title_in_current_path():
-    """Check title unicity in the current path."""
+    """Check title management in the current path."""
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, title="folder")
     parent2 = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER, title="an other one"
@@ -763,24 +763,48 @@ def test_models_items_unique_title_in_current_path():
         filename="file.txt",
     )
 
-    with pytest.raises(ValidationError) as exc_info:
-        factories.ItemFactory(
-            parent=parent, title="folder", type=models.ItemTypeChoices.FOLDER
-        )
-        assert exc_info.value.message_dict == {
-            "title": "title already exists in this folder."
-        }
+    modified_folder_title = factories.ItemFactory(
+        parent=parent, title="folder", type=models.ItemTypeChoices.FOLDER
+    )
 
-    with pytest.raises(ValidationError) as exc_info:
-        factories.ItemFactory(
-            parent=parent,
-            title="file.txt",
-            type=models.ItemTypeChoices.FILE,
-            filename="file.txt",
-        )
-        assert exc_info.value.message_dict == {
-            "title": "title already exists in this folder."
-        }
+    assert modified_folder_title.title == "folder_01"
+
+    factories.ItemFactory(
+        parent=parent,
+        title="file_01.txt",
+        type=models.ItemTypeChoices.FILE,
+        filename="file_01.txt",
+    )
+
+    factories.ItemFactory(
+        parent=parent,
+        title="file_02.txt",
+        type=models.ItemTypeChoices.FILE,
+        filename="file_02.txt",
+    )
+
+    modified_file_title = factories.ItemFactory(
+        parent=parent,
+        title="file.txt",
+        type=models.ItemTypeChoices.FILE,
+        filename="file.txt",
+    )
+    assert modified_file_title.title == "file_03.txt"
+
+    factories.ItemFactory(
+        parent=parent,
+        title="file_10.txt",
+        type=models.ItemTypeChoices.FILE,
+        filename="file_10.txt",
+    )
+
+    modified_file_title = factories.ItemFactory(
+        parent=parent,
+        title="file.txt",
+        type=models.ItemTypeChoices.FILE,
+        filename="file.txt",
+    )
+    assert modified_file_title.title == "file_11.txt"
 
 
 def test_models_items_unique_title_in_current_path_soft_deleted():
