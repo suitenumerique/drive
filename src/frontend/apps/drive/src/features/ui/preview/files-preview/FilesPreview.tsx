@@ -16,6 +16,7 @@ import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
 import { getIconByMimeType } from "@/features/explorer/components/icons/ItemIcon";
 import { useTranslation } from "react-i18next";
 import { downloadFile } from "@/features/items/utils";
+import { SuspiciousPreview } from "../suspicious/SuspiciousPreview";
 
 export type FilePreviewType = {
   id: string;
@@ -26,6 +27,7 @@ export type FilePreviewType = {
 
 type FilePreviewData = FilePreviewType & {
   category: MimeCategory;
+  isSuspicious?: boolean;
 };
 
 interface FilePreviewProps {
@@ -74,6 +76,10 @@ export const FilePreview = ({
       return <div>{t("file_preview.unsupported.title")}</div>;
     }
 
+    if (currentFile.isSuspicious) {
+      return <SuspiciousPreview file={currentFile} />;
+    }
+
     switch (currentFile.category) {
       case MimeCategory.IMAGE:
         return (
@@ -110,7 +116,9 @@ export const FilePreview = ({
       case MimeCategory.PDF:
         return <PreviewPdf src={currentFile.url} />;
       default:
-        return <NotSupportedPreview file={currentFile} />;
+        return (
+          <NotSupportedPreview file={currentFile} onDownload={handleDownload} />
+        );
     }
   };
 

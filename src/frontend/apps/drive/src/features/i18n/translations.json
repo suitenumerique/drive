@@ -2,6 +2,11 @@
   "en": {
     "translation": {
       "file_preview": {
+        "suspicious": {
+          "title": "Suspicious file",
+          "description": "This file looks suspicious. It is only visible to you.",
+          "download": "Download file"
+        },
         "unsupported": {
           "title": "File type not supported for preview",
           "description": "To view the file, download it to your device.",
@@ -87,6 +92,12 @@
           }
         },
         "rightPanel": {
+          "suspicious": {
+            "text": "This file looks suspicious. It is only visible to you."
+          },
+          "file_too_large": {
+            "text": "This file is too large to scan. It may be unsafe to download."
+          },
           "multipleSelection": {
             "text": "Multiple files selected",
             "alt": "Multiple files selected image"
@@ -318,6 +329,11 @@
   "fr": {
     "translation": {
       "file_preview": {
+        "suspicious": {
+          "title": "Fichier suspect",
+          "description": "Ce fichier semble suspect. Il n'est visible que pour vous.",
+          "download": "Télécharger le fichier"
+        },
         "unsupported": {
           "title": "Type de fichier non supporté pour la prévisualisation",
           "description": "Pour visualiser le fichier, téléchargez-le sur votre appareil.",
@@ -403,6 +419,12 @@
           }
         },
         "rightPanel": {
+          "suspicious": {
+            "text": "Ce fichier semble suspect. Il n'est visible que pour vous."
+          },
+          "file_too_large": {
+            "text": "Ce fichier est trop volumineux pour être analysé. Il peut être dangereux de le télécharger."
+          },
           "multipleSelection": {
             "text": "Plusieurs fichiers sélectionnés",
             "alt": "Image de plusieurs fichiers sélectionnés"

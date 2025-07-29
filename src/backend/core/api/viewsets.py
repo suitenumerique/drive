@@ -18,6 +18,7 @@ from django.db.models.expressions import RawSQL
 import magic
 import posthog
 import rest_framework as drf
+from lasuite.malware_detection import malware_detection
 from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
 from rest_framework.permissions import AllowAny
@@ -479,10 +480,35 @@ class ItemViewSet(
             user_roles=db.Value([], output_field=output_field),
         )
 
+    def _filter_suspicious_items(self, queryset, user):
+        """
+        Filter out items with SUSPICIOUS upload_state for non-creators.
+
+        Args:
+            queryset: The queryset to filter
+            user: The current user
+
+        Returns:
+            Filtered queryset excluding suspicious items from non-creators
+        """
+        # For authenticated users, exclude suspicious items they didn't create
+        # For unauthenticated users, exclude all suspicious items
+        if user.is_authenticated:
+            return queryset.exclude(
+                db.Q(upload_state=models.ItemUploadStateChoices.SUSPICIOUS)
+                & ~db.Q(creator=user)
+            )
+
+        return queryset.exclude(upload_state=models.ItemUploadStateChoices.SUSPICIOUS)
+
     def get_queryset(self):
         """Get queryset performing all annotation and filtering on the item tree structure."""
         user = self.request.user
         queryset = super().get_queryset().select_related("creator")
+
+        # Remove items with upload_state SUSPICIOUS for non-creators
+        queryset = self._filter_suspicious_items(queryset, user)
+
         # Only list views need filtering and annotation
         if self.detail:
             return queryset
@@ -625,7 +651,7 @@ class ItemViewSet(
     @drf.decorators.action(detail=True, methods=["post"], url_path="upload-ended")
     def upload_ended(self, request, *args, **kwargs):
         """
-        Set an item state to uploaded after a successful upload.
+        Start the analysis of an item after a successful upload.
         """
 
         item = self.get_object()
@@ -647,11 +673,13 @@ class ItemViewSet(
         mimetype = mime_detector.from_buffer(file.read(2048))
         file.close()
 
-        item.upload_state = models.ItemUploadStateChoices.UPLOADED
+        item.upload_state = models.ItemUploadStateChoices.ANALYZING
         item.mimetype = mimetype
         item.size = file.size
 
         item.save(update_fields=["upload_state", "mimetype", "size"])
+
+        malware_detection.analyse_file(item.file_key, item_id=item.id)
 
         serializer = self.get_serializer(item)
 
@@ -829,6 +857,7 @@ class ItemViewSet(
 
         # GET: List children
         queryset = item.children().filter(deleted_at__isnull=True)
+        queryset = self._filter_suspicious_items(queryset, request.user)
         queryset = self.filter_queryset(queryset)
         filterset = ItemFilter(request.GET, queryset=queryset)
         if not filterset.is_valid():
@@ -916,6 +945,7 @@ class ItemViewSet(
 
         tree = self.annotate_user_roles(tree)
         tree = self.annotate_is_favorite(tree)
+        tree = self._filter_suspicious_items(tree, request.user)
 
         serializer = self.get_serializer(
             tree,
@@ -1037,8 +1067,10 @@ class ItemViewSet(
             raise drf.exceptions.PermissionDenied()
 
         # Fetch the item and check if the user has access
+        queryset = models.Item.objects.all()
+        queryset = self._filter_suspicious_items(queryset, request.user)
         try:
-            item = models.Item.objects.get(pk=pk)
+            item = queryset.get(pk=pk)
         except models.Item.DoesNotExist as exc:
             logger.debug("item with ID '%s' does not exist", pk)
             raise drf.exceptions.PermissionDenied() from exc
@@ -1074,8 +1106,8 @@ class ItemViewSet(
             logger.debug("Item '%s' is not a file", item.id)
             raise drf.exceptions.PermissionDenied()
 
-        if item.upload_state != models.ItemUploadStateChoices.UPLOADED:
-            logger.debug("Item '%s' is not uploaded", item.id)
+        if item.upload_state == models.ItemUploadStateChoices.PENDING:
+            logger.debug("Item '%s' is not ready", item.id)
             raise drf.exceptions.PermissionDenied()
 
         # Generate S3 authorization headers using the extracted URL parameters

@@ -65,7 +65,7 @@ def test_api_items_list_format():
     )
     factories.UserItemAccessFactory(item=hard_deleted_item, user=user)
 
-    item2.upload_state = models.ItemUploadStateChoices.UPLOADED
+    item2.upload_state = models.ItemUploadStateChoices.READY
     item2.filename = "logo.png"
     item2.save()
 
@@ -103,7 +103,7 @@ def test_api_items_list_format():
             "updated_at": item2.updated_at.isoformat().replace("+00:00", "Z"),
             "user_roles": [access2.role],
             "type": models.ItemTypeChoices.FILE,
-            "upload_state": models.ItemUploadStateChoices.UPLOADED,
+            "upload_state": models.ItemUploadStateChoices.READY,
             "url": f"http://localhost:8083/media/item/{item2.id!s}/logo.png",
             "mimetype": None,
             "main_workspace": False,
@@ -530,3 +530,51 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
             assert result["is_favorite"] is True
         else:
             assert result["is_favorite"] is False
+
+
+def test_api_items_list_with_suspicious_items():
+    """
+    Suspicious items should not be listed in the items list for non creator.
+    """
+    creator = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    suspicious_item = factories.ItemFactory(
+        creator=creator,
+        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
+        users=[creator, other_user],
+        type=models.ItemTypeChoices.FILE,
+        filename="suspicious.txt",
+    )
+
+    item1, item2 = factories.ItemFactory.create_batch(
+        2,
+        creator=creator,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        users=[creator, other_user],
+        type=models.ItemTypeChoices.FILE,
+        filename="test.txt",
+    )
+
+    client = APIClient()
+    client.force_login(other_user)
+
+    response = client.get("/api/v1.0/items/")
+    assert response.status_code == 200
+    content = response.json()
+    for item in content["results"]:
+        assert item["id"] != str(suspicious_item.id)
+    assert content["count"] == 3
+
+    assert content["results"][0]["id"] == str(item2.id)
+    assert content["results"][1]["id"] == str(item1.id)
+    assert content["results"][2]["id"] == str(other_user.get_main_workspace().id)
+
+    client.force_login(creator)
+    response = client.get("/api/v1.0/items/")
+    content = response.json()
+    assert content["count"] == 4
+    assert content["results"][0]["id"] == str(item2.id)
+    assert content["results"][1]["id"] == str(item1.id)
+    assert content["results"][2]["id"] == str(suspicious_item.id)
+    assert content["results"][3]["id"] == str(creator.get_main_workspace().id)

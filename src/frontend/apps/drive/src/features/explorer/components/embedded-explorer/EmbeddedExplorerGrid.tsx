@@ -1,4 +1,4 @@
-import { Item, ItemType } from "@/features/drivers/types";
+import { Item, ItemType, ItemUploadState } from "@/features/drivers/types";
 import {
   createContext,
   Dispatch,
@@ -188,6 +188,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
       title: item.title,
       mimetype: item.mimetype ?? "",
       url: item.url ?? "",
+      isSuspicious: item.upload_state === ItemUploadState.SUSPICIOUS,
     }));
   }, [props.items]);
 
