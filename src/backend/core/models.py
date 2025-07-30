@@ -93,7 +93,7 @@ class ItemUploadStateChoices(models.TextChoices):
     PENDING = "pending", _("Pending")
     ANALYZING = "analyzing", _("Analyzing")
     SUSPICIOUS = "suspicious", _("Suspicious")
-    FILE_TOO_LARGE = "file_too_large", _("File too large")
+    FILE_TOO_LARGE_TO_ANALYZE = "file_too_large_to_analyze", _("File too large to analyze")
     READY = "ready", _("Ready")
 
 

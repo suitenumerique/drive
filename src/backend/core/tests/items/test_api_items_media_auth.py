@@ -173,7 +173,7 @@ def test_api_items_media_auth_authenticated_restricted():
     [
         models.ItemUploadStateChoices.READY,
         models.ItemUploadStateChoices.ANALYZING,
-        models.ItemUploadStateChoices.FILE_TOO_LARGE,
+        models.ItemUploadStateChoices.FILE_TOO_LARGE_TO_ANALYZE,
     ],
 )
 def test_api_items_media_auth_related(via, mock_user_teams, upload_state):

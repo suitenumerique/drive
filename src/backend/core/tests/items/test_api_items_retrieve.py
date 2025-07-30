@@ -1079,7 +1079,7 @@ def test_api_items_retrieve_permanently_deleted_related(role, depth):
     [
         models.ItemUploadStateChoices.READY,
         models.ItemUploadStateChoices.ANALYZING,
-        models.ItemUploadStateChoices.FILE_TOO_LARGE,
+        models.ItemUploadStateChoices.FILE_TOO_LARGE_TO_ANALYZE,
         models.ItemUploadStateChoices.SUSPICIOUS,
     ],
 )
