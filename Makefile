@@ -66,31 +66,32 @@ data/static:
 
 # -- Project
 
-create-env-files: ## Copy the dist env files to env files
-create-env-files: \
-	env.d/development/common \
-	env.d/development/crowdin \
-	env.d/development/postgresql \
-	env.d/development/kc_postgresql
-.PHONY: create-env-files
+create-env-local-files: ## create env.local files in env.d/development
+create-env-local-files: 
+	@touch env.d/development/crowdin.local
+	@touch env.d/development/common.local
+	@touch env.d/development/postgresql.local
+	@touch env.d/development/kc_postgresql.local
+.PHONY: create-env-local-files
 
 bootstrap: ## Prepare Docker images for the project
 bootstrap: \
 	data/media \
 	data/static \
-	create-env-files \
+	create-env-local-files \
 	build \
 	migrate \
 	back-i18n-compile \
 	mails-install \
-	mails-build
+	mails-build \
+	run
 .PHONY: bootstrap
 
 # -- Docker/compose
 build: cache ?= --no-cache
 build: ## build the project containers
 	@$(MAKE) build-backend cache=$(cache)
-	@$(MAKE) build-frontend-dev cache=$(cache)
+	@$(MAKE) build-frontend cache=$(cache)
 .PHONY: build
 
 build-backend: cache ?=
@@ -98,15 +99,10 @@ build-backend: ## build the app-dev container
 	@$(COMPOSE) build app-dev $(cache)
 .PHONY: build-backend
 
-build-frontend-dev: cache ?=
-build-frontend-dev: ## build the frontend container
-	@$(COMPOSE) build frontend-dev $(cache)
-.PHONY: build-frontend-dev
-
 build-frontend: cache ?=
 build-frontend: ## build the frontend container
-	@$(COMPOSE) build frontend $(cache)
-.PHONY: build-frontend
+	@$(COMPOSE) build frontend-dev $(cache)
+.PHONY: build-frontend-development
 
 down: ## stop and remove containers, networks, images, and volumes
 	@$(COMPOSE) down
@@ -116,14 +112,16 @@ logs: ## display app-dev logs (follow mode)
 	@$(COMPOSE) logs -f app-dev
 .PHONY: logs
 
-run: ## start the wsgi (production) and development server
+run-backend: ## start the backend container
+	@$(COMPOSE) up --force-recreate -d celery-dev
 	@$(COMPOSE) up --force-recreate -d nginx
-.PHONY: run
+.PHONY: run-backend
 
-run-with-frontend: ## Start all the containers needed (backend to frontend)
-	@$(MAKE) run
+run: ## start the development server and frontend development
+run: 
+	@$(MAKE) run-backend
 	@$(COMPOSE) up --force-recreate -d frontend-dev
-.PHONY: run-with-frontend
+.PHONY: run
 
 status: ## an alias for "docker compose ps"
 	@$(COMPOSE) ps
@@ -134,11 +132,6 @@ stop: ## stop the development server using Docker
 .PHONY: stop
 
 # -- Backend
-
-demo: ## flush db then create a demo for load testing purpose
-	@$(MAKE) resetdb
-	@$(MANAGE) create_demo
-.PHONY: demo
 
 # Nota bene: Black should come after isort just in case they don't agree...
 lint: ## lint back-end python sources
@@ -219,19 +212,7 @@ resetdb: ## flush database and create a superuser "admin"
 	@${MAKE} superuser
 .PHONY: resetdb
 
-env.d/development/common:
-	cp -n env.d/development/common.dist env.d/development/common
-
-env.d/development/postgresql:
-	cp -n env.d/development/postgresql.dist env.d/development/postgresql
-
-env.d/development/kc_postgresql:
-	cp -n env.d/development/kc_postgresql.dist env.d/development/kc_postgresql
-
 # -- Internationalization
-
-env.d/development/crowdin:
-	cp -n env.d/development/crowdin.dist env.d/development/crowdin
 
 crowdin-download: ## Download translated message from crowdin
 	@$(COMPOSE_RUN_CROWDIN) download -c crowdin/config.yml
@@ -304,9 +285,9 @@ help:
 .PHONY: help
 
 # Front
-frontend-install: ## install the frontend locally
+frontend-development-install: ## install the frontend locally
 	cd $(PATH_FRONT_DRIVE) && yarn
-.PHONY: frontend-install
+.PHONY: frontend-development-install
 
 frontend-lint: ## run the frontend linter
 	cd $(PATH_FRONT) && yarn lint
