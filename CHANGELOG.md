@@ -11,7 +11,7 @@ and this project adheres to
 ### Changed
 
 - 🧑‍💻(docker) handle frontend development images with docker compose #298
-- 🔧(project) change env.d system by using local files
+- 🔧(project) change env.d system by using local files #298
 
 ### Fixed
 
