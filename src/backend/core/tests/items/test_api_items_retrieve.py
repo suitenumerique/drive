@@ -29,6 +29,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "abilities": item.get_abilities(AnonymousUser()),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
+            "id": str(item.creator.id),
             "full_name": item.creator.full_name,
             "short_name": item.creator.short_name,
         },
@@ -80,6 +81,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "abilities": item.get_abilities(AnonymousUser()),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
+            "id": str(item.creator.id),
             "full_name": item.creator.full_name,
             "short_name": item.creator.short_name,
         },
@@ -176,6 +178,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "abilities": item.get_abilities(user),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
+            "id": str(item.creator.id),
             "full_name": item.creator.full_name,
             "short_name": item.creator.short_name,
         },
@@ -233,6 +236,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "abilities": item.get_abilities(user),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
+            "id": str(item.creator.id),
             "full_name": item.creator.full_name,
             "short_name": item.creator.short_name,
         },
@@ -367,6 +371,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "id": str(item.id),
         "abilities": item.get_abilities(user),
         "creator": {
+            "id": str(item.creator.id),
             "full_name": item.creator.full_name,
             "short_name": item.creator.short_name,
         },
@@ -426,6 +431,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "id": str(item.id),
         "abilities": item.get_abilities(user),
         "creator": {
+            "id": str(item.creator.id),
             "full_name": item.creator.full_name,
             "short_name": item.creator.short_name,
         },
@@ -604,6 +610,7 @@ def test_api_items_retrieve_authenticated_related_team_members(
         "abilities": item.get_abilities(user),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
+            "id": str(item.creator.id),
             "full_name": item.creator.full_name,
             "short_name": item.creator.short_name,
         },
@@ -675,6 +682,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
         "abilities": item.get_abilities(user),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
+            "id": str(item.creator.id),
             "full_name": item.creator.full_name,
             "short_name": item.creator.short_name,
         },
@@ -746,6 +754,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(
         "abilities": item.get_abilities(user),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
+            "id": str(item.creator.id),
             "full_name": item.creator.full_name,
             "short_name": item.creator.short_name,
         },
@@ -1111,6 +1120,7 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "abilities": item.get_abilities(user),
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
+            "id": str(item.creator.id),
             "full_name": item.creator.full_name,
             "short_name": item.creator.short_name,
         },
