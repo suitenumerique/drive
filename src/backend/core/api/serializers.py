@@ -26,8 +26,8 @@ class UserLiteSerializer(UserSerializer):
 
     class Meta:
         model = models.User
-        fields = ["full_name", "short_name"]
-        read_only_fields = ["full_name", "short_name"]
+        fields = ["id", "full_name", "short_name"]
+        read_only_fields = ["id", "full_name", "short_name"]
 
 
 class BaseAccessSerializer(serializers.ModelSerializer):
@@ -141,7 +141,6 @@ class ListItemSerializer(serializers.ModelSerializer):
             "creator",
             "depth",
             "is_favorite",
-            "creator_id",
             "link_role",
             "link_reach",
             "nb_accesses",
@@ -166,7 +165,6 @@ class ListItemSerializer(serializers.ModelSerializer):
             "id",
             "abilities",
             "created_at",
-            "creator_id",
             "creator",
             "depth",
             "is_favorite",
@@ -245,7 +243,6 @@ class ItemSerializer(ListItemSerializer):
             "creator",
             "depth",
             "is_favorite",
-            "creator_id",
             "link_role",
             "link_reach",
             "nb_accesses",
@@ -272,7 +269,6 @@ class ItemSerializer(ListItemSerializer):
             "created_at",
             "creator",
             "depth",
-            "creator_id",
             "is_favorite",
             "nb_accesses",
             "numchild",
