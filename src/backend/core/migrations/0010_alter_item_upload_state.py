@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='item',
             name='upload_state',
-            field=models.CharField(blank=True, choices=[('pending', 'Pending'), ('analyzing', 'Analyzing'), ('suspicious', 'Suspicious'), ('file_too_large_to_analyze', 'File too large to analyze'), ('ready', 'Ready')], max_length=20, null=True),
+            field=models.CharField(blank=True, choices=[('pending', 'Pending'), ('analyzing', 'Analyzing'), ('suspicious', 'Suspicious'), ('file_too_large_to_analyze', 'File too large to analyze'), ('ready', 'Ready')], max_length=25, null=True),
         ),
     ]

@@ -533,7 +533,7 @@ class Item(TreeModel, BaseModel):
         default=ItemTypeChoices.FOLDER,
     )
     upload_state = models.CharField(
-        max_length=20,
+        max_length=25,
         choices=ItemUploadStateChoices.choices,
         null=True,
         blank=True,
