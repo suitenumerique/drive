@@ -73,12 +73,21 @@ The easiest way to start working on the project is to use GNU Make:
 $ make bootstrap
 ```
 
-This command builds the `app-dev` container, installs dependencies, performs
+This command builds the `app-dev` and `frontend-dev` containers, installs dependencies, performs
 database migrations and compile translations. It's a good idea to use this
 command each time you are pulling code from the project repository to avoid
 dependency-related or migration-related issues.
 
 Your Docker services should now be up and running! 🎉
+
+You can access the project by going to <http://localhost:3000>.
+
+You will be prompted to log in. The default credentials are:
+
+```
+username: drive
+password: drive
+```
 
 Note that if you need to run them afterward, you can use the eponym Make rule:
 
@@ -90,6 +99,26 @@ You can check all available Make rules using:
 
 ```bash
 $ make help
+```
+
+⚠️ For the frontend developer, it is often better to run the frontend in development mode locally.
+
+To do so, install the frontend dependencies with the following command:
+
+```shellscript
+$ make frontend-development-install
+```
+
+And run the frontend locally in development mode with the following command:
+
+```shellscript
+$ make run-frontend-development
+```
+
+To start all the services, except the frontend container, you can use the following command:
+
+```shellscript
+$ make run-backend
 ```
 
 ### Django admin
@@ -105,25 +134,6 @@ $ make superuser
 
 You can then login with sub `admin@example.com` and password `admin`.
 
-
-### Run frontend
-
-#### Locally
-To run the frontend locally :
-
-`cd src/frontend/ && yarn && yarn build-theme && yarn dev`
-
-#### With Docker
-
-Run the front with:
-
-```bash
-$ make run-with-frontend
-```
-
-Then access [http://localhost:3000](http://localhost:3000) with :
-user: drive
-password: drive
 
 ## Feedback 🙋‍♂️🙋‍♀️
 

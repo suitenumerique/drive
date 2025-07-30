@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- 🧑‍💻(docker) handle frontend development images with docker compose #298
+- 🔧(project) change env.d system by using local files
+
 ### Fixed
 
 - 🐛(backend) stop decreasing twice the numchild in deletion process #284

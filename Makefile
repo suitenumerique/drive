@@ -83,14 +83,15 @@ bootstrap: \
 	migrate \
 	back-i18n-compile \
 	mails-install \
-	mails-build
+	mails-build \
+	run
 .PHONY: bootstrap
 
 # -- Docker/compose
 build: cache ?= --no-cache
 build: ## build the project containers
 	@$(MAKE) build-backend cache=$(cache)
-	@$(MAKE) build-frontend-dev cache=$(cache)
+	@$(MAKE) build-frontend cache=$(cache)
 .PHONY: build
 
 build-backend: cache ?=
@@ -98,15 +99,10 @@ build-backend: ## build the app-dev container
 	@$(COMPOSE) build app-dev $(cache)
 .PHONY: build-backend
 
-build-frontend-dev: cache ?=
-build-frontend-dev: ## build the frontend container
-	@$(COMPOSE) build frontend-dev $(cache)
-.PHONY: build-frontend-dev
-
 build-frontend: cache ?=
 build-frontend: ## build the frontend container
-	@$(COMPOSE) build frontend $(cache)
-.PHONY: build-frontend
+	@$(COMPOSE) build frontend-dev $(cache)
+.PHONY: build-frontend-development
 
 down: ## stop and remove containers, networks, images, and volumes
 	@$(COMPOSE) down
@@ -116,14 +112,16 @@ logs: ## display app-dev logs (follow mode)
 	@$(COMPOSE) logs -f app-dev
 .PHONY: logs
 
-run: ## start the wsgi (production) and development server
+run-backend: ## start the backend container
+	@$(COMPOSE) up --force-recreate -d celery-dev
 	@$(COMPOSE) up --force-recreate -d nginx
-.PHONY: run
+.PHONY: run-backend
 
-run-with-frontend: ## Start all the containers needed (backend to frontend)
-	@$(MAKE) run
+run: ## start the development server and frontend development
+run: 
+	@$(MAKE) run-backend
 	@$(COMPOSE) up --force-recreate -d frontend-dev
-.PHONY: run-with-frontend
+.PHONY: run
 
 status: ## an alias for "docker compose ps"
 	@$(COMPOSE) ps
@@ -134,11 +132,6 @@ stop: ## stop the development server using Docker
 .PHONY: stop
 
 # -- Backend
-
-demo: ## flush db then create a demo for load testing purpose
-	@$(MAKE) resetdb
-	@$(MANAGE) create_demo
-.PHONY: demo
 
 # Nota bene: Black should come after isort just in case they don't agree...
 lint: ## lint back-end python sources
@@ -304,9 +297,9 @@ help:
 .PHONY: help
 
 # Front
-frontend-install: ## install the frontend locally
+frontend-development-install: ## install the frontend locally
 	cd $(PATH_FRONT_DRIVE) && yarn
-.PHONY: frontend-install
+.PHONY: frontend-development-install
 
 frontend-lint: ## run the frontend linter
 	cd $(PATH_FRONT) && yarn lint
