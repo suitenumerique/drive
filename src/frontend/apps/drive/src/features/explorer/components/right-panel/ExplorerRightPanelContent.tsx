@@ -26,7 +26,8 @@ export const ExplorerRightPanelContent = ({
   const firstSelectedItem = item ?? selectedItems[0];
   const showWarning =
     firstSelectedItem?.upload_state === ItemUploadState.SUSPICIOUS ||
-    firstSelectedItem?.upload_state === ItemUploadState.FILE_TOO_LARGE;
+    firstSelectedItem?.upload_state ===
+      ItemUploadState.FILE_TOO_LARGE_TO_ANALYSE;
   const isWorkspace = firstSelectedItem
     ? itemIsWorkspace(firstSelectedItem)
     : false;

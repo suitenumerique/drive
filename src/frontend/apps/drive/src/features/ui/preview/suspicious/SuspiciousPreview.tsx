@@ -1,22 +1,17 @@
 import { useTranslation } from "react-i18next";
-import { FilePreviewType } from "../files-preview/FilesPreview";
 
 import { Button } from "@openfun/cunningham-react";
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
-import { downloadFile } from "@/features/items/utils";
-import { useCallback } from "react";
 import mimeSuspicious from "@/assets/files/icons/suspicious_file.svg";
 
 interface SuspiciousPreviewProps {
-  file: FilePreviewType;
+  handleDownload?: () => void;
 }
 
-export const SuspiciousPreview = ({ file }: SuspiciousPreviewProps) => {
+export const SuspiciousPreview = ({
+  handleDownload,
+}: SuspiciousPreviewProps) => {
   const { t } = useTranslation();
-
-  const handleDownload = useCallback(() => {
-    downloadFile(file.url!, file.title);
-  }, [file]);
 
   return (
     <div className="file-preview-suspicious">

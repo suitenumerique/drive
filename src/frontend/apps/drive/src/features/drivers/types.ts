@@ -20,7 +20,7 @@ export enum ItemUploadState {
   PENDING = "pending",
   ANALYZING = "analyzing",
   SUSPICIOUS = "suspicious",
-  FILE_TOO_LARGE = "file_too_large",
+  FILE_TOO_LARGE_TO_ANALYSE = "file_too_large_to_analyse",
   READY = "ready",
 }
 
@@ -29,6 +29,7 @@ export type Item = {
   title: string;
   filename: string;
   creator: {
+    id: string;
     full_name: string;
     short_name: string;
   };

@@ -1,6 +1,20 @@
 {
   "en": {
     "translation": {
+      "file_download_modal": {
+        "suspicious": {
+          "title": "This file is suspicious"
+        },
+        "file_too_large": {
+          "title": "This file is too large to be scanned"
+        },
+        "analyzing": {
+          "title": "This file is still being scanned"
+        },
+        "description": "Are you sure you want to download this file?",
+        "download": "Download anyway",
+          "cancel": "Cancel"
+      },
       "file_preview": {
         "suspicious": {
           "title": "Suspicious file",
@@ -328,6 +342,20 @@
   },
   "fr": {
     "translation": {
+      "file_download_modal": {
+        "suspicious": {
+          "title": "Ce fichier est suspect"
+        },
+        "file_too_large": {
+          "title": "Ce fichier est trop volumineux pour être analysé"
+        },
+        "analyzing": {
+          "title": "Ce fichier est en cours d'analyse"
+        },
+        "description": "Êtes-vous sûr de vouloir télécharger ce fichier ?",
+        "download": "Télécharger quand même",
+        "cancel": "Annuler"
+      },
       "file_preview": {
         "suspicious": {
           "title": "Fichier suspect",

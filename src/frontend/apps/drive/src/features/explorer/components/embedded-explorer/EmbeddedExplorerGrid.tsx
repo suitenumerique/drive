@@ -41,6 +41,7 @@ import {
   FilePreview,
   FilePreviewType,
 } from "@/features/ui/preview/files-preview/FilesPreview";
+import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 
 export type EmbeddedExplorerGridProps = {
   isCompact?: boolean;
@@ -109,6 +110,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
     Item | undefined
   >(undefined);
   const moveModal = useModal();
+  const { handleDownloadItem } = useDownloadItem();
 
   const handleClosePreview = () => {
     setIsPreviewOpen(false);
@@ -177,6 +179,12 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
       setCurrentPreviewItem(item);
     } else {
       setCurrentPreviewItem(undefined);
+    }
+  };
+
+  const handleDownloadFile = (file?: FilePreviewType) => {
+    if (file?.id === currentPreviewItem?.id) {
+      handleDownloadItem(currentPreviewItem);
     }
   };
 
@@ -401,6 +409,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
           title={t("file_preview.title")}
           files={previewItems ?? []}
           onChangeFile={handleChangePreviewItem}
+          handleDownloadFile={handleDownloadFile}
           openedFileId={openedFileId}
           sidebarContent={
             currentPreviewItem && <ItemInfo item={currentPreviewItem} />

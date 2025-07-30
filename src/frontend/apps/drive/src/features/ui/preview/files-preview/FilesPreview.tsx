@@ -15,7 +15,6 @@ import { PreviewPdf } from "../pdf-preview/PreviewPdf";
 import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
 import { getIconByMimeType } from "@/features/explorer/components/icons/ItemIcon";
 import { useTranslation } from "react-i18next";
-import { downloadFile } from "@/features/items/utils";
 import { SuspiciousPreview } from "../suspicious/SuspiciousPreview";
 
 export type FilePreviewType = {
@@ -40,6 +39,7 @@ interface FilePreviewProps {
   headerRightContent?: React.ReactNode;
   sidebarContent?: React.ReactNode;
   onChangeFile?: (file?: FilePreviewType) => void;
+  handleDownloadFile?: (file?: FilePreviewType) => void;
 }
 
 export const FilePreview = ({
@@ -52,6 +52,7 @@ export const FilePreview = ({
   sidebarContent,
   headerRightContent,
   onChangeFile,
+  handleDownloadFile,
 }: FilePreviewProps) => {
   const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(initialIndexFile);
@@ -67,7 +68,8 @@ export const FilePreview = ({
   const currentFile: FilePreviewData | null = data[currentIndex] || null;
 
   const handleDownload = async () => {
-    downloadFile(currentFile.url, currentFile.title);
+    console.log("currentFile", currentFile);
+    handleDownloadFile?.(currentFile);
   };
 
   // Render the appropriate viewer based on file category
@@ -77,7 +79,9 @@ export const FilePreview = ({
     }
 
     if (currentFile.isSuspicious) {
-      return <SuspiciousPreview file={currentFile} />;
+      return (
+        <SuspiciousPreview file={currentFile} handleDownload={handleDownload} />
+      );
     }
 
     switch (currentFile.category) {
