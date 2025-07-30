@@ -143,6 +143,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "children": [],
                 "created_at": level2_1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
+                    "id": str(level2_1.creator.id),
                     "full_name": level2_1.creator.full_name,
                     "short_name": level2_1.creator.short_name,
                 },
@@ -174,6 +175,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "children": [],
                 "created_at": level2_2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
+                    "id": str(level2_2.creator.id),
                     "full_name": level2_2.creator.full_name,
                     "short_name": level2_2.creator.short_name,
                 },
@@ -203,6 +205,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
         ],
         "created_at": level1_2.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
+            "id": str(level1_2.creator.id),
             "full_name": level1_2.creator.full_name,
             "short_name": level1_2.creator.short_name,
         },
@@ -348,6 +351,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                             "+00:00", "Z"
                         ),
                         "creator": {
+                            "id": str(level2_1.item.creator.id),
                             "full_name": level2_1.item.creator.full_name,
                             "short_name": level2_1.item.creator.short_name,
                         },
@@ -386,6 +390,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                                     "+00:00", "Z"
                                 ),
                                 "creator": {
+                                    "id": str(level3_1.item.creator.id),
                                     "full_name": level3_1.item.creator.full_name,
                                     "short_name": level3_1.item.creator.short_name,
                                 },
@@ -422,6 +427,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                             "+00:00", "Z"
                         ),
                         "creator": {
+                            "id": str(level2_2.item.creator.id),
                             "full_name": level2_2.item.creator.full_name,
                             "short_name": level2_2.item.creator.short_name,
                         },
@@ -455,6 +461,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                     "+00:00", "Z"
                 ),
                 "creator": {
+                    "id": str(level1_1.item.creator.id),
                     "full_name": level1_1.item.creator.full_name,
                     "short_name": level1_1.item.creator.short_name,
                 },
@@ -490,6 +497,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                     "+00:00", "Z"
                 ),
                 "creator": {
+                    "id": str(level1_2.item.creator.id),
                     "full_name": level1_2.item.creator.full_name,
                     "short_name": level1_2.item.creator.short_name,
                 },
@@ -525,6 +533,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                     "+00:00", "Z"
                 ),
                 "creator": {
+                    "id": str(level1_3.item.creator.id),
                     "full_name": level1_3.item.creator.full_name,
                     "short_name": level1_3.item.creator.short_name,
                 },
@@ -556,6 +565,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
         ],
         "created_at": root.item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
+            "id": str(root.item.creator.id),
             "full_name": root.item.creator.full_name,
             "short_name": root.item.creator.short_name,
         },
@@ -668,6 +678,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
     assert response.json() == {
         "created_at": level1_1.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
+            "id": str(level1_1.creator.id),
             "full_name": level1_1.creator.full_name,
             "short_name": level1_1.creator.short_name,
         },
@@ -700,6 +711,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "children": [],
                 "created_at": level2_1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
+                    "id": str(level2_1.creator.id),
                     "full_name": level2_1.creator.full_name,
                     "short_name": level2_1.creator.short_name,
                 },
@@ -731,6 +743,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "children": [],
                 "created_at": level2_2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
+                    "id": str(level2_2.creator.id),
                     "full_name": level2_2.creator.full_name,
                     "short_name": level2_2.creator.short_name,
                 },

@@ -88,6 +88,7 @@ def test_api_items_list_format():
             "abilities": item2.get_abilities(user),
             "created_at": item2.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
+                "id": str(item2.creator.id),
                 "full_name": item2.creator.full_name,
                 "short_name": item2.creator.short_name,
             },
@@ -118,6 +119,7 @@ def test_api_items_list_format():
             "abilities": item.get_abilities(user),
             "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
+                "id": str(item.creator.id),
                 "full_name": item.creator.full_name,
                 "short_name": item.creator.short_name,
             },
@@ -148,6 +150,7 @@ def test_api_items_list_format():
             "abilities": item3.get_abilities(user),
             "created_at": item3.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
+                "id": str(item3.creator.id),
                 "full_name": item3.creator.full_name,
                 "short_name": item3.creator.short_name,
             },

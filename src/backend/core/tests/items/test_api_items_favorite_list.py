@@ -69,6 +69,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "abilities": item.get_abilities(user),
                 "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
+                    "id": str(item.creator.id),
                     "full_name": item.creator.full_name,
                     "short_name": item.creator.short_name,
                 },
