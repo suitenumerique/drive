@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.1.1] - 2025-07-30
+
 ### Fixed
 
 - 🐛(backend) stop decreasing twice the numchild in deletion process #284
@@ -39,5 +41,6 @@ and this project adheres to
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.1.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.1.1...main
+[0.1.1]: https://github.com/suitenumerique/drive/releases/v0.1.1
 [0.1.0]: https://github.com/suitenumerique/drive/releases/v0.1.0
