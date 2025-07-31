@@ -124,6 +124,40 @@ export type User = {
   language: string;
 };
 
+export interface Link {
+  label: string;
+  href: string;
+}
+
+export interface Logo {
+  src: string;
+  width: string;
+  alt: string;
+  withTitle: boolean;
+}
+
+export interface BottomInformation {
+  label: string;
+  link?: Link;
+}
+
+export interface ContentType {
+  logo?: Logo;
+  externalLinks?: Link[];
+  legalLinks?: Link[];
+  bottomInformation?: BottomInformation;
+}
+
+export interface FooterType {
+  default: ContentType;
+  [key: string]: ContentType;
+}
+
+
+interface ThemeCustomization {
+  footer?: FooterType;
+}
+
 export type ApiConfig = {
   POSTHOG_KEY?: string;
   POSTHOG_HOST?: string;
@@ -133,6 +167,7 @@ export type ApiConfig = {
   FRONTEND_FEEDBACK_ITEMS?: Record<string, { url: string }>;
   FRONTEND_THEME?: string;
   FRONTEND_HIDE_GAUFRE?: boolean;
+  theme_customization?: ThemeCustomization;
 };
 
 export interface APIList<T> {

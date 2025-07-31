@@ -27,9 +27,12 @@ import { Button } from "@openfun/cunningham-react";
 import { Feedback } from "@/features/feedback/Feedback";
 import { useConfig } from "@/features/config/ConfigProvider";
 export default function HomePage() {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const { user } = useAuth();
   const { config } = useConfig();
+  const footerJson = config?.theme_customization?.footer;
+  const resolvedLanguage = i18n.resolvedLanguage;
+  const langData = footerJson?.[resolvedLanguage as keyof typeof footerJson];
 
   useEffect(() => {
     if (user) {
@@ -98,7 +101,17 @@ export default function HomePage() {
           }
         />
       </HomeGutter>
-      <Footer />
+      <Footer 
+        externalLinks={footerJson?.default?.externalLinks} 
+        license={{
+          label: langData?.bottomInformation?.label || "",
+          link: {
+            label: langData?.bottomInformation?.link?.label || "",
+            href: langData?.bottomInformation?.link?.href || "",
+          },
+        }}
+        legalLinks={langData?.legalLinks}
+      />
     </>
   );
 }
