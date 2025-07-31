@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(back) allow theme customnization using a configuration file #299
+- ✨(front) use theme_customization to configure the footer #299
+
 ### Fixed
 
 - 🔧(nginx) fix trash route #309

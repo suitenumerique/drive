@@ -1,4 +1,4 @@
-import { TreeViewDataType } from "@gouvfr-lasuite/ui-kit";
+import { FooterProps, TreeViewDataType } from "@gouvfr-lasuite/ui-kit";
 
 export enum ItemType {
   FILE = "file",
@@ -124,6 +124,15 @@ export type User = {
   language: string;
 };
 
+export type LocalizedThemeCustomization<T> = {
+  default: T;
+  [key: string]: T;
+};
+
+export interface ThemeCustomization {
+  footer?: LocalizedThemeCustomization<FooterProps>;
+}
+
 export type ApiConfig = {
   POSTHOG_KEY?: string;
   POSTHOG_HOST?: string;
@@ -133,6 +142,7 @@ export type ApiConfig = {
   FRONTEND_FEEDBACK_ITEMS?: Record<string, { url: string }>;
   FRONTEND_THEME?: string;
   FRONTEND_HIDE_GAUFRE?: boolean;
+  theme_customization?: ThemeCustomization;
 };
 
 export interface APIList<T> {

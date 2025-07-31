@@ -1,74 +1,73 @@
 {
-    "footer": {
-      "default": {
-        "externalLinks": [
-          {
-            "label": "Github",
-            "href": "https://github.com/suitenumerique/drive/"
-          },
-          {
-            "label": "DINUM",
-            "href": "https://www.numerique.gouv.fr/dinum/"
-          },
-          {
-            "label": "ANCT",
-            "href": "https://anct.gouv.fr/"
-          }
-        ],
-        "bottomInformation": {
-          "label": "Unless otherwise stated, all content on this site is under",
-          "link": {
-            "label": "licence etalab-2.0",
-            "href": "https://github.com/etalab/licence-ouverte/blob/master/LO.md"
-          }
+  "footer": {
+    "default": {
+      "externalLinks": [
+        {
+          "label": "Github",
+          "href": "https://github.com/suitenumerique/drive/"
+        },
+        {
+          "label": "DINUM",
+          "href": "https://www.numerique.gouv.fr/dinum/"
+        },
+        {
+          "label": "ANCT",
+          "href": "https://anct.gouv.fr/"
         }
-      },
-      "en": {
-        "legalLinks": [
-          {
-            "label": "Legal Notice",
-            "href": "#"
-          },
-          {
-            "label": "Personal data and cookies",
-            "href": "#"
-          },
-          {
-            "label": "Accessibility: non compliant",
-            "href": "#"
-          }
-        ],
-        "bottomInformation": {
-          "label": "Unless otherwise stated, all content on this site is under",
-          "link": {
-            "label": "licence etalab-2.0",
-            "href": "https://github.com/etalab/licence-ouverte/blob/master/LO.md"
-          }
+      ],
+      "license": {
+        "label": "Unless otherwise stated, all content on this site is under",
+        "link": {
+          "label": "licence etalab-2.0",
+          "href": "https://github.com/etalab/licence-ouverte/blob/master/LO.md"
         }
-      },
-      "fr": {
-        "legalLinks": [
-          {
-            "label": "Mentions légales",
-            "href": "#"
-          },
-          {
-            "label": "Données personnelles et cookies",
-            "href": "#"
-          },
-          {
-            "label": "Accessibilité: non conforme",
-            "href": "#"
-          }
-        ],
-        "bottomInformation": {
-          "label": "Sauf mention contraire, tout le contenu de ce site est sous",
-          "link": {
-            "label": "licence etalab-2.0",
-            "href": "https://github.com/etalab/licence-ouverte/blob/master/LO.md"
-          }
+      }
+    },
+    "en": {
+      "legalLinks": [
+        {
+          "label": "Legal Notice",
+          "href": "#"
+        },
+        {
+          "label": "Personal data and cookies",
+          "href": "#"
+        },
+        {
+          "label": "Accessibility: non compliant",
+          "href": "#"
+        }
+      ],
+      "license": {
+        "label": "Unless otherwise stated, all content on this site is under",
+        "link": {
+          "label": "licence etalab-2.0",
+          "href": "https://github.com/etalab/licence-ouverte/blob/master/LO.md"
+        }
+      }
+    },
+    "fr": {
+      "legalLinks": [
+        {
+          "label": "Mentions légales",
+          "href": "#"
+        },
+        {
+          "label": "Données personnelles et cookies",
+          "href": "#"
+        },
+        {
+          "label": "Accessibilité: non conforme",
+          "href": "#"
+        }
+      ],
+      "license": {
+        "label": "Sauf mention contraire, tout le contenu de ce site est sous",
+        "link": {
+          "label": "licence etalab-2.0",
+          "href": "https://github.com/etalab/licence-ouverte/blob/master/LO.md"
         }
       }
     }
   }
-  
+}
