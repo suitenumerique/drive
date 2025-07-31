@@ -14,8 +14,8 @@ interface PreviewGristProps {
         // Assuming bootstrapGrist is globally available
           if (window) {
             window.bootstrapGrist?.({
-                initialFile: "/gristtest.grist", // Todo: use src instead (gots to figure out that CORS issue with NGINX...)
-                name: title || "Grist document",
+              // Todo: need to make a PR in grist-static to fetch with credentials
+                initialFile: "/gristtest.grist",
                 elementId: 'grist-app',
                 singlePage: false,
           });
