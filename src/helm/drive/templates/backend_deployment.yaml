@@ -90,6 +90,11 @@ spec:
               subPath: {{ .subPath | default "" }}
               readOnly: {{ .readOnly }}
             {{- end }}
+            {{- if .Values.backend.themeCustomization.enabled }}
+            - name: theme-customization
+              mountPath: {{ .Values.backend.themeCustomization.mount_path }}
+              readOnly: true
+            {{- end }}
       {{- with .Values.backend.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -137,6 +142,11 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        {{- end }}
+        {{- if .Values.backend.themeCustomization.enabled }}
+        - name: theme-customization
+          configMap:
+            name: drive-theme-customization
         {{- end }}
 ---
 {{ if .Values.backend.pdb.enabled }}
