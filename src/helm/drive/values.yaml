@@ -199,6 +199,14 @@ backend:
     annotations: 
       argocd.argoproj.io/hook: PostSync
 
+  ## @param backend.themeCustomization.enabled Enable theme customization
+  ## @param backend.themeCustomization.file_content Content of the theme customization file. Must be a json object.
+  ## @param backend.themeCustomization.mount_path Path where the customization file will be mounted in the backend deployment.
+  themeCustomization:
+    enabled: false
+    file_content: ""
+    mount_path: /app/drive/configuration/theme
+
   ## @param backend.celery.replicas Amount of celery replicas
   ## @param backend.celery.command Override the celery container command
   ## @param backend.celery.args Override the celery container args
