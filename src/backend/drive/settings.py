@@ -443,6 +443,16 @@ class Base(Configuration):
     FRONTEND_HIDE_GAUFRE = values.BooleanValue(
         default=False, environ_name="FRONTEND_HIDE_GAUFRE", environ_prefix=None
     )
+    THEME_CUSTOMIZATION_FILE_PATH = values.Value(
+        os.path.join(BASE_DIR, "drive/configuration/theme/default.json"),
+        environ_name="THEME_CUSTOMIZATION_FILE_PATH",
+        environ_prefix=None,
+    )
+    THEME_CUSTOMIZATION_CACHE_TIMEOUT = values.Value(
+        60 * 60 * 24,
+        environ_name="THEME_CUSTOMIZATION_CACHE_TIMEOUT",
+        environ_prefix=None,
+    )
     # Crisp
     CRISP_WEBSITE_ID = values.Value(
         None, environ_name="CRISP_WEBSITE_ID", environ_prefix=None
