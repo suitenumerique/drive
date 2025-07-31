@@ -11,17 +11,20 @@ import { ImageViewer } from "../image-viewer/ImageViewer";
 import { VideoPlayer } from "../video-player/VideoPlayer";
 import { AudioPlayer } from "../audio-player/AudioPlayer";
 import { PreviewPdf } from "../pdf-preview/PreviewPdf";
+import { PreviewGrist } from "../grist-preview/PreviewGrist";
 
 import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
 import { getIconByMimeType } from "@/features/explorer/components/icons/ItemIcon";
 import { useTranslation } from "react-i18next";
 import { downloadFile } from "@/features/items/utils";
+import { PreviewCsv } from "../csv-preview/CsvPreview";
 
 export type FilePreviewType = {
   id: string;
   title: string;
   mimetype: string;
   url: string;
+  extension?: string | null;
 };
 
 type FilePreviewData = FilePreviewType & {
@@ -56,9 +59,10 @@ export const FilePreview = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const data: FilePreviewData[] = useMemo(() => {
-    return files?.map((file) => ({
+    return files?.map((file) => (
+      {
       ...file,
-      category: getMimeCategory(file.mimetype),
+      category: getMimeCategory(file.mimetype, file.url.split('.').pop() || null),
     }));
   }, [files]);
 
@@ -109,6 +113,12 @@ export const FilePreview = ({
         );
       case MimeCategory.PDF:
         return <PreviewPdf src={currentFile.url} />;
+      case MimeCategory.GRIST:
+        console.log(currentFile.url);
+        return <PreviewGrist src={currentFile.url} title={currentFile.title}/>;
+      case MimeCategory.CALC:
+        // TODO: separate between CSV and Excel-like files
+        return <PreviewCsv src={currentFile.url} title={currentFile.title}/>;
       default:
         return <NotSupportedPreview file={currentFile} />;
     }
@@ -148,7 +158,7 @@ export const FilePreview = ({
 
               <div className="file-preview-title">
                 <img
-                  src={getIconByMimeType(currentFile.mimetype, "mini").src}
+                  src={getIconByMimeType(currentFile.mimetype, "mini", currentFile.url.split('.').pop()).src}
                   alt=""
                   width={24}
                   className={`item-icon`}

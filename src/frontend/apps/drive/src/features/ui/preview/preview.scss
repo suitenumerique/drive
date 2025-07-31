@@ -7,3 +7,5 @@
 @use "./components/volume-bar/VolumeBar.scss";
 @use "./components/controls/PreviewControls.scss";
 @use "./not-supported/NotSupportedPreview.scss";
+@use "./grist-preview/grist-preview.scss";
+@use "./csv-preview/csv-preview.scss";
