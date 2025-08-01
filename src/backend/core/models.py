@@ -419,6 +419,16 @@ class ItemQuerySet(TreeQuerySet):
 
         return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC))
 
+    def filter_non_deleted(self, **kwargs):
+        """Filter the non deleted items"""
+        return self.filter(
+            models.Q(
+                models.Q(deleted_at__isnull=True)
+                | models.Q(ancestors_deleted_at__isnull=True),
+            ),
+            **kwargs,
+        )
+
 
 class ItemManager(TreeManager):
     """Custom manager for Item model overriding create_child method."""
@@ -624,7 +634,7 @@ class Item(TreeModel, BaseModel):
         return f"item_{self.id!s}_nb_accesses"
 
     def manage_unique_title(self, title):
-        """Check if the title is unique in the same path."""
+        """Manage the unique title in the same path."""
         return manage_unique_title_utils(
             self.siblings(),
             title,

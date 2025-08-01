@@ -410,7 +410,7 @@ def test_api_items_update_title_unique_in_current_path():
         format="json",
     )
     assert response.status_code == 200
-    assert response.json()["title"] == "child2_1"
+    assert response.json()["title"] == "child2_01"
 
 
 def test_api_items_update_title_unique_in_current_path_soft_deleted():

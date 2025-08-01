@@ -359,7 +359,7 @@ def test_api_items_children_create_title_already_existing_at_the_same_level():
     )
 
     assert response.status_code == 201
-    assert response.json()["title"] == "my item_1"
+    assert response.json()["title"] == "my item_01"
 
 
 def test_api_items_children_create_item_soft_deleted_with_same_title_exists():

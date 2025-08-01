@@ -767,21 +767,29 @@ def test_models_items_unique_title_in_current_path():
         parent=parent, title="folder", type=models.ItemTypeChoices.FOLDER
     )
 
-    assert modified_folder_title.title == "folder_1"
+    assert modified_folder_title.title == "folder_01"
 
     factories.ItemFactory(
         parent=parent,
-        title="file_1.txt",
+        title="file_01.txt",
         type=models.ItemTypeChoices.FILE,
-        filename="file_1.txt",
+        filename="file_01.txt",
     )
 
     factories.ItemFactory(
         parent=parent,
-        title="file_2.txt",
+        title="file_02.txt",
         type=models.ItemTypeChoices.FILE,
-        filename="file_2.txt",
+        filename="file_02.txt",
     )
+
+    modified_file_title = factories.ItemFactory(
+        parent=parent,
+        title="file.txt",
+        type=models.ItemTypeChoices.FILE,
+        filename="file.txt",
+    )
+    assert modified_file_title.title == "file_03.txt"
 
     factories.ItemFactory(
         parent=parent,
