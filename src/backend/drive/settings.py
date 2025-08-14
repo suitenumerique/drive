@@ -369,7 +369,7 @@ class Base(Configuration):
                 environ_prefix=None,
             ),
             "sdk_event_relay": values.Value(
-                default="100/minute",
+                default="200/minute",
                 environ_name="API_SDK_EVENT_RELAY_THROTTLE_RATE",
                 environ_prefix=None,
             ),
