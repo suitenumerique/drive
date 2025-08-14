@@ -19,6 +19,7 @@ and this project adheres to
 - ♻️(back) manage title uniqueness by generating new one if existing #296
 - 🧑‍💻(docker) handle frontend development images with docker compose #298
 - 🔧(project) change env.d system by using local files #298
+- Bump ui-kit to remove the usage of base64 font in CSS #302
 
 ### Fixed
 
