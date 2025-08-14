@@ -79,6 +79,10 @@ server {
         try_files $uri /sdk.html;
     }
 
+    location ~ "^/trash/?$" {
+        try_files $uri /explorer/trash.html;
+    }
+
     location ~ "^/401/?$" {
         try_files $uri /401.html;
     }

@@ -23,6 +23,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(front) set the correct move icon
+- 🐛(nginx) add trash route
 
 ## [v0.1.1] - 2025-07-30
 
