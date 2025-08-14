@@ -25,6 +25,7 @@ and this project adheres to
 
 - 🐛(front) set the correct move icon
 - 🐛(nginx) add trash route
+- 💬(front) update feedback texts
 
 ## [v0.1.1] - 2025-07-30
 

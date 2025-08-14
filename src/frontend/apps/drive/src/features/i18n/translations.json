@@ -44,19 +44,19 @@
         "button": "Give feedback",
         "modal": {
           "title": "New feedback",
-          "description": "This application is in alpha. You can help us in several ways:",
+          "description": "Drive is under development: your feedback matters! Choose how to share your ideas:",
           "buttons": {
             "form": {
-              "title": "Fill out a questionnaire",
-              "description": "For a structured feedback"
+              "title": "Give quick feedback",
+              "description": "30 sec to tell us what you think or report a bug"
             },
             "tchap": {
-              "title": "Write a message on Tchap",
-              "description": "To send us your feedback directly via message"
+              "title": "Write on Tchap",
+              "description": "Direct exchange with our team"
             },
             "visio": {
-              "title": "Chat on Visio",
-              "description": "For a deep discussion with a LaSuite member"
+              "title": "Talk on video",
+              "description": "20 min for an in-depth discussion"
             }
           }
         }
@@ -370,19 +370,19 @@
         "button": "Faire un retour",
         "modal": {
           "title": "Nouveau retour",
-          "description": "Cette application est en cours de développement. Vous pouvez nous aider de plusieurs façons :",
+          "description": "Fichiers est en cours de développement : vos retours comptent ! Choisissez comment partager vos idées :",
           "buttons": {
             "form": {
-              "title": "Remplir un questionnaire",
-              "description": "Pour un retour structuré"
+              "title": "Donner un avis rapide",
+              "description": "30 sec pour nous dire ce que vous pensez ou signaler un bug"
             },
             "tchap": {
-              "title": "Écrire un message sur Tchap",
-              "description": "Pour nous faire vos remarques directement par message"
+              "title": "Écrire sur Tchap",
+              "description": "Échange direct avec notre équipe"
             },
             "visio": {
-              "title": "Échanger en visio",
-              "description": "Pour discuter en profondeur de Fichiers avec un membre de LaSuite"
+              "title": "Parler en visio",
+              "description": "20 min pour aller en profondeur"
             }
           }
         }
