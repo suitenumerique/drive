@@ -16,9 +16,13 @@ and this project adheres to
 
 ### Changed
 
-- ♻️(back) manage title uniqueness by generating new one if existing #296 
+- ♻️(back) manage title uniqueness by generating new one if existing #296
 - 🧑‍💻(docker) handle frontend development images with docker compose #298
 - 🔧(project) change env.d system by using local files #298
+
+### Fixed
+
+- 🐛(front) set the correct move icon
 
 ## [v0.1.1] - 2025-07-30
 

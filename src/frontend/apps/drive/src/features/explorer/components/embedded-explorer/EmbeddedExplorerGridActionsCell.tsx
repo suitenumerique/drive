@@ -98,7 +98,7 @@ export const EmbeddedExplorerGridActionsCell = (
               callback: shareFileModal.open,
             },
             {
-              icon: <span className="material-icons">group</span>,
+              icon: <span className="material-icons">arrow_forward</span>,
               label: t("explorer.grid.actions.move"),
               isHidden: !item.abilities.move,
               callback: handleMove,
