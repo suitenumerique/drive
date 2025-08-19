@@ -11,6 +11,7 @@ and this project adheres to
 ### Fixed
 
 - 🔧(nginx) fix trash route #309
+- 🐛(front) fix workspace link react cache #310
 
 ## [v0.2.0] - 2025-08-18
 

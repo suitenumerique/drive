@@ -25,6 +25,7 @@ import {
   HorizontalSeparator,
   ShareModal,
   ShareModalCopyLinkFooter,
+  useTreeContext,
 } from "@gouvfr-lasuite/ui-kit";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -44,7 +45,7 @@ export const WorkspaceShareModal = ({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const copyToClipboard = useClipboard();
-
+  const treeContext = useTreeContext<Item>();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [queryValue, setQueryValue] = useState("");
   const previousSearchResult = useRef<User[]>([]);
@@ -226,10 +227,19 @@ export const WorkspaceShareModal = ({
       ]}
       linkReach={item.link_reach}
       onUpdateLinkReach={(value) => {
-        updateItem.mutate({
-          id: item.id,
-          link_reach: value as LinkReach,
-        });
+        updateItem.mutate(
+          {
+            id: item.id,
+            link_reach: value as LinkReach,
+          },
+          {
+            onSuccess: () => {
+              treeContext?.treeData.updateNode(item.id, {
+                link_reach: value as LinkReach,
+              });
+            },
+          }
+        );
       }}
       canView={item.abilities.accesses_view}
     >
