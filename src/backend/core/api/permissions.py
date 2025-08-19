@@ -103,6 +103,7 @@ class AccessPermission(permissions.BasePermission):
         return request.user.is_authenticated or view.action not in [
             "create",
             "trashbin",
+            "search",
         ]
 
     def has_object_permission(self, request, view, obj):

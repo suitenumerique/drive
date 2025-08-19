@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) search endpoint for ItemViewSet #312
+
 ## [v0.2.0] - 2025-08-18
 
 ### Added
