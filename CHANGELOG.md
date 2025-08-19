@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🔧(nginx) fix trash route #309
+
 ## [v0.2.0] - 2025-08-18
 
 ### Added
