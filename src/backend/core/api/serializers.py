@@ -232,6 +232,17 @@ class ListItemSerializer(serializers.ModelSerializer):
         return hard_delete_at.isoformat()
 
 
+class SearchItemSerializer(ListItemSerializer):
+    """Serialize items for search."""
+
+    parents = ListItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = models.Item
+        fields = ListItemSerializer.Meta.fields + ["parents"]
+        read_only_fields = ListItemSerializer.Meta.read_only_fields + ["parents"]
+
+
 class ItemSerializer(ListItemSerializer):
     """Serialize items with all fields for display in detail views."""
 

@@ -36,7 +36,7 @@ from core.services.sdk_relay import SDKRelayManager
 from core.tasks.item import process_item_deletion
 
 from . import permissions, serializers, utils
-from .filters import ItemFilter, ListItemFilter
+from .filters import ItemFilter, ListItemFilter, SearchItemFilter
 
 logger = logging.getLogger(__name__)
 
@@ -422,6 +422,7 @@ class ItemViewSet(
     children_serializer_class = serializers.ListItemSerializer
     create_serializer_class = serializers.CreateItemSerializer
     tree_serializer_class = serializers.ListItemSerializer
+    search_serializer_class = serializers.SearchItemSerializer
 
     def annotate_is_favorite(self, queryset):
         """
@@ -526,6 +527,7 @@ class ItemViewSet(
 
     def get_response_for_queryset(self, queryset):
         """Return paginated response for the queryset if requested."""
+
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
@@ -940,6 +942,93 @@ class ItemViewSet(
         return drf.response.Response(
             utils.flat_to_nested(serializer.data), status=drf.status.HTTP_200_OK
         )
+
+    @drf.decorators.action(
+        detail=False,
+        methods=["get"],
+        url_path="search",
+        pagination_class=drf.pagination.PageNumberPagination,
+    )
+    def search(self, request, *args, **kwargs):
+        """
+        Search for items using filterset.
+        """
+
+        queryset = self.queryset
+        filterset = SearchItemFilter(
+            request.GET, queryset=queryset, request=self.request
+        )
+
+        if not filterset.is_valid():
+            raise drf.exceptions.ValidationError(filterset.errors)
+
+        workspace = filterset.form.cleaned_data.get("workspace")
+        # First look for all top level items user has access to
+        user = request.user
+        item_access_queryset = models.ItemAccess.objects.select_related("item").filter(
+            db.Q(user=user) | db.Q(team__in=user.teams),
+            item__type=models.ItemTypeChoices.FOLDER,
+            item__deleted_at__isnull=True,
+            item__path__depth=1,
+        )
+
+        if workspace:
+            item_access_queryset = item_access_queryset.filter(item__id=workspace)
+
+        top_level_items = item_access_queryset.values_list("item__path", flat=True)
+        # Then look for all items that are children of the top level items
+
+        if not top_level_items:
+            return self.get_response_for_queryset(queryset.none())
+
+        path_list = db.Q()
+        for top_level_item in top_level_items:
+            path_list |= db.Q(path__descendants=top_level_item)
+
+        queryset = queryset.filter(path_list)
+        queryset = filterset.filter_queryset(queryset)
+        queryset = self.annotate_user_roles(queryset)
+        queryset = self.annotate_is_favorite(queryset)
+
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            items = self._compute_parents(page)
+            serializer = self.get_serializer(items, many=True)
+            result = self.get_paginated_response(serializer.data)
+            return result
+
+        items = self._compute_parents(queryset)
+        serializer = self.get_serializer(items, many=True)
+        return drf.response.Response(serializer.data)
+
+    def _compute_parents(self, items):
+        """
+        Compute parents for the items by analyzing their paths and fetching missing parents.
+        """
+        # Build parents dictionary and collect missing parent IDs
+        parents = {str(item.id): item for item in items}
+        missing_parent_ids = set()
+
+        for item in items:
+            for item_id in item.path:
+                if item_id not in parents and item_id not in missing_parent_ids:
+                    missing_parent_ids.add(item_id)
+
+        # Fetch missing ancestors from database
+        if missing_parent_ids:
+            for parent in models.Item.objects.filter(
+                id__in=missing_parent_ids
+            ).iterator():
+                parents[str(parent.id)] = parent
+
+        # Set parents for each item
+        for item in items:
+            item.parents = [
+                parents[item_id] for item_id in item.path if item_id != str(item.id)
+            ]
+
+        return items
 
     @drf.decorators.action(detail=True, methods=["put"], url_path="link-configuration")
     def link_configuration(self, request, *args, **kwargs):
