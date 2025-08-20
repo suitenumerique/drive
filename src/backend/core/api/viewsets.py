@@ -963,16 +963,16 @@ class ItemViewSet(
         page = self.paginate_queryset(queryset)
 
         if page is not None:
-            items = self._compute_ancestors(page)
+            items = self._compute_parents(page)
             serializer = self.get_serializer(items, many=True)
             result = self.get_paginated_response(serializer.data)
             return result
 
-        items = self._compute_ancestors(queryset)
+        items = self._compute_parents(queryset)
         serializer = self.get_serializer(items, many=True)
         return drf.response.Response(serializer.data)
 
-    def _compute_ancestors(self, items):
+    def _compute_parents(self, items):
         """
         Compute ancestors for the items by analyzing their paths and fetching missing ancestors.
         """
