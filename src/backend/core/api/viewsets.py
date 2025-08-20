@@ -971,26 +971,30 @@ class ItemViewSet(
 
     def _compute_parents(self, items):
         """
-        Compute ancestors for the items by analyzing their paths and fetching missing ancestors.
+        Compute parents for the items by analyzing their paths and fetching missing parents.
         """
-        # Build ancestors dictionary and collect missing ancestor IDs
-        ancestors = {str(item.id): item for item in items}
-        missing_ancestor_ids = set()
-        
+        # Build parents dictionary and collect missing parent IDs
+        parents = {str(item.id): item for item in items}
+        missing_parent_ids = set()
+
         for item in items:
             for item_id in item.path:
-                if item_id not in ancestors and item_id not in missing_ancestor_ids:
-                    missing_ancestor_ids.add(item_id)
-        
+                if item_id not in parents and item_id not in missing_parent_ids:
+                    missing_parent_ids.add(item_id)
+
         # Fetch missing ancestors from database
-        if missing_ancestor_ids:
-            for ancestor in models.Item.objects.filter(id__in=missing_ancestor_ids).iterator():
-                ancestors[str(ancestor.id)] = ancestor
-        
+        if missing_parent_ids:
+            for parent in models.Item.objects.filter(
+                id__in=missing_parent_ids
+            ).iterator():
+                parents[str(parent.id)] = parent
+
         # Set parents for each item
         for item in items:
-            item.parents = [ancestors[item_id] for item_id in item.path if item_id != str(item.id)]
-        
+            item.parents = [
+                parents[item_id] for item_id in item.path if item_id != str(item.id)
+            ]
+
         return items
 
     @drf.decorators.action(detail=True, methods=["put"], url_path="link-configuration")
