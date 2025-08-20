@@ -18,6 +18,7 @@ and this project adheres to
 - 🔧(nginx) fix trash route #309
 - 🐛(front) fix workspace link react cache #310
 - 🐛(backend) allow item partial update without modifying title #316
+- 🌐(front) fix share item wording #315
 
 ## [v0.2.0] - 2025-08-18
 
