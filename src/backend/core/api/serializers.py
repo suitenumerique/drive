@@ -292,7 +292,11 @@ class ItemSerializer(ListItemSerializer):
 
     def update(self, instance, validated_data):
         """Validate that the title is unique in the current path."""
-        if instance.title != validated_data.get("title") and instance.depth > 1:
+        if (
+            validated_data.get("title")
+            and instance.title != validated_data.get("title")
+            and instance.depth > 1
+        ):
             validated_data["title"] = instance.manage_unique_title(
                 validated_data.get("title")
             )

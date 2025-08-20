@@ -506,3 +506,88 @@ def test_api_items_update_empty_description():
 
     item.refresh_from_db()
     assert item.description == ""
+
+
+def test_api_items_update_link_reach():
+    """
+    Update file link_reach
+    """
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    parent = factories.ItemFactory(
+        link_reach="restricted",
+        type=models.ItemTypeChoices.FOLDER,
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    item = factories.ItemFactory(
+        parent=parent,
+        link_reach="restricted",
+        type=models.ItemTypeChoices.FILE,
+        creator=user,
+    )
+
+    assert item.title is not None
+
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/",
+        {"link_reach": "public"},
+        format="json",
+    )
+    assert response.status_code == 200
+    assert response.json()["link_reach"] == "public"
+
+    item.refresh_from_db()
+    assert item.link_reach == "public"
+
+
+def test_api_items_update_empty_title():
+    """
+    Update file title
+    """
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    parent = factories.ItemFactory(
+        link_reach="restricted",
+        type=models.ItemTypeChoices.FOLDER,
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    item = factories.ItemFactory(
+        parent=parent,
+        link_reach="restricted",
+        type=models.ItemTypeChoices.FILE,
+        creator=user,
+    )
+
+    assert item.title is not None
+
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/",
+        {"title": ""},
+        format="json",
+    )
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "title",
+                "code": "blank",
+                "detail": "This field may not be blank.",
+            },
+        ],
+        "type": "validation_error",
+    }
+    assert response.status_code == 400
+
+    item.refresh_from_db()
+    assert item.title is not None
