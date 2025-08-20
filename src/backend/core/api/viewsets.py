@@ -418,7 +418,7 @@ class ItemViewSet(
     children_serializer_class = serializers.ListItemSerializer
     create_serializer_class = serializers.CreateItemSerializer
     tree_serializer_class = serializers.ListItemSerializer
-    search_serializer_class = serializers.ListItemSerializer
+    search_serializer_class = serializers.SearchItemSerializer
 
     def annotate_is_favorite(self, queryset):
         """
@@ -957,7 +957,45 @@ class ItemViewSet(
         queryset = self.annotate_user_roles(queryset)
         queryset = self.annotate_is_favorite(queryset)
 
-        return self.get_response_for_queryset(queryset)
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            items = self._compute_ancestors(page)
+            serializer = self.get_serializer(items, many=True)
+            result = self.get_paginated_response(serializer.data)
+            return result
+
+        items = self._compute_ancestors(queryset)
+        serializer = self.get_serializer(items, many=True)
+        return drf.response.Response(serializer.data)
+
+    def _compute_ancestors(self, items):
+        """
+        Compute ancestors for the item.
+        """
+        ancestors = {}
+        ancestors_id = set()
+        # Add in a set all the items id we have to compute.
+        for item in items:
+            for item_id in item.path:
+                # The current item can be an ancestor of other items so we save it.
+                if item_id == str(item.id):
+                    ancestors[str(item.id)] = item
+                elif item_id not in ancestors_id:
+                    ancestors_id.add(item_id)
+        ancestors_list = ancestors_id - set(ancestors.keys())
+
+        if ancestors_list:
+            ancestors_iterator = models.Item.objects.filter(
+                id__in=ancestors_list
+            ).iterator()
+            for ancestor in ancestors_iterator:
+                ancestors[str(ancestor.id)] = ancestor
+
+        for item in items:
+            item.parents = [ancestors[id] for id in item.path if id != str(item.id)]
+
+        return items
 
     @drf.decorators.action(detail=True, methods=["put"], url_path="link-configuration")
     def link_configuration(self, request, *args, **kwargs):
