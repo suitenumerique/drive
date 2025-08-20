@@ -29,21 +29,251 @@ def test_api_items_search_authenticated_without_filters():
     client.force_login(user)
 
     top_parent = factories.ItemFactory(
-        title="Item 1", users=[user], type=models.ItemTypeChoices.FOLDER
+        title="Item 1", type=models.ItemTypeChoices.FOLDER
+    )
+    top_parent_access = factories.UserItemAccessFactory(item=top_parent, user=user)
+    parent = factories.ItemFactory(
+        title="Item 2", parent=top_parent, type=models.ItemTypeChoices.FOLDER
     )
     children = factories.ItemFactory(
-        title="Item 2", parent=top_parent, type=models.ItemTypeChoices.FILE
+        title="Item 3", parent=parent, type=models.ItemTypeChoices.FILE
     )
-    factories.ItemFactory(title="Item 3")
+    factories.ItemFactory(title="Item hidden")
 
     response = client.get("/api/v1.0/items/search/")
     assert response.status_code == 200
-    assert response.data["count"] == 3
+    assert response.data["count"] == 4
 
-    results = response.json()["results"]
-    assert results[0]["id"] == str(user.get_main_workspace().id)
-    assert results[1]["id"] == str(top_parent.id)
-    assert results[2]["id"] == str(children.id)
+    assert response.json()["results"] == [
+        {
+            "abilities": user.get_main_workspace().get_abilities(user),
+            "created_at": user.get_main_workspace()
+            .created_at.isoformat()
+            .replace("+00:00", "Z"),
+            "creator": {
+                "full_name": user.get_main_workspace().creator.full_name,
+                "short_name": user.get_main_workspace().creator.short_name,
+            },
+            "deleted_at": None,
+            "depth": 1,
+            "description": None,
+            "filename": None,
+            "hard_delete_at": None,
+            "id": str(user.get_main_workspace().id),
+            "is_favorite": False,
+            "link_reach": user.get_main_workspace().link_reach,
+            "link_role": user.get_main_workspace().link_role,
+            "main_workspace": True,
+            "mimetype": None,
+            "nb_accesses": 1,
+            "numchild": 0,
+            "numchild_folder": 0,
+            "parents": [],
+            "path": str(user.get_main_workspace().path),
+            "size": None,
+            "title": "Workspace",
+            "type": "folder",
+            "updated_at": user.get_main_workspace()
+            .updated_at.isoformat()
+            .replace("+00:00", "Z"),
+            "upload_state": None,
+            "url": None,
+            "user_roles": ["owner"],
+        },
+        {
+            "abilities": top_parent.get_abilities(user),
+            "created_at": top_parent.created_at.isoformat().replace("+00:00", "Z"),
+            "creator": {
+                "full_name": top_parent.creator.full_name,
+                "short_name": top_parent.creator.short_name,
+            },
+            "deleted_at": None,
+            "depth": 1,
+            "description": None,
+            "filename": None,
+            "hard_delete_at": None,
+            "id": str(top_parent.id),
+            "is_favorite": False,
+            "link_reach": top_parent.link_reach,
+            "link_role": top_parent.link_role,
+            "main_workspace": False,
+            "mimetype": None,
+            "nb_accesses": 1,
+            "numchild": 1,
+            "numchild_folder": 1,
+            "parents": [],
+            "path": str(top_parent.path),
+            "size": None,
+            "title": "Item 1",
+            "type": "folder",
+            "updated_at": top_parent.updated_at.isoformat().replace("+00:00", "Z"),
+            "upload_state": None,
+            "url": None,
+            "user_roles": [top_parent_access.role],
+        },
+        {
+            "abilities": parent.get_abilities(user),
+            "created_at": parent.created_at.isoformat().replace("+00:00", "Z"),
+            "creator": {
+                "full_name": parent.creator.full_name,
+                "short_name": parent.creator.short_name,
+            },
+            "deleted_at": None,
+            "depth": 2,
+            "description": None,
+            "filename": None,
+            "hard_delete_at": None,
+            "id": str(parent.id),
+            "is_favorite": False,
+            "link_reach": parent.link_reach,
+            "link_role": parent.link_role,
+            "main_workspace": False,
+            "mimetype": None,
+            "nb_accesses": 1,
+            "numchild": 1,
+            "numchild_folder": 0,
+            "parents": [
+                {
+                    "abilities": top_parent.get_abilities(user),
+                    "created_at": top_parent.created_at.isoformat().replace(
+                        "+00:00", "Z"
+                    ),
+                    "creator": {
+                        "full_name": top_parent.creator.full_name,
+                        "short_name": top_parent.creator.short_name,
+                    },
+                    "deleted_at": None,
+                    "depth": 1,
+                    "description": None,
+                    "filename": None,
+                    "hard_delete_at": None,
+                    "id": str(top_parent.id),
+                    "is_favorite": False,
+                    "link_reach": top_parent.link_reach,
+                    "link_role": top_parent.link_role,
+                    "main_workspace": False,
+                    "mimetype": None,
+                    "nb_accesses": 1,
+                    "numchild": 1,
+                    "numchild_folder": 1,
+                    "path": str(top_parent.path),
+                    "size": None,
+                    "title": "Item 1",
+                    "type": "folder",
+                    "updated_at": top_parent.updated_at.isoformat().replace(
+                        "+00:00", "Z"
+                    ),
+                    "upload_state": None,
+                    "url": None,
+                    "user_roles": [top_parent_access.role],
+                }
+            ],
+            "path": str(parent.path),
+            "size": None,
+            "title": "Item 2",
+            "type": "folder",
+            "updated_at": parent.updated_at.isoformat().replace("+00:00", "Z"),
+            "upload_state": None,
+            "url": None,
+            "user_roles": [top_parent_access.role],
+        },
+        {
+            "abilities": children.get_abilities(user),
+            "created_at": children.created_at.isoformat().replace("+00:00", "Z"),
+            "creator": {
+                "full_name": children.creator.full_name,
+                "short_name": children.creator.short_name,
+            },
+            "deleted_at": None,
+            "depth": 3,
+            "description": None,
+            "filename": children.filename,
+            "hard_delete_at": None,
+            "id": str(children.id),
+            "is_favorite": False,
+            "link_reach": children.link_reach,
+            "link_role": children.link_role,
+            "main_workspace": False,
+            "mimetype": None,
+            "nb_accesses": 1,
+            "numchild": 0,
+            "numchild_folder": 0,
+            "parents": [
+                {
+                    "abilities": top_parent.get_abilities(user),
+                    "created_at": top_parent.created_at.isoformat().replace(
+                        "+00:00", "Z"
+                    ),
+                    "creator": {
+                        "full_name": top_parent.creator.full_name,
+                        "short_name": top_parent.creator.short_name,
+                    },
+                    "deleted_at": None,
+                    "depth": 1,
+                    "description": None,
+                    "filename": None,
+                    "hard_delete_at": None,
+                    "id": str(top_parent.id),
+                    "is_favorite": False,
+                    "link_reach": top_parent.link_reach,
+                    "link_role": top_parent.link_role,
+                    "main_workspace": False,
+                    "mimetype": None,
+                    "nb_accesses": 1,
+                    "numchild": 1,
+                    "numchild_folder": 1,
+                    "path": str(top_parent.path),
+                    "size": None,
+                    "title": "Item 1",
+                    "type": "folder",
+                    "updated_at": top_parent.updated_at.isoformat().replace(
+                        "+00:00", "Z"
+                    ),
+                    "upload_state": None,
+                    "url": None,
+                    "user_roles": [top_parent_access.role],
+                },
+                {
+                    "abilities": parent.get_abilities(user),
+                    "created_at": parent.created_at.isoformat().replace("+00:00", "Z"),
+                    "creator": {
+                        "full_name": parent.creator.full_name,
+                        "short_name": parent.creator.short_name,
+                    },
+                    "deleted_at": None,
+                    "depth": 2,
+                    "description": None,
+                    "filename": None,
+                    "hard_delete_at": None,
+                    "id": str(parent.id),
+                    "is_favorite": False,
+                    "link_reach": parent.link_reach,
+                    "link_role": parent.link_role,
+                    "main_workspace": False,
+                    "mimetype": None,
+                    "nb_accesses": 1,
+                    "numchild": 1,
+                    "numchild_folder": 0,
+                    "path": str(parent.path),
+                    "size": None,
+                    "title": "Item 2",
+                    "type": "folder",
+                    "updated_at": parent.updated_at.isoformat().replace("+00:00", "Z"),
+                    "upload_state": None,
+                    "url": None,
+                    "user_roles": [top_parent_access.role],
+                },
+            ],
+            "path": str(children.path),
+            "size": None,
+            "title": "Item 3",
+            "type": "file",
+            "updated_at": children.updated_at.isoformat().replace("+00:00", "Z"),
+            "upload_state": "pending",
+            "url": None,
+            "user_roles": [top_parent_access.role],
+        },
+    ]
 
 
 @pytest.mark.parametrize(
