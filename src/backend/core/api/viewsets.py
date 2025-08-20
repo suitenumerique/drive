@@ -971,30 +971,26 @@ class ItemViewSet(
 
     def _compute_ancestors(self, items):
         """
-        Compute ancestors for the item.
+        Compute ancestors for the items by analyzing their paths and fetching missing ancestors.
         """
-        ancestors = {}
-        ancestors_id = set()
-        # Add in a set all the items id we have to compute.
+        # Build ancestors dictionary and collect missing ancestor IDs
+        ancestors = {str(item.id): item for item in items}
+        missing_ancestor_ids = set()
+        
         for item in items:
             for item_id in item.path:
-                # The current item can be an ancestor of other items so we save it.
-                if item_id == str(item.id):
-                    ancestors[str(item.id)] = item
-                elif item_id not in ancestors_id:
-                    ancestors_id.add(item_id)
-        ancestors_list = ancestors_id - set(ancestors.keys())
-
-        if ancestors_list:
-            ancestors_iterator = models.Item.objects.filter(
-                id__in=ancestors_list
-            ).iterator()
-            for ancestor in ancestors_iterator:
+                if item_id not in ancestors and item_id not in missing_ancestor_ids:
+                    missing_ancestor_ids.add(item_id)
+        
+        # Fetch missing ancestors from database
+        if missing_ancestor_ids:
+            for ancestor in models.Item.objects.filter(id__in=missing_ancestor_ids).iterator():
                 ancestors[str(ancestor.id)] = ancestor
-
+        
+        # Set parents for each item
         for item in items:
-            item.parents = [ancestors[id] for id in item.path if id != str(item.id)]
-
+            item.parents = [ancestors[item_id] for item_id in item.path if item_id != str(item.id)]
+        
         return items
 
     @drf.decorators.action(detail=True, methods=["put"], url_path="link-configuration")
