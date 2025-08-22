@@ -12,7 +12,9 @@ services:
       retries: 300
     env_file:
       - env.d/development/postgresql
-      - env.d/development/postgresql.local
+      - env.d/development/postgresql.${ENV_OVERRIDE:-local}
+    volumes:
+      - ./data/postgresql.${ENV_OVERRIDE:-local}:/var/lib/postgresql/data
 
   redis:
     image: redis:5
@@ -71,7 +73,7 @@ services:
       - env.d/development/common
       - env.d/development/common.local
       - env.d/development/postgresql
-      - env.d/development/postgresql.local
+      - env.d/development/postgresql.${ENV_OVERRIDE:-local}
     ports:
       - "8071:8000"
     volumes:

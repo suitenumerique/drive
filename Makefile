@@ -117,6 +117,19 @@ run-backend: ## start the backend container
 	@$(COMPOSE) up --force-recreate -d nginx
 .PHONY: run-backend
 
+run-backend-e2e: ## start the backend container for e2e tests, always remove the postgresql.e2e volume first
+	rm -rf data/postgresql.e2e
+	@ENV_OVERRIDE=e2e $(MAKE) run-backend
+	@ENV_OVERRIDE=e2e $(MAKE) migrate
+.PHONY: run-backend-e2e
+
+run-tests-e2e: ## run the e2e tests
+	@$(MAKE) stop
+	@$(MAKE) run-backend-e2e	
+	@args="$(filter-out $@,$(MAKECMDGOALS))" && \
+	cd src/frontend/apps/e2e && yarn test $${args:-${1}}
+.PHONY: run-tests-e2e
+
 run: ## start the development server and frontend development
 run: 
 	@$(MAKE) run-backend
