@@ -117,13 +117,24 @@ run-backend: ## start the backend container
 	@$(COMPOSE) up --force-recreate -d nginx
 .PHONY: run-backend
 
+bootstrap-e2e: ## bootstrap the backend container for e2e tests, without frontend
+bootstrap-e2e: \
+	data/media \
+	data/static \
+	create-env-local-files \
+	build-backend \
+	migrate \
+	back-i18n-compile \
+	run-backend
+.PHONY: bootstrap-e2e
+
 run-backend-e2e: ## start the backend container for e2e tests, always remove the postgresql.e2e volume first
 	rm -rf data/postgresql.e2e
 	@ENV_OVERRIDE=e2e $(MAKE) run-backend
 	@ENV_OVERRIDE=e2e $(MAKE) migrate
 .PHONY: run-backend-e2e
 
-run-tests-e2e: ## run the e2e tests
+run-tests-e2e: ## run the e2e tests, example: make run-tests-e2e -- --project chromium --headed
 	@$(MAKE) stop
 	@$(MAKE) run-backend-e2e	
 	@args="$(filter-out $@,$(MAKECMDGOALS))" && \
