@@ -62,13 +62,7 @@ jobs:
 
       - name: Start Docker services
         run: |
-          make data/media
-          make data/static
-          make create-env-local-files
-          make build-backend
-          make migrate
-          make back-i18n-compile
-          make run-backend
+          make bootstrap-e2e
 
       - name: Start frontend
         run: |
