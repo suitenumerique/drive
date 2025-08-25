@@ -773,6 +773,7 @@ class Development(Base):
             "django_extensions",
             "drf_spectacular_sidecar",
             "debug_toolbar",
+            "demo",
         ]
 
 

@@ -26,6 +26,7 @@ if settings.DEBUG:
         + static(settings.MEDIA_URL, item_root=settings.MEDIA_ROOT)
         + debug_toolbar_urls()
     )
+    urlpatterns += [path("", include("demo.urls"))]
 
 
 if settings.USE_SWAGGER or settings.DEBUG:
