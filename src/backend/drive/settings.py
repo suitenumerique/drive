@@ -334,7 +334,43 @@ class Base(Configuration):
 
     # Cache
     CACHES = {
-        "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": values.Value(
+                "redis://redis:6379/0",
+                environ_name="REDIS_URL",
+                environ_prefix=None,
+            ),
+            "TIMEOUT": values.IntegerValue(
+                30,  # timeout in seconds
+                environ_name="CACHES_DEFAULT_TIMEOUT",
+                environ_prefix=None,
+            ),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+            "KEY_PREFIX": values.Value(
+                "drive",
+                environ_name="CACHES_DEFAULT_KEY_PREFIX",
+                environ_prefix=None,
+            ),
+        },
+        "session": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": values.Value(
+                "redis://redis:6379/0",
+                environ_name="REDIS_URL",
+                environ_prefix=None,
+            ),
+            "TIMEOUT": values.IntegerValue(
+                30,  # timeout in seconds
+                environ_name="CACHES_SESSION_TIMEOUT",
+                environ_prefix=None,
+            ),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
+        },
     }
 
     REST_FRAMEWORK = {
@@ -471,7 +507,7 @@ class Base(Configuration):
 
     # Session
     SESSION_ENGINE = "django.contrib.sessions.backends.cache"
-    SESSION_CACHE_ALIAS = "default"
+    SESSION_CACHE_ALIAS = "session"
     SESSION_COOKIE_AGE = 60 * 60 * 12
 
     # OIDC - Authorization Code Flow
@@ -713,6 +749,10 @@ class Build(Base):
     settings.
     """
 
+    SESSION_CACHE_ALIAS = "default"
+    CACHES = {
+        "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
+    }
     SECRET_KEY = values.Value("DummyKey")
     STORAGES = {
         "default": {
@@ -744,25 +784,6 @@ class Development(Base):
 
     USE_SWAGGER = True
 
-    CACHES = {
-        "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": values.Value(
-                "redis://redis:6379/2",
-                environ_name="REDIS_URL",
-                environ_prefix=None,
-            ),
-            "TIMEOUT": values.IntegerValue(
-                30,  # timeout in seconds
-                environ_name="CACHES_DEFAULT_TIMEOUT",
-                environ_prefix=None,
-            ),
-            "OPTIONS": {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            },
-        },
-    }
-
     DEBUG_TOOLBAR_CONFIG = {
         "SHOW_TOOLBAR_CALLBACK": lambda request: True,
     }
@@ -781,6 +802,11 @@ class Development(Base):
 
 class Test(Base):
     """Test environment settings"""
+
+    SESSION_CACHE_ALIAS = "default"
+    CACHES = {
+        "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
+    }
 
     PASSWORD_HASHERS = [
         "django.contrib.auth.hashers.MD5PasswordHasher",
@@ -849,25 +875,6 @@ class Production(Base):
 
     # Privacy
     SECURE_REFERRER_POLICY = "same-origin"
-
-    CACHES = {
-        "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": values.Value(
-                "redis://redis:6379/1",
-                environ_name="REDIS_URL",
-                environ_prefix=None,
-            ),
-            "TIMEOUT": values.IntegerValue(
-                30,  # timeout in seconds
-                environ_name="CACHES_DEFAULT_TIMEOUT",
-                environ_prefix=None,
-            ),
-            "OPTIONS": {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            },
-        },
-    }
 
 
 class Feature(Production):

@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- 🔧(back) customize cache config #321
+
 ## [v0.3.0] - 2025-08-25
 
 ### Added
@@ -15,6 +19,7 @@ and this project adheres to
 - ✨(back) allow theme customization using a configuration file #299
 - ✨(front) use theme_customization to configure the footer #299
 - ✅(front) add e2e testing #317
+
 
 ### Fixed
 
