@@ -17,7 +17,7 @@ import { itemIsWorkspace } from "@/features/drivers/utils";
 import { useEmbeddedExplorerGirdContext } from "./EmbeddedExplorerGrid";
 import { FileShareModal } from "@/features/explorer/components/modals/share/FileShareModal";
 import { useDisableDragGridItem } from "./hooks";
-import { downloadFile } from "@/features/items/utils";
+import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 
 export type EmbeddedExplorerGridActionsCellProps = CellContext<Item, unknown>;
 
@@ -30,6 +30,7 @@ export const EmbeddedExplorerGridActionsCell = (
   const disableDrag = useDisableDragGridItem(item);
   const shareWorkspaceModal = useModal();
   const shareFileModal = useModal();
+  const { handleDownloadItem } = useDownloadItem();
 
   const [isOpen, setIsOpen] = useState(false);
   const isWorkspace = itemIsWorkspace(item);
@@ -50,7 +51,7 @@ export const EmbeddedExplorerGridActionsCell = (
   };
 
   const handleDownload = async () => {
-    downloadFile(item.url!, item.filename);
+    handleDownloadItem(item);
   };
 
   const handleMove = () => {
