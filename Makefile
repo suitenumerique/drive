@@ -130,7 +130,7 @@ bootstrap-e2e: \
 .PHONY: bootstrap-e2e
 
 clear-db-e2e: ## quickly clears the database for e2e tests
-	@ENV_OVERRIDE=e2e $(PSQL) -c "DO \$$\$$ DECLARE r RECORD; BEGIN FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename != 'drive_user') LOOP RAISE NOTICE 'Truncating table %', r.tablename; EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE'; END LOOP; END \$$\$$;" > /dev/null
+	@ENV_OVERRIDE=e2e $(PSQL) -c "$$(cat bin/clear_db_e2e.sql)"
 .PHONY: clear-db-e2e
 
 run-backend-e2e: ## start the backend container for e2e tests, always remove the postgresql.e2e volume first

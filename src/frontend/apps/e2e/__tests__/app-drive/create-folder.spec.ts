@@ -1,9 +1,13 @@
 import test, { expect } from "@playwright/test";
 import { getStorageState } from "./utils-common";
 
-test.use({ storageState: getStorageState("drive") });
-
 test("Create a folder", async ({ page }) => {
+  await page.request.post("http://localhost:8071/api/v1.0/demo/user-auth/", {
+    data: {
+      email: "drive@example.com",
+    },
+  });
+
   await page.goto("/");
 
   await expect(page.getByText("Drop your files here")).toBeVisible();

@@ -44,11 +44,6 @@ export default defineConfig({
       testMatch: /.*db\.setup\.ts/,
     },
     {
-      name: "setup_auth",
-      testMatch: /.*auth\.setup\.ts/,
-      dependencies: ["setup_db"],
-    },
-    {
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
@@ -58,7 +53,7 @@ export default defineConfig({
           permissions: ["clipboard-read", "clipboard-write"],
         },
       },
-      dependencies: ["setup_auth"],
+      dependencies: ["setup_db"],
     },
     {
       name: "webkit",
@@ -67,7 +62,7 @@ export default defineConfig({
         locale: "en-US",
         timezoneId: "Europe/Paris",
       },
-      dependencies: ["setup_auth"],
+      dependencies: ["setup_db"],
     },
     {
       name: "firefox",
@@ -82,7 +77,7 @@ export default defineConfig({
           },
         },
       },
-      dependencies: ["setup_auth"],
+      dependencies: ["setup_db"],
     },
   ],
 });
