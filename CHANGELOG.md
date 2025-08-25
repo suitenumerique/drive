@@ -8,9 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.3.0] - 2025-08-25
+
 ### Added
 
-- ✨(back) allow theme customnization using a configuration file #299
+- ✨(back) allow theme customization using a configuration file #299
 - ✨(front) use theme_customization to configure the footer #299
 
 ### Fixed
@@ -73,7 +75,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.2.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.3.0...main
+[0.3.0]: https://github.com/suitenumerique/drive/releases/v0.3.0
 [0.2.0]: https://github.com/suitenumerique/drive/releases/v0.2.0
 [0.1.1]: https://github.com/suitenumerique/drive/releases/v0.1.1
 [0.1.0]: https://github.com/suitenumerique/drive/releases/v0.1.0
