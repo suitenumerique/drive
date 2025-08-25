@@ -1,4 +1,4 @@
-import { Item } from "@/features/drivers/types";
+import { Item, ItemUploadState } from "@/features/drivers/types";
 import { ItemIcon } from "../icons/ItemIcon";
 import { Button, useModal } from "@openfun/cunningham-react";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
@@ -24,6 +24,11 @@ export const ExplorerRightPanelContent = ({
   const { t } = useTranslation();
 
   const firstSelectedItem = item ?? selectedItems[0];
+  console.log(firstSelectedItem?.upload_state);
+  const showWarning =
+    firstSelectedItem?.upload_state === ItemUploadState.SUSPICIOUS ||
+    firstSelectedItem?.upload_state ===
+      ItemUploadState.FILE_TOO_LARGE_TO_ANALYZE;
   const isWorkspace = firstSelectedItem
     ? itemIsWorkspace(firstSelectedItem)
     : false;
@@ -96,6 +101,15 @@ export const ExplorerRightPanelContent = ({
           <div className="explorer__right-panel__item-type">
             <ItemIcon item={firstSelectedItem} size={IconSize.X_LARGE} />
           </div>
+          {showWarning && (
+            <div className="explorer__right-panel__suspicious-warning">
+              <div className="explorer__right-panel__suspicious-warning__text">
+                {t(
+                  `explorer.rightPanel.${firstSelectedItem.upload_state}.text`
+                )}
+              </div>
+            </div>
+          )}
           {isWorkspace && (
             <InfoRow
               label={t("explorer.rightPanel.sharing")}
@@ -118,6 +132,7 @@ export const ExplorerRightPanelContent = ({
             />
           )}
         </div>
+
         <ItemInfo item={firstSelectedItem} />
       </div>
       {firstSelectedItem && isWorkspace && shareModal.isOpen && (
