@@ -1,4 +1,4 @@
-import { Item } from "@/features/drivers/types";
+import { Item, ItemUploadState } from "@/features/drivers/types";
 import mimeCalc from "@/assets/files/icons/mime-calc.svg";
 import mimeDoc from "@/assets/files/icons/mime-doc.svg";
 import mimeImage from "@/assets/files/icons/mime-image.svg";
@@ -17,7 +17,7 @@ import mimePowerpointMini from "@/assets/files/icons/mime-powerpoint-mini.svg";
 import mimeAudioMini from "@/assets/files/icons/mime-audio-mini.svg";
 import mimeVideoMini from "@/assets/files/icons/mime-video-mini.svg";
 import mimeArchiveMini from "@/assets/files/icons/mime-archive-mini.svg";
-
+import mimeSuspicious from "@/assets/files/icons/suspicious_file.svg";
 
 import mimeArchive from "@/assets/files/icons/mime-archive.svg";
 import { getExtension } from "../utils/utils";
@@ -32,6 +32,7 @@ export enum MimeCategory {
   AUDIO = "audio",
   VIDEO = "video",
   ARCHIVE = "archive",
+  SUSPICIOUS = "suspicious",
 }
 
 export const MIME_TO_ICON = {
@@ -44,7 +45,7 @@ export const MIME_TO_ICON = {
   [MimeCategory.AUDIO]: mimeAudio,
   [MimeCategory.VIDEO]: mimeVideo,
   [MimeCategory.ARCHIVE]: mimeArchive,
-
+  [MimeCategory.SUSPICIOUS]: mimeSuspicious,
 };
 
 export const MIME_TO_ICON_MINI = {
@@ -57,6 +58,7 @@ export const MIME_TO_ICON_MINI = {
   [MimeCategory.AUDIO]: mimeAudioMini,
   [MimeCategory.VIDEO]: mimeVideoMini,
   [MimeCategory.ARCHIVE]: mimeArchiveMini,
+  [MimeCategory.SUSPICIOUS]: mimeSuspicious,
 };
 
 export const ICONS = {
@@ -70,6 +72,7 @@ export const ICONS = {
     [MimeCategory.AUDIO]: mimeAudioMini,
     [MimeCategory.VIDEO]: mimeVideoMini,
     [MimeCategory.ARCHIVE]: mimeArchiveMini,
+    [MimeCategory.SUSPICIOUS]: mimeSuspicious,
 	},
 	"normal": {
     [MimeCategory.CALC]: mimeCalc,
@@ -81,6 +84,7 @@ export const ICONS = {
     [MimeCategory.AUDIO]: mimeAudio,
     [MimeCategory.VIDEO]: mimeVideo,
     [MimeCategory.ARCHIVE]: mimeArchive,
+    [MimeCategory.SUSPICIOUS]: mimeSuspicious,
 	}
 }
 
@@ -162,10 +166,15 @@ export const getMimeCategory = (mimetype: string, extension?: string | null): Mi
 export const getItemMimeCategory = (item: Item): MimeCategory => {
   const mimetype = item.mimetype;
   const extension = getExtension(item);
+  const uploadState = item.upload_state;
+  if (uploadState === ItemUploadState.SUSPICIOUS) {
+    return MimeCategory.SUSPICIOUS;
+  }
 
   if (!mimetype) {
     return MimeCategory.OTHER;
   }
+
 
   return getMimeCategory(mimetype, extension);
 };

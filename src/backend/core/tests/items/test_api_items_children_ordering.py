@@ -33,7 +33,7 @@ def test_api_items_children_ordering_type():
     factories.UserItemAccessFactory(item=item, user=user)
     factories.UserItemAccessFactory(item=item2, user=user)
 
-    item2.upload_state = models.ItemUploadStateChoices.UPLOADED
+    item2.upload_state = models.ItemUploadStateChoices.READY
     item2.filename = "logo.png"
     item2.save()
 
@@ -88,7 +88,7 @@ def test_api_items_children_ordering_title():
         title="Zyxc",
     )
 
-    item2.upload_state = models.ItemUploadStateChoices.UPLOADED
+    item2.upload_state = models.ItemUploadStateChoices.READY
     item2.filename = "logo.png"
     item2.save()
 

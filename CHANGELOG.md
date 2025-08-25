@@ -14,6 +14,7 @@ and this project adheres to
 
 - ✨(back) allow theme customization using a configuration file #299
 - ✨(front) use theme_customization to configure the footer #299
+- ✨(back) implement lasuite.malware_detection app #212
 
 ### Fixed
 
@@ -63,6 +64,7 @@ and this project adheres to
 - ✨(front) make frontend themable
 - ✨(global) Add File Picker SDK
 - 🔧(cron) add pgdump cron on scalingo deployment #264
+- ✨(back) implement lasuite.malware_detection app #212
 
 ### Changed
 
