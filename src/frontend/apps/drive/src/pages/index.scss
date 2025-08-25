@@ -128,3 +128,7 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
   background-repeat: no-repeat;
   background-position: center;
 }
+
+.c__modal__backdrop {
+  z-index: 1002;
+}
