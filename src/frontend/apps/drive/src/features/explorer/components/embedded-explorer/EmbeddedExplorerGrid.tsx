@@ -1,4 +1,4 @@
-import { Item, ItemType } from "@/features/drivers/types";
+import { Item, ItemType, ItemUploadState } from "@/features/drivers/types";
 import {
   createContext,
   Dispatch,
@@ -41,6 +41,7 @@ import {
   FilePreview,
   FilePreviewType,
 } from "@/features/ui/preview/files-preview/FilesPreview";
+import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 
 export type EmbeddedExplorerGridProps = {
   isCompact?: boolean;
@@ -109,6 +110,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
     Item | undefined
   >(undefined);
   const moveModal = useModal();
+  const { handleDownloadItem } = useDownloadItem();
 
   const handleClosePreview = () => {
     setIsPreviewOpen(false);
@@ -180,6 +182,10 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
     }
   };
 
+  const handleDownloadFile = () => {
+    handleDownloadItem(currentPreviewItem);
+  };
+
   const previewItems: FilePreviewType[] = useMemo(() => {
     const items =
       props.items?.filter((item) => item.type === ItemType.FILE) ?? [];
@@ -188,6 +194,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
       title: item.title,
       mimetype: item.mimetype ?? "",
       url: item.url ?? "",
+      isSuspicious: item.upload_state === ItemUploadState.SUSPICIOUS,
     }));
   }, [props.items]);
 
@@ -400,6 +407,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
           title={t("file_preview.title")}
           files={previewItems ?? []}
           onChangeFile={handleChangePreviewItem}
+          handleDownloadFile={handleDownloadFile}
           openedFileId={openedFileId}
           sidebarContent={
             currentPreviewItem && <ItemInfo item={currentPreviewItem} />
