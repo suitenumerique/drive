@@ -9,7 +9,29 @@
         "title": "You don't have the necessary permissions to access this page.",
         "button": "Home"
       },
+      "file_download_modal": {
+        "error": {
+          "no_url_or_title": "This file has no URL or title."
+        },
+        "suspicious": {
+          "title": "This file is suspicious"
+        },
+        "file_too_large_to_analyze": {
+          "title": "This file is too large to be scanned"
+        },
+        "analyzing": {
+          "title": "This file is still being scanned"
+        },
+        "description": "Are you sure you want to download this file?",
+        "download": "Download anyway",
+        "cancel": "Cancel"
+      },
       "file_preview": {
+        "suspicious": {
+          "title": "Suspicious file",
+          "description": "This file looks suspicious. It is only visible to you.",
+          "download": "Download file"
+        },
         "unsupported": {
           "title": "File type not supported for preview",
           "description": "To view the file, download it to your device.",
@@ -96,6 +118,12 @@
           }
         },
         "rightPanel": {
+          "suspicious": {
+            "text": "This file looks suspicious. It is only visible to you."
+          },
+          "file_too_large_to_analyze": {
+            "text": "This file is too large to scan. It may be unsafe to download."
+          },
           "multipleSelection": {
             "text": "Multiple files selected",
             "alt": "Multiple files selected image"
@@ -335,7 +363,29 @@
         "title": "Vous n'avez pas les permissions nécessaires pour accéder à cette page.",
         "button": "Accueil"
       },
+      "file_download_modal": {
+        "error": {
+          "no_url_or_title": "Ce fichier n'a pas d'URL ou de titre. "
+        },
+        "suspicious": {
+          "title": "Ce fichier est suspect"
+        },
+        "file_too_large_to_analyze": {
+          "title": "Ce fichier est trop volumineux pour être analysé"
+        },
+        "analyzing": {
+          "title": "Ce fichier est en cours d'analyse"
+        },
+        "description": "Êtes-vous sûr de vouloir télécharger ce fichier ?",
+        "download": "Télécharger quand même",
+        "cancel": "Annuler"
+      },
       "file_preview": {
+        "suspicious": {
+          "title": "Fichier suspect",
+          "description": "Ce fichier semble suspect. Il n'est visible que pour vous.",
+          "download": "Télécharger le fichier"
+        },
         "unsupported": {
           "title": "Type de fichier non supporté pour la prévisualisation",
           "description": "Pour visualiser le fichier, téléchargez-le sur votre appareil.",
@@ -422,6 +472,12 @@
           }
         },
         "rightPanel": {
+          "suspicious": {
+            "text": "Ce fichier semble suspect. Il n'est visible que pour vous."
+          },
+          "file_too_large_to_analyze": {
+            "text": "Ce fichier est trop volumineux pour être analysé. Il peut être dangereux de le télécharger."
+          },
           "multipleSelection": {
             "text": "Plusieurs fichiers sélectionnés",
             "alt": "Image de plusieurs fichiers sélectionnés"
