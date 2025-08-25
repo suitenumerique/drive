@@ -16,11 +16,20 @@ export enum LinkRole {
   EDITOR = "editor",
 }
 
+export enum ItemUploadState {
+  PENDING = "pending",
+  ANALYZING = "analyzing",
+  SUSPICIOUS = "suspicious",
+  FILE_TOO_LARGE_TO_ANALYSE = "file_too_large_to_analyse",
+  READY = "ready",
+}
+
 export type Item = {
   id: string;
   title: string;
   filename: string;
   creator: {
+    id: string;
     full_name: string;
     short_name: string;
   };
