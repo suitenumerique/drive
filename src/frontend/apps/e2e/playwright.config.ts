@@ -13,15 +13,14 @@ export default defineConfig({
   testDir: "./__tests__",
   outputDir: "./test-results",
 
-  /* Run tests in files in parallel */
-  fullyParallel: true,
+  fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   maxFailures: process.env.CI ? 3 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 3 : undefined,
+  workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [["html", { outputFolder: "./report" }]],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
@@ -41,8 +40,13 @@ export default defineConfig({
   /* Configure projects for major browsers */
   projects: [
     {
-      name: "setup",
-      testMatch: /.*\.setup\.ts/,
+      name: "setup_db",
+      testMatch: /.*db\.setup\.ts/,
+    },
+    {
+      name: "setup_auth",
+      testMatch: /.*auth\.setup\.ts/,
+      dependencies: ["setup_db"],
     },
     {
       name: "chromium",
@@ -54,7 +58,7 @@ export default defineConfig({
           permissions: ["clipboard-read", "clipboard-write"],
         },
       },
-      dependencies: ["setup"],
+      dependencies: ["setup_auth"],
     },
     {
       name: "webkit",
@@ -63,7 +67,7 @@ export default defineConfig({
         locale: "en-US",
         timezoneId: "Europe/Paris",
       },
-      dependencies: ["setup"],
+      dependencies: ["setup_auth"],
     },
     {
       name: "firefox",
@@ -78,7 +82,7 @@ export default defineConfig({
           },
         },
       },
-      dependencies: ["setup"],
+      dependencies: ["setup_auth"],
     },
   ],
 });

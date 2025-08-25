@@ -48,6 +48,7 @@ COMPOSE_RUN_CROWDIN = $(COMPOSE_RUN) crowdin crowdin
 # -- Backend
 MANAGE              = $(COMPOSE_RUN_APP) python manage.py
 MAIL_YARN           = $(COMPOSE_RUN) -w /app/src/mail node yarn
+PSQL = $(COMPOSE) exec -T postgresql psql -U dinum -d drive_e2e -v ON_ERROR_STOP=1
 
 # -- Frontend
 PATH_FRONT          = ./src/frontend
@@ -128,14 +129,18 @@ bootstrap-e2e: \
 	run-backend
 .PHONY: bootstrap-e2e
 
+clear-db-e2e: ## quickly clears the database for e2e tests
+	@ENV_OVERRIDE=e2e $(PSQL) -c "DO \$$\$$ DECLARE r RECORD; BEGIN FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename != 'drive_user') LOOP RAISE NOTICE 'Truncating table %', r.tablename; EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE'; END LOOP; END \$$\$$;" > /dev/null
+.PHONY: clear-db-e2e
+
 run-backend-e2e: ## start the backend container for e2e tests, always remove the postgresql.e2e volume first
+	@$(MAKE) stop
 	rm -rf data/postgresql.e2e
 	@ENV_OVERRIDE=e2e $(MAKE) run-backend
 	@ENV_OVERRIDE=e2e $(MAKE) migrate
 .PHONY: run-backend-e2e
 
 run-tests-e2e: ## run the e2e tests, example: make run-tests-e2e -- --project chromium --headed
-	@$(MAKE) stop
 	@$(MAKE) run-backend-e2e	
 	@args="$(filter-out $@,$(MAKECMDGOALS))" && \
 	cd src/frontend/apps/e2e && yarn test $${args:-${1}}
