@@ -15,6 +15,7 @@ import {
   Item,
   ItemType,
   User,
+  WopiInfo,
 } from "../types";
 import { DTODeleteAccess } from "../DTOs/AccessesDTO";
 
@@ -278,6 +279,12 @@ export class StandardDriver extends Driver {
         method: "DELETE",
       });
     }
+  }
+
+  async getWopiInfo(itemId: string): Promise<WopiInfo> {
+    const response = await fetchAPI(`items/${itemId}/wopi/`);
+    const data = await response.json();
+    return data;
   }
 }
 

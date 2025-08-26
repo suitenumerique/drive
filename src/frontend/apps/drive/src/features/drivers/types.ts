@@ -38,6 +38,7 @@ export type Item = {
   upload_state: string;
   updated_at: Date;
   description: string;
+  is_wopi_supported?: boolean;
   created_at: Date;
   children?: Item[];
   parents?: Item[];
@@ -78,6 +79,12 @@ export type TreeItemData = Omit<Item, "children"> & {
 };
 
 export type TreeItem = TreeViewDataType<TreeItemData>;
+
+export type WopiInfo = {
+  access_token: string;
+  access_token_ttl: number;
+  launch_url: string;
+}
 
 export type Access = {
   id: string;
