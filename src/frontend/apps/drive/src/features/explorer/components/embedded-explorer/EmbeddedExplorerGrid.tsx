@@ -188,6 +188,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
       title: item.title,
       mimetype: item.mimetype ?? "",
       url: item.url ?? "",
+      is_wopi_supported: item.is_wopi_supported ?? false,
     }));
   }, [props.items]);
 
