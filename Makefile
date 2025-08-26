@@ -48,6 +48,7 @@ COMPOSE_RUN_CROWDIN = $(COMPOSE_RUN) crowdin crowdin
 # -- Backend
 MANAGE              = $(COMPOSE_RUN_APP) python manage.py
 MAIL_YARN           = $(COMPOSE_RUN) -w /app/src/mail node yarn
+PSQL_E2E = ./bin/postgres_e2e
 
 # -- Frontend
 PATH_FRONT          = ./src/frontend
@@ -105,6 +106,7 @@ build-frontend: ## build the frontend container
 .PHONY: build-frontend-development
 
 down: ## stop and remove containers, networks, images, and volumes
+	rm -rf data/postgresql.*
 	@$(COMPOSE) down
 .PHONY: down
 
@@ -116,6 +118,33 @@ run-backend: ## start the backend container
 	@$(COMPOSE) up --force-recreate -d celery-dev
 	@$(COMPOSE) up --force-recreate -d nginx
 .PHONY: run-backend
+
+bootstrap-e2e: ## bootstrap the backend container for e2e tests, without frontend
+bootstrap-e2e: \
+	data/media \
+	data/static \
+	create-env-local-files \
+	build-backend \
+	back-i18n-compile \
+	run-backend-e2e
+.PHONY: bootstrap-e2e
+
+clear-db-e2e: ## quickly clears the database for e2e tests, used in the e2e tests
+	$(PSQL_E2E) -c "$$(cat bin/clear_db_e2e.sql)"
+.PHONY: clear-db-e2e
+
+run-backend-e2e: ## start the backend container for e2e tests, always remove the postgresql.e2e volume first
+	@$(MAKE) stop
+	rm -rf data/postgresql.e2e
+	@ENV_OVERRIDE=e2e $(MAKE) run-backend
+	@ENV_OVERRIDE=e2e $(MAKE) migrate
+.PHONY: run-backend-e2e
+
+run-tests-e2e: ## run the e2e tests, example: make run-tests-e2e -- --project chromium --headed
+	@$(MAKE) run-backend-e2e	
+	@args="$(filter-out $@,$(MAKECMDGOALS))" && \
+	cd src/frontend/apps/e2e && yarn test $${args:-${1}}
+.PHONY: run-tests-e2e
 
 run: ## start the development server and frontend development
 run: 

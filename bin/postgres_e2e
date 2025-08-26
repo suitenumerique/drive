@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+# shellcheck source=bin/_config.sh
+source "$(dirname "${BASH_SOURCE[0]}")/_config.sh"
+
+# Get database credentials from environment file
+ENV_FILE="${REPO_DIR}/env.d/development/postgresql.e2e"
+POSTGRES_USER=$(grep POSTGRES_USER "$ENV_FILE" | cut -d'=' -f2)
+POSTGRES_DB=$(grep POSTGRES_DB "$ENV_FILE" | cut -d'=' -f2)
+
+# Execute PostgreSQL command (run as postgres user, not host user)
+_docker_compose exec -T postgresql psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 "$@"
