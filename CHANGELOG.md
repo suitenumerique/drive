@@ -14,6 +14,7 @@ and this project adheres to
 
 - ✨(back) allow theme customization using a configuration file #299
 - ✨(front) use theme_customization to configure the footer #299
+- ✅(front) add e2e testing #317
 
 ### Fixed
 
