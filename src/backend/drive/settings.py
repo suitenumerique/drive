@@ -60,6 +60,7 @@ class Base(Configuration):
     """
 
     DEBUG = False
+    LOAD_E2E_URLS = False
     USE_SWAGGER = False
 
     API_VERSION = "v1.0"
@@ -737,6 +738,7 @@ class Development(Base):
     CORS_ALLOW_ALL_ORIGINS = True
     CSRF_TRUSTED_ORIGINS = ["http://localhost:8072", "http://localhost:3000"]
     DEBUG = True
+    LOAD_E2E_URLS = True
 
     SESSION_COOKIE_NAME = "drive_sessionid"
 
@@ -773,6 +775,7 @@ class Development(Base):
             "django_extensions",
             "drf_spectacular_sidecar",
             "debug_toolbar",
+            "e2e",
         ]
 
 
@@ -788,7 +791,7 @@ class Test(Base):
 
     def __init__(self):
         # pylint: disable=invalid-name
-        self.INSTALLED_APPS += ["drf_spectacular_sidecar"]
+        self.INSTALLED_APPS += ["drf_spectacular_sidecar", "e2e"]
 
 
 class ContinuousIntegration(Test):

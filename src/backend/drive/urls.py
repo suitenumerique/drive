@@ -27,6 +27,9 @@ if settings.DEBUG:
         + debug_toolbar_urls()
     )
 
+if settings.LOAD_E2E_URLS:
+    urlpatterns += [path("", include("e2e.urls"))]
+
 
 if settings.USE_SWAGGER or settings.DEBUG:
     urlpatterns += [
