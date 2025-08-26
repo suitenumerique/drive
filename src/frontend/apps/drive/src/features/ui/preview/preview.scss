@@ -8,3 +8,5 @@
 @use "./components/controls/PreviewControls.scss";
 @use "./not-supported/NotSupportedPreview.scss";
 @use "./suspicious/SuspiciousPreview.scss";
+@use "./wopi/WopiEditor.scss";
+@use "./error/ErrorPreview.scss";
