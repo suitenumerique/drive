@@ -32,6 +32,14 @@
           "description": "This file looks suspicious. It is only visible to you.",
           "download": "Download file"
         },
+        "error": {
+          "title": "An error occurred while loading the document.",
+          "description": "Please try again later."
+        },
+        "wopi": {
+          "loading": "Loading document...",
+          "error": "An error occurred while loading the document."
+        },
         "unsupported": {
           "title": "File type not supported for preview",
           "description": "To view the file, download it to your device.",
@@ -409,6 +417,14 @@
           "title": "Fichier suspect",
           "description": "Ce fichier semble suspect. Il n'est visible que pour vous.",
           "download": "Télécharger le fichier"
+        },
+        "error": {
+          "title": "Une erreur est survenue lors du chargement du document.",
+          "description": "Veuillez réessayer plus tard."
+        },
+        "wopi": {
+          "loading": "Chargement du document...",
+          "error": "Une erreur est survenue lors du chargement du document."
         },
         "unsupported": {
           "title": "Type de fichier non supporté pour la prévisualisation",
