@@ -24,7 +24,7 @@ export const ExplorerSearchModal = (
     searchUserTimeoutRef.current = setTimeout(async () => {
       setLoading(true);
       const items = await driver.searchItems({
-        q: search,
+        title: search,
         type: ItemType.FILE,
       });
       console.log(items);

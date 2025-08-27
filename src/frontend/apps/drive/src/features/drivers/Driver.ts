@@ -20,6 +20,7 @@ import {
 
 export type ItemFilters = {
   type?: ItemType;
+  title?: string;
 };
 
 export type UserFilters = {
