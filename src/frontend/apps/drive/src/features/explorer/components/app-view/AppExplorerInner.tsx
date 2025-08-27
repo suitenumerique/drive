@@ -55,6 +55,11 @@ export const AppExplorerInner = (props: AppExplorerProps) => {
     },
   }: SelectionEvent) => {
     setRightPanelForcedItem(undefined);
+
+    if (added.length == 0 && removed.length == 0) {
+      return;
+    }
+
     setSelectedItems((prev) => {
       let next = [...prev];
 
