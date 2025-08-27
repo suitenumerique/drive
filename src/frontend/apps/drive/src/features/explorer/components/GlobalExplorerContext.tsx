@@ -30,6 +30,11 @@ import { useFirstLevelItems } from "../hooks/useQueries";
 import { useTranslation } from "react-i18next";
 import { getWorkspaceType } from "../utils/utils";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
+import { ItemInfo } from "@/features/items/components/ItemInfo";
+import {
+  FilePreview,
+  FilePreviewType,
+} from "@/features/ui/preview/files-preview/FilesPreview";
 
 export interface GlobalExplorerContextType {
   displayMode: "sdk" | "app";
@@ -51,6 +56,8 @@ export interface GlobalExplorerContextType {
   setRightPanelOpen: (open: boolean) => void;
   isLeftPanelOpen: boolean;
   setIsLeftPanelOpen: (isLeftPanelOpen: boolean) => void;
+  setPreviewItem: (item: Item | undefined) => void;
+  setPreviewItems: (items: Item[]) => void;
 }
 
 export const GlobalExplorerContext = createContext<
@@ -180,6 +187,35 @@ export const GlobalExplorerProvider = ({
 
   const { dropZone } = useUploadZone({ item: item! });
 
+  const { t } = useTranslation();
+
+  const [previewItem, setPreviewItem] = useState<Item | undefined>(undefined);
+  const [previewItems, setPreviewItems] = useState<Item[]>([]);
+
+  const previewFiles = useMemo(() => {
+    return previewItems
+      .filter((item) => item.type === ItemType.FILE)
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        mimetype: item.mimetype ?? "",
+        url: item.url ?? "",
+      }));
+  }, [previewItems]);
+
+  const handleClosePreview = () => {
+    setPreviewItem(undefined);
+  };
+
+  const handleChangePreviewItem = (file?: FilePreviewType) => {
+    if (file) {
+      const item = previewItems.find((item) => file?.id === item.id);
+      setPreviewItem(item);
+    } else {
+      setPreviewItem(undefined);
+    }
+  };
+
   return (
     <GlobalExplorerContext.Provider
       value={{
@@ -202,6 +238,8 @@ export const GlobalExplorerProvider = ({
         setRightPanelOpen,
         isLeftPanelOpen,
         setIsLeftPanelOpen,
+        setPreviewItem,
+        setPreviewItems,
       }}
     >
       <TreeProvider
@@ -243,6 +281,15 @@ export const GlobalExplorerProvider = ({
       />
 
       <Toaster />
+      <FilePreview
+        isOpen={!!previewItem}
+        onClose={handleClosePreview}
+        title={t("file_preview.title")}
+        files={previewFiles}
+        onChangeFile={handleChangePreviewItem}
+        openedFileId={previewItem?.id}
+        sidebarContent={previewItem && <ItemInfo item={previewItem} />}
+      />
     </GlobalExplorerContext.Provider>
   );
 };

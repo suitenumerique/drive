@@ -12,6 +12,10 @@ import {
   useAppExplorer,
 } from "@/features/explorer/components/app-view/AppExplorer";
 import { EmbeddedExplorerGrid } from "../embedded-explorer/EmbeddedExplorerGrid";
+import {
+  addToast,
+  ToasterItem,
+} from "@/features/ui/components/toaster/Toaster";
 
 /**
  * ExplorerGridItems wrapper around ExplorerGridItems to display a list of items in a table.
@@ -35,6 +39,8 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
     item,
     itemId,
     displayMode,
+    setPreviewItem,
+    setPreviewItems,
   } = useGlobalExplorer();
 
   const { filters, disableItemDragAndDrop } = useAppExplorer();
@@ -92,6 +98,19 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
     treeContext?.treeData.setChildren(itemId, childrens);
   }, [folders, treeIsInitialized]);
 
+  const handleFileClick = (item: Item) => {
+    if (item.url) {
+      setPreviewItem(item);
+    } else {
+      addToast(<ToasterItem>{t("explorer.grid.no_url")}</ToasterItem>);
+    }
+  };
+
+  // Set the preview files list.
+  useEffect(() => {
+    setPreviewItems(props.childrenItems ?? []);
+  }, [props.childrenItems]);
+
   const isLoading = props.childrenItems === undefined;
   const isEmpty = props.childrenItems?.length === 0;
   const canCreateChildren = item?.abilities?.children_create;
@@ -133,6 +152,7 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
         enableMetaKeySelection={true}
         displayMode={displayMode}
         canSelect={props.canSelect}
+        onFileClick={handleFileClick}
       />
     );
   };

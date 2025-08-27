@@ -6023,13 +6023,6 @@ react-dom@19.1.0:
   dependencies:
     scheduler "^0.26.0"
 
-react-dom@^19.1.0:
-  version "19.1.1"
-  resolved "https://registry.npmjs.org/react-dom/-/react-dom-19.1.1.tgz"
-  integrity sha512-Dlq/5LAZgF0Gaz6yiqZCf6VCcZs1ghAJyrsu84Q/GT0gV+mCxbfmKNoGRKBYMJ8IEdGPqu49YWXD02GCknEDkw==
-  dependencies:
-    scheduler "^0.26.0"
-
 react-dropzone@14.3.8:
   version "14.3.8"
   resolved "https://registry.npmjs.org/react-dropzone/-/react-dropzone-14.3.8.tgz"

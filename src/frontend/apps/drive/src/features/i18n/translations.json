@@ -205,7 +205,9 @@
         "search": {
           "modal": {
             "title": "Search",
-            "description": "The search function is under development and will be available soon."
+            "description": "The search function is under development and will be available soon.",
+            "placeholder": "Type a keyword or a file name",
+            "results": "Select a document"
           }
         },
         "selectionBar": {
@@ -531,7 +533,9 @@
         "search": {
           "modal": {
             "title": "Rechercher",
-            "description": "La fonction de recherche est en cours de développement et sera bientôt disponible."
+            "description": "La fonction de recherche est en cours de développement et sera bientôt disponible.",
+            "placeholder": "Taper un mot clé ou le nom d'un fichier",
+            "results": "Sélectionnez un document"
           }
         },
         "selectionBar": {

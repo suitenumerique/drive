@@ -284,19 +284,6 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
   }
 }
 
-.explorer__search__modal {
-  p {
-    font-size: 14px;
-    font-weight: 400;
-    color: var(--c--theme--colors--greyscale-600);
-  }
-
-  img {
-    margin: auto;
-    display: block;
-  }
-}
-
 @media (max-width: $tablet) {
   .explorer-app {
     background-color: var(--c--theme--colors--greyscale-000);

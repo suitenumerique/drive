@@ -57,6 +57,7 @@ export type EmbeddedExplorerGridProps = {
   displayMode?: GlobalExplorerContextType["displayMode"];
   canSelect?: (item: Item) => boolean;
   openPreviews?: boolean;
+  onFileClick?: (item: Item) => void;
 };
 
 const EMPTY_ARRAY: Item[] = [];
@@ -109,11 +110,6 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
     Item | undefined
   >(undefined);
   const moveModal = useModal();
-
-  const handleClosePreview = () => {
-    setIsPreviewOpen(false);
-    setOpenedFileId(undefined);
-  };
 
   const selectedItems = props.selectedItems ?? [];
   const selectedItemsMap = useMemo(() => {
@@ -171,25 +167,25 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
 
   const canSelect = props.canSelect ?? (() => true);
 
-  const handleChangePreviewItem = (file?: FilePreviewType) => {
-    if (file) {
-      const item = props.items?.find((item) => file?.id === item.id);
-      setCurrentPreviewItem(item);
-    } else {
-      setCurrentPreviewItem(undefined);
-    }
-  };
+  // const handleChangePreviewItem = (file?: FilePreviewType) => {
+  //   if (file) {
+  //     const item = props.items?.find((item) => file?.id === item.id);
+  //     setCurrentPreviewItem(item);
+  //   } else {
+  //     setCurrentPreviewItem(undefined);
+  //   }
+  // };
 
-  const previewItems: FilePreviewType[] = useMemo(() => {
-    const items =
-      props.items?.filter((item) => item.type === ItemType.FILE) ?? [];
-    return items?.map((item) => ({
-      id: item.id,
-      title: item.title,
-      mimetype: item.mimetype ?? "",
-      url: item.url ?? "",
-    }));
-  }, [props.items]);
+  // const previewItems: FilePreviewType[] = useMemo(() => {
+  //   const items =
+  //     props.items?.filter((item) => item.type === ItemType.FILE) ?? [];
+  //   return items?.map((item) => ({
+  //     id: item.id,
+  //     title: item.title,
+  //     mimetype: item.mimetype ?? "",
+  //     url: item.url ?? "",
+  //   }));
+  // }, [props.items]);
 
   return (
     <>
@@ -335,18 +331,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                             item: row.original,
                           });
                         } else {
-                          if (openPreviews) {
-                            if (row.original.url) {
-                              setIsPreviewOpen(true);
-                              setOpenedFileId(row.original.id);
-                            } else {
-                              addToast(
-                                <ToasterItem>
-                                  {t("explorer.grid.no_url")}
-                                </ToasterItem>
-                              );
-                            }
-                          }
+                          props.onFileClick?.(row.original);
                         }
                       }
                     }}
@@ -394,17 +379,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
             </tbody>
           </table>
         </div>
-        <FilePreview
-          isOpen={isPreviewOpen}
-          onClose={handleClosePreview}
-          title={t("file_preview.title")}
-          files={previewItems ?? []}
-          onChangeFile={handleChangePreviewItem}
-          openedFileId={openedFileId}
-          sidebarContent={
-            currentPreviewItem && <ItemInfo item={currentPreviewItem} />
-          }
-        />
+
         {moveModal.isOpen && moveItem && (
           <ExplorerMoveFolder
             {...moveModal}

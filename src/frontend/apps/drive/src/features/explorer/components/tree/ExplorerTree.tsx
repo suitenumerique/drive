@@ -48,6 +48,19 @@ export const ExplorerTree = () => {
 
   const { itemId, treeIsInitialized } = useGlobalExplorer();
 
+  // Toggle the menu when ⌘K is pressed
+  React.useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        searchModal.open();
+      }
+    };
+
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
+
   // Initialize the opened nodes when the tree is initialized.
   useEffect(() => {
     if (!treeIsInitialized) {
@@ -113,7 +126,9 @@ export const ExplorerTree = () => {
 
   const createFolderModal = useModal();
   const createWorkspaceModal = useModal();
-  const searchModal = useModal();
+  const searchModal = useModal({
+    isOpenDefault: true,
+  });
 
   const handleMove = (result: TreeViewMoveResult) => {
     move.mutate(

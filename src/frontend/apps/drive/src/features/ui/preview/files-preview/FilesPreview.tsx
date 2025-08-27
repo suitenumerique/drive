@@ -45,7 +45,7 @@ export const FilePreview = ({
   onClose,
   title = "File Preview",
   files = [],
-  initialIndexFile = 0,
+  initialIndexFile = -1,
   openedFileId,
   sidebarContent,
   headerRightContent,
@@ -62,9 +62,13 @@ export const FilePreview = ({
     }));
   }, [files]);
 
-  const currentFile: FilePreviewData | null = data[currentIndex] || null;
+  const currentFile: FilePreviewData | undefined =
+    currentIndex > -1 ? data[currentIndex] : undefined;
 
   const handleDownload = async () => {
+    if (!currentFile) {
+      return;
+    }
     downloadFile(currentFile.url, currentFile.title);
   };
 
@@ -117,7 +121,10 @@ export const FilePreview = ({
   useEffect(() => {
     if (openedFileId) {
       const index = data.findIndex((file) => file.id === openedFileId);
-      setCurrentIndex(index > -1 ? index : 0);
+      const newIndex = index > -1 ? index : -1;
+      setCurrentIndex(newIndex);
+    } else {
+      setCurrentIndex(-1);
     }
   }, [openedFileId]);
 
@@ -125,7 +132,7 @@ export const FilePreview = ({
     onChangeFile?.(currentFile);
   }, [currentFile]);
 
-  if (!isOpen) {
+  if (!isOpen || !currentFile) {
     return null;
   }
 

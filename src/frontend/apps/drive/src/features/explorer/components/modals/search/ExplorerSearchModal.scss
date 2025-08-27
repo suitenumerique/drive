@@ -1,0 +1,72 @@
+.explorer__search__modal {
+  &__empty {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 50px 0;
+  }
+
+  &__items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 12px 12px 12px;
+    margin-top: 4px;
+
+    &__title {
+      font-size: 14px;
+      font-style: normal;
+      font-weight: 700;
+      color: var(--c--theme--colors--greyscale-800);
+      margin-bottom: 1rem;
+    }
+  }
+
+  &__item {
+    display: flex;
+    height: 48px;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 4px;
+    background-color: transparent;
+    outline: none;
+    border: none;
+    text-align: left;
+    font-family: var(--c--theme--fonts--base);
+
+    &:hover,
+    &:focus {
+      background-color: var(--c--theme--colors--greyscale-100);
+    }
+
+    &__content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100%;
+      gap: 4px;
+
+      &__title {
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 16px;
+        color: var(--c--theme--colors--greyscale-800);
+      }
+
+      &__ancestors {
+        font-size: 12px;
+        font-style: normal;
+        font-weight: 400;
+        color: var(--c--theme--colors--greyscale-600);
+        line-height: 12px;
+      }
+    }
+
+    &__icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+    }
+  }
+}
