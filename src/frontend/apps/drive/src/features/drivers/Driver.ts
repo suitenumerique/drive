@@ -36,6 +36,7 @@ export abstract class Driver {
   abstract moveItem(id: string, parentId: string): Promise<void>;
   abstract moveItems(ids: string[], parentId: string): Promise<void>;
   abstract getChildren(id: string, filters?: ItemFilters): Promise<Item[]>;
+  abstract searchItems(filters?: ItemFilters): Promise<Item[]>;
   // Accesses
   abstract getItemAccesses(itemId: string): Promise<APIList<Access>>;
   abstract createAccess(data: DTOCreateAccess): Promise<void>;
