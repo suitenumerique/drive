@@ -43,7 +43,7 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
 
   const folders = useMemo(() => {
     if (!props.childrenItems) {
-      return [];
+      return undefined;
     }
 
     return props.childrenItems.filter((item) => item.type === ItemType.FOLDER);
@@ -59,6 +59,10 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
 
   // Sets the children of the item in the tree.
   useEffect(() => {
+    if (!folders) {
+      return;
+    }
+
     const itemFilters = filters ?? {};
 
     if (!treeIsInitialized || !itemId || Object.keys(itemFilters).length > 0) {
