@@ -535,6 +535,12 @@ class Item(TreeModel, BaseModel):
     main_workspace = models.BooleanField(default=False)
     size = models.BigIntegerField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
+    malware_detection_info = models.JSONField(
+        null=True,
+        blank=True,
+        default=dict,
+        help_text=_("Malware detection info when the analysis status is unsafe."),
+    )
 
     label_size = 7
 
