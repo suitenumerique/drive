@@ -1,8 +1,13 @@
-import { Modal, ModalProps, ModalSize } from "@openfun/cunningham-react";
+import {
+  Button,
+  Modal,
+  ModalProps,
+  ModalSize,
+} from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
 
 import { QuickSearch } from "@gouvfr-lasuite/ui-kit";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Item, ItemType } from "@/features/drivers/types";
 import { getDriver } from "@/features/config/Config";
 import searchImage from "@/assets/search-dev.png";
@@ -11,36 +16,58 @@ import {
   NavigationEventType,
   useGlobalExplorer,
 } from "../../GlobalExplorerContext";
+import {
+  ExplorerFilterType,
+  ExplorerFilterWorkspace,
+  handleFilterChange,
+} from "../../app-view/ExplorerFilters";
+import { ItemFilters } from "@/features/drivers/Driver";
+import { Key } from "react-aria-components";
 
 export const ExplorerSearchModal = (
   props: Pick<ModalProps, "isOpen" | "onClose">
 ) => {
   const { t } = useTranslation();
   const [inputValue, setInputValue] = useState<string>("");
+  const [filters, setFilters] = useState<ItemFilters>({});
   const searchUserTimeoutRef = useRef<NodeJS.Timeout>(null);
   const [items, setItems] = useState<Item[]>([]);
+
   const driver = getDriver();
   const [loading, setLoading] = useState(false);
   const { onNavigate, setPreviewItem, setPreviewItems } = useGlobalExplorer();
 
-  const onSearch = (search: string) => {
+  const onSearch = () => {
     if (searchUserTimeoutRef.current) {
       clearTimeout(searchUserTimeoutRef.current);
+    }
+
+    if (inputValue === "" && Object.keys(filters).length === 0) {
+      setItems([]);
+      return;
     }
 
     searchUserTimeoutRef.current = setTimeout(async () => {
       setLoading(true);
       const items = await driver.searchItems({
-        title: search,
+        ...filters,
+        title: inputValue,
       });
       setItems(items);
       setLoading(false);
     }, 300);
   };
 
+  useEffect(() => {
+    onSearch();
+  }, [filters, inputValue]);
+
   const onInputChange = (str: string) => {
     setInputValue(str);
-    onSearch(str);
+  };
+
+  const onFilterChange = (name: string, value: Key | null) => {
+    setFilters(handleFilterChange(filters, name, value));
   };
 
   const onItemClick = (item: Item) => {
@@ -71,6 +98,25 @@ export const ExplorerSearchModal = (
           loading={loading}
           placeholder={t("explorer.search.modal.placeholder")}
         >
+          <div className="explorer__search__modal__filters">
+            <div className="explorer__search__modal__filters__inputs">
+              <ExplorerFilterType
+                value={filters?.type ?? null}
+                onChange={(value) => onFilterChange("type", value)}
+              />
+              <ExplorerFilterWorkspace
+                value={filters?.workspace ?? null}
+                onChange={(value) => onFilterChange("workspace", value)}
+              />
+            </div>
+            <Button
+              color="primary-text"
+              size="small"
+              onClick={() => setFilters({})}
+            >
+              {t("explorer.search.modal.filters.reset")}
+            </Button>
+          </div>
           {items.length > 0 ? (
             <div className="explorer__search__modal__items">
               <div className="explorer__search__modal__items__title">

@@ -145,6 +145,9 @@
               "folder": "Folder",
               "reset": "Reset"
             }
+          },
+          "workspace": {
+            "label": "Workspace"
           }
         },
         "tree": {
@@ -207,7 +210,10 @@
             "title": "Search",
             "description": "The search function is under development and will be available soon.",
             "placeholder": "Type a keyword or a file name",
-            "results": "Select a document"
+            "results": "Select a document",
+            "filters": {
+              "reset": "Reset"
+            }
           }
         },
         "selectionBar": {
@@ -535,7 +541,10 @@
             "title": "Rechercher",
             "description": "La fonction de recherche est en cours de développement et sera bientôt disponible.",
             "placeholder": "Taper un mot clé ou le nom d'un fichier",
-            "results": "Sélectionnez un document"
+            "results": "Sélectionnez un document",
+            "filters": {
+              "reset": "Réinitialiser"
+            }
           }
         },
         "selectionBar": {

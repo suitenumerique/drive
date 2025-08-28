@@ -6,6 +6,18 @@
     padding: 50px 0;
   }
 
+  &__filters {
+    padding: 0 12px 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    &__inputs {
+      display: flex;
+      gap: 8px;
+    }
+  }
+
   &__items {
     display: flex;
     flex-direction: column;
@@ -18,7 +30,7 @@
       font-style: normal;
       font-weight: 700;
       color: var(--c--theme--colors--greyscale-800);
-      margin-bottom: 1rem;
+      margin-bottom: 8px;
     }
   }
 

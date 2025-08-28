@@ -112,7 +112,7 @@ export const GlobalExplorerProvider = ({
   onNavigate,
 }: ExplorerProviderProps) => {
   const driver = getDriver();
-
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedItems, setSelectedItems] = useState<Item[]>([]);
 
@@ -187,11 +187,11 @@ export const GlobalExplorerProvider = ({
 
   const { dropZone } = useUploadZone({ item: item! });
 
-  const { t } = useTranslation();
-
+  /**
+   * Preview states.
+   */
   const [previewItem, setPreviewItem] = useState<Item | undefined>(undefined);
   const [previewItems, setPreviewItems] = useState<Item[]>([]);
-
   const previewFiles = useMemo(() => {
     return previewItems
       .filter((item) => item.type === ItemType.FILE)

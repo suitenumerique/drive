@@ -28,19 +28,10 @@ import { EmbeddedExplorerGridActionsCell } from "@/features/explorer/components/
 import { useTableKeyboardNavigation } from "@/features/explorer/hooks/useTableKeyboardNavigation";
 import clsx from "clsx";
 import { isTablet } from "@/features/ui/components/responsive/ResponsiveDivs";
-import {
-  addToast,
-  ToasterItem,
-} from "@/features/ui/components/toaster/Toaster";
 import { Droppable } from "@/features/explorer/components/Droppable";
 import { useDragItemContext } from "@/features/explorer/components/ExplorerDndProvider";
 import { useModal } from "@openfun/cunningham-react";
 import { ExplorerMoveFolder } from "@/features/explorer/components/modals/move/ExplorerMoveFolderModal";
-import { ItemInfo } from "@/features/items/components/ItemInfo";
-import {
-  FilePreview,
-  FilePreviewType,
-} from "@/features/ui/preview/files-preview/FilesPreview";
 
 export type EmbeddedExplorerGridProps = {
   isCompact?: boolean;
@@ -56,7 +47,6 @@ export type EmbeddedExplorerGridProps = {
   parentItem?: Item;
   displayMode?: GlobalExplorerContextType["displayMode"];
   canSelect?: (item: Item) => boolean;
-  openPreviews?: boolean;
   onFileClick?: (item: Item) => void;
 };
 
@@ -100,15 +90,7 @@ export const useEmbeddedExplorerGirdContext = () => {
 export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   const { t } = useTranslation();
 
-  const openPreviews = props.openPreviews ?? true;
   const [moveItem, setMoveItem] = useState<Item | null>(null);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [openedFileId, setOpenedFileId] = useState<string | undefined>(
-    undefined
-  );
-  const [currentPreviewItem, setCurrentPreviewItem] = useState<
-    Item | undefined
-  >(undefined);
   const moveModal = useModal();
 
   const selectedItems = props.selectedItems ?? [];
@@ -166,26 +148,6 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   };
 
   const canSelect = props.canSelect ?? (() => true);
-
-  // const handleChangePreviewItem = (file?: FilePreviewType) => {
-  //   if (file) {
-  //     const item = props.items?.find((item) => file?.id === item.id);
-  //     setCurrentPreviewItem(item);
-  //   } else {
-  //     setCurrentPreviewItem(undefined);
-  //   }
-  // };
-
-  // const previewItems: FilePreviewType[] = useMemo(() => {
-  //   const items =
-  //     props.items?.filter((item) => item.type === ItemType.FILE) ?? [];
-  //   return items?.map((item) => ({
-  //     id: item.id,
-  //     title: item.title,
-  //     mimetype: item.mimetype ?? "",
-  //     url: item.url ?? "",
-  //   }));
-  // }, [props.items]);
 
   return (
     <>

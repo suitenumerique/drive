@@ -55,7 +55,6 @@ export const HeaderRight = () => {
       )}
       <LanguagePicker />
       {!config?.FRONTEND_HIDE_GAUFRE && <LaGaufre />}
-      <ExplorerSearchButton />
     </>
   );
 };

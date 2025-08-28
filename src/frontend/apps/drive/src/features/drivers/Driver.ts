@@ -21,6 +21,7 @@ import {
 export type ItemFilters = {
   type?: ItemType;
   title?: string;
+  workspace?: string;
 };
 
 export type UserFilters = {
