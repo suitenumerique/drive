@@ -109,22 +109,29 @@ export const ExplorerSearchModal = (
                 onChange={(value) => onFilterChange("workspace", value)}
               />
             </div>
-            <Button
-              color="primary-text"
-              size="small"
-              onClick={() => setFilters({})}
-            >
-              {t("explorer.search.modal.filters.reset")}
-            </Button>
+
+            <div>
+              {Object.keys(filters).length > 0 && (
+                <Button
+                  color="primary-text"
+                  size="small"
+                  onClick={() => setFilters({})}
+                >
+                  {t("explorer.search.modal.filters.reset")}
+                </Button>
+              )}
+            </div>
           </div>
           {items.length > 0 ? (
-            <div className="explorer__search__modal__items">
-              <div className="explorer__search__modal__items__title">
-                {t("explorer.search.modal.results")}
+            <div className="explorer__search__modal__items__container">
+              <div className="explorer__search__modal__items">
+                <div className="explorer__search__modal__items__title">
+                  {t("explorer.search.modal.results")}
+                </div>
+                {items.map((item) => (
+                  <SearchItem key={item.id} item={item} onClick={onItemClick} />
+                ))}
               </div>
-              {items.map((item) => (
-                <SearchItem key={item.id} item={item} onClick={onItemClick} />
-              ))}
             </div>
           ) : (
             <div className="explorer__search__modal__empty">
