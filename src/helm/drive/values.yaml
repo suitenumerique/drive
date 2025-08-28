@@ -199,6 +199,18 @@ backend:
     annotations: 
       argocd.argoproj.io/hook: PostSync
 
+  # List of cronjob to add
+  # cronjobs:
+  #   - name: reset-database
+  #     schedule: "0 */2 * * *"
+  #     command:
+  #       - "/bin/sh"
+  #       - "-c"
+  #       - python manage.py flush --no-input
+  ## @param backend.cronjobs Cronjob name, schedule, command
+  cronjobs: []
+
+
   ## @param backend.themeCustomization.enabled Enable theme customization
   ## @param backend.themeCustomization.file_content Content of the theme customization file. Must be a json object.
   ## @param backend.themeCustomization.mount_path Path where the customization file will be mounted in the backend deployment.
