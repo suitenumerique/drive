@@ -25,7 +25,7 @@ license = { file = "LICENSE" }
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "boto3==1.40.14",
+    "boto3==1.40.20",
     "Brotli==1.1.0",
     "dj-database-url==3.0.1",
     "celery[redis]==5.5.3",
@@ -34,7 +34,7 @@ dependencies = [
     "django-cors-headers==4.7.0",
     "django-countries==7.6.1",
     "django-filter==25.1",
-    "django-lasuite==0.0.12",
+    "django-lasuite==0.0.13",
     "django-ltree@git+https://github.com/mariocesar/django-ltree@5d955bc82021a50c522ee524106f6709e3b414e4",
     "django-parler==2.3",
     "django-redis==6.0.0",
@@ -51,13 +51,13 @@ dependencies = [
     "markdown==3.8.2",
     "mozilla-django-oidc==4.0.1",
     "nested-multipart-parser==1.5.0",
-    "posthog==6.6.0",
+    "posthog==6.7.0",
     "psycopg[binary]==3.2.9",
     "PyJWT==2.10.1",
     "python-magic==0.4.27",
     "redis<6.0.0",
     "requests==2.32.5",
-    "sentry-sdk==2.35.0",
+    "sentry-sdk==2.35.1",
     "url-normalize==2.2.1",
     "whitenoise==6.9.0",
 ]
@@ -75,7 +75,7 @@ dev = [
     "drf-spectacular-sidecar==2025.8.1",
     "freezegun==1.5.5",
     "ipdb==0.13.13",
-    "ipython==9.4.0",
+    "ipython==9.5.0",
     "pyfakefs==5.9.2",
     "pylint-django==2.6.1",
     "pylint==3.3.8",
@@ -85,7 +85,7 @@ dev = [
     "pytest-icdiff==0.9",
     "pytest-xdist==3.8.0",
     "responses==0.25.8",
-    "ruff==0.12.9",
+    "ruff==0.12.11",
     "types-requests==2.32.4.20250809",
 ]
 
