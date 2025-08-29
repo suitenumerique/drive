@@ -93,7 +93,13 @@ class ItemUploadStateChoices(models.TextChoices):
     """Defines the possible states of an item."""
 
     PENDING = "pending", _("Pending")
-    UPLOADED = "uploaded", _("Uploaded")
+    ANALYZING = "analyzing", _("Analyzing")
+    SUSPICIOUS = "suspicious", _("Suspicious")
+    FILE_TOO_LARGE_TO_ANALYZE = (
+        "file_too_large_to_analyze",
+        _("File too large to analyze"),
+    )
+    READY = "ready", _("Ready")
 
 
 class DuplicateEmailError(Exception):
@@ -518,7 +524,7 @@ class Item(TreeModel, BaseModel):
         default=ItemTypeChoices.FOLDER,
     )
     upload_state = models.CharField(
-        max_length=20,
+        max_length=25,
         choices=ItemUploadStateChoices.choices,
         null=True,
         blank=True,
@@ -529,6 +535,12 @@ class Item(TreeModel, BaseModel):
     main_workspace = models.BooleanField(default=False)
     size = models.BigIntegerField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
+    malware_detection_info = models.JSONField(
+        null=True,
+        blank=True,
+        default=dict,
+        help_text=_("Malware detection info when the analysis status is unsafe."),
+    )
 
     label_size = 7
 

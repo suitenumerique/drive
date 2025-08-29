@@ -1,6 +1,7 @@
 """Test related to item upload ended API."""
 
 from io import BytesIO
+from unittest import mock
 
 from django.core.files.storage import default_storage
 
@@ -8,6 +9,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from core import factories
+from core.api.viewsets import malware_detection
 from core.models import ItemTypeChoices, ItemUploadStateChoices, LinkRoleChoices
 
 pytestmark = pytest.mark.django_db
@@ -75,7 +77,7 @@ def test_api_item_upload_ended_on_wrong_upload_state():
     client.force_login(user)
 
     item = factories.ItemFactory(type=ItemTypeChoices.FILE)
-    item.upload_state = ItemUploadStateChoices.UPLOADED
+    item.upload_state = ItemUploadStateChoices.READY
     item.save()
     factories.UserItemAccessFactory(item=item, user=user, role="owner")
 
@@ -110,12 +112,15 @@ def test_api_item_upload_ended_success():
         BytesIO(b"my prose"),
     )
 
-    response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+    with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
+        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
 
     assert response.status_code == 200
 
     item.refresh_from_db()
-    assert item.upload_state == ItemUploadStateChoices.UPLOADED
+    assert item.upload_state == ItemUploadStateChoices.ANALYZING
     assert item.mimetype == "text/plain"
     assert item.size == 8
 

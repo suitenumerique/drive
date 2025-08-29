@@ -27,8 +27,8 @@ class UserLiteSerializer(UserSerializer):
 
     class Meta:
         model = models.User
-        fields = ["full_name", "short_name"]
-        read_only_fields = ["full_name", "short_name"]
+        fields = ["id", "full_name", "short_name"]
+        read_only_fields = ["id", "full_name", "short_name"]
 
 
 class BaseAccessSerializer(serializers.ModelSerializer):
@@ -216,7 +216,7 @@ class ListItemSerializer(serializers.ModelSerializer):
         """Return the URL of the item."""
         if (
             item.type != models.ItemTypeChoices.FILE
-            or item.upload_state != models.ItemUploadStateChoices.UPLOADED
+            or item.upload_state == models.ItemUploadStateChoices.PENDING
             or item.filename is None
         ):
             return None

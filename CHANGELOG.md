@@ -8,13 +8,17 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(back) implement lasuite.malware_detection app #212
+- ✅(front) add e2e testing #317
+
 ## [v0.3.0] - 2025-08-25
 
 ### Added
 
 - ✨(back) allow theme customization using a configuration file #299
 - ✨(front) use theme_customization to configure the footer #299
-- ✅(front) add e2e testing #317
 
 ### Fixed
 
@@ -64,6 +68,7 @@ and this project adheres to
 - ✨(front) make frontend themable
 - ✨(global) Add File Picker SDK
 - 🔧(cron) add pgdump cron on scalingo deployment #264
+- ✨(back) implement lasuite.malware_detection app #212
 
 ### Changed
 

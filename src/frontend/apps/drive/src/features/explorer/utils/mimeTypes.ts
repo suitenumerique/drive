@@ -1,4 +1,4 @@
-import { Item } from "@/features/drivers/types";
+import { Item, ItemUploadState } from "@/features/drivers/types";
 import mimeCalc from "@/assets/files/icons/mime-calc.svg";
 import mimeDoc from "@/assets/files/icons/mime-doc.svg";
 import mimeImage from "@/assets/files/icons/mime-image.svg";
@@ -17,7 +17,7 @@ import mimePowerpointMini from "@/assets/files/icons/mime-powerpoint-mini.svg";
 import mimeAudioMini from "@/assets/files/icons/mime-audio-mini.svg";
 import mimeVideoMini from "@/assets/files/icons/mime-video-mini.svg";
 import mimeArchiveMini from "@/assets/files/icons/mime-archive-mini.svg";
-
+import mimeSuspicious from "@/assets/files/icons/suspicious_file.svg";
 
 import mimeArchive from "@/assets/files/icons/mime-archive.svg";
 import { getExtension } from "../utils/utils";
@@ -32,6 +32,7 @@ export enum MimeCategory {
   AUDIO = "audio",
   VIDEO = "video",
   ARCHIVE = "archive",
+  SUSPICIOUS = "suspicious",
 }
 
 export const MIME_TO_ICON = {
@@ -44,7 +45,7 @@ export const MIME_TO_ICON = {
   [MimeCategory.AUDIO]: mimeAudio,
   [MimeCategory.VIDEO]: mimeVideo,
   [MimeCategory.ARCHIVE]: mimeArchive,
-
+  [MimeCategory.SUSPICIOUS]: mimeSuspicious,
 };
 
 export const MIME_TO_ICON_MINI = {
@@ -57,10 +58,11 @@ export const MIME_TO_ICON_MINI = {
   [MimeCategory.AUDIO]: mimeAudioMini,
   [MimeCategory.VIDEO]: mimeVideoMini,
   [MimeCategory.ARCHIVE]: mimeArchiveMini,
+  [MimeCategory.SUSPICIOUS]: mimeSuspicious,
 };
 
 export const ICONS = {
-	"mini": {
+  mini: {
     [MimeCategory.CALC]: mimeCalcMini,
     [MimeCategory.DOC]: mimeDocMini,
     [MimeCategory.IMAGE]: mimeImageMini,
@@ -70,8 +72,9 @@ export const ICONS = {
     [MimeCategory.AUDIO]: mimeAudioMini,
     [MimeCategory.VIDEO]: mimeVideoMini,
     [MimeCategory.ARCHIVE]: mimeArchiveMini,
-	},
-	"normal": {
+    [MimeCategory.SUSPICIOUS]: mimeSuspicious,
+  },
+  normal: {
     [MimeCategory.CALC]: mimeCalc,
     [MimeCategory.DOC]: mimeDoc,
     [MimeCategory.IMAGE]: mimeImage,
@@ -81,9 +84,9 @@ export const ICONS = {
     [MimeCategory.AUDIO]: mimeAudio,
     [MimeCategory.VIDEO]: mimeVideo,
     [MimeCategory.ARCHIVE]: mimeArchive,
-	}
-}
-
+    [MimeCategory.SUSPICIOUS]: mimeSuspicious,
+  },
+};
 
 export const MIME_TO_FORMAT_TRANSLATION_KEY = {
   [MimeCategory.CALC]: "mime.calc",
@@ -97,27 +100,26 @@ export const MIME_TO_FORMAT_TRANSLATION_KEY = {
   [MimeCategory.ARCHIVE]: "mime.archive",
 };
 
-
 export const MIME_MAP = {
-    [MimeCategory.CALC]: [
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "text/csv",
-    ],
-    [MimeCategory.PDF]: ["application/pdf"],
-    [MimeCategory.DOC]: [
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ],
-    [MimeCategory.POWERPOINT]: [
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    ],
-    [MimeCategory.ARCHIVE]: [
-      "application/zip",
-      "application/x-7z-compressed",
-      "application/x-rar-compressed",
-      "application/x-tar",
-      "application/x-rar",
-      "application/octet-stream",
-    ],
+  [MimeCategory.CALC]: [
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/csv",
+  ],
+  [MimeCategory.PDF]: ["application/pdf"],
+  [MimeCategory.DOC]: [
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ],
+  [MimeCategory.POWERPOINT]: [
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ],
+  [MimeCategory.ARCHIVE]: [
+    "application/zip",
+    "application/x-7z-compressed",
+    "application/x-rar-compressed",
+    "application/x-tar",
+    "application/x-rar",
+    "application/octet-stream",
+  ],
 };
 
 // This is used to map mimetypes to categories to get a O(1) lookup
@@ -127,41 +129,46 @@ Object.entries(MIME_MAP).forEach(([category, mimes]) => {
     MIME_TO_CATEGORY[mime] = category as MimeCategory;
   });
 });
-  
+
 export const CALC_EXTENSIONS = ["numbers", "xlsx", "xls"];
 
-export const getMimeCategory = (mimetype: string, extension?: string | null): MimeCategory => {
+export const getMimeCategory = (
+  mimetype: string,
+  extension?: string | null
+): MimeCategory => {
   // Special case: some calc files have application/zip mimetype. For those we should check their extension too.
   // Otherwise they will be shown as zip files.
   if (
-      mimetype === "application/zip" &&
-      extension &&
-      CALC_EXTENSIONS.includes(extension)
+    mimetype === "application/zip" &&
+    extension &&
+    CALC_EXTENSIONS.includes(extension)
   ) {
-      return MimeCategory.CALC;
+    return MimeCategory.CALC;
   }
 
-
-  
   if (MIME_TO_CATEGORY[mimetype]) {
-      return MIME_TO_CATEGORY[mimetype];
+    return MIME_TO_CATEGORY[mimetype];
   }
   if (mimetype?.startsWith("image/")) {
-      return MimeCategory.IMAGE;
+    return MimeCategory.IMAGE;
   }
   if (mimetype?.startsWith("audio/")) {
-      return MimeCategory.AUDIO;
+    return MimeCategory.AUDIO;
   }
   if (mimetype?.startsWith("video/")) {
-      return MimeCategory.VIDEO;
+    return MimeCategory.VIDEO;
   }
-  
+
   return MimeCategory.OTHER;
-  };
+};
 
 export const getItemMimeCategory = (item: Item): MimeCategory => {
   const mimetype = item.mimetype;
   const extension = getExtension(item);
+  const uploadState = item.upload_state;
+  if (uploadState === ItemUploadState.SUSPICIOUS) {
+    return MimeCategory.SUSPICIOUS;
+  }
 
   if (!mimetype) {
     return MimeCategory.OTHER;
@@ -169,13 +176,14 @@ export const getItemMimeCategory = (item: Item): MimeCategory => {
 
   return getMimeCategory(mimetype, extension);
 };
-  
 
 export const getFormatTranslationKey = (item: Item) => {
   const category = getItemMimeCategory(item);
+  if (category === MimeCategory.SUSPICIOUS) {
+    return "mime.suspicious";
+  }
   return MIME_TO_FORMAT_TRANSLATION_KEY[category];
 };
-
 
 /**
  * This function removes the file extension from the filename.
