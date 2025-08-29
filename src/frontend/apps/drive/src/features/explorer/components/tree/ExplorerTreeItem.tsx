@@ -1,4 +1,4 @@
-import { Item, TreeItem } from "@/features/drivers/types";
+import { Item, TreeItem, TreeItemData } from "@/features/drivers/types";
 import {
   IconSize,
   NodeRendererProps,
@@ -21,7 +21,7 @@ type ExplorerTreeItemProps = NodeRendererProps<TreeDataItem<TreeItem>>;
 
 export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
   const { onNavigate } = useGlobalExplorer();
-  const item = props.node.data.value;
+  const item: TreeViewDataType<TreeItemData> = props.node.data.value;
   const editModal = useModal();
 
   return (
@@ -36,7 +36,7 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
             });
           }}
         >
-          <div className="explorer__tree__item">
+          <div className="explorer__tree__item" data-testid="tree_item_content">
             <div className="explorer__tree__item__content">
               <ExplorerTreeItemIcon item={item} size={IconSize.SMALL} />
               {/* 
