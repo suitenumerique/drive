@@ -20,13 +20,13 @@ and this project adheres to
 - ✨(front) use theme_customization to configure the footer #299
 - ✅(front) add e2e testing #317
 
-
 ### Fixed
 
 - 🔧(nginx) fix trash route #309
 - 🐛(front) fix workspace link react cache #310
 - 🐛(backend) allow item partial update without modifying title #316
 - 🌐(front) fix share item wording #315
+- 🐛(front) fix redirect after delete node in tree #325
 
 ## [v0.2.0] - 2025-08-18
 
