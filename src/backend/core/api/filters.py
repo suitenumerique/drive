@@ -21,6 +21,26 @@ class ItemFilter(django_filters.FilterSet):
         fields = ["title", "type"]
 
 
+class SearchItemFilter(ItemFilter):
+    """Filter class dedicated to the Item viewset search method."""
+
+    workspace = django_filters.UUIDFilter(
+        method="filter_workspace", label=_("Workspace")
+    )
+
+    class Meta:
+        model = models.Item
+        fields = ["title", "type", "workspace"]
+
+    # pylint: disable=unused-argument
+    def filter_workspace(self, queryset, name, value):
+        """
+        This filter do nothing, it returns directly the queryset.
+        It is used by the viewset directly to filter the ItemAccess queryset.
+        """
+        return queryset
+
+
 class ListItemFilter(ItemFilter):
     """Filter class dedicated to the Item viewset list method."""
 
