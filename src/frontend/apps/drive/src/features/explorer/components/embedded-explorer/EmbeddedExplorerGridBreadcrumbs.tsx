@@ -105,6 +105,7 @@ const BaseBreadcrumbs = ({
         content: (
           <button
             className="c__breadcrumbs__button"
+            data-testid="breadcrumb-button"
             onClick={() => handleGoBack(item)}
           >
             {isWorkspace && <ItemIcon item={item} size={IconSize.SMALL} />}
