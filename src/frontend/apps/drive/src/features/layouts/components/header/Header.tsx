@@ -1,7 +1,7 @@
 import { DropdownMenu, LaGaufre } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@openfun/cunningham-react";
 import { useAuth, logout } from "@/features/auth/Auth";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExplorerSearchButton } from "@/features/explorer/components/app-view/ExplorerSearchButton";
 import { getDriver } from "@/features/config/Config";
@@ -18,7 +18,7 @@ export const HeaderIcon = () => {
   );
 };
 
-export const HeaderRight = () => {
+export const HeaderRight = ({ displaySearch }: { displaySearch?: boolean }) => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
@@ -55,6 +55,7 @@ export const HeaderRight = () => {
       )}
       <LanguagePicker />
       {!config?.FRONTEND_HIDE_GAUFRE && <LaGaufre />}
+      {displaySearch && <ExplorerSearchButton />}
     </>
   );
 };

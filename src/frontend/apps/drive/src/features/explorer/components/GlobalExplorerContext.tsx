@@ -68,7 +68,7 @@ export const useGlobalExplorer = () => {
   const context = useContext(GlobalExplorerContext);
   if (!context) {
     throw new Error(
-      "useGlobalExplorer must be used within an ExplorerProvider"
+      "useGlobalExplorer must be used within an GlobalExplorerProvider"
     );
   }
   return context;
@@ -154,6 +154,7 @@ export const GlobalExplorerProvider = ({
 
   const { data: firstLevelItems } = useFirstLevelItems();
 
+  // TODO: To remove ?
   const { data: tree } = useQuery({
     queryKey: ["initialTreeItem", initialId],
     refetchOnWindowFocus: false,
@@ -167,6 +168,10 @@ export const GlobalExplorerProvider = ({
       return getDriver().getTree(initialId!);
     },
   });
+
+  useEffect(() => {
+    console.log("TREE CHANGED", tree);
+  }, [tree]);
 
   useEffect(() => {
     // If we open the right panel and we have a selection, we need to clear it.
@@ -306,6 +311,7 @@ const TreeProviderInitializer = ({
     setTreeIsInitialized,
   } = useGlobalExplorer();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
 
   const treeContext = useTreeContext<TreeItem>();
 
@@ -404,6 +410,7 @@ const TreeProviderInitializer = ({
     treeContext?.treeData.resetTree(items);
     setTreeIsInitialized(true);
   }, [treeItem, firstLevelItems]);
+
   return children;
 };
 

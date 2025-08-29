@@ -84,6 +84,10 @@ export const ExplorerSearchModal = (
     }
   };
 
+  useEffect(() => {
+    setInputValue("miss");
+  }, []);
+
   return (
     <Modal
       {...props}

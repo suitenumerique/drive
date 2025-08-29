@@ -18,12 +18,12 @@ import {
 } from "@/features/ui/components/toaster/Toaster";
 
 /**
- * ExplorerGridItems wrapper around ExplorerGridItems to display a list of items in a table.
+ * Wrapper around EmbeddedExplorerGrid to display a list of items in a table.
  *
  * It provides:
  * - Runtime tree lazy loading support
  *
- * TODO: Refactor using ExplorerGridItemsExplorer
+ * TODO: Refactor using EmbeddedExplorer
  *
  */
 export const AppExplorerGrid = (props: AppExplorerProps) => {
@@ -114,6 +114,36 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
   const isLoading = props.childrenItems === undefined;
   const isEmpty = props.childrenItems?.length === 0;
   const canCreateChildren = item?.abilities?.children_create;
+
+  // const { data: tree } = useQuery({
+  //   queryKey: ["tree", itemId],
+  //   enabled: AmIInTree(),
+  //   queryFn: () => {
+  //     return getDriver().getTree(itemId!);
+  //   },
+  // });
+
+  // useEffect(() => {
+  //   if (!tree) {
+  //     return;
+  //   }
+  //   // if (!treeItem) {
+  //   //   return;
+  //   // }
+  //   // console.log("ITEM ID CHANGED", itemId);
+  //   const node = treeContext?.treeData.getNode(itemId);
+  //   console.log("NODE", node);
+  //   if (node) {
+  //     return;
+  //   }
+
+  //   // NOPE: ça cause une boucle car treeItem est rafraichit avant l'arbre, et l'arbre va être reconstruit avec initiaLId.
+  //   // Et même si on modifiait pour que ça fonctionne, on perdrait tous les items en cache de l'arbre.
+  //   // queryClient.invalidateQueries({ queryKey: ["initialTreeItem"] });
+
+  //   const tree = driver.getTree(itemId);
+  //   // Add LAZY TO TREE
+  // }, [itemId, tree]);
 
   const getContent = () => {
     if (isLoading) {

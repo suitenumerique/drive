@@ -1,3 +1,7 @@
+@use "sass:map";
+@use "@/styles/cunningham-tokens-sass" as *;
+$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+
 .explorer__search__modal {
   &__empty {
     display: flex;
@@ -89,6 +93,10 @@
   top: var(--v-modal-top);
   transform: translate(-50%, 0);
   max-height: calc(100vh - var(--v-modal-top) - 2rem);
+
+  @media (max-width: $tablet) {
+    --v-modal-top: 1rem;
+  }
 
   /**
    * I know this next thing seems wtf. The goal is to make ONLY the item list scrollable and the filters and
