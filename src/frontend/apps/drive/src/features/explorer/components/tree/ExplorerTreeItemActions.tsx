@@ -3,7 +3,6 @@ import { Button, useModal } from "@openfun/cunningham-react";
 import settingsSvg from "@/assets/icons/settings.svg";
 import infoSvg from "@/assets/icons/info.svg";
 import { useTranslation } from "react-i18next";
-import { useMutationDeleteWorskpace } from "../../hooks/useMutations";
 import { Item } from "@/features/drivers/types";
 import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWorkspaceModal";
 import clsx from "clsx";
@@ -14,7 +13,10 @@ import { useDeleteTreeNode } from "./hooks/useDeleteTreeNode";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
 import { ExplorerRenameItemModal } from "../modals/ExplorerRenameItemModal";
 import { ExplorerMoveFolder } from "../modals/move/ExplorerMoveFolderModal";
-import { getParentIdFromPath } from "../../utils/utils";
+import { getParentIdFromPath, isIdInItemTree } from "../../utils/utils";
+import { useRouter } from "next/router";
+import { useDeleteItem } from "../../hooks/useDeleteItem";
+
 export type ExplorerTreeItemActionsProps = {
   item: Item;
 };
@@ -24,7 +26,9 @@ export const ExplorerTreeItemActions = ({
   const { t } = useTranslation();
   const menu = useDropdownMenu();
   const explorerContext = useGlobalExplorer();
-  const deleteWorkspaceModal = useMutationDeleteWorskpace();
+
+  const { deleteItems } = useDeleteItem();
+  const router = useRouter();
   const editWorkspaceModal = useModal();
   const shareWorkspaceModal = useModal();
   const isWorkspace = itemIsWorkspace(item);
@@ -32,6 +36,40 @@ export const ExplorerTreeItemActions = ({
   const createFolderModal = useModal();
   const renameModal = useModal();
   const moveModal = useModal();
+
+  // Simplified deletion logic for tree item actions
+  const onDelete = async () => {
+    await deleteItems([item.id]);
+
+    const currentItem = explorerContext.item;
+    if (!currentItem) return;
+
+    const parentId = getParentIdFromPath(item.path);
+    const isWorkspace = itemIsWorkspace(item);
+    const currentItemIsDeletedPath = isIdInItemTree(currentItem.path, item.id);
+
+    // Determine the redirect target after deletion
+    let redirectId: string | undefined;
+
+    if (isWorkspace && currentItemIsDeletedPath) {
+      // If deleting a workspace and the current item is part of the workspace tree, redirect to the main workspace
+      redirectId = explorerContext.mainWorkspace?.id;
+    } else if (
+      currentItemIsDeletedPath ||
+      (parentId && item.id === currentItem.id)
+    ) {
+      // If deleting an item in the current workspace or the current item itself, go to parent
+      redirectId = parentId || explorerContext.mainWorkspace?.id;
+    }
+
+    deleteTreeNode(item.id, !!redirectId && redirectId === parentId);
+    menu.setIsOpen(false);
+
+    if (redirectId) {
+      router.push(`/explorer/items/${redirectId}`);
+    }
+  };
+
   return (
     <>
       <div
@@ -90,13 +128,7 @@ export const ExplorerTreeItemActions = ({
                   : t("explorer.tree.workspace.options.delete_workspace"),
                 value: "delete",
                 isHidden: !item.abilities.destroy || item.main_workspace,
-                callback: () =>
-                  deleteWorkspaceModal.mutate(item.id, {
-                    onSuccess: () => {
-                      deleteTreeNode(item.id);
-                      menu.setIsOpen(false);
-                    },
-                  }),
+                callback: onDelete,
               },
             ]}
             {...menu}
@@ -105,6 +137,7 @@ export const ExplorerTreeItemActions = ({
             <Button
               size="nano"
               color="tertiary-text"
+              aria-label="more_actions"
               className="explorer__tree__item__actions__button-more"
               onClick={() => menu.setIsOpen(true)}
               icon={<span className="material-icons more">more_horiz</span>}
@@ -114,6 +147,7 @@ export const ExplorerTreeItemActions = ({
         <Button
           size="nano"
           color="primary"
+          aria-label="add_children"
           className="explorer__tree__item__actions__button-add"
           icon={<span className="material-icons">add</span>}
           onClick={(e) => {

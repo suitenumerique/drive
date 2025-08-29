@@ -299,7 +299,10 @@
           },
           "delete": {
             "toast_one": "Item deleted",
-            "toast_other": "{{count}} items deleted"
+            "toast_other": "{{count}} items deleted",
+            "low_rights_toast": "You don't have the necessary rights to delete these items.",
+            "toast_error_one": "An error occurred while deleting the item.",
+            "toast_error_other": "An error occurred while deleting the items."
           },
           "hard_delete": {
             "toast_one": "Item deleted forever",
@@ -655,7 +658,9 @@
           "delete": {
             "toast_one": "Élément supprimé",
             "toast_other": "{{count}} éléments supprimés",
-            "low_rights_toast": "Vous ne pouvez pas restaurer ces éléments car vous n'avez pas les droits nécessaires."
+            "low_rights_toast": "Vous ne pouvez pas restaurer ces éléments car vous n'avez pas les droits nécessaires.",
+            "toast_error_one": "Une erreur est survenue lors de la suppression de l'élément.",
+            "toast_error_other": "Une erreur est survenue lors de la suppression des éléments."
           },
           "hard_delete": {
             "toast_one": "Élément supprimé définitivement",

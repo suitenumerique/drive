@@ -1,10 +1,5 @@
 import { CellContext } from "@tanstack/react-table";
 import { Item, ItemType } from "@/features/drivers/types";
-import {
-  addToast,
-  ToasterItem,
-} from "@/features/ui/components/toaster/Toaster";
-import { useMutationDeleteItems } from "@/features/explorer/hooks/useMutations";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
@@ -18,6 +13,7 @@ import { useEmbeddedExplorerGirdContext } from "./EmbeddedExplorerGrid";
 import { FileShareModal } from "@/features/explorer/components/modals/share/FileShareModal";
 import { useDisableDragGridItem } from "./hooks";
 import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
+import { useDeleteItem } from "../../hooks/useDeleteItem";
 
 export type EmbeddedExplorerGridActionsCellProps = CellContext<Item, unknown>;
 
@@ -37,17 +33,12 @@ export const EmbeddedExplorerGridActionsCell = (
   const canShareWorkspace = isWorkspace;
   const canShareFile = item.type === ItemType.FILE;
   const { t } = useTranslation();
-  const deleteItems = useMutationDeleteItems();
+
   const renameModal = useModal();
 
+  const { deleteItems: deleteItem } = useDeleteItem();
   const handleDelete = async () => {
-    addToast(
-      <ToasterItem>
-        <span className="material-icons">delete</span>
-        <span>{t("explorer.actions.delete.toast", { count: 1 })}</span>
-      </ToasterItem>
-    );
-    await deleteItems.mutateAsync([item.id]);
+    await deleteItem([item.id]);
   };
 
   const handleDownload = async () => {

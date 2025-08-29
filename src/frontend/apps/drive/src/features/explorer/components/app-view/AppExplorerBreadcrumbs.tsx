@@ -22,7 +22,10 @@ export const AppExplorerBreadcrumbs = () => {
   }
 
   return (
-    <div className="explorer__content__breadcrumbs">
+    <div
+      className="explorer__content__breadcrumbs"
+      data-testid="explorer-breadcrumbs"
+    >
       <EmbeddedExplorerGridBreadcrumbs
         buildWithTreeContext
         currentItemId={item.id}
