@@ -35,6 +35,7 @@ export interface GlobalExplorerContextType {
   displayMode: "sdk" | "app";
   selectedItems: Item[];
   selectedItemsMap: Record<string, Item>;
+  mainWorkspace: Item | undefined;
   setSelectedItems: Dispatch<SetStateAction<Item[]>>;
   itemId: string;
   item: Item | undefined;
@@ -161,6 +162,10 @@ export const GlobalExplorerProvider = ({
     },
   });
 
+  const mainWorkspace = useMemo(() => {
+    return firstLevelItems?.find((item) => item.main_workspace);
+  }, [firstLevelItems]);
+
   useEffect(() => {
     // If we open the right panel and we have a selection, we need to clear it.
     if (rightPanelForcedItem?.id === itemId) {
@@ -189,6 +194,7 @@ export const GlobalExplorerProvider = ({
         displayMode,
         selectedItems,
         selectedItemsMap,
+        mainWorkspace,
         setSelectedItems,
         itemId,
         initialId,
@@ -357,6 +363,7 @@ const TreeProviderInitializer = ({
     treeContext?.treeData.resetTree(items);
     setTreeIsInitialized(true);
   }, [treeItem, firstLevelItems]);
+
   return children;
 };
 

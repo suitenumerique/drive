@@ -1,7 +1,10 @@
 import { expect, Page } from "@playwright/test";
 import { exec } from "child_process";
-
-const ROOT_PATH = "../../../..";
+import path from "path";
+// We need to use __dirname to get the root path of the project
+// because Playwright runs tests in a different directory from the root
+// by default.
+const ROOT_PATH = path.join(__dirname, "/../../../../../..");
 const CLEAR_DB_TARGET = "clear-db-e2e";
 
 export const keyCloakSignIn = async (

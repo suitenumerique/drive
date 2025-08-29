@@ -1,5 +1,10 @@
 import { getDriver } from "@/features/config/Config";
-import { Item, ItemType, LinkReach, WorkspaceType } from "@/features/drivers/types";
+import {
+  Item,
+  ItemType,
+  LinkReach,
+  WorkspaceType,
+} from "@/features/drivers/types";
 import i18n from "@/features/i18n/initI18n";
 /**
  * Temporary solution to redirect to the last visited item, by default the personal root folder.
@@ -91,7 +96,6 @@ export const formatSize = (size: number) => {
   } ${units[unitIndex]}`;
 };
 
-
 export const getParentIdFromPath = (path: string) => {
   const parts = path.split(".");
   if (parts.length === 1) {
@@ -108,4 +112,22 @@ export const getWorkspaceType = (item: Item): WorkspaceType => {
     return WorkspaceType.PUBLIC;
   }
   return WorkspaceType.SHARED;
+};
+
+/**
+ * Check if a given ID is part of an item's tree via its path
+ * @param itemPath - The path of the item (e.g., "id1.id2.id3")
+ * @param targetId - The ID to check if it's in the tree
+ * @returns true if the targetId is part of the item's tree, false otherwise
+ */
+export const isIdInItemTree = (itemPath: string, targetId: string): boolean => {
+  if (!itemPath || !targetId) {
+    return false;
+  }
+
+  // Split the path into individual IDs
+  const pathIds = itemPath.split(".");
+
+  // Check if the targetId exists anywhere in the path
+  return pathIds.includes(targetId);
 };
