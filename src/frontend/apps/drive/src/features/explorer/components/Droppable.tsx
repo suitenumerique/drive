@@ -34,7 +34,7 @@ export const Droppable = (props: DroppableProps) => {
   }, [isOver, props.item, active]);
 
   return (
-    <div ref={setNodeRef} style={style} className="droppable">
+    <div ref={setNodeRef} style={style} className="droppable wesh">
       {props.children}
     </div>
   );
