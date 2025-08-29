@@ -34,7 +34,7 @@ dependencies = [
     "django-cors-headers==4.7.0",
     "django-countries==7.6.1",
     "django-filter==25.1",
-    "django-lasuite[all]==0.0.12",
+    "django-lasuite[all]==0.0.13",
     "django-ltree@git+https://github.com/mariocesar/django-ltree@5d955bc82021a50c522ee524106f6709e3b414e4",
     "django-parler==2.3",
     "django-redis==6.0.0",
