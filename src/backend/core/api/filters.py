@@ -13,7 +13,7 @@ class ItemFilter(django_filters.FilterSet):
     """
 
     title = django_filters.CharFilter(
-        field_name="title", lookup_expr="icontains", label=_("Title")
+        field_name="title", lookup_expr="unaccent__icontains", label=_("Title")
     )
 
     class Meta:
