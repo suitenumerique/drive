@@ -170,10 +170,6 @@ export const GlobalExplorerProvider = ({
   });
 
   useEffect(() => {
-    console.log("TREE CHANGED", tree);
-  }, [tree]);
-
-  useEffect(() => {
     // If we open the right panel and we have a selection, we need to clear it.
     if (rightPanelForcedItem?.id === itemId) {
       setSelectedItems([]);

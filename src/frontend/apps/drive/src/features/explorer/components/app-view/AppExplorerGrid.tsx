@@ -1,10 +1,14 @@
-import { ItemType } from "@/features/drivers/types";
+import { ItemType, TreeItem } from "@/features/drivers/types";
 import { Item } from "@/features/drivers/types";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { itemToTreeItem, useGlobalExplorer } from "../GlobalExplorerContext";
+import {
+  itemsToTreeItems,
+  itemToTreeItem,
+  useGlobalExplorer,
+} from "../GlobalExplorerContext";
 import clsx from "clsx";
-import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import { TreeViewDataType, useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import { Loader, useCunningham } from "@openfun/cunningham-react";
 import gridEmpty from "@/assets/grid_empty.png";
 import {
@@ -16,6 +20,7 @@ import {
   addToast,
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
+import { getDriver } from "@/features/config/Config";
 
 /**
  * Wrapper around EmbeddedExplorerGrid to display a list of items in a table.
@@ -45,7 +50,8 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
 
   const { filters, disableItemDragAndDrop } = useAppExplorer();
   const effectiveOnNavigate = props.onNavigate ?? onNavigate;
-  const treeContext = useTreeContext();
+  const treeContext = useTreeContext<TreeItem>();
+  const driver = getDriver();
 
   const folders = useMemo(() => {
     if (!props.childrenItems) {
@@ -63,6 +69,39 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
     }
   }, [itemId, treeIsInitialized]);
 
+  const updateTree = async () => {
+    const tree = await driver.getTree(itemId);
+    console.log("TREE", tree);
+
+    const aux = (parent: TreeViewDataType<TreeItem>, children: Item[]) => {
+      const childrens = itemsToTreeItems(children);
+      treeContext?.treeData.setChildren(parent.id, childrens);
+    };
+
+    const root = treeContext?.treeData.getNode(tree.id);
+    if (!root) {
+      throw new Error("Root not found");
+    }
+    console.log("ROOT", root);
+    aux(root, tree.children ?? []);
+    // TODO: Remove this, ugly.
+    setTimeout(() => {
+      treeContext?.treeApiRef.current?.open(itemId);
+      treeContext?.treeApiRef.current?.openParents(itemId);
+    }, 100);
+  };
+
+  useEffect(() => {
+    if (!treeIsInitialized || !itemId) {
+      return;
+    }
+    const node = treeContext?.treeData.getNode(itemId);
+    if (node) {
+      return;
+    }
+    updateTree();
+  }, [treeIsInitialized, itemId]);
+
   // Sets the children of the item in the tree.
   useEffect(() => {
     const itemFilters = filters ?? {};
@@ -71,31 +110,34 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
       return;
     }
 
-    // We merge the existing children with the new folders or we create the children
-    const childrens = folders.map((folder) => {
-      const folderNode = treeContext?.treeData.getNode(folder.id);
-      if (folderNode) {
-        const children = folderNode.children?.map((child) => child) as Item[];
-        const item = itemToTreeItem({
-          ...folder,
-          children: children,
-        });
-        item.hasLoadedChildren =
-          folder.numchild_folder !== undefined &&
-          folder.numchild_folder > 0 &&
-          children.length > 0;
-        return item;
-      } else {
-        const children = itemToTreeItem({
-          ...folder,
-          children: [],
-        });
-        children.hasLoadedChildren = false;
-        return children;
-      }
-    });
-
-    treeContext?.treeData.setChildren(itemId, childrens);
+    const node = treeContext?.treeData.getNode(itemId);
+    if (node) {
+      // We merge the existing children with the new folders or we create the children
+      const childrens = folders.map((folder) => {
+        const folderNode = treeContext?.treeData.getNode(folder.id);
+        if (folderNode) {
+          // What is the point of this ?
+          const children = folderNode.children?.map((child) => child) as Item[];
+          const item = itemToTreeItem({
+            ...folder,
+            children: children,
+          });
+          item.hasLoadedChildren =
+            folder.numchild_folder !== undefined &&
+            folder.numchild_folder > 0 &&
+            children.length > 0;
+          return item;
+        } else {
+          const children = itemToTreeItem({
+            ...folder,
+            children: [],
+          });
+          children.hasLoadedChildren = false;
+          return children;
+        }
+      });
+      treeContext?.treeData.setChildren(itemId, childrens);
+    }
   }, [folders, treeIsInitialized]);
 
   const handleFileClick = (item: Item) => {

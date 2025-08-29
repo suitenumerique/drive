@@ -56,7 +56,6 @@ const GridBreadcrumbsFromTree = ({
   const ancestors = currentItemId
     ? (treeContext?.treeData.getAncestors(currentItemId) as Item[])
     : [];
-  console.log("ancestors", ancestors);
   return <BaseBreadcrumbs {...props} ancestors={ancestors} />;
 };
 
