@@ -174,14 +174,13 @@ export const GlobalExplorerProvider = ({
   }, [rightPanelForcedItem]);
 
   /**
-   * When the right panel is open, we need to force the new item to be displayed in the right panel.
+   * We need to force the current folder to be displayed in the right panel.
    */
   useEffect(() => {
-    if (item && rightPanelOpen) {
-      setRightPanelForcedItem(item);
+    if (rightPanelOpen) {
       setSelectedItems([]);
     }
-  }, [item, rightPanelOpen]);
+  }, [rightPanelOpen]);
 
   const { dropZone } = useUploadZone({ item: item! });
 

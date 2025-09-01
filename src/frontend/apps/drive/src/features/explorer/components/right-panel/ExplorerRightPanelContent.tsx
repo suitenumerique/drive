@@ -76,7 +76,7 @@ export const ExplorerRightPanelContent = ({
 
   return (
     <>
-      <div className="explorer__right-panel">
+      <div className="explorer__right-panel" data-testid="right-panel">
         <div className="explorer__right-panel__section p">
           <div className="explorer__right-panel__item-title">
             <div className="explorer__right-panel__item-title__close">
