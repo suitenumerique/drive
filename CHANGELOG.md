@@ -69,6 +69,7 @@ and this project adheres to
 - ✨(front) make frontend themable
 - ✨(global) Add File Picker SDK
 - 🔧(cron) add pgdump cron on scalingo deployment #264
+- ✨(front) add grist and sqlite mimeTypes #275
 
 ### Changed
 
