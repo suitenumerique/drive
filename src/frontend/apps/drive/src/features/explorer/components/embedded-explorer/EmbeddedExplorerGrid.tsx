@@ -235,6 +235,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                 const isOvered = !!overedItemIds[row.original.id];
                 return (
                   <tr
+                    role="row"
                     key={row.original.id}
                     className={clsx("selectable", {
                       selected: isSelected,
