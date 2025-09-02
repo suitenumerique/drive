@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.4.0] - 2025-09-02
+
 ### Added
 
 - ✨(back) implement lasuite.malware_detection app #212
@@ -16,6 +18,10 @@ and this project adheres to
 ### Changed
 
 - 🔧(back) customize cache config #321
+
+### Fixed
+
+- 🐛(front) fix redirect after delete node in tree #325
 
 ## [v0.3.0] - 2025-08-25
 
@@ -30,7 +36,6 @@ and this project adheres to
 - 🐛(front) fix workspace link react cache #310
 - 🐛(backend) allow item partial update without modifying title #316
 - 🌐(front) fix share item wording #315
-- 🐛(front) fix redirect after delete node in tree #325
 
 ## [v0.2.0] - 2025-08-18
 
@@ -86,7 +91,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.3.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.4.0...main
+[0.4.0]: https://github.com/suitenumerique/drive/releases/v0.3.0
 [0.3.0]: https://github.com/suitenumerique/drive/releases/v0.3.0
 [0.2.0]: https://github.com/suitenumerique/drive/releases/v0.2.0
 [0.1.1]: https://github.com/suitenumerique/drive/releases/v0.1.1
