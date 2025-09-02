@@ -26,7 +26,7 @@ def get_wopi_client_config(item):
     if item.type != models.ItemTypeChoices.FILE:
         return None
 
-    if item.upload_state != models.ItemUploadStateChoices.UPLOADED:
+    if item.upload_state != models.ItemUploadStateChoices.READY:
         return None
 
     wopi_configuration = cache.get(

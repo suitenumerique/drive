@@ -35,7 +35,7 @@ def test_is_item_wopi_supported():
     )
     item = ItemFactory(
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         filename="test.docx",
     )
@@ -43,7 +43,7 @@ def test_is_item_wopi_supported():
 
     item = ItemFactory(
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         mimetype="application/pdf",
         filename="test.pdf",
     )
@@ -51,7 +51,7 @@ def test_is_item_wopi_supported():
 
     item = ItemFactory(
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         filename="test.docx",
     )
 
@@ -59,7 +59,7 @@ def test_is_item_wopi_supported():
 
     item = ItemFactory(
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         filename="test",
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
@@ -94,7 +94,7 @@ def test_get_wopi_client_config():
     )
     item = ItemFactory(
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         filename="test.docx",
     )
@@ -102,7 +102,7 @@ def test_get_wopi_client_config():
 
     item = ItemFactory(
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         mimetype="application/pdf",
         filename="test.pdf",
     )
@@ -110,7 +110,7 @@ def test_get_wopi_client_config():
 
     item = ItemFactory(
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         filename="test.docx",
     )
 
@@ -118,7 +118,7 @@ def test_get_wopi_client_config():
 
     item = ItemFactory(
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         filename="test",
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
@@ -142,7 +142,7 @@ def test_get_wopi_client_config_no_configuration():
     cache.set(WOPI_CONFIGURATION_CACHE_KEY, None)
     item = ItemFactory(
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     assert get_wopi_client_config(item) is None
 

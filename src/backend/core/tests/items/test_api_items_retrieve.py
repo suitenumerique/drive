@@ -1274,6 +1274,7 @@ def test_api_items_retrieve_file_analysing_not_creator():
         },
         "depth": 1,
         "is_favorite": False,
+        "is_wopi_supported": False,
         "link_reach": "public",
         "link_role": item.link_role,
         "nb_accesses": 1,
@@ -1294,6 +1295,7 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "deleted_at": None,
         "hard_delete_at": None,
     }
+
 
 def test_api_items_retrieve_wopi_supported():
     """
@@ -1319,7 +1321,7 @@ def test_api_items_retrieve_wopi_supported():
         link_reach="restricted",
         mimetype="application/vnd.oasis.opendocument.text",
     )
-    item.upload_state = models.ItemUploadStateChoices.UPLOADED
+    item.upload_state = models.ItemUploadStateChoices.READY
     item.save()
     factories.UserItemAccessFactory(item=item, user=user, role="owner")
 

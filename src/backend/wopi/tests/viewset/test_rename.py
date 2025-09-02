@@ -26,7 +26,7 @@ def test_rename_file_success():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
@@ -69,7 +69,7 @@ def test_rename_file_no_filename():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
@@ -102,7 +102,7 @@ def test_rename_file_duplicate_filename():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
@@ -110,7 +110,7 @@ def test_rename_file_duplicate_filename():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="new_name.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
@@ -144,7 +144,7 @@ def test_rename_file_with_lock():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
@@ -190,7 +190,7 @@ def test_rename_file_with_invalid_lock():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
@@ -228,7 +228,7 @@ def test_rename_file_storage_error():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
