@@ -19,7 +19,7 @@ def test_get_lock_on_an_unlocked_file():
         type=models.ItemTypeChoices.FILE,
         parent=folder,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     user = factories.UserFactory()
     factories.UserItemAccessFactory(
@@ -51,7 +51,7 @@ def test_get_lock_on_a_locked_file():
         type=models.ItemTypeChoices.FILE,
         parent=folder,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     user = factories.UserFactory()
     factories.UserItemAccessFactory(

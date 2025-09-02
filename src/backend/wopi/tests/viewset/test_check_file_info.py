@@ -23,7 +23,7 @@ def test_check_file_info_connected_user_with_access():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
@@ -177,12 +177,14 @@ def test_check_file_info_anonymous_user_with_access():
     """Anonymous user having access to the item can get the file info with read permissions."""
     folder = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_role=models.LinkRoleChoices.READER,
     )
     item = factories.ItemFactory(
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.PUBLIC,
         link_role=models.LinkRoleChoices.READER,
     )

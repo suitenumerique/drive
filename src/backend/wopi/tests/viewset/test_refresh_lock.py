@@ -21,7 +21,7 @@ def test_refresh_lock_without_lock_header():
         type=models.ItemTypeChoices.FILE,
         parent=folder,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     user = factories.UserFactory()
     factories.UserItemAccessFactory(
@@ -49,7 +49,7 @@ def test_refresh_lock_with_mismatching_lock():
         type=models.ItemTypeChoices.FILE,
         parent=folder,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     user = factories.UserFactory()
     factories.UserItemAccessFactory(
@@ -87,7 +87,7 @@ def test_refresh_lock_with_matching_lock():
         type=models.ItemTypeChoices.FILE,
         parent=folder,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     user = factories.UserFactory()
     factories.UserItemAccessFactory(
