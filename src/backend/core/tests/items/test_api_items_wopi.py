@@ -69,7 +69,7 @@ def test_api_items_wopi_anonymous_user_item_public(
         type=models.ItemTypeChoices.FILE,
         mimetype=valid_mimetype,
     )
-    item.upload_state = models.ItemUploadStateChoices.UPLOADED
+    item.upload_state = models.ItemUploadStateChoices.READY
     item.save()
 
     client = APIClient()
@@ -125,7 +125,7 @@ def test_api_items_wopi_anonymous_item_file_mimetype_not_supported():
         mimetype="image/png",
         link_reach=models.LinkReachChoices.PUBLIC,
     )
-    item.upload_state = models.ItemUploadStateChoices.UPLOADED
+    item.upload_state = models.ItemUploadStateChoices.READY
     item.save()
 
     client = APIClient()
@@ -144,8 +144,8 @@ def test_api_items_wopi_anonymous_item_file_mimetype_not_supported():
     }
 
 
-def test_api_items_wopi_anonymous_user_item_not_uploaded():
-    """Anymous user can not access item file that is not uploaded."""
+def test_api_items_wopi_anonymous_user_item_not_ready():
+    """Anymous user can not access item file that is not ready."""
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
         mimetype="image/png",
@@ -191,7 +191,7 @@ def test_api_items_wopi_authenticated_can_access_retricted_item(
         type=models.ItemTypeChoices.FILE,
         mimetype=valid_mimetype,
     )
-    item.upload_state = models.ItemUploadStateChoices.UPLOADED
+    item.upload_state = models.ItemUploadStateChoices.READY
     item.save()
     factories.UserItemAccessFactory(user=user, item=item)
 
@@ -241,7 +241,7 @@ def test_api_items_wopi_authenticated_user_item_mimetype_not_supported():
         type=models.ItemTypeChoices.FILE,
         mimetype="image/png",
     )
-    item.upload_state = models.ItemUploadStateChoices.UPLOADED
+    item.upload_state = models.ItemUploadStateChoices.READY
     item.save()
     factories.UserItemAccessFactory(user=user, item=item)
 

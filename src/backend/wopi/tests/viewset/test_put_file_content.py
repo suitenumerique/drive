@@ -21,7 +21,7 @@ def test_put_file_content_connected_user_with_access():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
@@ -71,7 +71,7 @@ def test_put_file_content_connected_user_not_linked_to_item():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
@@ -84,7 +84,7 @@ def test_put_file_content_connected_user_not_linked_to_item():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="other_wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
@@ -117,7 +117,7 @@ def test_put_file_content_without_override_header():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
@@ -148,7 +148,7 @@ def test_put_file_content_with_invalid_lock():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
@@ -192,7 +192,7 @@ def test_put_file_content_with_no_lock_header_and_body_size_greater_than_0():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
@@ -226,7 +226,7 @@ def test_put_file_content_with_no_lock_header_and_body_size_0():
         parent=folder,
         type=models.ItemTypeChoices.FILE,
         filename="wopi_test.txt",
-        update_upload_state=models.ItemUploadStateChoices.UPLOADED,
+        update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
