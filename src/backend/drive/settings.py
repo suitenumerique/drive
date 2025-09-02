@@ -253,6 +253,7 @@ class Base(Configuration):
         "drf_standardized_errors",
         # Third party apps
         "corsheaders",
+        "django_celery_beat",
         "django_filters",
         "dockerflow.django",
         "rest_framework",
@@ -445,6 +446,7 @@ class Base(Configuration):
     # Celery
     CELERY_BROKER_URL = values.Value("redis://redis:6379/0")
     CELERY_BROKER_TRANSPORT_OPTIONS = values.DictValue({})
+    CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
     # Session
     SESSION_ENGINE = "django.contrib.sessions.backends.cache"
