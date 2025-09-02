@@ -3,6 +3,15 @@ entries:
   drive:
   - apiVersion: v2
     appVersion: latest
+    created: "2025-09-02T13:55:17.500309622Z"
+    digest: 4a5969166a075821f479f0e1e292d52e71f26273f75c404fd2f37dd4021f72ff
+    name: drive
+    type: application
+    urls:
+    - https://suitenumerique.github.io/drive/drive-0.5.0-beta.1.tgz
+    version: 0.5.0-beta.1
+  - apiVersion: v2
+    appVersion: latest
     created: "2025-09-02T08:42:41.610766024Z"
     digest: 1dbb11a58e4033801fbc6b80e2b1082d09571414b0708f5f0d8b06fac1f0058a
     name: drive
@@ -100,4 +109,4 @@ entries:
     urls:
     - https://suitenumerique.github.io/drive/drive-0.0.1.tgz
     version: 0.0.1
-generated: "2025-09-02T08:42:41.609389331Z"
+generated: "2025-09-02T13:55:17.498905773Z"
