@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - 'main'
+      - 'wopi'
     tags:
       - 'v*'
   pull_request:
