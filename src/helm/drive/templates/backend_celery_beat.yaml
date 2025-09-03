@@ -1,6 +1,6 @@
 {{- $envVars := include "drive.common.env" (list . .Values.backend) -}}
 {{- $fullName := include "drive.backend.fullname" . -}}
-{{- $component := "backend" -}}
+{{- $component := "backend-celery-beat" -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

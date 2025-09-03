@@ -1,7 +1,7 @@
 {{- if .Values.backend.cronjobs -}}
 {{- $envVars := include "drive.common.env" (list . .Values.backend) -}}
 {{- $fullName := include "drive.backend.fullname" . -}}
-{{- $component := "backend" -}}
+{{- $component := "backend-cronjob-list" -}}
 apiVersion: batch/v1
 kind: CronJobList
 items:
