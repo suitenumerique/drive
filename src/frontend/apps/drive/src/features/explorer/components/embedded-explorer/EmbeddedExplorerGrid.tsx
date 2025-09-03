@@ -1,4 +1,4 @@
-import { Item, ItemType, ItemUploadState } from "@/features/drivers/types";
+import { Item, ItemType } from "@/features/drivers/types";
 import {
   createContext,
   Dispatch,
@@ -28,20 +28,10 @@ import { EmbeddedExplorerGridActionsCell } from "@/features/explorer/components/
 import { useTableKeyboardNavigation } from "@/features/explorer/hooks/useTableKeyboardNavigation";
 import clsx from "clsx";
 import { isTablet } from "@/features/ui/components/responsive/ResponsiveDivs";
-import {
-  addToast,
-  ToasterItem,
-} from "@/features/ui/components/toaster/Toaster";
 import { Droppable } from "@/features/explorer/components/Droppable";
 import { useDragItemContext } from "@/features/explorer/components/ExplorerDndProvider";
 import { useModal } from "@openfun/cunningham-react";
 import { ExplorerMoveFolder } from "@/features/explorer/components/modals/move/ExplorerMoveFolderModal";
-import { ItemInfo } from "@/features/items/components/ItemInfo";
-import {
-  FilePreview,
-  FilePreviewType,
-} from "@/features/ui/preview/files-preview/FilesPreview";
-import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 
 export type EmbeddedExplorerGridProps = {
   isCompact?: boolean;
@@ -57,7 +47,7 @@ export type EmbeddedExplorerGridProps = {
   parentItem?: Item;
   displayMode?: GlobalExplorerContextType["displayMode"];
   canSelect?: (item: Item) => boolean;
-  openPreviews?: boolean;
+  onFileClick?: (item: Item) => void;
 };
 
 const EMPTY_ARRAY: Item[] = [];
@@ -100,22 +90,8 @@ export const useEmbeddedExplorerGirdContext = () => {
 export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   const { t } = useTranslation();
 
-  const openPreviews = props.openPreviews ?? true;
   const [moveItem, setMoveItem] = useState<Item | null>(null);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [openedFileId, setOpenedFileId] = useState<string | undefined>(
-    undefined
-  );
-  const [currentPreviewItem, setCurrentPreviewItem] = useState<
-    Item | undefined
-  >(undefined);
   const moveModal = useModal();
-  const { handleDownloadItem } = useDownloadItem();
-
-  const handleClosePreview = () => {
-    setIsPreviewOpen(false);
-    setOpenedFileId(undefined);
-  };
 
   const selectedItems = props.selectedItems ?? [];
   const selectedItemsMap = useMemo(() => {
@@ -172,31 +148,6 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   };
 
   const canSelect = props.canSelect ?? (() => true);
-
-  const handleChangePreviewItem = (file?: FilePreviewType) => {
-    if (file) {
-      const item = props.items?.find((item) => file?.id === item.id);
-      setCurrentPreviewItem(item);
-    } else {
-      setCurrentPreviewItem(undefined);
-    }
-  };
-
-  const handleDownloadFile = () => {
-    handleDownloadItem(currentPreviewItem);
-  };
-
-  const previewItems: FilePreviewType[] = useMemo(() => {
-    const items =
-      props.items?.filter((item) => item.type === ItemType.FILE) ?? [];
-    return items?.map((item) => ({
-      id: item.id,
-      title: item.title,
-      mimetype: item.mimetype ?? "",
-      url: item.url ?? "",
-      isSuspicious: item.upload_state === ItemUploadState.SUSPICIOUS,
-    }));
-  }, [props.items]);
 
   return (
     <>
@@ -342,18 +293,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                             item: row.original,
                           });
                         } else {
-                          if (openPreviews) {
-                            if (row.original.url) {
-                              setIsPreviewOpen(true);
-                              setOpenedFileId(row.original.id);
-                            } else {
-                              addToast(
-                                <ToasterItem>
-                                  {t("explorer.grid.no_url")}
-                                </ToasterItem>
-                              );
-                            }
-                          }
+                          props.onFileClick?.(row.original);
                         }
                       }
                     }}
@@ -401,18 +341,6 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
             </tbody>
           </table>
         </div>
-        <FilePreview
-          isOpen={isPreviewOpen}
-          onClose={handleClosePreview}
-          title={t("file_preview.title")}
-          files={previewItems ?? []}
-          onChangeFile={handleChangePreviewItem}
-          handleDownloadFile={handleDownloadFile}
-          openedFileId={openedFileId}
-          sidebarContent={
-            currentPreviewItem && <ItemInfo item={currentPreviewItem} />
-          }
-        />
         {moveModal.isOpen && moveItem && (
           <ExplorerMoveFolder
             {...moveModal}

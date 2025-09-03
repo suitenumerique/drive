@@ -42,7 +42,6 @@ export default function SdkExplorerPage() {
       gridActionsCell: () => <div />,
       displayMode: "sdk",
       canSelect: canPickItem,
-      openPreviews: false,
     },
   });
 
