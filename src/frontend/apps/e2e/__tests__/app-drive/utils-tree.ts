@@ -69,10 +69,10 @@ export const clickOnItemInTree = async (page: Page, itemTitle: string) => {
   const item = await getItemTree(page, itemTitle);
   await expect(item).toBeVisible();
   await item.click();
-  await checkTreeItemIsSelected(page, itemTitle);
+  await expectTreeItemIsSelected(page, itemTitle);
 };
 
-export const checkTreeItemIsSelected = async (
+export const expectTreeItemIsSelected = async (
   page: Page,
   itemTitle: string
 ) => {
