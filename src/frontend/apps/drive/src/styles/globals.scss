@@ -4,6 +4,7 @@
 @use "./../features/layouts/components/global/GlobalLayout.scss";
 @use "./../features/layouts/components/explorer/ExplorerLayout.scss";
 @use "./../features/explorer/components/app-view/AppExplorer.scss";
+@use "./../features/explorer/components/app-view/ExplorerFilters.scss";
 @use "./../features/explorer/components/embedded-explorer/EmbeddedExplorer.scss";
 @use "./../features/feedback/Feedback.scss";
 @use "./../features/explorer/components/right-panel/ExplorerRightPanel.scss";
