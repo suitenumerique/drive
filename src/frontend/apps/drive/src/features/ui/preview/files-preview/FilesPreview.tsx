@@ -4,9 +4,8 @@ import {
   removeFileExtension,
 } from "@/features/explorer/utils/mimeTypes";
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
-import { Button } from "@openfun/cunningham-react";
+import { Button, Modal, ModalSize } from "@openfun/cunningham-react";
 import React, { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import { ImageViewer } from "../image-viewer/ImageViewer";
 import { VideoPlayer } from "../video-player/VideoPlayer";
 import { AudioPlayer } from "../audio-player/AudioPlayer";
@@ -47,7 +46,7 @@ export const FilePreview = ({
   onClose,
   title = "File Preview",
   files = [],
-  initialIndexFile = 0,
+  initialIndexFile = -1,
   openedFileId,
   sidebarContent,
   headerRightContent,
@@ -65,7 +64,8 @@ export const FilePreview = ({
     }));
   }, [files]);
 
-  const currentFile: FilePreviewData | null = data[currentIndex] || null;
+  const currentFile: FilePreviewData | undefined =
+    currentIndex > -1 ? data[currentIndex] : undefined;
 
   const handleDownload = async () => {
     handleDownloadFile?.(currentFile);
@@ -126,7 +126,10 @@ export const FilePreview = ({
   useEffect(() => {
     if (openedFileId) {
       const index = data.findIndex((file) => file.id === openedFileId);
-      setCurrentIndex(index > -1 ? index : 0);
+      const newIndex = index > -1 ? index : -1;
+      setCurrentIndex(newIndex);
+    } else {
+      setCurrentIndex(-1);
     }
   }, [openedFileId]);
 
@@ -134,83 +137,82 @@ export const FilePreview = ({
     onChangeFile?.(currentFile);
   }, [currentFile]);
 
-  if (!isOpen) {
+  if (!isOpen || !currentFile) {
     return null;
   }
 
-  const previewContent = (
-    <div className="file-preview-overlay">
-      <div
-        className={`file-preview-container ${
-          isSidebarOpen ? "sidebar-open" : ""
-        }`}
-      >
-        <div className="file-preview-header">
-          <div className="file-preview-header__content">
-            <div className="file-preview-header__content-left">
-              <Button
-                color="tertiary-text"
-                size="small"
-                onClick={onClose}
-                icon={<Icon name="close" />}
-              />
-
-              <div className="file-preview-title">
-                <img
-                  src={getIconByMimeType(currentFile.mimetype, "mini").src}
-                  alt=""
-                  width={24}
-                  className={`item-icon`}
-                  draggable="false"
-                />
-                <h1 className="file-preview-title">
-                  {removeFileExtension(currentFile?.title || title)}
-                </h1>
-              </div>
-            </div>
-            <div className="file-preview-header__content-center">
-              <FilePreviewNav
-                currentIndex={currentIndex}
-                totalFiles={data.length}
-                onPrevious={() => setCurrentIndex(currentIndex - 1)}
-                onNext={() => setCurrentIndex(currentIndex + 1)}
-              />
-            </div>
-            <div className="file-preview-header__content-right">
-              {headerRightContent}
-              {handleDownloadFile && (
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size={ModalSize.FULL}>
+      <div data-testid="file-preview">
+        <div
+          className={`file-preview-container ${
+            isSidebarOpen ? "sidebar-open" : ""
+          }`}
+        >
+          <div className="file-preview-header">
+            <div className="file-preview-header__content">
+              <div className="file-preview-header__content-left">
                 <Button
                   color="tertiary-text"
-                  onClick={handleDownload}
-                  icon={
-                    <Icon type={IconType.OUTLINED} name={"file_download"} />
-                  }
+                  size="small"
+                  onClick={onClose}
+                  icon={<Icon name="close" />}
                 />
-              )}
 
-              <Button
-                color="tertiary-text"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                icon={<Icon name={"info_outline"} />}
-              />
+                <div className="file-preview-title">
+                  <img
+                    src={getIconByMimeType(currentFile.mimetype, "mini").src}
+                    alt=""
+                    width={24}
+                    className={`item-icon`}
+                    draggable="false"
+                  />
+                  <h1 className="file-preview-title">
+                    {removeFileExtension(currentFile?.title || title)}
+                  </h1>
+                </div>
+              </div>
+              <div className="file-preview-header__content-center">
+                <FilePreviewNav
+                  currentIndex={currentIndex}
+                  totalFiles={data.length}
+                  onPrevious={() => setCurrentIndex(currentIndex - 1)}
+                  onNext={() => setCurrentIndex(currentIndex + 1)}
+                />
+              </div>
+              <div className="file-preview-header__content-right">
+                {headerRightContent}
+                {handleDownloadFile && (
+                  <Button
+                    color="tertiary-text"
+                    onClick={handleDownload}
+                    icon={
+                      <Icon type={IconType.OUTLINED} name={"file_download"} />
+                    }
+                  />
+                )}
+
+                <Button
+                  color="tertiary-text"
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  icon={<Icon name={"info_outline"} />}
+                />
+              </div>
             </div>
           </div>
-        </div>
-        <div className="file-preview-content">
-          <div className="file-preview-main">{renderViewer()}</div>
+          <div className="file-preview-content">
+            <div className="file-preview-main">{renderViewer()}</div>
 
-          <div
-            className={`file-preview-sidebar ${isSidebarOpen ? "open" : ""}`}
-          >
-            {sidebarContent}
+            <div
+              className={`file-preview-sidebar ${isSidebarOpen ? "open" : ""}`}
+            >
+              {sidebarContent}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
-
-  // Use Portal to render the preview outside the component hierarchy
-  return <>{createPortal(previewContent, document.body)}</>;
 };
 
 interface FilePreviewNavProps {
