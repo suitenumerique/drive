@@ -10,6 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Item,
   ItemType,
+  ItemUploadState,
   TreeItem,
   WorkspaceType,
 } from "@/features/drivers/types";
@@ -30,6 +31,12 @@ import { useFirstLevelItems } from "../hooks/useQueries";
 import { useTranslation } from "react-i18next";
 import { getWorkspaceType } from "../utils/utils";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
+import { ItemInfo } from "@/features/items/components/ItemInfo";
+import {
+  FilePreview,
+  FilePreviewType,
+} from "@/features/ui/preview/files-preview/FilesPreview";
+import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 
 export interface GlobalExplorerContextType {
   displayMode: "sdk" | "app";
@@ -52,6 +59,8 @@ export interface GlobalExplorerContextType {
   setRightPanelOpen: (open: boolean) => void;
   isLeftPanelOpen: boolean;
   setIsLeftPanelOpen: (isLeftPanelOpen: boolean) => void;
+  setPreviewItem: (item: Item | undefined) => void;
+  setPreviewItems: (items: Item[]) => void;
 }
 
 export const GlobalExplorerContext = createContext<
@@ -106,7 +115,7 @@ export const GlobalExplorerProvider = ({
   onNavigate,
 }: ExplorerProviderProps) => {
   const driver = getDriver();
-
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedItems, setSelectedItems] = useState<Item[]>([]);
 
@@ -126,6 +135,7 @@ export const GlobalExplorerProvider = ({
   const [initialId] = useState<string | undefined>(itemId);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [treeIsInitialized, setTreeIsInitialized] = useState<boolean>(false);
+  const { handleDownloadItem } = useDownloadItem();
 
   const { data: item } = useQuery({
     queryKey: ["items", itemId],
@@ -184,6 +194,32 @@ export const GlobalExplorerProvider = ({
 
   const { dropZone } = useUploadZone({ item: item! });
 
+  /**
+   * Preview states.
+   */
+  const [previewItem, setPreviewItem] = useState<Item | undefined>(undefined);
+  const [previewItems, setPreviewItems] = useState<Item[]>([]);
+  const previewFiles = useMemo(() => {
+    return previewItems
+      .filter((item) => item.type === ItemType.FILE)
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        mimetype: item.mimetype ?? "",
+        url: item.url ?? "",
+        isSuspicious: item.upload_state === ItemUploadState.SUSPICIOUS,
+      }));
+  }, [previewItems]);
+
+  const handleClosePreview = () => {
+    setPreviewItem(undefined);
+  };
+
+  const handleChangePreviewItem = (file?: FilePreviewType) => {
+    const item = previewItems.find((item) => file?.id === item.id);
+    setPreviewItem(item);
+  };
+
   return (
     <GlobalExplorerContext.Provider
       value={{
@@ -207,6 +243,8 @@ export const GlobalExplorerProvider = ({
         setRightPanelOpen,
         isLeftPanelOpen,
         setIsLeftPanelOpen,
+        setPreviewItem,
+        setPreviewItems,
       }}
     >
       <TreeProvider
@@ -248,21 +286,29 @@ export const GlobalExplorerProvider = ({
       />
 
       <Toaster />
+      <FilePreview
+        isOpen={!!previewItem}
+        onClose={handleClosePreview}
+        title={t("file_preview.title")}
+        files={previewFiles}
+        onChangeFile={handleChangePreviewItem}
+        handleDownloadFile={() => handleDownloadItem(previewItem)}
+        openedFileId={previewItem?.id}
+        sidebarContent={previewItem && <ItemInfo item={previewItem} />}
+      />
     </GlobalExplorerContext.Provider>
   );
 };
 
+/**
+ * Initializes the tree provider with the root items ( aka workspaces )
+ */
 const TreeProviderInitializer = ({
   children,
 }: {
   children: React.ReactNode;
 }) => {
-  const {
-    tree: treeItem,
-    firstLevelItems,
-    itemId,
-    setTreeIsInitialized,
-  } = useGlobalExplorer();
+  const { firstLevelItems, setTreeIsInitialized } = useGlobalExplorer();
   const { t } = useTranslation();
 
   const treeContext = useTreeContext<TreeItem>();
