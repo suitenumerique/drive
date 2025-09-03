@@ -47,6 +47,7 @@ COMPOSE_RUN_CROWDIN = $(COMPOSE_RUN) crowdin crowdin
 
 # -- Backend
 MANAGE              = $(COMPOSE_RUN_APP) python manage.py
+MANAGE_EXEC         = $(COMPOSE_EXEC_APP) python manage.py
 MAIL_YARN           = $(COMPOSE_RUN) -w /app/src/mail node yarn
 PSQL_E2E = ./bin/postgres_e2e
 
@@ -145,6 +146,11 @@ run-tests-e2e: ## run the e2e tests, example: make run-tests-e2e -- --project ch
 	@args="$(filter-out $@,$(MAKECMDGOALS))" && \
 	cd src/frontend/apps/e2e && yarn test $${args:-${1}}
 .PHONY: run-tests-e2e
+
+backend-exec-command: ## execute a command in the backend container
+	@args="$(filter-out $@,$(MAKECMDGOALS))" && \
+	$(MANAGE_EXEC) $${args}
+.PHONY: backend-exec-command
 
 run: ## start the development server and frontend development
 run: 
