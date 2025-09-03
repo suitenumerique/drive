@@ -1,0 +1,160 @@
+@use "sass:map";
+@use "@/styles/cunningham-tokens-sass" as *;
+$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+
+.explorer__search__modal {
+  &__empty {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 50px 0;
+  }
+
+  &__filters {
+    padding: 0 12px 12px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    &__inputs {
+      display: flex;
+      gap: 8px;
+    }
+  }
+
+  &__items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 12px 12px 12px;
+    margin-top: 4px;
+
+    &__title {
+      font-size: 14px;
+      font-style: normal;
+      font-weight: 700;
+      color: var(--c--theme--colors--greyscale-800);
+      margin-bottom: 8px;
+    }
+  }
+
+  &__item {
+    display: flex;
+    width: 100%;
+    height: 48px;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 4px;
+    background-color: transparent;
+    outline: none;
+    border: none;
+    text-align: left;
+    font-family: var(--c--theme--fonts--base);
+
+    &:hover,
+    &:focus {
+      background-color: var(--c--theme--colors--greyscale-100);
+    }
+
+    &__content {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100%;
+      gap: 4px;
+
+      &__title {
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 16px;
+        color: var(--c--theme--colors--greyscale-800);
+      }
+
+      &__ancestors {
+        font-size: 12px;
+        font-style: normal;
+        font-weight: 400;
+        color: var(--c--theme--colors--greyscale-600);
+        line-height: 12px;
+      }
+    }
+
+    &__icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+    }
+  }
+}
+
+// Make the modal steady.
+.c__modal:has(.explorer__search__modal) {
+  --v-modal-top: 100px;
+  top: var(--v-modal-top);
+  transform: translate(-50%, 0);
+  max-height: calc(100vh - var(--v-modal-top) - 2rem);
+
+  @media (max-width: $tablet) {
+    --v-modal-top: 1rem;
+  }
+
+  /**
+   * I know this next thing seems wtf. The goal is to make ONLY the item list scrollable and the filters and
+   * search input fixed. So to do this we need to bring down the constraint of the max-height of the modal down to the
+   * items container. Which own height depends on the height of the user screen. 
+   *
+   * > If you find a better way to do this, please do. It might be late when I did this.
+   * 
+   * This approach is quite of bullet proof as the list will have the correct scroll on a tiny height screen and also
+   * on a huge height screen too. Which will not be the case with a fixed max-height on the item list, which could be
+   * too big for a tiny screen or a splitted windows, causing uncomplete scroll behavior. :)
+   */
+  .c__modal__scroller {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    .c__modal__content {
+      overflow: hidden;
+      display: flex;
+
+      .explorer__search__modal {
+        width: 100%;
+        display: flex;
+
+        .quick-search-container {
+          width: 100%;
+          display: flex;
+
+          > div {
+            display: flex;
+            flex-direction: column;
+
+            [cmdk-list] {
+              overflow: hidden;
+              display: flex;
+              flex-direction: column;
+
+              [cmdk-list-sizer] {
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+
+                > div {
+                  overflow: hidden;
+                  display: flex;
+                  flex-direction: column;
+
+                  .explorer__search__modal__items__container {
+                    overflow-y: auto;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

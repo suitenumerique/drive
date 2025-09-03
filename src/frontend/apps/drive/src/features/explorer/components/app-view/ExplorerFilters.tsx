@@ -6,8 +6,8 @@ import mimeOther from "@/assets/files/icons/mime-other.svg";
 import { Key } from "react-aria-components";
 import { useAppExplorer } from "./AppExplorer";
 import { ItemType } from "@/features/drivers/types";
-import { ItemFilters } from "@/features/drivers/Driver";
 import { useFirstLevelItems } from "../../hooks/useQueries";
+import { ItemFilters, ItemFiltersScope } from "@/features/drivers/Driver";
 import { TFunction } from "i18next";
 import { ItemIcon } from "../icons/ItemIcon";
 import { getItemTitle } from "../../utils/utils";
@@ -132,6 +132,39 @@ export const ExplorerFilterWorkspace = (props: {
   return (
     <Filter
       label={t("explorer.filters.workspace.label")}
+      options={options}
+      selectedKey={props.value ?? null} // undefined would trigger "uncontrolled components become controlled" warning.
+      onSelectionChange={props.onChange}
+    />
+  );
+};
+
+export const ExplorerFilterScope = (props: {
+  value: string | null;
+  onChange: (value: Key | null) => void;
+}) => {
+  const { t } = useTranslation();
+
+  const options: FilterOption[] = useMemo(
+    () => [
+      {
+        label: t("explorer.filters.scopes.options.trash"),
+        value: ItemFiltersScope.DELETED,
+        render: () => (
+          <div className="explorer__filters__item">
+            {t("explorer.filters.scopes.options.trash")}
+          </div>
+        ),
+        showSeparator: true,
+      },
+      getResetOption(t),
+    ],
+    [t]
+  );
+
+  return (
+    <Filter
+      label={t("explorer.filters.scopes.label")}
       options={options}
       selectedKey={props.value ?? null} // undefined would trigger "uncontrolled components become controlled" warning.
       onSelectionChange={props.onChange}

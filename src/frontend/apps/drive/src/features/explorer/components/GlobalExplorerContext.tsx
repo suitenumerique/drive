@@ -29,7 +29,7 @@ import {
 import { ExplorerDndProvider } from "./ExplorerDndProvider";
 import { useFirstLevelItems } from "../hooks/useQueries";
 import { useTranslation } from "react-i18next";
-import { getWorkspaceType } from "../utils/utils";
+import { getItemTitle, getWorkspaceType } from "../utils/utils";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
 import { ItemInfo } from "@/features/items/components/ItemInfo";
 import {
@@ -326,8 +326,6 @@ const TreeProviderInitializer = ({
       };
       // We add the personal workspace node and the main workspace node
       items.push(personalWorkspaceNode);
-
-      mainWorkspace.title = t("explorer.workspaces.mainWorkspace");
       items.push(mainWorkspace);
     }
 
@@ -382,6 +380,7 @@ export const itemToTreeItem = (item: Item, parentId?: string): TreeItem => {
     children:
       item.children?.map((child) => itemToTreeItem(child, item.id)) ?? [],
     nodeType: TreeViewNodeTypeEnum.NODE,
+    title: getItemTitle(item),
   };
 };
 

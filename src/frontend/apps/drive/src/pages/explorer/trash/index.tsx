@@ -22,6 +22,7 @@ import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorer
 import { ItemFilters } from "@/features/drivers/Driver";
 import { useState } from "react";
 import { HardDeleteConfirmationModal } from "@/features/explorer/components/modals/HardDeleteConfirmationModal";
+import { messageModalTrashNavigate } from "@/features/explorer/components/trash/utils";
 export default function TrashPage() {
   const { t } = useTranslation();
   const [filters, setFilters] = useState<ItemFilters>({});
@@ -55,14 +56,7 @@ export default function TrashPage() {
       filters={filters}
       onFiltersChange={setFilters}
       onNavigate={() => {
-        modals.messageModal({
-          title: t("explorer.trash.navigate.modal.title"),
-          children: (
-            <div className="clr-greyscale-600">
-              {t("explorer.trash.navigate.modal.description")}
-            </div>
-          ),
-        });
+        messageModalTrashNavigate(modals);
       }}
     />
   );

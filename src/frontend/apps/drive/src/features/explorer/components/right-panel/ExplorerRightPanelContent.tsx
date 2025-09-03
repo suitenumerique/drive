@@ -24,7 +24,7 @@ export const ExplorerRightPanelContent = ({
   const { t } = useTranslation();
 
   const firstSelectedItem = item ?? selectedItems[0];
-  console.log(firstSelectedItem?.upload_state);
+
   const showWarning =
     firstSelectedItem?.upload_state === ItemUploadState.SUSPICIOUS ||
     firstSelectedItem?.upload_state ===

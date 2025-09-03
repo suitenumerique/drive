@@ -165,6 +165,13 @@
           }
         },
         "filters": {
+          "scopes": {
+            "label": "Location",
+            "options": {
+              "all": "Drive",
+              "trash": "Recycle bin"
+            }
+          },
           "type": {
             "label": "Type",
             "options": {
@@ -173,6 +180,9 @@
               "folder": "Folder",
               "reset": "Reset"
             }
+          },
+          "workspace": {
+            "label": "Workspace"
           }
         },
         "tree": {
@@ -233,7 +243,12 @@
         "search": {
           "modal": {
             "title": "Search",
-            "description": "The search function is under development and will be available soon."
+            "description": "The search function is under development and will be available soon.",
+            "placeholder": "Type a keyword or a file name",
+            "results": "Select a document",
+            "filters": {
+              "reset": "Reset"
+            }
           }
         },
         "selectionBar": {
@@ -522,6 +537,13 @@
           }
         },
         "filters": {
+          "scopes": {
+            "label": "Emplacement",
+            "options": {
+              "all": "Drive",
+              "trash": "Corbeille"
+            }
+          },
           "type": {
             "label": "Type",
             "options": {
@@ -530,6 +552,9 @@
               "folder": "Dossier",
               "reset": "Réinitialiser"
             }
+          },
+          "workspace": {
+            "label": "Espace"
           }
         },
         "tree": {
@@ -590,7 +615,12 @@
         "search": {
           "modal": {
             "title": "Rechercher",
-            "description": "La fonction de recherche est en cours de développement et sera bientôt disponible."
+            "description": "La fonction de recherche est en cours de développement et sera bientôt disponible.",
+            "placeholder": "Taper un mot clé ou le nom d'un fichier",
+            "results": "Sélectionnez un document",
+            "filters": {
+              "reset": "Réinitialiser"
+            }
           }
         },
         "selectionBar": {
