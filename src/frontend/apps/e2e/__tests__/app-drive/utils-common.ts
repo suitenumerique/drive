@@ -32,11 +32,24 @@ export const keyCloakSignIn = async (
 };
 
 export const clearDb = async () => {
+  await runTarget(CLEAR_DB_TARGET);
+};
+
+export const runFixture = async (fixture: string) => {
+  await runTarget(`backend-exec-command ${fixture}`);
+};
+
+export const runTarget = async (target: string) => {
   await new Promise((resolve, reject) => {
     exec(
-      `cd ${ROOT_PATH} && make ${CLEAR_DB_TARGET}`,
+      `cd ${ROOT_PATH} && make ${target}`,
       (error: Error | null, stdout: string, stderr: string) => {
         if (error) {
+          // Ignore "No rule to make target" errors
+          if (error.message.includes("make: *** No rule to make target")) {
+            resolve(stdout);
+            return;
+          }
           console.error(`Error executing command: ${error}`);
           reject(error);
           return;
