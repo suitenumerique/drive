@@ -12,7 +12,8 @@ and this project adheres to
 
 - ✨(backend) search endpoint for ItemViewSet #312
 - 🔧(cron) pgdump: fix restic repository #282
-- 🔧(backend) support _FILE for secret environment variables #196 
+- 🔧(backend) support \_FILE for secret environment variables #196
+- ✨(front) add search modal #326
 
 ### Changed
 
@@ -22,6 +23,11 @@ and this project adheres to
 
 - 🐛(front) fix the content when opening the right panel #328
 - 🐛(back) encode white spaces in item url #336
+
+### Patches
+
+- ♻️(front) refactor tree loading #326
+- ♻️(front) externalize FilePreview from EmbeddedExplorer + modalify #326
 
 ## [v0.4.0] - 2025-09-02
 
@@ -51,7 +57,9 @@ and this project adheres to
 - 🐛(front) fix workspace link react cache #310
 - 🐛(backend) allow item partial update without modifying title #316
 - 🌐(front) fix share item wording #315
-- 🐛(front) fix left tree glitch #323
+  <<<<<<< HEAD
+- # 🐛(front) fix left tree glitch #323
+  > > > > > > > c624750 (📝(changelog) update changelog)
 
 ## [v0.2.0] - 2025-08-18
 
