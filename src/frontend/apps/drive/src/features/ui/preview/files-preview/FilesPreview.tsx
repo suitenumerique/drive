@@ -6,7 +6,6 @@ import {
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
 import { Button, Modal, ModalSize } from "@openfun/cunningham-react";
 import React, { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import { ImageViewer } from "../image-viewer/ImageViewer";
 import { VideoPlayer } from "../video-player/VideoPlayer";
 import { AudioPlayer } from "../audio-player/AudioPlayer";
