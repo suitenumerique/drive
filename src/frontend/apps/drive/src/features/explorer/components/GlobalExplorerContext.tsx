@@ -47,7 +47,6 @@ export interface GlobalExplorerContextType {
   itemId: string;
   item: Item | undefined;
   firstLevelItems: Item[] | undefined;
-  tree: Item | null | undefined;
   onNavigate: (event: NavigationEvent) => void;
   initialId: string | undefined;
   treeIsInitialized: boolean;
@@ -71,7 +70,7 @@ export const useGlobalExplorer = () => {
   const context = useContext(GlobalExplorerContext);
   if (!context) {
     throw new Error(
-      "useGlobalExplorer must be used within an ExplorerProvider"
+      "useGlobalExplorer must be used within an GlobalExplorerProvider"
     );
   }
   return context;
@@ -158,20 +157,6 @@ export const GlobalExplorerProvider = ({
 
   const { data: firstLevelItems } = useFirstLevelItems();
 
-  const { data: tree } = useQuery({
-    queryKey: ["initialTreeItem", initialId],
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    // The logic behind is simple: we want to execute the tree query ONLY if the first url is an
-    // item url. Otherwise, it is not needed to perform the query because no there is no current
-    // item ( like on the /trash page ). Even when landing first on /trash page, the tree will be
-    // constructed during further navigation, so no need to perform the tree request too.
-    enabled: !!initialId,
-    queryFn: () => {
-      return getDriver().getTree(initialId!);
-    },
-  });
-
   const mainWorkspace = useMemo(() => {
     return firstLevelItems?.find((item) => item.main_workspace);
   }, [firstLevelItems]);
@@ -234,7 +219,6 @@ export const GlobalExplorerProvider = ({
         itemId,
         initialId,
         item,
-        tree,
         onNavigate,
         dropZone,
         rightPanelForcedItem,
@@ -318,29 +302,7 @@ const TreeProviderInitializer = ({
     if (!firstLevelItems) {
       return;
     }
-    // If we are on an item page, we want to wait for the tree request to be resolved in order to build the tree.
-    if (itemId && !treeItem) {
-      return;
-    }
-
     const firstLevelItems_: Item[] = firstLevelItems ?? [];
-
-    // On some route no treeItem is provided, like on the trash route.
-    if (treeItem) {
-      const treeItemIndex = firstLevelItems_.findIndex(
-        (item) => item.id === treeItem.id
-      );
-
-      if (treeItemIndex !== -1) {
-        // as we need to make two requests to retrieve the items and the minimal tree based
-        // on where we invoke the tree, we replace the root of the invoked tree in the array
-        firstLevelItems_[treeItemIndex] = treeItem;
-      } else {
-        // Otherwise we add it to the beginning of the array, example: when landing on a public
-        // workspace, the public workspace is not present in firstLevelItems but it is in the treeItem.
-        firstLevelItems_.unshift(treeItem);
-      }
-    }
 
     const firstLevelTreeItems_: TreeItem[] = itemsToTreeItems(firstLevelItems_);
     const items: TreeViewDataType<TreeItem>[] = [];
@@ -407,7 +369,7 @@ const TreeProviderInitializer = ({
 
     treeContext?.treeData.resetTree(items);
     setTreeIsInitialized(true);
-  }, [treeItem, firstLevelItems]);
+  }, [firstLevelItems]);
 
   return children;
 };
