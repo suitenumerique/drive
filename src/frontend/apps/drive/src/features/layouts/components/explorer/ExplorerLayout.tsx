@@ -77,7 +77,7 @@ export const ExplorerPanelsLayout = ({
       hideLeftPanelOnDesktop={!user}
       setIsLeftPanelOpen={() => setIsLeftPanelOpen(!isLeftPanelOpen)}
       icon={<HeaderIcon />}
-      rightHeaderContent={<HeaderRight />}
+      rightHeaderContent={<HeaderRight displaySearch={true} />}
     >
       {children}
     </MainLayout>
