@@ -6,7 +6,7 @@ import {
 } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
 
-import { QuickSearch } from "@gouvfr-lasuite/ui-kit";
+import { QuickSearch, QuickSearchGroup } from "@gouvfr-lasuite/ui-kit";
 import { useEffect, useRef, useState } from "react";
 import { Item, ItemType } from "@/features/drivers/types";
 import { getDriver } from "@/features/config/Config";
@@ -78,7 +78,6 @@ export const ExplorerSearchModal = (
       });
       props.onClose();
     } else {
-      console.log("onItemClick", item);
       setPreviewItems([item]);
       setPreviewItem(item);
     }
@@ -128,9 +127,14 @@ export const ExplorerSearchModal = (
                 <div className="explorer__search__modal__items__title">
                   {t("explorer.search.modal.results")}
                 </div>
-                {items.map((item) => (
-                  <SearchItem key={item.id} item={item} onClick={onItemClick} />
-                ))}
+                <QuickSearchGroup
+                  onSelect={onItemClick}
+                  renderElement={(element) => <SearchItem item={element} />}
+                  group={{
+                    groupName: "",
+                    elements: items,
+                  }}
+                />
               </div>
             </div>
           ) : (
@@ -144,26 +148,9 @@ export const ExplorerSearchModal = (
   );
 };
 
-const SearchItem = ({
-  item,
-  onClick,
-}: {
-  item: Item;
-  onClick: (item: Item) => void;
-}) => {
+const SearchItem = ({ item }: { item: Item }) => {
   return (
-    <button
-      className="explorer__search__modal__item"
-      onClick={() => {
-        onClick(item);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          onClick(item);
-        }
-      }}
-      data-testid="search-item"
-    >
+    <div className="explorer__search__modal__item" data-testid="search-item">
       <div className="explorer__search__modal__item__icon">
         <ItemIcon item={item} />
       </div>
@@ -175,6 +162,6 @@ const SearchItem = ({
           {item.parents?.map((ancestor) => ancestor.title).join(" / ")}
         </div>
       </div>
-    </button>
+    </div>
   );
 };
