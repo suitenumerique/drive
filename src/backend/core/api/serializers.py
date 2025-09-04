@@ -238,7 +238,10 @@ class ListItemSerializer(serializers.ModelSerializer):
 
     def get_is_wopi_supported(self, item):
         """Return whether the item is supported by WOPI protocol."""
-        return wopi_utils.is_item_wopi_supported(item)
+        request = self.context.get("request")
+        return wopi_utils.is_item_wopi_supported(
+            item, request.user if request else None
+        )
 
 
 class SearchItemSerializer(ListItemSerializer):
