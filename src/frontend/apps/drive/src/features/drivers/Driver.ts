@@ -16,6 +16,7 @@ import {
   Item,
   ItemType,
   User,
+  WopiInfo,
 } from "./types";
 
 export type ItemFilters = {
@@ -65,4 +66,7 @@ export abstract class Driver {
   }): Promise<Item>;
   abstract deleteItems(ids: string[]): Promise<void>;
   abstract hardDeleteItems(ids: string[]): Promise<void>;
+  abstract getWopiInfo(itemId: string): Promise<WopiInfo>;
+
+
 }

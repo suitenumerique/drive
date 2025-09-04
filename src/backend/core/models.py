@@ -8,6 +8,7 @@ import uuid
 from collections import defaultdict
 from datetime import timedelta
 from logging import getLogger
+from os.path import splitext
 
 from django.conf import settings
 from django.contrib.auth import models as auth_models
@@ -616,6 +617,21 @@ class Item(TreeModel, BaseModel):
         return super().descendants().exclude(id=self.id)
 
     @property
+    def extension(self):
+        """Return the extension related to the filename."""
+        if self.filename is None:
+            raise RuntimeError(
+                "The item must have a filename to compute its extension."
+            )
+
+        _, extension = splitext(self.filename)
+
+        if extension:
+            return extension.lstrip(".")
+
+        return None
+
+    @property
     def key_base(self):
         """Key base of the location where the item is stored in object storage."""
         if not self.pk:
@@ -774,6 +790,7 @@ class Item(TreeModel, BaseModel):
             "partial_update": is_owner_or_admin if self.is_root else can_update,
             "update": is_owner_or_admin if self.is_root else can_update,
             "upload_ended": can_update and user.is_authenticated,
+            "wopi": can_get,
         }
 
     def send_email(self, subject, emails, context=None, language=None):

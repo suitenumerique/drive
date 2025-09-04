@@ -1,10 +1,10 @@
 {{- $envVars := include "drive.common.env" (list . .Values.backend) -}}
 {{- $fullName := include "drive.backend.fullname" . -}}
-{{- $component := "backend" -}}
+{{- $component := "backend-celery-beat" -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $fullName }}-celery
+  name: {{ $fullName }}-celery-beat
   namespace: {{ .Release.Namespace | quote }}
   annotations:
     {{- with .Values.backend.dpAnnotations }}
@@ -13,7 +13,7 @@ metadata:
   labels:
     {{- include "drive.common.labels" (list . $component) | nindent 4 }}
 spec:
-  replicas: {{ .Values.backend.celery.replicas }}
+  replicas: {{ .Values.backend.celeryBeat.replicas }}
   selector:
     matchLabels:
       {{- include "drive.common.selectorLabels" (list . $component) | nindent 6 }}
@@ -38,11 +38,11 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ (.Values.backend.image | default dict).repository | default .Values.image.repository }}:{{ (.Values.backend.image | default dict).tag | default .Values.image.tag }}"
           imagePullPolicy: {{ (.Values.backend.image | default dict).pullPolicy | default .Values.image.pullPolicy }}
-          {{- with .Values.backend.celery.command }}
+          {{- with .Values.backend.celeryBeat.command }}
           command:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.backend.celery.args }}
+          {{- with .Values.backend.celeryBeat.args }}
           args:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -54,19 +54,19 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if .Values.backend.celery.probes.liveness }}
+          {{- if .Values.backend.celeryBeat.probes.liveness }}
           livenessProbe:
-            {{- include "drive.probes.abstract" (merge .Values.backend.celery.probes.liveness (dict "targetPort" .Values.backend.service.targetPort )) | nindent 12 }}
+            {{- include "drive.probes.abstract" (merge .Values.backend.celeryBeat.probes.liveness (dict "targetPort" .Values.backend.service.targetPort )) | nindent 12 }}
           {{- end }}
-          {{- if .Values.backend.celery.probes.readiness }}
+          {{- if .Values.backend.celeryBeat.probes.readiness }}
           readinessProbe:
-            {{- include "drive.probes.abstract" (merge .Values.backend.celery.probes.readiness (dict "targetPort" .Values.backend.service.targetPort )) | nindent 12 }}
+            {{- include "drive.probes.abstract" (merge .Values.backend.celeryBeat.probes.readiness (dict "targetPort" .Values.backend.service.targetPort )) | nindent 12 }}
           {{- end }}
-          {{- if .Values.backend.celery.probes.startup }}
+          {{- if .Values.backend.celeryBeat.probes.startup }}
           startupProbe:
-            {{- include "drive.probes.abstract" (merge .Values.backend.celery.probes.startup (dict "targetPort" .Values.backend.service.targetPort )) | nindent 12 }}
+            {{- include "drive.probes.abstract" (merge .Values.backend.celeryBeat.probes.startup (dict "targetPort" .Values.backend.service.targetPort )) | nindent 12 }}
           {{- end }}
-          {{- with .Values.backend.celery.resources }}
+          {{- with .Values.backend.celeryBeat.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}

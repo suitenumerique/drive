@@ -16,11 +16,14 @@ import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
 import { getIconByMimeType } from "@/features/explorer/components/icons/ItemIcon";
 import { useTranslation } from "react-i18next";
 import { SuspiciousPreview } from "../suspicious/SuspiciousPreview";
+import { downloadFile } from "@/features/items/utils";
+import { WopiEditor } from "../wopi/WopiEditor";
 
 export type FilePreviewType = {
   id: string;
   title: string;
   mimetype: string;
+  is_wopi_supported?: boolean;
   url: string;
 };
 
@@ -61,6 +64,7 @@ export const FilePreview = ({
   const data: FilePreviewData[] = useMemo(() => {
     return files?.map((file) => ({
       ...file,
+      is_wopi_supported: file.is_wopi_supported ?? false,
       category: getMimeCategory(file.mimetype),
     }));
   }, [files]);
@@ -79,6 +83,9 @@ export const FilePreview = ({
 
     if (currentFile.isSuspicious) {
       return <SuspiciousPreview handleDownload={handleDownload} />;
+    }
+    if (currentFile.is_wopi_supported) {
+      return <WopiEditor item={currentFile} />;
     }
 
     switch (currentFile.category) {
@@ -116,6 +123,7 @@ export const FilePreview = ({
         );
       case MimeCategory.PDF:
         return <PreviewPdf src={currentFile.url} />;
+
       default:
         return (
           <NotSupportedPreview file={currentFile} onDownload={handleDownload} />
