@@ -1196,7 +1196,7 @@ class ItemViewSet(
         """
         item = self.get_object()
 
-        if not (wopi_client := get_wopi_client_config(item)):
+        if not (wopi_client := get_wopi_client_config(item, request.user)):
             raise drf.exceptions.ValidationError(
                 {"detail": "This item does not suport WOPI integration."}
             )
