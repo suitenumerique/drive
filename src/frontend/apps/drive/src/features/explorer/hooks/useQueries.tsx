@@ -33,3 +33,10 @@ export const useFirstLevelItems = () => {
     queryFn: () => getDriver().getItems(),
   });
 };
+
+export const useItems = () => {
+  return useQuery({
+    queryKey: ["items"],
+    queryFn: () => getDriver().getItems(),
+  });
+};
