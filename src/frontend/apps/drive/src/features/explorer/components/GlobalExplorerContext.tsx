@@ -202,12 +202,8 @@ export const GlobalExplorerProvider = ({
   };
 
   const handleChangePreviewItem = (file?: FilePreviewType) => {
-    if (file) {
-      const item = previewItems.find((item) => file?.id === item.id);
-      setPreviewItem(item);
-    } else {
-      setPreviewItem(undefined);
-    }
+    const item = previewItems.find((item) => file?.id === item.id);
+    setPreviewItem(item);
   };
 
   return (
