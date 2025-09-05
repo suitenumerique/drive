@@ -7,7 +7,7 @@ import { Key } from "react-aria-components";
 import { useAppExplorer } from "./AppExplorer";
 import { ItemType } from "@/features/drivers/types";
 import { ItemFilters } from "@/features/drivers/Driver";
-import { useFirstLevelItems } from "../../hooks/useQueries";
+import { useItems } from "../../hooks/useQueries";
 import { TFunction } from "i18next";
 import { ItemIcon } from "../icons/ItemIcon";
 
@@ -110,11 +110,11 @@ export const ExplorerFilterWorkspace = (props: {
   onChange: (value: Key | null) => void;
 }) => {
   const { t } = useTranslation();
-  const { data: firstLevelItems } = useFirstLevelItems();
+  const { data: items } = useItems();
 
   const options = useMemo(() => {
     return [
-      ...(firstLevelItems?.map((item) => ({
+      ...(items?.map((item) => ({
         label: item.title,
         value: item.id,
         render: () => (
@@ -126,7 +126,7 @@ export const ExplorerFilterWorkspace = (props: {
       })) ?? []),
       getResetOption(t),
     ];
-  }, [firstLevelItems]);
+  }, [items]);
 
   if (!options) {
     return null;
