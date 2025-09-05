@@ -125,6 +125,7 @@ export const EmbeddedExplorerGridActionsCell = (
         >
           <Button
             onClick={() => setIsOpen(!isOpen)}
+            aria-label="item-row-more-action"
             color="primary-text"
             className="explorer__grid__item__actions__button"
             icon={<span className="material-icons">more_horiz</span>}
