@@ -158,16 +158,14 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
 
   const handleFileClick = (item: Item) => {
     if (item.url) {
+      // We need to ensure the preview items list is updated when clicking on a file from the grid. Because this list
+      // can be updated when clicking on a file from the search modal which sets the preview items to a list of one item.
+      setPreviewItems(props.childrenItems ?? []);
       setPreviewItem(item);
     } else {
       addToast(<ToasterItem>{t("explorer.grid.no_url")}</ToasterItem>);
     }
   };
-
-  // Set the preview files list.
-  useEffect(() => {
-    setPreviewItems(props.childrenItems ?? []);
-  }, [props.childrenItems]);
 
   const isLoading = props.childrenItems === undefined;
   const isEmpty = props.childrenItems?.length === 0;
