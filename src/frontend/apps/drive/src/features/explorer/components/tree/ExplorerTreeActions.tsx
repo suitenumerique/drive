@@ -86,7 +86,7 @@ export const ExplorerTreeActions = ({
           </Button>
         </DropdownMenu>
       </div>
-      <ExplorerSearchButton />
+      <ExplorerSearchButton keyboardShortcut />
     </div>
   );
 };

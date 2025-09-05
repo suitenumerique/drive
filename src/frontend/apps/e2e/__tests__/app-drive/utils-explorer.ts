@@ -1,6 +1,7 @@
 import { expect, Page } from "@playwright/test";
+import { expectTreeItemIsSelected } from "./utils-tree";
 
-export const checkExplorerBreadcrumbs = async (
+export const expectExplorerBreadcrumbs = async (
   page: Page,
   expected: string[],
   hidden: string[] = []
@@ -19,4 +20,9 @@ export const checkExplorerBreadcrumbs = async (
       await expect(button).toContainText(expected[i]);
     }
   }
+};
+
+export const expectCurrentFolder = async (page: Page, expected: string[]) => {
+  await expectTreeItemIsSelected(page, expected[expected.length - 1]);
+  await expectExplorerBreadcrumbs(page, expected);
 };

@@ -18,7 +18,7 @@ export const HeaderIcon = () => {
   );
 };
 
-export const HeaderRight = () => {
+export const HeaderRight = ({ displaySearch }: { displaySearch?: boolean }) => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
@@ -55,7 +55,7 @@ export const HeaderRight = () => {
       )}
       <LanguagePicker />
       {!config?.FRONTEND_HIDE_GAUFRE && <LaGaufre />}
-      <ExplorerSearchButton />
+      {displaySearch && <ExplorerSearchButton />}
     </>
   );
 };

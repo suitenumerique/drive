@@ -39,6 +39,7 @@ export type Item = {
   description: string;
   created_at: Date;
   children?: Item[];
+  parents?: Item[];
   numchild?: number;
   nb_accesses?: number;
   numchild_folder?: number;

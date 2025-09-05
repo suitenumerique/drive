@@ -11,6 +11,12 @@ and this project adheres to
 ### Added
 
 - ✨(backend) search endpoint for ItemViewSet #312
+- ✨(front) add search modal #326
+
+### Patches
+
+- ♻️(front) refactor tree loading #326
+- ♻️(front) externalize FilePreview from EmbeddedExplorer + modalify #326
 
 ## [v0.4.0] - 2025-09-02
 
@@ -40,7 +46,6 @@ and this project adheres to
 - 🐛(front) fix workspace link react cache #310
 - 🐛(backend) allow item partial update without modifying title #316
 - 🌐(front) fix share item wording #315
-
 
 ## [v0.2.0] - 2025-08-18
 

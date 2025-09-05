@@ -10,6 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Item,
   ItemType,
+  ItemUploadState,
   TreeItem,
   WorkspaceType,
 } from "@/features/drivers/types";
@@ -30,6 +31,12 @@ import { useFirstLevelItems } from "../hooks/useQueries";
 import { useTranslation } from "react-i18next";
 import { getWorkspaceType } from "../utils/utils";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
+import { ItemInfo } from "@/features/items/components/ItemInfo";
+import {
+  FilePreview,
+  FilePreviewType,
+} from "@/features/ui/preview/files-preview/FilesPreview";
+import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 
 export interface GlobalExplorerContextType {
   displayMode: "sdk" | "app";
@@ -40,7 +47,6 @@ export interface GlobalExplorerContextType {
   itemId: string;
   item: Item | undefined;
   firstLevelItems: Item[] | undefined;
-  tree: Item | null | undefined;
   onNavigate: (event: NavigationEvent) => void;
   initialId: string | undefined;
   treeIsInitialized: boolean;
@@ -52,6 +58,8 @@ export interface GlobalExplorerContextType {
   setRightPanelOpen: (open: boolean) => void;
   isLeftPanelOpen: boolean;
   setIsLeftPanelOpen: (isLeftPanelOpen: boolean) => void;
+  setPreviewItem: (item: Item | undefined) => void;
+  setPreviewItems: (items: Item[]) => void;
 }
 
 export const GlobalExplorerContext = createContext<
@@ -62,7 +70,7 @@ export const useGlobalExplorer = () => {
   const context = useContext(GlobalExplorerContext);
   if (!context) {
     throw new Error(
-      "useGlobalExplorer must be used within an ExplorerProvider"
+      "useGlobalExplorer must be used within an GlobalExplorerProvider"
     );
   }
   return context;
@@ -106,7 +114,7 @@ export const GlobalExplorerProvider = ({
   onNavigate,
 }: ExplorerProviderProps) => {
   const driver = getDriver();
-
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedItems, setSelectedItems] = useState<Item[]>([]);
 
@@ -126,6 +134,7 @@ export const GlobalExplorerProvider = ({
   const [initialId] = useState<string | undefined>(itemId);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [treeIsInitialized, setTreeIsInitialized] = useState<boolean>(false);
+  const { handleDownloadItem } = useDownloadItem();
 
   const { data: item } = useQuery({
     queryKey: ["items", itemId],
@@ -147,20 +156,6 @@ export const GlobalExplorerProvider = ({
   }, [item]);
 
   const { data: firstLevelItems } = useFirstLevelItems();
-
-  const { data: tree } = useQuery({
-    queryKey: ["initialTreeItem", initialId],
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    // The logic behind is simple: we want to execute the tree query ONLY if the first url is an
-    // item url. Otherwise, it is not needed to perform the query because no there is no current
-    // item ( like on the /trash page ). Even when landing first on /trash page, the tree will be
-    // constructed during further navigation, so no need to perform the tree request too.
-    enabled: !!initialId,
-    queryFn: () => {
-      return getDriver().getTree(initialId!);
-    },
-  });
 
   const mainWorkspace = useMemo(() => {
     return firstLevelItems?.find((item) => item.main_workspace);
@@ -185,6 +180,32 @@ export const GlobalExplorerProvider = ({
 
   const { dropZone } = useUploadZone({ item: item! });
 
+  /**
+   * Preview states.
+   */
+  const [previewItem, setPreviewItem] = useState<Item | undefined>(undefined);
+  const [previewItems, setPreviewItems] = useState<Item[]>([]);
+  const previewFiles = useMemo(() => {
+    return previewItems
+      .filter((item) => item.type === ItemType.FILE)
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        mimetype: item.mimetype ?? "",
+        url: item.url ?? "",
+        isSuspicious: item.upload_state === ItemUploadState.SUSPICIOUS,
+      }));
+  }, [previewItems]);
+
+  const handleClosePreview = () => {
+    setPreviewItem(undefined);
+  };
+
+  const handleChangePreviewItem = (file?: FilePreviewType) => {
+    const item = previewItems.find((item) => file?.id === item.id);
+    setPreviewItem(item);
+  };
+
   return (
     <GlobalExplorerContext.Provider
       value={{
@@ -199,7 +220,6 @@ export const GlobalExplorerProvider = ({
         itemId,
         initialId,
         item,
-        tree,
         onNavigate,
         dropZone,
         rightPanelForcedItem,
@@ -208,6 +228,8 @@ export const GlobalExplorerProvider = ({
         setRightPanelOpen,
         isLeftPanelOpen,
         setIsLeftPanelOpen,
+        setPreviewItem,
+        setPreviewItems,
       }}
     >
       <TreeProvider
@@ -249,21 +271,29 @@ export const GlobalExplorerProvider = ({
       />
 
       <Toaster />
+      <FilePreview
+        isOpen={!!previewItem}
+        onClose={handleClosePreview}
+        title={t("file_preview.title")}
+        files={previewFiles}
+        onChangeFile={handleChangePreviewItem}
+        handleDownloadFile={() => handleDownloadItem(previewItem)}
+        openedFileId={previewItem?.id}
+        sidebarContent={previewItem && <ItemInfo item={previewItem} />}
+      />
     </GlobalExplorerContext.Provider>
   );
 };
 
+/**
+ * Initializes the tree provider with the root items ( aka workspaces )
+ */
 const TreeProviderInitializer = ({
   children,
 }: {
   children: React.ReactNode;
 }) => {
-  const {
-    tree: treeItem,
-    firstLevelItems,
-    itemId,
-    setTreeIsInitialized,
-  } = useGlobalExplorer();
+  const { firstLevelItems, setTreeIsInitialized } = useGlobalExplorer();
   const { t } = useTranslation();
 
   const treeContext = useTreeContext<TreeItem>();
@@ -273,29 +303,7 @@ const TreeProviderInitializer = ({
     if (!firstLevelItems) {
       return;
     }
-    // If we are on an item page, we want to wait for the tree request to be resolved in order to build the tree.
-    if (itemId && !treeItem) {
-      return;
-    }
-
     const firstLevelItems_: Item[] = firstLevelItems ?? [];
-
-    // On some route no treeItem is provided, like on the trash route.
-    if (treeItem) {
-      const treeItemIndex = firstLevelItems_.findIndex(
-        (item) => item.id === treeItem.id
-      );
-
-      if (treeItemIndex !== -1) {
-        // as we need to make two requests to retrieve the items and the minimal tree based
-        // on where we invoke the tree, we replace the root of the invoked tree in the array
-        firstLevelItems_[treeItemIndex] = treeItem;
-      } else {
-        // Otherwise we add it to the beginning of the array, example: when landing on a public
-        // workspace, the public workspace is not present in firstLevelItems but it is in the treeItem.
-        firstLevelItems_.unshift(treeItem);
-      }
-    }
 
     const firstLevelTreeItems_: TreeItem[] = itemsToTreeItems(firstLevelItems_);
     const items: TreeViewDataType<TreeItem>[] = [];
@@ -362,7 +370,7 @@ const TreeProviderInitializer = ({
 
     treeContext?.treeData.resetTree(items);
     setTreeIsInitialized(true);
-  }, [treeItem, firstLevelItems]);
+  }, [firstLevelItems]);
 
   return children;
 };
