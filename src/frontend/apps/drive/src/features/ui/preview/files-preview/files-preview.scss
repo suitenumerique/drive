@@ -1,5 +1,5 @@
 .c__modal__backdrop:has(.file-preview-container) {
-  background-color: rgba(255, 255, 255, 0.6);
+  background-color: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(14px);
 
   .c__modal {
@@ -9,6 +9,16 @@
   .c__modal__scroller {
     padding: 0;
   }
+}
+
+/**
+ * When the file preview is opened from the explorer search modal, we want to
+ * have a more opaque backdrop color.
+ */
+.ReactModalPortal:has(.explorer__search__modal)
+  ~ .ReactModalPortal:has(.file-preview-container)
+  .c__modal__backdrop {
+  background-color: rgba(255, 255, 255, 0.95);
 }
 
 .file-preview-container {
