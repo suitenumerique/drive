@@ -26,15 +26,15 @@ test("Search somes items and shows them in the search modal", async ({
   searchItems = page.getByTestId("search-item");
   expect(searchItems).toHaveCount(3);
 
-  let searchItem = page.getByRole("button", { name: "Meetings Dev Team" });
+  let searchItem = page.getByRole("option", { name: "Meetings Dev Team" });
   await expect(searchItem).toContainText("Dev Team");
 
-  searchItem = page.getByRole("button", {
+  searchItem = page.getByRole("option", {
     name: "Meeting notes 5th September",
   });
   await expect(searchItem).toContainText("Dev Team / Meetings");
 
-  searchItem = page.getByRole("button", {
+  searchItem = page.getByRole("option", {
     name: "Meeting notes 15th September",
   });
   await expect(searchItem).toContainText("Dev Team / Meetings");
@@ -44,7 +44,7 @@ test("Search somes items and shows them in the search modal", async ({
   searchItems = page.getByTestId("search-item");
   expect(searchItems).toHaveCount(1);
 
-  searchItem = page.getByRole("button", {
+  searchItem = page.getByRole("option", {
     name: "Sales report",
   });
   await expect(searchItem).toContainText("Project 2025");
@@ -62,7 +62,7 @@ test("Search folder and click on it", async ({ page }) => {
   await expect(input).toBeVisible();
   await input.fill("meetings");
 
-  const button = page.getByRole("button", { name: "Meetings" });
+  const button = page.getByRole("option", { name: "Meetings" });
   await button.click();
 
   await expectCurrentFolder(page, ["Dev Team", "Meetings"]);
@@ -79,7 +79,7 @@ test("Search file and click on it", async ({ page }) => {
   await expect(input).toBeVisible();
   await input.fill("budget");
 
-  const button = page.getByRole("button", { name: "Budget report" });
+  const button = page.getByRole("option", { name: "Budget report" });
   await button.click();
 
   const filePreview = page.getByTestId("file-preview");
