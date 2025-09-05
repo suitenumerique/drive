@@ -64,24 +64,22 @@ class Command(BaseCommand):
             },
         ]
 
+        self._create_item(None, content)
+        
+    def _create_item(self, parent, content, depth=0):
+        if content is None:
+            return
         for data in content:
             item = factories.ItemFactory(
-                title=data["title"], type=data["type"], creator=data["creator"]
+                title=data["title"],
+                type=data["type"],
+                creator=data["creator"],
+                parent=parent,
+                users=[(data["creator"], models.RoleChoices.OWNER)]
+                if depth == 0
+                else None,
             )
-            factories.UserItemAccessFactory(
-                item=item, user=user, role=models.RoleChoices.OWNER
+            self.stdout.write(
+                f"Item created: {item.title} with parent: {parent.title if parent else None} and depth: {depth}"
             )
-            if "children" in data:
-                for child_data in data["children"]:
-                    self._create_item(item, child_data, user)
-
-    def _create_item(self, parent, data, user):
-        item = factories.ItemFactory(
-            title=data["title"],
-            type=data["type"],
-            creator=data["creator"],
-            parent=parent,
-        )
-        if "children" in data:
-            for child_data in data["children"]:
-                self._create_item(item, child_data, user)
+            self._create_item(item, data.get("children"), depth + 1)
