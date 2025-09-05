@@ -13,6 +13,10 @@ and this project adheres to
 - ✨(backend) search endpoint for ItemViewSet #312
 - 🔧(cron) pgdump: fix restic repository #282
 
+### Changed
+
+- ♻️(tilt) use helm dev-backend chart
+
 ## [v0.4.0] - 2025-09-02
 
 ### Added
