@@ -11,12 +11,14 @@ import { useItems } from "../../hooks/useQueries";
 import { TFunction } from "i18next";
 import { ItemIcon } from "../icons/ItemIcon";
 
+const ALL = "all";
+
 export const handleFilterChange = (
   filters: ItemFilters = {},
   name: string,
   value: Key | null
 ) => {
-  if (value === "all") {
+  if (value === ALL) {
     const newFilters = { ...filters };
     delete newFilters[name as keyof ItemFilters];
     return newFilters;
@@ -29,18 +31,12 @@ const getResetOption = (t: TFunction) => {
   return {
     label: t("explorer.filters.type.options.reset"),
     render: () => (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.5em",
-        }}
-      >
+      <div className="explorer__filters__item">
         <span className="material-icons">undo</span>
         {t("explorer.filters.type.options.reset")}
       </div>
     ),
-    value: "all",
+    value: ALL,
   };
 };
 
@@ -73,7 +69,7 @@ export const ExplorerFilterType = (props: {
         label: t("explorer.filters.type.options.folder"),
         value: "folder",
         render: () => (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5em" }}>
+          <div className="explorer__filters__item">
             <img src={folderIcon.src} alt="" width="24" height="24" />
             {t("explorer.filters.type.options.folder")}
           </div>
@@ -82,7 +78,7 @@ export const ExplorerFilterType = (props: {
       {
         label: t("explorer.filters.type.options.file"),
         render: () => (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5em" }}>
+          <div className="explorer__filters__item">
             <img src={mimeOther.src} alt="" width="24" height="24" />
             {t("explorer.filters.type.options.file")}
           </div>
@@ -118,7 +114,7 @@ export const ExplorerFilterWorkspace = (props: {
         label: item.title,
         value: item.id,
         render: () => (
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5em" }}>
+          <div className="explorer__filters__item">
             <ItemIcon item={item} size={IconSize.SMALL} />
             {item.title}
           </div>
