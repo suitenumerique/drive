@@ -2,6 +2,7 @@
 
 import json
 from datetime import timedelta
+from urllib.parse import quote
 
 from django.conf import settings
 from django.db.models import Q
@@ -221,7 +222,7 @@ class ListItemSerializer(serializers.ModelSerializer):
         ):
             return None
 
-        return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{item.file_key}"
+        return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{quote(item.file_key)}"
 
     def get_hard_delete_at(self, item):
         """Return the hard delete date of the item."""

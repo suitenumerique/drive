@@ -1148,6 +1148,62 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
     }
 
 
+def test_api_items_retrieve_file_with_url_property_with_spaces():
+    """
+    The `url` property should have white spaces encoded.
+    """
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        creator=user,
+        type=models.ItemTypeChoices.FILE,
+        link_reach="public",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        filename="logo with spaces.png",
+        mimetype="image/png",
+        size=8,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": str(item.id),
+        "abilities": item.get_abilities(user),
+        "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
+        "creator": {
+            "id": str(item.creator.id),
+            "full_name": item.creator.full_name,
+            "short_name": item.creator.short_name,
+        },
+        "depth": 1,
+        "is_favorite": False,
+        "link_reach": "public",
+        "link_role": item.link_role,
+        "nb_accesses": 1,
+        "numchild": 0,
+        "numchild_folder": 0,
+        "path": str(item.path),
+        "title": item.title,
+        "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
+        "user_roles": [models.RoleChoices.OWNER],
+        "type": models.ItemTypeChoices.FILE,
+        "upload_state": models.ItemUploadStateChoices.READY,
+        "url": f"http://localhost:8083/media/item/{item.id!s}/logo%20with%20spaces.png",
+        "mimetype": "image/png",
+        "main_workspace": False,
+        "filename": item.filename,
+        "size": 8,
+        "description": None,
+        "deleted_at": None,
+        "hard_delete_at": None,
+    }
+
+
 def test_api_items_retrieve_hard_deleted_item_should_not_work():
     """
     Hard deleted items should not be accessible via their detail endpoint.

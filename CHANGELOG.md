@@ -20,6 +20,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(front) fix the content when opening the right panel #328
+- 🐛(back) encode white spaces in item url #336
 
 ## [v0.4.0] - 2025-09-02
 
