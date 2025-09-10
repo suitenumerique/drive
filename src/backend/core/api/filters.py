@@ -28,6 +28,13 @@ class SearchItemFilter(ItemFilter):
         method="filter_workspace", label=_("Workspace")
     )
 
+    type = django_filters.ChoiceFilter(
+        field_name="type",
+        label=_("Type"),
+        choices=models.ItemTypeChoices.choices + [("workspace", _("Workspace"))],
+        method="filter_type",
+    )
+
     class Meta:
         model = models.Item
         fields = ["title", "type", "workspace"]
@@ -38,6 +45,20 @@ class SearchItemFilter(ItemFilter):
         This filter do nothing, it returns directly the queryset.
         It is used by the viewset directly to filter the ItemAccess queryset.
         """
+        return queryset
+
+    def filter_type(self, queryset, name, value):
+        """
+        Filter items based on their type.
+        """
+        if value == "workspace":
+            return queryset.filter(path__depth=1, type=models.ItemTypeChoices.FOLDER)
+        if value == "folder":
+            return queryset.filter(
+                path__depth__gt=1, type=models.ItemTypeChoices.FOLDER
+            )
+        if value == "file":
+            return queryset.filter(type=models.ItemTypeChoices.FILE)
         return queryset
 
 

@@ -77,7 +77,7 @@ class Command(BaseCommand):
         ]
 
         self._create_item(None, content)
-        
+
     def _create_item(self, parent, content, depth=0):
         if content is None:
             return

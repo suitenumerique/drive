@@ -415,7 +415,15 @@ def test_api_items_search_authenticated_by_type():
 
     response = client.get("/api/v1.0/items/search/?type=folder")
     assert response.status_code == 200
-    assert response.data["count"] == 5
+    assert (
+        response.data["count"] == 3
+    )  # top_parent and user.get_main_workspace() are removed.
+
+    response = client.get("/api/v1.0/items/search/?type=workspace")
+    assert response.status_code == 200
+    assert (
+        response.data["count"] == 2
+    )  # top_parent and user.get_main_workspace() are workspaces.
 
 
 def test_api_items_search_authenticated_by_workspace():
