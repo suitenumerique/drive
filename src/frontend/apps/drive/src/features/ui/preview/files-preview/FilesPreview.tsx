@@ -30,7 +30,7 @@ type FilePreviewData = FilePreviewType & {
 
 interface FilePreviewProps {
   isOpen: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   title?: string;
   files?: FilePreviewType[];
   initialIndexFile?: number;
@@ -39,6 +39,8 @@ interface FilePreviewProps {
   sidebarContent?: React.ReactNode;
   onChangeFile?: (file?: FilePreviewType) => void;
   handleDownloadFile?: (file?: FilePreviewType) => void;
+  hideCloseButton?: boolean;
+  hideNav?: boolean;
 }
 
 export const FilePreview = ({
@@ -52,6 +54,8 @@ export const FilePreview = ({
   headerRightContent,
   onChangeFile,
   handleDownloadFile,
+  hideCloseButton,
+  hideNav,
 }: FilePreviewProps) => {
   const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(initialIndexFile);
@@ -142,7 +146,7 @@ export const FilePreview = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size={ModalSize.FULL}>
+    <Modal isOpen={isOpen} onClose={() => onClose?.()} size={ModalSize.FULL}>
       <div data-testid="file-preview">
         <div
           className={`file-preview-container ${
@@ -152,12 +156,14 @@ export const FilePreview = ({
           <div className="file-preview-header">
             <div className="file-preview-header__content">
               <div className="file-preview-header__content-left">
-                <Button
-                  color="tertiary-text"
-                  size="small"
-                  onClick={onClose}
-                  icon={<Icon name="close" />}
-                />
+                {!hideCloseButton && (
+                  <Button
+                    color="tertiary-text"
+                    size="small"
+                    onClick={onClose}
+                    icon={<Icon name="close" />}
+                  />
+                )}
 
                 <div className="file-preview-title">
                   <img
@@ -173,12 +179,14 @@ export const FilePreview = ({
                 </div>
               </div>
               <div className="file-preview-header__content-center">
-                <FilePreviewNav
-                  currentIndex={currentIndex}
-                  totalFiles={data.length}
-                  onPrevious={() => setCurrentIndex(currentIndex - 1)}
-                  onNext={() => setCurrentIndex(currentIndex + 1)}
-                />
+                {!hideNav && (
+                  <FilePreviewNav
+                    currentIndex={currentIndex}
+                    totalFiles={data.length}
+                    onPrevious={() => setCurrentIndex(currentIndex - 1)}
+                    onNext={() => setCurrentIndex(currentIndex + 1)}
+                  />
+                )}
               </div>
               <div className="file-preview-header__content-right">
                 {headerRightContent}
@@ -229,7 +237,7 @@ export const FilePreviewNav: React.FC<FilePreviewNavProps> = ({
   onNext,
 }) => {
   return (
-    <div className="file-preview-nav">
+    <div className="file-preview-nav" data-testid="file-preview-nav">
       <Button
         color="tertiary-text"
         onClick={onPrevious}
