@@ -20,7 +20,7 @@ test("Create a folder", async ({ page }) => {
 
   await expect(page.getByText("Drop your files here")).not.toBeVisible();
   await expect(
-    page.getByRole("cell", { name: "My first folder" })
+    page.getByRole("cell", { name: "My first folder", exact: true })
   ).toBeVisible();
   await page.getByRole("cell", { name: "few seconds ago" }).click();
 });

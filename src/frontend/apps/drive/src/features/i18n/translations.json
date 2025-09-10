@@ -153,6 +153,7 @@
           },
           "no_url": "This resource does not have an URL",
           "actions": {
+            "button_aria_label": "More actions for {{name}}",
             "info": "Info",
             "share": "Share",
             "download": "Download",
@@ -525,6 +526,7 @@
           },
           "no_url": "Cette ressource n'a pas d'URL",
           "actions": {
+            "button_aria_label": "Plus d'actions pour {{name}}",
             "info": "Informations",
             "share": "Partager",
             "download": "Télécharger",

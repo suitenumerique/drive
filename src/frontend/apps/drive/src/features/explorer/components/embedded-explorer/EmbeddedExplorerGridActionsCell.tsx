@@ -125,10 +125,12 @@ export const EmbeddedExplorerGridActionsCell = (
         >
           <Button
             onClick={() => setIsOpen(!isOpen)}
-            aria-label="item-row-more-action"
             color="primary-text"
             className="explorer__grid__item__actions__button"
             icon={<span className="material-icons">more_horiz</span>}
+            aria-label={t("explorer.grid.actions.button_aria_label", {
+              name: item.title,
+            })}
           />
         </DropdownMenu>
         {renameModal.isOpen && (

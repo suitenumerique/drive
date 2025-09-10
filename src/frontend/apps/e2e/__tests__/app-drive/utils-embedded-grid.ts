@@ -14,7 +14,7 @@ export const getRowItemActions = async (page: Page, itemName: string) => {
   const row = await getRowItem(page, itemName);
   const actions = row
     .getByRole("button", {
-      name: "item-row-more-action",
+      name: `More actions for ${itemName}`,
       exact: true,
     })
     .nth(1);
