@@ -2,6 +2,7 @@ import { getDriver } from "@/features/config/Config";
 import {
   Item,
   ItemType,
+  ItemUploadState,
   LinkReach,
   WorkspaceType,
 } from "@/features/drivers/types";
@@ -130,4 +131,14 @@ export const isIdInItemTree = (itemPath: string, targetId: string): boolean => {
 
   // Check if the targetId exists anywhere in the path
   return pathIds.includes(targetId);
+};
+
+export const itemToPreviewFile = (item: Item) => {
+  return {
+    id: item.id,
+    title: item.title,
+    mimetype: item.mimetype ?? "",
+    url: item.url ?? "",
+    isSuspicious: item.upload_state === ItemUploadState.SUSPICIOUS,
+  };
 };
