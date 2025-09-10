@@ -1,0 +1,6 @@
+{
+    "wopi": {
+        "enable": true,
+        "host": "http://localhost:9981"
+    }
+}
