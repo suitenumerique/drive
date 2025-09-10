@@ -274,6 +274,11 @@
             "submit": "Edit"
           }
         },
+        "files": {
+          "not_found": {
+            "description": "The file you are looking for does not exist."
+          }
+        },
         "workspaces": {
           "mainWorkspace": "My workspace",
           "form": {
@@ -645,6 +650,11 @@
             "description": "Description",
             "cancel": "Annuler",
             "submit": "Mettre à jour"
+          }
+        },
+        "files": {
+          "not_found": {
+            "description": "Le fichier que vous recherchez n'existe pas."
           }
         },
         "workspaces": {
