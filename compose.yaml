@@ -93,6 +93,8 @@ services:
         condition: service_started
       collabora:
         condition: service_started
+      onlyoffice:
+        condition: service_started
 
   celery-dev:
     user: ${DOCKER_USER:-1000}
@@ -202,3 +204,15 @@ services:
       - password=password
       - server_name=localhost:9980
       - aliasgroup1=app-dev:8000
+
+  onlyoffice:
+    image: onlyoffice/documentserver-de
+    environment:
+      TZ: "Europe/Berlin"
+      USE_UNAUTHORIZED_STORAGE: "true"
+    ports:
+      - "9981:80"
+    volumes:
+      - ./docker/onlyoffice/local-development.json:/etc/onlyoffice/documentserver/local-production-linux.json
+      # Enable debug
+      - ./docker/onlyoffice/log4js/production.json:/etc/onlyoffice/documentserver/log4js/production.json

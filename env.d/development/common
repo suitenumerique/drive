@@ -56,6 +56,7 @@ FRONTEND_FEEDBACK_BUTTON_IDLE=False
 FRONTEND_FEEDBACK_ITEMS={"form":{"url": "https://tally.so/r/w2YaWL"}, "tchap":{"url": "https://tchap.gouv.fr/#/room/#fichiers:agent.dinum.tchap.gouv.fr"}, "visio":{"url": "https://cal.com/robin-lecomte-eyul9w/fichiers"}}
 
 # WOPI
-WOPI_CLIENTS="collabora"
+WOPI_CLIENTS="collabora,onlyoffice"
 WOPI_COLLABORA_DISCOVERY_URL="http://collabora:9980/hosting/discovery"
+WOPI_ONLYOFFICE_DISCOVERY_URL=http://onlyoffice/hosting/discovery
 WOPI_SRC_BASE_URL=http://app-dev:8000
