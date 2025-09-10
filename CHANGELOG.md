@@ -31,6 +31,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(front) fix redirect after delete node in tree #325
+- 🐛(front) fix drag leave behavior in upload zone
 
 ## [v0.3.0] - 2025-08-25
 
@@ -46,7 +47,6 @@ and this project adheres to
 - 🐛(backend) allow item partial update without modifying title #316
 - 🌐(front) fix share item wording #315
 - 🐛(front) fix left tree glitch #323
-
 
 ## [v0.2.0] - 2025-08-18
 
