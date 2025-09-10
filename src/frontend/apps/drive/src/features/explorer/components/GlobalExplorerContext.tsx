@@ -10,7 +10,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Item,
   ItemType,
-  ItemUploadState,
   TreeItem,
   WorkspaceType,
 } from "@/features/drivers/types";
@@ -29,7 +28,11 @@ import {
 import { ExplorerDndProvider } from "./ExplorerDndProvider";
 import { useFirstLevelItems } from "../hooks/useQueries";
 import { useTranslation } from "react-i18next";
-import { getItemTitle, getWorkspaceType } from "../utils/utils";
+import {
+  getItemTitle,
+  getWorkspaceType,
+  itemToPreviewFile,
+} from "../utils/utils";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
 import { ItemInfo } from "@/features/items/components/ItemInfo";
 import {
@@ -187,13 +190,7 @@ export const GlobalExplorerProvider = ({
   const previewFiles = useMemo(() => {
     return previewItems
       .filter((item) => item.type === ItemType.FILE)
-      .map((item) => ({
-        id: item.id,
-        title: item.title,
-        mimetype: item.mimetype ?? "",
-        url: item.url ?? "",
-        isSuspicious: item.upload_state === ItemUploadState.SUSPICIOUS,
-      }));
+      .map(itemToPreviewFile);
   }, [previewItems]);
 
   const handleClosePreview = () => {

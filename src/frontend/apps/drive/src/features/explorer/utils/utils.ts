@@ -2,6 +2,7 @@ import { getDriver } from "@/features/config/Config";
 import {
   Item,
   ItemType,
+  ItemUploadState,
   LinkReach,
   WorkspaceType,
 } from "@/features/drivers/types";
@@ -137,4 +138,14 @@ export const getItemTitle = (item: Item) => {
     return i18n.t("explorer.workspaces.mainWorkspace");
   }
   return item.title;
+};
+
+export const itemToPreviewFile = (item: Item) => {
+  return {
+    id: item.id,
+    title: item.title,
+    mimetype: item.mimetype ?? "",
+    url: item.url ?? "",
+    isSuspicious: item.upload_state === ItemUploadState.SUSPICIOUS,
+  };
 };
