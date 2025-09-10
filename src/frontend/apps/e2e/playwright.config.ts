@@ -56,6 +56,9 @@ export default defineConfig({
         ...devices["Desktop Safari"],
         locale: "en-US",
         timezoneId: "Europe/Paris",
+        contextOptions: {
+          permissions: ["clipboard-read"],
+        },
       },
     },
     {
