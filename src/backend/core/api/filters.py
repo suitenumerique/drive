@@ -1,5 +1,6 @@
 """API filters for drive' core application."""
 
+from django.db.models import Q, TextChoices
 from django.utils.translation import gettext_lazy as _
 
 import django_filters
@@ -21,6 +22,14 @@ class ItemFilter(django_filters.FilterSet):
         fields = ["title", "type"]
 
 
+class ScopeChoices(TextChoices):
+    """Choices for the scope filter."""
+
+    ALL = "all", _("All")
+    DELETED = "deleted", _("Deleted")
+    NOT_DELETED = "not_deleted", _("Not deleted")
+
+
 class SearchItemFilter(ItemFilter):
     """Filter class dedicated to the Item viewset search method."""
 
@@ -35,9 +44,35 @@ class SearchItemFilter(ItemFilter):
         method="filter_type",
     )
 
+    scope = django_filters.MultipleChoiceFilter(
+        field_name="scopes",
+        label=_("Scopes"),
+        choices=ScopeChoices.choices,
+        initial="not_deleted",
+        method="filter_scope",
+    )
+
     class Meta:
         model = models.Item
         fields = ["title", "type", "workspace"]
+
+    # pylint: disable=keyword-arg-before-vararg
+    def __init__(self, data=None, *args, **kwargs):
+        """Use initial values as defaults."""
+        # if filterset is bound, use initial values as defaults
+        if data is not None:
+            # get a mutable copy of the QueryDict
+            data = data.copy()
+
+            # pylint: disable=no-member
+            for name, f in self.base_filters.items():
+                initial = f.extra.get("initial")
+
+                # filter param is either missing or empty, use initial as default
+                if not data.get(name) and initial:
+                    data[name] = initial
+
+        super().__init__(data, *args, **kwargs)
 
     # pylint: disable=unused-argument
     def filter_workspace(self, queryset, name, value):
@@ -60,6 +95,18 @@ class SearchItemFilter(ItemFilter):
         if value == "file":
             return queryset.filter(type=models.ItemTypeChoices.FILE)
         return queryset
+
+    def filter_scope(self, queryset, name, value):
+        """Filter items based on their scopes."""
+        to_filter = Q()
+        if ScopeChoices.ALL in value:
+            return queryset
+        if ScopeChoices.DELETED in value:
+            to_filter |= Q(deleted_at__isnull=False)
+        if ScopeChoices.NOT_DELETED in value:
+            to_filter |= Q(deleted_at__isnull=True)
+
+        return queryset.filter(to_filter)
 
 
 class ListItemFilter(ItemFilter):
