@@ -12,6 +12,7 @@ and this project adheres to
 
 - ✨(backend) search endpoint for ItemViewSet #312
 - ✨(front) add search modal #326
+- ✨(front) add standalone file preview #337
 
 ### Patches
 
