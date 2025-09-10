@@ -37,6 +37,10 @@ def test_api_items_search_authenticated_without_filters():
         title="Item 3", parent=parent, type=models.ItemTypeChoices.FILE
     )
     factories.ItemFactory(title="Item hidden")
+    deleted_file = factories.ItemFactory(
+        title="Deleted file", type=models.ItemTypeChoices.FILE, parent=top_parent
+    )
+    deleted_file.soft_delete()
 
     response = client.get("/api/v1.0/items/search/")
     assert response.status_code == 200
@@ -409,6 +413,11 @@ def test_api_items_search_authenticated_by_type():
         3, parent=user.get_main_workspace(), type=models.ItemTypeChoices.FILE
     )
 
+    deleted_file = factories.ItemFactory(
+        title="Deleted file", type=models.ItemTypeChoices.FILE, parent=top_parent
+    )
+    deleted_file.soft_delete()
+
     response = client.get("/api/v1.0/items/search/?type=file")
     assert response.status_code == 200
     assert response.data["count"] == 6
@@ -424,6 +433,53 @@ def test_api_items_search_authenticated_by_type():
     assert (
         response.data["count"] == 2
     )  # top_parent and user.get_main_workspace() are workspaces.
+
+
+def test_api_items_search_authenticated_filter_scopes():
+    """
+    Authenticated users should be able to search for items by deleted status.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    top_parent = factories.ItemFactory(
+        title="Item 1", users=[user], type=models.ItemTypeChoices.FOLDER
+    )
+    factories.ItemFactory.create_batch(
+        3, parent=top_parent, type=models.ItemTypeChoices.FILE
+    )
+    factories.ItemFactory.create_batch(
+        3, parent=top_parent, type=models.ItemTypeChoices.FOLDER
+    )
+    factories.ItemFactory.create_batch(
+        3, parent=user.get_main_workspace(), type=models.ItemTypeChoices.FILE
+    )
+
+    deleted_file = factories.ItemFactory(
+        title="Deleted file", type=models.ItemTypeChoices.FILE, parent=top_parent
+    )
+    deleted_file.soft_delete()
+
+    response = client.get("/api/v1.0/items/search/")
+    assert response.status_code == 200
+    assert response.data["count"] == 11
+
+    response = client.get("/api/v1.0/items/search/?scope=all")
+    assert response.status_code == 200
+    assert response.data["count"] == 12
+
+    response = client.get("/api/v1.0/items/search/?scope=deleted")
+    assert response.status_code == 200
+    assert response.data["count"] == 1
+
+    response = client.get("/api/v1.0/items/search/?scope=not_deleted")
+    assert response.status_code == 200
+    assert response.data["count"] == 11
+
+    response = client.get("/api/v1.0/items/search/?scope=deleted&scope=not_deleted")
+    assert response.status_code == 200
+    assert response.data["count"] == 12
 
 
 def test_api_items_search_authenticated_by_workspace():
