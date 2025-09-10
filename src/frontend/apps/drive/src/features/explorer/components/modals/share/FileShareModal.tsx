@@ -35,7 +35,9 @@ export const FileShareModal = ({ item, ...props }: FileShareModalProps) => {
       outsideSearchContent={
         <ShareModalCopyLinkFooter
           onCopyLink={() => {
-            copyToClipboard(item.url ?? "");
+            const url =
+              window.location.origin + "/explorer/items/files/" + item.id;
+            copyToClipboard(url);
           }}
           onOk={() => {
             props.onClose();
