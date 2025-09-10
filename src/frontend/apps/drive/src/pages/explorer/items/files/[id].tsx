@@ -7,7 +7,7 @@ import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 import { GenericDisclaimer } from "@/features/ui/components/generic-disclaimer/GenericDisclaimer";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
 import { FilePreview } from "@/features/ui/preview/files-preview/FilesPreview";
-import { Icon, Spinner } from "@gouvfr-lasuite/ui-kit";
+import { Icon } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@openfun/cunningham-react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/router";
