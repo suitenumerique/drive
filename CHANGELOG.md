@@ -14,6 +14,7 @@ and this project adheres to
 - 🔧(cron) pgdump: fix restic repository #282
 - 🔧(backend) support \_FILE for secret environment variables #196
 - ✨(front) add search modal #326
+- ✨(front) add standalone file preview #337
 
 ### Changed
 
