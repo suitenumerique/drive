@@ -28,10 +28,10 @@ export const WopiEditor = ({ item }: WopiEditorProps) => {
     if (!wopiInfo) {
       return undefined;
     }
-
-    const baseUrl = wopiInfo.launch_url;
-    const separator = baseUrl.includes("?") ? "&" : "?";
-    return `${baseUrl}${separator}lang=${i18n.language}`;
+    return wopiInfo.launch_url;
+    // const baseUrl = wopiInfo.launch_url;
+    // const separator = baseUrl.includes("?") ? "&" : "?";
+    // return `${baseUrl}${separator}lang=${i18n.language}`;
   }, [wopiInfo, i18n.language]);
 
   useEffect(() => {
