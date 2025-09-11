@@ -32,9 +32,7 @@ export const ExplorerSearchModal = (
 ) => {
   const { t } = useTranslation();
   const [inputValue, setInputValue] = useState<string>("");
-  const [filters, setFilters] = useState<ItemFilters>({
-    scope: ItemFiltersScope.NOT_DELETED,
-  });
+  const [filters, setFilters] = useState<ItemFilters>({});
   const searchUserTimeoutRef = useRef<NodeJS.Timeout>(null);
   const [items, setItems] = useState<Item[]>([]);
 

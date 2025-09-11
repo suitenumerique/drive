@@ -147,15 +147,6 @@ export const ExplorerFilterScope = (props: {
   const options: FilterOption[] = useMemo(
     () => [
       {
-        label: t("explorer.filters.scopes.options.all"),
-        value: ItemFiltersScope.NOT_DELETED,
-        render: () => (
-          <div className="explorer__filters__item">
-            {t("explorer.filters.scopes.options.all")}
-          </div>
-        ),
-      },
-      {
         label: t("explorer.filters.scopes.options.trash"),
         value: ItemFiltersScope.DELETED,
         render: () => (
