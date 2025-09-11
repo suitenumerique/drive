@@ -1205,7 +1205,12 @@ class ItemViewSet(
         access_token, access_token_ttl = service.insert_new_access(item, request.user)
 
         get_file_info = reverse("files-detail", kwargs={"pk": item.id})
-        launch_url = compute_wopi_launch_url(wopi_client, get_file_info)
+        language = (
+            request.user.language
+            if request.user.is_authenticated
+            else settings.LANGUAGE_CODE
+        )
+        launch_url = compute_wopi_launch_url(wopi_client, get_file_info, language)
 
         return drf.response.Response(
             {

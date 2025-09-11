@@ -521,13 +521,95 @@ def test_compute_wopi_launch_url(settings):
     settings.WOPI_SRC_BASE_URL = "http://app-dev:8000"
     launch_url = "https://vendorA.com/launch_url"
     get_file_info_path = "/api/v1.0/wopi/files/123"
-    assert (
-        compute_wopi_launch_url(launch_url, get_file_info_path)
-        == f"{launch_url}?WOPISrc={quote_plus(f'{settings.WOPI_SRC_BASE_URL}{get_file_info_path}')}"
+    assert compute_wopi_launch_url(launch_url, get_file_info_path) == (
+        f"{launch_url}?WOPISrc={quote_plus(f'{settings.WOPI_SRC_BASE_URL}{get_file_info_path}')}"
+        "&closebutton=false"
     )
 
     settings.WOPI_SRC_BASE_URL = None
     assert (
         compute_wopi_launch_url(launch_url, get_file_info_path)
-        == f"{launch_url}?WOPISrc={quote_plus(get_file_info_path)}"
+        == f"{launch_url}?WOPISrc={quote_plus(get_file_info_path)}&closebutton=false"
+    )
+
+
+def test_compute_wopi_launch_url_with_lang(settings):
+    """Test the compute_wopi_launch_url function."""
+    settings.WOPI_SRC_BASE_URL = "http://app-dev:8000"
+    launch_url = "https://vendorA.com/launch_url"
+    get_file_info_path = "/api/v1.0/wopi/files/123"
+    assert compute_wopi_launch_url(launch_url, get_file_info_path, lang="en-us") == (
+        f"{launch_url}?WOPISrc={quote_plus(f'{settings.WOPI_SRC_BASE_URL}{get_file_info_path}')}"
+        "&closebutton=false&lang=en-us"
+    )
+
+    settings.WOPI_SRC_BASE_URL = None
+    assert (
+        compute_wopi_launch_url(launch_url, get_file_info_path, lang="en-us")
+        == f"{launch_url}?WOPISrc={quote_plus(get_file_info_path)}&closebutton=false&lang=en-us"
+    )
+
+
+def test_compute_wopi_launch_url_leading_question_mark(settings):
+    """Test the compute_wopi_launch_url function with a leading question mark."""
+
+    settings.WOPI_SRC_BASE_URL = "http://app-dev:8000"
+    launch_url = "https://vendorA.com/launch_url?"
+    expected_launch_url = "https://vendorA.com/launch_url"
+    get_file_info_path = "/api/v1.0/wopi/files/123"
+    assert compute_wopi_launch_url(launch_url, get_file_info_path) == (
+        f"{expected_launch_url}?"
+        f"WOPISrc={quote_plus(f'{settings.WOPI_SRC_BASE_URL}{get_file_info_path}')}"
+        "&closebutton=false"
+    )
+
+    settings.WOPI_SRC_BASE_URL = None
+    assert (
+        compute_wopi_launch_url(launch_url, get_file_info_path)
+        == f"{expected_launch_url}?WOPISrc={quote_plus(get_file_info_path)}&closebutton=false"
+    )
+
+
+def test_compute_wopi_launch_url_leading_ampersand(settings):
+    """Test the compute_wopi_launch_url function with a leading &."""
+
+    settings.WOPI_SRC_BASE_URL = "http://app-dev:8000"
+    launch_url = "https://vendorA.com/launch_url&"
+    expected_launch_url = "https://vendorA.com/launch_url"
+    get_file_info_path = "/api/v1.0/wopi/files/123"
+    assert compute_wopi_launch_url(launch_url, get_file_info_path) == (
+        f"{expected_launch_url}?"
+        f"WOPISrc={quote_plus(f'{settings.WOPI_SRC_BASE_URL}{get_file_info_path}')}"
+        "&closebutton=false"
+    )
+
+    settings.WOPI_SRC_BASE_URL = None
+    assert (
+        compute_wopi_launch_url(launch_url, get_file_info_path)
+        == f"{expected_launch_url}?WOPISrc={quote_plus(get_file_info_path)}&closebutton=false"
+    )
+
+
+def test_compute_wopi_launch_url_placeholders(settings):
+    """Test the compute_wopi_launch_url function with a leading &."""
+
+    settings.WOPI_SRC_BASE_URL = "http://app-dev:8000"
+    launch_url = (
+        "http://localhost:9981/hosting/wopi/word/view?"
+        "<rs=DC_LLCC&><dchat=DISABLE_CHAT&><embed=EMBEDDED&><fs=FULLSCREEN&><hid=HOST_SESSION_ID&>"
+        "<rec=RECORDING&><sc=SESSION_CONTEXT&><thm=THEME_ID&><ui=UI_LLCC&><wopisrc=WOPI_SOURCE&>&"
+    )
+    get_file_info_path = "/api/v1.0/wopi/files/123"
+    expected_launch_url = "http://localhost:9981/hosting/wopi/word/view"
+    assert compute_wopi_launch_url(launch_url, get_file_info_path, "en-us") == (
+        f"{expected_launch_url}?"
+        f"WOPISrc={quote_plus(f'{settings.WOPI_SRC_BASE_URL}{get_file_info_path}')}"
+        "&closebutton=false&lang=en-us&rs=en-us&dchat=0&ui=en-us"
+    )
+
+    settings.WOPI_SRC_BASE_URL = None
+    settings.WOPI_DISABLE_CHAT = 1
+    assert compute_wopi_launch_url(launch_url, get_file_info_path) == (
+        f"{expected_launch_url}?WOPISrc={quote_plus(get_file_info_path)}"
+        "&closebutton=false&dchat=1"
     )

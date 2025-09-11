@@ -679,6 +679,9 @@ class Base(Configuration):
     WOPI_LOCK_TIMEOUT = values.IntegerValue(
         30 * 60, environ_name="WOPI_LOCK_TIMEOUT", environ_prefix=None
     )
+    WOPI_DISABLE_CHAT = values.IntegerValue(
+        0, environ_name="WOPI_DISABLE_CHAT", environ_prefix=None
+    )
 
     # Malware detection
     MALWARE_DETECTION = {

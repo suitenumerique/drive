@@ -1213,6 +1213,7 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "description": None,
         "deleted_at": None,
         "hard_delete_at": None,
+        "is_wopi_supported": False,
     }
 
 

@@ -79,7 +79,9 @@ def test_api_items_wopi_anonymous_user_item_public(
     data = response.json()
     assert data["access_token"] is not None
     assert data["access_token_ttl"] > timestamp_now
-    assert data["launch_url"] == f"{valid_wopi_launch_url}?WOPISrc={wopi_src}"
+    assert data["launch_url"] == (
+        f"{valid_wopi_launch_url}?WOPISrc={wopi_src}&closebutton=false&lang=en-us"
+    )
 
 
 @pytest.mark.parametrize(
@@ -204,7 +206,9 @@ def test_api_items_wopi_authenticated_can_access_retricted_item(
     data = response.json()
     assert data["access_token"] is not None
     assert data["access_token_ttl"] > timestamp_now
-    assert data["launch_url"] == f"{valid_wopi_launch_url}?WOPISrc={wopi_src}"
+    assert data["launch_url"] == (
+        f"{valid_wopi_launch_url}?WOPISrc={wopi_src}&closebutton=false&lang={user.language}"
+    )
 
 
 def test_api_items_wopi_authenticated_user_item_not_file():
