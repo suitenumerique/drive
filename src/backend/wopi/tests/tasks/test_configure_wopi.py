@@ -51,7 +51,6 @@ def test_configure_wopi_clients(settings):
             "application/vnd.oasis.opendocument.text": "http://localhost:9980/browser/0968141f2c/cool.html?",
         },
         "extensions": {
-            "sxw": "http://localhost:9980/browser/0968141f2c/cool.html?",
             "odt": "http://localhost:9980/browser/0968141f2c/cool.html?",
         },
     }
