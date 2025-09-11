@@ -165,6 +165,13 @@
           }
         },
         "filters": {
+          "scopes": {
+            "label": "Location",
+            "options": {
+              "all": "Drive",
+              "trash": "Recycle bin"
+            }
+          },
           "type": {
             "label": "Type",
             "options": {
@@ -530,6 +537,13 @@
           }
         },
         "filters": {
+          "scopes": {
+            "label": "Emplacement",
+            "options": {
+              "all": "Drive",
+              "trash": "Corbeille"
+            }
+          },
           "type": {
             "label": "Type",
             "options": {

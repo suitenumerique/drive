@@ -18,10 +18,17 @@ import {
   User,
 } from "./types";
 
+export enum ItemFiltersScope {
+  ALL = "all",
+  DELETED = "deleted",
+  NOT_DELETED = "not_deleted",
+}
+
 export type ItemFilters = {
   type?: ItemType;
   title?: string;
   workspace?: string;
+  scope?: ItemFiltersScope;
 };
 
 export type UserFilters = {

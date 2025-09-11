@@ -34,6 +34,7 @@ export type Item = {
     short_name: string;
   };
   type: ItemType;
+  deleted_at?: Date;
   upload_state: string;
   updated_at: Date;
   description: string;

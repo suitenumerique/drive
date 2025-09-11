@@ -131,3 +131,10 @@ export const isIdInItemTree = (itemPath: string, targetId: string): boolean => {
   // Check if the targetId exists anywhere in the path
   return pathIds.includes(targetId);
 };
+
+export const getItemTitle = (item: Item) => {
+  if (item.main_workspace) {
+    return i18n.t("explorer.workspaces.mainWorkspace");
+  }
+  return item.title;
+};
