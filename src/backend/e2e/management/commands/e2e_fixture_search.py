@@ -31,6 +31,18 @@ class Command(BaseCommand):
                         "type": models.ItemTypeChoices.FILE,
                         "creator": user,
                     },
+                    {
+                        "title": "I am deleted",
+                        "type": models.ItemTypeChoices.FOLDER,
+                        "creator": user,
+                        "deleted": True,
+                    },
+                    {
+                        "title": "Resume",
+                        "type": models.ItemTypeChoices.FILE,
+                        "creator": user,
+                        "deleted": True,
+                    },
                 ],
             },
             {
@@ -79,7 +91,10 @@ class Command(BaseCommand):
                 if depth == 0
                 else None,
             )
+            if data.get("deleted"):
+                item.soft_delete()
             self.stdout.write(
-                f"Item created: {item.title} with parent: {parent.title if parent else None} and depth: {depth}"
+                f"Item created: {item.title} with parent: {parent.title if parent else None} "
+                f"and depth: {depth} and deleted: {data.get('deleted')}"
             )
             self._create_item(item, data.get("children"), depth + 1)
