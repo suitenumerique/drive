@@ -71,6 +71,9 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
             continue
 
         for action in app.findall("action"):
+            if action.get("name") != "edit":
+                continue
+
             # configure using mimetype
             if action.get("ext") == "":
                 mimetype = app.get("name")

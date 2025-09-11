@@ -41,6 +41,7 @@ def get_wopi_client_config(item, user):
         return None
 
     result = None
+    # Extension must always be checked first.
     if item.extension in wopi_configuration["extensions"]:
         result = wopi_configuration["extensions"][item.extension]
     elif item.mimetype in wopi_configuration["mimetypes"]:
