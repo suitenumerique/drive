@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { getDriver } from "@/features/config/Config";
@@ -12,7 +12,6 @@ interface WopiEditorProps {
 export const WopiEditor = ({ item }: WopiEditorProps) => {
   const { t } = useTranslation();
   const formRef = useRef<HTMLFormElement>(null);
-  const { i18n } = useTranslation();
 
   const {
     data: wopiInfo,
@@ -23,16 +22,6 @@ export const WopiEditor = ({ item }: WopiEditorProps) => {
     refetchOnWindowFocus: false,
     queryFn: () => getDriver().getWopiInfo(item.id),
   });
-
-  const wopiUrl = useMemo(() => {
-    if (!wopiInfo) {
-      return undefined;
-    }
-
-    const baseUrl = wopiInfo.launch_url;
-    const separator = baseUrl.includes("?") ? "&" : "?";
-    return `${baseUrl}${separator}lang=${i18n.language}`;
-  }, [wopiInfo, i18n.language]);
 
   useEffect(() => {
     if (wopiInfo && formRef.current) {
@@ -54,7 +43,7 @@ export const WopiEditor = ({ item }: WopiEditorProps) => {
         ref={formRef}
         name="office_form"
         target="office_frame"
-        action={wopiUrl}
+        action={wopiInfo.launch_url}
         method="post"
       >
         <input
