@@ -109,7 +109,7 @@ export default function HomePage() {
           }
         />
       </HomeGutter>
-      <Footer {...footerCustommization} />
+      { config?.FRONTEND_SHOW_FOOTER && <Footer {...footerCustommization} />}
     </>
   );
 }
