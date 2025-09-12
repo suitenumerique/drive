@@ -92,9 +92,9 @@ services:
       celery-dev:
         condition: service_started
       collabora:
-        condition: service_started
+        condition: service_healthy
       onlyoffice:
-        condition: service_started
+        condition: service_healthy
 
   celery-dev:
     user: ${DOCKER_USER:-1000}
@@ -196,6 +196,12 @@ services:
 
   collabora:
     image: collabora/code:latest
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9980/hosting/discovery"]
+      interval: 30s
+      retries: 5
+      start_period: 60s
+      timeout: 10s
     ports:
       - "9980:9980"
     environment:
@@ -207,6 +213,12 @@ services:
 
   onlyoffice:
     image: onlyoffice/documentserver-de
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/hosting/discovery"]
+      interval: 30s
+      retries: 5
+      start_period: 60s
+      timeout: 10s
     environment:
       TZ: "Europe/Berlin"
       USE_UNAUTHORIZED_STORAGE: "true"
