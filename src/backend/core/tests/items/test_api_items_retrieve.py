@@ -8,12 +8,14 @@ from datetime import timedelta
 from unittest import mock
 
 from django.contrib.auth.models import AnonymousUser
+from django.core.cache import cache
 from django.utils import timezone
 
 import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
+from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
 
 pytestmark = pytest.mark.django_db
 
@@ -56,6 +58,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "description": None,
         "deleted_at": None,
         "hard_delete_at": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -108,6 +111,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "description": None,
         "deleted_at": None,
         "hard_delete_at": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -205,6 +209,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "description": None,
         "deleted_at": None,
         "hard_delete_at": None,
+        "is_wopi_supported": False,
     }
     assert models.LinkTrace.objects.filter(item=item, user=user).exists() is True
 
@@ -263,6 +268,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "description": None,
         "deleted_at": None,
         "hard_delete_at": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -399,6 +405,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "description": None,
         "deleted_at": None,
         "hard_delete_at": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -459,6 +466,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "description": None,
         "deleted_at": None,
         "hard_delete_at": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -637,6 +645,7 @@ def test_api_items_retrieve_authenticated_related_team_members(
         "description": None,
         "deleted_at": None,
         "hard_delete_at": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -709,6 +718,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
         "description": None,
         "deleted_at": None,
         "hard_delete_at": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -781,6 +791,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(
         "description": None,
         "deleted_at": None,
         "hard_delete_at": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -1145,6 +1156,7 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "description": None,
         "deleted_at": None,
         "hard_delete_at": None,
+        "is_wopi_supported": False,
     }
 
 
@@ -1318,6 +1330,7 @@ def test_api_items_retrieve_file_analysing_not_creator():
         },
         "depth": 1,
         "is_favorite": False,
+        "is_wopi_supported": False,
         "link_reach": "public",
         "link_role": item.link_role,
         "nb_accesses": 1,
@@ -1338,3 +1351,37 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "deleted_at": None,
         "hard_delete_at": None,
     }
+
+
+def test_api_items_retrieve_wopi_supported():
+    """
+    The `is_wopi_supported` field should be true if the item is a file and the
+    `WopiEnabled` setting is true.
+    """
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            "mimetypes": {
+                "application/vnd.oasis.opendocument.text": "https://vendorA.com/launch_url",
+            },
+            "extensions": {},
+        },
+    )
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach="restricted",
+        mimetype="application/vnd.oasis.opendocument.text",
+    )
+    item.upload_state = models.ItemUploadStateChoices.READY
+    item.save()
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["is_wopi_supported"] is True

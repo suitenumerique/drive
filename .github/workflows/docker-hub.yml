@@ -6,11 +6,13 @@ on:
   push:
     branches:
       - 'main'
+      - 'wopi'
     tags:
       - 'v*'
   pull_request:
     branches:
       - 'main'
+      - 'wopi'
 
 env:
   DOCKER_USER: 1001:127

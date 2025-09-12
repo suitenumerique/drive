@@ -92,6 +92,7 @@ def test_api_items_trashbin_format(settings):
         "size": None,
         "description": None,
         "hard_delete_at": ((now + timedelta(days=30)).isoformat()),
+        "is_wopi_supported": False,
     }
 
 

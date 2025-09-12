@@ -195,6 +195,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
       mimetype: item.mimetype ?? "",
       url: item.url ?? "",
       isSuspicious: item.upload_state === ItemUploadState.SUSPICIOUS,
+      is_wopi_supported: item.is_wopi_supported ?? false,
     }));
   }, [props.items]);
 
