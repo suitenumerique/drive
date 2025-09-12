@@ -151,6 +151,7 @@ export type ApiConfig = {
   FRONTEND_FEEDBACK_ITEMS?: Record<string, { url: string }>;
   FRONTEND_THEME?: string;
   FRONTEND_HIDE_GAUFRE?: boolean;
+  FRONTEND_SHOW_FOOTER?: boolean;
   theme_customization?: ThemeCustomization;
 };
 

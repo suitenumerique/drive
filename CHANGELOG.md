@@ -13,6 +13,7 @@ and this project adheres to
 - ✨(backend) search endpoint for ItemViewSet #312
 - 🔧(cron) pgdump: fix restic repository #282
 - 🔧(backend) support _FILE for secret environment variables #196 
+- ✨(frontend) Make the footer visibility configurable #343 
 
 ### Changed
 
