@@ -42,6 +42,7 @@ import {
   FilePreviewType,
 } from "@/features/ui/preview/files-preview/FilesPreview";
 import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
+import { EmbeddedExplorerContextMenu } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerContextMenu";
 
 export type EmbeddedExplorerGridProps = {
   isCompact?: boolean;
@@ -109,6 +110,15 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   const [currentPreviewItem, setCurrentPreviewItem] = useState<
     Item | undefined
   >(undefined);
+  const [contextMenuState, setContextMenuState] = useState<{
+    isOpen: boolean;
+    item: Item | null;
+    position: { x: number; y: number };
+  }>({
+    isOpen: false,
+    item: null,
+    position: { x: 0, y: 0 },
+  });
   const moveModal = useModal();
   const { handleDownloadItem } = useDownloadItem();
 
@@ -186,6 +196,25 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
     handleDownloadItem(currentPreviewItem);
   };
 
+  const handleContextMenu = (e: React.MouseEvent, item: Item) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setContextMenuState({
+      isOpen: true,
+      item,
+      position: { x: e.clientX, y: e.clientY },
+    });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenuState({
+      isOpen: false,
+      item: null,
+      position: { x: 0, y: 0 },
+    });
+  };
+
   const previewItems: FilePreviewType[] = useMemo(() => {
     const items =
       props.items?.filter((item) => item.type === ItemType.FILE) ?? [];
@@ -249,6 +278,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                     })}
                     data-id={row.original.id}
                     tabIndex={0}
+                    onContextMenu={(e) => handleContextMenu(e, row.original)}
                     onClick={(e) => {
                       const target = e.target as HTMLElement;
                       const closest = target.closest("tr");
@@ -419,6 +449,20 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
             onClose={handleCloseMoveModal}
             itemsToMove={[moveItem]}
             initialFolderId={props.parentItem?.id}
+          />
+        )}
+        {contextMenuState.isOpen && contextMenuState.item && (
+          <EmbeddedExplorerContextMenu
+            item={contextMenuState.item}
+            parentItem={props.parentItem}
+            onNavigate={props.onNavigate}
+            setRightPanelForcedItem={props.setRightPanelForcedItem}
+            setRightPanelOpen={(open) => {
+              // You might need to implement this based on your right panel implementation
+              console.log("Right panel open:", open);
+            }}
+            position={contextMenuState.position}
+            onClose={handleCloseContextMenu}
           />
         )}
       </EmbeddedExplorerGridContext.Provider>
