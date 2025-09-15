@@ -7,6 +7,8 @@ import mimePdf from "@/assets/files/icons/mime-pdf.svg";
 import mimePowerpoint from "@/assets/files/icons/mime-powerpoint.svg";
 import mimeAudio from "@/assets/files/icons/mime-audio.svg";
 import mimeVideo from "@/assets/files/icons/mime-video.svg";
+import mimeSQLite from "@/assets/files/icons/mime-sqlite.svg";
+import mimeGrist from "@/assets/files/icons/mime-grist.svg";
 
 import mimeCalcMini from "@/assets/files/icons/mime-calc-mini.svg";
 import mimeDocMini from "@/assets/files/icons/mime-doc-mini.svg";
@@ -18,6 +20,8 @@ import mimeAudioMini from "@/assets/files/icons/mime-audio-mini.svg";
 import mimeVideoMini from "@/assets/files/icons/mime-video-mini.svg";
 import mimeArchiveMini from "@/assets/files/icons/mime-archive-mini.svg";
 import mimeSuspicious from "@/assets/files/icons/suspicious_file.svg";
+import mimeSQLiteMini from "@/assets/files/icons/mime-sqlite-mini.svg";
+import mimeGristMini from "@/assets/files/icons/mime-grist-mini.svg";
 
 import mimeArchive from "@/assets/files/icons/mime-archive.svg";
 import { getExtension } from "../utils/utils";
@@ -33,6 +37,8 @@ export enum MimeCategory {
   VIDEO = "video",
   ARCHIVE = "archive",
   SUSPICIOUS = "suspicious",
+  SQLITE = "sqlite",
+  GRIST = "grist",
 }
 
 export const MIME_TO_ICON = {
@@ -46,6 +52,8 @@ export const MIME_TO_ICON = {
   [MimeCategory.VIDEO]: mimeVideo,
   [MimeCategory.ARCHIVE]: mimeArchive,
   [MimeCategory.SUSPICIOUS]: mimeSuspicious,
+  [MimeCategory.SQLITE]: mimeSQLite,
+  [MimeCategory.GRIST]: mimeGrist,
 };
 
 export const MIME_TO_ICON_MINI = {
@@ -59,6 +67,8 @@ export const MIME_TO_ICON_MINI = {
   [MimeCategory.VIDEO]: mimeVideoMini,
   [MimeCategory.ARCHIVE]: mimeArchiveMini,
   [MimeCategory.SUSPICIOUS]: mimeSuspicious,
+  [MimeCategory.SQLITE]: mimeSQLiteMini,
+  [MimeCategory.GRIST]: mimeGristMini,
 };
 
 export const ICONS = {
@@ -73,6 +83,8 @@ export const ICONS = {
     [MimeCategory.VIDEO]: mimeVideoMini,
     [MimeCategory.ARCHIVE]: mimeArchiveMini,
     [MimeCategory.SUSPICIOUS]: mimeSuspicious,
+    [MimeCategory.SQLITE]: mimeSQLiteMini,
+    [MimeCategory.GRIST]: mimeGristMini,
   },
   normal: {
     [MimeCategory.CALC]: mimeCalc,
@@ -85,6 +97,8 @@ export const ICONS = {
     [MimeCategory.VIDEO]: mimeVideo,
     [MimeCategory.ARCHIVE]: mimeArchive,
     [MimeCategory.SUSPICIOUS]: mimeSuspicious,
+    [MimeCategory.SQLITE]: mimeSQLite,
+    [MimeCategory.GRIST]: mimeGrist,
   },
 };
 
@@ -98,6 +112,8 @@ export const MIME_TO_FORMAT_TRANSLATION_KEY = {
   [MimeCategory.AUDIO]: "mime.audio",
   [MimeCategory.VIDEO]: "mime.video",
   [MimeCategory.ARCHIVE]: "mime.archive",
+  [MimeCategory.SQLITE]: "mime.sqlite",
+  [MimeCategory.GRIST]: "mime.grist",
 };
 
 export const MIME_MAP = {
@@ -119,6 +135,10 @@ export const MIME_MAP = {
     "application/x-tar",
     "application/x-rar",
     "application/octet-stream",
+  ],
+  [MimeCategory.SQLITE]: [
+    "application/x-sqlite3", // deprecated but still exists
+    "application/vnd.sqlite3",
   ],
 };
 
@@ -144,6 +164,11 @@ export const getMimeCategory = (
     CALC_EXTENSIONS.includes(extension)
   ) {
     return MimeCategory.CALC;
+  }
+
+  // Special case: a SQLITE file that has a .grist extension is a grist file
+  if (mimetype === "application/vnd.sqlite3" && extension === "grist") {
+    return MimeCategory.GRIST;
   }
 
   if (MIME_TO_CATEGORY[mimetype]) {
