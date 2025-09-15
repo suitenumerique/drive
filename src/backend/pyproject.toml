@@ -29,7 +29,9 @@ dependencies = [
     "Brotli==1.1.0",
     "dj-database-url==3.0.1",
     "celery[redis]==5.5.3",
+    "defusedxml==0.7.1",
     "django==5.2.6",
+    "django-celery-beat==2.8.1",
     "django-configurations==2.5.1",
     "django-cors-headers==4.8.0",
     "django-countries==7.6.1",
@@ -129,7 +131,7 @@ select = [
 
 [tool.ruff.lint.isort]
 section-order = ["future","standard-library","django","third-party","drive","first-party","local-folder"]
-sections = { drive=["core"], django=["django"] }
+sections = { drive=["core", "wopi"], django=["django"] }
 extra-standard-library = ["tomllib"]
 
 [tool.ruff.lint.per-file-ignores]

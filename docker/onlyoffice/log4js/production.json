@@ -1,0 +1,19 @@
+{
+    "appenders": {
+      "default": {
+        "type": "console",
+        "layout": {
+          "type": "pattern",
+          "pattern": "[%d] [%p] %c - %.10000m"
+        }
+      }
+    },
+    "categories": {
+      "default": {
+        "appenders": [
+          "default"
+        ],
+        "level": "DEBUG"
+      }
+    }
+  }
