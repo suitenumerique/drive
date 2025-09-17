@@ -11,6 +11,7 @@ This document lists all configurable environment variables for the Drive applica
 | `API_USERS_LIST_THROTTLE_RATE_SUSTAINED` | Sustained throttle rate for user list API | `180/hour` |
 | `AWS_S3_ACCESS_KEY_ID` | AWS S3 access key ID for file storage | `None` |
 | `AWS_S3_ENDPOINT_URL` | AWS S3 endpoint URL for file storage | `None` |
+| `AWS_S3_DOMAIN_REPLACE` | The S3 domain to used by the frontend application. Used by the docker compose stack. | `None` |
 | `AWS_S3_REGION_NAME` | AWS S3 region name for file storage | `None` |
 | `AWS_S3_SECRET_ACCESS_KEY` | AWS S3 secret access key for file storage | `None` |
 | `AWS_S3_UPLOAD_POLICY_EXPIRATION` | AWS S3 upload policy expiration time in seconds | `86400` (24h) |

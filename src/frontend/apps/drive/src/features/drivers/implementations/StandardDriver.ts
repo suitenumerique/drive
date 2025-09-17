@@ -253,27 +253,7 @@ export class StandardDriver extends Driver {
       throw new Error("No policy found");
     }
 
-    const { url, fields } = item.policy!;
-    const formData = new FormData();
-
-    // Add all the policy fields to the form data
-    Object.entries(fields).forEach(([key, value]) => {
-      formData.append(key, value);
-    });
-    // IMPORTANT !!! The Content-Type must be BEFORE file, otherwise it will be ignored by
-    // Scaleway object storage. Order matters !!!
-    formData.append("Content-Type", file.type);
-    formData.append("file", file);
-
-    let urlObject = new URL(url);
-    if (process.env["NEXT_PUBLIC_S3_DOMAIN_REPLACE"]) {
-      urlObject = new URL(
-        urlObject.pathname,
-        process.env["NEXT_PUBLIC_S3_DOMAIN_REPLACE"]
-      );
-    }
-
-    await uploadFile(urlObject.toString(), formData, (progress) => {
+    await uploadFile(item.policy, file, (progress) => {
       progressHandler?.(progress);
     });
 
@@ -327,19 +307,21 @@ const jsonToItem = (data: any): Item => {
  */
 export const uploadFile = (
   url: string,
-  formData: FormData,
+  file: File,
   progressHandler: (progress: number) => void
 ) =>
   new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", url);
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("X-amz-acl", "private");
+    xhr.setRequestHeader("Content-Type", file.type);
 
     xhr.addEventListener("error", reject);
     xhr.addEventListener("abort", reject);
 
     xhr.addEventListener("readystatechange", () => {
       if (xhr.readyState === 4) {
-        if (xhr.status === 204) {
+        if (xhr.status === 200) {
           return resolve(true);
         }
         reject(new Error(`Failed to perform the upload on ${url}.`));
@@ -354,5 +336,5 @@ export const uploadFile = (
       }
     });
 
-    xhr.send(formData);
+    xhr.send(file);
   });

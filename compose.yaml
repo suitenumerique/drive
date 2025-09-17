@@ -125,7 +125,6 @@ services:
       target: drive-dev
       args:
         API_ORIGIN: "http://localhost:8071"
-        S3_DOMAIN_REPLACE: "http://localhost:9000"
     image: drive:frontend-development
     volumes:
       - ./src/frontend/:/home/frontend/
