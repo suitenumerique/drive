@@ -3,9 +3,10 @@ Tests for items API endpoint in drive's core app: create
 """
 
 from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
-from django.conf import settings
+from django.utils import timezone
 
 import pytest
 from rest_framework.test import APIClient
@@ -113,19 +114,24 @@ def test_api_items_create_file_authenticated_success():
     assert response.json().get("policy") is not None
 
     policy = response.json()["policy"]
-    assert policy.get("fields").get("policy") is not None
-    assert policy.get("fields").get("signature") is not None
-    del policy["fields"]["policy"]
-    del policy["fields"]["signature"]
+    policy_parsed = urlparse(policy)
 
-    assert policy == {
-        "url": f"{settings.AWS_S3_ENDPOINT_URL}/drive-media-storage",
-        "fields": {
-            "acl": "private",
-            "key": f"item/{item.id!s}/file.txt",
-            "AWSAccessKeyId": "drive",
-        },
-    }
+    assert policy_parsed.scheme == "http"
+    assert policy_parsed.netloc == "localhost:9000"
+    assert policy_parsed.path == f"/drive-media-storage/item/{item.id!s}/file.txt"
+
+    query_params = parse_qs(policy_parsed.query)
+
+    assert query_params.pop("X-Amz-Algorithm") == ["AWS4-HMAC-SHA256"]
+    assert query_params.pop("X-Amz-Credential") == [
+        f"drive/{timezone.now().strftime('%Y%m%d')}/us-east-1/s3/aws4_request"
+    ]
+    assert query_params.pop("X-Amz-Date") == [timezone.now().strftime("%Y%m%dT%H%M%SZ")]
+    assert query_params.pop("X-Amz-Expires") == ["60"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-Signature") is not None
+
+    assert len(query_params) == 0
 
 
 def test_api_items_create_authenticated_title_null():

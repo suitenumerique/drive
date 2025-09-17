@@ -18,6 +18,7 @@ and this project adheres to
 ### Changed
 
 - ♻️(tilt) use helm dev-backend chart
+- ♻️(backend) use PUT presigned-url to upload files
 
 ### Fixed
 
