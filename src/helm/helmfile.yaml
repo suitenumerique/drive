@@ -12,7 +12,7 @@ releases:
   - name: dev-backend
     namespace: {{ .Namespace }}
     chart: dev-backends/dev-backend
-    version: 0.0.2
+    version: 0.0.3
     values:
       - postgres:
           enabled: true
@@ -47,6 +47,8 @@ releases:
             tls:
               enabled: true
               secretName: drive-tls
+          api:
+            port: 80
           username: dinum
           password: password
           bucket: drive-media-storage
