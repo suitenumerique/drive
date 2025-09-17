@@ -26,6 +26,8 @@ STORAGES_STATICFILES_BACKEND=django.contrib.staticfiles.storage.StaticFilesStora
 AWS_S3_ENDPOINT_URL=http://minio:9000
 AWS_S3_ACCESS_KEY_ID=drive
 AWS_S3_SECRET_ACCESS_KEY=password
+AWS_S3_SIGNATURE_VERSION=s3v4
+AWS_S3_DOMAIN_REPLACE=http://localhost:9000
 MEDIA_BASE_URL=http://localhost:8083
 
 # OIDC

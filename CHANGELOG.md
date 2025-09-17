@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- ♻️(backend) use PUT presigned-url to upload files #345
+
 ## [v0.5.0] - 2025-09-22
 
 ### Added

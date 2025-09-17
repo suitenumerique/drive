@@ -4,9 +4,10 @@ Tests for items API endpoint in drive's core app: create
 
 from concurrent.futures import ThreadPoolExecutor
 from random import choice, randint
+from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
-from django.conf import settings
+from django.utils import timezone
 
 import pytest
 from rest_framework.test import APIClient
@@ -216,19 +217,85 @@ def test_api_items_children_create_related_success(role, depth):
     assert response.json().get("policy") is not None
 
     policy = response.json()["policy"]
-    assert policy.get("fields").get("policy") is not None
-    assert policy.get("fields").get("signature") is not None
-    del policy["fields"]["policy"]
-    del policy["fields"]["signature"]
 
-    assert policy == {
-        "url": f"{settings.AWS_S3_ENDPOINT_URL}/drive-media-storage",
-        "fields": {
-            "acl": "private",
-            "key": f"item/{child.id!s}/file.txt",
-            "AWSAccessKeyId": "drive",
+    policy_parsed = urlparse(policy)
+
+    assert policy_parsed.scheme == "http"
+    assert policy_parsed.netloc == "localhost:9000"
+    assert policy_parsed.path == f"/drive-media-storage/item/{child.id!s}/file.txt"
+
+    query_params = parse_qs(policy_parsed.query)
+
+    assert query_params.pop("X-Amz-Algorithm") == ["AWS4-HMAC-SHA256"]
+    assert query_params.pop("X-Amz-Credential") == [
+        f"drive/{timezone.now().strftime('%Y%m%d')}/us-east-1/s3/aws4_request"
+    ]
+    assert query_params.pop("X-Amz-Date") == [timezone.now().strftime("%Y%m%dT%H%M%SZ")]
+    assert query_params.pop("X-Amz-Expires") == ["60"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-Signature") is not None
+
+    assert len(query_params) == 0
+
+
+def test_api_items_children_create_related_success_override_s3_endpoint(settings):
+    """
+    Authenticated users with a specific write access on a item should be
+    able to create a nested item.
+    """
+    settings.AWS_S3_DOMAIN_REPLACE = "https://other-s3-endpoint.com"
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    for i in range(3):
+        if i == 0:
+            item = factories.ItemFactory(
+                link_reach="restricted", type=ItemTypeChoices.FOLDER
+            )
+            factories.UserItemAccessFactory(user=user, item=item, role="owner")
+        else:
+            item = factories.ItemFactory(
+                parent=item, link_reach="restricted", type=ItemTypeChoices.FOLDER
+            )
+
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/children/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.txt",
         },
-    }
+    )
+
+    assert response.status_code == 201
+    child = Item.objects.get(id=response.json()["id"])
+    assert child.title == "file.txt"
+    assert child.link_reach == "restricted"
+    assert not child.accesses.filter(role="owner", user=user).exists()
+
+    assert response.json().get("policy") is not None
+
+    policy = response.json()["policy"]
+
+    policy_parsed = urlparse(policy)
+
+    assert policy_parsed.scheme == "https"
+    assert policy_parsed.netloc == "other-s3-endpoint.com"
+    assert policy_parsed.path == f"/drive-media-storage/item/{child.id!s}/file.txt"
+
+    query_params = parse_qs(policy_parsed.query)
+
+    assert query_params.pop("X-Amz-Algorithm") == ["AWS4-HMAC-SHA256"]
+    assert query_params.pop("X-Amz-Credential") == [
+        f"drive/{timezone.now().strftime('%Y%m%d')}/us-east-1/s3/aws4_request"
+    ]
+    assert query_params.pop("X-Amz-Date") == [timezone.now().strftime("%Y%m%dT%H%M%SZ")]
+    assert query_params.pop("X-Amz-Expires") == ["60"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-Signature") is not None
+
+    assert len(query_params) == 0
 
 
 def test_api_items_children_create_force_id_success():

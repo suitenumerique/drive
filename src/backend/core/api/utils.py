@@ -5,6 +5,7 @@ from datetime import datetime
 from django.conf import settings
 from django.core.files.storage import default_storage
 
+import boto3
 import botocore
 
 
@@ -101,17 +102,31 @@ def generate_upload_policy(item):
     # Generate a unique key for the item
     key = f"{item.key_base}/{item.filename}"
 
+    # This settings should be used if the backend application and the frontend application
+    # can't connect to the object storage with the same domain. This is the case in the
+    # docker compose stack used in development. The frontend application will use localhost
+    # to connect to the object storage while the backend application will use the object storage
+    # service name declared in the docker compose stack.
+    # This is needed because the domain name is used to compute the signature. So it can't be
+    # changed dynamically by the frontend application.
+    if settings.AWS_S3_DOMAIN_REPLACE:
+        s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=settings.AWS_S3_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_S3_SECRET_ACCESS_KEY,
+            endpoint_url=settings.AWS_S3_DOMAIN_REPLACE,
+            config=botocore.client.Config(
+                region_name=settings.AWS_S3_REGION_NAME,
+                signature_version=settings.AWS_S3_SIGNATURE_VERSION,
+            ),
+        )
+    else:
+        s3_client = default_storage.connection.meta.client
+
     # Generate the policy
-    s3_client = default_storage.connection.meta.client
-    policy = s3_client.generate_presigned_post(
-        default_storage.bucket_name,
-        key,
-        Fields={"acl": "private"},
-        Conditions=[
-            {"acl": "private"},
-            ["content-length-range", 0, settings.ITEM_FILE_MAX_SIZE],
-            ["starts-with", "$Content-Type", ""],
-        ],
+    policy = s3_client.generate_presigned_url(
+        ClientMethod="put_object",
+        Params={"Bucket": default_storage.bucket_name, "Key": key, "ACL": "private"},
         ExpiresIn=settings.AWS_S3_UPLOAD_POLICY_EXPIRATION,
     )
 

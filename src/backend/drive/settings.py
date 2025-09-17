@@ -149,9 +149,18 @@ class Base(Configuration):
         environ_name="AWS_STORAGE_BUCKET_NAME",
         environ_prefix=None,
     )
+    AWS_S3_SIGNATURE_VERSION = values.Value(
+        "s3v4",
+        environ_name="AWS_S3_SIGNATURE_VERSION",
+        environ_prefix=None,
+    )
     AWS_S3_UPLOAD_POLICY_EXPIRATION = values.Value(
-        24 * 60 * 60,  # 24h
+        60,  # 1 minute
         environ_name="AWS_S3_UPLOAD_POLICY_EXPIRATION",
+        environ_prefix=None,
+    )
+    AWS_S3_DOMAIN_REPLACE = values.Value(
+        environ_name="AWS_S3_DOMAIN_REPLACE",
         environ_prefix=None,
     )
 
