@@ -70,16 +70,7 @@ export type Item = {
     update: boolean;
     upload_ended: boolean;
   };
-  policy?: {
-    url: string;
-    fields: {
-      AWSAccessKeyId: string;
-      acl: string;
-      policy: string;
-      key: string;
-      signature: string;
-    };
-  };
+  policy?: string;
 };
 
 export type TreeItemData = Omit<Item, "children"> & {
