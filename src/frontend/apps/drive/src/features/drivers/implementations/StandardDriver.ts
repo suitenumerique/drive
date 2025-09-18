@@ -285,6 +285,9 @@ export class StandardDriver extends Driver {
       item.policy,
       {
         method: "PUT",
+        headers: {
+          "X-amz-acl": "private",
+        },
         body: file,
       }
     );

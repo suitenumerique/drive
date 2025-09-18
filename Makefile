@@ -107,7 +107,7 @@ build-frontend: ## build the frontend container
 .PHONY: build-frontend-development
 
 down: ## stop and remove containers, networks, images, and volumes
-	rm -rf data/postgresql.*
+	
 	@$(COMPOSE) down
 .PHONY: down
 
