@@ -42,7 +42,7 @@ ENV NEXT_PUBLIC_S3_DOMAIN_REPLACE=${S3_DOMAIN_REPLACE}
 RUN yarn build
 
 # ---- Front-end image ----
-FROM nginxinc/nginx-unprivileged:alpine3.21 AS frontend-production
+FROM nginxinc/nginx-unprivileged:alpine3.22 AS frontend-production
 
 # Un-privileged user running the application
 ARG DOCKER_USER
