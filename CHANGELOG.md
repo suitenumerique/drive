@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.5.0] - 2025-09-22
+
 ### Added
 
 - ✨(backend) search endpoint for ItemViewSet #312
@@ -19,16 +21,13 @@ and this project adheres to
 ### Changed
 
 - ♻️(tilt) use helm dev-backend chart
+- ♻️(front) refactor tree loading #326
+- ♻️(front) externalize FilePreview from EmbeddedExplorer + modalify #326
 
 ### Fixed
 
 - 🐛(front) fix the content when opening the right panel #328
 - 🐛(back) encode white spaces in item url #336
-
-### Patches
-
-- ♻️(front) refactor tree loading #326
-- ♻️(front) externalize FilePreview from EmbeddedExplorer + modalify #326
 
 ## [v0.4.0] - 2025-09-02
 
@@ -116,8 +115,9 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.4.0...main
-[0.4.0]: https://github.com/suitenumerique/drive/releases/v0.3.0
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.5.0...main
+[0.5.0]: https://github.com/suitenumerique/drive/releases/v0.5.0
+[0.4.0]: https://github.com/suitenumerique/drive/releases/v0.4.0
 [0.3.0]: https://github.com/suitenumerique/drive/releases/v0.3.0
 [0.2.0]: https://github.com/suitenumerique/drive/releases/v0.2.0
 [0.1.1]: https://github.com/suitenumerique/drive/releases/v0.1.1
