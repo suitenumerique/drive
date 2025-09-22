@@ -67,6 +67,10 @@ server {
         proxy_set_header X-Original-Method $request_method;
     }
 
+    location ~ "^/explorer/items/files/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/?$" {
+        try_files $uri /explorer/items/files/[id].html;
+    }
+
     location ~ "^/explorer/items/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/?$" {
         try_files $uri /explorer/items/[id].html;
     }
