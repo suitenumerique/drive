@@ -70,7 +70,10 @@ export type Item = {
     update: boolean;
     upload_ended: boolean;
   };
-  policy?: string;
+  policy?: {
+    headers: Record<string, string>;
+    url: string;
+  };
 };
 
 export type TreeItemData = Omit<Item, "children"> & {

@@ -253,7 +253,7 @@ export class StandardDriver extends Driver {
       throw new Error("No policy found");
     }
 
-    await uploadFile(item.policy, file, (progress) => {
+    await uploadFile(item.policy.url, item.policy.headers, file, (progress) => {
       progressHandler?.(progress);
     });
 
@@ -301,19 +301,24 @@ const jsonToItem = (data: any): Item => {
 
 /**
  * Upload a file, using XHR so we can report on progress through a handler.
- * @param url The URL to POST the file to.
- * @param formData The multi-part request form data body to send (includes the file).
+ * @param url The url to use to upload the file.
+ * @param headers The headers to use to upload the file.
+ * @param file The file to upload.
  * @param progressHandler A handler that receives progress updates as a single integer `0 <= x <= 100`.
  */
 export const uploadFile = (
   url: string,
+  headers: Record<string, string>,
   file: File,
   progressHandler: (progress: number) => void
 ) =>
   new Promise((resolve, reject) => {
+
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", url);
-    xhr.setRequestHeader("X-amz-acl", "private");
+    Object.entries(headers).forEach(([key, value]) => {
+      xhr.setRequestHeader(key, value);
+    });
     xhr.setRequestHeader("Content-Type", file.type);
 
     xhr.addEventListener("error", reject);
