@@ -98,17 +98,17 @@ def test_api_items_create_file_authenticated_success():
         "/api/v1.0/items/",
         {
             "type": ItemTypeChoices.FILE,
-            "filename": "file.txt",
+            "filename": 'file "test.txt',
         },
         format="json",
     )
     assert response.status_code == 201
     item = Item.objects.exclude(id=user.get_main_workspace().id).get()
-    assert item.title == "file.txt"
+    assert item.title == 'file "test.txt'
     assert item.link_reach == "restricted"
     assert item.accesses.filter(role="owner", user=user).exists()
     assert item.type == ItemTypeChoices.FILE
-    assert item.filename == "file.txt"
+    assert item.filename == 'file "test.txt'
 
     assert response.json().get("policy") is not None
 
@@ -122,7 +122,7 @@ def test_api_items_create_file_authenticated_success():
         "url": f"{settings.AWS_S3_ENDPOINT_URL}/drive-media-storage",
         "fields": {
             "acl": "private",
-            "key": f"item/{item.id!s}/file.txt",
+            "key": f'item/{item.id!s}/file "test.txt',
             "AWSAccessKeyId": "drive",
         },
     }

@@ -1,5 +1,6 @@
 """Util to generate S3 authorization headers for object storage access control"""
 
+import mimetypes
 from datetime import datetime
 
 from django.conf import settings
@@ -98,21 +99,47 @@ def generate_upload_policy(item):
     Generate a S3 upload policy for a given item.
     """
 
-    # Generate a unique key for the item
-    key = f"{item.key_base}/{item.filename}"
+    guessed_mime_type, _ = mimetypes.guess_type(item.filename)
+
+    if not guessed_mime_type:
+        raise ValueError("Could not guess the mime type of the item")
+
+    fields = {
+        "acl": "private",
+    }
+    conditions = [
+        ["content-length-range", 0, settings.ITEM_FILE_MAX_SIZE],
+        ["starts-with", "$Content-Type", guessed_mime_type],
+    ]
+
+    if not _is_previewable(guessed_mime_type):
+        fields["Content-Disposition"] = f'attachment; filename="{item.filename:s}"'
 
     # Generate the policy
     s3_client = default_storage.connection.meta.client
     policy = s3_client.generate_presigned_post(
         default_storage.bucket_name,
-        key,
-        Fields={"acl": "private"},
-        Conditions=[
-            {"acl": "private"},
-            ["content-length-range", 0, settings.ITEM_FILE_MAX_SIZE],
-            ["starts-with", "$Content-Type", ""],
-        ],
+        item.file_key,
+        Fields=fields,
+        Conditions=[fields] + conditions,
         ExpiresIn=settings.AWS_S3_UPLOAD_POLICY_EXPIRATION,
     )
 
     return policy
+
+
+def _is_previewable(mime_type):
+    """
+    Check if a mime type is previewable.
+    """
+    is_previewable = False
+    for previewable_mime_type in settings.ITEM_PREVIEWABLE_MIME_TYPES:
+        if previewable_mime_type.endswith("/") and mime_type.startswith(
+            previewable_mime_type
+        ):
+            is_previewable = True
+            break
+        if mime_type == previewable_mime_type:
+            is_previewable = True
+            break
+    return is_previewable

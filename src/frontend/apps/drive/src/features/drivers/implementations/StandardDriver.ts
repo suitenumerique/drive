@@ -241,6 +241,7 @@ export class StandardDriver extends Driver {
     progressHandler?: (progress: number) => void;
   }): Promise<Item> {
     const { parentId, file, progressHandler, ...rest } = data;
+    console.log(file.type);
     const response = await fetchAPI(`items/${parentId}/children/`, {
       method: "POST",
       body: JSON.stringify({
