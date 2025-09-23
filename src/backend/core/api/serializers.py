@@ -422,8 +422,11 @@ class CreateItemSerializer(ItemSerializer):
         """Return the policy to use if the item is a file."""
         if item.type != models.ItemTypeChoices.FILE:
             return None
-
-        return utils.generate_upload_policy(item)
+        policy, headers = utils.generate_upload_policy(item)
+        return {
+            "url": policy,
+            "headers": headers,
+        }
 
     def get_numchild(self, _item):
         """On creation, an item can not have children, return directly 0"""

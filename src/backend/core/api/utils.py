@@ -1,5 +1,6 @@
 """Util to generate S3 authorization headers for object storage access control"""
 
+import mimetypes
 from datetime import datetime
 
 from django.conf import settings
@@ -97,10 +98,27 @@ def generate_s3_authorization_headers(key):
 def generate_upload_policy(item):
     """
     Generate a S3 upload policy for a given item.
+    return the policy and the headers to use to upload the file.
     """
 
-    # Generate a unique key for the item
-    key = f"{item.key_base}/{item.filename}"
+    guessed_mime_type, _ = mimetypes.guess_type(item.filename)
+
+    if not guessed_mime_type:
+        raise ValueError("Could not guess the mime type of the item")
+
+    params = {
+        "Bucket": default_storage.bucket_name,
+        "Key": item.file_key,
+        "ACL": "private",
+    }
+
+    headers = {
+        "X-amz-acl": "private",
+    }
+
+    if not _is_previewable(guessed_mime_type):
+        params["ContentDisposition"] = f'attachment; filename="{item.filename:s}"'
+        headers["Content-Disposition"] = f'attachment; filename="{item.filename:s}"'
 
     # This settings should be used if the backend application and the frontend application
     # can't connect to the object storage with the same domain. This is the case in the
@@ -126,8 +144,21 @@ def generate_upload_policy(item):
     # Generate the policy
     policy = s3_client.generate_presigned_url(
         ClientMethod="put_object",
-        Params={"Bucket": default_storage.bucket_name, "Key": key, "ACL": "private"},
+        Params=params,
         ExpiresIn=settings.AWS_S3_UPLOAD_POLICY_EXPIRATION,
     )
 
-    return policy
+    return policy, headers
+
+
+def _is_previewable(mime_type):
+    """
+    Check if a mime type is previewable.
+    """
+    for allowed in settings.ITEM_PREVIEWABLE_MIME_TYPES:
+        if allowed.endswith("/"):
+            if mime_type.startswith(allowed):
+                return True
+        elif mime_type == allowed:
+            return True
+    return False

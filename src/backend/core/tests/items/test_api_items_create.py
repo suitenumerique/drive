@@ -114,7 +114,7 @@ def test_api_items_create_file_authenticated_success():
     assert response.json().get("policy") is not None
 
     policy = response.json()["policy"]
-    policy_parsed = urlparse(policy)
+    policy_parsed = urlparse(policy["url"])
 
     assert policy_parsed.scheme == "http"
     assert policy_parsed.netloc == "localhost:9000"
@@ -128,8 +128,15 @@ def test_api_items_create_file_authenticated_success():
     ]
     assert query_params.pop("X-Amz-Date") == [timezone.now().strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
-    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-SignedHeaders") == [
+        "content-disposition;host;x-amz-acl"
+    ]
     assert query_params.pop("X-Amz-Signature") is not None
+
+    assert policy["headers"] == {
+        "X-amz-acl": "private",
+        "Content-Disposition": 'attachment; filename="file.txt"',
+    }
 
     assert len(query_params) == 0
 
