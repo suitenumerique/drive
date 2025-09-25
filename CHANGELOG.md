@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(back) create wopi applcation #2
+
 ### Changed
 
 - ♻️(backend) use PUT presigned-url to upload files #345
@@ -61,9 +65,6 @@ and this project adheres to
 - 🐛(front) fix workspace link react cache #310
 - 🐛(backend) allow item partial update without modifying title #316
 - 🌐(front) fix share item wording #315
-  <<<<<<< HEAD
-- # 🐛(front) fix left tree glitch #323
-  > > > > > > > c624750 (📝(changelog) update changelog)
 
 ## [v0.2.0] - 2025-08-18
 
