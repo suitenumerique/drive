@@ -132,6 +132,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     nb_accesses = serializers.IntegerField(read_only=True)
     user_roles = serializers.SerializerMethodField()
     url = serializers.SerializerMethodField()
+    url_preview = serializers.SerializerMethodField()
     creator = UserLiteSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
@@ -157,6 +158,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "type",
             "upload_state",
             "url",
+            "url_preview",
             "filename",
             "mimetype",
             "main_workspace",
@@ -184,6 +186,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "type",
             "upload_state",
             "url",
+            "url_preview",
             "mimetype",
             "main_workspace",
             "size",
@@ -227,6 +230,17 @@ class ListItemSerializer(serializers.ModelSerializer):
             return None
 
         return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{quote(item.file_key)}"
+
+    def get_url_preview(self, item):
+        """Return the URL of the item."""
+        if (
+            item.type != models.ItemTypeChoices.FILE
+            or item.upload_state == models.ItemUploadStateChoices.PENDING
+            or item.filename is None
+            or not utils.is_previewable_item(item)
+        ):
+            return None
+        return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{quote(item.file_key)}"
 
     def get_hard_delete_at(self, item):
         """Return the hard delete date of the item."""
@@ -279,6 +293,7 @@ class ItemSerializer(ListItemSerializer):
             "type",
             "upload_state",
             "url",
+            "url_preview",
             "filename",
             "mimetype",
             "main_workspace",
@@ -304,6 +319,7 @@ class ItemSerializer(ListItemSerializer):
             "type",
             "upload_state",
             "url",
+            "url_preview",
             "mimetype",
             "main_workspace",
             "size",

@@ -57,6 +57,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child1.filename,
@@ -91,6 +92,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child2.filename,
@@ -129,6 +131,7 @@ def test_api_items_children_list_anonymous_public_parent():
 
     child2.upload_state = models.ItemUploadStateChoices.READY
     child2.filename = "logo.png"
+    child2.mimetype = "image/png"
     child2.save()
 
     response = APIClient().get(f"/api/v1.0/items/{item.id!s}/children/")
@@ -162,6 +165,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "type": models.ItemTypeChoices.FILE,
                 "upload_state": models.ItemUploadStateChoices.PENDING,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child1.filename,
@@ -194,7 +198,8 @@ def test_api_items_children_list_anonymous_public_parent():
                 "type": models.ItemTypeChoices.FILE,
                 "upload_state": models.ItemUploadStateChoices.READY,
                 "url": f"http://localhost:8083/media/item/{child2.id!s}/logo.png",
-                "mimetype": None,
+                "url_preview": f"http://localhost:8083/media/preview/item/{child2.id!s}/logo.png",
+                "mimetype": "image/png",
                 "main_workspace": False,
                 "filename": child2.filename,
                 "size": None,
@@ -280,6 +285,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child1.filename,
@@ -314,6 +320,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child2.filename,
@@ -385,6 +392,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child1.filename,
@@ -419,6 +427,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child2.filename,
@@ -515,6 +524,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child1.filename,
@@ -549,6 +559,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child2.filename,
@@ -621,6 +632,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child1.filename,
@@ -655,6 +667,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child2.filename,
@@ -790,6 +803,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child1.filename,
@@ -824,6 +838,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child2.filename,
@@ -892,6 +907,7 @@ def test_api_items_children_list_filter_type():
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child1.filename,
@@ -939,6 +955,7 @@ def test_api_items_children_list_filter_type():
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "main_workspace": False,
                 "filename": child2.filename,

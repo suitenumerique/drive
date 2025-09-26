@@ -102,6 +102,7 @@ class Base(Configuration):
     STATIC_URL = "/static/"
     STATIC_ROOT = os.path.join(DATA_DIR, "static")
     MEDIA_URL = "/media/"
+    MEDIA_URL_PREVIEW = "/media/preview/"
     MEDIA_ROOT = os.path.join(DATA_DIR, "media")
     MEDIA_BASE_URL = values.Value(
         None, environ_name="MEDIA_BASE_URL", environ_prefix=None
@@ -170,6 +171,17 @@ class Base(Configuration):
     DATA_UPLOAD_MAX_MEMORY_SIZE = values.PositiveIntegerValue(
         2 * (2**30),  # 2GB
         environ_name="DATA_UPLOAD_MAX_MEMORY_SIZE",
+        environ_prefix=None,
+    )
+
+    ITEM_PREVIEWABLE_MIME_TYPES = values.ListValue(
+        [
+            "image/",
+            "video/",
+            "audio/",
+            "application/pdf",
+        ],
+        environ_name="ITEM_PREVIEWABLE_MIME_TYPES",
         environ_prefix=None,
     )
 

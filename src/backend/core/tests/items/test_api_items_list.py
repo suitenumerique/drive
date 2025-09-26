@@ -67,6 +67,7 @@ def test_api_items_list_format():
 
     item2.upload_state = models.ItemUploadStateChoices.READY
     item2.filename = "logo.png"
+    item2.mimetype = "image/png"
     item2.save()
 
     item3 = user.get_main_workspace()
@@ -106,7 +107,8 @@ def test_api_items_list_format():
             "type": models.ItemTypeChoices.FILE,
             "upload_state": models.ItemUploadStateChoices.READY,
             "url": f"http://localhost:8083/media/item/{item2.id!s}/logo.png",
-            "mimetype": None,
+            "url_preview": f"http://localhost:8083/media/preview/item/{item2.id!s}/logo.png",
+            "mimetype": "image/png",
             "main_workspace": False,
             "filename": item2.filename,
             "size": None,
@@ -138,6 +140,7 @@ def test_api_items_list_format():
             "type": models.ItemTypeChoices.FOLDER,
             "upload_state": None,
             "url": None,
+            "url_preview": None,
             "mimetype": None,
             "main_workspace": False,
             "filename": item.filename,
@@ -170,6 +173,7 @@ def test_api_items_list_format():
             "type": models.ItemTypeChoices.FOLDER,
             "upload_state": None,
             "url": None,
+            "url_preview": None,
             "mimetype": None,
             "main_workspace": True,
             "filename": item3.filename,
