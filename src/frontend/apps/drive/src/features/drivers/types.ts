@@ -48,6 +48,7 @@ export type Item = {
   main_workspace?: boolean;
   path: string;
   url?: string;
+  url_preview?: string;
   size?: number;
   mimetype?: string;
   user_roles?: Role[];
