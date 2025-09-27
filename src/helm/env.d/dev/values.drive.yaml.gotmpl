@@ -145,6 +145,16 @@ ingressMedia:
     nginx.ingress.kubernetes.io/upstream-vhost: drive-minio.127.0.0.1.nip.io
     nginx.ingress.kubernetes.io/rewrite-target: /drive-media-storage/$1
 
+ingressMediaPreview:
+  enabled: true
+  host: drive.127.0.0.1.nip.io
+
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: https://drive.127.0.0.1.nip.io/api/v1.0/items/media-auth/
+    nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
+    nginx.ingress.kubernetes.io/upstream-vhost: drive-minio.127.0.0.1.nip.io
+    nginx.ingress.kubernetes.io/rewrite-target: /drive-media-storage/$1
+
 serviceMedia:
   host: dev-backend-minio.drive.svc.cluster.local
   port: 80

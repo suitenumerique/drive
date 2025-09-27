@@ -10,7 +10,8 @@ and this project adheres to
 
 ### Added
 
-- ✨(back) create wopi applcation #2
+- ✨(backend) create wopi applcation #2
+- ✨(backend) expose url_preview on item object
 
 ### Changed
 

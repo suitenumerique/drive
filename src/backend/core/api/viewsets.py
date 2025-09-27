@@ -49,7 +49,7 @@ UUID_REGEX = (
 )
 FILE_EXT_REGEX = '[^.\\/:*?&"<>|\r\n]+'
 MEDIA_STORAGE_URL_PATTERN = re.compile(
-    f"{settings.MEDIA_URL:s}"
+    f"{settings.MEDIA_URL:s}(?P<preview>preview/)?"
     f"(?P<key>{ITEM_FOLDER:s}/(?P<pk>{UUID_REGEX:s})/.*{FILE_EXT_REGEX:s})$"
 )
 
@@ -1181,6 +1181,10 @@ class ItemViewSet(
 
         if item.upload_state == models.ItemUploadStateChoices.PENDING:
             logger.debug("Item '%s' is not ready", item.id)
+            raise drf.exceptions.PermissionDenied()
+
+        if url_params.get("preview") and not utils.is_previewable_item(item):
+            logger.debug("Item '%s' is not previewable", item.id)
             raise drf.exceptions.PermissionDenied()
 
         # Generate S3 authorization headers using the extracted URL parameters

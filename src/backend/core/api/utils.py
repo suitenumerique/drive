@@ -133,6 +133,22 @@ def generate_upload_policy(item):
     return policy
 
 
+def is_previewable_item(item):
+    """
+    Check if a mime type is previewable.
+    """
+    if item.mimetype is None:
+        return False
+
+    for allowed in settings.ITEM_PREVIEWABLE_MIME_TYPES:
+        if allowed.endswith("/"):
+            if item.mimetype.startswith(allowed):
+                return True
+        elif item.mimetype == allowed:
+            return True
+    return False
+
+
 def get_item_file_head_object(item):
     """
     Get the head object of an item file.

@@ -82,6 +82,7 @@ def test_api_items_search_authenticated_without_filters():
             .replace("+00:00", "Z"),
             "upload_state": None,
             "url": None,
+            "url_preview": None,
             "user_roles": ["owner"],
         },
         {
@@ -115,6 +116,7 @@ def test_api_items_search_authenticated_without_filters():
             "updated_at": top_parent.updated_at.isoformat().replace("+00:00", "Z"),
             "upload_state": None,
             "url": None,
+            "url_preview": None,
             "user_roles": [top_parent_access.role],
         },
         {
@@ -175,6 +177,7 @@ def test_api_items_search_authenticated_without_filters():
                     ),
                     "upload_state": None,
                     "url": None,
+                    "url_preview": None,
                     "user_roles": [top_parent_access.role],
                 }
             ],
@@ -185,6 +188,7 @@ def test_api_items_search_authenticated_without_filters():
             "updated_at": parent.updated_at.isoformat().replace("+00:00", "Z"),
             "upload_state": None,
             "url": None,
+            "url_preview": None,
             "user_roles": [top_parent_access.role],
         },
         {
@@ -245,6 +249,7 @@ def test_api_items_search_authenticated_without_filters():
                     ),
                     "upload_state": None,
                     "url": None,
+                    "url_preview": None,
                     "user_roles": [top_parent_access.role],
                 },
                 {
@@ -277,6 +282,7 @@ def test_api_items_search_authenticated_without_filters():
                     "updated_at": parent.updated_at.isoformat().replace("+00:00", "Z"),
                     "upload_state": None,
                     "url": None,
+                    "url_preview": None,
                     "user_roles": [top_parent_access.role],
                 },
             ],
@@ -287,6 +293,7 @@ def test_api_items_search_authenticated_without_filters():
             "updated_at": children.updated_at.isoformat().replace("+00:00", "Z"),
             "upload_state": "pending",
             "url": None,
+            "url_preview": None,
             "user_roles": [top_parent_access.role],
         },
     ]

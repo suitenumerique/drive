@@ -51,6 +51,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "url_preview": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -104,6 +105,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "url_preview": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -202,6 +204,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "url_preview": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -261,6 +264,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "url_preview": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -398,6 +402,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "url_preview": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -459,6 +464,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "url_preview": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -638,6 +644,7 @@ def test_api_items_retrieve_authenticated_related_team_members(
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "url_preview": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -711,6 +718,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "url_preview": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -784,6 +792,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url": None,
+        "url_preview": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -1149,7 +1158,76 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "type": models.ItemTypeChoices.FILE,
         "upload_state": upload_state,
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
+        "url_preview": f"http://localhost:8083/media/preview/item/{item.id!s}/logo.png",
         "mimetype": "image/png",
+        "main_workspace": False,
+        "filename": item.filename,
+        "size": 8,
+        "description": None,
+        "deleted_at": None,
+        "hard_delete_at": None,
+        "is_wopi_supported": False,
+    }
+
+
+@pytest.mark.parametrize(
+    "upload_state",
+    [
+        models.ItemUploadStateChoices.READY,
+        models.ItemUploadStateChoices.ANALYZING,
+        models.ItemUploadStateChoices.FILE_TOO_LARGE_TO_ANALYZE,
+        models.ItemUploadStateChoices.SUSPICIOUS,
+    ],
+)
+def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state):
+    """
+    The `url` property should not be none if the item is not pending but the
+    url preview should.
+    """
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        creator=user,
+        type=models.ItemTypeChoices.FILE,
+        link_reach="public",
+        update_upload_state=upload_state,
+        filename="document.odt",
+        mimetype="application/vnd.oasis.opendocument.text",
+        size=8,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": str(item.id),
+        "abilities": item.get_abilities(user),
+        "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
+        "creator": {
+            "id": str(item.creator.id),
+            "full_name": item.creator.full_name,
+            "short_name": item.creator.short_name,
+        },
+        "depth": 1,
+        "is_favorite": False,
+        "link_reach": "public",
+        "link_role": item.link_role,
+        "nb_accesses": 1,
+        "numchild": 0,
+        "numchild_folder": 0,
+        "path": str(item.path),
+        "title": item.title,
+        "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
+        "user_roles": [models.RoleChoices.OWNER],
+        "type": models.ItemTypeChoices.FILE,
+        "upload_state": upload_state,
+        "url": f"http://localhost:8083/media/item/{item.id!s}/document.odt",
+        "url_preview": None,
+        "mimetype": "application/vnd.oasis.opendocument.text",
         "main_workspace": False,
         "filename": item.filename,
         "size": 8,
@@ -1206,6 +1284,10 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "type": models.ItemTypeChoices.FILE,
         "upload_state": models.ItemUploadStateChoices.READY,
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo%20with%20spaces.png",
+        "url_preview": (
+            f"http://localhost:8083/media/preview/item/{item.id!s}/"
+            "logo%20with%20spaces.png"
+        ),
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,
@@ -1344,6 +1426,7 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "type": models.ItemTypeChoices.FILE,
         "upload_state": models.ItemUploadStateChoices.ANALYZING,
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
+        "url_preview": f"http://localhost:8083/media/preview/item/{item.id!s}/logo.png",
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,

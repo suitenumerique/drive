@@ -105,6 +105,40 @@ ingressMedia:
     nginx.ingress.kubernetes.io/upstream-vhost: minio.drive.svc.cluster.local:9000
     nginx.ingress.kubernetes.io/configuration-snippet: |
       add_header Content-Security-Policy "default-src 'none'" always;
+      add_header Content-Disposition "attachment";
+
+## @param ingressMediaPreview.enabled whether to enable the Ingress or not
+## @param ingressMediaPreview.className IngressClass to use for the Ingress
+## @param ingressMediaPreview.host Host for the Ingress
+## @param ingressMediaPreview.path Path to use for the Ingress
+ingressMediaPreview:
+  enabled: false
+  className: null
+  host: drive.example.com
+  path: /media/preview/(.*)
+  ## @param ingressMediaPreview.hosts Additional host to configure for the Ingress
+  hosts: [ ]
+  #  - chart-example.local
+  ## @param ingressMediaPreview.tls.enabled Weather to enable TLS for the Ingress
+  ## @param ingressMediaPreview.tls.secretName Secret name for TLS config
+  ## @skip ingressMediaPreview.tls.additional
+  ## @extra ingressMediaPreview.tls.additional[].secretName Secret name for additional TLS config
+  ## @extra ingressMediaPreview.tls.additional[].hosts[] Hosts for additional TLS config
+  tls:
+    enabled: true
+    secretName: null
+    additional: []
+
+  ## @param ingressMediaPreview.annotations.nginx.ingress.kubernetes.io/auth-url
+  ## @param ingressMediaPreview.annotations.nginx.ingress.kubernetes.io/auth-response-headers
+  ## @param ingressMediaPreview.annotations.nginx.ingress.kubernetes.io/upstream-vhost
+  ## @param ingressMediaPreview.annotations.nginx.ingress.kubernetes.io/configuration-snippet
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: https://drive.example.com/api/v1.0/items/media-auth/
+    nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
+    nginx.ingress.kubernetes.io/upstream-vhost: minio.drive.svc.cluster.local:9000
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header Content-Security-Policy "default-src 'none'" always;
 
 ## @param serviceMedia.host
 ## @param serviceMedia.port
@@ -188,6 +222,8 @@ backend:
 
   ## @param backend.configureWopi.command backend configure wopi command
   ## @param backend.configureWopi.restartPolicy backend configure wopi job restart policy
+  ## @extra backend.configureWopi.annotations Annotations to add to the job [default: argocd.argoproj.io/hook: PostSync]
+  ## @skip backend.configureWopi.annotations.argocd.argoproj.io/hook
   configureWopi:
     command:
       - "/bin/sh"

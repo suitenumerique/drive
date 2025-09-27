@@ -86,6 +86,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
                 "upload_state": item.upload_state,
                 "url": None,
+                "url_preview": None,
                 "mimetype": None,
                 "user_roles": ["reader"],
                 "main_workspace": False,

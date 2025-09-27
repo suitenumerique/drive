@@ -22,6 +22,7 @@ export type FilePreviewType = {
   title: string;
   mimetype: string;
   is_wopi_supported?: boolean;
+  url_preview: string;
   url: string;
 };
 
@@ -95,7 +96,7 @@ export const FilePreview = ({
       case MimeCategory.IMAGE:
         return (
           <ImageViewer
-            src={currentFile.url}
+            src={currentFile.url_preview}
             alt={currentFile.title}
             className="file-preview-viewer"
           />
@@ -105,7 +106,7 @@ export const FilePreview = ({
           <div className="video-preview-viewer-container">
             <div className="video-preview-viewer">
               <VideoPlayer
-                src={currentFile.url}
+                src={currentFile.url_preview}
                 className="file-preview-viewer"
                 controls={true}
               />
@@ -117,7 +118,7 @@ export const FilePreview = ({
           <div className="video-preview-viewer-container">
             <div className="video-preview-viewer">
               <AudioPlayer
-                src={currentFile.url}
+                src={currentFile.url_preview}
                 title={currentFile.title}
                 className="file-preview-viewer"
               />
@@ -125,7 +126,7 @@ export const FilePreview = ({
           </div>
         );
       case MimeCategory.PDF:
-        return <PreviewPdf src={currentFile.url} />;
+        return <PreviewPdf src={currentFile.url_preview} />;
 
       default:
         return (
