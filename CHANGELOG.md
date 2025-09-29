@@ -8,10 +8,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.6.0] - 2025-09-29
+
 ### Added
 
 - ✨(backend) create wopi applcation #2
-- ✨(backend) expose url_preview on item object
+- ✨(backend) expose url_preview on item object #355
 - ✨(front) add messages widget #357
 
 ### Changed
@@ -122,7 +124,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.5.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.6.0...main
+[0.6.0]: https://github.com/suitenumerique/drive/releases/v0.6.0
 [0.5.0]: https://github.com/suitenumerique/drive/releases/v0.5.0
 [0.4.0]: https://github.com/suitenumerique/drive/releases/v0.4.0
 [0.3.0]: https://github.com/suitenumerique/drive/releases/v0.3.0
