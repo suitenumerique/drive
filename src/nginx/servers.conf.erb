@@ -51,6 +51,25 @@ server {
         proxy_pass <%= ENV["AWS_S3_BUCKET_INTERNAL_URL"] %>;
         proxy_set_header Host <%= ENV["AWS_S3_BUCKET_INTERNAL_HOST"] %>;
         add_header Content-Security-Policy "default-src 'none'" always;
+        add_header Content-Disposition "attachment";
+    }
+
+    location /media/preview {
+        # Auth request configuration
+        auth_request /media-auth;
+        auth_request_set $authHeader $upstream_http_authorization;
+        auth_request_set $authDate $upstream_http_x_amz_date;
+        auth_request_set $authContentSha256 $upstream_http_x_amz_content_sha256;
+
+        # Pass specific headers from the auth response
+        proxy_set_header Authorization $authHeader;
+        proxy_set_header X-Amz-Date $authDate;
+        proxy_set_header X-Amz-Content-SHA256 $authContentSha256;
+
+        # Get resource from Object Storage
+        proxy_pass <%= ENV["AWS_S3_BUCKET_INTERNAL_URL"] %>;
+        proxy_set_header Host <%= ENV["AWS_S3_BUCKET_INTERNAL_HOST"] %>;
+        add_header Content-Security-Policy "default-src 'none'" always;
     }
 
     location /media-auth {
