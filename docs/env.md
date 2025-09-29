@@ -43,6 +43,13 @@ This document lists all configurable environment variables for the Drive applica
 | `EMAIL_USE_TLS` | Use TLS for SMTP connection | `False` |
 | `FEATURES_ALPHA` | Enable alpha features | `False` |
 | `FRONTEND_THEME` | Frontend theme configuration | `None` |
+| `FRONTEND_FEEDBACK_BUTTON_SHOW` | Show feedback button | `False` |
+| `FRONTEND_FEEDBACK_BUTTON_IDLE` | Make feedback button idle (e.g. to bind to external library) | `False` |
+| `FRONTEND_FEEDBACK_ITEMS` | Dictionary of feedback items with URLs | `{}` |
+| `FRONTEND_FEEDBACK_MESSAGES_WIDGET_ENABLED` | Enable feedback messages widget | `False` |
+| `FRONTEND_FEEDBACK_MESSAGES_WIDGET_API_URL` | API URL for feedback messages widget | `None` |
+| `FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL` | Channel for feedback messages widget | `None` |
+| `FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH` | Path for feedback messages widget | `None` |
 | `ITEM_FILE_MAX_SIZE` | Maximum file size for uploads in bytes | `5368709120` (5GB) |
 | `LANGUAGE_CODE` | Default language code | `en-us` |
 | `LOGIN_REDIRECT_URL` | URL to redirect after successful login | `None` |

@@ -431,6 +431,24 @@ class Base(Configuration):
     FRONTEND_FEEDBACK_ITEMS = values.DictValue(
         {}, environ_name="FRONTEND_FEEDBACK_ITEMS", environ_prefix=None
     )
+    FRONTEND_FEEDBACK_MESSAGES_WIDGET_ENABLED = values.BooleanValue(
+        default=False,
+        environ_name="FRONTEND_FEEDBACK_MESSAGES_WIDGET_ENABLED",
+        environ_prefix=None,
+    )
+    FRONTEND_FEEDBACK_MESSAGES_WIDGET_API_URL = values.Value(
+        None,
+        environ_name="FRONTEND_FEEDBACK_MESSAGES_WIDGET_API_URL",
+        environ_prefix=None,
+    )
+    FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL = values.Value(
+        None,
+        environ_name="FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL",
+        environ_prefix=None,
+    )
+    FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH = values.Value(
+        None, environ_name="FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH", environ_prefix=None
+    )
     FRONTEND_HIDE_GAUFRE = values.BooleanValue(
         default=False, environ_name="FRONTEND_HIDE_GAUFRE", environ_prefix=None
     )
