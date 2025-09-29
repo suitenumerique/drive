@@ -9,11 +9,13 @@ import {
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useConfig } from "../config/ConfigProvider";
+import { useMessagesWidget } from "./useMessagesWidget";
 
 export const Feedback = (props: { buttonProps?: Partial<ButtonProps> }) => {
   const { t } = useTranslation();
   const modal = useModal();
   const { config } = useConfig();
+  const { showWidget } = useMessagesWidget();
 
   const FEEDBACK_BUTTONS = useMemo(() => {
     return config?.FRONTEND_FEEDBACK_ITEMS
@@ -61,6 +63,10 @@ export const Feedback = (props: { buttonProps?: Partial<ButtonProps> }) => {
 
   const onClick = () => {
     if (config?.FRONTEND_FEEDBACK_BUTTON_IDLE) {
+      return;
+    }
+    if (config?.FRONTEND_FEEDBACK_MESSAGES_WIDGET_ENABLED) {
+      showWidget();
       return;
     }
     modal.open();

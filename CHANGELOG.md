@@ -12,6 +12,7 @@ and this project adheres to
 
 - ✨(backend) create wopi applcation #2
 - ✨(backend) expose url_preview on item object
+- ✨(front) add messages widget #357
 
 ### Changed
 

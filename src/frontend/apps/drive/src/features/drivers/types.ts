@@ -85,7 +85,7 @@ export type WopiInfo = {
   access_token: string;
   access_token_ttl: number;
   launch_url: string;
-}
+};
 
 export type Access = {
   id: string;
@@ -150,6 +150,10 @@ export type ApiConfig = {
   FRONTEND_FEEDBACK_BUTTON_SHOW?: boolean;
   FRONTEND_FEEDBACK_BUTTON_IDLE?: boolean;
   FRONTEND_FEEDBACK_ITEMS?: Record<string, { url: string }>;
+  FRONTEND_FEEDBACK_MESSAGES_WIDGET_ENABLED?: boolean;
+  FRONTEND_FEEDBACK_MESSAGES_WIDGET_API_URL?: string;
+  FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL?: string;
+  FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH?: string;
   FRONTEND_THEME?: string;
   FRONTEND_HIDE_GAUFRE?: boolean;
   theme_customization?: ThemeCustomization;
