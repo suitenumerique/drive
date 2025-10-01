@@ -103,6 +103,9 @@ services:
   celery-dev:
     user: ${DOCKER_USER:-1000}
     image: drive:backend-development
+    networks:
+      - default
+      - lasuite
     command: ["celery", "-A", "drive.celery_app", "worker", "-l", "DEBUG"]
     environment:
       - DJANGO_CONFIGURATION=Development
@@ -120,14 +123,16 @@ services:
     image: nginx:1.25
     ports:
       - "8083:8083"
+    networks:
+      default: {}
+      lasuite:
+        aliases:
+          - nginx
     volumes:
       - ./docker/files/development/etc/nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
       - keycloak
       - app-dev
-    networks:
-      - lasuite
-      - default
 
   frontend-dev:
     user: "${DOCKER_USER:-1000}"
@@ -244,4 +249,5 @@ networks:
   default: {}
   lasuite:
     name: lasuite-network
+    driver: bridge
     external: true
