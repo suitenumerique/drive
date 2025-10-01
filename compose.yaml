@@ -76,6 +76,9 @@ services:
       - env.d/development/postgresql.${ENV_OVERRIDE:-local}
     ports:
       - "8071:8000"
+    networks:
+      - default
+      - lasuite-net
     volumes:
       - ./src/backend:/app
       - ./data/static:/data/static
@@ -228,3 +231,8 @@ services:
       - ./docker/onlyoffice/local-development.json:/etc/onlyoffice/documentserver/local-production-linux.json
       # Enable debug
       - ./docker/onlyoffice/log4js/production.json:/etc/onlyoffice/documentserver/log4js/production.json
+
+networks:
+  lasuite-net:
+    name: lasuite-net
+    driver: bridge
