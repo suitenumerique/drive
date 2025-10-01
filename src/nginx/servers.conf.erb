@@ -54,7 +54,7 @@ server {
         add_header Content-Disposition "attachment";
     }
 
-    location /media/preview {
+    location /media/preview/ {
         # Auth request configuration
         auth_request /media-auth;
         auth_request_set $authHeader $upstream_http_authorization;
