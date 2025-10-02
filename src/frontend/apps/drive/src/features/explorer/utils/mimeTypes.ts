@@ -41,36 +41,6 @@ export enum MimeCategory {
   GRIST = "grist",
 }
 
-export const MIME_TO_ICON = {
-  [MimeCategory.CALC]: mimeCalc,
-  [MimeCategory.DOC]: mimeDoc,
-  [MimeCategory.IMAGE]: mimeImage,
-  [MimeCategory.OTHER]: mimeOther,
-  [MimeCategory.PDF]: mimePdf,
-  [MimeCategory.POWERPOINT]: mimePowerpoint,
-  [MimeCategory.AUDIO]: mimeAudio,
-  [MimeCategory.VIDEO]: mimeVideo,
-  [MimeCategory.ARCHIVE]: mimeArchive,
-  [MimeCategory.SUSPICIOUS]: mimeSuspicious,
-  [MimeCategory.SQLITE]: mimeSQLite,
-  [MimeCategory.GRIST]: mimeGrist,
-};
-
-export const MIME_TO_ICON_MINI = {
-  [MimeCategory.CALC]: mimeCalcMini,
-  [MimeCategory.DOC]: mimeDocMini,
-  [MimeCategory.IMAGE]: mimeImageMini,
-  [MimeCategory.OTHER]: mimeOther,
-  [MimeCategory.PDF]: mimePdfMini,
-  [MimeCategory.POWERPOINT]: mimePowerpointMini,
-  [MimeCategory.AUDIO]: mimeAudioMini,
-  [MimeCategory.VIDEO]: mimeVideoMini,
-  [MimeCategory.ARCHIVE]: mimeArchiveMini,
-  [MimeCategory.SUSPICIOUS]: mimeSuspicious,
-  [MimeCategory.SQLITE]: mimeSQLiteMini,
-  [MimeCategory.GRIST]: mimeGristMini,
-};
-
 export const ICONS = {
   mini: {
     [MimeCategory.CALC]: mimeCalcMini,

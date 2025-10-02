@@ -68,6 +68,10 @@ export const timeAgo = (date: Date) => {
 /** TODO: test */
 export const getExtension = (item: Item, useTitle = false) => {
   const str = useTitle ? item.title : item.filename;
+  return getExtensionFromName(str);
+};
+
+export const getExtensionFromName = (str: string) => {
   if (!str) {
     return null;
   }

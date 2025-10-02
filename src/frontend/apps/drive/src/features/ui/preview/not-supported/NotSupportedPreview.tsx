@@ -3,7 +3,7 @@ import { FilePreviewType } from "../files-preview/FilesPreview";
 
 import { Button } from "@openfun/cunningham-react";
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
-import { IconFromMimeType } from "@/features/explorer/components/icons/ItemIcon";
+import { FileIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { useCallback } from "react";
 
 interface NotSupportedPreviewProps {
@@ -24,7 +24,7 @@ export const NotSupportedPreview = ({
   return (
     <div className="file-preview-unsupported">
       <div className="file-preview-unsupported__icon">
-        <IconFromMimeType mimeType={file.mimetype} size="xlarge" />
+        <FileIcon file={file} size="xlarge" />
       </div>
       <p className="file-preview-unsupported__title">
         {t("file_preview.unsupported.title")}

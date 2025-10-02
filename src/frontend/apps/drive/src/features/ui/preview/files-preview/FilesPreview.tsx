@@ -12,7 +12,7 @@ import { AudioPlayer } from "../audio-player/AudioPlayer";
 import { PreviewPdf } from "../pdf-preview/PreviewPdf";
 
 import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
-import { getIconByMimeType } from "@/features/explorer/components/icons/ItemIcon";
+import { FileIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { useTranslation } from "react-i18next";
 import { SuspiciousPreview } from "../suspicious/SuspiciousPreview";
 import { WopiEditor } from "../wopi/WopiEditor";
@@ -174,13 +174,7 @@ export const FilePreview = ({
                 )}
 
                 <div className="file-preview-title">
-                  <img
-                    src={getIconByMimeType(currentFile.mimetype, "mini").src}
-                    alt=""
-                    width={24}
-                    className={`item-icon`}
-                    draggable="false"
-                  />
+                  <FileIcon file={currentFile} type="mini" size="small" />
                   <h1 className="file-preview-title">
                     {removeFileExtension(currentFile?.title || title)}
                   </h1>

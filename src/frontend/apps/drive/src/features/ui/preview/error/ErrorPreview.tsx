@@ -3,7 +3,7 @@ import { FilePreviewType } from "../files-preview/FilesPreview";
 
 import { Button } from "@openfun/cunningham-react";
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
-import { IconFromMimeType } from "@/features/explorer/components/icons/ItemIcon";
+import { FileIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { downloadFile } from "@/features/items/utils";
 import { useCallback } from "react";
 
@@ -21,7 +21,7 @@ export const ErrorPreview = ({ file }: ErrorPreviewProps) => {
   return (
     <div className="file-preview-error">
       <div className="file-preview-error__icon">
-        <IconFromMimeType mimeType={file.mimetype} size="xlarge" />
+        <FileIcon file={file} size="xlarge" />
       </div>
       <div className="file-preview-error__title">
         {t("file_preview.error.title")}
