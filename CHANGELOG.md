@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- 🔧(procfile) added celery worker on scalingo deployment #362
+
 ## [v0.6.0] - 2025-09-29
 
 ### Added
