@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.7.0] - 2025-10-03
+
 ### Added
 
 - 🔧(procfile) added celery worker on scalingo deployment #362
@@ -128,7 +130,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.6.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.7.0...main
+[0.7.0]: https://github.com/suitenumerique/drive/releases/v0.6.0
 [0.6.0]: https://github.com/suitenumerique/drive/releases/v0.6.0
 [0.5.0]: https://github.com/suitenumerique/drive/releases/v0.5.0
 [0.4.0]: https://github.com/suitenumerique/drive/releases/v0.4.0
