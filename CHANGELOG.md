@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(wopi) force updated_at udpate in the viewset
+
 ## [v0.7.0] - 2025-10-03
 
 ### Added

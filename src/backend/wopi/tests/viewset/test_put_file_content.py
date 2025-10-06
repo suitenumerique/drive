@@ -39,6 +39,7 @@ def test_put_file_content_connected_user_with_access():
 
     client = APIClient()
     assert item.size == 0
+    updated_at = item.updated_at
     response = client.post(
         f"/api/v1.0/wopi/files/{item.id}/contents/",
         data=b"new content",
@@ -62,6 +63,7 @@ def test_put_file_content_connected_user_with_access():
     assert response.headers.get("X-WOPI-ItemVersion") == file["VersionId"]
     item.refresh_from_db()
     assert item.size == 11  # the size should have been updated
+    assert item.updated_at > updated_at
 
 
 def test_put_file_content_connected_user_with_access_delete_item_during_edition():

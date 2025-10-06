@@ -178,7 +178,7 @@ class WopiViewSet(viewsets.ViewSet):
             Body=file,
         )
         item.size = file.size
-        item.save(update_fields=["size"])
+        item.save(update_fields=["size", "updated_at"])
         return Response(
             status=200, headers={X_WOPI_ITEMVERSION: updated_file["VersionId"]}
         )
@@ -362,7 +362,7 @@ class WopiViewSet(viewsets.ViewSet):
 
         # ensure renaming the file in the database and on the storage are done atomically
         with transaction.atomic():
-            item.save(update_fields=["filename"])
+            item.save(update_fields=["filename", "updated_at"])
 
             # Rename the file in the storage
             s3_client = default_storage.connection.meta.client
