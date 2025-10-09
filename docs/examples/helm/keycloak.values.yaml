@@ -1,0 +1,22 @@
+keycloak:
+  enabled: true
+  image: quay.io/keycloak/keycloak:20.0.1
+  name: keycloak
+  #serviceNameOverride: keycloak
+  hostname: drive-keycloak.127.0.0.1.nip.io
+  username: admin
+  password: pass
+  tls:
+    enabled: true
+    secretName: drive-tls
+  db:
+    username: dinum
+    password: pass
+    database: keycloak
+    size: 1Gi
+    image: postgres:16-alpine
+  realm:
+    name: drive
+    username: drive
+    password: drive
+    email: drive@example.com

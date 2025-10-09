@@ -1,0 +1,24 @@
+minio:
+  enabled: true
+  image: minio/minio
+  name: minio
+  # serviceNameOverride: drive-minio
+  ingress:
+    enabled: true
+    hostname: drive-minio.127.0.0.1.nip.io
+    tls:
+      enabled: true
+      secretName: drive-tls
+  consoleIngress:
+    enabled: true
+    hostname: drive-minio-console.127.0.0.1.nip.io
+    tls:
+      enabled: true
+      secretName: drive-tls
+  api:
+    port: 80
+  username: dinum
+  password: password
+  bucket: drive-media-storage
+  versioning: true
+  size: 1Gi
