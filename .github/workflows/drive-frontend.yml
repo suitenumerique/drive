@@ -61,7 +61,9 @@ jobs:
           fail-on-cache-miss: true
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps ${{matrix.browser}}
+        run: |
+          cd src/frontend/apps/e2e
+          npx playwright install --with-deps ${{matrix.browser}}
 
       - name: Start Docker services
         run: |
