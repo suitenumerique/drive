@@ -98,7 +98,7 @@ ingress-nginx-controller-57c548c4cd-2rx47   1/1     Running     0          2m56s
 
 When your k8s cluster is ready (the ingress nginx controller is up), you can start the deployment. This cluster is special because it uses the `*.127.0.0.1.nip.io` domain and mkcert certificates to have full HTTPS support and easy domain name management.
 
-The namespace `driev` is already created, you can work in it and configure your kubectl cli to use it by default.
+The namespace `drive` is already created, you can work in it and configure your kubectl cli to use it by default.
 
 ```
 $ kubectl config set-context --current --namespace=drive
@@ -211,7 +211,7 @@ postgresql-dev-backend-postgres-0          1/1     Running   0          5m32s
 redis-dev-backend-redis-7cbd7c7bb8-6d74c   1/1     Running   0          7m15s
 ```
 
-Frome here the important information you will need are:
+From here the important information you will need are:
 
 ```yaml
 AWS_S3_ENDPOINT_URL: https://drive-minio.127.0.0.1.nip.io
@@ -225,7 +225,7 @@ MEDIA_BASE_URL: https://drive.127.0.0.1.nip.io
 
 ## Deployment
 
-Now you are ready to deploy Docs without AI. AI requires more dependencies (OpenAI API). To deploy Docs you need to provide all previous information to the helm chart.
+Now you are ready to deploy Drive. To deploy Drive you need to provide all previous information to the helm chart.
 
 ```
 $ helm repo add drive https://suitenumerique.github.io/drive/
