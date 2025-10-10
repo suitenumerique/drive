@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Trigger collabora configuration
+python manage.py trigger_wopi_configuration
+
 # Start the Django backend
 gunicorn -b :8000 drive.wsgi:application --log-file - &
 

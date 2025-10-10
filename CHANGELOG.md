@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+- 🔧(procfile) trigger collabora configuration tasks at start #368
+
 ## [v0.7.0] - 2025-10-03
 
 ### Added
