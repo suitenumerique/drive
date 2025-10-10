@@ -1,14 +1,14 @@
-# Installation on a k8s cluster
+# Installation on a Kubernetes (k8s) cluster
 
 This document is a step-by-step guide that describes how to install Drive on a k8s cluster. It's a teaching document to learn how it works. It needs to be adapted for a production environment.
 
 ## Prerequisites
 
 - k8s cluster with an nginx-ingress controller
-- an OIDC provider (if you don't have one, we provide an example)
-- a PostgreSQL server (if you don't have one, we provide an example)
-- a Redis server (if you don't have one, we provide an example)
-- a S3 bucket (if you don't have one, we provide an example)
+- an OIDC provider (if you don’t have one, we provide an example)
+- a PostgreSQL server (if you don’t have one, we provide an example)
+- a Redis server (if you don’t have one, we provide an example)
+- an S3 bucket (if you don’t have one, we provide an example)
 
 ### Test cluster
 
@@ -35,7 +35,7 @@ Created a new certificate valid for the following names 📜
  - "127.0.0.1.nip.io"
  - "*.127.0.0.1.nip.io"
 
-Reminder: X.509 wildcards only go one level deep, so this won't match a.b.127.0.0.1.nip.io ℹ️
+Reminder: X.509 wildcards only go one level deep, so this won’t match a.b.127.0.0.1.nip.io ℹ️
 
 The certificate is at "./127.0.0.1.nip.io+1.pem" and the key at "./127.0.0.1.nip.io+1-key.pem" ✅
 
@@ -112,10 +112,10 @@ Please remember that `*.127.0.0.1.nip.io` will always resolve to `127.0.0.1`, ex
 
 Drive uses OIDC, so if you already have an OIDC provider, obtain the necessary information to use it. In the next step, we will see how to configure Django (and thus Drive) to use it. If you do not have a provider, we will show you how to deploy a local Keycloak instance (this is not a production deployment, just a demo).
 
-We provide our own helm chart for all development dependencies, it is available here https://github.com/suitenumerique/helm-dev-backend
-This provided chart is for development purpose only and is not ready to use in production.
+We provide our own Helm chart for all development dependencies, it is available here https://github.com/suitenumerique/helm-dev-backend
+This provided chart is for development purposes only and is not ready to use in production.
 
-You can install it on your cluster to deploy keycloak, minio, postgresql and redis.
+You can install it on your cluster to deploy Keycloak, Minio, Postgresql and Redis.
 
 ```
 $ helm install --repo https://suitenumerique.github.io/helm-dev-backend -f docs/examples/helm/keycloak.values.yaml keycloak dev-backend
@@ -126,7 +126,7 @@ keycloak-dev-backend-keycloak-0      1/1     Running   0          36s
 keycloak-dev-backend-keycloak-pg-0   1/1     Running   0          36s
 ```
 
-From here the important information you will need are:
+The important information you will need from here is:
 
 ```yaml
 OIDC_OP_JWKS_ENDPOINT: https://drive-keycloak.127.0.0.1.nip.io/realms/drive/protocol/openid-connect/certs
@@ -144,7 +144,7 @@ OIDC_USER_FIELDS_TO_FULLNAME: "given_name,usual_name"
 
 ### Find redis server connection values
 
-Drive needs a redis so we start by deploying one:
+Drive needs a Redis server so we start by deploying one:
 
 ```
 $ helm install --repo https://suitenumerique.github.io/helm-dev-backend -f docs/examples/helm/redis.values.yaml redis dev-backend
@@ -155,7 +155,7 @@ keycloak-dev-backend-keycloak-pg-0         1/1     Running   0          3m34s
 redis-dev-backend-redis-7cbd7c7bb8-6d74c   1/1     Running   0          14s
 ```
 
-From here the important information you will need are:
+The important information you will need from here is:
 
 ```yaml
 REDIS_URL: redis://user:pass@dev-backend-redis:6379/1
@@ -164,7 +164,7 @@ DJANGO_CELERY_BROKER_URL: redis://user:pass@dev-backend-redis:6379/1
 
 ### Find postgresql connection values
 
-Drive uses a postgresql database as backend, so if you have a provider, obtain the necessary information to use it. If you don't, you can install a postgresql testing environment as follow:
+Drive uses a Postgresql database as backend, so if you have a provider, obtain the necessary information to use it. If you don't, you can install a postgresql testing environment as follow:
 
 ```
 $ helm install --repo https://suitenumerique.github.io/helm-dev-backend -f docs/examples/helm/postgresql.values.yaml postgresql dev-backend
@@ -177,7 +177,7 @@ redis-dev-backend-redis-7cbd7c7bb8-6d74c   1/1     Running   0          112s
 
 ```
 
-From here the important information you will need are:
+The important information you will need from here is:
 
 ```yaml
 DB_HOST: postgresql-dev-backend-postgres
@@ -198,7 +198,7 @@ DB_PORT: 5432
 
 ### Find s3 bucket connection values
 
-Drive uses an s3 bucket to store files, so if you have a provider obtain the necessary information to use it. If you don't, you can install a local minio testing environment as follow:
+Drive uses an S3 bucket to store files, so if you have a provider, obtain the necessary information to use it. If you don't, you can install a local minio testing environment as follow:
 
 ```
 $ helm install --repo https://suitenumerique.github.io/helm-dev-backend -f docs/examples/helm/minio.values.yaml minio dev-backend
@@ -211,7 +211,7 @@ postgresql-dev-backend-postgres-0          1/1     Running   0          5m32s
 redis-dev-backend-redis-7cbd7c7bb8-6d74c   1/1     Running   0          7m15s
 ```
 
-From here the important information you will need are:
+The important information you will need from here is:
 
 ```yaml
 AWS_S3_ENDPOINT_URL: https://drive-minio.127.0.0.1.nip.io
@@ -225,7 +225,7 @@ MEDIA_BASE_URL: https://drive.127.0.0.1.nip.io
 
 ## Deployment
 
-Now you are ready to deploy Drive. To deploy Drive you need to provide all previous information to the helm chart.
+Now you are ready to deploy Drive. To deploy Drive, you need to provide all previous information to the helm chart.
 
 ```
 $ helm repo add drive https://suitenumerique.github.io/drive/
@@ -250,7 +250,7 @@ redis-dev-backend-redis-7cbd7c7bb8-6d74c    1/1     Running     0          36m
 
 ## Test your deployment
 
-In order to test your deployment you have to log into your instance. If you exclusively use our examples you can do:
+In order to test your deployment you have to log in to your instance. If you exclusively use our examples you can run:
 
 ```
 $ kubectl get ingress
