@@ -10,6 +10,10 @@ and this project adheres to
 
 ### Added
 
+- ✨(backend) expose main workspace on /me endpoint
+
+### Added
+
 - ✨(front) add disclaimer when close tab during upload
 - ✨(front) add creating folder upload step
 - ✨(front) update to ui-kit v2
