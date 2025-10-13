@@ -281,6 +281,12 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     align-items: center;
     padding: 0 8px 0 8px;
     justify-content: space-between;
+
+    &__text {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
   }
 }
 

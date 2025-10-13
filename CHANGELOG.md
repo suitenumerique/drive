@@ -12,6 +12,15 @@ and this project adheres to
 
 - 🐛(wopi) force updated_at udpate in the viewset
 
+### Added
+
+- ✨(front) add disclaimer when close tab during upload
+- ✨(front) add creating folder upload step
+
+### Fix
+
+- 🐛(front) fix upload pending items
+
 ## [v0.7.0] - 2025-10-03
 
 ### Added
@@ -121,11 +130,10 @@ and this project adheres to
 - ✨(front) make frontend themable
 - ✨(global) Add File Picker SDK
 - 🔧(cron) add pgdump cron on scalingo deployment #264
-<<<<<<< HEAD
-- ✨(back) implement lasuite.malware_detection app #212
-=======
+  <<<<<<< HEAD
+- # ✨(back) implement lasuite.malware_detection app #212
 - ✨(front) add grist and sqlite mimeTypes #275
->>>>>>> 42fba11 (✨(front) create Grist file type)
+  > > > > > > > 42fba11 (✨(front) create Grist file type)
 
 ### Changed
 
