@@ -329,6 +329,9 @@ export const uploadFile = (
     xhr.addEventListener("readystatechange", () => {
       if (xhr.readyState === 4) {
         if (xhr.status === 200) {
+          // Make sure to always set the progress to 100% when the upload is done.
+          // Because 'progress' event listener is not called when the file size is 0.
+          progressHandler(100);
           return resolve(true);
         }
         reject(new Error(`Failed to perform the upload on ${url}.`));
