@@ -28,7 +28,7 @@ def test_api_sdk_relay_register_event_anonymous():
         {"token": "1Az6SO4CE7JAl9hE96dXl7145nghwZNP", "event": {"type": "test"}},
         format="json",
     )
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_api_sdk_relay_register_event():

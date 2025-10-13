@@ -37,7 +37,7 @@ def test_api_e2e_user_auth_anonymous():
     client = APIClient()
 
     response = client.get("/api/v1.0/users/me/")
-    assert response.status_code == 401
+    assert response.status_code == 403
 
     response = client.post("/api/v1.0/e2e/user-auth/", {"email": "test@example.com"})
     assert response.status_code == 200
@@ -55,7 +55,7 @@ def test_api_e2e_user_auth_authenticated():
     client = APIClient()
 
     response = client.get("/api/v1.0/users/me/")
-    assert response.status_code == 401
+    assert response.status_code == 403
 
     response = client.post("/api/v1.0/e2e/user-auth/", {"email": "test@example.com"})
     assert response.status_code == 200
@@ -81,7 +81,7 @@ def test_api_e2e_user_auth_email_required():
     client = APIClient()
 
     response = client.get("/api/v1.0/users/me/")
-    assert response.status_code == 401
+    assert response.status_code == 403
 
     response = client.post("/api/v1.0/e2e/user-auth/", {})
     assert response.status_code == 400
