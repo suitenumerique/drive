@@ -23,7 +23,7 @@ def is_item_wopi_supported(item, user):
 
 
 def get_wopi_client_config(item, user):
-    """make
+    """
     Get the WOPI client configuration for an item.
     """
     if (
@@ -36,9 +36,7 @@ def get_wopi_client_config(item, user):
     ):
         return None
 
-    wopi_configuration = cache.get(
-        WOPI_CONFIGURATION_CACHE_KEY, default=WOPI_DEFAULT_CONFIGURATION
-    )
+    wopi_configuration = get_wopi_configuration()
 
     if not wopi_configuration:
         return None
@@ -51,6 +49,23 @@ def get_wopi_client_config(item, user):
         result = wopi_configuration["mimetypes"][item.mimetype]
 
     return result
+
+
+def get_wopi_client_proof_keys(item, user):
+    """get the wopi proof keys for an item"""
+    wopi_client_config = get_wopi_client_config(item, user)
+
+    if not wopi_client_config:
+        return None
+
+    wopi_configuration = get_wopi_configuration()
+
+    return wopi_configuration[wopi_client_config["client"]]["proof_keys"]
+
+
+def get_wopi_configuration():
+    """get the wopi configuration"""
+    return cache.get(WOPI_CONFIGURATION_CACHE_KEY, default=WOPI_DEFAULT_CONFIGURATION)
 
 
 def compute_wopi_launch_url(launch_url, get_file_info_path, lang=None):
