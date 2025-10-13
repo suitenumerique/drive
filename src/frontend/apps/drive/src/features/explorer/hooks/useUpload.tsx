@@ -368,6 +368,18 @@ export const useUploadZone = ({ item }: { item: Item }) => {
     }
   }, [uploadingState]);
 
+  useEffect(() => {
+    const unloadCallback = (event: BeforeUnloadEvent) => {
+      if (uploadingState.step !== "done") {
+        event.preventDefault();
+      }
+      return "";
+    };
+
+    window.addEventListener("beforeunload", unloadCallback);
+    return () => window.removeEventListener("beforeunload", unloadCallback);
+  }, [uploadingState]);
+
   return {
     dropZone,
   };
