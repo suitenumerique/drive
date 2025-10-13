@@ -164,6 +164,11 @@ const useUpload = ({ item }: { item: Item }) => {
   };
 };
 
+export type UploadingState = {
+  step: "create_folders" | "upload_files" | "done";
+  filesMeta: Record<string, FileUploadMeta>;
+};
+
 /**
  * This function removes the leading "./" or "/" from the path.
  */
@@ -177,9 +182,17 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
   const fileDragToastId = useRef<Id | null>(null);
   const fileUploadsToastId = useRef<Id | null>(null);
-  const [uploadingState, setUploadingState] = useState<
-    Record<string, FileUploadMeta>
-  >({});
+  const [uploadingState, setUploadingState] = useState<UploadingState>({
+    step: "create_folders",
+    filesMeta: {},
+  });
+
+  const resetUploadingState = () => {
+    setUploadingState({
+      step: "create_folders",
+      filesMeta: {},
+    });
+  };
 
   const { filesToUpload, handleHierarchy } = useUpload({ item: item! });
 
@@ -240,11 +253,8 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         dismissToast();
         return;
       }
-      const upload = filesToUpload(acceptedFiles);
-      await handleHierarchy(upload);
 
-      dismissToast();
-
+      resetUploadingState();
       if (!fileUploadsToastId.current) {
         fileUploadsToastId.current = addToast(
           <FileUploadToast uploadingState={uploadingState} />,
@@ -258,18 +268,37 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         );
       }
 
+      if (!fileUploadsToastId.current) {
+        fileUploadsToastId.current = addToast(
+          <FileUploadToast uploadingState={uploadingState} />,
+          {
+            autoClose: false,
+            onClose: () => {
+              // We need to set this to null in order to re-show the toast when the user drops another file later.
+              fileUploadsToastId.current = null;
+            },
+          }
+        );
+      }
+      dismissToast();
+
+      const upload = filesToUpload(acceptedFiles);
+      await handleHierarchy(upload);
+
       // Do not run "setUploadingState({});" because if a uploading is still in progress, it will be overwritten.
 
       // First, add all the files to the uploading state in order to display them in the toast.
+      const newUploadingState: UploadingState = {
+        step: "upload_files",
+        filesMeta: {},
+      };
       for (const file of upload.files) {
-        setUploadingState((prev) => {
-          const newState = {
-            ...prev,
-            [pathNicefy(file.path!)]: { file, progress: 0 },
-          };
-          return newState;
-        });
+        newUploadingState.filesMeta[pathNicefy(file.path!)] = {
+          file,
+          progress: 0,
+        };
       }
+      setUploadingState(newUploadingState);
 
       // Then, upload all the files sequentially. We are not uploading them in parallel because the backend
       // does not support it, it causes concurrency issues.
@@ -290,7 +319,10 @@ export const useUploadZone = ({ item }: { item: Item }) => {
                     setUploadingState((prev) => {
                       const newState = {
                         ...prev,
-                        [pathNicefy(file.path!)]: { file, progress },
+                        filesMeta: {
+                          ...prev.filesMeta,
+                          [pathNicefy(file.path!)]: { file, progress },
+                        },
                       };
                       return newState;
                     });
@@ -301,7 +333,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
                     setUploadingState((prev) => {
                       // Remove the file from the uploading state on error
                       const newState = { ...prev };
-                      delete newState[pathNicefy(file.path!)];
+                      delete newState.filesMeta[pathNicefy(file.path!)];
                       return newState;
                     });
                   },
@@ -316,6 +348,10 @@ export const useUploadZone = ({ item }: { item: Item }) => {
       for (const promise of promises) {
         await promise();
       }
+      setUploadingState((prev) => ({
+        ...prev,
+        step: "done",
+      }));
     },
   });
 
