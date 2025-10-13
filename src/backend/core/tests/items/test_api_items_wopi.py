@@ -40,11 +40,14 @@ def configure_wopi_settings(valid_mimetype, valid_wopi_launch_url):
         {
             "mimetypes": {
                 valid_mimetype: {
-                    "url": valid_wopi_launch_url,
+                    "launch_url": valid_wopi_launch_url,
                     "client": "vendorA",
                 },
             },
             "extensions": {},
+            "vendorA": {
+                "proof_keys": {},
+            },
         },
     )
 
