@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) expose main workspace on /me endpoint
+
 ### Fixed
 
 - 🐛(wopi) force updated_at udpate in the viewset
