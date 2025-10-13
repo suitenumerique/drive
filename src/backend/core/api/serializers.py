@@ -15,16 +15,7 @@ from core.api import utils
 from wopi import utils as wopi_utils
 
 
-class UserSerializer(serializers.ModelSerializer):
-    """Serialize users."""
-
-    class Meta:
-        model = models.User
-        fields = ["id", "email", "full_name", "short_name", "language"]
-        read_only_fields = ["id", "email", "full_name", "short_name"]
-
-
-class UserLiteSerializer(UserSerializer):
+class UserLiteSerializer(serializers.ModelSerializer):
     """Serialize users with limited fields."""
 
     class Meta:
@@ -103,25 +94,6 @@ class BaseAccessSerializer(serializers.ModelSerializer):
         # pylint: disable=no-member
         attrs[f"{self.Meta.resource_field_name}_id"] = self.context["resource_id"]
         return attrs
-
-
-class ItemAccessSerializer(BaseAccessSerializer):
-    """Serialize item accesses."""
-
-    user_id = serializers.PrimaryKeyRelatedField(
-        queryset=models.User.objects.all(),
-        write_only=True,
-        source="user",
-        required=False,
-        allow_null=True,
-    )
-    user = UserSerializer(read_only=True)
-
-    class Meta:
-        model = models.ItemAccess
-        resource_field_name = "item"
-        fields = ["id", "user", "user_id", "team", "role", "abilities"]
-        read_only_fields = ["id", "abilities"]
 
 
 class ListItemSerializer(serializers.ModelSerializer):
@@ -464,6 +436,53 @@ class CreateItemSerializer(ItemSerializer):
 
     def update(self, instance, validated_data):
         raise NotImplementedError("Update method can not be used.")
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """Serialize users."""
+
+    class Meta:
+        model = models.User
+        fields = [
+            "id",
+            "email",
+            "full_name",
+            "short_name",
+            "language",
+        ]
+        read_only_fields = ["id", "email", "full_name", "short_name"]
+
+
+class UserMeSerializer(UserSerializer):
+    """Serialize users for me endpoint."""
+
+    main_workspace = ItemSerializer(
+        source="get_main_workspace", read_only=True, required=False
+    )
+
+    class Meta:
+        model = models.User
+        fields = UserSerializer.Meta.fields + ["main_workspace"]
+        read_only_fields = UserSerializer.Meta.read_only_fields + ["main_workspace"]
+
+
+class ItemAccessSerializer(BaseAccessSerializer):
+    """Serialize item accesses."""
+
+    user_id = serializers.PrimaryKeyRelatedField(
+        queryset=models.User.objects.all(),
+        write_only=True,
+        source="user",
+        required=False,
+        allow_null=True,
+    )
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = models.ItemAccess
+        resource_field_name = "item"
+        fields = ["id", "user", "user_id", "team", "role", "abilities"]
+        read_only_fields = ["id", "abilities"]
 
 
 class LinkItemSerializer(serializers.ModelSerializer):
