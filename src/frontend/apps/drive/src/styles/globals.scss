@@ -44,21 +44,31 @@ body {
 }
 
 .p-2xs {
-  padding: var(--c--theme--spacings--2xs);
+  padding: var(--c--globals--spacings--2xs);
 }
 
 .p-xs {
-  padding: var(--c--theme--spacings--xs);
+  padding: var(--c--globals--spacings--xs);
 }
 
 .p-sm {
-  padding: var(--c--theme--spacings--sm);
+  padding: var(--c--globals--spacings--sm);
 }
 
 .p-md {
-  padding: var(--c--theme--spacings--md);
+  padding: var(--c--globals--spacings--md);
 }
 
 .p-base {
-  padding: var(--c--theme--spacings--base);
+  padding: var(--c--globals--spacings--base);
+}
+
+.lasuite-gaufre-btn--vanilla:before {
+  background-color: var(
+    --c--contextuals--background--semantic--brand--primary
+  ) !important;
+}
+
+.c__left-panel {
+  border-right: none;
 }

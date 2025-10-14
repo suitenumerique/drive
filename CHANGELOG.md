@@ -16,6 +16,7 @@ and this project adheres to
 
 - ✨(front) add disclaimer when close tab during upload
 - ✨(front) add creating folder upload step
+- ✨(front) update to ui-kit v2
 
 ### Fix
 

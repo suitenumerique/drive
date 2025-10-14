@@ -1,53 +1,391 @@
 import { cunninghamConfig } from "@gouvfr-lasuite/ui-kit";
 
-
 // TODO: Temporary solution to override the default button tertiary text color, waiting for the new ui-kit to be released
-const ButtonTertiaryText = {
-  "background--color-disabled": "var(--c--theme--colors--greyscale-000)",
-  "color-disabled": "var(--c--theme--colors--greyscale-100)",
-};
 
-cunninghamConfig.themes.default.components.button["tertiary-text"] = {
-  ...ButtonTertiaryText,
-  ...cunninghamConfig.themes.default.components.button["tertiary-text"]
-};
+/**
+ * Deep merge function that recursively merges objects
+ * @param target - The target object to merge into
+ * @param source - The source object to merge from
+ * @returns A new object with deeply merged properties
+ *
+ * @example
+ * const obj1 = { a: { x: 1, y: 2 }, b: 3 };
+ * const obj2 = { a: { y: 3, z: 4 }, c: 5 };
+ * const merged = deepMerge(obj1, obj2);
+ * // Result: { a: { x: 1, y: 3, z: 4 }, b: 3, c: 5 }
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function deepMerge(target: any, source: any): any {
+  const result = { ...target };
 
- 
-const config = {
-  ...cunninghamConfig, 
-  themes: {
-    ...cunninghamConfig.themes,
-    default: {
-      ...cunninghamConfig.themes.default,
-      components: {
-        ...cunninghamConfig.themes.default.components,
-        favicon: {
-          src: "'/assets/favicon.png'",
-        },
-        logo: {
-          src: "url('/assets/logo_alpha.svg')",
-        },
-        "logo-icon": {
-          src: "url('/assets/logo-icon_alpha.svg')",
-        },
-      },
-    },
-    anct: {
-      components: {
-        favicon: {
-          src: "'/assets/anct_favicon.png'",
-        },
-        logo: {
-          src: "url('/assets/anct_logo_alpha.svg')",
-        },
-        "logo-icon": {
-          src: "url('/assets/anct_logo-icon.svg')",
-        },
-      },
-    },
+  for (const key in source) {
+    if (source.hasOwnProperty(key)) {
+      const sourceValue = source[key];
+      const targetValue = result[key];
+
+      if (
+        sourceValue &&
+        typeof sourceValue === "object" &&
+        !Array.isArray(sourceValue) &&
+        targetValue &&
+        typeof targetValue === "object" &&
+        !Array.isArray(targetValue)
+      ) {
+        // Recursively merge nested objects
+        result[key] = deepMerge(targetValue, sourceValue);
+      } else if (sourceValue !== undefined) {
+        // Override with source value
+        result[key] = sourceValue;
+      }
+    }
+  }
+
+  return result;
+}
+
+const themesImages = {
+  anct: {
+    favicon: "/assets/anct_favicon.png",
+    logo: "/assets/anct_logo_alpha.svg",
+    "logo-icon": "/assets/anct_logo-icon.svg",
+  },
+  dark: {
+    favicon: "/assets/favicon.png",
+    logo: "/assets/logo_alpha.svg",
+    "logo-icon": "/assets/logo-icon_alpha.svg",
+  },
+  default: {
+    favicon: "/assets/favicon.png",
+    logo: "/assets/logo_alpha.svg",
+    "logo-icon": "/assets/logo-icon_alpha.svg",
   },
 };
 
+const getComponents = (theme: keyof typeof themesImages) => {
+  return {
+    datagrid: {
+      "body--background-color-hover":
+        "ref(contextuals.background.semantic.contextual.primary)",
+    },
+    favicon: {
+      src: `'${themesImages[theme].favicon}'`,
+    },
+    logo: {
+      src: `url('${themesImages[theme].logo}')`,
+    },
+    "logo-icon": {
+      src: `url('${themesImages[theme]["logo-icon"]}')`,
+    },
+  };
+};
+
+const defaultConfig = deepMerge(cunninghamConfig, {
+  themes: {
+    anct: {
+      components: getComponents("anct"),
+      globals: {
+        colors: {
+          "brand-050": "#EEF0FA",
+          "brand-100": "#DDE2F5",
+          "brand-150": "#CDD3F0",
+          "brand-200": "#BCC5EC",
+          "brand-250": "#ACB7E7",
+          "brand-300": "#9BA9E2",
+          "brand-350": "#8B9BDE",
+          "brand-400": "#7B8DD8",
+          "brand-450": "#6B7FD3",
+          "brand-500": "#5A71CF",
+          "brand-550": "#4A62CB",
+          "brand-600": "#3954C6",
+          "brand-650": "#2D4AAE",
+          "brand-700": "#2B428A",
+          "brand-750": "#28396C",
+          "brand-800": "#232F51",
+          "brand-850": "#1D253C",
+          "brand-900": "#161B2A",
+          "brand-950": "#0F1118",
+          "gray-000": "#FFFFFF",
+          "gray-025": "#F7F8F8",
+          "gray-050": "#F0F1F2",
+          "gray-100": "#E1E2E6",
+          "gray-150": "#D2D4DA",
+          "gray-200": "#C3C6CE",
+          "gray-250": "#B5B9C2",
+          "gray-300": "#A7ABB6",
+          "gray-350": "#999EAB",
+          "gray-400": "#8B919F",
+          "gray-450": "#7D8494",
+          "gray-500": "#707789",
+          "gray-550": "#636A7E",
+          "gray-600": "#565E73",
+          "gray-650": "#4A5267",
+          "gray-700": "#3F4758",
+          "gray-750": "#353B4A",
+          "gray-800": "#2B303C",
+          "gray-850": "#22262F",
+          "gray-900": "#191B22",
+          "gray-950": "#0F1115",
+          "gray-1000": "#000000",
+          "info-050": "#EEF1F6",
+          "info-100": "#DEE2ED",
+          "info-150": "#CDD4E5",
+          "info-200": "#BDC7DC",
+          "info-250": "#ADB9D4",
+          "info-300": "#9DABCB",
+          "info-350": "#8E9EC3",
+          "info-400": "#7E90BB",
+          "info-450": "#6F83B3",
+          "info-500": "#6076AB",
+          "info-550": "#5169A3",
+          "info-600": "#445D98",
+          "info-650": "#3F527C",
+          "info-700": "#384666",
+          "info-750": "#323B52",
+          "info-800": "#29303F",
+          "info-850": "#212630",
+          "info-900": "#191C22",
+          "info-950": "#101114",
+          "success-050": "#E5F4F2",
+          "success-100": "#CBE8E6",
+          "success-150": "#B1DDD9",
+          "success-200": "#97D1CC",
+          "success-250": "#7DC6BF",
+          "success-300": "#62BAB2",
+          "success-350": "#47ADA5",
+          "success-400": "#29A197",
+          "success-450": "#0C9488",
+          "success-500": "#01867B",
+          "success-550": "#01786E",
+          "success-600": "#026A61",
+          "success-650": "#1C5C55",
+          "success-700": "#224E49",
+          "success-750": "#23403E",
+          "success-800": "#1F3432",
+          "success-850": "#1A2827",
+          "success-900": "#131D1B",
+          "success-950": "#0D1212",
+          "warning-050": "#F7EFEB",
+          "warning-100": "#EEE0D8",
+          "warning-150": "#E6D0C4",
+          "warning-200": "#DDC1B1",
+          "warning-250": "#D5B29E",
+          "warning-300": "#CDA28B",
+          "warning-350": "#C59377",
+          "warning-400": "#BC8464",
+          "warning-450": "#B47551",
+          "warning-500": "#AC653E",
+          "warning-550": "#A3552B",
+          "warning-600": "#9A4516",
+          "warning-650": "#893B19",
+          "warning-700": "#6F371F",
+          "warning-750": "#59311F",
+          "warning-800": "#452A1D",
+          "warning-850": "#342119",
+          "warning-900": "#241913",
+          "warning-950": "#16100C",
+          "error-050": "#F8EFEF",
+          "error-100": "#F0DEDF",
+          "error-150": "#E9CECF",
+          "error-200": "#E2BEBF",
+          "error-250": "#DBAEAF",
+          "error-300": "#D49DA0",
+          "error-350": "#CD8D90",
+          "error-400": "#C57D80",
+          "error-450": "#BE6C70",
+          "error-500": "#B65C5F",
+          "error-550": "#AF4A4E",
+          "error-600": "#A6383D",
+          "error-650": "#93302F",
+          "error-700": "#782F2E",
+          "error-750": "#5F2C2B",
+          "error-800": "#492725",
+          "error-850": "#37201F",
+          "error-900": "#261817",
+          "error-950": "#170F0F",
+          "red-050": "#F8EFEF",
+          "red-100": "#F0DEDF",
+          "red-150": "#E9CECF",
+          "red-200": "#E2BEBF",
+          "red-250": "#DBAEAF",
+          "red-300": "#D49DA0",
+          "red-350": "#CD8D90",
+          "red-400": "#C57D80",
+          "red-450": "#BE6C70",
+          "red-500": "#B65C5F",
+          "red-550": "#AF4A4E",
+          "red-600": "#A6383D",
+          "red-650": "#93302F",
+          "red-700": "#782F2E",
+          "red-750": "#5F2C2B",
+          "red-800": "#492725",
+          "red-850": "#37201F",
+          "red-900": "#261817",
+          "red-950": "#170F0F",
+          "orange-050": "#F5F0EE",
+          "orange-100": "#EAE1DC",
+          "orange-150": "#E0D1CB",
+          "orange-200": "#D6C3BA",
+          "orange-250": "#CCB4AA",
+          "orange-300": "#C2A599",
+          "orange-350": "#B89788",
+          "orange-400": "#AE8978",
+          "orange-450": "#A47A68",
+          "orange-500": "#9B6C58",
+          "orange-550": "#915E48",
+          "orange-600": "#885038",
+          "orange-650": "#794530",
+          "orange-700": "#633E2E",
+          "orange-750": "#4F352A",
+          "orange-800": "#3E2C24",
+          "orange-850": "#2F231E",
+          "orange-900": "#221A17",
+          "orange-950": "#14100F",
+          "brown-050": "#F2F0EF",
+          "brown-100": "#E6E2DF",
+          "brown-150": "#D9D3CF",
+          "brown-200": "#CDC5BF",
+          "brown-250": "#C1B7B0",
+          "brown-300": "#B5A9A0",
+          "brown-350": "#A99B91",
+          "brown-400": "#9D8E82",
+          "brown-450": "#918174",
+          "brown-500": "#867465",
+          "brown-550": "#7B6757",
+          "brown-600": "#705A49",
+          "brown-650": "#624F40",
+          "brown-700": "#524439",
+          "brown-750": "#433A32",
+          "brown-800": "#362F2A",
+          "brown-850": "#2A2522",
+          "brown-900": "#1D1B19",
+          "brown-950": "#121110",
+          "yellow-050": "#FEF0CB",
+          "yellow-100": "#FDE094",
+          "yellow-150": "#FCCF59",
+          "yellow-200": "#F3BF38",
+          "yellow-250": "#E2B234",
+          "yellow-300": "#D1A530",
+          "yellow-350": "#C1982D",
+          "yellow-400": "#B18C29",
+          "yellow-450": "#A17F25",
+          "yellow-500": "#927322",
+          "yellow-550": "#82671E",
+          "yellow-600": "#735B1B",
+          "yellow-650": "#625023",
+          "yellow-700": "#534526",
+          "yellow-750": "#443A25",
+          "yellow-800": "#363021",
+          "yellow-850": "#29261C",
+          "yellow-900": "#1D1B15",
+          "yellow-950": "#13110E",
+          "green-050": "#E5F4F2",
+          "green-100": "#CBE8E6",
+          "green-150": "#B1DDD9",
+          "green-200": "#97D1CC",
+          "green-250": "#7DC6BF",
+          "green-300": "#62BAB2",
+          "green-350": "#47ADA5",
+          "green-400": "#29A197",
+          "green-450": "#0C9488",
+          "green-500": "#01867B",
+          "green-550": "#01786E",
+          "green-600": "#026A61",
+          "green-650": "#1C5C55",
+          "green-700": "#224E49",
+          "green-750": "#23403E",
+          "green-800": "#1F3432",
+          "green-850": "#1A2827",
+          "green-900": "#131D1B",
+          "green-950": "#0D1212",
+          "blue1-050": "#EEF0FA",
+          "blue1-100": "#DDE2F5",
+          "blue1-150": "#CDD3F0",
+          "blue1-200": "#BCC5EC",
+          "blue1-250": "#ACB7E7",
+          "blue1-300": "#9BA9E2",
+          "blue1-350": "#8B9BDE",
+          "blue1-400": "#7B8DD8",
+          "blue1-450": "#6B7FD3",
+          "blue1-500": "#5A71CF",
+          "blue1-550": "#4A62CB",
+          "blue1-600": "#3954C6",
+          "blue1-650": "#2D4AAE",
+          "blue1-700": "#2B428A",
+          "blue1-750": "#28396C",
+          "blue1-800": "#232F51",
+          "blue1-850": "#1D253C",
+          "blue1-900": "#161B2A",
+          "blue1-950": "#0F1118",
+          "blue2-050": "#EEF1F6",
+          "blue2-100": "#DEE2ED",
+          "blue2-150": "#CDD4E5",
+          "blue2-200": "#BDC7DC",
+          "blue2-250": "#ADB9D4",
+          "blue2-300": "#9DABCB",
+          "blue2-350": "#8E9EC3",
+          "blue2-400": "#7E90BB",
+          "blue2-450": "#6F83B3",
+          "blue2-500": "#6076AB",
+          "blue2-550": "#5169A3",
+          "blue2-600": "#445D98",
+          "blue2-650": "#3F527C",
+          "blue2-700": "#384666",
+          "blue2-750": "#323B52",
+          "blue2-800": "#29303F",
+          "blue2-850": "#212630",
+          "blue2-900": "#191C22",
+          "blue2-950": "#101114",
+          "purple-050": "#F4EFF4",
+          "purple-100": "#E9E0E8",
+          "purple-150": "#DDD0DD",
+          "purple-200": "#D3C1D2",
+          "purple-250": "#C8B2C7",
+          "purple-300": "#BDA3BC",
+          "purple-350": "#B295B1",
+          "purple-400": "#A886A7",
+          "purple-450": "#9D789C",
+          "purple-500": "#936992",
+          "purple-550": "#895B87",
+          "purple-600": "#7F4D7D",
+          "purple-650": "#70426E",
+          "purple-700": "#5D3B5B",
+          "purple-750": "#4B334A",
+          "purple-800": "#3C2B3B",
+          "purple-850": "#2D222C",
+          "purple-900": "#20191F",
+          "purple-950": "#141013",
+          "pink-050": "#F5EFF2",
+          "pink-100": "#ECDFE6",
+          "pink-150": "#E3CFD9",
+          "pink-200": "#D9BFCD",
+          "pink-250": "#D0B0C1",
+          "pink-300": "#C7A0B5",
+          "pink-350": "#BE91A9",
+          "pink-400": "#B5829C",
+          "pink-450": "#AB7391",
+          "pink-500": "#A36385",
+          "pink-550": "#995478",
+          "pink-600": "#90456C",
+          "pink-650": "#803B5E",
+          "pink-700": "#69364F",
+          "pink-750": "#543042",
+          "pink-800": "#422935",
+          "pink-850": "#312128",
+          "pink-900": "#22191D",
+          "pink-950": "#150F11",
+        },
+      },
+    },
+    dark: {
+      globals: cunninghamConfig.themes.default.globals,
+      components: getComponents("dark"),
+    },
+    default: {
+      components: getComponents("default"),
+    },
+  },
+});
+
+const config = defaultConfig;
+
 export default config;
-
-
