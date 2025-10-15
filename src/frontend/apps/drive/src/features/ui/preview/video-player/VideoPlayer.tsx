@@ -262,10 +262,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         {/* Status icon overlay */}
         {showStatusIcon && (
           <div className="video-player__status-icon">
-            <Icon
-              color="#5E5E5E"
-              name={statusIcon === "play" ? "play_arrow" : "pause"}
-            />
+            <Icon name={statusIcon === "play" ? "play_arrow" : "pause"} />
           </div>
         )}
       </div>

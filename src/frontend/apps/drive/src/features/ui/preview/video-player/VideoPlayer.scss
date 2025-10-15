@@ -5,7 +5,7 @@
   height: 100vh; // Use full available height
   display: flex;
   flex-direction: column;
-  gap: var(--c--theme--spacings--md);
+  gap: var(--c--globals--spacings--md);
 
   @keyframes fadeInOut {
     0% {
@@ -51,7 +51,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
     background: #ffffffcc; // TODO: Replace with new ui-kit color
-    border-radius: var(--c--theme--spacings--xxxs);
+    border-radius: var(--c--globals--spacings--xxxs);
 
     width: 40px;
     height: 40px;
@@ -76,7 +76,7 @@
     opacity: 1;
     display: flex;
     flex-direction: column;
-    gap: var(--c--theme--spacings--md);
+    gap: var(--c--globals--spacings--md);
     flex-shrink: 0; // Prevent controls from shrinking
     min-height: 120px; // Minimum height for controls
   }
