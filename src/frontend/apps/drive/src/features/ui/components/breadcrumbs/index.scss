@@ -3,6 +3,10 @@
   align-items: center;
   overflow: auto;
 
+  &__separator {
+    color: var(--c--contextuals--content--semantic--neutral--tertiary);
+  }
+
   > * {
     flex-shrink: 0;
   }
@@ -13,10 +17,10 @@
   padding: 4px;
   background-color: transparent;
   border: none;
-  color: var(--c--theme--colors--greyscale-600);
+  color: var(--c--contextuals--content--semantic--neutral--secondary);
   font-size: 16px;
   font-weight: 400;
-  font-family: var(--c--theme--font--families--base);
+  font-family: var(--c--globals--font--families--base);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -25,6 +29,6 @@
 
   &.active {
     font-weight: 500;
-    color: var(--c--theme--colors--greyscale-950);
+    color: var(--c--contextuals--content--semantic--neutral--primary);
   }
 }

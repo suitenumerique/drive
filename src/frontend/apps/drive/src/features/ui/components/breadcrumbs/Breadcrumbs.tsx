@@ -23,7 +23,8 @@ export const Breadcrumbs = ({
       {displayBack && (
         <Button
           icon={<span className="material-icons">arrow_back</span>}
-          color="tertiary"
+          color="neutral"
+          variant="tertiary"
           className="mr-t"
           onClick={onBack}
           disabled={items.length <= 1}
@@ -36,7 +37,7 @@ export const Breadcrumbs = ({
         return (
           <React.Fragment key={index}>
             {index > 0 && (
-              <span className="material-icons clr-greyscale-600">
+              <span className="material-icons c__breadcrumbs__separator">
                 chevron_right
               </span>
             )}
