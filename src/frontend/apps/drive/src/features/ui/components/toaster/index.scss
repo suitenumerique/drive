@@ -1,3 +1,14 @@
+@mixin toaster-theme($color) {
+  background-color: var(
+    --c--contextuals--background--semantic--#{$color}--tertiary
+  );
+  border: 1px solid var(--c--contextuals--border--semantic--#{$color}--tertiary);
+  color: var(--c--contextuals--content--semantic--#{$color}--primary);
+  --toastify-color-progress-light: var(
+    --c--contextuals--content--semantic--#{$color}--tertiary
+  );
+}
+
 .suite__toaster {
   &__wrapper {
     width: auto;
@@ -15,7 +26,7 @@
     box-shadow: 0px 6px 18px 0px #0000910d;
     font-size: 14px;
     font-weight: 500;
-    font-family: var(--c--theme--font--families--base);
+    font-family: var(--c--globals--font--families--base);
 
     &__content {
       display: flex;
@@ -25,20 +36,11 @@
     }
 
     &--info {
-      background-color: var(--c--theme--colors--primary-050);
-      border: 1px solid var(--c--theme--colors--primary-300);
-      color: var(--c--theme--colors--primary-800);
-      --toastify-color-progress-light: var(--c--theme--colors--primary-800);
+      @include toaster-theme("brand");
     }
 
     &--error {
-      background-color: var(--c--theme--colors--danger-050);
-      border: 1px solid var(--c--theme--colors--danger-300);
-      color: var(--c--theme--colors--danger-600);
-      --toastify-color-progress-light: var(--c--theme--colors--danger-800);
+      @include toaster-theme("info");
     }
   }
-}
-
-:root {
 }

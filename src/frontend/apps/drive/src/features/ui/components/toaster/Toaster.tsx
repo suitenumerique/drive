@@ -30,7 +30,7 @@ export const ToasterItem = ({
       {closeButton && (
         <Button
           onClick={closeToast}
-          color="primary-text"
+          variant="tertiary"
           size="small"
           icon={<span className="material-icons">close</span>}
         ></Button>
