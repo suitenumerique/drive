@@ -184,6 +184,10 @@ export const getFormatTranslationKey = (item: Item) => {
  * This function removes the file extension from the filename.
  */
 export const removeFileExtension = (filename: string) => {
+  if (filename.startsWith(".")) {
+    return filename;
+  }
+
   const lastDotIndex = filename.lastIndexOf(".");
   if (lastDotIndex === -1) {
     return filename; // No extension found

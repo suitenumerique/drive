@@ -30,7 +30,7 @@ export const ExplorerSearchButton = ({
     <>
       <ExplorerSearchModal {...searchModal} />
       <Button
-        color="primary-text"
+        variant="tertiary"
         aria-label={t("explorer.tree.search")}
         icon={<span className="material-icons">search</span>}
         onClick={searchModal.open}

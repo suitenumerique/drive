@@ -9,7 +9,11 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { createColumnHelper, flexRender } from "@tanstack/react-table";
+import {
+  CellContext,
+  createColumnHelper,
+  flexRender,
+} from "@tanstack/react-table";
 import { useReactTable } from "@tanstack/react-table";
 import { getCoreRowModel } from "@tanstack/react-table";
 import { AppExplorerProps } from "@/features/explorer/components/app-view/AppExplorer";
@@ -115,6 +119,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
       header: t("explorer.grid.name"),
       cell: props.gridNameCell ?? EmbeddedExplorerGridNameCell,
     }),
+
     columnHelper.accessor("updated_at", {
       header: t("explorer.grid.last_update"),
       cell: EmbeddedExplorerGridUpdatedAtCell,
@@ -352,4 +357,8 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
       </EmbeddedExplorerGridContext.Provider>
     </>
   );
+};
+
+export type EmbeddedExplorerGridTypeCellProps = CellContext<Item, string> & {
+  children?: React.ReactNode;
 };

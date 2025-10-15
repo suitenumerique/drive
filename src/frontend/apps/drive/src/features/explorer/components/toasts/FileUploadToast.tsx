@@ -6,6 +6,7 @@ import clsx from "clsx";
 import { CircularProgress } from "@/features/ui/components/circular-progress/CircularProgress";
 import prettyBytes from "pretty-bytes";
 import { ToastContentProps } from "react-toastify";
+import { getIconByMimeType } from "../icons/ItemIcon";
 import { UploadingState } from "@/features/explorer/hooks/useUpload";
 import { Spinner } from "@gouvfr-lasuite/ui-kit";
 
@@ -44,19 +45,23 @@ export const FileUploadToast = (
           })}
         >
           {Object.entries(props.uploadingState.filesMeta).map(
-            ([name, meta]) => (
-              <div key={name} className="file-upload-toast__files__item">
-                <div className="file-upload-toast__files__item__name">
-                  <span>{name}</span>
-                  <span className="file-upload-toast__files__item__size">
-                    {prettyBytes(meta.file.size)}
-                  </span>
+            ([name, meta]) => {
+              const icon = getIconByMimeType(meta.file.type, "normal");
+              return (
+                <div key={name} className="file-upload-toast__files__item">
+                  <div className="file-upload-toast__files__item__name">
+                    <img src={icon.src} alt={name} />
+                    <span>{name}</span>
+                    <span className="file-upload-toast__files__item__size">
+                      {prettyBytes(meta.file.size)}
+                    </span>
+                  </div>
+                  <div className="file-upload-toast__files__item__progress">
+                    <CircularProgress progress={meta.progress} />
+                  </div>
                 </div>
-                <div className="file-upload-toast__files__item__progress">
-                  <CircularProgress progress={meta.progress} />
-                </div>
-              </div>
-            )
+              );
+            }
           )}
         </div>
         <div className="file-upload-toast__description">
@@ -83,7 +88,7 @@ export const FileUploadToast = (
           <div>
             {props.uploadingState.step !== "create_folders" && (
               <Button
-                color="primary-text"
+                variant="tertiary"
                 size="small"
                 icon={
                   <span className="material-icons">
@@ -97,7 +102,7 @@ export const FileUploadToast = (
             <Button
               onClick={props.closeToast}
               disabled={pendingFilesCount > 0}
-              color="primary-text"
+              variant="tertiary"
               size="small"
               icon={<span className="material-icons">close</span>}
             ></Button>

@@ -78,7 +78,7 @@ export const ExplorerTreeActions = ({
           onOpenChange={importMenu.setIsOpen}
         >
           <Button
-            color="secondary"
+            variant="bordered"
             disabled={!item?.abilities.children_create}
             onClick={() => importMenu.setIsOpen(true)}
           >

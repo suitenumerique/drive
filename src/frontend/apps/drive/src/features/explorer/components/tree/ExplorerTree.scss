@@ -1,21 +1,21 @@
 @use "sass:map";
 @use "@/styles/cunningham-tokens-sass" as *;
 
-$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+$tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 
 .explorer__tree__item {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--c--theme--spacings--xs);
+  gap: var(--c--globals--spacings--xs);
   overflow: hidden;
   height: 24px;
 
   &__title {
-    font-size: var(--c--theme--font--sizes--sm);
+    font-size: var(--c--globals--font--sizes--sm);
     font-weight: 500;
-    color: var(--c--theme--colors--greyscale-1000);
+    color: var(--c--contextuals--content--semantic--neutral--primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -26,8 +26,11 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     border: 1.5px solid transparent;
     border-radius: 4px;
     &.over {
-      background-color: var(--c--theme--colors--primary-100);
-      border: 1.5px solid var(--c--theme--colors--primary-500);
+      background-color: var(
+        --c--contextuals--background--semantic--brand--tertiary
+      );
+      border: 1.5px solid
+        var(--c--contextuals--border--semantic--brand--primary);
     }
   }
   &:hover {
@@ -39,7 +42,7 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
   &__content {
     display: flex;
     align-items: center;
-    gap: var(--c--theme--spacings--xs);
+    gap: var(--c--globals--spacings--xs);
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -48,7 +51,7 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 
   &__actions {
     display: none;
-
+    gap: 4px;
     align-items: center;
     padding-right: 4px;
 
@@ -68,8 +71,8 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     }
 
     &__button-add {
-      width: 18px;
-      height: 18px;
+      width: 18px !important;
+      height: 18px !important;
       padding: 0;
       border-radius: 2px;
     }
@@ -89,20 +92,24 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     display: flex;
     border-radius: 4px;
     align-items: center;
-    gap: var(--c--theme--spacings--xs);
+    gap: var(--c--globals--spacings--xs);
     height: 34px;
     padding-left: 22px;
-    font-size: var(--c--theme--font--sizes--sm);
-    color: var(--c--theme--colors--greyscale-1000);
+    font-size: var(--c--globals--font--sizes--sm);
+    color: var(--c--contextuals--content--semantic--neutral--primary);
     font-weight: 500;
 
     &.active {
-      background-color: var(--c--theme--colors--greyscale-100);
+      background-color: var(
+        --c--contextuals--background--semantic--contextual--primary
+      );
       font-weight: 700;
     }
 
     &:hover {
-      background-color: var(--c--theme--colors--greyscale-100);
+      background-color: var(
+        --c--contextuals--background--semantic--contextual--primary
+      );
     }
 
     &__icon {
@@ -199,7 +206,9 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
       flex-grow: 1;
 
       &--selected {
-        background-color: var(--c--theme--colors--greyscale-100);
+        background-color: var(
+          --c--contextuals--background--semantic--contextual--primary
+        );
       }
     }
   }

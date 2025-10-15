@@ -97,6 +97,14 @@ export const getItemIcon = (
   return ICONS[type][category];
 };
 
+export const getIconByMimeType = (
+  mimeType: string,
+  type: "normal" | "mini"
+) => {
+  const category = getMimeCategory(mimeType);
+  return ICONS[type][category];
+};
+
 /**
  * Used by the FilePreview component to display the file icon.
  * The FilePreview only uses FilePreviewType, not Item, so it needs a

@@ -136,7 +136,7 @@ export const ExplorerTreeItemActions = ({
           >
             <Button
               size="nano"
-              color="tertiary-text"
+              variant="tertiary"
               aria-label="more_actions"
               className="explorer__tree__item__actions__button-more"
               onClick={() => menu.setIsOpen(true)}
@@ -146,7 +146,7 @@ export const ExplorerTreeItemActions = ({
         )}
         <Button
           size="nano"
-          color="primary"
+          // color="primary"
           aria-label="add_children"
           className="explorer__tree__item__actions__button-add"
           icon={<span className="material-icons">add</span>}

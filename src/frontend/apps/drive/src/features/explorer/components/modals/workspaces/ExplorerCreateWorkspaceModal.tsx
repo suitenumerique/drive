@@ -45,7 +45,7 @@ export const ExplorerCreateWorkspaceModal = (
       title={t("explorer.workspaces.create.title")}
       rightActions={
         <>
-          <Button color="secondary" onClick={props.onClose}>
+          <Button variant="bordered" onClick={props.onClose}>
             {t("explorer.workspaces.create.cancel")}
           </Button>
           <Button type="submit" form="workspace-form">

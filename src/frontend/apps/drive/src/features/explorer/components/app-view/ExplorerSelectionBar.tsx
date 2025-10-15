@@ -39,7 +39,7 @@ export const ExplorerSelectionBar = () => {
         <Button
           onClick={handleClearSelection}
           icon={<span className="material-icons">close</span>}
-          color="primary-text"
+          variant="tertiary"
           size="small"
           aria-label={t("explorer.selectionBar.reset_selection")}
         />
@@ -105,24 +105,25 @@ export const ExplorerSelectionBarActions = () => {
       {/* <Button
         onClick={handleClearSelection}
         icon={<span className="material-icons">download</span>}
-        color="primary-text"
+        variant="tertiary"
         size="small"
         aria-label={t("explorer.selectionBar.download")}
       /> */}
       <Button
-        onClick={moveModal.open}
-        icon={<span className="material-icons">arrow_forward</span>}
-        color="primary-text"
-        size="small"
-        aria-label={t("explorer.selectionBar.move")}
-      />
-      <Button
         onClick={handleDelete}
         icon={<span className="material-icons">delete</span>}
-        color="primary-text"
+        variant="tertiary"
         size="small"
         aria-label={t("explorer.selectionBar.delete")}
       />
+      <Button
+        onClick={moveModal.open}
+        icon={<span className="material-icons">arrow_forward</span>}
+        variant="tertiary"
+        size="small"
+        aria-label={t("explorer.selectionBar.move")}
+      />
+
       {moveModal.isOpen && (
         <ExplorerMoveFolder
           {...moveModal}

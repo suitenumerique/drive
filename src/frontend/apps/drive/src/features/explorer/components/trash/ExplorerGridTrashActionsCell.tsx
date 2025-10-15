@@ -73,7 +73,7 @@ export const ExplorerGridTrashActionsCell = (
       >
         <Button
           onClick={() => setIsOpen(!isOpen)}
-          color="primary-text"
+          variant="tertiary"
           className="c__language-picker"
           icon={<span className="material-icons">more_horiz</span>}
         ></Button>
