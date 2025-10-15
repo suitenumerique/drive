@@ -76,7 +76,7 @@ export const PickerFooter = ({
       </div>
       <div className="sdk__explorer__footer__actions">
         <Button
-          color="primary-text"
+          variant="tertiary"
           onClick={onCancel}
           disabled={waitForClosing}
           icon={waitForClosing ? <Spinner size="sm" /> : undefined}
