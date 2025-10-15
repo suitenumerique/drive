@@ -20,6 +20,7 @@ export const HeaderIcon = () => {
 
 export const HeaderRight = ({ displaySearch }: { displaySearch?: boolean }) => {
   const { user } = useAuth();
+
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
   const { config } = useConfig();
@@ -38,7 +39,7 @@ export const HeaderRight = ({ displaySearch }: { displaySearch?: boolean }) => {
           onOpenChange={setIsOpen}
         >
           <Button
-            color="primary-text"
+            variant="tertiary"
             onClick={() => setIsOpen(!isOpen)}
             icon={
               <span className="material-icons">
@@ -101,7 +102,7 @@ export const LanguagePicker = () => {
     >
       <Button
         onClick={() => setIsOpen(!isOpen)}
-        color="primary-text"
+        variant="tertiary"
         className="c__language-picker"
         icon={
           <span className="material-icons">
