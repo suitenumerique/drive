@@ -1,7 +1,7 @@
 @use "sass:map";
 @use "@/styles/cunningham-tokens-sass" as *;
 
-$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+$tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 
 .explorer {
   display: flex;
@@ -13,10 +13,11 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 
   &--app {
     padding: 16px;
-    background-color: var(--c--theme--colors--greyscale-050);
+    background-color: var(--c--contextuals--background--surface--tertiary);
 
     @media (max-width: $tablet) {
       padding: 0;
+      background-color: var(--c--contextuals--background--surface--tertiary);
     }
 
     .explorer__container {
@@ -24,7 +25,12 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     }
 
     .explorer__content {
-      border: 1px var(--c--theme--colors--greyscale-200) solid;
+      border: 1px var(--c--contextuals--border--surface--primary) solid;
+
+      @media (max-width: $tablet) {
+        border: none;
+        padding: 5px;
+      }
 
       &__breadcrumbs {
         @media (max-width: $tablet) {
@@ -48,23 +54,28 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     height: 32px;
     display: flex;
     align-items: center;
-    color: var(--c--theme--colors--greyscale-600);
 
     @media (max-width: $tablet) {
       padding: 8px;
       height: auto;
+      background-color: var(--c--contextuals--background--surface--secondary);
     }
   }
 
   &--drop-zone--drag-accept {
     .explorer__content {
-      background-color: var(--c--theme--colors--primary-050);
-      box-shadow: var(--c--theme--colors--primary-500) 0 0 0 3px inset;
+      background-color: var(
+        --c--contextuals--background--semantic--brand--tertiary
+      );
+      box-shadow: var(--c--contextuals--border--semantic--brand--primary) 0 0 0
+        3px inset;
       border-radius: 2px;
 
       table {
         tbody {
-          background-color: var(--c--theme--colors--primary-050);
+          background-color: var(
+            --c--contextuals--background--semantic--brand--tertiary
+          );
         }
       }
     }
@@ -72,7 +83,7 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 
   &__content {
     flex: 1;
-    background-color: #fff;
+    background-color: var(--c--contextuals--background--surface--secondary);
 
     border-radius: 4px;
     padding: 24px;
@@ -96,13 +107,11 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
       &--mobile {
         display: none;
         padding: 0 12px;
-        border-bottom: 1px solid var(--c--theme--colors--greyscale-200);
-        border-top: 2px solid var(--c--theme--colors--primary-500);
-        background: linear-gradient(
-          180deg,
-          rgba(106, 106, 244, 0.05) 0%,
-          rgba(106, 106, 244, 0) 100%
-        );
+        border-bottom: 1px solid var(--c--contextuals--border--surface--primary);
+        border-top: 2px solid
+          var(--c--contextuals--border--semantic--brand--primary);
+
+        background: var(--c--contextuals--background--surface--secondary);
         align-items: center;
         height: 64px;
 
@@ -125,7 +134,9 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
               font-size: 14px;
               line-height: 20px;
               font-weight: 500;
-              color: var(--c--theme--colors--greyscale-600);
+              color: var(
+                --c--contextuals--content--semantic--neutral--secondary
+              );
               display: flex;
               align-items: center;
               gap: 6px;
@@ -141,7 +152,7 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
               font-size: 16px;
               line-height: 18px;
               font-weight: 600;
-              color: var(--c--theme--colors--greyscale-900);
+              color: var(--c--contextuals--content--semantic--neutral--primary);
               text-overflow: ellipsis;
               white-space: nowrap;
               overflow: hidden;
@@ -152,7 +163,7 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
         &__workspace {
           font-size: 16px;
           font-weight: 600;
-          color: var(--c--theme--colors--greyscale-900);
+          color: var(--c--contextuals--content--semantic--neutral--primary);
           display: flex;
           align-items: center;
           gap: 8px;
@@ -172,14 +183,14 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
       &__title {
         font-size: 22px;
         font-weight: 700;
-        color: var(--c--theme--colors--greyscale-1000);
+        color: var(--c--contextuals--content--semantic--neutral--primary);
         padding-left: 6px;
       }
 
       &__description {
         font-size: 12px;
         font-weight: 400;
-        color: var(--c--theme--colors--greyscale-600);
+        color: var(--c--contextuals--content--semantic--neutral--secondary);
       }
     }
   }
@@ -190,8 +201,10 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     align-items: center;
     height: 32px;
     padding: 0 8px;
-    background-color: var(--c--theme--colors--primary-050);
-    border: 1px solid var(--c--theme--colors--primary-300);
+    background-color: var(
+      --c--contextuals--background--semantic--brand--tertiary
+    );
+    border: 1px solid var(--c--contextuals--border--semantic--brand--tertiary);
     border-radius: 4px;
 
     &__left {
@@ -209,17 +222,19 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     &__caption {
       font-size: 14px;
       font-weight: 500;
-      color: var(--c--theme--colors--primary-800);
+      color: var(--c--contextuals--content--semantic--brand--primary);
     }
   }
 
   &__drag-overlay {
     cursor: grabbing;
-    padding: var(--c--theme--spacings--3xs, 4px)
-      calc(var(--c--theme--spacings--2xs, 6px) + 10px);
-    background-color: #5858d3;
+    padding: var(--c--globals--spacings--3xs, 4px)
+      calc(var(--c--globals--spacings--2xs, 6px) + 10px);
+    background-color: var(
+      --c--contextuals--background--semantic--brand--primary
+    );
     border-radius: 12px;
-    color: var(--c--theme--colors--greyscale-000, #fff);
+    color: var(--c--contextuals--content--semantic--brand--on-brand, #fff);
     font-weight: 700;
     font-size: 11px;
     width: fit-content;
@@ -236,10 +251,10 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
   }
 
   &__files {
-    background-color: var(--c--theme--colors--greyscale-000);
+    background-color: var(--c--contextuals--background--surface--secondary);
     padding: 4px 12px;
     border-radius: 4px;
-    border: 1px solid var(--c--theme--colors--primary-200);
+    border: 1px solid var(--c--contextuals--border--semantic--brand--tertiary);
     overflow-y: auto;
     margin-bottom: 8px;
     transition: all 0.2s ease-in-out;
@@ -254,8 +269,8 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 
     &__item {
       font-size: 14px;
-      color: var(--c--theme--colors--greyscale-1000);
-      font-weight: 500;
+      color: var(--c--contextuals--content--semantic--neutral--primary);
+      font-weight: 600;
       display: flex;
       justify-content: space-between;
       height: 40px;
@@ -264,7 +279,7 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
       &__size {
         font-size: 14px;
         font-weight: 400;
-        color: var(--c--theme--colors--greyscale-600);
+        color: var(--c--contextuals--content--semantic--neutral--tertiary);
       }
 
       &__name {
@@ -292,7 +307,7 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 
 @media (max-width: $tablet) {
   .explorer-app {
-    background-color: var(--c--theme--colors--greyscale-000);
+    background-color: var(--c--contextuals--background--surface--tertiary);
 
     &__content {
       border: none;

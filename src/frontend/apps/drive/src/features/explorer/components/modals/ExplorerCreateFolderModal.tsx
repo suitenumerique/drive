@@ -45,7 +45,7 @@ export const ExplorerCreateFolderModal = (
       title={t("explorer.actions.createFolder.modal.title")}
       rightActions={
         <>
-          <Button color="secondary" onClick={props.onClose}>
+          <Button variant="bordered" onClick={props.onClose}>
             {t("explorer.actions.createFolder.modal.cancel")}
           </Button>
           <Button type="submit" form="create-folder-form">

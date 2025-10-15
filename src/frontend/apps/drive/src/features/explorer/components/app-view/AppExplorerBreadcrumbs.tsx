@@ -40,7 +40,7 @@ export const AppExplorerBreadcrumbs = () => {
       <div className="explorer__content__breadcrumbs__actions">
         <Button
           icon={<span className="material-icons">info</span>}
-          color="primary-text"
+          variant="tertiary"
           onClick={() => {
             setRightPanelOpen(true);
             setRightPanelForcedItem(item);
@@ -98,7 +98,8 @@ export const ExplorerBreadcrumbsMobile = () => {
         <div className="explorer__content__breadcrumbs--mobile__container">
           <div className="explorer__content__breadcrumbs--mobile__container__actions">
             <Button
-              color="tertiary"
+              variant="bordered"
+              color="neutral"
               icon={<span className="material-icons">chevron_left</span>}
               onClick={() => {
                 onNavigate({

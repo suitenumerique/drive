@@ -16,7 +16,7 @@ import {
   EmbeddedExplorer,
   useEmbeddedExplorer,
 } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorer";
-import add_folder from "@/assets/icons/folder-tiny-plus.svg";
+import { AddFolderButton } from "./AddFolderButton";
 
 interface ExplorerMoveFolderProps {
   isOpen: boolean;
@@ -58,11 +58,10 @@ export const ExplorerMoveFolder = ({
       itemsExplorer.currentItemId ? (
         <Button
           size="small"
-          color="primary-text"
+          variant="tertiary"
+          icon={<AddFolderButton />}
           onClick={createFolderModal.open}
-        >
-          <img src={add_folder.src} alt="add" />
-        </Button>
+        />
       ) : null,
   });
 
@@ -183,11 +182,10 @@ export const ExplorerMoveFolder = ({
         size={isDesktop ? ModalSize.LARGE : ModalSize.FULL}
         rightActions={
           <div className="modal__move__footer">
-            <Button color="secondary" onClick={onCloseModal}>
+            <Button variant="tertiary" onClick={onCloseModal}>
               {t("common.cancel")}
             </Button>
             <Button
-              color="primary"
               disabled={
                 !itemsExplorer.currentItemId &&
                 itemsExplorer.selectedItems.length === 0

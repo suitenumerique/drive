@@ -24,7 +24,7 @@ import mimeSQLiteMini from "@/assets/files/icons/mime-sqlite-mini.svg";
 import mimeGristMini from "@/assets/files/icons/mime-grist-mini.svg";
 
 import mimeArchive from "@/assets/files/icons/mime-archive.svg";
-import { getExtension } from "../utils/utils";
+import { getExtension, getExtensionFromName } from "../utils/utils";
 
 export enum MimeCategory {
   CALC = "calc",
@@ -184,9 +184,20 @@ export const getFormatTranslationKey = (item: Item) => {
  * This function removes the file extension from the filename.
  */
 export const removeFileExtension = (filename: string) => {
+  if (filename.startsWith(".")) {
+    return filename;
+  }
+
   const lastDotIndex = filename.lastIndexOf(".");
   if (lastDotIndex === -1) {
     return filename; // No extension found
   }
   return filename.substring(0, lastDotIndex);
+};
+
+export const getFileExtension = (filename: string) => {
+  if (filename.startsWith(".")) {
+    return "filename";
+  }
+  return getExtensionFromName(filename);
 };

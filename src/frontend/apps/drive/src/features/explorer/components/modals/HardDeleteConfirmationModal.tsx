@@ -22,7 +22,7 @@ export const HardDeleteConfirmationModal = ({
       rightActions={
         <>
           <Button
-            color="secondary"
+            variant="bordered"
             onClick={() => {
               onDecide(null);
               props.onClose();
@@ -31,7 +31,7 @@ export const HardDeleteConfirmationModal = ({
             {t("explorer.trash.hard_delete.cancel")}
           </Button>
           <Button
-            color="danger"
+            color="error"
             onClick={() => {
               onDecide("yes");
               props.onClose();
