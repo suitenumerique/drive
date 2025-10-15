@@ -430,13 +430,13 @@ export const ZoomControl = ({
 }: ZoomControlProps) => {
   return (
     <div className="zoom-control">
-      <Button color="tertiary-text" onClick={zoomOut}>
+      <Button variant="tertiary" color="neutral" onClick={zoomOut}>
         <Icon name="zoom_out" />
       </Button>
       <div className="zoom-control__value" role="button" onClick={resetView}>
         {Math.round(zoom * 100)}%
       </div>
-      <Button color="tertiary-text" onClick={zoomIn}>
+      <Button variant="tertiary" color="neutral" onClick={zoomIn}>
         <Icon name="zoom_in" />
       </Button>
     </div>

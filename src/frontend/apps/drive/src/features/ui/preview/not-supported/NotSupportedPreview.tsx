@@ -35,7 +35,7 @@ export const NotSupportedPreview = ({
 
       {onDownload && (
         <Button
-          color="tertiary"
+          variant="tertiary"
           className="file-preview-unsupported__download-button"
           icon={
             <Icon name="file_download" type={IconType.OUTLINED} size={16} />

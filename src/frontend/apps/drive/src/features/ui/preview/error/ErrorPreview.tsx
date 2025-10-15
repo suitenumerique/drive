@@ -31,7 +31,7 @@ export const ErrorPreview = ({ file }: ErrorPreviewProps) => {
       </div>
 
       <Button
-        color="tertiary"
+        variant="bordered"
         className="file-preview-error__download-button"
         icon={<Icon name="file_download" type={IconType.OUTLINED} size={16} />}
         onClick={handleDownload}

@@ -6,7 +6,7 @@
   width: 100%;
 
   &__time {
-    color: var(--c--theme--colors--greyscale-600);
+    color: var(--c--contextuals--content--semantic--neutral--secondary);
     font-size: 14px;
     font-weight: 500;
     min-width: 80px;
@@ -24,31 +24,50 @@
     -webkit-appearance: none;
     background: linear-gradient(
       to right,
-      var(--c--theme--colors--greyscale-600) 0%,
-      var(--c--theme--colors--greyscale-600) var(--progress-percentage, 0%),
-      #e9ecef var(--progress-percentage, 0%),
-      #e9ecef 100%
+      var(--c--contextuals--content--semantic--neutral--tertiary) 0%,
+      var(--c--contextuals--content--semantic--neutral--tertiary)
+        var(--progress-percentage, 100%),
+      color-mix(
+          in srgb,
+          var(--c--contextuals--content--semantic--neutral--tertiary) 25%,
+          transparent
+        )
+        var(--progress-percentage, 0%),
+      color-mix(
+          in srgb,
+          var(--c--contextuals--content--semantic--neutral--tertiary) 25%,
+          transparent
+        )
+        100%
     );
 
     &:hover {
       background: linear-gradient(
         to right,
-        var(--c--theme--colors--primary-800) 0%,
-        var(--c--theme--colors--primary-800) var(--progress-percentage, 0%),
-        #e9ecef var(--progress-percentage, 0%),
-        #e9ecef 100%
+        var(--c--contextuals--content--semantic--brand--primary) 0%,
+        var(--c--contextuals--content--semantic--brand--primary)
+          var(--progress-percentage, 100%),
+        color-mix(
+            in srgb,
+            var(--c--contextuals--content--semantic--neutral--tertiary) 25%,
+            transparent
+          )
+          var(--progress-percentage, 0%),
+        color-mix(
+            in srgb,
+            var(--c--contextuals--content--semantic--neutral--tertiary) 25%,
+            transparent
+          )
+          100%
       );
+
       &::-webkit-slider-thumb {
         transform: scale(1.8);
-        background: var(
-          --c--theme--colors--primary-800
-        ); // TODO: Replace with new ui-kit color
+        background: var(--c--contextuals--content--semantic--brand--primary);
       }
       &::-moz-range-thumb:hover {
         transform: scale(1.8);
-        background: var(
-          --c--theme--colors--primary-800
-        ); // TODO: Replace with new ui-kit color
+        background: var(--c--contextuals--content--semantic--brand--primary);
       }
     }
     &::-webkit-slider-thumb {
@@ -56,9 +75,7 @@
       -webkit-appearance: none;
       width: 8px;
       height: 8px;
-      background: var(
-        --c--theme--colors--greyscale-600
-      ); // TODO: Replace with new ui-kit color
+      background: var(--c--contextuals--content--semantic--neutral--tertiary);
       border-radius: 50%;
       cursor: pointer;
       transition: transform 0.2s ease;
@@ -70,9 +87,7 @@
       -webkit-appearance: none;
       width: 10px;
       height: 10px;
-      background: var(
-        --c--theme--colors--greyscale-600
-      ); // TODO: Replace with new ui-kit color
+      background: var(--c--contextuals--content--semantic--neutral--tertiary);
       border-radius: 50%;
       cursor: pointer;
       transition: transform 0.2s ease;

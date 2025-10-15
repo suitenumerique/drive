@@ -27,7 +27,8 @@ export const SuspiciousPreview = ({
 
       {handleDownload && (
         <Button
-          color="tertiary"
+          variant="secondary"
+          color="warning"
           className="file-preview-suspicious__download-button"
           icon={
             <Icon name="file_download" type={IconType.OUTLINED} size={16} />

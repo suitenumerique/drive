@@ -3,20 +3,10 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
 
-  &__btn {
-    background: transparent;
-    color: var(--c--theme--colors--greyscale-600);
-    padding: 8px;
-    min-width: 40px;
-    height: 40px;
-    border-radius: 6px !important;
-    transition: all 0.2s ease !important;
-
-    &:hover {
-      color: var(--c--theme--colors--greyscale-600);
-      background: var(--c--theme--colors--greyscale-100);
-      border-color: var(--c--theme--colors--greyscale-200);
-    }
-  }
+.controls-vertical-separator {
+  height: 24px;
+  width: 1px;
+  background-color: var(--c--contextuals--border--surface--primary);
 }
