@@ -8,6 +8,11 @@ from django.contrib.auth.hashers import make_password
 import factory.fuzzy
 from faker import Faker
 from faker.providers import file
+from lasuite.drf.models.choices import (
+    LinkReachChoices,
+    LinkRoleChoices,
+    RoleChoices,
+)
 
 from core import models
 
@@ -60,12 +65,8 @@ class ItemFactory(factory.django.DjangoModelFactory):
     title = factory.Sequence(lambda n: f"item{n}")
     creator = factory.SubFactory(UserFactory)
     deleted_at = None
-    link_reach = factory.fuzzy.FuzzyChoice(
-        [a[0] for a in models.LinkReachChoices.choices]
-    )
-    link_role = factory.fuzzy.FuzzyChoice(
-        [r[0] for r in models.LinkRoleChoices.choices]
-    )
+    link_reach = factory.fuzzy.FuzzyChoice([a[0] for a in LinkReachChoices.choices])
+    link_role = factory.fuzzy.FuzzyChoice([r[0] for r in LinkRoleChoices.choices])
     type = factory.fuzzy.FuzzyChoice([t[0] for t in models.ItemTypeChoices.choices])
     filename = factory.lazy_attribute(
         lambda o: fake.file_name() if o.type == models.ItemTypeChoices.FILE else None
@@ -131,7 +132,7 @@ class UserItemAccessFactory(factory.django.DjangoModelFactory):
 
     item = factory.SubFactory(ItemFactory)
     user = factory.SubFactory(UserFactory)
-    role = factory.fuzzy.FuzzyChoice([r[0] for r in models.RoleChoices.choices])
+    role = factory.fuzzy.FuzzyChoice([r[0] for r in RoleChoices.choices])
 
 
 class TeamItemAccessFactory(factory.django.DjangoModelFactory):
@@ -142,7 +143,7 @@ class TeamItemAccessFactory(factory.django.DjangoModelFactory):
 
     item = factory.SubFactory(ItemFactory)
     team = factory.Sequence(lambda n: f"team{n}")
-    role = factory.fuzzy.FuzzyChoice([r[0] for r in models.RoleChoices.choices])
+    role = factory.fuzzy.FuzzyChoice([r[0] for r in RoleChoices.choices])
 
 
 class InvitationFactory(factory.django.DjangoModelFactory):
@@ -153,5 +154,5 @@ class InvitationFactory(factory.django.DjangoModelFactory):
 
     email = factory.Faker("email")
     item = factory.SubFactory(ItemFactory)
-    role = factory.fuzzy.FuzzyChoice([role[0] for role in models.RoleChoices.choices])
+    role = factory.fuzzy.FuzzyChoice([role[0] for role in RoleChoices.choices])
     issuer = factory.SubFactory(UserFactory)

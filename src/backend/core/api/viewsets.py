@@ -26,6 +26,7 @@ from corsheaders.middleware import (
     ACCESS_CONTROL_ALLOW_METHODS,
     ACCESS_CONTROL_ALLOW_ORIGIN,
 )
+from lasuite.drf.models.choices import PRIVILEGED_ROLES, LinkReachChoices
 from lasuite.malware_detection import malware_detection
 from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
@@ -524,7 +525,7 @@ class ItemViewSet(
             db.Q(id__in=access_items_ids)
             | (
                 db.Q(id__in=traced_items_ids)
-                & ~db.Q(link_reach=models.LinkReachChoices.RESTRICTED)
+                & ~db.Q(link_reach=LinkReachChoices.RESTRICTED)
             )
         )
 
@@ -1441,11 +1442,11 @@ class InvitationViewset(
                 queryset.filter(
                     db.Q(
                         item__accesses__user=user,
-                        item__accesses__role__in=models.PRIVILEGED_ROLES,
+                        item__accesses__role__in=PRIVILEGED_ROLES,
                     )
                     | db.Q(
                         item__accesses__team__in=teams,
-                        item__accesses__role__in=models.PRIVILEGED_ROLES,
+                        item__accesses__role__in=PRIVILEGED_ROLES,
                     ),
                 )
                 # Abilities are computed based on logged-in user's role and
