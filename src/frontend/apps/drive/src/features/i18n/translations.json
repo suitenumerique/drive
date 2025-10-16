@@ -802,5 +802,404 @@
         }
       }
     }
+  },
+  "nl": {
+    "translation": {
+      "401": {
+        "title": "U moet ingelogd zijn om toegang te krijgen tot de documenten.",
+        "button": "Login"
+      },
+      "403": {
+        "title": "U beschikt niet over de benodigde rechten om deze pagina te openen.",
+        "button": "Home"
+      },
+      "file_download_modal": {
+        "error": {
+          "no_url_or_title": "Dit bestand heeft geen URL of titel."
+        },
+        "suspicious": {
+          "title": "Dit bestand is verdacht"
+        },
+        "file_too_large_to_analyze": {
+          "title": "Dit bestand is te groot om te worden gescand"
+        },
+        "analyzing": {
+          "title": "Dit bestand wordt nog steeds gescandd"
+        },
+        "description": "Weet u zeker dat u dit bestand wilt downloaden?",
+        "download": "Toch downloaden",
+        "cancel": "Annuleren"
+      },
+      "file_preview": {
+        "suspicious": {
+          "title": "Verdacht bestand",
+          "description": "Dit bestand ziet er verdacht uit. Het is alleen voor jou zichtbaar.",
+          "download": "Bestand downloaden"
+        },
+        "error": {
+          "title": "Er is een fout opgetreden tijdens het laden van het document.",
+          "description": "Probeer het later opnieuw."
+        },
+        "wopi": {
+          "loading": "Document laden...",
+          "error": "Er is een fout opgetreden tijdens het laden van het document."
+        },
+        "unsupported": {
+          "title": "Bestandstype niet ondersteund voor voorbeeld",
+          "description": "Om het bestand te bekijken, downloadt u het naar uw apparaat.",
+          "download": "Bestand downloaden"
+        }
+      },
+      "common": {
+        "cancel": "Annuleren"
+      },
+      "clipboard": {
+        "success": "Gekopieerd naar klembord",
+        "error": "Kopiëren naar klembord mislukt"
+      },
+      "app_title": "Drive",
+      "app_description": "Bestandsbeheer",
+      "welcome": "Welkom",
+      "logout": "Uitloggen",
+      "login": "Inloggen",
+      "my_account": "Mijn account",
+      "api": {
+        "error": {
+          "unexpected": "Er is een onverwachte fout opgetreden."
+        }
+      },
+      "home": {
+        "title": "Eenvoudig opslaan en delen",
+        "subtitle": "U krijgt toegang tot een alfaversie van de service, die intern is getest. Deze heeft een beperkte reikwijdte, weinig opslagruimte, kan bugs bevatten en heeft nog geen antivirusprogramma geïntegreerd. Uw feedback is essentieel om ons te helpen verbeteren.",
+        "main_button": "Doe mee aan de alfa",
+        "more": "Meer informatie"
+      },
+      "feedback": {
+        "button": "Geef feedback",
+        "modal": {
+          "title": "Nieuwe feedback",
+          "description": "Drive is in ontwikkeling: uw feedback telt! Kies hoe u uw ideeën wilt delen:",
+          "buttons": {
+            "form": {
+              "title": "Geef snel feedback",
+              "description": "30 seconden om ons te vertellen wat u ervan vindt of een bug te melden"
+            },
+            "tchap": {
+              "title": "Schrijf op Tchap",
+              "description": "Directe uitwisseling met ons team"
+            },
+            "visio": {
+              "title": "Praten op video",
+              "description": "20 min voor een diepgaand gesprek"
+            }
+          }
+        }
+      },
+      "feedback_widget": {
+        "shortTitle": "Feedback?",
+        "title": "Heeft u feedback?",
+        "placeholder": "Deel hier uw feedback...",
+        "email_placeholder": "Uw e-mailadres...",
+        "submit_text": "Feedback verzenden",
+        "success_text": "Bedankt voor uw feedback!",
+        "success_text2": "Indien u vragen heeft, nemen wij spoedig contact met u op."
+      },
+      "authentication": {
+        "error": {
+          "alpha": "Deze applicatie bevindt zich in de alfa-fase en de toegang ertoe is beperkt."
+        }
+      },
+      "mime": {
+        "calc": "Spreadsheet",
+        "doc": "Document",
+        "image": "Afbeelding",
+        "other": "overige",
+        "pdf": "PDF",
+        "powerpoint": "Presentatie",
+        "audio": "Audio",
+        "video": "Video",
+        "archive": "Archief"
+      },
+      "roles": {
+        "administrator": "Beheerder",
+        "editor": "Redacteur",
+        "reader": "Lezer",
+        "owner": "Eigenaar"
+      },
+      "explorer": {
+        "breadcrumbs": {
+          "spaces": "Werkruimten"
+        },
+        "modal": {
+          "move": {
+            "title": "Verplaatsen",
+            "move_button": "Hierheen verplaatsen",
+            "description_one_item": "Kies de nieuwe locatie voor <strong>{{name}}</strong>",
+            "description_multiple_items": "Kies de nieuwe locatie voor de <strong>{{count}}</strong> geselecteerde elementen"
+          }
+        },
+        "rightPanel": {
+          "suspicious": {
+            "text": "Dit bestand ziet er verdacht uit. Het is alleen voor jou zichtbaar."
+          },
+          "file_too_large_to_analyze": {
+            "text": "Dit bestand is te groot om te scannen. Het downloaden ervan is mogelijk onveilig."
+          },
+          "multipleSelection": {
+            "text": "Meerdere bestanden geselecteerd",
+            "alt": "Meerdere bestanden geselecteerde afbeelding"
+          },
+          "empty": {
+            "text": "Geen bestanden geselecteerd",
+            "alt": "Geen bestanden geselecteerd afbeelding"
+          },
+          "sharing": "Delen",
+          "share": "Deel",
+          "format": "Formaat",
+          "updated_at": "Bijgewerkt op",
+          "created_at": "Gecreeerd op",
+          "size": "Grootte",
+          "created_by": "Gecreeerd door",
+          "description": "Beschrijving"
+        },
+        "grid": {
+          "name": "Naam",
+          "last_update": "Laatste update",
+          "empty": {
+            "default": "Geen map gevonden in de geselecteerde map",
+            "caption": "Sleep uw bestanden hier heen",
+            "caption_no_create": "U heeft geen toestemming om bestanden toe te voegen",
+            "cta": "Of klik op \"Maak\"",
+            "cta_no_create": "Lezers kunnen geen bestanden toevoegen of mappen aanmaken"
+          },
+          "no_url": "Deze bron heeft geen URL",
+          "actions": {
+            "button_aria_label": "Meer acties voor {{name}}",
+            "info": "Info",
+            "share": "Deel",
+            "download": "Download",
+            "rename": "Hernoem",
+            "move": "Verplaats",
+            "duplicate": "Dupliceer",
+            "delete": "Verwijder",
+            "restore": "Herstel",
+            "hard_delete": "Verwijder permanent"
+          }
+        },
+        "filters": {
+          "scopes": {
+            "label": "Locatie",
+            "options": {
+              "all": "Drive",
+              "trash": "Prullenbak"
+            }
+          },
+          "type": {
+            "label": "Type",
+            "options": {
+              "all": "Alles",
+              "file": "Bestanden",
+              "folder": "Map",
+              "reset": "Reset"
+            }
+          },
+          "workspace": {
+            "label": "Werkruimte"
+          }
+        },
+        "tree": {
+          "trash": "Prullenbak",
+          "create": {
+            "label": "Creëeren",
+            "folder": "Nieuwe map",
+            "workspace": "Nieuwe werkruimte"
+          },
+          "import": {
+            "label": "Importeer",
+            "files": "Importeer bestanden",
+            "folders": "Importeer mappen"
+          },
+          "workspace": {
+            "options": {
+              "info": "Informatie",
+              "settings_workspace": "Werkruimte instellingen",
+              "settings_folder": "Map instellingen",
+              "delete_workspace": "Verwijder werkruimte",
+              "delete_folder": "Verwijder map",
+              "share": "Deel",
+              "share_view": "Bekijk delen"
+            },
+            "move": {
+              "confirmation_modal": {
+                "title": "Overdrachtsrechten",
+                "description": "U staat op het punt het element <strong>{{sourceItem}}</strong> naar de map <strong>{{targetItem}}</strong> te verplaatsen. Uw document zal de rechten van de doelmap overnemen.",
+                "description_multiple": "U staat op het punt om <strong>{{count}}</strong> elementen naar de map <strong>{{targetItem}}</strong> te verplaatsen. Uw documenten zullen de rechten van de doelmap overnemen.",
+                "confirm_button": "Verplaats toch",
+                "cancel_button": "Annuleren"
+              }
+            }
+          },
+          "createFolder": "Creëeren",
+          "search": "Zoeken",
+          "personalSpace": "Persoonlijke werkruimte",
+          "shared_space": "Gedeelte werkruimte",
+          "public_space": "Publieke werkruimte"
+        },
+        "trash": {
+          "title": "Prullenbak",
+          "description": "Automatisch verwijderen na 30 dagen",
+          "navigate": {
+            "modal": {
+              "title": "Deze map bevindt zich in de prullenbak",
+              "description": "Om deze map weer te geven, moet u deze eerst herstellen."
+            }
+          },
+          "hard_delete": {
+            "title": "Permanent verwijderen",
+            "content_one": "Weet u zeker dat u dit item definitief wilt verwijderen?",
+            "content_other": "Weet u zeker dat u deze {{count}} items definitief wilt verwijderen?",
+            "cancel": "Annuleren",
+            "confirm": "Verwijder permanent"
+          }
+        },
+        "search": {
+          "modal": {
+            "title": "Zoeken",
+            "description": "De zoekfunctie is in ontwikkeling en zal binnenkort beschikbaar zijn.",
+            "placeholder": "Typ een trefwoord of een bestandsnaam",
+            "results": "Selecteer een document",
+            "filters": {
+              "reset": "Herstellen"
+            }
+          }
+        },
+        "selectionBar": {
+          "caption_one": "1 item geselecteerd",
+          "caption_other": "{{count}} items geselecteerd",
+          "download": "Download",
+          "move": "Verplaats",
+          "delete": "Verwijder",
+          "reset_selection": "Herstel selectie"
+        },
+        "folders": {
+          "edit": {
+            "title": "Bewerk map",
+            "description": "Bewerk map informatie",
+            "cancel": "Annuleren",
+            "submit": "Bewerk"
+          },
+          "form": {
+            "title": "Map naam",
+            "description": "Beschrijving",
+            "cancel": "Annuleren",
+            "submit": "Bewerk"
+          }
+        },
+        "files": {
+          "not_found": {
+            "description": "Het bestand dat u zoekt bestaat niet."
+          }
+        },
+        "workspaces": {
+          "mainWorkspace": "Mijn Werkruimte",
+          "form": {
+            "title": "Werktuimte naam",
+            "description": "Beschrijving",
+            "settings": "Werkruimte intstellingen"
+          },
+          "create": {
+            "title": "Nieuwe werkruimte",
+            "description": "Met een werkruimte kunt u uw bestanden in een team organiseren.",
+            "cancel": "Annuleren",
+            "submit": "Werkruimte creëren"
+          },
+          "edit": {
+            "title": "Bewerk werkruimte",
+            "description": "Bewerk werktuimte informatie",
+            "cancel": "Annuleren",
+            "submit": "Bewerk"
+          }
+        },
+        "actions": {
+          "createFolder": {
+            "modal": {
+              "title": "Map maken",
+              "label": "Map naam",
+              "placeholder": "Voer mapnaam in",
+              "cancel": "Annuleren",
+              "submit": "Bewerken"
+            }
+          },
+          "upload": {
+            "toast": "Zet uw bestanden hier neer om ze over te zetten in {{title}}",
+            "toast_no_rights": "U beschikt niet over de benodigde rechten om bestanden over te dragen in {{title}}",
+            "folders": {
+              "description": "Creatie van mappen in progress..."
+            },
+            "files": {
+              "description_one": "{{count}} bestand wordt getransfereerd",
+              "description_other": "{{count}} bestanden wordt getransfereerd",
+              "description_done_one": "{{count}} bestand getransfereerd",
+              "description_done_other": "{{count}} bestanden getransfereerd"
+            }
+          },
+          "delete": {
+            "toast_one": "Item verwijderd",
+            "toast_other": "{{count}} items verwijderd",
+            "low_rights_toast": "U beschikt niet over de benodigde rechten om deze items te verwijderen.",
+            "toast_error_one": "Er is een fout opgetreden bij het verwijderen van het item.",
+            "toast_error_other": "Er is een fout opgetreden bij het verwijderen van de items."
+          },
+          "hard_delete": {
+            "toast_one": "Item permanent verwijderd",
+            "toast_other": "{{count}} items permanent verwijderd"
+          },
+          "move": {
+            "toast_one": "{{count}} item verplaatst",
+            "toast_other": "{{count}} items verplaatst"
+          },
+          "share": {
+            "modal": {
+              "title": "Deel werkruimte"
+            }
+          },
+          "rename": {
+            "modal": {
+              "title": "Hernoem",
+              "label": "Nieuwe naam",
+              "placeholder": "Voor een nieuwe naam in",
+              "cancel": "Annuleren",
+              "submit": "Hernoem"
+            }
+          }
+        }
+      },
+      "time": {
+        "years_ago_one": "{{count}} jaar geleden",
+        "years_ago_other": "{{count}} jaren geleden",
+        "months_ago_one": "{{count}} maand geleden",
+        "months_ago_other": "{{count}} maanden geleden",
+        "weeks_ago_one": "{{count}} week geleden",
+        "weeks_ago_other": "{{count}} weken geleden",
+        "days_ago_one": "{{count}} dag geleden",
+        "days_ago_other": "{{count}} dagen geleden",
+        "hours_ago_one": "{{count}} uur geleden",
+        "hours_ago_other": "{{count}} uren geleden",
+        "minutes_ago_one": "{{count}} minuut geleden",
+        "minutes_ago_other": "{{count}} minuten geleden",
+        "seconds_ago": "een paar seconden geleden"
+      },
+      "sdk": {
+        "explorer": {
+          "choose": "Kiezen",
+          "picker_label_zero": "Geen bestanden geselecteerd",
+          "picker_label_one": "{{count}} bestand geselecteerd",
+          "picker_label_other": "{{count}} bestanden geselecteerd",
+          "save_label": "CKies een bestemming voor het bestand",
+          "save": "bewaren",
+          "cannot_pick": "Je hebt geen toestemming om dit bestand te delen omdat je slechts een kijker bent."
+        }
+      }
+    }
   }
 }
