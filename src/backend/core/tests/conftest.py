@@ -130,3 +130,30 @@ def user_token():
     A fixture to create a user token for testing.
     """
     return build_authorization_bearer("some_token")
+
+
+@pytest.fixture(name="indexer_settings")
+def indexer_settings_fixture(settings):
+    """
+    Setup valid settings for the document indexer. Clear the indexer cache.
+    """
+
+    # pylint: disable-next=import-outside-toplevel
+    from core.services.search_indexers import (  # noqa: PLC0415
+        get_file_indexer,
+    )
+
+    get_file_indexer.cache_clear()
+
+    settings.SEARCH_INDEXER_CLASS = "core.services.search_indexers.SearchIndexer"
+    settings.SEARCH_INDEXER_SECRET = "ThisIsAKeyForTest"
+    settings.SEARCH_INDEXER_URL = "http://localhost:8081/api/v1.0/documents/index/"
+    settings.SEARCH_INDEXER_QUERY_URL = (
+        "http://localhost:8081/api/v1.0/documents/search/"
+    )
+    settings.SEARCH_INDEXER_ALLOWED_MIMETYPES = ("text/",)
+
+    yield settings
+
+    # clear cache to prevent issues with other tests
+    get_file_indexer.cache_clear()
