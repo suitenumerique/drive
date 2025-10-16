@@ -806,11 +806,11 @@
   "nl": {
     "translation": {
       "401": {
-        "title": "U moet ingelogd zijn om toegang te krijgen tot de documenten.",
+        "title": "U moet ingelogd zijn om toegang te krijgen tot de bestanden.",
         "button": "Login"
       },
       "403": {
-        "title": "U beschikt niet over de benodigde rechten om deze pagina te openen.",
+        "title": "U beschikt niet over de benodigde rechten om dit bestand te openen.",
         "button": "Home"
       },
       "file_download_modal": {
@@ -824,7 +824,7 @@
           "title": "Dit bestand is te groot om te worden gescand"
         },
         "analyzing": {
-          "title": "Dit bestand wordt nog steeds gescandd"
+          "title": "Dit bestand wordt nog steeds gescand"
         },
         "description": "Weet u zeker dat u dit bestand wilt downloaden?",
         "download": "Toch downloaden",
@@ -833,7 +833,7 @@
       "file_preview": {
         "suspicious": {
           "title": "Verdacht bestand",
-          "description": "Dit bestand ziet er verdacht uit. Het is alleen voor jou zichtbaar.",
+          "description": "Dit bestand is verdacht. Het is alleen voor jou zichtbaar.",
           "download": "Bestand downloaden"
         },
         "error": {
@@ -854,7 +854,7 @@
         "cancel": "Annuleren"
       },
       "clipboard": {
-        "success": "Gekopieerd naar klembord",
+        "success": "Gekopieërd naar klembord",
         "error": "Kopiëren naar klembord mislukt"
       },
       "app_title": "Drive",
@@ -889,7 +889,7 @@
               "description": "Directe uitwisseling met ons team"
             },
             "visio": {
-              "title": "Praten op video",
+              "title": "Praten op Videogesprek",
               "description": "20 min voor een diepgaand gesprek"
             }
           }
@@ -947,7 +947,7 @@
           },
           "multipleSelection": {
             "text": "Meerdere bestanden geselecteerd",
-            "alt": "Meerdere bestanden geselecteerde afbeelding"
+            "alt": "Meerdere bestanden geselecteerd afbeelding"
           },
           "empty": {
             "text": "Geen bestanden geselecteerd",
@@ -957,9 +957,9 @@
           "share": "Deel",
           "format": "Formaat",
           "updated_at": "Bijgewerkt op",
-          "created_at": "Gecreeerd op",
+          "created_at": "Gecreëerd op",
           "size": "Grootte",
-          "created_by": "Gecreeerd door",
+          "created_by": "Gecreëerd door",
           "description": "Beschrijving"
         },
         "grid": {
@@ -1031,7 +1031,7 @@
             },
             "move": {
               "confirmation_modal": {
-                "title": "Overdrachtsrechten",
+                "title": "Rechten overdragen",
                 "description": "U staat op het punt het element <strong>{{sourceItem}}</strong> naar de map <strong>{{targetItem}}</strong> te verplaatsen. Uw document zal de rechten van de doelmap overnemen.",
                 "description_multiple": "U staat op het punt om <strong>{{count}}</strong> elementen naar de map <strong>{{targetItem}}</strong> te verplaatsen. Uw documenten zullen de rechten van de doelmap overnemen.",
                 "confirm_button": "Verplaats toch",
@@ -1074,8 +1074,8 @@
           }
         },
         "selectionBar": {
-          "caption_one": "1 item geselecteerd",
-          "caption_other": "{{count}} items geselecteerd",
+          "caption_one": "1 element geselecteerd",
+          "caption_other": "{{count}} elementen geselecteerd",
           "download": "Download",
           "move": "Verplaats",
           "delete": "Verwijder",
@@ -1115,7 +1115,7 @@
           },
           "edit": {
             "title": "Bewerk werkruimte",
-            "description": "Bewerk werktuimte informatie",
+            "description": "Bewerk werkruimte informatie",
             "cancel": "Annuleren",
             "submit": "Bewerk"
           }
@@ -1137,10 +1137,10 @@
               "description": "Creatie van mappen in progress..."
             },
             "files": {
-              "description_one": "{{count}} bestand wordt getransfereerd",
-              "description_other": "{{count}} bestanden wordt getransfereerd",
-              "description_done_one": "{{count}} bestand getransfereerd",
-              "description_done_other": "{{count}} bestanden getransfereerd"
+              "description_one": "{{count}} bestand wordt verplaatst",
+              "description_other": "{{count}} bestanden wordt verplaatst",
+              "description_done_one": "{{count}} bestand verplaatst",
+              "description_done_other": "{{count}} bestanden verplaatst"
             }
           },
           "delete": {
@@ -1195,9 +1195,9 @@
           "picker_label_zero": "Geen bestanden geselecteerd",
           "picker_label_one": "{{count}} bestand geselecteerd",
           "picker_label_other": "{{count}} bestanden geselecteerd",
-          "save_label": "CKies een bestemming voor het bestand",
+          "save_label": "Kies een bestemming voor het bestand",
           "save": "bewaren",
-          "cannot_pick": "Je hebt geen toestemming om dit bestand te delen omdat je slechts een kijker bent."
+          "cannot_pick": "Je hebt geen toestemming om dit bestand te delen omdat je alleen lees-rechten hebt."
         }
       }
     }
