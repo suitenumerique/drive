@@ -72,6 +72,7 @@ export const LanguagePicker = () => {
   const languages = [
     { label: "Français", value: "fr-fr" },
     { label: "English", value: "en-us" },
+    { label: "Nederlands", value: "nl-nl" },
   ];
 
   // Make sure the language of the ui is in the same language as the user.
