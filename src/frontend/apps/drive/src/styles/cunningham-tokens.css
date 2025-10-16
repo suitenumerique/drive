@@ -212,6 +212,7 @@
 	--c--components--button--tertiary-text--background--color-hover: var(--c--theme--colors--greyscale-100);
 	--c--components--button--tertiary-text--color-hover: var(--c--theme--colors--primary-text);
 	--c--components--button--tertiary-text--color: var(--c--theme--colors--primary-600);
+	--c--components--button--tertiary-text--disabled: var(--c--theme--colors--primary-300);
 	--c--components--button--danger--color-hover: white;
 	--c--components--button--danger--background--color: var(--c--theme--colors--danger-600);
 	--c--components--button--danger--background--color-hover: #FF2725;

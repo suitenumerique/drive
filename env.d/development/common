@@ -64,3 +64,4 @@ WOPI_CLIENTS="collabora,onlyoffice"
 WOPI_COLLABORA_DISCOVERY_URL="http://collabora:9980/hosting/discovery"
 WOPI_ONLYOFFICE_DISCOVERY_URL=http://onlyoffice/hosting/discovery
 WOPI_SRC_BASE_URL=http://app-dev:8000
+MAX_PAGE_SIZE=20
