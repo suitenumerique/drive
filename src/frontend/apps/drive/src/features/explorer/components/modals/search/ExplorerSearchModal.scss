@@ -1,6 +1,6 @@
 @use "sass:map";
 @use "@/styles/cunningham-tokens-sass" as *;
-$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+$tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 
 .explorer__search__modal {
   &__empty {
@@ -33,7 +33,7 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
       font-size: 14px;
       font-style: normal;
       font-weight: 700;
-      color: var(--c--theme--colors--greyscale-800);
+      color: red;
       margin-bottom: 8px;
     }
   }
@@ -49,11 +49,10 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     outline: none;
     border: none;
     text-align: left;
-    font-family: var(--c--theme--fonts--base);
+    font-family: var(--c--globals--font--families--base);
 
-    &:hover,
-    &:focus {
-      background-color: var(--c--theme--colors--greyscale-100);
+    &__right-icon {
+      color: var(--c--contextuals--content--semantic--brand--secondary);
     }
 
     &__content {
@@ -67,14 +66,14 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
         font-size: 14px;
         font-weight: 700;
         line-height: 16px;
-        color: var(--c--theme--colors--greyscale-800);
+        color: var(--c--contextuals--content--semantic--neutral--primary);
       }
 
       &__ancestors {
         font-size: 12px;
         font-style: normal;
         font-weight: 400;
-        color: var(--c--theme--colors--greyscale-600);
+        color: var(--c--contextuals--content--semantic--neutral--tertiary);
         line-height: 12px;
       }
     }

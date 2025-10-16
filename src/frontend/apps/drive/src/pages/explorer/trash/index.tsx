@@ -103,14 +103,14 @@ export const TrashPageSelectionBarActions = () => {
       <Button
         onClick={handleRestore}
         icon={<img src={undoIcon.src} alt="" width={16} height={16} />}
-        color="primary-text"
+        variant="tertiary"
         size="small"
         aria-label={t("explorer.grid.actions.restore")}
       />
       <Button
         onClick={() => hardDeleteConfirmationModal.open()}
         icon={<img src={cancelIcon.src} alt="" width={16} height={16} />}
-        color="primary-text"
+        variant="tertiary"
         size="small"
         aria-label={t("explorer.grid.actions.hard_delete")}
       />

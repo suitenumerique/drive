@@ -1,24 +1,9 @@
 @use "sass:map";
 @use "@/styles/cunningham-tokens-sass" as *;
 
-$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+$tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 
 .c__feedback {
-  &__button {
-    color: var(--c--theme--colors--info-600);
-    background-color: var(--c--theme--colors--info-100);
-
-    &:hover {
-      color: var(--c--theme--colors--info-600);
-      background-color: var(--c--theme--colors--info-200);
-    }
-
-    &:active {
-      color: var(--c--theme--colors--info-800);
-      background-color: var(--c--theme--colors--info-200);
-    }
-  }
-
   &__footer {
     position: fixed;
     bottom: 0;
@@ -28,8 +13,9 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
     justify-content: center;
     align-items: center;
     padding: 8px;
-    background-color: white;
-    border-top: 1px solid var(--c--theme--colors--greyscale-200);
+    background-color: var(--c--contextuals--background--surface--tertiary);
+    border-top: 1px solid
+      var(--c--contextuals--border--semantic--neutral--tertiary);
     display: none;
 
     @media (max-width: $tablet) {
@@ -48,8 +34,9 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
       display: flex;
       padding: 20px;
       border-radius: 4px;
-      border: 1px solid var(--c--theme--colors--greyscale-100);
-      color: var(--c--theme--colors--greyscale-600);
+      border: 1px solid
+        var(--c--contextuals--border--semantic--neutral--tertiary);
+      color: var(--c--contextuals--content--semantic--neutral--secondary);
       gap: 20px;
       text-decoration: none;
       align-items: center;
@@ -65,9 +52,11 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
       }
 
       &:hover {
-        border-color: #b6d7fb;
-        background-color: #e7f2fd;
-        color: var(--c--theme--colors--info-600);
+        border-color: var(--c--contextuals--border--semantic--info--tertiary);
+        background-color: var(
+          --c--contextuals--background--semantic--info--tertiary
+        );
+        color: var(--c--contextuals--content--semantic--info--secondary);
       }
     }
   }
@@ -77,7 +66,10 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
  * This is made to avoid having the feedback footer to hide the content.
  * To remove when the feedback footer is removed.
  */
-.drive__home--feedback,
-.c__main-layout__content__center__children {
-  padding-bottom: 57px;
+
+@media (max-width: $tablet) {
+  .drive__home--feedback,
+  .c__main-layout__content__center__children {
+    padding-bottom: 57px;
+  }
 }

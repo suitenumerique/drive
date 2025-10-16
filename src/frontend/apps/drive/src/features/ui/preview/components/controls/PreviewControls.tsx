@@ -60,20 +60,23 @@ export const PreviewControls = ({
   return (
     <div className="suite-preview-controls">
       <Button
-        color="tertiary-text"
+        variant="tertiary"
+        color="neutral"
         onClick={togglePlay}
         className="suite-preview-controls__btn"
         icon={<Icon name={isPlaying ? "pause" : "play_arrow"} />}
       />
       <VerticalSeparator />
       <Button
-        color="tertiary-text"
+        variant="tertiary"
+        color="neutral"
         onClick={rewind10Seconds}
         className="suite-preview-controls__btn"
         icon={<Icon name={"replay_10"} />}
       />
       <Button
-        color="tertiary-text"
+        variant="tertiary"
+        color="neutral"
         onClick={forward10Seconds}
         className="suite-preview-controls__btn"
         icon={<Icon name={"forward_10"} />}
@@ -92,7 +95,8 @@ export const PreviewControls = ({
           <VerticalSeparator />
 
           <Button
-            color="tertiary-text"
+            variant="tertiary"
+            color="neutral"
             onClick={toggleFullscreen}
             className="suite-preview-controls__btn"
             icon={

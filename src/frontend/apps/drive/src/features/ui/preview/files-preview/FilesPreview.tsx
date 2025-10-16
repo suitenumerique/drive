@@ -166,7 +166,7 @@ export const FilePreview = ({
               <div className="file-preview-header__content-left">
                 {!hideCloseButton && (
                   <Button
-                    color="tertiary-text"
+                    variant="tertiary"
                     size="small"
                     onClick={onClose}
                     icon={<Icon name="close" />}
@@ -194,7 +194,7 @@ export const FilePreview = ({
                 {headerRightContent}
                 {handleDownloadFile && (
                   <Button
-                    color="tertiary-text"
+                    variant="tertiary"
                     onClick={handleDownload}
                     icon={
                       <Icon type={IconType.OUTLINED} name={"file_download"} />
@@ -203,7 +203,7 @@ export const FilePreview = ({
                 )}
 
                 <Button
-                  color="tertiary-text"
+                  variant="tertiary"
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                   icon={<Icon name={"info_outline"} />}
                 />
@@ -241,7 +241,7 @@ export const FilePreviewNav: React.FC<FilePreviewNavProps> = ({
   return (
     <div className="file-preview-nav" data-testid="file-preview-nav">
       <Button
-        color="tertiary-text"
+        variant="tertiary"
         onClick={onPrevious}
         disabled={currentIndex === 0}
         icon={<Icon name="arrow_back" />}
@@ -250,7 +250,7 @@ export const FilePreviewNav: React.FC<FilePreviewNavProps> = ({
         {currentIndex + 1} / {totalFiles}
       </span>
       <Button
-        color="tertiary-text"
+        variant="tertiary"
         onClick={onNext}
         disabled={currentIndex === totalFiles - 1}
         icon={<Icon name="arrow_forward" />}

@@ -39,7 +39,7 @@ export const ExplorerRightPanelContent = ({
         <div className="explorer__right-panel__multiple-selection__close">
           <Button
             size="small"
-            color="primary-text"
+            variant="tertiary"
             icon={<span className="material-icons">close</span>}
             onClick={() => setRightPanelOpen(false)}
           />
@@ -48,7 +48,7 @@ export const ExplorerRightPanelContent = ({
           src={emptySelection.src}
           alt={t("explorer.rightPanel.empty.alt")}
         />
-        <div className="explorer__right-panel__empty__text">
+        <div className="explorer__right-panel__empty-selection__text">
           {t("explorer.rightPanel.empty.text")}
         </div>
       </div>
@@ -61,7 +61,7 @@ export const ExplorerRightPanelContent = ({
         <div className="explorer__right-panel__multiple-selection__close">
           <Button
             size="small"
-            color="primary-text"
+            variant="tertiary"
             icon={<span className="material-icons">close</span>}
             onClick={() => setRightPanelOpen(false)}
           />
@@ -82,7 +82,7 @@ export const ExplorerRightPanelContent = ({
             <div className="explorer__right-panel__item-title__close">
               <Button
                 size="small"
-                color="primary-text"
+                variant="tertiary"
                 icon={<span className="material-icons">close</span>}
                 onClick={() => setRightPanelOpen(false)}
               />
@@ -117,14 +117,14 @@ export const ExplorerRightPanelContent = ({
                 firstSelectedItem?.nb_accesses &&
                 firstSelectedItem?.nb_accesses > 1 ? (
                   <Button
-                    color="tertiary"
+                    variant="secondary"
                     icon={<span className="material-icons">group</span>}
                     onClick={shareModal.open}
                   >
                     {firstSelectedItem?.nb_accesses}
                   </Button>
                 ) : (
-                  <Button color="primary-text" onClick={shareModal.open}>
+                  <Button variant="tertiary" onClick={shareModal.open}>
                     {t("explorer.rightPanel.share")}
                   </Button>
                 )

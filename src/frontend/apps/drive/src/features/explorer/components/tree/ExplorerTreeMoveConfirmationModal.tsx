@@ -33,10 +33,10 @@ export const ExplorerTreeMoveConfirmationModal = ({
       size={ModalSize.MEDIUM}
       rightActions={
         <>
-          <Button color="secondary" onClick={onClose}>
+          <Button variant="bordered" onClick={onClose}>
             {t("explorer.tree.workspace.move.confirmation_modal.cancel_button")}
           </Button>
-          <Button color="danger" onClick={onMove}>
+          <Button color="error" onClick={onMove}>
             {t(
               "explorer.tree.workspace.move.confirmation_modal.confirm_button"
             )}

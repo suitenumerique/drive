@@ -1,6 +1,6 @@
 .item-info {
   display: flex;
   flex-direction: column;
-  gap: var(--c--theme--spacings--xs, 0.5rem);
-  padding: var(--c--theme--spacings--base, 1rem);
+  gap: var(--c--globals--spacings--xs, 0.5rem);
+  padding: var(--c--globals--spacings--base, 1rem);
 }

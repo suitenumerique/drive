@@ -1,6 +1,7 @@
 import { TreeItem } from "@/features/drivers/types";
 import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import { useRouter } from "next/router";
+import { useGlobalExplorer } from "../../GlobalExplorerContext";
 
 type ExplorerTreeNavItemProps = {
   icon: React.ReactNode;
@@ -13,6 +14,7 @@ export const ExplorerTreeNavItem = ({
   label,
   route,
 }: ExplorerTreeNavItemProps) => {
+  const { setIsLeftPanelOpen } = useGlobalExplorer();
   const treeContext = useTreeContext<TreeItem>();
   const router = useRouter();
   const isActive = router.pathname === route;
@@ -20,6 +22,7 @@ export const ExplorerTreeNavItem = ({
   const handleClick = () => {
     router.push(route);
     treeContext?.treeData?.setSelectedNode(undefined);
+    setIsLeftPanelOpen(false);
   };
 
   return (

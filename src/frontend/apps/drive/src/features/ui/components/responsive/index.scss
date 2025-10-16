@@ -1,7 +1,7 @@
 @use "sass:map";
 @use "@/styles/cunningham-tokens-sass" as *;
 
-$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+$tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 
 #responsive-tablet {
   display: none;

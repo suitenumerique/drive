@@ -60,7 +60,7 @@ export const ExplorerRenameItemModal = (
       title={t("explorer.actions.rename.modal.title")}
       rightActions={
         <>
-          <Button color="secondary" onClick={props.onClose}>
+          <Button variant="bordered" onClick={props.onClose}>
             {t("explorer.actions.rename.modal.cancel")}
           </Button>
           <Button type="submit" form="rename-item-form">

@@ -52,7 +52,7 @@ export const VolumeBar = ({
   return (
     <div className="suite-volume-bar">
       <Button
-        color="tertiary-text"
+        variant="tertiary"
         onClick={toggleMute}
         className="suite-volume-bar__btn-mute"
         icon={<Icon name={getVolumeIcon()} />}

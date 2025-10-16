@@ -1,4 +1,4 @@
-import { Icon } from "@gouvfr-lasuite/ui-kit";
+import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
 import {
   Button,
   ButtonProps,
@@ -79,14 +79,16 @@ export const Feedback = (props: { buttonProps?: Partial<ButtonProps> }) => {
   return (
     <>
       <Button
-        color="tertiary"
-        icon={<Icon name="info" />}
+        icon={<Icon name="feedback" type={IconType.OUTLINED} />}
+        color="info"
         className="c__feedback__button"
+        variant="secondary"
         onClick={onClick}
         {...props.buttonProps}
       >
         {t("feedback.button")}
       </Button>
+
       <Modal
         {...modal}
         title={t("feedback.modal.title")}

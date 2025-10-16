@@ -7,7 +7,11 @@ import {
 } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
 
-import { QuickSearch, QuickSearchGroup } from "@gouvfr-lasuite/ui-kit";
+import {
+  QuickSearch,
+  QuickSearchGroup,
+  QuickSearchItemTemplate,
+} from "@gouvfr-lasuite/ui-kit";
 import { useEffect, useRef, useState } from "react";
 import { Item, ItemType } from "@/features/drivers/types";
 import { getDriver } from "@/features/config/Config";
@@ -147,7 +151,7 @@ export const ExplorerSearchModal = (
             <div>
               {Object.keys(filters).length > 0 && (
                 <Button
-                  color="primary-text"
+                  variant="tertiary"
                   size="small"
                   onClick={() => setFilters({})}
                 >
@@ -159,14 +163,11 @@ export const ExplorerSearchModal = (
           {items.length > 0 && (
             <div className="explorer__search__modal__items__container">
               <div className="explorer__search__modal__items">
-                <div className="explorer__search__modal__items__title">
-                  {t("explorer.search.modal.results")}
-                </div>
                 <QuickSearchGroup
                   onSelect={onItemClick}
                   renderElement={(element) => <SearchItem item={element} />}
                   group={{
-                    groupName: "",
+                    groupName: t("explorer.search.modal.results"),
                     elements: items,
                   }}
                 />
@@ -184,24 +185,36 @@ const SearchItem = ({ item }: { item: Item }) => {
   const shouldShowAncestors =
     (item.parents && item.parents.length > 0) || item.deleted_at;
   return (
-    <div className="explorer__search__modal__item" data-testid="search-item">
-      <div className="explorer__search__modal__item__icon">
-        <ItemIcon item={item} />
-      </div>
-      <div className="explorer__search__modal__item__content">
-        <div className="explorer__search__modal__item__content__title">
-          {getItemTitle(item)}
-        </div>
-        {shouldShowAncestors && (
-          <div className="explorer__search__modal__item__content__ancestors">
-            {item.deleted_at
-              ? t("explorer.tree.trash")
-              : item.parents
-                  ?.map((ancestor) => getItemTitle(ancestor))
-                  .join(" / ")}
+    <QuickSearchItemTemplate
+      right={
+        <span className="material-icons explorer__search__modal__item__right-icon">
+          keyboard_return
+        </span>
+      }
+      left={
+        <div
+          className="explorer__search__modal__item"
+          data-testid="search-item"
+        >
+          <div className="explorer__search__modal__item__icon">
+            <ItemIcon item={item} />
           </div>
-        )}
-      </div>
-    </div>
+          <div className="explorer__search__modal__item__content">
+            <div className="explorer__search__modal__item__content__title">
+              {getItemTitle(item)}
+            </div>
+            {shouldShowAncestors && (
+              <div className="explorer__search__modal__item__content__ancestors">
+                {item.deleted_at
+                  ? t("explorer.tree.trash")
+                  : item.parents
+                      ?.map((ancestor) => getItemTitle(ancestor))
+                      .join(" / ")}
+              </div>
+            )}
+          </div>
+        </div>
+      }
+    />
   );
 };

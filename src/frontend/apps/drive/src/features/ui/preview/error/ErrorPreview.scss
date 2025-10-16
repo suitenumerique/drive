@@ -3,11 +3,11 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--c--theme--spacings--sm);
+  gap: var(--c--globals--spacings--sm);
   height: 100%;
 
   &__title {
-    color: var(--c--theme--colors--danger-600);
+    color: var(--c--contextuals--content--semantic--error--primary);
     text-align: center;
     font-size: 16px;
     font-style: normal;
@@ -16,7 +16,7 @@
   }
 
   &__description {
-    color: var(--c--theme--colors--greyscale-600);
+    color: var(--c--contextuals--content--semantic--neutral--secondary);
     text-align: center;
     font-size: 12px;
     font-style: normal;
@@ -25,6 +25,6 @@
   }
 
   &__download-button {
-    margin-top: var(--c--theme--spacings--xs);
+    margin-top: var(--c--globals--spacings--xs);
   }
 }
