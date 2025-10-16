@@ -860,6 +860,7 @@ class Development(Base):
             "drf_spectacular_sidecar",
             "debug_toolbar",
             "e2e",
+            "demo",
         ]
 
 
@@ -880,7 +881,7 @@ class Test(Base):
 
     def __init__(self):
         # pylint: disable=invalid-name
-        self.INSTALLED_APPS += ["drf_spectacular_sidecar", "e2e"]
+        self.INSTALLED_APPS += ["drf_spectacular_sidecar", "e2e", "demo"]
 
 
 class ContinuousIntegration(Test):
