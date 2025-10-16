@@ -8,15 +8,16 @@ and this project adheres to
 
 ## [Unreleased]
 
-### Fixed
-
-- 🐛(wopi) force updated_at udpate in the viewset
-
 ### Added
 
 - ✨(front) add disclaimer when close tab during upload
 - ✨(front) add creating folder upload step
 - ✨(front) update to ui-kit v2
+- 🌐 add dutch translation
+
+### Fixed
+
+- 🐛(wopi) force updated_at udpate in the viewset
 
 ### Fix
 

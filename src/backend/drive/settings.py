@@ -205,6 +205,7 @@ class Base(Configuration):
             ("en-us", _("English")),
             ("fr-fr", _("French")),
             ("de-de", _("German")),
+            ("nl-nl", _("Dutch")),
         )
     )
 

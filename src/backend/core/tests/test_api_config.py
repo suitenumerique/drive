@@ -59,7 +59,12 @@ def test_api_config(is_authenticated):
         "FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL": "test",
         "FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH": "https://test.com",
         "FRONTEND_HIDE_GAUFRE": True,
-        "LANGUAGES": [["en-us", "English"], ["fr-fr", "French"], ["de-de", "German"]],
+        "LANGUAGES": [
+            ["en-us", "English"],
+            ["fr-fr", "French"],
+            ["de-de", "German"],
+            ["nl-nl", "Dutch"],
+        ],
         "LANGUAGE_CODE": "en-us",
         "MEDIA_BASE_URL": "http://testserver/",
         "POSTHOG_KEY": "132456",
