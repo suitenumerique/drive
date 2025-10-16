@@ -100,6 +100,38 @@ class Base(Configuration):
     }
     DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
+    # Search
+    SEARCH_INDEXER_CLASS = values.Value(
+        default=None,
+        environ_name="SEARCH_INDEXER_CLASS",
+        environ_prefix=None,
+    )
+    SEARCH_INDEXER_BATCH_SIZE = values.IntegerValue(
+        default=100_000, environ_name="SEARCH_INDEXER_BATCH_SIZE", environ_prefix=None
+    )
+    SEARCH_INDEXER_URL = values.Value(
+        default=None, environ_name="SEARCH_INDEXER_URL", environ_prefix=None
+    )
+    SEARCH_INDEXER_COUNTDOWN = values.IntegerValue(
+        default=1, environ_name="SEARCH_INDEXER_COUNTDOWN", environ_prefix=None
+    )
+    SEARCH_INDEXER_SECRET = values.Value(
+        default=None, environ_name="SEARCH_INDEXER_SECRET", environ_prefix=None
+    )
+    SEARCH_INDEXER_QUERY_URL = values.Value(
+        default=None, environ_name="SEARCH_INDEXER_QUERY_URL", environ_prefix=None
+    )
+    SEARCH_INDEXER_UPLOAD_MAX_SIZE = values.PositiveIntegerValue(
+        2 * (2**20),  # 2MB
+        environ_name="SEARCH_INDEXER_UPLOAD_MAX_SIZE",
+        environ_prefix=None,
+    )
+    SEARCH_INDEXER_ALLOWED_MIMETYPES = values.ListValue(
+        ["text/"],
+        environ_name="SEARCH_INDEXER_ALLOWED_MIMETYPES",
+        environ_prefix=None,
+    )
+
     # Static files (CSS, JavaScript, Images)
     STATIC_URL = "/static/"
     STATIC_ROOT = os.path.join(DATA_DIR, "static")
