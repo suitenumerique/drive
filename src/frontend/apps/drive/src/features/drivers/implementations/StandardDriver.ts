@@ -92,7 +92,7 @@ export class StandardDriver extends Driver {
 
   async getChildren(id: string, filters?: ItemFilters): Promise<Item[]> {
     const params = {
-      page_size: "100000",
+      page_size: filters?.page_size || "100000",
       ordering: "-type,-created_at",
       ...(filters ? filters : {}),
     };

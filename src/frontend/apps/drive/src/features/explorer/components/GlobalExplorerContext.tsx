@@ -40,6 +40,7 @@ import {
   FilePreviewType,
 } from "@/features/ui/preview/files-preview/FilesPreview";
 import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
+import { useAuth } from "@/features/auth/Auth";
 
 export interface GlobalExplorerContextType {
   displayMode: "sdk" | "app";
@@ -117,6 +118,7 @@ export const GlobalExplorerProvider = ({
   onNavigate,
 }: ExplorerProviderProps) => {
   const driver = getDriver();
+  const { user } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedItems, setSelectedItems] = useState<Item[]>([]);
@@ -161,8 +163,12 @@ export const GlobalExplorerProvider = ({
   const { data: firstLevelItems } = useFirstLevelItems();
 
   const mainWorkspace = useMemo(() => {
+    if (user && user.main_workspace) {
+      return user.main_workspace;
+    }
+
     return firstLevelItems?.find((item) => item.main_workspace);
-  }, [firstLevelItems]);
+  }, [firstLevelItems, user]);
 
   useEffect(() => {
     // If we open the right panel and we have a selection, we need to clear it.
@@ -290,6 +296,7 @@ const TreeProviderInitializer = ({
   children: React.ReactNode;
 }) => {
   const { firstLevelItems, setTreeIsInitialized } = useGlobalExplorer();
+  const { user } = useAuth();
   const { t } = useTranslation();
 
   const treeContext = useTreeContext<TreeItem>();
@@ -310,7 +317,10 @@ const TreeProviderInitializer = ({
       });
     };
 
-    const mainWorkspaces = getWorkspacesByType(WorkspaceType.MAIN);
+    const mainWorkspaces =
+      user && user.main_workspace
+        ? itemsToTreeItems([user.main_workspace])
+        : getWorkspacesByType(WorkspaceType.MAIN);
 
     // Arriving on a public workspace, we don't have any main workspace.
     if (mainWorkspaces.length > 0) {
