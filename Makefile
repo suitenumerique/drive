@@ -177,6 +177,15 @@ stop: ## stop the development server using Docker
 
 # -- Backend
 
+demo: ## flush db then create a demo for load testing purpose
+	@$(MAKE) resetdb
+	@$(MANAGE) create_demo
+.PHONY: demo
+
+index: ## index all files to remote search
+	@$(MANAGE) index
+.PHONY: index
+
 # Nota bene: Black should come after isort just in case they don't agree...
 lint: ## lint back-end python sources
 lint: \
