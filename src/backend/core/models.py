@@ -29,6 +29,11 @@ from django.utils.translation import gettext_lazy as _
 
 from django_ltree.managers import TreeManager, TreeQuerySet
 from django_ltree.models import TreeModel
+from lasuite.drf.models.choices import (
+    LinkReachChoices,
+    LinkRoleChoices,
+    RoleChoices,
+)
 from timezone_field import TimeZoneField
 
 from core.utils.item_title import manage_unique_title as manage_unique_title_utils
@@ -48,39 +53,6 @@ def get_trashbin_cutoff():
         datetime: The cutoff datetime for soft-deleted items.
     """
     return timezone.now() - timedelta(days=settings.TRASHBIN_CUTOFF_DAYS)
-
-
-class LinkRoleChoices(models.TextChoices):
-    """Defines the possible roles a link can offer on a item."""
-
-    READER = "reader", _("Reader")  # Can read
-    EDITOR = "editor", _("Editor")  # Can read and edit
-
-
-class RoleChoices(models.TextChoices):
-    """Defines the possible roles a user can have in a resource."""
-
-    READER = "reader", _("Reader")  # Can read
-    EDITOR = "editor", _("Editor")  # Can read and edit
-    ADMIN = "administrator", _("Administrator")  # Can read, edit, delete and share
-    OWNER = "owner", _("Owner")
-
-
-PRIVILEGED_ROLES = [RoleChoices.ADMIN, RoleChoices.OWNER]
-
-
-class LinkReachChoices(models.TextChoices):
-    """Defines types of access for links"""
-
-    RESTRICTED = (
-        "restricted",
-        _("Restricted"),
-    )  # Only users with a specific access can read/edit the item
-    AUTHENTICATED = (
-        "authenticated",
-        _("Authenticated"),
-    )  # Any authenticated user can access the item
-    PUBLIC = "public", _("Public")  # Even anonymous users can access the item
 
 
 class ItemTypeChoices(models.TextChoices):
