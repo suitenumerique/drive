@@ -1,7 +1,6 @@
 @use "sass:map";
 @use "@/styles/cunningham-tokens-sass" as *;
-
-$tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
+$tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 
 :root {
   --header-height: 52px;
@@ -114,7 +113,7 @@ $tablet: map.get($themes, "default", "theme", "breakpoints", "tablet");
 .drive__header__logo {
   background-image: var(--c--components--logo--src);
   width: 142px;
-  height: 32px;
+  height: 40px;
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
