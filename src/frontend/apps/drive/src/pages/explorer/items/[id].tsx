@@ -5,11 +5,11 @@ import { getGlobalExplorerLayout } from "@/features/layouts/components/explorer/
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import { useState } from "react";
-
 export default function ItemPage() {
   const router = useRouter();
   const itemId = router.query.id as string;
   const [filters, setFilters] = useState<ItemFilters>({});
+
   const { data: itemChildren } = useQuery({
     queryKey: [
       "items",

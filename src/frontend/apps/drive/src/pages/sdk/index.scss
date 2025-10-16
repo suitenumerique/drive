@@ -6,7 +6,7 @@
 }
 
 .sdk__explorer {
-  padding: 0 var(--c--theme--spacings--md);
+  padding: 0 var(--c--globals--spacings--md);
   flex-grow: 1;
   display: flex;
 
@@ -31,10 +31,10 @@
   height: 50px;
   display: flex;
   align-items: center;
-  padding: var(--c--theme--spacings--base) var(--c--theme--spacings--base) 0
-    var(--c--theme--spacings--base);
+  padding: var(--c--globals--spacings--base) var(--c--globals--spacings--base) 0
+    var(--c--globals--spacings--base);
   font-size: 14px;
-  color: var(--c--theme--colors--greyscale-600);
+  color: var(--c--contextuals--content--semantic--neutral--secondary);
 }
 
 .sdk__explorer__footer {
@@ -52,7 +52,7 @@
 
   &__caption {
     font-size: 14px;
-    color: var(--c--theme--colors--greyscale-600);
+    color: var(--c--contextuals--content--semantic--neutral--secondary);
   }
 
   &__actions {
