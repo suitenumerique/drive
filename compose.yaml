@@ -120,6 +120,9 @@ services:
     depends_on:
       - keycloak
       - app-dev
+    networks:
+      - lasuite
+      - default
 
   frontend-dev:
     user: "${DOCKER_USER:-1000}"
@@ -193,6 +196,9 @@ services:
       - "8080:8080"
     depends_on:
       - kc_postgresql
+    networks:
+      - lasuite
+      - default
 
   collabora:
     image: collabora/code:latest
@@ -228,3 +234,9 @@ services:
       - ./docker/onlyoffice/local-development.json:/etc/onlyoffice/documentserver/local-production-linux.json
       # Enable debug
       - ./docker/onlyoffice/log4js/production.json:/etc/onlyoffice/documentserver/log4js/production.json
+
+networks:
+  default: {}
+  lasuite:
+    name: lasuite-network
+    external: true
