@@ -140,7 +140,7 @@ class Pagination(drf.pagination.PageNumberPagination):
     """Pagination to display no more than 100 objects per page sorted by creation date."""
 
     ordering = "-created_on"
-    max_page_size = 200
+    max_page_size = settings.MAX_PAGE_SIZE
     page_size_query_param = "page_size"
 
 
@@ -157,13 +157,17 @@ class UserListThrottleSustained(UserRateThrottle):
 
 
 class UserViewSet(
-    drf.mixins.UpdateModelMixin, viewsets.GenericViewSet, drf.mixins.ListModelMixin
+    SerializerPerActionMixin,
+    drf.mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+    drf.mixins.ListModelMixin,
 ):
     """User ViewSet"""
 
     permission_classes = [permissions.IsSelf]
     queryset = models.User.objects.all().filter(is_active=True)
     serializer_class = serializers.UserSerializer
+    get_me_serializer_class = serializers.UserMeSerializer
     pagination_class = None
     throttle_classes = []
 
@@ -226,7 +230,7 @@ class UserViewSet(
         """
         context = {"request": request}
         return drf.response.Response(
-            self.serializer_class(request.user, context=context).data
+            self.get_serializer(request.user, context=context).data
         )
 
 
@@ -606,6 +610,9 @@ class ItemViewSet(
             queryset = filterset.filters[field].filter(queryset, filter_data[field])
 
         queryset = self.annotate_user_roles(queryset)
+
+        # Remove main workspace from the items list. It is presented in the user /me endpoint.
+        queryset = queryset.filter(main_workspace=False)
 
         # Among the results, we may have items that are ancestors/descendants
         # of each other. In this case we want to keep only the highest ancestors.
