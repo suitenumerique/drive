@@ -17,6 +17,7 @@ from django.db import models as db
 from django.db import transaction
 from django.db.models.expressions import RawSQL
 from django.urls import reverse
+from django.utils.decorators import method_decorator
 from django.utils.text import slugify
 
 import magic
@@ -27,6 +28,7 @@ from corsheaders.middleware import (
     ACCESS_CONTROL_ALLOW_ORIGIN,
 )
 from lasuite.malware_detection import malware_detection
+from lasuite.oidc_login.decorators import refresh_oidc_access_token
 from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
 from rest_framework.permissions import AllowAny
@@ -36,6 +38,10 @@ from rest_framework_api_key.permissions import HasAPIKey
 from core import enums, models
 from core.entitlements import get_entitlements_backend
 from core.services.sdk_relay import SDKRelayManager
+from core.services.search_indexers import (
+    get_file_indexer,
+    get_visited_items_ids_of,
+)
 from core.tasks.item import process_item_deletion, rename_file
 from wopi.services import access as access_service
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
@@ -1040,17 +1046,42 @@ class ItemViewSet(
         serializer = self.get_serializer(breadcrumb, many=True)
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
+    def _fulltext_search_queryset(self, queryset, indexer, token, user, params):
+        """
+        Returns a queryset from the results the fulltext search of Find
+        """
+        text = params.validated_data["q"]
+
+        # Retrieve the documents ids from Find. No pagination here the queryset is
+        # already filtered
+        results = indexer.search(
+            text=text,
+            token=token,
+            visited=get_visited_items_ids_of(queryset, user),
+            page=1,
+            page_size=2000,
+        )
+
+        return queryset.filter(pk__in=results)
+
     @drf.decorators.action(
         detail=False,
         methods=["get"],
         url_path="search",
         pagination_class=drf.pagination.PageNumberPagination,
     )
+    @method_decorator(refresh_oidc_access_token)
     def search(self, request, *args, **kwargs):
         """
-        Search for items using filterset.
-        """
+        Returns a DRF response containing the filtered, annotated and ordered items.
 
+        Applies filtering based on request parameter 'q' from `SearchItemFilter`.
+        Depending of the configuration it can be:
+         - A fulltext search through the opensearch indexation app "find" if the backend is
+           enabled (see SEARCH_INDEXER_CLASS)
+         - A filtering by the model fields 'title' & 'type'.
+        """
         queryset = self.queryset
         filterset = SearchItemFilter(
             request.GET, queryset=queryset, request=self.request
@@ -1083,7 +1114,19 @@ class ItemViewSet(
             path_list |= db.Q(path__descendants=top_level_item)
 
         queryset = queryset.filter(path_list)
-        queryset = filterset.filter_queryset(queryset)
+
+        indexer = get_file_indexer()
+        access_token = request.session.get("oidc_access_token")
+
+        if indexer and access_token:
+            queryset = self._fulltext_search_queryset(
+                queryset, indexer, token=access_token, user=user, params=filterset
+            )
+        else:
+            # The indexer is not configured or the token is missing, we fallback on
+            # a simple queryset filter.
+            queryset = filterset.filter_queryset(queryset)
+
         queryset = self.annotate_user_roles(queryset)
         queryset = self.annotate_is_favorite(queryset)
 
