@@ -25,7 +25,7 @@ def test_api_items_link_configuration_update_anonymous(reach, role):
         new_item_values,
         format="json",
     )
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {

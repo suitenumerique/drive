@@ -53,7 +53,7 @@ def test_api_items_update_anonymous_forbidden(reach, role, via_parent):
         new_item_values,
         format="json",
     )
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {

@@ -29,7 +29,7 @@ def test_api_items_trashbin_anonymous(reach, role):
 
     response = APIClient().get("/api/v1.0/items/trashbin/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_api_items_trashbin_format(settings):
