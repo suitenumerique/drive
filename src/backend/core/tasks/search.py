@@ -83,6 +83,6 @@ def trigger_file_indexer(item):
             countdown,
         )
 
-        file_indexer_task.apply_async(args=[item.pk])
+        file_indexer_task.apply_async(args=[item.pk], countdown=countdown)
     else:
         logger.info("Skip task for file %s indexation", item.pk)
