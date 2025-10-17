@@ -23,6 +23,8 @@ from configurations import Configuration, values
 from lasuite.configuration.values import SecretFileValue
 from sentry_sdk.integrations.django import DjangoIntegration
 
+# pylint: disable=too-many-lines
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.environ.get("DATA_DIR", os.path.join("/", "data"))
@@ -591,6 +593,79 @@ class Base(Configuration):
     OIDC_USERINFO_SHORTNAME_FIELD = values.Value(
         default="first_name",
         environ_name="OIDC_USERINFO_SHORTNAME_FIELD",
+        environ_prefix=None,
+    )
+
+    # OIDC Resource Server
+
+    OIDC_RESOURCE_SERVER_ENABLED = values.BooleanValue(
+        default=False, environ_name="OIDC_RESOURCE_SERVER_ENABLED", environ_prefix=None
+    )
+
+    OIDC_RS_BACKEND_CLASS = values.Value(
+        "lasuite.oidc_resource_server.backend.ResourceServerBackend",
+        environ_name="OIDC_RS_BACKEND_CLASS",
+        environ_prefix=None,
+    )
+
+    OIDC_OP_URL = values.Value(None, environ_name="OIDC_OP_URL", environ_prefix=None)
+
+    OIDC_VERIFY_SSL = values.BooleanValue(
+        default=True, environ_name="OIDC_VERIFY_SSL", environ_prefix=None
+    )
+
+    OIDC_TIMEOUT = values.PositiveIntegerValue(
+        3, environ_name="OIDC_TIMEOUT", environ_prefix=None
+    )
+
+    OIDC_PROXY = values.Value(None, environ_name="OIDC_PROXY", environ_prefix=None)
+
+    OIDC_OP_INTROSPECTION_ENDPOINT = values.Value(
+        None, environ_name="OIDC_OP_INTROSPECTION_ENDPOINT", environ_prefix=None
+    )
+
+    OIDC_RS_CLIENT_ID = values.Value(
+        None, environ_name="OIDC_RS_CLIENT_ID", environ_prefix=None
+    )
+
+    OIDC_RS_CLIENT_SECRET = values.Value(
+        None, environ_name="OIDC_RS_CLIENT_SECRET", environ_prefix=None
+    )
+
+    OIDC_RS_AUDIENCE_CLAIM = values.Value(
+        "client_id", environ_name="OIDC_RS_AUDIENCE_CLAIM", environ_prefix=None
+    )
+
+    OIDC_RS_ENCRYPTION_ENCODING = values.Value(
+        "A256GCM", environ_name="OIDC_RS_ENCRYPTION_ENCODING", environ_prefix=None
+    )
+
+    OIDC_RS_ENCRYPTION_ALGO = values.Value(
+        "RSA-OAEP", environ_name="OIDC_RS_ENCRYPTION_ALGO", environ_prefix=None
+    )
+
+    OIDC_RS_SIGNING_ALGO = values.Value(
+        "ES256", environ_name="OIDC_RS_SIGNING_ALGO", environ_prefix=None
+    )
+
+    OIDC_RS_SCOPES = values.ListValue(
+        ["openid"], environ_name="OIDC_RS_SCOPES", environ_prefix=None
+    )
+
+    OIDC_RS_ALLOWED_AUDIENCES = values.ListValue(
+        default=[],
+        environ_name="OIDC_RS_ALLOWED_AUDIENCES",
+        environ_prefix=None,
+    )
+
+    OIDC_RS_PRIVATE_KEY_STR = values.Value(
+        default=None,
+        environ_name="OIDC_RS_PRIVATE_KEY_STR",
+        environ_prefix=None,
+    )
+    OIDC_RS_ENCRYPTION_KEY_TYPE = values.Value(
+        default="RSA",
+        environ_name="OIDC_RS_ENCRYPTION_KEY_TYPE",
         environ_prefix=None,
     )
 

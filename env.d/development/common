@@ -48,6 +48,15 @@ LOGOUT_REDIRECT_URL=http://localhost:3000
 OIDC_REDIRECT_ALLOWED_HOSTS="http://localhost:8083,http://localhost:3000"
 OIDC_AUTH_REQUEST_EXTRA_PARAMS={"acr_values": "eidas1"}
 
+# Resource Server Backend
+OIDC_OP_URL=http://localhost:8083/realms/drive
+OIDC_OP_INTROSPECTION_ENDPOINT = http://nginx:8083/realms/drive/protocol/openid-connect/token/introspect
+OIDC_RESOURCE_SERVER_ENABLED=False
+OIDC_RS_CLIENT_ID=drive
+OIDC_RS_CLIENT_SECRET=ThisIsAnExampleKeyForDevPurposeOnly
+OIDC_RS_AUDIENCE_CLAIM="client_id"  # The claim used to identify the audience
+OIDC_RS_ALLOWED_AUDIENCES=""
+
 # Frontend
 FRONTEND_THEME=default
 FRONTEND_MORE_LINK=https://docs.numerique.gouv.fr/docs/fa0aba15-e119-4185-b466-a4b37ad95950/
