@@ -4,6 +4,7 @@ Core application factories
 
 from django.conf import settings
 from django.contrib.auth.hashers import make_password
+from django.core.files.storage import default_storage
 
 import factory.fuzzy
 from faker import Faker
@@ -121,6 +122,17 @@ class ItemFactory(factory.django.DjangoModelFactory):
         if create and extracted:
             for item in extracted:
                 models.ItemFavorite.objects.create(item=self, user=item)
+
+    @factory.post_generation
+    def upload(self, create, extracted, **kwargs):
+        """Save content of the file into the storage"""
+        if create and extracted:
+            content = (
+                extracted
+                if isinstance(extracted, bytes)
+                else str(extracted).encode("utf-8")
+            )
+            default_storage.save(self.file_key, content)
 
 
 class UserItemAccessFactory(factory.django.DjangoModelFactory):

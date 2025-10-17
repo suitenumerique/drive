@@ -87,7 +87,7 @@ def get_batch_accesses_by_users_and_teams(items):
     return dict(access_by_document_path)
 
 
-def get_visited_document_ids_of(queryset, user):
+def get_visited_items_ids_of(queryset, user):
     """
     Returns the ids of the documents that have a linktrace to the user and NOT owned.
     It will be use to limit the opensearch responses to the public documents already
