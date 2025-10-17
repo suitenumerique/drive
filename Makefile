@@ -76,6 +76,10 @@ create-env-local-files:
 	@touch env.d/development/kc_postgresql.local
 .PHONY: create-env-local-files
 
+create-docker-network: ## create the docker network if it doesn't exist
+	@docker network create lasuite-network || true
+.PHONY: create-docker-network
+
 bootstrap: ## Prepare Docker images for the project
 bootstrap: \
 	data/media \
@@ -116,6 +120,7 @@ logs: ## display app-dev logs (follow mode)
 .PHONY: logs
 
 run-backend: ## start the backend container
+	@$(MAKE) create-docker-network
 	@$(COMPOSE) up --force-recreate -d celery-dev
 	@$(COMPOSE) up --force-recreate -d nginx
 	@$(MAKE) configure-wopi
