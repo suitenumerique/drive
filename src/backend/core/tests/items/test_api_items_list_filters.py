@@ -122,10 +122,10 @@ def test_api_items_list_ordering_default():
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 5
+    assert len(results) == 4
 
     # Check that results are sorted by descending "updated_at" as expected
-    for i in range(4):
+    for i in range(3):
         assert operator.ge(results[i]["updated_at"], results[i + 1]["updated_at"])
 
 
@@ -154,11 +154,11 @@ def test_api_items_list_ordering_by_fields():
         response = client.get(f"/api/v1.0/items/{querystring:s}")
         assert response.status_code == 200
         results = response.json()["results"]
-        assert len(results) == 5
+        assert len(results) == 4
 
         # Check that results are sorted by the field in querystring as expected
         compare = operator.ge if is_descending else operator.le
-        for i in range(4):
+        for i in range(3):
             operator1 = (
                 results[i][field].lower()
                 if isinstance(results[i][field], str)
@@ -187,13 +187,12 @@ def test_api_items_list_filter_unknown_field():
     expected_ids = {
         str(item.id) for item in factories.ItemFactory.create_batch(2, users=[user])
     }
-    expected_ids.add(str(user.get_main_workspace().id))
 
     response = client.get("/api/v1.0/items/?unknown=true")
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 3
+    assert len(results) == 2
     assert {result["id"] for result in results} == expected_ids
 
 
@@ -215,7 +214,7 @@ def test_api_items_list_filter_is_creator_me_true():
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 3
+    assert len(results) == 2
 
     # Ensure all results are created by the current user
     for result in results:
@@ -265,7 +264,7 @@ def test_api_items_list_filter_is_creator_me_invalid():
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 6
+    assert len(results) == 5
 
 
 # Filters: is_favorite
@@ -308,7 +307,7 @@ def test_api_items_list_filter_is_favorite_false():
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 3
+    assert len(results) == 2
 
     # Ensure all results are not marked as favorite by the current user
     for result in results:
@@ -328,7 +327,7 @@ def test_api_items_list_filter_is_favorite_invalid():
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 6
+    assert len(results) == 5
 
 
 # Filters: title
@@ -342,7 +341,7 @@ def test_api_items_list_filter_is_favorite_invalid():
         ("Guide", 1),  # Word match within a title
         ("Special", 0),  # No match (nonexistent keyword)
         ("2024", 2),  # Match by numeric keyword
-        ("", 6),  # Empty string
+        ("", 5),  # Empty string
     ],
 )
 def test_api_items_list_filter_title(query, nb_results):
@@ -406,7 +405,7 @@ def test_api_items_list_filter_type():
     response = client.get("/api/v1.0/items/?type=folder")
     assert response.status_code == 200
 
-    assert response.json()["count"] == 3
+    assert response.json()["count"] == 2
     results = response.json()["results"]
 
     # Ensure all results are folders

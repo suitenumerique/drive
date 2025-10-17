@@ -611,6 +611,9 @@ class ItemViewSet(
 
         queryset = self.annotate_user_roles(queryset)
 
+        # Remove main workspace from the items list. It is presented in the user /me endpoint.
+        queryset = queryset.filter(main_workspace=False)
+
         # Among the results, we may have items that are ancestors/descendants
         # of each other. In this case we want to keep only the highest ancestors.
         root_paths = utils.filter_root_paths(
