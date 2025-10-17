@@ -2,24 +2,14 @@
 Test e2e API endpoints.
 """
 
-import importlib
-
 from django.test.utils import override_settings
-from django.urls import clear_url_caches
 
 import pytest
 from rest_framework.test import APIClient
 
+from core.tests.utils.urls import reload_urls
+
 pytestmark = pytest.mark.django_db
-
-
-def reload_urls():
-    """Reload the URLs to test the e2e URLs. Since the url are loaded based on a
-    settings value, we need to reload the urls to test the e2e urls."""
-    import drive.urls  # pylint:disable=import-outside-toplevel # noqa: PLC0415
-
-    importlib.reload(drive.urls)
-    clear_url_caches()
 
 
 def test_api_e2e_user_auth_no_urls():
