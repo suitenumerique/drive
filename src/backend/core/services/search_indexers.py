@@ -55,7 +55,11 @@ def get_ancestor_to_descendants_map(items):
     ancestor_map = defaultdict(set)
 
     for item in items:
-        ancestor_map[str(item.path)].update([str(d.path) for d in item.descendants()])
+        path = str(item.path)
+        ancestors = path.split(".")
+        for i in range(1, len(ancestors) + 1):
+            ancestor = ".".join(ancestors[:i])
+            ancestor_map[ancestor].add(path)
 
     return ancestor_map
 
@@ -66,9 +70,9 @@ def get_batch_accesses_by_users_and_teams(items):
     grouped by users and teams, including all ancestor paths.
     """
     ancestor_map = get_ancestor_to_descendants_map(items)
-    access_qs = models.ItemAccess.objects.filter(item__in=items).values(
-        "item__path", "user__sub", "team"
-    )
+    access_qs = models.ItemAccess.objects.filter(
+        item__path__in=list(ancestor_map.keys())
+    ).values("item__path", "user__sub", "team")
 
     access_by_document_path = defaultdict(lambda: {"users": set(), "teams": set()})
 
@@ -163,7 +167,7 @@ class BaseItemIndexer(ABC):
         last_id = None
         count = 0
         queryset = models.Item.objects.filter(
-            upload_state=models.ItemUploadStateChoices.READY,
+            main_workspace=False,
         ).order_by("id")
 
         while True:
@@ -229,7 +233,7 @@ class BaseItemIndexer(ABC):
             data={
                 "q": text,
                 "visited": visited,
-                "services": ["docs"],
+                "services": ["drive"],
                 "page_number": page,
                 "page_size": page_size,
                 "order_by": "updated_at",
@@ -258,19 +262,24 @@ class SearchIndexer(BaseItemIndexer):
         """
         Convert a file content into an indexable text.
         """
-        if item.mimetype.startswith("text/"):
+        mimetype = item.mimetype or ""
+
+        if mimetype.startswith("text/"):
             return default_storage.open(item.file_key, "rb").read().decode()
 
-        raise SuspiciousFileOperation(f"Unrecognized mimetype {item.mimetype}")
+        raise SuspiciousFileOperation(f"Unrecognized mimetype {mimetype}")
 
     def has_text(self, item):
         """
         Return True if the file mimetype can be converted into text for indexation
         """
-        mimetype = item.mimetype
+        mimetype = item.mimetype or ""
 
-        return item.type == models.ItemTypeChoices.FILE and any(
-            mimetype.startswith(allowed) for allowed in self.allowed_mimetypes
+        return (
+            item.upload_state == models.ItemUploadStateChoices.READY
+            and item.type == models.ItemTypeChoices.FILE
+            and mimetype
+            and any(mimetype.startswith(allowed) for allowed in self.allowed_mimetypes)
         )
 
     def serialize_item(self, item, accesses):
@@ -285,16 +294,14 @@ class SearchIndexer(BaseItemIndexer):
             dict: A JSON-serializable dictionary.
         """
         doc_path = str(item.path)
-        content = self.to_text(item) if self.has_text(item) else ""
-        title = item.title or ""
-
-        if item.description:
-            title += f"\n{item.description}"
+        is_deleted = bool(item.ancestors_deleted_at or item.deleted_at)
+        content = self.to_text(item) if not is_deleted and self.has_text(item) else ""
 
         return {
             "id": str(item.id),
-            "title": title,
+            "title": item.title or "",
             "mimetype": item.mimetype or "",
+            "description": item.description or "",
             "content": content,
             "depth": item.depth,
             "path": str(item.path),
@@ -305,7 +312,7 @@ class SearchIndexer(BaseItemIndexer):
             "groups": list(accesses.get(doc_path, {}).get("teams", set())),
             "reach": item.link_reach,
             "size": item.size,
-            "is_active": not bool(item.ancestors_deleted_at),
+            "is_active": not is_deleted,
         }
 
     def search_query(self, data, token) -> requests.Response:

@@ -74,6 +74,7 @@ class ItemFactory(factory.django.DjangoModelFactory):
         lambda o: fake.file_name() if o.type == models.ItemTypeChoices.FILE else None
     )
     upload_state = None
+    size = None
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
