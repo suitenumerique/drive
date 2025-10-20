@@ -66,7 +66,9 @@ def get_batch_accesses_by_users_and_teams(items):
     grouped by users and teams, including all ancestor paths.
     """
     ancestor_map = get_ancestor_to_descendants_map(items)
-    access_qs = models.ItemAccess.objects.filter(item__in=items).values(
+    access_qs = models.ItemAccess.objects.filter(
+        item__path__in=list(ancestor_map.keys())
+    ).values(
         "item__path", "user__sub", "team"
     )
 
@@ -258,18 +260,20 @@ class SearchIndexer(BaseItemIndexer):
         """
         Convert a file content into an indexable text.
         """
-        if item.mimetype.startswith("text/"):
+        mimetype = item.mimetype or ''
+
+        if mimetype.startswith("text/"):
             return default_storage.open(item.file_key, "rb").read().decode()
 
-        raise SuspiciousFileOperation(f"Unrecognized mimetype {item.mimetype}")
+        raise SuspiciousFileOperation(f"Unrecognized mimetype {mimetype}")
 
     def has_text(self, item):
         """
         Return True if the file mimetype can be converted into text for indexation
         """
-        mimetype = item.mimetype
+        mimetype = item.mimetype or ''
 
-        return item.type == models.ItemTypeChoices.FILE and any(
+        return item.type == models.ItemTypeChoices.FILE and mimetype and any(
             mimetype.startswith(allowed) for allowed in self.allowed_mimetypes
         )
 
@@ -285,7 +289,8 @@ class SearchIndexer(BaseItemIndexer):
             dict: A JSON-serializable dictionary.
         """
         doc_path = str(item.path)
-        content = self.to_text(item) if self.has_text(item) else ""
+        is_deleted = bool(item.ancestors_deleted_at or item.deleted_at)
+        content = self.to_text(item) if not is_deleted and self.has_text(item) else ""
         title = item.title or ""
 
         if item.description:
@@ -305,7 +310,7 @@ class SearchIndexer(BaseItemIndexer):
             "groups": list(accesses.get(doc_path, {}).get("teams", set())),
             "reach": item.link_reach,
             "size": item.size,
-            "is_active": not bool(item.ancestors_deleted_at),
+            "is_active": not is_deleted,
         }
 
     def search_query(self, data, token) -> requests.Response:

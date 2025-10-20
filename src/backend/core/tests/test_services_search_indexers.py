@@ -13,12 +13,13 @@ import responses
 from factory import fuzzy
 from requests import HTTPError
 
-from core import factories, models, utils
+from core import factories, models
 from core.services.search_indexers import (
     BaseItemIndexer,
     SearchIndexer,
     get_file_indexer,
     get_visited_items_ids_of,
+    get_ancestor_to_descendants_map,
 )
 
 pytestmark = pytest.mark.django_db
@@ -35,6 +36,45 @@ class FakeDocumentIndexer(BaseItemIndexer):
 
     def search_query(self, data, token):
         return {}
+
+
+def test_get_ancestor_to_descendants_map_single_path():
+    """Test ancestor mapping of a multiple paths."""
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    a = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, parent=root)
+    a_1 = factories.ItemFactory(type=models.ItemTypeChoices.FILE, parent=a)
+    a_a = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, parent=a)
+    a_a_1 = factories.ItemFactory(type=models.ItemTypeChoices.FILE, parent=a_a)
+    b = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, parent=root)
+    b_1 = factories.ItemFactory(type=models.ItemTypeChoices.FILE, parent=b)
+
+    result = get_ancestor_to_descendants_map([
+        a_1, a_a_1, b_1,
+    ])
+
+    assert result == {
+        str(root.path): {
+            str(a_1.path), str(a_a_1.path), str(b_1.path),
+        },
+        str(a.path): {
+            str(a_1.path), str(a_a_1.path),
+        },
+        str(a_a.path): {
+            str(a_1.path), str(a_a_1.path),
+        },
+        str(a_1.path): {
+            str(a_1.path),
+        },
+        str(a_a_1.path): {
+            str(a_a_1.path),
+        },
+        str(b.path): {
+            str(b_1.path),
+        },
+        str(b_1.path): {
+            str(b_1.path),
+        },
+    }
 
 
 def test_services_search_indexer_class_invalid(indexer_settings):
@@ -173,58 +213,15 @@ def test_services_search_endpoint_is_empty(indexer_settings):
 
 
 @pytest.mark.usefixtures("indexer_settings")
-def test_services_search_indexers_serialize_item_textfile():
+def test_services_search_indexers_serialize_item_file():
     """
-    It should serialize documents with correct metadata and access control.
+    It should serialize files with correct metadata and access control.
     """
     user_a, user_b = factories.UserFactory.create_batch(2)
     item = factories.ItemFactory(
         upload_bytes=b"This is a text file content",
-    )
-
-    factories.UserItemAccessFactory(item=item, user=user_a)
-    factories.UserItemAccessFactory(item=item, user=user_b)
-    factories.TeamItemAccessFactory(item=item, team="team1")
-    factories.TeamItemAccessFactory(item=item, team="team2")
-
-    accesses = {
-        str(item.path): {
-            "users": {str(user_a.sub), str(user_b.sub)},
-            "teams": {"team1", "team2"},
-        }
-    }
-
-    indexer = SearchIndexer()
-    result = indexer.serialize_item(item, accesses)
-
-    assert set(result.pop("users")) == {str(user_a.sub), str(user_b.sub)}
-    assert set(result.pop("groups")) == {"team1", "team2"}
-    assert result == {
-        "id": str(item.id),
-        "title": item.title,
-        "depth": 1,
-        "path": str(item.path),
-        "numchild": 0,
-        "mimetype": "text/plain",
-        "content": "This is a text file content",
-        "created_at": item.created_at.isoformat(),
-        "updated_at": item.updated_at.isoformat(),
-        "reach": item.link_reach,
-        "size": item.size,
-        "is_active": True,
-        "is_extracted": True,
-        "is_too_big": False,
-    }
-
-
-@pytest.mark.usefixtures("indexer_settings")
-def test_services_search_indexers_serialize_item_file():
-    """
-    It should serialize documents with correct metadata and access control.
-    """
-    user_a, user_b = factories.UserFactory.create_batch(2)
-    item = factories.ItemFactory(
-        upload_bytes=b"This is a text file content", mimetype="application/pdf"
+        mimetype="application/pdf",
+        type=models.ItemTypeChoices.FILE,
     )
 
     factories.UserItemAccessFactory(item=item, user=user_a)
@@ -263,7 +260,7 @@ def test_services_search_indexers_serialize_item_file():
 @pytest.mark.usefixtures("indexer_settings")
 def test_services_search_indexers_serialize_item_folder():
     """
-    It should serialize documents with correct metadata and access control.
+    It should serialize folder with correct metadata and access control.
     """
     user_a, user_b = factories.UserFactory.create_batch(2)
     folder = factories.ItemFactory(
@@ -308,11 +305,13 @@ def test_services_search_indexers_serialize_item_folder():
 @pytest.mark.usefixtures("indexer_settings")
 def test_services_search_indexers_serialize_item_textfile():
     """
-    It should serialize documents with correct metadata and access control.
+    It should serialize text files with correct metadata and access control.
     """
     user_a, user_b = factories.UserFactory.create_batch(2)
     item = factories.ItemFactory(
         upload_bytes=b"This is a text file content",
+        mimetype="text/plain",
+        type=models.ItemTypeChoices.FILE,
     )
 
     factories.UserItemAccessFactory(item=item, user=user_a)
@@ -352,7 +351,11 @@ def test_services_search_indexers_serialize_item_textfile():
 def test_services_search_indexers_serialize_document_deleted():
     """Deleted documents are marked as just in the serialized json."""
     folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
-    item = factories.ItemFactory(parent=folder, mimetype="text/plain")
+    item = factories.ItemFactory(
+        parent=folder,
+        mimetype="text/plain",
+        type=models.ItemTypeChoices.FILE,
+    )
 
     folder.soft_delete()
     item.refresh_from_db()
@@ -368,7 +371,12 @@ def test_services_search_indexers_index_errors(indexer_settings):
     """
     Documents indexing response handling on Find API HTTP errors.
     """
-    factories.ItemFactory(mimetype="text/plain")
+    factories.ItemFactory(
+        mimetype="text/plain",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes=b'This is a text file'
+    )
 
     indexer_settings.SEARCH_INDEXER_URL = "http://app-find/api/v1.0/documents/index/"
 
@@ -394,7 +402,10 @@ def test_services_search_indexers_batches_pass_only_batch_accesses(
     indexer_settings.SEARCH_INDEXER_BATCH_SIZE = 2
     items = factories.ItemFactory.create_batch(
         5,
-        upload_state=models.ItemUploadStateChoices.READY,
+        mimetype="text/plain",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes="this is a text",
     )
 
     # Attach a single user access to each file
@@ -435,19 +446,24 @@ def test_services_search_indexers_ignore_not_ready(mock_push):
     """
     item = factories.ItemFactory(
         mimetype="text/plain",
-        upload_state=models.ItemUploadStateChoices.READY,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes="this is a text",
     )
 
     # wrong mimetype
     pdf_item = factories.ItemFactory(
         mimetype="application/pdf",
-        upload_state=models.ItemUploadStateChoices.READY,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes="this is a PDF",
     )
 
     # not ready
     factories.ItemFactory.create_batch(
         5,
-        upload_state=fuzzy.FuzzyChoice(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=fuzzy.FuzzyChoice(
             [
                 models.ItemUploadStateChoices.PENDING,
                 models.ItemUploadStateChoices.ANALYZING,
