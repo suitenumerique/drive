@@ -152,6 +152,7 @@ def indexer_settings_fixture(settings):
         "http://localhost:8081/api/v1.0/documents/search/"
     )
     settings.SEARCH_INDEXER_ALLOWED_MIMETYPES = ("text/",)
+    settings.SEARCH_INDEXER_COUNTDOWN = 1
 
     yield settings
 

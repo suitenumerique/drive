@@ -1047,11 +1047,12 @@ class ItemViewSet(
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
-    def _fulltext_search_queryset(self, queryset, indexer, token, user, params):
+    def _fulltext_search_queryset(self, queryset, indexer, request, text):
         """
         Returns a queryset from the results the fulltext search of Find
         """
-        text = params.validated_data["q"]
+        user = request.user
+        token = request.session.get("oidc_access_token")
 
         # Retrieve the documents ids from Find. No pagination here the queryset is
         # already filtered
@@ -1060,7 +1061,7 @@ class ItemViewSet(
             token=token,
             visited=get_visited_items_ids_of(queryset, user),
             page=1,
-            page_size=2000,
+            page_size=200,
         )
 
         return queryset.filter(pk__in=results)
@@ -1083,6 +1084,8 @@ class ItemViewSet(
          - A filtering by the model fields 'title' & 'type'.
         """
         queryset = self.queryset
+        indexer = get_file_indexer()
+
         filterset = SearchItemFilter(
             request.GET, queryset=queryset, request=self.request
         )
@@ -1091,6 +1094,7 @@ class ItemViewSet(
             raise drf.exceptions.ValidationError(filterset.errors)
 
         workspace = filterset.form.cleaned_data.get("workspace")
+
         # First look for all top level items user has access to
         user = request.user
         item_access_queryset = models.ItemAccess.objects.select_related("item").filter(
@@ -1115,17 +1119,18 @@ class ItemViewSet(
 
         queryset = queryset.filter(path_list)
 
-        indexer = get_file_indexer()
-        access_token = request.session.get("oidc_access_token")
-
-        if indexer and access_token:
+        if indexer:
+            # When the indexer is configured pop "title" from queryset search and use
+            # fulltext results instead.
             queryset = self._fulltext_search_queryset(
-                queryset, indexer, token=access_token, user=user, params=filterset
+                queryset,
+                indexer,
+                request,
+                text=filterset.form.cleaned_data.pop("title"),
             )
-        else:
-            # The indexer is not configured or the token is missing, we fallback on
-            # a simple queryset filter.
-            queryset = filterset.filter_queryset(queryset)
+
+        # Without the indexer, the "title" filtering is kept
+        queryset = filterset.filter_queryset(queryset)
 
         queryset = self.annotate_user_roles(queryset)
         queryset = self.annotate_is_favorite(queryset)

@@ -18,16 +18,18 @@ from drive.celery_app import app
 logger = getLogger(__file__)
 
 
-def indexer_throttle_acquire(document_id, timeout=0, atomic=True):
+def batch_indexer_throttle_acquire(timeout: int = 0, atomic: bool = True):
     """
     Enable the task throttle flag for a delay.
     Uses redis locks if available to ensure atomic changes
     """
-    key = f"file-indexer-throttle-{document_id}"
+    key = "file-batch-indexer-throttle"
 
+    # Redis is used as cache database (not in tests). Use the lock feature here
+    # to ensure atomicity of changes to the throttle flag.
     if isinstance(cache, RedisCache) and atomic:
         with cache.locks(key):
-            return indexer_throttle_acquire(document_id, timeout, atomic=False)
+            return batch_indexer_throttle_acquire(timeout, atomic=False)
 
     # Use add() here :
     #   - set the flag and returns true if not exist
@@ -46,14 +48,13 @@ def file_indexer_task(item_id):
     try:
         item = models.Item.objects.get(
             pk=item_id,
-            deleted_at__null=True,
-            upload_state=models.ItemUploadStateChoices.READY,
+            main_workspace=False,
         )
     except models.Item.DoesNotExist:
         # Skip the task if the document does not exist.
         return
 
-    accesses = get_batch_accesses_by_users_and_teams((item.path,))
+    accesses = get_batch_accesses_by_users_and_teams((item,))
 
     data = indexer.serialize_item(item=item, accesses=accesses)
 
@@ -61,28 +62,49 @@ def file_indexer_task(item_id):
     indexer.push(data)
 
 
-def trigger_file_indexer(item):
+@app.task
+def batch_file_indexer_task(timestamp):
+    """Celery Task : Sends indexation query for a batch of documents."""
+    indexer = get_file_indexer()
+
+    if indexer:
+        queryset = models.Item.objects.filter(updated_at__gte=timestamp)
+
+        count = indexer.index(queryset)
+        logger.info("Indexed %d files", count)
+
+
+def trigger_batch_file_indexer(item):
     """
     Trigger indexation task with debounce a delay set by the SEARCH_INDEXER_COUNTDOWN setting.
 
     Args:
         item (Item): The file item instance.
     """
-    countdown = settings.SEARCH_INDEXER_COUNTDOWN
+    countdown = int(settings.SEARCH_INDEXER_COUNTDOWN)
 
     # DO NOT create a task if indexation if disabled
     if not settings.SEARCH_INDEXER_CLASS:
         return
 
-    # Each time this method is called during a countdown, we increment the
-    # counter and each task decrease it, so the index be run only once.
-    if indexer_throttle_acquire(item.pk, timeout=countdown):
-        logger.info(
-            "Add task for file %s indexation in %.2f seconds",
-            item.pk,
-            countdown,
-        )
+    # Ignore triggres from workspace items created along users
+    if item.main_workspace:
+        return
 
-        file_indexer_task.apply_async(args=[item.pk], countdown=countdown)
+    if countdown > 0:
+        # Each time this method is called during a countdown, we increment the
+        # counter and each task decrease it, so the index be run only once.
+        if batch_indexer_throttle_acquire(timeout=countdown):
+            logger.info(
+                "Add task for batch file indexation from updated_at=%s in %d seconds",
+                item.updated_at.isoformat(),
+                countdown,
+            )
+
+            batch_file_indexer_task.apply_async(
+                args=[item.updated_at], countdown=countdown
+            )
+        else:
+            logger.info("Skip task for batch file %s indexation", item.pk)
     else:
-        logger.info("Skip task for file %s indexation", item.pk)
+        file_indexer_task.apply(args=[item.pk])

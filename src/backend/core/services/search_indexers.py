@@ -160,13 +160,19 @@ class BaseItemIndexer(ABC):
                 "SEARCH_INDEXER_ALLOWED_MIMETYPES must be set in Django settings."
             )
 
-    def index(self):
+        if not isinstance(self.allowed_mimetypes, (tuple, list)):
+            raise ImproperlyConfigured(
+                "SEARCH_INDEXER_ALLOWED_MIMETYPES Django setting must be a list."
+            )
+
+    def index(self, queryset=None):
         """
         Fetch documents in batches, serialize them, and push to the search backend.
         """
         last_id = None
         count = 0
-        queryset = models.Item.objects.filter(
+        queryset = queryset or models.Item.objects.all()
+        queryset = queryset.filter(
             main_workspace=False,
         ).order_by("id")
 
@@ -310,7 +316,7 @@ class SearchIndexer(BaseItemIndexer):
             "updated_at": item.updated_at.isoformat(),
             "users": list(accesses.get(doc_path, {}).get("users", set())),
             "groups": list(accesses.get(doc_path, {}).get("teams", set())),
-            "reach": item.link_reach,
+            "reach": str(item.link_reach),
             "size": item.size,
             "is_active": not is_deleted,
         }

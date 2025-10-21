@@ -227,6 +227,30 @@ def test_services_search_endpoint_is_empty(indexer_settings):
     )
 
 
+@pytest.mark.parametrize(
+    "mimetypes, expected",
+    [
+        ("", "SEARCH_INDEXER_ALLOWED_MIMETYPES must be set in Django settings."),
+        (None, "SEARCH_INDEXER_ALLOWED_MIMETYPES must be set in Django settings."),
+        ((), "SEARCH_INDEXER_ALLOWED_MIMETYPES must be set in Django settings."),
+        (12, "SEARCH_INDEXER_ALLOWED_MIMETYPES Django setting must be a list."),
+    ],
+)
+def test_services_search_allowed_mimetypes_is_invalid(
+    indexer_settings, mimetypes, expected
+):
+    """
+    Indexer should raise RuntimeError if SEARCH_INDEXER_ALLOWED_MIMETYPES is either empty, None
+    or not a list
+    """
+    indexer_settings.SEARCH_INDEXER_ALLOWED_MIMETYPES = mimetypes
+
+    with pytest.raises(ImproperlyConfigured) as exc_info:
+        SearchIndexer()
+
+    assert expected in str(exc_info.value)
+
+
 @pytest.mark.usefixtures("indexer_settings")
 def test_services_search_indexers_serialize_item_file():
     """
