@@ -79,6 +79,7 @@ services:
     volumes:
       - ./src/backend:/app
       - ./data/static:/data/static
+      - /home/manu/dev/dinum/django-lasuite/src/lasuite:/usr/local/lib/python3.12/site-packages/lasuite
     depends_on:
       postgresql:
         condition: service_healthy
