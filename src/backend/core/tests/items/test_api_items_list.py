@@ -103,7 +103,7 @@ def test_api_items_list_format():
             "path": str(item2.path),
             "title": item2.title,
             "updated_at": item2.updated_at.isoformat().replace("+00:00", "Z"),
-            "user_roles": [access2.role],
+            "user_role": access2.role,
             "type": models.ItemTypeChoices.FILE,
             "upload_state": models.ItemUploadStateChoices.READY,
             "url": f"http://localhost:8083/media/item/{item2.id!s}/logo.png",
@@ -136,7 +136,7 @@ def test_api_items_list_format():
             "path": str(item.path),
             "title": item.title,
             "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-            "user_roles": [access.role],
+            "user_role": access.role,
             "type": models.ItemTypeChoices.FOLDER,
             "upload_state": None,
             "url": None,
@@ -169,7 +169,7 @@ def test_api_items_list_format():
             "path": str(item3.path),
             "title": item3.title,
             "updated_at": item3.updated_at.isoformat().replace("+00:00", "Z"),
-            "user_roles": ["owner"],
+            "user_role": "owner",
             "type": models.ItemTypeChoices.FOLDER,
             "upload_state": None,
             "url": None,
@@ -268,11 +268,11 @@ def test_api_items_list_authenticated_direct(django_assert_num_queries):
         str(user.get_main_workspace().id),
     }
 
-    with django_assert_num_queries(9):
+    with django_assert_num_queries(11):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
@@ -408,11 +408,11 @@ def test_api_items_list_authenticated_link_reach_public_or_authenticated(
         str(user.get_main_workspace().id),
     }
 
-    with django_assert_num_queries(8):
+    with django_assert_num_queries(9):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(5):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200

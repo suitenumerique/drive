@@ -15,6 +15,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 import pytest
+from lasuite.drf.models.choices import LinkReachChoices
 
 from core import factories, models
 
@@ -252,6 +253,7 @@ def test_models_items_get_abilities_forbidden(
         "media_auth": False,
         "move": False,
         "link_configuration": False,
+        "link_select_options": {},
         "partial_update": False,
         "restore": False,
         "retrieve": False,
@@ -295,6 +297,7 @@ def test_models_items_get_abilities_reader(
         "favorite": is_authenticated,
         "invite_owner": False,
         "link_configuration": False,
+        "link_select_options": {},
         "media_auth": True,
         "move": False,
         "partial_update": False,
@@ -310,7 +313,11 @@ def test_models_items_get_abilities_reader(
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
-    assert all(value is False for value in item.get_abilities(user).values())
+    assert all(
+        value is False
+        for key, value in item.get_abilities(user).items()
+        if key not in ["link_select_options"]
+    )
 
 
 @pytest.mark.parametrize(
@@ -340,13 +347,14 @@ def test_models_items_get_abilities_editor(
         "favorite": is_authenticated,
         "invite_owner": False,
         "link_configuration": False,
+        "link_select_options": {},
         "media_auth": True,
         "move": False,
-        "partial_update": False,
+        "partial_update": True,
         "restore": False,
         "retrieve": True,
         "tree": True,
-        "update": False,
+        "update": True,
         "upload_ended": is_authenticated,
         "wopi": True,
     }
@@ -355,16 +363,19 @@ def test_models_items_get_abilities_editor(
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
-    assert all(value is False for value in item.get_abilities(user).values())
+    assert all(
+        value is False
+        for key, value in item.get_abilities(user).items()
+        if key not in ["link_select_options"]
+    )
 
 
 def test_models_items_not_root_get_abilities_owner(django_assert_num_queries):
-    """Check abilities returned for the owner of a item."""
+    """Check abilities returned for the owner of an item."""
     user = factories.UserFactory()
-    parent = factories.ItemFactory(
+    item = factories.ItemFactory(
         users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER
     )
-    item = factories.ItemFactory(parent=parent)
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -375,6 +386,11 @@ def test_models_items_not_root_get_abilities_owner(django_assert_num_queries):
         "favorite": True,
         "invite_owner": True,
         "link_configuration": True,
+        "link_select_options": {
+            "authenticated": ["reader", "editor"],
+            "public": ["reader", "editor"],
+            "restricted": None,
+        },
         "media_auth": True,
         "move": True,
         "partial_update": True,
@@ -385,31 +401,54 @@ def test_models_items_not_root_get_abilities_owner(django_assert_num_queries):
         "upload_ended": True,
         "wopi": True,
     }
-    with django_assert_num_queries(2):
+    with django_assert_num_queries(1):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
-    expected_abilities["move"] = False
-    assert item.get_abilities(user) == expected_abilities
+    assert item.get_abilities(user) == {
+        "accesses_manage": False,
+        "accesses_view": False,
+        "children_create": False,
+        "children_list": False,
+        "destroy": False,
+        "hard_delete": True,
+        "favorite": False,
+        "invite_owner": False,
+        "link_configuration": False,
+        "link_select_options": {},
+        "media_auth": False,
+        "move": False,
+        "partial_update": False,
+        "restore": True,
+        "retrieve": True,
+        "tree": False,
+        "update": False,
+        "upload_ended": False,
+        "wopi": False,
+    }
 
 
 def test_models_items_not_root_get_abilities_administrator(django_assert_num_queries):
     """Check abilities returned for the administrator of a item."""
     user = factories.UserFactory()
-    parent = factories.ItemFactory(
+    item = factories.ItemFactory(
         users=[(user, "administrator")], type=models.ItemTypeChoices.FOLDER
     )
-    item = factories.ItemFactory(parent=parent)
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
         "children_create": True,
         "children_list": True,
-        "destroy": True,
-        "hard_delete": True,
+        "destroy": False,
+        "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
         "link_configuration": True,
+        "link_select_options": {
+            "authenticated": ["reader", "editor"],
+            "public": ["reader", "editor"],
+            "restricted": None,
+        },
         "media_auth": True,
         "move": True,
         "partial_update": True,
@@ -420,11 +459,15 @@ def test_models_items_not_root_get_abilities_administrator(django_assert_num_que
         "upload_ended": True,
         "wopi": True,
     }
-    with django_assert_num_queries(2):
+    with django_assert_num_queries(1):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
-    assert all(value is False for value in item.get_abilities(user).values())
+    assert all(
+        value is False
+        for key, value in item.get_abilities(user).items()
+        if key not in ["link_select_options"]
+    )
 
 
 def test_models_items_not_root_get_abilities_editor_user(django_assert_num_queries):
@@ -434,18 +477,22 @@ def test_models_items_not_root_get_abilities_editor_user(django_assert_num_queri
         users=[(user, "editor")], type=models.ItemTypeChoices.FOLDER
     )
     item = factories.ItemFactory(parent=parent)
+    link_select_options = LinkReachChoices.get_select_options(
+        **item.ancestors_link_definition
+    )
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": True,
         "children_create": True,
         "children_list": True,
-        "destroy": True,
-        "hard_delete": True,
+        "destroy": False,
+        "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
         "link_configuration": False,
+        "link_select_options": link_select_options,
         "media_auth": True,
-        "move": True,
+        "move": False,
         "partial_update": True,
         "restore": False,
         "retrieve": True,
@@ -454,11 +501,15 @@ def test_models_items_not_root_get_abilities_editor_user(django_assert_num_queri
         "upload_ended": True,
         "wopi": True,
     }
-    with django_assert_num_queries(2):
+    with django_assert_num_queries(1):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
-    assert all(value is False for value in item.get_abilities(user).values())
+    assert all(
+        value is False
+        for key, value in item.get_abilities(user).items()
+        if key not in ["link_select_options"]
+    )
 
 
 def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queries):
@@ -477,13 +528,18 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "accesses_view": True,
         "children_create": access_from_link,
         "children_list": True,
-        "destroy": access_from_link,
-        "hard_delete": access_from_link,
+        "destroy": False,
+        "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
         "link_configuration": False,
+        "link_select_options": {
+            "authenticated": ["reader", "editor"],
+            "public": ["reader", "editor"],
+            "restricted": None,
+        },
         "media_auth": True,
-        "move": access_from_link,
+        "move": False,
         "partial_update": access_from_link,
         "restore": False,
         "retrieve": True,
@@ -496,37 +552,11 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
-    assert all(value is False for value in item.get_abilities(user).values())
-
-
-def test_models_items_get_abilities_preset_role(django_assert_num_queries):
-    """No query is done if the role is preset e.g. with query annotation."""
-    access = factories.UserItemAccessFactory(role="reader", item__link_role="reader")
-    access.item.user_roles = ["reader"]
-
-    with django_assert_num_queries(0):
-        abilities = access.item.get_abilities(access.user)
-
-    assert abilities == {
-        "accesses_manage": False,
-        "accesses_view": True,
-        "children_create": False,
-        "children_list": True,
-        "destroy": False,
-        "hard_delete": False,
-        "favorite": True,
-        "invite_owner": False,
-        "link_configuration": False,
-        "media_auth": True,
-        "move": False,
-        "partial_update": False,
-        "restore": False,
-        "retrieve": True,
-        "tree": True,
-        "update": False,
-        "upload_ended": False,
-        "wopi": True,
-    }
+    assert all(
+        value is False
+        for key, value in item.get_abilities(user).items()
+        if key not in ["link_select_options"]
+    )
 
 
 def test_models_items__email_invitation__success():

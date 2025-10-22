@@ -8,6 +8,7 @@ from django.conf import settings
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
+from lasuite.drf.models.choices import get_equivalent_link_definition
 from rest_framework import exceptions, serializers
 
 from core import models
@@ -130,7 +131,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     abilities = serializers.SerializerMethodField(read_only=True)
     is_favorite = serializers.BooleanField(read_only=True)
     nb_accesses = serializers.IntegerField(read_only=True)
-    user_roles = serializers.SerializerMethodField()
+    user_role = serializers.SerializerMethodField()
     url = serializers.SerializerMethodField()
     url_preview = serializers.SerializerMethodField()
     creator = UserLiteSerializer(read_only=True)
@@ -154,7 +155,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "path",
             "title",
             "updated_at",
-            "user_roles",
+            "user_role",
             "type",
             "upload_state",
             "url",
@@ -182,7 +183,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "numchild_folder",
             "path",
             "updated_at",
-            "user_roles",
+            "user_role",
             "type",
             "upload_state",
             "url",
@@ -196,28 +197,32 @@ class ListItemSerializer(serializers.ModelSerializer):
             "is_wopi_supported",
         ]
 
+    def to_representation(self, instance):
+        """Precompute once per instance"""
+        paths_links_mapping = self.context.get("paths_links_mapping")
+
+        if paths_links_mapping is not None:
+            links = paths_links_mapping.get(str(instance.path[:-1]), [])
+            instance.ancestors_link_definition = get_equivalent_link_definition(links)
+
+        return super().to_representation(instance)
+
     def get_abilities(self, item) -> dict:
         """Return abilities of the logged-in user on the instance."""
         request = self.context.get("request")
-        if request:
-            paths_links_mapping = self.context.get("paths_links_mapping", None)
-            # Retrieve ancestor links from paths_links_mapping (if provided)
-            ancestors_links = (
-                paths_links_mapping.get(str(item.path[:-1]))
-                if paths_links_mapping
-                else None
-            )
-            return item.get_abilities(request.user, ancestors_links=ancestors_links)
-        return {}
+        if not request:
+            return {}
 
-    def get_user_roles(self, item):
+        return item.get_abilities(request.user)
+
+    def get_user_role(self, item):
         """
         Return roles of the logged-in user for the current item,
         taking into account ancestors.
         """
         request = self.context.get("request")
         if request:
-            return item.get_roles(request.user)
+            return item.get_role(request.user)
         return []
 
     def get_url(self, item):
@@ -289,7 +294,7 @@ class ItemSerializer(ListItemSerializer):
             "path",
             "title",
             "updated_at",
-            "user_roles",
+            "user_role",
             "type",
             "upload_state",
             "url",
@@ -315,7 +320,7 @@ class ItemSerializer(ListItemSerializer):
             "numchild_folder",
             "path",
             "updated_at",
-            "user_roles",
+            "user_role",
             "type",
             "upload_state",
             "url",
@@ -370,7 +375,7 @@ class CreateItemSerializer(ItemSerializer):
             "path",
             "title",
             "updated_at",
-            "user_roles",
+            "user_role",
             "type",
             "upload_state",
             "url",
@@ -394,7 +399,7 @@ class CreateItemSerializer(ItemSerializer):
             "numchild_folder",
             "path",
             "updated_at",
-            "user_roles",
+            "user_role",
             "upload_state",
             "url",
             "policy",
