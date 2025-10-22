@@ -19,9 +19,9 @@ and this project adheres to
 ### Fixed
 
 - 🐛(wopi) force updated_at udpate in the viewset
-
-### Fix
-
+- 🐛(front) fix large uploads progress
+- ♻️(back) improve uploaded ended performance
+- (front) fix large uploads progress
 - 🐛(front) fix upload pending items
 
 ## [v0.7.0] - 2025-10-03
