@@ -75,6 +75,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(front) fix redirect after delete node in tree #325
+- 🐛(front) fix drag leave behavior in upload zone
 
 ## [v0.3.0] - 2025-08-25
 
