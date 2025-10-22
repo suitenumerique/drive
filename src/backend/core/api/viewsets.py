@@ -655,13 +655,21 @@ class ItemViewSet(
             )
 
         mime_detector = magic.Magic(mime=True)
-        file = default_storage.open(item.file_key)
-        mimetype = mime_detector.from_buffer(file.read(2048))
-        file.close()
+        s3_client = default_storage.connection.meta.client
+        range_response = s3_client.get_object(
+            Bucket=default_storage.bucket_name, Key=item.file_key, Range="bytes=0-2047"
+        )
+        file_head = range_response["Body"].read()
+        mimetype = mime_detector.from_buffer(file_head)
+
+        head_response = s3_client.head_object(
+            Bucket=default_storage.bucket_name, Key=item.file_key
+        )
+        file_size = head_response["ContentLength"]
 
         item.upload_state = models.ItemUploadStateChoices.ANALYZING
         item.mimetype = mimetype
-        item.size = file.size
+        item.size = file_size
 
         item.save(update_fields=["upload_state", "mimetype", "size"])
 
