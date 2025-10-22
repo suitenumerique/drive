@@ -80,7 +80,7 @@ def test_api_items_trashbin_format(settings):
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": ["owner"],
+        "user_role": "owner",
         "type": item.type,
         "upload_state": models.ItemUploadStateChoices.PENDING
         if item.type == models.ItemTypeChoices.FILE
