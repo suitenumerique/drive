@@ -264,8 +264,7 @@ def test_api_items_update_authenticated_editor_administrator_or_owner(
     via, role, via_parent, mock_user_teams
 ):
     """
-    A user who is administrator or owner of a item should be allowed to update it via parent or not.
-    A user who is editor of a item should be allowed to update it only via parent.
+    A user who is editor, administrator or owner of an item should be allowed to update it.
     """
     user = factories.UserFactory()
 
@@ -307,10 +306,6 @@ def test_api_items_update_authenticated_editor_administrator_or_owner(
         new_item_values,
         format="json",
     )
-
-    if role == "editor" and not via_parent:
-        assert response.status_code == 403
-        return
 
     assert response.status_code == 200
 

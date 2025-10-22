@@ -3,6 +3,7 @@ Unit tests for the item model, when it is the root of the tree.
 """
 
 import pytest
+from lasuite.drf.models.choices import LinkReachChoices
 from rest_framework.test import APIClient
 
 from core import factories, models
@@ -51,8 +52,13 @@ def test_models_sub_item_abilities_downgraded():
         "favorite": True,
         "invite_owner": False,
         "link_configuration": False,
+        "link_select_options": {
+            "authenticated": ["reader", "editor"],
+            "public": ["reader", "editor"],
+            "restricted": None,
+        },
         "media_auth": True,
-        "move": True,
+        "move": False,
         "partial_update": True,
         "restore": False,
         "retrieve": True,
@@ -73,11 +79,16 @@ def test_models_sub_item_abilities_downgraded():
         "breadcrumb": True,
         "children_create": False,
         "children_list": True,
-        "destroy": False,
-        "hard_delete": False,
+        "destroy": True,
+        "hard_delete": True,
         "favorite": True,
         "invite_owner": False,
         "link_configuration": False,
+        "link_select_options": {
+            "authenticated": ["reader", "editor"],
+            "public": ["reader", "editor"],
+            "restricted": None,
+        },
         "media_auth": True,
         "move": False,
         "partial_update": False,
@@ -91,9 +102,12 @@ def test_models_sub_item_abilities_downgraded():
 
 
 def test_models_items_root_get_abilities_owner(django_assert_num_queries):
-    """Check abilities returned for the owner of a item."""
+    """Check abilities returned for the owner of an item."""
     user = factories.UserFactory()
     item = factories.ItemFactory(users=[(user, "owner")])
+    link_select_options = LinkReachChoices.get_select_options(
+        **item.ancestors_link_definition
+    )
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -105,8 +119,9 @@ def test_models_items_root_get_abilities_owner(django_assert_num_queries):
         "favorite": True,
         "invite_owner": True,
         "link_configuration": True,
+        "link_select_options": link_select_options,
         "media_auth": True,
-        "move": False,
+        "move": True,
         "partial_update": True,
         "restore": True,
         "retrieve": True,
@@ -119,14 +134,37 @@ def test_models_items_root_get_abilities_owner(django_assert_num_queries):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
-    expected_abilities["move"] = False
-    assert item.get_abilities(user) == expected_abilities
+    assert item.get_abilities(user) == {
+        "accesses_manage": False,
+        "accesses_view": False,
+        "breadcrumb": False,
+        "children_create": False,
+        "children_list": False,
+        "destroy": False,
+        "hard_delete": True,
+        "favorite": False,
+        "invite_owner": False,
+        "link_configuration": False,
+        "link_select_options": {},
+        "media_auth": False,
+        "move": False,
+        "partial_update": False,
+        "restore": True,
+        "retrieve": True,
+        "tree": False,
+        "update": False,
+        "upload_ended": False,
+        "wopi": False,
+    }
 
 
 def test_models_items_root_get_abilities_administrator(django_assert_num_queries):
     """Check abilities returned for the administrator of a item."""
     user = factories.UserFactory()
     item = factories.ItemFactory(users=[(user, "administrator")])
+    link_select_options = LinkReachChoices.get_select_options(
+        **item.ancestors_link_definition
+    )
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -138,6 +176,47 @@ def test_models_items_root_get_abilities_administrator(django_assert_num_queries
         "favorite": True,
         "invite_owner": False,
         "link_configuration": True,
+        "link_select_options": link_select_options,
+        "media_auth": True,
+        "move": True,
+        "partial_update": True,
+        "restore": False,
+        "retrieve": True,
+        "tree": True,
+        "update": True,
+        "upload_ended": True,
+        "wopi": True,
+    }
+    with django_assert_num_queries(1):
+        assert item.get_abilities(user) == expected_abilities
+    item.soft_delete()
+    item.refresh_from_db()
+    assert all(
+        value is False
+        for key, value in item.get_abilities(user).items()
+        if key not in ["link_select_options"]
+    )
+
+
+def test_models_items_root_get_abilities_editor_user(django_assert_num_queries):
+    """Check abilities returned for the editor of a root item."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "editor")])
+    link_select_options = LinkReachChoices.get_select_options(
+        **item.ancestors_link_definition
+    )
+    expected_abilities = {
+        "accesses_manage": False,
+        "accesses_view": True,
+        "breadcrumb": True,
+        "children_create": True,
+        "children_list": True,
+        "destroy": False,
+        "hard_delete": False,
+        "favorite": True,
+        "invite_owner": False,
+        "link_configuration": False,
+        "link_select_options": link_select_options,
         "media_auth": True,
         "move": False,
         "partial_update": True,
@@ -152,39 +231,11 @@ def test_models_items_root_get_abilities_administrator(django_assert_num_queries
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
-    assert all(value is False for value in item.get_abilities(user).values())
-
-
-def test_models_items_root_get_abilities_editor_user(django_assert_num_queries):
-    """Check abilities returned for the editor of a root item."""
-    user = factories.UserFactory()
-    item = factories.ItemFactory(users=[(user, "editor")])
-    expected_abilities = {
-        "accesses_manage": False,
-        "accesses_view": True,
-        "breadcrumb": True,
-        "children_create": True,
-        "children_list": True,
-        "destroy": False,
-        "hard_delete": False,
-        "favorite": True,
-        "invite_owner": False,
-        "link_configuration": False,
-        "media_auth": True,
-        "move": False,
-        "partial_update": False,
-        "restore": False,
-        "retrieve": True,
-        "tree": True,
-        "update": False,
-        "upload_ended": True,
-        "wopi": True,
-    }
-    with django_assert_num_queries(1):
-        assert item.get_abilities(user) == expected_abilities
-    item.soft_delete()
-    item.refresh_from_db()
-    assert all(value is False for value in item.get_abilities(user).values())
+    assert all(
+        value is False
+        for key, value in item.get_abilities(user).items()
+        if key not in ["link_select_options"]
+    )
 
 
 def test_models_items_root_get_abilities_reader_user(django_assert_num_queries):
@@ -192,6 +243,9 @@ def test_models_items_root_get_abilities_reader_user(django_assert_num_queries):
     user = factories.UserFactory()
     item = factories.ItemFactory(users=[(user, "reader")])
     access_from_link = item.link_reach != "restricted" and item.link_role == "editor"
+    link_select_options = LinkReachChoices.get_select_options(
+        **item.ancestors_link_definition
+    )
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": True,
@@ -203,13 +257,14 @@ def test_models_items_root_get_abilities_reader_user(django_assert_num_queries):
         "favorite": True,
         "invite_owner": False,
         "link_configuration": False,
+        "link_select_options": link_select_options,
         "media_auth": True,
         "move": False,
-        "partial_update": False,
+        "partial_update": access_from_link,
         "restore": False,
         "retrieve": True,
         "tree": True,
-        "update": False,
+        "update": access_from_link,
         "upload_ended": access_from_link,
         "wopi": True,
     }
@@ -217,4 +272,8 @@ def test_models_items_root_get_abilities_reader_user(django_assert_num_queries):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
-    assert all(value is False for value in item.get_abilities(user).values())
+    assert all(
+        value is False
+        for key, value in item.get_abilities(user).items()
+        if key not in ["link_select_options"]
+    )

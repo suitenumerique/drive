@@ -880,7 +880,12 @@ class ItemViewSet(
             ) from excpt
 
         message = None
-        if not target_item.get_abilities(user).get("children_create"):
+        owner_accesses = []
+        if target_item.is_root:
+            owner_accesses = item.get_root().accesses.filter(
+                role=models.RoleChoices.OWNER
+            )
+        elif not target_item.get_abilities(user).get("children_create"):
             message = (
                 "You do not have permission to move items "
                 "as a child to this target item."
