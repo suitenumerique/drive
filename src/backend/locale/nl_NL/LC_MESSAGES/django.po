@@ -19,344 +19,351 @@ msgstr ""
 
 #: core/admin.py:26
 msgid "Personal info"
-msgstr ""
+msgstr "Persoonlijke gegevens"
 
 #: core/admin.py:39 core/admin.py:119
 msgid "Permissions"
-msgstr ""
+msgstr "Machtigingen"
 
 #: core/admin.py:51
 msgid "Important dates"
-msgstr ""
+msgstr "Belangrijke data"
 
 #: core/admin.py:129
 msgid "Tree structure"
-msgstr ""
+msgstr "Boomstructuur"
 
 #: core/api/filters.py:16
 msgid "Title"
-msgstr ""
+msgstr "Titel"
 
 #: core/api/filters.py:28
 msgid "Creator is me"
-msgstr ""
+msgstr "Ik ben eigenaar"
 
 #: core/api/filters.py:31
 msgid "Favorite"
-msgstr ""
+msgstr "Favoriet"
 
 #: core/api/serializers.py:304
 msgid "An item with this title already exists in the current path."
-msgstr ""
+msgstr "Er bestaat al een item met deze titel in het huidige pad."
 
 #: core/api/serializers.py:397
 msgid "This field is required for files."
-msgstr ""
+msgstr "Dit veld is verplicht voor bestanden"
 
 #: core/api/serializers.py:409
 msgid "This field is required for folders."
-msgstr ""
+msgstr "Dit veld is verplicht voor mappen."
 
 #: core/models.py:53 core/models.py:60
 msgid "Reader"
-msgstr ""
+msgstr "Lezer"
 
 #: core/models.py:54 core/models.py:61
 msgid "Editor"
-msgstr ""
+msgstr "Redacteur"
 
 #: core/models.py:62
 msgid "Administrator"
-msgstr ""
+msgstr "Beheerder"
 
 #: core/models.py:63
 msgid "Owner"
-msgstr ""
+msgstr "Eigenaar"
 
 #: core/models.py:74
 msgid "Restricted"
-msgstr ""
+msgstr "Beperkt"
 
 #: core/models.py:78
 msgid "Authenticated"
-msgstr ""
+msgstr "Ingelogd"
 
 #: core/models.py:80
 msgid "Public"
-msgstr ""
+msgstr "Openbaar"
 
 #: core/models.py:86
 msgid "Folder"
-msgstr ""
+msgstr "Map"
 
 #: core/models.py:87
 msgid "File"
-msgstr ""
+msgstr "Bestand"
 
 #: core/models.py:93
 msgid "Pending"
-msgstr ""
+msgstr "In afwachting"
 
 #: core/models.py:94
 msgid "Uploaded"
-msgstr ""
+msgstr "Geüpload"
 
 #: core/models.py:116
 msgid "id"
-msgstr ""
+msgstr "id"
 
 #: core/models.py:117
 msgid "primary key for the record as UUID"
-msgstr ""
+msgstr "primaire sleutel voor het record als UUID"
 
 #: core/models.py:123
 msgid "created on"
-msgstr ""
+msgstr "gecreëerd op"
 
 #: core/models.py:124
 msgid "date and time at which a record was created"
-msgstr ""
+msgstr "datum en tijd waarop een record is gemaakt"
 
 #: core/models.py:129
 msgid "updated on"
-msgstr ""
+msgstr "bijgewerkt op"
 
 #: core/models.py:130
 msgid "date and time at which a record was last updated"
-msgstr ""
+msgstr "datum en tijd waarop een record voor het laatst is bijgewerkt"
 
 #: core/models.py:166
 msgid ""
 "We couldn't find a user with this sub but the email is already associated "
 "with a registered user."
-msgstr ""
+msgstr "We konden geen gebruiker vinden met deze id, maar het e-mailadres is al gekoppeld aan een geregistreerde gebruiker."
 
 #: core/models.py:179
 msgid ""
 "Enter a valid sub. This value may contain only letters, numbers, and @/./+/-/"
 "_/: characters."
-msgstr ""
+msgstr "Voer een geldige sub in. Deze waarde mag alleen letters, cijfers en @/./+/-/_/: "
+"tekens bevatten."
 
 #: core/models.py:185
 msgid "sub"
-msgstr ""
+msgstr "id"
 
 #: core/models.py:187
 msgid ""
 "Required. 255 characters or fewer. Letters, numbers, and @/./+/-/_/: "
 "characters only."
-msgstr ""
+msgstr "Verplicht. 255 tekens of minder. Alleen letters, cijfers en @/./+/-/_/: tekens."
 
 #: core/models.py:196
 msgid "full name"
-msgstr ""
+msgstr "volledige naam"
 
 #: core/models.py:197
 msgid "short name"
-msgstr ""
+msgstr "gebruikersnaam"
 
 #: core/models.py:199
 msgid "identity email address"
-msgstr ""
+msgstr "identiteits e-mailadres"
 
 #: core/models.py:204
 msgid "admin email address"
-msgstr ""
+msgstr "admin e-mailadres"
 
 #: core/models.py:211
 msgid "language"
-msgstr ""
+msgstr "taal"
 
 #: core/models.py:212
 msgid "The language in which the user wants to see the interface."
-msgstr ""
+msgstr "De taal waarin de gebruiker de interface wil zien."
 
 #: core/models.py:218
 msgid "The timezone in which the user wants to see times."
-msgstr ""
+msgstr "Tijdzone waarin de gebruiker de tijd wil zien."
 
 #: core/models.py:221
 msgid "device"
-msgstr ""
+msgstr "apparaat"
 
 #: core/models.py:223
 msgid "Whether the user is a device or a real user."
-msgstr ""
+msgstr "Of de gebruiker een apparaat of een echte gebruiker is."
 
 #: core/models.py:226
 msgid "staff status"
-msgstr ""
+msgstr "personeelsstatus"
 
 #: core/models.py:228
 msgid "Whether the user can log into this admin site."
-msgstr ""
+msgstr "Of de gebruiker kan inloggen op deze beheer site."
 
 #: core/models.py:231
 msgid "active"
-msgstr ""
+msgstr "actief"
 
 #: core/models.py:234
 msgid ""
 "Whether this user should be treated as active. Unselect this instead of "
 "deleting accounts."
-msgstr ""
+msgstr "Of deze gebruiker als actief moet worden behandeld. Deselecteer dit in plaats van "
+"accounts te verwijderen."
 
 #: core/models.py:246
 msgid "user"
-msgstr ""
+msgstr "gebruiker"
 
 #: core/models.py:247
 msgid "users"
-msgstr ""
+msgstr "gebruikers"
 
 #: core/models.py:269
 msgid "Workspace"
-msgstr ""
+msgstr "Werkruimte"
 
 #: core/models.py:457
 msgid "Only folders can have children."
-msgstr ""
+msgstr "Alleen mappen kunnen subitems hebben."
 
 #: core/models.py:470
 msgid "title already exists in this folder."
-msgstr ""
+msgstr "titel bestaat al in deze map."
 
 #: core/models.py:504
 msgid "title"
-msgstr ""
+msgstr "titel"
 
 #: core/models.py:549
 msgid "Item"
-msgstr ""
+msgstr "Item"
 
 #: core/models.py:550
 msgid "Items"
-msgstr ""
+msgstr "Items"
 
 #: core/models.py:815
 #, python-brace-format
 msgid "{name} shared an item with you!"
-msgstr ""
+msgstr "{name} heeft een item met je gedeeld!"
 
 #: core/models.py:817
 #, python-brace-format
 msgid "{name} invited you with the role \"{role}\" on the following item:"
-msgstr ""
+msgstr "{name} heeft je uitgenodigd met de rol \"{role}\" voor het volgende item:"
 
 #: core/models.py:820
 #, python-brace-format
 msgid "{name} shared an item with you: {title}"
-msgstr ""
+msgstr "{name} heeft een item met je gedeeld: {title}"
 
 #: core/models.py:872
 msgid "This item is already hard deleted."
-msgstr ""
+msgstr "Dit item is al permanent verwijderd."
 
 #: core/models.py:882
 msgid "To hard delete an item, it must first be soft deleted."
-msgstr ""
+msgstr "Om een item permanent te verwijderen, moet het eerst tijdelijk worden verwijderd."
 
 #: core/models.py:902
 msgid "This item is not deleted."
-msgstr ""
+msgstr "Dit item is niet verwijderd."
 
 #: core/models.py:918
 msgid "This item was permanently deleted and cannot be restored."
-msgstr ""
+msgstr "Dit item is permanent verwijderd en kan niet worden hersteld."
 
 #: core/models.py:968
 msgid "Only folders can be targeted when moving an item"
-msgstr ""
+msgstr "Alleen mappen kunnen worden geselecteerd bij het verplaatsen van een item."
 
 #: core/models.py:1021
 msgid "Item/user link trace"
-msgstr ""
+msgstr "Item/gebruiker link "
 
 #: core/models.py:1022
 msgid "Item/user link traces"
-msgstr ""
+msgstr "Item/gebruiker link"
 
 #: core/models.py:1028
 msgid "A link trace already exists for this item/user."
-msgstr ""
+msgstr "Er bestaat al een link trace voor dit item/gebruiker."
 
 #: core/models.py:1051
 msgid "Item favorite"
-msgstr ""
+msgstr "Item favoriet"
 
 #: core/models.py:1052
 msgid "Item favorites"
-msgstr ""
+msgstr "Item favorieten"
 
 #: core/models.py:1058
 msgid ""
 "This item is already targeted by a favorite relation instance for the same "
 "user."
-msgstr ""
+msgstr "Dit item is al het doel van een favorietrelatie voor dezelfde "
+"gebruiker."
 
 #: core/models.py:1080
 msgid "Item/user relation"
-msgstr ""
+msgstr "Item/gebruiker relatie"
 
 #: core/models.py:1081
 msgid "Item/user relations"
-msgstr ""
+msgstr "Item/gebruiker relaties"
 
 #: core/models.py:1087
 msgid "This user is already in this item."
-msgstr ""
+msgstr "Deze gebruiker bestaat al in dit item."
 
 #: core/models.py:1093
 msgid "This team is already in this item."
-msgstr ""
+msgstr "Dit team bestaat al in dit item."
 
 #: core/models.py:1099
 msgid "Either user or team must be set, not both."
-msgstr ""
+msgstr "Ofwel gebruiker of team moet worden ingesteld, niet beide."
 
 #: core/models.py:1126
 msgid "email address"
-msgstr ""
+msgstr "e-mailadres"
 
 #: core/models.py:1145
 msgid "Item invitation"
-msgstr ""
+msgstr "Item uitnodiging"
 
 #: core/models.py:1146
 msgid "Item invitations"
-msgstr ""
+msgstr "Item uitnodigingen"
 
 #: core/templates/mail/html/invitation.html:162
 #: core/templates/mail/text/invitation.txt:3
 msgid "Logo email"
-msgstr ""
+msgstr "Logo e-mail"
 
 #: core/templates/mail/html/invitation.html:209
 #: core/templates/mail/text/invitation.txt:10
 msgid "Open"
-msgstr ""
+msgstr "Open"
 
 #: core/templates/mail/html/invitation.html:226
 #: core/templates/mail/text/invitation.txt:14
 msgid ""
 " Drive, your new essential tool for organizing, sharing and collaborating as "
 "a team. "
-msgstr ""
+msgstr " Drive, jouw nieuwe essentiële tool voor het organiseren, delen en samenwerken als team"
 
 #: core/templates/mail/html/invitation.html:233
 #: core/templates/mail/text/invitation.txt:16
 #, python-format
 msgid " Brought to you by %(brandname)s "
-msgstr ""
+msgstr " Aangeboden door %(brandname)s "
 
 #: drive/settings.py:250
 msgid "English"
-msgstr ""
+msgstr "Engels"
 
 #: drive/settings.py:251
 msgid "French"
-msgstr ""
+msgstr "Frans"
 
 #: drive/settings.py:252
 msgid "German"
-msgstr ""
+msgstr "Duits"
+
+#: drive/settings.py:253
+msgid "Dutch"
+msgstr "Nederlands"
