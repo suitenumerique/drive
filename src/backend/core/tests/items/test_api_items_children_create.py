@@ -124,7 +124,7 @@ def test_api_items_children_create_authenticated_success(reach, role, depth):
             )
         else:
             item = factories.ItemFactory(
-                parent=item, link_role="reader", type=ItemTypeChoices.FOLDER
+                parent=item, link_reach="restricted", type=ItemTypeChoices.FOLDER
             )
 
     response = client.post(

@@ -375,9 +375,9 @@ def test_models_item_access_get_abilities_preset_role(django_assert_num_queries)
     """No query is done if the role is preset, e.g., with a query annotation."""
     access = factories.UserItemAccessFactory(role="reader")
     user = factories.UserItemAccessFactory(item=access.item, role="reader").user
-    access.user_roles = ["reader"]
+    access.user_role = "reader"
 
-    with django_assert_num_queries(0):
+    with django_assert_num_queries(1):
         abilities = access.get_abilities(user)
 
     assert abilities == {

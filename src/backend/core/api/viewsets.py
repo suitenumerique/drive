@@ -536,16 +536,16 @@ class ItemViewSet(
         queryset = self.annotate_user_roles(queryset)
         return queryset
 
-    def get_response_for_queryset(self, queryset):
+    def get_response_for_queryset(self, queryset, context=None):
         """Return paginated response for the queryset if requested."""
-
+        context = context or self.get_serializer_context()
         page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = self.get_serializer(page, many=True)
+            serializer = self.get_serializer(page, many=True, context=context)
             result = self.get_paginated_response(serializer.data)
             return result
 
-        serializer = self.get_serializer(queryset, many=True)
+        serializer = self.get_serializer(queryset, many=True, context=context)
         return drf.response.Response(serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
@@ -826,7 +826,12 @@ class ItemViewSet(
             ) from excpt
 
         message = None
-        if not target_item.get_abilities(user).get("children_create"):
+        owner_accesses = []
+        if target_item.is_root:
+            owner_accesses = item.get_root().accesses.filter(
+                role=models.RoleChoices.OWNER
+            )
+        elif not target_item.get_abilities(user).get("children_create"):
             message = (
                 "You do not have permission to move items "
                 "as a child to this target item."
@@ -912,11 +917,21 @@ class ItemViewSet(
             raise drf.exceptions.ValidationError(filterset.errors)
         queryset = filterset.qs
 
+        # Pass ancestors' links paths mapping to the serializer as a context variable
+        # in order to allow saving time while computing abilities on the instance
+        paths_links_mapping = item.compute_ancestors_links_paths_mapping()
+
         # Apply ordering only now that everyting is filtered and annotated
         queryset = filters.OrderingFilter().filter_queryset(
             self.request, queryset, self
         )
-        return self.get_response_for_queryset(queryset)
+        return self.get_response_for_queryset(
+            queryset,
+            context={
+                "request": request,
+                "paths_links_mapping": paths_links_mapping,
+            },
+        )
 
     @drf.decorators.action(detail=True, methods=["get"])
     def tree(self, request, pk=None):

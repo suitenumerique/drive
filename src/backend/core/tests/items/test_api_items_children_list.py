@@ -51,7 +51,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": child1.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child1.type == models.ItemTypeChoices.FILE
@@ -86,7 +86,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": child2.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child2.type == models.ItemTypeChoices.FILE
@@ -161,7 +161,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": models.ItemTypeChoices.FILE,
                 "upload_state": models.ItemUploadStateChoices.PENDING,
                 "url": None,
@@ -194,7 +194,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": models.ItemTypeChoices.FILE,
                 "upload_state": models.ItemUploadStateChoices.READY,
                 "url": f"http://localhost:8083/media/item/{child2.id!s}/logo.png",
@@ -279,7 +279,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": child1.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child1.type == models.ItemTypeChoices.FILE
@@ -314,7 +314,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": child2.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child2.type == models.ItemTypeChoices.FILE
@@ -386,7 +386,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": child1.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child1.type == models.ItemTypeChoices.FILE
@@ -421,7 +421,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": child2.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child2.type == models.ItemTypeChoices.FILE
@@ -518,7 +518,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [access.role],
+                "user_role": access.role,
                 "type": child1.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child1.type == models.ItemTypeChoices.FILE
@@ -553,7 +553,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [access.role],
+                "user_role": access.role,
                 "type": child2.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child2.type == models.ItemTypeChoices.FILE
@@ -626,7 +626,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [grand_parent_access.role],
+                "user_role": grand_parent_access.role,
                 "type": child1.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child1.type == models.ItemTypeChoices.FILE
@@ -661,7 +661,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [grand_parent_access.role],
+                "user_role": grand_parent_access.role,
                 "type": child2.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child2.type == models.ItemTypeChoices.FILE
@@ -797,7 +797,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [access.role],
+                "user_role": access.role,
                 "type": child1.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child1.type == models.ItemTypeChoices.FILE
@@ -832,7 +832,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [access.role],
+                "user_role": access.role,
                 "type": child2.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child2.type == models.ItemTypeChoices.FILE
@@ -901,7 +901,7 @@ def test_api_items_children_list_filter_type():
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [access.role],
+                "user_role": access.role,
                 "type": child1.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child1.type == models.ItemTypeChoices.FILE
@@ -949,7 +949,7 @@ def test_api_items_children_list_filter_type():
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [access.role],
+                "user_role": access.role,
                 "type": child2.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child2.type == models.ItemTypeChoices.FILE
