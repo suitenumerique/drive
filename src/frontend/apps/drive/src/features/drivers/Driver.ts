@@ -34,6 +34,15 @@ export type ItemFilters = {
   page_size?: string;
 };
 
+export type PaginatedChildrenResult = {
+  children: Item[];
+  pagination: {
+    currentPage: number;
+    nextPage: number | null;
+    totalCount: number;
+    hasMore: boolean;
+  };
+};
 export type UserFilters = {
   q?: string;
 };
@@ -48,6 +57,11 @@ export abstract class Driver {
   abstract moveItem(id: string, parentId: string): Promise<void>;
   abstract moveItems(ids: string[], parentId: string): Promise<void>;
   abstract getChildren(id: string, filters?: ItemFilters): Promise<Item[]>;
+  abstract getPaginatedChildren(
+    id: string,
+    page: number,
+    filters?: ItemFilters
+  ): Promise<PaginatedChildrenResult>;
   abstract searchItems(filters?: ItemFilters): Promise<Item[]>;
   // Accesses
   abstract getItemAccesses(itemId: string): Promise<APIList<Access>>;

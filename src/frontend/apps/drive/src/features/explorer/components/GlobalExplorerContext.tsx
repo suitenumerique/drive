@@ -237,6 +237,18 @@ export const GlobalExplorerProvider = ({
       <TreeProvider
         initialTreeData={[]}
         initialNodeId={initialId}
+        loadPaginatedChildrenCallback={async (id, page) => {
+          const data = await driver.getPaginatedChildren(id, page, {
+            type: ItemType.FOLDER,
+          });
+          const result = data.children.map((item) =>
+            itemToTreeItem(item, id)
+          ) as TreeViewDataType<Item>[];
+          return {
+            children: result,
+            pagination: data.pagination,
+          };
+        }}
         onLoadChildren={async (id) => {
           const children = await driver.getChildren(id, {
             type: ItemType.FOLDER,
