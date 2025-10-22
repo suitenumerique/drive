@@ -165,7 +165,7 @@ const useUpload = ({ item }: { item: Item }) => {
 };
 
 export type UploadingState = {
-  step: "create_folders" | "upload_files" | "done";
+  step: "none" | "create_folders" | "upload_files" | "done";
   filesMeta: Record<string, FileUploadMeta>;
 };
 
@@ -183,16 +183,9 @@ export const useUploadZone = ({ item }: { item: Item }) => {
   const fileDragToastId = useRef<Id | null>(null);
   const fileUploadsToastId = useRef<Id | null>(null);
   const [uploadingState, setUploadingState] = useState<UploadingState>({
-    step: "create_folders",
+    step: "none",
     filesMeta: {},
   });
-
-  const resetUploadingState = () => {
-    setUploadingState({
-      step: "create_folders",
-      filesMeta: {},
-    });
-  };
 
   const { filesToUpload, handleHierarchy } = useUpload({ item: item! });
 
@@ -254,7 +247,11 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         return;
       }
 
-      resetUploadingState();
+      setUploadingState((prev) => ({
+        ...prev,
+        step: "create_folders",
+      }));
+
       if (!fileUploadsToastId.current) {
         fileUploadsToastId.current = addToast(
           <FileUploadToast uploadingState={uploadingState} />,
@@ -370,7 +367,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
   useEffect(() => {
     const unloadCallback = (event: BeforeUnloadEvent) => {
-      if (uploadingState.step !== "done") {
+      if (["create_folders", "upload_files"].includes(uploadingState.step)) {
         event.preventDefault();
       }
       return "";
@@ -378,7 +375,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
     window.addEventListener("beforeunload", unloadCallback);
     return () => window.removeEventListener("beforeunload", unloadCallback);
-  }, [uploadingState]);
+  }, [uploadingState.step]);
 
   return {
     dropZone,
