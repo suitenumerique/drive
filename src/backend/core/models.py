@@ -33,6 +33,7 @@ from lasuite.drf.models.choices import (
     LinkReachChoices,
     LinkRoleChoices,
     RoleChoices,
+    get_equivalent_link_definition,
 )
 from timezone_field import TimeZoneField
 
@@ -546,6 +547,12 @@ class Item(TreeModel, BaseModel):
     def __str__(self):
         return str(self.title)
 
+    def __init__(self, *args, **kwargs):
+        """Initialize cache property."""
+        super().__init__(*args, **kwargs)
+        self._ancestors_link_definition = None
+        self._computed_link_definition = None
+
     def save(self, *args, **kwargs):
         """Set the upload state to pending if it's the first save and it's a file"""
         # Validate filename requirements based on item type
@@ -688,6 +695,10 @@ class Item(TreeModel, BaseModel):
         """Return True if the item is the root of the tree."""
         return len(self.path) == 1
 
+    def get_root(self):
+        """Return the root of the tree."""
+        return self.ancestors().filter(path__depth=1).first()
+
     def invalidate_nb_accesses_cache(self):
         """
         Invalidate the cache for number of accesses, including on affected descendants.
@@ -698,99 +709,162 @@ class Item(TreeModel, BaseModel):
             cache_key = item.get_nb_accesses_cache_key()
             cache.delete(cache_key)
 
-    def get_roles(self, user):
-        """Return the roles a user has on an item."""
+    def get_role(self, user):
+        """Return the role a user has on an item."""
         if not user.is_authenticated:
-            return []
+            return None
 
         try:
             roles = self.user_roles or []
         except AttributeError:
-            try:
-                roles = ItemAccess.objects.filter(
-                    models.Q(user=user) | models.Q(team__in=user.teams),
-                    item__path__ancestors=self.path,
-                ).values_list("role", flat=True)
-            except (models.ObjectDoesNotExist, IndexError):
-                roles = []
-        return roles
+            roles = ItemAccess.objects.filter(
+                models.Q(user=user) | models.Q(team__in=user.teams),
+                item__path__ancestors=self.path,
+            ).values_list("role", flat=True)
 
-    def get_links_definitions(self, ancestors_links=None):
-        """Get links reach/role definitions for the current item and its ancestors."""
-        links_definitions = defaultdict(set)
-        links_definitions[self.link_reach].add(self.link_role)
+        return RoleChoices.max(*roles)
 
-        # Merge ancestor link definitions
-        for ancestor in ancestors_links:
-            links_definitions[ancestor["link_reach"]].add(ancestor["link_role"])
+    def compute_ancestors_links_paths_mapping(self):
+        """
+        Compute the ancestors links for the current item up to the highest readable ancestor.
+        """
+        ancestors = (
+            (self.ancestors() | self._meta.model.objects.filter(pk=self.pk))
+            .filter(ancestors_deleted_at__isnull=True)
+            .order_by("path")
+        )
+        ancestors_links = []
+        paths_links_mapping = {}
 
-        return dict(links_definitions)  # Convert defaultdict back to a normal dict
+        for ancestor in ancestors:
+            ancestors_links.append(
+                {"link_reach": ancestor.link_reach, "link_role": ancestor.link_role}
+            )
+            paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
-    def get_abilities(self, user, ancestors_links=None):
+        return paths_links_mapping
+
+    @property
+    def link_definition(self):
+        """Returns link reach/role as a definition in dictionary format."""
+        return {"link_reach": self.link_reach, "link_role": self.link_role}
+
+    @property
+    def ancestors_link_definition(self):
+        """Link definition equivalent to all document's ancestors."""
+        if getattr(self, "_ancestors_link_definition", None) is None:
+            if self.depth <= 1:
+                ancestors_links = []
+            else:
+                mapping = self.compute_ancestors_links_paths_mapping()
+                ancestors_links = mapping.get(str(self.path[:-1]), [])
+            self._ancestors_link_definition = get_equivalent_link_definition(
+                ancestors_links
+            )
+
+        return self._ancestors_link_definition
+
+    @ancestors_link_definition.setter
+    def ancestors_link_definition(self, definition):
+        """Cache the ancestors_link_definition."""
+        self._ancestors_link_definition = definition
+
+    @property
+    def ancestors_link_reach(self):
+        """Link reach equivalent to all document's ancestors."""
+        return self.ancestors_link_definition["link_reach"]
+
+    @property
+    def ancestors_link_role(self):
+        """Link role equivalent to all document's ancestors."""
+        return self.ancestors_link_definition["link_role"]
+
+    @property
+    def computed_link_definition(self):
+        """
+        Link reach/role on the document, combining inherited ancestors' link
+        definitions and the document's own link definition.
+        """
+        if getattr(self, "_computed_link_definition", None) is None:
+            self._computed_link_definition = get_equivalent_link_definition(
+                [self.ancestors_link_definition, self.link_definition]
+            )
+        return self._computed_link_definition
+
+    @property
+    def computed_link_reach(self):
+        """Actual link reach on the document."""
+        return self.computed_link_definition["link_reach"]
+
+    @property
+    def computed_link_role(self):
+        """Actual link role on the document."""
+        return self.computed_link_definition["link_role"]
+
+    def get_abilities(self, user):
         """
         Compute and return abilities for a given user on the item.
         """
-        if self.depth <= 1 or getattr(self, "is_highest_ancestor_for_user", False):
-            ancestors_links = []
-        elif ancestors_links is None:
-            ancestors_links = self.ancestors().values("link_reach", "link_role")
-
-        roles = set(
-            self.get_roles(user)
-        )  # at this point only roles based on specific access
-
+        # First get the role based on specific access
+        role = self.get_role(user)
         # Characteristics that are based only on specific access
-        is_owner = RoleChoices.OWNER in roles
-        is_deleted = self.ancestors_deleted_at and not is_owner
-        is_owner_or_admin = (is_owner or RoleChoices.ADMIN in roles) and not is_deleted
+        is_owner = role == RoleChoices.OWNER
+        is_deleted = self.ancestors_deleted_at
+        is_owner_or_admin = (is_owner or role == RoleChoices.ADMIN) and not is_deleted
 
         # Compute access roles before adding link roles because we don't
         # want anonymous users to access versions (we wouldn't know from
         # which date to allow them anyway)
         # Anonymous users should also not see item accesses
-        has_access_role = bool(roles) and not is_deleted
-
-        # Add roles provided by the item link, taking into account its ancestors
-
-        # Add roles provided by the item link
-        links_definitions = self.get_links_definitions(ancestors_links=ancestors_links)
-        public_roles = links_definitions.get(LinkReachChoices.PUBLIC, set())
-        authenticated_roles = (
-            links_definitions.get(LinkReachChoices.AUTHENTICATED, set())
-            if user.is_authenticated
-            else set()
+        has_access_role = bool(role) and not is_deleted
+        link_select_options = (
+            LinkReachChoices.get_select_options(**self.ancestors_link_definition)
+            if has_access_role
+            else {}
         )
 
-        roles = roles | public_roles | authenticated_roles
+        link_definition = self.computed_link_definition
 
-        can_get = bool(roles) and not is_deleted
+        link_reach = link_definition["link_reach"]
+        if link_reach == LinkReachChoices.PUBLIC or (
+            link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated
+        ):
+            # Set the user role to the highest role between the item role and the link role
+            # Needed for a user with an access lower than link_role
+            # Needed for a user without access to determine the role he has.
+            role = RoleChoices.max(role, link_definition["link_role"])
+        can_get = bool(role) and not is_deleted
+        retrieve = can_get or is_owner
         can_update = (
-            is_owner_or_admin or RoleChoices.EDITOR in roles
+            is_owner_or_admin or role == RoleChoices.EDITOR
         ) and not is_deleted
-        can_destroy = is_owner if self.is_root else can_update
-        # A workspace cannot be moved
-        can_move = (
-            False if self.is_root else can_update and not self.ancestors_deleted_at
+        can_create_children = can_update and user.is_authenticated
+        can_hard_delete = (
+            is_owner
+            if self.is_root
+            else (is_owner_or_admin or (user.is_authenticated and self.creator == user))
         )
+        can_destroy = can_hard_delete and not is_deleted
 
         return {
             "accesses_manage": is_owner_or_admin,
             "accesses_view": has_access_role,
             "breadcrumb": can_get,
             "children_list": can_get,
-            "children_create": can_update and user.is_authenticated,
+            "children_create": can_create_children,
             "destroy": can_destroy,
-            "hard_delete": can_destroy,
+            "hard_delete": can_hard_delete,
             "favorite": can_get and user.is_authenticated,
             "link_configuration": is_owner_or_admin,
-            "invite_owner": is_owner,
-            "move": can_move,
+            "invite_owner": is_owner and not is_deleted,
+            "link_select_options": link_select_options,
+            "move": is_owner_or_admin and not is_deleted,
             "restore": is_owner,
-            "retrieve": can_get,
+            "retrieve": retrieve,
             "tree": can_get,
             "media_auth": can_get,
-            "partial_update": is_owner_or_admin if self.is_root else can_update,
-            "update": is_owner_or_admin if self.is_root else can_update,
+            "partial_update": can_update,
+            "update": can_update,
             "upload_ended": can_update and user.is_authenticated,
             "wopi": can_get,
         }

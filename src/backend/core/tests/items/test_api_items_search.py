@@ -83,7 +83,7 @@ def test_api_items_search_authenticated_without_filters():
             "upload_state": None,
             "url": None,
             "url_preview": None,
-            "user_roles": ["owner"],
+            "user_role": "owner",
         },
         {
             "abilities": top_parent.get_abilities(user),
@@ -117,7 +117,7 @@ def test_api_items_search_authenticated_without_filters():
             "upload_state": None,
             "url": None,
             "url_preview": None,
-            "user_roles": [top_parent_access.role],
+            "user_role": top_parent_access.role,
         },
         {
             "abilities": parent.get_abilities(user),
@@ -178,7 +178,7 @@ def test_api_items_search_authenticated_without_filters():
                     "upload_state": None,
                     "url": None,
                     "url_preview": None,
-                    "user_roles": [top_parent_access.role],
+                    "user_role": top_parent_access.role,
                 }
             ],
             "path": str(parent.path),
@@ -189,7 +189,7 @@ def test_api_items_search_authenticated_without_filters():
             "upload_state": None,
             "url": None,
             "url_preview": None,
-            "user_roles": [top_parent_access.role],
+            "user_role": top_parent_access.role,
         },
         {
             "abilities": children.get_abilities(user),
@@ -250,7 +250,7 @@ def test_api_items_search_authenticated_without_filters():
                     "upload_state": None,
                     "url": None,
                     "url_preview": None,
-                    "user_roles": [top_parent_access.role],
+                    "user_role": top_parent_access.role,
                 },
                 {
                     "abilities": parent.get_abilities(user),
@@ -283,7 +283,7 @@ def test_api_items_search_authenticated_without_filters():
                     "upload_state": None,
                     "url": None,
                     "url_preview": None,
-                    "user_roles": [top_parent_access.role],
+                    "user_role": top_parent_access.role,
                 },
             ],
             "path": str(children.path),
@@ -294,7 +294,7 @@ def test_api_items_search_authenticated_without_filters():
             "upload_state": "pending",
             "url": None,
             "url_preview": None,
-            "user_roles": [top_parent_access.role],
+            "user_role": top_parent_access.role,
         },
     ]
 
