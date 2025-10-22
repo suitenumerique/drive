@@ -108,7 +108,7 @@ def test_api_items_list_format():
             "path": str(item.path),
             "title": item.title,
             "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-            "user_roles": [access.role],
+            "user_role": access.role,
             "type": models.ItemTypeChoices.FOLDER,
             "upload_state": None,
             "url": None,
@@ -206,11 +206,11 @@ def test_api_items_list_authenticated_direct(django_assert_num_queries):
         str(child4_with_access.id),
     }
 
-    with django_assert_num_queries(8):
+    with django_assert_num_queries(10):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
@@ -353,11 +353,11 @@ def test_api_items_list_authenticated_link_reach_public_or_authenticated(
         str(visible_child.id),
     }
 
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(8):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(5):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
