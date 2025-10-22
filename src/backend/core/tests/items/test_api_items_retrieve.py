@@ -30,6 +30,10 @@ def test_api_items_retrieve_anonymous_public_standalone():
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(AnonymousUser()),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),

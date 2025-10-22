@@ -143,6 +143,10 @@ class ListItemSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "abilities",
+            "ancestors_link_reach",
+            "ancestors_link_role",
+            "computed_link_reach",
+            "computed_link_role",
             "created_at",
             "creator",
             "depth",
@@ -172,6 +176,10 @@ class ListItemSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "abilities",
+            "ancestors_link_reach",
+            "ancestors_link_role",
+            "computed_link_reach",
+            "computed_link_role",
             "created_at",
             "creator",
             "depth",
@@ -282,6 +290,10 @@ class ItemSerializer(ListItemSerializer):
         fields = [
             "id",
             "abilities",
+            "ancestors_link_reach",
+            "ancestors_link_role",
+            "computed_link_reach",
+            "computed_link_role",
             "created_at",
             "creator",
             "depth",
@@ -311,6 +323,10 @@ class ItemSerializer(ListItemSerializer):
         read_only_fields = [
             "id",
             "abilities",
+            "ancestors_link_reach",
+            "ancestors_link_role",
+            "computed_link_reach",
+            "computed_link_role",
             "created_at",
             "creator",
             "depth",
@@ -363,6 +379,10 @@ class CreateItemSerializer(ItemSerializer):
         fields = [
             "id",
             "abilities",
+            "ancestors_link_reach",
+            "ancestors_link_role",
+            "computed_link_reach",
+            "computed_link_role",
             "created_at",
             "creator",
             "depth",
@@ -388,6 +408,10 @@ class CreateItemSerializer(ItemSerializer):
         ]
         read_only_fields = [
             "abilities",
+            "ancestors_link_reach",
+            "ancestors_link_role",
+            "computed_link_reach",
+            "computed_link_role",
             "created_at",
             "creator",
             "depth",
