@@ -7,6 +7,7 @@ from lasuite.oidc_login.urls import urlpatterns as oidc_urls
 from rest_framework.routers import DefaultRouter
 
 from core.api import viewsets
+from core.external_api import viewsets as external_api_viewsets
 
 # - Main endpoints
 router = DefaultRouter()
@@ -33,6 +34,19 @@ sdk_relay_router.register(
     basename="sdk_relay_events",
 )
 
+# - Resource server routes
+external_api_router = DefaultRouter()
+external_api_router.register(
+    "items",
+    external_api_viewsets.ResourceServerItemViewSet,
+    basename="resource_server_items",
+)
+external_api_router.register(
+    "users",
+    external_api_viewsets.ResourceServerUserViewSet,
+    basename="resource_server_users",
+)
+
 
 urlpatterns = [
     path(
@@ -51,3 +65,16 @@ urlpatterns = [
     ),
     path(f"api/{settings.API_VERSION}/config/", viewsets.ConfigView.as_view()),
 ]
+
+
+if settings.OIDC_RESOURCE_SERVER_ENABLED:
+    urlpatterns.append(
+        path(
+            f"external_api/{settings.API_VERSION}/",
+            include(
+                [
+                    *external_api_router.urls,
+                ]
+            ),
+        )
+    )
