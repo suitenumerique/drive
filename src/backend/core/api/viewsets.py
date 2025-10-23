@@ -423,7 +423,7 @@ class ItemViewSet(
         permissions.ItemAccessPermission,
     ]
     queryset = models.Item.objects.filter(hard_deleted_at__isnull=True)
-    serializer_class = serializers.ItemSerializer
+    serializer_class = serializers.SearchItemSerializer
     list_serializer_class = serializers.ListItemSerializer
     trashbin_serializer_class = serializers.ListItemSerializer
     children_serializer_class = serializers.ListItemSerializer
@@ -552,6 +552,7 @@ class ItemViewSet(
         """
         user = self.request.user
         instance = self.get_object()
+        self._compute_parents([instance])
         serializer = self.get_serializer(instance)
 
         # The `create` query generates 5 db queries which are much less efficient than an
@@ -1011,7 +1012,8 @@ class ItemViewSet(
 
     def _compute_parents(self, items):
         """
-        Compute parents for the items by analyzing their paths and fetching missing parents.
+        Compute parents for the items 
+        by analyzing their paths and fetching missing parents.
         """
         # Build parents dictionary and collect missing parent IDs
         parents = {str(item.id): item for item in items}
