@@ -30,8 +30,19 @@ export type ItemFilters = {
   title?: string;
   workspace?: string;
   scope?: ItemFiltersScope;
+  page?: string;
+  page_size?: string;
+  link_reach?: LinkReach;
 };
 
+export type PaginatedChildrenResult = {
+  children: Item[];
+  pagination: {
+    currentPage: number;
+    totalCount?: number;
+    hasMore: boolean;
+  };
+};
 export type UserFilters = {
   q?: string;
 };
@@ -39,6 +50,11 @@ export type UserFilters = {
 export abstract class Driver {
   abstract getConfig(): Promise<ApiConfig>;
   abstract getItems(filters?: ItemFilters): Promise<Item[]>;
+  abstract getPaginatedItems(
+    page: number,
+    filters?: ItemFilters
+  ): Promise<PaginatedChildrenResult>;
+
   abstract getTrashItems(filters?: ItemFilters): Promise<Item[]>;
   abstract getItem(id: string): Promise<Item>;
   abstract updateItem(item: Partial<Item>): Promise<Item>;
@@ -46,6 +62,11 @@ export abstract class Driver {
   abstract moveItem(id: string, parentId: string): Promise<void>;
   abstract moveItems(ids: string[], parentId: string): Promise<void>;
   abstract getChildren(id: string, filters?: ItemFilters): Promise<Item[]>;
+  abstract getPaginatedChildren(
+    id: string,
+    page: number,
+    filters?: ItemFilters
+  ): Promise<PaginatedChildrenResult>;
   abstract searchItems(filters?: ItemFilters): Promise<Item[]>;
   // Accesses
   abstract getItemAccesses(itemId: string): Promise<APIList<Access>>;
@@ -77,6 +98,4 @@ export abstract class Driver {
   abstract deleteItems(ids: string[]): Promise<void>;
   abstract hardDeleteItems(ids: string[]): Promise<void>;
   abstract getWopiInfo(itemId: string): Promise<WopiInfo>;
-
-
 }

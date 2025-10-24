@@ -84,7 +84,10 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
 
   const { data: rootItems } = useQuery({
     queryKey: ["rootItems"],
-    queryFn: () => getDriver().getItems(),
+    queryFn: () => {
+      console.log("get root items");
+      return getDriver().getItems();
+    },
   });
 
   const { data: itemChildren } = useQuery({

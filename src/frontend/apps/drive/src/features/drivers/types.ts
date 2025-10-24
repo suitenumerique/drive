@@ -54,7 +54,7 @@ export type Item = {
   user_roles?: Role[];
   link_reach?: LinkReach;
   link_role?: LinkRole;
-  abilities: {
+  abilities?: {
     accesses_manage: boolean;
     accesses_view: boolean;
     children_create: boolean;

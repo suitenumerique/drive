@@ -19,6 +19,11 @@ export interface AppExplorerProps {
   onNavigate?: (event: NavigationEvent) => void;
   disableAreaSelection?: boolean;
   canSelect?: (item: Item) => boolean;
+  // Infinite scroll props
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
+  fetchNextPage?: () => void;
+  isLoading?: boolean;
 }
 
 export type AppExplorerType = AppExplorerProps;

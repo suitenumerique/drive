@@ -140,7 +140,7 @@ class Pagination(drf.pagination.PageNumberPagination):
     """Pagination to display no more than 100 objects per page sorted by creation date."""
 
     ordering = "-created_on"
-    max_page_size = 200
+    max_page_size = settings.MAX_PAGE_SIZE
     page_size_query_param = "page_size"
 
 
@@ -157,13 +157,17 @@ class UserListThrottleSustained(UserRateThrottle):
 
 
 class UserViewSet(
-    drf.mixins.UpdateModelMixin, viewsets.GenericViewSet, drf.mixins.ListModelMixin
+    SerializerPerActionMixin,
+    drf.mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+    drf.mixins.ListModelMixin,
 ):
     """User ViewSet"""
 
     permission_classes = [permissions.IsSelf]
     queryset = models.User.objects.all().filter(is_active=True)
     serializer_class = serializers.UserSerializer
+    get_me_serializer_class = serializers.UserMeSerializer
     pagination_class = None
     throttle_classes = []
 
@@ -226,7 +230,7 @@ class UserViewSet(
         """
         context = {"request": request}
         return drf.response.Response(
-            self.serializer_class(request.user, context=context).data
+            self.get_serializer(request.user, context=context).data
         )
 
 
@@ -397,10 +401,14 @@ class ItemViewSet(
         - `is_favorite=true`: Returns items marked as favorite by the current user
         - `is_favorite=false`: Returns items not marked as favorite by the current user
         - `title=hello`: Returns items which title contains the "hello" string
+        - `link_reach=public`: Returns items with public link reach (excluding main workspaces)
+        - `link_reach=authenticated`: Returns items with authenticated link reach (excluding main workspaces)
+        - `link_reach=restricted`: Returns items with restricted link reach (excluding main workspaces)
 
         Example:
         - GET /api/v1.0/items/?is_creator_me=true&is_favorite=true
         - GET /api/v1.0/items/?is_creator_me=false&title=hello
+        - GET /api/v1.0/items/?link_reach=public
 
     ### Annotations:
     1. **is_favorite**: Indicates whether the item is marked as favorite by the current user.
@@ -419,7 +427,7 @@ class ItemViewSet(
         permissions.ItemAccessPermission,
     ]
     queryset = models.Item.objects.filter(hard_deleted_at__isnull=True)
-    serializer_class = serializers.ItemSerializer
+    serializer_class = serializers.SearchItemSerializer
     list_serializer_class = serializers.ListItemSerializer
     trashbin_serializer_class = serializers.ListItemSerializer
     children_serializer_class = serializers.ListItemSerializer
@@ -548,6 +556,7 @@ class ItemViewSet(
         """
         user = self.request.user
         instance = self.get_object()
+        self._compute_parents([instance])
         serializer = self.get_serializer(instance)
 
         # The `create` query generates 5 db queries which are much less efficient than an
@@ -602,7 +611,7 @@ class ItemViewSet(
         filter_data = filterset.form.cleaned_data
 
         # Filter as early as possible on fields that are available on the model
-        for field in ["is_creator_me", "title", "type"]:
+        for field in ["is_creator_me", "title", "type", "link_reach"]:
             queryset = filterset.filters[field].filter(queryset, filter_data[field])
 
         queryset = self.annotate_user_roles(queryset)
@@ -1007,7 +1016,8 @@ class ItemViewSet(
 
     def _compute_parents(self, items):
         """
-        Compute parents for the items by analyzing their paths and fetching missing parents.
+        Compute parents for the items 
+        by analyzing their paths and fetching missing parents.
         """
         # Build parents dictionary and collect missing parent IDs
         parents = {str(item.id): item for item in items}

@@ -140,7 +140,7 @@ export const ExplorerTree = () => {
 
       {initialOpenState && (
         <TreeView
-          selectedNodeId={itemId}
+          // selectedNodeId={itemId}
           initialOpenState={initialOpenState}
           afterMove={handleMove}
           beforeMove={(moveResult, moveCallback) => {
