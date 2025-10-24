@@ -8,6 +8,8 @@ import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationCreateFolder } from "../../hooks/useMutations";
+import { itemToTreeItem } from "../GlobalExplorerContext";
+import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
 
 type Inputs = {
   title: string;
@@ -21,6 +23,7 @@ export const ExplorerCreateFolderModal = (
   const { t } = useTranslation();
   const form = useForm<Inputs>();
   const createFolder = useMutationCreateFolder();
+  const treeContext = useTreeContext();
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     form.reset();
@@ -30,7 +33,12 @@ export const ExplorerCreateFolderModal = (
         parentId: props.parentId,
       },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          treeContext?.treeData.addChild(
+            props.parentId,
+            itemToTreeItem(data),
+            0
+          );
           form.reset();
           props.onClose();
         },

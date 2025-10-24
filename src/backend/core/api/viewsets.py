@@ -401,10 +401,14 @@ class ItemViewSet(
         - `is_favorite=true`: Returns items marked as favorite by the current user
         - `is_favorite=false`: Returns items not marked as favorite by the current user
         - `title=hello`: Returns items which title contains the "hello" string
+        - `link_reach=public`: Returns items with public link reach (excluding main workspaces)
+        - `link_reach=authenticated`: Returns items with authenticated link reach (excluding main workspaces)
+        - `link_reach=restricted`: Returns items with restricted link reach (excluding main workspaces)
 
         Example:
         - GET /api/v1.0/items/?is_creator_me=true&is_favorite=true
         - GET /api/v1.0/items/?is_creator_me=false&title=hello
+        - GET /api/v1.0/items/?link_reach=public
 
     ### Annotations:
     1. **is_favorite**: Indicates whether the item is marked as favorite by the current user.
@@ -607,7 +611,7 @@ class ItemViewSet(
         filter_data = filterset.form.cleaned_data
 
         # Filter as early as possible on fields that are available on the model
-        for field in ["is_creator_me", "title", "type"]:
+        for field in ["is_creator_me", "title", "type", "link_reach"]:
             queryset = filterset.filters[field].filter(queryset, filter_data[field])
 
         queryset = self.annotate_user_roles(queryset)

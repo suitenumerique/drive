@@ -38,6 +38,29 @@ export class StandardDriver extends Driver {
     const data = await response.json();
     return jsonToItems(data.results);
   }
+  async getPaginatedItems(
+    page: number,
+    filters?: ItemFilters
+  ): Promise<PaginatedChildrenResult> {
+    const params = {
+      page: page.toString(),
+      page_size: filters?.page_size || "20",
+      ordering: "-type,-created_at",
+      ...(filters ? filters : {}),
+    };
+    const response = await fetchAPI(`items/`, {
+      params,
+    });
+    const data = await response.json();
+    return {
+      children: jsonToItems(data.results),
+      pagination: {
+        currentPage: page,
+        totalCount: data.count,
+        hasMore: data.next !== null,
+      },
+    };
+  }
 
   async searchItems(filters?: ItemFilters): Promise<Item[]> {
     const response = await fetchAPI(`items/search/`, {
@@ -128,7 +151,6 @@ export class StandardDriver extends Driver {
       children: jsonToItems(data.results),
       pagination: {
         currentPage: page,
-        nextPage: data.next ? page + 1 : null,
         totalCount: data.count,
         hasMore: data.next !== null,
       },

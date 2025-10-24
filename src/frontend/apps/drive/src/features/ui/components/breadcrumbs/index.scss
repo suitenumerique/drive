@@ -19,6 +19,7 @@
   border: none;
   color: var(--c--contextuals--content--semantic--neutral--secondary);
   font-size: 16px;
+  border-radius: 4px;
   font-weight: 400;
   font-family: var(--c--globals--font--families--base);
   cursor: pointer;
@@ -27,8 +28,14 @@
   gap: 8px;
   text-decoration: none;
 
+  &:hover {
+    background-color: var(
+      --c--contextuals--background--semantic--neutral--tertiary
+    );
+  }
+
   &.active {
-    font-weight: 500;
+    font-weight: 600;
     color: var(--c--contextuals--content--semantic--neutral--primary);
   }
 }

@@ -10,6 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Item,
   ItemType,
+  LinkReach,
   TreeItem,
   WorkspaceType,
 } from "@/features/drivers/types";
@@ -238,12 +239,29 @@ export const GlobalExplorerProvider = ({
         initialTreeData={[]}
         initialNodeId={initialId}
         loadPaginatedChildrenCallback={async (id, page) => {
+          if (id === "SHARED_SPACE" || id === "PUBLIC_SPACE") {
+            const link_reach =
+              id === "SHARED_SPACE" ? LinkReach.RESTRICTED : LinkReach.PUBLIC;
+            const response = await driver.getPaginatedItems(page, {
+              link_reach,
+            });
+
+            const result = response.children.map((item) =>
+              itemToTreeItem(item, id)
+            ) as TreeViewDataType<Item>[];
+
+            return {
+              children: result,
+              pagination: response.pagination,
+            };
+          }
           const data = await driver.getPaginatedChildren(id, page, {
             type: ItemType.FOLDER,
           });
           const result = data.children.map((item) =>
             itemToTreeItem(item, id)
           ) as TreeViewDataType<Item>[];
+
           return {
             children: result,
             pagination: data.pagination,
@@ -342,47 +360,75 @@ const TreeProviderInitializer = ({
         id: "PERSONAL_SPACE",
         nodeType: TreeViewNodeTypeEnum.TITLE,
         headerTitle: t("explorer.tree.personalSpace"),
+        pagination: {
+          currentPage: 1,
+          totalCount: 400,
+          hasMore: true,
+        },
       };
       // We add the personal workspace node and the main workspace node
-      items.push(personalWorkspaceNode);
+      // items.push(personalWorkspaceNode);
       items.push(mainWorkspace);
     }
 
-    const sharedWorkspaces = getWorkspacesByType(WorkspaceType.SHARED);
-    const publicWorkspaces = getWorkspacesByType(WorkspaceType.PUBLIC);
+    const sharedWorkspaceNode: TreeViewDataType<TreeItem> = {
+      id: "SHARED_SPACE",
+      nodeType: TreeViewNodeTypeEnum.SIMPLE_NODE,
+      childrenCount: 20,
+      label: t("explorer.tree.shared_space"),
+      pagination: {
+        currentPage: 0,
+        hasMore: true,
+      },
+    };
+    const publicWorkspaceNode: TreeViewDataType<TreeItem> = {
+      id: "PUBLIC_SPACE",
+      nodeType: TreeViewNodeTypeEnum.SIMPLE_NODE,
+      childrenCount: 20,
+      label: t("explorer.tree.public_space"),
+      pagination: {
+        currentPage: 0,
+        hasMore: true,
+      },
+    };
+    items.push(sharedWorkspaceNode);
+    items.push(publicWorkspaceNode);
 
-    if (sharedWorkspaces.length > 0) {
-      // We add a separator and the shared space node
-      const separator: TreeViewDataType<TreeItem> = {
-        id: "SEPARATOR",
-        nodeType: TreeViewNodeTypeEnum.SEPARATOR,
-      };
+    // const sharedWorkspaces = getWorkspacesByType(WorkspaceType.SHARED);
+    // const publicWorkspaces = getWorkspacesByType(WorkspaceType.PUBLIC);
 
-      const sharedSpace: TreeViewDataType<TreeItem> = {
-        id: "SHARED_SPACE",
-        nodeType: TreeViewNodeTypeEnum.TITLE,
-        headerTitle: t("explorer.tree.shared_space"),
-      };
+    // if (sharedWorkspaces.length > 0) {
+    //   // We add a separator and the shared space node
+    //   const separator: TreeViewDataType<TreeItem> = {
+    //     id: "SEPARATOR",
+    //     nodeType: TreeViewNodeTypeEnum.SEPARATOR,
+    //   };
 
-      items.push(separator);
-      items.push(sharedSpace);
-      items.push(...sharedWorkspaces);
-    }
+    //   const sharedSpace: TreeViewDataType<TreeItem> = {
+    //     id: "SHARED_SPACE",
+    //     nodeType: TreeViewNodeTypeEnum.TITLE,
+    //     headerTitle: t("explorer.tree.shared_space"),
+    //   };
 
-    if (publicWorkspaces.length > 0) {
-      const separator: TreeViewDataType<TreeItem> = {
-        id: "SEPARATOR_PUBLIC",
-        nodeType: TreeViewNodeTypeEnum.SEPARATOR,
-      };
-      const publicSpace: TreeViewDataType<TreeItem> = {
-        id: "PUBLIC_SPACE",
-        nodeType: TreeViewNodeTypeEnum.TITLE,
-        headerTitle: t("explorer.tree.public_space"),
-      };
-      items.push(separator);
-      items.push(publicSpace);
-      items.push(...publicWorkspaces);
-    }
+    //   items.push(separator);
+    //   items.push(sharedSpace);
+    //   items.push(...sharedWorkspaces);
+    // }
+
+    // if (publicWorkspaces.length > 0) {
+    //   const separator: TreeViewDataType<TreeItem> = {
+    //     id: "SEPARATOR_PUBLIC",
+    //     nodeType: TreeViewNodeTypeEnum.SEPARATOR,
+    //   };
+    //   const publicSpace: TreeViewDataType<TreeItem> = {
+    //     id: "PUBLIC_SPACE",
+    //     nodeType: TreeViewNodeTypeEnum.TITLE,
+    //     headerTitle: t("explorer.tree.public_space"),
+    //   };
+    //   items.push(separator);
+    //   items.push(publicSpace);
+    //   items.push(...publicWorkspaces);
+    // }
 
     treeContext?.treeData.resetTree(items);
     setTreeIsInitialized(true);

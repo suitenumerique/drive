@@ -52,9 +52,16 @@ class SearchItemFilter(ItemFilter):
         method="filter_scope",
     )
 
+    link_reach = django_filters.ChoiceFilter(
+        field_name="link_reach",
+        label=_("Link Reach"),
+        choices=models.LinkReachChoices.choices,
+        method="filter_link_reach",
+    )
+
     class Meta:
         model = models.Item
-        fields = ["title", "type", "workspace"]
+        fields = ["title", "type", "workspace", "link_reach"]
 
     # pylint: disable=keyword-arg-before-vararg
     def __init__(self, data=None, *args, **kwargs):
@@ -108,6 +115,19 @@ class SearchItemFilter(ItemFilter):
 
         return queryset.filter(to_filter)
 
+    # pylint: disable=unused-argument
+    def filter_link_reach(self, queryset, name, value):
+        """
+        Filter items based on their link_reach, excluding main workspaces.
+        
+        Example:
+            - /api/v1.0/items/search/?link_reach=public
+                → Filters items with public link reach (excluding main workspaces)
+        """
+        if value:
+            return queryset.filter(link_reach=value).exclude(main_workspace=True)
+        return queryset
+
 
 class ListItemFilter(ItemFilter):
     """Filter class dedicated to the Item viewset list method."""
@@ -118,10 +138,29 @@ class ListItemFilter(ItemFilter):
     is_favorite = django_filters.BooleanFilter(
         method="filter_is_favorite", label=_("Favorite")
     )
+    link_reach = django_filters.ChoiceFilter(
+        field_name="link_reach",
+        label=_("Link Reach"),
+        choices=models.LinkReachChoices.choices,
+        method="filter_link_reach",
+    )
 
     class Meta:
         model = models.Item
-        fields = ["is_creator_me", "is_favorite", "title", "type"]
+        fields = ["is_creator_me", "is_favorite", "title", "type", "link_reach"]
+
+    # pylint: disable=unused-argument
+    def filter_link_reach(self, queryset, name, value):
+        """
+        Filter items based on their link_reach, excluding main workspaces.
+        
+        Example:
+            - /api/v1.0/items/?link_reach=public
+                → Filters items with public link reach (excluding main workspaces)
+        """
+        if value:
+            return queryset.filter(link_reach=value).exclude(main_workspace=True)
+        return queryset
 
     # pylint: disable=unused-argument
     def filter_is_creator_me(self, queryset, name, value):

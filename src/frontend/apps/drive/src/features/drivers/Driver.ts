@@ -32,14 +32,14 @@ export type ItemFilters = {
   scope?: ItemFiltersScope;
   page?: string;
   page_size?: string;
+  link_reach?: LinkReach;
 };
 
 export type PaginatedChildrenResult = {
   children: Item[];
   pagination: {
     currentPage: number;
-    nextPage: number | null;
-    totalCount: number;
+    totalCount?: number;
     hasMore: boolean;
   };
 };
@@ -50,6 +50,11 @@ export type UserFilters = {
 export abstract class Driver {
   abstract getConfig(): Promise<ApiConfig>;
   abstract getItems(filters?: ItemFilters): Promise<Item[]>;
+  abstract getPaginatedItems(
+    page: number,
+    filters?: ItemFilters
+  ): Promise<PaginatedChildrenResult>;
+
   abstract getTrashItems(filters?: ItemFilters): Promise<Item[]>;
   abstract getItem(id: string): Promise<Item>;
   abstract updateItem(item: Partial<Item>): Promise<Item>;
