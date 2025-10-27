@@ -62,6 +62,10 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
     assert response.json()["results"] == [
         {
             "abilities": item_b.get_abilities(user),
+            "ancestors_link_reach": item_b.ancestors_link_reach,
+            "ancestors_link_role": item_b.ancestors_link_role,
+            "computed_link_reach": item_b.computed_link_reach,
+            "computed_link_role": item_b.computed_link_role,
             "created_at": item_b.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
                 "id": str(item_b.creator.id),
@@ -91,10 +95,14 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
             "upload_state": str(item_b.upload_state),
             "url": None,
             "url_preview": None,
-            "user_roles": [folder_access.role],
+            "user_role": folder_access.role,
             "parents": [
                 {
                     "abilities": folder.get_abilities(user),
+                    "ancestors_link_reach": folder.ancestors_link_reach,
+                    "ancestors_link_role": folder.ancestors_link_role,
+                    "computed_link_reach": folder.computed_link_reach,
+                    "computed_link_role": folder.computed_link_role,
                     "created_at": folder.created_at.isoformat().replace("+00:00", "Z"),
                     "creator": {
                         "id": str(folder.creator.id),
@@ -123,12 +131,16 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
                     "upload_state": None,
                     "url": None,
                     "url_preview": None,
-                    "user_roles": [folder_access.role],
+                    "user_role": folder_access.role,
                 },
             ],
         },
         {
             "abilities": item_c.get_abilities(user),
+            "ancestors_link_reach": item_c.ancestors_link_reach,
+            "ancestors_link_role": item_c.ancestors_link_role,
+            "computed_link_reach": item_c.computed_link_reach,
+            "computed_link_role": item_c.computed_link_role,
             "created_at": item_c.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
                 "id": str(item_c.creator.id),
@@ -158,10 +170,14 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
             "upload_state": str(item_c.upload_state),
             "url": None,
             "url_preview": None,
-            "user_roles": [folder_access.role],
+            "user_role": folder_access.role,
             "parents": [
                 {
                     "abilities": folder.get_abilities(user),
+                    "ancestors_link_reach": folder.ancestors_link_reach,
+                    "ancestors_link_role": folder.ancestors_link_role,
+                    "computed_link_reach": folder.computed_link_reach,
+                    "computed_link_role": folder.computed_link_role,
                     "created_at": folder.created_at.isoformat().replace("+00:00", "Z"),
                     "creator": {
                         "id": str(folder.creator.id),
@@ -190,7 +206,7 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
                     "upload_state": None,
                     "url": None,
                     "url_preview": None,
-                    "user_roles": [folder_access.role],
+                    "user_role": folder_access.role,
                 },
             ],
         },

@@ -49,6 +49,10 @@ def test_api_items_search_authenticated_without_filters():
     assert response.json()["results"] == [
         {
             "abilities": user.get_main_workspace().get_abilities(user),
+            "ancestors_link_reach": None,
+            "ancestors_link_role": None,
+            "computed_link_reach": user.get_main_workspace().computed_link_reach,
+            "computed_link_role": user.get_main_workspace().computed_link_role,
             "created_at": user.get_main_workspace()
             .created_at.isoformat()
             .replace("+00:00", "Z"),
@@ -87,6 +91,10 @@ def test_api_items_search_authenticated_without_filters():
         },
         {
             "abilities": top_parent.get_abilities(user),
+            "ancestors_link_reach": None,
+            "ancestors_link_role": None,
+            "computed_link_reach": top_parent.computed_link_reach,
+            "computed_link_role": top_parent.computed_link_role,
             "created_at": top_parent.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
                 "id": str(top_parent.creator.id),
@@ -121,6 +129,10 @@ def test_api_items_search_authenticated_without_filters():
         },
         {
             "abilities": parent.get_abilities(user),
+            "ancestors_link_reach": parent.ancestors_link_reach,
+            "ancestors_link_role": parent.ancestors_link_role,
+            "computed_link_reach": parent.computed_link_reach,
+            "computed_link_role": parent.computed_link_role,
             "created_at": parent.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
                 "id": str(parent.creator.id),
@@ -145,6 +157,10 @@ def test_api_items_search_authenticated_without_filters():
             "parents": [
                 {
                     "abilities": top_parent.get_abilities(user),
+                    "ancestors_link_reach": top_parent.ancestors_link_reach,
+                    "ancestors_link_role": top_parent.ancestors_link_role,
+                    "computed_link_reach": top_parent.computed_link_reach,
+                    "computed_link_role": top_parent.computed_link_role,
                     "created_at": top_parent.created_at.isoformat().replace(
                         "+00:00", "Z"
                     ),
@@ -193,6 +209,10 @@ def test_api_items_search_authenticated_without_filters():
         },
         {
             "abilities": children.get_abilities(user),
+            "ancestors_link_reach": children.ancestors_link_reach,
+            "ancestors_link_role": children.ancestors_link_role,
+            "computed_link_reach": children.computed_link_reach,
+            "computed_link_role": children.computed_link_role,
             "created_at": children.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
                 "id": str(children.creator.id),
@@ -217,6 +237,10 @@ def test_api_items_search_authenticated_without_filters():
             "parents": [
                 {
                     "abilities": top_parent.get_abilities(user),
+                    "ancestors_link_reach": top_parent.ancestors_link_reach,
+                    "ancestors_link_role": top_parent.ancestors_link_role,
+                    "computed_link_reach": top_parent.computed_link_reach,
+                    "computed_link_role": top_parent.computed_link_role,
                     "created_at": top_parent.created_at.isoformat().replace(
                         "+00:00", "Z"
                     ),
@@ -254,6 +278,10 @@ def test_api_items_search_authenticated_without_filters():
                 },
                 {
                     "abilities": parent.get_abilities(user),
+                    "ancestors_link_reach": parent.ancestors_link_reach,
+                    "ancestors_link_role": parent.ancestors_link_role,
+                    "computed_link_reach": parent.computed_link_reach,
+                    "computed_link_role": parent.computed_link_role,
                     "created_at": parent.created_at.isoformat().replace("+00:00", "Z"),
                     "creator": {
                         "id": str(parent.creator.id),

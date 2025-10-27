@@ -67,6 +67,10 @@ def test_api_item_favorite_list_authenticated_with_favorite():
         "results": [
             {
                 "abilities": item.get_abilities(user),
+                "ancestors_link_reach": item.ancestors_link_reach,
+                "ancestors_link_role": item.ancestors_link_role,
+                "computed_link_reach": item.computed_link_reach,
+                "computed_link_role": item.computed_link_role,
                 "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(item.creator.id),
