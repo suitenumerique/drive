@@ -34,6 +34,10 @@ def test_api_items_children_list_anonymous_public_standalone():
         "results": [
             {
                 "abilities": child1.get_abilities(AnonymousUser()),
+                "ancestors_link_reach": "public",
+                "ancestors_link_role": item.link_role,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -69,6 +73,10 @@ def test_api_items_children_list_anonymous_public_standalone():
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
+                "ancestors_link_reach": "public",
+                "ancestors_link_role": item.link_role,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -144,6 +152,10 @@ def test_api_items_children_list_anonymous_public_parent():
         "results": [
             {
                 "abilities": child1.get_abilities(AnonymousUser()),
+                "ancestors_link_reach": "public",
+                "ancestors_link_role": grand_parent.link_role,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -177,6 +189,10 @@ def test_api_items_children_list_anonymous_public_parent():
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
+                "ancestors_link_reach": "public",
+                "ancestors_link_role": grand_parent.link_role,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -262,6 +278,10 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
         "results": [
             {
                 "abilities": child1.get_abilities(user),
+                "ancestors_link_reach": reach,
+                "ancestors_link_role": item.link_role,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -297,6 +317,10 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
             },
             {
                 "abilities": child2.get_abilities(user),
+                "ancestors_link_reach": reach,
+                "ancestors_link_role": item.link_role,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -369,6 +393,10 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
         "results": [
             {
                 "abilities": child1.get_abilities(user),
+                "ancestors_link_reach": reach,
+                "ancestors_link_role": grand_parent.link_role,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -404,6 +432,10 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
             },
             {
                 "abilities": child2.get_abilities(user),
+                "ancestors_link_reach": reach,
+                "ancestors_link_role": grand_parent.link_role,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -475,7 +507,7 @@ def test_api_items_children_list_authenticated_unrelated_restricted():
 
 def test_api_items_children_list_authenticated_related_direct():
     """
-    Authenticated users should be allowed to retrieve the children of a item
+    Authenticated users should be allowed to retrieve the children of an item
     to which they are directly related whatever the role.
     """
     user = factories.UserFactory()
@@ -483,7 +515,9 @@ def test_api_items_children_list_authenticated_related_direct():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(
+        link_reach="restricted", type=models.ItemTypeChoices.FOLDER
+    )
     access = factories.UserItemAccessFactory(item=item, user=user)
     factories.UserItemAccessFactory(item=item)
 
@@ -501,6 +535,10 @@ def test_api_items_children_list_authenticated_related_direct():
         "results": [
             {
                 "abilities": child1.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -536,6 +574,10 @@ def test_api_items_children_list_authenticated_related_direct():
             },
             {
                 "abilities": child2.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -609,6 +651,10 @@ def test_api_items_children_list_authenticated_related_parent():
         "results": [
             {
                 "abilities": child1.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -644,6 +690,10 @@ def test_api_items_children_list_authenticated_related_parent():
             },
             {
                 "abilities": child2.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -780,6 +830,10 @@ def test_api_items_children_list_authenticated_related_team_members(
         "results": [
             {
                 "abilities": child1.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -815,6 +869,10 @@ def test_api_items_children_list_authenticated_related_team_members(
             },
             {
                 "abilities": child2.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -862,7 +920,9 @@ def test_api_items_children_list_filter_type():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(
+        link_reach="restricted", type=models.ItemTypeChoices.FOLDER
+    )
     access = factories.UserItemAccessFactory(item=item, user=user)
     factories.UserItemAccessFactory(item=item)
 
@@ -884,6 +944,10 @@ def test_api_items_children_list_filter_type():
         "results": [
             {
                 "abilities": child1.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -932,6 +996,10 @@ def test_api_items_children_list_filter_type():
         "results": [
             {
                 "abilities": child2.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),

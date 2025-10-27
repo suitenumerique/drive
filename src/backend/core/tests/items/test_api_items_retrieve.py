@@ -30,6 +30,10 @@ def test_api_items_retrieve_anonymous_public_standalone():
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(AnonymousUser()),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -84,6 +88,10 @@ def test_api_items_retrieve_anonymous_public_parent():
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(AnonymousUser()),
+        "ancestors_link_reach": "public",
+        "ancestors_link_role": grand_parent.link_role,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -183,6 +191,10 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -243,6 +255,10 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": reach,
+        "ancestors_link_role": grand_parent.link_role,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -381,6 +397,10 @@ def test_api_items_retrieve_authenticated_related_direct():
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "creator": {
             "id": str(item.creator.id),
             "full_name": item.creator.full_name,
@@ -443,6 +463,10 @@ def test_api_items_retrieve_authenticated_related_parent():
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": "restricted",
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "creator": {
             "id": str(item.creator.id),
             "full_name": item.creator.full_name,
@@ -623,6 +647,10 @@ def test_api_items_retrieve_authenticated_related_team_members(
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -697,6 +725,10 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -769,6 +801,10 @@ def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_t
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -1138,6 +1174,10 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -1206,6 +1246,10 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -1264,6 +1308,10 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -1405,6 +1453,10 @@ def test_api_items_retrieve_file_analysing_not_creator():
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
