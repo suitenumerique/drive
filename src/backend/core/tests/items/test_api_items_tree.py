@@ -137,9 +137,17 @@ def test_items_api_anonymous_to_a_public_tree_structure():
     assert response.status_code == 200
     assert response.json() == {
         "abilities": level1_2.get_abilities(AnonymousUser()),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": level1_2.computed_link_reach,
+        "computed_link_role": level1_2.computed_link_role,
         "children": [
             {
                 "abilities": level2_1.get_abilities(AnonymousUser()),
+                "ancestors_link_reach": level2_1.ancestors_link_reach,
+                "ancestors_link_role": level2_1.ancestors_link_role,
+                "computed_link_reach": level2_1.computed_link_reach,
+                "computed_link_role": level2_1.computed_link_role,
                 "children": [],
                 "created_at": level2_1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
@@ -174,6 +182,10 @@ def test_items_api_anonymous_to_a_public_tree_structure():
             },
             {
                 "abilities": level2_2.get_abilities(AnonymousUser()),
+                "ancestors_link_reach": level2_2.ancestors_link_reach,
+                "ancestors_link_role": level2_2.ancestors_link_role,
+                "computed_link_reach": level2_2.computed_link_reach,
+                "computed_link_role": level2_2.computed_link_role,
                 "children": [],
                 "created_at": level2_2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
@@ -346,12 +358,24 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
     assert response.status_code == 200
     assert response.json() == {
         "abilities": root.item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": root.item.computed_link_reach,
+        "computed_link_role": root.item.computed_link_role,
         "children": [
             {
                 "abilities": level1_1.item.get_abilities(user),
+                "ancestors_link_reach": level1_1.item.ancestors_link_reach,
+                "ancestors_link_role": level1_1.item.ancestors_link_role,
+                "computed_link_reach": level1_1.item.computed_link_reach,
+                "computed_link_role": level1_1.item.computed_link_role,
                 "children": [
                     {
                         "abilities": level2_1.item.get_abilities(user),
+                        "ancestors_link_reach": level2_1.item.ancestors_link_reach,
+                        "ancestors_link_role": level2_1.item.ancestors_link_role,
+                        "computed_link_reach": level2_1.item.computed_link_reach,
+                        "computed_link_role": level2_1.item.computed_link_role,
                         "children": [],
                         "created_at": level2_1.item.created_at.isoformat().replace(
                             "+00:00", "Z"
@@ -390,9 +414,17 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                     },
                     {
                         "abilities": level2_2.item.get_abilities(user),
+                        "ancestors_link_reach": level2_2.item.ancestors_link_reach,
+                        "ancestors_link_role": level2_2.item.ancestors_link_role,
+                        "computed_link_reach": level2_2.item.computed_link_reach,
+                        "computed_link_role": level2_2.item.computed_link_role,
                         "children": [
                             {
                                 "abilities": level3_1.item.get_abilities(user),
+                                "ancestors_link_reach": level3_1.item.ancestors_link_reach,
+                                "ancestors_link_role": level3_1.item.ancestors_link_role,
+                                "computed_link_reach": level3_1.item.computed_link_reach,
+                                "computed_link_role": level3_1.item.computed_link_role,
                                 "children": [],
                                 "created_at": level3_1.item.created_at.isoformat().replace(
                                     "+00:00", "Z"
@@ -506,6 +538,10 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
             },
             {
                 "abilities": level1_2.item.get_abilities(user),
+                "ancestors_link_reach": level1_2.item.ancestors_link_reach,
+                "ancestors_link_role": level1_2.item.ancestors_link_role,
+                "computed_link_reach": level1_2.item.computed_link_reach,
+                "computed_link_role": level1_2.item.computed_link_role,
                 "children": [],
                 "created_at": level1_2.item.created_at.isoformat().replace(
                     "+00:00", "Z"
@@ -544,6 +580,10 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
             },
             {
                 "abilities": level1_3.item.get_abilities(user),
+                "ancestors_link_reach": level1_3.item.ancestors_link_reach,
+                "ancestors_link_role": level1_3.item.ancestors_link_role,
+                "computed_link_reach": level1_3.item.computed_link_reach,
+                "computed_link_role": level1_3.item.computed_link_role,
                 "children": [],
                 "created_at": level1_3.item.created_at.isoformat().replace(
                     "+00:00", "Z"
@@ -722,6 +762,10 @@ def test_api_items_tree_authenticated_with_access_authenticated():
         "main_workspace": False,
         "is_wopi_supported": False,
         "abilities": level1_1.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": level1_1.computed_link_reach,
+        "computed_link_role": level1_1.computed_link_role,
         "filename": level1_1.filename,
         "size": None,
         "description": None,
@@ -730,6 +774,10 @@ def test_api_items_tree_authenticated_with_access_authenticated():
         "children": [
             {
                 "abilities": level2_1.get_abilities(user),
+                "ancestors_link_reach": level2_1.ancestors_link_reach,
+                "ancestors_link_role": level2_1.ancestors_link_role,
+                "computed_link_reach": level2_1.computed_link_reach,
+                "computed_link_role": level2_1.computed_link_role,
                 "children": [],
                 "created_at": level2_1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
@@ -764,6 +812,10 @@ def test_api_items_tree_authenticated_with_access_authenticated():
             },
             {
                 "abilities": level2_2.get_abilities(user),
+                "ancestors_link_reach": level2_2.ancestors_link_reach,
+                "ancestors_link_role": level2_2.ancestors_link_role,
+                "computed_link_reach": level2_2.computed_link_reach,
+                "computed_link_role": level2_2.computed_link_role,
                 "children": [],
                 "created_at": level2_2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
