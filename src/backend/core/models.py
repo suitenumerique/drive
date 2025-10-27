@@ -12,6 +12,7 @@ from os.path import splitext
 from django.conf import settings
 from django.contrib.auth import models as auth_models
 from django.contrib.auth.base_user import AbstractBaseUser
+from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GistIndex
 from django.contrib.sites.models import Site
 from django.core import mail, validators
@@ -414,6 +415,41 @@ class ItemQuerySet(TreeQuerySet):
             **kwargs,
         )
 
+    def annotate_is_favorite(self, user):
+        """
+        Annotate item queryset with the favorite status for the current user.
+        """
+        if user.is_authenticated:
+            favorite_exists_subquery = ItemFavorite.objects.filter(
+                item_id=models.OuterRef("pk"), user=user
+            )
+            return self.annotate(is_favorite=models.Exists(favorite_exists_subquery))
+
+        return self.annotate(is_favorite=models.Value(False))
+
+    def annotate_user_roles(self, user):
+        """
+        Annotate item queryset with the roles of the current user
+        on the item or its ancestors.
+        """
+        output_field = ArrayField(base_field=models.CharField())
+
+        if user.is_authenticated:
+            user_roles_subquery = ItemAccess.objects.filter(
+                models.Q(user=user) | models.Q(team__in=user.teams),
+                item__path__ancestors=models.OuterRef("path"),
+            ).values_list("role", flat=True)
+
+            return self.annotate(
+                user_roles=models.Func(
+                    user_roles_subquery, function="ARRAY", output_field=output_field
+                )
+            )
+
+        return self.annotate(
+            user_roles=models.Value([], output_field=output_field),
+        )
+
 
 class ItemManager(TreeManager):
     """Custom manager for Item model overriding create_child method."""
@@ -582,26 +618,6 @@ class Item(TreeModel, BaseModel):
             self.path = str(self.id)
 
         return super().save(*args, **kwargs)
-
-    def compute_ancestors_links_paths_mapping(self):
-        """
-        Compute the ancestors links for the current document up to the highest readable ancestor.
-        """
-        ancestors = (
-            (self.ancestors() | self._meta.model.objects.filter(pk=self.pk))
-            .filter(ancestors_deleted_at__isnull=True)
-            .order_by("path")
-        )
-        ancestors_links = []
-        paths_links_mapping = {}
-
-        for ancestor in ancestors:
-            ancestors_links.append(
-                {"link_reach": ancestor.link_reach, "link_role": ancestor.link_role}
-            )
-            paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
-
-        return paths_links_mapping
 
     def delete(self, using=None, keep_parents=False):
         if self.main_workspace:
