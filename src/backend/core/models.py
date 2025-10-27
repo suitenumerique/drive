@@ -5,7 +5,6 @@ Declare and configure the models for the drive core application
 
 import smtplib
 import uuid
-from collections import defaultdict
 from datetime import timedelta
 from logging import getLogger
 from os.path import splitext
