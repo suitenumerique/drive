@@ -8,7 +8,6 @@ from urllib.parse import unquote, urlparse
 
 from django.conf import settings
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.search import TrigramSimilarity
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -441,44 +440,6 @@ class ItemViewSet(
     search_serializer_class = serializers.SearchItemSerializer
     breadcrumb_serializer_class = serializers.BreadcrumbItemSerializer
 
-    def annotate_is_favorite(self, queryset):
-        """
-        Annotate item queryset with the favorite status for the current user.
-        """
-        user = self.request.user
-
-        if user.is_authenticated:
-            favorite_exists_subquery = models.ItemFavorite.objects.filter(
-                item_id=db.OuterRef("pk"), user=user
-            )
-            return queryset.annotate(is_favorite=db.Exists(favorite_exists_subquery))
-
-        return queryset.annotate(is_favorite=db.Value(False))
-
-    def annotate_user_roles(self, queryset):
-        """
-        Annotate item queryset with the roles of the current user
-        on the item or its ancestors.
-        """
-        user = self.request.user
-        output_field = ArrayField(base_field=db.CharField())
-
-        if user.is_authenticated:
-            user_roles_subquery = models.ItemAccess.objects.filter(
-                db.Q(user=user) | db.Q(team__in=user.teams),
-                item__path__ancestors=db.OuterRef("path"),
-            ).values_list("role", flat=True)
-
-            return queryset.annotate(
-                user_roles=db.Func(
-                    user_roles_subquery, function="ARRAY", output_field=output_field
-                )
-            )
-
-        return queryset.annotate(
-            user_roles=db.Value([], output_field=output_field),
-        )
-
     def _filter_suspicious_items(self, queryset, user):
         """
         Filter out items with SUSPICIOUS upload_state for non-creators.
@@ -538,8 +499,9 @@ class ItemViewSet(
     def filter_queryset(self, queryset):
         """Override to apply annotations to generic views."""
         queryset = super().filter_queryset(queryset)
-        queryset = self.annotate_is_favorite(queryset)
-        queryset = self.annotate_user_roles(queryset)
+        user = self.request.user
+        queryset = queryset.annotate_is_favorite(user)
+        queryset = queryset.annotate_user_roles(user)
         return queryset
 
     def get_response_for_queryset(self, queryset, context=None):
@@ -630,8 +592,8 @@ class ItemViewSet(
         # Filter as early as possible on fields that are available on the model
         for field in ["is_creator_me", "title", "workspaces"]:
             queryset = filterset.filters[field].filter(queryset, filter_data[field])
-
-        queryset = self.annotate_user_roles(queryset)
+        user = request.user
+        queryset = queryset.annotate_user_roles(user)
 
         # Among the results, we may have items that are ancestors/descendants
         # of each other. In this case we want to keep only the highest ancestors.
@@ -648,7 +610,7 @@ class ItemViewSet(
         )
 
         # Annotate favorite status and filter if applicable as late as possible
-        queryset = self.annotate_is_favorite(queryset)
+        queryset = queryset.annotate_is_favorite(user)
         queryset = filterset.filters["is_favorite"].filter(
             queryset, filter_data["is_favorite"]
         )
@@ -847,7 +809,7 @@ class ItemViewSet(
         queryset = filterset.qs
 
         # Only annotate with user roles for the filtered set if needed by serializer
-        queryset = self.annotate_user_roles(queryset)
+        queryset = queryset.annotate_user_roles(user)
 
         return self.get_response_for_queryset(queryset)
 
@@ -1064,9 +1026,10 @@ class ItemViewSet(
             .order_by("created_at")
         )
 
-        tree = self.annotate_user_roles(tree)
-        tree = self.annotate_is_favorite(tree)
-        tree = self._filter_suspicious_items(tree, request.user)
+        user = request.user
+        tree = tree.annotate_user_roles(user)
+        tree = tree.annotate_is_favorite(user)
+        tree = self._filter_suspicious_items(tree, user)
 
         serializer = self.get_serializer(
             tree,
@@ -1134,8 +1097,8 @@ class ItemViewSet(
         ]
 
         queryset = queryset.filter(pk__in=result_ids)
-        queryset = self.annotate_user_roles(queryset)
-        queryset = self.annotate_is_favorite(queryset)
+        queryset = queryset.annotate_user_roles(user)
+        queryset = queryset.annotate_is_favorite(user)
 
         files_by_uuid = {str(d.pk): d for d in queryset}
         ordered_files = [files_by_uuid[id] for id in result_ids if id in files_by_uuid]
@@ -1217,9 +1180,8 @@ class ItemViewSet(
 
         # Without the indexer, the "title" filtering is kept
         queryset = filterset.filter_queryset(queryset)
-
-        queryset = self.annotate_user_roles(queryset)
-        queryset = self.annotate_is_favorite(queryset)
+        queryset = queryset.annotate_user_roles(user)
+        queryset = queryset.annotate_is_favorite(user)
 
         page = self.paginate_queryset(queryset)
 
