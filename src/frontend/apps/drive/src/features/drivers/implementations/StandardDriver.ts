@@ -254,13 +254,24 @@ export class StandardDriver extends Driver {
       throw new Error("No policy found");
     }
 
-    await uploadFile(item.policy, file, (progress) => {
+    // We don't want to call the progress handler with 100% when the upload is done.
+    // We want to wait until the upload-ended endpoint is called.
+    const progressHandlerProxy = (progress: number) => {
+      if (progress === 100) {
+        return;
+      }
       progressHandler?.(progress);
+    };
+
+    await uploadFile(item.policy, file, (progress) => {
+      progressHandlerProxy(progress);
     });
 
     await fetchAPI(`items/${item.id}/upload-ended/`, {
       method: "POST",
     });
+
+    progressHandler?.(100);
 
     return item;
   }
