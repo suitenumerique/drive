@@ -184,9 +184,15 @@ def test_api_items_update_anonymous_or_authenticated_unrelated(
         if key in [
             "id",
             "accesses",
+            "ancestors_link_reach",
+            "ancestors_link_role",
+            "computed_link_reach",
+            "computed_link_role",
             "created_at",
             "creator",
             "depth",
+            "link_reach",
+            "link_role",
             "numchild",
             "path",
             "type",
@@ -314,9 +320,15 @@ def test_api_items_update_authenticated_editor_administrator_or_owner(
     for key, value in item_values.items():
         if key in [
             "id",
+            "ancestors_link_reach",
+            "ancestors_link_role",
+            "computed_link_reach",
+            "computed_link_role",
             "created_at",
             "creator",
             "depth",
+            "link_reach",
+            "link_role",
             "nb_accesses",
             "numchild",
             "path",
@@ -505,44 +517,6 @@ def test_api_items_update_empty_description():
 
     item.refresh_from_db()
     assert item.description == ""
-
-
-def test_api_items_update_link_reach():
-    """
-    Update file link_reach
-    """
-
-    user = factories.UserFactory()
-
-    client = APIClient()
-    client.force_login(user)
-
-    parent = factories.ItemFactory(
-        link_reach="restricted",
-        type=models.ItemTypeChoices.FOLDER,
-        creator=user,
-        users=[(user, models.RoleChoices.OWNER)],
-    )
-
-    item = factories.ItemFactory(
-        parent=parent,
-        link_reach="restricted",
-        type=models.ItemTypeChoices.FILE,
-        creator=user,
-    )
-
-    assert item.title is not None
-
-    response = client.patch(
-        f"/api/v1.0/items/{item.id!s}/",
-        {"link_reach": "public"},
-        format="json",
-    )
-    assert response.status_code == 200
-    assert response.json()["link_reach"] == "public"
-
-    item.refresh_from_db()
-    assert item.link_reach == "public"
 
 
 def test_api_items_update_empty_title():
