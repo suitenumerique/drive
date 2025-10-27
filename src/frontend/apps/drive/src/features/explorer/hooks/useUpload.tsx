@@ -235,7 +235,17 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         { autoClose: false }
       );
     },
-    onDragLeave: () => {
+    onDragLeave: (event) => {
+      // Check if we're leaving the dropzone for a toast or staying within the dropzone area
+      const relatedTarget = event.relatedTarget as Element;
+      // const currentTarget = event.currentTarget as Element;
+      const isToastElement = relatedTarget?.closest(".Toastify");
+
+      if (isToastElement) {
+        // Don't dismiss the toast if we're moving to a toast elemen
+        return;
+      }
+
       if (fileDragToastId.current) {
         toast.dismiss(fileDragToastId.current);
         fileDragToastId.current = null;
