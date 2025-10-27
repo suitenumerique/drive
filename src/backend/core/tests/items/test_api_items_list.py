@@ -87,6 +87,10 @@ def test_api_items_list_format():
         {
             "id": str(item2.id),
             "abilities": item2.get_abilities(user),
+            "ancestors_link_reach": item2.ancestors_link_reach,
+            "ancestors_link_role": item2.ancestors_link_role,
+            "computed_link_reach": item2.computed_link_reach,
+            "computed_link_role": item2.computed_link_role,
             "created_at": item2.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
                 "id": str(item2.creator.id),
@@ -120,6 +124,10 @@ def test_api_items_list_format():
         {
             "id": str(item.id),
             "abilities": item.get_abilities(user),
+            "ancestors_link_reach": item.ancestors_link_reach,
+            "ancestors_link_role": item.ancestors_link_role,
+            "computed_link_reach": item.computed_link_reach,
+            "computed_link_role": item.computed_link_role,
             "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
                 "id": str(item.creator.id),
@@ -153,6 +161,10 @@ def test_api_items_list_format():
         {
             "id": str(item3.id),
             "abilities": item3.get_abilities(user),
+            "ancestors_link_reach": item3.ancestors_link_reach,
+            "ancestors_link_role": item3.ancestors_link_role,
+            "computed_link_reach": item3.computed_link_reach,
+            "computed_link_role": item3.computed_link_role,
             "created_at": item3.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
                 "id": str(item3.creator.id),
