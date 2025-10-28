@@ -18,6 +18,7 @@ from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.utils.decorators import method_decorator
+from django.utils.functional import cached_property
 from django.utils.text import slugify
 
 import posthog
@@ -335,7 +336,7 @@ class ItemViewSet(
     ordering_fields = ["created_at", "updated_at", "title", "type"]
     pagination_class = Pagination
     permission_classes = [
-        permissions.ItemAccessPermission,
+        permissions.ItemPermission,
     ]
     queryset = models.Item.objects.filter(hard_deleted_at__isnull=True)
     serializer_class = serializers.ItemSerializer
@@ -1357,10 +1358,20 @@ class ItemAccessViewSet(
 
     lookup_field = "pk"
     pagination_class = Pagination
-    permission_classes = [permissions.IsAuthenticated, permissions.AccessPermission]
+    permission_classes = [permissions.ItemAccessPermission]
     queryset = models.ItemAccess.objects.select_related("user").all()
     resource_field_name = "item"
     serializer_class = serializers.ItemAccessSerializer
+
+    @cached_property
+    def item(self):
+        """Get related item from resource ID in url and annotate user roles."""
+        try:
+            return models.Item.objects.annotate_user_roles(self.request.user).get(
+                pk=self.kwargs["resource_id"]
+            )
+        except models.Item.DoesNotExist as excpt:
+            raise drf.exceptions.NotFound() from excpt
 
     def get_permissions(self):
         """User only needs to be authenticated to list resource accesses"""
@@ -1452,15 +1463,32 @@ class ItemAccessViewSet(
         serializer.save()
 
     def perform_create(self, serializer):
-        """Add a new access to the item and send an email to the new added user."""
-        access = serializer.save()
+        """
+        Actually create the new item access:
+        - Ensures the `item_id` is explicitly set from the URL
+        - If the assigned role is `OWNER`, checks that the requesting user is an owner
+          of the item. This is the only permission check deferred until this step;
+          all other access checks are handled earlier in the permission lifecycle.
+        - Sends an invitation email to the newly added user after saving the access.
+        """
+        role = serializer.validated_data.get("role")
+        if (
+            role == models.RoleChoices.OWNER
+            and self.item.get_role(self.request.user) != models.RoleChoices.OWNER
+        ):
+            raise drf.exceptions.PermissionDenied(
+                "Only owners of an item can assign other users as owners."
+            )
 
-        access.item.send_invitation_email(
-            access.user.email,
-            access.role,
-            self.request.user,
-            self.request.user.language or settings.LANGUAGE_CODE,
-        )
+        access = serializer.save(item_id=self.kwargs["resource_id"])
+
+        if access.user:
+            access.item.send_invitation_email(
+                access.user.email,
+                access.role,
+                self.request.user,
+                self.request.user.language or settings.LANGUAGE_CODE,
+            )
 
 
 class InvitationViewset(
@@ -1492,10 +1520,7 @@ class InvitationViewset(
 
     lookup_field = "id"
     pagination_class = Pagination
-    permission_classes = [
-        permissions.CanCreateInvitationPermission,
-        permissions.AccessPermission,
-    ]
+    permission_classes = [permissions.InvitationPermission]
     queryset = (
         models.Invitation.objects.all().select_related("item").order_by("-created_at")
     )
