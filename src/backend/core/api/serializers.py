@@ -36,6 +36,15 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "email", "full_name", "short_name"]
 
 
+class UserLightSerializer(UserSerializer):
+    """Serialize users with limited fields."""
+
+    class Meta:
+        model = models.User
+        fields = ["id", "full_name", "short_name"]
+        read_only_fields = ["id", "full_name", "short_name"]
+
+
 # pylint: disable=abstract-method
 class UsageMetricSerializer(serializers.BaseSerializer):
     """Serialize usage metrics."""
@@ -58,13 +67,13 @@ class UsageMetricSerializer(serializers.BaseSerializer):
         return output
 
 
-class UserLiteSerializer(serializers.ModelSerializer):
-    """Serialize users with limited fields."""
+class ItemLightSerializer(serializers.ModelSerializer):
+    """Minimal item serializer for nesting in item accesses."""
 
     class Meta:
-        model = models.User
-        fields = ["id", "full_name", "short_name"]
-        read_only_fields = ["id", "full_name", "short_name"]
+        model = models.Item
+        fields = ["id", "path", "depth"]
+        read_only_fields = ["id", "path", "depth"]
 
 
 class ItemAccessSerializer(serializers.ModelSerializer):
@@ -78,25 +87,87 @@ class ItemAccessSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
     user = UserSerializer(read_only=True)
+    team = serializers.CharField(required=False, allow_blank=True)
     abilities = serializers.SerializerMethodField(read_only=True)
+    max_ancestors_role = serializers.SerializerMethodField(read_only=True)
+    max_role = serializers.SerializerMethodField(read_only=True)
+    item = ItemLightSerializer(read_only=True)
 
     class Meta:
         model = models.ItemAccess
         resource_field_name = "item"
-        fields = ["id", "user", "user_id", "team", "role", "abilities"]
-        read_only_fields = ["id", "abilities"]
+        fields = [
+            "id",
+            "user",
+            "user_id",
+            "team",
+            "role",
+            "abilities",
+            "max_ancestors_role",
+            "max_role",
+            "item",
+        ]
+        read_only_fields = [
+            "id",
+            "abilities",
+            "max_ancestors_role",
+            "max_role",
+            "item",
+        ]
 
-    def get_abilities(self, access) -> dict:
+    def get_abilities(self, instance):
         """Return abilities of the logged-in user on the instance."""
         request = self.context.get("request")
         if request:
-            return access.get_abilities(request.user)
+            return instance.get_abilities(request.user)
         return {}
+
+    def get_max_ancestors_role(self, instance):
+        """Return max_ancestors_role if annotated; else None."""
+        return getattr(instance, "max_ancestors_role", None)
+
+    def get_max_role(self, instance):
+        """Return max_ancestors_role if annotated; else None."""
+        return models.RoleChoices.max(
+            getattr(instance, "max_ancestors_role", None),
+            instance.role,
+        )
 
     def update(self, instance, validated_data):
         """Make "user" field is readonly but only on update."""
         validated_data.pop("user", None)
+        validated_data.pop("team", None)
         return super().update(instance, validated_data)
+
+
+class ItemAccessLightSerializer(ItemAccessSerializer):
+    """Serialize item accesses with limited fields."""
+
+    user = UserLightSerializer(read_only=True)
+
+    class Meta:
+        model = models.ItemAccess
+        resource_field_name = "item"
+        fields = [
+            "id",
+            "item",
+            "user",
+            "team",
+            "role",
+            "abilities",
+            "max_ancestors_role",
+            "max_role",
+        ]
+        read_only_fields = [
+            "id",
+            "item",
+            "user",
+            "team",
+            "role",
+            "abilities",
+            "max_ancestors_role",
+            "max_role",
+        ]
 
 
 class ListItemSerializer(serializers.ModelSerializer):
@@ -108,7 +179,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     user_role = serializers.SerializerMethodField()
     url = serializers.SerializerMethodField()
     url_preview = serializers.SerializerMethodField()
-    creator = UserLiteSerializer(read_only=True)
+    creator = UserLightSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
 
