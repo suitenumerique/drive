@@ -4,6 +4,7 @@
 import json
 import logging
 import re
+from collections import defaultdict
 from urllib.parse import unquote, urlparse
 
 from django.conf import settings
@@ -1161,43 +1162,91 @@ class ItemAccessViewSet(
         context["resource_id"] = self.kwargs["resource_id"]
         return context
 
-    def get_queryset(self):
-        """Return the queryset according to the action."""
-        queryset = super().get_queryset()
-        queryset = queryset.filter(
-            **{self.resource_field_name: self.kwargs["resource_id"]}
-        )
-
-        return queryset
+    def filter_queryset(self, queryset):
+        """Override to filter on related resource."""
+        queryset = super().filter_queryset(queryset)
+        return queryset.filter(**{self.resource_field_name: self.kwargs["resource_id"]})
 
     def list(self, request, *args, **kwargs):
         """List item accesses for an item."""
-        item = self.item
-        queryset = self.filter_queryset(self.get_queryset())
-        user = self.request.user
+        # item = self.item
+        # queryset = self.filter_queryset(self.get_queryset())
+        # user = self.request.user
 
-        if item.get_role(user) is None:
+        # if item.get_role(user) is None:
+        #     return drf.response.Response([])
+
+        # serializer = self.get_serializer(queryset, many=True)
+        # return drf.response.Response(serializer.data)
+        user = request.user
+
+        role = self.item.get_role(user)
+        if not role:
             return drf.response.Response([])
 
-        serializer = self.get_serializer(queryset, many=True)
-        return drf.response.Response(serializer.data)
+        ancestors = (
+            self.item.ancestors() | models.Item.objects.filter(pk=self.item.pk)
+        ).filter(ancestors_deleted_at__isnull=True)
 
-    def destroy(self, request, *args, **kwargs):
-        """Forbid deleting the last owner access"""
-        instance = self.get_object()
-        resource = getattr(instance, self.resource_field_name)
+        queryset = self.get_queryset().filter(item__in=ancestors)
 
-        # Check if the access being deleted is the last owner access for the resource
-        if (
-            instance.role == "owner"
-            and resource.accesses.filter(role="owner").count() == 1
-        ):
-            return drf.response.Response(
-                {"detail": "Cannot delete the last owner access for the resource."},
-                status=drf.status.HTTP_403_FORBIDDEN,
+        # if role not in PRIVILEGED_ROLES:
+        #     queryset = queryset.filter(role__in=choices.PRIVILEGED_ROLES)
+
+        accesses = list(queryset.order_by("item__path"))
+
+        # Annotate more information on roles
+        path_to_key_to_max_ancestors_role = defaultdict(
+            lambda: defaultdict(lambda: None)
+        )
+        path_to_ancestors_roles = defaultdict(list)
+        path_to_role = defaultdict(lambda: None)
+        for access in accesses:
+            key = access.target_key
+            path = str(access.item.path)
+            parent_path = str(access.item.path[:-1])
+
+            path_to_key_to_max_ancestors_role[path][key] = models.RoleChoices.max(
+                path_to_key_to_max_ancestors_role[path][key], access.role
             )
 
-        return super().destroy(request, *args, **kwargs)
+            if parent_path:
+                path_to_key_to_max_ancestors_role[path][key] = models.RoleChoices.max(
+                    path_to_key_to_max_ancestors_role[parent_path][key],
+                    path_to_key_to_max_ancestors_role[path][key],
+                )
+                path_to_ancestors_roles[path].extend(
+                    path_to_ancestors_roles[parent_path]
+                )
+                path_to_ancestors_roles[path].append(path_to_role[parent_path])
+            else:
+                path_to_ancestors_roles[path] = []
+
+            if access.user_id == user.id or access.team in user.teams:
+                path_to_role[path] = models.RoleChoices.max(
+                    path_to_role[path], access.role
+                )
+
+        # serialize and return the response
+        context = self.get_serializer_context()
+        serializer_class = self.get_serializer_class()
+        serialized_data = []
+        for access in accesses:
+            path = str(access.item.path)
+            parent_path = str(access.item.path[:-1])
+            access.max_ancestors_role = (
+                path_to_key_to_max_ancestors_role[parent_path][access.target_key]
+                if parent_path
+                else None
+            )
+            access.set_user_roles_tuple(
+                models.RoleChoices.max(*path_to_ancestors_roles[path]),
+                path_to_role.get(path),
+            )
+            serializer = serializer_class(access, context=context)
+            serialized_data.append(serializer.data)
+
+        return drf.response.Response(serialized_data)
 
     def perform_update(self, serializer):
         """Check that we don't change the role if it leads to losing the last owner."""
