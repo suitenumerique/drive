@@ -159,6 +159,7 @@ jobs:
       AWS_S3_ENDPOINT_URL: http://localhost:9000
       AWS_S3_ACCESS_KEY_ID: drive
       AWS_S3_SECRET_ACCESS_KEY: password
+      AWS_S3_REGION_NAME: eu-east-1
       MEDIA_BASE_URL: http://localhost:8083
 
     steps:
