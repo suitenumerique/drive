@@ -151,7 +151,12 @@ def test_api_item_accesses_list_authenticated_related_non_privileged(
     assert response.status_code == 200
     content = response.json()
 
-    assert len(content) == len(accesses)
+    # Make sure only privileged roles are returned
+    privileged_accesses = [
+        acc for acc in accesses if acc.role in PRIVILEGED_ROLES
+    ]
+
+    assert len(content) == len(privileged_accesses)
 
     assert sorted(content, key=lambda x: x["id"]) == sorted(
         [
@@ -164,8 +169,6 @@ def test_api_item_accesses_list_authenticated_related_non_privileged(
                 },
                 "user": {
                     "id": str(access.user.id),
-                    "email": access.user.email,
-                    "language": access.user.language,
                     "full_name": access.user.full_name,
                     "short_name": access.user.short_name,
                 }
@@ -177,7 +180,7 @@ def test_api_item_accesses_list_authenticated_related_non_privileged(
                 "max_role": access.role,
                 "abilities": access.get_abilities(user),
             }
-            for access in accesses
+            for access in privileged_accesses
         ],
         key=lambda x: x["id"],
     )

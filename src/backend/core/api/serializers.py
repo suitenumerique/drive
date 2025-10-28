@@ -25,7 +25,7 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "email", "full_name", "short_name"]
 
 
-class UserLiteSerializer(UserSerializer):
+class UserLightSerializer(UserSerializer):
     """Serialize users with limited fields."""
 
     class Meta:
@@ -106,6 +106,34 @@ class ItemAccessSerializer(serializers.ModelSerializer):
         validated_data.pop("team", None)
         return super().update(instance, validated_data)
 
+class ItemAccessLightSerializer(ItemAccessSerializer):
+    """Serialize item accesses with limited fields."""
+
+    user = UserLightSerializer(read_only=True)
+
+    class Meta:
+        model = models.ItemAccess
+        resource_field_name = "item"
+        fields = [
+            "id",
+            "item",
+            "user",
+            "team",
+            "role",
+            "abilities",
+            "max_ancestors_role",
+            "max_role",
+        ]
+        read_only_fields = [
+            "id",
+            "item",
+            "user"
+            "team",
+            "role",
+            "abilities",
+            "max_ancestors_role",
+            "max_role",
+        ]
 
 class ListItemSerializer(serializers.ModelSerializer):
     """Serialize items with limited fields for display in lists."""
@@ -116,7 +144,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     user_role = serializers.SerializerMethodField()
     url = serializers.SerializerMethodField()
     url_preview = serializers.SerializerMethodField()
-    creator = UserLiteSerializer(read_only=True)
+    creator = UserLightSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
 

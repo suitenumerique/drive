@@ -1156,6 +1156,14 @@ class ItemAccessViewSet(
         except models.Item.DoesNotExist as excpt:
             raise drf.exceptions.NotFound() from excpt
 
+    def get_serializer_class(self):
+        """Use light serializer for unprivileged users."""
+        return (
+            serializers.ItemAccessSerializer
+            if self.item.get_role(self.request.user) in PRIVILEGED_ROLES
+            else serializers.ItemAccessLightSerializer
+        )
+
     def get_serializer_context(self):
         """Extra context provided to the serializer class."""
         context = super().get_serializer_context()
@@ -1169,15 +1177,6 @@ class ItemAccessViewSet(
 
     def list(self, request, *args, **kwargs):
         """List item accesses for an item."""
-        # item = self.item
-        # queryset = self.filter_queryset(self.get_queryset())
-        # user = self.request.user
-
-        # if item.get_role(user) is None:
-        #     return drf.response.Response([])
-
-        # serializer = self.get_serializer(queryset, many=True)
-        # return drf.response.Response(serializer.data)
         user = request.user
 
         role = self.item.get_role(user)
@@ -1190,8 +1189,8 @@ class ItemAccessViewSet(
 
         queryset = self.get_queryset().filter(item__in=ancestors)
 
-        # if role not in PRIVILEGED_ROLES:
-        #     queryset = queryset.filter(role__in=choices.PRIVILEGED_ROLES)
+        if role not in PRIVILEGED_ROLES:
+            queryset = queryset.filter(role__in=PRIVILEGED_ROLES)
 
         accesses = list(queryset.order_by("item__path"))
 
