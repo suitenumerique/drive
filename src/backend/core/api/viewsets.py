@@ -1327,7 +1327,6 @@ class ItemViewSet(
 class ItemAccessViewSet(
     drf.mixins.CreateModelMixin,
     drf.mixins.DestroyModelMixin,
-    drf.mixins.ListModelMixin,
     drf.mixins.RetrieveModelMixin,
     drf.mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
@@ -1357,9 +1356,8 @@ class ItemAccessViewSet(
     """
 
     lookup_field = "pk"
-    pagination_class = Pagination
     permission_classes = [permissions.ItemAccessPermission]
-    queryset = models.ItemAccess.objects.select_related("user").all()
+    queryset = models.ItemAccess.objects.select_related("user", "item").all()
     resource_field_name = "item"
     serializer_class = serializers.ItemAccessSerializer
 
@@ -1372,15 +1370,6 @@ class ItemAccessViewSet(
             )
         except models.Item.DoesNotExist as excpt:
             raise drf.exceptions.NotFound() from excpt
-
-    def get_permissions(self):
-        """User only needs to be authenticated to list resource accesses"""
-        if self.action == "list":
-            permission_classes = [permissions.IsAuthenticated]
-        else:
-            return super().get_permissions()
-
-        return [permission() for permission in permission_classes]
 
     def get_serializer_context(self):
         """Extra context provided to the serializer class."""
@@ -1395,35 +1384,19 @@ class ItemAccessViewSet(
             **{self.resource_field_name: self.kwargs["resource_id"]}
         )
 
-        if self.action == "list":
-            user = self.request.user
-            teams = user.teams
-            user_roles_query = (
-                queryset.filter(
-                    db.Q(user=user) | db.Q(team__in=teams),
-                    **{self.resource_field_name: self.kwargs["resource_id"]},
-                )
-                .values(self.resource_field_name)
-                .annotate(roles_array=ArrayAgg("role"))
-                .values("roles_array")
-            )
-
-            # Limit to resource access instances related to a resource THAT also has
-            # a resource access
-            # instance for the logged-in user (we don't want to list only the resource
-            # access instances pointing to the logged-in user)
-            queryset = (
-                queryset.filter(
-                    db.Q(**{f"{self.resource_field_name}__accesses__user": user})
-                    | db.Q(
-                        **{f"{self.resource_field_name}__accesses__team__in": teams}
-                    ),
-                    **{self.resource_field_name: self.kwargs["resource_id"]},
-                )
-                .annotate(user_roles=db.Subquery(user_roles_query))
-                .distinct()
-            )
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        """List item accesses for an item."""
+        item = self.item
+        queryset = self.filter_queryset(self.get_queryset())
+        user = self.request.user
+
+        if item.get_role(user) is None:
+            return drf.response.Response([])
+
+        serializer = self.get_serializer(queryset, many=True)
+        return drf.response.Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
         """Forbid deleting the last owner access"""

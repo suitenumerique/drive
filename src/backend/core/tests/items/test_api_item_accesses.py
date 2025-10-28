@@ -55,12 +55,7 @@ def test_api_item_accesses_list_authenticated_unrelated():
         f"/api/v1.0/items/{item.id!s}/accesses/",
     )
     assert response.status_code == 200
-    assert response.json() == {
-        "count": 0,
-        "next": None,
-        "previous": None,
-        "results": [],
-    }
+    assert response.json() == []
 
 
 @pytest.mark.parametrize("via", VIA)
@@ -106,8 +101,8 @@ def test_api_item_accesses_list_authenticated_related(via, mock_user_teams):
 
     assert response.status_code == 200
     content = response.json()
-    assert len(content["results"]) == 3
-    assert sorted(content["results"], key=lambda x: x["id"]) == sorted(
+    assert len(content) == 3
+    assert sorted(content, key=lambda x: x["id"]) == sorted(
         [
             {
                 "id": str(user_access.id),
