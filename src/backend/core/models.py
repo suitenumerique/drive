@@ -313,79 +313,6 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         return Item.objects.get(creator=self, main_workspace=True)
 
 
-class BaseAccess(BaseModel):
-    """Base model for accesses to handle resources."""
-
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-    )
-    team = models.CharField(max_length=100, blank=True)
-    role = models.CharField(
-        max_length=20, choices=RoleChoices.choices, default=RoleChoices.READER
-    )
-
-    class Meta:
-        abstract = True
-
-    def _get_abilities(self, resource, user):
-        """
-        Compute and return abilities for a given user taking into account
-        the current state of the object.
-        """
-        roles = []
-        if user.is_authenticated:
-            teams = user.teams
-            try:
-                roles = self.user_roles or []
-            except AttributeError:
-                try:
-                    roles = resource.accesses.filter(
-                        models.Q(user=user) | models.Q(team__in=teams),
-                    ).values_list("role", flat=True)
-                except (self._meta.model.DoesNotExist, IndexError):
-                    roles = []
-
-        is_owner_or_admin = bool(
-            set(roles).intersection({RoleChoices.OWNER, RoleChoices.ADMIN})
-        )
-        if self.role == RoleChoices.OWNER:
-            can_delete = (
-                RoleChoices.OWNER in roles
-                and resource.accesses.filter(role=RoleChoices.OWNER).count() > 1
-            )
-            set_role_to = (
-                [RoleChoices.ADMIN, RoleChoices.EDITOR, RoleChoices.READER]
-                if can_delete
-                else []
-            )
-        else:
-            can_delete = is_owner_or_admin
-            set_role_to = []
-            if RoleChoices.OWNER in roles:
-                set_role_to.append(RoleChoices.OWNER)
-            if is_owner_or_admin:
-                set_role_to.extend(
-                    [RoleChoices.ADMIN, RoleChoices.EDITOR, RoleChoices.READER]
-                )
-
-        # Remove the current role as we don't want to propose it as an option
-        try:
-            set_role_to.remove(self.role)
-        except ValueError:
-            pass
-
-        return {
-            "destroy": can_delete,
-            "update": bool(set_role_to),
-            "partial_update": bool(set_role_to),
-            "retrieve": bool(roles),
-            "set_role_to": set_role_to,
-        }
-
-
 class ItemQuerySet(TreeQuerySet):
     """Custom queryset for Item model with additional methods."""
 
@@ -1188,13 +1115,23 @@ class ItemFavorite(BaseModel):
         return f"{self.user!s} favorite on item {self.item!s}"
 
 
-class ItemAccess(BaseAccess):
+class ItemAccess(BaseModel):
     """Relation model to give access to an item for a user or a team with a role."""
 
     item = models.ForeignKey(
         Item,
         on_delete=models.CASCADE,
         related_name="accesses",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
+    team = models.CharField(max_length=100, blank=True)
+    role = models.CharField(
+        max_length=20, choices=RoleChoices.choices, default=RoleChoices.READER
     )
 
     class Meta:
@@ -1240,7 +1177,55 @@ class ItemAccess(BaseAccess):
         """
         Compute and return abilities for a given user on the item access.
         """
-        return self._get_abilities(self.item, user)
+        roles = []
+        if user.is_authenticated:
+            teams = user.teams
+            try:
+                roles = self.user_roles or []
+            except AttributeError:
+                try:
+                    roles = self.item.accesses.filter(
+                        models.Q(user=user) | models.Q(team__in=teams),
+                    ).values_list("role", flat=True)
+                except (self._meta.model.DoesNotExist, IndexError):
+                    roles = []
+
+        is_owner_or_admin = bool(
+            set(roles).intersection({RoleChoices.OWNER, RoleChoices.ADMIN})
+        )
+        if self.role == RoleChoices.OWNER:
+            can_delete = (
+                RoleChoices.OWNER in roles
+                and self.item.accesses.filter(role=RoleChoices.OWNER).count() > 1
+            )
+            set_role_to = (
+                [RoleChoices.ADMIN, RoleChoices.EDITOR, RoleChoices.READER]
+                if can_delete
+                else []
+            )
+        else:
+            can_delete = is_owner_or_admin
+            set_role_to = []
+            if RoleChoices.OWNER in roles:
+                set_role_to.append(RoleChoices.OWNER)
+            if is_owner_or_admin:
+                set_role_to.extend(
+                    [RoleChoices.ADMIN, RoleChoices.EDITOR, RoleChoices.READER]
+                )
+
+        # Remove the current role as we don't want to propose it as an option
+        try:
+            set_role_to.remove(self.role)
+        except ValueError:
+            pass
+
+        return {
+            "destroy": can_delete,
+            "update": bool(set_role_to),
+            "partial_update": bool(set_role_to),
+            "retrieve": bool(roles),
+            "set_role_to": set_role_to,
+        }
 
 
 class Invitation(BaseModel):
