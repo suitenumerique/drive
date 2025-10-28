@@ -11,7 +11,7 @@ from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
 from lasuite.drf.models.choices import get_equivalent_link_definition
-from rest_framework import exceptions, serializers
+from rest_framework import serializers
 
 from core import models
 from core.api import utils
@@ -19,6 +19,21 @@ from core.storage import get_storage_compute_backend
 from wopi import utils as wopi_utils
 
 logger = logging.getLogger(__name__)
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """Serialize users."""
+
+    class Meta:
+        model = models.User
+        fields = [
+            "id",
+            "email",
+            "full_name",
+            "short_name",
+            "language",
+        ]
+        read_only_fields = ["id", "email", "full_name", "short_name"]
 
 
 # pylint: disable=abstract-method
@@ -52,15 +67,24 @@ class UserLiteSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "full_name", "short_name"]
 
 
-class BaseAccessSerializer(serializers.ModelSerializer):
-    """Serialize template accesses."""
+class ItemAccessSerializer(serializers.ModelSerializer):
+    """Serialize item accesses."""
 
+    user_id = serializers.PrimaryKeyRelatedField(
+        queryset=models.User.objects.all(),
+        write_only=True,
+        source="user",
+        required=False,
+        allow_null=True,
+    )
+    user = UserSerializer(read_only=True)
     abilities = serializers.SerializerMethodField(read_only=True)
 
-    def update(self, instance, validated_data):
-        """Make "user" field is readonly but only on update."""
-        validated_data.pop("user", None)
-        return super().update(instance, validated_data)
+    class Meta:
+        model = models.ItemAccess
+        resource_field_name = "item"
+        fields = ["id", "user", "user_id", "team", "role", "abilities"]
+        read_only_fields = ["id", "abilities"]
 
     def get_abilities(self, access) -> dict:
         """Return abilities of the logged-in user on the instance."""
@@ -69,59 +93,10 @@ class BaseAccessSerializer(serializers.ModelSerializer):
             return access.get_abilities(request.user)
         return {}
 
-    def validate(self, attrs):
-        """
-        Check access rights specific to writing (create/update)
-        """
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        role = attrs.get("role")
-
-        # Update
-        if self.instance:
-            can_set_role_to = self.instance.get_abilities(user)["set_role_to"]
-
-            if role and role not in can_set_role_to:
-                message = (
-                    f"You are only allowed to set role to {', '.join(can_set_role_to)}"
-                    if can_set_role_to
-                    else "You are not allowed to set this role for this template."
-                )
-                raise exceptions.PermissionDenied(message)
-
-        # Create
-        else:
-            try:
-                resource_id = self.context["resource_id"]
-            except KeyError as exc:
-                raise exceptions.ValidationError(
-                    "You must set a resource ID in kwargs to create a new access."
-                ) from exc
-
-            if not self.Meta.model.objects.filter(  # pylint: disable=no-member
-                Q(user=user) | Q(team__in=user.teams),
-                role__in=[models.RoleChoices.OWNER, models.RoleChoices.ADMIN],
-                **{self.Meta.resource_field_name: resource_id},  # pylint: disable=no-member
-            ).exists():
-                raise exceptions.PermissionDenied(
-                    "You are not allowed to manage accesses for this resource."
-                )
-
-            if (
-                role == models.RoleChoices.OWNER
-                and not self.Meta.model.objects.filter(  # pylint: disable=no-member
-                    Q(user=user) | Q(team__in=user.teams),
-                    role=models.RoleChoices.OWNER,
-                    **{self.Meta.resource_field_name: resource_id},  # pylint: disable=no-member
-                ).exists()
-            ):
-                raise exceptions.PermissionDenied(
-                    "Only owners of a resource can assign other users as owners."
-                )
-
-        # pylint: disable=no-member
-        attrs[f"{self.Meta.resource_field_name}_id"] = self.context["resource_id"]
-        return attrs
+    def update(self, instance, validated_data):
+        """Make "user" field is readonly but only on update."""
+        validated_data.pop("user", None)
+        return super().update(instance, validated_data)
 
 
 class ListItemSerializer(serializers.ModelSerializer):
@@ -519,21 +494,6 @@ class BreadcrumbItemSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "title", "path", "depth", "main_workspace"]
 
 
-class UserSerializer(serializers.ModelSerializer):
-    """Serialize users."""
-
-    class Meta:
-        model = models.User
-        fields = [
-            "id",
-            "email",
-            "full_name",
-            "short_name",
-            "language",
-        ]
-        read_only_fields = ["id", "email", "full_name", "short_name"]
-
-
 class UserMeSerializer(UserSerializer):
     """Serialize users for me endpoint."""
 
@@ -545,25 +505,6 @@ class UserMeSerializer(UserSerializer):
         model = models.User
         fields = UserSerializer.Meta.fields + ["main_workspace"]
         read_only_fields = UserSerializer.Meta.read_only_fields + ["main_workspace"]
-
-
-class ItemAccessSerializer(BaseAccessSerializer):
-    """Serialize item accesses."""
-
-    user_id = serializers.PrimaryKeyRelatedField(
-        queryset=models.User.objects.all(),
-        write_only=True,
-        source="user",
-        required=False,
-        allow_null=True,
-    )
-    user = UserSerializer(read_only=True)
-
-    class Meta:
-        model = models.ItemAccess
-        resource_field_name = "item"
-        fields = ["id", "user", "user_id", "team", "role", "abilities"]
-        read_only_fields = ["id", "abilities"]
 
 
 class LinkItemSerializer(serializers.ModelSerializer):
