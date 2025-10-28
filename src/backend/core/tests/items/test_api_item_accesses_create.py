@@ -191,6 +191,13 @@ def test_api_item_accesses_create_authenticated_administrator(
         "team": "",
         "role": role,
         "user": other_user,
+        "item": {
+            "id": str(item.id),
+            "path": str(item.path),
+            "depth": item.depth,
+        },
+        "max_ancestors_role": None,
+        "max_role": role,
     }
     assert len(mail.outbox) == 1
     email = mail.outbox[0]
@@ -256,6 +263,13 @@ def test_api_item_accesses_create_authenticated_owner(via, depth, mock_user_team
         "team": "",
         "role": role,
         "abilities": new_item_access.get_abilities(user),
+        "max_ancestors_role": None,
+        "max_role": role,
+        "item": {
+            "id": str(item.id),
+            "path": str(item.path),
+            "depth": item.depth,
+        },
     }
     assert len(mail.outbox) == 1
     email = mail.outbox[0]

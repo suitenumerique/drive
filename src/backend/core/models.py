@@ -30,6 +30,7 @@ from django.utils.translation import gettext_lazy as _
 from django_ltree.managers import TreeManager, TreeQuerySet
 from django_ltree.models import TreeModel
 from lasuite.drf.models.choices import (
+    PRIVILEGED_ROLES,
     LinkReachChoices,
     LinkRoleChoices,
     RoleChoices,
@@ -1173,57 +1174,115 @@ class ItemAccess(BaseModel):
         super().delete(*args, **kwargs)
         self.item.invalidate_nb_accesses_cache()
 
+    @property
+    def target_key(self):
+        """Get a unique key for the actor targeted by the access, without possible conflict."""
+        return f"user:{self.user_id!s}" if self.user_id else f"team:{self.team:s}"
+
+    def set_user_roles_tuple(self, ancestors_role, current_role):
+        """
+        Set a precomputed (ancestor_role, current_role) tuple for this instance.
+
+        This avoids querying the database in `get_roles_tuple()` and is useful
+        when roles are already known, such as in bulk serialization.
+
+        Args:
+            ancestor_role (str | None): Highest role on any ancestor document.
+            current_role (str | None): Role on the current document.
+        """
+        # pylint: disable=attribute-defined-outside-init
+        self._prefetched_user_roles_tuple = (ancestors_role, current_role)
+
+    def get_user_roles_tuple(self, user):
+        """
+        Return a tuple of:
+        - the highest role the user has on any ancestor of the item
+        - the role the user has on the current item
+
+        If roles have been explicitly set using `set_user_roles_tuple()`,
+        those will be returned instead of querying the database.
+
+        This allows viewsets or serializers to precompute roles for performance
+        when handling multiple items at once.
+
+        Args:
+            user (User): The user whose roles are being evaluated.
+
+        Returns:
+            tuple[str | None, str | None]: (max_ancestor_role, current_document_role)
+        """
+        if not user.is_authenticated:
+            return None, None
+
+        try:
+            return self._prefetched_user_roles_tuple
+        except AttributeError:
+            pass
+
+        ancestors = (
+            self.item.ancestors() | Item.objects.filter(pk=self.item_id)
+        ).filter(ancestors_deleted_at__isnull=True)
+
+        access_tuples = ItemAccess.objects.filter(
+            models.Q(user=user) | models.Q(team__in=user.teams),
+            item__in=ancestors,
+        ).values_list("item_id", "role")
+
+        ancestors_roles = []
+        current_role = None
+        for item_id, role in access_tuples:
+            if item_id == self.item_id:
+                current_role = role
+            else:
+                ancestors_roles.append(role)
+
+        return RoleChoices.max(*ancestors_roles), current_role
+
     def get_abilities(self, user):
         """
         Compute and return abilities for a given user on the item access.
         """
-        roles = []
-        if user.is_authenticated:
-            teams = user.teams
-            try:
-                roles = self.user_roles or []
-            except AttributeError:
-                try:
-                    roles = self.item.accesses.filter(
-                        models.Q(user=user) | models.Q(team__in=teams),
-                    ).values_list("role", flat=True)
-                except (self._meta.model.DoesNotExist, IndexError):
-                    roles = []
+        ancestors_role, current_role = self.get_user_roles_tuple(user)
+        role = RoleChoices.max(ancestors_role, current_role)
+        is_owner_or_admin = role in PRIVILEGED_ROLES
 
-        is_owner_or_admin = bool(
-            set(roles).intersection({RoleChoices.OWNER, RoleChoices.ADMIN})
-        )
         if self.role == RoleChoices.OWNER:
-            can_delete = (
-                RoleChoices.OWNER in roles
-                and self.item.accesses.filter(role=RoleChoices.OWNER).count() > 1
+            can_delete = role == RoleChoices.OWNER and (
+                # check if item is not root trying to avoid an extra query
+                self.item.depth > 1
+                or ItemAccess.objects.filter(
+                    item_id=self.item_id, role=RoleChoices.OWNER
+                ).count()
+                > 1
             )
-            set_role_to = (
-                [RoleChoices.ADMIN, RoleChoices.EDITOR, RoleChoices.READER]
-                if can_delete
-                else []
-            )
+            set_role_to = RoleChoices.values if can_delete else []
         else:
             can_delete = is_owner_or_admin
             set_role_to = []
-            if RoleChoices.OWNER in roles:
-                set_role_to.append(RoleChoices.OWNER)
             if is_owner_or_admin:
                 set_role_to.extend(
-                    [RoleChoices.ADMIN, RoleChoices.EDITOR, RoleChoices.READER]
+                    [RoleChoices.READER, RoleChoices.EDITOR, RoleChoices.ADMIN]
                 )
+            if role == RoleChoices.OWNER:
+                set_role_to.append(RoleChoices.OWNER)
 
-        # Remove the current role as we don't want to propose it as an option
-        try:
-            set_role_to.remove(self.role)
-        except ValueError:
-            pass
+        # Filter out roles that would be lower than the one the user already has
+        ancestors_role_priority = RoleChoices.get_priority(
+            getattr(self, "max_ancestors_role", None)
+        )
+        set_role_to = [
+            candidate_role
+            for candidate_role in set_role_to
+            if RoleChoices.get_priority(candidate_role) > ancestors_role_priority
+        ]
+        if len(set_role_to) == 1:
+            set_role_to = []
 
         return {
             "destroy": can_delete,
-            "update": bool(set_role_to),
-            "partial_update": bool(set_role_to),
-            "retrieve": bool(roles),
+            "update": bool(set_role_to) and is_owner_or_admin,
+            "partial_update": bool(set_role_to) and is_owner_or_admin,
+            "retrieve": (self.user and self.user.id == user.id) or is_owner_or_admin,
             "set_role_to": set_role_to,
         }
 

@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 
 import pytest
 
-from core import factories
+from core import factories, models
 
 pytestmark = pytest.mark.django_db
 
@@ -37,7 +37,7 @@ def test_models_item_accesses_unique_user():
 
 
 def test_models_item_accesses_several_empty_teams():
-    """A item can have several item accesses with an empty team."""
+    """an item can have several item accesses with an empty team."""
     access = factories.UserItemAccessFactory()
     factories.UserItemAccessFactory(item=access.item)
 
@@ -54,13 +54,13 @@ def test_models_item_accesses_unique_team():
 
 
 def test_models_item_accesses_several_null_users():
-    """A item can have several item accesses with a null user."""
+    """an item can have several item accesses with a null user."""
     access = factories.TeamItemAccessFactory()
     factories.TeamItemAccessFactory(item=access.item)
 
 
 def test_models_item_accesses_user_and_team_set():
-    """User and team can't both be set on a item access."""
+    """User and team can't both be set on an item access."""
     with pytest.raises(
         ValidationError,
         match="Either user or team must be set, not both.",
@@ -69,7 +69,7 @@ def test_models_item_accesses_user_and_team_set():
 
 
 def test_models_item_accesses_user_and_team_empty():
-    """User and team can't both be empty on a item access."""
+    """User and team can't both be empty on an item access."""
     with pytest.raises(
         ValidationError,
         match="Either user or team must be set, not both.",
@@ -112,7 +112,7 @@ def test_models_item_access_get_abilities_authenticated():
 
 def test_models_item_access_get_abilities_for_owner_of_self_allowed():
     """
-    Check abilities of self access for the owner of a item when
+    Check abilities of self access for the owner of an item when
     there is more than one owner left.
     """
     access = factories.UserItemAccessFactory(role="owner")
@@ -123,16 +123,22 @@ def test_models_item_access_get_abilities_for_owner_of_self_allowed():
         "retrieve": True,
         "update": True,
         "partial_update": True,
-        "set_role_to": ["administrator", "editor", "reader"],
+        "set_role_to": ["reader", "editor", "administrator", "owner"],
     }
 
 
-def test_models_item_access_get_abilities_for_owner_of_self_last():
+def test_models_item_access_get_abilities_for_owner_of_self_last_on_root(
+    django_assert_num_queries,
+):
     """
-    Check abilities of self access for the owner of a item when there is only one owner left.
+    Check abilities of self access for the owner of a root item when there
+    is only one owner left.
     """
     access = factories.UserItemAccessFactory(role="owner")
-    abilities = access.get_abilities(access.user)
+
+    with django_assert_num_queries(2):
+        abilities = access.get_abilities(access.user)
+
     assert abilities == {
         "destroy": False,
         "retrieve": True,
@@ -142,8 +148,30 @@ def test_models_item_access_get_abilities_for_owner_of_self_last():
     }
 
 
+def test_models_item_access_get_abilities_for_owner_of_self_last_on_child(
+    django_assert_num_queries,
+):
+    """
+    Check abilities of self access for the owner of a child item when there
+    is only one owner left.
+    """
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    access = factories.UserItemAccessFactory(item__parent=parent, role="owner")
+
+    with django_assert_num_queries(1):
+        abilities = access.get_abilities(access.user)
+
+    assert abilities == {
+        "destroy": True,
+        "retrieve": True,
+        "update": True,
+        "partial_update": True,
+        "set_role_to": ["reader", "editor", "administrator", "owner"],
+    }
+
+
 def test_models_item_access_get_abilities_for_owner_of_owner():
-    """Check abilities of owner access for the owner of a item."""
+    """Check abilities of owner access for the owner of an item."""
     access = factories.UserItemAccessFactory(role="owner")
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="owner").user
@@ -153,12 +181,12 @@ def test_models_item_access_get_abilities_for_owner_of_owner():
         "retrieve": True,
         "update": True,
         "partial_update": True,
-        "set_role_to": ["administrator", "editor", "reader"],
+        "set_role_to": ["reader", "editor", "administrator", "owner"],
     }
 
 
 def test_models_item_access_get_abilities_for_owner_of_administrator():
-    """Check abilities of administrator access for the owner of a item."""
+    """Check abilities of administrator access for the owner of an item."""
     access = factories.UserItemAccessFactory(role="administrator")
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="owner").user
@@ -168,12 +196,12 @@ def test_models_item_access_get_abilities_for_owner_of_administrator():
         "retrieve": True,
         "update": True,
         "partial_update": True,
-        "set_role_to": ["owner", "editor", "reader"],
+        "set_role_to": ["reader", "editor", "administrator", "owner"],
     }
 
 
 def test_models_item_access_get_abilities_for_owner_of_editor():
-    """Check abilities of editor access for the owner of a item."""
+    """Check abilities of editor access for the owner of an item."""
     access = factories.UserItemAccessFactory(role="editor")
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="owner").user
@@ -183,12 +211,12 @@ def test_models_item_access_get_abilities_for_owner_of_editor():
         "retrieve": True,
         "update": True,
         "partial_update": True,
-        "set_role_to": ["owner", "administrator", "reader"],
+        "set_role_to": ["reader", "editor", "administrator", "owner"],
     }
 
 
 def test_models_item_access_get_abilities_for_owner_of_reader():
-    """Check abilities of reader access for the owner of a item."""
+    """Check abilities of reader access for the owner of an item."""
     access = factories.UserItemAccessFactory(role="reader")
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="owner").user
@@ -198,7 +226,7 @@ def test_models_item_access_get_abilities_for_owner_of_reader():
         "retrieve": True,
         "update": True,
         "partial_update": True,
-        "set_role_to": ["owner", "administrator", "editor"],
+        "set_role_to": ["reader", "editor", "administrator", "owner"],
     }
 
 
@@ -206,7 +234,7 @@ def test_models_item_access_get_abilities_for_owner_of_reader():
 
 
 def test_models_item_access_get_abilities_for_administrator_of_owner():
-    """Check abilities of owner access for the administrator of a item."""
+    """Check abilities of owner access for the administrator of an item."""
     access = factories.UserItemAccessFactory(role="owner")
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="administrator").user
@@ -221,7 +249,7 @@ def test_models_item_access_get_abilities_for_administrator_of_owner():
 
 
 def test_models_item_access_get_abilities_for_administrator_of_administrator():
-    """Check abilities of administrator access for the administrator of a item."""
+    """Check abilities of administrator access for the administrator of an item."""
     access = factories.UserItemAccessFactory(role="administrator")
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="administrator").user
@@ -231,12 +259,12 @@ def test_models_item_access_get_abilities_for_administrator_of_administrator():
         "retrieve": True,
         "update": True,
         "partial_update": True,
-        "set_role_to": ["editor", "reader"],
+        "set_role_to": ["reader", "editor", "administrator"],
     }
 
 
 def test_models_item_access_get_abilities_for_administrator_of_editor():
-    """Check abilities of editor access for the administrator of a item."""
+    """Check abilities of editor access for the administrator of an item."""
     access = factories.UserItemAccessFactory(role="editor")
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="administrator").user
@@ -246,12 +274,12 @@ def test_models_item_access_get_abilities_for_administrator_of_editor():
         "retrieve": True,
         "update": True,
         "partial_update": True,
-        "set_role_to": ["administrator", "reader"],
+        "set_role_to": ["reader", "editor", "administrator"],
     }
 
 
 def test_models_item_access_get_abilities_for_administrator_of_reader():
-    """Check abilities of reader access for the administrator of a item."""
+    """Check abilities of reader access for the administrator of an item."""
     access = factories.UserItemAccessFactory(role="reader")
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="administrator").user
@@ -261,7 +289,7 @@ def test_models_item_access_get_abilities_for_administrator_of_reader():
         "retrieve": True,
         "update": True,
         "partial_update": True,
-        "set_role_to": ["administrator", "editor"],
+        "set_role_to": ["reader", "editor", "administrator"],
     }
 
 
@@ -269,14 +297,14 @@ def test_models_item_access_get_abilities_for_administrator_of_reader():
 
 
 def test_models_item_access_get_abilities_for_editor_of_owner():
-    """Check abilities of owner access for the editor of a item."""
+    """Check abilities of owner access for the editor of an item."""
     access = factories.UserItemAccessFactory(role="owner")
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="editor").user
     abilities = access.get_abilities(user)
     assert abilities == {
         "destroy": False,
-        "retrieve": True,
+        "retrieve": False,
         "update": False,
         "partial_update": False,
         "set_role_to": [],
@@ -284,14 +312,14 @@ def test_models_item_access_get_abilities_for_editor_of_owner():
 
 
 def test_models_item_access_get_abilities_for_editor_of_administrator():
-    """Check abilities of administrator access for the editor of a item."""
+    """Check abilities of administrator access for the editor of an item."""
     access = factories.UserItemAccessFactory(role="administrator")
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="editor").user
     abilities = access.get_abilities(user)
     assert abilities == {
         "destroy": False,
-        "retrieve": True,
+        "retrieve": False,
         "update": False,
         "partial_update": False,
         "set_role_to": [],
@@ -301,7 +329,7 @@ def test_models_item_access_get_abilities_for_editor_of_administrator():
 def test_models_item_access_get_abilities_for_editor_of_editor_user(
     django_assert_num_queries,
 ):
-    """Check abilities of editor access for the editor of a item."""
+    """Check abilities of editor access for the editor of an item."""
     access = factories.UserItemAccessFactory(role="editor")
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="editor").user
@@ -311,7 +339,7 @@ def test_models_item_access_get_abilities_for_editor_of_editor_user(
 
     assert abilities == {
         "destroy": False,
-        "retrieve": True,
+        "retrieve": False,
         "update": False,
         "partial_update": False,
         "set_role_to": [],
@@ -322,14 +350,14 @@ def test_models_item_access_get_abilities_for_editor_of_editor_user(
 
 
 def test_models_item_access_get_abilities_for_reader_of_owner():
-    """Check abilities of owner access for the reader of a item."""
+    """Check abilities of owner access for the reader of an item."""
     access = factories.UserItemAccessFactory(role="owner")
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="reader").user
     abilities = access.get_abilities(user)
     assert abilities == {
         "destroy": False,
-        "retrieve": True,
+        "retrieve": False,
         "update": False,
         "partial_update": False,
         "set_role_to": [],
@@ -337,14 +365,14 @@ def test_models_item_access_get_abilities_for_reader_of_owner():
 
 
 def test_models_item_access_get_abilities_for_reader_of_administrator():
-    """Check abilities of administrator access for the reader of a item."""
+    """Check abilities of administrator access for the reader of an item."""
     access = factories.UserItemAccessFactory(role="administrator")
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="reader").user
     abilities = access.get_abilities(user)
     assert abilities == {
         "destroy": False,
-        "retrieve": True,
+        "retrieve": False,
         "update": False,
         "partial_update": False,
         "set_role_to": [],
@@ -354,7 +382,7 @@ def test_models_item_access_get_abilities_for_reader_of_administrator():
 def test_models_item_access_get_abilities_for_reader_of_reader_user(
     django_assert_num_queries,
 ):
-    """Check abilities of reader access for the reader of a item."""
+    """Check abilities of reader access for the reader of an item."""
     access = factories.UserItemAccessFactory(role="reader")
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="reader").user
@@ -364,7 +392,7 @@ def test_models_item_access_get_abilities_for_reader_of_reader_user(
 
     assert abilities == {
         "destroy": False,
-        "retrieve": True,
+        "retrieve": False,
         "update": False,
         "partial_update": False,
         "set_role_to": [],
@@ -382,8 +410,16 @@ def test_models_item_access_get_abilities_preset_role(django_assert_num_queries)
 
     assert abilities == {
         "destroy": False,
-        "retrieve": True,
+        "retrieve": False,
         "update": False,
         "partial_update": False,
         "set_role_to": [],
     }
+
+
+@pytest.mark.parametrize("role", models.RoleChoices)
+def test_models_item_access_get_abilities_retrieve_own_access(role):
+    """Check abilities of self access for the owner of an item."""
+    access = factories.UserItemAccessFactory(role=role)
+    abilities = access.get_abilities(access.user)
+    assert abilities["retrieve"] is True

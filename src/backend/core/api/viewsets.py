@@ -4,6 +4,7 @@
 import json
 import logging
 import re
+from collections import defaultdict
 from urllib.parse import unquote, urlparse
 
 from django.conf import settings
@@ -1371,49 +1372,113 @@ class ItemAccessViewSet(
         except models.Item.DoesNotExist as excpt:
             raise drf.exceptions.NotFound() from excpt
 
+    def get_serializer_class(self):
+        """Use light serializer for unprivileged users."""
+        return (
+            serializers.ItemAccessSerializer
+            if self.item.get_role(self.request.user) in PRIVILEGED_ROLES
+            else serializers.ItemAccessLightSerializer
+        )
+
     def get_serializer_context(self):
         """Extra context provided to the serializer class."""
         context = super().get_serializer_context()
         context["resource_id"] = self.kwargs["resource_id"]
         return context
 
-    def get_queryset(self):
-        """Return the queryset according to the action."""
-        queryset = super().get_queryset()
-        queryset = queryset.filter(
-            **{self.resource_field_name: self.kwargs["resource_id"]}
-        )
+    def filter_queryset(self, queryset):
+        """Override to filter on related resource."""
+        queryset = super().filter_queryset(queryset)
+        return queryset.filter(**{self.resource_field_name: self.kwargs["resource_id"]})
 
-        return queryset
-
+    # pylint: disable=too-many-locals
     def list(self, request, *args, **kwargs):
-        """List item accesses for an item."""
-        item = self.item
-        queryset = self.filter_queryset(self.get_queryset())
-        user = self.request.user
+        """
+        List item accesses for an item.
+        The list contains accesses for the item and its ancestors.
+        Only the deepest access for each items in the hierarchy is returned.
 
-        if item.get_role(user) is None:
+        Return an empty list for users without access to the item.
+
+        If the user is privileged, return all accesses.
+        If the user is not privileged, return only the accesses with privileged roles
+        to not leak information to non-privileged users.
+
+        The accesses are ordered by item depth and creation date.
+        """
+        user = request.user
+
+        role = self.item.get_role(user)
+        if not role:
             return drf.response.Response([])
 
-        serializer = self.get_serializer(queryset, many=True)
-        return drf.response.Response(serializer.data)
+        ancestor_qs = (
+            self.item.ancestors() | models.Item.objects.filter(pk=self.item.pk)
+        ).filter(ancestors_deleted_at__isnull=True)
+        ancestor_items = list(ancestor_qs.order_by("path"))
+        ancestor_ids = [item.id for item in ancestor_items]
 
-    def destroy(self, request, *args, **kwargs):
-        """Forbid deleting the last owner access"""
-        instance = self.get_object()
-        resource = getattr(instance, self.resource_field_name)
+        queryset = self.get_queryset().filter(item__in=ancestor_ids)
 
-        # Check if the access being deleted is the last owner access for the resource
-        if (
-            instance.role == "owner"
-            and resource.accesses.filter(role="owner").count() == 1
-        ):
-            return drf.response.Response(
-                {"detail": "Cannot delete the last owner access for the resource."},
-                status=drf.status.HTTP_403_FORBIDDEN,
+        if role not in PRIVILEGED_ROLES:
+            # Restrict the queryset to only privileged roles
+            # to not leak information to non-privileged users
+            queryset = queryset.filter(role__in=PRIVILEGED_ROLES)
+            
+        accesses = list(queryset.order_by("item__path", "created_at"))
+
+        # Annotate more information on roles
+        target_to_accesses = defaultdict(list)
+        for access in accesses:
+            target_to_accesses[access.target_key].append(access)
+
+        for target_accesses in target_to_accesses.values():
+            highest_role_on_ancestors = None
+            for access in target_accesses:
+                access.max_ancestors_role = highest_role_on_ancestors
+                highest_role_on_ancestors = models.RoleChoices.max(
+                    highest_role_on_ancestors, access.role
+                )
+
+        request_teams = set(getattr(user, "teams", []))
+        request_target_keys = set()
+        if user.is_authenticated:
+            request_target_keys.add(f"user:{user.id}")
+            request_target_keys.update(f"team:{team}" for team in request_teams)
+
+        user_roles_by_path: dict[str, str | None] = {}
+        for access in accesses:
+            if access.target_key in request_target_keys:
+                path = str(access.item.path)
+                user_roles_by_path[path] = models.RoleChoices.max(
+                    user_roles_by_path.get(path), access.role
+                )
+
+        user_ancestor_role_by_path: dict[str, str | None] = {}
+        user_max_role_by_path: dict[str, str | None] = {}
+        for ancestor in ancestor_items:
+            path = str(ancestor.path)
+            parent_path = str(ancestor.path[:-1]) if ancestor.depth > 1 else ""
+            ancestors_role = user_max_role_by_path.get(parent_path)
+            user_ancestor_role_by_path[path] = ancestors_role
+            user_max_role_by_path[path] = models.RoleChoices.max(
+                ancestors_role, user_roles_by_path.get(path)
             )
 
-        return super().destroy(request, *args, **kwargs)
+        # serialize and return the response
+        context = self.get_serializer_context()
+        serializer_class = self.get_serializer_class()
+        serialized_data = []
+        for access in accesses:
+            path = str(access.item.path)
+            access.set_user_roles_tuple(
+                user_ancestor_role_by_path.get(path),
+                user_roles_by_path.get(path),
+            )
+            serializer = serializer_class(access, context=context)
+            serialized_data.append(serializer.data)
+
+        return drf.response.Response(serialized_data)
 
     def perform_update(self, serializer):
         """Check that we don't change the role if it leads to losing the last owner."""
