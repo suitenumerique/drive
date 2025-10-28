@@ -451,10 +451,11 @@ class ItemQuerySet(TreeQuerySet):
         )
 
 
-class ItemManager(TreeManager):
+class ItemManager(TreeManager.from_queryset(ItemQuerySet)):
     """Custom manager for Item model overriding create_child method."""
 
     def get_queryset(self):
+        """Get the queryset for the Item model."""
         return ItemQuerySet(model=self.model, using=self._db)
 
     def readable_per_se(self, user):

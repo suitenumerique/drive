@@ -108,10 +108,13 @@ def test_api_item_accesses_create_authenticated_reader_or_editor(
     assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
 
 
+@pytest.mark.parametrize("depth", [1, 2, 3])
 @pytest.mark.parametrize("via", VIA)
-def test_api_item_accesses_create_authenticated_administrator(via, mock_user_teams):
+def test_api_item_accesses_create_authenticated_administrator(
+    via, depth, mock_user_teams
+):
     """
-    Administrators of an item should be able to create item accesses
+    Administrators of an item (direct or by heritage) should be able to create item accesses
     except for the "owner" role.
     An email should be sent to the accesses to notify them of the adding.
     """
@@ -120,14 +123,23 @@ def test_api_item_accesses_create_authenticated_administrator(via, mock_user_tea
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory()
+    items = []
+    for i in range(depth):
+        parent = items[i - 1] if i > 0 else None
+        items.append(
+            factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+        )
+
     if via == USER:
-        factories.UserItemAccessFactory(item=item, user=user, role="administrator")
+        factories.UserItemAccessFactory(item=items[0], user=user, role="administrator")
     elif via == TEAM:
         mock_user_teams.return_value = ["lasuite", "unknown"]
-        factories.TeamItemAccessFactory(item=item, team="lasuite", role="administrator")
+        factories.TeamItemAccessFactory(
+            item=items[0], team="lasuite", role="administrator"
+        )
 
     other_user = factories.UserFactory()
+    item = items[-1]
     assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
     # It should not be allowed to create an owner access
     response = client.post(
@@ -145,7 +157,7 @@ def test_api_item_accesses_create_authenticated_administrator(via, mock_user_tea
             {
                 "attr": None,
                 "code": "permission_denied",
-                "detail": "Only owners of a resource can assign other users as owners.",
+                "detail": "Only owners of an item can assign other users as owners.",
             },
         ],
         "type": "client_error",
@@ -192,10 +204,12 @@ def test_api_item_accesses_create_authenticated_administrator(via, mock_user_tea
     assert "items/" + str(item.id) + "/" in email_content
 
 
+@pytest.mark.parametrize("depth", [1, 2, 3])
 @pytest.mark.parametrize("via", VIA)
-def test_api_item_accesses_create_authenticated_owner(via, mock_user_teams):
+def test_api_item_accesses_create_authenticated_owner(via, depth, mock_user_teams):
     """
-    Owners of an item should be able to create item accesses whatever the role.
+    Owners of an item (direct or by heritage) should be able to create item accesses whatever
+    the role.
     An email should be sent to the accesses to notify them of the adding.
     """
     user = factories.UserFactory(language=settings.LANGUAGE_CODE)
@@ -203,14 +217,21 @@ def test_api_item_accesses_create_authenticated_owner(via, mock_user_teams):
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory()
+    items = []
+    for i in range(depth):
+        parent = items[i - 1] if i > 0 else None
+        items.append(
+            factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+        )
+
     if via == USER:
-        factories.UserItemAccessFactory(item=item, user=user, role="owner")
+        factories.UserItemAccessFactory(item=items[0], user=user, role="owner")
     elif via == TEAM:
         mock_user_teams.return_value = ["lasuite", "unknown"]
-        factories.TeamItemAccessFactory(item=item, team="lasuite", role="owner")
+        factories.TeamItemAccessFactory(item=items[0], team="lasuite", role="owner")
 
     other_user = factories.UserFactory()
+    item = items[-1]
     assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
     role = random.choice([role[0] for role in models.RoleChoices.choices])
 
