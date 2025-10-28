@@ -9,6 +9,7 @@ from uuid import uuid4
 from django.utils import timezone
 
 import pytest
+from freezegun import freeze_time
 from rest_framework.test import APIClient
 
 from core import factories
@@ -95,14 +96,16 @@ def test_api_items_create_file_authenticated_success():
     client = APIClient()
     client.force_login(user)
 
-    response = client.post(
-        "/api/v1.0/items/",
-        {
-            "type": ItemTypeChoices.FILE,
-            "filename": "file.txt",
-        },
-        format="json",
-    )
+    now = timezone.now()
+    with freeze_time(now):
+        response = client.post(
+            "/api/v1.0/items/",
+            {
+                "type": ItemTypeChoices.FILE,
+                "filename": "file.txt",
+            },
+            format="json",
+        )
     assert response.status_code == 201
     item = Item.objects.exclude(id=user.get_main_workspace().id).get()
     assert item.title == "file.txt"
@@ -124,9 +127,9 @@ def test_api_items_create_file_authenticated_success():
 
     assert query_params.pop("X-Amz-Algorithm") == ["AWS4-HMAC-SHA256"]
     assert query_params.pop("X-Amz-Credential") == [
-        f"drive/{timezone.now().strftime('%Y%m%d')}/us-east-1/s3/aws4_request"
+        f"drive/{now.strftime('%Y%m%d')}/eu-east-1/s3/aws4_request"
     ]
-    assert query_params.pop("X-Amz-Date") == [timezone.now().strftime("%Y%m%dT%H%M%SZ")]
+    assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
     assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
     assert query_params.pop("X-Amz-Signature") is not None
