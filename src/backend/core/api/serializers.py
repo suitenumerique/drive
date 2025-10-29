@@ -124,12 +124,12 @@ class ItemAccessSerializer(serializers.ModelSerializer):
 
     def get_max_ancestors_role(self, instance):
         """Return max_ancestors_role if annotated; else None."""
-        return getattr(instance, "max_ancestors_role", None)
+        return instance.max_ancestors_role
 
     def get_max_role(self, instance):
         """Return max_ancestors_role if annotated; else None."""
         return models.RoleChoices.max(
-            getattr(instance, "max_ancestors_role", None),
+            instance.max_ancestors_role,
             instance.role,
         )
 
