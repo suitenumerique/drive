@@ -1489,11 +1489,12 @@ class ItemAccessViewSet(
             "role" in self.request.data
             and self.request.data["role"] != models.RoleChoices.OWNER
         ):
-            resource = getattr(instance, self.resource_field_name)
             # Check if the access being updated is the last owner access for the resource
             if (
-                instance.role == models.RoleChoices.OWNER
-                and resource.accesses.filter(role=models.RoleChoices.OWNER).count() == 1
+                self.item.is_root
+                and instance.role == models.RoleChoices.OWNER
+                and self.item.accesses.filter(role=models.RoleChoices.OWNER).count()
+                == 1
             ):
                 message = "Cannot change the role to a non-owner role for the last owner access."
                 raise drf.exceptions.PermissionDenied({"detail": message})
