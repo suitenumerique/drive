@@ -1260,7 +1260,7 @@ class ItemAccess(BaseModel):
         set_role_to = [
             candidate_role
             for candidate_role in set_role_to
-            if RoleChoices.get_priority(candidate_role) >= ancestors_role_priority
+            if RoleChoices.get_priority(candidate_role) > ancestors_role_priority
         ]
         if len(set_role_to) == 1:
             set_role_to = []

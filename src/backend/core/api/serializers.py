@@ -106,6 +106,7 @@ class ItemAccessSerializer(serializers.ModelSerializer):
         validated_data.pop("team", None)
         return super().update(instance, validated_data)
 
+
 class ItemAccessLightSerializer(ItemAccessSerializer):
     """Serialize item accesses with limited fields."""
 
@@ -127,13 +128,13 @@ class ItemAccessLightSerializer(ItemAccessSerializer):
         read_only_fields = [
             "id",
             "item",
-            "user"
-            "team",
+            "userteam",
             "role",
             "abilities",
             "max_ancestors_role",
             "max_role",
         ]
+
 
 class ListItemSerializer(serializers.ModelSerializer):
     """Serialize items with limited fields for display in lists."""

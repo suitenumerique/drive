@@ -145,16 +145,14 @@ def test_api_item_accesses_list_authenticated_related_non_privileged(
     other_access = factories.UserItemAccessFactory(user=user)
     factories.UserItemAccessFactory(item=other_access.item)
 
-    with django_assert_num_queries(3):
+    with django_assert_num_queries(4):
         response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
 
     assert response.status_code == 200
     content = response.json()
 
     # Make sure only privileged roles are returned
-    privileged_accesses = [
-        acc for acc in accesses if acc.role in PRIVILEGED_ROLES
-    ]
+    privileged_accesses = [acc for acc in accesses if acc.role in PRIVILEGED_ROLES]
 
     assert len(content) == len(privileged_accesses)
 
@@ -253,7 +251,7 @@ def test_api_item_accesses_list_authenticated_related_privileged(
     other_access = factories.UserItemAccessFactory(user=user)
     factories.UserItemAccessFactory(item=other_access.item)
 
-    with django_assert_num_queries(3):
+    with django_assert_num_queries(4):
         response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
 
     assert response.status_code == 200
@@ -337,7 +335,6 @@ def test_api_item_accesses_retrieve_set_role_to_child():
         result["id"]: result["abilities"]["set_role_to"] for result in content
     }
     assert result_dict[str(item_access_other_user.id)] == [
-        "editor",
         "administrator",
         "owner",
     ]
@@ -359,7 +356,7 @@ def test_api_item_accesses_retrieve_set_role_to_child():
                 ["reader", "editor", "administrator"],
                 [],
                 [],
-                ["reader", "editor", "administrator"],
+                ["editor", "administrator"],
             ],
         ],
         [
@@ -368,7 +365,7 @@ def test_api_item_accesses_retrieve_set_role_to_child():
                 ["reader", "editor", "administrator", "owner"],
                 [],
                 [],
-                ["reader", "editor", "administrator", "owner"],
+                ["editor", "administrator", "owner"],
             ],
         ],
         [
@@ -377,14 +374,14 @@ def test_api_item_accesses_retrieve_set_role_to_child():
                 ["reader", "editor", "administrator", "owner"],
                 [],
                 [],
-                ["reader", "editor", "administrator", "owner"],
+                ["editor", "administrator", "owner"],
             ],
         ],
     ],
 )
 def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
     """
-    The maximum role across ancestor items and set_role_to optionsfor
+    The maximum role accross ancestor items and set_role_to options for
     a given user should be filled as expected.
     """
     user = factories.UserFactory()
@@ -439,7 +436,7 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
                 ["reader", "editor", "administrator"],
                 [],
                 [],
-                ["reader", "editor", "administrator"],
+                ["editor", "administrator"],
             ],
         ],
         [
@@ -448,7 +445,7 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
                 ["reader", "editor", "administrator", "owner"],
                 [],
                 [],
-                ["reader", "editor", "administrator", "owner"],
+                ["editor", "administrator", "owner"],
             ],
         ],
         [
@@ -457,7 +454,7 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
                 ["reader", "editor", "administrator", "owner"],
                 [],
                 [],
-                ["reader", "editor", "administrator", "owner"],
+                ["editor", "administrator", "owner"],
             ],
         ],
         [
@@ -466,7 +463,7 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
                 ["reader", "editor", "administrator", "owner"],
                 [],
                 [],
-                ["reader", "editor", "administrator", "owner"],
+                ["editor", "administrator", "owner"],
             ],
         ],
         [
@@ -483,7 +480,7 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
             [
                 ["reader", "editor", "administrator"],
                 [],
-                ["editor", "administrator"],
+                [],
                 [],
             ],
         ],
@@ -1277,3 +1274,143 @@ def test_api_item_accesses_delete_owners_last_owner_child_team(
 
     assert response.status_code == 204
     assert models.ItemAccess.objects.count() == 3
+
+
+## Realistic case.
+
+
+def test_api_item_accesses_explicit():
+    """
+    test case with a combination of explicit accesses and inherited accesses.
+    An explicit access id added on the root item with a "weak" role (editor)
+    and then an explicit access is added on the deepest item with a "strong" role (owner).
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    # explicit access on root.
+    root_access = factories.UserItemAccessFactory(item=root, user=user, role="editor")
+    # explicit access on item.
+    item_access = factories.UserItemAccessFactory(item=item, user=user, role="owner")
+    other_admin_access = factories.UserItemAccessFactory(
+        item=root, role="administrator"
+    )
+    other_owner_access = factories.UserItemAccessFactory(item=root, role="owner")
+
+    assert item.get_role(user) == "owner"
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
+    assert response.status_code == 200
+    content = response.json()
+
+    assert content == [
+        {
+            "id": str(root_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "full_name": user.full_name,
+                "short_name": user.short_name,
+                "language": user.language,
+            },
+            "team": "",
+            "role": "editor",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": True,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": None,
+            "max_role": "editor",
+        },
+        {
+            "id": str(other_admin_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(other_admin_access.user.id),
+                "email": other_admin_access.user.email,
+                "language": other_admin_access.user.language,
+                "full_name": other_admin_access.user.full_name,
+                "short_name": other_admin_access.user.short_name,
+            },
+            "team": "",
+            "role": "administrator",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": False,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": None,
+            "max_role": "administrator",
+        },
+        {
+            "id": str(other_owner_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(other_owner_access.user.id),
+                "email": other_owner_access.user.email,
+                "language": other_owner_access.user.language,
+                "full_name": other_owner_access.user.full_name,
+                "short_name": other_owner_access.user.short_name,
+            },
+            "team": "",
+            "role": "owner",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": False,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": None,
+            "max_role": "owner",
+        },
+        {
+            "id": str(item_access.id),
+            "item": {
+                "id": str(item.id),
+                "path": str(item.path),
+                "depth": item.depth,
+            },
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "language": user.language,
+                "full_name": user.full_name,
+                "short_name": user.short_name,
+            },
+            "team": "",
+            "role": "owner",
+            "abilities": {
+                "destroy": True,
+                "update": True,
+                "partial_update": True,
+                "retrieve": True,
+                "set_role_to": ["administrator", "owner"],
+            },
+            "max_ancestors_role": "editor",
+            "max_role": "owner",
+        },
+    ]

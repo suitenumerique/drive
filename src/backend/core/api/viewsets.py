@@ -1175,6 +1175,7 @@ class ItemAccessViewSet(
         queryset = super().filter_queryset(queryset)
         return queryset.filter(**{self.resource_field_name: self.kwargs["resource_id"]})
 
+    # pylint: disable=too-many-locals
     def list(self, request, *args, **kwargs):
         """List item accesses for an item."""
         user = request.user
@@ -1183,11 +1184,13 @@ class ItemAccessViewSet(
         if not role:
             return drf.response.Response([])
 
-        ancestors = (
+        ancestor_qs = (
             self.item.ancestors() | models.Item.objects.filter(pk=self.item.pk)
         ).filter(ancestors_deleted_at__isnull=True)
+        ancestor_items = list(ancestor_qs.order_by("path"))
+        ancestor_ids = [item.id for item in ancestor_items]
 
-        queryset = self.get_queryset().filter(item__in=ancestors)
+        queryset = self.get_queryset().filter(item__in=ancestor_ids)
 
         if role not in PRIVILEGED_ROLES:
             queryset = queryset.filter(role__in=PRIVILEGED_ROLES)
@@ -1195,36 +1198,43 @@ class ItemAccessViewSet(
         accesses = list(queryset.order_by("item__path"))
 
         # Annotate more information on roles
-        path_to_key_to_max_ancestors_role = defaultdict(
-            lambda: defaultdict(lambda: None)
-        )
-        path_to_ancestors_roles = defaultdict(list)
-        path_to_role = defaultdict(lambda: None)
+        target_to_accesses = defaultdict(list)
         for access in accesses:
-            key = access.target_key
-            path = str(access.item.path)
-            parent_path = str(access.item.path[:-1])
+            target_to_accesses[access.target_key].append(access)
 
-            path_to_key_to_max_ancestors_role[path][key] = models.RoleChoices.max(
-                path_to_key_to_max_ancestors_role[path][key], access.role
+        for target_accesses in target_to_accesses.values():
+            target_accesses.sort(key=lambda acc: (acc.item.depth, str(acc.item.path)))
+            highest_role_on_ancestors = None
+            for access in target_accesses:
+                access.max_ancestors_role = highest_role_on_ancestors
+                highest_role_on_ancestors = models.RoleChoices.max(
+                    highest_role_on_ancestors, access.role
+                )
+
+        request_teams = set(getattr(user, "teams", []))
+        request_target_keys = set()
+        if user.is_authenticated:
+            request_target_keys.add(f"user:{user.id}")
+            request_target_keys.update(f"team:{team}" for team in request_teams)
+
+        user_roles_by_path: dict[str, str | None] = {}
+        for access in accesses:
+            if access.target_key in request_target_keys:
+                path = str(access.item.path)
+                user_roles_by_path[path] = models.RoleChoices.max(
+                    user_roles_by_path.get(path), access.role
+                )
+
+        user_ancestor_role_by_path: dict[str, str | None] = {}
+        user_max_role_by_path: dict[str, str | None] = {}
+        for ancestor in ancestor_items:
+            path = str(ancestor.path)
+            parent_path = str(ancestor.path[:-1]) if ancestor.depth > 1 else ""
+            ancestors_role = user_max_role_by_path.get(parent_path)
+            user_ancestor_role_by_path[path] = ancestors_role
+            user_max_role_by_path[path] = models.RoleChoices.max(
+                ancestors_role, user_roles_by_path.get(path)
             )
-
-            if parent_path:
-                path_to_key_to_max_ancestors_role[path][key] = models.RoleChoices.max(
-                    path_to_key_to_max_ancestors_role[parent_path][key],
-                    path_to_key_to_max_ancestors_role[path][key],
-                )
-                path_to_ancestors_roles[path].extend(
-                    path_to_ancestors_roles[parent_path]
-                )
-                path_to_ancestors_roles[path].append(path_to_role[parent_path])
-            else:
-                path_to_ancestors_roles[path] = []
-
-            if access.user_id == user.id or access.team in user.teams:
-                path_to_role[path] = models.RoleChoices.max(
-                    path_to_role[path], access.role
-                )
 
         # serialize and return the response
         context = self.get_serializer_context()
@@ -1232,15 +1242,9 @@ class ItemAccessViewSet(
         serialized_data = []
         for access in accesses:
             path = str(access.item.path)
-            parent_path = str(access.item.path[:-1])
-            access.max_ancestors_role = (
-                path_to_key_to_max_ancestors_role[parent_path][access.target_key]
-                if parent_path
-                else None
-            )
             access.set_user_roles_tuple(
-                models.RoleChoices.max(*path_to_ancestors_roles[path]),
-                path_to_role.get(path),
+                user_ancestor_role_by_path.get(path),
+                user_roles_by_path.get(path),
             )
             serializer = serializer_class(access, context=context)
             serialized_data.append(serializer.data)
