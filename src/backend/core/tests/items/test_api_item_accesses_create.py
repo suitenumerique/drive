@@ -281,3 +281,73 @@ def test_api_item_accesses_create_authenticated_owner(via, depth, mock_user_team
         f"on the following item: {item.title}"
     ) in email_content
     assert "items/" + str(item.id) + "/" in email_content
+
+
+def test_api_item_accesses_create_authenticated_owner_multiple_accesses():
+    """
+    Owners of an item (direct or by heritage) should able to create multiple accesses
+    for the same user in the same tree. The role should be higher than the previous
+    created access.
+    """
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{root.id!s}/accesses/",
+        {
+            "user_id": str(other_user.id),
+            "role": "editor",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+
+    # Creating an access on parent should be allowed but will fail because the role
+    # is not strictly higher than the previous access.
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/accesses/",
+        {
+            "user_id": str(other_user.id),
+            "role": "editor",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "role",
+                "code": "invalid",
+                "detail": (
+                    "The role editor you are trying to assign is lower or equal than the "
+                    "max ancestors role editor."
+                ),
+            },
+        ],
+        "type": "validation_error",
+    }
+
+    # Creating an access on parent should be allowed if the role is higher
+    # than the previous access.
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/accesses/",
+        {
+            "user_id": str(other_user.id),
+            "role": "administrator",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
