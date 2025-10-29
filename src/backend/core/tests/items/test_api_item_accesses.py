@@ -1029,6 +1029,62 @@ def test_api_item_accesses_update_owner_self(
     assert access.role == new_role
 
 
+def test_api_item_accesses_update_authenticated_owner_explict_accesses():
+    """
+    An owner of an item should be able to update the accesses of an other user
+    if the roles are strictly higher than the previous accesses.
+    """
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+
+    root_access = factories.UserItemAccessFactory(
+        item=root, user=other_user, role="editor"
+    )
+    item_access = factories.UserItemAccessFactory(
+        item=item, user=other_user, role="owner"
+    )
+
+    # Changing role of item to lower than editor should fail
+    response = client.put(
+        f"/api/v1.0/items/{item.id!s}/accesses/{item_access.id!s}/",
+        data={
+            "role": "reader",
+        },
+        format="json",
+    )
+    assert response.status_code == 403
+
+    # Changing role of item to higher than editor should success
+    response = client.put(
+        f"/api/v1.0/items/{item.id!s}/accesses/{item_access.id!s}/",
+        data={
+            "role": "administrator",
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+
+    # Root access can be downgraded to reader
+
+    response = client.put(
+        f"/api/v1.0/items/{root.id!s}/accesses/{root_access.id!s}/",
+        data={
+            "role": "reader",
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+
+
 # Delete
 
 
