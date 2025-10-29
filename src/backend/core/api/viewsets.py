@@ -1518,6 +1518,27 @@ class ItemAccessViewSet(
                 "Only owners of an item can assign other users as owners."
             )
 
+        # Look for the max ancestors role of the item for the current user.
+        ancestor_qs = (
+            self.item.ancestors() | models.Item.objects.filter(pk=self.item.pk)
+        ).filter(ancestors_deleted_at__isnull=True)
+        ancestors_roles = models.ItemAccess.objects.filter(
+            item__in=ancestor_qs, user=serializer.validated_data.get("user")
+        ).values_list("role", flat=True)
+        max_ancestors_role = models.RoleChoices.max(*ancestors_roles)
+
+        if models.RoleChoices.get_priority(
+            max_ancestors_role
+        ) >= models.RoleChoices.get_priority(role):
+            raise drf.exceptions.ValidationError(
+                {
+                    "role": (
+                        f"The role {role} you are trying to assign is lower or equal"
+                        f" than the max ancestors role {max_ancestors_role}."
+                    ),
+                }
+            )
+
         access = serializer.save(item_id=self.kwargs["resource_id"])
 
         if access.user:
