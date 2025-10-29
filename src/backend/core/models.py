@@ -1238,6 +1238,29 @@ class ItemAccess(BaseModel):
 
         return RoleChoices.max(*ancestors_roles), current_role
 
+    @property
+    def max_ancestors_role(self):
+        """Link definition equivalent to all document's ancestors."""
+        if getattr(self, "_max_ancestors_role", False) is False:
+            ancestors = self.item.ancestors().filter(ancestors_deleted_at__isnull=True)
+            filter_condition = models.Q()
+            if self.user:
+                filter_condition |= models.Q(user=self.user)
+            if self.team:
+                filter_condition |= models.Q(team=self.team)
+            ancestors_roles = ItemAccess.objects.filter(
+                filter_condition, item__in=ancestors
+            ).values_list("role", flat=True)
+
+            self._max_ancestors_role = RoleChoices.max(*ancestors_roles)
+
+        return self._max_ancestors_role
+
+    @max_ancestors_role.setter
+    def max_ancestors_role(self, max_ancestors_role):
+        """Cache the max_ancestors_role."""
+        self._max_ancestors_role = max_ancestors_role
+
     def get_abilities(self, user):
         """
         Compute and return abilities for a given user on the item access.
@@ -1267,9 +1290,7 @@ class ItemAccess(BaseModel):
                 set_role_to.append(RoleChoices.OWNER)
 
         # Filter out roles that would be lower than the one the user already has
-        ancestors_role_priority = RoleChoices.get_priority(
-            getattr(self, "max_ancestors_role", None)
-        )
+        ancestors_role_priority = RoleChoices.get_priority(self.max_ancestors_role)
         set_role_to = [
             candidate_role
             for candidate_role in set_role_to
