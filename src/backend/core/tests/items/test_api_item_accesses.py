@@ -1414,3 +1414,146 @@ def test_api_item_accesses_explicit():
             "max_role": "owner",
         },
     ]
+
+    other_owner = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    owner_access = factories.UserItemAccessFactory(
+        item=root, user=other_owner, role="owner"
+    )
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
+    assert response.status_code == 200
+    content = response.json()
+    assert content == [
+        {
+            "id": str(other_admin_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(other_admin_access.user.id),
+                "email": other_admin_access.user.email,
+                "language": other_admin_access.user.language,
+                "full_name": other_admin_access.user.full_name,
+                "short_name": other_admin_access.user.short_name,
+            },
+            "team": "",
+            "role": "administrator",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": False,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": None,
+            "max_role": "administrator",
+        },
+        {
+            "id": str(other_owner_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(other_owner_access.user.id),
+                "email": other_owner_access.user.email,
+                "language": other_owner_access.user.language,
+                "full_name": other_owner_access.user.full_name,
+                "short_name": other_owner_access.user.short_name,
+            },
+            "team": "",
+            "role": "owner",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": False,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": None,
+            "max_role": "owner",
+        },
+        {
+            "id": str(owner_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(owner_access.user.id),
+                "email": owner_access.user.email,
+                "language": owner_access.user.language,
+                "full_name": owner_access.user.full_name,
+                "short_name": owner_access.user.short_name,
+            },
+            "team": "",
+            "role": "owner",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": False,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": None,
+            "max_role": "owner",
+        },
+        {
+            "id": str(root_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "full_name": user.full_name,
+                "short_name": user.short_name,
+                "language": user.language,
+            },
+            "team": "",
+            "role": "editor",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": True,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": None,
+            "max_role": "editor",
+        },
+        {
+            "id": str(item_access.id),
+            "item": {
+                "id": str(item.id),
+                "path": str(item.path),
+                "depth": item.depth,
+            },
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "language": user.language,
+                "full_name": user.full_name,
+                "short_name": user.short_name,
+            },
+            "team": "",
+            "role": "owner",
+            "abilities": {
+                "destroy": True,
+                "update": True,
+                "partial_update": True,
+                "retrieve": True,
+                "set_role_to": ["administrator", "owner"],
+            },
+            "max_ancestors_role": "editor",
+            "max_role": "owner",
+        },
+    ]

@@ -136,7 +136,7 @@ def test_models_item_access_get_abilities_for_owner_of_self_last_on_root(
     """
     access = factories.UserItemAccessFactory(role="owner")
 
-    with django_assert_num_queries(2):
+    with django_assert_num_queries(3):
         abilities = access.get_abilities(access.user)
 
     assert abilities == {
@@ -158,7 +158,7 @@ def test_models_item_access_get_abilities_for_owner_of_self_last_on_child(
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
     access = factories.UserItemAccessFactory(item__parent=parent, role="owner")
 
-    with django_assert_num_queries(1):
+    with django_assert_num_queries(2):
         abilities = access.get_abilities(access.user)
 
     assert abilities == {
@@ -334,7 +334,7 @@ def test_models_item_access_get_abilities_for_editor_of_editor_user(
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="editor").user
 
-    with django_assert_num_queries(1):
+    with django_assert_num_queries(2):
         abilities = access.get_abilities(user)
 
     assert abilities == {
@@ -387,25 +387,7 @@ def test_models_item_access_get_abilities_for_reader_of_reader_user(
     factories.UserItemAccessFactory(item=access.item)  # another one
     user = factories.UserItemAccessFactory(item=access.item, role="reader").user
 
-    with django_assert_num_queries(1):
-        abilities = access.get_abilities(user)
-
-    assert abilities == {
-        "destroy": False,
-        "retrieve": False,
-        "update": False,
-        "partial_update": False,
-        "set_role_to": [],
-    }
-
-
-def test_models_item_access_get_abilities_preset_role(django_assert_num_queries):
-    """No query is done if the role is preset, e.g., with a query annotation."""
-    access = factories.UserItemAccessFactory(role="reader")
-    user = factories.UserItemAccessFactory(item=access.item, role="reader").user
-    access.user_role = "reader"
-
-    with django_assert_num_queries(1):
+    with django_assert_num_queries(2):
         abilities = access.get_abilities(user)
 
     assert abilities == {
@@ -423,3 +405,68 @@ def test_models_item_access_get_abilities_retrieve_own_access(role):
     access = factories.UserItemAccessFactory(role=role)
     abilities = access.get_abilities(access.user)
     assert abilities["retrieve"] is True
+
+
+def test_models_item_access_get_abilities_explicit():
+    """
+    test case with a combination of explicit accesses and inherited accesses.
+    An explicit access id added on the root item with a "weak" role (editor)
+    and then an explicit access is added on the deepest item with a "strong" role (owner).
+    The `set_role_to` should take of ancestors roles to determine the available roles.
+    """
+    user = factories.UserFactory()
+    other_owner = factories.UserFactory()
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    # explicit access on root.
+    root_access = factories.UserItemAccessFactory(item=root, user=user, role="editor")
+    # explicit access on item.
+    item_access = factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    # Explicit owner access on root for other owner.
+    factories.UserItemAccessFactory(item=root, user=other_owner, role="owner")
+
+    factories.UserItemAccessFactory(item=root, role="administrator")
+    factories.UserItemAccessFactory(item=root, role="owner")
+
+    assert item.get_role(user) == "owner"
+
+    # User with inherited accesses on its own accesses.
+
+    assert root_access.get_abilities(user) == {
+        "destroy": False,
+        "update": False,
+        "partial_update": False,
+        "retrieve": True,
+        "set_role_to": [],
+    }
+
+    assert item_access.get_abilities(user) == {
+        "destroy": True,
+        "update": True,
+        "partial_update": True,
+        "retrieve": True,
+        "set_role_to": ["administrator", "owner"],
+    }
+
+    # Owner user on the root item, acting on the previous user's accesses.
+
+    assert root_access.get_abilities(other_owner) == {
+        "destroy": True,
+        "update": True,
+        "partial_update": True,
+        "retrieve": True,
+        "set_role_to": ["reader", "editor", "administrator", "owner"],
+    }
+
+    assert item_access.max_ancestors_role == "editor"
+    assert item_access.get_abilities(other_owner) == {
+        "destroy": True,
+        "update": True,
+        "partial_update": True,
+        "retrieve": True,
+        "set_role_to": ["administrator", "owner"],
+    }
