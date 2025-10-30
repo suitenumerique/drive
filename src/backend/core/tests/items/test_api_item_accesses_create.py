@@ -351,3 +351,118 @@ def test_api_item_accesses_create_authenticated_owner_multiple_accesses():
     )
 
     assert response.status_code == 201
+
+
+def test_api_item_accesses_create_authenticated_owner_syncronize_descendants_accesses():
+    """
+    Owners of an item (direct or by heritage) should be able to create item accesses
+    and syncronize the accesses of the descendants of the item.
+    """
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+
+    factories.UserItemAccessFactory(item=root, user=other_user, role="reader")
+    factories.UserItemAccessFactory(item=item, user=other_user, role="editor")
+
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 1
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/accesses/",
+        {
+            "user_id": str(other_user.id),
+            "role": "administrator",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 0
+
+
+def test_api_item_accesses_create_authenticated_owner_syncronize_descendants_accesses_same_role():
+    """
+    Owners of an item (direct or by heritage) should be able to create item accesses
+    and syncronize the accesses of the descendants of the item.
+    """
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+
+    factories.UserItemAccessFactory(item=root, user=other_user, role="reader")
+    factories.UserItemAccessFactory(item=item, user=other_user, role="editor")
+
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 1
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/accesses/",
+        {
+            "user_id": str(other_user.id),
+            "role": "editor",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 0
+
+
+def test_api_item_accesses_create_authenticated_owner_syncronize_descendants_accesses_no_lower():
+    """
+    Owners of an item (direct or by heritage) should be able to create item accesses
+    and syncronize the accesses of the descendants of the item.
+    """
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+
+    factories.UserItemAccessFactory(item=root, user=other_user, role="reader")
+    factories.UserItemAccessFactory(item=item, user=other_user, role="owner")
+
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 1
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/accesses/",
+        {
+            "user_id": str(other_user.id),
+            "role": "editor",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+
+    # access on item should be kept
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 1
