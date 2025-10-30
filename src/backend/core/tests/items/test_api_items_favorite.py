@@ -23,7 +23,7 @@ def test_api_item_favorite_anonymous_user(method, reach):
 
     response = getattr(APIClient(), method)(f"/api/v1.0/items/{item.id!s}/favorite/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {

@@ -14,7 +14,7 @@ def test_api_items_search_anonymous():
     """Anonymous users should not be able to search for items."""
     client = APIClient()
     response = client.get("/api/v1.0/items/search/")
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_api_items_search_authenticated_without_filters():

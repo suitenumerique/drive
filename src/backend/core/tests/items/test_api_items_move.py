@@ -25,7 +25,7 @@ def test_api_items_move_anonymous_user():
         data={"target_item_id": str(target.id)},
     )
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert response.json() == {
         "errors": [
             {

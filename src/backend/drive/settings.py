@@ -62,7 +62,9 @@ class Base(Configuration):
 
     DEBUG = False
     LOAD_E2E_URLS = False
-    USE_SWAGGER = False
+    USE_SWAGGER = values.BooleanValue(
+        False, environ_name="USE_SWAGGER", environ_prefix=None
+    )
 
     API_VERSION = "v1.0"
 
@@ -285,6 +287,7 @@ class Base(Configuration):
         # OIDC third party
         "mozilla_django_oidc",
         "lasuite.malware_detection",
+        "drf_spectacular_sidecar",
     ]
 
     # Cache
@@ -330,7 +333,6 @@ class Base(Configuration):
 
     REST_FRAMEWORK = {
         "DEFAULT_AUTHENTICATION_CLASSES": (
-            "mozilla_django_oidc.contrib.drf.OIDCAuthentication",
             "rest_framework.authentication.SessionAuthentication",
         ),
         "DEFAULT_PARSER_CLASSES": [
@@ -401,7 +403,9 @@ class Base(Configuration):
     EMAIL_FROM = values.Value("from@example.com")
 
     AUTH_USER_MODEL = "core.User"
-    INVITATION_VALIDITY_DURATION = 604800  # 7 days, in seconds
+    INVITATION_VALIDITY_DURATION = values.PositiveIntegerValue(
+        604800
+    )  # 7 days, in seconds
 
     # CORS
     CORS_ALLOW_CREDENTIALS = True
@@ -594,6 +598,72 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # OIDC - Drive as a resource server
+    OIDC_OP_URL = values.Value(
+        default=None, environ_name="OIDC_OP_URL", environ_prefix=None
+    )
+    OIDC_OP_INTROSPECTION_ENDPOINT = values.Value(
+        environ_name="OIDC_OP_INTROSPECTION_ENDPOINT", environ_prefix=None
+    )
+    OIDC_VERIFY_SSL = values.BooleanValue(
+        default=True, environ_name="OIDC_VERIFY_SSL", environ_prefix=None
+    )
+    OIDC_TIMEOUT = values.IntegerValue(
+        default=3, environ_name="OIDC_TIMEOUT", environ_prefix=None
+    )
+    OIDC_PROXY = values.Value(None, environ_name="OIDC_PROXY", environ_prefix=None)
+
+    OIDC_RESOURCE_SERVER_ENABLED = values.BooleanValue(
+        default=False, environ_name="OIDC_RESOURCE_SERVER_ENABLED", environ_prefix=None
+    )
+    OIDC_RS_BACKEND_CLASS = values.Value(
+        default="lasuite.oidc_resource_server.backend.ResourceServerBackend",
+        environ_name="OIDC_RS_BACKEND_CLASS",
+        environ_prefix=None,
+    )
+    OIDC_RS_AUDIENCE_CLAIM = values.Value(  # The claim used to identify the audience
+        default="client_id", environ_name="OIDC_RS_AUDIENCE_CLAIM", environ_prefix=None
+    )
+    OIDC_RS_PRIVATE_KEY_STR = values.Value(
+        default=None,
+        environ_name="OIDC_RS_PRIVATE_KEY_STR",
+        environ_prefix=None,
+    )
+    OIDC_RS_ENCRYPTION_KEY_TYPE = values.Value(
+        default="RSA",
+        environ_name="OIDC_RS_ENCRYPTION_KEY_TYPE",
+        environ_prefix=None,
+    )
+    OIDC_RS_ENCRYPTION_ALGO = values.Value(
+        default="RSA-OAEP",
+        environ_name="OIDC_RS_ENCRYPTION_ALGO",
+        environ_prefix=None,
+    )
+    OIDC_RS_ENCRYPTION_ENCODING = values.Value(
+        default="A256GCM",
+        environ_name="OIDC_RS_ENCRYPTION_ENCODING",
+        environ_prefix=None,
+    )
+    OIDC_RS_CLIENT_ID = values.Value(
+        None, environ_name="OIDC_RS_CLIENT_ID", environ_prefix=None
+    )
+    OIDC_RS_CLIENT_SECRET = values.Value(
+        None,
+        environ_name="OIDC_RS_CLIENT_SECRET",
+        environ_prefix=None,
+    )
+    OIDC_RS_SIGNING_ALGO = values.Value(
+        default="ES256", environ_name="OIDC_RS_SIGNING_ALGO", environ_prefix=None
+    )
+    OIDC_RS_SCOPES = values.ListValue(
+        [], environ_name="OIDC_RS_SCOPES", environ_prefix=None
+    )
+    OIDC_RS_ALLOWED_AUDIENCES = values.ListValue(
+        default=[],
+        environ_name="OIDC_RS_ALLOWED_AUDIENCES",
+        environ_prefix=None,
+    )
+
     # SDK Relay
     SDK_RELAY_CACHE_TIMEOUT = values.PositiveIntegerValue(
         600,  # 10 minutes
@@ -730,6 +800,32 @@ class Base(Configuration):
         ),
     }
 
+    JWT_AUTH_ENABLED = values.BooleanValue(
+        default=False,
+        environ_name="JWT_AUTH_ENABLED",
+        environ_prefix=None,
+    )
+    JWT_SECRET_KEY = values.Value(
+        default="",
+        environ_name="JWT_SECRET_KEY",
+        environ_prefix=None,
+    )
+    JWT_ALGORITHM = values.Value(
+        default="HS256",
+        environ_name="JWT_ALGORITHM",
+        environ_prefix=None,
+    )
+    JWT_REQUIRED_CLAIMS = values.ListValue(
+        default=["exp", "sub", "email"],
+        environ_name="JWT_REQUIRED_CLAIMS",
+        environ_prefix=None,
+    )
+    JWT_CREATE_USER = values.BooleanValue(
+        default=False,
+        environ_name="JWT_CREATE_USER",
+        environ_prefix=None,
+    )
+
     # pylint: disable=invalid-name
     @property
     def ENVIRONMENT(self):
@@ -817,6 +913,8 @@ class Build(Base):
     CACHES = {
         "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"},
     }
+    USE_SWAGGER = True
+
     SECRET_KEY = values.Value("DummyKey")
     STORAGES = {
         "default": {
@@ -858,7 +956,6 @@ class Development(Base):
         # pylint: disable=invalid-name
         self.INSTALLED_APPS += [
             "django_extensions",
-            "drf_spectacular_sidecar",
             "debug_toolbar",
             "e2e",
         ]
@@ -878,10 +975,12 @@ class Test(Base):
     USE_SWAGGER = True
 
     CELERY_TASK_ALWAYS_EAGER = values.BooleanValue(True)
+    OIDC_RESOURCE_SERVER_ENABLED = True
+    JWT_AUTH_ENABLED = True
 
     def __init__(self):
         # pylint: disable=invalid-name
-        self.INSTALLED_APPS += ["drf_spectacular_sidecar", "e2e"]
+        self.INSTALLED_APPS += ["e2e"]
 
 
 class ContinuousIntegration(Test):

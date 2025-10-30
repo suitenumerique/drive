@@ -95,7 +95,7 @@ def test_api_items_wopi_anonymous_user_item_not_public(link_reach):
     client = APIClient()
     response = client.get(f"/api/v1.0/items/{item.id!s}/wopi/")
 
-    assert response.status_code == 401
+    assert response.status_code == 403
 
 
 def test_api_items_wopi_anonymous_user_not_item_file():
