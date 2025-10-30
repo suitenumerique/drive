@@ -1085,6 +1085,145 @@ def test_api_item_accesses_update_authenticated_owner_explict_accesses():
     assert response.status_code == 200
 
 
+def test_api_item_accesses_update_authenticated_owner_syncronize_descendants_accesses():
+    """
+    An owner of an item should be able to update the accesses of an other user
+    and syncronize the accesses of the descendants of the item.
+    """
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+
+    root_access = factories.UserItemAccessFactory(
+        item=root, user=other_user, role="reader"
+    )
+    factories.UserItemAccessFactory(item=item, user=other_user, role="editor")
+
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 1
+
+    # Promote the other user to administrator on the root_access
+
+    response = client.put(
+        f"/api/v1.0/items/{root.id!s}/accesses/{root_access.id!s}/",
+        data={
+            "role": "administrator",
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+
+    root_access.refresh_from_db()
+    assert root_access.role == "administrator"
+
+    # item_access should be removed
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 0
+
+
+def test_api_item_accesses_update_authenticated_owner_syncronize_descendants_accesses_same_role():
+    """
+    An owner of an item should be able to update the accesses of an other user
+    and syncronize the accesses of the descendants of the item.
+    """
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+
+    root_access = factories.UserItemAccessFactory(
+        item=root, user=other_user, role="reader"
+    )
+    factories.UserItemAccessFactory(item=item, user=other_user, role="editor")
+
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 1
+
+    # Promote the other user to editor on the root_access
+
+    response = client.put(
+        f"/api/v1.0/items/{root.id!s}/accesses/{root_access.id!s}/",
+        data={
+            "role": "editor",
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+
+    root_access.refresh_from_db()
+    assert root_access.role == "editor"
+
+    # item_access should be removed
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 0
+
+
+def test_api_item_accesses_update_authenticated_owner_syncronize_descendants_accesses_no_lower():
+    """
+    An owner of an item should be able to update the accesses of an other user
+    and syncronize the accesses of the descendants of the item.
+    """
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+
+    root_access = factories.UserItemAccessFactory(
+        item=root, user=other_user, role="reader"
+    )
+    factories.UserItemAccessFactory(item=parent, user=other_user, role="administrator")
+    factories.UserItemAccessFactory(item=item, user=other_user, role="owner")
+
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 1
+
+    # Promote the other user to administrator on the root_access
+
+    response = client.put(
+        f"/api/v1.0/items/{root.id!s}/accesses/{root_access.id!s}/",
+        data={
+            "role": "editor",
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+
+    root_access.refresh_from_db()
+    assert root_access.role == "editor"
+
+    # item_access should be kept
+    assert (
+        models.ItemAccess.objects.filter(
+            item=item, user=other_user, role="owner"
+        ).count()
+        == 1
+    )
+    # parent_access should be kept
+    assert (
+        models.ItemAccess.objects.filter(
+            item=parent, user=other_user, role="administrator"
+        ).count()
+        == 1
+    )
+
+
 # Delete
 
 
