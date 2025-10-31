@@ -2,10 +2,13 @@ import { Button, useModal } from "@openfun/cunningham-react";
 import { ExplorerSearchModal } from "@/features/explorer/components/modals/search/ExplorerSearchModal";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
+import { ItemFilters } from "@/features/drivers/Driver";
 export const ExplorerSearchButton = ({
   keyboardShortcut,
+  defaultFilters,
 }: {
   keyboardShortcut?: boolean;
+  defaultFilters?: ItemFilters;
 }) => {
   const searchModal = useModal();
   const { t } = useTranslation();
@@ -28,13 +31,13 @@ export const ExplorerSearchButton = ({
 
   return (
     <>
-      <ExplorerSearchModal {...searchModal} />
+      <ExplorerSearchModal {...searchModal} defaultFilters={defaultFilters} />
+
       <Button
         variant="tertiary"
         aria-label={t("explorer.tree.search")}
         icon={<span className="material-icons">search</span>}
         onClick={searchModal.open}
-        className="explorer__search__button"
       />
     </>
   );

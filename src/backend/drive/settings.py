@@ -370,6 +370,10 @@ class Base(Configuration):
         },
     }
 
+    MAX_PAGE_SIZE = values.PositiveIntegerValue(
+        200, environ_name="MAX_PAGE_SIZE", environ_prefix=None
+    )
+
     SPECTACULAR_SETTINGS = {
         "TITLE": "drive API",
         "DESCRIPTION": "This is the drive API schema.",

@@ -1,13 +1,16 @@
 import { DropdownMenu, LaGaufre } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@openfun/cunningham-react";
 import { useAuth, logout } from "@/features/auth/Auth";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExplorerSearchButton } from "@/features/explorer/components/app-view/ExplorerSearchButton";
 import { getDriver } from "@/features/config/Config";
 import { useConfig } from "@/features/config/ConfigProvider";
 import { Feedback } from "@/features/feedback/Feedback";
 import { LoginButton } from "@/features/auth/components/LoginButton";
+import { Item } from "@/features/drivers/types";
+import { ItemFilters } from "@/features/drivers/Driver";
+import { useIsMinimalLayout } from "@/utils/useLayout";
 
 export const HeaderIcon = () => {
   return (
@@ -18,14 +21,35 @@ export const HeaderIcon = () => {
   );
 };
 
-export const HeaderRight = ({ displaySearch }: { displaySearch?: boolean }) => {
+export const HeaderRight = ({
+  displaySearch,
+  currentItem,
+}: {
+  displaySearch?: boolean;
+  currentItem?: Item;
+}) => {
   const { user } = useAuth();
+  const isMinimalLayout = useIsMinimalLayout();
+
+  const defaultFilters: ItemFilters = useMemo(() => {
+    const workspaceId = currentItem?.parents?.[0]?.id ?? currentItem?.id;
+
+    if (isMinimalLayout) {
+      return {
+        workspace: workspaceId,
+      };
+    }
+    return {};
+  }, [currentItem, isMinimalLayout]);
 
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
   const { config } = useConfig();
   return (
     <>
+      {user && displaySearch && (
+        <ExplorerSearchButton defaultFilters={defaultFilters} />
+      )}
       {user ? (
         <DropdownMenu
           options={[
@@ -56,7 +80,6 @@ export const HeaderRight = ({ displaySearch }: { displaySearch?: boolean }) => {
       )}
       <LanguagePicker />
       {!config?.FRONTEND_HIDE_GAUFRE && <LaGaufre />}
-      {displaySearch && <ExplorerSearchButton />}
     </>
   );
 };

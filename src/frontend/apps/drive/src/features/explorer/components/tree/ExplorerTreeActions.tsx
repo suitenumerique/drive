@@ -2,8 +2,6 @@ import { DropdownMenu, useDropdownMenu } from "@gouvfr-lasuite/ui-kit";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import createFolderSvg from "@/assets/icons/create_folder.svg";
 import createWorkspaceSvg from "@/assets/icons/create_workspace.svg";
-import uploadFileSvg from "@/assets/icons/upload_file.svg";
-import uploadFolderSvg from "@/assets/icons/upload_folder.svg";
 import { Button } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { ExplorerSearchButton } from "@/features/explorer/components/app-view/ExplorerSearchButton";
@@ -19,7 +17,7 @@ export const ExplorerTreeActions = ({
 }: ExplorerTreeActionsProps) => {
   const { t } = useTranslation();
   const { treeIsInitialized, item } = useGlobalExplorer();
-  const importMenu = useDropdownMenu();
+
   const createMenu = useDropdownMenu();
 
   if (!treeIsInitialized) {
@@ -34,7 +32,7 @@ export const ExplorerTreeActions = ({
               icon: <img src={createFolderSvg.src} alt="" />,
               label: t("explorer.tree.create.folder"),
               value: "info",
-              isHidden: !item?.abilities.children_create,
+              isHidden: !item?.abilities?.children_create,
               callback: openCreateFolderModal,
             },
             {
@@ -52,37 +50,6 @@ export const ExplorerTreeActions = ({
             onClick={() => createMenu.setIsOpen(true)}
           >
             {t("explorer.tree.create.label")}
-          </Button>
-        </DropdownMenu>
-
-        <DropdownMenu
-          options={[
-            {
-              icon: <img src={uploadFileSvg.src} alt="" />,
-              label: t("explorer.tree.import.files"),
-              value: "info",
-              callback: () => {
-                document.getElementById("import-files")?.click();
-              },
-            },
-            {
-              icon: <img src={uploadFolderSvg.src} alt="" />,
-              label: t("explorer.tree.import.folders"),
-              value: "info",
-              callback: () => {
-                document.getElementById("import-folders")?.click();
-              },
-            },
-          ]}
-          {...importMenu}
-          onOpenChange={importMenu.setIsOpen}
-        >
-          <Button
-            variant="bordered"
-            disabled={!item?.abilities.children_create}
-            onClick={() => importMenu.setIsOpen(true)}
-          >
-            {t("explorer.tree.import.label")}
           </Button>
         </DropdownMenu>
       </div>

@@ -105,6 +105,7 @@ export const ExplorerFilterType = (props: {
 export const ExplorerFilterWorkspace = (props: {
   value: string | null;
   onChange: (value: Key | null) => void;
+  isDisabled?: boolean;
 }) => {
   const { t } = useTranslation();
   const { data: items } = useItems();
@@ -135,6 +136,7 @@ export const ExplorerFilterWorkspace = (props: {
       options={options}
       selectedKey={props.value ?? null} // undefined would trigger "uncontrolled components become controlled" warning.
       onSelectionChange={props.onChange}
+      isDisabled={props.isDisabled}
     />
   );
 };

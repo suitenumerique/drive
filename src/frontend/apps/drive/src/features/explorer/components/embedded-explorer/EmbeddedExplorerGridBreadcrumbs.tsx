@@ -5,9 +5,12 @@ import {
   Breadcrumbs,
 } from "@/features/ui/components/breadcrumbs/Breadcrumbs";
 import { useTranslation } from "react-i18next";
-import { IconSize, useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import { IconSize } from "@gouvfr-lasuite/ui-kit";
 import { itemIsWorkspace } from "@/features/drivers/utils";
 import { ItemIcon } from "../icons/ItemIcon";
+import { useGlobalExplorer } from "../GlobalExplorerContext";
+import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
+import clsx from "clsx";
 
 type BaseBreadcrumbsProps = {
   ancestors?: Item[];
@@ -16,6 +19,7 @@ type BaseBreadcrumbsProps = {
   goToSpaces?: () => void;
   currentItemId?: string | null;
   showSpacesItem?: boolean;
+  showMenuLastItem?: boolean;
 };
 
 type GridBreadcrumbsProps = BaseBreadcrumbsProps & {
@@ -41,6 +45,7 @@ export const EmbeddedExplorerGridBreadcrumbs = ({
   if (buildWithTreeContext) {
     return <GridBreadcrumbsFromTree {...props} />;
   }
+
   return <BaseBreadcrumbs {...props} />;
 };
 
@@ -50,13 +55,28 @@ export const EmbeddedExplorerGridBreadcrumbs = ({
  */
 const GridBreadcrumbsFromTree = ({
   currentItemId,
+
   ...props
 }: GridBreadcrumbsFromTreeProps) => {
-  const treeContext = useTreeContext<Item>();
-  const ancestors = currentItemId
-    ? (treeContext?.treeData.getAncestors(currentItemId) as Item[])
-    : [];
-  return <BaseBreadcrumbs {...props} ancestors={ancestors} />;
+  const { item } = useGlobalExplorer();
+  if (!item) {
+    return null;
+  }
+
+  const allParents = JSON.parse(JSON.stringify(item.parents ?? []));
+  const ancestors: Item[] = currentItemId ? allParents : [];
+
+  // Add the current item to display the complete breadcrumb path.
+  ancestors.push(item);
+
+  return (
+    <BaseBreadcrumbs
+      {...props}
+      ancestors={ancestors}
+      showMenuLastItem={true}
+      currentItemId={currentItemId}
+    />
+  );
 };
 
 /**
@@ -67,7 +87,7 @@ const BaseBreadcrumbs = ({
   onGoBack,
   goToSpaces,
   showSpacesItem = false,
-
+  showMenuLastItem = false,
   ancestors,
   currentItemId,
   resetAncestors,
@@ -99,28 +119,82 @@ const BaseBreadcrumbs = ({
     const breadcrumbsData = ancestors ?? [];
 
     breadcrumbsData.forEach((item) => {
-      const isWorkspace = itemIsWorkspace(item) || item.main_workspace;
+      const isActive = item.id === currentItemId;
+      if (showMenuLastItem && isActive) {
+        breadcrumbsItems.push({
+          content: <LastItemBreadcrumb item={item} />,
+        });
 
-      breadcrumbsItems.push({
-        content: (
-          <button
-            className="c__breadcrumbs__button"
-            data-testid="breadcrumb-button"
-            onClick={() => handleGoBack(item)}
-          >
-            {isWorkspace && <ItemIcon item={item} size={IconSize.SMALL} />}
-            {item.main_workspace
-              ? t("explorer.workspaces.mainWorkspace")
-              : item.title}
-          </button>
-        ),
-      });
+        return;
+      } else {
+        breadcrumbsItems.push({
+          content: (
+            <BreadcrumbItemButton
+              item={item}
+              onClick={() => handleGoBack(item)}
+              isActive={isActive}
+            />
+          ),
+        });
+      }
     });
 
     return breadcrumbsItems;
   }, [ancestors, showSpacesItem, currentItemId]);
 
   return <Breadcrumbs items={breadcrumbsItems} />;
+};
+
+export type BreadcrumbItemProps = {
+  item: Item;
+  isActive?: boolean;
+  onClick: () => void;
+  rightIcon?: React.ReactNode;
+};
+export const BreadcrumbItemButton = ({
+  item,
+  rightIcon,
+  onClick,
+  isActive = false,
+}: BreadcrumbItemProps) => {
+  const isWorkspace = itemIsWorkspace(item) || item.main_workspace;
+
+  const { t } = useTranslation();
+  return (
+    <button
+      className={clsx("c__breadcrumbs__button", {
+        active: isActive,
+      })}
+      data-testid="breadcrumb-button"
+      onClick={onClick}
+    >
+      {isWorkspace && <ItemIcon item={item} size={IconSize.SMALL} />}
+      {item.main_workspace
+        ? t("explorer.workspaces.mainWorkspace")
+        : item.title}
+      {rightIcon}
+    </button>
+  );
+};
+
+export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <ItemActionDropdown
+      item={item}
+      isOpen={isOpen}
+      setIsOpen={setIsOpen}
+      trigger={
+        <BreadcrumbItemButton
+          isActive={true}
+          item={item}
+          onClick={() => setIsOpen(true)}
+          rightIcon={<span className="material-icons">arrow_drop_down</span>}
+        />
+      }
+    />
+  );
 };
 
 /**

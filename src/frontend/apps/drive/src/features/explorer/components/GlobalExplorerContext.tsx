@@ -6,13 +6,8 @@ import {
   useState,
 } from "react";
 import { Dispatch } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Item,
-  ItemType,
-  TreeItem,
-  WorkspaceType,
-} from "@/features/drivers/types";
+import { useQuery } from "@tanstack/react-query";
+import { Item, ItemType, LinkReach, TreeItem } from "@/features/drivers/types";
 import { createContext } from "react";
 import { getDriver } from "@/features/config/Config";
 import { Toaster } from "@/features/ui/components/toaster/Toaster";
@@ -28,11 +23,7 @@ import {
 import { ExplorerDndProvider } from "./ExplorerDndProvider";
 import { useFirstLevelItems } from "../hooks/useQueries";
 import { useTranslation } from "react-i18next";
-import {
-  getItemTitle,
-  getWorkspaceType,
-  itemToPreviewFile,
-} from "../utils/utils";
+import { getItemTitle, itemToPreviewFile } from "../utils/utils";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
 import { ItemInfo } from "@/features/items/components/ItemInfo";
 import {
@@ -40,6 +31,7 @@ import {
   FilePreviewType,
 } from "@/features/ui/preview/files-preview/FilesPreview";
 import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
+import { useAuth } from "@/features/auth/Auth";
 
 export interface GlobalExplorerContextType {
   displayMode: "sdk" | "app";
@@ -63,6 +55,7 @@ export interface GlobalExplorerContextType {
   setIsLeftPanelOpen: (isLeftPanelOpen: boolean) => void;
   setPreviewItem: (item: Item | undefined) => void;
   setPreviewItems: (items: Item[]) => void;
+  isMinimalLayout?: boolean;
 }
 
 export const GlobalExplorerContext = createContext<
@@ -117,8 +110,9 @@ export const GlobalExplorerProvider = ({
   onNavigate,
 }: ExplorerProviderProps) => {
   const driver = getDriver();
+  const { user } = useAuth();
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
+
   const [selectedItems, setSelectedItems] = useState<Item[]>([]);
 
   // Avoid inifinite rerendering
@@ -161,8 +155,12 @@ export const GlobalExplorerProvider = ({
   const { data: firstLevelItems } = useFirstLevelItems();
 
   const mainWorkspace = useMemo(() => {
+    if (user && user.main_workspace) {
+      return user.main_workspace;
+    }
+
     return firstLevelItems?.find((item) => item.main_workspace);
-  }, [firstLevelItems]);
+  }, [firstLevelItems, user]);
 
   useEffect(() => {
     // If we open the right panel and we have a selection, we need to clear it.
@@ -231,17 +229,36 @@ export const GlobalExplorerProvider = ({
       <TreeProvider
         initialTreeData={[]}
         initialNodeId={initialId}
-        onLoadChildren={async (id) => {
-          const children = await driver.getChildren(id, {
+        onLoadChildren={async (id, page) => {
+          if (id === "SHARED_SPACE" || id === "PUBLIC_SPACE") {
+            const link_reach =
+              id === "SHARED_SPACE" ? LinkReach.RESTRICTED : LinkReach.PUBLIC;
+            const response = await driver.getItems({
+              page: page.toString(),
+              link_reach,
+            });
+
+            const result = response.children.map((item) =>
+              itemToTreeItem(item, id)
+            ) as TreeViewDataType<Item>[];
+
+            return {
+              children: result,
+              pagination: response.pagination,
+            };
+          }
+          const data = await driver.getChildren(id, {
+            page: page.toString(),
             type: ItemType.FOLDER,
           });
-
-          queryClient.setQueryData(["items", id, "children"], children);
-          const result = children.map((item) =>
+          const result = data.children.map((item) =>
             itemToTreeItem(item, id)
           ) as TreeViewDataType<Item>[];
 
-          return result;
+          return {
+            children: result,
+            pagination: data.pagination,
+          };
         }}
         onRefresh={async (id) => {
           const item = await driver.getItem(id);
@@ -289,82 +306,73 @@ const TreeProviderInitializer = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const { firstLevelItems, setTreeIsInitialized } = useGlobalExplorer();
+  const { setTreeIsInitialized } = useGlobalExplorer();
+  const { user } = useAuth();
+  const driver = getDriver();
   const { t } = useTranslation();
 
   const treeContext = useTreeContext<TreeItem>();
 
-  // TODO: Move to global tree context?
-  useEffect(() => {
-    if (!firstLevelItems) {
-      return;
-    }
-    const firstLevelItems_: Item[] = firstLevelItems ?? [];
-
-    const firstLevelTreeItems_: TreeItem[] = itemsToTreeItems(firstLevelItems_);
+  const initialTree = async () => {
     const items: TreeViewDataType<TreeItem>[] = [];
 
-    const getWorkspacesByType = (type: WorkspaceType) => {
-      return firstLevelTreeItems_.filter((item) => {
-        return getWorkspaceType(item as Item) === type;
-      });
-    };
+    const mainWorkspaces =
+      user && user.main_workspace
+        ? itemsToTreeItems([user.main_workspace])
+        : [];
 
-    const mainWorkspaces = getWorkspacesByType(WorkspaceType.MAIN);
+    items.push(...mainWorkspaces);
 
-    // Arriving on a public workspace, we don't have any main workspace.
-    if (mainWorkspaces.length > 0) {
-      const mainWorkspace = mainWorkspaces[0] as Item;
-      // We start to build the tree
-      const personalWorkspaceNode: TreeViewDataType<TreeItem> = {
-        id: "PERSONAL_SPACE",
-        nodeType: TreeViewNodeTypeEnum.TITLE,
-        headerTitle: t("explorer.tree.personalSpace"),
-      };
-      // We add the personal workspace node and the main workspace node
-      items.push(personalWorkspaceNode);
-      items.push(mainWorkspace);
-    }
+    const sharedWorkspaces = await driver.getItems({
+      link_reach: LinkReach.RESTRICTED,
+      page: "1",
+    });
 
-    const sharedWorkspaces = getWorkspacesByType(WorkspaceType.SHARED);
-    const publicWorkspaces = getWorkspacesByType(WorkspaceType.PUBLIC);
-
-    if (sharedWorkspaces.length > 0) {
-      // We add a separator and the shared space node
-      const separator: TreeViewDataType<TreeItem> = {
-        id: "SEPARATOR",
-        nodeType: TreeViewNodeTypeEnum.SEPARATOR,
-      };
-
-      const sharedSpace: TreeViewDataType<TreeItem> = {
+    if (sharedWorkspaces.children.length > 0) {
+      const sharedWorkspaceNode: TreeViewDataType<TreeItem> = {
         id: "SHARED_SPACE",
-        nodeType: TreeViewNodeTypeEnum.TITLE,
-        headerTitle: t("explorer.tree.shared_space"),
+        nodeType: TreeViewNodeTypeEnum.SIMPLE_NODE,
+        childrenCount: sharedWorkspaces.pagination.totalCount,
+        children: sharedWorkspaces.children.map((item) => itemToTreeItem(item)),
+        label: t("explorer.tree.shared_space"),
+        pagination: {
+          currentPage: 1,
+          totalCount: sharedWorkspaces.pagination.totalCount,
+          hasMore: sharedWorkspaces.pagination.hasMore,
+        },
       };
-
-      items.push(separator);
-      items.push(sharedSpace);
-      items.push(...sharedWorkspaces);
+      items.push(sharedWorkspaceNode);
     }
 
-    if (publicWorkspaces.length > 0) {
-      const separator: TreeViewDataType<TreeItem> = {
-        id: "SEPARATOR_PUBLIC",
-        nodeType: TreeViewNodeTypeEnum.SEPARATOR,
-      };
-      const publicSpace: TreeViewDataType<TreeItem> = {
+    const publicWorkspaces = await driver.getItems({
+      link_reach: LinkReach.PUBLIC,
+      page: "1",
+    });
+
+    if (publicWorkspaces.children.length > 0) {
+      const publicWorkspaceNode: TreeViewDataType<TreeItem> = {
         id: "PUBLIC_SPACE",
-        nodeType: TreeViewNodeTypeEnum.TITLE,
-        headerTitle: t("explorer.tree.public_space"),
+        nodeType: TreeViewNodeTypeEnum.SIMPLE_NODE,
+        childrenCount: publicWorkspaces.pagination.totalCount,
+        children: publicWorkspaces.children.map((item) => itemToTreeItem(item)),
+        label: t("explorer.tree.public_space"),
+        pagination: {
+          currentPage: 1,
+          totalCount: publicWorkspaces.pagination.totalCount,
+          hasMore: publicWorkspaces.pagination.hasMore,
+        },
       };
-      items.push(separator);
-      items.push(publicSpace);
-      items.push(...publicWorkspaces);
+      items.push(publicWorkspaceNode);
     }
 
     treeContext?.treeData.resetTree(items);
     setTreeIsInitialized(true);
-  }, [firstLevelItems]);
+  };
+
+  // TODO: Move to global tree context?
+  useEffect(() => {
+    initialTree();
+  }, []);
 
   return children;
 };

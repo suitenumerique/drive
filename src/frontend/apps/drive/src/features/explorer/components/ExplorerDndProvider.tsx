@@ -223,8 +223,8 @@ export const canDrop = (activeItem: Item, overItem: Item | TreeItem) => {
   const activePath = activeItem.path;
   const overPath = overItem.path;
 
-  const canDrop = overItem.abilities.children_create;
-  const canMove = activeItem.abilities.move;
+  const canDrop = overItem.abilities?.children_create;
+  const canMove = activeItem.abilities?.move;
 
   if (!canDrop || !canMove) {
     return false;

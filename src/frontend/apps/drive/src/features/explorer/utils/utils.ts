@@ -23,7 +23,9 @@ export const gotoLastVisitedItem = async (prefix: string = "") => {
 };
 
 export const getLastVisitedItem = async () => {
-  const items = await getDriver().getItems({ type: ItemType.FOLDER });
+  const { children: items } = await getDriver().getItems({
+    type: ItemType.FOLDER,
+  });
   if (!items.length) {
     return null;
   }

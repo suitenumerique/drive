@@ -163,7 +163,7 @@ export const WorkspaceShareModal = ({
       loading={isLoadingUsers ?? false}
       onClose={onClose}
       modalTitle={t("explorer.actions.share.modal.title")}
-      canUpdate={item.abilities.accesses_manage}
+      canUpdate={item.abilities?.accesses_manage}
       accesses={accessesData}
       invitations={invitationsData}
       invitationRoles={rolesOptions}
@@ -241,9 +241,9 @@ export const WorkspaceShareModal = ({
           }
         );
       }}
-      canView={item.abilities.accesses_view}
+      canView={item.abilities?.accesses_view}
     >
-      {!item.abilities.accesses_manage && <HorizontalSeparator />}
+      {!item.abilities?.accesses_manage && <HorizontalSeparator />}
     </ShareModal>
   );
 };

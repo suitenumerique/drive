@@ -92,7 +92,7 @@ export const ExplorerTreeItemActions = ({
               },
               {
                 icon: <span className="material-icons">group</span>,
-                label: item.abilities.accesses_manage
+                label: item.abilities?.accesses_manage
                   ? t("explorer.tree.workspace.options.share")
                   : t("explorer.tree.workspace.options.share_view"),
                 value: "share",
@@ -103,7 +103,7 @@ export const ExplorerTreeItemActions = ({
                 icon: <span className="material-icons">arrow_forward</span>,
                 label: t("explorer.grid.actions.move"),
                 value: "move",
-                isHidden: !item.abilities.move,
+                isHidden: !item.abilities?.move,
                 callback: moveModal.open,
               },
               {
@@ -112,7 +112,7 @@ export const ExplorerTreeItemActions = ({
                   ? t("explorer.tree.workspace.options.settings_workspace")
                   : t("explorer.grid.actions.rename"),
                 value: "settings",
-                isHidden: !item.abilities.update || item.main_workspace,
+                isHidden: !item.abilities?.update || item.main_workspace,
                 callback: () => {
                   if (isWorkspace) {
                     editWorkspaceModal.open();
@@ -127,7 +127,7 @@ export const ExplorerTreeItemActions = ({
                   ? t("explorer.tree.workspace.options.delete_folder")
                   : t("explorer.tree.workspace.options.delete_workspace"),
                 value: "delete",
-                isHidden: !item.abilities.destroy || item.main_workspace,
+                isHidden: !item.abilities?.destroy || item.main_workspace,
                 callback: onDelete,
               },
             ]}
