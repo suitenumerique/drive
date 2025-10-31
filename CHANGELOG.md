@@ -14,6 +14,7 @@ and this project adheres to
 - ✨(front) add creating folder upload step
 - ✨(front) update to ui-kit v2
 - 🌐 add dutch translation
+- ✨(back) add resource server routes
 
 ### Fixed
 
