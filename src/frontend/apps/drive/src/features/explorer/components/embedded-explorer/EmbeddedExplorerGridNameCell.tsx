@@ -20,7 +20,7 @@ export const EmbeddedExplorerGridNameCell = (
   const { selectedItemsMap, disableItemDragAndDrop } =
     useEmbeddedExplorerGirdContext();
   const isSelected = !!selectedItemsMap[item.id];
-  const canMove = item.abilities.move;
+  const canMove = item.abilities?.move;
   const disableDrag = useDisableDragGridItem(item);
 
   const renderTitle = () => {

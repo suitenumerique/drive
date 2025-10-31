@@ -140,7 +140,7 @@ export const ExplorerTree = () => {
 
       {initialOpenState && (
         <TreeView
-          selectedNodeId={itemId}
+          // selectedNodeId={itemId}
           initialOpenState={initialOpenState}
           afterMove={handleMove}
           beforeMove={(moveResult, moveCallback) => {
@@ -182,7 +182,7 @@ export const ExplorerTree = () => {
               return false;
             }
 
-            return item.abilities.move;
+            return item.abilities?.move ?? false;
           }}
           canDrop={(args) => {
             const parent = args.parentNode?.data.value as Item | undefined;

@@ -15,6 +15,7 @@ import {
   EmbeddedExplorerGrid,
   EmbeddedExplorerGridProps,
 } from "./EmbeddedExplorerGrid";
+import { getRootItems } from "../../hooks/useQueries";
 
 export type EmbeddedExplorerProps = {
   breadcrumbsRight?: () => React.ReactNode;
@@ -84,7 +85,7 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
 
   const { data: rootItems } = useQuery({
     queryKey: ["rootItems"],
-    queryFn: () => getDriver().getItems(),
+    queryFn: getRootItems,
   });
 
   const { data: itemChildren } = useQuery({
@@ -97,14 +98,15 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
         : []),
     ],
     enabled: props.currentItemId !== null,
-    queryFn: () => {
+    queryFn: async () => {
       if (props.currentItemId === null) {
         return Promise.resolve(undefined);
       }
       // TODO: Customize
-      return getDriver().getChildren(props.currentItemId!, {
+      const response = await getDriver().getChildren(props.currentItemId!, {
         ...props.itemsFilters,
       });
+      return response.children;
     },
   });
 
