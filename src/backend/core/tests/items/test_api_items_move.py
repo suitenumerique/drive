@@ -145,34 +145,26 @@ def test_api_tems_move_file_authenticated_target_roles_mocked(
     client = APIClient()
     client.force_login(user)
 
-    power_roles = ["administrator", "owner", "editor"]
+    power_roles = ["administrator", "owner"]
+    children_create_roles = power_roles + ["editor"]
 
     item_parent = factories.ItemFactory(
         users=[(user, random.choice(power_roles))],
         type=models.ItemTypeChoices.FOLDER,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
     item = factories.ItemFactory(
-        users=[(user, random.choice(power_roles))],
         type=models.ItemTypeChoices.FILE,
         parent=item_parent,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
 
     target_parent = factories.ItemFactory(
         users=[(user, target_parent_role)],
         type=models.ItemTypeChoices.FOLDER,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
     _sibling1, target, _sibling2 = factories.ItemFactory.create_batch(
         3,
         parent=target_parent,
         type=models.ItemTypeChoices.FOLDER,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
     models.ItemAccess.objects.create(item=target, user=user, role=target_role)
     target_children = factories.ItemFactory.create_batch(2, parent=target)
@@ -183,7 +175,14 @@ def test_api_tems_move_file_authenticated_target_roles_mocked(
     )
 
     item.refresh_from_db()
-    if target_role in power_roles or target_parent_role in power_roles:
+    target.refresh_from_db()
+    target_parent.refresh_from_db()
+    if (
+        target_role in children_create_roles
+        or target_parent_role in children_create_roles
+        or target.computed_link_role in children_create_roles
+        or target_parent.computed_link_role in children_create_roles
+    ):
         assert response.status_code == 200
         assert response.json() == {"message": "item moved successfully."}
 
@@ -219,20 +218,17 @@ def test_api_items_move_authenticated_target_roles_mocked(
     client = APIClient()
     client.force_login(user)
 
-    power_roles = ["administrator", "owner", "editor"]
+    power_roles = ["administrator", "owner"]
+    children_create_roles = power_roles + ["editor"]
 
     item_parent = factories.ItemFactory(
         users=[(user, random.choice(power_roles))],
         type=models.ItemTypeChoices.FOLDER,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
     item = factories.ItemFactory(
         users=[(user, random.choice(power_roles))],
         type=models.ItemTypeChoices.FOLDER,
         parent=item_parent,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
 
     # children
@@ -243,15 +239,11 @@ def test_api_items_move_authenticated_target_roles_mocked(
     target_parent = factories.ItemFactory(
         users=[(user, target_parent_role)],
         type=models.ItemTypeChoices.FOLDER,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
     _sibling1, target, _sibling2 = factories.ItemFactory.create_batch(
         3,
         parent=target_parent,
         type=models.ItemTypeChoices.FOLDER,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
 
     models.ItemAccess.objects.create(item=target, user=user, role=target_role)
@@ -263,7 +255,14 @@ def test_api_items_move_authenticated_target_roles_mocked(
     )
 
     item.refresh_from_db()
-    if target_role in power_roles or target_parent_role in power_roles:
+    target.refresh_from_db()
+    target_parent.refresh_from_db()
+    if (
+        target_role in children_create_roles
+        or target_parent_role in children_create_roles
+        or target.computed_link_role in children_create_roles
+        or target_parent.computed_link_role in children_create_roles
+    ):
         assert response.status_code == 200
         assert response.json() == {"message": "item moved successfully."}
 

@@ -2,7 +2,7 @@
 
 from lasuite.oidc_resource_server.authentication import ResourceServerAuthentication
 
-from core.api.permissions import ItemAccessPermission
+from core.api.permissions import ItemPermission
 from core.api.viewsets import ItemViewSet, UserViewSet
 from core.external_api.permissions import ResourceServerClientPermission
 
@@ -12,7 +12,7 @@ class ResourceServerItemViewSet(ItemViewSet):
 
     authentication_classes = [ResourceServerAuthentication]
 
-    permission_classes = [ResourceServerClientPermission & ItemAccessPermission]
+    permission_classes = [ResourceServerClientPermission & ItemPermission]
 
     resource_server_actions = ["list", "retrieve", "children", "upload_ended"]
 
