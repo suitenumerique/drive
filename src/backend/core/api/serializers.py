@@ -10,7 +10,7 @@ from django.conf import settings
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
-from lasuite.drf.models.choices import get_equivalent_link_definition
+from lasuite.drf.models.choices import LinkReachChoices, get_equivalent_link_definition
 from rest_framework import serializers
 
 from core import models
@@ -584,12 +584,68 @@ class LinkItemSerializer(serializers.ModelSerializer):
     We expose it separately from item in order to simplify and secure access control.
     """
 
+    link_reach = serializers.ChoiceField(
+        choices=LinkReachChoices.choices, required=True
+    )
+
     class Meta:
         model = models.Item
         fields = [
             "link_role",
             "link_reach",
         ]
+
+    def validate(self, attrs):
+        """Validate that link_role and link_reach are compatible using get_select_options."""
+        link_reach = attrs.get("link_reach")
+        link_role = attrs.get("link_role")
+
+        if not link_reach:
+            raise serializers.ValidationError(
+                {"link_reach": _("This field is required.")}
+            )
+
+        # Get available options based on ancestors' link definition
+        available_options = LinkReachChoices.get_select_options(
+            **self.instance.ancestors_link_definition
+        )
+
+        # Validate link_reach is allowed
+        if link_reach not in available_options:
+            msg = _(
+                "Link reach '%(link_reach)s' is not allowed based on parent item configuration."
+            )
+            raise serializers.ValidationError(
+                {"link_reach": msg % {"link_reach": link_reach}}
+            )
+
+        # Validate link_role is compatible with link_reach
+        allowed_roles = available_options[link_reach]
+
+        # Restricted reach: link_role must be None
+        if link_reach == LinkReachChoices.RESTRICTED:
+            if link_role is not None:
+                raise serializers.ValidationError(
+                    {
+                        "link_role": (
+                            "Cannot set link_role when link_reach is 'restricted'. "
+                            "Link role must be null for restricted reach."
+                        )
+                    }
+                )
+        # Non-restricted: link_role must be in allowed roles
+        elif link_role not in allowed_roles:
+            allowed_roles_str = ", ".join(allowed_roles) if allowed_roles else "none"
+            raise serializers.ValidationError(
+                {
+                    "link_role": (
+                        f"Link role '{link_role}' is not allowed for link reach '{link_reach}'. "
+                        f"Allowed roles: {allowed_roles_str}"
+                    )
+                }
+            )
+
+        return attrs
 
 
 class InvitationSerializer(serializers.ModelSerializer):
