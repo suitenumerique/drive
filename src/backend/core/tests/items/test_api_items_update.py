@@ -646,11 +646,11 @@ def test_api_items_update_no_title_should_not_rename_file():
     with mock.patch.object(rename_file, "delay") as rename_file_mock:
         response = client.patch(
             f"/api/v1.0/items/{item.id!s}/",
-            {"link_reach": "public"},
+            {"description": "New description"},
             format="json",
         )
     assert response.status_code == 200
-    assert response.json()["link_reach"] == "public"
+    assert response.json()["description"] == "New description"
 
     item.refresh_from_db()
     assert item.filename == "old_title.txt"
