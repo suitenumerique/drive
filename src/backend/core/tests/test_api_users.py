@@ -282,6 +282,7 @@ def test_api_users_retrieve_me_authenticated():
                 "short_name": user.get_main_workspace().creator.short_name,
             },
             "abilities": user.get_main_workspace().get_abilities(user),
+            "breadcrumb": [],
             "nb_accesses": 1,
             "numchild": 0,
             "numchild_folder": 0,

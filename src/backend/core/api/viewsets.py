@@ -599,6 +599,9 @@ class ItemViewSet(
         # Not calling filter_queryset. We do our own cooking.
         queryset = self.get_queryset()
 
+        # exclude main workspace
+        queryset = queryset.filter(main_workspace=False)
+
         filterset = ListItemFilter(
             self.request.GET, queryset=queryset, request=self.request
         )

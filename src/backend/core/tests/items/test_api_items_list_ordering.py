@@ -41,14 +41,13 @@ def test_api_items_list_ordering_type():
     content = response.json()
     results = content.pop("results")
     assert content == {
-        "count": 3,
+        "count": 2,
         "next": None,
         "previous": None,
     }
-    assert len(results) == 3
+    assert len(results) == 2
     assert results[0]["id"] == str(item2.id)
-    assert results[1]["id"] == str(user.get_main_workspace().id)
-    assert results[2]["id"] == str(item.id)
+    assert results[1]["id"] == str(item.id)
 
     # ordering by type descendant (FOLDER first then FILE)
     response = client.get("/api/v1.0/items/?ordering=-type")
@@ -57,14 +56,13 @@ def test_api_items_list_ordering_type():
     content = response.json()
     results = content.pop("results")
     assert content == {
-        "count": 3,
+        "count": 2,
         "next": None,
         "previous": None,
     }
-    assert len(results) == 3
-    assert results[0]["id"] == str(user.get_main_workspace().id)
-    assert results[1]["id"] == str(item.id)
-    assert results[2]["id"] == str(item2.id)
+    assert len(results) == 2
+    assert results[0]["id"] == str(item.id)
+    assert results[1]["id"] == str(item2.id)
 
 
 def test_api_items_list_ordering_title():
@@ -93,14 +91,13 @@ def test_api_items_list_ordering_title():
     content = response.json()
     results = content.pop("results")
     assert content == {
-        "count": 3,
+        "count": 2,
         "next": None,
         "previous": None,
     }
-    assert len(results) == 3
+    assert len(results) == 2
     assert results[0]["id"] == str(item.id)
-    assert results[1]["id"] == str(user.get_main_workspace().id)
-    assert results[2]["id"] == str(item2.id)
+    assert results[1]["id"] == str(item2.id)
 
     # ordering by title descendant (item2 and then item1)
     response = client.get("/api/v1.0/items/?ordering=-title")
@@ -109,11 +106,10 @@ def test_api_items_list_ordering_title():
     content = response.json()
     results = content.pop("results")
     assert content == {
-        "count": 3,
+        "count": 2,
         "next": None,
         "previous": None,
     }
-    assert len(results) == 3
+    assert len(results) == 2
     assert results[0]["id"] == str(item2.id)
-    assert results[1]["id"] == str(user.get_main_workspace().id)
-    assert results[2]["id"] == str(item.id)
+    assert results[1]["id"] == str(item.id)
