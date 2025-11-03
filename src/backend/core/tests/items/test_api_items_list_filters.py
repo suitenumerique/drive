@@ -450,3 +450,66 @@ def test_api_items_list_filter_unknown_type():
         ],
         "type": "validation_error",
     }
+
+
+# Filters: workspace
+
+
+def test_api_items_list_filter_workspace_public():
+    """
+    Authenticated users should be able to filter items by their workspace.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    public_item_with_link_trace = factories.ItemFactory(
+        link_reach="public",
+        link_traces=[user],
+    )
+    public_item_with_user_access = factories.ItemFactory(users=[user])
+
+    factories.ItemFactory.create_batch(3, link_reach="public")
+
+    response = client.get("/api/v1.0/items/")
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 2
+    assert results[0]["id"] == str(public_item_with_user_access.id)
+    assert results[1]["id"] == str(public_item_with_link_trace.id)
+
+    response = client.get("/api/v1.0/items/?workspaces=public")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 1
+
+    assert results[0]["id"] == str(public_item_with_link_trace.id)
+
+
+def test_api_items_list_filter_workspace_shared():
+    """
+    Authenticated users should be able to filter items by their workspace.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    shared_item_with_user_access = factories.ItemFactory(users=[user])
+    shared_item_with_link_trace = factories.ItemFactory(
+        link_reach="public", link_traces=[user]
+    )
+    factories.ItemFactory.create_batch(3)
+
+    response = client.get("/api/v1.0/items/")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 2
+    assert results[0]["id"] == str(shared_item_with_link_trace.id)
+    assert results[1]["id"] == str(shared_item_with_user_access.id)
+
+    response = client.get("/api/v1.0/items/?workspaces=shared")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 1
+    assert results[0]["id"] == str(shared_item_with_user_access.id)

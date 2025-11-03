@@ -610,7 +610,7 @@ class ItemViewSet(
         filter_data = filterset.form.cleaned_data
 
         # Filter as early as possible on fields that are available on the model
-        for field in ["is_creator_me", "title", "type"]:
+        for field in ["is_creator_me", "title", "type", "workspaces"]:
             queryset = filterset.filters[field].filter(queryset, filter_data[field])
 
         queryset = self.annotate_user_roles(queryset)

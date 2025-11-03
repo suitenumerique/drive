@@ -1,6 +1,6 @@
 """API filters for drive' core application."""
 
-from django.db.models import Q, TextChoices
+from django.db.models import Exists, OuterRef, Q, TextChoices
 from django.utils.translation import gettext_lazy as _
 
 import django_filters
@@ -28,6 +28,13 @@ class ScopeChoices(TextChoices):
     ALL = "all", _("All")
     DELETED = "deleted", _("Deleted")
     NOT_DELETED = "not_deleted", _("Not deleted")
+
+
+class WorkspacesChoices(TextChoices):
+    """Choices for the workspace filter."""
+
+    PUBLIC = "public", _("Public")
+    SHARED = "shared", _("Shared")
 
 
 class SearchItemFilter(ItemFilter):
@@ -119,6 +126,12 @@ class ListItemFilter(ItemFilter):
         method="filter_is_favorite", label=_("Favorite")
     )
 
+    workspaces = django_filters.ChoiceFilter(
+        label=_("Workspaces"),
+        choices=WorkspacesChoices.choices,
+        method="filter_workspaces",
+    )
+
     class Meta:
         model = models.Item
         fields = ["is_creator_me", "is_favorite", "title", "type"]
@@ -161,3 +174,24 @@ class ListItemFilter(ItemFilter):
             return queryset
 
         return queryset.filter(is_favorite=bool(value))
+
+    def filter_workspaces(self, queryset, name, value):
+        """Filter items based on their workspace."""
+        user = self.request.user
+
+        if not user.is_authenticated or not value:
+            return queryset
+
+        item_access_queryset = models.ItemAccess.objects.filter(
+            Q(user=user) | Q(team__in=user.teams),
+            item__path__ancestors=OuterRef("path"),
+        )
+
+        if value == WorkspacesChoices.PUBLIC:
+            return queryset.filter(link_reach=models.LinkReachChoices.PUBLIC).filter(
+                ~Q(Exists(item_access_queryset))
+            )
+        if value == WorkspacesChoices.SHARED:
+            return queryset.filter(Exists(item_access_queryset))
+
+        return queryset
