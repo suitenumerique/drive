@@ -1047,7 +1047,7 @@ class ItemViewSet(
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
-    def _fulltext_search_queryset(self, queryset, indexer, request, text):
+    def _fulltext_search(self, queryset, indexer, request, text):
         """
         Returns a queryset from the results the fulltext search of Find
         """
@@ -1061,10 +1061,27 @@ class ItemViewSet(
             token=token,
             visited=get_visited_items_ids_of(queryset, user),
             page=1,
-            page_size=200,
+            page_size=100,
         )
 
-        return queryset.filter(pk__in=results)
+        queryset = queryset.filter(pk__in=results)
+        queryset = self.annotate_user_roles(queryset)
+        queryset = self.annotate_is_favorite(queryset)
+
+        files_by_uuid = {str(d.pk): d for d in queryset}
+        ordered_files = [files_by_uuid[id] for id in results if id in files_by_uuid]
+
+        page = self.paginate_queryset(ordered_files)
+
+        if page is not None:
+            items = self._compute_parents(page)
+            serializer = self.get_serializer(items, many=True)
+            result = self.get_paginated_response(serializer.data)
+            return result
+
+        items = self._compute_parents(ordered_files)
+        serializer = self.get_serializer(items, many=True)
+        return drf.response.Response(serializer.data)
 
     @drf.decorators.action(
         detail=False,
@@ -1122,7 +1139,7 @@ class ItemViewSet(
         if indexer:
             # When the indexer is configured pop "title" from queryset search and use
             # fulltext results instead.
-            queryset = self._fulltext_search_queryset(
+            return self._fulltext_search(
                 queryset,
                 indexer,
                 request,

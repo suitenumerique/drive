@@ -1,12 +1,27 @@
 """Tests for the Item viewset search method with fulltext."""
 
+import random
+from json import loads as json_loads
+
+from django.test import RequestFactory
+
 import pytest
 import responses
 from rest_framework.test import APIClient
 
 from core import factories, models
+from core.services.search_indexers import get_file_indexer
 
 pytestmark = pytest.mark.django_db
+
+
+def build_search_url(**kwargs):
+    """Build absolute uri for search endpoint with ORDERED query arguments"""
+    return (
+        RequestFactory()
+        .get("/api/v1.0/items/search/", dict(sorted(kwargs.items())))
+        .build_absolute_uri()
+    )
 
 
 @pytest.mark.usefixtures("indexer_settings")
@@ -179,3 +194,240 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
             ],
         },
     ]
+
+
+@responses.activate
+@pytest.mark.parametrize(
+    "pagination, status, expected",
+    (
+        (
+            {"page": 1},
+            200,
+            {
+                "count": 30,
+                "previous": None,
+                "next": {"page": 2},
+                "range": (0, 20),
+            },
+        ),
+        (
+            {},
+            200,
+            {
+                "count": 30,
+                "previous": None,
+                "next": {"page": 2},
+                "range": (0, 20),
+                "api_page_size": 21,  # default page_size is 20
+            },
+        ),
+        (
+            {"page": 3},
+            404,
+            {},
+        ),
+        (
+            {"page": 1},
+            200,
+            {
+                "count": 30,
+                "previous": None,
+                "next": {"page": 2},
+                "range": (0, 20),
+            },
+        ),
+        (
+            {"page": 2},
+            200,
+            {
+                "count": 30,
+                "previous": {},
+                "next": None,
+                "range": (20, 30),
+            },
+        ),
+    ),
+)
+def test_api_items_search_pagination(indexer_settings, pagination, status, expected):
+    """Files should be ordered by descending "score" by default"""
+    indexer_settings.SEARCH_INDEXER_QUERY_URL = "http://find/api/v1.0/search"
+
+    assert get_file_indexer() is not None
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    items = factories.ItemFactory.create_batch(
+        30,
+        title="alpha",
+        users=[user],
+        mimetype="text/plain",
+        type=models.ItemTypeChoices.FILE,
+        parent=user.get_main_workspace(),
+    )
+
+    items_by_uuid = {str(item.pk): item for item in items}
+    api_results = [{"_id": id} for id in items_by_uuid.keys()]
+
+    # reorder randomly to simulate score ordering
+    random.shuffle(api_results)
+
+    # Find response
+    # pylint: disable-next=assignment-from-none
+    api_search = responses.add(
+        responses.POST,
+        "http://find/api/v1.0/search",
+        json=api_results,
+        status=200,
+    )
+
+    response = client.get(
+        "/api/v1.0/items/search/",
+        data={
+            "title": "alpha",
+            **pagination,
+        },
+    )
+
+    assert response.status_code == status
+
+    if response.status_code < 300:
+        previous_url = (
+            build_search_url(title="alpha", **expected["previous"])
+            if expected.get("previous") is not None
+            else None
+        )
+        next_url = (
+            build_search_url(title="alpha", **expected["next"])
+            if expected.get("next") is not None
+            else None
+        )
+        start, end = expected["range"]
+
+        content = response.json()
+        results = content.pop("results")
+
+        # The find api results ordering by score is kept
+        assert [r["id"] for r in results] == [r["_id"] for r in api_results[start:end]]
+        assert content["count"] == expected["count"]
+        assert content["previous"] == previous_url
+        assert content["next"] == next_url
+
+        # Check the query parameters.
+        assert api_search.call_count == 1
+        assert api_search.calls[0].response.status_code == 200
+        assert json_loads(api_search.calls[0].request.body) == {
+            "q": "alpha",
+            "visited": [],
+            "services": ["drive"],
+            "page_number": 1,
+            "page_size": 100,
+        }
+
+
+@responses.activate
+@pytest.mark.parametrize(
+    "pagination, status, expected",
+    (
+        (
+            {"page": 1},
+            200,
+            {
+                "count": 30,
+                "previous": None,
+                "next": {"page": 2},
+                "range": (0, 20),
+            },
+        ),
+        (
+            {},
+            200,
+            {
+                "count": 30,
+                "previous": None,
+                "next": {"page": 2},
+                "range": (0, 20),
+                "api_page_size": 21,  # default page_size is 20
+            },
+        ),
+        (
+            {"page": 3},
+            404,
+            {},
+        ),
+        (
+            {"page": 1},
+            200,
+            {
+                "count": 30,
+                "previous": None,
+                "next": {"page": 2},
+                "range": (0, 20),
+            },
+        ),
+        (
+            {"page": 2},
+            200,
+            {
+                "count": 30,
+                "previous": {},
+                "next": None,
+                "range": (20, 30),
+            },
+        ),
+    ),
+)
+def test_api_items_search_pagination_endpoint_is_none(
+    indexer_settings, pagination, status, expected
+):
+    """Files are filtered and ordered (created_at)"""
+    indexer_settings.SEARCH_INDEXER_QUERY_URL = None
+
+    assert get_file_indexer() is None
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    factories.ItemFactory.create_batch(
+        30,
+        title="alpha",
+        users=[user],
+        parent=user.get_main_workspace(),
+    )
+
+    response = client.get(
+        "/api/v1.0/items/search/",
+        data={
+            "title": "alpha",
+            **pagination,
+        },
+    )
+
+    assert response.status_code == status
+
+    if response.status_code < 300:
+        previous_url = (
+            build_search_url(title="alpha", **expected["previous"])
+            if expected.get("previous") is not None
+            else None
+        )
+        next_url = (
+            build_search_url(title="alpha", **expected["next"])
+            if expected.get("next") is not None
+            else None
+        )
+        queryset = user.get_main_workspace().descendants().order_by("created_at")
+        start, end = expected["range"]
+        expected_results = [str(d.pk) for d in queryset[start:end]]
+
+        content = response.json()
+        results = content.pop("results")
+
+        assert [r["id"] for r in results] == expected_results
+        assert content["count"] == expected["count"]
+        assert content["previous"] == previous_url
+        assert content["next"] == next_url

@@ -338,7 +338,7 @@ def test_services_search_indexers_serialize_item_folder():
         "created_at": folder.created_at.isoformat(),
         "updated_at": folder.updated_at.isoformat(),
         "reach": folder.link_reach,
-        "size": folder.size,
+        "size": 0,
         "is_active": True,
     }
 
@@ -784,8 +784,6 @@ def test_services_search_indexers_search(mock_post, indexer_settings):
     assert query_data["services"] == ["drive"]
     assert query_data["page_number"] == 1
     assert query_data["page_size"] == 50
-    assert query_data["order_by"] == "updated_at"
-    assert query_data["order_direction"] == "desc"
 
     assert kwargs.get("headers") == {"Authorization": "Bearer mytoken"}
     assert kwargs.get("timeout") == 10

@@ -8,6 +8,15 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) add async indexation of items on save (or access save)
+- ✨(backend) add throttle mechanism to limit indexation job
+
+### Changed
+
+- ✨(api) modify items/search endpoint to use indexed items in Find
+
 ### Fixed
 
 - 🐛(scalingo) fix deploy scalingo with yarn
