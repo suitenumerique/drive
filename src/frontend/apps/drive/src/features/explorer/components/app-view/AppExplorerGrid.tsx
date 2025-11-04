@@ -167,7 +167,7 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
     }
   };
 
-  const isLoading = props.childrenItems === undefined;
+  const isLoading = props.isLoading || props.childrenItems === undefined;
   const isEmpty = props.childrenItems?.length === 0;
   const canCreateChildren = item?.abilities?.children_create;
 

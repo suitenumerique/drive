@@ -30,13 +30,18 @@ export const useFirstLevelItems = () => {
     queryKey: ["firstLevelItems"],
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    queryFn: () => getDriver().getItems(),
+    queryFn: () => getRootItems(),
   });
 };
 
 export const useItems = () => {
   return useQuery({
     queryKey: ["items"],
-    queryFn: () => getDriver().getItems(),
+    queryFn: () => getRootItems(),
   });
+};
+
+export const getRootItems = async () => {
+  const result = await getDriver().getItems();
+  return result.children;
 };

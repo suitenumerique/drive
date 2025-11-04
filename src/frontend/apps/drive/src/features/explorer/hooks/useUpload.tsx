@@ -190,7 +190,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
   const { filesToUpload, handleHierarchy } = useUpload({ item: item! });
 
   const validateDrop = () => {
-    const canUpload = item?.abilities.children_create;
+    const canUpload = item?.abilities?.children_create ?? false;
     if (!canUpload) {
       return {
         code: "no-upload-rights",
@@ -212,7 +212,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         return;
       }
 
-      const canUpload = item?.abilities.children_create;
+      const canUpload = item?.abilities?.children_create ?? false;
       fileDragToastId.current = addToast(
         <ToasterItem type={canUpload ? "info" : "error"}>
           <span className="material-icons">cloud_upload</span>
@@ -242,7 +242,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         }
       };
 
-      if (!item?.abilities.children_create) {
+      if (!(item?.abilities?.children_create ?? false)) {
         dismissToast();
         return;
       }
