@@ -75,8 +75,10 @@ export const fetchAPI = async (
   }
 
   const data = await response.text();
+
   if (isJson(data)) {
     throw new APIError(response.status, JSON.parse(data));
   }
+
   throw new APIError(response.status);
 };

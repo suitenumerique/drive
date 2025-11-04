@@ -17,9 +17,23 @@ export const errorToString = (error: unknown): string => {
   if (typeof error === "string") {
     return error;
   }
+
   if (error instanceof APIError) {
+    const data = error.data;
     // If there is a data, it means that the error is a JSON object
-    if (error.data) {
+    if (typeof data === "string") {
+      return data;
+    }
+
+    if (
+      data?.errors &&
+      Array.isArray(data?.errors) &&
+      data?.errors?.length > 0
+    ) {
+      return data.errors[0].detail;
+    }
+
+    if (data) {
       /**
        * This is made to handle full text errors from the API like:
        *
