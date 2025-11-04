@@ -44,7 +44,7 @@ def get_ancestor_to_descendants_map(items):
     """
     Given a list of items, return a mapping of ancestor_path -> set of descendant_paths.
 
-    Each path is assumed to use materialized path format with fixed-length segments.
+    Each path is assumed to be a list of uid.
 
     Args:
         items (list of Item): List of items.
@@ -55,11 +55,11 @@ def get_ancestor_to_descendants_map(items):
     ancestor_map = defaultdict(set)
 
     for item in items:
-        path = str(item.path)
-        ancestors = path.split(".")
+        fullpath = str(item.path)
+        ancestors = item.path
         for i in range(1, len(ancestors) + 1):
             ancestor = ".".join(ancestors[:i])
-            ancestor_map[ancestor].add(path)
+            ancestor_map[ancestor].add(fullpath)
 
     return ancestor_map
 
@@ -187,10 +187,9 @@ class BaseItemIndexer(ABC):
 
             last_id = items_batch[-1].id
             accesses_by_item_path = get_batch_accesses_by_users_and_teams(items_batch)
-            serialize = self.serialize_item
 
             serialized_batch = [
-                serialize(item, accesses_by_item_path) for item in items_batch
+                self.serialize_item(item, accesses_by_item_path) for item in items_batch
             ]
 
             self.push(serialized_batch)
@@ -242,8 +241,6 @@ class BaseItemIndexer(ABC):
                 "services": ["drive"],
                 "page_number": page,
                 "page_size": page_size,
-                "order_by": "updated_at",
-                "order_direction": "desc",
             },
             token=token,
         )
@@ -317,7 +314,7 @@ class SearchIndexer(BaseItemIndexer):
             "users": list(accesses.get(doc_path, {}).get("users", set())),
             "groups": list(accesses.get(doc_path, {}).get("teams", set())),
             "reach": str(item.link_reach),
-            "size": item.size,
+            "size": item.size or 0,
             "is_active": not is_deleted,
         }
 

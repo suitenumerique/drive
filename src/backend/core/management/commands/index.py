@@ -22,7 +22,8 @@ class Command(BaseCommand):
         indexer = get_file_indexer()
 
         if not indexer:
-            raise CommandError("The indexer is not enabled or properly configured.")
+            logger.warning("The indexer is not enabled or properly configured.")
+            return
 
         logger.info("Starting to regenerate Find index...")
         start = time.perf_counter()

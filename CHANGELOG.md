@@ -35,10 +35,13 @@ and this project adheres to
 - 🌐 add dutch translation
 - ✨(back) add resource server routes
 - ✨(backend) expose main workspace on /me endpoint
+- ✨(backend) add async indexation of items on save (or access save)
+- ✨(backend) add throttle mechanism to limit indexation job
 
 ### Changed
 
 - ⬆️(backend) upgrade to python 3.13
+- ✨(api) modify items/search endpoint to use indexed items in Find
 
 ### Fixed
 
