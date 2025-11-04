@@ -1,53 +1,75 @@
-import { Button } from "@openfun/cunningham-react";
+import { Button, useModal } from "@openfun/cunningham-react";
 import {
   NavigationEventType,
   useGlobalExplorer,
 } from "@/features/explorer/components/GlobalExplorerContext";
-import { IconSize, useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import {
+  IconSize,
+  useDropdownMenu,
+  useTreeContext,
+} from "@gouvfr-lasuite/ui-kit";
 import { Item, TreeItem } from "@/features/drivers/types";
 import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
+import createFolderSvg from "@/assets/icons/add_folder.svg";
 import { EmbeddedExplorerGridBreadcrumbs } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridBreadcrumbs";
+import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
+import { ImportDropdown } from "../item-actions/ImportDropdown";
+import { useTranslation } from "react-i18next";
 
 export const AppExplorerBreadcrumbs = () => {
-  const {
-    item,
-    onNavigate,
-    setRightPanelOpen,
-    setRightPanelForcedItem,
-    treeIsInitialized,
-  } = useGlobalExplorer();
+  const { item, onNavigate, treeIsInitialized } = useGlobalExplorer();
+  const { t } = useTranslation();
+  const createFolderModal = useModal();
+  const importDropdown = useDropdownMenu();
 
   if (!item || !treeIsInitialized) {
     return null;
   }
 
   return (
-    <div
-      className="explorer__content__breadcrumbs"
-      data-testid="explorer-breadcrumbs"
-    >
-      <EmbeddedExplorerGridBreadcrumbs
-        buildWithTreeContext
-        currentItemId={item.id}
-        onGoBack={(item) => {
-          onNavigate({
-            type: NavigationEventType.ITEM,
-            item,
-          });
-        }}
-      />
-
-      <div className="explorer__content__breadcrumbs__actions">
-        <Button
-          icon={<span className="material-icons">info</span>}
-          variant="tertiary"
-          onClick={() => {
-            setRightPanelOpen(true);
-            setRightPanelForcedItem(item);
+    <>
+      <div
+        className="explorer__content__breadcrumbs"
+        data-testid="explorer-breadcrumbs"
+      >
+        <EmbeddedExplorerGridBreadcrumbs
+          currentItemId={item.id}
+          showMenuLastItem={true}
+          onGoBack={(item) => {
+            onNavigate({
+              type: NavigationEventType.ITEM,
+              item,
+            });
           }}
         />
+
+        <div className="explorer__content__breadcrumbs__actions">
+          <ImportDropdown
+            importMenu={importDropdown}
+            trigger={
+              <Button
+                variant="tertiary"
+                size="small"
+                onClick={() => {
+                  importDropdown.setIsOpen(true);
+                }}
+              >
+                {t("explorer.tree.import.label")}
+              </Button>
+            }
+          />
+          <Button
+            icon={<img src={createFolderSvg.src} alt="Create Folder" />}
+            variant="tertiary"
+            size="small"
+            onClick={() => {
+              createFolderModal.open();
+            }}
+          />
+        </div>
       </div>
-    </div>
+      <ExplorerCreateFolderModal {...createFolderModal} parentId={item.id} />
+    </>
   );
 };
 

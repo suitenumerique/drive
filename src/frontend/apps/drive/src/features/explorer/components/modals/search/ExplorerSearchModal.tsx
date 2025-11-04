@@ -30,13 +30,20 @@ import { ItemFilters } from "@/features/drivers/Driver";
 import { Key } from "react-aria-components";
 import { getItemTitle } from "@/features/explorer/utils/utils";
 import { messageModalTrashNavigate } from "../../trash/utils";
+import { useIsMinimalLayout } from "@/utils/useLayout";
 
-export const ExplorerSearchModal = (
-  props: Pick<ModalProps, "isOpen" | "onClose">
-) => {
+type ExplorerSearchModalProps = Pick<ModalProps, "isOpen" | "onClose"> & {
+  defaultFilters?: ItemFilters;
+};
+
+export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
   const { t } = useTranslation();
   const [inputValue, setInputValue] = useState<string>("");
-  const [filters, setFilters] = useState<ItemFilters>({});
+  const isMinimalLayout = useIsMinimalLayout();
+  const [filters, setFilters] = useState<ItemFilters>(
+    props.defaultFilters || {}
+  );
+
   const searchUserTimeoutRef = useRef<NodeJS.Timeout>(null);
   const [items, setItems] = useState<Item[]>([]);
 
@@ -140,6 +147,7 @@ export const ExplorerSearchModal = (
               />
               <ExplorerFilterWorkspace
                 value={filters?.workspace ?? null}
+                isDisabled={isMinimalLayout}
                 onChange={(value) => onFilterChange("workspace", value)}
               />
               <ExplorerFilterScope

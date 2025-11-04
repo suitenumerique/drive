@@ -322,7 +322,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                             disabled={
                               isSelected ||
                               row.original.type !== ItemType.FOLDER ||
-                              !row.original.abilities.children_create
+                              !row.original.abilities?.children_create
                             }
                             onOver={(isOver, item) => {
                               setOveredItemIds?.((prev) => ({

@@ -1,6 +1,7 @@
 import { Item, ItemType } from "@/features/drivers/types";
 import folderIcon from "@/assets/folder/folder.svg";
 import folderIconTree from "@/assets/tree/folder.svg";
+import folderPersonalIcon from "@/assets/folder/folder-tiny-perso.svg";
 import {
   getItemMimeCategory,
   getMimeCategory,
@@ -66,21 +67,25 @@ export const WorkspaceIcon = ({
 }: WorkspaceIconProps) => {
   const containerSize = useMemo(() => getContainerSize(iconSize), [iconSize]);
 
-  const iconName = useMemo(() => {
-    if (isMainWorkspace) {
-      return "person";
-    }
-    return "groups";
-  }, [isMainWorkspace]);
-
   const style = {
     width: containerSize,
     height: containerSize,
   };
 
+  if (isMainWorkspace) {
+    return (
+      <img
+        src={folderPersonalIcon.src}
+        alt=""
+        width={containerSize}
+        height={containerSize}
+      />
+    );
+  }
+
   return (
     <div className="workspace-icon-container" style={style}>
-      <Icon name={iconName} size={iconSize} color="white" />
+      <Icon name="groups" size={iconSize} color="white" />
     </div>
   );
 };

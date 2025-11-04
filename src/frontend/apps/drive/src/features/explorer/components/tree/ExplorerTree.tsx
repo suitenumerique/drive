@@ -29,6 +29,7 @@ import { canDrop } from "../ExplorerDndProvider";
 import React from "react";
 import clsx from "clsx";
 import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
+import { WorkspaceCategory } from "../../constants";
 
 export const ExplorerTree = () => {
   const { t, i18n } = useTranslation();
@@ -97,14 +98,14 @@ export const ExplorerTree = () => {
       });
     }
 
-    if (treeData?.getNode("SHARED_SPACE")) {
-      treeData.updateNode("SHARED_SPACE", {
+    if (treeData?.getNode(WorkspaceCategory.SHARED_SPACE)) {
+      treeData.updateNode(WorkspaceCategory.SHARED_SPACE, {
         headerTitle: t("explorer.tree.shared_space"),
       });
     }
 
-    if (treeData?.getNode("PUBLIC_SPACE")) {
-      treeData.updateNode("PUBLIC_SPACE", {
+    if (treeData?.getNode(WorkspaceCategory.PUBLIC_SPACE)) {
+      treeData.updateNode(WorkspaceCategory.PUBLIC_SPACE, {
         headerTitle: t("explorer.tree.public_space"),
       });
     }
@@ -140,8 +141,8 @@ export const ExplorerTree = () => {
 
       {initialOpenState && (
         <TreeView
-          selectedNodeId={itemId}
-          initialOpenState={initialOpenState}
+          // selectedNodeId={itemId}
+
           afterMove={handleMove}
           beforeMove={(moveResult, moveCallback) => {
             // TODO: this comes from the tree in the ui-kit, it needs to be explained in the documentation
@@ -182,7 +183,7 @@ export const ExplorerTree = () => {
               return false;
             }
 
-            return item.abilities.move;
+            return item.abilities?.move ?? false;
           }}
           canDrop={(args) => {
             const parent = args.parentNode?.data.value as Item | undefined;

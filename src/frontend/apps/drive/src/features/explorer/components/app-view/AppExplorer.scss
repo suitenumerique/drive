@@ -40,6 +40,10 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
     }
   }
 
+  &__grid {
+    padding: 0px 14px;
+    padding-right: 24px;
+  }
   &__container {
     display: flex;
     flex-direction: column;
@@ -86,22 +90,25 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
     background-color: var(--c--contextuals--background--surface--secondary);
 
     border-radius: 4px;
-    padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 16px;
     box-sizing: content-box;
     transition:
       background-color 0.3s ease,
       box-shadow 0.3s ease;
 
     &__breadcrumbs {
+      padding: 16px 24px 0 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
 
       &__actions {
         padding-right: 6px;
+        display: flex;
+        align-items: center;
+        gap: var(--c--globals--spacings--2xs);
       }
 
       &--mobile {

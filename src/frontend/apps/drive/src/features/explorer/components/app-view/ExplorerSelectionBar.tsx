@@ -58,7 +58,7 @@ export const ExplorerSelectionBarActions = () => {
   const handleDelete = async () => {
     let canDelete = true;
     for (const item of selectedItems) {
-      if (!item.abilities.destroy) {
+      if (!item.abilities?.destroy) {
         canDelete = false;
       }
     }

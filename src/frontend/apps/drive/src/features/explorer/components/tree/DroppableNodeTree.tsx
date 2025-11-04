@@ -71,7 +71,9 @@ export const DroppableNodeTree = (props: DroppableNodeTreeProps) => {
   }, [isOver]);
 
   if (props.item.nodeType !== TreeViewNodeTypeEnum.NODE) {
-    return props.children;
+    return (
+      <div className="explorer__tree__item__droppable">{props.children}</div>
+    );
   }
 
   return (

@@ -29,7 +29,7 @@ export const FileShareModal = ({ item, ...props }: FileShareModalProps) => {
           link_reach: value as LinkReach,
         });
       }}
-      canUpdate={item.abilities.update}
+      canUpdate={item.abilities?.update}
       hideInvitations={true}
       hideMembers={true}
       outsideSearchContent={

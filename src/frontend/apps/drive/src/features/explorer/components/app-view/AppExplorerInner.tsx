@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { Item } from "@/features/drivers/types";
 import { useEffect, useRef } from "react";
 import { AppExplorerProps } from "./AppExplorer";
-import { useResponsive } from "@gouvfr-lasuite/ui-kit";
+import { HorizontalSeparator, useResponsive } from "@gouvfr-lasuite/ui-kit";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import {
   AppExplorerBreadcrumbs,
@@ -166,6 +166,7 @@ export const AppExplorerInner = (props: AppExplorerProps) => {
 
             <div className="explorer__content">
               {props.gridHeader ? props.gridHeader : <AppExplorerBreadcrumbs />}
+              <HorizontalSeparator withPadding={false} />
               <AppExplorerGrid {...props} />
             </div>
           </div>

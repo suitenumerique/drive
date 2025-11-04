@@ -20,7 +20,7 @@ export const EmbeddedExplorerGridMobileCell = (
           </span>
         </div>
         <div className="explorer__grid__item__mobile__info__meta">
-          <span>{timeAgo(params.row.original.updated_at)}</span>
+          <span>{timeAgo(new Date(item.updated_at))}</span>
         </div>
       </div>
     </div>

@@ -28,6 +28,7 @@
 
   &__explorer {
     padding: 0 var(--c--globals--spacings--md);
+    overflow-y: auto;
   }
 }
 

@@ -34,6 +34,7 @@
     "sass": "1.85.0"
   },
   "devDependencies": {
+    "@tanstack/react-query-devtools": "5.66.9",
     "@eslint/eslintrc": "3.2.0",
     "@tanstack/eslint-plugin-query": "5.66.1",
     "@types/node": "20.14.2",

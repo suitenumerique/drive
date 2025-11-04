@@ -6,31 +6,34 @@ import {
 } from "@gouvfr-lasuite/ui-kit";
 import { useTranslation } from "react-i18next";
 import { itemToTreeItem } from "../../GlobalExplorerContext";
+import { WorkspaceCategory } from "../../../constants";
 
 export const useAddWorkspaceNode = () => {
   const treeContext = useTreeContext<TreeItem>();
   const { t } = useTranslation();
   const addWorkspaceNode = (data: Item) => {
-    const items = treeContext?.treeData.nodes.map((node) => node.value) ?? [];
-    if (items.length === 2) {
-      const separator: TreeViewDataType<TreeItem> = {
-        id: "SEPARATOR",
-        nodeType: TreeViewNodeTypeEnum.SEPARATOR,
+    const sharedNode = treeContext?.treeData.getNode(
+      WorkspaceCategory.SHARED_SPACE
+    );
+    if (!sharedNode) {
+      const publicWorkspaceNode: TreeViewDataType<TreeItem> = {
+        id: WorkspaceCategory.SHARED_SPACE,
+        nodeType: TreeViewNodeTypeEnum.SIMPLE_NODE,
+        childrenCount: 1,
+        label: t("explorer.tree.shared_space"),
+        children: [itemToTreeItem(data)],
+        pagination: {
+          currentPage: 1,
+          hasMore: false,
+        },
       };
-
-      const sharedSpace: TreeViewDataType<TreeItem> = {
-        id: "SHARED_SPACE",
-        nodeType: TreeViewNodeTypeEnum.TITLE,
-        headerTitle: t("explorer.tree.shared_space"),
-      };
-
-      treeContext?.treeData.addRootNodes([
-        separator,
-        sharedSpace,
-        itemToTreeItem(data),
-      ]);
+      treeContext?.treeData.addRootNode(publicWorkspaceNode, 1);
     } else {
-      treeContext?.treeData.addRootNode(itemToTreeItem(data), 4);
+      treeContext?.treeData.addChild(
+        WorkspaceCategory.SHARED_SPACE,
+        itemToTreeItem(data),
+        0
+      );
     }
   };
 

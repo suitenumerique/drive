@@ -1,5 +1,6 @@
 import { getDriver } from "@/features/config/Config";
-import { Item, ItemType } from "@/features/drivers/types";
+import { Item } from "@/features/drivers/types";
+import { PaginatedChildrenResult } from "@gouvfr-lasuite/ui-kit";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const useMoveItems = () => {
@@ -16,8 +17,7 @@ export const useMoveItems = () => {
       await driver.moveItems(payload.ids, payload.parentId);
     },
     onMutate: async (payload: MoveItemPayload) => {
-      const itemIds = payload.ids;
-      // Cancel any outgoing refetches
+      // Cancel any outgoing refetches to avoid overwriting optimistic updates
       await queryClient.cancelQueries({
         queryKey: ["items", payload.oldParentId, "children"],
       });
@@ -25,64 +25,38 @@ export const useMoveItems = () => {
       await queryClient.cancelQueries({
         queryKey: ["items", payload.parentId, "children"],
       });
-
-      // Snapshot the previous value
-      const previousItems: Item[] =
-        queryClient.getQueryData(["items", payload.oldParentId, "children"]) ??
-        [];
-
-      const nextItems: Item[] =
-        queryClient.getQueryData(["items", payload.parentId, "children"]) ?? [];
-
-      // Get the nodes from previous items that match the ids
-      const movedItems = previousItems?.filter((item: Item) =>
-        itemIds.includes(item.id)
-      );
-
-      const newOldParentItems = previousItems?.filter(
-        (item: Item) => !itemIds.includes(item.id)
-      );
-
-      const newNextItems = [...movedItems, ...nextItems];
-
-      // Sort newNextItems by type first (folders first), then by creation date in descending order
-      newNextItems.sort((a, b) => {
-        // First sort by type (folders first)
-        if (a.type !== b.type) {
-          return a.type === ItemType.FOLDER ? -1 : 1;
-        }
-
-        // Then sort by creation date in descending order (newest first)
-        const dateA = new Date(a.created_at || 0).getTime();
-        const dateB = new Date(b.created_at || 0).getTime();
-        return dateB - dateA;
+    },
+    onSuccess: (data, payload: MoveItemPayload) => {
+      const queriesData = queryClient.getQueriesData({
+        queryKey: ["items", payload.oldParentId, "children", "infinite"],
       });
 
-      // Optimistically update to the new value
-      queryClient.setQueryData(
-        ["items", payload.oldParentId, "children"],
-        () => newOldParentItems
-      );
+      queriesData.forEach((query) => {
+        const key = query[0];
+        const data: { pages: PaginatedChildrenResult<Item>[] } = JSON.parse(
+          JSON.stringify(query[1])
+        ) as {
+          pages: PaginatedChildrenResult<Item>[];
+        };
 
-      queryClient.setQueryData(
-        ["items", payload.parentId, "children"],
-        () => newNextItems
-      );
+        data.pages.forEach((page) => {
+          page.children = page.children?.filter(
+            (child) => !payload.ids.includes(child.id)
+          );
+        });
 
-      // Return a context object with the snapshotted value
-      return { previousItems, nextItems };
+        queryClient.setQueryData(key, data);
+      });
     },
-    onError: (err, variables, context) => {
-      // If the mutation fails, use the context returned from onMutate to roll back
-      queryClient.setQueryData(
-        ["items", variables.oldParentId, "children"],
-        context?.previousItems
-      );
+    onError: (err, variables) => {
+      // If the mutation fails, you could invalidate to ensure fresh data
+      queryClient.invalidateQueries({
+        queryKey: ["items", variables.oldParentId, "children", "infinite"],
+      });
 
-      queryClient.setQueryData(
-        ["items", variables.parentId, "children"],
-        context?.nextItems
-      );
+      queryClient.invalidateQueries({
+        queryKey: ["items", variables.parentId, "children", "infinite"],
+      });
     },
   });
 };

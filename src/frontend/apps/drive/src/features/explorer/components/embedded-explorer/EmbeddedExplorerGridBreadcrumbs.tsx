@@ -1,32 +1,31 @@
 import { useMemo, useState } from "react";
-import { Item } from "@/features/drivers/types";
+import { Item, ItemBreadcrumb } from "@/features/drivers/types";
 import {
   BreadcrumbItem,
   Breadcrumbs,
 } from "@/features/ui/components/breadcrumbs/Breadcrumbs";
 import { useTranslation } from "react-i18next";
-import { IconSize, useTreeContext } from "@gouvfr-lasuite/ui-kit";
-import { itemIsWorkspace } from "@/features/drivers/utils";
-import { ItemIcon } from "../icons/ItemIcon";
+import { IconSize } from "@gouvfr-lasuite/ui-kit";
+import { WorkspaceIcon } from "../icons/ItemIcon";
+import { NavigationItem } from "../GlobalExplorerContext";
+import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
+import clsx from "clsx";
+import { useAuth } from "@/features/auth/Auth";
+import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
+import { useQuery } from "@tanstack/react-query";
+import { getDriver } from "@/features/config/Config";
 
 type BaseBreadcrumbsProps = {
-  ancestors?: Item[];
-  resetAncestors?: (items?: Item[]) => void;
-  onGoBack?: (item: Item) => void;
+  onGoBack?: (item: Item | ItemBreadcrumb) => void;
   goToSpaces?: () => void;
-  currentItemId?: string | null;
+  currentItemId: string | null;
   showSpacesItem?: boolean;
+  showMenuLastItem?: boolean;
 };
 
 type GridBreadcrumbsProps = BaseBreadcrumbsProps & {
   showSpacesItem?: boolean;
-  buildWithTreeContext?: boolean;
 };
-
-type GridBreadcrumbsFromTreeProps = Omit<
-  GridBreadcrumbsProps,
-  "buildWithTreeContext" | "resetAncestors" | "ancestors"
-> & {};
 
 /**
  * ExplorerGridBreadcrumbs is a component that displays the breadcrumbs of the current item.
@@ -35,28 +34,9 @@ type GridBreadcrumbsFromTreeProps = Omit<
  * For the uncontrolled mode, if buildWithTreeContext is true, it will use the tree context to get the ancestors.
  */
 export const EmbeddedExplorerGridBreadcrumbs = ({
-  buildWithTreeContext = false,
   ...props
 }: GridBreadcrumbsProps) => {
-  if (buildWithTreeContext) {
-    return <GridBreadcrumbsFromTree {...props} />;
-  }
   return <BaseBreadcrumbs {...props} />;
-};
-
-/**
- * GridBreadcrumbsFromTree is a component that displays the breadcrumbs of the current item.
- * It uses the tree context to get the ancestors.
- */
-const GridBreadcrumbsFromTree = ({
-  currentItemId,
-  ...props
-}: GridBreadcrumbsFromTreeProps) => {
-  const treeContext = useTreeContext<Item>();
-  const ancestors = currentItemId
-    ? (treeContext?.treeData.getAncestors(currentItemId) as Item[])
-    : [];
-  return <BaseBreadcrumbs {...props} ancestors={ancestors} />;
 };
 
 /**
@@ -67,14 +47,21 @@ const BaseBreadcrumbs = ({
   onGoBack,
   goToSpaces,
   showSpacesItem = false,
+  showMenuLastItem = false,
 
-  ancestors,
   currentItemId,
-  resetAncestors,
 }: BaseBreadcrumbsProps) => {
   const { t } = useTranslation();
 
-  const handleGoBack = (item: Item) => {
+  const { data: breadcrumb } = useBreadcrumbQuery(currentItemId);
+
+  const { data: item } = useQuery({
+    queryKey: ["item", currentItemId],
+    queryFn: () => getDriver().getItem(currentItemId!),
+    enabled: currentItemId !== null,
+  });
+
+  const handleGoBack = (item: Item | ItemBreadcrumb) => {
     onGoBack?.(item);
   };
 
@@ -87,7 +74,6 @@ const BaseBreadcrumbs = ({
             className="c__breadcrumbs__button"
             onClick={() => {
               goToSpaces?.();
-              resetAncestors?.([]);
             }}
           >
             {t("explorer.breadcrumbs.spaces")}
@@ -96,31 +82,92 @@ const BaseBreadcrumbs = ({
       });
     }
 
-    const breadcrumbsData = ancestors ?? [];
+    const breadcrumbsData = showMenuLastItem
+      ? (breadcrumb ?? []).slice(0, -1)
+      : (breadcrumb ?? []);
+
+    const lastItem = item;
 
     breadcrumbsData.forEach((item) => {
-      const isWorkspace = itemIsWorkspace(item) || item.main_workspace;
-
+      const isActive = item.id === lastItem?.id;
       breadcrumbsItems.push({
         content: (
-          <button
-            className="c__breadcrumbs__button"
-            data-testid="breadcrumb-button"
+          <BreadcrumbItemButton
+            item={item}
             onClick={() => handleGoBack(item)}
-          >
-            {isWorkspace && <ItemIcon item={item} size={IconSize.SMALL} />}
-            {item.main_workspace
-              ? t("explorer.workspaces.mainWorkspace")
-              : item.title}
-          </button>
+            isActive={isActive}
+          />
         ),
       });
     });
 
+    if (showMenuLastItem && lastItem) {
+      breadcrumbsItems.push({
+        content: <LastItemBreadcrumb item={lastItem} />,
+      });
+    }
+
     return breadcrumbsItems;
-  }, [ancestors, showSpacesItem, currentItemId]);
+  }, [showSpacesItem, currentItemId, item, breadcrumb]);
 
   return <Breadcrumbs items={breadcrumbsItems} />;
+};
+
+export type BreadcrumbItemProps = {
+  item: ItemBreadcrumb | Item;
+  isActive?: boolean;
+  onClick: () => void;
+  rightIcon?: React.ReactNode;
+};
+export const BreadcrumbItemButton = ({
+  item,
+  rightIcon,
+  onClick,
+  isActive = false,
+}: BreadcrumbItemProps) => {
+  const { user } = useAuth();
+  const isMainWorkspace = item.id === user?.main_workspace?.id;
+  const isWorkspace = item.path.split(".").length === 1;
+
+  const { t } = useTranslation();
+  return (
+    <button
+      className={clsx("c__breadcrumbs__button", {
+        active: isActive,
+      })}
+      data-testid="breadcrumb-button"
+      onClick={onClick}
+    >
+      {isWorkspace && (
+        <WorkspaceIcon
+          isMainWorkspace={isMainWorkspace}
+          iconSize={IconSize.SMALL}
+        />
+      )}
+      {isMainWorkspace ? t("explorer.workspaces.mainWorkspace") : item.title}
+      {rightIcon}
+    </button>
+  );
+};
+
+export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <ItemActionDropdown
+      item={item}
+      isOpen={isOpen}
+      setIsOpen={setIsOpen}
+      trigger={
+        <BreadcrumbItemButton
+          isActive={true}
+          item={item}
+          onClick={() => setIsOpen(true)}
+          rightIcon={<span className="material-icons">arrow_drop_down</span>}
+        />
+      }
+    />
+  );
 };
 
 /**
@@ -130,23 +177,16 @@ const BaseBreadcrumbs = ({
 export const useBreadcrumbs = ({
   handleNavigate: handleNavigateFromProps,
 }: {
-  handleNavigate: (item?: Item) => void;
+  handleNavigate: (item?: NavigationItem) => void;
 }) => {
-  const [ancestors, setAncestors] = useState<Item[]>([]);
+  const [, setAncestors] = useState<NavigationItem[]>([]);
 
-  const update = (item: Item) => {
-    setAncestors((prev) => {
-      return [...prev, item];
-    });
-    // handleNavigateFromProps(item);
-  };
-
-  const onGoBack = (item: Item) => {
+  const onGoBack = (item: ItemBreadcrumb) => {
     setAncestors((prev) => prev.slice(0, prev.indexOf(item) + 1));
     handleNavigateFromProps(item);
   };
 
-  const resetAncestors = (items: Item[] = []) => {
+  const resetAncestors = (items: ItemBreadcrumb[] = []) => {
     if (items?.length === 0) {
       setAncestors([]);
       handleNavigateFromProps(undefined);
@@ -162,11 +202,6 @@ export const useBreadcrumbs = ({
   };
 
   return {
-    // Methods to be used by the parent.
-    update,
-    resetAncestors,
-    // Props to be passed to the component.
-    ancestors,
     onGoBack,
     goToSpaces,
   };

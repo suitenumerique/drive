@@ -17,7 +17,7 @@ export const EmbeddedExplorerGridUpdatedAtCell = (
     <Draggable id={params.cell.id} item={item} disabled={disableDrag}>
       <div className="explorer__grid__item__last-update">
         <Tooltip content={params.row.original.updated_at.toLocaleString()}>
-          <span>{timeAgo(params.row.original.updated_at)}</span>
+          <span>{timeAgo(new Date(item.updated_at))}</span>
         </Tooltip>
       </div>
     </Draggable>

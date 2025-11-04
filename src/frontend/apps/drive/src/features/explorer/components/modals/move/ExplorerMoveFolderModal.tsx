@@ -71,7 +71,7 @@ export const ExplorerMoveFolder = ({
   const { data: item } = useQuery({
     queryKey: ["item", itemsExplorer.currentItemId],
     queryFn: () => getDriver().getItem(itemsExplorer.currentItemId!),
-    enabled: itemsExplorer.currentItemId !== null,
+    enabled: !!itemsExplorer.currentItemId,
   });
 
   const onCloseModal = () => {

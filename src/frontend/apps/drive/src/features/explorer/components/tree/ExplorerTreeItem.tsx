@@ -16,6 +16,10 @@ import { useModal } from "@openfun/cunningham-react";
 import { ExplorerTreeItemActions } from "./ExplorerTreeItemActions";
 import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWorkspaceModal";
 import { ItemIcon } from "../icons/ItemIcon";
+import publicSpaceIcon from "@/assets/folder/folder-tiny-public.svg";
+import sharedSpaceIcon from "@/assets/folder/folder-tiny-shared.svg";
+import { itemIsWorkspace } from "@/features/drivers/utils";
+import { WorkspaceCategory } from "../../constants";
 
 type ExplorerTreeItemProps = NodeRendererProps<TreeDataItem<TreeItem>>;
 
@@ -30,6 +34,9 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
         <TreeViewItem
           {...props}
           onClick={() => {
+            if (item.nodeType === TreeViewNodeTypeEnum.SIMPLE_NODE) {
+              return;
+            }
             onNavigate({
               type: NavigationEventType.ITEM,
               item: item as Item,
@@ -48,8 +55,16 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
                   {item.title}
                 </span>
               )}
+              {item.nodeType === TreeViewNodeTypeEnum.SIMPLE_NODE && (
+                <span className="explorer__tree__item__title">
+                  {item.label}
+                </span>
+              )}
             </div>
-            <ExplorerTreeItemActions item={item as Item} />
+
+            {item?.nodeType === TreeViewNodeTypeEnum.NODE && (
+              <ExplorerTreeItemActions item={item as Item} />
+            )}
           </div>
           {editModal.isOpen && (
             <ExplorerEditWorkspaceModal
@@ -72,13 +87,27 @@ export const ExplorerTreeItemIcon = ({
   item: TreeViewDataType<TreeItem>;
   size?: IconSize;
 }) => {
+  if (item.nodeType === TreeViewNodeTypeEnum.SIMPLE_NODE) {
+    const isPublcNode = item.id === WorkspaceCategory.PUBLIC_SPACE;
+    const isSharedNode = item.id === WorkspaceCategory.SHARED_SPACE;
+    if (isPublcNode) {
+      return <img src={publicSpaceIcon.src} alt="" />;
+    }
+    if (isSharedNode) {
+      return <img src={sharedSpaceIcon.src} alt="" />;
+    }
+  }
+
   if (item.nodeType === TreeViewNodeTypeEnum.NODE) {
+    const isWorkspace = itemIsWorkspace(item as Item);
+    const isMainWorkspace = item.main_workspace;
+    const isSimpleFolder = !isWorkspace && !isMainWorkspace;
     return (
       <ItemIcon
         item={item as Item}
         type="mini"
         isTree
-        size={IconSize.X_SMALL}
+        size={isSimpleFolder ? IconSize.SMALL : IconSize.X_SMALL}
       />
     );
   }
