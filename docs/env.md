@@ -85,6 +85,15 @@ This document lists all configurable environment variables for the Drive applica
 | `POSTHOG_HOST` | PostHog analytics host URL | `https://eu.i.posthog.com` |
 | `POSTHOG_KEY` | PostHog analytics API key | `None` |
 | `REDIS_URL` | Redis connection URL | `redis://redis:6379/0` |
+| `SEARCH_INDEXER_ALLOWED_MIMETYPES` | Indexable files mimetypes | `["text/"]` |
+| `SEARCH_INDEXER_CLASS` | Class of the backend for item indexation & search ||
+| `SEARCH_INDEXER_BATCH_SIZE` | Size of each batch for indexation of all items | `1000` |
+| `SEARCH_INDEXER_COUNTDOWN` | Minimum debounce delay of indexation jobs (in seconds) | 1 |
+| `SEARCH_INDEXER_MIMETYPES` | Find application endpoint for search | `None` |
+| `SEARCH_INDEXER_QUERY_URL` | Find application endpoint for search | `None` |
+| `SEARCH_INDEXER_SECRET` | Token for indexation queries | `None` |
+| `SEARCH_INDEXER_UPLOAD_MAX_SIZE` | Maximum size for an indexable file | `2097152` |
+| `SEARCH_INDEXER_URL` | Find application endpoint for indexation | `None` |
 | `SENTRY_DSN` | Sentry DSN for error tracking | `None` |
 | `SPECTACULAR_SETTINGS_ENABLE_DJANGO_DEPLOY_CHECK` | Enable Django deploy check in Spectacular | `False` |
 | `STORAGES_STATICFILES_BACKEND` | Backend for static files storage | `whitenoise.storage.CompressedManifestStaticFilesStorage` |
