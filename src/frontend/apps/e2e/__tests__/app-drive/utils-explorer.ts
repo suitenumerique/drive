@@ -22,7 +22,15 @@ export const expectExplorerBreadcrumbs = async (
   }
 };
 
-export const expectCurrentFolder = async (page: Page, expected: string[]) => {
-  await expectTreeItemIsSelected(page, expected[expected.length - 1]);
+export const expectCurrentFolder = async (
+  page: Page,
+  expected: string[],
+  isSelected: boolean = false
+) => {
+  await expectTreeItemIsSelected(
+    page,
+    expected[expected.length - 1],
+    isSelected
+  );
   await expectExplorerBreadcrumbs(page, expected);
 };

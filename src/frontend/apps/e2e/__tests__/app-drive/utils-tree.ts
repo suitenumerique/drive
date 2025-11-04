@@ -3,9 +3,6 @@ import { expect, Page } from "@playwright/test";
 export const getItemTree = async (page: Page, itemTitle: string) => {
   const item = page.getByRole("treeitem").filter({ hasText: itemTitle });
   let itemTree = item.first();
-  if (itemTitle === "My workspace") {
-    itemTree = item.nth(1);
-  }
   await expect(itemTree).toBeVisible();
   return itemTree;
 };
@@ -65,6 +62,25 @@ export const addChildrenFromTreeItem = async (
   await page.getByRole("button", { name: "Create" }).click();
 };
 
+export const openTreeNode = async (page: Page, itemTitle: string) => {
+  const item = await getItemTree(page, itemTitle);
+  await expect(item).toBeVisible();
+
+  // Check if node is already open (has keyboard_arrow_down icon)
+  const downArrow = item.getByText("keyboard_arrow_down");
+  const isOpen = await downArrow.isVisible().catch(() => false);
+
+  if (isOpen) {
+    // Node is already open, nothing to do
+    return;
+  }
+
+  // Node is closed, open it
+  const arrow = item.getByText("keyboard_arrow_right");
+  await expect(arrow).toBeVisible();
+  await arrow.click();
+};
+
 export const clickOnItemInTree = async (page: Page, itemTitle: string) => {
   const item = await getItemTree(page, itemTitle);
   await expect(item).toBeVisible();
@@ -74,10 +90,14 @@ export const clickOnItemInTree = async (page: Page, itemTitle: string) => {
 
 export const expectTreeItemIsSelected = async (
   page: Page,
-  itemTitle: string
+  itemTitle: string,
+  isSelected: boolean = true
 ) => {
   const item = await getItemTree(page, itemTitle);
-  await expect(item).toHaveAttribute("aria-selected", "true");
+  await expect(item).toHaveAttribute(
+    "aria-selected",
+    isSelected ? "true" : "false"
+  );
 };
 
 export const deleteFolderInTree = async (page: Page, itemTitle: string) => {

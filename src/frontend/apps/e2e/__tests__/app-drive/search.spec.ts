@@ -1,6 +1,9 @@
 import test, { expect } from "@playwright/test";
-import { clearDb, getStorageState, login, runFixture } from "./utils-common";
-import { expectCurrentFolder } from "./utils-explorer";
+import { clearDb, login, runFixture } from "./utils-common";
+import {
+  expectCurrentFolder,
+  expectExplorerBreadcrumbs,
+} from "./utils-explorer";
 
 test("Search somes items and shows them in the search modal", async ({
   page,
@@ -65,7 +68,7 @@ test("Search folder and click on it", async ({ page }) => {
   const button = page.getByRole("option", { name: "Meetings" });
   await button.click();
 
-  await expectCurrentFolder(page, ["Dev Team", "Meetings"]);
+  await expectExplorerBreadcrumbs(page, ["Dev Team", "Meetings"]);
 });
 
 test("Search file and click on it", async ({ page }) => {

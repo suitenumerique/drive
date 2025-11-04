@@ -14,10 +14,7 @@ export const keyCloakSignIn = async (
   fromHome: boolean = true
 ) => {
   if (fromHome) {
-    await page
-      .getByRole("button", { name: "Participate to the alpha" })
-      .first()
-      .click();
+    await page.getByRole("button", { name: "Sign in" }).first().click();
   }
 
   await expect(page.getByText("Sign in to your account").first()).toBeVisible();
