@@ -24,7 +24,7 @@ function canPickItem(item: Item) {
     return true;
   }
   // Means that anyway we can set the link_reach to public.
-  if (item.abilities.update) {
+  if (item.abilities?.update) {
     return true;
   }
   return false;

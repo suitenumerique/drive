@@ -69,7 +69,7 @@ export class StandardDriver extends Driver {
 
   async getTrashItems(filters?: ItemFilters): Promise<Item[]> {
     const response = await fetchAPI(`items/trashbin/`, {
-      params: { ...filters, page_size: "100000" },
+      params: { ...filters, page_size: 200 },
     });
     const data = await response.json();
     return jsonToItems(data.results);
@@ -120,8 +120,8 @@ export class StandardDriver extends Driver {
     filters?: ItemFilters
   ): Promise<PaginatedChildrenResult> {
     const params = {
-      page: "1",
-      page_size: filters?.page_size || "100000",
+      page: 1,
+      page_size: filters?.page_size || 200,
       ordering: "-type,-created_at",
       ...(filters ? filters : {}),
     };

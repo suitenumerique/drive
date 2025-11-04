@@ -9,6 +9,7 @@
   padding: 0 var(--c--globals--spacings--md);
   flex-grow: 1;
   display: flex;
+  overflow-y: auto;
 
   &__page {
     height: calc(100vh - 50px);

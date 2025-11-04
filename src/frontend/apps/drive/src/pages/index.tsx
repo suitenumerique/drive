@@ -10,7 +10,6 @@ import {
   IconType,
 } from "@gouvfr-lasuite/ui-kit";
 import { login, useAuth } from "@/features/auth/Auth";
-import { gotoLastVisitedItem } from "@/features/explorer/utils/utils";
 import { useEffect } from "react";
 import logoGouv from "@/assets/logo-gouv.svg";
 import banner from "@/assets/home/banner.png";
@@ -43,7 +42,7 @@ export default function HomePage() {
         sessionStorage.removeItem(SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL);
         window.location.href = attemptedUrl;
       } else {
-        gotoLastVisitedItem();
+        window.location.href = `/explorer/items/${user.main_workspace.id}`;
       }
     }
   }, [user]);
