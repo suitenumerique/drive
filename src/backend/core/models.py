@@ -775,6 +775,7 @@ class Item(TreeModel, BaseModel):
         return {
             "accesses_manage": is_owner_or_admin,
             "accesses_view": has_access_role,
+            "breadcrumb": can_get,
             "children_list": can_get,
             "children_create": can_update and user.is_authenticated,
             "destroy": can_destroy,

@@ -438,6 +438,15 @@ class CreateItemSerializer(ItemSerializer):
         raise NotImplementedError("Update method can not be used.")
 
 
+class BreadcrumbItemSerializer(serializers.ModelSerializer):
+    """Serialize breadcrumb items."""
+
+    class Meta:
+        model = models.Item
+        fields = ["id", "title", "path", "depth", "main_workspace"]
+        read_only_fields = ["id", "title", "path", "depth", "main_workspace"]
+
+
 class UserSerializer(serializers.ModelSerializer):
     """Serialize users."""
 

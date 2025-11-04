@@ -430,6 +430,7 @@ class ItemViewSet(
     create_serializer_class = serializers.CreateItemSerializer
     tree_serializer_class = serializers.ListItemSerializer
     search_serializer_class = serializers.SearchItemSerializer
+    breadcrumb_serializer_class = serializers.BreadcrumbItemSerializer
 
     def annotate_is_favorite(self, queryset):
         """
@@ -957,6 +958,39 @@ class ItemViewSet(
         return drf.response.Response(
             utils.flat_to_nested(serializer.data), status=drf.status.HTTP_200_OK
         )
+
+    @drf.decorators.action(detail=True, methods=["get"])
+    def breadcrumb(self, request, *args, **kwargs):
+        """
+        List the breadcrumb for an item
+        """
+        item = self.get_object()
+
+        highest_ancestor = (
+            self.queryset.filter(
+                path__ancestors=item.path, ancestors_deleted_at__isnull=True
+            )
+            .readable_per_se(request.user)
+            .only("path")
+            .order_by("path")
+            .first()
+        )
+
+        if not highest_ancestor:
+            raise (
+                drf.exceptions.PermissionDenied()
+                if request.user.is_authenticated
+                else drf.exceptions.NotAuthenticated()
+            )
+
+        breadcrumb = self.queryset.filter(
+            path__ancestors=item.path,
+            path__descendants=highest_ancestor.path,
+            ancestors_deleted_at__isnull=True,
+        ).order_by("path")
+
+        serializer = self.get_serializer(breadcrumb, many=True)
+        return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
     @drf.decorators.action(
         detail=False,

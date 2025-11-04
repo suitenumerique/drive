@@ -43,6 +43,7 @@ def test_models_sub_item_abilities_downgraded():
     assert child.get_abilities(user) == {
         "accesses_manage": False,
         "accesses_view": True,
+        "breadcrumb": True,
         "children_create": True,
         "children_list": True,
         "destroy": True,
@@ -69,6 +70,7 @@ def test_models_sub_item_abilities_downgraded():
     assert child.get_abilities(user) == {
         "accesses_manage": False,
         "accesses_view": True,
+        "breadcrumb": True,
         "children_create": False,
         "children_list": True,
         "destroy": False,
@@ -95,6 +97,7 @@ def test_models_items_root_get_abilities_owner(django_assert_num_queries):
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
+        "breadcrumb": True,
         "children_create": True,
         "children_list": True,
         "destroy": True,
@@ -127,6 +130,7 @@ def test_models_items_root_get_abilities_administrator(django_assert_num_queries
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
+        "breadcrumb": True,
         "children_create": True,
         "children_list": True,
         "destroy": False,
@@ -158,6 +162,7 @@ def test_models_items_root_get_abilities_editor_user(django_assert_num_queries):
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": True,
+        "breadcrumb": True,
         "children_create": True,
         "children_list": True,
         "destroy": False,
@@ -190,6 +195,7 @@ def test_models_items_root_get_abilities_reader_user(django_assert_num_queries):
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": True,
+        "breadcrumb": True,
         "children_create": access_from_link,
         "children_list": True,
         "destroy": False,
