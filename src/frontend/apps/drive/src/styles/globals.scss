@@ -21,6 +21,7 @@
 @use "./../features/items/components/ItemInfo.scss";
 @use "./../features/explorer/components/icons/ItemIcon.scss";
 @use "./../features/ui/components/spinner/SpinnerPage.scss";
+@use "./../features/ui/components/infinite-scroll/InfiniteScroll.scss";
 @use "./../features/layouts/components/left-panel/LeftPanelMobile.scss";
 @use "./../pages/index.scss" as *;
 @use "./../pages/sdk/index.scss" as *;

@@ -1,0 +1,12 @@
+.infinite-scroll {
+  &__loading-component {
+    display: flex;
+    justify-content: center;
+    padding: 10px;
+  }
+
+  &__trigger {
+    min-height: 20px;
+    margin-top: 10px;
+  }
+}
