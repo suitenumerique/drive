@@ -1,5 +1,10 @@
 import { fetchAPI } from "@/features/api/fetchApi";
-import { Driver, ItemFilters, UserFilters } from "../Driver";
+import {
+  Driver,
+  ItemFilters,
+  PaginatedChildrenResult,
+  UserFilters,
+} from "../Driver";
 import {
   DTODeleteInvitation,
   DTOCreateInvitation,
@@ -13,6 +18,7 @@ import {
   APIList,
   Invitation,
   Item,
+  ItemBreadcrumb,
   ItemType,
   User,
   WopiInfo,
@@ -26,12 +32,31 @@ export class StandardDriver extends Driver {
     return data;
   }
 
-  async getItems(filters = {}): Promise<Item[]> {
+  async getItems(filters: ItemFilters = {}): Promise<PaginatedChildrenResult> {
+    const params = {
+      page: 1,
+      page_size: 100,
+      ordering: "-type,-created_at",
+      ...(filters ? filters : {}),
+    };
     const response = await fetchAPI(`items/`, {
-      params: filters,
+      params,
     });
     const data = await response.json();
-    return jsonToItems(data.results);
+    return {
+      children: jsonToItems(data.results),
+      pagination: {
+        currentPage: filters.page ?? 1,
+        totalCount: data.count,
+        hasMore: data.next !== null,
+      },
+    };
+  }
+
+  async getItemBreadcrumb(id: string): Promise<ItemBreadcrumb[]> {
+    const response = await fetchAPI(`items/${id}/breadcrumb/`);
+    const data = await response.json();
+    return data;
   }
 
   async searchItems(filters?: ItemFilters): Promise<Item[]> {
@@ -90,17 +115,30 @@ export class StandardDriver extends Driver {
     return data;
   }
 
-  async getChildren(id: string, filters?: ItemFilters): Promise<Item[]> {
+  async getChildren(
+    id: string,
+    filters?: ItemFilters
+  ): Promise<PaginatedChildrenResult> {
     const params = {
-      page_size: "100000",
+      page: "1",
+      page_size: filters?.page_size || "100000",
       ordering: "-type,-created_at",
       ...(filters ? filters : {}),
     };
+
     const response = await fetchAPI(`items/${id}/children/`, {
       params,
     });
     const data = await response.json();
-    return jsonToItems(data.results);
+
+    return {
+      children: jsonToItems(data.results),
+      pagination: {
+        currentPage: params.page,
+        totalCount: data.count,
+        hasMore: data.next !== null,
+      },
+    };
   }
 
   async getTree(id: string): Promise<Item> {

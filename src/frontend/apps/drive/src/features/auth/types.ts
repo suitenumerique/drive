@@ -1,3 +1,5 @@
+import { Item } from "../drivers/types";
+
 /**
  * Represents user retrieved from the API.
  * @interface User
@@ -9,4 +11,5 @@ export interface User {
   id: string;
   email: string;
   language: string;
+  main_workspace: Item;
 }

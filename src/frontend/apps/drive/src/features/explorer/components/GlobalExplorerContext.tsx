@@ -231,8 +231,28 @@ export const GlobalExplorerProvider = ({
       <TreeProvider
         initialTreeData={[]}
         initialNodeId={initialId}
-        onLoadChildren={async (id) => {
-          const children = await driver.getChildren(id, {
+        onLoadChildren={async (id, page) => {
+          if (id === "SHARED_SPACE" || id === "PUBLIC_SPACE") {
+            const workspaces =
+              id === "SHARED_SPACE"
+                ? WorkspaceType.SHARED
+                : WorkspaceType.PUBLIC;
+            const response = await driver.getItems({
+              page: page,
+              workspaces,
+            });
+
+            const result = response.children.map((item) =>
+              itemToTreeItem(item, id)
+            ) as TreeViewDataType<Item>[];
+
+            return {
+              children: result,
+              pagination: response.pagination,
+            };
+          }
+          const data = await driver.getChildren(id, {
+            page: page,
             type: ItemType.FOLDER,
           });
 
@@ -295,7 +315,7 @@ const TreeProviderInitializer = ({
   const treeContext = useTreeContext<TreeItem>();
 
   // TODO: Move to global tree context?
-  useEffect(() => {
+  useEffect(async async () => {
     if (!firstLevelItems) {
       return;
     }
@@ -326,8 +346,10 @@ const TreeProviderInitializer = ({
       items.push(mainWorkspace);
     }
 
-    const sharedWorkspaces = getWorkspacesByType(WorkspaceType.SHARED);
-    const publicWorkspaces = getWorkspacesByType(WorkspaceType.PUBLIC);
+    const sharedWorkspaces = await driver.getItems({
+      workspaces: WorkspaceType.SHARED,
+      page: 1,
+    });
 
     if (sharedWorkspaces.length > 0) {
       // We add a separator and the shared space node
@@ -347,12 +369,13 @@ const TreeProviderInitializer = ({
       items.push(...sharedWorkspaces);
     }
 
-    if (publicWorkspaces.length > 0) {
-      const separator: TreeViewDataType<TreeItem> = {
-        id: "SEPARATOR_PUBLIC",
-        nodeType: TreeViewNodeTypeEnum.SEPARATOR,
-      };
-      const publicSpace: TreeViewDataType<TreeItem> = {
+    const publicWorkspaces = await driver.getItems({
+      workspaces: WorkspaceType.PUBLIC,
+      page: 1,
+    });
+
+    if (publicWorkspaces.children.length > 0) {
+      const publicWorkspaceNode: TreeViewDataType<TreeItem> = {
         id: "PUBLIC_SPACE",
         nodeType: TreeViewNodeTypeEnum.TITLE,
         headerTitle: t("explorer.tree.public_space"),

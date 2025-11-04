@@ -24,6 +24,14 @@ export enum ItemUploadState {
   READY = "ready",
 }
 
+export type ItemBreadcrumb = {
+  id: string;
+  title: string;
+  path: string;
+  depth: number;
+  main_workspace: boolean;
+};
+
 export type Item = {
   id: string;
   title: string;
@@ -42,6 +50,7 @@ export type Item = {
   created_at: Date;
   children?: Item[];
   parents?: Item[];
+  breadcrumb?: ItemBreadcrumb[];
   numchild?: number;
   nb_accesses?: number;
   numchild_folder?: number;

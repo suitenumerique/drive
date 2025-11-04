@@ -33,13 +33,13 @@ export interface fetchAPIOptions {
 
 export const fetchAPI = async (
   input: string,
-  init?: RequestInit & { params?: Record<string, string> },
+  init?: RequestInit & { params?: Record<string, string | number> },
   options?: fetchAPIOptions
 ) => {
   const apiUrl = new URL(`${baseApiUrl("1.0")}${input}`);
   if (init?.params) {
     Object.entries(init.params).forEach(([key, value]) => {
-      apiUrl.searchParams.set(key, value);
+      apiUrl.searchParams.set(key, String(value));
     });
   }
   const csrfToken = getCSRFToken();
