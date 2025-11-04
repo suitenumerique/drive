@@ -9,11 +9,13 @@ import { useCallback } from "react";
 interface NotSupportedPreviewProps {
   file: FilePreviewType;
   onDownload?: (file: FilePreviewType) => void;
+  title?: string;
 }
 
 export const NotSupportedPreview = ({
   file,
   onDownload,
+  title,
 }: NotSupportedPreviewProps) => {
   const { t } = useTranslation();
 
@@ -27,7 +29,7 @@ export const NotSupportedPreview = ({
         <FileIcon file={file} size="xlarge" />
       </div>
       <p className="file-preview-unsupported__title">
-        {t("file_preview.unsupported.title")}
+        {title || t("file_preview.unsupported.title")}
       </p>
       <p className="file-preview-unsupported__description">
         {t("file_preview.unsupported.description")}

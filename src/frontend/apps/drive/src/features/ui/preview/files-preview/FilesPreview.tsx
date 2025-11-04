@@ -94,6 +94,16 @@ export const FilePreview = ({
 
     switch (currentFile.category) {
       case MimeCategory.IMAGE:
+        if (currentFile.mimetype.includes("heic")) {
+          return (
+            <NotSupportedPreview
+              title={t("file_preview.unsupported.heic_title")}
+              file={currentFile}
+              onDownload={handleDownload}
+            />
+          );
+        }
+
         return (
           <ImageViewer
             src={currentFile.url_preview}
