@@ -133,7 +133,7 @@ const MyAppInner = ({ Component, pageProps }: AppPropsWithLayout) => {
       <QueryClientProvider client={queryClient}>
         <CunninghamProvider
           currentLocale={capitalizeRegion(i18n.language)}
-          theme={theme}
+          theme={"anct"}
         >
           <ConfigProvider>
             <AnalyticsProvider>
