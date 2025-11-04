@@ -24,7 +24,7 @@ import mimeSQLiteMini from "@/assets/files/icons/mime-sqlite-mini.svg";
 import mimeGristMini from "@/assets/files/icons/mime-grist-mini.svg";
 
 import mimeArchive from "@/assets/files/icons/mime-archive.svg";
-import { getExtension } from "../utils/utils";
+import { getExtension, getExtensionFromName } from "../utils/utils";
 
 export enum MimeCategory {
   CALC = "calc",
@@ -122,6 +122,96 @@ Object.entries(MIME_MAP).forEach(([category, mimes]) => {
 
 export const CALC_EXTENSIONS = ["numbers", "xlsx", "xls"];
 
+// Common file extensions known to the system
+export const KNOWN_EXTENSIONS = new Set([
+  // Documents
+  "doc",
+  "docx",
+  "docm",
+  "odt",
+  "rtf",
+  "txt",
+  "pdf",
+  // Spreadsheets
+  "xls",
+  "xlsx",
+  "xlsm",
+  "ods",
+  "csv",
+  "numbers",
+  // Presentations
+  "ppt",
+  "pptx",
+  "pptm",
+  "odp",
+  // Images
+  "jpg",
+  "jpeg",
+  "png",
+  "gif",
+  "bmp",
+  "svg",
+  "webp",
+  "ico",
+  "tiff",
+  "tif",
+  "heic",
+  "heif",
+  // Audio
+  "mp3",
+  "wav",
+  "flac",
+  "aac",
+  "ogg",
+  "oga",
+  "wma",
+  "m4a",
+  // Video
+  "mp4",
+  "avi",
+  "mov",
+  "wmv",
+  "flv",
+  "webm",
+  "mkv",
+  "m4v",
+  "3gp",
+  // Archives
+  "zip",
+  "rar",
+  "7z",
+  "tar",
+  "gz",
+  "bz2",
+  "xz",
+  // Database
+  "db",
+  "sqlite",
+  "sqlite3",
+  "grist",
+  // Other common
+  "html",
+  "htm",
+  "xml",
+  "json",
+  "js",
+  "ts",
+  "css",
+  "scss",
+  "py",
+  "java",
+  "cpp",
+  "c",
+  "h",
+  "php",
+  "rb",
+  "go",
+  "rs",
+  "md",
+  "yaml",
+  "yml",
+]);
+
 export const getMimeCategory = (
   mimetype: string,
   extension?: string | null
@@ -181,16 +271,43 @@ export const getFormatTranslationKey = (item: Item) => {
 };
 
 /**
+ * Validates if a string is a known file extension.
+ * Checks if the extension exists in the KNOWN_EXTENSIONS set.
+ */
+const isValidExtension = (extension: string): boolean => {
+  if (!extension || extension.length === 0) {
+    return false;
+  }
+
+  // Check if extension is in lowercase in the known extensions set
+  return KNOWN_EXTENSIONS.has(extension.toLowerCase());
+};
+
+/**
  * This function removes the file extension from the filename.
+ * It only removes extensions that are in the KNOWN_EXTENSIONS set.
  */
 export const removeFileExtension = (filename: string) => {
+  if (!filename) {
+    return filename;
+  }
+
+  // Handle hidden files (starting with a dot)
   if (filename.startsWith(".")) {
     return filename;
   }
 
-  const lastDotIndex = filename.lastIndexOf(".");
-  if (lastDotIndex === -1) {
+  const extension = getExtensionFromName(filename);
+  if (!extension) {
     return filename; // No extension found
   }
-  return filename.substring(0, lastDotIndex);
+
+  // Only remove if it's a valid extension
+  if (!isValidExtension(extension)) {
+    return filename;
+  }
+
+  // Remove only the extension (including the dot)
+  const extensionLength = extension.length + 1; // +1 for the dot
+  return filename.slice(0, -extensionLength);
 };

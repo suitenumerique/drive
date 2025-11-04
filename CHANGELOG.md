@@ -8,6 +8,13 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(front) fix the issue of not being able to put spaces in a folder name
+- 🐛(front) heic files are not supported yet
+- 🐛(front) update API error handling
+- 🐛(front) enhance mimeTypes utility with known extensions and validation
+
 ## [v0.8.0] - 2025-11-18
 
 ### Added
