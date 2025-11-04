@@ -15,12 +15,14 @@ import { getParentIdFromPath, isIdInItemTree } from "../../utils/utils";
 import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWorkspaceModal";
 import { useDeleteTreeNode } from "../tree/hooks/useDeleteTreeNode";
 import { useRouter } from "next/router";
+import { useEffect } from "react";
 
 export type ItemActionDropdownProps = {
   item: Item;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   trigger: React.ReactNode;
+  onModalOpenChange?: (isModalOpen: boolean) => void;
 };
 
 export const ItemActionDropdown = ({
@@ -28,6 +30,7 @@ export const ItemActionDropdown = ({
   isOpen,
   setIsOpen,
   trigger,
+  onModalOpenChange,
 }: ItemActionDropdownProps) => {
   const router = useRouter();
   const { setRightPanelForcedItem, setRightPanelOpen } = useGlobalExplorer();
@@ -82,6 +85,22 @@ export const ItemActionDropdown = ({
       router.push(`/explorer/items/${redirectId}`);
     }
   };
+
+  useEffect(() => {
+    onModalOpenChange?.(
+      renameModal.isOpen ||
+        shareWorkspaceModal.isOpen ||
+        shareFileModal.isOpen ||
+        editWorkspaceModal.isOpen ||
+        moveModal.isOpen
+    );
+  }, [
+    renameModal.isOpen,
+    shareWorkspaceModal.isOpen,
+    shareFileModal.isOpen,
+    editWorkspaceModal.isOpen,
+    moveModal.isOpen,
+  ]);
 
   return (
     <>

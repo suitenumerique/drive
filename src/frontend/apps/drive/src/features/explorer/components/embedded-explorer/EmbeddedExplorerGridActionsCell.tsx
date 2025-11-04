@@ -17,6 +17,9 @@ export const EmbeddedExplorerGridActionsCell = (
   const disableDrag = useDisableDragGridItem(item);
   const [isOpen, setIsOpen] = useState(false);
 
+  // Disable drag when any modal is open because it conflicts with the keyboard navigation
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <div
       onClick={(e) => {
@@ -27,12 +30,13 @@ export const EmbeddedExplorerGridActionsCell = (
         id={params.cell.id}
         item={item}
         className="explorer__grid__item__actions"
-        disabled={disableDrag}
+        disabled={disableDrag || isModalOpen}
       >
         <ItemActionDropdown
           item={item}
           isOpen={isOpen}
           setIsOpen={setIsOpen}
+          onModalOpenChange={setIsModalOpen}
           trigger={
             <Button
               variant="tertiary"
