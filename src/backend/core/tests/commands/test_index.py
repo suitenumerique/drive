@@ -2,10 +2,11 @@
 Unit test for `index` command.
 """
 
+import logging
 from operator import itemgetter
 from unittest import mock
 
-from django.core.management import CommandError, call_command
+from django.core.management import call_command
 from django.db import transaction
 
 import pytest
@@ -67,11 +68,21 @@ def test_index():
 
 @pytest.mark.django_db
 @pytest.mark.usefixtures("indexer_settings")
-def test_index_improperly_configured(indexer_settings):
+def test_index_improperly_configured(indexer_settings, caplog):
     """The command should raise an exception if the indexer is not configured"""
     indexer_settings.SEARCH_INDEXER_CLASS = None
 
-    with pytest.raises(CommandError) as err:
-        call_command("index")
+    with transaction.atomic():
+        factories.ItemFactory(
+            upload_bytes=b"This is a text file content",
+            mimetype="text/plain",
+            type=models.ItemTypeChoices.FILE,
+        )
 
-    assert str(err.value) == "The indexer is not enabled or properly configured."
+    with caplog.at_level(logging.WARN):
+        with mock.patch.object(SearchIndexer, "push") as mock_push:
+            call_command("index")
+
+    mock_push.assert_not_called()
+
+    assert "The indexer is not enabled or properly configured." in caplog.messages
