@@ -6,9 +6,9 @@ oidc:
     clientSecret: ThisIsAnExampleKeyForDevPurposeOnly
 
 image:
-  repository: localhost:5001/drive-backend
+  repository: lasuite/drive-backend
   pullPolicy: Always
-  tag: "latest"
+  tag: "main"
 
 backend:
   replicas: 1
@@ -57,7 +57,7 @@ backend:
     DB_PORT: 5432
     REDIS_URL: redis://user:pass@dev-backend-redis:6379/1
     DJANGO_CELERY_BROKER_URL: redis://user:pass@dev-backend-redis:6379/1
-    AWS_S3_ENDPOINT_URL: https://drive-minio.127.0.0.1.nip.io
+    AWS_S3_ENDPOINT_URL: https://dsproxy.127.0.0.1.nip.io/upstream
     AWS_S3_ACCESS_KEY_ID: dinum
     AWS_S3_SECRET_ACCESS_KEY: password
     AWS_STORAGE_BUCKET_NAME: drive-media-storage
@@ -108,14 +108,11 @@ frontend:
     NEXT_PUBLIC_API_ORIGIN: https://drive.127.0.0.1.nip.io
 
   replicas: 1
-  command:
-    - yarn
-    - dev
 
   image:
-    repository: localhost:5001/drive-frontend
+    repository: lasuite/drive-frontend
     pullPolicy: Always
-    tag: "latest"
+    tag: "main"
 
 
 ingress:
@@ -142,7 +139,7 @@ ingressMedia:
   annotations:
     nginx.ingress.kubernetes.io/auth-url: https://drive.127.0.0.1.nip.io/api/v1.0/items/media-auth/
     nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
-    nginx.ingress.kubernetes.io/upstream-vhost: drive-minio.127.0.0.1.nip.io
+    nginx.ingress.kubernetes.io/upstream-vhost: dsproxy.127.0.0.1.nip.io
     nginx.ingress.kubernetes.io/rewrite-target: /drive-media-storage/$1
 
 ingressMediaPreview:
