@@ -26,7 +26,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "boto3==1.40.45",
-    "Brotli==1.1.0",
+    "Brotli==1.2.0",
     "dj-database-url==3.0.1",
     "celery[redis]==5.5.3",
     "defusedxml==0.7.1",
