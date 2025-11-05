@@ -11,7 +11,7 @@ repositories:
 releases:
   - name: dev-backend
     namespace: {{ .Namespace }}
-    chart: dev-backends/dev-backend
+    chart: /home/jroussel/Documents/Dinum/git/helm-dev-backend/charts/dev-backends
     version: 0.0.3
     values:
       - postgres:
@@ -76,6 +76,13 @@ releases:
             username: drive
             password: drive
             email: drive@example.com
+      - dsproxy:
+          aws_url: http://dev-backend-minio
+          enabled: true
+          ingress:
+            enabled: true
+            tls:
+              enabled: true
 
   - name: drive
     version: {{ .Values.version }}
