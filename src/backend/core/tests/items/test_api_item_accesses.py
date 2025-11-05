@@ -337,6 +337,7 @@ def test_api_item_accesses_retrieve_set_role_to_child():
         result["id"]: result["abilities"]["set_role_to"] for result in content
     }
     assert result_dict[str(item_access_other_user.id)] == [
+        "editor",
         "administrator",
         "owner",
     ]
@@ -357,7 +358,7 @@ def test_api_item_accesses_retrieve_set_role_to_child():
             [
                 ["reader", "editor", "administrator"],
                 [],
-                ["editor", "administrator"],
+                ["reader", "editor", "administrator"],
             ],
         ],
         [
@@ -365,7 +366,7 @@ def test_api_item_accesses_retrieve_set_role_to_child():
             [
                 ["reader", "editor", "administrator", "owner"],
                 [],
-                ["editor", "administrator", "owner"],
+                ["reader", "editor", "administrator", "owner"],
             ],
         ],
         [
@@ -373,7 +374,7 @@ def test_api_item_accesses_retrieve_set_role_to_child():
             [
                 ["reader", "editor", "administrator", "owner"],
                 [],
-                ["editor", "administrator", "owner"],
+                ["reader", "editor", "administrator", "owner"],
             ],
         ],
     ],
@@ -432,7 +433,7 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
             [
                 ["reader", "editor", "administrator"],
                 [],
-                ["editor", "administrator"],
+                ["reader", "editor", "administrator"],
             ],
         ],
         [
@@ -440,7 +441,7 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
             [
                 ["reader", "editor", "administrator", "owner"],
                 [],
-                ["editor", "administrator", "owner"],
+                ["reader", "editor", "administrator", "owner"],
             ],
         ],
         [
@@ -448,7 +449,7 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
             [
                 ["reader", "editor", "administrator", "owner"],
                 [],
-                ["editor", "administrator", "owner"],
+                ["reader", "editor", "administrator", "owner"],
             ],
         ],
         [
@@ -456,7 +457,7 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
             [
                 ["reader", "editor", "administrator", "owner"],
                 [],
-                ["editor", "administrator", "owner"],
+                ["reader", "editor", "administrator", "owner"],
             ],
         ],
         [
@@ -1595,7 +1596,7 @@ def test_api_item_accesses_explicit():
                 "update": True,
                 "partial_update": True,
                 "retrieve": True,
-                "set_role_to": ["administrator", "owner"],
+                "set_role_to": ["editor", "administrator", "owner"],
             },
             "max_ancestors_role": "editor",
             "max_role": "owner",
@@ -1743,10 +1744,10 @@ def test_api_item_accesses_explicit():
             "role": "owner",
             "abilities": {
                 "destroy": True,
-                "update": False,
-                "partial_update": False,
+                "update": True,
+                "partial_update": True,
                 "retrieve": True,
-                "set_role_to": [],
+                "set_role_to": ["administrator", "owner"],
             },
             "max_ancestors_role": "administrator",
             "max_role": "owner",
