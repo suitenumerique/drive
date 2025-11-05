@@ -198,6 +198,7 @@ def test_api_item_accesses_create_authenticated_administrator(
         },
         "max_ancestors_role": None,
         "max_role": role,
+        "is_explicit": True,
     }
     assert len(mail.outbox) == 1
     email = mail.outbox[0]
@@ -259,6 +260,7 @@ def test_api_item_accesses_create_authenticated_owner(via, depth, mock_user_team
     other_user = serializers.UserSerializer(instance=other_user).data
     assert response.json() == {
         "id": str(new_item_access.id),
+        "is_explicit": True,
         "user": other_user,
         "team": "",
         "role": role,

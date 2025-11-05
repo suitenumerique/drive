@@ -92,6 +92,7 @@ class ItemAccessSerializer(serializers.ModelSerializer):
     max_ancestors_role = serializers.SerializerMethodField(read_only=True)
     max_role = serializers.SerializerMethodField(read_only=True)
     item = ItemLightSerializer(read_only=True)
+    is_explicit = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = models.ItemAccess
@@ -106,6 +107,7 @@ class ItemAccessSerializer(serializers.ModelSerializer):
             "max_ancestors_role",
             "max_role",
             "item",
+            "is_explicit",
         ]
         read_only_fields = [
             "id",
@@ -113,6 +115,7 @@ class ItemAccessSerializer(serializers.ModelSerializer):
             "max_ancestors_role",
             "max_role",
             "item",
+            "is_explicit",
         ]
 
     def get_abilities(self, instance):
@@ -132,6 +135,14 @@ class ItemAccessSerializer(serializers.ModelSerializer):
             instance.max_ancestors_role,
             instance.role,
         )
+
+    def get_is_explicit(self, instance):
+        """Return whether the item access is explicit."""
+        item_id = self.context.get("resource_id")
+        if not item_id:
+            return False
+
+        return str(instance.item_id) == str(item_id)
 
     def update(self, instance, validated_data):
         """Make "user" field is readonly but only on update."""
@@ -157,6 +168,7 @@ class ItemAccessLightSerializer(ItemAccessSerializer):
             "abilities",
             "max_ancestors_role",
             "max_role",
+            "is_explicit",
         ]
         read_only_fields = [
             "id",
@@ -167,6 +179,7 @@ class ItemAccessLightSerializer(ItemAccessSerializer):
             "abilities",
             "max_ancestors_role",
             "max_role",
+            "is_explicit",
         ]
 
 

@@ -177,6 +177,7 @@ def test_api_item_accesses_list_authenticated_related_non_privileged(
                 "max_ancestors_role": None,
                 "max_role": access.role,
                 "abilities": access.get_abilities(user),
+                "is_explicit": str(access.item_id) == str(item.id),
             }
             for access in privileged_accesses
         ],
@@ -280,6 +281,7 @@ def test_api_item_accesses_list_authenticated_related_privileged(
                 "team": access.team,
                 "role": access.role,
                 "abilities": access.get_abilities(user),
+                "is_explicit": str(access.item_id) == str(item.id),
             }
             for access in ancestors_accesses + item_accesses
         ],
@@ -639,6 +641,7 @@ def test_api_item_accesses_retrieve_authenticated_related(
             "path": str(item.path),
             "depth": item.depth,
         },
+        "is_explicit": True,
     }
 
 
@@ -1515,6 +1518,7 @@ def test_api_item_accesses_explicit():
             },
             "max_ancestors_role": None,
             "max_role": "editor",
+            "is_explicit": False,
         },
         {
             "id": str(other_admin_access.id),
@@ -1541,6 +1545,7 @@ def test_api_item_accesses_explicit():
             },
             "max_ancestors_role": None,
             "max_role": "administrator",
+            "is_explicit": False,
         },
         {
             "id": str(other_owner_access.id),
@@ -1567,6 +1572,7 @@ def test_api_item_accesses_explicit():
             },
             "max_ancestors_role": None,
             "max_role": "owner",
+            "is_explicit": False,
         },
         {
             "id": str(item_access.id),
@@ -1593,6 +1599,7 @@ def test_api_item_accesses_explicit():
             },
             "max_ancestors_role": "editor",
             "max_role": "owner",
+            "is_explicit": True,
         },
     ]
 
@@ -1635,6 +1642,7 @@ def test_api_item_accesses_explicit():
             },
             "max_ancestors_role": None,
             "max_role": "administrator",
+            "is_explicit": False,
         },
         {
             "id": str(other_owner_access.id),
@@ -1661,6 +1669,7 @@ def test_api_item_accesses_explicit():
             },
             "max_ancestors_role": None,
             "max_role": "owner",
+            "is_explicit": False,
         },
         {
             "id": str(owner_access.id),
@@ -1687,6 +1696,7 @@ def test_api_item_accesses_explicit():
             },
             "max_ancestors_role": None,
             "max_role": "owner",
+            "is_explicit": False,
         },
         {
             "id": str(parent_access.id),
@@ -1713,6 +1723,7 @@ def test_api_item_accesses_explicit():
             },
             "max_ancestors_role": "editor",
             "max_role": "administrator",
+            "is_explicit": False,
         },
         {
             "id": str(item_access.id),
@@ -1739,5 +1750,6 @@ def test_api_item_accesses_explicit():
             },
             "max_ancestors_role": "administrator",
             "max_role": "owner",
+            "is_explicit": True,
         },
     ]
