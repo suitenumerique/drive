@@ -1328,7 +1328,6 @@ class ItemAccessViewSet(
     drf.mixins.CreateModelMixin,
     drf.mixins.DestroyModelMixin,
     drf.mixins.RetrieveModelMixin,
-    drf.mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
     """
@@ -1481,15 +1480,24 @@ class ItemAccessViewSet(
 
         return drf.response.Response(serialized_data)
 
-    def perform_update(self, serializer):
-        """Check that we don't change the role if it leads to losing the last owner."""
-        instance = serializer.instance
+    def update(self, request, *args, **kwargs):
+        """
+        We not use the update mixin to apply a specific behavior we can't implement using
+        perform_update method.
+
+        If the role is updated and is the same role as the max ancestors role,
+        we don't want to have two consecutive explicit accesses with the same role.
+        We have to delete the current access, this item will have an inherited access
+        with the correct role.
+        """
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        role = serializer.validated_data.get("role")
 
         # Check if the role is being updated and the new role is not "owner"
-        if (
-            "role" in self.request.data
-            and self.request.data["role"] != models.RoleChoices.OWNER
-        ):
+        if role and role != models.RoleChoices.OWNER:
             # Check if the access being updated is the last owner access for the resource
             if (
                 self.item.is_root
@@ -1500,9 +1508,24 @@ class ItemAccessViewSet(
                 message = "Cannot change the role to a non-owner role for the last owner access."
                 raise drf.exceptions.PermissionDenied({"detail": message})
 
+        if role and instance.max_ancestors_role == role:
+            # The submitted role is the same as the max ancestors role,
+            # We don't want to have two consecutive explicit accesses with the same role.
+            # We have to delete the current access, this item will have an inherited access
+            # with the correct role.
+            instance.delete()
+            return drf.response.Response(status=drf.status.HTTP_204_NO_CONTENT)
+
         access = serializer.save()
 
         self._syncronize_descendants_accesses(access)
+
+        return drf.response.Response(serializer.data)
+
+    def partial_update(self, request, *args, **kwargs):
+        """Partial update the item access."""
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         """
