@@ -449,7 +449,7 @@ def test_models_item_access_get_abilities_explicit():
         "update": True,
         "partial_update": True,
         "retrieve": True,
-        "set_role_to": ["administrator", "owner"],
+        "set_role_to": ["editor", "administrator", "owner"],
     }
 
     # Owner user on the root item, acting on the previous user's accesses.
@@ -468,5 +468,5 @@ def test_models_item_access_get_abilities_explicit():
         "update": True,
         "partial_update": True,
         "retrieve": True,
-        "set_role_to": ["administrator", "owner"],
+        "set_role_to": ["editor", "administrator", "owner"],
     }

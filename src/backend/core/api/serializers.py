@@ -122,7 +122,9 @@ class ItemAccessSerializer(serializers.ModelSerializer):
         """Return abilities of the logged-in user on the instance."""
         request = self.context.get("request")
         if request:
-            return instance.get_abilities(request.user)
+            return instance.get_abilities(
+                request.user, is_explicit=self.get_is_explicit(instance)
+            )
         return {}
 
     def get_max_ancestors_role(self, instance):

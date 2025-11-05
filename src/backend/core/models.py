@@ -1261,7 +1261,7 @@ class ItemAccess(BaseModel):
         """Cache the max_ancestors_role."""
         self._max_ancestors_role = max_ancestors_role
 
-    def get_abilities(self, user):
+    def get_abilities(self, user, is_explicit=True):
         """
         Compute and return abilities for a given user on the item access.
         """
@@ -1291,11 +1291,19 @@ class ItemAccess(BaseModel):
 
         # Filter out roles that would be lower than the one the user already has
         ancestors_role_priority = RoleChoices.get_priority(self.max_ancestors_role)
-        set_role_to = [
-            candidate_role
-            for candidate_role in set_role_to
-            if RoleChoices.get_priority(candidate_role) > ancestors_role_priority
-        ]
+        if is_explicit:
+            set_role_to = [
+                candidate_role
+                for candidate_role in set_role_to
+                if RoleChoices.get_priority(candidate_role) >= ancestors_role_priority
+            ]
+        else:
+            set_role_to = [
+                candidate_role
+                for candidate_role in set_role_to
+                if RoleChoices.get_priority(candidate_role) > ancestors_role_priority
+            ]
+
         if len(set_role_to) == 1:
             set_role_to = []
 
