@@ -66,8 +66,8 @@
       },
       "home": {
         "title": "Easy storage and sharing",
-        "subtitle": "You access to an alpha version of the service, tested internally. It has a limited scope, little storage, may contain bugs, and does not yet integrate an antivirus. Your feedback is essential to help us improve.",
-        "main_button": "Participate to the alpha",
+        "subtitle": "A modern, high-performance drive built for French public teams. Sovereign hosting in France, strong security, and seamless sync with all LaSuite apps. On par with the market’s best—without the data trade-offs.",
+        "main_button": "Sign in",
         "more": "Learn more"
       },
       "feedback": {
@@ -465,8 +465,8 @@
       },
       "home": {
         "title": "Stocker et partager facilement",
-        "subtitle": "Vous accédez à une version alpha du service, testée en interne. Elle propose un périmètre limité, peu de stockage, peut contenir des bugs, et n’intègre pas encore d’antivirus. Vos retours sont essentiels pour nous aider à l’améliorer.",
-        "main_button": "Participer à l'alpha",
+        "subtitle": "Un stockage performant et sécurisé pour les équipes publiques françaises. Hébergement en France, sécurité renforcée, et synchronisation fluide avec toutes les applications LaSuite. A la hauteur des meilleurs du marché, sans les compromis de données.",
+        "main_button": "Se connecter",
         "more": "En savoir plus"
       },
       "feedback": {
@@ -869,9 +869,9 @@
         }
       },
       "home": {
-        "title": "Eenvoudig opslaan en delen",
-        "subtitle": "U krijgt toegang tot een alfaversie van de service, die intern is getest. Deze heeft een beperkte reikwijdte, weinig opslagruimte, kan bugs bevatten en heeft nog geen antivirusprogramma geïntegreerd. Uw feedback is essentieel om ons te helpen verbeteren.",
-        "main_button": "Doe mee aan de alfa",
+        "title": "Eenvoudige opslag en delen",
+        "subtitle": "Een modern, hoogwaardig platform voor bestandenopslag ontworpen voor Franse publieke teams. Soevereine hosting in Frankrijk, sterke beveiliging en naadloze synchronisatie met alle LaSuite-apps. Even goed als de beste op de markt — zonder concessies op het gebied van data.",
+        "main_button": "Inloggen",
         "more": "Meer informatie"
       },
       "feedback": {

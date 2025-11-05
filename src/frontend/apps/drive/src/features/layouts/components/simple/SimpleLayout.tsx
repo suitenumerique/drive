@@ -1,6 +1,6 @@
 import { MainLayout } from "@gouvfr-lasuite/ui-kit";
 import { GlobalLayout } from "../global/GlobalLayout";
-import { HeaderIcon, HeaderRight } from "../header/Header";
+import { HeaderRight } from "../header/Header";
 import { Toaster } from "@/features/ui/components/toaster/Toaster";
 import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
 
@@ -21,7 +21,6 @@ export const SimpleLayout = ({ children }: { children: React.ReactNode }) => {
           enableResize
           hideLeftPanelOnDesktop={true}
           leftPanelContent={<LeftPanelMobile />}
-          icon={<HeaderIcon />}
           rightHeaderContent={<HeaderRight />}
         >
           {children}

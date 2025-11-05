@@ -1,14 +1,7 @@
 import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
 import Head from "next/head";
 import { useTranslation } from "next-i18next";
-import {
-  Hero,
-  Footer,
-  MainLayout,
-  HomeGutter,
-  Icon,
-  IconType,
-} from "@gouvfr-lasuite/ui-kit";
+import { Hero, Footer, MainLayout, HomeGutter } from "@gouvfr-lasuite/ui-kit";
 import { login, useAuth } from "@/features/auth/Auth";
 import { useEffect } from "react";
 import logoGouv from "@/assets/logo-gouv.svg";
@@ -20,11 +13,11 @@ import {
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
 import { Button } from "@openfun/cunningham-react";
-import { Feedback } from "@/features/feedback/Feedback";
 import { useConfig } from "@/features/config/ConfigProvider";
 import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
 import { SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL } from "@/features/api/fetchApi";
 import { useThemeCustomization } from "@/hooks/useThemeCustomization";
+import { Feedback } from "@/features/feedback/Feedback";
 export default function HomePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -83,19 +76,14 @@ export default function HomePage() {
           mainButton={
             <div className="c__hero__buttons">
               <div>
-                <Button
-                  onClick={() => login()}
-                  icon={<Icon name="login" />}
-                  fullWidth
-                >
+                <Button onClick={() => login()} fullWidth>
                   {t("home.main_button")}
                 </Button>
               </div>
 
               <div>
                 <Button
-                  variant="secondary"
-                  icon={<Icon name="info" type={IconType.OUTLINED} />}
+                  variant="bordered"
                   fullWidth
                   href={config?.FRONTEND_MORE_LINK}
                   target="_blank"

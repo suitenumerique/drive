@@ -43,7 +43,6 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
         }
 
         > span {
-          color: var(--c--theme--colors--greyscale-500);
           text-align: left;
         }
       }

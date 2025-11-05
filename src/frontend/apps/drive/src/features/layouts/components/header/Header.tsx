@@ -6,11 +6,11 @@ import { useTranslation } from "react-i18next";
 import { ExplorerSearchButton } from "@/features/explorer/components/app-view/ExplorerSearchButton";
 import { getDriver } from "@/features/config/Config";
 import { useConfig } from "@/features/config/ConfigProvider";
-import { Feedback } from "@/features/feedback/Feedback";
 import { LoginButton } from "@/features/auth/components/LoginButton";
 import { Item } from "@/features/drivers/types";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { useIsMinimalLayout } from "@/utils/useLayout";
+import { Feedback } from "@/features/feedback/Feedback";
 
 export const HeaderIcon = () => {
   return (
