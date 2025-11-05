@@ -38,7 +38,7 @@ def test_api_item_accesses_list_anonymous():
 
 def test_api_item_accesses_list_authenticated_unrelated():
     """
-    Authenticated users should not be allowed to list item accesses for a item
+    Authenticated users should not be allowed to list item accesses for an item
     to which they are not related.
     """
     user = factories.UserFactory()
@@ -528,7 +528,7 @@ def test_api_item_accesses_list_authenticated_related_same_team(
 
 def test_api_item_accesses_retrieve_anonymous():
     """
-    Anonymous users should not be allowed to retrieve a item access.
+    Anonymous users should not be allowed to retrieve an item access.
     """
     access = factories.UserItemAccessFactory()
 
@@ -646,8 +646,11 @@ def test_api_item_accesses_retrieve_authenticated_related(
     }
 
 
+## Update --
+
+
 def test_api_item_accesses_update_anonymous():
-    """Anonymous users should not be allowed to update a item access."""
+    """Anonymous users should not be allowed to update an item access."""
     access = factories.UserItemAccessFactory()
     old_values = serializers.ItemAccessSerializer(instance=access).data
 
@@ -673,7 +676,7 @@ def test_api_item_accesses_update_anonymous():
 
 def test_api_item_accesses_update_authenticated_unrelated():
     """
-    Authenticated users should not be allowed to update a item access for a item to which
+    Authenticated users should not be allowed to update an item access for an item to which
     they are not related.
     """
     user = factories.UserFactory()
@@ -708,7 +711,7 @@ def test_api_item_accesses_update_authenticated_unrelated():
 def test_api_item_accesses_update_authenticated_reader_or_editor(
     via, role, mock_user_teams
 ):
-    """Readers or editors of a item should not be allowed to update its accesses."""
+    """Readers or editors of an item should not be allowed to update its accesses."""
     user = factories.UserFactory()
 
     client = APIClient()
@@ -806,7 +809,7 @@ def test_api_item_accesses_update_administrator_except_owner(
 @pytest.mark.parametrize("via", VIA)
 def test_api_item_accesses_update_administrator_from_owner(via, mock_user_teams):
     """
-    A user who is an administrator in a item, should not be allowed to update
+    A user who is an administrator in an item, should not be allowed to update
     the user access of an "owner" for this item.
     """
     user = factories.UserFactory()
@@ -850,7 +853,7 @@ def test_api_item_accesses_update_administrator_to_owner(
     mock_user_teams,
 ):
     """
-    A user who is an administrator in a item, should not be allowed to update
+    A user who is an administrator in an item, should not be allowed to update
     the user access of another user to grant item ownership.
     """
     user = factories.UserFactory()
@@ -911,7 +914,7 @@ def test_api_item_accesses_update_owner(
     mock_user_teams,
 ):
     """
-    A user who is an owner in a item should be allowed to update
+    A user who is an owner in an item should be allowed to update
     a user access for this item whatever the role.
     """
     user = factories.UserFactory()
@@ -969,7 +972,7 @@ def test_api_item_accesses_update_owner_self(
     mock_user_teams,
 ):
     """
-    A user who is owner of a item should be allowed to update
+    A user who is owner of an item should be allowed to update
     their own user access provided there are other owners in the item.
     """
     user = factories.UserFactory()
@@ -1215,11 +1218,48 @@ def test_api_item_accesses_update_authenticated_owner_syncronize_descendants_acc
     )
 
 
+def test_api_item_accesses_update_to_same_role_as_max_ancestors_role():
+    """
+    If the role is updated and is the same role as the max ancestors role,
+    The current access is deleted and a 204 status code is returned.
+    """
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    # Create an explicit owner access for the current user on the root item
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+
+    other_user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=root, user=other_user, role="editor")
+    target_access = factories.UserItemAccessFactory(
+        item=item, user=other_user, role="administrator"
+    )
+
+    assert item.get_role(other_user) == "administrator"
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).exists()
+
+    response = client.put(
+        f"/api/v1.0/items/{item.id!s}/accesses/{target_access.id!s}/",
+        data={"role": "editor"},
+    )
+
+    assert response.status_code == 204
+
+    assert item.get_role(other_user) == "editor"
+    assert not models.ItemAccess.objects.filter(item=item, user=other_user).exists()
+
+
 # Delete
 
 
 def test_api_item_accesses_delete_anonymous():
-    """Anonymous users should not be allowed to destroy a item access."""
+    """Anonymous users should not be allowed to destroy an item access."""
     user = factories.UserFactory()
     item = user.get_main_workspace()
     access = models.ItemAccess.objects.get(user=user, role="owner", item=item)
@@ -1234,7 +1274,7 @@ def test_api_item_accesses_delete_anonymous():
 
 def test_api_item_accesses_delete_authenticated():
     """
-    Authenticated users should not be allowed to delete a item access for a
+    Authenticated users should not be allowed to delete an item access for a
     item to which they are not related.
     """
     user = factories.UserFactory()
@@ -1258,7 +1298,7 @@ def test_api_item_accesses_delete_authenticated():
 @pytest.mark.parametrize("via", VIA)
 def test_api_item_accesses_delete_reader_or_editor(via, role, mock_user_teams):
     """
-    Authenticated users should not be allowed to delete a item access for a
+    Authenticated users should not be allowed to delete an item access for a
     item in which they are a simple reader or editor.
     """
     user = factories.UserFactory()
@@ -1292,7 +1332,7 @@ def test_api_item_accesses_delete_administrators_except_owners(
     mock_user_teams,
 ):
     """
-    Users who are administrators in a item should be allowed to delete an access
+    Users who are administrators in an item should be allowed to delete an access
     from the item provided it is not ownership.
     """
     user = factories.UserFactory()
@@ -1325,7 +1365,7 @@ def test_api_item_accesses_delete_administrators_except_owners(
 @pytest.mark.parametrize("via", VIA)
 def test_api_item_accesses_delete_administrator_on_owners(via, mock_user_teams):
     """
-    Users who are administrators in a item should not be allowed to delete an ownership
+    Users who are administrators in an item should not be allowed to delete an ownership
     access from the item.
     """
     user = factories.UserFactory()
@@ -1360,7 +1400,7 @@ def test_api_item_accesses_delete_owners(
 ):
     """
     Users should be able to delete the item access of another user
-    for a item of which they are owner.
+    for an item of which they are owner.
     """
     user = factories.UserFactory()
 
@@ -1390,7 +1430,7 @@ def test_api_item_accesses_delete_owners(
 @pytest.mark.parametrize("via", VIA)
 def test_api_item_accesses_delete_owners_last_owner(via, mock_user_teams):
     """
-    It should not be possible to delete the last owner access from a item
+    It should not be possible to delete the last owner access from an item
     """
     user = factories.UserFactory()
 
