@@ -4,7 +4,6 @@
 import json
 import logging
 import re
-from collections import defaultdict
 from urllib.parse import unquote, urlparse
 
 from django.conf import settings
@@ -1412,14 +1411,12 @@ class ItemAccessViewSet(
         if not role:
             return drf.response.Response([])
 
-        ancestor_qs = (
-            self.item.ancestors() | models.Item.objects.filter(pk=self.item.pk)
-        ).filter(ancestors_deleted_at__isnull=True)
-        ancestor_items = list(ancestor_qs.order_by("path"))
-        ancestor_ids = [item.id for item in ancestor_items]
+        ancestors_qs = models.Item.objects.filter(
+            path__ancestors=self.item.path, ancestors_deleted_at__isnull=True
+        )
+        ancestor_items = list(ancestors_qs.order_by("path"))
 
-        queryset = self.get_queryset().filter(item__in=ancestor_ids)
-
+        queryset = self.get_queryset().filter(item__in=ancestors_qs)
         if role not in PRIVILEGED_ROLES:
             # Restrict the queryset to only privileged roles
             # to not leak information to non-privileged users
@@ -1427,35 +1424,26 @@ class ItemAccessViewSet(
             
         accesses = list(queryset.order_by("item__path", "created_at"))
 
-        # Annotate more information on roles
-        target_to_accesses = defaultdict(list)
+        max_role_by_target = {}
+        user_roles_by_path = {}
+        accesses_by_target = {}
         for access in accesses:
-            target_to_accesses[access.target_key].append(access)
+            previous_role = max_role_by_target.get(access.target_key)
+            access.max_ancestors_role = previous_role
+            max_role_by_target[access.target_key] = models.RoleChoices.max(
+                previous_role, access.role
+            )
 
-        for target_accesses in target_to_accesses.values():
-            highest_role_on_ancestors = None
-            for access in target_accesses:
-                access.max_ancestors_role = highest_role_on_ancestors
-                highest_role_on_ancestors = models.RoleChoices.max(
-                    highest_role_on_ancestors, access.role
-                )
+            accesses_by_target.setdefault(access.target_key, []).append(access)
 
-        request_teams = set(getattr(user, "teams", []))
-        request_target_keys = set()
-        if user.is_authenticated:
-            request_target_keys.add(f"user:{user.id}")
-            request_target_keys.update(f"team:{team}" for team in request_teams)
-
-        user_roles_by_path: dict[str, str | None] = {}
-        for access in accesses:
             if access.target_key in request_target_keys:
                 path = str(access.item.path)
                 user_roles_by_path[path] = models.RoleChoices.max(
                     user_roles_by_path.get(path), access.role
                 )
 
-        user_ancestor_role_by_path: dict[str, str | None] = {}
-        user_max_role_by_path: dict[str, str | None] = {}
+        user_ancestor_role_by_path = {}
+        user_max_role_by_path = {}
         for ancestor in ancestor_items:
             path = str(ancestor.path)
             parent_path = str(ancestor.path[:-1]) if ancestor.depth > 1 else ""
@@ -1465,11 +1453,24 @@ class ItemAccessViewSet(
                 ancestors_role, user_roles_by_path.get(path)
             )
 
+        selected_access_ids = set()
+        for target_accesses in accesses_by_target.values():
+            target_accesses.sort(
+                key=lambda item_access: (
+                    item_access.item.depth if item_access.item_id else 0,
+                    item_access.created_at,
+                ),
+                reverse=True,
+            )
+            selected_access_ids.update(access.pk for access in target_accesses[:2])
+
         # serialize and return the response
         context = self.get_serializer_context()
         serializer_class = self.get_serializer_class()
         serialized_data = []
         for access in accesses:
+            if access.pk not in selected_access_ids:
+                continue
             path = str(access.item.path)
             access.set_user_roles_tuple(
                 user_ancestor_role_by_path.get(path),
