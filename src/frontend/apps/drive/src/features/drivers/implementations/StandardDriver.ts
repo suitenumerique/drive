@@ -154,9 +154,10 @@ export class StandardDriver extends Driver {
     });
   }
 
-  async getItemAccesses(itemId: string): Promise<APIList<Access>> {
+  async getItemAccesses(itemId: string): Promise<Access[]> {
     const response = await fetchAPI(`items/${itemId}/accesses/`);
     const data = await response.json();
+    console.log("data from getItemAccesses", data);
     return data;
   }
 
