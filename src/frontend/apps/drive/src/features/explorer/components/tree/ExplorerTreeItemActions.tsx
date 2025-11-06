@@ -96,7 +96,7 @@ export const ExplorerTreeItemActions = ({
                   ? t("explorer.tree.workspace.options.share")
                   : t("explorer.tree.workspace.options.share_view"),
                 value: "share",
-                isHidden: !isWorkspace || item.main_workspace,
+                isHidden: !item.abilities.accesses_manage,
                 callback: shareWorkspaceModal.open,
               },
               {

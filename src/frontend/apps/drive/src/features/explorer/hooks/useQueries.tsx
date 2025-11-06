@@ -1,15 +1,22 @@
 import { getDriver } from "@/features/config/Config";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
-export const useInfiniteItemAccesses = (itemId: string) => {
-  const driver = getDriver();
-  return useInfiniteQuery({
+// export const useInfiniteItemAccesses = (itemId: string) => {
+//   const driver = getDriver();
+//   return useInfiniteQuery({
+//     queryKey: ["itemAccesses", itemId],
+//     queryFn: () => driver.getItemAccesses(itemId),
+//     initialPageParam: 1,
+//     getNextPageParam(lastPage, allPages) {
+//       return lastPage.next ? allPages.length + 1 : undefined;
+//     },
+//   });
+// };
+
+export const useItemAccesses = (itemId: string) => {
+  return useQuery({
     queryKey: ["itemAccesses", itemId],
-    queryFn: () => driver.getItemAccesses(itemId),
-    initialPageParam: 1,
-    getNextPageParam(lastPage, allPages) {
-      return lastPage.next ? allPages.length + 1 : undefined;
-    },
+    queryFn: () => getDriver().getItemAccesses(itemId),
   });
 };
 
