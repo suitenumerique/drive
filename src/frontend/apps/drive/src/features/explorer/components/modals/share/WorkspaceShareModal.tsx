@@ -200,33 +200,47 @@ export const WorkspaceShareModal = ({
       hasNextInvitations={hasNextInvitations}
       searchUsersResult={queryValue === "" ? undefined : users}
       onInviteUser={(users, role) => onInviteUser(users, role as Role)}
+      accessRoleTopMessage={(access) => {
+        const availableRoles = access.abilities.set_role_to;
+        if (availableRoles.length === 0 && access.role === Role.OWNER) {
+          return t("share_modal.options.top_message.only_owner");
+        }
+        if (availableRoles.length === 0 && access.role !== Role.OWNER) {
+          return t("share_modal.options.top_message.to_lower_role");
+        }
+        return undefined;
+      }}
       getAccessRoles={(access) => {
-        // const availableRoles = access.abilities.set_role_to;
-        const availableRoles = [Role.EDITOR, Role.ADMIN, Role.OWNER];
-        const activeRole = access.role;
+        const availableRoles = access.abilities.set_role_to;
+        // const availableRoles = [Role.EDITOR, Role.ADMIN, Role.OWNER];
+
+        const isDisabled = (role: Role) => {
+          return !availableRoles.includes(role) && access.role !== role;
+        };
+
         return [
           {
             value: Role.READER,
-            subtText: "Can view only",
-            isDisabled: !availableRoles.includes(Role.READER),
+            subtText: t("share_modal.options.subtext.reader"),
+            isDisabled: isDisabled(Role.READER),
             label: t("roles.reader"),
           },
           {
             value: Role.EDITOR,
-            subtText: "Can view and edit content",
-            isDisabled: !availableRoles.includes(Role.EDITOR),
+            subtText: t("share_modal.options.subtext.editor"),
+            isDisabled: isDisabled(Role.EDITOR),
             label: t("roles.editor"),
           },
           {
             value: Role.ADMIN,
-            subtText: "Can edit and manage access",
-            isDisabled: !availableRoles.includes(Role.ADMIN),
-            label: t("roles.admin"),
+            subtText: t("share_modal.options.subtext.admin"),
+            isDisabled: isDisabled(Role.ADMIN),
+            label: t("roles.administrator"),
           },
           {
             value: Role.OWNER,
-            subtText: "Full control and can delete",
-            isDisabled: !availableRoles.includes(Role.OWNER),
+            subtText: t("share_modal.options.subtext.owner"),
+            isDisabled: isDisabled(Role.OWNER),
             label: t("roles.owner"),
           },
         ];
