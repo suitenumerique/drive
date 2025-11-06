@@ -14,6 +14,20 @@
         "title": "You don't have the necessary permissions to access this page.",
         "button": "Home"
       },
+      "share_modal": {
+        "options": {
+          "subtext": {
+            "reader": "Can view only",
+            "editor": "Can view and edit content",
+            "admin": "Can edit and manage access",
+            "owner": "Full control and can delete"
+          },
+          "top_message": {
+            "only_owner": "You cannot change your role as you are the only owner.",
+            "to_lower_role": "Inherited. To lower role or remove access, edit the parent folder."
+          }
+        }
+      },
       "file_download_modal": {
         "error": {
           "no_url_or_title": "This file has no URL or title."
@@ -420,6 +434,20 @@
       "403": {
         "title": "Vous n'avez pas les permissions nécessaires pour accéder à cette page.",
         "button": "Accueil"
+      },
+      "share_modal": {
+        "options": {
+          "subtext": {
+            "reader": "Peut voir uniquement",
+            "editor": "Peut voir et modifier le contenu",
+            "admin": "Peut gérer les accès",
+            "owner": "Contrôle complet et peut supprimer"
+          },
+          "top_message": {
+            "only_owner": "Vous ne pouvez pas changer votre rôle car vous êtes le seul propriétaire.",
+            "to_lower_role": "Hérité. Pour réduire le rôle ou supprimer l'accès, modifiez le dossier parent."
+          }
+        }
       },
       "file_download_modal": {
         "error": {
@@ -833,6 +861,20 @@
       "403": {
         "title": "U beschikt niet over de benodigde rechten om dit bestand te openen.",
         "button": "Home"
+      },
+      "share_modal": {
+        "options": {
+          "subtext": {
+            "reader": "Kan alleen bekijken",
+            "editor": "Kan bekijken en bewerken",
+            "admin": "Kan beheren",
+            "owner": "Volledige controle en kan verwijderen"
+          },
+          "top_message": {
+            "only_owner": "U kunt uw rol niet wijzigen omdat u de enige eigenaar bent.",
+            "to_lower_role": "Herediteerd. Om de rol te verlagen of het toegang te verwijderen, bewerkt u de bovenliggende map."
+          }
+        }
       },
       "file_download_modal": {
         "error": {
