@@ -175,6 +175,11 @@ export interface APIList<T> {
   results: T[];
 }
 
+export interface InfiniteAPIList<T> {
+  pages: T[];
+  pageParams: number[];
+}
+
 export enum WorkspaceType {
   MAIN = "main",
   PUBLIC = "public",

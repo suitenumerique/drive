@@ -16,8 +16,8 @@ import {
   useMutationUpdateItem,
 } from "@/features/explorer/hooks/useMutations";
 import {
-  useInfiniteItemAccesses,
   useInfiniteItemInvitations,
+  useItemAccesses,
 } from "@/features/explorer/hooks/useQueries";
 import { useUsers } from "@/features/users/hooks/useUserQueries";
 import { useClipboard } from "@/hooks/useCopyToClipboard";
@@ -49,9 +49,8 @@ export const WorkspaceShareModal = ({
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [queryValue, setQueryValue] = useState("");
   const previousSearchResult = useRef<User[]>([]);
-  const { data, hasNextPage: hasNextMembers } = useInfiniteItemAccesses(
-    item.id
-  );
+  const { data } = useItemAccesses(item.id);
+
   const { data: invitations, hasNextPage: hasNextInvitations } =
     useInfiniteItemInvitations(item.id);
   const { mutateAsync: createAccess } = useMutationCreateAccess();
@@ -125,11 +124,7 @@ export const WorkspaceShareModal = ({
   };
 
   const accessesData: Access[] = useMemo(() => {
-    if (!data) {
-      return [];
-    }
-
-    return data.pages.flatMap((page) => page.results);
+    return data ?? [];
   }, [data]);
 
   const invitationsData: Invitation[] = useMemo(() => {
@@ -157,6 +152,7 @@ export const WorkspaceShareModal = ({
 
   const updateItem = useMutationUpdateItem();
 
+  console.log("accessesData", accessesData);
   return (
     <ShareModal
       isOpen={isOpen}
@@ -200,10 +196,41 @@ export const WorkspaceShareModal = ({
         });
       }}
       onSearchUsers={onSearch}
-      hasNextMembers={hasNextMembers}
+      hasNextMembers={false}
       hasNextInvitations={hasNextInvitations}
       searchUsersResult={queryValue === "" ? undefined : users}
       onInviteUser={(users, role) => onInviteUser(users, role as Role)}
+      getAccessRoles={(access) => {
+        // const availableRoles = access.abilities.set_role_to;
+        const availableRoles = [Role.EDITOR, Role.ADMIN, Role.OWNER];
+        const activeRole = access.role;
+        return [
+          {
+            value: Role.READER,
+            subtText: "Can view only",
+            isDisabled: !availableRoles.includes(Role.READER),
+            label: t("roles.reader"),
+          },
+          {
+            value: Role.EDITOR,
+            subtText: "Can view and edit content",
+            isDisabled: !availableRoles.includes(Role.EDITOR),
+            label: t("roles.editor"),
+          },
+          {
+            value: Role.ADMIN,
+            subtText: "Can edit and manage access",
+            isDisabled: !availableRoles.includes(Role.ADMIN),
+            label: t("roles.admin"),
+          },
+          {
+            value: Role.OWNER,
+            subtText: "Full control and can delete",
+            isDisabled: !availableRoles.includes(Role.OWNER),
+            label: t("roles.owner"),
+          },
+        ];
+      }}
       outsideSearchContent={
         <ShareModalCopyLinkFooter
           onCopyLink={() => {
