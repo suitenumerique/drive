@@ -1116,6 +1116,37 @@ class ItemFavorite(BaseModel):
         return f"{self.user!s} favorite on item {self.item!s}"
 
 
+class ItemAccessQuerySet(models.QuerySet):
+    """Custom queryset for ItemAccess model with additional methods."""
+
+    def annotate_user_roles(self, user):
+        """
+        Annotate ItemAccess queryset with the roles of the current user
+        on the item or its ancestors.
+        """
+        output_field = ArrayField(base_field=models.CharField())
+
+        if user.is_authenticated:
+            user_roles_subquery = ItemAccess.objects.filter(
+                models.Q(user=user) | models.Q(team__in=user.teams),
+                item__path__ancestors=models.OuterRef("item__path"),
+            ).values_list("role", flat=True)
+
+            return self.annotate(
+                user_roles=models.Func(
+                    user_roles_subquery, function="ARRAY", output_field=output_field
+                )
+            )
+
+        return self.annotate(
+            user_roles=models.Value([], output_field=output_field),
+        )
+
+
+class ItemAccessManager(models.Manager.from_queryset(ItemAccessQuerySet)):
+    """Manager for ItemAccess model."""
+
+
 class ItemAccess(BaseModel):
     """Relation model to give access to an item for a user or a team with a role."""
 
@@ -1134,6 +1165,8 @@ class ItemAccess(BaseModel):
     role = models.CharField(
         max_length=20, choices=RoleChoices.choices, default=RoleChoices.READER
     )
+
+    objects = ItemAccessManager()
 
     class Meta:
         db_table = "drive_item_access"
@@ -1178,65 +1211,6 @@ class ItemAccess(BaseModel):
     def target_key(self):
         """Get a unique key for the actor targeted by the access, without possible conflict."""
         return f"user:{self.user_id!s}" if self.user_id else f"team:{self.team:s}"
-
-    def set_user_roles_tuple(self, ancestors_role, current_role):
-        """
-        Set a precomputed (ancestor_role, current_role) tuple for this instance.
-
-        This avoids querying the database in `get_roles_tuple()` and is useful
-        when roles are already known, such as in bulk serialization.
-
-        Args:
-            ancestor_role (str | None): Highest role on any ancestor document.
-            current_role (str | None): Role on the current document.
-        """
-        # pylint: disable=attribute-defined-outside-init
-        self._prefetched_user_roles_tuple = (ancestors_role, current_role)
-
-    def get_user_roles_tuple(self, user):
-        """
-        Return a tuple of:
-        - the highest role the user has on any ancestor of the item
-        - the role the user has on the current item
-
-        If roles have been explicitly set using `set_user_roles_tuple()`,
-        those will be returned instead of querying the database.
-
-        This allows viewsets or serializers to precompute roles for performance
-        when handling multiple items at once.
-
-        Args:
-            user (User): The user whose roles are being evaluated.
-
-        Returns:
-            tuple[str | None, str | None]: (max_ancestor_role, current_document_role)
-        """
-        if not user.is_authenticated:
-            return None, None
-
-        try:
-            return self._prefetched_user_roles_tuple
-        except AttributeError:
-            pass
-
-        ancestors = (
-            self.item.ancestors() | Item.objects.filter(pk=self.item_id)
-        ).filter(ancestors_deleted_at__isnull=True)
-
-        access_tuples = ItemAccess.objects.filter(
-            models.Q(user=user) | models.Q(team__in=user.teams),
-            item__in=ancestors,
-        ).values_list("item_id", "role")
-
-        ancestors_roles = []
-        current_role = None
-        for item_id, role in access_tuples:
-            if item_id == self.item_id:
-                current_role = role
-            else:
-                ancestors_roles.append(role)
-
-        return RoleChoices.max(*ancestors_roles), current_role
 
     def _compute_max_ancestors_role(self):
         """
@@ -1294,16 +1268,30 @@ class ItemAccess(BaseModel):
         """Cache the max_ancestors_role_item_id."""
         self._max_ancestors_role_item_id = max_ancestors_role_item_id
 
+    def get_role(self, user):
+        """Return the role a user has on an item related to this access.."""
+        if not user.is_authenticated:
+            return None
+
+        try:
+            roles = self.user_roles or []
+        except AttributeError:
+            roles = ItemAccess.objects.filter(
+                models.Q(user=user) | models.Q(team__in=user.teams),
+                item__path__ancestors=self.item.path,
+            ).values_list("role", flat=True)
+
+        return RoleChoices.max(*roles)
+
     def get_abilities(self, user, is_explicit=True):
         """
         Compute and return abilities for a given user on the item access.
         """
-        ancestors_role, current_role = self.get_user_roles_tuple(user)
-        role = RoleChoices.max(ancestors_role, current_role)
-        is_owner_or_admin = role in PRIVILEGED_ROLES
+        user_role = self.get_role(user)
+        is_owner_or_admin = user_role in PRIVILEGED_ROLES
 
         if self.role == RoleChoices.OWNER:
-            can_delete = role == RoleChoices.OWNER and (
+            can_delete = user_role == RoleChoices.OWNER and (
                 # check if item is not root trying to avoid an extra query
                 self.item.depth > 1
                 or ItemAccess.objects.filter(
@@ -1319,7 +1307,7 @@ class ItemAccess(BaseModel):
                 set_role_to.extend(
                     [RoleChoices.READER, RoleChoices.EDITOR, RoleChoices.ADMIN]
                 )
-            if role == RoleChoices.OWNER:
+            if user_role == RoleChoices.OWNER:
                 set_role_to.append(RoleChoices.OWNER)
 
         # Filter out roles that would be lower than the one the user already has
