@@ -61,7 +61,6 @@ class ItemAccessSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     team = serializers.CharField(required=False, allow_blank=True)
     abilities = serializers.SerializerMethodField(read_only=True)
-    max_ancestors_role = serializers.SerializerMethodField(read_only=True)
     max_role = serializers.SerializerMethodField(read_only=True)
     item = ItemLightSerializer(read_only=True)
     is_explicit = serializers.SerializerMethodField(read_only=True)
@@ -77,6 +76,7 @@ class ItemAccessSerializer(serializers.ModelSerializer):
             "role",
             "abilities",
             "max_ancestors_role",
+            "max_ancestors_role_item_id",
             "max_role",
             "item",
             "is_explicit",
@@ -85,6 +85,7 @@ class ItemAccessSerializer(serializers.ModelSerializer):
             "id",
             "abilities",
             "max_ancestors_role",
+            "max_ancestors_role_item_id",
             "max_role",
             "item",
             "is_explicit",
@@ -98,10 +99,6 @@ class ItemAccessSerializer(serializers.ModelSerializer):
                 request.user, is_explicit=self.get_is_explicit(instance)
             )
         return {}
-
-    def get_max_ancestors_role(self, instance):
-        """Return max_ancestors_role if annotated; else None."""
-        return instance.max_ancestors_role
 
     def get_max_role(self, instance):
         """Return max_ancestors_role if annotated; else None."""
@@ -141,6 +138,7 @@ class ItemAccessLightSerializer(ItemAccessSerializer):
             "role",
             "abilities",
             "max_ancestors_role",
+            "max_ancestors_role_item_id",
             "max_role",
             "is_explicit",
         ]
@@ -152,6 +150,7 @@ class ItemAccessLightSerializer(ItemAccessSerializer):
             "role",
             "abilities",
             "max_ancestors_role",
+            "max_ancestors_role_item_id",
             "max_role",
             "is_explicit",
         ]
