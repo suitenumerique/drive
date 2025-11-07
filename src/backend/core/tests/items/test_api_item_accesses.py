@@ -145,7 +145,7 @@ def test_api_item_accesses_list_authenticated_related_non_privileged(
     other_access = factories.UserItemAccessFactory(user=user)
     factories.UserItemAccessFactory(item=other_access.item)
 
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(3):
         response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
 
     assert response.status_code == 200
@@ -253,7 +253,7 @@ def test_api_item_accesses_list_authenticated_related_privileged(
     other_access = factories.UserItemAccessFactory(user=user)
     factories.UserItemAccessFactory(item=other_access.item)
 
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(3):
         response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
 
     assert response.status_code == 200
@@ -1492,7 +1492,7 @@ def test_api_item_accesses_delete_owners_last_owner_child_team(
 ## Realistic case.
 
 
-def test_api_item_accesses_explicit():
+def test_api_item_accesses_explicit(django_assert_num_queries):
     """
     test case with a combination of explicit accesses and inherited accesses.
     An explicit access id added on the root item with a "weak" role (editor)
@@ -1517,7 +1517,8 @@ def test_api_item_accesses_explicit():
 
     assert item.get_role(user) == "owner"
 
-    response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
+    with django_assert_num_queries(3):
+        response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
     assert response.status_code == 200
     content = response.json()
     assert content == [
@@ -1616,7 +1617,9 @@ def test_api_item_accesses_explicit():
     factories.UserItemAccessFactory(item=parent, user=user, role="administrator")
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
-    assert response.status_code == 200
+    with django_assert_num_queries(3):
+        response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
+
     content = response.json()
     assert content == [
         {
