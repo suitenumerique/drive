@@ -325,16 +325,15 @@ def test_api_item_accesses_retrieve_set_role_to_child():
     assert result_dict[str(parent_access.id)] == []
 
     # Add an access for the other user on the parent
-    parent_access_other_user = factories.UserItemAccessFactory(
-        item=parent, user=other_user, role="editor"
-    )
+    factories.UserItemAccessFactory(item=parent, user=other_user, role="editor")
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
 
     assert response.status_code == 200
     content = response.json()
-    assert len(content) == 3
+    assert len(content) == 2
 
+    # the new added access is not present in the result so the list should be the same
     result_dict = {
         result["id"]: result["abilities"]["set_role_to"] for result in content
     }
@@ -344,12 +343,6 @@ def test_api_item_accesses_retrieve_set_role_to_child():
         "owner",
     ]
     assert result_dict[str(parent_access.id)] == []
-    assert result_dict[str(parent_access_other_user.id)] == [
-        "reader",
-        "editor",
-        "administrator",
-        "owner",
-    ]
 
 
 @pytest.mark.parametrize(
@@ -359,7 +352,6 @@ def test_api_item_accesses_retrieve_set_role_to_child():
             ["administrator", "reader", "reader", "reader"],
             [
                 ["reader", "editor", "administrator"],
-                [],
                 ["reader", "editor", "administrator"],
             ],
         ],
@@ -367,7 +359,6 @@ def test_api_item_accesses_retrieve_set_role_to_child():
             ["owner", "reader", "reader", "reader"],
             [
                 ["reader", "editor", "administrator", "owner"],
-                [],
                 ["reader", "editor", "administrator", "owner"],
             ],
         ],
@@ -375,7 +366,6 @@ def test_api_item_accesses_retrieve_set_role_to_child():
             ["owner", "reader", "reader", "owner"],
             [
                 ["reader", "editor", "administrator", "owner"],
-                [],
                 ["reader", "editor", "administrator", "owner"],
             ],
         ],
@@ -402,9 +392,9 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
     # Create accesses for another user
     other_user = factories.UserFactory()
     factories.UserItemAccessFactory(item=grand_parent, user=other_user, role=roles[1])
+    factories.UserItemAccessFactory(item=parent, user=other_user, role=roles[2])
     accesses = [
         factories.UserItemAccessFactory(item=item, user=user, role=roles[0]),
-        factories.UserItemAccessFactory(item=parent, user=other_user, role=roles[2]),
         factories.UserItemAccessFactory(item=item, user=other_user, role=roles[3]),
     ]
 
@@ -412,7 +402,7 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
 
     assert response.status_code == 200
     content = response.json()
-    assert len(content) == 3
+    assert len(content) == 2
 
     for result in content:
         assert (
@@ -434,7 +424,6 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
             ["administrator", "reader", "reader", "reader"],
             [
                 ["reader", "editor", "administrator"],
-                [],
                 ["reader", "editor", "administrator"],
             ],
         ],
@@ -442,7 +431,6 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
             ["owner", "reader", "reader", "reader"],
             [
                 ["reader", "editor", "administrator", "owner"],
-                [],
                 ["reader", "editor", "administrator", "owner"],
             ],
         ],
@@ -450,7 +438,6 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
             ["owner", "reader", "reader", "owner"],
             [
                 ["reader", "editor", "administrator", "owner"],
-                [],
                 ["reader", "editor", "administrator", "owner"],
             ],
         ],
@@ -458,7 +445,6 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
             ["reader", "reader", "reader", "owner"],
             [
                 ["reader", "editor", "administrator", "owner"],
-                [],
                 ["reader", "editor", "administrator", "owner"],
             ],
         ],
@@ -467,14 +453,12 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
             [
                 ["reader", "editor", "administrator"],
                 [],
-                [],
             ],
         ],
         [
             ["editor", "editor", "administrator", "editor"],
             [
                 ["reader", "editor", "administrator"],
-                [],
                 [],
             ],
         ],
@@ -502,10 +486,10 @@ def test_api_item_accesses_list_authenticated_related_same_team(
 
     mock_user_teams.return_value = ["lasuite", "unknown"]
     factories.TeamItemAccessFactory(item=grand_parent, team="lasuite", role=roles[1])
+    factories.TeamItemAccessFactory(item=parent, team="lasuite", role=roles[2])
     accesses = [
         factories.UserItemAccessFactory(item=item, user=user, role=roles[0]),
         # Create accesses for a team
-        factories.TeamItemAccessFactory(item=parent, team="lasuite", role=roles[2]),
         factories.TeamItemAccessFactory(item=item, team="lasuite", role=roles[3]),
     ]
 
@@ -513,7 +497,7 @@ def test_api_item_accesses_list_authenticated_related_same_team(
 
     assert response.status_code == 200
     content = response.json()
-    assert len(content) == 3
+    assert len(content) == 2
 
     for result in content:
         assert (
@@ -1523,7 +1507,7 @@ def test_api_item_accesses_explicit():
     item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
 
     # explicit access on root.
-    root_access = factories.UserItemAccessFactory(item=root, user=user, role="editor")
+    factories.UserItemAccessFactory(item=root, user=user, role="editor")
     # explicit access on item.
     item_access = factories.UserItemAccessFactory(item=item, user=user, role="owner")
     other_admin_access = factories.UserItemAccessFactory(
@@ -1537,34 +1521,6 @@ def test_api_item_accesses_explicit():
     assert response.status_code == 200
     content = response.json()
     assert content == [
-        {
-            "id": str(root_access.id),
-            "item": {
-                "id": str(root.id),
-                "path": str(root.path),
-                "depth": root.depth,
-            },
-            "user": {
-                "id": str(user.id),
-                "email": user.email,
-                "full_name": user.full_name,
-                "short_name": user.short_name,
-                "language": user.language,
-            },
-            "team": "",
-            "role": "editor",
-            "abilities": {
-                "destroy": False,
-                "update": False,
-                "partial_update": False,
-                "retrieve": True,
-                "set_role_to": [],
-            },
-            "max_ancestors_role": None,
-            "max_ancestors_role_item_id": None,
-            "max_role": "editor",
-            "is_explicit": False,
-        },
         {
             "id": str(other_admin_access.id),
             "item": {
@@ -1657,9 +1613,7 @@ def test_api_item_accesses_explicit():
     owner_access = factories.UserItemAccessFactory(
         item=root, user=other_owner, role="owner"
     )
-    parent_access = factories.UserItemAccessFactory(
-        item=parent, user=user, role="administrator"
-    )
+    factories.UserItemAccessFactory(item=parent, user=user, role="administrator")
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
     assert response.status_code == 200
@@ -1747,34 +1701,6 @@ def test_api_item_accesses_explicit():
             "max_ancestors_role": None,
             "max_ancestors_role_item_id": None,
             "max_role": "owner",
-            "is_explicit": False,
-        },
-        {
-            "id": str(parent_access.id),
-            "item": {
-                "id": str(parent.id),
-                "path": str(parent.path),
-                "depth": parent.depth,
-            },
-            "user": {
-                "id": str(user.id),
-                "email": user.email,
-                "full_name": user.full_name,
-                "short_name": user.short_name,
-                "language": user.language,
-            },
-            "team": "",
-            "role": "administrator",
-            "abilities": {
-                "destroy": True,
-                "update": False,
-                "partial_update": False,
-                "retrieve": True,
-                "set_role_to": [],
-            },
-            "max_ancestors_role": "editor",
-            "max_ancestors_role_item_id": str(root.id),
-            "max_role": "administrator",
             "is_explicit": False,
         },
         {
