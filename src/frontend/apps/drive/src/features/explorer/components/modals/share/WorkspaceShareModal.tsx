@@ -124,8 +124,66 @@ export const WorkspaceShareModal = ({
   };
 
   const accessesData: Access[] = useMemo(() => {
-    return data ?? [];
+    if (!data) {
+      return [];
+    }
+
+    // return data;
+
+    const accessesByUserId = new Map<string, Access>();
+
+    data.forEach((access) => {
+      const existing = accessesByUserId.get(access.user.id);
+
+      if (!existing) {
+        accessesByUserId.set(access.user.id, access);
+        return;
+      }
+
+      if (!existing.is_explicit && access.is_explicit) {
+        accessesByUserId.set(access.user.id, access);
+      }
+    });
+
+    const result = Array.from(accessesByUserId.values());
+
+    // return result;
+    // Find parent_id_max_role for each access
+    return result.map((access) => {
+      if (!access.max_ancestors_role) {
+        return access;
+      }
+
+      // Only search for parent if max_ancestors_role is different from max_role
+      if (access.max_ancestors_role === access.max_role) {
+        return access;
+      }
+
+      // Find the access with max_role equal to max_ancestors_role and same user/team
+      const parentAccess = data.find((candidateAccess) => {
+        const sameUser =
+          access.user?.id && candidateAccess.user?.id
+            ? access.user.id === candidateAccess.user.id
+            : false;
+        const sameTeam =
+          access.team && candidateAccess.team
+            ? access.team === candidateAccess.team
+            : false;
+
+        return (
+          (sameUser || sameTeam) &&
+          candidateAccess.max_role === access.max_ancestors_role
+        );
+      });
+
+      return {
+        ...access,
+        parent_id_max_role: parentAccess?.item.id,
+      };
+    });
   }, [data]);
+
+  console.log("ACCESSES DATA", accessesData);
 
   const invitationsData: Invitation[] = useMemo(() => {
     if (!invitations) {
@@ -150,9 +208,46 @@ export const WorkspaceShareModal = ({
     }, 500);
   };
 
+  const linkReachChoices = useMemo(() => {
+    const options = item.abilities.link_select_options;
+    if (!options) {
+      return [];
+    }
+
+    return Object.entries(options).map(([key]) => ({
+      value: key as LinkReach,
+
+      label: t(`share_modal.options.link_reach.${key}`),
+    }));
+  }, [item]);
+
+  const linkRoleChoices = useMemo(() => {
+    const options = item.abilities.link_select_options;
+
+    if (!options) {
+      return [];
+    }
+
+    const currentLinkReach = item.computed_link_reach;
+    if (!currentLinkReach) {
+      return undefined;
+    }
+
+    const linkRoleOptions = options[currentLinkReach];
+    console.log("AAAAAA", currentLinkReach, options);
+
+    if (!linkRoleOptions) {
+      return undefined;
+    }
+
+    return linkRoleOptions.map((role) => ({
+      value: role,
+      label: t(`roles.${role}`),
+    }));
+  }, [item]);
+
   const updateItem = useMutationUpdateItem();
 
-  console.log("accessesData", accessesData);
   return (
     <ShareModal
       isOpen={isOpen}
@@ -188,12 +283,17 @@ export const WorkspaceShareModal = ({
           return;
         }
 
-        updateAccess({
-          itemId: item.id,
-          accessId: access.id,
-          role: role as Role,
-          user_id: access.user.id,
-        });
+        console.log("ACCESS", access);
+        if (!access.is_explicit) {
+          onInviteUser([access.user], role as Role);
+        } else {
+          updateAccess({
+            itemId: item.id,
+            accessId: access.id,
+            role: role as Role,
+            user_id: access.user.id,
+          });
+        }
       }}
       onSearchUsers={onSearch}
       hasNextMembers={false}
@@ -258,15 +358,11 @@ export const WorkspaceShareModal = ({
         />
       }
       linkSettings={true}
-      linkReachChoices={[
-        {
-          value: LinkReach.PUBLIC,
-        },
-        {
-          value: LinkReach.RESTRICTED,
-        },
-      ]}
-      linkReach={item.link_reach}
+      accessRoleKey="max_role"
+      linkReachChoices={linkReachChoices}
+      linkRoleChoices={linkRoleChoices}
+      linkReach={item.computed_link_reach ?? item.link_reach}
+      linkRole={item.computed_link_role ?? item.link_role}
       onUpdateLinkReach={(value) => {
         updateItem.mutate(
           {
