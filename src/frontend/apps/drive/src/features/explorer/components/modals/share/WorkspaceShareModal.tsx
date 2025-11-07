@@ -3,6 +3,7 @@ import {
   Invitation,
   Item,
   LinkReach,
+  LinkRole,
   Role,
   User,
 } from "@/features/drivers/types";
@@ -13,10 +14,11 @@ import {
   useMutationDeleteInvitation,
   useMutationUpdateAccess,
   useMutationUpdateInvitation,
-  useMutationUpdateItem,
+  useMutationUpdateLinkConfiguration,
 } from "@/features/explorer/hooks/useMutations";
 import {
   useInfiniteItemInvitations,
+  useItem,
   useItemAccesses,
 } from "@/features/explorer/hooks/useQueries";
 import { useUsers } from "@/features/users/hooks/useUserQueries";
@@ -25,7 +27,6 @@ import {
   HorizontalSeparator,
   ShareModal,
   ShareModalCopyLinkFooter,
-  useTreeContext,
 } from "@gouvfr-lasuite/ui-kit";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -40,19 +41,24 @@ type WorkspaceShareModalProps = {
 export const WorkspaceShareModal = ({
   isOpen,
   onClose,
-  item,
+  item: initialItem,
 }: WorkspaceShareModalProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const copyToClipboard = useClipboard();
-  const treeContext = useTreeContext<Item>();
+  const itemId = initialItem.id;
+  const { data: item } = useItem(itemId, {
+    enabled: isOpen,
+    initialData: initialItem,
+  });
+
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [queryValue, setQueryValue] = useState("");
   const previousSearchResult = useRef<User[]>([]);
-  const { data } = useItemAccesses(item.id);
+  const { data } = useItemAccesses(itemId);
 
   const { data: invitations, hasNextPage: hasNextInvitations } =
-    useInfiniteItemInvitations(item.id);
+    useInfiniteItemInvitations(itemId);
   const { mutateAsync: createAccess } = useMutationCreateAccess();
   const { mutateAsync: createInvitation } = useMutationCreateInvitation();
 
@@ -97,7 +103,7 @@ export const WorkspaceShareModal = ({
 
     const promises = inviteByUsername.map((user) =>
       createAccess({
-        itemId: item.id,
+        itemId: itemId,
         userId: user.id,
         role: role as Role,
       })
@@ -105,7 +111,7 @@ export const WorkspaceShareModal = ({
 
     const promisesInvitation = inviteByEmail.map((user) =>
       createInvitation({
-        itemId: item.id,
+        itemId: itemId,
         email: user.email,
         role: role as Role,
       })
@@ -115,11 +121,11 @@ export const WorkspaceShareModal = ({
     await Promise.all(promisesInvitation);
 
     queryClient.invalidateQueries({
-      queryKey: ["itemAccesses", item.id],
+      queryKey: ["itemAccesses", itemId],
     });
 
     queryClient.invalidateQueries({
-      queryKey: ["itemInvitations", item.id],
+      queryKey: ["itemInvitations", itemId],
     });
   };
 
@@ -183,7 +189,7 @@ export const WorkspaceShareModal = ({
     });
   }, [data]);
 
-  console.log("ACCESSES DATA", accessesData);
+  // console.log("ACCESSES DATA", accessesData);
 
   const invitationsData: Invitation[] = useMemo(() => {
     if (!invitations) {
@@ -209,7 +215,7 @@ export const WorkspaceShareModal = ({
   };
 
   const linkReachChoices = useMemo(() => {
-    const options = item.abilities.link_select_options;
+    const options = item?.abilities.link_select_options;
     if (!options) {
       return [];
     }
@@ -222,31 +228,36 @@ export const WorkspaceShareModal = ({
   }, [item]);
 
   const linkRoleChoices = useMemo(() => {
-    const options = item.abilities.link_select_options;
+    console.log("ITEM", item);
+    const options = item?.abilities.link_select_options;
 
     if (!options) {
       return [];
     }
 
-    const currentLinkReach = item.computed_link_reach;
+    const currentLinkReach = item?.computed_link_reach;
     if (!currentLinkReach) {
+      console.log("1111 NO CURRENT LINK REACH");
       return undefined;
     }
 
     const linkRoleOptions = options[currentLinkReach];
-    console.log("AAAAAA", currentLinkReach, options);
 
     if (!linkRoleOptions) {
+      console.log("2222 NO LINK ROLE OPTIONS");
       return undefined;
     }
 
-    return linkRoleOptions.map((role) => ({
+    const a = linkRoleOptions.map((role) => ({
       value: role,
       label: t(`roles.${role}`),
     }));
+
+    console.log("LINK ROLE CHOICES", a);
+    return a;
   }, [item]);
 
-  const updateItem = useMutationUpdateItem();
+  const updateLinkConfiguration = useMutationUpdateLinkConfiguration();
 
   return (
     <ShareModal
@@ -254,25 +265,25 @@ export const WorkspaceShareModal = ({
       loading={isLoadingUsers ?? false}
       onClose={onClose}
       modalTitle={t("explorer.actions.share.modal.title")}
-      canUpdate={item.abilities?.accesses_manage}
+      canUpdate={item?.abilities.accesses_manage}
       accesses={accessesData}
       invitations={invitationsData}
       invitationRoles={rolesOptions}
       onDeleteAccess={(access) =>
         deleteAccess({
-          itemId: item.id,
+          itemId: itemId,
           accessId: access.id,
         })
       }
       onDeleteInvitation={(invitation) =>
         deleteInvitation({
-          itemId: item.id,
+          itemId: itemId,
           invitationId: invitation.id,
         })
       }
       onUpdateInvitation={(invitation, role) =>
         updateInvitation({
-          itemId: item.id,
+          itemId: itemId,
           invitationId: invitation.id,
           role: role as Role,
         })
@@ -288,7 +299,7 @@ export const WorkspaceShareModal = ({
           onInviteUser([access.user], role as Role);
         } else {
           updateAccess({
-            itemId: item.id,
+            itemId: itemId,
             accessId: access.id,
             role: role as Role,
             user_id: access.user.id,
@@ -349,7 +360,7 @@ export const WorkspaceShareModal = ({
         <ShareModalCopyLinkFooter
           onCopyLink={() => {
             copyToClipboard(
-              `${window.location.origin}/explorer/items/${item.id}`
+              `${window.location.origin}/explorer/items/${itemId}`
             );
           }}
           onOk={() => {
@@ -361,26 +372,33 @@ export const WorkspaceShareModal = ({
       accessRoleKey="max_role"
       linkReachChoices={linkReachChoices}
       linkRoleChoices={linkRoleChoices}
-      linkReach={item.computed_link_reach ?? item.link_reach}
-      linkRole={item.computed_link_role ?? item.link_role}
-      onUpdateLinkReach={(value) => {
-        updateItem.mutate(
-          {
-            id: item.id,
-            link_reach: value as LinkReach,
-          },
-          {
-            onSuccess: () => {
-              treeContext?.treeData.updateNode(item.id, {
-                link_reach: value as LinkReach,
-              });
-            },
-          }
-        );
+      showLinkRole={true}
+      linkReach={item?.computed_link_reach ?? item?.link_reach}
+      linkRole={item?.computed_link_role ?? item?.link_role}
+      onUpdateLinkRole={(value) => {
+        updateLinkConfiguration.mutate({
+          itemId: itemId,
+          link_reach:
+            item?.computed_link_reach ??
+            item?.link_reach ??
+            LinkReach.RESTRICTED,
+          link_role: value as LinkRole,
+        });
       }}
-      canView={item.abilities?.accesses_view}
+      onUpdateLinkReach={(value) => {
+        const linkRole =
+          value === LinkReach.RESTRICTED
+            ? undefined
+            : (item?.computed_link_role ?? item?.link_role ?? LinkRole.READER);
+        updateLinkConfiguration.mutate({
+          itemId: itemId,
+          link_reach: value as LinkReach,
+          link_role: linkRole,
+        });
+      }}
+      canView={item?.abilities.accesses_view}
     >
-      {!item.abilities?.accesses_manage && <HorizontalSeparator />}
+      {!item?.abilities.accesses_manage && <HorizontalSeparator />}
     </ShareModal>
   );
 };

@@ -2,6 +2,7 @@ import {
   DTOCreateAccess,
   DTODeleteAccess,
   DTOUpdateAccess,
+  DTOUpdateLinkConfiguration,
 } from "./DTOs/AccessesDTO";
 import {
   DTOCreateInvitation,
@@ -69,6 +70,10 @@ export abstract class Driver {
   abstract getItemAccesses(itemId: string): Promise<Access[]>;
   abstract createAccess(data: DTOCreateAccess): Promise<void>;
   abstract updateAccess(payload: DTOUpdateAccess): Promise<Access>;
+  abstract updateAccess(payload: DTOUpdateAccess): Promise<Access>;
+  abstract updateLinkConfiguration(
+    payload: DTOUpdateLinkConfiguration
+  ): Promise<void>;
   abstract deleteAccess(payload: DTODeleteAccess): Promise<void>;
   // Invitations
   abstract getItemInvitations(itemId: string): Promise<APIList<Invitation>>;
