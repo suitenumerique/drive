@@ -1238,28 +1238,61 @@ class ItemAccess(BaseModel):
 
         return RoleChoices.max(*ancestors_roles), current_role
 
+    def _compute_max_ancestors_role(self):
+        """
+        Compute the max ancestors role for this instance.
+        and return a tuple of (max_ancestors_role, item_id)
+        """
+        ancestors = self.item.ancestors().filter(ancestors_deleted_at__isnull=True)
+        filter_condition = models.Q()
+        if self.user:
+            filter_condition |= models.Q(user=self.user)
+        if self.team:
+            filter_condition |= models.Q(team=self.team)
+        ancestors_roles = ItemAccess.objects.filter(
+            filter_condition, item__in=ancestors
+        ).values_list("role", "item_id")
+
+        roles = dict(ancestors_roles)
+
+        max_role = RoleChoices.max(*roles.keys())
+
+        self._max_ancestors_role = max_role
+        self._max_ancestors_role_item_id = roles.get(max_role)
+
     @property
     def max_ancestors_role(self):
         """Link definition equivalent to all document's ancestors."""
-        if getattr(self, "_max_ancestors_role", False) is False:
-            ancestors = self.item.ancestors().filter(ancestors_deleted_at__isnull=True)
-            filter_condition = models.Q()
-            if self.user:
-                filter_condition |= models.Q(user=self.user)
-            if self.team:
-                filter_condition |= models.Q(team=self.team)
-            ancestors_roles = ItemAccess.objects.filter(
-                filter_condition, item__in=ancestors
-            ).values_list("role", flat=True)
+        try:
+            return self._max_ancestors_role
+        except AttributeError:
+            pass
 
-            self._max_ancestors_role = RoleChoices.max(*ancestors_roles)
+        self._compute_max_ancestors_role()
 
         return self._max_ancestors_role
+
+    @property
+    def max_ancestors_role_item_id(self):
+        """Get the item_id of the item with the max ancestors role."""
+        try:
+            return self._max_ancestors_role_item_id
+        except AttributeError:
+            pass
+
+        self._compute_max_ancestors_role()
+
+        return self._max_ancestors_role_item_id
 
     @max_ancestors_role.setter
     def max_ancestors_role(self, max_ancestors_role):
         """Cache the max_ancestors_role."""
         self._max_ancestors_role = max_ancestors_role
+
+    @max_ancestors_role_item_id.setter
+    def max_ancestors_role_item_id(self, max_ancestors_role_item_id):
+        """Cache the max_ancestors_role_item_id."""
+        self._max_ancestors_role_item_id = max_ancestors_role_item_id
 
     def get_abilities(self, user, is_explicit=True):
         """
