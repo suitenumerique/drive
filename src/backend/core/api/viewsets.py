@@ -1414,15 +1414,14 @@ class ItemAccessViewSet(
         ancestors_qs = models.Item.objects.filter(
             path__ancestors=self.item.path, ancestors_deleted_at__isnull=True
         )
-        ancestor_items = list(ancestors_qs.order_by("path"))
-
-        accesses_queryset = self.get_queryset().filter(item__in=ancestors_qs)
+        accesses_qs = self.get_queryset().filter(item__in=ancestors_qs)
         if role not in PRIVILEGED_ROLES:
             # Restrict the queryset to only privileged roles
             # to not leak information to non-privileged users
-            accesses_queryset = accesses_queryset.filter(role__in=PRIVILEGED_ROLES)
+            accesses_qs = accesses_qs.filter(role__in=PRIVILEGED_ROLES)
 
-        accesses = list(accesses_queryset.order_by("item__path", "created_at"))
+        accesses_qs = accesses_qs.annotate_user_roles(user)
+        accesses = list(accesses_qs.order_by("item__path", "created_at").iterator())
 
         request_target_keys = {f"user:{user.id}"}
         request_target_keys.update(
@@ -1430,7 +1429,8 @@ class ItemAccessViewSet(
         )
 
         max_role_by_target = {}
-        user_roles_by_path = {}
+        # Keep in this dict the deepest access for each target
+        # This is the access that will be returned to the user
         accesses_by_target = defaultdict(list)
         for access in accesses:
             previous = max_role_by_target.get(access.target_key)
@@ -1445,49 +1445,19 @@ class ItemAccessViewSet(
                 "item_id": access.item_id,
             }
 
-            accesses_by_target[access.target_key].append(access)
+            accesses_by_target[access.target_key] = access
 
-            if access.target_key in request_target_keys:
-                path = str(access.item.path)
-                user_roles_by_path[path] = models.RoleChoices.max(
-                    user_roles_by_path.get(path), access.role
-                )
-
-        user_ancestor_role_by_path = {}
-        user_max_role_by_path = {}
-        for ancestor in ancestor_items:
-            path = str(ancestor.path)
-            parent_path = str(ancestor.path[:-1]) if ancestor.depth > 1 else ""
-            ancestor_role = user_max_role_by_path.get(parent_path)
-            user_ancestor_role_by_path[path] = ancestor_role
-            user_max_role_by_path[path] = models.RoleChoices.max(
-                ancestor_role, user_roles_by_path.get(path)
-            )
-
-        selected_access_ids = {
-            max(
-                target_accesses,
-                key=lambda item_access: (
-                    item_access.item.depth if item_access.item_id else 0,
-                    item_access.created_at,
-                ),
-            ).pk
-            for target_accesses in accesses_by_target.values()
-            if target_accesses
-        }
+        # Reorder accesses by their corresponding item depth and creation date
+        selected_accesses = sorted(
+            accesses_by_target.values(),
+            key=lambda access: (access.item.depth, access.created_at),
+        )
 
         # serialize and return the response
         context = self.get_serializer_context()
         serializer_class = self.get_serializer_class()
         serialized_data = []
-        for access in accesses:
-            if access.pk not in selected_access_ids:
-                continue
-            path = str(access.item.path)
-            access.set_user_roles_tuple(
-                user_ancestor_role_by_path.get(path),
-                user_roles_by_path.get(path),
-            )
+        for access in selected_accesses:
             serializer = serializer_class(access, context=context)
             serialized_data.append(serializer.data)
 
