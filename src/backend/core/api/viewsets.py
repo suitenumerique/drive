@@ -1427,11 +1427,16 @@ class ItemAccessViewSet(
         user_roles_by_path = {}
         accesses_by_target = {}
         for access in accesses:
-            previous_role = max_role_by_target.get(access.target_key)
+            previous_max_role_ancestor = max_role_by_target.get(access.target_key, {})
+            previous_role = previous_max_role_ancestor.get("role")
             access.max_ancestors_role = previous_role
-            max_role_by_target[access.target_key] = models.RoleChoices.max(
-                previous_role, access.role
+            access.max_ancestors_role_item_id = previous_max_role_ancestor.get(
+                "item_id"
             )
+            max_role_by_target[access.target_key] = {
+                "role": models.RoleChoices.max(previous_role, access.role),
+                "item_id": access.item_id,
+            }
 
             accesses_by_target.setdefault(access.target_key, []).append(access)
 

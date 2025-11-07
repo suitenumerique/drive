@@ -197,6 +197,7 @@ def test_api_item_accesses_create_authenticated_administrator(
             "depth": item.depth,
         },
         "max_ancestors_role": None,
+        "max_ancestors_role_item_id": None,
         "max_role": role,
         "is_explicit": True,
     }
@@ -266,6 +267,7 @@ def test_api_item_accesses_create_authenticated_owner(via, depth, mock_user_team
         "role": role,
         "abilities": new_item_access.get_abilities(user),
         "max_ancestors_role": None,
+        "max_ancestors_role_item_id": None,
         "max_role": role,
         "item": {
             "id": str(item.id),
