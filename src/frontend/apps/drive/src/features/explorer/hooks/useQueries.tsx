@@ -1,4 +1,6 @@
 import { getDriver } from "@/features/config/Config";
+import { Item } from "@/features/drivers/types";
+import { HookUseQueryOptions } from "@/utils/useQueries";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 // export const useInfiniteItemAccesses = (itemId: string) => {
@@ -51,4 +53,15 @@ export const useItems = () => {
 export const getRootItems = async () => {
   const result = await getDriver().getItems();
   return result.children;
+};
+
+export const useItem = (
+  itemId: string,
+  options?: HookUseQueryOptions<Item>
+) => {
+  return useQuery({
+    queryKey: ["items", itemId],
+    queryFn: () => getDriver().getItem(itemId),
+    ...options,
+  });
 };
