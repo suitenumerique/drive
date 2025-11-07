@@ -11,6 +11,11 @@
       },
       "share_modal": {
         "options": {
+          "link_reach": {
+            "authenticated": "Authenticated",
+            "public": "Public",
+            "restricted": "Restricted"
+          },
           "subtext": {
             "reader": "Can view only",
             "editor": "Can view and edit content",
@@ -425,6 +430,11 @@
       },
       "share_modal": {
         "options": {
+          "link_reach": {
+            "authenticated": "Authentifié",
+            "public": "Public",
+            "restricted": "Restreint"
+          },
           "subtext": {
             "reader": "Peut voir uniquement",
             "editor": "Peut voir et modifier le contenu",
@@ -845,6 +855,11 @@
       },
       "share_modal": {
         "options": {
+          "link_reach": {
+            "authenticated": "Geauthenticeerd",
+            "public": "Publiek",
+            "restricted": "Beperkt"
+          },
           "subtext": {
             "reader": "Kan alleen bekijken",
             "editor": "Kan bekijken en bewerken",
