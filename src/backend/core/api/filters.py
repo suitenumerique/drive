@@ -102,9 +102,11 @@ class SearchItemFilter(ItemFilter):
         if ScopeChoices.ALL in value:
             return queryset
         if ScopeChoices.DELETED in value:
-            to_filter |= Q(deleted_at__isnull=False)
+            to_filter |= Q(deleted_at__isnull=False) | Q(
+                ancestors_deleted_at__isnull=False
+            )
         if ScopeChoices.NOT_DELETED in value:
-            to_filter |= Q(deleted_at__isnull=True)
+            to_filter |= Q(deleted_at__isnull=True, ancestors_deleted_at__isnull=True)
 
         return queryset.filter(to_filter)
 
