@@ -23,6 +23,7 @@ and this project adheres to
 - ♻️(back) improve uploaded ended performance
 - (front) fix large uploads progress
 - 🐛(front) fix upload pending items
+- 🐛(back) fix search to exclude deleted child #352
 
 ## [v0.7.0] - 2025-10-03
 
