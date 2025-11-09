@@ -632,3 +632,74 @@ def test_api_items_search_authenticated_filter_with_workspace_children():
     response = client.get(f"/api/v1.0/items/search/?workspace={children.id}")
     assert response.status_code == 200
     assert response.data["count"] == 0
+
+
+def test_api_items_search_excludes_children_of_deleted_folders():
+    """
+    Children of deleted folders should not appear in search results.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent = factories.ItemFactory(
+        title="folder A",
+        parent=user.get_main_workspace(),
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    factories.ItemFactory(
+        title="folder B",
+        parent=user.get_main_workspace(),
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    factories.ItemFactory(
+        title="folder A child",
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+    )
+
+    parent.soft_delete()
+
+    response = client.get("/api/v1.0/items/search/?title=folder")
+    assert response.status_code == 200
+    assert response.data["count"] == 1
+
+    titles = [item["title"] for item in response.data["results"]]
+    assert "folder B" in titles
+    assert "folder A" not in titles
+    assert "folder A child" not in titles
+
+
+def test_api_items_search_deleted_folder_and_children_in_recycle_bin():
+    """
+    Children of deleted folders should appear when searching in the recycle bin.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent = factories.ItemFactory(
+        title="folder A",
+        parent=user.get_main_workspace(),
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    factories.ItemFactory(
+        title="folder B",
+        parent=user.get_main_workspace(),
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    factories.ItemFactory(
+        title="folder A child",
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+    )
+
+    parent.soft_delete()
+
+    response = client.get("/api/v1.0/items/search/?scope=deleted")
+    assert response.status_code == 200
+    assert response.data["count"] == 2
+
+    titles = [item["title"] for item in response.data["results"]]
+    assert "folder A" in titles
+    assert "folder A child" in titles
