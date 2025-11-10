@@ -95,6 +95,19 @@ services:
         condition: service_healthy
       onlyoffice:
         condition: service_healthy
+      ds-proxy:
+        condition: service_started
+
+  ds-proxy:
+    image: lunika/ds-proxy:aws-signature
+    command: ["proxy", "--address", "0.0.0.0:4444", "--password-file", "/etc/dsproxy/PASSWORD", "--salt", "12345678901234567890123456789012", "--keyring-file", "/etc/dsproxy/keyring.toml", "--upstream-url", "http://minio:9000", "--local-encryption-directory", "/var/tmp/local_encryption/", "--aws-access-key", "drive", "--aws-secret-key", "password", "--aws-region", "us-east-1"]
+    ports:
+      - "4444:4444"
+    environment:
+      - RUST_LOG=debug,ds_proxy::http::handlers::fetch=trace,ds_proxy::http::handlers::forward=trace
+      - RUST_BACKTRACE=full
+    volumes:
+      - ./docker/files/development/ds_proxy/:/etc/dsproxy/:ro
 
   celery-dev:
     user: ${DOCKER_USER:-1000}
