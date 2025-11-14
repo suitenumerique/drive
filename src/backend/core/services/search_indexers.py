@@ -123,21 +123,16 @@ class BaseItemIndexer(ABC):
     `serialize_item()` and `push()` to define backend-specific behavior.
     """
 
-    def __init__(self, batch_size=None, max_upload_size=None):
+    def __init__(self):
         """
         Initialize the indexer.
-
-        Args:
-            batch_size (int, optional): Number of documents per batch.
-                Defaults to settings.SEARCH_INDEXER_BATCH_SIZE.
         """
-        self.batch_size = batch_size or settings.SEARCH_INDEXER_BATCH_SIZE
-        self.max_upload_size = (
-            max_upload_size or settings.SEARCH_INDEXER_UPLOAD_MAX_SIZE
-        )
+        self.batch_size = settings.SEARCH_INDEXER_BATCH_SIZE
+        self.max_upload_size = settings.SEARCH_INDEXER_UPLOAD_MAX_SIZE
         self.indexer_url = settings.SEARCH_INDEXER_URL
         self.indexer_secret = settings.SEARCH_INDEXER_SECRET
         self.search_url = settings.SEARCH_INDEXER_QUERY_URL
+        self.search_limit = settings.SEARCH_INDEXER_QUERY_LIMIT
         self.allowed_mimetypes = settings.SEARCH_INDEXER_ALLOWED_MIMETYPES
 
         if not self.indexer_url:
@@ -165,12 +160,19 @@ class BaseItemIndexer(ABC):
                 "SEARCH_INDEXER_ALLOWED_MIMETYPES Django setting must be a list."
             )
 
-    def index(self, queryset=None):
+    def index(self, queryset=None, batch_size=None):
         """
         Fetch documents in batches, serialize them, and push to the search backend.
+
+        Args:
+            queryset (optional): Document queryset
+                Defaults to all documents without filter.
+            batch_size (int, optional): Number of documents per batch.
+                Defaults to settings.SEARCH_INDEXER_BATCH_SIZE.
         """
         last_id = None
         count = 0
+        batch_size = batch_size or self.batch_size
         queryset = queryset or models.Item.objects.all()
         queryset = queryset.filter(
             main_workspace=False,
@@ -178,9 +180,9 @@ class BaseItemIndexer(ABC):
 
         while True:
             if last_id is not None:
-                items_batch = list(queryset.filter(id__gt=last_id)[: self.batch_size])
+                items_batch = list(queryset.filter(id__gt=last_id)[:batch_size])
             else:
-                items_batch = list(queryset[: self.batch_size])
+                items_batch = list(queryset[:batch_size])
 
             if not items_batch:
                 break
@@ -214,7 +216,7 @@ class BaseItemIndexer(ABC):
         """
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
-    def search(self, text, token, visited=(), page=1, page_size=50):
+    def search(self, text, token, visited=(), nb_results=None):
         """
         Search for documents in Find app.
         Ensure the same default ordering as "Docs" list : -updated_at
@@ -227,20 +229,17 @@ class BaseItemIndexer(ABC):
             visited (list, optional):
                 List of ids of active public documents with LinkTrace
                 Defaults to settings.SEARCH_INDEXER_BATCH_SIZE.
-            page (int, optional):
-                The page number to retrieve.
-                Defaults to 1 if not specified.
-            page_size (int, optional):
+            nb_results (int, optional):
                 The number of results to return per page.
-                Defaults to 50 if not specified.
+                Defaults to settings.SEARCH_INDEXER_QUERY_LIMIT.
         """
+        nb_results = nb_results or self.search_limit
         response = self.search_query(
             data={
                 "q": text,
                 "visited": visited,
                 "services": ["drive"],
-                "page_number": page,
-                "page_size": page_size,
+                "nb_results": nb_results,
             },
             token=token,
         )
@@ -281,7 +280,7 @@ class SearchIndexer(BaseItemIndexer):
         return (
             item.upload_state == models.ItemUploadStateChoices.READY
             and item.type == models.ItemTypeChoices.FILE
-            and mimetype
+            and len(mimetype) > 0
             and any(mimetype.startswith(allowed) for allowed in self.allowed_mimetypes)
         )
 
@@ -298,7 +297,12 @@ class SearchIndexer(BaseItemIndexer):
         """
         doc_path = str(item.path)
         is_deleted = bool(item.ancestors_deleted_at or item.deleted_at)
-        content = self.to_text(item) if not is_deleted and self.has_text(item) else ""
+        content = ""
+
+        # There is no endpoint in Find API for deleted items so we index it
+        # again with an empty content.
+        if not is_deleted and self.has_text(item):
+            content = self.to_text(item)
 
         return {
             "id": str(item.id),

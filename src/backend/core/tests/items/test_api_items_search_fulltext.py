@@ -322,8 +322,7 @@ def test_api_items_search_pagination(indexer_settings, pagination, status, expec
             "q": "alpha",
             "visited": [],
             "services": ["drive"],
-            "page_number": 1,
-            "page_size": 100,
+            "nb_results": 50,
         }
 
 
