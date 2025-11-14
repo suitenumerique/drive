@@ -34,7 +34,7 @@ from rest_framework.throttling import UserRateThrottle
 
 from core import enums, models
 from core.services.sdk_relay import SDKRelayManager
-from core.tasks.item import process_item_deletion
+from core.tasks.item import process_item_deletion, rename_file
 from wopi.services import access as access_service
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
 
@@ -583,6 +583,14 @@ class ItemViewSet(
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
         instance.soft_delete()
+
+    def perform_update(self, serializer):
+        """Override to check if a file is renamed in order to rename file on storage."""
+        instance = serializer.instance
+        if instance.type == models.ItemTypeChoices.FILE:
+            if instance.title != serializer.validated_data.get("title"):
+                rename_file.delay(instance.id, serializer.validated_data.get("title"))
+        serializer.save()
 
     @drf.decorators.action(detail=True, methods=["delete"], url_path="hard-delete")
     def hard_delete(self, request, *args, **kwargs):

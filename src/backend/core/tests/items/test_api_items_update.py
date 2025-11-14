@@ -3,14 +3,18 @@ Tests for items API endpoint in drive's core app: update
 """
 
 import random
+from io import BytesIO
+from unittest import mock
 
 from django.contrib.auth.models import AnonymousUser
+from django.core.files.storage import default_storage
 
 import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
 from core.api import serializers
+from core.api.viewsets import rename_file
 from core.tests.conftest import TEAM, USER, VIA
 
 pytestmark = pytest.mark.django_db
@@ -614,3 +618,38 @@ def test_api_items_update_suspicious_item_should_not_work_for_non_creator():
         format="json",
     )
     assert response.status_code == 404
+
+
+def test_api_items_update_file_rename():
+    """
+    Test the rename of a file.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        title="old_title",
+        type=models.ItemTypeChoices.FILE,
+        filename="old_title.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+
+    assert item.filename == "old_title.txt"
+    assert default_storage.exists(item.file_key)
+
+    with mock.patch.object(rename_file, "delay") as rename_file_mock:
+        response = client.patch(
+            f"/api/v1.0/items/{item.id!s}/",
+            {"title": "new_title"},
+            format="json",
+        )
+    assert response.status_code == 200
+    assert response.json()["title"] == "new_title"
+    item.refresh_from_db()
+    assert item.title == "new_title"
+    rename_file_mock.assert_called_once_with(item.id, "new_title")

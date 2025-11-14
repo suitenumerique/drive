@@ -30,6 +30,7 @@ and this project adheres to
 - 🐛(back) fix search to exclude deleted child #352
 - 🔧(procfile) trigger collabora configuration tasks at start #368
 - 🐛(backend) filter invitation with case insensitive email
+- 🐛(back) rename file on storage on renaming action
 
 ## [v0.7.0] - 2025-10-03
 

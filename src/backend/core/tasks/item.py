@@ -3,6 +3,7 @@ Tasks related to items.
 """
 
 import logging
+from os.path import splitext
 
 from django.core.files.storage import default_storage
 
@@ -44,3 +45,47 @@ def process_item_deletion(item_id):
             process_item_deletion.delay(child.id)
 
     item.delete()
+
+
+@app.task
+def rename_file(item_id, new_title):
+    """Rename the file of an item. Update the filename and then rename the file on storage."""
+    try:
+        item = Item.objects.get(id=item_id)
+    except Item.DoesNotExist:
+        logger.error("Item %s does not exist", item_id)
+        return
+
+    if item.type != ItemTypeChoices.FILE:
+        logger.error("Item %s is not a file", item_id)
+        return
+
+    if item.upload_state != ItemUploadStateChoices.READY:
+        logger.error("Item %s is not ready for renaming", item_id)
+
+    _, extension = splitext(item.filename)
+
+    new_filename = f"{new_title}{extension}"
+    from_file_key = item.file_key
+
+    item.filename = new_filename
+    item.save(update_fields=["filename", "updated_at"])
+
+    to_file_key = item.file_key
+
+    s3_client = default_storage.connection.meta.client
+
+    s3_client.copy_object(
+        Bucket=default_storage.bucket_name,
+        CopySource={
+            "Bucket": default_storage.bucket_name,
+            "Key": from_file_key,
+        },
+        Key=to_file_key,
+        MetadataDirective="COPY",
+    )
+
+    s3_client.delete_object(
+        Bucket=default_storage.bucket_name,
+        Key=from_file_key,
+    )

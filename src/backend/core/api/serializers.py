@@ -292,6 +292,7 @@ class ItemSerializer(ListItemSerializer):
             "upload_state",
             "url",
             "url_preview",
+            "filename",
             "mimetype",
             "main_workspace",
             "size",
