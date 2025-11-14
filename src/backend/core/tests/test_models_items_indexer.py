@@ -74,15 +74,18 @@ def test_models_items_post_save_indexer_no_batches(indexer_settings):
 
     indexer = SearchIndexer()
 
+    def _key(d):
+        return d[0]["id"]
+
     # 3 calls
     assert len(data) == 3
-    assert sorted(data, key=itemgetter("id")) == sorted(
+    assert sorted(data, key=_key) == sorted(
         [
-            indexer.serialize_item(item1, accesses),
-            indexer.serialize_item(item2, accesses),
-            indexer.serialize_item(item3, accesses),
+            [indexer.serialize_item(item1, accesses)],
+            [indexer.serialize_item(item2, accesses)],
+            [indexer.serialize_item(item3, accesses)],
         ],
-        key=itemgetter("id"),
+        key=_key,
     )
 
     # The throttle counters should be reset
@@ -428,4 +431,8 @@ def test_models_items_access_post_save_indexer_no_throttle(indexer_settings):
 
         # 3 calls
         assert len(data) == 3
-        assert [d["id"] for d in data] == [str(item.pk)] * 3
+        assert [list(map(itemgetter("id"), d)) for d in data] == [
+            [str(item.pk)],
+            [str(item.pk)],
+            [str(item.pk)],
+        ]
