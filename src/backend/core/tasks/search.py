@@ -8,10 +8,7 @@ from django.core.cache import cache
 from django_redis.cache import RedisCache
 
 from core import models
-from core.services.search_indexers import (
-    get_batch_accesses_by_users_and_teams,
-    get_file_indexer,
-)
+from core.services.search_indexers import get_file_indexer
 
 from drive.celery_app import app
 
@@ -42,24 +39,14 @@ def file_indexer_task(item_id):
     """Celery Task : Sends indexation query for a document."""
     indexer = get_file_indexer()
 
-    if indexer is None:
-        return
-
-    try:
-        item = models.Item.objects.get(
+    if indexer:
+        queryset = models.Item.objects.filter(
             pk=item_id,
             main_workspace=False,
         )
-    except models.Item.DoesNotExist:
-        # Skip the task if the document does not exist.
-        return
 
-    accesses = get_batch_accesses_by_users_and_teams((item,))
-
-    data = indexer.serialize_item(item=item, accesses=accesses)
-
-    logger.info("Start file %s indexation", item_id)
-    indexer.push(data)
+        indexer.index(queryset)
+        logger.info("Start file %s indexation", item_id)
 
 
 @app.task

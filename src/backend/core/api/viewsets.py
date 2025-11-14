@@ -1057,11 +1057,7 @@ class ItemViewSet(
         # Retrieve the documents ids from Find. No pagination here the queryset is
         # already filtered
         results = indexer.search(
-            text=text,
-            token=token,
-            visited=get_visited_items_ids_of(queryset, user),
-            page=1,
-            page_size=100,
+            text=text, token=token, visited=get_visited_items_ids_of(queryset, user)
         )
 
         queryset = queryset.filter(pk__in=results)

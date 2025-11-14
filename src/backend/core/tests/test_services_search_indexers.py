@@ -251,6 +251,37 @@ def test_services_search_allowed_mimetypes_is_invalid(
     assert expected in str(exc_info.value)
 
 
+@pytest.mark.parametrize(
+    "kwargs, expected",
+    [
+        ({"mimetype": "text/plain"}, True),
+        ({"mimetype": "text/html"}, True),
+        ({"mimetype": "application/html"}, False),
+        ({"mimetype": "application/pdf"}, True),
+        ({"mimetype": "application/"}, False),
+        ({"mimetype": ""}, False),
+    ],
+)
+def test_services_search_has_text(indexer_settings, kwargs, expected):
+    """
+    Only allowed mimetypes of uploaded files in ready state can have an indexable
+    content.
+    """
+    indexer_settings.SEARCH_INDEXER_ALLOWED_MIMETYPES = [
+        "text/",
+        "application/pdf",
+    ]
+
+    item = factories.ItemFactory(
+        upload_bytes=b"This is a text file content",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        **kwargs,
+    )
+
+    assert expected == SearchIndexer().has_text(item)
+
+
 @pytest.mark.usefixtures("indexer_settings")
 def test_services_search_indexers_serialize_item_file():
     """
@@ -458,6 +489,50 @@ def test_services_search_indexers_batches_pass_only_batch_accesses(
         expected_user_subs[str(item.id)] = str(access.user.sub)
 
     assert SearchIndexer().index() == 5
+
+    # Should be 3 batches: 2 + 2 + 1
+    assert mock_push.call_count == 3
+
+    seen_item_ids = set()
+
+    for call in mock_push.call_args_list:
+        batch = call.args[0]
+        assert isinstance(batch, list)
+
+        for item_json in batch:
+            item_id = item_json["id"]
+            seen_item_ids.add(item_id)
+
+            # Only one user expected per document
+            assert item_json["users"] == [expected_user_subs[item_id]]
+            assert item_json["groups"] == []
+
+    # Make sure all 5 files were indexed
+    assert seen_item_ids == {str(d.id) for d in items}
+
+
+@patch.object(SearchIndexer, "push")
+@pytest.mark.usefixtures("indexer_settings")
+def test_services_search_indexers_batch_size_argument(mock_push):
+    """
+    Documents indexing should be processed in batches,
+    batch_size overrides SEARCH_INDEXER_BATCH_SIZE
+    """
+    items = factories.ItemFactory.create_batch(
+        5,
+        mimetype="text/plain",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes="this is a text",
+    )
+
+    # Attach a single user access to each file
+    expected_user_subs = {}
+    for item in items:
+        access = factories.UserItemAccessFactory(item=item)
+        expected_user_subs[str(item.id)] = str(access.user.sub)
+
+    assert SearchIndexer().index(batch_size=2) == 5
 
     # Should be 3 batches: 2 + 2 + 1
     assert mock_push.call_count == 3
@@ -782,8 +857,46 @@ def test_services_search_indexers_search(mock_post, indexer_settings):
     assert query_data["q"] == "alpha"
     assert sorted(query_data["visited"]) == sorted([str(item1.pk), str(item2.pk)])
     assert query_data["services"] == ["drive"]
-    assert query_data["page_number"] == 1
-    assert query_data["page_size"] == 50
+    assert query_data["nb_results"] == 50
 
     assert kwargs.get("headers") == {"Authorization": "Bearer mytoken"}
     assert kwargs.get("timeout") == 10
+
+
+@patch("requests.post")
+def test_services_search_indexers_search_nb_results(mock_post, indexer_settings):
+    """
+    Find API call should have nb_results == SEARCH_INDEXER_QUERY_LIMIT
+    or the given nb_results argument.
+    """
+    indexer_settings.SEARCH_INDEXER_QUERY_LIMIT = 25
+
+    user = factories.UserFactory()
+    indexer = SearchIndexer()
+
+    mock_response = mock_post.return_value
+    mock_response.raise_for_status.return_value = None  # No error
+
+    item1, item2, _ = factories.ItemFactory.create_batch(3)
+
+    create_link = partial(models.LinkTrace.objects.create, user=user)
+
+    create_link(item=item1)
+    create_link(item=item2)
+
+    visited = get_visited_items_ids_of(models.Item.objects.all(), user)
+
+    indexer.search("alpha", visited=visited, token="mytoken")
+
+    args, kwargs = mock_post.call_args
+
+    assert args[0] == indexer_settings.SEARCH_INDEXER_QUERY_URL
+    assert kwargs.get("json")["nb_results"] == 25
+
+    # The argument overrides the setting value
+    indexer.search("alpha", visited=visited, token="mytoken", nb_results=109)
+
+    args, kwargs = mock_post.call_args
+
+    assert args[0] == indexer_settings.SEARCH_INDEXER_QUERY_URL
+    assert kwargs.get("json")["nb_results"] == 109
