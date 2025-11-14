@@ -689,6 +689,32 @@ def test_api_item_invitations_update_authenticated_unprivileged(
         assert value == old_invitation_values[key]
 
 
+@pytest.mark.parametrize("via", VIA)
+@pytest.mark.parametrize("role", ["administrator", "owner"])
+def test_api_item_invitations_patch(via, role, mock_user_teams):
+    """Partially updating an invitation should be allowed."""
+    user = factories.UserFactory()
+    invitation = factories.InvitationFactory(role="editor")
+
+    if via == USER:
+        factories.UserItemAccessFactory(item=invitation.item, user=user, role=role)
+    elif via == TEAM:
+        mock_user_teams.return_value = ["lasuite", "unknown"]
+        factories.TeamItemAccessFactory(item=invitation.item, team="lasuite", role=role)
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.patch(
+        f"/api/v1.0/items/{invitation.item.id!s}/invitations/{invitation.id!s}/",
+        {"role": "reader"},
+        format="json",
+    )
+    assert response.status_code == 200
+    invitation.refresh_from_db()
+    assert invitation.role == "reader"
+
+
 # Delete
 
 
@@ -772,3 +798,29 @@ def test_api_item_invitations_delete_readers_or_editors(via, role, mock_user_tea
             }
         ],
     }
+
+
+def test_api_item_invitations_create_lower_email():
+    """
+    No matter the case, the email should be converted to lowercase.
+    """
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "owner")])
+
+    # Build an invitation to the email of an existing identity in the db
+    invitation_values = {
+        "email": "GuEst@example.com",
+        "role": random.choice(models.RoleChoices.values),
+    }
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/invitations/",
+        invitation_values,
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert response.json()["email"] == "guest@example.com"

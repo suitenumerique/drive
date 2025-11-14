@@ -520,6 +520,9 @@ class InvitationSerializer(serializers.ModelSerializer):
 
         attrs["item_id"] = self.context["resource_id"]
 
+        if attrs.get("email"):
+            attrs["email"] = attrs["email"].lower()
+
         # Only set the issuer if the instance is being created
         if self.instance is None:
             attrs["issuer"] = user

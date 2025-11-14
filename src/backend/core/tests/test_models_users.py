@@ -54,6 +54,7 @@ def test_models_users_save_create_main_workspace():
         user=user, role=models.RoleChoices.OWNER, item=item
     ).exists()
 
+
 def test_models_users_convert_valid_invitations():
     """
     The "_convert_valid_invitations" method should convert valid invitations to item accesses.
@@ -78,7 +79,5 @@ def test_models_users_convert_valid_invitations():
     assert other_item.accesses.filter(user=user).count() == 1
 
     assert not models.Invitation.objects.filter(id=invitation_item.id).exists()
-    assert not models.Invitation.objects.filter(
-        id=invitation_other_item.id
-    ).exists()
+    assert not models.Invitation.objects.filter(id=invitation_other_item.id).exists()
     assert models.Invitation.objects.filter(id=other_email_invitation.id).exists()
