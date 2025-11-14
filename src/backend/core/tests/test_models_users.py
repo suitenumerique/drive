@@ -53,3 +53,32 @@ def test_models_users_save_create_main_workspace():
     assert models.ItemAccess.objects.filter(
         user=user, role=models.RoleChoices.OWNER, item=item
     ).exists()
+
+def test_models_users_convert_valid_invitations():
+    """
+    The "_convert_valid_invitations" method should convert valid invitations to item accesses.
+    """
+    email = "test@example.com"
+    item = factories.ItemFactory()
+    other_item = factories.ItemFactory()
+    invitation_item = factories.InvitationFactory(email=email, item=item)
+    invitation_other_item = factories.InvitationFactory(
+        email="Test@example.coM", item=other_item
+    )
+    other_email_invitation = factories.InvitationFactory(
+        email="pre_test@example.com", item=item
+    )
+
+    assert item.accesses.count() == 0
+    assert other_item.accesses.count() == 0
+
+    user = factories.UserFactory(email=email)
+
+    assert item.accesses.filter(user=user).count() == 1
+    assert other_item.accesses.filter(user=user).count() == 1
+
+    assert not models.Invitation.objects.filter(id=invitation_item.id).exists()
+    assert not models.Invitation.objects.filter(
+        id=invitation_other_item.id
+    ).exists()
+    assert models.Invitation.objects.filter(id=other_email_invitation.id).exists()

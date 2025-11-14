@@ -25,6 +25,7 @@ and this project adheres to
 - 🐛(front) fix upload pending items
 - 🐛(back) fix search to exclude deleted child #352
 - 🔧(procfile) trigger collabora configuration tasks at start #368
+- 🐛(backend) filter invitation with case insensitive email
 
 ## [v0.7.0] - 2025-10-03
 

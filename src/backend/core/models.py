@@ -292,7 +292,7 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         Expired invitations are ignored.
         """
         valid_invitations = Invitation.objects.filter(
-            email=self.email,
+            email__iexact=self.email,
             created_at__gte=(
                 timezone.now()
                 - timedelta(seconds=settings.INVITATION_VALIDITY_DURATION)
