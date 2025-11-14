@@ -55,7 +55,14 @@ def test_api_items_list_format():
         type=models.ItemTypeChoices.FILE,
     )
     access = factories.UserItemAccessFactory(item=item, user=user)
-    access2 = factories.UserItemAccessFactory(item=item2, user=user)
+    factories.UserItemAccessFactory(item=item2, user=user)
+
+    # User has visited this file but should not be present in the list view
+    factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach="public",
+        link_traces=[user],
+    )
 
     # hard deleted item should not appear
     hard_deleted_item = factories.ItemFactory(
@@ -76,45 +83,12 @@ def test_api_items_list_format():
     content = response.json()
     results = content.pop("results")
     assert content == {
-        "count": 2,
+        "count": 1,
         "next": None,
         "previous": None,
     }
-    assert len(results) == 2
+    assert len(results) == 1
     assert results == [
-        {
-            "id": str(item2.id),
-            "abilities": item2.get_abilities(user),
-            "created_at": item2.created_at.isoformat().replace("+00:00", "Z"),
-            "creator": {
-                "id": str(item2.creator.id),
-                "full_name": item2.creator.full_name,
-                "short_name": item2.creator.short_name,
-            },
-            "depth": 1,
-            "is_favorite": True,
-            "link_reach": item2.link_reach,
-            "link_role": item2.link_role,
-            "nb_accesses": 3,
-            "numchild": 0,
-            "numchild_folder": 0,
-            "path": str(item2.path),
-            "title": item2.title,
-            "updated_at": item2.updated_at.isoformat().replace("+00:00", "Z"),
-            "user_roles": [access2.role],
-            "type": models.ItemTypeChoices.FILE,
-            "upload_state": models.ItemUploadStateChoices.READY,
-            "url": f"http://localhost:8083/media/item/{item2.id!s}/logo.png",
-            "url_preview": f"http://localhost:8083/media/preview/item/{item2.id!s}/logo.png",
-            "mimetype": "image/png",
-            "main_workspace": False,
-            "filename": item2.filename,
-            "size": None,
-            "description": None,
-            "deleted_at": None,
-            "hard_delete_at": None,
-            "is_wopi_supported": False,
-        },
         {
             "id": str(item.id),
             "abilities": item.get_abilities(user),
@@ -189,11 +163,11 @@ def test_api_items_list_authenticated_direct(django_assert_num_queries):
     # Children of hidden items should get listed when visible by the logged-in user
     hidden_root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
     child3_with_access = factories.ItemFactory(
-        parent=hidden_root, type=models.ItemTypeChoices.FILE
+        parent=hidden_root, type=models.ItemTypeChoices.FOLDER
     )
     factories.UserItemAccessFactory(user=user, item=child3_with_access)
     child4_with_access = factories.ItemFactory(
-        parent=hidden_root, type=models.ItemTypeChoices.FILE
+        parent=hidden_root, type=models.ItemTypeChoices.FOLDER
     )
     factories.UserItemAccessFactory(user=user, item=child4_with_access)
 
@@ -262,13 +236,13 @@ def test_api_items_list_authenticated_via_team(
     items_team1 = [
         access.item
         for access in factories.TeamItemAccessFactory.create_batch(
-            2, team="team1", item__type=models.ItemTypeChoices.FILE
+            2, team="team1", item__type=models.ItemTypeChoices.FOLDER
         )
     ]
     items_team2 = [
         access.item
         for access in factories.TeamItemAccessFactory.create_batch(
-            3, team="team2", item__type=models.ItemTypeChoices.FILE
+            3, team="team2", item__type=models.ItemTypeChoices.FOLDER
         )
     ]
 
@@ -292,7 +266,7 @@ def test_api_items_list_authenticated_link_reach_restricted(
     django_assert_num_queries,
 ):
     """
-    An authenticated user who has link traces to a item that is restricted should not
+    An authenticated user who has link traces to an item that is restricted should not
     see it on the list view
     """
     user = factories.UserFactory()
@@ -303,13 +277,17 @@ def test_api_items_list_authenticated_link_reach_restricted(
     item = factories.ItemFactory(
         link_traces=[user], link_reach="restricted", type=models.ItemTypeChoices.FILE
     )
+    models.LinkTrace.objects.create(item=item, user=factories.UserFactory())
 
     # Link traces for other items or other users should not interfere
-    models.LinkTrace.objects.create(item=item, user=factories.UserFactory())
     other_item = factories.ItemFactory(
         link_reach="public", type=models.ItemTypeChoices.FILE
     )
     models.LinkTrace.objects.create(item=other_item, user=user)
+    folder_item = factories.ItemFactory(
+        link_reach="public", type=models.ItemTypeChoices.FOLDER
+    )
+    models.LinkTrace.objects.create(item=folder_item, user=user)
 
     with django_assert_num_queries(5):
         response = client.get("/api/v1.0/items/")
@@ -320,17 +298,18 @@ def test_api_items_list_authenticated_link_reach_restricted(
 
     assert response.status_code == 200
     results = response.json()["results"]
-    # Only the other item is returned but not the restricted item even though the user
+    # Only the folder item is returned but not the other items even though the user
     # visited it earlier (probably b/c it previously had public or authenticated reach...)
+    # only items of type folder are return.
     assert len(results) == 1
-    assert results[0]["id"] == str(other_item.id)
+    assert results[0]["id"] == str(folder_item.id)
 
 
 def test_api_items_list_authenticated_link_reach_public_or_authenticated(
     django_assert_num_queries,
 ):
     """
-    An authenticated user who has link traces to a item with public or authenticated
+    An authenticated user who has link traces to an item with public or authenticated
     link reach should see it on the list view.
     """
     user = factories.UserFactory()
@@ -355,11 +334,17 @@ def test_api_items_list_authenticated_link_reach_public_or_authenticated(
         link_reach=random.choice(["public", "authenticated"]),
         type=models.ItemTypeChoices.FOLDER,
     )
-    visible_child = factories.ItemFactory(
+    factories.ItemFactory(
         link_traces=[user],
         link_reach=random.choice(["public", "authenticated"]),
         parent=hidden_item,
         type=models.ItemTypeChoices.FILE,
+    )
+    visible_child = factories.ItemFactory(
+        link_traces=[user],
+        link_reach=random.choice(["public", "authenticated"]),
+        parent=hidden_item,
+        type=models.ItemTypeChoices.FOLDER,
     )
 
     expected_ids = {
@@ -393,7 +378,9 @@ def test_api_items_list_pagination(
 
     item_ids = [
         str(access.item_id)
-        for access in factories.UserItemAccessFactory.create_batch(3, user=user)
+        for access in factories.UserItemAccessFactory.create_batch(
+            3, user=user, item__type=models.ItemTypeChoices.FOLDER
+        )
     ]
     # Get page 1
     response = client.get(
@@ -438,7 +425,9 @@ def test_api_items_list_authenticated_distinct():
 
     other_user = factories.UserFactory()
 
-    item = factories.ItemFactory(users=[user, other_user])
+    item = factories.ItemFactory(
+        users=[user, other_user], type=models.ItemTypeChoices.FOLDER
+    )
 
     response = client.get(
         "/api/v1.0/items/",
@@ -460,7 +449,10 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
     client.force_login(user)
 
     special_items = factories.ItemFactory.create_batch(
-        3, users=[user], type=models.ItemTypeChoices.FILE
+        3, users=[user], type=models.ItemTypeChoices.FOLDER
+    )
+    factories.ItemFactory.create_batch(
+        2, users=[user], type=models.ItemTypeChoices.FOLDER
     )
     factories.ItemFactory.create_batch(
         2, users=[user], type=models.ItemTypeChoices.FILE
@@ -498,49 +490,3 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
             assert result["is_favorite"] is True
         else:
             assert result["is_favorite"] is False
-
-
-def test_api_items_list_with_suspicious_items():
-    """
-    Suspicious items should not be listed in the items list for non creator.
-    """
-    creator = factories.UserFactory()
-    other_user = factories.UserFactory()
-
-    suspicious_item = factories.ItemFactory(
-        creator=creator,
-        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
-        users=[creator, other_user],
-        type=models.ItemTypeChoices.FILE,
-        filename="suspicious.txt",
-    )
-
-    item1, item2 = factories.ItemFactory.create_batch(
-        2,
-        creator=creator,
-        update_upload_state=models.ItemUploadStateChoices.READY,
-        users=[creator, other_user],
-        type=models.ItemTypeChoices.FILE,
-        filename="test.txt",
-    )
-
-    client = APIClient()
-    client.force_login(other_user)
-
-    response = client.get("/api/v1.0/items/")
-    assert response.status_code == 200
-    content = response.json()
-    for item in content["results"]:
-        assert item["id"] != str(suspicious_item.id)
-    assert content["count"] == 2
-
-    assert content["results"][0]["id"] == str(item2.id)
-    assert content["results"][1]["id"] == str(item1.id)
-
-    client.force_login(creator)
-    response = client.get("/api/v1.0/items/")
-    content = response.json()
-    assert content["count"] == 3
-    assert content["results"][0]["id"] == str(item2.id)
-    assert content["results"][1]["id"] == str(item1.id)
-    assert content["results"][2]["id"] == str(suspicious_item.id)

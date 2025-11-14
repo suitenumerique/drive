@@ -116,7 +116,9 @@ def test_api_items_list_ordering_default():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory.create_batch(4, users=[user])
+    factories.ItemFactory.create_batch(
+        4, users=[user], type=models.ItemTypeChoices.FOLDER
+    )
 
     response = client.get("/api/v1.0/items/")
 
@@ -135,7 +137,9 @@ def test_api_items_list_ordering_by_fields():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory.create_batch(4, users=[user])
+    factories.ItemFactory.create_batch(
+        4, users=[user], type=models.ItemTypeChoices.FOLDER
+    )
 
     for parameter in [
         "created_at",
@@ -183,9 +187,12 @@ def test_api_items_list_filter_unknown_field():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory()
+    factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
     expected_ids = {
-        str(item.id) for item in factories.ItemFactory.create_batch(2, users=[user])
+        str(item.id)
+        for item in factories.ItemFactory.create_batch(
+            2, users=[user], type=models.ItemTypeChoices.FOLDER
+        )
     }
 
     response = client.get("/api/v1.0/items/?unknown=true")
@@ -207,8 +214,12 @@ def test_api_items_list_filter_is_creator_me_true():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory.create_batch(2, users=[user], creator=user)
-    factories.ItemFactory.create_batch(2, users=[user])
+    factories.ItemFactory.create_batch(
+        2, users=[user], creator=user, type=models.ItemTypeChoices.FOLDER
+    )
+    factories.ItemFactory.create_batch(
+        2, users=[user], type=models.ItemTypeChoices.FOLDER
+    )
 
     response = client.get("/api/v1.0/items/?is_creator_me=true")
 
@@ -233,8 +244,12 @@ def test_api_items_list_filter_is_creator_me_false():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory.create_batch(3, users=[user], creator=user)
-    factories.ItemFactory.create_batch(2, users=[user])
+    factories.ItemFactory.create_batch(
+        3, users=[user], creator=user, type=models.ItemTypeChoices.FOLDER
+    )
+    factories.ItemFactory.create_batch(
+        2, users=[user], type=models.ItemTypeChoices.FOLDER
+    )
 
     response = client.get("/api/v1.0/items/?is_creator_me=false")
 
@@ -257,8 +272,12 @@ def test_api_items_list_filter_is_creator_me_invalid():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory.create_batch(3, users=[user], creator=user)
-    factories.ItemFactory.create_batch(2, users=[user])
+    factories.ItemFactory.create_batch(
+        3, users=[user], creator=user, type=models.ItemTypeChoices.FOLDER
+    )
+    factories.ItemFactory.create_batch(
+        2, users=[user], type=models.ItemTypeChoices.FOLDER
+    )
 
     response = client.get("/api/v1.0/items/?is_creator_me=invalid")
 
@@ -278,8 +297,12 @@ def test_api_items_list_filter_is_favorite_true():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory.create_batch(3, users=[user], favorited_by=[user])
-    factories.ItemFactory.create_batch(2, users=[user])
+    factories.ItemFactory.create_batch(
+        3, users=[user], favorited_by=[user], type=models.ItemTypeChoices.FOLDER
+    )
+    factories.ItemFactory.create_batch(
+        2, users=[user], type=models.ItemTypeChoices.FOLDER
+    )
 
     response = client.get("/api/v1.0/items/?is_favorite=true")
 
@@ -300,8 +323,12 @@ def test_api_items_list_filter_is_favorite_false():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory.create_batch(3, users=[user], favorited_by=[user])
-    factories.ItemFactory.create_batch(2, users=[user])
+    factories.ItemFactory.create_batch(
+        3, users=[user], favorited_by=[user], type=models.ItemTypeChoices.FOLDER
+    )
+    factories.ItemFactory.create_batch(
+        2, users=[user], type=models.ItemTypeChoices.FOLDER
+    )
 
     response = client.get("/api/v1.0/items/?is_favorite=false")
 
@@ -320,8 +347,12 @@ def test_api_items_list_filter_is_favorite_invalid():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory.create_batch(3, users=[user], favorited_by=[user])
-    factories.ItemFactory.create_batch(2, users=[user])
+    factories.ItemFactory.create_batch(
+        3, users=[user], favorited_by=[user], type=models.ItemTypeChoices.FOLDER
+    )
+    factories.ItemFactory.create_batch(
+        2, users=[user], type=models.ItemTypeChoices.FOLDER
+    )
 
     response = client.get("/api/v1.0/items/?is_favorite=invalid")
 
@@ -364,7 +395,9 @@ def test_api_items_list_filter_title(query, nb_results):
             if random.choice([True, False])
             else None
         )
-        factories.ItemFactory(title=title, users=[user], parent=parent)
+        factories.ItemFactory(
+            title=title, users=[user], parent=parent, type=models.ItemTypeChoices.FOLDER
+        )
 
     # Perform the search query
     response = client.get(f"/api/v1.0/items/?title={query:s}")
@@ -376,80 +409,6 @@ def test_api_items_list_filter_title(query, nb_results):
     # Ensure all results contain the query in their title
     for result in results:
         assert query.lower().strip() in result["title"].lower()
-
-
-def test_api_items_list_filter_type():
-    """
-    Authenticated users should be able to filter items by their type.
-    """
-
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
-
-    # create 2 folders, main workspace is already a folder, means 3 folders in total
-    folders = factories.UserItemAccessFactory.create_batch(
-        2, user=user, item__type=models.ItemTypeChoices.FOLDER
-    )
-    folders_ids = [str(folder.item.id) for folder in folders] + [
-        str(user.get_main_workspace().id)
-    ]
-
-    # create 2 files
-    files = factories.UserItemAccessFactory.create_batch(
-        2, user=user, item__type=models.ItemTypeChoices.FILE
-    )
-    files_ids = [str(file.item.id) for file in files]
-
-    # Filter by type: folder
-    response = client.get("/api/v1.0/items/?type=folder")
-    assert response.status_code == 200
-
-    assert response.json()["count"] == 2
-    results = response.json()["results"]
-
-    # Ensure all results are folders
-    for result in results:
-        assert result["id"] in folders_ids
-        assert result["type"] == models.ItemTypeChoices.FOLDER
-
-    # Filter by type: file
-    response = client.get("/api/v1.0/items/?type=file")
-    assert response.status_code == 200
-
-    assert response.json()["count"] == 2
-    results = response.json()["results"]
-
-    # Ensure all results are files
-    for result in results:
-        assert result["id"] in files_ids
-        assert result["type"] == models.ItemTypeChoices.FILE
-
-
-def test_api_items_list_filter_unknown_type():
-    """
-    Filtering by an unknown type should return an empty list
-    """
-
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
-
-    factories.UserItemAccessFactory.create_batch(3, user=user)
-
-    response = client.get("/api/v1.0/items/?type=unknown")
-
-    assert response.status_code == 400
-    assert response.json() == {
-        "errors": [
-            {
-                "attr": "type",
-                "code": "invalid",
-                "detail": "Select a valid choice. unknown is not one of the available choices.",
-            },
-        ],
-        "type": "validation_error",
-    }
 
 
 # Filters: workspace
@@ -466,10 +425,15 @@ def test_api_items_list_filter_workspace_public():
     public_item_with_link_trace = factories.ItemFactory(
         link_reach="public",
         link_traces=[user],
+        type=models.ItemTypeChoices.FOLDER,
     )
-    public_item_with_user_access = factories.ItemFactory(users=[user])
+    public_item_with_user_access = factories.ItemFactory(
+        users=[user], type=models.ItemTypeChoices.FOLDER
+    )
 
-    factories.ItemFactory.create_batch(3, link_reach="public")
+    factories.ItemFactory.create_batch(
+        3, link_reach="public", type=models.ItemTypeChoices.FOLDER
+    )
 
     response = client.get("/api/v1.0/items/")
 
@@ -495,11 +459,13 @@ def test_api_items_list_filter_workspace_shared():
     client = APIClient()
     client.force_login(user)
 
-    shared_item_with_user_access = factories.ItemFactory(users=[user])
-    shared_item_with_link_trace = factories.ItemFactory(
-        link_reach="public", link_traces=[user]
+    shared_item_with_user_access = factories.ItemFactory(
+        users=[user], type=models.ItemTypeChoices.FOLDER
     )
-    factories.ItemFactory.create_batch(3)
+    shared_item_with_link_trace = factories.ItemFactory(
+        link_reach="public", link_traces=[user], type=models.ItemTypeChoices.FOLDER
+    )
+    factories.ItemFactory.create_batch(3, type=models.ItemTypeChoices.FOLDER)
 
     response = client.get("/api/v1.0/items/")
     assert response.status_code == 200
