@@ -394,4 +394,9 @@ class WopiViewSet(viewsets.ViewSet):
                 "Error deleting old file for item %s in the storage: %s", item.id, e
             )
 
+        if "application/json" in request.META.get("HTTP_ACCEPT", ""):
+            return Response(
+                data={"Name": new_filename}, status=200, content_type="application/json"
+            )
+
         return Response(status=200)

@@ -59,6 +59,53 @@ def test_rename_file_success():
     assert item.filename == "new name.txt"
     assert item.title == "new name"
 
+    assert len(response.content) == 0
+
+
+def test_rename_file_success_accept_json():
+    """User having access to the item can rename the file."""
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    item = factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.EDITOR,
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(
+        item=item, user=user, role=models.RoleChoices.EDITOR
+    )
+
+    service = AccessUserItemService()
+    access_token, _ = service.insert_new_access(item, user)
+
+    default_storage.connection.meta.client.put_object(
+        Bucket=default_storage.bucket_name,
+        Key=item.file_key,
+        Body=BytesIO(b"my prose"),
+        ContentType="text/plain",
+    )
+    client = APIClient()
+    response = client.post(
+        f"/api/v1.0/wopi/files/{item.id}/",
+        HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        headers={
+            "X-WOPI-Override": "RENAME_FILE",
+            "X-WOPI-RequestedName": "new name".encode("utf-7").decode("ascii"),
+            "Accept": "application/json",
+        },
+    )
+    assert response.status_code == 200
+
+    item.refresh_from_db()
+    assert item.filename == "new name.txt"
+    assert item.title == "new name"
+    assert response.json()["Name"] == "new name"
+
 
 def test_rename_file_no_filename():
     """Request without X-WOPI-RequestedName header should return 400."""
