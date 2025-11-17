@@ -105,6 +105,8 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
       {
         onSuccess: () => {
           addItemsMovedToast(ids.length);
+          // Reset the selected items after the move
+          setSelectedItems([]);
         },
       }
     );
