@@ -115,6 +115,32 @@ def get_visited_items_ids_of(queryset, user):
     return [str(id) for id in docs.values_list("pk", flat=True)]
 
 
+def match_mimetype_glob(mimetype, pattern):
+    """
+    Returns true if the mimetype match with the pattern.
+    If a pattern ends with / all subtypes are valid, if not it have to
+    perfectly match. e.g :
+      - application/pdf only match "application/pdf" and not "application/pdf+bin"
+      - application/ match any "application/*"
+    """
+    if len(mimetype) < 1:
+        return False
+
+    if pattern.endswith("/"):
+        return mimetype.startswith(pattern)
+
+    return mimetype == pattern
+
+
+def is_allowed_mimetype(mimetype, patterns):
+    """
+    Returns true if the mimetype is not empty and matches any of the allowed patterns.
+    """
+    return len(mimetype) > 0 and any(
+        match_mimetype_glob(mimetype, pattern) for pattern in patterns
+    )
+
+
 class BaseItemIndexer(ABC):
     """
     Base class for item indexers.
@@ -166,17 +192,17 @@ class BaseItemIndexer(ABC):
 
         Args:
             queryset (optional): Document queryset
-                Defaults to all documents without filter.
+                Defaults to all documents without the main workspaces.
             batch_size (int, optional): Number of documents per batch.
                 Defaults to settings.SEARCH_INDEXER_BATCH_SIZE.
         """
         last_id = None
         count = 0
         batch_size = batch_size or self.batch_size
-        queryset = queryset or models.Item.objects.all()
-        queryset = queryset.filter(
+        queryset = queryset or models.Item.objects.filter(
             main_workspace=False,
-        ).order_by("id")
+        )
+        queryset = queryset.order_by("id")
 
         while True:
             if last_id is not None:
@@ -280,8 +306,7 @@ class SearchIndexer(BaseItemIndexer):
         return (
             item.upload_state == models.ItemUploadStateChoices.READY
             and item.type == models.ItemTypeChoices.FILE
-            and len(mimetype) > 0
-            and any(mimetype.startswith(allowed) for allowed in self.allowed_mimetypes)
+            and is_allowed_mimetype(mimetype, self.allowed_mimetypes)
         )
 
     def serialize_item(self, item, accesses):
@@ -296,12 +321,15 @@ class SearchIndexer(BaseItemIndexer):
             dict: A JSON-serializable dictionary.
         """
         doc_path = str(item.path)
-        is_deleted = bool(item.ancestors_deleted_at or item.deleted_at)
         content = ""
 
-        # There is no endpoint in Find API for deleted items so we index it
+        # The deleted items are still accessible in Drive (not in Docs !)
+        # See in V2 for handling hard deleted ones
+        is_active = True
+
+        # There is no endpoint in Find API for inactive items so we index it
         # again with an empty content.
-        if not is_deleted and self.has_text(item):
+        if is_active and self.has_text(item):
             content = self.to_text(item)
 
         return {
@@ -319,7 +347,7 @@ class SearchIndexer(BaseItemIndexer):
             "groups": list(accesses.get(doc_path, {}).get("teams", set())),
             "reach": str(item.link_reach),
             "size": item.size or 0,
-            "is_active": not is_deleted,
+            "is_active": is_active,
         }
 
     def search_query(self, data, token) -> requests.Response:
