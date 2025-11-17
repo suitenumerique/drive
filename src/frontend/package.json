@@ -14,7 +14,7 @@
   },
   "resolutions": {},
   "devDependencies": {
-    "turbo": "2.0.10"
+    "turbo": "2.6.1"
   },
   "packageManager": "yarn@1.22.22"
 }

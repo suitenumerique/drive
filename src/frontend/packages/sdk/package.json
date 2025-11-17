@@ -27,26 +27,26 @@
     "check": "prettier --check ./src"
   },
   "dependencies": {
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
   },
   "devDependencies": {
-    "@tanstack/eslint-plugin-query": "5.74.7",
-    "@types/node": "22.15.17",
-    "@types/react": "18.3.3",
-    "@types/react-dom": "18.3.0",
-    "@typescript-eslint/eslint-plugin": "8.32.0",
-    "@typescript-eslint/parser": "8.32.0",
-    "@vitejs/plugin-react-swc": "3.9.0",
-    "eslint": "8.57.0",
-    "eslint-config-prettier": "10.1.5",
-    "eslint-plugin-react-hooks": "5.2.0",
-    "eslint-plugin-react-refresh": "0.4.20",
+    "@tanstack/eslint-plugin-query": "5.91.2",
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.5",
+    "@types/react-dom": "19.2.3",
+    "@typescript-eslint/eslint-plugin": "8.46.4",
+    "@typescript-eslint/parser": "8.46.4",
+    "@vitejs/plugin-react-swc": "4.2.2",
+    "eslint": "9.39.1",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-react-refresh": "0.4.24",
     "eslint-plugin-jsx-a11y": "6.10.2",
-    "sass": "1.88.0",
-    "prettier": "3.5.3",
-    "typescript": "5.8.3",
+    "sass": "1.94.0",
+    "prettier": "3.6.2",
+    "typescript": "5.9.3",
     "vite": "5.4.21",
-    "vite-plugin-dts": "4.5.3"
+    "vite-plugin-dts": "4.5.4"
   }
 }
