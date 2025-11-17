@@ -20,6 +20,7 @@ from core.services.search_indexers import (
     get_ancestor_to_descendants_map,
     get_file_indexer,
     get_visited_items_ids_of,
+    is_allowed_mimetype,
 )
 
 pytestmark = pytest.mark.django_db
@@ -251,15 +252,43 @@ def test_services_search_allowed_mimetypes_is_invalid(
     assert expected in str(exc_info.value)
 
 
+def test_services_is_allowed_mimetype():
+    """
+    Check if the given mimetype matches with the allowed ones.
+    """
+    assert is_allowed_mimetype("", ["text/"]) is False
+    assert is_allowed_mimetype("text/plain", []) is False
+    assert is_allowed_mimetype("text/plain", ["text/html"]) is False
+    assert is_allowed_mimetype("text/plain", ["text/"]) is True
+    assert is_allowed_mimetype("application/pdf", ["text/", "application/pdf"]) is True
+    assert (
+        is_allowed_mimetype("application/pdf+bin", ["text/", "application/pdf"])
+        is False
+    )
+    assert is_allowed_mimetype("application/pdf+bin", ["text/", "application/"]) is True
+
+
 @pytest.mark.parametrize(
     "kwargs, expected",
     [
         ({"mimetype": "text/plain"}, True),
-        ({"mimetype": "text/html"}, True),
-        ({"mimetype": "application/html"}, False),
         ({"mimetype": "application/pdf"}, True),
-        ({"mimetype": "application/"}, False),
-        ({"mimetype": ""}, False),
+        ({"mimetype": "application/pdf+bin"}, False),
+        (
+            {
+                "mimetype": "text/plain",
+                "type": models.ItemTypeChoices.FOLDER,
+                "upload_bytes": None,
+            },
+            False,
+        ),
+        (
+            {
+                "mimetype": "text/plain",
+                "update_upload_state": models.ItemUploadStateChoices.ANALYZING,
+            },
+            False,
+        ),
     ],
 )
 def test_services_search_has_text(indexer_settings, kwargs, expected):
@@ -272,11 +301,16 @@ def test_services_search_has_text(indexer_settings, kwargs, expected):
         "application/pdf",
     ]
 
+    params = {
+        "upload_bytes": b"This is a text file content",
+        "type": models.ItemTypeChoices.FILE,
+        "update_upload_state": models.ItemUploadStateChoices.READY,
+    }
+
+    params.update(kwargs)
+
     item = factories.ItemFactory(
-        upload_bytes=b"This is a text file content",
-        type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.READY,
-        **kwargs,
+        **params,
     )
 
     assert expected == SearchIndexer().has_text(item)
@@ -422,13 +456,18 @@ def test_services_search_indexers_serialize_item_textfile():
 
 
 @pytest.mark.usefixtures("indexer_settings")
-def test_services_search_indexers_serialize_document_deleted():
-    """Deleted documents are marked as just in the serialized json."""
+def test_services_search_indexers_serialize_document_soft_deleted():
+    """
+    Deleted documents are NOT marked as inactive in the serialized json because
+    they can be accessed through the trashbin for several days.
+    """
     folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
     item = factories.ItemFactory(
         parent=folder,
         mimetype="text/plain",
         type=models.ItemTypeChoices.FILE,
+        upload_bytes=b"This is a text file content",
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     folder.soft_delete()
@@ -437,7 +476,9 @@ def test_services_search_indexers_serialize_document_deleted():
     indexer = SearchIndexer()
     result = indexer.serialize_item(item, {})
 
-    assert result["is_active"] is False
+    # Still accessible through the thrashbin
+    assert result["is_active"] is True
+    assert result["content"] == "This is a text file content"
 
 
 @responses.activate
