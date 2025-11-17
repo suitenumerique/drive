@@ -92,7 +92,7 @@ This document lists all configurable environment variables for the Drive applica
 | `SEARCH_INDEXER_MIMETYPES` | Find application endpoint for search | `None` |
 | `SEARCH_INDEXER_QUERY_URL` | Find application endpoint for search | `None` |
 | `SEARCH_INDEXER_SECRET` | Token for indexation queries | `None` |
-| `SEARCH_INDEXER_UPLOAD_MAX_SIZE` | Maximum size for an indexable file | `2097152` |
+| `SEARCH_INDEXER_CONTENT_MAX_SIZE` | Maximum size for an indexable file | `2097152` |
 | `SEARCH_INDEXER_URL` | Find application endpoint for indexation | `None` |
 | `SEARCH_INDEXER_QUERY_LIMIT` | Maximum number of results expected from search endpoint | 50 |
 | `SENTRY_DSN` | Sentry DSN for error tracking | `None` |

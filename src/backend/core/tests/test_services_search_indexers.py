@@ -291,7 +291,7 @@ def test_services_is_allowed_mimetype():
         ),
     ],
 )
-def test_services_search_has_text(indexer_settings, kwargs, expected):
+def test_services_search_can_serialize_content(indexer_settings, kwargs, expected):
     """
     Only allowed mimetypes of uploaded files in ready state can have an indexable
     content.
@@ -313,7 +313,7 @@ def test_services_search_has_text(indexer_settings, kwargs, expected):
         **params,
     )
 
-    assert expected == SearchIndexer().has_text(item)
+    assert expected == SearchIndexer().can_serialize_content(item)
 
 
 @pytest.mark.usefixtures("indexer_settings")
@@ -643,6 +643,43 @@ def test_services_search_indexers_ignore_content_if_not_ready(mock_push):
         str(item.id): "this is a text",
         str(pdf_item.id): "",
         **{str(item.id): "" for item in not_ready_items},
+    }
+
+
+@patch.object(SearchIndexer, "push")
+@pytest.mark.usefixtures("indexer_settings")
+def test_services_search_indexers_ignore_content_if_too_big(
+    mock_push, indexer_settings
+):
+    """
+    Should not fill the content data when the file is over the limit
+    setting SEARCH_INDEXER_CONTENT_MAX_SIZE
+    """
+    indexer_settings.SEARCH_INDEXER_CONTENT_MAX_SIZE = 50
+
+    item = factories.ItemFactory(
+        mimetype="text/plain",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes="a" * 49,
+    )
+
+    # too big
+    too_big_item = factories.ItemFactory(
+        mimetype="text/plain",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes="a" * 50,
+    )
+
+    assert SearchIndexer().index() == 2
+
+    assert mock_push.call_count == 1
+
+    results = {item["id"]: item["content"] for item in mock_push.call_args[0][0]}
+    assert results == {
+        str(item.id): "a" * 49,
+        str(too_big_item.id): "",
     }
 
 
