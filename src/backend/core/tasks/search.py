@@ -55,7 +55,10 @@ def batch_file_indexer_task(timestamp):
     indexer = get_file_indexer()
 
     if indexer:
-        queryset = models.Item.objects.filter(updated_at__gte=timestamp)
+        queryset = models.Item.objects.filter(
+            updated_at__gte=timestamp,
+            main_workspace=False,
+        )
 
         count = indexer.index(queryset)
         logger.info("Indexed %d files", count)
