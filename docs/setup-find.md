@@ -32,7 +32,7 @@ SEARCH_INDEXER_QUERY_LIMIT=50
 
 # Limit the mimetypes and size of indexable files
 SEARCH_INDEXER_ALLOWED_MIMETYPES=["text/"]
-SEARCH_INDEXER_UPLOAD_MAX_SIZE=2 * 2**20  # 2Mb
+SEARCH_INDEXER_CONTENT_MAX_SIZE=2 * 2**20  # 2Mb
 ```
 
 We also need to enable the **OIDC Token** refresh or the authentication will fail quickly.

@@ -1095,6 +1095,10 @@ class ItemViewSet(
          - A fulltext search through the opensearch indexation app "find" if the backend is
            enabled (see SEARCH_INDEXER_CLASS)
          - A filtering by the model fields 'title' & 'type'.
+
+        Note : Even if the indexer is disabled this view will do OIDC refresh calls
+        anyway. Think about using a decorator with args to prevent this when the
+        SEARCH_INDEXER_CLASS setting is not configured.
         """
         queryset = self.queryset
         indexer = get_file_indexer()

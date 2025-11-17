@@ -124,9 +124,9 @@ class Base(Configuration):
     SEARCH_INDEXER_QUERY_LIMIT = values.PositiveIntegerValue(
         default=50, environ_name="SEARCH_INDEXER_QUERY_LIMIT", environ_prefix=None
     )
-    SEARCH_INDEXER_UPLOAD_MAX_SIZE = values.PositiveIntegerValue(
+    SEARCH_INDEXER_CONTENT_MAX_SIZE = values.PositiveIntegerValue(
         2 * (2**20),  # 2MB
-        environ_name="SEARCH_INDEXER_UPLOAD_MAX_SIZE",
+        environ_name="SEARCH_INDEXER_CONTENT_MAX_SIZE",
         environ_prefix=None,
     )
     SEARCH_INDEXER_ALLOWED_MIMETYPES = values.ListValue(

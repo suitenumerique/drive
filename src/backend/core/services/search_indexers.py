@@ -154,7 +154,7 @@ class BaseItemIndexer(ABC):
         Initialize the indexer.
         """
         self.batch_size = settings.SEARCH_INDEXER_BATCH_SIZE
-        self.max_upload_size = settings.SEARCH_INDEXER_UPLOAD_MAX_SIZE
+        self.max_content_size = settings.SEARCH_INDEXER_CONTENT_MAX_SIZE
         self.indexer_url = settings.SEARCH_INDEXER_URL
         self.indexer_secret = settings.SEARCH_INDEXER_SECRET
         self.search_url = settings.SEARCH_INDEXER_QUERY_URL
@@ -297,15 +297,17 @@ class SearchIndexer(BaseItemIndexer):
 
         raise SuspiciousFileOperation(f"Unrecognized mimetype {mimetype}")
 
-    def has_text(self, item):
+    def can_serialize_content(self, item):
         """
         Return True if the file mimetype can be converted into text for indexation
         """
         mimetype = item.mimetype or ""
+        filesize = item.size or 0
 
         return (
             item.upload_state == models.ItemUploadStateChoices.READY
             and item.type == models.ItemTypeChoices.FILE
+            and filesize < self.max_content_size
             and is_allowed_mimetype(mimetype, self.allowed_mimetypes)
         )
 
@@ -329,7 +331,7 @@ class SearchIndexer(BaseItemIndexer):
 
         # There is no endpoint in Find API for inactive items so we index it
         # again with an empty content.
-        if is_active and self.has_text(item):
+        if is_active and self.can_serialize_content(item):
             content = self.to_text(item)
 
         return {
