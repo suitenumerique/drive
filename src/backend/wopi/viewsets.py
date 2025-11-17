@@ -197,7 +197,6 @@ class WopiViewSet(viewsets.ViewSet):
         """
         if not request.META.get(HTTP_X_WOPI_OVERRIDE) in self.detail_post_actions:
             return Response(status=404)
-
         item = request.auth.item
         abilities = item.get_abilities(request.user)
 
@@ -325,12 +324,15 @@ class WopiViewSet(viewsets.ViewSet):
             return Response(status=401)
 
         new_filename = request.META.get("HTTP_X_WOPI_REQUESTEDNAME")
+
         if not new_filename:
             return Response(
                 status=400,
                 headers={X_WOPI_INVALIDFILENAMERROR: "No filename provided"},
             )
 
+        # Convert it to utf-7 to avoid issues with special characters
+        new_filename = new_filename.encode("ascii").decode("utf-7")
         lock_service = LockService(item)
         if lock_service.is_locked():
             current_lock_value = lock_service.get_lock(default="")
@@ -359,10 +361,11 @@ class WopiViewSet(viewsets.ViewSet):
 
         file_key = item.file_key
         item.filename = new_filename_with_extension
+        item.title = new_filename
 
         # ensure renaming the file in the database and on the storage are done atomically
         with transaction.atomic():
-            item.save(update_fields=["filename", "updated_at"])
+            item.save(update_fields=["filename", "title", "updated_at"])
 
             # Rename the file in the storage
             s3_client = default_storage.connection.meta.client
