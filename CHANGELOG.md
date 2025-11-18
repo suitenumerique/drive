@@ -8,9 +8,7 @@ and this project adheres to
 
 ## [Unreleased]
 
-### Added
-
-- ✨(backend) expose main workspace on /me endpoint
+## [v0.8.0] - 2025-11-18
 
 ### Added
 
@@ -19,6 +17,7 @@ and this project adheres to
 - ✨(front) update to ui-kit v2
 - 🌐 add dutch translation
 - ✨(back) add resource server routes
+- ✨(backend) expose main workspace on /me endpoint
 
 ### Fixed
 
@@ -158,8 +157,9 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.7.0...main
-[0.7.0]: https://github.com/suitenumerique/drive/releases/v0.6.0
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.8.0...main
+[0.8.0]: https://github.com/suitenumerique/drive/releases/v0.8.0
+[0.7.0]: https://github.com/suitenumerique/drive/releases/v0.7.0
 [0.6.0]: https://github.com/suitenumerique/drive/releases/v0.6.0
 [0.5.0]: https://github.com/suitenumerique/drive/releases/v0.5.0
 [0.4.0]: https://github.com/suitenumerique/drive/releases/v0.4.0
