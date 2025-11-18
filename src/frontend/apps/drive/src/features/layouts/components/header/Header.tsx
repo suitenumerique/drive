@@ -50,34 +50,38 @@ export const HeaderRight = ({
       {user && displaySearch && (
         <ExplorerSearchButton defaultFilters={defaultFilters} />
       )}
-      {user ? (
-        <DropdownMenu
-          options={[
-            {
-              label: t("logout"),
-              icon: <span className="material-icons">logout</span>,
-              callback: logout,
-            },
-          ]}
-          isOpen={isOpen}
-          onOpenChange={setIsOpen}
-        >
-          <Button
-            variant="tertiary"
-            onClick={() => setIsOpen(!isOpen)}
-            icon={
-              <span className="material-icons">
-                {isOpen ? "arrow_drop_up" : "arrow_drop_down"}
-              </span>
-            }
-            iconPosition="right"
-          >
-            {t("my_account")}
-          </Button>
-        </DropdownMenu>
-      ) : (
-        <LoginButton />
-      )}
+      {
+        !config?.FRONTEND_HIDE_AUTH_BUTTONS &&
+          (user ? (
+              <DropdownMenu
+                options={[
+                  {
+                    label: t("logout"),
+                    icon: <span className="material-icons">logout</span>,
+                    callback: logout,
+                  },
+                ]}
+                isOpen={isOpen}
+                onOpenChange={setIsOpen}
+              >
+                <Button
+                  variant="tertiary"
+                  onClick={() => setIsOpen(!isOpen)}
+                  icon={
+                    <span className="material-icons">
+                      {isOpen ? "arrow_drop_up" : "arrow_drop_down"}
+                    </span>
+                  }
+                  iconPosition="right"
+                >
+                  {t("my_account")}
+                </Button>
+              </DropdownMenu>
+            ) : (
+              <LoginButton />
+            )
+          )
+      }
       {!config?.FRONTEND_HIDE_LANGUAGE_PICKER && <LanguagePicker />}
       {!config?.FRONTEND_HIDE_GAUFRE && <LaGaufre />}
     </>

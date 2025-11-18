@@ -11,7 +11,7 @@ export const LeftPanelMobile = () => {
   return (
     <div className="drive__home__left-panel">
       {!config?.FRONTEND_HIDE_LANGUAGE_PICKER && <LanguagePicker />}
-      {user ? <LogoutButton /> : <LoginButton />}
+      {!config?.FRONTEND_HIDE_AUTH_BUTTONS && (user ? <LogoutButton /> : <LoginButton />)}
     </div>
   );
 };
