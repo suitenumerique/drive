@@ -1455,6 +1455,7 @@ class ConfigView(drf.views.APIView):
             "FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL",
             "FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH",
             "FRONTEND_HIDE_GAUFRE",
+            "FRONTEND_HIDE_LANGUAGE_PICKER",
             "MEDIA_BASE_URL",
             "POSTHOG_KEY",
             "POSTHOG_HOST",
