@@ -50,6 +50,7 @@ This document lists all configurable environment variables for the Drive applica
 | `FRONTEND_FEEDBACK_MESSAGES_WIDGET_API_URL` | API URL for feedback messages widget | `None` |
 | `FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL` | Channel for feedback messages widget | `None` |
 | `FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH` | Path for feedback messages widget | `None` |
+| `FRONTEND_HIDE_AUTH_BUTTONS` | Hide auth buttons | `False` |
 | `FRONTEND_HIDE_LANGUAGE_PICKER` | Hide language picker | `False` |
 | `ITEM_FILE_MAX_SIZE` | Maximum file size for uploads in bytes | `5368709120` (5GB) |
 | `LANGUAGE_CODE` | Default language code | `en-us` |
