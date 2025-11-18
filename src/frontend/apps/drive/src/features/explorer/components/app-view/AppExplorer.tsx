@@ -1,9 +1,11 @@
 import { Item } from "@/features/drivers/types";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useMemo } from "react";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { EmbeddedExplorerGridActionsCellProps } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridActionsCell";
 import { NavigationEvent } from "@/features/explorer/components/GlobalExplorerContext";
 import { AppExplorerInner } from "./AppExplorerInner";
+import { ContextMenu } from "@/features/ui/components/context-menu/ContextMenu";
+import { useTranslation } from "react-i18next";
 
 export interface AppExplorerProps {
   childrenItems?: Item[];
@@ -44,9 +46,37 @@ export const useAppExplorer = () => {
 };
 
 export const AppExplorer = (props: AppExplorerProps) => {
+  const { t } = useTranslation();
+  const contextMenuItems = useMemo(
+    () => [
+      {
+        id: "open",
+        label: "Open",
+        onSelect: () => {
+          console.log("open");
+        },
+      },
+    ],
+    []
+  );
   return (
     <AppExplorerContext.Provider value={props}>
-      <AppExplorerInner {...props} />
+      <ContextMenu
+        key={"toto"}
+        items={contextMenuItems}
+        ariaLabel={t("explorer.context_menu.aria_label", {
+          defaultValue: `Actions pour toto`,
+          item: "toto",
+        })}
+        shouldOpen={() => true}
+        onOpen={(event) => {
+          console.log("open global explorer");
+        }}
+      >
+        <div>
+          <AppExplorerInner {...props} />
+        </div>
+      </ContextMenu>
     </AppExplorerContext.Provider>
   );
 };
