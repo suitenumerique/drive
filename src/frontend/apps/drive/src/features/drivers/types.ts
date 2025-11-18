@@ -164,6 +164,7 @@ export type ApiConfig = {
   FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL?: string;
   FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH?: string;
   FRONTEND_THEME?: string;
+  FRONTEND_HIDE_AUTH_BUTTONS?: boolean;
   FRONTEND_HIDE_GAUFRE?: boolean;
   FRONTEND_HIDE_LANGUAGE_PICKER?: boolean;
   theme_customization?: ThemeCustomization;
