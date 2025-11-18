@@ -26,6 +26,10 @@ and this project adheres to
 - ✨(back) add resource server routes
 - ✨(backend) expose main workspace on /me endpoint
 
+### Changed
+
+- ⬆️(backend) upgrade to python 3.13
+
 ### Fixed
 
 - 🐛(wopi) force updated_at udpate in the viewset

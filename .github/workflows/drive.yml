@@ -111,7 +111,7 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12.6"
+          python-version: "3.13.9"
           cache: 'pip'
       - name: Upgrade pip and setuptools
         run: pip install --upgrade pip setuptools
@@ -207,7 +207,7 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12.6"
+          python-version: "3.13.9"
           cache: 'pip'
 
       - name: Install development dependencies
