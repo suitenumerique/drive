@@ -78,7 +78,7 @@ export const HeaderRight = ({
       ) : (
         <LoginButton />
       )}
-      <LanguagePicker />
+      {!config?.FRONTEND_HIDE_LANGUAGE_PICKER && <LanguagePicker />}
       {!config?.FRONTEND_HIDE_GAUFRE && <LaGaufre />}
     </>
   );
