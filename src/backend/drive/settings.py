@@ -456,6 +456,9 @@ class Base(Configuration):
     FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH = values.Value(
         None, environ_name="FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH", environ_prefix=None
     )
+    FRONTEND_HIDE_AUTH_BUTTONS = values.BooleanValue(
+        default=False, environ_name="FRONTEND_HIDE_AUTH_BUTTONS", environ_prefix=None
+    )
     FRONTEND_HIDE_GAUFRE = values.BooleanValue(
         default=False, environ_name="FRONTEND_HIDE_GAUFRE", environ_prefix=None
     )
