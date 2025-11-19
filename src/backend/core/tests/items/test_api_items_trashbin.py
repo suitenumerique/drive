@@ -64,6 +64,10 @@ def test_api_items_trashbin_format(settings):
     assert results[0] == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": item.ancestors_link_reach,
+        "ancestors_link_role": item.ancestors_link_role,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "deleted_at": item.deleted_at.isoformat().replace("+00:00", "Z"),
         "creator": {
@@ -80,7 +84,7 @@ def test_api_items_trashbin_format(settings):
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": ["owner"],
+        "user_role": "owner",
         "type": item.type,
         "upload_state": models.ItemUploadStateChoices.PENDING
         if item.type == models.ItemTypeChoices.FILE
