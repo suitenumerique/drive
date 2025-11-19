@@ -171,6 +171,12 @@ backend:
   ## @param backend.migrateJobAnnotations Annotations for the migrate job
   migrateJobAnnotations: {}
 
+  ## @param backend.jobs.ttlSecondsAfterFinished Period to wait before remove jobs
+  ## @param backend.jobs.backoffLimit Numbers of jobs retries
+  jobs:
+    ttlSecondsAfterFinished: 30
+    backoffLimit: 2
+
   ## @param backend.securityContext Configure backend Pod security context
   securityContext: null
 
