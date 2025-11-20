@@ -14,7 +14,7 @@ from lasuite.oidc_login.backends import get_oidc_refresh_token
 
 from core import models
 from core.authentication.backends import OIDCAuthenticationBackend, posthog
-from core.authentication.exceptions import EmailNotAlphaAuthorized
+from core.authentication.exceptions import EmailNotAlphaAuthorized, UserCannotAccessApp
 from core.factories import UserFactory
 
 pytestmark = pytest.mark.django_db
@@ -588,3 +588,100 @@ def test_authentication_get_create_user_with_email_alpha(
     assert user.full_name == "John Doe"
     assert user.short_name == "John"
     assert user.has_usable_password() is False
+
+
+@override_settings(OIDC_STORE_CLAIMS=["iss"])
+def test_authentication_store_claims_new_user(monkeypatch):
+    """
+    Test that the claims are stored on the user when a new user is created.
+    """
+    klass = OIDCAuthenticationBackend()
+
+    email = "drive@example.com"
+
+    def get_userinfo_mocked(*args):
+        return {
+            "sub": "123",
+            "email": email,
+            "first_name": "John",
+            "last_name": "Doe",
+            "iss": "https://example.com",
+        }
+
+    monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
+
+    user = klass.get_or_create_user(
+        access_token="test-token", id_token=None, payload=None
+    )
+
+    assert user.sub == "123"
+    assert user.email == email
+    assert user.full_name == "John Doe"
+    assert user.short_name == "John"
+    assert user.has_usable_password() is False
+    assert user.claims == {"iss": "https://example.com"}
+    assert models.User.objects.count() == 1
+
+
+@override_settings(OIDC_STORE_CLAIMS=["iss"])
+def test_authentication_store_claims_existing_user(monkeypatch):
+    """
+    Test that the claims are stored on the user when an existing user is authenticated.
+    """
+    klass = OIDCAuthenticationBackend()
+    user = UserFactory(
+        email="drive@example.com", sub="123", claims={"iss": "https://obsolete.com"}
+    )
+    email = "drive@example.com"
+
+    def get_userinfo_mocked(*args):
+        return {
+            "sub": "123",
+            "email": email,
+            "first_name": "John",
+            "last_name": "Doe",
+            "iss": "https://example.com",
+        }
+
+    monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
+
+    user = klass.get_or_create_user(
+        access_token="test-token", id_token=None, payload=None
+    )
+
+    user.refresh_from_db()
+    assert user.sub == "123"
+    assert user.email == email
+    assert user.claims == {"iss": "https://example.com"}
+    assert models.User.objects.count() == 1
+
+
+@mock.patch("core.authentication.backends.get_entitlements_backend")
+def test_authentication_get_or_create_user_raises_exception_when_entitlement_backend_returns_falsy(
+    mock_get_entitlements_backend, monkeypatch
+):
+    """
+    Test that get_or_create_user raises UserCannotAccessApp exception
+    when the entitlement backend's can_access method returns a falsy result.
+    """
+    klass = OIDCAuthenticationBackend()
+    email = "drive@example.com"
+
+    def get_userinfo_mocked(*args):
+        return {"sub": "123", "email": email, "first_name": "John", "last_name": "Doe"}
+
+    monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
+
+    # Mock the entitlement backend to return a falsy result
+    mock_entitlement_backend = mock.Mock()
+    mock_entitlement_backend.can_access.return_value = {"result": False}
+    mock_get_entitlements_backend.return_value = mock_entitlement_backend
+
+    with pytest.raises(
+        UserCannotAccessApp, match="User does not have access to the app"
+    ):
+        klass.get_or_create_user(access_token="test-token", id_token=None, payload=None)
+
+    # Verify the entitlement backend was called
+    mock_get_entitlements_backend.assert_called_once()
+    mock_entitlement_backend.can_access.assert_called_once()
