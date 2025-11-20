@@ -1053,6 +1053,8 @@ class Test(Base):
     CELERY_TASK_ALWAYS_EAGER = values.BooleanValue(True)
 
     SEARCH_INDEXER_CLASS = None
+    OIDC_STORE_ACCESS_TOKEN = False
+    OIDC_STORE_REFRESH_TOKEN = False
 
     def __init__(self):
         # pylint: disable=invalid-name

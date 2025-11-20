@@ -81,5 +81,8 @@ SEARCH_INDEXER_URL="http://find:8000/api/v1.0/documents/index/"
 SEARCH_INDEXER_QUERY_URL="http://find:8000/api/v1.0/documents/search/"
 
 # Store OIDC tokens in the session
-OIDC_STORE_ACCESS_TOKEN = True
-OIDC_STORE_REFRESH_TOKEN = True # Store the encrypted refresh token in the session.
+# OIDC_STORE_ACCESS_TOKEN = True
+# OIDC_STORE_REFRESH_TOKEN = True # Store the encrypted refresh token in the session.
+# Must be a valid Fernet key (32 url-safe base64-encoded bytes)
+# To create one, use the bin/fernetkey command.
+# OIDC_STORE_REFRESH_TOKEN_KEY="your-32-byte-encryption-key=="

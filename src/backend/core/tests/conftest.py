@@ -7,6 +7,7 @@ from django.core.cache import cache
 
 import pytest
 import responses
+from cryptography.fernet import Fernet
 
 from core import factories
 from core.tests.utils.urls import reload_urls
@@ -153,6 +154,10 @@ def indexer_settings_fixture(settings):
     )
     settings.SEARCH_INDEXER_ALLOWED_MIMETYPES = ("text/",)
     settings.SEARCH_INDEXER_COUNTDOWN = 1
+
+    settings.OIDC_STORE_ACCESS_TOKEN = True
+    settings.OIDC_STORE_REFRESH_TOKEN = True
+    settings.OIDC_STORE_REFRESH_TOKEN_KEY = Fernet.generate_key().decode()
 
     yield settings
 

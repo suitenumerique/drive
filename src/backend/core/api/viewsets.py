@@ -1047,7 +1047,8 @@ class ItemViewSet(
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
-    def _fulltext_search(self, queryset, indexer, request, text):
+    @method_decorator(refresh_oidc_access_token)
+    def _indexed_search(self, request, queryset, indexer, text):
         """
         Returns a queryset from the results the fulltext search of Find
         """
@@ -1056,16 +1057,19 @@ class ItemViewSet(
 
         # Retrieve the documents ids from Find. No pagination here the queryset is
         # already filtered
-        results = indexer.search(
-            text=text, token=token, visited=get_visited_items_ids_of(queryset, user)
-        )
+        result_ids = [
+            r["_id"]
+            for r in indexer.search(
+                text=text, token=token, visited=get_visited_items_ids_of(queryset, user)
+            )
+        ]
 
-        queryset = queryset.filter(pk__in=results)
+        queryset = queryset.filter(pk__in=result_ids)
         queryset = self.annotate_user_roles(queryset)
         queryset = self.annotate_is_favorite(queryset)
 
         files_by_uuid = {str(d.pk): d for d in queryset}
-        ordered_files = [files_by_uuid[id] for id in results if id in files_by_uuid]
+        ordered_files = [files_by_uuid[id] for id in result_ids if id in files_by_uuid]
 
         page = self.paginate_queryset(ordered_files)
 
@@ -1085,7 +1089,6 @@ class ItemViewSet(
         url_path="search",
         pagination_class=drf.pagination.PageNumberPagination,
     )
-    @method_decorator(refresh_oidc_access_token)
     def search(self, request, *args, **kwargs):
         """
         Returns a DRF response containing the filtered, annotated and ordered items.
@@ -1139,10 +1142,10 @@ class ItemViewSet(
         if indexer:
             # When the indexer is configured pop "title" from queryset search and use
             # fulltext results instead.
-            return self._fulltext_search(
+            return self._indexed_search(
+                request,
                 queryset,
                 indexer,
-                request,
                 text=filterset.form.cleaned_data.pop("title"),
             )
 
