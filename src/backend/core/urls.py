@@ -34,6 +34,13 @@ sdk_relay_router.register(
     basename="sdk_relay_events",
 )
 
+entitlements_router = DefaultRouter()
+entitlements_router.register(
+    "entitlements",
+    viewsets.EntitlementsViewset,
+    basename="entitlements",
+)
+
 # - Resource server routes
 external_api_router = DefaultRouter()
 external_api_router.register(
@@ -47,7 +54,6 @@ external_api_router.register(
     basename="resource_server_users",
 )
 
-
 urlpatterns = [
     path(
         f"api/{settings.API_VERSION}/",
@@ -60,6 +66,7 @@ urlpatterns = [
                     include(item_related_router.urls),
                 ),
                 *sdk_relay_router.urls,
+                *entitlements_router.urls,
             ]
         ),
     ),
