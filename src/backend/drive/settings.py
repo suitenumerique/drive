@@ -830,6 +830,19 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # Entitlements
+    ENTITLEMENTS_BACKEND = values.Value(
+        "core.entitlements.dummy_entitlements_backend.DummyEntitlementsBackend",
+        environ_name="ENTITLEMENTS_BACKEND",
+        environ_prefix=None,
+    )
+
+    ENTITLEMENTS_BACKEND_PARAMETERS = values.DictValue(
+        {},
+        environ_name="ENTITLEMENTS_BACKEND_PARAMETERS",
+        environ_prefix=None,
+    )
+
     # pylint: disable=invalid-name
     @property
     def ENVIRONMENT(self):
