@@ -12,7 +12,30 @@ from rest_framework import exceptions, serializers
 
 from core import models
 from core.api import utils
+from core.storage import get_storage_compute_backend
 from wopi import utils as wopi_utils
+
+
+# pylint: disable=abstract-method
+class UsageMetricSerializer(serializers.BaseSerializer):
+    """Serialize usage metrics."""
+
+    def to_representation(self, instance):
+        """Return the usage metric."""
+        storage_compute_backend = get_storage_compute_backend()
+        output = {
+            "account": {
+                "type": "user",
+                "id": instance.id,
+                "email": instance.email,
+            },
+            "metrics": {
+                "storage_used": storage_compute_backend.compute_storage_used(instance),
+            },
+        }
+        for claim in settings.METRICS_USER_CLAIMS_EXPOSED:
+            output[claim] = instance.claims.get(claim)
+        return output
 
 
 class UserLiteSerializer(serializers.ModelSerializer):

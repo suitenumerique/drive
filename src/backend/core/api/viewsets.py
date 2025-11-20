@@ -31,6 +31,7 @@ from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
 from rest_framework.permissions import AllowAny
 from rest_framework.throttling import UserRateThrottle
+from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
 from core.services.sdk_relay import SDKRelayManager
@@ -1572,3 +1573,26 @@ class SDKRelayEventViewset(drf.viewsets.ViewSet):
         response = drf.response.Response(status=status.HTTP_200_OK)
         self.handle_cors(request, response)
         return response
+
+
+class UsageMetricViewset(drf.mixins.ListModelMixin, viewsets.GenericViewSet):
+    """
+    Viewset for usage metrics.
+    """
+
+    permission_classes = [HasAPIKey]
+    queryset = models.User.objects.all().filter(is_active=True)
+    serializer_class = serializers.UsageMetricSerializer
+    pagination_class = Pagination
+
+    def get_queryset(self):
+        """
+        Return the queryset applying the filters from the query params.
+        """
+        queryset = self.queryset
+
+        if self.request.query_params.get("account_id"):
+            queryset = queryset.filter(id=self.request.query_params.get("account_id"))
+
+        return queryset
+

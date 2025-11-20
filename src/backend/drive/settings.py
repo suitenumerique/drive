@@ -810,6 +810,19 @@ class Base(Configuration):
         ),
     }
 
+    # Metrics
+    METRICS_ENABLED = values.BooleanValue(
+        False,
+        environ_name="METRICS_ENABLED",
+        environ_prefix=None,
+    )
+
+    METRICS_USER_CLAIMS_EXPOSED = values.ListValue(
+        [],
+        environ_name="METRICS_USER_CLAIMS_EXPOSED",
+        environ_prefix=None,
+    )
+
     # Storage compute
     STORAGE_COMPUTE_BACKEND = values.Value(
         "core.storage.creator_storage_compute_backend.CreatorStorageComputeBackend",
