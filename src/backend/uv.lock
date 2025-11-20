@@ -594,6 +594,18 @@ wheels = [
 ]
 
 [[package]]
+name = "djangorestframework-api-key"
+version = "3.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/95/d9/d187626f67eec3d8c7fb170009ffc323e70553dbac8832ca051f4c7e0a53/djangorestframework_api_key-3.1.0.tar.gz", hash = "sha256:7e9c88360933b3c46467d80645a50cf36697674c7856a737a1c674d570860ac9", size = 36922, upload-time = "2025-04-04T08:53:19.422Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/60/50/29fd576a9162ff3fcd0423ae5a30e7f9610a438329dd20081a60c758f100/djangorestframework_api_key-3.1.0-py3-none-any.whl", hash = "sha256:1b6ed7d89308cf872b29084cf68f9b7171f7efd2b8f84f480c09aa4232f910c1", size = 15664, upload-time = "2025-04-04T08:53:18.228Z" },
+]
+
+[[package]]
 name = "dockerflow"
 version = "2024.4.2"
 source = { registry = "https://pypi.org/simple" }
@@ -667,6 +679,7 @@ dependencies = [
     { name = "django-storages", extra = ["s3"] },
     { name = "django-timezone-field" },
     { name = "djangorestframework" },
+    { name = "djangorestframework-api-key" },
     { name = "dockerflow" },
     { name = "drf-spectacular" },
     { name = "drf-standardized-errors" },
@@ -731,6 +744,7 @@ requires-dist = [
     { name = "django-storages", extras = ["s3"], specifier = "==1.14.6" },
     { name = "django-timezone-field", specifier = ">=5.1" },
     { name = "djangorestframework", specifier = "==3.16.1" },
+    { name = "djangorestframework-api-key", specifier = "==3.1.0" },
     { name = "dockerflow", specifier = "==2024.4.2" },
     { name = "drf-spectacular", specifier = "==0.29.0" },
     { name = "drf-spectacular-sidecar", marker = "extra == 'dev'", specifier = "==2025.10.1" },

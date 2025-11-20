@@ -272,6 +272,7 @@ class Base(Configuration):
         "django_filters",
         "dockerflow.django",
         "rest_framework",
+        "rest_framework_api_key",
         "parler",
         "django_ltree",
         "easy_thumbnails",
