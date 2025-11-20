@@ -247,6 +247,12 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         ),
     )
 
+    claims = models.JSONField(
+        blank=True,
+        default=dict,
+        help_text=_("Claims from the OIDC token."),
+    )
+
     objects = UserManager()
 
     USERNAME_FIELD = "admin_email"
