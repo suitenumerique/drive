@@ -35,7 +35,7 @@ class FakeDocumentIndexer(BaseItemIndexer):
     def push(self, data):
         pass
 
-    def search_query(self, data, token):
+    def search(self, text, token, visited=(), nb_results=None) -> dict:
         return {}
 
 
