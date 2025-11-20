@@ -4,6 +4,7 @@ Tests for items API endpoint in drive's core app: create
 
 from concurrent.futures import ThreadPoolExecutor
 from random import choice, randint
+from unittest import mock
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
@@ -496,3 +497,68 @@ def test_api_items_create_item_children_race_condition():
 
         item.refresh_from_db()
         assert item.numchild == 2
+
+
+@mock.patch("core.api.viewsets.get_entitlements_backend")
+def test_api_items_children_create_entitlements_backend_returns_falsy(
+    mock_get_entitlements_backend,
+):
+    """
+    Test that the API returns a 403 when the entitlements backend returns a falsy result.
+    """
+
+    # Mock the entitlement backend to return a falsy result
+    mock_entitlement_backend = mock.Mock()
+    mock_entitlement_backend.can_upload.return_value = {"result": False}
+    mock_get_entitlements_backend.return_value = mock_entitlement_backend
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    access = factories.UserItemAccessFactory(
+        user=user, role="editor", item__type=ItemTypeChoices.FOLDER
+    )
+
+    response = client.post(
+        f"/api/v1.0/items/{access.item.id!s}/children/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.txt",
+        },
+    )
+    assert response.status_code == 403
+    assert response.json() == {
+        "type": "client_error",
+        "errors": [
+            {
+                "code": "permission_denied",
+                "detail": "You do not have permission to upload files.",
+                "attr": None,
+            }
+        ],
+    }
+
+    # Test that a custom message can be provided by the entitlement backend
+    mock_entitlement_backend.can_upload.return_value = {
+        "result": False,
+        "message": "Hello World",
+    }
+    response = client.post(
+        f"/api/v1.0/items/{access.item.id!s}/children/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.txt",
+        },
+    )
+    assert response.status_code == 403
+    assert response.json() == {
+        "type": "client_error",
+        "errors": [
+            {
+                "code": "permission_denied",
+                "detail": "Hello World",
+                "attr": None,
+            }
+        ],
+    }
