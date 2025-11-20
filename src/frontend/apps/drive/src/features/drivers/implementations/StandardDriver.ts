@@ -1,10 +1,5 @@
 import { fetchAPI } from "@/features/api/fetchApi";
-import {
-  Driver,
-  ItemFilters,
-  PaginatedChildrenResult,
-  UserFilters,
-} from "../Driver";
+import { Driver, Entitlements, ItemFilters, UserFilters, PaginatedChildrenResult } from "../Driver";
 import {
   DTODeleteInvitation,
   DTOCreateInvitation,
@@ -280,13 +275,22 @@ export class StandardDriver extends Driver {
     progressHandler?: (progress: number) => void;
   }): Promise<Item> {
     const { parentId, file, progressHandler, ...rest } = data;
-    const response = await fetchAPI(`items/${parentId}/children/`, {
-      method: "POST",
-      body: JSON.stringify({
-        type: ItemType.FILE,
-        ...rest,
-      }),
-    });
+    const response = await fetchAPI(
+      `items/${parentId}/children/`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          type: ItemType.FILE,
+          ...rest,
+        }),
+      },
+      {
+        // When entitlements are falsy, the backend returns a 403 error.
+        // We don't want to redirect to the login page in this case, instead
+        // we want to show an error.
+        redirectOn40x: false,
+      }
+    );
     const item = jsonToItem(await response.json());
     if (!item.policy) {
       throw new Error("No policy found");
@@ -332,6 +336,12 @@ export class StandardDriver extends Driver {
 
   async getWopiInfo(itemId: string): Promise<WopiInfo> {
     const response = await fetchAPI(`items/${itemId}/wopi/`);
+    const data = await response.json();
+    return data;
+  }
+
+  async getEntitlements(): Promise<Entitlements> {
+    const response = await fetchAPI(`entitlements/`);
     const data = await response.json();
     return data;
   }

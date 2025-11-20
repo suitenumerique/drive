@@ -279,6 +279,29 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         );
       }
 
+      const entitlements = await getEntitlements();
+      if (!entitlements.can_upload.result) {
+        dismissDragToast();
+        setUploadingState((prev) => ({
+          ...prev,
+          step: "none",
+        }));
+        addToast(
+          <ToasterItem type="error">
+            <span>
+              {entitlements.can_upload.message ||
+                t("entitlements.can_upload.cannot_upload")}
+            </span>
+          </ToasterItem>
+        );
+        return;
+      }
+
+      setUploadingState((prev) => ({
+        ...prev,
+        step: "create_folders",
+      }));
+
       if (!fileUploadsToastId.current) {
         fileUploadsToastId.current = addToast(
           <FileUploadToast uploadingState={uploadingState} />,
