@@ -18,6 +18,8 @@ from core import models
 
 logger = logging.getLogger(__name__)
 
+SERVICE_NAME = "drive"
+
 
 @cache
 def get_file_indexer():
@@ -242,12 +244,13 @@ class BaseItemIndexer(ABC):
         """
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
-    def search(self, text, token, visited=(), nb_results=None):
+    @abstractmethod
+    def search(self, text, token, visited=(), nb_results=None) -> dict:
         """
         Search for documents in Find app.
         Ensure the same default ordering as "Docs" list : -updated_at
 
-        Returns ids of the documents
+        Returns retrieved items
 
         Args:
             text (str): Text search content.
@@ -258,24 +261,6 @@ class BaseItemIndexer(ABC):
             nb_results (int, optional):
                 The number of results to return per page.
                 Defaults to settings.SEARCH_INDEXER_QUERY_LIMIT.
-        """
-        nb_results = nb_results or self.search_limit
-        response = self.search_query(
-            data={
-                "q": text,
-                "visited": visited,
-                "services": ["drive"],
-                "nb_results": nb_results,
-            },
-            token=token,
-        )
-
-        return response
-
-    @abstractmethod
-    def search_query(self, data, token) -> dict:
-        """
-        Retrieve items from indexation database.
 
         Must be implemented by subclasses.
         """
@@ -352,23 +337,40 @@ class SearchIndexer(BaseItemIndexer):
             "is_active": is_active,
         }
 
-    def search_query(self, data, token) -> requests.Response:
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
+    def search(self, text, token, visited=(), nb_results=None):
         """
-        Retrieve documents from the Find app API.
+        Search for documents in Find app.
+        Ensure the same default ordering as "Docs" list : -updated_at
+
+        Returns retrieved items
 
         Args:
-            data (dict): search data
-            token (str): OICD token
+            text (str): Text search content.
+            token (str): OIDC Authentication token.
+            visited (list, optional):
+                List of ids of active public documents with LinkTrace
+                Defaults to settings.SEARCH_INDEXER_BATCH_SIZE.
+            nb_results (int, optional):
+                The number of results to return per page.
+                Defaults to settings.SEARCH_INDEXER_QUERY_LIMIT.
 
         Returns:
             dict: A JSON-serializable dictionary.
         """
+        nb_results = nb_results or self.search_limit
         response = requests.post(
             self.search_url,
-            json=data,
+            json={
+                "q": text,
+                "visited": visited,
+                "services": [SERVICE_NAME],
+                "nb_results": nb_results,
+            },
             headers={"Authorization": f"Bearer {token}"},
             timeout=10,
         )
+
         response.raise_for_status()
         return response.json()
 

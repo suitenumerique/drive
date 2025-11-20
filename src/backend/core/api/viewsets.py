@@ -1050,7 +1050,8 @@ class ItemViewSet(
     @method_decorator(refresh_oidc_access_token)
     def _indexed_search(self, request, queryset, indexer, text):
         """
-        Returns a queryset from the results the fulltext search of Find
+        Returns a DRF response containding the results the fulltext search of Find
+        sorted by score.
         """
         user = request.user
         token = request.session.get("oidc_access_token")
@@ -1098,10 +1099,6 @@ class ItemViewSet(
          - A fulltext search through the opensearch indexation app "find" if the backend is
            enabled (see SEARCH_INDEXER_CLASS)
          - A filtering by the model fields 'title' & 'type'.
-
-        Note : Even if the indexer is disabled this view will do OIDC refresh calls
-        anyway. Think about using a decorator with args to prevent this when the
-        SEARCH_INDEXER_CLASS setting is not configured.
         """
         queryset = self.queryset
         indexer = get_file_indexer()

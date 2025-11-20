@@ -1,21 +1,21 @@
 # Setup the Find search for Drive
 
-This configuration will enable the fulltext search feature for Docs :
+This configuration will enable the fulltext search feature for Drive :
 - Each save on **core.Item** or **core.Item** will trigger the indexer
 - Once indexer service configured, the `api/v1.0/item/search/` will work as a proxy with the Find API for fulltext search.
 
 ## Create an index service for Drive
 
-Configure a **Service** for Docs application with these settings
+Configure a **Service** for Drive application with these settings
 
-- **Name**: `drive`<br>_request.auth.name of the Docs application._
-- **Client id**: `drive`<br>_Name of the token audience or client_id of the Docs application._
+- **Name**: `drive`<br>_request.auth.name of the Drive application._
+- **Client id**: `drive`<br>_Name of the token audience or client_id of the Drive application._
 
 See [how-to-use-indexer.md](how-to-use-indexer.md) for details.
 
 ## Configure settings of Drive
 
-Add those Django settings the Docs application to enable the feature.
+Add those Django settings the Drive application to enable the feature.
 
 ```python
 SEARCH_INDEXER_CLASS="core.services.search_indexers.SearchIndexer"
