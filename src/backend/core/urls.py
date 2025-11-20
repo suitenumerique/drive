@@ -78,3 +78,17 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
             ),
         )
     )
+
+if settings.METRICS_ENABLED:
+    usage_metrics_router = DefaultRouter()
+    usage_metrics_router.register(
+        "usage",
+        viewsets.UsageMetricViewset,
+        basename="usage_metrics",
+    )
+    urlpatterns.append(
+        path(
+            f"external_api/{settings.API_VERSION}/metrics/",
+            include(usage_metrics_router.urls),
+        )
+    )
