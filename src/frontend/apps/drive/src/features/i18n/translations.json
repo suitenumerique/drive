@@ -1,6 +1,11 @@
 {
   "en": {
     "translation": {
+      "entitlements": {
+        "can_upload": {
+          "cannot_upload": "You don't have the necessary rights to transfer files."
+        }
+      },
       "401": {
         "title": "You need to be logged in to access the documents.",
         "button": "Login"
@@ -103,7 +108,8 @@
       },
       "authentication": {
         "error": {
-          "alpha": "This application is in alpha and its access is restricted."
+          "alpha": "This application is in alpha and its access is restricted.",
+          "user_cannot_access_app": "You do not have the necessary permissions to access this application. Contact your administrator."
         }
       },
       "mime": {
@@ -330,8 +336,9 @@
           "upload": {
             "toast": "Drop your files here to transfer them in {{title}}",
             "toast_no_rights": "You don't have the necessary rights to transfer files in {{title}}",
-            "folders": {
-              "description": "Creation of folders in progress..."
+            "steps": {
+              "preparing": "Preparing the transfer...",
+              "create_folders": "Creation of folders in progress..."
             },
             "files": {
               "description_one": "{{count}} file being transferred",
@@ -401,6 +408,11 @@
   },
   "fr": {
     "translation": {
+      "entitlements": {
+        "can_upload": {
+          "cannot_upload": "Vous n'avez pas les droits nécessaires pour transférer des fichiers."
+        }
+      },
       "401": {
         "title": "Connectez-vous pour accéder aux documents.",
         "button": "Se connecter"
@@ -503,7 +515,8 @@
       },
       "authentication": {
         "error": {
-          "alpha": "Cette application est en version alpha et son accès est restreint."
+          "alpha": "Cette application est en version alpha et son accès est restreint.",
+          "user_cannot_access_app": "Vous n'avez pas les permissions nécessaires pour accéder à cette application. Contactez votre administrateur."
         }
       },
       "mime": {
@@ -730,8 +743,9 @@
           "upload": {
             "toast": "Déposez vos fichiers ici pour les transférer dans {{title}}",
             "toast_no_rights": "Vous n'avez pas les droits nécessaires pour transférer des fichiers dans {{title}}",
-            "folders": {
-              "description": "Création des dossiers en cours..."
+            "steps": {
+              "preparing": "Préparation du transfert...",
+              "create_folders": "Création des dossiers en cours..."
             },
             "files": {
               "description_one": "{{count}} fichier en cours de transfert",
@@ -807,6 +821,11 @@
   },
   "nl": {
     "translation": {
+      "entitlements": {
+        "can_upload": {
+          "cannot_upload": "U heeft niet de benodigde rechten om bestanden te uploaden."
+        }
+      },
       "401": {
         "title": "U moet ingelogd zijn om toegang te krijgen tot de bestanden.",
         "button": "Login"
@@ -909,7 +928,8 @@
       },
       "authentication": {
         "error": {
-          "alpha": "Deze applicatie bevindt zich in de alfa-fase en de toegang ertoe is beperkt."
+          "alpha": "Deze applicatie bevindt zich in de alfa-fase en de toegang ertoe is beperkt.",
+          "user_cannot_access_app": "U heeft niet de benodigde rechten om toegang te krijgen tot deze applicatie. Neem contact op met uw beheerder."
         }
       },
       "mime": {
@@ -1136,8 +1156,9 @@
           "upload": {
             "toast": "Zet uw bestanden hier neer om ze over te zetten in {{title}}",
             "toast_no_rights": "U beschikt niet over de benodigde rechten om bestanden over te dragen in {{title}}",
-            "folders": {
-              "description": "Creatie van mappen in progress..."
+            "steps": {
+              "preparing": "Voorbereiding van de overdracht...",
+              "create_folders": "Creatie van mappen in progress..."
             },
             "files": {
               "description_one": "{{count}} bestand wordt verplaatst",
