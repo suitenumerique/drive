@@ -8,7 +8,7 @@ from django.core.files.storage import default_storage
 import pytest
 from rest_framework.test import APIClient
 
-from core import factories
+from core import factories, models
 from core.api.viewsets import malware_detection
 from core.models import ItemTypeChoices, ItemUploadStateChoices, LinkRoleChoices
 
@@ -150,3 +150,90 @@ def test_api_item_upload_ended_empty_file():
     assert item.size == 0
 
     assert response.json()["mimetype"] == "application/x-empty"
+
+
+@mock.patch("core.api.viewsets.get_entitlements_backend")
+def test_api_item_upload_ended_entitlements_backend_returns_falsy(
+    mock_get_entitlements_backend,
+):
+    """
+    Test that the API returns a 403 when the entitlements backend returns a falsy result.
+    It should hard delete the item.
+    """
+    # Mock the entitlement backend to return a falsy result
+    mock_entitlement_backend = mock.Mock()
+    mock_entitlement_backend.can_upload.return_value = {"result": False}
+    mock_get_entitlements_backend.return_value = mock_entitlement_backend
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=ItemTypeChoices.FILE, filename="my_file.txt")
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
+    )
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "type": "client_error",
+        "errors": [
+            {
+                "code": "permission_denied",
+                "detail": "You do not have permission to upload files.",
+                "attr": None,
+            }
+        ],
+    }
+
+    assert not models.Item.objects.filter(id=item.id).exists()
+
+
+@mock.patch("core.api.viewsets.get_entitlements_backend")
+def test_api_item_upload_ended_entitlements_backend_returns_falsy_custom_message(
+    mock_get_entitlements_backend,
+):
+    """
+    Test that the API returns a 403 when the entitlements backend returns a falsy result
+    with a custom message. It should hard delete the item.
+    """
+    # Mock the entitlement backend to return a falsy result
+    mock_entitlement_backend = mock.Mock()
+    mock_entitlement_backend.can_upload.return_value = {
+        "result": False,
+        "message": "Hello World",
+    }
+    mock_get_entitlements_backend.return_value = mock_entitlement_backend
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=ItemTypeChoices.FILE, filename="my_file.txt")
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
+    )
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "type": "client_error",
+        "errors": [
+            {
+                "code": "permission_denied",
+                "detail": "Hello World",
+                "attr": None,
+            }
+        ],
+    }
+
+    assert not models.Item.objects.filter(id=item.id).exists()

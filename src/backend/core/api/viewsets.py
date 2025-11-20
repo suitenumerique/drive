@@ -34,6 +34,7 @@ from rest_framework.throttling import UserRateThrottle
 from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
+from core.entitlements import get_entitlements_backend
 from core.services.sdk_relay import SDKRelayManager
 from core.tasks.item import process_item_deletion, rename_file
 from wopi.services import access as access_service
@@ -673,6 +674,18 @@ class ItemViewSet(
                 code="item_upload_state_not_pending",
             )
 
+        entitlements_backend = get_entitlements_backend()
+        can_upload = entitlements_backend.can_upload(self.request.user)
+        if not can_upload["result"]:
+            item.soft_delete()
+            item.hard_delete()
+            process_item_deletion.delay(item.id)
+            raise drf.exceptions.PermissionDenied(
+                detail=can_upload.get(
+                    "message", "You do not have permission to upload files."
+                )
+            )
+
         mime_detector = magic.Magic(mime=True)
         s3_client = default_storage.connection.meta.client
 
@@ -861,6 +874,18 @@ class ItemViewSet(
                 data=request.data, context=self.get_serializer_context()
             )
             serializer.is_valid(raise_exception=True)
+
+            entitlements_backend = get_entitlements_backend()
+            can_upload = entitlements_backend.can_upload(self.request.user)
+            if (
+                serializer.validated_data.get("type") == models.ItemTypeChoices.FILE
+                and not can_upload["result"]
+            ):
+                raise drf.exceptions.PermissionDenied(
+                    detail=can_upload.get(
+                        "message", "You do not have permission to upload files."
+                    )
+                )
 
             with transaction.atomic():
                 child_item = models.Item.objects.create_child(
