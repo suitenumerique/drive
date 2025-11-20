@@ -571,6 +571,13 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # OIDC claims to store
+    OIDC_STORE_CLAIMS = values.ListValue(
+        default=[],
+        environ_name="OIDC_STORE_CLAIMS",
+        environ_prefix=None,
+    )
+
     # WARNING: Enabling this setting allows multiple user accounts to share the same email
     # address. This may cause security issues and is not recommended for production use when
     # email is activated as fallback for identification (see previous setting).

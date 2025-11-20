@@ -6,7 +6,7 @@ from lasuite.oidc_login.views import (
     OIDCAuthenticationCallbackView as LaSuiteOIDCAuthenticationCallbackView,
 )
 
-from core.authentication.exceptions import EmailNotAlphaAuthorized
+from core.authentication.exceptions import EmailNotAlphaAuthorized, UserCannotAccessApp
 
 
 class OIDCAuthenticationCallbackView(LaSuiteOIDCAuthenticationCallbackView):
@@ -21,3 +21,7 @@ class OIDCAuthenticationCallbackView(LaSuiteOIDCAuthenticationCallbackView):
             return super().get(request)
         except EmailNotAlphaAuthorized:
             return HttpResponseRedirect(self.failure_url + "?auth_error=alpha")
+        except UserCannotAccessApp:
+            return HttpResponseRedirect(
+                self.failure_url + "?auth_error=user_cannot_access_app"
+            )
