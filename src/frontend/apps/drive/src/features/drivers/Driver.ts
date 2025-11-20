@@ -49,6 +49,18 @@ export type UserFilters = {
   q?: string;
 };
 
+export type Entitlement = {
+  result: boolean;
+  message?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+};
+
+export type Entitlements = {
+  can_access: Entitlement;
+  can_upload: Entitlement;
+};
+
 export abstract class Driver {
   abstract getConfig(): Promise<ApiConfig>;
   abstract getItems(filters?: ItemFilters): Promise<PaginatedChildrenResult>;
@@ -95,4 +107,6 @@ export abstract class Driver {
   abstract deleteItems(ids: string[]): Promise<void>;
   abstract hardDeleteItems(ids: string[]): Promise<void>;
   abstract getWopiInfo(itemId: string): Promise<WopiInfo>;
+
+  abstract getEntitlements(): Promise<Entitlements>;
 }
