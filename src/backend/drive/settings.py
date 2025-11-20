@@ -810,6 +810,13 @@ class Base(Configuration):
         ),
     }
 
+    # Storage compute
+    STORAGE_COMPUTE_BACKEND = values.Value(
+        "core.storage.creator_storage_compute_backend.CreatorStorageComputeBackend",
+        environ_name="STORAGE_COMPUTE_BACKEND",
+        environ_prefix=None,
+    )
+
     # pylint: disable=invalid-name
     @property
     def ENVIRONMENT(self):
