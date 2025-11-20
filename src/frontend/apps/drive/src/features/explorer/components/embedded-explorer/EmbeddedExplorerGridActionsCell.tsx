@@ -6,6 +6,7 @@ import { Draggable } from "@/features/explorer/components/Draggable";
 import { useDisableDragGridItem } from "./hooks";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 import { useTranslation } from "react-i18next";
+import { useEmbeddedExplorerGirdContext } from "./EmbeddedExplorerGrid";
 
 export type EmbeddedExplorerGridActionsCellProps = CellContext<Item, unknown>;
 
@@ -18,7 +19,13 @@ export const EmbeddedExplorerGridActionsCell = (
   const [isOpen, setIsOpen] = useState(false);
 
   // Disable drag when any modal is open because it conflicts with the keyboard navigation
-  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const { setIsActionModalOpen, isActionModalOpen } =
+    useEmbeddedExplorerGirdContext();
+
+  const handleModalOpenChange = (value: boolean) => {
+    setIsActionModalOpen(value);
+  };
 
   return (
     <div
@@ -30,13 +37,13 @@ export const EmbeddedExplorerGridActionsCell = (
         id={params.cell.id}
         item={item}
         className="explorer__grid__item__actions"
-        disabled={disableDrag || isModalOpen}
+        disabled={disableDrag || isActionModalOpen}
       >
         <ItemActionDropdown
           item={item}
           isOpen={isOpen}
           setIsOpen={setIsOpen}
-          onModalOpenChange={setIsModalOpen}
+          onModalOpenChange={handleModalOpenChange}
           trigger={
             <Button
               variant="tertiary"

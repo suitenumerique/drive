@@ -6,9 +6,11 @@ import { useGlobalExplorer } from "../components/GlobalExplorerContext";
 export const useTableKeyboardNavigation = ({
   table,
   tableRef,
+  isDisabled = false,
 }: {
   table: Table<Item>;
   tableRef: React.RefObject<HTMLTableElement | null>;
+  isDisabled?: boolean;
 }) => {
   const { setSelectedItems, selectedItemsMap, selectedItems, itemId } =
     useGlobalExplorer();
@@ -21,12 +23,13 @@ export const useTableKeyboardNavigation = ({
     // We also want to focus when selectedItem are updated to make sure that we case use arrows navigation after selection. ( Which is not always
     // the case by default, if we start the area selection from outside the table, the body will be focused instead of the table, making the
     // onKeyDown event not being triggered on table)
+
     if (tableRef.current) {
       tableRef.current.focus({
         preventScroll: true,
       });
     }
-  }, [tableRef.current]);
+  }, [selectedItems, isDisabled]);
 
   useEffect(() => {
     // When we change item during navigation, the first arrow trigger must select the first item. Reset the state.
@@ -147,6 +150,9 @@ export const useTableKeyboardNavigation = ({
 
   // Handle keyboard navigation via up/down arrows
   const onKeyDown = (event: KeyboardEvent<HTMLTableElement>) => {
+    if (isDisabled) {
+      return;
+    }
     if (event.key === "ArrowDown") {
       arrowDown(event);
     } else if (event.key === "ArrowUp") {
