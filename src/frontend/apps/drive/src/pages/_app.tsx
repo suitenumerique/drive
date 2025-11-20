@@ -52,8 +52,13 @@ const onError = (error: Error, query: unknown) => {
   // Don't show toast for 401/403 errors because the app handles them by
   // redirecting to the 401/403 page. So we don't want to show a toast before
   // the redirect, it would feels buggy.
-  if (error instanceof APIError && (error.code === 401 || error.code === 403)) {
-    return;
+  if (error instanceof APIError) {
+    if (error.code === 401) {
+      return;
+    }
+    if (error.code === 403 && !(query as Query).meta?.showErrorOn403) {
+      return;
+    }
   }
 
   addToast(
