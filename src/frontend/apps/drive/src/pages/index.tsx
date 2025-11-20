@@ -52,6 +52,14 @@ export default function HomePage() {
         </ToasterItem>
       );
     }
+    if (failure === "user_cannot_access_app") {
+      addToast(
+        <ToasterItem type="error">
+          <span className="material-icons">lock</span>
+          <span>{t("authentication.error.user_cannot_access_app")}</span>
+        </ToasterItem>
+      );
+    }
   }, []);
 
   if (user) {
