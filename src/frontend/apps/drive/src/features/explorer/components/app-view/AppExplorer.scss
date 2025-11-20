@@ -76,7 +76,8 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
       border-radius: 2px;
 
       table {
-        tbody {
+        tbody,
+        thead {
           background-color: var(
             --c--contextuals--background--semantic--brand--tertiary
           );
