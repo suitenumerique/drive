@@ -270,7 +270,7 @@ class BaseItemIndexer(ABC):
             token=token,
         )
 
-        return [d["_id"] for d in response]
+        return response
 
     @abstractmethod
     def search_query(self, data, token) -> dict:
