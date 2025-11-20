@@ -200,6 +200,14 @@ export const useUploadZone = ({ item }: { item: Item }) => {
     return null;
   };
 
+  const dismissDragToast = () => {
+    if (!fileDragToastId.current) {
+      return;
+    }
+    toast.dismiss(fileDragToastId.current);
+    fileDragToastId.current = null;
+  };
+
   const dropZone = useDropzone({
     noClick: true,
     useFsAccessApi: false,
@@ -213,8 +221,12 @@ export const useUploadZone = ({ item }: { item: Item }) => {
       }
 
       const canUpload = item?.abilities?.children_create ?? false;
+
       fileDragToastId.current = addToast(
-        <ToasterItem type={canUpload ? "info" : "error"}>
+        <ToasterItem
+          type={canUpload ? "info" : "error"}
+          onDrop={dismissDragToast}
+        >
           <span className="material-icons">cloud_upload</span>
           <span>
             {t(
@@ -228,22 +240,24 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         { autoClose: false }
       );
     },
-    onDragLeave: () => {
-      if (fileDragToastId.current) {
-        toast.dismiss(fileDragToastId.current);
-        fileDragToastId.current = null;
+    onDragLeave: (event) => {
+      // Check if we're leaving the dropzone for a toast or staying within the dropzone area
+      const relatedTarget = event.relatedTarget as Element;
+      const isToastElement = relatedTarget?.closest(".Toastify");
+
+      /*  If we're leaving the dropzone for a toast, we don't need to dismiss the toast.
+       *  This is useful to avoid the flicker effect when the user drops a file over the toast.
+       *  However, if we drop over a toast, the toast is never closed. This is because we added the onDrop={handleDrop} on the ToasterItem.
+       */
+      if (isToastElement) {
+        return;
       }
+
+      dismissDragToast();
     },
     onDrop: async (acceptedFiles) => {
-      const dismissToast = () => {
-        if (fileDragToastId.current) {
-          toast.dismiss(fileDragToastId.current);
-          fileDragToastId.current = null;
-        }
-      };
-
       if (!(item?.abilities?.children_create ?? false)) {
-        dismissToast();
+        dismissDragToast();
         return;
       }
 
@@ -277,7 +291,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
           }
         );
       }
-      dismissToast();
+      dismissDragToast();
 
       const upload = filesToUpload(acceptedFiles);
       await handleHierarchy(upload);

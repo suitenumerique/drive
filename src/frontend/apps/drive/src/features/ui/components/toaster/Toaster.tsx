@@ -12,14 +12,17 @@ export const ToasterItem = ({
   closeButton = false,
   className,
   type = "info",
+  onDrop,
 }: {
   children: React.ReactNode;
   closeButton?: boolean;
   className?: string;
   type?: "error" | "info";
+  onDrop?: (event: React.DragEvent<HTMLDivElement>) => void;
 } & Partial<ToastContentProps>) => {
   return (
     <div
+      onDrop={(event) => onDrop?.(event)}
       className={clsx(
         "suite__toaster__item",
         "suite__toaster__item--" + type,

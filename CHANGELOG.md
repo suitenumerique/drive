@@ -14,6 +14,7 @@ and this project adheres to
 - 🐛(front) heic files are not supported yet
 - 🐛(front) update API error handling
 - 🐛(front) enhance mimeTypes utility with known extensions and validation
+- 🐛(front) fix drag leave behavior in upload zone
 
 ## [v0.8.0] - 2025-11-18
 
