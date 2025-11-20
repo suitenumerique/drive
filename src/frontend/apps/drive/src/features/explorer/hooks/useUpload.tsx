@@ -12,6 +12,7 @@ import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { FileUploadToast } from "../components/toasts/FileUploadToast";
 import { useQueryClient } from "@tanstack/react-query";
+import { getEntitlements } from "@/utils/entitlements";
 
 type FileUpload = FileWithPath & {
   parentId?: string;
@@ -164,8 +165,16 @@ const useUpload = ({ item }: { item: Item }) => {
   };
 };
 
+enum UploadingStep {
+  NONE = "none",
+  PREPARING = "preparing",
+  CREATE_FOLDERS = "create_folders",
+  UPLOAD_FILES = "upload_files",
+  DONE = "done",
+}
+
 export type UploadingState = {
-  step: "none" | "create_folders" | "upload_files" | "done";
+  step: UploadingStep;
   filesMeta: Record<string, FileUploadMeta>;
 };
 
@@ -183,7 +192,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
   const fileDragToastId = useRef<Id | null>(null);
   const fileUploadsToastId = useRef<Id | null>(null);
   const [uploadingState, setUploadingState] = useState<UploadingState>({
-    step: "none",
+    step: UploadingStep.NONE,
     filesMeta: {},
   });
 
@@ -263,7 +272,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
       setUploadingState((prev) => ({
         ...prev,
-        step: "create_folders",
+        step: UploadingStep.PREPARING,
       }));
 
       if (!fileUploadsToastId.current) {
@@ -284,7 +293,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         dismissDragToast();
         setUploadingState((prev) => ({
           ...prev,
-          step: "none",
+          step: UploadingStep.NONE,
         }));
         addToast(
           <ToasterItem type="error">
@@ -299,7 +308,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
       setUploadingState((prev) => ({
         ...prev,
-        step: "create_folders",
+        step: UploadingStep.CREATE_FOLDERS,
       }));
 
       if (!fileUploadsToastId.current) {
@@ -323,7 +332,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
       // First, add all the files to the uploading state in order to display them in the toast.
       const newUploadingState: UploadingState = {
-        step: "upload_files",
+        step: UploadingStep.UPLOAD_FILES,
         filesMeta: {},
       };
       for (const file of upload.files) {
@@ -384,14 +393,20 @@ export const useUploadZone = ({ item }: { item: Item }) => {
       }
       setUploadingState((prev) => ({
         ...prev,
-        step: "done",
+        step: UploadingStep.DONE,
       }));
     },
   });
 
   useEffect(() => {
     if (fileUploadsToastId.current) {
-      if (Object.keys(uploadingState).length === 0) {
+      // If the uploading state is "upload_files" and there are no files, we dismiss the toast.
+      // It can happen if the upload fails for unknown reasons.
+      if (
+        (uploadingState.step === UploadingStep.UPLOAD_FILES &&
+          Object.keys(uploadingState.filesMeta).length === 0) ||
+        uploadingState.step === UploadingStep.NONE
+      ) {
         toast.dismiss(fileUploadsToastId.current);
         fileUploadsToastId.current = null;
       } else {
@@ -404,7 +419,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
   useEffect(() => {
     const unloadCallback = (event: BeforeUnloadEvent) => {
-      if (["create_folders", "upload_files"].includes(uploadingState.step)) {
+      if ([UploadingStep.CREATE_FOLDERS, UploadingStep.UPLOAD_FILES].includes(uploadingState.step)) {
         event.preventDefault();
       }
       return "";

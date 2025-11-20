@@ -17,6 +17,9 @@ export const useMutationCreateFile = () => {
         });
       }
     },
+    meta: {
+      showErrorOn403: true,
+    },
   });
 };
 

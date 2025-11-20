@@ -23,6 +23,10 @@ export const FileUploadToast = (
   const doneFilesCount = Object.values(props.uploadingState.filesMeta).filter(
     (meta) => meta.progress >= 100
   ).length;
+  // Does not show the files list and the open button.
+  const simpleMode =
+    props.uploadingState.step === "preparing" ||
+    props.uploadingState.step === "create_folders";
 
   useEffect(() => {
     if (props.uploadingState.step === "upload_files") {
@@ -66,10 +70,12 @@ export const FileUploadToast = (
         </div>
         <div className="file-upload-toast__description">
           <div className="file-upload-toast__description__text">
-            {props.uploadingState.step === "create_folders" ? (
+            {simpleMode ? (
               <>
                 <Spinner />
-                {t("explorer.actions.upload.folders.description")}
+                {t(
+                  `explorer.actions.upload.steps.${props.uploadingState.step}`
+                )}
               </>
             ) : (
               <>
@@ -86,7 +92,7 @@ export const FileUploadToast = (
             )}
           </div>
           <div>
-            {props.uploadingState.step !== "create_folders" && (
+            {!simpleMode && (
               <Button
                 variant="tertiary"
                 size="small"
