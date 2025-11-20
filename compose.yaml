@@ -79,6 +79,9 @@ services:
     volumes:
       - ./src/backend:/app
       - ./data/static:/data/static
+    networks:
+      - lasuite
+      - default      
     depends_on:
       postgresql:
         condition: service_healthy
