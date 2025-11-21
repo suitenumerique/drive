@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.8.1] - 2025-11-24
+
 ### Fixed
 
 - 🐛(front) fix the issue of not being able to put spaces in a folder name
