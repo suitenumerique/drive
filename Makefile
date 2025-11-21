@@ -235,7 +235,7 @@ configure-wopi: ## configure the wopi settings
 .PHONY: configure-wopi
 
 back-i18n-compile: ## compile the gettext files
-	@$(MANAGE) compilemessages --ignore="venv/**/*"
+	@$(MANAGE) compilemessages --ignore=".venv/**/*"
 .PHONY: back-i18n-compile
 
 back-i18n-generate: ## create the .pot files used for i18n
