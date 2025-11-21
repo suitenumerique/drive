@@ -1,13 +1,12 @@
 import { useModal } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
-import {
-  NavigationEventType,
-  useGlobalExplorer,
-} from "../GlobalExplorerContext";
-import { Item, TreeItem } from "@/features/drivers/types";
+import publicSpaceIcon from "@/assets/folder/folder-tiny-public.svg";
+import sharedSpaceIcon from "@/assets/folder/folder-tiny-shared.svg";
+import folderPersonalIcon from "@/assets/folder/folder-tiny-perso.svg";
+import { useGlobalExplorer } from "../GlobalExplorerContext";
+import { Item, TreeItem, WorkspaceType } from "@/features/drivers/types";
 import {
   HorizontalSeparator,
-  IconSize,
   OpenMap,
   TreeDataItem,
   TreeView,
@@ -17,7 +16,7 @@ import {
   useTreeContext,
 } from "@gouvfr-lasuite/ui-kit";
 import { useEffect, useState } from "react";
-import { ExplorerTreeItem, ExplorerTreeItemIcon } from "./ExplorerTreeItem";
+import { ExplorerTreeItem } from "./ExplorerTreeItem";
 import { useMoveItems } from "../../api/useMoveItem";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
 import { ExplorerCreateWorkspaceModal } from "../modals/workspaces/ExplorerCreateWorkspaceModal";
@@ -30,6 +29,9 @@ import React from "react";
 import clsx from "clsx";
 import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
 import { WorkspaceCategory } from "../../constants";
+import { getDriver } from "@/features/config/Config";
+import { useAuth } from "@/features/auth/Auth";
+import { useRouter } from "next/router";
 
 export const ExplorerTree = () => {
   const { t, i18n } = useTranslation();
@@ -228,62 +230,97 @@ export const ExplorerTree = () => {
   );
 };
 
-export const ExplorerTreeMobile = () => {
-  const treeContext = useTreeContext<TreeItem>();
-  const { item, onNavigate, setIsLeftPanelOpen } = useGlobalExplorer();
+type ExplorerTreeMobileNode = {
+  id: string;
+  label: string;
+  route: string;
+  icon: string;
+};
 
-  const nodes = treeContext?.treeData.nodes;
+export const ExplorerTreeMobile = () => {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const { user } = useAuth();
+  const { setIsLeftPanelOpen } = useGlobalExplorer();
+  const [nodes, setNodes] = useState<ExplorerTreeMobileNode[]>([]);
+  const driver = getDriver();
+
+  const initialTree = async () => {
+    if (!user) {
+      return;
+    }
+    const mainWorkspace = user.main_workspace;
+    const sharedWorkspaces = await driver.getItems({
+      workspaces: WorkspaceType.SHARED,
+      page: 1,
+    });
+    const publicWorkspaces = await driver.getItems({
+      workspaces: WorkspaceType.PUBLIC,
+      page: 1,
+    });
+
+    const nodes: ExplorerTreeMobileNode[] = [
+      {
+        id: mainWorkspace.id,
+        label: mainWorkspace.title,
+        route: `/explorer/items/${mainWorkspace.id}`,
+        icon: folderPersonalIcon.src,
+      },
+    ];
+    if (sharedWorkspaces.children.length > 0) {
+      nodes.push({
+        id: "shared",
+        label: t("explorer.tree.shared_space"),
+        route: `/explorer/items/shared`,
+        icon: sharedSpaceIcon.src,
+      });
+    }
+    if (publicWorkspaces.children.length > 0) {
+      nodes.push({
+        id: "public",
+        label: t("explorer.tree.public_space"),
+        route: `/explorer/items/public`,
+        icon: publicSpaceIcon.src,
+      });
+    }
+    setNodes(nodes);
+  };
+
+  useEffect(() => {
+    initialTree();
+  }, []);
 
   if (!nodes) {
     return null;
   }
 
-  const renderNode = (node: TreeDataItem<TreeItem>) => {
-    const isSelected = item?.id === node.value.id;
-    const type = node.value.nodeType;
-    if (type === TreeViewNodeTypeEnum.NODE) {
-      return (
-        <div
-          className={clsx(
-            "explorer__tree__mobile__item",
-            "explorer__tree__mobile__node",
-            {
-              "explorer__tree__mobile__node--selected": isSelected,
-            }
-          )}
-          onClick={() => {
-            onNavigate({
-              type: NavigationEventType.ITEM,
-              item: node.value as Item,
-            });
-            setIsLeftPanelOpen(false);
-          }}
-        >
-          <ExplorerTreeItemIcon item={node.value} size={IconSize.X_SMALL} />
-          <span>{node.value.title}</span>
-        </div>
-      );
-    }
+  const renderNode = (node: ExplorerTreeMobileNode) => {
+    const isSelected = router.asPath === node.route;
 
-    if (type === TreeViewNodeTypeEnum.TITLE) {
-      return (
-        <div className="explorer__tree__mobile__item explorer__tree__mobile__title">
-          {node.value.headerTitle}
-        </div>
-      );
-    }
-
-    if (type === TreeViewNodeTypeEnum.SEPARATOR) {
-      return <HorizontalSeparator withPadding={true} />;
-    }
-
-    return null;
+    return (
+      <div
+        className={clsx(
+          "explorer__tree__mobile__item",
+          "explorer__tree__mobile__node",
+          {
+            "explorer__tree__mobile__node--selected": isSelected,
+          }
+        )}
+        onClick={() => {
+          router.push(node.route);
+          setIsLeftPanelOpen(false);
+        }}
+      >
+        <img src={node.icon} alt="" />
+        <span>{node.label}</span>
+      </div>
+    );
   };
 
   return (
     <div className="explorer__tree__mobile">
       {nodes.map((node) => (
-        <React.Fragment key={node.key}>{renderNode(node)}</React.Fragment>
+        <React.Fragment key={node.id}>{renderNode(node)}</React.Fragment>
       ))}
     </div>
   );
