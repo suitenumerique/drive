@@ -8,7 +8,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- 🏗️(core) migrate from pip to uv
+
 ## [v0.8.1] - 2025-11-24
+
 
 ### Fixed
 
