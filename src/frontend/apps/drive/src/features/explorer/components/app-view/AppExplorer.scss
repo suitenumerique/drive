@@ -43,6 +43,13 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
   &__grid {
     padding: 0px 14px;
     padding-right: 24px;
+
+    &__empty__image {
+      width: 280px !important;
+      height: 280px !important;
+      object-fit: contain;
+      margin: 0 auto;
+    }
   }
   &__container {
     display: flex;
@@ -75,8 +82,13 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
         3px inset;
       border-radius: 2px;
 
+      .c__datagrid--empty {
+        background-color: transparent;
+      }
+
       table {
-        tbody {
+        tbody,
+        thead {
           background-color: var(
             --c--contextuals--background--semantic--brand--tertiary
           );

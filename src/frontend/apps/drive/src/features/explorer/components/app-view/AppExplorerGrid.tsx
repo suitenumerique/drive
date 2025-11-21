@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import clsx from "clsx";
 import { Loader, useCunningham } from "@openfun/cunningham-react";
-import gridEmpty from "@/assets/grid_empty.png";
+import gridEmpty from "@/assets/grid_empty.svg";
 import {
   AppExplorerProps,
   useAppExplorer,
@@ -64,7 +64,11 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
     if (isEmpty) {
       return (
         <div className="c__datagrid__empty-placeholder fs-h3 clr-greyscale-900 fw-bold">
-          <img src={gridEmpty.src} alt={t("components.datagrid.empty_alt")} />
+          <img
+            src={gridEmpty.src}
+            alt={t("components.datagrid.empty_alt")}
+            className="explorer__grid__empty__image"
+          />
           <div className="explorer__grid__empty">
             <div className="explorer__grid__empty__caption">
               {canCreateChildren

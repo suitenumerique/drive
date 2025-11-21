@@ -15,6 +15,8 @@ and this project adheres to
 - 🐛(front) update API error handling
 - 🐛(front) enhance mimeTypes utility with known extensions and validation
 - 🐛(front) fix drag leave behavior in upload zone
+- 🐛(front) fix style on hover and empty grid svg
+- 🐛(front) fix grid focus and keyboard navigation when a modal is open
 
 ## [v0.8.0] - 2025-11-18
 

@@ -61,6 +61,8 @@ type EmbeddedExplorerGridContextType = EmbeddedExplorerGridProps & {
   openMoveModal: () => void;
   closeMoveModal: () => void;
   setMoveItem: (item: Item) => void;
+  isActionModalOpen: boolean;
+  setIsActionModalOpen: (value: boolean) => void;
 };
 
 export const EmbeddedExplorerGridContext = createContext<
@@ -96,6 +98,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
 
   const [moveItem, setMoveItem] = useState<Item | null>(null);
   const moveModal = useModal();
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
 
   const selectedItems = props.selectedItems ?? [];
   const selectedItemsMap = useMemo(() => {
@@ -145,6 +148,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   const { onKeyDown } = useTableKeyboardNavigation({
     table,
     tableRef,
+    isDisabled: isActionModalOpen,
   });
 
   const handleCloseMoveModal = () => {
@@ -167,6 +171,8 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
           openMoveModal: moveModal.open,
           closeMoveModal: moveModal.close,
           setMoveItem,
+          isActionModalOpen,
+          setIsActionModalOpen,
         }}
       >
         <div
