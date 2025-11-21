@@ -3,9 +3,6 @@
 # ---- base image to inherit from ----
 FROM python:3.13.9-alpine AS base
 
-# Upgrade pip to its latest release to speed up dependencies installation
-RUN python -m pip install --upgrade pip setuptools
-
 # Upgrade system packages to install security updates
 RUN apk update && \
   apk upgrade && \
@@ -14,13 +11,28 @@ RUN apk update && \
 # ---- Back-end builder image ----
 FROM base AS back-builder
 
-WORKDIR /builder
 
-# Copy required python dependencies
-COPY ./src/backend /builder
+ENV UV_COMPILE_BYTECODE=1 
+ENV UV_LINK_MODE=copy
 
-RUN mkdir /install && \
-  pip install --prefix=/install .
+# Disable Python downloads, because we want to use the system interpreter
+# across both images. If using a managed Python version, it needs to be
+# copied from the build image into the final image; 
+ENV UV_PYTHON_DOWNLOADS=0
+
+# install uv
+COPY --from=ghcr.io/astral-sh/uv:0.9.10 /uv /uvx /bin/
+
+WORKDIR /app
+
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=src/backend/uv.lock,target=uv.lock \
+    --mount=type=bind,source=src/backend/pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-install-project --no-dev
+COPY src/backend /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev
 
 # ---- mails ----
 FROM node:20 AS mail-builder
@@ -41,13 +53,13 @@ RUN apk add \
   pango \
   rdfind
 
-# Copy installed python dependencies
-COPY --from=back-builder /install /usr/local
-
-# Copy drive application (see .dockerignore)
-COPY ./src/backend /app/
-
 WORKDIR /app
+
+# Copy the application from the builder
+COPY --from=back-builder /app /app
+
+ENV PATH="/app/.venv/bin:$PATH"
+
 
 # collectstatic
 RUN DJANGO_CONFIGURATION=Build \
@@ -85,13 +97,12 @@ COPY ./docker/files/usr/local/bin/entrypoint /usr/local/bin/entrypoint
 # docker user (see entrypoint).
 RUN chmod g=u /etc/passwd
 
-# Copy installed python dependencies
-COPY --from=back-builder /install /usr/local
-
-# Copy drive application (see .dockerignore)
-COPY ./src/backend /app/
+# Copy the application from the builder
+COPY --from=back-builder /app /app
 
 WORKDIR /app
+
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Generate compiled translation messages
 RUN DJANGO_CONFIGURATION=Build \
@@ -112,10 +123,9 @@ USER root:root
 # Install psql
 RUN apk add postgresql-client
 
-# Uninstall drive and re-install it in editable mode along with development
-# dependencies
-RUN pip uninstall -y drive
-RUN pip install -e .[dev]
+# Install development dependencies
+RUN --mount=from=ghcr.io/astral-sh/uv:0.9.10,source=/uv,target=/bin/uv \
+    uv sync --all-extras --locked
 
 # Restore the un-privileged user running the application
 ARG DOCKER_USER

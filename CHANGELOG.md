@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- 🏗️(core) migrate from pip to uv
+
 ### Fixed
 
 - 🐛(front) fix the issue of not being able to put spaces in a folder name

@@ -79,6 +79,7 @@ services:
     volumes:
       - ./src/backend:/app
       - ./data/static:/data/static
+      - /app/.venv
     depends_on:
       postgresql:
         condition: service_healthy
@@ -110,6 +111,7 @@ services:
     volumes:
       - ./src/backend:/app
       - ./data/static:/data/static
+      - /app/.venv
 
   nginx:
     image: nginx:1.25
