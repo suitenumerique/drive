@@ -12,6 +12,7 @@ import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { FileUploadToast } from "../components/toasts/FileUploadToast";
 import { useQueryClient } from "@tanstack/react-query";
+import { getEntitlements } from "@/utils/entitlements";
 
 type FileUpload = FileWithPath & {
   parentId?: string;
@@ -165,7 +166,7 @@ const useUpload = ({ item }: { item: Item }) => {
 };
 
 export type UploadingState = {
-  step: "none" | "create_folders" | "upload_files" | "done";
+  step: "none" | "preparing" | "create_folders" | "upload_files" | "done";
   filesMeta: Record<string, FileUploadMeta>;
 };
 
@@ -263,7 +264,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
       setUploadingState((prev) => ({
         ...prev,
-        step: "create_folders",
+        step: "preparing",
       }));
 
       if (!fileUploadsToastId.current) {
@@ -278,6 +279,29 @@ export const useUploadZone = ({ item }: { item: Item }) => {
           }
         );
       }
+
+      const entitlements = await getEntitlements();
+      if (!entitlements.can_upload.result) {
+        dismissToast();
+        setUploadingState((prev) => ({
+          ...prev,
+          step: "none",
+        }));
+        addToast(
+          <ToasterItem type="error">
+            <span>
+              {entitlements.can_upload.message ||
+                t("entitlements.can_upload.cannot_upload")}
+            </span>
+          </ToasterItem>
+        );
+        return;
+      }
+
+      setUploadingState((prev) => ({
+        ...prev,
+        step: "create_folders",
+      }));
 
       if (!fileUploadsToastId.current) {
         fileUploadsToastId.current = addToast(
@@ -368,7 +392,13 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
   useEffect(() => {
     if (fileUploadsToastId.current) {
-      if (Object.keys(uploadingState).length === 0) {
+      // If the uploading state is "upload_files" and there are no files, we dismiss the toast.
+      // It can happen if the upload fails for unknown reasons.
+      if (
+        (uploadingState.step === "upload_files" &&
+          Object.keys(uploadingState.filesMeta).length === 0) ||
+        uploadingState.step === "none"
+      ) {
         toast.dismiss(fileUploadsToastId.current);
         fileUploadsToastId.current = null;
       } else {

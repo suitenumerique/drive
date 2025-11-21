@@ -31,8 +31,10 @@ from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
 from rest_framework.permissions import AllowAny
 from rest_framework.throttling import UserRateThrottle
+from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
+from core.entitlements import get_entitlements_backend
 from core.services.sdk_relay import SDKRelayManager
 from core.tasks.item import process_item_deletion, rename_file
 from wopi.services import access as access_service
@@ -672,6 +674,18 @@ class ItemViewSet(
                 code="item_upload_state_not_pending",
             )
 
+        entitlements_backend = get_entitlements_backend()
+        can_upload = entitlements_backend.can_upload(self.request.user)
+        if not can_upload["result"]:
+            item.soft_delete()
+            item.hard_delete()
+            process_item_deletion.delay(item.id)
+            raise drf.exceptions.PermissionDenied(
+                detail=can_upload.get(
+                    "message", "You do not have permission to upload files."
+                )
+            )
+
         mime_detector = magic.Magic(mime=True)
         s3_client = default_storage.connection.meta.client
         range_response = s3_client.get_object(
@@ -851,6 +865,18 @@ class ItemViewSet(
                 data=request.data, context=self.get_serializer_context()
             )
             serializer.is_valid(raise_exception=True)
+
+            entitlements_backend = get_entitlements_backend()
+            can_upload = entitlements_backend.can_upload(self.request.user)
+            if (
+                serializer.validated_data.get("type") == models.ItemTypeChoices.FILE
+                and not can_upload["result"]
+            ):
+                raise drf.exceptions.PermissionDenied(
+                    detail=can_upload.get(
+                        "message", "You do not have permission to upload files."
+                    )
+                )
 
             with transaction.atomic():
                 child_item = models.Item.objects.create_child(
@@ -1563,3 +1589,44 @@ class SDKRelayEventViewset(drf.viewsets.ViewSet):
         response = drf.response.Response(status=status.HTTP_200_OK)
         self.handle_cors(request, response)
         return response
+
+
+class UsageMetricViewset(drf.mixins.ListModelMixin, viewsets.GenericViewSet):
+    """
+    Viewset for usage metrics.
+    """
+
+    permission_classes = [HasAPIKey]
+    queryset = models.User.objects.all().filter(is_active=True)
+    serializer_class = serializers.UsageMetricSerializer
+    pagination_class = Pagination
+
+    def get_queryset(self):
+        """
+        Return the queryset applying the filters from the query params.
+        """
+        queryset = self.queryset
+
+        if self.request.query_params.get("account_id"):
+            queryset = queryset.filter(id=self.request.query_params.get("account_id"))
+
+        return queryset
+
+
+class EntitlementsViewset(viewsets.ViewSet):
+    """API View for handling entitlements."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def list(self, request):
+        """
+        GET /api/v1.0/entitlements/
+        """
+        entitlements_backend = get_entitlements_backend()
+        entitlements = {}
+        for method_name in dir(entitlements_backend):
+            if method_name.startswith("can_"):
+                method = getattr(entitlements_backend, method_name)
+                if callable(method):
+                    entitlements[method_name] = method(request.user)
+        return drf.response.Response(entitlements)

@@ -272,6 +272,7 @@ class Base(Configuration):
         "django_filters",
         "dockerflow.django",
         "rest_framework",
+        "rest_framework_api_key",
         "parler",
         "django_ltree",
         "easy_thumbnails",
@@ -570,6 +571,13 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # OIDC claims to store
+    OIDC_STORE_CLAIMS = values.ListValue(
+        default=[],
+        environ_name="OIDC_STORE_CLAIMS",
+        environ_prefix=None,
+    )
+
     # WARNING: Enabling this setting allows multiple user accounts to share the same email
     # address. This may cause security issues and is not recommended for production use when
     # email is activated as fallback for identification (see previous setting).
@@ -808,6 +816,39 @@ class Base(Configuration):
             environ_prefix=None,
         ),
     }
+
+    # Metrics
+    METRICS_ENABLED = values.BooleanValue(
+        False,
+        environ_name="METRICS_ENABLED",
+        environ_prefix=None,
+    )
+
+    METRICS_USER_CLAIMS_EXPOSED = values.ListValue(
+        [],
+        environ_name="METRICS_USER_CLAIMS_EXPOSED",
+        environ_prefix=None,
+    )
+
+    # Storage compute
+    STORAGE_COMPUTE_BACKEND = values.Value(
+        "core.storage.creator_storage_compute_backend.CreatorStorageComputeBackend",
+        environ_name="STORAGE_COMPUTE_BACKEND",
+        environ_prefix=None,
+    )
+
+    # Entitlements
+    ENTITLEMENTS_BACKEND = values.Value(
+        "core.entitlements.dummy_entitlements_backend.DummyEntitlementsBackend",
+        environ_name="ENTITLEMENTS_BACKEND",
+        environ_prefix=None,
+    )
+
+    ENTITLEMENTS_BACKEND_PARAMETERS = values.DictValue(
+        {},
+        environ_name="ENTITLEMENTS_BACKEND_PARAMETERS",
+        environ_prefix=None,
+    )
 
     # pylint: disable=invalid-name
     @property
