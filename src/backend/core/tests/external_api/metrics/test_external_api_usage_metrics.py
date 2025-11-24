@@ -20,6 +20,8 @@ pytestmark = pytest.mark.django_db
 def fixture_api_key_and_key():
     """
     Create a API key for the test.
+    The api_key is only available once at creation time, the one used
+    in the requests, where key can be seen as the id of the API key.
     """
     api_key, key = APIKey.objects.create_key(name="my-remote-service")
     return api_key, key
