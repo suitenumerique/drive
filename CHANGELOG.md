@@ -20,6 +20,7 @@ and this project adheres to
 - ✨(backend) add a quota_excluded flag on items
 - ✨(backend) apply per-audience attributes to external api items
 - ✨(backend) add a grant_unlimited_storage command
+- ✨(wopi) verify the WOPI request proof signature
 
 ### Changed
 
