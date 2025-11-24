@@ -124,10 +124,6 @@ class Base(Configuration):
         },
     }
 
-    FEATURES_ALPHA = values.BooleanValue(
-        False, environ_name="FEATURES_ALPHA", environ_prefix=None
-    )
-
     # Posthog
     POSTHOG_KEY = SecretFileValue(None, environ_name="POSTHOG_KEY", environ_prefix=None)
     POSTHOG_HOST = values.Value(

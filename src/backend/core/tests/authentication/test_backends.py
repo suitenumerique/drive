@@ -13,8 +13,8 @@ from cryptography.fernet import Fernet
 from lasuite.oidc_login.backends import get_oidc_refresh_token
 
 from core import models
-from core.authentication.backends import OIDCAuthenticationBackend, posthog
-from core.authentication.exceptions import EmailNotAlphaAuthorized, UserCannotAccessApp
+from core.authentication.backends import OIDCAuthenticationBackend
+from core.authentication.exceptions import UserCannotAccessApp
 from core.factories import UserFactory
 
 pytestmark = pytest.mark.django_db
@@ -511,83 +511,6 @@ def test_authentication_session_tokens(
     assert user is not None
     assert request.session["oidc_access_token"] == "test-access-token"
     assert get_oidc_refresh_token(request.session) == "test-refresh-token"
-
-
-@mock.patch.object(posthog, "feature_enabled")
-def test_authentication_get_existing_user_with_email_not_alpha(
-    mock_posthog_feature_enabled, settings
-):
-    """
-    Test that the get_existing_user method raises an EmailNotAlphaAuthorized error
-    if the email is not in the alpha feature flag.
-    """
-    settings.FEATURES_ALPHA = True
-    klass = OIDCAuthenticationBackend()
-
-    mock_posthog_feature_enabled.return_value = False
-
-    with pytest.raises(EmailNotAlphaAuthorized):
-        klass.get_existing_user(sub="123", email="test@example.com")
-
-    mock_posthog_feature_enabled.assert_called_once_with("alpha", "test@example.com")
-
-
-@mock.patch.object(posthog, "feature_enabled")
-def test_authentication_get_create_user_with_email_not_alpha(
-    mock_posthog_feature_enabled, settings, monkeypatch
-):
-    """
-    Test that the get_create_user method raises an EmailNotAlphaAuthorized error
-    if the email is not in the alpha feature flag.
-    """
-    settings.FEATURES_ALPHA = True
-    klass = OIDCAuthenticationBackend()
-
-    email = "drive@example.com"
-
-    def get_userinfo_mocked(*args):
-        return {"sub": "123", "email": email, "first_name": "John", "last_name": "Doe"}
-
-    monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
-
-    mock_posthog_feature_enabled.return_value = False
-
-    with pytest.raises(EmailNotAlphaAuthorized):
-        klass.get_or_create_user(access_token="test-token", id_token=None, payload=None)
-
-    mock_posthog_feature_enabled.assert_called_once_with("alpha", email)
-
-
-@mock.patch.object(posthog, "feature_enabled")
-def test_authentication_get_create_user_with_email_alpha(
-    mock_posthog_feature_enabled, settings, monkeypatch
-):
-    """
-    Test that the get_create_user method does not raise an EmailNotAlphaAuthorized error
-    if the email is in the alpha feature flag.
-    """
-    settings.FEATURES_ALPHA = True
-    klass = OIDCAuthenticationBackend()
-
-    email = "drive@example.com"
-
-    def get_userinfo_mocked(*args):
-        return {"sub": "123", "email": email, "first_name": "John", "last_name": "Doe"}
-
-    monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
-
-    mock_posthog_feature_enabled.return_value = True
-    user = klass.get_or_create_user(
-        access_token="test-token", id_token=None, payload=None
-    )
-
-    mock_posthog_feature_enabled.assert_called_once_with("alpha", email)
-
-    assert user is not None
-    assert user.email == email
-    assert user.full_name == "John Doe"
-    assert user.short_name == "John"
-    assert user.has_usable_password() is False
 
 
 @override_settings(OIDC_STORE_CLAIMS=["iss"])
