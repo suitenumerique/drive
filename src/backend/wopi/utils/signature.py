@@ -14,6 +14,14 @@ from cryptography.hazmat.primitives.asymmetric import padding
 
 # ---------- HELPERS ----------
 
+# .NET DateTime epoch: January 1, 0001 00:00:00
+# Unix datetime epoch: January 1, 1970 00:00:00 UTC
+# Ticks between these epochs: 621,355,968,000,000,000
+DOTNET_EPOCH_TICKS = 621355968000000000
+
+# Each tick is 100 nanoseconds = 0.0000001 seconds
+TICKS_PER_SECOND = 10000000
+
 
 def ticks_to_datetime(ticks: int) -> datetime:
     """Convert a .NET DateTime ticks to a datetime object.
@@ -27,16 +35,9 @@ def ticks_to_datetime(ticks: int) -> datetime:
     Returns:
         datetime: Python datetime object corresponding to the ticks
     """
-    # .NET DateTime epoch: January 1, 0001 00:00:00
-    # Unix datetime epoch: January 1, 1970 00:00:00 UTC
-    # Ticks between these epochs: 621,355,968,000,000,000
-    dotnet_epoch_ticks = 621355968000000000
-
-    # Each tick is 100 nanoseconds = 0.0000001 seconds
-    ticks_per_second = 10000000
 
     # Convert .NET ticks to Unix timestamp (seconds since 1970-01-01)
-    unix_seconds = (ticks - dotnet_epoch_ticks) / ticks_per_second
+    unix_seconds = (ticks - DOTNET_EPOCH_TICKS) / TICKS_PER_SECOND
 
     # Create datetime from Unix timestamp (UTC)
     return datetime.fromtimestamp(unix_seconds, timezone.utc)
