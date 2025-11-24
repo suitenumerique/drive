@@ -591,9 +591,9 @@ def test_authentication_get_create_user_with_email_alpha(
 
 
 @override_settings(OIDC_STORE_CLAIMS=["iss"])
-def test_authentication_store_claims(monkeypatch):
+def test_authentication_store_claims_new_user(monkeypatch):
     """
-    Test that the claims are stored on the user.
+    Test that the claims are stored on the user when a new user is created.
     """
     klass = OIDCAuthenticationBackend()
 
@@ -619,6 +619,39 @@ def test_authentication_store_claims(monkeypatch):
     assert user.full_name == "John Doe"
     assert user.short_name == "John"
     assert user.has_usable_password() is False
+    assert user.claims == {"iss": "https://example.com"}
+    assert models.User.objects.count() == 1
+
+
+@override_settings(OIDC_STORE_CLAIMS=["iss"])
+def test_authentication_store_claims_existing_user(monkeypatch):
+    """
+    Test that the claims are stored on the user when an existing user is authenticated.
+    """
+    klass = OIDCAuthenticationBackend()
+    user = UserFactory(
+        email="drive@example.com", sub="123", claims={"iss": "https://obsolete.com"}
+    )
+    email = "drive@example.com"
+
+    def get_userinfo_mocked(*args):
+        return {
+            "sub": "123",
+            "email": email,
+            "first_name": "John",
+            "last_name": "Doe",
+            "iss": "https://example.com",
+        }
+
+    monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
+
+    user = klass.get_or_create_user(
+        access_token="test-token", id_token=None, payload=None
+    )
+
+    user.refresh_from_db()
+    assert user.sub == "123"
+    assert user.email == email
     assert user.claims == {"iss": "https://example.com"}
     assert models.User.objects.count() == 1
 
