@@ -28,9 +28,7 @@ pytestmark = pytest.mark.django_db
     FRONTEND_FEEDBACK_MESSAGES_WIDGET_API_URL="https://test.com",
     FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL="test",
     FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH="https://test.com",
-    FRONTEND_HIDE_AUTH_BUTTONS=True,
     FRONTEND_HIDE_GAUFRE=True,
-    FRONTEND_HIDE_LANGUAGE_PICKER=True,
     MEDIA_BASE_URL="http://testserver/",
     POSTHOG_KEY="132456",
     POSTHOG_HOST="https://eu.i.posthog-test.com",
@@ -61,8 +59,6 @@ def test_api_config(is_authenticated):
         "FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL": "test",
         "FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH": "https://test.com",
         "FRONTEND_HIDE_GAUFRE": True,
-        "FRONTEND_HIDE_LANGUAGE_PICKER": True,
-        "FRONTEND_HIDE_AUTH_BUTTONS": True,
         "LANGUAGES": [
             ["en-us", "English"],
             ["fr-fr", "French"],

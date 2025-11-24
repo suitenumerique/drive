@@ -11,6 +11,7 @@ import { Item } from "@/features/drivers/types";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { useIsMinimalLayout } from "@/utils/useLayout";
 import { Feedback } from "@/features/feedback/Feedback";
+import { useThemeCustomizationElementsDisplay } from "@/hooks/useThemeCustomization";
 
 export const HeaderIcon = () => {
   return (
@@ -45,13 +46,16 @@ export const HeaderRight = ({
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
   const { config } = useConfig();
+  const authButtonsCustomization = useThemeCustomizationElementsDisplay('auth_buttons');
+  const languagePickerCustomization = useThemeCustomizationElementsDisplay('language_picker');
+
   return (
     <>
       {user && displaySearch && (
         <ExplorerSearchButton defaultFilters={defaultFilters} />
       )}
       {
-        !config?.FRONTEND_HIDE_AUTH_BUTTONS &&
+        authButtonsCustomization.show &&
           (user ? (
               <DropdownMenu
                 options={[
@@ -82,7 +86,7 @@ export const HeaderRight = ({
             )
           )
       }
-      {!config?.FRONTEND_HIDE_LANGUAGE_PICKER && <LanguagePicker />}
+      {languagePickerCustomization.show && <LanguagePicker />}
       {!config?.FRONTEND_HIDE_GAUFRE && <LaGaufre />}
     </>
   );
