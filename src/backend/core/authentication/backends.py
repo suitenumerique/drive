@@ -44,7 +44,7 @@ class OIDCAuthenticationBackend(LaSuiteOIDCAuthenticationBackend):
         return {
             "full_name": self.compute_full_name(user_info),
             "short_name": user_info.get(settings.OIDC_USERINFO_SHORTNAME_FIELD),
-            **claims_to_store,
+            "claims": claims_to_store,
         }
 
     def get_existing_user(self, sub, email):
@@ -67,47 +67,4 @@ class OIDCAuthenticationBackend(LaSuiteOIDCAuthenticationBackend):
             raise UserCannotAccessApp(
                 result.get("message", "User does not have access to the app")
             )
-        return user
-
-    def post_get_or_create_user(self, user, claims, is_new_user):
-        """
-        Post-processing after user creation or retrieval.
-
-        Args:
-          user (User): The user instance.
-          claims (dict): The claims dictionary.
-          is_new_user (bool): Indicates if the user was newly created.
-
-        Returns:
-        - None
-
-        """
-        claims_to_store = {
-            claim: claims.get(claim) for claim in settings.OIDC_STORE_CLAIMS
-        }
-
-        if claims_to_store:
-            user.refresh_from_db()
-            user.claims.update(claims_to_store)
-            user.save()
-
-    def create_user(self, claims):
-        """Return a newly created User instance."""
-        sub = claims.get(self.OIDC_USER_SUB_FIELD)
-        if sub is None:
-            raise SuspiciousOperation(
-                _("Claims contained no recognizable user identification")
-            )
-
-        logger.info("Creating user %s", sub)
-
-        user = self.UserModel(
-            sub=sub,
-            email=claims.get("email"),
-            full_name=claims.get("full_name"),
-            short_name=claims.get("short_name"),
-        )
-        user.set_unusable_password()
-        user.save()
-
         return user
