@@ -6,13 +6,13 @@ from urllib.parse import quote
 
 from django.conf import settings
 from django.db.models import Q
-from django.utils.module_loading import import_string
 from django.utils.translation import gettext_lazy as _
 
 from rest_framework import exceptions, serializers
 
 from core import models
 from core.api import utils
+from core.storage import get_storage_compute_backend
 from wopi import utils as wopi_utils
 
 
@@ -22,7 +22,7 @@ class UsageMetricSerializer(serializers.BaseSerializer):
 
     def to_representation(self, instance):
         """Return the usage metric."""
-        storage_compute_backend = import_string(settings.STORAGE_COMPUTE_BACKEND)()
+        storage_compute_backend = get_storage_compute_backend()
         output = {
             "account": {
                 "type": "user",
