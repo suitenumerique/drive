@@ -14,6 +14,12 @@
             "matchManagers": ["pep621"],
             "matchPackageNames": ["pylint"],
             "allowedVersions": "<4.0.0"
+        },
+        {
+            "description": "Disable requires-python updates - managed manually",
+            "matchManagers": ["pep621"],
+            "matchPackageNames": ["python"],
+            "enabled": false
         }
     ]
 }
