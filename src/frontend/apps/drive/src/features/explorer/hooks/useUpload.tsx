@@ -282,7 +282,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
       const entitlements = await getEntitlements();
       if (!entitlements.can_upload.result) {
-        dismissToast();
+        dismissDragToast();
         setUploadingState((prev) => ({
           ...prev,
           step: "none",
