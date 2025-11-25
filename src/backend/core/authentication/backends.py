@@ -6,7 +6,6 @@ from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
 from django.utils.translation import gettext_lazy as _
 
-import posthog
 from lasuite.oidc_login.backends import (
     OIDCAuthenticationBackend as LaSuiteOIDCAuthenticationBackend,
 )

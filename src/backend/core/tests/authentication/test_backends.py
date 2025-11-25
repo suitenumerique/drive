@@ -13,7 +13,7 @@ from cryptography.fernet import Fernet
 from lasuite.oidc_login.backends import get_oidc_refresh_token
 
 from core import models
-from core.authentication.backends import OIDCAuthenticationBackend, posthog
+from core.authentication.backends import OIDCAuthenticationBackend
 from core.authentication.exceptions import UserCannotAccessApp
 from core.factories import UserFactory
 
