@@ -1,8 +1,8 @@
-# ruff: noqa: S311, S106
+# ruff: noqa: S106
 """create_demo management command"""
 
 import logging
-import random
+import secrets
 import time
 from io import BytesIO
 
@@ -125,7 +125,7 @@ def create_item(user):
 def create_items(users):
     """Create random items and file content for users"""
     for _id in range(defaults.NB_OBJECTS["files"]):
-        user = random.choice(users)
+        user = secrets.choice(users)
         yield create_item(user)
 
 
