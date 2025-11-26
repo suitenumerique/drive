@@ -486,11 +486,6 @@ class ItemViewSet(
         # Not calling filter_queryset. We do our own cooking.
         queryset = self.get_queryset()
 
-        # exclude main workspace
-        queryset = queryset.filter(main_workspace=False)
-        # filter only on folder types
-        queryset = queryset.filter(type=models.ItemTypeChoices.FOLDER)
-
         filterset = ListItemFilter(
             self.request.GET, queryset=queryset, request=self.request
         )
@@ -499,7 +494,7 @@ class ItemViewSet(
         filter_data = filterset.form.cleaned_data
 
         # Filter as early as possible on fields that are available on the model
-        for field in ["is_creator_me", "title", "workspaces"]:
+        for field in ["is_creator_me", "title"]:
             queryset = filterset.filters[field].filter(queryset, filter_data[field])
         user = request.user
         queryset = queryset.annotate_user_roles(user)
