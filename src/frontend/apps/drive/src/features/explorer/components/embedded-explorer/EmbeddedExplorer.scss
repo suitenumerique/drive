@@ -239,6 +239,58 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
       }
     }
   }
+
+  @media (max-width: $tablet) {
+    table {
+      tr td:first-child,
+      tr th:first-child {
+        padding-left: 0;
+      }
+
+      tr td:last-child,
+      tr th:last-child {
+        padding-right: 0;
+      }
+
+      thead {
+        // We can't just simply hide the columns because the table
+        // column will not size properly. We want the first column
+        // to grow to fill the space.
+        th {
+          height: 0;
+        }
+
+        th:nth-child(1) {
+          display: table-cell;
+        }
+
+        th:nth-child(2),
+        th:nth-child(3) {
+          display: none;
+        }
+
+        th:nth-child(4) {
+          display: table-cell;
+          width: 40px;
+        }
+      }
+
+      tbody {
+        td:nth-child(1) {
+          display: table-cell;
+        }
+
+        td:nth-child(2),
+        td:nth-child(3) {
+          display: none;
+        }
+
+        td:nth-child(4) {
+          height: 48px;
+        }
+      }
+    }
+  }
 }
 
 .explorer__compact {
