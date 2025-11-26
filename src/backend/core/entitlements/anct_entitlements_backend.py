@@ -13,7 +13,7 @@ from rest_framework.exceptions import ValidationError
 from core.entitlements.entitlements_backend import EntitlementsBackend
 
 ENTITLEMENTS_CACHE_TIMEOUT = 60
-ENTITLEMENTS_CACHE_KEY_PREFIX = "anct_entitlements_user_"
+ENTITLEMENTS_CACHE_KEY_PREFIX = "anct_entitlements_user:"
 
 
 # pylint: disable=abstract-method
