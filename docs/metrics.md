@@ -18,7 +18,7 @@ By default, this route is not available. You need to set the setting `METRICS_EN
 
 ## How to get the API key
 
-You need to log in to the Django admin and then go to `Api keys`.
+You need to log into the Django admin and then go to `Api keys`.
 
 Click `Add Api Key`.
 

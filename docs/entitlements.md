@@ -19,10 +19,10 @@ The entitlements system consists of:
 
 All entitlements backends must inherit from `EntitlementsBackend` and implement at least two abstract methods:
 
-- `can_access(user)`: Can the OIDC logged in user can access the app?
-- `can_upload(user)`: Can the user upload new files?
+- `can_access(user)`: Can the OIDC logged in user access the app?
+- `can_upload(user)`: Can the OIDC logged in user upload new files?
 
-Those methods need to eturns a dictionary with a `result` key (boolean) indicating if the user can upload files. Optionally includes a `message` key for user-facing messages.
+These methods need to return a dictionary with a `result` key (boolean) indicating if the user can upload files. Optionally includes a `message` key for user-facing messages.
 
 The API endpoint automatically discovers and exposes all methods starting with `can_` from the backend, making it easy to extend with additional permission checks.
 
