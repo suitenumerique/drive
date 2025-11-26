@@ -1,7 +1,8 @@
 """Tests for the Item viewset search method with fulltext."""
 
-import random
+import secrets
 from json import loads as json_loads
+from operator import itemgetter
 
 from django.test import RequestFactory
 
@@ -269,10 +270,16 @@ def test_api_items_search_pagination(indexer_settings, pagination, status, expec
     )
 
     items_by_uuid = {str(item.pk): item for item in items}
-    api_results = [{"_id": id} for id in items_by_uuid.keys()]
 
-    # reorder randomly to simulate score ordering
-    random.shuffle(api_results)
+    # reverse sort by random score to simulate score ordering
+    api_results = sorted(
+        [
+            {"_id": id, "score": (secrets.randbelow(1000) / 1000.0)}
+            for id in items_by_uuid.keys()
+        ],
+        key=itemgetter("score"),
+        reverse=True,
+    )
 
     # Find response
     # pylint: disable-next=assignment-from-none
