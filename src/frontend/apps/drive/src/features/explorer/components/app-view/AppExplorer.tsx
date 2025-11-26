@@ -25,6 +25,7 @@ export interface AppExplorerProps {
   fetchNextPage?: () => void;
   isLoading?: boolean;
   isMinimalLayout?: boolean;
+  showFilters?: boolean;
 }
 
 export type AppExplorerType = AppExplorerProps;

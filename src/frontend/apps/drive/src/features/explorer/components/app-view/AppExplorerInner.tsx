@@ -29,7 +29,7 @@ export const AppExplorerInner = (props: AppExplorerProps) => {
     selectedItems,
     dropZone,
   } = useGlobalExplorer();
-
+  const showFilters = props.showFilters ?? true;
   const ref = useRef<Item[]>([]);
   ref.current = selectedItems;
 
@@ -160,13 +160,14 @@ export const AppExplorerInner = (props: AppExplorerProps) => {
           <div className="explorer__container">
             {selectedItems.length > 0 ? (
               <ExplorerSelectionBar />
-            ) : (
+            ) : showFilters ? (
               <ExplorerFilters />
+            ) : (
+              <HorizontalSeparator withPadding={false} />
             )}
 
             <div className="explorer__content">
               {props.gridHeader ? props.gridHeader : <AppExplorerBreadcrumbs />}
-              <HorizontalSeparator withPadding={false} />
               <AppExplorerGrid {...props} />
             </div>
           </div>

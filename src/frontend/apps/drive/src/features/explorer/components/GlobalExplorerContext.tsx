@@ -63,6 +63,8 @@ export interface GlobalExplorerContextType {
   setPreviewItem: (item: Item | undefined) => void;
   setPreviewItems: (items: Item[]) => void;
   isMinimalLayout?: boolean;
+  refreshMobileNodes: () => void;
+  mobileNodesRefreshTrigger: number;
 }
 
 export const GlobalExplorerContext = createContext<
@@ -140,7 +142,16 @@ export const GlobalExplorerProvider = ({
   const [initialId] = useState<string | undefined>(itemId);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [treeIsInitialized, setTreeIsInitialized] = useState<boolean>(false);
+  const [mobileNodesRefreshTrigger, setMobileNodesRefreshTrigger] = useState(0);
   const { handleDownloadItem } = useDownloadItem();
+
+  /**
+   * Triggers a refresh of the mobile nodes.
+   * We do this as a hack because we can't act the same as we do with the desktop tree because the tree is imperative not reactive.
+   */
+  const refreshMobileNodes = () => {
+    setMobileNodesRefreshTrigger((prev) => prev + 1);
+  };
 
   const { data: item } = useQuery({
     queryKey: ["items", itemId],
@@ -233,6 +244,8 @@ export const GlobalExplorerProvider = ({
         setIsLeftPanelOpen,
         setPreviewItem,
         setPreviewItems,
+        refreshMobileNodes,
+        mobileNodesRefreshTrigger,
       }}
     >
       <TreeProvider

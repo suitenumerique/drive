@@ -13,6 +13,11 @@ and this project adheres to
 - ✨(backend) add more info on the item detail in the admin
 - ✨(backend) add an admin action to trigger new file analysis
 
+### Fixed
+
+- 🐛(front) fix responsive item row
+- 🐛(front) fix responsive tree
+
 ## [v0.9.0] - 2025-12-02
 
 ### Added

@@ -73,6 +73,9 @@ body {
 .c__left-panel {
   border-right: none;
 }
+.c__modal__backdrop {
+  z-index: 1000;
+}
 
 .c__datagrid--empty,
 .c__datagrid thead {

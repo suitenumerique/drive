@@ -5,12 +5,13 @@ import {
   useTreeContext,
 } from "@gouvfr-lasuite/ui-kit";
 import { useTranslation } from "react-i18next";
-import { itemToTreeItem } from "../../GlobalExplorerContext";
+import { itemToTreeItem, useGlobalExplorer } from "../../GlobalExplorerContext";
 import { WorkspaceCategory } from "../../../constants";
 
 export const useAddWorkspaceNode = () => {
   const treeContext = useTreeContext<TreeItem>();
   const { t } = useTranslation();
+  const { refreshMobileNodes } = useGlobalExplorer();
   const addWorkspaceNode = (data: Item) => {
     const sharedNode = treeContext?.treeData.getNode(
       WorkspaceCategory.SHARED_SPACE
@@ -35,6 +36,8 @@ export const useAddWorkspaceNode = () => {
         0
       );
     }
+    // Refresh mobile nodes to ensure the workspace category is displayed if needed
+    refreshMobileNodes();
   };
 
   return { addWorkspaceNode };

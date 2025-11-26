@@ -4,17 +4,21 @@ import {
   useGlobalExplorer,
 } from "@/features/explorer/components/GlobalExplorerContext";
 import {
+  HorizontalSeparator,
   IconSize,
   useDropdownMenu,
-  useTreeContext,
 } from "@gouvfr-lasuite/ui-kit";
-import { Item, TreeItem } from "@/features/drivers/types";
-import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
+import { WorkspaceIcon } from "@/features/explorer/components/icons/ItemIcon";
 import createFolderSvg from "@/assets/icons/add_folder.svg";
 import { EmbeddedExplorerGridBreadcrumbs } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridBreadcrumbs";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
 import { ImportDropdown } from "../item-actions/ImportDropdown";
 import { useTranslation } from "react-i18next";
+import { WorkspaceCategory } from "../../constants";
+import { useRouter } from "next/router";
+import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
+import { useMemo } from "react";
+import { itemIsWorkspace } from "@/features/drivers/utils";
 
 export const AppExplorerBreadcrumbs = () => {
   const { item, onNavigate, treeIsInitialized } = useGlobalExplorer();
@@ -68,55 +72,60 @@ export const AppExplorerBreadcrumbs = () => {
           />
         </div>
       </div>
+      <div className="explorer__content__separator">
+        <HorizontalSeparator withPadding={false} />
+      </div>
       <ExplorerCreateFolderModal {...createFolderModal} parentId={item.id} />
     </>
   );
 };
 
 export const ExplorerBreadcrumbsMobile = () => {
-  const treeContext = useTreeContext<TreeItem>();
+  const router = useRouter();
+  const { t } = useTranslation();
   const { item, onNavigate, treeIsInitialized } = useGlobalExplorer();
+  const { data: breadcrumb } = useBreadcrumbQuery(item?.id);
+  const currentIsWorkspace = item ? itemIsWorkspace(item) : false;
 
-  const getItems = () => {
-    if (!item) {
+  const items = useMemo(() => {
+    if (!breadcrumb) {
       return null;
     }
-
-    const nodes = treeContext?.treeData.nodes ?? [];
-
-    const ancestors: Item[] =
-      nodes.length > 0
-        ? (treeContext?.treeData.getAncestors(item.id) as Item[])
-        : [];
-
-    if (ancestors.length === 0) {
-      return null;
-    }
-
-    const workspace = ancestors[0];
-    const current = item.id === workspace.id ? null : item;
-    const parent = current ? ancestors[ancestors.length - 2] : null;
+    const workspace = breadcrumb[0];
+    const current = breadcrumb[breadcrumb.length - 1];
+    const parent = breadcrumb[breadcrumb.length - 2] ?? workspace;
     return {
       workspace,
       current,
       parent,
     };
-  };
+  }, [breadcrumb]);
 
   if (!item || !treeIsInitialized) {
     return null;
   }
 
-  const items = getItems();
   if (!items) {
     return null;
   }
 
   const { workspace, parent, current } = items;
 
+  const workspaceTitle = workspace.main_workspace
+    ? t("explorer.workspaces.mainWorkspace")
+    : workspace.title;
+  const isRoot = current.id === workspace.id;
   return (
     <div className="explorer__content__breadcrumbs--mobile">
-      {current ? (
+      {isRoot ? (
+        <div className="explorer__content__breadcrumbs--mobile__workspace">
+          <WorkspaceIcon
+            isMainWorkspace={workspace.main_workspace}
+            iconSize={IconSize.X_SMALL}
+          />
+          <span>{workspaceTitle}</span>
+        </div>
+      ) : (
         <div className="explorer__content__breadcrumbs--mobile__container">
           <div className="explorer__content__breadcrumbs--mobile__container__actions">
             <Button
@@ -124,27 +133,34 @@ export const ExplorerBreadcrumbsMobile = () => {
               color="neutral"
               icon={<span className="material-icons">chevron_left</span>}
               onClick={() => {
-                onNavigate({
-                  type: NavigationEventType.ITEM,
-                  item: parent as Item,
-                });
+                if (
+                  currentIsWorkspace ||
+                  parent?.id === WorkspaceCategory.SHARED_SPACE
+                ) {
+                  router.push("/explorer/items/shared");
+                } else if (parent?.id === WorkspaceCategory.PUBLIC_SPACE) {
+                  router.push("/explorer/items/public");
+                } else {
+                  onNavigate({
+                    type: NavigationEventType.ITEM,
+                    item: parent,
+                  });
+                }
               }}
             />
           </div>
           <div className="explorer__content__breadcrumbs--mobile__container__info">
             <div className="explorer__content__breadcrumbs--mobile__container__info__title">
-              <ItemIcon item={workspace} size={IconSize.X_SMALL} />
-              <span>{workspace.title}</span>
+              <WorkspaceIcon
+                isMainWorkspace={workspace.main_workspace}
+                iconSize={IconSize.X_SMALL}
+              />
+              <span>{workspaceTitle}</span>
             </div>
             <div className="explorer__content__breadcrumbs--mobile__container__info__folder">
               {current.title}
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="explorer__content__breadcrumbs--mobile__workspace">
-          <ItemIcon item={workspace as Item} size={IconSize.SMALL} />
-          <span>{workspace.title}</span>
         </div>
       )}
     </div>
