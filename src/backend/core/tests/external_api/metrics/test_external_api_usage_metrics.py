@@ -16,15 +16,15 @@ pytestmark = pytest.mark.django_db
 # pylint: disable=unused-argument
 
 
-@pytest.fixture(name="api_key_and_key")
-def fixture_api_key_and_key():
+@pytest.fixture(name="api_key")
+def fixture_api_key():
     """
     Create a API key for the test.
-    The api_key is only available once at creation time, the one used
+    The key is only available once at creation time, the one used
     in the requests, where key can be seen as the id of the API key.
     """
-    api_key, key = APIKey.objects.create_key(name="my-remote-service")
-    return api_key, key
+    _, key = APIKey.objects.create_key(name="my-remote-service")
+    return key
 
 
 @override_settings(METRICS_ENABLED=False)
@@ -60,14 +60,13 @@ def test_usage_metrics_no_keys():
 
 
 @override_settings(METRICS_ENABLED=True)
-def test_usage_metrics_with_valid_key(api_key_and_key):
+def test_usage_metrics_with_valid_key(api_key):
     """
     API keys should be allowed to retrieve usage metrics.
     """
     reload_urls()
-    _, key = api_key_and_key
     response = APIClient().get(
-        "/external_api/v1.0/metrics/usage/", HTTP_AUTHORIZATION=f"Api-Key {key}"
+        "/external_api/v1.0/metrics/usage/", HTTP_AUTHORIZATION=f"Api-Key {api_key}"
     )
 
     assert response.status_code == 200
@@ -80,19 +79,18 @@ def test_usage_metrics_with_valid_key(api_key_and_key):
 
 
 @override_settings(METRICS_ENABLED=True)
-def test_usage_metrics_list(api_key_and_key):
+def test_usage_metrics_list(api_key):
     """
     API keys should be allowed to list usage metrics for multiple accounts.
     """
     client = APIClient()
-    _, key = api_key_and_key
     user1 = factories.UserFactory()
     user2 = factories.UserFactory()
 
     factories.ItemFactory(creator=user1, size=100)
 
     response = client.get(
-        "/external_api/v1.0/metrics/usage/", HTTP_AUTHORIZATION=f"Api-Key {key}"
+        "/external_api/v1.0/metrics/usage/", HTTP_AUTHORIZATION=f"Api-Key {api_key}"
     )
     assert response.status_code == 200
     assert response.json() == {
@@ -125,12 +123,11 @@ def test_usage_metrics_list(api_key_and_key):
 
 
 @override_settings(METRICS_ENABLED=True)
-def test_usage_metrics_list_filter_by_account_id(api_key_and_key):
+def test_usage_metrics_list_filter_by_account_id(api_key):
     """
     API keys should be allowed to list usage metrics for a specific account.
     """
     client = APIClient()
-    _, key = api_key_and_key
     user1 = factories.UserFactory()
     factories.UserFactory()
 
@@ -138,7 +135,7 @@ def test_usage_metrics_list_filter_by_account_id(api_key_and_key):
 
     response = client.get(
         f"/external_api/v1.0/metrics/usage/?account_id={user1.id}",
-        HTTP_AUTHORIZATION=f"Api-Key {key}",
+        HTTP_AUTHORIZATION=f"Api-Key {api_key}",
     )
     assert response.status_code == 200
     assert response.json() == {
@@ -161,12 +158,11 @@ def test_usage_metrics_list_filter_by_account_id(api_key_and_key):
 
 
 @override_settings(METRICS_ENABLED=True, METRICS_USER_CLAIMS_EXPOSED=["iss", "aud"])
-def test_usage_metrics_exposed_claims(api_key_and_key):
+def test_usage_metrics_exposed_claims(api_key):
     """
     API keys should be allowed to list usage metrics for a specific account.
     """
     client = APIClient()
-    _, key = api_key_and_key
     user1 = factories.UserFactory(
         claims={"iss": "https://example.com", "aud": "https://example.com"}
     )
@@ -177,7 +173,7 @@ def test_usage_metrics_exposed_claims(api_key_and_key):
     factories.ItemFactory(creator=user1, size=100)
 
     response = client.get(
-        "/external_api/v1.0/metrics/usage/", HTTP_AUTHORIZATION=f"Api-Key {key}"
+        "/external_api/v1.0/metrics/usage/", HTTP_AUTHORIZATION=f"Api-Key {api_key}"
     )
     assert response.status_code == 200
     assert response.json() == {
