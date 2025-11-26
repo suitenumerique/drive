@@ -340,3 +340,85 @@ def test_api_items_list_filter_title(query, nb_results):
     # Ensure all results contain the query in their title
     for result in results:
         assert query.lower().strip() in result["title"].lower()
+
+
+# Filters: type
+
+
+def test_api_items_list_filter_type():
+    """
+    Authenticated users should be able to filter items by their type.
+    """
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    # create 2 folders, main workspace is already a folder, means 3 folders in total
+    folders = factories.UserItemAccessFactory.create_batch(
+        2, user=user, item__type=models.ItemTypeChoices.FOLDER
+    )
+    folders_ids = {str(folder.item.id) for folder in folders} | {
+        str(user.get_main_workspace().id)
+    }
+
+    # create 2 files
+    files = factories.UserItemAccessFactory.create_batch(
+        2, user=user, item__type=models.ItemTypeChoices.FILE
+    )
+    files_ids = {str(file.item.id) for file in files}
+
+    # Filter by type: folder
+    response = client.get("/api/v1.0/items/?type=folder")
+
+    assert response.status_code == 200
+    assert response.json()["count"] == 3
+
+    results = response.json()["results"]
+
+    # Ensure all results are folders
+    results_ids = {result["id"] for result in results}
+    assert results_ids == folders_ids
+    for result in results:
+        assert result["type"] == models.ItemTypeChoices.FOLDER
+
+    # Filter by type: file
+    response = client.get("/api/v1.0/items/?type=file")
+
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+    results = response.json()["results"]
+
+    # Ensure all results are files
+    results_ids = {result["id"] for result in results}
+    assert results_ids == files_ids
+    for result in results:
+        assert result["type"] == models.ItemTypeChoices.FILE
+
+
+def test_api_items_list_filter_unknown_type():
+    """
+    Filtering by an unknown type should return an empty list
+    """
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    factories.UserItemAccessFactory.create_batch(3, user=user)
+
+    response = client.get("/api/v1.0/items/?type=unknown")
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "type",
+                "code": "invalid",
+                "detail": "Select a valid choice. unknown is not one of the available choices.",
+            },
+        ],
+        "type": "validation_error",
+    }
