@@ -182,6 +182,23 @@ export const useMutationUpdateItem = () => {
   });
 };
 
+export const useMutationUpdateLinkConfiguration = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      ...payload: Parameters<typeof driver.updateLinkConfiguration>
+    ) => {
+      await driver.updateLinkConfiguration(...payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["items", variables.itemId],
+      });
+    },
+  });
+};
+
 export const useMutationRestoreItems = () => {
   const driver = getDriver();
   const queryClient = useQueryClient();

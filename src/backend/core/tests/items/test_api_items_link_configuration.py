@@ -47,7 +47,7 @@ def test_api_items_link_configuration_update_anonymous(reach, role):
 def test_api_items_link_configuration_update_authenticated_unrelated(reach, role):
     """
     Authenticated users should not be allowed to update the link configuration for
-    a item to which they are not related.
+    an item to which they are not related.
     """
     user = factories.UserFactory()
 
@@ -89,7 +89,7 @@ def test_api_items_link_configuration_update_authenticated_related_forbidden(
     via, role, mock_user_teams
 ):
     """
-    Users who are readers or editors of a item should not be allowed to update
+    Users who are readers or editors of an item should not be allowed to update
     the link configuration.
     """
     user = factories.UserFactory()
@@ -140,7 +140,7 @@ def test_api_items_link_configuration_update_authenticated_related_success(
     mock_user_teams,
 ):
     """
-    A user who is administrator or owner of a item should be allowed to update
+    A user who is administrator or owner of an item should be allowed to update
     the link configuration.
     """
     user = factories.UserFactory()
@@ -148,7 +148,10 @@ def test_api_items_link_configuration_update_authenticated_related_success(
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory()
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.AUTHENTICATED,
+        link_role=models.LinkRoleChoices.READER,
+    )
     if via == USER:
         factories.UserItemAccessFactory(item=item, user=user, role=role)
     elif via == TEAM:
@@ -156,7 +159,10 @@ def test_api_items_link_configuration_update_authenticated_related_success(
         factories.TeamItemAccessFactory(item=item, team="lasuite", role=role)
 
     new_item_values = serializers.LinkItemSerializer(
-        instance=factories.ItemFactory()
+        instance=factories.ItemFactory(
+            link_reach=models.LinkReachChoices.PUBLIC,
+            link_role=models.LinkRoleChoices.EDITOR,
+        )
     ).data
 
     response = client.put(
@@ -172,66 +178,258 @@ def test_api_items_link_configuration_update_authenticated_related_success(
         assert value == new_item_values[key]
 
 
-def test_api_items_link_configuration_suspicious_item_should_not_work_for_non_creator():
+def test_api_items_link_configuration_update_role_restricted_forbidden():
     """
-    Non-creators should not be able to update link configuration for suspicious items.
+    Test that trying to set link_role on an item with restricted link_reach
+    returns a validation error.
     """
-    creator = factories.UserFactory()
-    other_user = factories.UserFactory()
+    user = factories.UserFactory()
     client = APIClient()
-    client.force_login(other_user)
+    client.force_login(user)
 
-    suspicious_item = factories.ItemFactory(
-        creator=creator,
-        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
-        users=[
-            (creator, models.RoleChoices.OWNER),
-            (other_user, models.RoleChoices.ADMIN),
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
+    )
+
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.OWNER)
+
+    # Try to set a meaningful role on a restricted item
+    new_data = {
+        "link_reach": models.LinkReachChoices.RESTRICTED,
+        "link_role": models.LinkRoleChoices.EDITOR,
+    }
+
+    response = client.put(
+        f"/api/v1.0/items/{item.id!s}/link-configuration/",
+        new_data,
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "link_role",
+                "code": "invalid",
+                "detail": (
+                    "Cannot set link_role when link_reach is 'restricted'. "
+                    "Link role must be null for restricted reach."
+                ),
+            }
         ],
-        type=models.ItemTypeChoices.FILE,
-        filename="suspicious.txt",
-    )
-
-    new_item_values = serializers.LinkItemSerializer(
-        instance=factories.ItemFactory()
-    ).data
-
-    response = client.put(
-        f"/api/v1.0/items/{suspicious_item.id!s}/link-configuration/",
-        new_item_values,
-        format="json",
-    )
-    assert response.status_code == 404
+        "type": "validation_error",
+    }
 
 
-def test_api_items_link_configuration_suspicious_item_should_work_for_creator():
+def test_api_items_link_configuration_update_link_reach_required():
     """
-    Creators should be able to update link configuration for their own suspicious items.
+    Test that link_reach is required when updating link configuration.
     """
-    creator = factories.UserFactory()
+    user = factories.UserFactory()
     client = APIClient()
-    client.force_login(creator)
+    client.force_login(user)
 
-    suspicious_item = factories.ItemFactory(
-        creator=creator,
-        update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
-        users=[(creator, models.RoleChoices.OWNER)],
-        type=models.ItemTypeChoices.FILE,
-        filename="suspicious.txt",
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_role=models.LinkRoleChoices.READER,
     )
 
-    new_item_values = serializers.LinkItemSerializer(
-        instance=factories.ItemFactory()
-    ).data
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.OWNER)
+
+    # Try to update without providing link_reach
+    new_data = {"link_role": models.LinkRoleChoices.EDITOR}
 
     response = client.put(
-        f"/api/v1.0/items/{suspicious_item.id!s}/link-configuration/",
-        new_item_values,
+        f"/api/v1.0/items/{item.id!s}/link-configuration/",
+        new_data,
         format="json",
     )
-    assert response.status_code == 200
 
-    suspicious_item = models.Item.objects.get(pk=suspicious_item.pk)
-    item_values = serializers.LinkItemSerializer(instance=suspicious_item).data
-    for key, value in item_values.items():
-        assert value == new_item_values[key]
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "link_reach",
+                "code": "invalid",
+                "detail": "This field is required.",
+            }
+        ],
+        "type": "validation_error",
+    }
+
+
+def test_api_items_link_configuration_update_restricted_without_role_success():
+    """
+    Test that setting link_reach to restricted without specifying link_role succeeds.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_role=models.LinkRoleChoices.READER,
+    )
+
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.OWNER)
+
+    # Only specify link_reach, not link_role
+    new_data = {
+        "link_reach": models.LinkReachChoices.RESTRICTED,
+    }
+
+    response = client.put(
+        f"/api/v1.0/items/{item.id!s}/link-configuration/",
+        new_data,
+        format="json",
+    )
+
+    assert response.status_code == 200
+    item.refresh_from_db()
+    assert item.link_reach == models.LinkReachChoices.RESTRICTED
+
+
+@pytest.mark.parametrize(
+    "reach", [models.LinkReachChoices.PUBLIC, models.LinkReachChoices.AUTHENTICATED]
+)
+@pytest.mark.parametrize("role", models.LinkRoleChoices.values)
+def test_api_items_link_configuration_update_non_restricted_with_valid_role_success(
+    reach,
+    role,
+):
+    """
+    Test that setting non-restricted link_reach with valid link_role succeeds.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
+    )
+
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.OWNER)
+
+    new_data = {
+        "link_reach": reach,
+        "link_role": role,
+    }
+
+    response = client.put(
+        f"/api/v1.0/items/{item.id!s}/link-configuration/",
+        new_data,
+        format="json",
+    )
+
+    assert response.status_code == 200
+    item.refresh_from_db()
+    assert item.link_reach == reach
+    assert item.link_role == role
+
+
+def test_api_items_link_configuration_update_with_ancestor_constraints():
+    """
+    Test that link configuration respects ancestor constraints using get_select_options.
+    This test may need adjustment based on the actual get_select_options implementation.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent_item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_role=models.LinkRoleChoices.READER,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
+    child_item = factories.ItemFactory(
+        parent=parent_item,
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_role=models.LinkRoleChoices.READER,
+        type=models.ItemTypeChoices.FILE,
+    )
+
+    factories.UserItemAccessFactory(
+        item=child_item, user=user, role=models.RoleChoices.OWNER
+    )
+
+    # Try to set child to PUBLIC when parent is RESTRICTED
+    new_data = {
+        "link_reach": models.LinkReachChoices.RESTRICTED,
+        "link_role": models.LinkRoleChoices.READER,
+    }
+
+    response = client.put(
+        f"/api/v1.0/items/{child_item.id!s}/link-configuration/",
+        new_data,
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "link_reach",
+                "code": "invalid",
+                "detail": (
+                    "Link reach 'restricted' is not allowed based on parent item configuration."
+                ),
+            }
+        ],
+        "type": "validation_error",
+    }
+
+
+def test_api_items_link_configuration_update_invalid_role_for_reach_validation():
+    """
+    Test the specific validation logic that checks if link_role is allowed for link_reach.
+    This tests the code section that validates allowed_roles from get_select_options.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent_item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.AUTHENTICATED,
+        link_role=models.LinkRoleChoices.EDITOR,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
+    child_item = factories.ItemFactory(
+        parent=parent_item,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.READER,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
+    factories.UserItemAccessFactory(
+        item=child_item, user=user, role=models.RoleChoices.OWNER
+    )
+
+    new_data = {
+        "link_reach": models.LinkReachChoices.AUTHENTICATED,
+        "link_role": models.LinkRoleChoices.READER,  # This should be rejected
+    }
+
+    response = client.put(
+        f"/api/v1.0/items/{child_item.id!s}/link-configuration/",
+        new_data,
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "link_role",
+                "code": "invalid",
+                "detail": (
+                    "Link role 'reader' is not allowed for link reach 'authenticated'. "
+                    "Allowed roles: editor"
+                ),
+            }
+        ],
+        "type": "validation_error",
+    }

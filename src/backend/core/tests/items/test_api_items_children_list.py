@@ -34,6 +34,10 @@ def test_api_items_children_list_anonymous_public_standalone():
         "results": [
             {
                 "abilities": child1.get_abilities(AnonymousUser()),
+                "ancestors_link_reach": "public",
+                "ancestors_link_role": item.link_role,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -51,7 +55,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": child1.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child1.type == models.ItemTypeChoices.FILE
@@ -69,6 +73,10 @@ def test_api_items_children_list_anonymous_public_standalone():
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
+                "ancestors_link_reach": "public",
+                "ancestors_link_role": item.link_role,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -86,7 +94,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": child2.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child2.type == models.ItemTypeChoices.FILE
@@ -144,6 +152,10 @@ def test_api_items_children_list_anonymous_public_parent():
         "results": [
             {
                 "abilities": child1.get_abilities(AnonymousUser()),
+                "ancestors_link_reach": "public",
+                "ancestors_link_role": grand_parent.link_role,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -161,7 +173,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": models.ItemTypeChoices.FILE,
                 "upload_state": models.ItemUploadStateChoices.PENDING,
                 "url": None,
@@ -177,6 +189,10 @@ def test_api_items_children_list_anonymous_public_parent():
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
+                "ancestors_link_reach": "public",
+                "ancestors_link_role": grand_parent.link_role,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -194,7 +210,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": models.ItemTypeChoices.FILE,
                 "upload_state": models.ItemUploadStateChoices.READY,
                 "url": f"http://localhost:8083/media/item/{child2.id!s}/logo.png",
@@ -262,6 +278,10 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
         "results": [
             {
                 "abilities": child1.get_abilities(user),
+                "ancestors_link_reach": reach,
+                "ancestors_link_role": item.link_role,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -279,7 +299,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": child1.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child1.type == models.ItemTypeChoices.FILE
@@ -297,6 +317,10 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
             },
             {
                 "abilities": child2.get_abilities(user),
+                "ancestors_link_reach": reach,
+                "ancestors_link_role": item.link_role,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -314,7 +338,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": child2.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child2.type == models.ItemTypeChoices.FILE
@@ -369,6 +393,10 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
         "results": [
             {
                 "abilities": child1.get_abilities(user),
+                "ancestors_link_reach": reach,
+                "ancestors_link_role": grand_parent.link_role,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -386,7 +414,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": child1.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child1.type == models.ItemTypeChoices.FILE
@@ -404,6 +432,10 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
             },
             {
                 "abilities": child2.get_abilities(user),
+                "ancestors_link_reach": reach,
+                "ancestors_link_role": grand_parent.link_role,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -421,7 +453,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [],
+                "user_role": None,
                 "type": child2.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child2.type == models.ItemTypeChoices.FILE
@@ -475,7 +507,7 @@ def test_api_items_children_list_authenticated_unrelated_restricted():
 
 def test_api_items_children_list_authenticated_related_direct():
     """
-    Authenticated users should be allowed to retrieve the children of a item
+    Authenticated users should be allowed to retrieve the children of an item
     to which they are directly related whatever the role.
     """
     user = factories.UserFactory()
@@ -483,7 +515,9 @@ def test_api_items_children_list_authenticated_related_direct():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(
+        link_reach="restricted", type=models.ItemTypeChoices.FOLDER
+    )
     access = factories.UserItemAccessFactory(item=item, user=user)
     factories.UserItemAccessFactory(item=item)
 
@@ -501,6 +535,10 @@ def test_api_items_children_list_authenticated_related_direct():
         "results": [
             {
                 "abilities": child1.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -518,7 +556,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [access.role],
+                "user_role": access.role,
                 "type": child1.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child1.type == models.ItemTypeChoices.FILE
@@ -536,6 +574,10 @@ def test_api_items_children_list_authenticated_related_direct():
             },
             {
                 "abilities": child2.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -553,7 +595,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [access.role],
+                "user_role": access.role,
                 "type": child2.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child2.type == models.ItemTypeChoices.FILE
@@ -609,6 +651,10 @@ def test_api_items_children_list_authenticated_related_parent():
         "results": [
             {
                 "abilities": child1.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -626,7 +672,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [grand_parent_access.role],
+                "user_role": grand_parent_access.role,
                 "type": child1.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child1.type == models.ItemTypeChoices.FILE
@@ -644,6 +690,10 @@ def test_api_items_children_list_authenticated_related_parent():
             },
             {
                 "abilities": child2.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -661,7 +711,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [grand_parent_access.role],
+                "user_role": grand_parent_access.role,
                 "type": child2.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child2.type == models.ItemTypeChoices.FILE
@@ -780,6 +830,10 @@ def test_api_items_children_list_authenticated_related_team_members(
         "results": [
             {
                 "abilities": child1.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -797,7 +851,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [access.role],
+                "user_role": access.role,
                 "type": child1.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child1.type == models.ItemTypeChoices.FILE
@@ -815,6 +869,10 @@ def test_api_items_children_list_authenticated_related_team_members(
             },
             {
                 "abilities": child2.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -832,7 +890,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [access.role],
+                "user_role": access.role,
                 "type": child2.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child2.type == models.ItemTypeChoices.FILE
@@ -862,7 +920,9 @@ def test_api_items_children_list_filter_type():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(
+        link_reach="restricted", type=models.ItemTypeChoices.FOLDER
+    )
     access = factories.UserItemAccessFactory(item=item, user=user)
     factories.UserItemAccessFactory(item=item)
 
@@ -884,6 +944,10 @@ def test_api_items_children_list_filter_type():
         "results": [
             {
                 "abilities": child1.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child1.computed_link_reach,
+                "computed_link_role": child1.computed_link_role,
                 "created_at": child1.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child1.creator.id),
@@ -901,7 +965,7 @@ def test_api_items_children_list_filter_type():
                 "path": str(child1.path),
                 "title": child1.title,
                 "updated_at": child1.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [access.role],
+                "user_role": access.role,
                 "type": child1.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child1.type == models.ItemTypeChoices.FILE
@@ -932,6 +996,10 @@ def test_api_items_children_list_filter_type():
         "results": [
             {
                 "abilities": child2.get_abilities(user),
+                "ancestors_link_reach": "restricted",
+                "ancestors_link_role": None,
+                "computed_link_reach": child2.computed_link_reach,
+                "computed_link_role": child2.computed_link_role,
                 "created_at": child2.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(child2.creator.id),
@@ -949,7 +1017,7 @@ def test_api_items_children_list_filter_type():
                 "path": str(child2.path),
                 "title": child2.title,
                 "updated_at": child2.updated_at.isoformat().replace("+00:00", "Z"),
-                "user_roles": [access.role],
+                "user_role": access.role,
                 "type": child2.type,
                 "upload_state": models.ItemUploadStateChoices.PENDING
                 if child2.type == models.ItemTypeChoices.FILE
