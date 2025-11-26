@@ -8,12 +8,19 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(back) add storage compute backends
+- ✨(back) add claims to user
+- ✨(back) add usage metrics route
+- ✨(global) add entitlements
+- ✨(back) add anct entitlement backend
+
 ### Changed
 
 - 🏗️(core) migrate from pip to uv
 
 ## [v0.8.1] - 2025-11-24
-
 
 ### Fixed
 

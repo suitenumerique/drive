@@ -34,6 +34,13 @@ sdk_relay_router.register(
     basename="sdk_relay_events",
 )
 
+entitlements_router = DefaultRouter()
+entitlements_router.register(
+    "entitlements",
+    viewsets.EntitlementsViewset,
+    basename="entitlements",
+)
+
 # - Resource server routes
 external_api_router = DefaultRouter()
 external_api_router.register(
@@ -47,7 +54,6 @@ external_api_router.register(
     basename="resource_server_users",
 )
 
-
 urlpatterns = [
     path(
         f"api/{settings.API_VERSION}/",
@@ -60,6 +66,7 @@ urlpatterns = [
                     include(item_related_router.urls),
                 ),
                 *sdk_relay_router.urls,
+                *entitlements_router.urls,
             ]
         ),
     ),
@@ -76,5 +83,19 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
                     *external_api_router.urls,
                 ]
             ),
+        )
+    )
+
+if settings.METRICS_ENABLED:
+    usage_metrics_router = DefaultRouter()
+    usage_metrics_router.register(
+        "usage",
+        viewsets.UsageMetricViewset,
+        basename="usage_metrics",
+    )
+    urlpatterns.append(
+        path(
+            f"external_api/{settings.API_VERSION}/metrics/",
+            include(usage_metrics_router.urls),
         )
     )

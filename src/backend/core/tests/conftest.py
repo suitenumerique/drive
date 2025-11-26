@@ -21,6 +21,17 @@ def clear_cache():
     """Fixture to clear the cache after each test."""
     yield
     cache.clear()
+    # Clear functools.cache for functions decorated with @functools.cache
+
+    from core.entitlements import (  # pylint:disable=import-outside-toplevel # noqa: PLC0415
+        get_entitlements_backend,
+    )
+    from core.storage import (  # pylint:disable=import-outside-toplevel # noqa: PLC0415
+        get_storage_compute_backend,
+    )
+
+    get_entitlements_backend.cache_clear()
+    get_storage_compute_backend.cache_clear()
 
 
 @pytest.fixture

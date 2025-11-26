@@ -80,6 +80,9 @@ services:
       - ./src/backend:/app
       - ./data/static:/data/static
       - /app/.venv
+    networks:
+      - lasuite
+      - default      
     depends_on:
       postgresql:
         condition: service_healthy

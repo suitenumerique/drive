@@ -88,6 +88,7 @@ bootstrap: \
 	data/static \
 	create-env-local-files \
 	build \
+	create-docker-network \
 	migrate \
 	back-i18n-compile \
 	mails-install \
@@ -122,7 +123,6 @@ logs: ## display app-dev logs (follow mode)
 .PHONY: logs
 
 run-backend: ## start the backend container
-	@$(MAKE) create-docker-network
 	@$(COMPOSE) up --force-recreate -d celery-dev
 	@$(COMPOSE) up --force-recreate -d nginx
 	@$(MAKE) configure-wopi
@@ -134,6 +134,7 @@ bootstrap-e2e: \
 	data/static \
 	create-env-local-files \
 	build-backend \
+	create-docker-network \
 	back-i18n-compile \
 	run-backend-e2e
 .PHONY: bootstrap-e2e
