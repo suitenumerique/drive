@@ -128,7 +128,7 @@ class ListItemFilter(ItemFilter):
 
     class Meta:
         model = models.Item
-        fields = ["is_creator_me", "is_favorite", "title"]
+        fields = ["is_creator_me", "is_favorite", "title", "type"]
 
     # pylint: disable=unused-argument
     def filter_is_creator_me(self, queryset, name, value):
