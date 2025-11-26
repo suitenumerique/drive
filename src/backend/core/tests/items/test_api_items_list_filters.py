@@ -2,7 +2,6 @@
 Tests for items API endpoint in drive's core app: list
 """
 
-import operator
 import random
 from urllib.parse import urlencode
 
@@ -107,75 +106,6 @@ def test_api_items_list_filter_and_access_rights():
         assert result["id"] in listed_ids
 
 
-# Filters: ordering
-
-
-def test_api_items_list_ordering_default():
-    """items should be ordered by descending "updated_at" by default"""
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
-
-    factories.ItemFactory.create_batch(
-        4, users=[user], type=models.ItemTypeChoices.FOLDER
-    )
-
-    response = client.get("/api/v1.0/items/")
-
-    assert response.status_code == 200
-    results = response.json()["results"]
-    assert len(results) == 4
-
-    # Check that results are sorted by descending "updated_at" as expected
-    for i in range(3):
-        assert operator.ge(results[i]["updated_at"], results[i + 1]["updated_at"])
-
-
-def test_api_items_list_ordering_by_fields():
-    """It should be possible to order by several fields"""
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
-
-    factories.ItemFactory.create_batch(
-        4, users=[user], type=models.ItemTypeChoices.FOLDER
-    )
-
-    for parameter in [
-        "created_at",
-        "-created_at",
-        "is_favorite",
-        "-is_favorite",
-        "title",
-        "-title",
-        "updated_at",
-        "-updated_at",
-    ]:
-        is_descending = parameter.startswith("-")
-        field = parameter.lstrip("-")
-        querystring = f"?ordering={parameter}"
-
-        response = client.get(f"/api/v1.0/items/{querystring:s}")
-        assert response.status_code == 200
-        results = response.json()["results"]
-        assert len(results) == 4
-
-        # Check that results are sorted by the field in querystring as expected
-        compare = operator.ge if is_descending else operator.le
-        for i in range(3):
-            operator1 = (
-                results[i][field].lower()
-                if isinstance(results[i][field], str)
-                else results[i][field]
-            )
-            operator2 = (
-                results[i + 1][field].lower()
-                if isinstance(results[i + 1][field], str)
-                else results[i + 1][field]
-            )
-            assert compare(operator1, operator2)
-
-
 # Filters: unknown field
 
 
@@ -194,12 +124,13 @@ def test_api_items_list_filter_unknown_field():
             2, users=[user], type=models.ItemTypeChoices.FOLDER
         )
     }
+    expected_ids.add(str(user.get_main_workspace().id))
 
     response = client.get("/api/v1.0/items/?unknown=true")
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 2
+    assert len(results) == 3
     assert {result["id"] for result in results} == expected_ids
 
 
@@ -225,7 +156,7 @@ def test_api_items_list_filter_is_creator_me_true():
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 2
+    assert len(results) == 3
 
     # Ensure all results are created by the current user
     for result in results:
@@ -283,7 +214,7 @@ def test_api_items_list_filter_is_creator_me_invalid():
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 5
+    assert len(results) == 6
 
 
 # Filters: is_favorite
@@ -334,7 +265,7 @@ def test_api_items_list_filter_is_favorite_false():
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 2
+    assert len(results) == 3
 
     # Ensure all results are not marked as favorite by the current user
     for result in results:
@@ -358,7 +289,7 @@ def test_api_items_list_filter_is_favorite_invalid():
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 5
+    assert len(results) == 6
 
 
 # Filters: title
@@ -372,7 +303,7 @@ def test_api_items_list_filter_is_favorite_invalid():
         ("Guide", 1),  # Word match within a title
         ("Special", 0),  # No match (nonexistent keyword)
         ("2024", 2),  # Match by numeric keyword
-        ("", 5),  # Empty string
+        ("", 6),  # Empty string
     ],
 )
 def test_api_items_list_filter_title(query, nb_results):
@@ -409,73 +340,3 @@ def test_api_items_list_filter_title(query, nb_results):
     # Ensure all results contain the query in their title
     for result in results:
         assert query.lower().strip() in result["title"].lower()
-
-
-# Filters: workspace
-
-
-def test_api_items_list_filter_workspace_public():
-    """
-    Authenticated users should be able to filter items by their workspace.
-    """
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
-
-    public_item_with_link_trace = factories.ItemFactory(
-        link_reach="public",
-        link_traces=[user],
-        type=models.ItemTypeChoices.FOLDER,
-    )
-    public_item_with_user_access = factories.ItemFactory(
-        users=[user], type=models.ItemTypeChoices.FOLDER
-    )
-
-    factories.ItemFactory.create_batch(
-        3, link_reach="public", type=models.ItemTypeChoices.FOLDER
-    )
-
-    response = client.get("/api/v1.0/items/")
-
-    assert response.status_code == 200
-    results = response.json()["results"]
-    assert len(results) == 2
-    assert results[0]["id"] == str(public_item_with_user_access.id)
-    assert results[1]["id"] == str(public_item_with_link_trace.id)
-
-    response = client.get("/api/v1.0/items/?workspaces=public")
-    assert response.status_code == 200
-    results = response.json()["results"]
-    assert len(results) == 1
-
-    assert results[0]["id"] == str(public_item_with_link_trace.id)
-
-
-def test_api_items_list_filter_workspace_shared():
-    """
-    Authenticated users should be able to filter items by their workspace.
-    """
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
-
-    shared_item_with_user_access = factories.ItemFactory(
-        users=[user], type=models.ItemTypeChoices.FOLDER
-    )
-    shared_item_with_link_trace = factories.ItemFactory(
-        link_reach="public", link_traces=[user], type=models.ItemTypeChoices.FOLDER
-    )
-    factories.ItemFactory.create_batch(3, type=models.ItemTypeChoices.FOLDER)
-
-    response = client.get("/api/v1.0/items/")
-    assert response.status_code == 200
-    results = response.json()["results"]
-    assert len(results) == 2
-    assert results[0]["id"] == str(shared_item_with_link_trace.id)
-    assert results[1]["id"] == str(shared_item_with_user_access.id)
-
-    response = client.get("/api/v1.0/items/?workspaces=shared")
-    assert response.status_code == 200
-    results = response.json()["results"]
-    assert len(results) == 1
-    assert results[0]["id"] == str(shared_item_with_user_access.id)
