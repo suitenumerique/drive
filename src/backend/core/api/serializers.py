@@ -16,6 +16,7 @@ from core.api import utils
 from core.storage import get_storage_compute_backend
 from wopi import utils as wopi_utils
 
+
 class UserSerializer(serializers.ModelSerializer):
     """Serialize users."""
 
