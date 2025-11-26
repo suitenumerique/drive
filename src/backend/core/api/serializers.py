@@ -15,6 +15,7 @@ from core import models
 from core.api import utils
 from wopi import utils as wopi_utils
 
+
 class UserSerializer(serializers.ModelSerializer):
     """Serialize users."""
 
