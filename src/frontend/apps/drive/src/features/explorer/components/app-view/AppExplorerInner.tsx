@@ -167,7 +167,9 @@ export const AppExplorerInner = (props: AppExplorerProps) => {
             <div className="explorer__content">
               {props.gridHeader ? props.gridHeader : <AppExplorerBreadcrumbs />}
               <HorizontalSeparator withPadding={false} />
-              <AppExplorerGrid {...props} />
+              <div className="explorer__grid__container">
+                <AppExplorerGrid {...props} />
+              </div>
             </div>
           </div>
         </div>

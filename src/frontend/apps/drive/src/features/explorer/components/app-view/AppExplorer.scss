@@ -41,14 +41,17 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
   }
 
   &__grid {
-    padding: 0px 14px;
-    padding-right: 24px;
-
     &__empty__image {
       width: 280px !important;
       height: 280px !important;
       object-fit: contain;
       margin: 0 auto;
+    }
+    @media (min-width: $tablet) {
+      &__container {
+        padding: 0px 14px;
+        padding-right: 24px;
+      }
     }
   }
   &__container {

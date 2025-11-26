@@ -15,7 +15,7 @@ import { getParentIdFromPath, isIdInItemTree } from "../../utils/utils";
 import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWorkspaceModal";
 import { useDeleteTreeNode } from "../tree/hooks/useDeleteTreeNode";
 import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 export type ItemActionDropdownProps = {
   item: Item;
@@ -85,6 +85,15 @@ export const ItemActionDropdown = ({
       router.push(`/explorer/items/${redirectId}`);
     }
   };
+
+  const deleteLabel = useMemo(() => {
+    if (item.type === ItemType.FILE) {
+      return t("explorer.tree.workspace.options.delete_file");
+    }
+    return !isWorkspace
+      ? t("explorer.tree.workspace.options.delete_folder")
+      : t("explorer.tree.workspace.options.delete_workspace");
+  }, [isWorkspace, item.type]);
 
   useEffect(() => {
     onModalOpenChange?.(
@@ -163,9 +172,7 @@ export const ItemActionDropdown = ({
           },
           {
             icon: <span className="material-icons">delete</span>,
-            label: !isWorkspace
-              ? t("explorer.tree.workspace.options.delete_folder")
-              : t("explorer.tree.workspace.options.delete_workspace"),
+            label: deleteLabel,
             value: "delete",
             showSeparator: true,
             isHidden: !item.abilities?.destroy || item.main_workspace,
