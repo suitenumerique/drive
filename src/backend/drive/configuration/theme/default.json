@@ -69,5 +69,11 @@
         }
       }
     }
+  },
+  "auth_buttons": {
+    "show": true
+  },
+  "language_picker": {
+    "show": true
   }
 }

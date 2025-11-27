@@ -148,8 +148,14 @@ export type LocalizedThemeCustomization<T> = {
   [key: string]: T;
 };
 
+export type ElementConfigDisplay = {
+  show: boolean;
+}
+
 export interface ThemeCustomization {
   footer?: LocalizedThemeCustomization<FooterProps>;
+  auth_buttons?: ElementConfigDisplay;
+  language_picker?: ElementConfigDisplay;
 }
 
 export type ApiConfig = {

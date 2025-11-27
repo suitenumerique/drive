@@ -11,6 +11,7 @@ import { Item } from "@/features/drivers/types";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { useIsMinimalLayout } from "@/utils/useLayout";
 import { Feedback } from "@/features/feedback/Feedback";
+import { useThemeCustomizationElementsDisplay } from "@/hooks/useThemeCustomization";
 
 export const HeaderIcon = () => {
   return (
@@ -45,40 +46,47 @@ export const HeaderRight = ({
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useTranslation();
   const { config } = useConfig();
+  const authButtonsCustomization = useThemeCustomizationElementsDisplay('auth_buttons');
+  const languagePickerCustomization = useThemeCustomizationElementsDisplay('language_picker');
+
   return (
     <>
       {user && displaySearch && (
         <ExplorerSearchButton defaultFilters={defaultFilters} />
       )}
-      {user ? (
-        <DropdownMenu
-          options={[
-            {
-              label: t("logout"),
-              icon: <span className="material-icons">logout</span>,
-              callback: logout,
-            },
-          ]}
-          isOpen={isOpen}
-          onOpenChange={setIsOpen}
-        >
-          <Button
-            variant="tertiary"
-            onClick={() => setIsOpen(!isOpen)}
-            icon={
-              <span className="material-icons">
-                {isOpen ? "arrow_drop_up" : "arrow_drop_down"}
-              </span>
-            }
-            iconPosition="right"
-          >
-            {t("my_account")}
-          </Button>
-        </DropdownMenu>
-      ) : (
-        <LoginButton />
-      )}
-      <LanguagePicker />
+      {
+        authButtonsCustomization.show &&
+          (user ? (
+              <DropdownMenu
+                options={[
+                  {
+                    label: t("logout"),
+                    icon: <span className="material-icons">logout</span>,
+                    callback: logout,
+                  },
+                ]}
+                isOpen={isOpen}
+                onOpenChange={setIsOpen}
+              >
+                <Button
+                  variant="tertiary"
+                  onClick={() => setIsOpen(!isOpen)}
+                  icon={
+                    <span className="material-icons">
+                      {isOpen ? "arrow_drop_up" : "arrow_drop_down"}
+                    </span>
+                  }
+                  iconPosition="right"
+                >
+                  {t("my_account")}
+                </Button>
+              </DropdownMenu>
+            ) : (
+              <LoginButton />
+            )
+          )
+      }
+      {languagePickerCustomization.show && <LanguagePicker />}
       {!config?.FRONTEND_HIDE_GAUFRE && <LaGaufre />}
     </>
   );

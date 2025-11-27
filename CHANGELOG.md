@@ -12,6 +12,10 @@ and this project adheres to
 
 - 🏗️(core) migrate from pip to uv
 
+### Added
+
+- ✨(front) hide language picker and auth buttons through config
+
 ## [v0.8.1] - 2025-11-24
 
 

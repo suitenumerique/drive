@@ -16,14 +16,14 @@ import { Button } from "@openfun/cunningham-react";
 import { useConfig } from "@/features/config/ConfigProvider";
 import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
 import { SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL } from "@/features/api/fetchApi";
-import { useThemeCustomization } from "@/hooks/useThemeCustomization";
+import { useThemeCustomizationFooter } from "@/hooks/useThemeCustomization";
 import { Feedback } from "@/features/feedback/Feedback";
 export default function HomePage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { config } = useConfig();
 
-  const footerCustommization = useThemeCustomization("footer");
+  const footerCustommization = useThemeCustomizationFooter();
 
   // Redirect to the attempted url if it exists, otherwise redirect to the last visited item.
   useEffect(() => {
