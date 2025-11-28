@@ -100,6 +100,7 @@ class ItemAccessInline(admin.TabularInline):
     model = models.ItemAccess
     extra = 0
 
+from django.contrib.admin.filters import AllValuesFieldListFilter
 
 @admin.register(models.Item)
 class ItemAdmin(admin.ModelAdmin):
@@ -126,6 +127,14 @@ class ItemAdmin(admin.ModelAdmin):
             },
         ),
         (
+            _("Malware detection"),
+            {
+                "fields": (
+                    "upload_state",
+                )
+            },
+        ),
+        (
             _("Tree structure"),
             {
                 "fields": (
@@ -140,8 +149,10 @@ class ItemAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "title",
+        "type",
         "link_reach",
         "link_role",
+        "upload_state",
         "created_at",
         "updated_at",
     )
@@ -153,6 +164,12 @@ class ItemAdmin(admin.ModelAdmin):
         "path",
     )
     search_fields = ("id", "title")
+    list_filter = (
+        "upload_state",
+        "link_reach",
+        "link_role"
+    )
+    show_facets = admin.ShowFacets.ALWAYS
 
 
 @admin.register(models.Invitation)
