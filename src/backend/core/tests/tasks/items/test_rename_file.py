@@ -51,3 +51,25 @@ def test_rename_file_origin_extension_is_kept():
     assert item.filename == "new_title.pdf.txt"
     assert default_storage.exists(item.file_key)
     assert not default_storage.exists(f"{item.key_base}/old_title.txt")
+
+
+def test_rename_file_filename_has_not_changed():
+    """The filename has not changed, no need to move it on storage."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        title="new_title",
+        type=models.ItemTypeChoices.FILE,
+        filename="new_title.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+    updated_at = item.updated_at
+    file_key = item.file_key
+
+    rename_file(item.id, "new_title")
+    item.refresh_from_db()
+    assert item.filename == "new_title.txt"
+    assert item.updated_at == updated_at
+    assert default_storage.exists(file_key)

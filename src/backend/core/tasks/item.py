@@ -68,6 +68,13 @@ def rename_file(item_id, new_title):
     new_filename = f"{new_title}{extension}"
     from_file_key = item.file_key
 
+    if item.filename == new_filename:
+        logger.info(
+            "Item %s filename has not changed, no need to move it on storage",
+            item_id,
+        )
+        return
+
     item.filename = new_filename
     item.save(update_fields=["filename", "updated_at"])
 
