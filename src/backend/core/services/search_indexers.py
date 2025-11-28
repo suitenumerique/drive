@@ -278,7 +278,8 @@ class SearchIndexer(BaseItemIndexer):
         mimetype = item.mimetype or ""
 
         if mimetype.startswith("text/"):
-            return default_storage.open(item.file_key, "rb").read().decode()
+            with default_storage.open(item.file_key, "rb") as fd:
+                return fd.read().decode()
 
         raise SuspiciousFileOperation(f"Unrecognized mimetype {mimetype}")
 

@@ -1097,7 +1097,7 @@ class ItemViewSet(
         Applies filtering based on request parameter 'q' from `SearchItemFilter`.
         Depending of the configuration it can be:
          - A fulltext search through the opensearch indexation app "find" if the backend is
-           enabled (see SEARCH_INDEXER_CLASS)
+           enabled (see SEARCH_INDEXER_CLASS) and the feature flag INDEXED_SEARCH_ENABLED is True
          - A filtering by the model fields 'title' & 'type'.
         """
         queryset = self.queryset
@@ -1136,7 +1136,8 @@ class ItemViewSet(
 
         queryset = queryset.filter(path_list)
 
-        if indexer:
+        # use indexed search ONLY when the feature flag is enabled
+        if indexer and settings.FEATURES_INDEXED_SEARCH is True:
             # When the indexer is configured pop "title" from queryset search and use
             # fulltext results instead.
             return self._indexed_search(

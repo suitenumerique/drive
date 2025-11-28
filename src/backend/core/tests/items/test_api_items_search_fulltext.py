@@ -437,3 +437,36 @@ def test_api_items_search_pagination_endpoint_is_none(
         assert content["count"] == expected["count"]
         assert content["previous"] == previous_url
         assert content["next"] == next_url
+
+
+def test_api_items_search_feature_disabled(indexer_settings):
+    """Should not use indexed search if the feature is disabled"""
+    indexer_settings.FEATURES_INDEXED_SEARCH = False
+
+    assert get_file_indexer() is not None
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    docs = factories.ItemFactory.create_batch(
+        5,
+        title="alpha",
+        users=[user],
+        parent=user.get_main_workspace(),
+    )
+
+    response = client.get(
+        "/api/v1.0/items/search/",
+        data={
+            "title": "alpha",
+        },
+    )
+
+    assert response.status_code == 200
+
+    content = response.json()
+    results = content.pop("results")
+
+    assert [r["id"] for r in results] == [str(d.pk) for d in docs]
