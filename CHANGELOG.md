@@ -12,6 +12,10 @@ and this project adheres to
 
 - 🏗️(core) migrate from pip to uv
 
+### Fixed
+
+- 🐛(backend) managed empty uploaded files
+
 ## [v0.8.1] - 2025-11-24
 
 
