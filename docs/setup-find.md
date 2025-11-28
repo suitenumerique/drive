@@ -15,7 +15,7 @@ See [how-to-use-indexer.md](how-to-use-indexer.md) for details.
 
 ## Configure settings of Drive
 
-Add those Django settings the Drive application to enable the feature.
+Add those Django settings the Drive application to enable the indexation feature.
 
 ```python
 SEARCH_INDEXER_CLASS="core.services.search_indexers.SearchIndexer"
@@ -42,4 +42,10 @@ We also need to enable the **OIDC Token** refresh or the authentication will fai
 OIDC_STORE_ACCESS_TOKEN = True  # Store the access token in the session
 OIDC_STORE_REFRESH_TOKEN = True  # Store the encrypted refresh token in the session
 OIDC_STORE_REFRESH_TOKEN_KEY = "your-32-byte-encryption-key=="  # Must be a valid Fernet key (32 url-safe base64-encoded bytes)
+```
+
+And to enable the search of indexed files through the API, add this feature flag (default=True)
+
+```python
+FEATURES_INDEXED_SEARCH=True
 ```

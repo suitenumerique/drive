@@ -42,6 +42,7 @@ This document lists all configurable environment variables for the Drive applica
 | `EMAIL_USE_SSL` | Use SSL for SMTP connection | `False` |
 | `EMAIL_USE_TLS` | Use TLS for SMTP connection | `False` |
 | `FEATURES_ALPHA` | Enable alpha features | `False` |
+| `FEATURES_INDEXED_SEARCH` | Enable the search of indexed files through the API | `True` |
 | `FRONTEND_THEME` | Frontend theme configuration | `None` |
 | `FRONTEND_FEEDBACK_BUTTON_SHOW` | Show feedback button | `False` |
 | `FRONTEND_FEEDBACK_BUTTON_IDLE` | Make feedback button idle (e.g. to bind to external library) | `False` |
