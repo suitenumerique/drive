@@ -15,6 +15,7 @@ and this project adheres to
 - ✨(back) add usage metrics route
 - ✨(global) add entitlements
 - ✨(back) add anct entitlement backend
+- ✨(back) enhance items django admin
 
 ### Changed
 
