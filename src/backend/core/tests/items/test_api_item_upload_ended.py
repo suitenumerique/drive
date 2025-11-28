@@ -125,3 +125,28 @@ def test_api_item_upload_ended_success():
     assert item.size == 8
 
     assert response.json()["mimetype"] == "text/plain"
+
+
+def test_api_item_upload_ended_empty_file():
+    """Upload an empty file should not raise an error."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=ItemTypeChoices.FILE, filename="my_file.txt")
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    default_storage.save(item.file_key, BytesIO(b""))
+
+    with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
+        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
+    assert response.status_code == 200
+
+    item.refresh_from_db()
+    assert item.upload_state == ItemUploadStateChoices.ANALYZING
+    assert item.mimetype == "application/x-empty"
+    assert item.size == 0
+
+    assert response.json()["mimetype"] == "application/x-empty"

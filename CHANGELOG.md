@@ -15,6 +15,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(backend) manage file renaming when filename has not changed
+- 🐛(backend) managed empty uploaded files
 
 ## [v0.8.1] - 2025-11-24
 
