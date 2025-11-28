@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(back) enhance items django admin
+
 ### Changed
 
 - 🏗️(core) migrate from pip to uv
