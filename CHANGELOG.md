@@ -12,6 +12,10 @@ and this project adheres to
 
 - 🏗️(core) migrate from pip to uv
 
+### Fixed
+
+- 🐛(backend) manage file renaming when filename has not changed
+
 ## [v0.8.1] - 2025-11-24
 
 
