@@ -24,6 +24,7 @@ and this project adheres to
 
 - 🐛(backend) manage file renaming when filename has not changed
 - 🐛(backend) managed empty uploaded files
+- 🐛(backend) do not allow renaming a file while not ready
 
 ## [v0.8.1] - 2025-11-24
 

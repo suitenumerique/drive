@@ -62,6 +62,7 @@ def rename_file(item_id, new_title):
 
     if item.upload_state != ItemUploadStateChoices.READY:
         logger.error("Item %s is not ready for renaming", item_id)
+        return
 
     _, extension = splitext(item.filename)
 

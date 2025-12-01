@@ -73,3 +73,21 @@ def test_rename_file_filename_has_not_changed():
     assert item.filename == "new_title.txt"
     assert item.updated_at == updated_at
     assert default_storage.exists(file_key)
+
+
+def test_rename_file_item_not_ready(caplog):
+    """Renamine a file that is not ready should abort the task."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        title="new_title",
+        type=models.ItemTypeChoices.FILE,
+        filename="old_title.txt",
+        update_upload_state=models.ItemUploadStateChoices.PENDING,
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    with caplog.at_level("ERROR", logger="core.tasks.item"):
+        rename_file(item.id, "new_title")
+    item.refresh_from_db()
+    assert item.filename == "old_title.txt"
+    assert f"Item {item.id} is not ready for renaming" in caplog.text
