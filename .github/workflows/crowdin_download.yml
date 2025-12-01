@@ -19,7 +19,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Create empty source files
         run: |
           touch src/backend/locale/django.pot
