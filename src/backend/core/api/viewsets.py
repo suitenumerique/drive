@@ -17,6 +17,7 @@ from django.db import models as db
 from django.db import transaction
 from django.db.models.expressions import RawSQL
 from django.urls import reverse
+from django.utils.decorators import method_decorator
 from django.utils.text import slugify
 
 import magic
@@ -27,6 +28,7 @@ from corsheaders.middleware import (
     ACCESS_CONTROL_ALLOW_ORIGIN,
 )
 from lasuite.malware_detection import malware_detection
+from lasuite.oidc_login.decorators import refresh_oidc_access_token
 from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
 from rest_framework.permissions import AllowAny
@@ -34,6 +36,10 @@ from rest_framework.throttling import UserRateThrottle
 
 from core import enums, models
 from core.services.sdk_relay import SDKRelayManager
+from core.services.search_indexers import (
+    get_file_indexer,
+    get_visited_items_ids_of,
+)
 from core.tasks.item import process_item_deletion, rename_file
 from wopi.services import access as access_service
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
@@ -1014,6 +1020,44 @@ class ItemViewSet(
         serializer = self.get_serializer(breadcrumb, many=True)
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
+    @method_decorator(refresh_oidc_access_token)
+    def _indexed_search(self, request, queryset, indexer, text):
+        """
+        Returns a DRF response containding the results the fulltext search of Find
+        sorted by score.
+        """
+        user = request.user
+        token = request.session.get("oidc_access_token")
+
+        # Retrieve the documents ids from Find. No pagination here the queryset is
+        # already filtered
+        result_ids = [
+            r["_id"]
+            for r in indexer.search(
+                text=text, token=token, visited=get_visited_items_ids_of(queryset, user)
+            )
+        ]
+
+        queryset = queryset.filter(pk__in=result_ids)
+        queryset = self.annotate_user_roles(queryset)
+        queryset = self.annotate_is_favorite(queryset)
+
+        files_by_uuid = {str(d.pk): d for d in queryset}
+        ordered_files = [files_by_uuid[id] for id in result_ids if id in files_by_uuid]
+
+        page = self.paginate_queryset(ordered_files)
+
+        if page is not None:
+            items = self._compute_parents(page)
+            serializer = self.get_serializer(items, many=True)
+            result = self.get_paginated_response(serializer.data)
+            return result
+
+        items = self._compute_parents(ordered_files)
+        serializer = self.get_serializer(items, many=True)
+        return drf.response.Response(serializer.data)
+
     @drf.decorators.action(
         detail=False,
         methods=["get"],
@@ -1022,10 +1066,17 @@ class ItemViewSet(
     )
     def search(self, request, *args, **kwargs):
         """
-        Search for items using filterset.
-        """
+        Returns a DRF response containing the filtered, annotated and ordered items.
 
+        Applies filtering based on request parameter 'q' from `SearchItemFilter`.
+        Depending of the configuration it can be:
+         - A fulltext search through the opensearch indexation app "find" if the backend is
+           enabled (see SEARCH_INDEXER_CLASS) and the feature flag INDEXED_SEARCH_ENABLED is True
+         - A filtering by the model fields 'title' & 'type'.
+        """
         queryset = self.queryset
+        indexer = get_file_indexer()
+
         filterset = SearchItemFilter(
             request.GET, queryset=queryset, request=self.request
         )
@@ -1034,6 +1085,7 @@ class ItemViewSet(
             raise drf.exceptions.ValidationError(filterset.errors)
 
         workspace = filterset.form.cleaned_data.get("workspace")
+
         # First look for all top level items user has access to
         user = request.user
         item_access_queryset = models.ItemAccess.objects.select_related("item").filter(
@@ -1057,7 +1109,21 @@ class ItemViewSet(
             path_list |= db.Q(path__descendants=top_level_item)
 
         queryset = queryset.filter(path_list)
+
+        # use indexed search ONLY when the feature flag is enabled
+        if indexer and settings.FEATURES_INDEXED_SEARCH is True:
+            # When the indexer is configured pop "title" from queryset search and use
+            # fulltext results instead.
+            return self._indexed_search(
+                request,
+                queryset,
+                indexer,
+                text=filterset.form.cleaned_data.pop("title"),
+            )
+
+        # Without the indexer, the "title" filtering is kept
         queryset = filterset.filter_queryset(queryset)
+
         queryset = self.annotate_user_roles(queryset)
         queryset = self.annotate_is_favorite(queryset)
 
