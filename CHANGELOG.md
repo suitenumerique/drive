@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.9.0] - 2025-12-02
+
 ### Added
 
 - ✨(back) add storage compute backends
@@ -176,10 +178,8 @@ and this project adheres to
 - ✨(front) make frontend themable
 - ✨(global) Add File Picker SDK
 - 🔧(cron) add pgdump cron on scalingo deployment #264
-  <<<<<<< HEAD
-- # ✨(back) implement lasuite.malware_detection app #212
+- ✨(back) implement lasuite.malware_detection app #212
 - ✨(front) add grist and sqlite mimeTypes #275
-  > > > > > > > 42fba11 (✨(front) create Grist file type)
 
 ### Changed
 
@@ -192,7 +192,9 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.8.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.9.0...main
+[0.9.0]: https://github.com/suitenumerique/drive/releases/v0.9.0
+[0.8.1]: https://github.com/suitenumerique/drive/releases/v0.8.1
 [0.8.0]: https://github.com/suitenumerique/drive/releases/v0.8.0
 [0.7.0]: https://github.com/suitenumerique/drive/releases/v0.7.0
 [0.6.0]: https://github.com/suitenumerique/drive/releases/v0.6.0
