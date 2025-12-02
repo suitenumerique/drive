@@ -497,7 +497,7 @@ wheels = [
 
 [[package]]
 name = "django-lasuite"
-version = "0.0.19"
+version = "0.0.20"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
@@ -507,9 +507,9 @@ dependencies = [
     { name = "requests" },
     { name = "requests-toolbelt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1c/04/55ddffaea330d18766e7a7af812489f0708335e6b668b466556cd7c8f09d/django_lasuite-0.0.19.tar.gz", hash = "sha256:342b441411d7bf6d57001bb03383ba280b4eda1533aedbf0324937ca7195c367", size = 30344, upload-time = "2025-11-21T15:47:43.65Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9f/9d/1ba8b6e5ba594374ad8da31748ad54ff664285dffc2b16611ddf4decf537/django_lasuite-0.0.20.tar.gz", hash = "sha256:d1be7c01d1b0ae604e016e7390c139a3f7038be6daf6890f8b41c69a1ec6db10", size = 31608, upload-time = "2025-12-02T08:32:33.111Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5e/6d/7548c0f1c0a9dc7227f96e18b1bb75a86ba97299bf90176c08d1717a481e/django_lasuite-0.0.19-py3-none-any.whl", hash = "sha256:6eb8c157d80d9661647dac143e1c56c4553c9e050a051f1ac6e58f6d630f640e", size = 44198, upload-time = "2025-11-21T15:47:41.916Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/5c/9175cf6456f4d467e04737f365036485bfda16ee063e1f5a6362b3d8f119/django_lasuite-0.0.20-py3-none-any.whl", hash = "sha256:ce78fa242c0d4c92e47040df75b62b53dc83e7ea06f09a3b82bc8447ef6c8dbd", size = 46915, upload-time = "2025-12-02T08:32:31.587Z" },
 ]
 
 [package.optional-dependencies]
@@ -737,7 +737,7 @@ requires-dist = [
     { name = "django-debug-toolbar", marker = "extra == 'dev'", specifier = "==6.1.0" },
     { name = "django-extensions", marker = "extra == 'dev'", specifier = "==4.1" },
     { name = "django-filter", specifier = "==25.2" },
-    { name = "django-lasuite", extras = ["all"], specifier = "==0.0.19" },
+    { name = "django-lasuite", extras = ["all"], specifier = "==0.0.20" },
     { name = "django-ltree", git = "https://github.com/mariocesar/django-ltree?rev=5d955bc82021a50c522ee524106f6709e3b414e4" },
     { name = "django-parler", specifier = "==2.3" },
     { name = "django-redis", specifier = "==6.0.0" },
