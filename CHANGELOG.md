@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) add more info on the item detail in the admin
+
 ## [v0.9.0] - 2025-12-02
 
 ### Added

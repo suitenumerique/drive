@@ -112,6 +112,11 @@ class ItemAdmin(admin.ModelAdmin):
                 "fields": (
                     "id",
                     "title",
+                    "filename",
+                    "size",
+                    "deleted_at",
+                    "ancestors_deleted_at",
+                    "malware_detection_info",
                 )
             },
         ),
@@ -157,8 +162,13 @@ class ItemAdmin(admin.ModelAdmin):
         "id",
         "numchild",
         "path",
+        "filename",
+        "size",
+        "deleted_at",
+        "ancestors_deleted_at",
+        "malware_detection_info",
     )
-    search_fields = ("id", "title")
+    search_fields = ("id", "title", "creator__email")
     list_filter = ("upload_state", "link_reach", "link_role")
     show_facets = admin.ShowFacets.ALWAYS
 
