@@ -4,6 +4,8 @@ from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
 from django.utils.translation import gettext_lazy as _
 
+from lasuite.malware_detection import malware_detection
+
 from . import models
 
 
@@ -171,6 +173,16 @@ class ItemAdmin(admin.ModelAdmin):
     search_fields = ("id", "title", "creator__email")
     list_filter = ("upload_state", "link_reach", "link_role")
     show_facets = admin.ShowFacets.ALWAYS
+    actions = ("trigger_file_analysis",)
+
+    def trigger_file_analysis(self, request, queryset):
+        """Reanalyse the file of the items."""
+
+        for item in queryset:
+            if item.type == models.ItemTypeChoices.FILE:
+                malware_detection.analyse_file(item.file_key, item_id=item.id)
+
+        self.message_user(request, "The files have been scheduled for a new analysis.")
 
 
 @admin.register(models.Invitation)

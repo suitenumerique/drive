@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) add more info on the item detail in the admin
+- ✨(backend) add an admin action to trigger new file analysis
 
 ## [v0.9.0] - 2025-12-02
 
