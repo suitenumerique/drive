@@ -3,6 +3,10 @@
 # ---- base image to inherit from ----
 FROM python:3.13.9-alpine AS base
 
+# Upgrade pip to its latest release to speed up dependencies installation
+# We must do taht to avoid having an outdated pip version with security issues
+RUN python -m pip install --upgrade pip setuptools
+
 # Upgrade system packages to install security updates
 RUN apk update && \
   apk upgrade && \
