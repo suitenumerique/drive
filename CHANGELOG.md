@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.10.0] - 2025-12-04
+
 ### Added
 
 - ✨(backend) add more info on the item detail in the admin
@@ -203,7 +205,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.9.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.10.0...main
+[0.10.0]: https://github.com/suitenumerique/drive/releases/v0.10.0
 [0.9.0]: https://github.com/suitenumerique/drive/releases/v0.9.0
 [0.8.1]: https://github.com/suitenumerique/drive/releases/v0.8.1
 [0.8.0]: https://github.com/suitenumerique/drive/releases/v0.8.0
