@@ -2,6 +2,7 @@
 Tasks related to items.
 """
 
+import hashlib
 import logging
 from os.path import splitext
 
@@ -97,3 +98,28 @@ def rename_file(item_id, new_title):
         Bucket=default_storage.bucket_name,
         Key=from_file_key,
     )
+
+
+@app.task
+def update_suspicious_item_file_hash(item_id):
+    """
+    Update the file hash of a suspicious item.
+    This is done in a separate task to avoid blocking the main thread.
+    """
+    try:
+        item = Item.objects.get(id=item_id)
+    except Item.DoesNotExist:
+        logger.error(
+            "updating suspicious item file hash: Item %s does not exist", item_id
+        )
+        return
+    if item.upload_state != ItemUploadStateChoices.SUSPICIOUS:
+        logger.error(
+            "updating suspicious item file hash: Item %s is not suspicious", item_id
+        )
+        return
+    with default_storage.open(item.file_key, "rb") as file:
+        file_hash = hashlib.file_digest(file, "sha256").hexdigest()
+
+    item.malware_detection_info.update({"file_hash": file_hash})
+    item.save(update_fields=["malware_detection_info"])
