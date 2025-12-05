@@ -15,7 +15,7 @@
     "node": ">=22.0.0 <25.0.0"
   },
   "dependencies": {
-    "@gouvfr-lasuite/ui-kit": "0.18.0",
+    "@gouvfr-lasuite/ui-kit": "0.18.3",
     "@openfun/cunningham-react": "4.0.0",
     "@tanstack/react-query": "5.90.10",
     "@tanstack/react-table": "8.21.3",
