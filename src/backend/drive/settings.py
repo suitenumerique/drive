@@ -666,6 +666,27 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # External API Configuration
+    # Configure available routes and actions for external_api endpoints
+    EXTERNAL_API = values.DictValue(
+        default={
+            "items": {
+                "enabled": True,
+                "actions": ["list", "retrieve", "children", "upload_ended"],
+            },
+            "item_access": {
+                "enabled": False,
+                "actions": [],
+            },
+            "item_invitation": {
+                "enabled": False,
+                "actions": [],
+            },
+        },
+        environ_name="EXTERNAL_API",
+        environ_prefix=None,
+    )
+
     OIDC_RS_PRIVATE_KEY_STR = values.Value(
         default=None,
         environ_name="OIDC_RS_PRIVATE_KEY_STR",
