@@ -8,7 +8,7 @@ In order to activate the resource server on Drive you need to setup the followin
 
 ```
 OIDC_RESOURCE_SERVER_ENABLED=True
-OIDC_OP_URL= 
+OIDC_OP_URL=
 OIDC_OP_INTROSPECTION_ENDPOINT=
 OIDC_RS_CLIENT_ID=
 OIDC_RS_CLIENT_SECRET=
@@ -17,6 +17,37 @@ OIDC_RS_ALLOWED_AUDIENCES=
 ```
 
 It implements the resource server using `django-lasuite`, see the [documentation](https://github.com/suitenumerique/django-lasuite/blob/main/documentation/how-to-use-oidc-resource-server-backend.md)
+
+## Customise allowed routes
+
+Configure the `EXTERNAL_API` setting to control which routes and actions are available in the external API. Set it via the `EXTERNAL_API` environment variable (as JSON) or in Django settings.
+
+Default configuration:
+
+```python
+EXTERNAL_API = {
+    "items": {
+        "enabled": True,
+        "actions": ["list", "retrieve", "children", "upload_ended"],
+    },
+    "item_access": {
+        "enabled": False,
+        "actions": [],
+    },
+    "item_invitation": {
+        "enabled": False,
+        "actions": [],
+    },
+}
+```
+
+**Endpoints:**
+
+- `items`: Controls `/external_api/v1.0/items/`. Available actions: `list`, `retrieve`, `create`, `update`, `partial_update`, `destroy`, `children`, `upload_ended`, `move`, `restore`, `trashbin`, `hard_delete`, `tree`, `breadcrumb`, `link_configuration`, `favorite`, `media_auth`, `wopi`
+- `item_access`: Controls `/external_api/v1.0/items/{id}/accesses/`. Available actions: `list`, `retrieve`, `create`, `update`, `partial_update`, `destroy`
+- `item_invitation`: Controls `/external_api/v1.0/items/{id}/invitations/`. Available actions: `list`, `retrieve`, `create`, `update`, `partial_update`, `destroy`
+
+Each endpoint has `enabled` (boolean) and `actions` (list of allowed actions). Only actions explicitly listed are accessible.
 
 ## Request Drive
 
@@ -37,7 +68,7 @@ Here is an example of a view that create a file on the main workspace in Drive.
 
         # Get the access token from the session
         access_token = request.session.get('oidc_access_token')
-        
+
         # Get the main workspace
         response = requests.get(
             f"{settings.DRIVE_API}/items/",
@@ -89,7 +120,7 @@ Here is an example of a view that create a file on the main workspace in Drive.
             headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
         )
         response.raise_for_status()
-        
+
         return drf.response.Response(data)
 ```
 
