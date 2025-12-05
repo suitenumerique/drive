@@ -61,11 +61,31 @@ const themesImages = {
   },
 };
 
+const themesGaufre = {
+  anct: {
+    widgetPath: "https://static.suite.anct.gouv.fr/widgets/lagaufre.js",
+    apiUrl:
+      "https://operateurs.suite.anct.gouv.fr/api/v1.0/lagaufre/services/?operator=9f5624fc-ef99-4d10-ae3f-403a81eb16ef&siret=21870030000013",
+  },
+  dark: {
+    widgetPath: "https://static.suite.anct.gouv.fr/widgets/lagaufre.js",
+    apiUrl: "https://lasuite.numerique.gouv.fr/api/services",
+  },
+  default: {
+    widgetPath: "https://static.suite.anct.gouv.fr/widgets/lagaufre.js",
+    apiUrl: "https://lasuite.numerique.gouv.fr/api/services",
+  },
+};
+
 const getComponents = (theme: keyof typeof themesImages) => {
   return {
     datagrid: {
       "body--background-color-hover":
         "ref(contextuals.background.semantic.contextual.primary)",
+    },
+    gaufre: {
+      widgetPath: `'${themesGaufre[theme].widgetPath}'`,
+      apiUrl: `'${themesGaufre[theme].apiUrl}'`,
     },
     favicon: {
       src: `'${themesImages[theme].favicon}'`,
@@ -82,7 +102,6 @@ const getComponents = (theme: keyof typeof themesImages) => {
 const defaultConfig = deepMerge(cunninghamConfig, {
   themes: {
     anct: {
-      components: getComponents("anct"),
       globals: {
         colors: {
           "brand-050": "#EEF0F9",
@@ -375,6 +394,7 @@ const defaultConfig = deepMerge(cunninghamConfig, {
           "pink-950": "#1C0E10",
         },
       },
+      components: getComponents("anct"),
     },
     dark: {
       globals: cunninghamConfig.themes.default.globals,

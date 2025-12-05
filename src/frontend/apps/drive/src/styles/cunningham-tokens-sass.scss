@@ -844,6 +844,10 @@ $themes: (
           'color': #265EAA
         )
       ),
+      'gaufre': (
+        'widgetPath': 'https://static.suite.anct.gouv.fr/widgets/lagaufre.js',
+        'apiUrl': 'https://lasuite.numerique.gouv.fr/api/services'
+      ),
       'favicon': (
         'src': '/assets/favicon.png'
       ),
@@ -1647,6 +1651,10 @@ $themes: (
       'datagrid': (
         'body--background-color-hover': #0000000D
       ),
+      'gaufre': (
+        'widgetPath': 'https://static.suite.anct.gouv.fr/widgets/lagaufre.js',
+        'apiUrl': 'https://lasuite.numerique.gouv.fr/api/services'
+      ),
       'favicon': (
         'src': '/assets/favicon.png'
       ),
@@ -1659,20 +1667,6 @@ $themes: (
     )
   ),
   'anct': (
-    'components': (
-      'datagrid': (
-        'body--background-color-hover': #0000000D
-      ),
-      'favicon': (
-        'src': '/assets/anct_favicon.png'
-      ),
-      'logo': (
-        'src': url('/assets/anct_logo_beta.svg')
-      ),
-      'logo-icon': (
-        'src': url('/assets/anct_logo-icon.svg')
-      )
-    ),
     'globals': (
       'colors': (
         'brand-050': #EEF0F9,
@@ -1963,6 +1957,24 @@ $themes: (
         'pink-850': #3F1C24,
         'pink-900': #2D161A,
         'pink-950': #1C0E10
+      )
+    ),
+    'components': (
+      'datagrid': (
+        'body--background-color-hover': #0000000D
+      ),
+      'gaufre': (
+        'widgetPath': 'https://static.suite.anct.gouv.fr/widgets/lagaufre.js',
+        'apiUrl': 'https://operateurs.suite.anct.gouv.fr/api/v1.0/lagaufre/services/?operator=9f5624fc-ef99-4d10-ae3f-403a81eb16ef&siret=21870030000013'
+      ),
+      'favicon': (
+        'src': '/assets/anct_favicon.png'
+      ),
+      'logo': (
+        'src': url('/assets/anct_logo_beta.svg')
+      ),
+      'logo-icon': (
+        'src': url('/assets/anct_logo-icon.svg')
       )
     )
   )

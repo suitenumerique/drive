@@ -660,6 +660,8 @@
 	--c--components--badge--warning--color: var(--c--contextuals--content--semantic--warning--secondary);
 	--c--components--badge--info--background-color: var(--c--contextuals--background--semantic--info--secondary);
 	--c--components--badge--info--color: var(--c--contextuals--content--semantic--info--secondary);
+	--c--components--gaufre--widgetpath: 'https://static.suite.anct.gouv.fr/widgets/lagaufre.js';
+	--c--components--gaufre--apiurl: 'https://lasuite.numerique.gouv.fr/api/services';
 	--c--components--favicon--src: '/assets/favicon.png';
 	--c--components--logo--src: url('/assets/logo_beta.svg');
 	--c--components--logo-icon--src: url('/assets/logo-icon_beta.svg');
@@ -1297,15 +1299,13 @@
 	--c--contextuals--border--palette--gray--secondary: var(--c--globals--colors--gray-450);
 	--c--contextuals--border--palette--gray--tertiary: var(--c--globals--colors--gray-550);
 	--c--components--datagrid--body--background-color-hover: var(--c--contextuals--background--semantic--contextual--primary);
+	--c--components--gaufre--widgetPath: 'https://static.suite.anct.gouv.fr/widgets/lagaufre.js';
+	--c--components--gaufre--apiUrl: 'https://lasuite.numerique.gouv.fr/api/services';
 	--c--components--favicon--src: '/assets/favicon.png';
 	--c--components--logo--src: url('/assets/logo_beta.svg');
 	--c--components--logo-icon--src: url('/assets/logo-icon_beta.svg');
 }
 .cunningham-theme--anct{
-	--c--components--datagrid--body--background-color-hover: var(--c--contextuals--background--semantic--contextual--primary);
-	--c--components--favicon--src: '/assets/anct_favicon.png';
-	--c--components--logo--src: url('/assets/anct_logo_beta.svg');
-	--c--components--logo-icon--src: url('/assets/anct_logo-icon.svg');
 	--c--globals--colors--brand-050: #EEF0F9;
 	--c--globals--colors--brand-100: #DDE2F5;
 	--c--globals--colors--brand-150: #CBD4F1;
@@ -1594,4 +1594,10 @@
 	--c--globals--colors--pink-850: #3F1C24;
 	--c--globals--colors--pink-900: #2D161A;
 	--c--globals--colors--pink-950: #1C0E10;
+	--c--components--datagrid--body--background-color-hover: var(--c--contextuals--background--semantic--contextual--primary);
+	--c--components--gaufre--widgetPath: 'https://static.suite.anct.gouv.fr/widgets/lagaufre.js';
+	--c--components--gaufre--apiUrl: 'https://operateurs.suite.anct.gouv.fr/api/v1.0/lagaufre/services/?operator=9f5624fc-ef99-4d10-ae3f-403a81eb16ef&siret=21870030000013';
+	--c--components--favicon--src: '/assets/anct_favicon.png';
+	--c--components--logo--src: url('/assets/anct_logo_beta.svg');
+	--c--components--logo-icon--src: url('/assets/anct_logo-icon.svg');
 }
