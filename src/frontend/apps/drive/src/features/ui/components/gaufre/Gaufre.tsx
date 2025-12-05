@@ -1,0 +1,21 @@
+import { LaGaufreV2 } from "@gouvfr-lasuite/ui-kit";
+import {
+  removeQuotes,
+  useCunninghamTheme,
+} from "../../cunningham/useCunninghamTheme";
+import { useConfig } from "@/features/config/ConfigProvider";
+
+export const Gaufre = () => {
+  const { config } = useConfig();
+
+  const hideGaufre = config?.FRONTEND_HIDE_GAUFRE;
+  const theme = useCunninghamTheme();
+  const widgetPath = removeQuotes(theme.components.gaufre.widgetPath);
+  const apiUrl = removeQuotes(theme.components.gaufre.apiUrl);
+
+  if (hideGaufre) {
+    return null;
+  }
+
+  return <LaGaufreV2 widgetPath={widgetPath} apiUrl={apiUrl} />;
+};

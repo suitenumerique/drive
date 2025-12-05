@@ -1,14 +1,18 @@
-import { LanguagePicker } from "../header/Header";
-import { LogoutButton } from "@/features/auth/components/LogoutButton";
-import { useAuth } from "@/features/auth/Auth";
-import { LoginButton } from "@/features/auth/components/LoginButton";
+import { Gaufre } from "@/features/ui/components/gaufre/Gaufre";
+import { UserProfile } from "@/features/ui/components/user/UserProfile";
+import { useResponsive } from "@gouvfr-lasuite/ui-kit";
 
 export const LeftPanelMobile = () => {
-  const { user } = useAuth();
+  const { isTablet } = useResponsive();
+
+  if (!isTablet) {
+    return null;
+  }
+
   return (
     <div className="drive__home__left-panel">
-      <LanguagePicker />
-      {user ? <LogoutButton /> : <LoginButton />}
+      <UserProfile />
+      <Gaufre />
     </div>
   );
 };

@@ -121,6 +121,8 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 }
 
 .explorer__tree {
+  display: flex;
+  flex-direction: column;
   height: 100%;
 
   &__nav {
@@ -219,7 +221,9 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 
   @media (max-width: $tablet) {
     .explorer__tree__mobile-navs {
-      display: block;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
 
       .c__dropdown-menu-trigger {
         width: 100%;

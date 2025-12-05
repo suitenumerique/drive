@@ -23,6 +23,7 @@ export const login = (returnTo?: string) => {
 interface AuthContextInterface {
   user?: User | null;
   init?: () => Promise<User | null>;
+  refreshUser?: () => Promise<void>;
 }
 
 export const AuthContext = React.createContext<AuthContextInterface>({});
@@ -53,6 +54,10 @@ export const Auth = ({
     }
   };
 
+  const refreshUser = async () => {
+    void init();
+  };
+
   useEffect(() => {
     void init();
   }, []);
@@ -74,6 +79,7 @@ export const Auth = ({
       value={{
         user,
         init,
+        refreshUser,
       }}
     >
       {children}

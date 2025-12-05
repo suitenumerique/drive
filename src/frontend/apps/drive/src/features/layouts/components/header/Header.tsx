@@ -1,16 +1,15 @@
-import { DropdownMenu, LaGaufre } from "@gouvfr-lasuite/ui-kit";
-import { Button } from "@openfun/cunningham-react";
-import { useAuth, logout } from "@/features/auth/Auth";
-import { useEffect, useMemo, useState } from "react";
+import { LanguagePicker, useResponsive } from "@gouvfr-lasuite/ui-kit";
+import { useAuth } from "@/features/auth/Auth";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ExplorerSearchButton } from "@/features/explorer/components/app-view/ExplorerSearchButton";
 import { getDriver } from "@/features/config/Config";
-import { useConfig } from "@/features/config/ConfigProvider";
-import { LoginButton } from "@/features/auth/components/LoginButton";
 import { Item } from "@/features/drivers/types";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { useIsMinimalLayout } from "@/utils/useLayout";
 import { Feedback } from "@/features/feedback/Feedback";
+import { Gaufre } from "@/features/ui/components/gaufre/Gaufre";
+import { UserProfile } from "@/features/ui/components/user/UserProfile";
 
 export const HeaderIcon = () => {
   return (
@@ -29,7 +28,10 @@ export const HeaderRight = ({
   currentItem?: Item;
 }) => {
   const { user } = useAuth();
+
   const isMinimalLayout = useIsMinimalLayout();
+
+  const { isTablet } = useResponsive();
 
   const defaultFilters: ItemFilters = useMemo(() => {
     const workspaceId = currentItem?.parents?.[0]?.id ?? currentItem?.id;
@@ -42,104 +44,75 @@ export const HeaderRight = ({
     return {};
   }, [currentItem, isMinimalLayout]);
 
-  const [isOpen, setIsOpen] = useState(false);
-  const { t } = useTranslation();
-  const { config } = useConfig();
   return (
     <>
       {user && displaySearch && (
         <ExplorerSearchButton defaultFilters={defaultFilters} />
       )}
-      {user ? (
-        <DropdownMenu
-          options={[
-            {
-              label: t("logout"),
-              icon: <span className="material-icons">logout</span>,
-              callback: logout,
-            },
-          ]}
-          isOpen={isOpen}
-          onOpenChange={setIsOpen}
-        >
-          <Button
-            variant="tertiary"
-            onClick={() => setIsOpen(!isOpen)}
-            icon={
-              <span className="material-icons">
-                {isOpen ? "arrow_drop_up" : "arrow_drop_down"}
-              </span>
-            }
-            iconPosition="right"
-          >
-            {t("my_account")}
-          </Button>
-        </DropdownMenu>
-      ) : (
-        <LoginButton />
+
+      {!isTablet && (
+        <>
+          <Gaufre />
+          <UserProfile />
+        </>
       )}
-      <LanguagePicker />
-      {!config?.FRONTEND_HIDE_GAUFRE && <LaGaufre />}
     </>
   );
 };
 
-export const LanguagePicker = () => {
-  const [isOpen, setIsOpen] = useState(false);
+export const LanguagePickerUserMenu = () => {
   const { i18n } = useTranslation();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const driver = getDriver();
+  const [selectedLanguage, setSelectedLanguage] = useState(user?.language);
+
   // We must set the language to lowercase because django does not use "en-US", but "en-us".
-  const [selectedValues, setSelectedValues] = useState([
-    user?.language || i18n.language.toLowerCase(),
-  ]);
+
   const languages = [
-    { label: "Français", value: "fr-fr" },
-    { label: "English", value: "en-us" },
-    { label: "Nederlands", value: "nl-nl" },
+    {
+      label: "Français",
+      value: "fr-fr",
+      shortLabel: "FR",
+      isChecked: selectedLanguage === "fr-fr",
+    },
+    {
+      label: "English",
+      value: "en-us",
+      shortLabel: "EN",
+      isChecked: selectedLanguage === "en-us",
+    },
+    {
+      label: "Nederlands",
+      value: "nl-nl",
+      shortLabel: "NL",
+      isChecked: selectedLanguage === "nl-nl",
+    },
+    {
+      label: "Deutsch",
+      value: "de-de",
+      shortLabel: "DE",
+      isChecked: selectedLanguage === "de-de",
+    },
   ];
 
-  // Make sure the language of the ui is in the same language as the user.
-  useEffect(() => {
-    if (user?.language) {
-      i18n.changeLanguage(user.language).catch((err) => {
-        console.error("Error changing language", err);
+  const onChange = (value: string) => {
+    setSelectedLanguage(value);
+    i18n.changeLanguage(value).catch((err) => {
+      console.error("Error changing language", err);
+    });
+    if (user) {
+      driver.updateUser({ language: value, id: user.id }).then(() => {
+        void refreshUser?.();
       });
     }
-  }, [user?.language]);
+  };
 
   return (
-    <DropdownMenu
-      options={languages}
-      isOpen={isOpen}
-      onOpenChange={setIsOpen}
-      onSelectValue={(value) => {
-        setSelectedValues([value]);
-        i18n.changeLanguage(value).catch((err) => {
-          console.error("Error changing language", err);
-        });
-        if (user) {
-          driver.updateUser({ language: value, id: user.id });
-        }
-      }}
-      selectedValues={selectedValues}
-    >
-      <Button
-        onClick={() => setIsOpen(!isOpen)}
-        variant="tertiary"
-        className="c__language-picker"
-        icon={
-          <span className="material-icons">
-            {isOpen ? "arrow_drop_up" : "arrow_drop_down"}
-          </span>
-        }
-        iconPosition="right"
-      >
-        <span className="material-icons">translate</span>
-        <span className="c__language-picker__label">
-          {languages.find((lang) => lang.value === selectedValues[0])?.label}
-        </span>
-      </Button>
-    </DropdownMenu>
+    <LanguagePicker
+      languages={languages}
+      size="small"
+      onChange={onChange}
+      compact
+    />
   );
 };
