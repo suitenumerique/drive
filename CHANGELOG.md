@@ -8,6 +8,12 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.10.1] - 2025-12-05
+
+### Security
+
+- ⬆️(dependencies) update next to v15.4.8
+
 ## [v0.10.0] - 2025-12-04
 
 ### Added
@@ -205,7 +211,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.10.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.10.1...main
+[0.10.1]: https://github.com/suitenumerique/drive/releases/v0.10.1
 [0.10.0]: https://github.com/suitenumerique/drive/releases/v0.10.0
 [0.9.0]: https://github.com/suitenumerique/drive/releases/v0.9.0
 [0.8.1]: https://github.com/suitenumerique/drive/releases/v0.8.1
