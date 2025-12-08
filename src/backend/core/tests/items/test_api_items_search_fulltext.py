@@ -276,13 +276,19 @@ def test_api_items_search_pagination(indexer_settings, pagination, status, expec
     client = APIClient()
     client.force_login(user)
 
+    parent = factories.ItemFactory(
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
     items = factories.ItemFactory.create_batch(
         30,
         title="alpha",
         users=[user],
         mimetype="text/plain",
         type=models.ItemTypeChoices.FILE,
-        parent=user.get_main_workspace(),
+        parent=parent,
     )
 
     items_by_uuid = {str(item.pk): item for item in items}
@@ -414,11 +420,17 @@ def test_api_items_search_pagination_endpoint_is_none(
     client = APIClient()
     client.force_login(user)
 
+    parent = factories.ItemFactory(
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
     factories.ItemFactory.create_batch(
         30,
         title="alpha",
         users=[user],
-        parent=user.get_main_workspace(),
+        parent=parent,
     )
 
     response = client.get(
@@ -442,7 +454,7 @@ def test_api_items_search_pagination_endpoint_is_none(
             if expected.get("next") is not None
             else None
         )
-        queryset = user.get_main_workspace().descendants().order_by("created_at")
+        queryset = parent.descendants().order_by("created_at")
         start, end = expected["range"]
         expected_results = [str(d.pk) for d in queryset[start:end]]
 
@@ -466,11 +478,17 @@ def test_api_items_search_feature_disabled(indexer_settings):
     client = APIClient()
     client.force_login(user)
 
+    parent = factories.ItemFactory(
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
     docs = factories.ItemFactory.create_batch(
         5,
         title="alpha",
         users=[user],
-        parent=user.get_main_workspace(),
+        parent=parent,
     )
 
     response = client.get(

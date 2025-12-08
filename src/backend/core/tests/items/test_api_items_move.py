@@ -618,9 +618,15 @@ def test_api_items_move_suspicious_item_should_work_for_creator():
     client = APIClient()
     client.force_login(creator)
 
+    folder = factories.ItemFactory(
+        creator=creator,
+        users=[(creator, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
     suspicious_item = factories.ItemFactory(
         creator=creator,
-        parent=creator.get_main_workspace(),
+        parent=folder,
         update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
         users=[(creator, models.RoleChoices.OWNER)],
         type=models.ItemTypeChoices.FILE,
