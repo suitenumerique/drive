@@ -582,14 +582,10 @@ class BreadcrumbItemSerializer(serializers.ModelSerializer):
 class UserMeSerializer(UserSerializer):
     """Serialize users for me endpoint."""
 
-    main_workspace = ItemSerializer(
-        source="get_main_workspace", read_only=True, required=False
-    )
-
     class Meta:
         model = models.User
-        fields = UserSerializer.Meta.fields + ["main_workspace"]
-        read_only_fields = UserSerializer.Meta.read_only_fields + ["main_workspace"]
+        fields = UserSerializer.Meta.fields
+        read_only_fields = UserSerializer.Meta.read_only_fields
 
 
 class LinkItemSerializer(serializers.ModelSerializer):
