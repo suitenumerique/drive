@@ -250,21 +250,6 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
 
         if is_adding:
             self._convert_valid_invitations()
-            self._create_workspace()
-
-    def _create_workspace(self):
-        """Create a workspace for the user."""
-        obj = Item.objects.create_child(
-            creator=self,
-            type=ItemTypeChoices.FOLDER,
-            title=_("Workspace"),
-            main_workspace=True,
-        )
-        ItemAccess.objects.create(
-            item=obj,
-            user=self,
-            role=RoleChoices.OWNER,
-        )
 
     def _convert_valid_invitations(self):
         """
@@ -308,10 +293,6 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         Must be cached if retrieved remotely.
         """
         return []
-
-    def get_main_workspace(self):
-        """Get the main workspace for the user."""
-        return Item.objects.get(creator=self, main_workspace=True)
 
 
 class ItemQuerySet(TreeQuerySet):

@@ -93,7 +93,7 @@ def test_models_items_soft_delete(depth):
                 parent=items[-1], type=models.ItemTypeChoices.FOLDER, creator=user
             )
         )
-    assert models.Item.objects.count() == depth + 1 + 1  # +1 for the main workspace
+    assert models.Item.objects.count() == depth + 1
 
     # Delete any one of the items...
     deleted_item = random.choice(items)

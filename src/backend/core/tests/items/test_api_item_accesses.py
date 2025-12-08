@@ -1248,8 +1248,9 @@ def test_api_item_accesses_update_to_same_role_as_max_ancestors_role():
 def test_api_item_accesses_delete_anonymous():
     """Anonymous users should not be allowed to destroy an item access."""
     user = factories.UserFactory()
-    item = user.get_main_workspace()
-    access = models.ItemAccess.objects.get(user=user, role="owner", item=item)
+
+    item = factories.ItemFactory()
+    access = factories.UserItemAccessFactory(user=user, item=item, role="owner")
 
     response = APIClient().delete(
         f"/api/v1.0/items/{item.id!s}/accesses/{access.id!s}/",
@@ -1261,7 +1262,7 @@ def test_api_item_accesses_delete_anonymous():
 
 def test_api_item_accesses_delete_authenticated():
     """
-    Authenticated users should not be allowed to delete an item access for a
+    Authenticated users should not be allowed to delete an item access for an
     item to which they are not related.
     """
     user = factories.UserFactory()
@@ -1272,13 +1273,13 @@ def test_api_item_accesses_delete_authenticated():
     other_user = factories.UserFactory()
     access = factories.UserItemAccessFactory(user=other_user, item__creator=other_user)
 
-    assert models.ItemAccess.objects.count() == 3
+    assert models.ItemAccess.objects.count() == 1
     response = client.delete(
         f"/api/v1.0/items/{access.item_id!s}/accesses/{access.id!s}/",
     )
 
     assert response.status_code == 403
-    assert models.ItemAccess.objects.count() == 3
+    assert models.ItemAccess.objects.count() == 1
 
 
 @pytest.mark.parametrize("role", ["reader", "editor"])
@@ -1302,7 +1303,7 @@ def test_api_item_accesses_delete_reader_or_editor(via, role, mock_user_teams):
 
     access = factories.UserItemAccessFactory(item=item)
 
-    assert models.ItemAccess.objects.count() == 5
+    assert models.ItemAccess.objects.count() == 2
     assert models.ItemAccess.objects.filter(user=access.user).exists()
 
     response = client.delete(
@@ -1310,7 +1311,7 @@ def test_api_item_accesses_delete_reader_or_editor(via, role, mock_user_teams):
     )
 
     assert response.status_code == 403
-    assert models.ItemAccess.objects.count() == 5
+    assert models.ItemAccess.objects.count() == 2
 
 
 @pytest.mark.parametrize("via", VIA)
@@ -1338,7 +1339,7 @@ def test_api_item_accesses_delete_administrators_except_owners(
         item=item, role=random.choice(["reader", "editor", "administrator"])
     )
 
-    assert models.ItemAccess.objects.count() == 5
+    assert models.ItemAccess.objects.count() == 2
     assert models.ItemAccess.objects.filter(user=access.user).exists()
 
     response = client.delete(
@@ -1346,7 +1347,7 @@ def test_api_item_accesses_delete_administrators_except_owners(
     )
 
     assert response.status_code == 204
-    assert models.ItemAccess.objects.count() == 4
+    assert models.ItemAccess.objects.count() == 1
 
 
 @pytest.mark.parametrize("via", VIA)
@@ -1369,7 +1370,7 @@ def test_api_item_accesses_delete_administrator_on_owners(via, mock_user_teams):
 
     access = factories.UserItemAccessFactory(item=item, role="owner")
 
-    assert models.ItemAccess.objects.count() == 5
+    assert models.ItemAccess.objects.count() == 2
     assert models.ItemAccess.objects.filter(user=access.user).exists()
 
     response = client.delete(
@@ -1377,7 +1378,7 @@ def test_api_item_accesses_delete_administrator_on_owners(via, mock_user_teams):
     )
 
     assert response.status_code == 403
-    assert models.ItemAccess.objects.count() == 5
+    assert models.ItemAccess.objects.count() == 2
 
 
 @pytest.mark.parametrize("via", VIA)
@@ -1403,7 +1404,7 @@ def test_api_item_accesses_delete_owners(
 
     access = factories.UserItemAccessFactory(item=item)
 
-    assert models.ItemAccess.objects.count() == 5
+    assert models.ItemAccess.objects.count() == 2
     assert models.ItemAccess.objects.filter(user=access.user).exists()
 
     response = client.delete(
@@ -1411,7 +1412,7 @@ def test_api_item_accesses_delete_owners(
     )
 
     assert response.status_code == 204
-    assert models.ItemAccess.objects.count() == 4
+    assert models.ItemAccess.objects.count() == 1
 
 
 @pytest.mark.parametrize("via", VIA)
@@ -1434,13 +1435,13 @@ def test_api_item_accesses_delete_owners_last_owner(via, mock_user_teams):
             item=item, team="lasuite", role="owner"
         )
 
-    assert models.ItemAccess.objects.count() == 2
+    assert models.ItemAccess.objects.count() == 1
     response = client.delete(
         f"/api/v1.0/items/{item.id!s}/accesses/{access.id!s}/",
     )
 
     assert response.status_code == 403
-    assert models.ItemAccess.objects.count() == 2
+    assert models.ItemAccess.objects.count() == 1
 
 
 def test_api_item_accesses_delete_owners_last_owner_child_user():
@@ -1455,13 +1456,13 @@ def test_api_item_accesses_delete_owners_last_owner_child_user():
     item = factories.ItemFactory(parent=parent)
     access = factories.UserItemAccessFactory(item=item, user=user, role="owner")
 
-    assert models.ItemAccess.objects.count() == 4
+    assert models.ItemAccess.objects.count() == 1
     response = client.delete(
         f"/api/v1.0/items/{item.id!s}/accesses/{access.id!s}/",
     )
 
     assert response.status_code == 204
-    assert models.ItemAccess.objects.count() == 3
+    assert models.ItemAccess.objects.count() == 0
 
 
 def test_api_item_accesses_delete_owners_last_owner_child_team(
@@ -1480,13 +1481,13 @@ def test_api_item_accesses_delete_owners_last_owner_child_team(
     mock_user_teams.return_value = ["lasuite", "unknown"]
     access = factories.TeamItemAccessFactory(item=item, team="lasuite", role="owner")
 
-    assert models.ItemAccess.objects.count() == 4
+    assert models.ItemAccess.objects.count() == 1
     response = client.delete(
         f"/api/v1.0/items/{item.id!s}/accesses/{access.id!s}/",
     )
 
     assert response.status_code == 204
-    assert models.ItemAccess.objects.count() == 3
+    assert models.ItemAccess.objects.count() == 0
 
 
 ## Realistic case.
