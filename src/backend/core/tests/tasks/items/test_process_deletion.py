@@ -98,11 +98,11 @@ def test_process_item_deletion_in_cascade():
     parent.soft_delete()
     parent.hard_delete()
 
-    assert models.Item.objects.all().count() == 5 + 1  # +1 for the user's workspace
+    assert models.Item.objects.all().count() == 5
 
     process_item_deletion(parent.id)
 
-    assert models.Item.objects.all().count() == 1  # the user's workspace
+    assert models.Item.objects.all().count() == 0
     assert not default_storage.exists(child_file.file_key)
     assert not default_storage.exists(child2_file.file_key)
 
@@ -144,12 +144,12 @@ def test_process_item_deletion_item_subfolder_in_cascade():
     child.soft_delete()
     child.hard_delete()
 
-    assert models.Item.objects.all().count() == 5 + 1  # +1 for the user's workspace
+    assert models.Item.objects.all().count() == 5
     parent.refresh_from_db()
     assert parent.numchild == 1
 
     process_item_deletion(child.id)
 
-    assert models.Item.objects.all().count() == 3 + 1  # the user's workspace
+    assert models.Item.objects.all().count() == 3
     assert not default_storage.exists(child_file.file_key)
     assert default_storage.exists(child2_file.file_key)

@@ -46,15 +46,6 @@ def test_models_users_send_mail_main_missing():
     assert str(excinfo.value) == "User has no email address."
 
 
-def test_models_users_save_create_main_workspace():
-    """The "save' method should create a main workspace for the user."""
-    user = factories.UserFactory()
-    item = models.Item.objects.get(creator=user, main_workspace=True)
-    assert models.ItemAccess.objects.filter(
-        user=user, role=models.RoleChoices.OWNER, item=item
-    ).exists()
-
-
 def test_models_users_convert_valid_invitations():
     """
     The "_convert_valid_invitations" method should convert valid invitations to item accesses.

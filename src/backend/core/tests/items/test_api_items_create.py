@@ -51,7 +51,7 @@ def test_api_items_create_authenticated_success():
         format="json",
     )
     assert response.status_code == 201
-    item = Item.objects.exclude(id=user.get_main_workspace().id).get()
+    item = Item.objects.get()
     assert item.title == "my item"
     assert item.link_reach == "restricted"
     assert item.accesses.filter(role="owner", user=user).exists()
@@ -107,7 +107,7 @@ def test_api_items_create_file_authenticated_success():
             format="json",
         )
     assert response.status_code == 201
-    item = Item.objects.exclude(id=user.get_main_workspace().id).get()
+    item = Item.objects.get()
     assert item.title == "file.txt"
     assert item.link_reach == "restricted"
     assert item.accesses.filter(role="owner", user=user).exists()
@@ -181,7 +181,7 @@ def test_api_items_create_file_authenticated_extension_case_insensitive():
         format="json",
     )
     assert response.status_code == 201
-    item = Item.objects.exclude(id=user.get_main_workspace().id).get()
+    item = Item.objects.get()
     assert item.title == "file.JPG"
 
 
@@ -202,7 +202,7 @@ def test_api_items_create_file_authenticated_not_checking_extension(settings):
         format="json",
     )
     assert response.status_code == 201
-    item = Item.objects.exclude(id=user.get_main_workspace().id).get()
+    item = Item.objects.get()
     assert item.title == "file.notallowed"
 
 
@@ -311,7 +311,7 @@ def test_api_items_create_force_id_success():
     )
 
     assert response.status_code == 201
-    items = Item.objects.all().exclude(id=user.get_main_workspace().id)
+    items = Item.objects.all()
     assert len(items) == 1
     assert items[0].id == forced_id
 

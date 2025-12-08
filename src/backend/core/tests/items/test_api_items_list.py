@@ -84,11 +84,11 @@ def test_api_items_list_format():
     content = response.json()
     results = content.pop("results")
     assert content == {
-        "count": 4,
+        "count": 3,
         "next": None,
         "previous": None,
     }
-    assert len(results) == 4
+    assert len(results) == 3
     assert results == [
         {
             "id": str(item3.id),
@@ -201,47 +201,6 @@ def test_api_items_list_format():
             "hard_delete_at": None,
             "is_wopi_supported": False,
         },
-        {
-            "id": str(user.get_main_workspace().id),
-            "abilities": user.get_main_workspace().get_abilities(user),
-            "ancestors_link_reach": user.get_main_workspace().ancestors_link_reach,
-            "ancestors_link_role": user.get_main_workspace().ancestors_link_role,
-            "computed_link_reach": user.get_main_workspace().computed_link_reach,
-            "computed_link_role": user.get_main_workspace().computed_link_role,
-            "created_at": user.get_main_workspace()
-            .created_at.isoformat()
-            .replace("+00:00", "Z"),
-            "creator": {
-                "id": str(user.get_main_workspace().creator.id),
-                "full_name": user.get_main_workspace().creator.full_name,
-                "short_name": user.get_main_workspace().creator.short_name,
-            },
-            "depth": 1,
-            "is_favorite": False,
-            "link_reach": user.get_main_workspace().link_reach,
-            "link_role": user.get_main_workspace().link_role,
-            "nb_accesses": 1,
-            "numchild": 0,
-            "numchild_folder": 0,
-            "path": str(user.get_main_workspace().path),
-            "title": "Workspace",
-            "updated_at": user.get_main_workspace()
-            .updated_at.isoformat()
-            .replace("+00:00", "Z"),
-            "user_role": "owner",
-            "type": models.ItemTypeChoices.FOLDER,
-            "upload_state": None,
-            "url": None,
-            "url_preview": None,
-            "mimetype": None,
-            "main_workspace": True,
-            "filename": None,
-            "size": None,
-            "description": None,
-            "deleted_at": None,
-            "hard_delete_at": None,
-            "is_wopi_supported": False,
-        },
     ]
 
 
@@ -324,10 +283,9 @@ def test_api_items_list_authenticated_direct(django_assert_num_queries):
         str(item2.id),
         str(child3_with_access.id),
         str(child4_with_access.id),
-        str(user.get_main_workspace().id),
     }
 
-    with django_assert_num_queries(11):
+    with django_assert_num_queries(10):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
@@ -367,11 +325,9 @@ def test_api_items_list_authenticated_via_team(
         )
     ]
 
-    expected_ids = {
-        str(item.id) for item in items_team1 + items_team2 + [user.get_main_workspace()]
-    }
+    expected_ids = {str(item.id) for item in items_team1 + items_team2}
 
-    with django_assert_num_queries(10):
+    with django_assert_num_queries(9):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
@@ -380,7 +336,7 @@ def test_api_items_list_authenticated_via_team(
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 6
+    assert len(results) == 5
     results_id = {result["id"] for result in results}
     assert expected_ids == results_id
 
@@ -412,7 +368,7 @@ def test_api_items_list_authenticated_link_reach_restricted(
     )
     models.LinkTrace.objects.create(item=folder_item, user=user)
 
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
@@ -421,10 +377,9 @@ def test_api_items_list_authenticated_link_reach_restricted(
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 3
+    assert len(results) == 2
     assert results[0]["id"] == str(folder_item.id)
     assert results[1]["id"] == str(other_item.id)
-    assert results[2]["id"] == str(user.get_main_workspace().id)
 
 
 def test_api_items_list_authenticated_link_reach_public_or_authenticated(
@@ -467,10 +422,9 @@ def test_api_items_list_authenticated_link_reach_public_or_authenticated(
         str(item1.id),
         str(item2.id),
         str(visible_child.id),
-        str(user.get_main_workspace().id),
     }
 
-    with django_assert_num_queries(9):
+    with django_assert_num_queries(8):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
@@ -499,7 +453,6 @@ def test_api_items_list_pagination(
             3, user=user, item__type=models.ItemTypeChoices.FOLDER
         )
     ]
-    item_ids.append(str(user.get_main_workspace().id))
     # Get page 1
     response = client.get(
         "/api/v1.0/items/",
@@ -508,7 +461,7 @@ def test_api_items_list_pagination(
     assert response.status_code == 200
     content = response.json()
 
-    assert content["count"] == 4
+    assert content["count"] == 3
     assert content["next"] == "http://testserver/api/v1.0/items/?page=2"
     assert content["previous"] is None
 
@@ -524,11 +477,11 @@ def test_api_items_list_pagination(
     assert response.status_code == 200
     content = response.json()
 
-    assert content["count"] == 4
+    assert content["count"] == 3
     assert content["next"] is None
     assert content["previous"] == "http://testserver/api/v1.0/items/"
 
-    assert len(content["results"]) == 2
+    assert len(content["results"]) == 1
     for item in content["results"]:
         item_ids.remove(item["id"])
     assert item_ids == []
@@ -553,9 +506,8 @@ def test_api_items_list_authenticated_distinct():
 
     assert response.status_code == 200
     content = response.json()
-    assert len(content["results"]) == 2
+    assert len(content["results"]) == 1
     assert content["results"][0]["id"] == str(item.id)
-    assert content["results"][1]["id"] == str(user.get_main_workspace().id)
 
 
 def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
@@ -578,7 +530,7 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
     )
 
     url = "/api/v1.0/items/"
-    with django_assert_num_queries(12):
+    with django_assert_num_queries(11):
         response = client.get(url)
 
     # nb_accesses should now be cached
@@ -587,7 +539,7 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 8
+    assert len(results) == 7
 
     assert all(result["is_favorite"] is False for result in results)
 
@@ -600,7 +552,7 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 8
+    assert len(results) == 7
 
     # Check if the "is_favorite" annotation is correctly set for the favorited items
     favorited_ids = {str(doc.id) for doc in special_items}
