@@ -921,7 +921,7 @@ def test_api_items_retrieve_soft_deleted_anonymous(reach, depth):
                 parent=items[-1], type=models.ItemTypeChoices.FOLDER, creator=user
             )
         )
-    assert models.Item.objects.count() == depth + 1  # +1 for the main workspace
+    assert models.Item.objects.count() == depth
 
     response = APIClient().get(f"/api/v1.0/items/{items[-1].id!s}/")
 
@@ -987,7 +987,7 @@ def test_api_items_retrieve_soft_deleted_authenticated(reach, depth):
                 parent=items[-1], type=models.ItemTypeChoices.FOLDER, creator=user
             )
         )
-    assert models.Item.objects.count() == depth + 1  # +1 for the main workspace
+    assert models.Item.objects.count() == depth
 
     response = client.get(f"/api/v1.0/items/{items[-1].id!s}/")
 
@@ -1056,7 +1056,7 @@ def test_api_items_retrieve_soft_deleted_related(role, depth):
                 parent=items[-1], type=models.ItemTypeChoices.FOLDER, creator=user
             )
         )
-    assert models.Item.objects.count() == depth + 1  # +1 for the main workspace
+    assert models.Item.objects.count() == depth
     item = items[-1]
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
@@ -1111,7 +1111,7 @@ def test_api_items_retrieve_permanently_deleted_related(role, depth):
                 parent=items[-1], type=models.ItemTypeChoices.FOLDER, creator=user
             )
         )
-    assert models.Item.objects.count() == depth + 1  # +1 for the main workspace
+    assert models.Item.objects.count() == depth
     item = items[-1]
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
