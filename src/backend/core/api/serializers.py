@@ -31,6 +31,7 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "email", "full_name", "short_name"]
 
+
 class UserLightSerializer(UserSerializer):
     """Serialize users with limited fields."""
 
@@ -38,6 +39,7 @@ class UserLightSerializer(UserSerializer):
         model = models.User
         fields = ["id", "full_name", "short_name"]
         read_only_fields = ["id", "full_name", "short_name"]
+
 
 # pylint: disable=abstract-method
 class UsageMetricSerializer(serializers.BaseSerializer):
@@ -563,14 +565,10 @@ class BreadcrumbItemSerializer(serializers.ModelSerializer):
 class UserMeSerializer(UserSerializer):
     """Serialize users for me endpoint."""
 
-    main_workspace = ItemSerializer(
-        source="get_main_workspace", read_only=True, required=False
-    )
-
     class Meta:
         model = models.User
-        fields = UserSerializer.Meta.fields + ["main_workspace"]
-        read_only_fields = UserSerializer.Meta.read_only_fields + ["main_workspace"]
+        fields = UserSerializer.Meta.fields
+        read_only_fields = UserSerializer.Meta.read_only_fields
 
 
 class LinkItemSerializer(serializers.ModelSerializer):

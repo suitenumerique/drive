@@ -266,46 +266,6 @@ def test_api_users_retrieve_me_authenticated():
         "full_name": user.full_name,
         "short_name": user.short_name,
         "language": user.language,
-        "main_workspace": {
-            "id": str(user.get_main_workspace().id),
-            "title": user.get_main_workspace().title,
-            "type": user.get_main_workspace().type,
-            "created_at": user.get_main_workspace()
-            .created_at.isoformat()
-            .replace("+00:00", "Z"),
-            "updated_at": user.get_main_workspace()
-            .updated_at.isoformat()
-            .replace("+00:00", "Z"),
-            "creator": {
-                "id": str(user.get_main_workspace().creator.id),
-                "full_name": user.get_main_workspace().creator.full_name,
-                "short_name": user.get_main_workspace().creator.short_name,
-            },
-            "abilities": user.get_main_workspace().get_abilities(user),
-            "ancestors_link_reach": None,
-            "ancestors_link_role": None,
-            "computed_link_reach": "restricted",
-            "computed_link_role": None,
-            "nb_accesses": 1,
-            "numchild": 0,
-            "numchild_folder": 0,
-            "path": str(user.get_main_workspace().path),
-            "size": None,
-            "url": None,
-            "url_preview": None,
-            "user_role": "owner",
-            "upload_state": None,
-            "is_wopi_supported": False,
-            "link_reach": "restricted",
-            "link_role": "reader",
-            "main_workspace": True,
-            "mimetype": None,
-            "deleted_at": None,
-            "depth": 1,
-            "description": None,
-            "filename": None,
-            "hard_delete_at": None,
-        },
     }
 
 
