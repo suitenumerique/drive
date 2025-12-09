@@ -265,7 +265,10 @@
           "search": "Search",
           "personalSpace": "Personal Space",
           "shared_space": "Shared Space",
-          "public_space": "Public Space"
+          "public_space": "Public Space",
+          "recent": "Recent",
+          "my_files": "My files",
+          "shared_with_me": "Shared with me"
         },
         "trash": {
           "title": "Trash",
@@ -662,6 +665,9 @@
           "shared_space": "Espace partagé",
           "public_space": "Espace public",
           "search": "Rechercher",
+          "recent": "Récent",
+          "my_files": "Mes fichiers",
+          "shared_with_me": "Partagé avec moi",
           "import": {
             "label": "Importer",
             "files": "Importer des fichiers",
@@ -1123,7 +1129,10 @@
           "search": "Zoeken",
           "personalSpace": "Persoonlijke werkruimte",
           "shared_space": "Gedeelte werkruimte",
-          "public_space": "Publieke werkruimte"
+          "public_space": "Publieke werkruimte",
+          "recent": "Recent",
+          "my_files": "Mijn bestanden",
+          "shared_with_me": "Gedeeld met mij"
         },
         "trash": {
           "title": "Prullenbak",

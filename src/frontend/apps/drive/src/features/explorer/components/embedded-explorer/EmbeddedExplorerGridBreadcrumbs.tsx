@@ -1,24 +1,25 @@
 import { useMemo, useState } from "react";
 import { Item, ItemBreadcrumb } from "@/features/drivers/types";
+import { ORDERED_DEFAULT_ROUTES } from "@/utils/defaultRoutes";
 import {
   BreadcrumbItem,
   Breadcrumbs,
 } from "@/features/ui/components/breadcrumbs/Breadcrumbs";
 import { useTranslation } from "react-i18next";
-import { IconSize } from "@gouvfr-lasuite/ui-kit";
-import { WorkspaceIcon } from "../icons/ItemIcon";
+import { Icon, IconSize } from "@gouvfr-lasuite/ui-kit";
+import { FolderIcon } from "../icons/ItemIcon";
 import { NavigationItem } from "../GlobalExplorerContext";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 import clsx from "clsx";
-import { useAuth } from "@/features/auth/Auth";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
 import { useQuery } from "@tanstack/react-query";
 import { getDriver } from "@/features/config/Config";
+import { useRouter } from "next/router";
 
 type BaseBreadcrumbsProps = {
   onGoBack?: (item: Item | ItemBreadcrumb) => void;
   goToSpaces?: () => void;
-  currentItemId: string | null;
+  currentItemId?: string | null;
   showSpacesItem?: boolean;
   showMenuLastItem?: boolean;
 };
@@ -52,13 +53,16 @@ const BaseBreadcrumbs = ({
   currentItemId,
 }: BaseBreadcrumbsProps) => {
   const { t } = useTranslation();
-
+  const router = useRouter();
+  const defaultRoute = ORDERED_DEFAULT_ROUTES.find((route) =>
+    router.pathname.startsWith(route.route)
+  );
   const { data: breadcrumb } = useBreadcrumbQuery(currentItemId);
 
   const { data: item } = useQuery({
     queryKey: ["item", currentItemId],
     queryFn: () => getDriver().getItem(currentItemId!),
-    enabled: currentItemId !== null,
+    enabled: !!currentItemId,
   });
 
   const handleGoBack = (item: Item | ItemBreadcrumb) => {
@@ -67,6 +71,23 @@ const BaseBreadcrumbs = ({
 
   const breadcrumbsItems = useMemo(() => {
     const breadcrumbsItems: BreadcrumbItem[] = [];
+
+    if (defaultRoute) {
+      breadcrumbsItems.push({
+        content: (
+          <div
+            className="c__breadcrumbs__button"
+            onClick={() => {
+              router.push(defaultRoute.route);
+            }}
+          >
+            <Icon name={defaultRoute.iconName} />
+            {t(defaultRoute.label)}
+          </div>
+        ),
+      });
+    }
+
     if (showSpacesItem) {
       breadcrumbsItems.push({
         content: (
@@ -125,11 +146,8 @@ export const BreadcrumbItemButton = ({
   onClick,
   isActive = false,
 }: BreadcrumbItemProps) => {
-  const { user } = useAuth();
-  const isMainWorkspace = item.id === user?.main_workspace?.id;
-  const isWorkspace = item.path.split(".").length === 1;
+  const isRoot = item.path.split(".").length === 1;
 
-  const { t } = useTranslation();
   return (
     <button
       className={clsx("c__breadcrumbs__button", {
@@ -138,13 +156,8 @@ export const BreadcrumbItemButton = ({
       data-testid="breadcrumb-button"
       onClick={onClick}
     >
-      {isWorkspace && (
-        <WorkspaceIcon
-          isMainWorkspace={isMainWorkspace}
-          iconSize={IconSize.SMALL}
-        />
-      )}
-      {isMainWorkspace ? t("explorer.workspaces.mainWorkspace") : item.title}
+      {isRoot && <FolderIcon iconSize={IconSize.SMALL} />}
+      {item.title}
       {rightIcon}
     </button>
   );

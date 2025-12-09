@@ -343,55 +343,6 @@ const TreeProviderInitializer = ({
   const initialTree = async () => {
     const items: TreeViewDataType<TreeItem>[] = [];
 
-    const mainWorkspace =
-      user && user.main_workspace
-        ? itemsToTreeItems([user.main_workspace])
-        : [];
-
-    items.push(...mainWorkspace);
-
-    const sharedWorkspaces = await driver.getItems({
-      workspaces: WorkspaceType.SHARED,
-      page: 1,
-    });
-
-    if (sharedWorkspaces.children.length > 0) {
-      const sharedWorkspaceNode: TreeViewDataType<TreeItem> = {
-        id: WorkspaceCategory.SHARED_SPACE,
-        nodeType: TreeViewNodeTypeEnum.SIMPLE_NODE,
-        childrenCount: sharedWorkspaces.pagination.totalCount,
-        children: sharedWorkspaces.children.map((item) => itemToTreeItem(item)),
-        label: t("explorer.tree.shared_space"),
-        pagination: {
-          currentPage: 1,
-          totalCount: sharedWorkspaces.pagination.totalCount,
-          hasMore: sharedWorkspaces.pagination.hasMore,
-        },
-      };
-      items.push(sharedWorkspaceNode);
-    }
-
-    const publicWorkspaces = await driver.getItems({
-      workspaces: WorkspaceType.PUBLIC,
-      page: 1,
-    });
-
-    if (publicWorkspaces.children.length > 0) {
-      const publicWorkspaceNode: TreeViewDataType<TreeItem> = {
-        id: WorkspaceCategory.PUBLIC_SPACE,
-        nodeType: TreeViewNodeTypeEnum.SIMPLE_NODE,
-        childrenCount: publicWorkspaces.pagination.totalCount,
-        children: publicWorkspaces.children.map((item) => itemToTreeItem(item)),
-        label: t("explorer.tree.public_space"),
-        pagination: {
-          currentPage: 1,
-          totalCount: publicWorkspaces.pagination.totalCount,
-          hasMore: publicWorkspaces.pagination.hasMore,
-        },
-      };
-      items.push(publicWorkspaceNode);
-    }
-
     treeContext?.treeData.resetTree(items);
     setTreeIsInitialized(true);
   };

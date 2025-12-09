@@ -1,5 +1,11 @@
 import { fetchAPI } from "@/features/api/fetchApi";
-import { Driver, Entitlements, ItemFilters, UserFilters, PaginatedChildrenResult } from "../Driver";
+import {
+  Driver,
+  Entitlements,
+  ItemFilters,
+  UserFilters,
+  PaginatedChildrenResult,
+} from "../Driver";
 import {
   DTODeleteInvitation,
   DTOCreateInvitation,
@@ -248,7 +254,8 @@ export class StandardDriver extends Driver {
     parentId?: string;
   }): Promise<Item> {
     const { parentId, ...rest } = data;
-    const response = await fetchAPI(`items/${parentId}/children/`, {
+    const url = parentId ? `items/${parentId}/children/` : `items/`;
+    const response = await fetchAPI(url, {
       method: "POST",
       body: JSON.stringify({
         ...rest,

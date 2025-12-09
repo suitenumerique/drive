@@ -1,12 +1,12 @@
 import { useModal } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
-import publicSpaceIcon from "@/assets/folder/folder-tiny-public.svg";
-import sharedSpaceIcon from "@/assets/folder/folder-tiny-shared.svg";
-import folderPersonalIcon from "@/assets/folder/folder-tiny-perso.svg";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
-import { Item, TreeItem, WorkspaceType } from "@/features/drivers/types";
+import { Item, TreeItem } from "@/features/drivers/types";
+import { ORDERED_DEFAULT_ROUTES } from "@/utils/defaultRoutes";
 import {
   HorizontalSeparator,
+  Icon,
+  IconSize,
   OpenMap,
   TreeDataItem,
   TreeView,
@@ -15,7 +15,7 @@ import {
   TreeViewNodeTypeEnum,
   useTreeContext,
 } from "@gouvfr-lasuite/ui-kit";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ExplorerTreeItem } from "./ExplorerTreeItem";
 import { useMoveItems } from "../../api/useMoveItem";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
@@ -28,8 +28,6 @@ import { canDrop } from "../ExplorerDndProvider";
 import React from "react";
 import clsx from "clsx";
 import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
-import { WorkspaceCategory } from "../../constants";
-import { getDriver } from "@/features/config/Config";
 import { useAuth } from "@/features/auth/Auth";
 import { useRouter } from "next/router";
 
@@ -94,23 +92,23 @@ export const ExplorerTree = () => {
     const treeData = treeContext?.treeData;
 
     // No main workspace when being anon on a public workspace.
-    if (treeData?.getNode("PERSONAL_SPACE")) {
-      treeData?.updateNode("PERSONAL_SPACE", {
-        headerTitle: t("explorer.workspaces.mainWorkspace"),
-      });
-    }
+    // if (treeData?.getNode("PERSONAL_SPACE")) {
+    //   treeData?.updateNode("PERSONAL_SPACE", {
+    //     headerTitle: t("explorer.workspaces.mainWorkspace"),
+    //   });
+    // }
 
-    if (treeData?.getNode(WorkspaceCategory.SHARED_SPACE)) {
-      treeData.updateNode(WorkspaceCategory.SHARED_SPACE, {
-        headerTitle: t("explorer.tree.shared_space"),
-      });
-    }
+    // if (treeData?.getNode(WorkspaceCategory.SHARED_SPACE)) {
+    //   treeData.updateNode(WorkspaceCategory.SHARED_SPACE, {
+    //     headerTitle: t("explorer.tree.shared_space"),
+    //   });
+    // }
 
-    if (treeData?.getNode(WorkspaceCategory.PUBLIC_SPACE)) {
-      treeData.updateNode(WorkspaceCategory.PUBLIC_SPACE, {
-        headerTitle: t("explorer.tree.public_space"),
-      });
-    }
+    // if (treeData?.getNode(WorkspaceCategory.PUBLIC_SPACE)) {
+    //   treeData.updateNode(WorkspaceCategory.PUBLIC_SPACE, {
+    //     headerTitle: t("explorer.tree.public_space"),
+    //   });
+    // }
   }, [i18n.language, t, treeIsInitialized]);
 
   const createFolderModal = useModal();
@@ -234,7 +232,7 @@ type ExplorerTreeMobileNode = {
   id: string;
   label: string;
   route: string;
-  icon: string;
+  icon: React.ReactNode | string;
 };
 
 export const ExplorerTreeMobile = () => {
@@ -243,47 +241,27 @@ export const ExplorerTreeMobile = () => {
   const { user } = useAuth();
   const { setIsLeftPanelOpen, mobileNodesRefreshTrigger } = useGlobalExplorer();
   const [nodes, setNodes] = useState<ExplorerTreeMobileNode[]>([]);
-  const driver = useMemo(() => getDriver(), []);
 
   const initTree = useCallback(async () => {
     if (!user) {
       return;
     }
-    const mainWorkspace = user.main_workspace;
-    const sharedWorkspaces = await driver.getItems({
-      workspaces: WorkspaceType.SHARED,
-      page: 1,
-    });
-    const publicWorkspaces = await driver.getItems({
-      workspaces: WorkspaceType.PUBLIC,
-      page: 1,
-    });
 
-    const nodes: ExplorerTreeMobileNode[] = [
-      {
-        id: mainWorkspace.id,
-        label: t("explorer.workspaces.mainWorkspace"),
-        route: `/explorer/items/${mainWorkspace.id}`,
-        icon: folderPersonalIcon.src,
-      },
-    ];
+    const nodes: ExplorerTreeMobileNode[] = ORDERED_DEFAULT_ROUTES.map(
+      (route) => ({
+        id: route.id,
+        label: t(route.label),
+        route: route.route,
+        icon: (
+          <Icon
+            name={route.iconName}
+            size={IconSize.SMALL}
+            color="var(--c--contextuals--content--semantic--neutral--tertiary)"
+          />
+        ),
+      })
+    );
 
-    if (sharedWorkspaces.children.length > 0) {
-      nodes.push({
-        id: "shared",
-        label: t("explorer.tree.shared_space"),
-        route: `/explorer/items/shared`,
-        icon: sharedSpaceIcon.src,
-      });
-    }
-    if (publicWorkspaces.children.length > 0) {
-      nodes.push({
-        id: "public",
-        label: t("explorer.tree.public_space"),
-        route: `/explorer/items/public`,
-        icon: publicSpaceIcon.src,
-      });
-    }
     setNodes(nodes);
   }, [user, t]);
 
@@ -313,7 +291,11 @@ export const ExplorerTreeMobile = () => {
           setIsLeftPanelOpen(false);
         }}
       >
-        <img src={node.icon} alt="" />
+        {typeof node.icon === "string" ? (
+          <img src={node.icon} alt="" />
+        ) : (
+          node.icon
+        )}
         <span>{node.label}</span>
       </div>
     );
