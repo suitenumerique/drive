@@ -5,3 +5,14 @@
   padding: 0.75rem 0;
   gap: 12px;
 }
+
+.drive__home__left-panel__gaufre {
+  position: absolute;
+  bottom: 0;
+  padding: 8px 10px;
+  border-top: 1px solid var(--c--contextuals--border--surface--primary);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+}

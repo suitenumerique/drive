@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(scalingo) fix deploy scalingo with yarn
+- 🐛(front) fix responsive gaufre
+
 ## [v0.10.1] - 2025-12-05
 
 ### Security

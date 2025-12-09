@@ -11,8 +11,10 @@ export const LeftPanelMobile = () => {
 
   return (
     <div className="drive__home__left-panel">
-      <UserProfile />
-      <Gaufre />
+      <div className="drive__home__left-panel__gaufre">
+        <Gaufre />
+        <UserProfile />
+      </div>
     </div>
   );
 };

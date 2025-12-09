@@ -4,10 +4,11 @@ import {
   useCunninghamTheme,
 } from "../../cunningham/useCunninghamTheme";
 import { useConfig } from "@/features/config/ConfigProvider";
+import { useAppContext } from "@/pages/_app";
 
 export const Gaufre = () => {
   const { config } = useConfig();
-
+  const { theme: themeName } = useAppContext();
   const hideGaufre = config?.FRONTEND_HIDE_GAUFRE;
   const theme = useCunninghamTheme();
   const widgetPath = removeQuotes(theme.components.gaufre.widgetPath);
@@ -17,5 +18,11 @@ export const Gaufre = () => {
     return null;
   }
 
-  return <LaGaufreV2 widgetPath={widgetPath} apiUrl={apiUrl} />;
+  return (
+    <LaGaufreV2
+      widgetPath={widgetPath}
+      apiUrl={apiUrl}
+      showMoreLimit={themeName === "anct" ? 100 : 6}
+    />
+  );
 };
