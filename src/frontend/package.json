@@ -6,6 +6,10 @@
     "apps/*",
     "packages/*"
   ],
+  "engines": {
+    "node": ">=22.0.0 <25.0.0",
+    "yarn": "1.22.22"
+  },
   "scripts": {
     "dev": "yarn workspace drive run dev",
     "build": "yarn workspace drive run build",
