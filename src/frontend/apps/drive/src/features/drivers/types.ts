@@ -150,6 +150,7 @@ export type LocalizedThemeCustomization<T> = {
 
 export interface ThemeCustomization {
   footer?: LocalizedThemeCustomization<FooterProps>;
+  homepage_url: string;
 }
 
 export type ApiConfig = {

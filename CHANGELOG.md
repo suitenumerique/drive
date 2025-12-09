@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(front) allow homepage redirection through config
+
 ### Changed
 
 - ♻️(front) move auth urls to driver for config
