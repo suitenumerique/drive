@@ -1,11 +1,11 @@
 import { Spinner } from "@gouvfr-lasuite/ui-kit";
 import { useEffect } from "react";
-import { login, useAuth } from "@/features/auth/Auth";
+import { useAuth } from "@/features/auth/Auth";
 import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
 import { useSearchParams } from "next/navigation";
 
 export default function SDKPage() {
-  const { user } = useAuth();
+  const { user, login } = useAuth();
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode");
   const token = searchParams.get("token");
@@ -29,7 +29,7 @@ export default function SDKPage() {
       redirect();
     } else {
       const returnTo = window.location.href;
-      login(returnTo);
+      login?.(returnTo);
     }
   }, [user]);
 

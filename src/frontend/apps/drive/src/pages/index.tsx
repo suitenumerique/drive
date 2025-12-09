@@ -2,7 +2,7 @@ import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout"
 import Head from "next/head";
 import { useTranslation } from "next-i18next";
 import { Hero, Footer, MainLayout, HomeGutter } from "@gouvfr-lasuite/ui-kit";
-import { login, useAuth } from "@/features/auth/Auth";
+import { useAuth } from "@/features/auth/Auth";
 import { useEffect } from "react";
 import logoGouv from "@/assets/logo-gouv.svg";
 import banner from "@/assets/home/banner.png";
@@ -20,7 +20,7 @@ import { useThemeCustomization } from "@/hooks/useThemeCustomization";
 import { Feedback } from "@/features/feedback/Feedback";
 export default function HomePage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, login } = useAuth();
   const { config } = useConfig();
 
   const footerCustommization = useThemeCustomization("footer");
@@ -84,7 +84,7 @@ export default function HomePage() {
           mainButton={
             <div className="c__hero__buttons">
               <div>
-                <Button onClick={() => login()} fullWidth>
+                <Button onClick={() => login?.()} fullWidth>
                   {t("home.main_button")}
                 </Button>
               </div>

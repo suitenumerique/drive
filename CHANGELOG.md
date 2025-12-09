@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- ♻️(front) move auth urls to driver for config
+
 ## [v0.10.1] - 2025-12-05
 
 ### Security

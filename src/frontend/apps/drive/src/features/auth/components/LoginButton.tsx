@@ -1,10 +1,12 @@
 import { Button } from "@openfun/cunningham-react";
-import { login } from "../Auth";
 import { useTranslation } from "react-i18next";
 import { SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL } from "@/features/api/fetchApi";
+import { useAuth } from "../Auth";
 
 export const LoginButton = () => {
   const { t } = useTranslation();
+  const { login } = useAuth();
+
   return (
     <Button
       className="drive__header__login-button"
@@ -14,7 +16,7 @@ export const LoginButton = () => {
           SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL,
           window.location.href
         );
-        login();
+        login?.();
       }}
     >
       {t("login")}

@@ -1,11 +1,10 @@
 import { UserMenu } from "@gouvfr-lasuite/ui-kit";
 import { useAuth } from "@/features/auth/Auth";
-import { logout } from "@/features/auth/Auth";
 import { LanguagePickerUserMenu } from "@/features/layouts/components/header/Header";
 import { LoginButton } from "@/features/auth/components/LoginButton";
 
 export const UserProfile = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   return (
     <>
       {user ? (
