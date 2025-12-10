@@ -84,6 +84,9 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 }
 
 .explorer__tree__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   margin-top: 0.75rem;
   padding: 0 12px;
 

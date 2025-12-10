@@ -19,7 +19,11 @@ import { useRouter } from "next/router";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
 import { useMemo } from "react";
 import { itemIsWorkspace } from "@/features/drivers/utils";
-import { isDefaultRoute } from "@/utils/defaultRoutes";
+import {
+  DefaultRoute,
+  getDefaultRouteId,
+  isDefaultRoute,
+} from "@/utils/defaultRoutes";
 
 export const AppExplorerBreadcrumbs = () => {
   const { item, onNavigate } = useGlobalExplorer();
@@ -28,6 +32,10 @@ export const AppExplorerBreadcrumbs = () => {
   const createFolderModal = useModal();
   const importDropdown = useDropdownMenu();
   const onDefaultRoute = isDefaultRoute(router.pathname);
+  const defaultRouteId = getDefaultRouteId(router.pathname);
+  const showActions =
+    (onDefaultRoute && defaultRouteId === DefaultRoute.MY_FILES) ||
+    !onDefaultRoute;
 
   if (!item && !onDefaultRoute) {
     return null;
@@ -50,30 +58,32 @@ export const AppExplorerBreadcrumbs = () => {
           }}
         />
 
-        <div className="explorer__content__breadcrumbs__actions">
-          <ImportDropdown
-            importMenu={importDropdown}
-            trigger={
-              <Button
-                variant="tertiary"
-                size="small"
-                onClick={() => {
-                  importDropdown.setIsOpen(true);
-                }}
-              >
-                {t("explorer.tree.import.label")}
-              </Button>
-            }
-          />
-          <Button
-            icon={<img src={createFolderSvg.src} alt="Create Folder" />}
-            variant="tertiary"
-            size="small"
-            onClick={() => {
-              createFolderModal.open();
-            }}
-          />
-        </div>
+        {showActions && (
+          <div className="explorer__content__breadcrumbs__actions">
+            <ImportDropdown
+              importMenu={importDropdown}
+              trigger={
+                <Button
+                  variant="tertiary"
+                  size="small"
+                  onClick={() => {
+                    importDropdown.setIsOpen(true);
+                  }}
+                >
+                  {t("explorer.tree.import.label")}
+                </Button>
+              }
+            />
+            <Button
+              icon={<img src={createFolderSvg.src} alt="Create Folder" />}
+              variant="tertiary"
+              size="small"
+              onClick={() => {
+                createFolderModal.open();
+              }}
+            />
+          </div>
+        )}
       </div>
       <div className="explorer__content__separator">
         <HorizontalSeparator withPadding={false} />

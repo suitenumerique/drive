@@ -26,10 +26,9 @@ import { addItemsMovedToast } from "../toasts/addItemsMovedToast";
 import { ExplorerTreeMoveConfirmationModal } from "./ExplorerTreeMoveConfirmationModal";
 import { canDrop } from "../ExplorerDndProvider";
 import React from "react";
-import clsx from "clsx";
 import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
 import { useAuth } from "@/features/auth/Auth";
-import { useRouter } from "next/router";
+import { ExplorerTreeNavItem } from "./nav/ExplorerTreeNavItem";
 
 export const ExplorerTree = () => {
   const { t, i18n } = useTranslation();
@@ -137,7 +136,7 @@ export const ExplorerTree = () => {
       />
       <HorizontalSeparator withPadding={false} />
 
-      <ExplorerTreeMobile />
+      <ExplorerTreeNavDefault />
 
       {initialOpenState && (
         <TreeView
@@ -235,11 +234,9 @@ type ExplorerTreeMobileNode = {
   icon: React.ReactNode | string;
 };
 
-export const ExplorerTreeMobile = () => {
+export const ExplorerTreeNavDefault = () => {
   const { t } = useTranslation();
-  const router = useRouter();
   const { user } = useAuth();
-  const { setIsLeftPanelOpen, mobileNodesRefreshTrigger } = useGlobalExplorer();
   const [nodes, setNodes] = useState<ExplorerTreeMobileNode[]>([]);
 
   const initTree = useCallback(async () => {
@@ -267,44 +264,16 @@ export const ExplorerTreeMobile = () => {
 
   useEffect(() => {
     initTree();
-  }, [initTree, mobileNodesRefreshTrigger]);
+  }, [initTree]);
 
   if (!nodes) {
     return null;
   }
 
-  const renderNode = (node: ExplorerTreeMobileNode) => {
-    const isSelected = router.asPath === node.route;
-
-    return (
-      <div
-        id={`explorer__tree__mobile__node--${node.id}`}
-        className={clsx(
-          "explorer__tree__mobile__item",
-          "explorer__tree__mobile__node",
-          {
-            "explorer__tree__mobile__node--selected": isSelected,
-          }
-        )}
-        onClick={() => {
-          router.push(node.route);
-          setIsLeftPanelOpen(false);
-        }}
-      >
-        {typeof node.icon === "string" ? (
-          <img src={node.icon} alt="" />
-        ) : (
-          node.icon
-        )}
-        <span>{node.label}</span>
-      </div>
-    );
-  };
-
   return (
-    <div className="explorer__tree__mobile">
+    <div className="explorer__tree__nav">
       {nodes.map((node) => (
-        <React.Fragment key={node.id}>{renderNode(node)}</React.Fragment>
+        <ExplorerTreeNavItem key={node.id} {...node} />
       ))}
     </div>
   );

@@ -2,6 +2,7 @@ import { getDriver } from "@/features/config/Config";
 import { Item } from "@/features/drivers/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useGlobalExplorer } from "../components/GlobalExplorerContext";
+import { useAddItemToPaginatedList } from "../api/useAddItemToPaginatedList";
 
 export const useMutationCreateFile = () => {
   const driver = getDriver();
@@ -151,19 +152,18 @@ export const useMutationRenameItem = () => {
 };
 
 export const useMutationCreateFolder = () => {
-  const queryClient = useQueryClient();
   const driver = getDriver();
+  const addItemToTopOfPaginatedList = useAddItemToPaginatedList();
 
   return useMutation({
     mutationFn: (...payload: Parameters<typeof driver.createFolder>) => {
       return driver.createFolder(...payload);
     },
     onSuccess: (data, variables) => {
-      if (variables.parentId) {
-        queryClient.invalidateQueries({
-          queryKey: ["items", variables.parentId],
-        });
-      }
+      const queryKey = variables.parentId
+        ? ["items", variables.parentId, "children"]
+        : ["items", "infinite", JSON.stringify({ is_creator_me: true })];
+      addItemToTopOfPaginatedList(queryKey, data);
     },
   });
 };
