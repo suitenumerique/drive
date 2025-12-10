@@ -82,34 +82,6 @@ export const ExplorerTree = () => {
     setInitialOpenState(initialOpenedNodes);
   }, [treeContext?.treeData.nodes]);
 
-  // When the language changes, we update the tree titles to be sure they are translated
-  useEffect(() => {
-    if (!treeIsInitialized) {
-      return;
-    }
-
-    const treeData = treeContext?.treeData;
-
-    // No main workspace when being anon on a public workspace.
-    // if (treeData?.getNode("PERSONAL_SPACE")) {
-    //   treeData?.updateNode("PERSONAL_SPACE", {
-    //     headerTitle: t("explorer.workspaces.mainWorkspace"),
-    //   });
-    // }
-
-    // if (treeData?.getNode(WorkspaceCategory.SHARED_SPACE)) {
-    //   treeData.updateNode(WorkspaceCategory.SHARED_SPACE, {
-    //     headerTitle: t("explorer.tree.shared_space"),
-    //   });
-    // }
-
-    // if (treeData?.getNode(WorkspaceCategory.PUBLIC_SPACE)) {
-    //   treeData.updateNode(WorkspaceCategory.PUBLIC_SPACE, {
-    //     headerTitle: t("explorer.tree.public_space"),
-    //   });
-    // }
-  }, [i18n.language, t, treeIsInitialized]);
-
   const createFolderModal = useModal();
   const createWorkspaceModal = useModal();
 
