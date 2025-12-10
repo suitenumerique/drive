@@ -2,7 +2,7 @@ import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout"
 import Head from "next/head";
 import { useTranslation } from "next-i18next";
 import { Hero, Footer, MainLayout, HomeGutter } from "@gouvfr-lasuite/ui-kit";
-import { login, useAuth } from "@/features/auth/Auth";
+import { useAuth } from "@/features/auth/Auth";
 import { useEffect } from "react";
 import logoGouv from "@/assets/logo-gouv.svg";
 import banner from "@/assets/home/banner.png";
@@ -16,14 +16,14 @@ import { Button } from "@openfun/cunningham-react";
 import { useConfig } from "@/features/config/ConfigProvider";
 import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
 import { SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL } from "@/features/api/fetchApi";
-import { useThemeCustomization } from "@/hooks/useThemeCustomization";
+import { useThemeCustomizationFooter } from "@/hooks/useThemeCustomization";
 import { Feedback } from "@/features/feedback/Feedback";
 export default function HomePage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, login } = useAuth();
   const { config } = useConfig();
 
-  const footerCustommization = useThemeCustomization("footer");
+  const footerCustommization = useThemeCustomizationFooter();
 
   // Redirect to the attempted url if it exists, otherwise redirect to the last visited item.
   useEffect(() => {
@@ -66,6 +66,12 @@ export default function HomePage() {
     return null;
   }
 
+  // Redirect to homepage_url
+  if (config.theme_customization?.homepage_url) {
+    window.location.replace(config.theme_customization?.homepage_url);
+    return;
+  }
+
   return (
     <>
       <Head>
@@ -84,7 +90,7 @@ export default function HomePage() {
           mainButton={
             <div className="c__hero__buttons">
               <div>
-                <Button onClick={() => login()} fullWidth>
+                <Button onClick={() => login?.()} fullWidth>
                   {t("home.main_button")}
                 </Button>
               </div>

@@ -19,6 +19,8 @@ import {
   WopiInfo,
 } from "../types";
 import { DTODeleteAccess } from "../DTOs/AccessesDTO";
+import { User as ConnectedUser } from "@/features/auth/types";
+import { baseApiUrl } from "@/features/api/utils";
 
 export class StandardDriver extends Driver {
   async getConfig(): Promise<ApiConfig> {
@@ -344,6 +346,27 @@ export class StandardDriver extends Driver {
     const response = await fetchAPI(`entitlements/`);
     const data = await response.json();
     return data;
+  }
+
+  async getConnectedUser(): Promise<ConnectedUser> {
+    const response = await fetchAPI(`users/me/`, undefined, {
+      redirectOn40x: false,
+    });
+    const data = await response.json();
+    return data;
+  }
+
+  getLoginUrl(returnTo?: string): URL {
+    const url = new URL("authenticate/", baseApiUrl());
+    if (returnTo) {
+      url.searchParams.set("returnTo", returnTo);
+    }
+
+    return url;
+  }
+
+  getLogoutUrl(): URL {
+    return new URL("logout/", baseApiUrl());
   }
 }
 

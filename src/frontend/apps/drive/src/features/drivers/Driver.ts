@@ -20,6 +20,7 @@ import {
   WopiInfo,
   WorkspaceType,
 } from "./types";
+import { User as ConnectedUser } from "@/features/auth/types";
 
 export enum ItemFiltersScope {
   ALL = "all",
@@ -108,4 +109,9 @@ export abstract class Driver {
   abstract getWopiInfo(itemId: string): Promise<WopiInfo>;
 
   abstract getEntitlements(): Promise<Entitlements>;
+
+  // Auth
+  abstract getConnectedUser(): Promise<ConnectedUser>;
+  abstract getLoginUrl(returnTo?: string): URL;
+  abstract getLogoutUrl(): URL;
 }
