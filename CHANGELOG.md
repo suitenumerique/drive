@@ -26,6 +26,7 @@ and this project adheres to
 - ✨(backend) add more info on the item detail in the admin
 - ✨(backend) add an admin action to trigger new file analysis
 - ✨(backend) add a command to update file_hash in malware_detection_info
+- ✨(backend) enable full customization of external api
 
 ### Fixed
 

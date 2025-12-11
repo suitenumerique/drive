@@ -41,19 +41,6 @@ entitlements_router.register(
     basename="entitlements",
 )
 
-# - Resource server routes
-external_api_router = DefaultRouter()
-external_api_router.register(
-    "items",
-    external_api_viewsets.ResourceServerItemViewSet,
-    basename="resource_server_items",
-)
-external_api_router.register(
-    "users",
-    external_api_viewsets.ResourceServerUserViewSet,
-    basename="resource_server_users",
-)
-
 urlpatterns = [
     path(
         f"api/{settings.API_VERSION}/",
@@ -75,14 +62,50 @@ urlpatterns = [
 
 
 if settings.OIDC_RESOURCE_SERVER_ENABLED:
+    # - Resource server routes
+    external_api_router = DefaultRouter()
+    external_api_router.register(
+        "items",
+        external_api_viewsets.ResourceServerItemViewSet,
+        basename="resource_server_items",
+    )
+    external_api_router.register(
+        "users",
+        external_api_viewsets.ResourceServerUserViewSet,
+        basename="resource_server_users",
+    )
+
+    external_api_urls = [*external_api_router.urls]
+
+    # - Resource server nested routes under items
+    external_api_item_related_router = DefaultRouter()
+    item_access_config = settings.EXTERNAL_API.get("item_access", {})
+    if item_access_config.get("enabled", False):
+        external_api_item_related_router.register(
+            "accesses",
+            external_api_viewsets.ResourceServerItemAccessViewSet,
+            basename="resource_server_item_accesses",
+        )
+
+    item_invitation_config = settings.EXTERNAL_API.get("item_invitation", {})
+    if item_invitation_config.get("enabled", False):
+        external_api_item_related_router.register(
+            "invitations",
+            external_api_viewsets.ResourceServerInvitationViewSet,
+            basename="resource_server_invitations",
+        )
+
+    external_api_urls.append(
+        re_path(
+            r"^items/(?P<resource_id>[0-9a-z-]*)/",
+            include(external_api_item_related_router.urls),
+        )
+    )
+
     urlpatterns.append(
         path(
             f"external_api/{settings.API_VERSION}/",
-            include(
-                [
-                    *external_api_router.urls,
-                ]
-            ),
+            include(external_api_urls),
         )
     )
 
