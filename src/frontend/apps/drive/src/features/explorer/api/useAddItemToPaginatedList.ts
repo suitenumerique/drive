@@ -57,6 +57,52 @@ export const addItemToTopOfPaginatedList = (
 };
 
 /**
+ * Removes items from a paginated infinite query list.
+ * This function finds all queries matching the queryKey pattern and updates them
+ * by filtering out the items with the specified IDs from all pages.
+ *
+ * @param queryClient - The react-query QueryClient instance
+ * @param queryKey - The query key pattern to match (can be partial)
+ * @param itemIds - The IDs of items to remove from the list
+ */
+export const removeItemsFromPaginatedList = (
+  queryClient: QueryClient,
+  queryKey: QueryKey,
+  itemIds: string[]
+): void => {
+  // Get all queries matching the queryKey pattern
+  const queriesData = queryClient.getQueriesData({
+    queryKey,
+  });
+
+  queriesData.forEach((query) => {
+    const key = query[0];
+    const data = query[1] as
+      | { pages: PaginatedChildrenResult<Item>[] }
+      | undefined;
+
+    if (!data || !data.pages || data.pages.length === 0) {
+      return;
+    }
+
+    // Deep clone to avoid mutating the original data
+    const updatedData: { pages: PaginatedChildrenResult<Item>[] } = JSON.parse(
+      JSON.stringify(data)
+    );
+
+    // Remove items from all pages
+    updatedData.pages.forEach((page) => {
+      page.children = page.children?.filter(
+        (child) => !itemIds.includes(child.id)
+      );
+    });
+
+    // Update the query data
+    queryClient.setQueryData(key, updatedData);
+  });
+};
+
+/**
  * Hook that returns a function to add an item to the top of a paginated list.
  * This is a convenience hook that provides access to the queryClient.
  *
@@ -80,5 +126,32 @@ export const useAddItemToPaginatedList = () => {
 
   return (queryKey: QueryKey, newItem: Item) => {
     addItemToTopOfPaginatedList(queryClient, queryKey, newItem);
+  };
+};
+
+/**
+ * Hook that returns a function to remove items from a paginated list.
+ * This is a convenience hook that provides access to the queryClient.
+ *
+ * @example
+ * ```tsx
+ * const removeItems = useRemoveItemsFromPaginatedList();
+ *
+ * // In a mutation's onSuccess callback:
+ * onSuccess: () => {
+ *   removeItems(
+ *     ["items", parentId, "children", "infinite"],
+ *     ["item-id-1", "item-id-2"]
+ *   );
+ * }
+ * ```
+ *
+ * @returns A function that takes a queryKey and item IDs, and removes those items from the list
+ */
+export const useRemoveItemsFromPaginatedList = () => {
+  const queryClient = useQueryClient();
+
+  return (queryKey: QueryKey, itemIds: string[]) => {
+    removeItemsFromPaginatedList(queryClient, queryKey, itemIds);
   };
 };

@@ -290,14 +290,15 @@ export class StandardDriver extends Driver {
   }
 
   async createFile(data: {
-    parentId: string;
+    parentId?: string;
     file: File;
     filename: string;
     progressHandler?: (progress: number) => void;
   }): Promise<Item> {
     const { parentId, file, progressHandler, ...rest } = data;
+    const url = parentId ? `items/${parentId}/children/` : `items/`;
     const response = await fetchAPI(
-      `items/${parentId}/children/`,
+      url,
       {
         method: "POST",
         body: JSON.stringify({

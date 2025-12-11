@@ -45,3 +45,33 @@ export const getDefaultRouteId = (
 export const isDefaultRoute = (pathname: string): boolean => {
   return getDefaultRoute(pathname) !== undefined;
 };
+
+export const isMyFilesRoute = (pathname: string): boolean => {
+  return getDefaultRouteId(pathname) === DefaultRoute.MY_FILES;
+};
+
+export const getMyFilesQueryKey = (): string[] => {
+  return ["items", "infinite", JSON.stringify({ is_creator_me: true })];
+};
+
+export const getRecentItemsQueryKey = (): string[] => {
+  return ["items", "infinite"];
+};
+
+export const getSharedWithMeQueryKey = (): string[] => {
+  return ["items", "infinite", JSON.stringify({ is_creator_me: false })];
+};
+
+export const getQueryKeyForRouteId = (pathname: string): string[] => {
+  const route = getDefaultRouteId(pathname);
+  switch (route) {
+    case DefaultRoute.MY_FILES:
+      return getMyFilesQueryKey();
+    case DefaultRoute.RECENT:
+      return getRecentItemsQueryKey();
+    case DefaultRoute.SHARED_WITH_ME:
+      return getSharedWithMeQueryKey();
+    default:
+      return [];
+  }
+};

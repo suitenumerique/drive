@@ -106,7 +106,7 @@ export abstract class Driver {
   abstract updateWorkspace(item: Partial<Item>): Promise<Item>;
   abstract deleteWorkspace(id: string): Promise<void>;
   abstract createFile(data: {
-    parentId: string;
+    parentId?: string;
     filename: string;
   }): Promise<Item>;
   abstract deleteItems(ids: string[]): Promise<void>;

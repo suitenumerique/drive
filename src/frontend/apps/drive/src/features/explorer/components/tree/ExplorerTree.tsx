@@ -31,7 +31,6 @@ import { useAuth } from "@/features/auth/Auth";
 import { ExplorerTreeNavItem } from "./nav/ExplorerTreeNavItem";
 
 export const ExplorerTree = () => {
-  const { t, i18n } = useTranslation();
   const move = useMoveItems();
   const moveConfirmationModal = useModal();
   const [moveState, setMoveState] = useState<{
