@@ -1051,7 +1051,6 @@ class ItemViewSet(
         user = request.user
         item_access_queryset = models.ItemAccess.objects.select_related("item").filter(
             db.Q(user=user) | db.Q(team__in=user.teams),
-            item__type=models.ItemTypeChoices.FOLDER,
             item__deleted_at__isnull=True,
             item__path__depth=1,
         )

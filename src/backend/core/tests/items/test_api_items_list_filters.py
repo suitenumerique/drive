@@ -324,9 +324,7 @@ def test_api_items_list_filter_title(query, nb_results):
             if random.choice([True, False])
             else None
         )
-        factories.ItemFactory(
-            title=title, users=[user], parent=parent, type=models.ItemTypeChoices.FOLDER
-        )
+        factories.ItemFactory(title=title, users=[user], parent=parent)
 
     # Perform the search query
     response = client.get(f"/api/v1.0/items/?title={query:s}")
