@@ -353,7 +353,7 @@ def test_api_items_list_filter_type():
     client = APIClient()
     client.force_login(user)
 
-    # create 2 folders, main workspace is already a folder, means 3 folders in total
+    # create 2 folders
     folders = factories.UserItemAccessFactory.create_batch(
         2, user=user, item__type=models.ItemTypeChoices.FOLDER
     )
