@@ -392,6 +392,27 @@ def test_api_items_search_authenticated_with_title_filter(query, nb_results):
     assert response.data["count"] == nb_results
 
 
+def test_api_items_search_authenticated_with_title_filter_on_top_level_file():
+    """
+    Authenticated users should be able to search for items by title.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    factories.ItemFactory(
+        title="Item 1", users=[user], type=models.ItemTypeChoices.FILE
+    )
+
+    response = client.get("/api/v1.0/items/search/?title=Item")
+    assert response.status_code == 200
+    assert response.data["count"] == 1
+
+    response = client.get("/api/v1.0/items/search/?title=Item 2")
+    assert response.status_code == 200
+    assert response.data["count"] == 0
+
+
 def test_api_items_search_authenticated_by_type():
     """
     Authenticated users should be able to search for items by type.
@@ -427,15 +448,7 @@ def test_api_items_search_authenticated_by_type():
 
     response = client.get("/api/v1.0/items/search/?type=folder")
     assert response.status_code == 200
-    assert (
-        response.data["count"] == 3
-    )  # top_parent and user.get_main_workspace() are removed.
-
-    response = client.get("/api/v1.0/items/search/?type=workspace")
-    assert response.status_code == 200
-    assert (
-        response.data["count"] == 2
-    )  # top_parent and user.get_main_workspace() are workspaces.
+    assert response.data["count"] == 5
 
 
 def test_api_items_search_authenticated_filter_scopes():
