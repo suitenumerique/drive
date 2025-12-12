@@ -1,41 +1,29 @@
 import { Icon } from "@gouvfr-lasuite/ui-kit";
-import { useRef, useState } from "react";
+import { memo } from "react";
 import { useTranslation } from "react-i18next";
 
 type EmbeddedExplorerSearchInputProps = {
   onSearch: (query: string) => void;
+  value: string;
 };
 
-export const EmbeddedExplorerSearchInput = (
-  props: EmbeddedExplorerSearchInputProps
-) => {
-  const { t } = useTranslation();
-  const [inputSearchValue, setInputSearchValue] = useState<string>("");
-  const timeoutRef = useRef<NodeJS.Timeout>(null);
+export const EmbeddedExplorerSearchInput = memo(
+  (props: EmbeddedExplorerSearchInputProps) => {
+    const { t } = useTranslation();
 
-  const handleChange = (query: string) => {
-    if (query === "") {
-      setInputSearchValue("");
-      props.onSearch("");
-      return;
-    }
-    setInputSearchValue(query);
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = setTimeout(() => {
-      props.onSearch(query);
-    }, 300);
-  };
-  return (
-    <div className="embedded-explorer__search__container">
-      <Icon name="search" />
-      <input
-        type="text"
-        placeholder={t("explorer.search.placeholder", "Rechercher...")}
-        value={inputSearchValue}
-        onChange={(e) => handleChange(e.target.value)}
-      />
-    </div>
-  );
-};
+    return (
+      <div className="embedded-explorer__search__container">
+        <Icon name="search" />
+        <input
+          type="text"
+          placeholder={t("explorer.search.placeholder", "Rechercher...")}
+          value={props.value}
+          autoFocus={true}
+          onChange={(e) => props.onSearch(e.target.value)}
+        />
+      </div>
+    );
+  }
+);
+
+EmbeddedExplorerSearchInput.displayName = "EmbeddedExplorerSearchInput";

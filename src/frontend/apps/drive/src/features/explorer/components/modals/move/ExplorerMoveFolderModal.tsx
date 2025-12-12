@@ -42,6 +42,7 @@ export const ExplorerMoveFolder = ({
     gridProps: {
       enableMetaKeySelection: false,
       gridActionsCell: () => <div />,
+      disableKeyboardNavigation: true,
     },
     itemsFilters: {
       type: ItemType.FOLDER,

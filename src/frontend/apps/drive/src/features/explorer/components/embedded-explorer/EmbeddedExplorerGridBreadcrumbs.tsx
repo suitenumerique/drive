@@ -22,6 +22,7 @@ type BaseBreadcrumbsProps = {
   showAllFolderItem?: boolean;
   showMenuLastItem?: boolean;
   defaultRoute?: DefaultRoute;
+  forcedBreadcrumbsItems?: ItemBreadcrumb[];
 };
 
 type GridBreadcrumbsProps = BaseBreadcrumbsProps & {
@@ -51,6 +52,7 @@ const BaseBreadcrumbs = ({
   showMenuLastItem = false,
   defaultRoute,
   currentItemId,
+  forcedBreadcrumbsItems,
 }: BaseBreadcrumbsProps) => {
   const { t } = useTranslation();
   const router = useRouter();
@@ -70,6 +72,16 @@ const BaseBreadcrumbs = ({
   };
 
   const breadcrumbsItems = useMemo(() => {
+    if (forcedBreadcrumbsItems) {
+      return forcedBreadcrumbsItems.map((item) => ({
+        content: (
+          <BreadcrumbItemButton
+            item={item}
+            onClick={() => handleGoBack(item)}
+          />
+        ),
+      }));
+    }
     const breadcrumbsItems: BreadcrumbItem[] = [];
 
     if (defaultRouteData) {
@@ -129,7 +141,7 @@ const BaseBreadcrumbs = ({
     }
 
     return breadcrumbsItems;
-  }, [showSpacesItem, currentItemId, item, breadcrumb]);
+  }, [showSpacesItem, currentItemId, item, breadcrumb, forcedBreadcrumbsItems]);
 
   return <Breadcrumbs items={breadcrumbsItems} />;
 };

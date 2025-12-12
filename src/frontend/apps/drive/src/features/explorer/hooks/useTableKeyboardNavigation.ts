@@ -24,12 +24,30 @@ export const useTableKeyboardNavigation = ({
     // the case by default, if we start the area selection from outside the table, the body will be focused instead of the table, making the
     // onKeyDown event not being triggered on table)
 
+    if (isDisabled) {
+      return;
+    }
     if (tableRef.current) {
+      console.log("focusing on table");
       tableRef.current.focus({
         preventScroll: true,
       });
     }
   }, [selectedItems, isDisabled]);
+
+  useEffect(() => {
+    console.log("selectedItems", selectedItems);
+  }, [selectedItems]);
+  useEffect(() => {
+    console.log("isDisabled", isDisabled);
+  }, [isDisabled]);
+
+  useEffect(() => {
+    console.log("mount");
+    return () => {
+      console.log("unmount");
+    };
+  }, []);
 
   useEffect(() => {
     // When we change item during navigation, the first arrow trigger must select the first item. Reset the state.
