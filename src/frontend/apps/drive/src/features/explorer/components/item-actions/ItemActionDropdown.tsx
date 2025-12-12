@@ -1,9 +1,9 @@
 import { Item, ItemType } from "@/features/drivers/types";
 import { itemIsWorkspace } from "@/features/drivers/utils";
-import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
+import { DropdownMenu, useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import { useModal } from "@openfun/cunningham-react";
 import { t } from "i18next";
-import { useGlobalExplorer } from "../GlobalExplorerContext";
+import { itemToTreeItem, useGlobalExplorer } from "../GlobalExplorerContext";
 import settingsSvg from "@/assets/icons/settings.svg";
 import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 import { ExplorerRenameItemModal } from "../modals/ExplorerRenameItemModal";
@@ -16,6 +16,11 @@ import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWor
 import { useDeleteTreeNode } from "../tree/hooks/useDeleteTreeNode";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
+import {
+  useMutationCreateFavoriteItem,
+  useMutationDeleteFavoriteItem,
+} from "../../hooks/useMutations";
+import { DefaultRoute } from "@/utils/defaultRoutes";
 
 export type ItemActionDropdownProps = {
   item: Item;
@@ -37,6 +42,7 @@ export const ItemActionDropdown = ({
   const isWorkspace = itemIsWorkspace(item);
   const { handleDownloadItem } = useDownloadItem();
   const { deleteItems: deleteItem } = useDeleteItem();
+  const treeContext = useTreeContext();
   const shareWorkspaceModal = useModal();
   const shareFileModal = useModal();
   const renameModal = useModal();
@@ -45,8 +51,11 @@ export const ItemActionDropdown = ({
   const explorerContext = useGlobalExplorer();
   const { deleteTreeNode } = useDeleteTreeNode();
 
-  const canShareWorkspace = isWorkspace;
-  const canShareFile = item.type === ItemType.FILE;
+  const { mutateAsync: deleteFavoriteItem } = useMutationDeleteFavoriteItem();
+  const { mutateAsync: createFavoriteItem } = useMutationCreateFavoriteItem();
+  const canShareFolder = item.abilities?.accesses_manage;
+  const canShareFile =
+    item.abilities?.accesses_manage && item.type === ItemType.FILE;
   const handleMove = () => {
     moveModal.open();
   };
@@ -86,6 +95,21 @@ export const ItemActionDropdown = ({
     }
   };
 
+  const handleFavorite = async () => {
+    await createFavoriteItem(item.id, {
+      onSuccess: () => {
+        // We add the path level to the id to avoid conflicts with the same id inside the tree for favorite items.
+        const id = item.id + "_0";
+        const itemTree = itemToTreeItem({ ...item, id }, undefined);
+        treeContext?.treeData.addChild(DefaultRoute.FAVORITES, itemTree);
+      },
+    });
+  };
+
+  const handleUnfavorite = async () => {
+    await deleteFavoriteItem(item.id);
+  };
+
   useEffect(() => {
     onModalOpenChange?.(
       renameModal.isOpen ||
@@ -120,7 +144,7 @@ export const ItemActionDropdown = ({
             label: item.abilities?.accesses_manage
               ? t("explorer.tree.workspace.options.share")
               : t("explorer.tree.workspace.options.share_view"),
-            isHidden: !canShareWorkspace,
+            isHidden: !item.abilities?.accesses_manage,
             callback: shareWorkspaceModal.open,
           },
           {
@@ -162,6 +186,15 @@ export const ItemActionDropdown = ({
             showSeparator: true,
           },
           {
+            icon: <span className="material-icons">favorite</span>,
+            label: item.is_favorite
+              ? t("explorer.grid.actions.unfavorite")
+              : t("explorer.grid.actions.favorite"),
+            value: "favorite",
+            isHidden: !item.abilities?.retrieve,
+            callback: item.is_favorite ? handleUnfavorite : handleFavorite,
+          },
+          {
             icon: <span className="material-icons">delete</span>,
             label: !isWorkspace
               ? t("explorer.tree.workspace.options.delete_folder")
@@ -180,7 +213,7 @@ export const ItemActionDropdown = ({
       {renameModal.isOpen && (
         <ExplorerRenameItemModal {...renameModal} item={item} key={item.id} />
       )}
-      {canShareWorkspace && shareWorkspaceModal.isOpen && (
+      {canShareFolder && shareWorkspaceModal.isOpen && (
         <WorkspaceShareModal
           {...shareWorkspaceModal}
           item={item}

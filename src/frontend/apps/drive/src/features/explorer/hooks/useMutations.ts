@@ -1,21 +1,28 @@
 import { getDriver } from "@/features/config/Config";
 import { Item } from "@/features/drivers/types";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, QueryKey } from "@tanstack/react-query";
 import { useGlobalExplorer } from "../components/GlobalExplorerContext";
+import {
+  useAddItemToPaginatedList,
+  useRemoveItemsFromPaginatedList,
+} from "../api/useAddItemToPaginatedList";
+import { useRouter } from "next/router";
+import { getQueryKeyForRouteId, isMyFilesRoute } from "@/utils/defaultRoutes";
+import {
+  PaginatedChildrenResult,
+  useTreeContext,
+} from "@gouvfr-lasuite/ui-kit";
 
 export const useMutationCreateFile = () => {
   const driver = getDriver();
-  const queryClient = useQueryClient();
+  const refresh = useRefreshQueryCacheAfterMutation();
+
   return useMutation({
     mutationFn: async (...payload: Parameters<typeof driver.createFile>) => {
       return driver.createFile(...payload);
     },
     onSuccess: (data, variables) => {
-      if (variables.parentId) {
-        queryClient.invalidateQueries({
-          queryKey: ["items", variables.parentId],
-        });
-      }
+      refresh(variables.parentId);
     },
     meta: {
       showErrorOn403: true,
@@ -25,53 +32,23 @@ export const useMutationCreateFile = () => {
 
 export const useMutationDeleteItems = () => {
   const driver = getDriver();
-  const queryClient = useQueryClient();
   const { item } = useGlobalExplorer();
+  const mutationCallbacks = useDeleteMutationCallbacks(item?.id);
+
   return useMutation({
     mutationFn: async (...payload: Parameters<typeof driver.deleteItems>) => {
       await driver.deleteItems(...payload);
     },
-    onMutate: async (itemIds) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({
-        queryKey: ["items", item!.id, "children"],
-      });
-
-      // Snapshot the previous value
-      const previousItems = queryClient.getQueryData([
-        "items",
-        item!.id,
-        "children",
-      ]);
-
-      // Optimistically update to the new value
-      queryClient.setQueryData(
-        ["items", item!.id, "children"],
-        (old: Item[]) =>
-          old ? old.filter((i: Item) => !itemIds.includes(i.id)) : old
-      );
-
-      // Return a context object with the snapshotted value
-      return { previousItems };
-    },
-    onError: (err, variables, context) => {
-      // If the mutation fails, use the context returned from onMutate to roll back
-      queryClient.setQueryData(
-        ["items", item!.id, "children"],
-        context?.previousItems
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["items", item!.id],
-      });
-    },
+    ...mutationCallbacks,
   });
 };
 
 export const useMutationHardDeleteItems = () => {
   const driver = getDriver();
-  const queryClient = useQueryClient();
+  const mutationCallbacks = useDeleteMutationCallbacks(undefined, [
+    "items",
+    "trash",
+  ]);
 
   return useMutation({
     mutationFn: async (
@@ -79,91 +56,37 @@ export const useMutationHardDeleteItems = () => {
     ) => {
       await driver.hardDeleteItems(...payload);
     },
-    onMutate: async (itemIds) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({
-        queryKey: ["items", "trash"],
-      });
-
-      // Snapshot the previous value
-      const previousItems = queryClient.getQueryData(["items", "trash"]);
-
-      // Optimistically update to the new value
-      queryClient.setQueryData(["items", "trash"], (old: Item[]) =>
-        old ? old.filter((i: Item) => !itemIds.includes(i.id)) : old
-      );
-
-      // Return a context object with the snapshotted value
-      return { previousItems };
-    },
-    onError: (err, variables, context) => {
-      // If the mutation fails, use the context returned from onMutate to roll back
-      queryClient.setQueryData(["items", "trash"], context?.previousItems);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["items", "trash"],
-      });
-    },
+    ...mutationCallbacks,
   });
 };
 
 export const useMutationRenameItem = () => {
   const driver = getDriver();
-  const queryClient = useQueryClient();
+
   const { item } = useGlobalExplorer();
+  const { onMutate, onError } = useUpdateMutationCallbacks(item?.id);
   return useMutation({
     mutationFn: async (...payload: Parameters<typeof driver.updateItem>) => {
       await driver.updateItem(...payload);
     },
-    onMutate: async (itemUpdated) => {
-      await queryClient.cancelQueries({
-        queryKey: ["items", item!.id, "children"],
-      });
-      const previousItems = queryClient.getQueryData([
-        "items",
-        item!.id,
-        "children",
-      ]);
-      queryClient.setQueryData(
-        ["items", item!.id, "children"],
-        (old: Item[]) =>
-          old
-            ? old.map((i: Item) =>
-                i.id === itemUpdated.id ? { ...i, ...itemUpdated } : i
-              )
-            : old
-      );
-      return { previousItems };
-    },
-    onError: (err, variables, context) => {
-      queryClient.setQueryData(
-        ["items", item!.id, "children"],
-        context?.previousItems
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["items", item!.id, "children"],
-      });
-    },
+    onMutate,
+    onError,
   });
 };
 
 export const useMutationCreateFolder = () => {
-  const queryClient = useQueryClient();
   const driver = getDriver();
+  const addItemToTopOfPaginatedList = useAddItemToPaginatedList();
 
   return useMutation({
     mutationFn: (...payload: Parameters<typeof driver.createFolder>) => {
       return driver.createFolder(...payload);
     },
     onSuccess: (data, variables) => {
-      if (variables.parentId) {
-        queryClient.invalidateQueries({
-          queryKey: ["items", variables.parentId],
-        });
-      }
+      const queryKey = variables.parentId
+        ? ["items", variables.parentId, "children"]
+        : ["items", "infinite", JSON.stringify({ is_creator_me: true })];
+      addItemToTopOfPaginatedList(queryKey, data);
     },
   });
 };
@@ -180,6 +103,23 @@ export const useMutationUpdateItem = () => {
       queryClient.invalidateQueries({
         queryKey: ["items", item!.id],
         exact: true,
+      });
+    },
+  });
+};
+
+export const useMutationUpdateLinkConfiguration = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      ...payload: Parameters<typeof driver.updateLinkConfiguration>
+    ) => {
+      await driver.updateLinkConfiguration(...payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["items", variables.itemId],
       });
     },
   });
@@ -342,4 +282,184 @@ export const useMutationDeleteInvitation = () => {
       });
     },
   });
+};
+
+export const useMutationCreateFavoriteItem = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  const treeContext = useTreeContext();
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.createFavoriteItem>) => {
+      return driver.createFavoriteItem(...payload);
+    },
+  });
+};
+
+export const useMutationDeleteFavoriteItem = () => {
+  const driver = getDriver();
+
+  const treeContext = useTreeContext();
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.deleteFavoriteItem>) => {
+      return driver.deleteFavoriteItem(...payload);
+    },
+    onSuccess: (_data, itemId: string) => {
+      treeContext?.treeData.deleteNode(itemId + "_0");
+    },
+  });
+};
+
+export const useGetQueryKey = () => {
+  const router = useRouter();
+  return (parentId?: string) => {
+    const isOnMyFilesRoute = isMyFilesRoute(router.pathname);
+    let queryKey = parentId ? ["items", parentId, "children"] : [];
+    if (isOnMyFilesRoute) {
+      queryKey = getQueryKeyForRouteId(router.pathname);
+    }
+    return queryKey;
+  };
+};
+
+export const useRemoveFromQueryCache = () => {
+  const getQueryKey = useGetQueryKey();
+  const queryClient = useQueryClient();
+  const removeItems = useRemoveItemsFromPaginatedList();
+
+  return async (itemIds: string[], parentId?: string) => {
+    const queryKey = getQueryKey(parentId);
+    await queryClient.cancelQueries({
+      queryKey,
+    });
+    const previousItems = queryClient.getQueryData(queryKey);
+    removeItems(queryKey, itemIds);
+
+    return { previousItems };
+  };
+};
+
+export const useRefreshQueryCacheAfterMutation = () => {
+  const queryClient = useQueryClient();
+  const getQueryKey = useGetQueryKey();
+
+  return (parentId?: string) => {
+    const queryKey = getQueryKey(parentId);
+    const previousItems = queryClient.getQueryData(queryKey);
+    queryClient.invalidateQueries({
+      queryKey,
+    });
+    return { previousItems };
+  };
+};
+
+export const useDeleteMutationCallbacks = (
+  parentId?: string,
+  defaultQueryKey?: string[]
+) => {
+  const queryClient = useQueryClient();
+  const getQueryKey = useGetQueryKey();
+  const removeItems = useRemoveItemsFromPaginatedList();
+  const queryKey = defaultQueryKey ?? getQueryKey(parentId);
+
+  const onMutate = async (itemIds: string[]) => {
+    await queryClient.cancelQueries({
+      queryKey,
+    });
+    const previousItems = queryClient.getQueryData(queryKey);
+    removeItems(queryKey, itemIds);
+    return { previousItems };
+  };
+
+  const onError = (_err: unknown, _variables: unknown, context: unknown) => {
+    queryClient.setQueryData(
+      queryKey,
+      (context as { previousItems: Item[] })?.previousItems
+    );
+  };
+
+  const onSuccess = () => {
+    queryClient.invalidateQueries({
+      queryKey,
+    });
+  };
+
+  return { onMutate, onError, onSuccess };
+};
+
+export const useUpdateMutationCallbacks = (
+  parentId?: string,
+  defaultQueryKey?: string[]
+) => {
+  const queryClient = useQueryClient();
+  const getQueryKey = useGetQueryKey();
+  const queryKey = defaultQueryKey ?? getQueryKey(parentId);
+
+  const onMutate = async (itemUpdated: Partial<Item>) => {
+    if (!itemUpdated.id) {
+      return {};
+    }
+
+    await queryClient.cancelQueries({
+      queryKey,
+    });
+
+    // Get all queries matching the queryKey pattern
+    const queriesData = queryClient.getQueriesData({
+      queryKey,
+    });
+
+    const previousData: Array<[QueryKey, unknown]> = [];
+
+    queriesData.forEach((query) => {
+      const key = query[0] as QueryKey;
+      const data = query[1] as
+        | { pages: PaginatedChildrenResult<Item>[] }
+        | undefined;
+
+      // Store previous data for rollback
+      previousData.push([key, data]);
+
+      if (!data || !data.pages || data.pages.length === 0) {
+        return;
+      }
+
+      // Deep clone to avoid mutating the original data
+      const updatedData: { pages: PaginatedChildrenResult<Item>[] } =
+        JSON.parse(JSON.stringify(data));
+
+      // Update item in all pages
+      updatedData.pages.forEach((page) => {
+        if (page.children) {
+          page.children = page.children.map((child) =>
+            child.id === itemUpdated.id ? { ...child, ...itemUpdated } : child
+          );
+        }
+      });
+
+      // Update the query data
+      queryClient.setQueryData(key, updatedData);
+    });
+
+    return { previousData };
+  };
+
+  const onError = (_err: unknown, _variables: unknown, context: unknown) => {
+    const previousData = (
+      context as { previousData?: Array<[QueryKey, unknown]> }
+    )?.previousData;
+
+    if (previousData) {
+      previousData.forEach(([key, data]) => {
+        queryClient.setQueryData(key, data);
+      });
+    }
+  };
+
+  const onSuccess = () => {
+    queryClient.invalidateQueries({
+      queryKey,
+    });
+  };
+
+  return { onMutate, onError, onSuccess };
 };

@@ -111,7 +111,7 @@ def test_api_items_delete_authenticated_owner_of_ancestor(depth):
                 creator=user,
             )
         )
-    assert models.Item.objects.count() == depth + 1
+    assert models.Item.objects.count() == depth
 
     response = client.delete(
         f"/api/v1.0/items/{items[-1].id}/",
@@ -120,8 +120,8 @@ def test_api_items_delete_authenticated_owner_of_ancestor(depth):
     assert response.status_code == 204
 
     # Make sure it is only a soft delete
-    assert models.Item.objects.count() == depth + 1
-    assert models.Item.objects.filter(deleted_at__isnull=True).count() == depth
+    assert models.Item.objects.count() == depth
+    assert models.Item.objects.filter(deleted_at__isnull=True).count() == depth - 1
     assert models.Item.objects.filter(deleted_at__isnull=False).count() == 1
 
 

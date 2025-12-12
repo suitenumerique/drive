@@ -12,7 +12,6 @@ import {
   ItemBreadcrumb,
   ItemType,
   TreeItem,
-  WorkspaceType,
 } from "@/features/drivers/types";
 import { createContext } from "react";
 import { getDriver } from "@/features/config/Config";
@@ -38,7 +37,7 @@ import {
 } from "@/features/ui/preview/files-preview/FilesPreview";
 import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 import { useAuth } from "@/features/auth/Auth";
-import { WorkspaceCategory } from "../constants";
+import { DefaultRoute } from "@/utils/defaultRoutes";
 
 export interface GlobalExplorerContextType {
   displayMode: "sdk" | "app";
@@ -204,6 +203,7 @@ export const GlobalExplorerProvider = ({
    * Preview states.
    */
   const [previewItem, setPreviewItem] = useState<Item | undefined>(undefined);
+  console.log("previewItem", previewItem);
   const [previewItems, setPreviewItems] = useState<Item[]>([]);
   const previewFiles = useMemo(() => {
     return previewItems
@@ -251,22 +251,16 @@ export const GlobalExplorerProvider = ({
       <TreeProvider
         initialTreeData={[]}
         initialNodeId={initialId}
-        onLoadChildren={async (id, page) => {
-          if (
-            id === WorkspaceCategory.SHARED_SPACE ||
-            id === WorkspaceCategory.PUBLIC_SPACE
-          ) {
-            const workspaces =
-              id === WorkspaceCategory.SHARED_SPACE
-                ? WorkspaceType.SHARED
-                : WorkspaceType.PUBLIC;
-            const response = await driver.getItems({
+        onLoadChildren={async (itemId, page) => {
+          // If the itemId is a favorite item, we need to get the favorite items.
+          const id = itemId.split("_")[0];
+          if (id === DefaultRoute.FAVORITES) {
+            const response = await driver.getFavoriteItems({
               page: page,
-              workspaces,
             });
 
             const result = response.children.map((item) =>
-              itemToTreeItem(item, id)
+              itemToTreeItem(item, id, true)
             ) as TreeViewDataType<Item>[];
 
             return {
@@ -343,56 +337,23 @@ const TreeProviderInitializer = ({
   const initialTree = async () => {
     const items: TreeViewDataType<TreeItem>[] = [];
 
-    const mainWorkspace =
-      user && user.main_workspace
-        ? itemsToTreeItems([user.main_workspace])
-        : [];
+    const favoritesNode: TreeViewDataType<TreeItem> = {
+      id: DefaultRoute.FAVORITES,
+      nodeType: TreeViewNodeTypeEnum.SIMPLE_NODE,
+      childrenCount: 1,
+      children: [],
+      label: "Favorites",
+      pagination: {
+        currentPage: 0,
+        totalCount: 1,
+        hasMore: true,
+      },
+    };
 
-    items.push(...mainWorkspace);
-
-    const sharedWorkspaces = await driver.getItems({
-      workspaces: WorkspaceType.SHARED,
-      page: 1,
-    });
-
-    if (sharedWorkspaces.children.length > 0) {
-      const sharedWorkspaceNode: TreeViewDataType<TreeItem> = {
-        id: WorkspaceCategory.SHARED_SPACE,
-        nodeType: TreeViewNodeTypeEnum.SIMPLE_NODE,
-        childrenCount: sharedWorkspaces.pagination.totalCount,
-        children: sharedWorkspaces.children.map((item) => itemToTreeItem(item)),
-        label: t("explorer.tree.shared_space"),
-        pagination: {
-          currentPage: 1,
-          totalCount: sharedWorkspaces.pagination.totalCount,
-          hasMore: sharedWorkspaces.pagination.hasMore,
-        },
-      };
-      items.push(sharedWorkspaceNode);
-    }
-
-    const publicWorkspaces = await driver.getItems({
-      workspaces: WorkspaceType.PUBLIC,
-      page: 1,
-    });
-
-    if (publicWorkspaces.children.length > 0) {
-      const publicWorkspaceNode: TreeViewDataType<TreeItem> = {
-        id: WorkspaceCategory.PUBLIC_SPACE,
-        nodeType: TreeViewNodeTypeEnum.SIMPLE_NODE,
-        childrenCount: publicWorkspaces.pagination.totalCount,
-        children: publicWorkspaces.children.map((item) => itemToTreeItem(item)),
-        label: t("explorer.tree.public_space"),
-        pagination: {
-          currentPage: 1,
-          totalCount: publicWorkspaces.pagination.totalCount,
-          hasMore: publicWorkspaces.pagination.hasMore,
-        },
-      };
-      items.push(publicWorkspaceNode);
-    }
+    items.push(favoritesNode);
 
     treeContext?.treeData.resetTree(items);
+
     setTreeIsInitialized(true);
   };
 
@@ -404,13 +365,24 @@ const TreeProviderInitializer = ({
   return children;
 };
 
-export const itemToTreeItem = (item: Item, parentId?: string): TreeItem => {
+export const itemToTreeItem = (
+  item: Item,
+  parentId?: string,
+  isFavoriteItem?: boolean
+): TreeItem => {
+  const pathLevel = item.path.split(".").length - 1;
+  // We add the path level to the id to avoid conflicts with the same id inside the tree.
+  // This is useful when we have a favorite item that is a child of another item.
+  const id = item.id + (isFavoriteItem ? `_${pathLevel}` : "");
   return {
     ...item,
+    id,
     parentId: parentId,
     childrenCount: item.numchild_folder ?? 0,
     children:
-      item.children?.map((child) => itemToTreeItem(child, item.id)) ?? [],
+      item.children?.map((child) =>
+        itemToTreeItem(child, item.id, isFavoriteItem)
+      ) ?? [],
     nodeType: TreeViewNodeTypeEnum.NODE,
     title: getItemTitle(item),
   };

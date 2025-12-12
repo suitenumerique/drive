@@ -3,6 +3,7 @@ import {
   Invitation,
   Item,
   LinkReach,
+  LinkRole,
   Role,
   User,
 } from "@/features/drivers/types";
@@ -13,11 +14,12 @@ import {
   useMutationDeleteInvitation,
   useMutationUpdateAccess,
   useMutationUpdateInvitation,
-  useMutationUpdateItem,
+  useMutationUpdateLinkConfiguration,
 } from "@/features/explorer/hooks/useMutations";
 import {
-  useInfiniteItemAccesses,
   useInfiniteItemInvitations,
+  useItem,
+  useItemAccesses,
 } from "@/features/explorer/hooks/useQueries";
 import { useUsers } from "@/features/users/hooks/useUserQueries";
 import { useClipboard } from "@/hooks/useCopyToClipboard";
@@ -25,7 +27,6 @@ import {
   HorizontalSeparator,
   ShareModal,
   ShareModalCopyLinkFooter,
-  useTreeContext,
 } from "@gouvfr-lasuite/ui-kit";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -40,20 +41,24 @@ type WorkspaceShareModalProps = {
 export const WorkspaceShareModal = ({
   isOpen,
   onClose,
-  item,
+  item: initialItem,
 }: WorkspaceShareModalProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const copyToClipboard = useClipboard();
-  const treeContext = useTreeContext<Item>();
+  const itemId = initialItem.id;
+  const { data: item } = useItem(itemId, {
+    enabled: isOpen,
+    initialData: initialItem,
+  });
+
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [queryValue, setQueryValue] = useState("");
   const previousSearchResult = useRef<User[]>([]);
-  const { data, hasNextPage: hasNextMembers } = useInfiniteItemAccesses(
-    item.id
-  );
+  const { data } = useItemAccesses(itemId);
+
   const { data: invitations, hasNextPage: hasNextInvitations } =
-    useInfiniteItemInvitations(item.id);
+    useInfiniteItemInvitations(itemId);
   const { mutateAsync: createAccess } = useMutationCreateAccess();
   const { mutateAsync: createInvitation } = useMutationCreateInvitation();
 
@@ -98,7 +103,7 @@ export const WorkspaceShareModal = ({
 
     const promises = inviteByUsername.map((user) =>
       createAccess({
-        itemId: item.id,
+        itemId: itemId,
         userId: user.id,
         role: role as Role,
       })
@@ -106,7 +111,7 @@ export const WorkspaceShareModal = ({
 
     const promisesInvitation = inviteByEmail.map((user) =>
       createInvitation({
-        itemId: item.id,
+        itemId: itemId,
         email: user.email,
         role: role as Role,
       })
@@ -116,11 +121,11 @@ export const WorkspaceShareModal = ({
     await Promise.all(promisesInvitation);
 
     queryClient.invalidateQueries({
-      queryKey: ["itemAccesses", item.id],
+      queryKey: ["itemAccesses", itemId],
     });
 
     queryClient.invalidateQueries({
-      queryKey: ["itemInvitations", item.id],
+      queryKey: ["itemInvitations", itemId],
     });
   };
 
@@ -129,7 +134,59 @@ export const WorkspaceShareModal = ({
       return [];
     }
 
-    return data.pages.flatMap((page) => page.results);
+    // return data;
+
+    const accessesByUserId = new Map<string, Access>();
+
+    data.forEach((access) => {
+      const existing = accessesByUserId.get(access.user.id);
+
+      if (!existing) {
+        accessesByUserId.set(access.user.id, access);
+        return;
+      }
+
+      if (!existing.is_explicit && access.is_explicit) {
+        accessesByUserId.set(access.user.id, access);
+      }
+    });
+
+    const result = Array.from(accessesByUserId.values());
+
+    // return result;
+    // Find parent_id_max_role for each access
+    return result.map((access) => {
+      if (!access.max_ancestors_role) {
+        return access;
+      }
+
+      // Only search for parent if max_ancestors_role is different from max_role
+      if (access.max_ancestors_role === access.max_role) {
+        return access;
+      }
+
+      // Find the access with max_role equal to max_ancestors_role and same user/team
+      const parentAccess = data.find((candidateAccess) => {
+        const sameUser =
+          access.user?.id && candidateAccess.user?.id
+            ? access.user.id === candidateAccess.user.id
+            : false;
+        const sameTeam =
+          access.team && candidateAccess.team
+            ? access.team === candidateAccess.team
+            : false;
+
+        return (
+          (sameUser || sameTeam) &&
+          candidateAccess.max_role === access.max_ancestors_role
+        );
+      });
+
+      return {
+        ...access,
+        parent_id_max_role: parentAccess?.item.id,
+      };
+    });
   }, [data]);
 
   const invitationsData: Invitation[] = useMemo(() => {
@@ -155,7 +212,46 @@ export const WorkspaceShareModal = ({
     }, 500);
   };
 
-  const updateItem = useMutationUpdateItem();
+  const linkReachChoices = useMemo(() => {
+    const options = item?.abilities.link_select_options;
+    if (!options) {
+      return [];
+    }
+
+    return Object.entries(options).map(([key]) => ({
+      value: key as LinkReach,
+
+      label: t(`share_modal.options.link_reach.${key}`),
+    }));
+  }, [item]);
+
+  const linkRoleChoices = useMemo(() => {
+    const options = item?.abilities.link_select_options;
+
+    if (!options) {
+      return [];
+    }
+
+    const currentLinkReach = item?.computed_link_reach;
+    if (!currentLinkReach) {
+      return undefined;
+    }
+
+    const linkRoleOptions = options[currentLinkReach];
+
+    if (!linkRoleOptions) {
+      return undefined;
+    }
+
+    const a = linkRoleOptions.map((role) => ({
+      value: role,
+      label: t(`roles.${role}`),
+    }));
+
+    return a;
+  }, [item]);
+
+  const updateLinkConfiguration = useMutationUpdateLinkConfiguration();
 
   return (
     <ShareModal
@@ -163,25 +259,25 @@ export const WorkspaceShareModal = ({
       loading={isLoadingUsers ?? false}
       onClose={onClose}
       modalTitle={t("explorer.actions.share.modal.title")}
-      canUpdate={item.abilities?.accesses_manage}
+      canUpdate={item?.abilities.accesses_manage}
       accesses={accessesData}
       invitations={invitationsData}
       invitationRoles={rolesOptions}
       onDeleteAccess={(access) =>
         deleteAccess({
-          itemId: item.id,
+          itemId: itemId,
           accessId: access.id,
         })
       }
       onDeleteInvitation={(invitation) =>
         deleteInvitation({
-          itemId: item.id,
+          itemId: itemId,
           invitationId: invitation.id,
         })
       }
       onUpdateInvitation={(invitation, role) =>
         updateInvitation({
-          itemId: item.id,
+          itemId: itemId,
           invitationId: invitation.id,
           role: role as Role,
         })
@@ -192,23 +288,72 @@ export const WorkspaceShareModal = ({
           return;
         }
 
-        updateAccess({
-          itemId: item.id,
-          accessId: access.id,
-          role: role as Role,
-          user_id: access.user.id,
-        });
+        if (!access.is_explicit) {
+          onInviteUser([access.user], role as Role);
+        } else {
+          updateAccess({
+            itemId: itemId,
+            accessId: access.id,
+            role: role as Role,
+            user_id: access.user.id,
+          });
+        }
       }}
       onSearchUsers={onSearch}
-      hasNextMembers={hasNextMembers}
+      hasNextMembers={false}
       hasNextInvitations={hasNextInvitations}
       searchUsersResult={queryValue === "" ? undefined : users}
       onInviteUser={(users, role) => onInviteUser(users, role as Role)}
+      accessRoleTopMessage={(access) => {
+        const availableRoles = access.abilities.set_role_to;
+        if (availableRoles.length === 0 && access.role === Role.OWNER) {
+          return t("share_modal.options.top_message.only_owner");
+        }
+        if (availableRoles.length === 0 && access.role !== Role.OWNER) {
+          return t("share_modal.options.top_message.to_lower_role");
+        }
+        return undefined;
+      }}
+      getAccessRoles={(access) => {
+        const availableRoles = access.abilities.set_role_to;
+        // const availableRoles = [Role.EDITOR, Role.ADMIN, Role.OWNER];
+
+        const isDisabled = (role: Role) => {
+          return !availableRoles.includes(role) && access.role !== role;
+        };
+
+        return [
+          {
+            value: Role.READER,
+            subtText: t("share_modal.options.subtext.reader"),
+            isDisabled: isDisabled(Role.READER),
+            label: t("roles.reader"),
+          },
+          {
+            value: Role.EDITOR,
+            subtText: t("share_modal.options.subtext.editor"),
+            isDisabled: isDisabled(Role.EDITOR),
+            label: t("roles.editor"),
+          },
+          {
+            value: Role.ADMIN,
+            subtText: t("share_modal.options.subtext.admin"),
+            isDisabled: isDisabled(Role.ADMIN),
+            label: t("roles.administrator"),
+          },
+          {
+            value: Role.OWNER,
+            subtText: t("share_modal.options.subtext.owner"),
+            isDisabled: isDisabled(Role.OWNER),
+            label: t("roles.owner"),
+          },
+        ];
+      }}
       outsideSearchContent={
         <ShareModalCopyLinkFooter
           onCopyLink={() => {
             copyToClipboard(
-              `${window.location.origin}/explorer/items/${item.id}`
+              `${window.location.origin}/explorer/items/${itemId}`
             );
           }}
           onOk={() => {
@@ -217,33 +362,36 @@ export const WorkspaceShareModal = ({
         />
       }
       linkSettings={true}
-      linkReachChoices={[
-        {
-          value: LinkReach.PUBLIC,
-        },
-        {
-          value: LinkReach.RESTRICTED,
-        },
-      ]}
-      linkReach={item.link_reach}
-      onUpdateLinkReach={(value) => {
-        updateItem.mutate(
-          {
-            id: item.id,
-            link_reach: value as LinkReach,
-          },
-          {
-            onSuccess: () => {
-              treeContext?.treeData.updateNode(item.id, {
-                link_reach: value as LinkReach,
-              });
-            },
-          }
-        );
+      accessRoleKey="max_role"
+      linkReachChoices={linkReachChoices}
+      linkRoleChoices={linkRoleChoices}
+      showLinkRole={true}
+      linkReach={item?.computed_link_reach ?? item?.link_reach}
+      linkRole={item?.computed_link_role ?? item?.link_role}
+      onUpdateLinkRole={(value) => {
+        updateLinkConfiguration.mutate({
+          itemId: itemId,
+          link_reach:
+            item?.computed_link_reach ??
+            item?.link_reach ??
+            LinkReach.RESTRICTED,
+          link_role: value as LinkRole,
+        });
       }}
-      canView={item.abilities?.accesses_view}
+      onUpdateLinkReach={(value) => {
+        const linkRole =
+          value === LinkReach.RESTRICTED
+            ? undefined
+            : (item?.computed_link_role ?? item?.link_role ?? LinkRole.READER);
+        updateLinkConfiguration.mutate({
+          itemId: itemId,
+          link_reach: value as LinkReach,
+          link_role: linkRole,
+        });
+      }}
+      canView={item?.abilities.accesses_view}
     >
-      {!item.abilities?.accesses_manage && <HorizontalSeparator />}
+      {!item?.abilities.accesses_manage && <HorizontalSeparator />}
     </ShareModal>
   );
 };

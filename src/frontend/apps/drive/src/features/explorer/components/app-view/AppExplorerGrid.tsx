@@ -14,6 +14,9 @@ import {
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
 import { InfiniteScroll } from "@/features/ui/components/infinite-scroll/InfiniteScroll";
+import { useRouter } from "next/router";
+import { getDefaultRouteId, isMyFilesRoute } from "@/utils/defaultRoutes";
+import { useMemo } from "react";
 
 /**
  * Wrapper around EmbeddedExplorerGrid to display a list of items in a table.
@@ -27,6 +30,7 @@ import { InfiniteScroll } from "@/features/ui/components/infinite-scroll/Infinit
 export const AppExplorerGrid = (props: AppExplorerProps) => {
   const { t } = useTranslation();
   const { t: tc } = useCunningham();
+  const router = useRouter();
 
   const {
     setSelectedItems,
@@ -55,7 +59,17 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
 
   const isLoading = props.isLoading || props.childrenItems === undefined;
   const isEmpty = props.childrenItems?.length === 0;
-  const canCreateChildren = item?.abilities?.children_create;
+
+  const canCreateChildren =
+    item?.abilities?.children_create || isMyFilesRoute(router.pathname);
+
+  const defaultRouteId = getDefaultRouteId(router.pathname);
+  const emptyTranslationSuffix = useMemo(() => {
+    if (defaultRouteId && !canCreateChildren) {
+      return `.${defaultRouteId}`.replace("-", "_");
+    }
+    return "";
+  }, [defaultRouteId, canCreateChildren]);
 
   const getContent = () => {
     if (isLoading) {
@@ -73,12 +87,16 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
             <div className="explorer__grid__empty__caption">
               {canCreateChildren
                 ? t("explorer.grid.empty.caption")
-                : t("explorer.grid.empty.caption_no_create")}
+                : t(
+                    `explorer.grid.empty.caption_no_create${emptyTranslationSuffix}`
+                  )}
             </div>
             <div className="explorer__grid__empty__cta">
               {canCreateChildren
                 ? t("explorer.grid.empty.cta")
-                : t("explorer.grid.empty.cta_no_create")}
+                : t(
+                    `explorer.grid.empty.cta_no_create${emptyTranslationSuffix}`
+                  )}
             </div>
           </div>
         </div>

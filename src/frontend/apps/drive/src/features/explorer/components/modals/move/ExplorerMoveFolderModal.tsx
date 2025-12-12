@@ -42,6 +42,7 @@ export const ExplorerMoveFolder = ({
     gridProps: {
       enableMetaKeySelection: false,
       gridActionsCell: () => <div />,
+      disableKeyboardNavigation: true,
     },
     itemsFilters: {
       type: ItemType.FOLDER,
@@ -179,7 +180,7 @@ export const ExplorerMoveFolder = ({
           </div>
         }
         onClose={onCloseModal}
-        size={isDesktop ? ModalSize.LARGE : ModalSize.FULL}
+        size={isDesktop ? ModalSize.MEDIUM : ModalSize.FULL}
         rightActions={
           <div className="modal__move__footer">
             <Button variant="tertiary" onClick={onCloseModal}>
@@ -198,9 +199,9 @@ export const ExplorerMoveFolder = ({
         }
       >
         <div className="noPadding">
-          <HorizontalSeparator />
+          <HorizontalSeparator withPadding={false} />
           <div className="modal__move__explorer">
-            <EmbeddedExplorer {...itemsExplorer} />
+            <EmbeddedExplorer {...itemsExplorer} showSearch={true} />
           </div>
           <HorizontalSeparator />
         </div>

@@ -19,14 +19,26 @@ import { useRouter } from "next/router";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
 import { useMemo } from "react";
 import { itemIsWorkspace } from "@/features/drivers/utils";
+import {
+  DefaultRoute,
+  getDefaultRouteId,
+  isDefaultRoute,
+} from "@/utils/defaultRoutes";
 
 export const AppExplorerBreadcrumbs = () => {
-  const { item, onNavigate, treeIsInitialized } = useGlobalExplorer();
+  const { item, onNavigate } = useGlobalExplorer();
+  const router = useRouter();
   const { t } = useTranslation();
   const createFolderModal = useModal();
   const importDropdown = useDropdownMenu();
+  const onDefaultRoute = isDefaultRoute(router.pathname);
+  const defaultRouteId = getDefaultRouteId(router.pathname);
 
-  if (!item || !treeIsInitialized) {
+  const showActions =
+    (onDefaultRoute && defaultRouteId === DefaultRoute.MY_FILES) ||
+    !onDefaultRoute;
+
+  if (!item && !onDefaultRoute) {
     return null;
   }
 
@@ -37,8 +49,9 @@ export const AppExplorerBreadcrumbs = () => {
         data-testid="explorer-breadcrumbs"
       >
         <EmbeddedExplorerGridBreadcrumbs
-          currentItemId={item.id}
+          currentItemId={item?.id}
           showMenuLastItem={true}
+          defaultRoute={defaultRouteId}
           onGoBack={(item) => {
             onNavigate({
               type: NavigationEventType.ITEM,
@@ -47,35 +60,37 @@ export const AppExplorerBreadcrumbs = () => {
           }}
         />
 
-        <div className="explorer__content__breadcrumbs__actions">
-          <ImportDropdown
-            importMenu={importDropdown}
-            trigger={
-              <Button
-                variant="tertiary"
-                size="small"
-                onClick={() => {
-                  importDropdown.setIsOpen(true);
-                }}
-              >
-                {t("explorer.tree.import.label")}
-              </Button>
-            }
-          />
-          <Button
-            icon={<img src={createFolderSvg.src} alt="Create Folder" />}
-            variant="tertiary"
-            size="small"
-            onClick={() => {
-              createFolderModal.open();
-            }}
-          />
-        </div>
+        {showActions && (
+          <div className="explorer__content__breadcrumbs__actions">
+            <ImportDropdown
+              importMenu={importDropdown}
+              trigger={
+                <Button
+                  variant="tertiary"
+                  size="small"
+                  onClick={() => {
+                    importDropdown.setIsOpen(true);
+                  }}
+                >
+                  {t("explorer.tree.import.label")}
+                </Button>
+              }
+            />
+            <Button
+              icon={<img src={createFolderSvg.src} alt="Create Folder" />}
+              variant="tertiary"
+              size="small"
+              onClick={() => {
+                createFolderModal.open();
+              }}
+            />
+          </div>
+        )}
       </div>
       <div className="explorer__content__separator">
         <HorizontalSeparator withPadding={false} />
       </div>
-      <ExplorerCreateFolderModal {...createFolderModal} parentId={item.id} />
+      <ExplorerCreateFolderModal {...createFolderModal} parentId={item?.id} />
     </>
   );
 };

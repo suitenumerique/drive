@@ -2,6 +2,7 @@ import {
   DTOCreateAccess,
   DTODeleteAccess,
   DTOUpdateAccess,
+  DTOUpdateLinkConfiguration,
 } from "./DTOs/AccessesDTO";
 import {
   DTOCreateInvitation,
@@ -35,6 +36,8 @@ export type ItemFilters = {
   page?: number;
   page_size?: number;
   workspaces?: WorkspaceType;
+  is_creator_me?: boolean;
+  is_favorite?: boolean;
 };
 
 export type PaginatedChildrenResult = {
@@ -77,9 +80,19 @@ export abstract class Driver {
 
   abstract searchItems(filters?: ItemFilters): Promise<Item[]>;
   // Accesses
-  abstract getItemAccesses(itemId: string): Promise<APIList<Access>>;
+
+  abstract getFavoriteItems(
+    filters?: ItemFilters
+  ): Promise<PaginatedChildrenResult>;
+  abstract createFavoriteItem(itemId: string): Promise<void>;
+  abstract deleteFavoriteItem(itemId: string): Promise<void>;
+  abstract getItemAccesses(itemId: string): Promise<Access[]>;
   abstract createAccess(data: DTOCreateAccess): Promise<void>;
   abstract updateAccess(payload: DTOUpdateAccess): Promise<Access>;
+  abstract updateAccess(payload: DTOUpdateAccess): Promise<Access>;
+  abstract updateLinkConfiguration(
+    payload: DTOUpdateLinkConfiguration
+  ): Promise<void>;
   abstract deleteAccess(payload: DTODeleteAccess): Promise<void>;
   // Invitations
   abstract getItemInvitations(itemId: string): Promise<APIList<Invitation>>;
@@ -100,7 +113,7 @@ export abstract class Driver {
   abstract updateWorkspace(item: Partial<Item>): Promise<Item>;
   abstract deleteWorkspace(id: string): Promise<void>;
   abstract createFile(data: {
-    parentId: string;
+    parentId?: string;
     filename: string;
   }): Promise<Item>;
   abstract deleteItems(ids: string[]): Promise<void>;

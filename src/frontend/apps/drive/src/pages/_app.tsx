@@ -9,6 +9,7 @@ import {
 import type { NextPage } from "next";
 import type { AppProps } from "next/app";
 import { CunninghamProvider } from "@gouvfr-lasuite/ui-kit";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
   MutationCache,
   Query,
@@ -149,6 +150,7 @@ const MyAppInner = ({ Component, pageProps }: AppPropsWithLayout) => {
             </AnalyticsProvider>
           </ConfigProvider>
         </CunninghamProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </>
   );

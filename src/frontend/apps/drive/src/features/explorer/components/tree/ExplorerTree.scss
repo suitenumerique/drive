@@ -84,6 +84,9 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 }
 
 .explorer__tree__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   margin-top: 0.75rem;
   padding: 0 12px;
 
@@ -169,12 +172,13 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
   }
 
   &__mobile {
-    display: none;
+    display: flex;
+
     flex-direction: column;
     padding: 12px 0;
+    gap: 2px;
 
     @media (max-width: $tablet) {
-      display: flex;
     }
 
     &__item {
@@ -183,6 +187,13 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
       display: flex;
       align-items: center;
       gap: 8px;
+      cursor: pointer;
+
+      &:hover {
+        background-color: var(
+          --c--contextuals--background--semantic--contextual--primary
+        );
+      }
 
       span {
         text-overflow: ellipsis;
@@ -197,9 +208,8 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
     }
 
     &__node {
-      height: 40px;
+      padding: 6px;
       font-weight: 500;
-      padding: 0 6px;
       border-radius: 4px;
       border: none;
       outline: none;

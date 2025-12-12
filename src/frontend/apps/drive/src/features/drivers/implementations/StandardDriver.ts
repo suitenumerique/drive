@@ -1,11 +1,20 @@
 import { fetchAPI } from "@/features/api/fetchApi";
-import { Driver, Entitlements, ItemFilters, UserFilters, PaginatedChildrenResult } from "../Driver";
+import {
+  Driver,
+  Entitlements,
+  ItemFilters,
+  UserFilters,
+  PaginatedChildrenResult,
+} from "../Driver";
 import {
   DTODeleteInvitation,
   DTOCreateInvitation,
   DTOUpdateInvitation,
 } from "../DTOs/InvitationDTO";
-import { DTOCreateAccess } from "../DTOs/AccessesDTO";
+import {
+  DTOCreateAccess,
+  DTOUpdateLinkConfiguration,
+} from "../DTOs/AccessesDTO";
 import { DTOUpdateAccess } from "../DTOs/AccessesDTO";
 import {
   Access,
@@ -149,9 +158,10 @@ export class StandardDriver extends Driver {
     });
   }
 
-  async getItemAccesses(itemId: string): Promise<APIList<Access>> {
+  async getItemAccesses(itemId: string): Promise<Access[]> {
     const response = await fetchAPI(`items/${itemId}/accesses/`);
     const data = await response.json();
+    console.log("data from getItemAccesses", data);
     return data;
   }
 
@@ -168,6 +178,16 @@ export class StandardDriver extends Driver {
   async deleteAccess(payload: DTODeleteAccess): Promise<void> {
     await fetchAPI(`items/${payload.itemId}/accesses/${payload.accessId}/`, {
       method: "DELETE",
+    });
+  }
+
+  async updateLinkConfiguration(
+    payload: DTOUpdateLinkConfiguration
+  ): Promise<void> {
+    const { itemId, ...rest } = payload;
+    await fetchAPI(`items/${itemId}/link-configuration/`, {
+      method: "PUT",
+      body: JSON.stringify(rest),
     });
   }
 
@@ -234,7 +254,8 @@ export class StandardDriver extends Driver {
     parentId?: string;
   }): Promise<Item> {
     const { parentId, ...rest } = data;
-    const response = await fetchAPI(`items/${parentId}/children/`, {
+    const url = parentId ? `items/${parentId}/children/` : `items/`;
+    const response = await fetchAPI(url, {
       method: "POST",
       body: JSON.stringify({
         ...rest,
@@ -267,16 +288,35 @@ export class StandardDriver extends Driver {
   async deleteWorkspace(id: string): Promise<void> {
     return this.deleteItems([id]);
   }
+  async getFavoriteItems(
+    filters?: ItemFilters
+  ): Promise<PaginatedChildrenResult> {
+    const result = await this.getItems({ ...filters, is_favorite: true });
+    return result;
+  }
+
+  async createFavoriteItem(itemId: string): Promise<void> {
+    await fetchAPI(`items/${itemId}/favorite/`, {
+      method: "POST",
+    });
+  }
+
+  async deleteFavoriteItem(itemId: string): Promise<void> {
+    await fetchAPI(`items/${itemId}/favorite/`, {
+      method: "DELETE",
+    });
+  }
 
   async createFile(data: {
-    parentId: string;
+    parentId?: string;
     file: File;
     filename: string;
     progressHandler?: (progress: number) => void;
   }): Promise<Item> {
     const { parentId, file, progressHandler, ...rest } = data;
+    const url = parentId ? `items/${parentId}/children/` : `items/`;
     const response = await fetchAPI(
-      `items/${parentId}/children/`,
+      url,
       {
         method: "POST",
         body: JSON.stringify({
