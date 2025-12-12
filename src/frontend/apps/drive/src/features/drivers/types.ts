@@ -52,6 +52,7 @@ export type Item = {
   description: string;
   is_wopi_supported?: boolean;
   created_at: Date;
+  is_favorite?: boolean;
   children?: Item[];
   parents?: Item[];
   breadcrumb?: ItemBreadcrumb[];

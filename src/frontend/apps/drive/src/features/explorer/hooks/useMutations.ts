@@ -8,7 +8,10 @@ import {
 } from "../api/useAddItemToPaginatedList";
 import { useRouter } from "next/router";
 import { getQueryKeyForRouteId, isMyFilesRoute } from "@/utils/defaultRoutes";
-import { PaginatedChildrenResult } from "@gouvfr-lasuite/ui-kit";
+import {
+  PaginatedChildrenResult,
+  useTreeContext,
+} from "@gouvfr-lasuite/ui-kit";
 
 export const useMutationCreateFile = () => {
   const driver = getDriver();
@@ -277,6 +280,31 @@ export const useMutationDeleteInvitation = () => {
       queryClient.invalidateQueries({
         queryKey: ["itemInvitations", variables.itemId],
       });
+    },
+  });
+};
+
+export const useMutationCreateFavoriteItem = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  const treeContext = useTreeContext();
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.createFavoriteItem>) => {
+      return driver.createFavoriteItem(...payload);
+    },
+  });
+};
+
+export const useMutationDeleteFavoriteItem = () => {
+  const driver = getDriver();
+
+  const treeContext = useTreeContext();
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.deleteFavoriteItem>) => {
+      return driver.deleteFavoriteItem(...payload);
+    },
+    onSuccess: (_data, itemId: string) => {
+      treeContext?.treeData.deleteNode(itemId + "_0");
     },
   });
 };

@@ -288,6 +288,24 @@ export class StandardDriver extends Driver {
   async deleteWorkspace(id: string): Promise<void> {
     return this.deleteItems([id]);
   }
+  async getFavoriteItems(
+    filters?: ItemFilters
+  ): Promise<PaginatedChildrenResult> {
+    const result = await this.getItems({ ...filters, is_favorite: true });
+    return result;
+  }
+
+  async createFavoriteItem(itemId: string): Promise<void> {
+    await fetchAPI(`items/${itemId}/favorite/`, {
+      method: "POST",
+    });
+  }
+
+  async deleteFavoriteItem(itemId: string): Promise<void> {
+    await fetchAPI(`items/${itemId}/favorite/`, {
+      method: "DELETE",
+    });
+  }
 
   async createFile(data: {
     parentId?: string;

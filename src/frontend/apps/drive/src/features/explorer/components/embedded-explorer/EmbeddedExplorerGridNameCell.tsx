@@ -22,6 +22,11 @@ export const EmbeddedExplorerGridNameCell = (
   const isSelected = !!selectedItemsMap[item.id];
   const canMove = item.abilities?.move;
   const disableDrag = useDisableDragGridItem(item);
+  console.log(
+    "disableDrag",
+    disableItemDragAndDrop || isSelected || !canMove,
+    item.title
+  );
 
   const renderTitle = () => {
     // We need to have the element holding the ref nested because the Tooltip component
@@ -31,7 +36,7 @@ export const EmbeddedExplorerGridNameCell = (
         id={params.cell.id + "-title"}
         item={item}
         style={{ display: "flex", overflow: "hidden" }}
-        disabled={disableItemDragAndDrop || isSelected || !canMove} // If it's selected then we can drag on the entire cell
+        disabled={false} // If it's selected then we can drag on the entire cell
       >
         <div style={{ display: "flex", overflow: "hidden" }}>
           <span className="explorer__grid__item__name__text" ref={ref}>

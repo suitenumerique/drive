@@ -37,6 +37,7 @@ export type ItemFilters = {
   page_size?: number;
   workspaces?: WorkspaceType;
   is_creator_me?: boolean;
+  is_favorite?: boolean;
 };
 
 export type PaginatedChildrenResult = {
@@ -79,6 +80,12 @@ export abstract class Driver {
 
   abstract searchItems(filters?: ItemFilters): Promise<Item[]>;
   // Accesses
+
+  abstract getFavoriteItems(
+    filters?: ItemFilters
+  ): Promise<PaginatedChildrenResult>;
+  abstract createFavoriteItem(itemId: string): Promise<void>;
+  abstract deleteFavoriteItem(itemId: string): Promise<void>;
   abstract getItemAccesses(itemId: string): Promise<Access[]>;
   abstract createAccess(data: DTOCreateAccess): Promise<void>;
   abstract updateAccess(payload: DTOUpdateAccess): Promise<Access>;

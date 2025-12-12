@@ -15,6 +15,12 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 //     },
 //   });
 // };
+export const useFavoriteItems = () => {
+  return useQuery({
+    queryKey: ["items", "favorites"],
+    queryFn: () => getDriver().getFavoriteItems(),
+  });
+};
 
 export const useItemAccesses = (itemId: string) => {
   return useQuery({

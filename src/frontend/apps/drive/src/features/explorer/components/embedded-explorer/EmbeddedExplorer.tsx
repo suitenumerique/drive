@@ -76,7 +76,10 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
 
   // Update breadcrumbs when navigating
   const onNavigate = (event: NavigationEvent) => {
-    const item = event.item as Item;
+    let item = event.item as Item;
+    if (item.id.includes("_")) {
+      item = { ...item, id: item.id.split("_")[0] };
+    }
     props.gridProps?.setSelectedItems?.([]);
     props.setCurrentItemId?.(item?.id ?? null);
     setInputSearchValue("");

@@ -2,6 +2,7 @@ export enum DefaultRoute {
   MY_FILES = "my_files",
   RECENT = "recent",
   SHARED_WITH_ME = "shared-with-me",
+  FAVORITES = "favorites",
 }
 export type DefaultRouteData = {
   id: DefaultRoute;
@@ -27,6 +28,12 @@ export const ORDERED_DEFAULT_ROUTES: DefaultRouteData[] = [
     label: "explorer.tree.shared_with_me",
     route: "/explorer/items/shared-with-me",
     iconName: "people_alt",
+  },
+  {
+    id: DefaultRoute.FAVORITES,
+    label: "explorer.tree.favorites",
+    route: "/explorer/items/favorites",
+    iconName: "star_border",
   },
 ];
 
@@ -71,6 +78,7 @@ export const getQueryKeyForRouteId = (pathname: string): string[] => {
       return getRecentItemsQueryKey();
     case DefaultRoute.SHARED_WITH_ME:
       return getSharedWithMeQueryKey();
+
     default:
       return [];
   }

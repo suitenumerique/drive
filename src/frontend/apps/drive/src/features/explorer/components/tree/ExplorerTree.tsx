@@ -2,7 +2,11 @@ import { useModal } from "@openfun/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import { Item, TreeItem } from "@/features/drivers/types";
-import { ORDERED_DEFAULT_ROUTES } from "@/utils/defaultRoutes";
+import {
+  DefaultRoute,
+  getDefaultRoute,
+  ORDERED_DEFAULT_ROUTES,
+} from "@/utils/defaultRoutes";
 import {
   HorizontalSeparator,
   Icon,
@@ -15,7 +19,7 @@ import {
   TreeViewNodeTypeEnum,
   useTreeContext,
 } from "@gouvfr-lasuite/ui-kit";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ExplorerTreeItem } from "./ExplorerTreeItem";
 import { useMoveItems } from "../../api/useMoveItem";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
@@ -29,10 +33,12 @@ import React from "react";
 import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
 import { useAuth } from "@/features/auth/Auth";
 import { ExplorerTreeNavItem } from "./nav/ExplorerTreeNavItem";
+import { useRouter } from "next/router";
 
 export const ExplorerTree = () => {
   const move = useMoveItems();
   const moveConfirmationModal = useModal();
+  const router = useRouter();
   const [moveState, setMoveState] = useState<{
     moveCallback: () => void;
     sourceItem: Item;
@@ -45,6 +51,13 @@ export const ExplorerTree = () => {
   );
 
   const { itemId, treeIsInitialized } = useGlobalExplorer();
+  const defaultSelectedNodeId = useMemo(() => {
+    const defaultRoute = getDefaultRoute(router.pathname);
+    if (defaultRoute) {
+      return defaultRoute.id;
+    }
+    return itemId;
+  }, [itemId, router.pathname]);
 
   // Initialize the opened nodes when the tree is initialized.
   useEffect(() => {
@@ -111,8 +124,7 @@ export const ExplorerTree = () => {
 
       {initialOpenState && (
         <TreeView
-          // selectedNodeId={itemId}
-
+          selectedNodeId={defaultSelectedNodeId}
           afterMove={handleMove}
           beforeMove={(moveResult, moveCallback) => {
             // TODO: this comes from the tree in the ui-kit, it needs to be explained in the documentation
@@ -155,6 +167,7 @@ export const ExplorerTree = () => {
 
             return item.abilities?.move ?? false;
           }}
+          paddingTop={0}
           canDrop={(args) => {
             const parent = args.parentNode?.data.value as Item | undefined;
             const activeItem = args.dragNodes[0].data.value as Item;
@@ -215,20 +228,20 @@ export const ExplorerTreeNavDefault = () => {
       return;
     }
 
-    const nodes: ExplorerTreeMobileNode[] = ORDERED_DEFAULT_ROUTES.map(
-      (route) => ({
-        id: route.id,
-        label: t(route.label),
-        route: route.route,
-        icon: (
-          <Icon
-            name={route.iconName}
-            size={IconSize.SMALL}
-            color="var(--c--contextuals--content--semantic--neutral--tertiary)"
-          />
-        ),
-      })
-    );
+    const nodes: ExplorerTreeMobileNode[] = ORDERED_DEFAULT_ROUTES.filter(
+      (route) => route.id !== DefaultRoute.FAVORITES
+    ).map((route) => ({
+      id: route.id,
+      label: t(route.label),
+      route: route.route,
+      icon: (
+        <Icon
+          name={route.iconName}
+          size={IconSize.SMALL}
+          color="var(--c--contextuals--content--semantic--neutral--tertiary)"
+        />
+      ),
+    }));
 
     setNodes(nodes);
   }, [user, t]);
