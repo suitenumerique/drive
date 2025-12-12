@@ -1,3 +1,4 @@
+import { Icon } from "@gouvfr-lasuite/ui-kit";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -10,11 +11,11 @@ export const EmbeddedExplorerSearchInput = (
 ) => {
   const { t } = useTranslation();
   const [inputSearchValue, setInputSearchValue] = useState<string>("");
-
   const timeoutRef = useRef<NodeJS.Timeout>(null);
 
   const handleChange = (query: string) => {
     if (query === "") {
+      setInputSearchValue("");
       props.onSearch("");
       return;
     }
@@ -27,8 +28,8 @@ export const EmbeddedExplorerSearchInput = (
     }, 300);
   };
   return (
-    <div className="embedded-explorer__search">
-      <span className="embedded-explorer__search__icon">icone</span>
+    <div className="embedded-explorer__search__container">
+      <Icon name="search" />
       <input
         type="text"
         placeholder={t("explorer.search.placeholder", "Rechercher...")}

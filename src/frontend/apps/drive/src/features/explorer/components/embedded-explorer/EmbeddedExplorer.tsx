@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { Item } from "@/features/drivers/types";
 import { useTranslation } from "react-i18next";
 import { EmbeddedExplorerGridBreadcrumbs } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridBreadcrumbs";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { NavigationEvent } from "@/features/explorer/components/GlobalExplorerContext";
 import { useQuery } from "@tanstack/react-query";
 import { Spinner } from "@gouvfr-lasuite/ui-kit";
@@ -68,6 +68,7 @@ export const useEmbeddedExplorer = (props: EmbeddedExplorerProps) => {
 export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const itemsRef = useRef<Item[]>([]);
 
   const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -87,18 +88,18 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
     queryFn: () => getRootItems(props.itemsFilters),
   });
 
-  const { data: searchItems } = useQuery({
+  const { data: searchItems, isLoading: isSearchItemsLoading } = useQuery({
     queryKey: ["searchItems", searchQuery],
     queryFn: () =>
       getDriver().searchItems({
         title: searchQuery,
-        ...props.itemsFilters,
+        // ...props.itemsFilters,
       }),
     enabled: searchQuery !== "",
   });
 
   console.log("searchItems", searchItems);
-
+  console.log("isSearchItemsLoading", isSearchItemsLoading);
   const infiniteChildrenQuery = useInfiniteChildren(
     props.currentItemId ?? null,
     props.itemsFilters ?? {}
@@ -127,10 +128,14 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
     if (itemChildren === undefined && props.currentItemId) {
       return undefined;
     }
+    if (isSearchItemsLoading && searchQuery !== "") {
+      return itemsRef.current;
+    }
     let items = [];
     // If no itemId, we are in the root, we explorer spaces
-    if (searchQuery !== "" && searchItems && searchItems.length > 0) {
+    if (searchQuery !== "" && searchItems) {
       items = searchItems;
+      console.log("A", searchQuery, searchItems);
     } else if (props.currentItemId === null) {
       if (user?.main_workspace) {
         items.push(user.main_workspace);
@@ -143,8 +148,10 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
         if (!a.main_workspace && b.main_workspace) return 1;
         return 0;
       });
+      console.log("B");
     } else {
       items = itemChildren ?? [];
+      console.log("C");
     }
 
     if (props.itemsFilter) {
@@ -161,6 +168,7 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
       return item;
     });
 
+    itemsRef.current = items;
     return items;
   }, [
     props.currentItemId,
@@ -168,9 +176,9 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
     itemChildren,
     user?.main_workspace,
     props.itemsFilter,
-    searchQuery,
     searchItems,
-
+    searchQuery,
+    isSearchItemsLoading,
     t,
   ]);
 
