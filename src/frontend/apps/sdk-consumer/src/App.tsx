@@ -14,7 +14,6 @@ function App() {
   const pick = async () => {
     setPicking(true);
     const result = await openPicker(CONFIG);
-    console.log("Picker result:", result);
     setPickerResult(result);
     setPicking(false);
   };

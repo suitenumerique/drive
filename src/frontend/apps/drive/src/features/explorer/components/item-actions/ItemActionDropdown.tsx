@@ -45,8 +45,9 @@ export const ItemActionDropdown = ({
   const explorerContext = useGlobalExplorer();
   const { deleteTreeNode } = useDeleteTreeNode();
 
-  const canShareWorkspace = isWorkspace;
-  const canShareFile = item.type === ItemType.FILE;
+  const canShareFolder = item.abilities?.accesses_manage;
+  const canShareFile =
+    item.abilities?.accesses_manage && item.type === ItemType.FILE;
   const handleMove = () => {
     moveModal.open();
   };
@@ -120,7 +121,7 @@ export const ItemActionDropdown = ({
             label: item.abilities?.accesses_manage
               ? t("explorer.tree.workspace.options.share")
               : t("explorer.tree.workspace.options.share_view"),
-            isHidden: !canShareWorkspace,
+            isHidden: !item.abilities?.accesses_manage,
             callback: shareWorkspaceModal.open,
           },
           {
@@ -180,7 +181,7 @@ export const ItemActionDropdown = ({
       {renameModal.isOpen && (
         <ExplorerRenameItemModal {...renameModal} item={item} key={item.id} />
       )}
-      {canShareWorkspace && shareWorkspaceModal.isOpen && (
+      {canShareFolder && shareWorkspaceModal.isOpen && (
         <WorkspaceShareModal
           {...shareWorkspaceModal}
           item={item}

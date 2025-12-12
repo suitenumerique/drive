@@ -239,7 +239,6 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
   };
 
   const forcedBreadcrumbsItems: ItemBreadcrumb[] | undefined = useMemo(() => {
-    console.log("searchQuery", searchQuery);
     if (searchQuery !== "") {
       return [
         {
@@ -253,8 +252,6 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
     }
     return undefined;
   }, [searchQuery, searchItems]);
-
-  console.log("forcedBreadcrumbsItems", forcedBreadcrumbsItems);
 
   return (
     <>

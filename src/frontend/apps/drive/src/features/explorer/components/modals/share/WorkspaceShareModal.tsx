@@ -189,8 +189,6 @@ export const WorkspaceShareModal = ({
     });
   }, [data]);
 
-  // console.log("ACCESSES DATA", accessesData);
-
   const invitationsData: Invitation[] = useMemo(() => {
     if (!invitations) {
       return [];
@@ -228,7 +226,6 @@ export const WorkspaceShareModal = ({
   }, [item]);
 
   const linkRoleChoices = useMemo(() => {
-    console.log("ITEM", item);
     const options = item?.abilities.link_select_options;
 
     if (!options) {
@@ -237,14 +234,12 @@ export const WorkspaceShareModal = ({
 
     const currentLinkReach = item?.computed_link_reach;
     if (!currentLinkReach) {
-      console.log("1111 NO CURRENT LINK REACH");
       return undefined;
     }
 
     const linkRoleOptions = options[currentLinkReach];
 
     if (!linkRoleOptions) {
-      console.log("2222 NO LINK ROLE OPTIONS");
       return undefined;
     }
 
@@ -253,7 +248,6 @@ export const WorkspaceShareModal = ({
       label: t(`roles.${role}`),
     }));
 
-    console.log("LINK ROLE CHOICES", a);
     return a;
   }, [item]);
 
@@ -294,7 +288,6 @@ export const WorkspaceShareModal = ({
           return;
         }
 
-        console.log("ACCESS", access);
         if (!access.is_explicit) {
           onInviteUser([access.user], role as Role);
         } else {
