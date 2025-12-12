@@ -27,8 +27,12 @@
   }
 
   &__explorer {
-    padding: 0 var(--c--globals--spacings--md);
+    // padding: 0 var(--c--globals--spacings--md);
     overflow-y: auto;
+
+    .embedded-explorer__container {
+      padding: 0 var(--c--globals--spacings--md);
+    }
   }
 }
 

@@ -1,13 +1,12 @@
 import { useMemo, useState } from "react";
 import { Item, ItemBreadcrumb } from "@/features/drivers/types";
-import { ORDERED_DEFAULT_ROUTES } from "@/utils/defaultRoutes";
+import { DefaultRoute, ORDERED_DEFAULT_ROUTES } from "@/utils/defaultRoutes";
 import {
   BreadcrumbItem,
   Breadcrumbs,
 } from "@/features/ui/components/breadcrumbs/Breadcrumbs";
 import { useTranslation } from "react-i18next";
-import { Icon, IconSize } from "@gouvfr-lasuite/ui-kit";
-import { FolderIcon } from "../icons/ItemIcon";
+import { Icon } from "@gouvfr-lasuite/ui-kit";
 import { NavigationItem } from "../GlobalExplorerContext";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 import clsx from "clsx";
@@ -20,8 +19,9 @@ type BaseBreadcrumbsProps = {
   onGoBack?: (item: Item | ItemBreadcrumb) => void;
   goToSpaces?: () => void;
   currentItemId?: string | null;
-  showSpacesItem?: boolean;
+  showAllFolderItem?: boolean;
   showMenuLastItem?: boolean;
+  defaultRoute?: DefaultRoute;
 };
 
 type GridBreadcrumbsProps = BaseBreadcrumbsProps & {
@@ -47,15 +47,15 @@ export const EmbeddedExplorerGridBreadcrumbs = ({
 const BaseBreadcrumbs = ({
   onGoBack,
   goToSpaces,
-  showSpacesItem = false,
+  showAllFolderItem: showSpacesItem = false,
   showMenuLastItem = false,
-
+  defaultRoute,
   currentItemId,
 }: BaseBreadcrumbsProps) => {
   const { t } = useTranslation();
   const router = useRouter();
-  const defaultRoute = ORDERED_DEFAULT_ROUTES.find((route) =>
-    router.pathname.startsWith(route.route)
+  const defaultRouteData = ORDERED_DEFAULT_ROUTES.find(
+    (route) => route.id === defaultRoute
   );
   const { data: breadcrumb } = useBreadcrumbQuery(currentItemId);
 
@@ -72,17 +72,17 @@ const BaseBreadcrumbs = ({
   const breadcrumbsItems = useMemo(() => {
     const breadcrumbsItems: BreadcrumbItem[] = [];
 
-    if (defaultRoute) {
+    if (defaultRouteData) {
       breadcrumbsItems.push({
         content: (
           <div
             className="c__breadcrumbs__button"
             onClick={() => {
-              router.push(defaultRoute.route);
+              router.push(defaultRouteData.route);
             }}
           >
-            <Icon name={defaultRoute.iconName} />
-            {t(defaultRoute.label)}
+            <Icon name={defaultRouteData.iconName} />
+            {t(defaultRouteData.label)}
           </div>
         ),
       });
@@ -97,7 +97,7 @@ const BaseBreadcrumbs = ({
               goToSpaces?.();
             }}
           >
-            {t("explorer.breadcrumbs.spaces")}
+            {t("explorer.breadcrumbs.all_folders")}
           </div>
         ),
       });
@@ -146,8 +146,6 @@ export const BreadcrumbItemButton = ({
   onClick,
   isActive = false,
 }: BreadcrumbItemProps) => {
-  const isRoot = item.path.split(".").length === 1;
-
   return (
     <button
       className={clsx("c__breadcrumbs__button", {
@@ -156,7 +154,6 @@ export const BreadcrumbItemButton = ({
       data-testid="breadcrumb-button"
       onClick={onClick}
     >
-      {isRoot && <FolderIcon iconSize={IconSize.SMALL} />}
       {item.title}
       {rightIcon}
     </button>

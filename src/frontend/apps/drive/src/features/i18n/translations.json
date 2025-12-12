@@ -150,7 +150,8 @@
       },
       "explorer": {
         "breadcrumbs": {
-          "spaces": "Spaces"
+          "spaces": "Spaces",
+          "all_folders": "All folders"
         },
         "modal": {
           "move": {
@@ -579,7 +580,8 @@
       },
       "explorer": {
         "breadcrumbs": {
-          "spaces": "Espaces"
+          "spaces": "Espaces",
+          "all_folders": "Tous les dossiers"
         },
         "modal": {
           "move": {
@@ -1014,7 +1016,8 @@
       },
       "explorer": {
         "breadcrumbs": {
-          "spaces": "Werkruimten"
+          "spaces": "Werkruimten",
+          "all_folders": "Alle mappen"
         },
         "modal": {
           "move": {

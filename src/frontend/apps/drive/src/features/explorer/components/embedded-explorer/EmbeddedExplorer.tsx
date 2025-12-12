@@ -15,6 +15,8 @@ import { getRootItems } from "../../hooks/useQueries";
 import { useAuth } from "@/features/auth/Auth";
 import { useInfiniteChildren } from "../../hooks/useInfiniteChildren";
 import { InfiniteScroll } from "@/features/ui/components/infinite-scroll/InfiniteScroll";
+import { getDriver } from "@/features/config/Config";
+import { EmbeddedExplorerSearchInput } from "./EmbeddedExplorerSearchInput";
 
 export type EmbeddedExplorerProps = {
   breadcrumbsRight?: () => React.ReactNode;
@@ -26,6 +28,7 @@ export type EmbeddedExplorerProps = {
   currentItemId?: string | null;
   setCurrentItemId?: (itemId: string | null) => void;
   itemsFilters?: ItemFilters;
+  showSearch?: boolean;
 };
 
 export const useEmbeddedExplorer = (props: EmbeddedExplorerProps) => {
@@ -66,6 +69,12 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
 
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  const onSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+
   // Update breadcrumbs when navigating
   const onNavigate = (event: NavigationEvent) => {
     const item = event.item as Item;
@@ -75,8 +84,20 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
 
   const { data: rootItems } = useQuery({
     queryKey: ["rootItems"],
-    queryFn: getRootItems,
+    queryFn: () => getRootItems(props.itemsFilters),
   });
+
+  const { data: searchItems } = useQuery({
+    queryKey: ["searchItems", searchQuery],
+    queryFn: () =>
+      getDriver().searchItems({
+        title: searchQuery,
+        ...props.itemsFilters,
+      }),
+    enabled: searchQuery !== "",
+  });
+
+  console.log("searchItems", searchItems);
 
   const infiniteChildrenQuery = useInfiniteChildren(
     props.currentItemId ?? null,
@@ -108,7 +129,9 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
     }
     let items = [];
     // If no itemId, we are in the root, we explorer spaces
-    if (props.currentItemId === null) {
+    if (searchQuery !== "" && searchItems && searchItems.length > 0) {
+      items = searchItems;
+    } else if (props.currentItemId === null) {
       if (user?.main_workspace) {
         items.push(user.main_workspace);
       }
@@ -145,6 +168,9 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
     itemChildren,
     user?.main_workspace,
     props.itemsFilter,
+    searchQuery,
+    searchItems,
+
     t,
   ]);
 
@@ -195,34 +221,37 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
   };
 
   return (
-    <div
-      className={clsx("embedded-explorer", {
-        "embedded-explorer--compact": props.isCompact,
-      })}
-    >
-      <div className="embedded-explorer__container">
-        <div className="embedded-explorer__breadcrumbs">
-          <EmbeddedExplorerGridBreadcrumbs
-            currentItemId={props.currentItemId ?? null}
-            showSpacesItem={true}
-            goToSpaces={() => {
-              props.setCurrentItemId?.(null);
-            }}
-            onGoBack={(item) => {
-              props.setCurrentItemId?.(item?.id ?? null);
-            }}
-          />
-          {props.breadcrumbsRight?.()}
-        </div>
-        <div
-          className={clsx("c__datagrid explorer__grid", {
-            "c__datagrid--empty": isEmpty,
-            "c__datagrid--loading": isLoading,
-          })}
-        >
-          {getContent()}
+    <>
+      {props.showSearch && <EmbeddedExplorerSearchInput onSearch={onSearch} />}
+      <div
+        className={clsx("embedded-explorer", {
+          "embedded-explorer--compact": props.isCompact,
+        })}
+      >
+        <div className="embedded-explorer__container">
+          <div className="embedded-explorer__breadcrumbs">
+            <EmbeddedExplorerGridBreadcrumbs
+              currentItemId={props.currentItemId ?? null}
+              showAllFolderItem={true}
+              goToSpaces={() => {
+                props.setCurrentItemId?.(null);
+              }}
+              onGoBack={(item) => {
+                props.setCurrentItemId?.(item?.id ?? null);
+              }}
+            />
+            {props.breadcrumbsRight?.()}
+          </div>
+          <div
+            className={clsx("c__datagrid explorer__grid", {
+              "c__datagrid--empty": isEmpty,
+              "c__datagrid--loading": isLoading,
+            })}
+          >
+            {getContent()}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };

@@ -33,6 +33,7 @@ export const AppExplorerBreadcrumbs = () => {
   const importDropdown = useDropdownMenu();
   const onDefaultRoute = isDefaultRoute(router.pathname);
   const defaultRouteId = getDefaultRouteId(router.pathname);
+
   const showActions =
     (onDefaultRoute && defaultRouteId === DefaultRoute.MY_FILES) ||
     !onDefaultRoute;
@@ -50,6 +51,7 @@ export const AppExplorerBreadcrumbs = () => {
         <EmbeddedExplorerGridBreadcrumbs
           currentItemId={item?.id}
           showMenuLastItem={true}
+          defaultRoute={defaultRouteId}
           onGoBack={(item) => {
             onNavigate({
               type: NavigationEventType.ITEM,

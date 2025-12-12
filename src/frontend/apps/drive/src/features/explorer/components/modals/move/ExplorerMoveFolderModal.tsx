@@ -200,7 +200,7 @@ export const ExplorerMoveFolder = ({
         <div className="noPadding">
           <HorizontalSeparator />
           <div className="modal__move__explorer">
-            <EmbeddedExplorer {...itemsExplorer} />
+            <EmbeddedExplorer {...itemsExplorer} showSearch={true} />
           </div>
           <HorizontalSeparator />
         </div>

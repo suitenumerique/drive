@@ -13,6 +13,8 @@ import {
 import { ExplorerSelectionBar } from "@/features/explorer/components/app-view/ExplorerSelectionBar";
 import { ExplorerFilters } from "@/features/explorer/components/app-view/ExplorerFilters";
 import { AppExplorerGrid } from "@/features/explorer/components/app-view/AppExplorerGrid";
+import { useRouter } from "next/router";
+import { getDefaultRoute } from "@/utils/defaultRoutes";
 export type FileUploadMeta = { file: File; progress: number };
 
 /**
@@ -32,7 +34,8 @@ export const AppExplorerInner = (props: AppExplorerProps) => {
   const showFilters = props.showFilters ?? true;
   const ref = useRef<Item[]>([]);
   ref.current = selectedItems;
-
+  const router = useRouter();
+  const defaultRoute = getDefaultRoute(router.pathname);
   const onSelectionStart = ({ event, selection }: SelectionEvent) => {
     if (!event?.ctrlKey && !event?.metaKey) {
       selection.clearSelection();
@@ -168,7 +171,10 @@ export const AppExplorerInner = (props: AppExplorerProps) => {
 
             <div className="explorer__content">
               {props.gridHeader ? props.gridHeader : <AppExplorerBreadcrumbs />}
-              <AppExplorerGrid {...props} />
+
+              <div className="explorer__grid__container">
+                <AppExplorerGrid {...props} />
+              </div>
             </div>
           </div>
         </div>
