@@ -24,6 +24,7 @@ export default function HomePage() {
   const { config } = useConfig();
 
   const footerCustommization = useThemeCustomization("footer");
+  console.log(footerCustommization);
 
   // Redirect to the attempted url if it exists, otherwise redirect to the last visited item.
   useEffect(() => {
