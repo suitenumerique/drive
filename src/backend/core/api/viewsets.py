@@ -1160,18 +1160,28 @@ class ItemViewSet(
                     {"detail": "item already marked as favorite"},
                     status=drf.status.HTTP_200_OK,
                 )
+            # At this point the annotation is_favorite is already made by the
+            # queryset.annotate_is_favorite(user) and its value is False.
+            # If we want a fresh data we have to make a new queryset, apply the annotation
+            # and get the item again.
+            # To avoid all of this we directly set item.is_favorite to True.
+            item.is_favorite = True
+            serializer = self.get_serializer(item)
             return drf.response.Response(
-                {"detail": "item marked as favorite"},
-                status=drf.status.HTTP_201_CREATED,
+                serializer.data, status=drf.status.HTTP_201_CREATED
             )
 
         # Handle DELETE method to unmark as favorite
         deleted, _ = models.ItemFavorite.objects.filter(item=item, user=user).delete()
         if deleted:
-            return drf.response.Response(
-                {"detail": "item unmarked as favorite"},
-                status=drf.status.HTTP_204_NO_CONTENT,
-            )
+            # At this point the annotation is_favorite is already made by the
+            # queryset.annotate_is_favorite(user) and its value is True.
+            # If we want a fresh data we have to make a new queryset, apply the annotation
+            # and get the item again.
+            # To avoid all of this we directly set item.is_favorite to False.
+            item.is_favorite = False
+            serializer = self.get_serializer(item)
+            return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
         return drf.response.Response(
             {"detail": "item was already not marked as favorite"},
             status=drf.status.HTTP_200_OK,
