@@ -63,7 +63,8 @@ def test_api_item_favorite_authenticated_post_allowed(reach, has_role):
     response = client.post(f"/api/v1.0/items/{item.id!s}/favorite/")
 
     assert response.status_code == 201
-    assert response.json() == {"detail": "item marked as favorite"}
+    assert response.json()["id"] == str(item.id)
+    assert response.json()["is_favorite"] is True
 
     # Verify in database
     assert models.ItemFavorite.objects.filter(item=item, user=user).exists()
@@ -183,7 +184,9 @@ def test_api_item_favorite_authenticated_delete_allowed(reach, has_role):
 
     # Unmark as favorite
     response = client.delete(f"/api/v1.0/items/{item.id!s}/favorite/")
-    assert response.status_code == 204
+    assert response.status_code == 200
+    assert response.json()["id"] == str(item.id)
+    assert response.json()["is_favorite"] is False
 
     # Verify in database
     assert models.ItemFavorite.objects.filter(item=item, user=user).exists() is False
@@ -306,15 +309,20 @@ def test_api_item_favorite_authenticated_post_unmark_then_mark_again_allowed(
     # Mark as favorite
     response = client.post(url)
     assert response.status_code == 201
+    assert response.json()["id"] == str(item.id)
+    assert response.json()["is_favorite"] is True
 
     # Unmark as favorite
     response = client.delete(url)
-    assert response.status_code == 204
+    assert response.status_code == 200
+    assert response.json()["id"] == str(item.id)
+    assert response.json()["is_favorite"] is False
 
     # Mark as favorite again
     response = client.post(url)
     assert response.status_code == 201
-    assert response.json() == {"detail": "item marked as favorite"}
+    assert response.json()["id"] == str(item.id)
+    assert response.json()["is_favorite"] is True
 
     # Verify in database
     assert models.ItemFavorite.objects.filter(item=item, user=user).exists()
@@ -366,7 +374,8 @@ def test_api_item_favorite_suspicious_item_should_work_for_creator():
 
     response = client.post(f"/api/v1.0/items/{suspicious_item.id!s}/favorite/")
     assert response.status_code == 201
-    assert response.json() == {"detail": "item marked as favorite"}
+    assert response.json()["id"] == str(suspicious_item.id)
+    assert response.json()["is_favorite"]
 
     # Verify in database
     assert models.ItemFavorite.objects.filter(
