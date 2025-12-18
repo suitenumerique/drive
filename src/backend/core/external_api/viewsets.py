@@ -4,7 +4,7 @@ from django.conf import settings
 
 from lasuite.oidc_resource_server.authentication import ResourceServerAuthentication
 
-from core.api.permissions import ItemAccessPermission
+from core.api.permissions import AccessPermission, IsSelf, ItemAccessPermission
 from core.api.viewsets import (
     InvitationViewset,
     ItemAccessViewSet,
@@ -58,7 +58,7 @@ class ResourceServerItemAccessViewSet(
 
     authentication_classes = [ResourceServerAuthentication]
 
-    permission_classes = [ResourceServerClientPermission & ItemAccessPermission]
+    permission_classes = [ResourceServerClientPermission & AccessPermission]
 
     @property
     def resource_server_actions(self):
@@ -73,7 +73,7 @@ class ResourceServerInvitationViewSet(
 
     authentication_classes = [ResourceServerAuthentication]
 
-    permission_classes = [ResourceServerClientPermission & ItemAccessPermission]
+    permission_classes = [ResourceServerClientPermission & AccessPermission]
 
     @property
     def resource_server_actions(self):
