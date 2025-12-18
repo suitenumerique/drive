@@ -452,14 +452,14 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
             ["reader", "administrator", "reader", "editor"],
             [
                 ["reader", "editor", "administrator"],
-                [],
+                ["administrator"],
             ],
         ],
         [
             ["editor", "editor", "administrator", "editor"],
             [
                 ["reader", "editor", "administrator"],
-                [],
+                ["administrator"],
             ],
         ],
     ],
@@ -1734,5 +1734,93 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
             "max_ancestors_role_item_id": str(parent.id),
             "max_role": "owner",
             "is_explicit": True,
+        },
+    ]
+
+
+def test_api_item_accesses_other_user_accesses():
+    """Check the abilities of a user when other users have accesses on the same item."""
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    grand_parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, title="A")
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, title="B", parent=grand_parent
+    )
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, title="C", parent=parent
+    )
+
+    user_access = factories.UserItemAccessFactory(
+        item=grand_parent, user=user, role="owner"
+    )
+    other_user_access = factories.UserItemAccessFactory(
+        item=grand_parent, user=other_user, role="administrator"
+    )
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
+
+    assert response.status_code == 200
+    content = response.json()
+
+    assert content == [
+        {
+            "id": str(user_access.id),
+            "item": {
+                "id": str(grand_parent.id),
+                "path": str(grand_parent.path),
+                "depth": grand_parent.depth,
+            },
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "language": user.language,
+                "full_name": user.full_name,
+                "short_name": user.short_name,
+            },
+            "team": "",
+            "role": "owner",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": True,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": None,
+            "max_ancestors_role_item_id": None,
+            "max_role": "owner",
+            "is_explicit": False,
+        },
+        {
+            "id": str(other_user_access.id),
+            "item": {
+                "id": str(grand_parent.id),
+                "path": str(grand_parent.path),
+                "depth": grand_parent.depth,
+            },
+            "user": {
+                "id": str(other_user.id),
+                "email": other_user.email,
+                "language": other_user.language,
+                "full_name": other_user.full_name,
+                "short_name": other_user.short_name,
+            },
+            "team": "",
+            "role": "administrator",
+            "abilities": {
+                "destroy": True,
+                "update": True,
+                "partial_update": True,
+                "retrieve": True,
+                "set_role_to": ["owner"],
+            },
+            "max_ancestors_role": None,
+            "max_ancestors_role_item_id": None,
+            "max_role": "administrator",
+            "is_explicit": False,
         },
     ]
