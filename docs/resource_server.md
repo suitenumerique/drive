@@ -40,6 +40,10 @@ EXTERNAL_API = {
         "enabled": False,
         "actions": [],
     },
+    "users": {
+        "enabled": True,
+        "actions": ["get_me"],
+    }
 }
 ```
 

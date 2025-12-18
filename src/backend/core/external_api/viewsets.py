@@ -41,14 +41,17 @@ class ResourceServerItemViewSet(ResourceServerRestrictionMixin, ItemViewSet):
         return self._get_resource_server_actions("items")
 
 
-class ResourceServerUserViewSet(UserViewSet):
+class ResourceServerUserViewSet(ResourceServerRestrictionMixin, UserViewSet):
     """Resource Server Viewset for the Drive app."""
 
     authentication_classes = [ResourceServerAuthentication]
 
-    permission_classes = [ResourceServerClientPermission]
+    permission_classes = [ResourceServerClientPermission & IsSelf]
 
-    resource_server_actions = ["get_me"]
+    @property
+    def resource_server_actions(self):
+        """Get resource_server_actions from settings."""
+        return self._get_resource_server_actions("users")
 
 
 class ResourceServerItemAccessViewSet(
