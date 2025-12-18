@@ -22,6 +22,7 @@ and this project adheres to
 
 - 🐛(scalingo) fix deploy scalingo with yarn
 - 🐛(front) fix responsive gaufre
+- 🐛(docker-hub) fix mistake in docker user
 
 ## [v0.10.1] - 2025-12-05
 
