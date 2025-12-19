@@ -36,6 +36,7 @@
     "react-i18next": "16.3.3",
     "react-pdf": "9.2.1",
     "react-toastify": "11.0.5",
+    "react-zoom-pan-pinch": "^3.7.0",
     "sass": "1.94.0"
   },
   "devDependencies": {

@@ -1,3 +1,70 @@
-.pdf-container__iframe {
-  border: none;
+.pdf-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+  background-color: #1a1a1a;
+
+  &__iframe {
+    border: none;
+  }
+
+  &__scrollable {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    gap: 20px;
+    background-color: #1a1a1a;
+
+    &--exceeds-viewport {
+      align-items: flex-start;
+    }
+  }
+
+  &__loading {
+    padding: 20px;
+    text-align: center;
+    color: #ffffff;
+  }
+
+  &__page-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  &--mobile {
+    overflow: hidden;
+    position: relative;
+  }
+
+  &__transform-wrapper {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+  }
+
+  &__transform-content {
+    width: fit-content;
+    height: fit-content;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__scrollable--mobile {
+    padding: 20px;
+    gap: 20px;
+    width: fit-content;
+    min-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: visible;
+  }
 }
