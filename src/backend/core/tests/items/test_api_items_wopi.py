@@ -46,7 +46,7 @@ def configure_wopi_settings(valid_mimetype, valid_wopi_launch_url):
             },
             "extensions": {},
             "vendorA": {
-                "proof_key": {},
+                "proof_keys": {},
             },
         },
     )
