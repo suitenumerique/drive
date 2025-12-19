@@ -9,13 +9,19 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ImageViewer } from "../image-viewer/ImageViewer";
 import { VideoPlayer } from "../video-player/VideoPlayer";
 import { AudioPlayer } from "../audio-player/AudioPlayer";
-import { PreviewPdf } from "../pdf-preview/PreviewPdf";
+const PDFViewer = dynamic(
+  () => import("@/features/ui/preview/pdf-preview/PreviewPdf"),
+  {
+    ssr: false,
+  }
+);
 
 import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
 import { FileIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { useTranslation } from "react-i18next";
 import { SuspiciousPreview } from "../suspicious/SuspiciousPreview";
 import { WopiEditor } from "../wopi/WopiEditor";
+import dynamic from "next/dynamic";
 
 export type FilePreviewType = {
   id: string;
@@ -136,7 +142,7 @@ export const FilePreview = ({
           </div>
         );
       case MimeCategory.PDF:
-        return <PreviewPdf src={currentFile.url_preview} />;
+        return <PDFViewer src={currentFile.url_preview} />;
 
       default:
         return (
