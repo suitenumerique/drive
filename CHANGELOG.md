@@ -12,6 +12,7 @@ and this project adheres to
 
 - ✨(backend) add async indexation of items on save (or access save)
 - ✨(backend) add throttle mechanism to limit indexation job
+- ✨(frontend) Add navigation with enter key
 
 ### Changed
 

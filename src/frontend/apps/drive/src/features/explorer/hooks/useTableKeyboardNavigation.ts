@@ -2,6 +2,7 @@ import { Item } from "@/features/drivers/types";
 import { Table } from "@tanstack/react-table";
 import { KeyboardEvent, useEffect, useState } from "react";
 import { useGlobalExplorer } from "../components/GlobalExplorerContext";
+import { isTablet } from "@/features/ui/components/responsive/ResponsiveDivs";
 
 export const useTableKeyboardNavigation = ({
   table,
@@ -148,6 +149,51 @@ export const useTableKeyboardNavigation = ({
     }
   };
 
+  // Handle Enter key to open the selected item
+  const onEnterKey = (event: KeyboardEvent<HTMLTableElement>) => {
+    // In case the user focus a tr element, we track it so we can trigger a click on it.
+    const focusedElement = event.target as HTMLElement | null;
+    const isTableRow = focusedElement?.tagName.toLowerCase() === "tr";
+    const isDiv = focusedElement?.tagName.toLowerCase() === "div";
+    const isButton = focusedElement?.tagName.toLowerCase() === "button";
+    // If we are focused on a div or button, we do not handle the enter key.
+    if (focusedElement && (isDiv || isButton)) {
+      return;
+    }
+    const eventClick = new MouseEvent("click", { detail: 1, bubbles: true });
+    const dbClickEvent = new MouseEvent("click", { detail: 2, bubbles: true });
+    // We verify the tag html to be sure we are on a table row
+    if (focusedElement && isTableRow) {
+      if (selectedItems.length === 1 && selectedItems[0].id === focusedElement.dataset.id) { 
+        focusedElement.dispatchEvent(dbClickEvent);
+      } else {
+        focusedElement.dispatchEvent(eventClick);
+      }
+    } else if (selectedItems.length === 1) {
+      // When one item is selected, we open it
+      const rowElement = tableRef.current?.querySelector(`.selected`) as HTMLElement | null;
+      if (rowElement) {
+        // On mobile, we simulate a single click to open the item
+        const isMobile = isTablet();
+        if (isMobile) {
+          rowElement.click();
+        } else {
+          // On desktop, we simulate a double click to open the item
+          rowElement.dispatchEvent(dbClickEvent);
+        }
+      }
+    } else if (selectedItems.length > 1) {
+      const lastSelectedItem = selectedItems[selectedItems.length - 1];
+      // On multiple selection, we click on the last selected item
+      const rowElement = tableRef.current?.querySelector(
+        `[data-id="${lastSelectedItem.id}"]`
+      ) as HTMLElement | null;
+      if (rowElement) {
+        rowElement.dispatchEvent(eventClick);
+      }
+    }
+  };
+
   // Handle keyboard navigation via up/down arrows
   const onKeyDown = (event: KeyboardEvent<HTMLTableElement>) => {
     if (isDisabled) {
@@ -157,6 +203,8 @@ export const useTableKeyboardNavigation = ({
       arrowDown(event);
     } else if (event.key === "ArrowUp") {
       arrowUp(event);
+    } else if (event.key === "Enter") {
+      onEnterKey(event);
     }
   };
 
