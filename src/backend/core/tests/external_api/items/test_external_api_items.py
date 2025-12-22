@@ -21,6 +21,7 @@ from core.tests.utils.urls import reload_urls
 
 pytestmark = pytest.mark.django_db
 
+# pylint: disable=too-many-lines
 # pylint: disable=unused-argument
 
 
@@ -812,6 +813,78 @@ def test_api_items_accesses_create_resource_server_allowed(
     assert response_data["role"] == models.RoleChoices.READER
 
 
+def test_api_items_accesses_delete_resource_server_not_allowed(
+    user_token, resource_server_backend_conf, user_specific_sub
+):
+    """
+    Connected users should not be allowed to create an access for an item from a resource server.
+    """
+    reload_urls()
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
+    factories.UserItemAccessFactory(
+        item=item, user=user_specific_sub, role=models.RoleChoices.OWNER
+    )
+
+    other_user = factories.UserFactory()
+    access = factories.UserItemAccessFactory(
+        item=item, user=other_user, role=models.RoleChoices.READER
+    )
+
+    count_before = models.ItemAccess.objects.count()
+    response = client.delete(
+        f"/external_api/v1.0/items/{access.item_id!s}/accesses/{access.id!s}/",
+    )
+    assert response.status_code == 404
+    assert models.ItemAccess.objects.count() == count_before
+
+
+@override_settings(
+    EXTERNAL_API={
+        "items": {
+            "enabled": True,
+            "actions": ["list", "retrieve", "children", "upload_ended"],
+        },
+        "item_access": {
+            "enabled": True,
+            "actions": ["list", "create", "destroy"],
+        },
+        "item_invitation": {
+            "enabled": False,
+            "actions": [],
+        },
+    }
+)
+def test_api_items_accesses_delete_resource_server_allowed(
+    user_token, resource_server_backend, user_specific_sub
+):
+    """
+    Connected users should not be allowed to create an access for an item from a resource server.
+    """
+    reload_urls()
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
+    factories.UserItemAccessFactory(
+        item=item, user=user_specific_sub, role=models.RoleChoices.OWNER
+    )
+
+    other_user = factories.UserFactory()
+    access = factories.UserItemAccessFactory(
+        item=item, user=other_user, role=models.RoleChoices.READER
+    )
+
+    count_before = models.ItemAccess.objects.count()
+    response = client.delete(
+        f"/external_api/v1.0/items/{access.item_id!s}/accesses/{access.id!s}/",
+    )
+    assert response.status_code == 204
+    assert models.ItemAccess.objects.count() == count_before - 1
+
+
 def test_api_items_invitations_resource_server_not_allowed(
     user_token, resource_server_backend_conf, user_specific_sub
 ):
@@ -962,3 +1035,72 @@ def test_api_items_invitations_create_resource_server_allowed(
     assert response_data["id"] == str(new_invitation.id)
     assert response_data["email"] == "test@example.com"
     assert response_data["role"] == models.RoleChoices.READER
+
+
+def test_api_items_invitations_delete_resource_server_not_allowed(
+    user_token, resource_server_backend_conf, user_specific_sub
+):
+    """
+    Connected users should not be allowed to delete an invitation for
+    an item from a resource server.
+    """
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
+    factories.UserItemAccessFactory(
+        item=item, user=user_specific_sub, role=models.RoleChoices.OWNER
+    )
+
+    other_user = factories.UserFactory()
+    invitation = factories.InvitationFactory(item=item, issuer=other_user)
+
+    count_before = models.Invitation.objects.count()
+    response = client.delete(
+        f"/external_api/v1.0/items/{invitation.item_id!s}/invitations/{invitation.id!s}/",
+    )
+    assert response.status_code == 404
+    assert models.Invitation.objects.count() == count_before
+
+
+@override_settings(
+    EXTERNAL_API={
+        "items": {
+            "enabled": True,
+            "actions": ["list", "retrieve", "children", "upload_ended"],
+        },
+        "item_access": {
+            "enabled": False,
+            "actions": [],
+        },
+        "item_invitation": {
+            "enabled": True,
+            "actions": ["list", "create", "destroy"],
+        },
+    }
+)
+def test_api_items_invitations_delete_resource_server_allowed(
+    user_token, resource_server_backend, user_specific_sub
+):
+    """
+    Connected users should be allowed to create an invitation for an item from a resource server
+    when the create action is enabled in EXTERNAL_API item_invitation settings.
+    """
+    reload_urls()
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
+    factories.UserItemAccessFactory(
+        item=item, user=user_specific_sub, role=models.RoleChoices.OWNER
+    )
+
+    other_user = factories.UserFactory()
+    invitation = factories.InvitationFactory(item=item, issuer=other_user)
+
+    count_before = models.Invitation.objects.count()
+    response = client.delete(
+        f"/external_api/v1.0/items/{invitation.item_id!s}/invitations/{invitation.id!s}/",
+    )
+    assert response.status_code == 204
+    assert models.Invitation.objects.count() == count_before - 1

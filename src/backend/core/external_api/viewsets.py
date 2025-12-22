@@ -4,7 +4,7 @@ from django.conf import settings
 
 from lasuite.oidc_resource_server.authentication import ResourceServerAuthentication
 
-from core.api.permissions import ItemAccessPermission
+from core.api.permissions import AccessPermission, IsSelf, ItemAccessPermission
 from core.api.viewsets import (
     InvitationViewset,
     ItemAccessViewSet,
@@ -41,14 +41,17 @@ class ResourceServerItemViewSet(ResourceServerRestrictionMixin, ItemViewSet):
         return self._get_resource_server_actions("items")
 
 
-class ResourceServerUserViewSet(UserViewSet):
+class ResourceServerUserViewSet(ResourceServerRestrictionMixin, UserViewSet):
     """Resource Server Viewset for the Drive app."""
 
     authentication_classes = [ResourceServerAuthentication]
 
-    permission_classes = [ResourceServerClientPermission]
+    permission_classes = [ResourceServerClientPermission & IsSelf]
 
-    resource_server_actions = ["get_me"]
+    @property
+    def resource_server_actions(self):
+        """Get resource_server_actions from settings."""
+        return self._get_resource_server_actions("users")
 
 
 class ResourceServerItemAccessViewSet(
@@ -58,7 +61,7 @@ class ResourceServerItemAccessViewSet(
 
     authentication_classes = [ResourceServerAuthentication]
 
-    permission_classes = [ResourceServerClientPermission & ItemAccessPermission]
+    permission_classes = [ResourceServerClientPermission & AccessPermission]
 
     @property
     def resource_server_actions(self):
@@ -73,7 +76,7 @@ class ResourceServerInvitationViewSet(
 
     authentication_classes = [ResourceServerAuthentication]
 
-    permission_classes = [ResourceServerClientPermission & ItemAccessPermission]
+    permission_classes = [ResourceServerClientPermission & AccessPermission]
 
     @property
     def resource_server_actions(self):

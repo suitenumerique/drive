@@ -69,11 +69,14 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
         external_api_viewsets.ResourceServerItemViewSet,
         basename="resource_server_items",
     )
-    external_api_router.register(
-        "users",
-        external_api_viewsets.ResourceServerUserViewSet,
-        basename="resource_server_users",
-    )
+
+    users_access_config = settings.EXTERNAL_API.get("users", {})
+    if users_access_config.get("enabled", False):
+        external_api_router.register(
+            "users",
+            external_api_viewsets.ResourceServerUserViewSet,
+            basename="resource_server_users",
+        )
 
     external_api_urls = [*external_api_router.urls]
 

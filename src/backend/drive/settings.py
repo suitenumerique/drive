@@ -721,6 +721,10 @@ class Base(Configuration):
                 "enabled": False,
                 "actions": [],
             },
+            "users": {
+                "enabled": True,
+                "actions": ["get_me"],
+            },
         },
         environ_name="EXTERNAL_API",
         environ_prefix=None,
