@@ -595,8 +595,9 @@ class ItemViewSet(
         """Override to check if a file is renamed in order to rename file on storage."""
         instance = serializer.instance
         if instance.type == models.ItemTypeChoices.FILE:
-            if instance.title != serializer.validated_data.get("title"):
-                rename_file.delay(instance.id, serializer.validated_data.get("title"))
+            title = serializer.validated_data.get("title")
+            if title and instance.title != title:
+                rename_file.delay(instance.id, title)
         serializer.save()
 
     @drf.decorators.action(detail=True, methods=["delete"], url_path="hard-delete")

@@ -23,6 +23,7 @@ and this project adheres to
 - 🐛(scalingo) fix deploy scalingo with yarn
 - 🐛(front) fix responsive gaufre
 - 🐛(docker-hub) fix mistake in docker user
+- 🐛(backend) stop renaming file when no title is provided
 
 ## [v0.10.1] - 2025-12-05
 

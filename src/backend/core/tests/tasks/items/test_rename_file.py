@@ -76,7 +76,7 @@ def test_rename_file_filename_has_not_changed():
 
 
 def test_rename_file_item_not_ready(caplog):
-    """Renamine a file that is not ready should abort the task."""
+    """Renaming a file that is not ready should abort the task."""
     user = factories.UserFactory()
     item = factories.ItemFactory(
         title="new_title",
@@ -91,3 +91,41 @@ def test_rename_file_item_not_ready(caplog):
     item.refresh_from_db()
     assert item.filename == "old_title.txt"
     assert f"Item {item.id} is not ready for renaming" in caplog.text
+
+
+def test_rename_file_new_title_is_empty(caplog):
+    """Renaming a file with an empty new title should abort the task."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        title="new_title",
+        type=models.ItemTypeChoices.FILE,
+        filename="old_title.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    with caplog.at_level("ERROR", logger="core.tasks.item"):
+        rename_file(item.id, "")
+    item.refresh_from_db()
+    assert item.filename == "old_title.txt"
+    assert "New title is empty, skipping rename file" in caplog.text
+
+
+def test_rename_file_new_title_is_none(caplog):
+    """Renaming a file with a None new title should abort the task."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        title="new_title",
+        type=models.ItemTypeChoices.FILE,
+        filename="old_title.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    with caplog.at_level("ERROR", logger="core.tasks.item"):
+        rename_file(item.id, None)
+    item.refresh_from_db()
+    assert item.filename == "old_title.txt"
+    assert "New title is empty, skipping rename file" in caplog.text
