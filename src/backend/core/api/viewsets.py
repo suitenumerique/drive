@@ -908,7 +908,9 @@ class ItemViewSet(
             )
 
         # GET: List children
-        queryset = item.children().filter(deleted_at__isnull=True)
+        queryset = (
+            item.children().select_related("creator").filter(deleted_at__isnull=True)
+        )
         queryset = self._filter_suspicious_items(queryset, request.user)
         queryset = self.filter_queryset(queryset)
         filterset = ItemFilter(request.GET, queryset=queryset)
