@@ -898,6 +898,11 @@ class ItemViewSet(
                     parent=item,
                     **serializer.validated_data,
                 )
+                models.ItemAccess.objects.create(
+                    item=child_item,
+                    user=request.user,
+                    role=models.RoleChoices.OWNER,
+                )
 
             # Set the created instance to the serializer
             serializer.instance = child_item
