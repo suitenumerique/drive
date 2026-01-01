@@ -968,6 +968,55 @@ def test_api_items_children_list_filter_type():
         ],
     }
 
+def test_api_items_children_list_nb_accesses():
+    """The number of accesses is computed correctly when retrieving children list (pre-computed)."""
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    grand_parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(
+        parent=grand_parent, type=models.ItemTypeChoices.FOLDER
+    )
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    factories.UserItemAccessFactory(item=item, user=user)
+    children = factories.ItemFactory.create_batch(5, parent=item)
+
+    nb_accesses_grand_parent = random.randint(0, 5)
+    nb_accesses_parent = random.randint(0, 5)
+    nb_accesses_item = random.randint(0, 5)
+    nb_accesses_children = [random.randint(0, 5) for _ in range(5)]
+
+    factories.UserItemAccessFactory.create_batch(
+        nb_accesses_grand_parent, item=grand_parent
+    )
+    factories.UserItemAccessFactory.create_batch(nb_accesses_parent, item=parent)
+    factories.UserItemAccessFactory.create_batch(nb_accesses_item, item=item)
+    expected_nb_accesses = {}
+    for child, number in zip(children, nb_accesses_children, strict=True):
+        factories.UserItemAccessFactory.create_batch(number, item=child)
+        expected_nb_accesses[str(child.id)] = (
+            nb_accesses_grand_parent
+            + nb_accesses_parent
+            + nb_accesses_item
+            + 1
+            + number
+        )
+
+    response = client.get(
+        f"/api/v1.0/items/{item.id!s}/children/",
+    )
+
+    assert response.status_code == 200
+    returned_children = response.json()["results"]
+
+    for child_data in returned_children:
+        expected_number = expected_nb_accesses[child_data["id"]]
+        assert child_data["nb_accesses"] == expected_number, (
+            f"Child {child_data['id']} has nb_accesses={child_data['nb_accesses']}, "
+            f"expected {expected_number}"
+        )
 
 def test_api_items_children_list_filter_wrong_type():
     """

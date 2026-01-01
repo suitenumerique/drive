@@ -677,16 +677,19 @@ class Item(TreeModel, BaseModel):
     @property
     def nb_accesses(self):
         """Calculate the number of accesses."""
-        cache_key = self.get_nb_accesses_cache_key()
-        nb_accesses = cache.get(cache_key)
+        try:
+            return self._nb_accesses
+        except AttributeError:
+            cache_key = self.get_nb_accesses_cache_key()
+            nb_accesses = cache.get(cache_key)
 
-        if nb_accesses is None:
-            nb_accesses = ItemAccess.objects.filter(
-                item__path__ancestors=self.path,
-            ).count()
-            cache.set(cache_key, nb_accesses)
+            if nb_accesses is None:
+                nb_accesses = ItemAccess.objects.filter(
+                    item__path__ancestors=self.path,
+                ).count()
+                cache.set(cache_key, nb_accesses)
 
-        return nb_accesses
+            return nb_accesses
 
     @property
     def is_root(self):

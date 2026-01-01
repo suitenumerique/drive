@@ -16,6 +16,7 @@ from django.core.files.storage import default_storage
 from django.db import models as db
 from django.db import transaction
 from django.db.models.expressions import RawSQL
+from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.text import slugify
@@ -918,10 +919,18 @@ class ItemViewSet(
             raise drf.exceptions.ValidationError(filterset.errors)
         queryset = filterset.qs
 
-        # Apply ordering only now that everyting is filtered and annotated
+        # Apply ordering only now that everything is filtered and annotated
         queryset = filters.OrderingFilter().filter_queryset(
             self.request, queryset, self
         )
+
+        # Pre-compute number of accesses
+        item_nb_accesses = item.nb_accesses
+        queryset = queryset.annotate(
+            _nb_accesses=db.Value(item_nb_accesses)
+            + Coalesce(db.Count("accesses", distinct=True), 0),
+        )
+
         return self.get_response_for_queryset(queryset)
 
     @drf.decorators.action(detail=True, methods=["get"])
