@@ -968,6 +968,7 @@ def test_api_items_children_list_filter_type():
         ],
     }
 
+
 def test_api_items_children_list_nb_accesses():
     """The number of accesses is computed correctly when retrieving children list (pre-computed)."""
     user = factories.UserFactory()
@@ -1018,9 +1019,45 @@ def test_api_items_children_list_nb_accesses():
             f"expected {expected_number}"
         )
 
+
+def test_api_items_children_list_num_queries(django_assert_num_queries):
+    """Retrieving a list of N children should not create N queries."""
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    factories.UserItemAccessFactory(item=item, user=user)
+    factories.UserItemAccessFactory(item=item)
+
+    children = factories.ItemFactory.create_batch(
+        5, parent=item, type=models.ItemTypeChoices.FOLDER
+    )
+
+    file_child = factories.ItemFactory(parent=item, type=models.ItemTypeChoices.FILE)
+    factories.UserItemAccessFactory(item=file_child)
+
+    with django_assert_num_queries(6):
+        response = client.get(
+            f"/api/v1.0/items/{item.id!s}/children/?type=folder",
+        )
+    with django_assert_num_queries(5):
+        response = client.get(
+            f"/api/v1.0/items/{item.id!s}/children/?type=folder",
+        )
+
+    assert response.status_code == 200
+    content = response.json()
+    result_ids = {result["id"] for result in content["results"]}
+    assert len(result_ids) == 5
+    children_ids = {str(child.id) for child in children}
+    assert result_ids == children_ids, f"Expected {children_ids}, got {result_ids}"
+
+
 def test_api_items_children_list_filter_wrong_type():
     """
-    Filtering with a wront type should not filter result
+    Filtering with a wrong type should not filter results
     """
 
     user = factories.UserFactory()

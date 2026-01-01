@@ -605,6 +605,26 @@ class Item(TreeModel, BaseModel):
 
         return super().save(*args, **kwargs)
 
+    def compute_ancestors_links_paths_mapping(self):
+        """
+        Compute the ancestors links for the current document up to the highest readable ancestor.
+        """
+        ancestors = (
+            (self.ancestors() | self._meta.model.objects.filter(pk=self.pk))
+            .filter(ancestors_deleted_at__isnull=True)
+            .order_by("path")
+        )
+        ancestors_links = []
+        paths_links_mapping = {}
+
+        for ancestor in ancestors:
+            ancestors_links.append(
+                {"link_reach": ancestor.link_reach, "link_role": ancestor.link_role}
+            )
+            paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
+
+        return paths_links_mapping
+
     def delete(self, using=None, keep_parents=False):
         if self.main_workspace:
             raise RuntimeError("The main workspace cannot be deleted.")
