@@ -1,5 +1,6 @@
 """Util to generate S3 authorization headers for object storage access control"""
 
+import mimetypes
 from datetime import datetime
 
 from django.conf import settings
@@ -7,6 +8,7 @@ from django.core.files.storage import default_storage
 
 import boto3
 import botocore
+import magic
 
 
 def flat_to_nested(items):
@@ -156,3 +158,58 @@ def get_item_file_head_object(item):
     return default_storage.connection.meta.client.head_object(
         Bucket=default_storage.bucket_name, Key=item.file_key
     )
+
+
+def detect_mimetype(file_buffer: bytes, filename: str | None = None) -> str:
+    """
+    Detect MIME type using multiple methods for better accuracy.
+
+    This function combines:
+    1. Magic bytes detection (python-magic) - most reliable for actual file content
+    2. File extension detection (mimetypes) - useful as fallback or for validation
+
+    Args:
+        file_buffer: The file content buffer (first bytes of the file)
+        filename: Optional filename to extract extension from
+
+    Returns:
+        str: The detected MIME type
+    """
+    # Initialize magic detector
+    mime_detector = magic.Magic(mime=True)
+
+    # Method 1: Detect from file content (magic bytes) - most reliable
+    mimetype_from_content = mime_detector.from_buffer(file_buffer)
+
+    # If we have a filename, try extension-based detection as well
+    mimetype_from_extension = None
+    if filename:
+        # Use mimetypes module to guess from extension
+        # Use guess_file_type (Python 3.13+) instead of deprecated guess_type
+        mimetype_from_extension, _ = mimetypes.guess_file_type(filename, strict=False)
+
+    # Strategy: Prefer content-based detection, but use extension if:
+    # 1. Content detection returns generic types (application/octet-stream, text/plain)
+    # 2. Content detection fails or returns None
+    # 3. Extension detection provides a more specific type
+
+    # Generic/unreliable MIME types that we should try to improve
+    generic_types = {
+        "application/octet-stream",
+        "application/zip",
+        "text/plain",
+    }
+
+    # If content detection gives us a generic type and we have extension info
+    if mimetype_from_content in generic_types and mimetype_from_extension:
+        # Use extension-based detection if it's more specific
+        if mimetype_from_extension not in generic_types:
+            return mimetype_from_extension
+
+    # If content detection failed, returned None or is a generic type, use extension if available
+    if not mimetype_from_content or mimetype_from_content in generic_types:
+        if mimetype_from_extension:
+            return mimetype_from_extension
+
+    # Default to content-based detection (most reliable)
+    return mimetype_from_content or "application/octet-stream"

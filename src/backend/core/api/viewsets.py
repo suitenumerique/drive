@@ -20,7 +20,6 @@ from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.text import slugify
 
-import magic
 import posthog
 import rest_framework as drf
 from corsheaders.middleware import (
@@ -692,7 +691,6 @@ class ItemViewSet(
                 )
             )
 
-        mime_detector = magic.Magic(mime=True)
         s3_client = default_storage.connection.meta.client
 
         head_response = s3_client.head_object(
@@ -712,7 +710,8 @@ class ItemViewSet(
                 Bucket=default_storage.bucket_name, Key=item.file_key
             )["Body"].read()
 
-        mimetype = mime_detector.from_buffer(file_head)
+        # Use improved MIME type detection combining magic bytes and file extension
+        mimetype = utils.detect_mimetype(file_head, filename=item.filename)
 
         item.upload_state = models.ItemUploadStateChoices.ANALYZING
         item.mimetype = mimetype

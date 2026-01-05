@@ -17,6 +17,7 @@ and this project adheres to
 
 - ✨(api) modify items/search endpoint to use indexed items in Find
 - 🐛(email) avoid trying to send emails if no provider is configured
+- ♻️(backend) improve mimetype detection
 
 ### Fixed
 
