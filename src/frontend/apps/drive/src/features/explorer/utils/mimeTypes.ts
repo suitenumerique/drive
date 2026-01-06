@@ -218,11 +218,7 @@ export const getMimeCategory = (
 ): MimeCategory => {
   // Special case: some calc files have application/zip mimetype. For those we should check their extension too.
   // Otherwise they will be shown as zip files.
-  if (
-    mimetype === "application/zip" &&
-    extension &&
-    CALC_EXTENSIONS.includes(extension)
-  ) {
+  if (extension && CALC_EXTENSIONS.includes(extension)) {
     return MimeCategory.CALC;
   }
 
