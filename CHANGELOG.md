@@ -14,6 +14,7 @@ and this project adheres to
 - ✨(backend) add throttle mechanism to limit indexation job
 - 🌐(front) set html lang attribute on language change
 - ✨(front) add download and preview events
+- ✨(backend) add an allowed file extension list
 
 ### Changed
 

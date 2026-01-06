@@ -299,6 +299,61 @@ def test_api_items_children_create_related_success_override_s3_endpoint(settings
     assert len(query_params) == 0
 
 
+def test_api_items_children_create_file_extension_not_allowed(settings):
+    """
+    Creating a file item with an extension not allowed should fail.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = True
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_reach="restricted", type=ItemTypeChoices.FOLDER)
+    factories.UserItemAccessFactory(user=user, item=item, role="owner")
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/children/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.notallowed",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "filename",
+                "code": "item_create_file_extension_not_allowed",
+                "detail": "This file extension is not allowed.",
+            },
+        ],
+        "type": "validation_error",
+    }
+
+
+def test_api_items_children_create_file_extension_not_allowed_not_checking_extension(
+    settings,
+):
+    """
+    Creating a file item with an extension not allowed should fail.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = False
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_reach="restricted", type=ItemTypeChoices.FOLDER)
+    factories.UserItemAccessFactory(user=user, item=item, role="owner")
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/children/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.notallowed",
+        },
+    )
+    assert response.status_code == 201
+    child = Item.objects.get(id=response.json()["id"])
+    assert child.title == "file.notallowed"
+
+
 def test_api_items_children_create_force_id_success():
     """It should be possible to force the item ID when creating a nested item."""
     user = factories.UserFactory()

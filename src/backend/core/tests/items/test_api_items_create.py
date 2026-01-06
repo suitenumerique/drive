@@ -134,6 +134,117 @@ def test_api_items_create_file_authenticated_success():
     assert len(query_params) == 0
 
 
+def test_api_items_create_file_authenticated_extension_not_allowed():
+    """
+    Creating a file item with an extension not allowed should fail.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.notallowed",
+        },
+        format="json",
+    )
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "filename",
+                "code": "item_create_file_extension_not_allowed",
+                "detail": "This file extension is not allowed.",
+            },
+        ],
+        "type": "validation_error",
+    }
+
+
+def test_api_items_create_file_authenticated_not_checking_extension(settings):
+    """
+    Creating a file item with an extension not allowed should fail.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = False
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.notallowed",
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+    item = Item.objects.exclude(id=user.get_main_workspace().id).get()
+    assert item.title == "file.notallowed"
+
+
+def test_api_items_create_file_authenticated_no_extension_but_checking_it_should_fail(
+    settings,
+):
+    """
+    Creating a file without an extension but checking the extension should fail.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = True
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "filename": "file",
+        },
+        format="json",
+    )
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "filename",
+                "code": "item_create_file_extension_not_allowed",
+                "detail": "This file extension is not allowed.",
+            },
+        ],
+        "type": "validation_error",
+    }
+
+
+def test_api_items_create_file_authenticated_hidden_file_but_checking_extension_should_fail(
+    settings,
+):
+    """
+    Creating a hidden file (starting with a dot) but checking the extension should fail.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = True
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "filename": ".file",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "filename",
+                "code": "item_create_file_extension_not_allowed",
+                "detail": "This file extension is not allowed.",
+            },
+        ],
+        "type": "validation_error",
+    }
+
+
 def test_api_items_create_authenticated_title_null():
     """It should not be possible to create several items with a null title."""
     user = factories.UserFactory()

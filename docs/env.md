@@ -2,6 +2,7 @@
 
 This document lists all configurable environment variables for the Drive application, extracted from the Django settings configuration.
 
+
 | Environment Variable | Description | Default Value |
 |---------------------|-------------|---------------|
 | `ALLOWED_HOSTS` | List of allowed hosts for the application (used in Production) | `[]` |
@@ -43,6 +44,7 @@ This document lists all configurable environment variables for the Drive applica
 | `EMAIL_USE_TLS` | Use TLS for SMTP connection | `False` |
 | `FEATURES_ALPHA` | Enable alpha features | `False` |
 | `FEATURES_INDEXED_SEARCH` | Enable the search of indexed files through the API | `True` |
+| `FILE_EXTENSIONS_ALLOWED` | List of file extension allowed to be uploaded | See in the settings.py file |
 | `FRONTEND_THEME` | Frontend theme configuration | `None` |
 | `FRONTEND_FEEDBACK_BUTTON_SHOW` | Show feedback button | `False` |
 | `FRONTEND_FEEDBACK_BUTTON_IDLE` | Make feedback button idle (e.g. to bind to external library) | `False` |
@@ -86,6 +88,7 @@ This document lists all configurable environment variables for the Drive applica
 | `POSTHOG_HOST` | PostHog analytics host URL | `https://eu.i.posthog.com` |
 | `POSTHOG_KEY` | PostHog analytics API key | `None` |
 | `REDIS_URL` | Redis connection URL | `redis://redis:6379/0` |
+| `RESTRICT_UPLOAD_FILE_TYPE` | Boolean to enable or not upload restriction based on file type (extension + mimetype) | `True` |
 | `SEARCH_INDEXER_ALLOWED_MIMETYPES` | Indexable files mimetypes | `["text/"]` |
 | `SEARCH_INDEXER_CLASS` | Class of the backend for item indexation & search ||
 | `SEARCH_INDEXER_BATCH_SIZE` | Size of each batch for indexation of all items | `1000` |

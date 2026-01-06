@@ -1,7 +1,9 @@
 """Client serializers for the drive core app."""
 
 import json
+import logging
 from datetime import timedelta
+from os.path import splitext
 from urllib.parse import quote
 
 from django.conf import settings
@@ -14,6 +16,8 @@ from core import models
 from core.api import utils
 from core.storage import get_storage_compute_backend
 from wopi import utils as wopi_utils
+
+logger = logging.getLogger(__name__)
 
 
 # pylint: disable=abstract-method
@@ -428,6 +432,15 @@ class CreateItemSerializer(ItemSerializer):
                     {"filename": _("This field is required for files.")},
                     code="item_create_file_filename_required",
                 )
+
+            if settings.RESTRICT_UPLOAD_FILE_TYPE:
+                _root, extension = splitext(attrs["filename"])
+                if extension not in settings.FILE_EXTENSIONS_ALLOWED:
+                    logger.info("create_item: file extension not allowed %s for filename %s", extension, attrs["filename"])
+                    raise serializers.ValidationError(
+                        {"filename": _("This file extension is not allowed.")},
+                        code="item_create_file_extension_not_allowed",
+                    )
 
             # When it's a file we force the title with the filename
             attrs["title"] = attrs["filename"]
