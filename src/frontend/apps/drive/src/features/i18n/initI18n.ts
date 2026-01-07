@@ -17,12 +17,14 @@ import resources from "./translations.json";
  * This way we ensure that we use the most probable language of the user.
  */
 
+const fallbackLng = "en";
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: "en",
+    fallbackLng,
     detection: {
       order: ["cookie", "navigator"],
       caches: ["cookie"],
@@ -38,6 +40,14 @@ i18n
     },
     preload: LANGUAGES_ALLOWED,
   })
+  .then(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute(
+        "lang",
+        i18n.language || fallbackLng
+      );
+    }
+  })
   .catch(() => {
     throw new Error("i18n initialization failed");
   });
@@ -45,6 +55,7 @@ i18n
 // Save language in local storage
 i18n.on("languageChanged", (lng) => {
   if (typeof window !== "undefined") {
+    document.documentElement.setAttribute("lang", lng);
     localStorage.setItem(LANGUAGE_LOCAL_STORAGE, lng);
   }
 });
