@@ -34,10 +34,7 @@ def process_item_deletion(item_id):
         logger.error("To process an item deletion, it must be hard deleted first.")
         return
 
-    if (
-        item.type == ItemTypeChoices.FILE
-        and item.upload_state == ItemUploadStateChoices.READY
-    ):
+    if item.type == ItemTypeChoices.FILE:
         logger.info("Deleting file %s", item.file_key)
         default_storage.delete(item.file_key)
 

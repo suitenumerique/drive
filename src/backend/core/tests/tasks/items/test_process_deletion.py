@@ -36,22 +36,10 @@ def test_process_item_deletion_item_does_not_exist(caplog):
     assert "Item 1 does not exist" in caplog.records[0].message
 
 
-def test_process_item_deletion_item_file_is_not_ready():
-    """Test the process deletion task when the item file is not ready."""
-    item = factories.ItemFactory(type=models.ItemTypeChoices.FILE)
-    item.soft_delete()
-    item.hard_delete()
-
-    process_item_deletion(item.id)
-
-    assert not models.Item.objects.filter(id=item.id).exists()
-
-
 def test_process_item_deletion_item_file_is_ready():
     """Test the process deletion task when the item file is ready."""
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.READY,
         filename="foo.txt",
     )
     item.soft_delete()
