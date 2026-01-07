@@ -682,9 +682,7 @@ class ItemViewSet(
         entitlements_backend = get_entitlements_backend()
         can_upload = entitlements_backend.can_upload(self.request.user)
         if not can_upload["result"]:
-            item.soft_delete()
-            item.hard_delete()
-            process_item_deletion.delay(item.id)
+            self._complete_item_deletion(item)
             raise drf.exceptions.PermissionDenied(
                 detail=can_upload.get(
                     "message", "You do not have permission to upload files."
@@ -713,6 +711,21 @@ class ItemViewSet(
         # Use improved MIME type detection combining magic bytes and file extension
         mimetype = utils.detect_mimetype(file_head, filename=item.filename)
 
+        if (
+            settings.RESTRICT_UPLOAD_FILE_TYPE
+            and mimetype not in settings.FILE_MIMETYPE_ALLOWED
+        ):
+            self._complete_item_deletion(item)
+            logger.info(
+                "upload_ended: mimetype not allowed %s for filename %s",
+                mimetype,
+                item.filename,
+            )
+            raise drf.exceptions.ValidationError(
+                detail="The file type is not allowed.",
+                code="file_type_not_allowed",
+            )
+
         item.upload_state = models.ItemUploadStateChoices.ANALYZING
         item.mimetype = mimetype
         item.size = file_size
@@ -736,6 +749,12 @@ class ItemViewSet(
             )
 
         return drf_response.Response(serializer.data, status=status.HTTP_200_OK)
+
+    def _complete_item_deletion(self, item):
+        """Completely delete an item."""
+        item.soft_delete()
+        item.hard_delete()
+        process_item_deletion.delay(item.id)
 
     @drf.decorators.action(
         detail=False,

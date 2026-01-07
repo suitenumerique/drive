@@ -1,5 +1,6 @@
 """Test related to item upload ended API."""
 
+import logging
 from io import BytesIO
 from unittest import mock
 
@@ -237,3 +238,67 @@ def test_api_item_upload_ended_entitlements_backend_returns_falsy_custom_message
     }
 
     assert not models.Item.objects.filter(id=item.id).exists()
+
+
+def test_api_item_upload_ended_mimetype_not_allowed(settings, caplog):
+    """
+    Test that the API returns a 400 when the mimetype is not allowed.
+    Item should be deleted and the file should be deleted from the storage.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = True
+    settings.FILE_MIMETYPE_ALLOWED = ["application/pdf"]
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=ItemTypeChoices.FILE, filename="my_file.txt")
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
+    )
+
+    with caplog.at_level(logging.INFO):
+        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 400
+    assert (
+        "upload_ended: mimetype not allowed text/plain for filename my_file.txt"
+        in caplog.text
+    )
+
+    assert not models.Item.objects.filter(id=item.id).exists()
+    assert not default_storage.exists(item.file_key)
+
+
+def test_api_item_upload_ended_mimetype_not_allowed_not_checking_mimetype(settings):
+    """
+    Test that the API returns a 200 when the mimetype is not allowed but not checking the mimetype.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = False
+    settings.FILE_MIMETYPE_ALLOWED = ["application/pdf"]
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=ItemTypeChoices.FILE, filename="my_file.txt")
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
+    )
+
+    with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
+        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
+    assert response.status_code == 200
+
+    item.refresh_from_db()
+    assert item.upload_state == ItemUploadStateChoices.ANALYZING
+    assert item.mimetype == "text/plain"
+    assert item.size == 8
+
+    assert response.json()["mimetype"] == "text/plain"
