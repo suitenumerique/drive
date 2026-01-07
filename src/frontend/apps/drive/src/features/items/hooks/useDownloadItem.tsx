@@ -7,6 +7,7 @@ import {
   addToast,
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
+import posthog from "posthog-js";
 
 export const useDownloadItem = () => {
   const { t } = useTranslation();
@@ -46,6 +47,16 @@ export const useDownloadItem = () => {
       description = t("file_download_modal.description");
     }
 
+
+    const triggerDownload = () => {
+      posthog.capture("file_download", {
+        id: item.id,
+        size: item.size,
+        mimetype: item.mimetype,
+      });
+      downloadFile(item.url!, item.title);
+    };
+
     if (title && description) {
       const decision = await modals.confirmationModal({
         size: ModalSize.MEDIUM,
@@ -55,10 +66,10 @@ export const useDownloadItem = () => {
 
       if (decision === "yes") {
         // Only call downloadFile if both url and title are defined
-        downloadFile(item.url, item.title);
+        triggerDownload();
       }
     } else {
-      downloadFile(item.url, item.title);
+      triggerDownload();
     }
   };
 

@@ -16,9 +16,11 @@ import { FileIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { useTranslation } from "react-i18next";
 import { SuspiciousPreview } from "../suspicious/SuspiciousPreview";
 import { WopiEditor } from "../wopi/WopiEditor";
+import posthog from "posthog-js";
 
 export type FilePreviewType = {
   id: string;
+  size: number;
   title: string;
   mimetype: string;
   is_wopi_supported?: boolean;
@@ -157,6 +159,13 @@ export const FilePreview = ({
 
   useEffect(() => {
     onChangeFile?.(currentFile);
+    if (currentFile) {
+      posthog.capture("file_preview_opened", {
+        id: currentFile.id,
+        size: currentFile.size,
+        mimetype: currentFile.mimetype,
+      });
+    }
   }, [currentFile]);
 
   if (!isOpen || !currentFile) {

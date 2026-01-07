@@ -13,6 +13,7 @@ and this project adheres to
 - ✨(backend) add async indexation of items on save (or access save)
 - ✨(backend) add throttle mechanism to limit indexation job
 - 🌐(front) set html lang attribute on language change
+- ✨(front) add download and preview events
 
 ### Changed
 

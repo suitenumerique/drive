@@ -7,6 +7,7 @@ import {
   WorkspaceType,
 } from "@/features/drivers/types";
 import i18n from "@/features/i18n/initI18n";
+import { FilePreviewType } from "@/features/ui/preview/files-preview/FilesPreview";
 /**
  * Temporary solution to redirect to the last visited item, by default the personal root folder.
  * But we are waiting for the backend to be ready to handle this.
@@ -155,5 +156,6 @@ export const itemToPreviewFile = (item: Item) => {
     url: item.url ?? "",
     isSuspicious: item.upload_state === ItemUploadState.SUSPICIOUS,
     is_wopi_supported: item.is_wopi_supported,
-  };
+    size: item.size,
+  } as FilePreviewType;
 };
