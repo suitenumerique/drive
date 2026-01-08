@@ -1,26 +1,29 @@
 import { useMemo, useState } from "react";
 import { Item, ItemBreadcrumb } from "@/features/drivers/types";
+import { getDefaultRoute } from "@/utils/defaultRoutes";
 import {
   BreadcrumbItem,
   Breadcrumbs,
 } from "@/features/ui/components/breadcrumbs/Breadcrumbs";
 import { useTranslation } from "react-i18next";
-import { IconSize } from "@gouvfr-lasuite/ui-kit";
-import { WorkspaceIcon } from "../icons/ItemIcon";
+import { Icon, IconSize } from "@gouvfr-lasuite/ui-kit";
 import { NavigationItem } from "../GlobalExplorerContext";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 import clsx from "clsx";
-import { useAuth } from "@/features/auth/Auth";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
 import { useQuery } from "@tanstack/react-query";
 import { getDriver } from "@/features/config/Config";
+import { useRouter } from "next/router";
+import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
+import { ItemShareModal } from "../modals/share/ItemShareModal";
 
 type BaseBreadcrumbsProps = {
   onGoBack?: (item: Item | ItemBreadcrumb) => void;
   goToSpaces?: () => void;
-  currentItemId: string | null;
-  showSpacesItem?: boolean;
+  currentItemId?: string | null;
+  showAllFolderItem?: boolean;
   showMenuLastItem?: boolean;
+  forcedBreadcrumbsItems?: ItemBreadcrumb[];
 };
 
 type GridBreadcrumbsProps = BaseBreadcrumbsProps & {
@@ -46,19 +49,21 @@ export const EmbeddedExplorerGridBreadcrumbs = ({
 const BaseBreadcrumbs = ({
   onGoBack,
   goToSpaces,
-  showSpacesItem = false,
+  showAllFolderItem: showSpacesItem = false,
   showMenuLastItem = false,
-
   currentItemId,
+  forcedBreadcrumbsItems,
 }: BaseBreadcrumbsProps) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const router = useRouter();
 
+  const defaultRouteData = getDefaultRoute(router.pathname);
   const { data: breadcrumb } = useBreadcrumbQuery(currentItemId);
 
   const { data: item } = useQuery({
     queryKey: ["item", currentItemId],
     queryFn: () => getDriver().getItem(currentItemId!),
-    enabled: currentItemId !== null,
+    enabled: !!currentItemId,
   });
 
   const handleGoBack = (item: Item | ItemBreadcrumb) => {
@@ -66,7 +71,43 @@ const BaseBreadcrumbs = ({
   };
 
   const breadcrumbsItems = useMemo(() => {
+    if (forcedBreadcrumbsItems) {
+      return forcedBreadcrumbsItems.map((item) => ({
+        content: (
+          <BreadcrumbItemButton
+            item={item}
+            onClick={() => handleGoBack(item)}
+          />
+        ),
+      }));
+    }
     const breadcrumbsItems: BreadcrumbItem[] = [];
+
+    if (defaultRouteData) {
+      breadcrumbsItems.push({
+        content: (
+          <div
+            className="c__breadcrumbs__button"
+            data-testid="default-route-button"
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+              router.push(defaultRouteData.route);
+            }}
+          >
+            <img
+              src={defaultRouteData.breadcrumbIconSrc}
+              alt={defaultRouteData.label}
+              width={24}
+              height={24}
+            />
+
+            {t(defaultRouteData.label)}
+          </div>
+        ),
+      });
+    }
+
     if (showSpacesItem) {
       breadcrumbsItems.push({
         content: (
@@ -76,7 +117,7 @@ const BaseBreadcrumbs = ({
               goToSpaces?.();
             }}
           >
-            {t("explorer.breadcrumbs.spaces")}
+            {t("explorer.breadcrumbs.all_folders")}
           </div>
         ),
       });
@@ -108,7 +149,14 @@ const BaseBreadcrumbs = ({
     }
 
     return breadcrumbsItems;
-  }, [showSpacesItem, currentItemId, item, breadcrumb]);
+  }, [
+    showSpacesItem,
+    currentItemId,
+    item,
+    breadcrumb,
+    forcedBreadcrumbsItems,
+    i18n.language,
+  ]);
 
   return <Breadcrumbs items={breadcrumbsItems} />;
 };
@@ -125,11 +173,6 @@ export const BreadcrumbItemButton = ({
   onClick,
   isActive = false,
 }: BreadcrumbItemProps) => {
-  const { user } = useAuth();
-  const isMainWorkspace = item.id === user?.main_workspace?.id;
-  const isWorkspace = item.path.split(".").length === 1;
-
-  const { t } = useTranslation();
   return (
     <button
       className={clsx("c__breadcrumbs__button", {
@@ -138,13 +181,7 @@ export const BreadcrumbItemButton = ({
       data-testid="breadcrumb-button"
       onClick={onClick}
     >
-      {isWorkspace && (
-        <WorkspaceIcon
-          isMainWorkspace={isMainWorkspace}
-          iconSize={IconSize.SMALL}
-        />
-      )}
-      {isMainWorkspace ? t("explorer.workspaces.mainWorkspace") : item.title}
+      {item.title}
       {rightIcon}
     </button>
   );
@@ -152,21 +189,41 @@ export const BreadcrumbItemButton = ({
 
 export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const shareModal = useModal();
 
   return (
-    <ItemActionDropdown
-      item={item}
-      isOpen={isOpen}
-      setIsOpen={setIsOpen}
-      trigger={
-        <BreadcrumbItemButton
-          isActive={true}
-          item={item}
-          onClick={() => setIsOpen(true)}
-          rightIcon={<span className="material-icons">arrow_drop_down</span>}
-        />
-      }
-    />
+    <div className="embedded-explorer__breadcrumbs__last-item">
+      <ItemActionDropdown
+        item={item}
+        isOpen={isOpen}
+        setIsOpen={setIsOpen}
+        trigger={
+          <BreadcrumbItemButton
+            isActive={true}
+            item={item}
+            onClick={() => setIsOpen(true)}
+            rightIcon={<span className="material-icons">arrow_drop_down</span>}
+          />
+        }
+      />
+      {item.nb_accesses && item.nb_accesses > 1 && (
+        <>
+          <Button
+            variant="tertiary"
+            size="small"
+            icon={
+              <Icon
+                name="people"
+                size={IconSize.SMALL}
+                color="var(--c--contextuals--content--semantic--neutral--tertiary)"
+              />
+            }
+            onClick={() => shareModal.open()}
+          />
+          {shareModal.isOpen && <ItemShareModal {...shareModal} item={item} />}
+        </>
+      )}
+    </div>
   );
 };
 

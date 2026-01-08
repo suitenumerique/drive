@@ -204,6 +204,7 @@
               "recent": "Files and folders will appear here in order of their last modification.",
               "shared_with_me": "Files and folders shared with you will appear here.",
               "favorites": "Favorite files and folders will appear here.",
+              "trash": "Deleted files and folders will appear here.",
               "no_create": "You cannot add files or create folders because you do not have the necessary permissions."
             }
           },
@@ -304,6 +305,7 @@
         },
         "search": {
           "placeholder": "Search for a folder",
+          "results_title": "Search results",
           "modal": {
             "title": "Search",
             "description": "The search function is under development and will be available soon.",
@@ -665,6 +667,7 @@
               "recent": "Les fichiers et dossiers apparaîtront ici dans l'ordre de leur dernière modification.",
               "shared_with_me": "Les fichiers et dossiers partagés avec vous apparaîtront ici.",
               "favorites": "Les fichiers et dossiers favoris apparaîtront ici.",
+              "trash": "Les fichiers et dossiers supprimés apparaîtront ici.",
               "no_create": "Vous ne pouvez pas ajouter de fichiers ou créer de dossiers car vous n'avez pas les droits nécessaires."
             }
           },
@@ -768,6 +771,7 @@
         },
         "search": {
           "placeholder": "Rechercher un dossier",
+          "results_title": "Search results",
           "modal": {
             "title": "Rechercher",
             "description": "La fonction de recherche est en cours de développement et sera bientôt disponible.",
@@ -1134,6 +1138,7 @@
               "recent": "Bestanden en mappen verschijnen hier in volgorde van hun laatste wijziging.",
               "shared_with_me": "Bestanden en mappen die met u zijn gedeeld, verschijnen hier.",
               "favorites": "Favoriete bestanden en mappen verschijnen hier.",
+              "trash": "Verwijderde bestanden en mappen verschijnen hier.",
               "no_create": "U kunt geen bestanden toevoegen of mappen aanmaken omdat u niet over de benodigde rechten beschikt."
             }
           },
@@ -1234,6 +1239,7 @@
         },
         "search": {
           "placeholder": "Zoek naar een map",
+          "results_title": "Search results",
           "modal": {
             "title": "Zoeken",
             "description": "De zoekfunctie is in ontwikkeling en zal binnenkort beschikbaar zijn.",
