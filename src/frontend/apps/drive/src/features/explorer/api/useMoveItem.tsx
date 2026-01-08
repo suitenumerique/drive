@@ -1,17 +1,24 @@
 import { getDriver } from "@/features/config/Config";
-import { Item } from "@/features/drivers/types";
-import { PaginatedChildrenResult } from "@gouvfr-lasuite/ui-kit";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRemoveItemsFromPaginatedList } from "./useManageItemsToPaginatedList";
+import {
+  getMyFilesQueryKey,
+  getRecentItemsQueryKey,
+  getSharedWithMeQueryKey,
+} from "@/utils/defaultRoutes";
 
 export const useMoveItems = () => {
   type MoveItemPayload = {
     ids: string[];
-    parentId: string;
-    oldParentId: string;
+    parentId?: string;
+    oldParentId?: string;
   };
 
   const queryClient = useQueryClient();
   const driver = getDriver();
+
+  const removeItems = useRemoveItemsFromPaginatedList();
+
   return useMutation({
     mutationFn: async (payload: MoveItemPayload) => {
       await driver.moveItems(payload.ids, payload.parentId);
@@ -27,25 +34,12 @@ export const useMoveItems = () => {
       });
     },
     onSuccess: (data, payload: MoveItemPayload) => {
-      const queriesData = queryClient.getQueriesData({
-        queryKey: ["items", payload.oldParentId, "children", "infinite"],
-      });
-
-      queriesData.forEach((query) => {
-        const key = query[0];
-        const data: { pages: PaginatedChildrenResult<Item>[] } = JSON.parse(
-          JSON.stringify(query[1])
-        ) as {
-          pages: PaginatedChildrenResult<Item>[];
-        };
-
-        data.pages.forEach((page) => {
-          page.children = page.children?.filter(
-            (child) => !payload.ids.includes(child.id)
-          );
-        });
-
-        queryClient.setQueryData(key, data);
+      removeItems(["items", payload.oldParentId], payload.ids);
+      removeItems(getMyFilesQueryKey(), payload.ids);
+      removeItems(getSharedWithMeQueryKey(), payload.ids);
+      removeItems(getRecentItemsQueryKey(), payload.ids);
+      queryClient.invalidateQueries({
+        queryKey: ["items", payload.parentId],
       });
     },
     onError: (err, variables) => {

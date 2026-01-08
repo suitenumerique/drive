@@ -2,6 +2,7 @@ import {
   DTOCreateAccess,
   DTODeleteAccess,
   DTOUpdateAccess,
+  DTOUpdateLinkConfiguration,
 } from "./DTOs/AccessesDTO";
 import {
   DTOCreateInvitation,
@@ -27,6 +28,17 @@ export enum ItemFiltersScope {
   NOT_DELETED = "not_deleted",
 }
 
+export enum ItemFiltersOrdering {
+  CREATED_AT_ASC = "created_at",
+  CREATED_AT_DESC = "-created_at",
+  UPDATED_AT_ASC = "updated_at",
+  UPDATED_AT_DESC = "-updated_at",
+  TITLE_ASC = "title",
+  TITLE_DESC = "-title",
+  TYPE_ASC = "type",
+  TYPE_DESC = "-type",
+}
+
 export type ItemFilters = {
   type?: ItemType;
   title?: string;
@@ -35,6 +47,9 @@ export type ItemFilters = {
   page?: number;
   page_size?: number;
   workspaces?: WorkspaceType;
+  is_creator_me?: boolean;
+  ordering?: string;
+  is_favorite?: boolean;
 };
 
 export type PaginatedChildrenResult = {
@@ -68,8 +83,8 @@ export abstract class Driver {
   abstract getItemBreadcrumb(id: string): Promise<ItemBreadcrumb[]>;
   abstract updateItem(item: Partial<Item>): Promise<Item>;
   abstract restoreItems(ids: string[]): Promise<void>;
-  abstract moveItem(id: string, parentId: string): Promise<void>;
-  abstract moveItems(ids: string[], parentId: string): Promise<void>;
+  abstract moveItem(id: string, parentId?: string): Promise<void>;
+  abstract moveItems(ids: string[], parentId?: string): Promise<void>;
   abstract getChildren(
     id: string,
     filters?: ItemFilters
@@ -77,9 +92,21 @@ export abstract class Driver {
 
   abstract searchItems(filters?: ItemFilters): Promise<Item[]>;
   // Accesses
-  abstract getItemAccesses(itemId: string): Promise<APIList<Access>>;
+
+  abstract getRecentItems(
+    filters?: ItemFilters
+  ): Promise<PaginatedChildrenResult>;
+  abstract getFavoriteItems(
+    filters?: ItemFilters
+  ): Promise<PaginatedChildrenResult>;
+  abstract createFavoriteItem(itemId: string): Promise<void>;
+  abstract deleteFavoriteItem(itemId: string): Promise<void>;
+  abstract getItemAccesses(itemId: string): Promise<Access[]>;
   abstract createAccess(data: DTOCreateAccess): Promise<void>;
   abstract updateAccess(payload: DTOUpdateAccess): Promise<Access>;
+  abstract updateLinkConfiguration(
+    payload: DTOUpdateLinkConfiguration
+  ): Promise<void>;
   abstract deleteAccess(payload: DTODeleteAccess): Promise<void>;
   // Invitations
   abstract getItemInvitations(itemId: string): Promise<APIList<Invitation>>;
@@ -100,7 +127,7 @@ export abstract class Driver {
   abstract updateWorkspace(item: Partial<Item>): Promise<Item>;
   abstract deleteWorkspace(id: string): Promise<void>;
   abstract createFile(data: {
-    parentId: string;
+    parentId?: string;
     filename: string;
   }): Promise<Item>;
   abstract deleteItems(ids: string[]): Promise<void>;

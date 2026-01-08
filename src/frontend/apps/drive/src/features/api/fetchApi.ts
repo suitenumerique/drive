@@ -33,7 +33,7 @@ export interface fetchAPIOptions {
 
 export const fetchAPI = async (
   input: string,
-  init?: RequestInit & { params?: Record<string, string | number> },
+  init?: RequestInit & { params?: Record<string, string | number | boolean> },
   options?: fetchAPIOptions
 ) => {
   const apiUrl = new URL(`${baseApiUrl("1.0")}${input}`);
