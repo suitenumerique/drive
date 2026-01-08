@@ -1,7 +1,7 @@
 import { Item, ItemType } from "@/features/drivers/types";
 import { itemIsWorkspace } from "@/features/drivers/utils";
 import { DropdownMenu, useTreeContext } from "@gouvfr-lasuite/ui-kit";
-import { useModal } from "@openfun/cunningham-react";
+import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { t } from "i18next";
 import { itemToTreeItem, useGlobalExplorer } from "../GlobalExplorerContext";
 import settingsSvg from "@/assets/icons/settings.svg";

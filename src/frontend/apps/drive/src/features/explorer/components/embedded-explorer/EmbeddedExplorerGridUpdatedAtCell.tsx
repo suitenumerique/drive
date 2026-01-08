@@ -1,6 +1,6 @@
 import { CellContext } from "@tanstack/react-table";
 import { Item } from "@/features/drivers/types";
-import { Tooltip } from "@openfun/cunningham-react";
+import { Tooltip } from "@gouvfr-lasuite/cunningham-react";
 import { timeAgo } from "@/features/explorer/utils/utils";
 import { Draggable } from "@/features/explorer/components/Draggable";
 import { useDisableDragGridItem } from "@/features/explorer/components/embedded-explorer/hooks";

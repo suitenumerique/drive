@@ -1,5 +1,5 @@
 import { Icon } from "@gouvfr-lasuite/ui-kit";
-import { Button } from "@openfun/cunningham-react";
+import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { useEffect } from "react";
 
 export type VolumeBarProps = {

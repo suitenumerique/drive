@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { itemToPreviewFile } from "@/features/explorer/utils/utils";
 import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 import { ItemInfo } from "@/features/items/components/ItemInfo";
-import { Button, useModal } from "@openfun/cunningham-react";
+import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
 import { ItemShareModal } from "@/features/explorer/components/modals/share/ItemShareModal";
 
 type CustomFilesPreviewProps = {
