@@ -12,7 +12,6 @@ import {
   ItemBreadcrumb,
   ItemType,
   TreeItem,
-  WorkspaceType,
 } from "@/features/drivers/types";
 import { createContext } from "react";
 import { getDriver } from "@/features/config/Config";
@@ -29,16 +28,12 @@ import {
 import { ExplorerDndProvider } from "./ExplorerDndProvider";
 import { useFirstLevelItems } from "../hooks/useQueries";
 import { useTranslation } from "react-i18next";
-import { getItemTitle, itemToPreviewFile } from "../utils/utils";
+import { getItemTitle } from "../utils/utils";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
-import { ItemInfo } from "@/features/items/components/ItemInfo";
-import {
-  FilePreview,
-  FilePreviewType,
-} from "@/features/ui/preview/files-preview/FilesPreview";
-import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
+
 import { useAuth } from "@/features/auth/Auth";
-import { WorkspaceCategory } from "../constants";
+import { DefaultRoute } from "@/utils/defaultRoutes";
+import { CustomFilesPreview } from "@/features/ui/preview/custom-files-preview/CustomFilesPreview";
 
 export interface GlobalExplorerContextType {
   displayMode: "sdk" | "app";
@@ -75,7 +70,7 @@ export const useGlobalExplorer = () => {
   const context = useContext(GlobalExplorerContext);
   if (!context) {
     throw new Error(
-      "useGlobalExplorer must be used within an GlobalExplorerProvider"
+      "useGlobalExplorer must be used within an GlobalExplorerProvider",
     );
   }
   return context;
@@ -122,7 +117,6 @@ export const GlobalExplorerProvider = ({
 }: ExplorerProviderProps) => {
   const driver = getDriver();
   const { user } = useAuth();
-  const { t } = useTranslation();
 
   const [selectedItems, setSelectedItems] = useState<Item[]>([]);
 
@@ -143,7 +137,6 @@ export const GlobalExplorerProvider = ({
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [treeIsInitialized, setTreeIsInitialized] = useState<boolean>(false);
   const [mobileNodesRefreshTrigger, setMobileNodesRefreshTrigger] = useState(0);
-  const { handleDownloadItem } = useDownloadItem();
 
   /**
    * Triggers a refresh of the mobile nodes.
@@ -204,21 +197,8 @@ export const GlobalExplorerProvider = ({
    * Preview states.
    */
   const [previewItem, setPreviewItem] = useState<Item | undefined>(undefined);
+
   const [previewItems, setPreviewItems] = useState<Item[]>([]);
-  const previewFiles = useMemo(() => {
-    return previewItems
-      .filter((item) => item.type === ItemType.FILE)
-      .map(itemToPreviewFile);
-  }, [previewItems]);
-
-  const handleClosePreview = () => {
-    setPreviewItem(undefined);
-  };
-
-  const handleChangePreviewItem = (file?: FilePreviewType) => {
-    const item = previewItems.find((item) => file?.id === item.id);
-    setPreviewItem(item);
-  };
 
   return (
     <GlobalExplorerContext.Provider
@@ -251,22 +231,20 @@ export const GlobalExplorerProvider = ({
       <TreeProvider
         initialTreeData={[]}
         initialNodeId={initialId}
-        onLoadChildren={async (id, page) => {
-          if (
-            id === WorkspaceCategory.SHARED_SPACE ||
-            id === WorkspaceCategory.PUBLIC_SPACE
-          ) {
-            const workspaces =
-              id === WorkspaceCategory.SHARED_SPACE
-                ? WorkspaceType.SHARED
-                : WorkspaceType.PUBLIC;
-            const response = await driver.getItems({
+        onLoadChildren={async (treeId, page) => {
+          // Extract the original item ID from the tree ID for API requests.
+          // Tree IDs for favorites follow the format: `parentTreeId::itemId` (e.g., `favorites::abc123`)
+          const originalId = getOriginalIdFromTreeId(treeId);
+          const isFavoriteItem = treeId.startsWith(DefaultRoute.FAVORITES);
+
+          if (originalId === DefaultRoute.FAVORITES) {
+            const response = await driver.getFavoriteItems({
               page: page,
-              workspaces,
+              type: ItemType.FOLDER,
             });
 
             const result = response.children.map((item) =>
-              itemToTreeItem(item, id)
+              itemToTreeItem(item, treeId, true),
             ) as TreeViewDataType<Item>[];
 
             return {
@@ -274,12 +252,12 @@ export const GlobalExplorerProvider = ({
               pagination: response.pagination,
             };
           }
-          const data = await driver.getChildren(id, {
+          const data = await driver.getChildren(originalId, {
             page: page,
             type: ItemType.FOLDER,
           });
           const result = data.children.map((item) =>
-            itemToTreeItem(item, id)
+            itemToTreeItem(item, treeId, isFavoriteItem),
           ) as TreeViewDataType<Item>[];
 
           return {
@@ -287,9 +265,19 @@ export const GlobalExplorerProvider = ({
             pagination: data.pagination,
           };
         }}
-        onRefresh={async (id) => {
-          const item = await driver.getItem(id);
-          return itemToTreeItem(item) as TreeViewDataType<Item>;
+        onRefresh={async (treeId) => {
+          const originalId = getOriginalIdFromTreeId(treeId);
+          const isFavoriteItem = treeId.startsWith(DefaultRoute.FAVORITES);
+          const item = await driver.getItem(originalId);
+          // Extract parent tree ID from current tree ID
+          const parentTreeId = treeId.includes("::")
+            ? treeId.substring(0, treeId.lastIndexOf("::"))
+            : undefined;
+          return itemToTreeItem(
+            item,
+            parentTreeId,
+            isFavoriteItem,
+          ) as TreeViewDataType<Item>;
         }}
       >
         <TreeProviderInitializer>
@@ -311,15 +299,10 @@ export const GlobalExplorerProvider = ({
       />
 
       <Toaster />
-      <FilePreview
-        isOpen={!!previewItem}
-        onClose={handleClosePreview}
-        title={t("file_preview.title")}
-        files={previewFiles}
-        onChangeFile={handleChangePreviewItem}
-        handleDownloadFile={() => handleDownloadItem(previewItem)}
-        openedFileId={previewItem?.id}
-        sidebarContent={previewItem && <ItemInfo item={previewItem} />}
+      <CustomFilesPreview
+        currentItem={previewItem}
+        items={previewItems}
+        setPreviewItem={setPreviewItem}
       />
     </GlobalExplorerContext.Provider>
   );
@@ -334,83 +317,103 @@ const TreeProviderInitializer = ({
   children: React.ReactNode;
 }) => {
   const { setTreeIsInitialized } = useGlobalExplorer();
-  const { user } = useAuth();
-  const driver = getDriver();
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   const treeContext = useTreeContext<TreeItem>();
 
   const initialTree = async () => {
     const items: TreeViewDataType<TreeItem>[] = [];
 
-    const mainWorkspace =
-      user && user.main_workspace
-        ? itemsToTreeItems([user.main_workspace])
-        : [];
-
-    items.push(...mainWorkspace);
-
-    const sharedWorkspaces = await driver.getItems({
-      workspaces: WorkspaceType.SHARED,
+    const response = await getDriver().getFavoriteItems({
       page: 1,
+      type: ItemType.FOLDER,
     });
 
-    if (sharedWorkspaces.children.length > 0) {
-      const sharedWorkspaceNode: TreeViewDataType<TreeItem> = {
-        id: WorkspaceCategory.SHARED_SPACE,
-        nodeType: TreeViewNodeTypeEnum.SIMPLE_NODE,
-        childrenCount: sharedWorkspaces.pagination.totalCount,
-        children: sharedWorkspaces.children.map((item) => itemToTreeItem(item)),
-        label: t("explorer.tree.shared_space"),
-        pagination: {
-          currentPage: 1,
-          totalCount: sharedWorkspaces.pagination.totalCount,
-          hasMore: sharedWorkspaces.pagination.hasMore,
-        },
-      };
-      items.push(sharedWorkspaceNode);
-    }
+    const favorites = response.children.map((item) =>
+      itemToTreeItem(item, DefaultRoute.FAVORITES, true),
+    );
 
-    const publicWorkspaces = await driver.getItems({
-      workspaces: WorkspaceType.PUBLIC,
-      page: 1,
-    });
+    const favoritesNode: TreeViewDataType<TreeItem> = {
+      id: DefaultRoute.FAVORITES,
+      nodeType: TreeViewNodeTypeEnum.SIMPLE_NODE,
+      childrenCount: favorites.length,
+      children: favorites,
+      label: t("explorer.tree.favorites"),
+      pagination: response.pagination,
+    };
 
-    if (publicWorkspaces.children.length > 0) {
-      const publicWorkspaceNode: TreeViewDataType<TreeItem> = {
-        id: WorkspaceCategory.PUBLIC_SPACE,
-        nodeType: TreeViewNodeTypeEnum.SIMPLE_NODE,
-        childrenCount: publicWorkspaces.pagination.totalCount,
-        children: publicWorkspaces.children.map((item) => itemToTreeItem(item)),
-        label: t("explorer.tree.public_space"),
-        pagination: {
-          currentPage: 1,
-          totalCount: publicWorkspaces.pagination.totalCount,
-          hasMore: publicWorkspaces.pagination.hasMore,
-        },
-      };
-      items.push(publicWorkspaceNode);
-    }
-
+    items.push(favoritesNode);
     treeContext?.treeData.resetTree(items);
     setTreeIsInitialized(true);
   };
 
   // TODO: Move to global tree context?
   useEffect(() => {
+    if (!user) {
+      return;
+    }
+
     initialTree();
-  }, []);
+  }, [user]);
 
   return children;
 };
 
-export const itemToTreeItem = (item: Item, parentId?: string): TreeItem => {
+/**
+ * Generates a unique tree ID based on the parent tree ID and the original item ID.
+ * This ensures uniqueness even when the same item appears multiple times in the tree
+ * (e.g., once in favorites and once as a child of an opened favorite folder).
+ *
+ * Format: `{parentTreeId}::{itemId}` for favorite items, or just `{itemId}` for non-favorite items.
+ *
+ * @param originalId - The original item ID
+ * @param parentTreeId - The parent's tree ID (which may already contain the path)
+ * @param isFavoriteItem - Whether this item is in the favorites branch
+ * @returns A unique tree ID
+ */
+export const generateTreeId = (
+  originalId: string,
+  parentTreeId?: string,
+  isFavoriteItem?: boolean,
+): string => {
+  if (!isFavoriteItem) {
+    return originalId;
+  }
+  // For favorite items, build a path-based ID to ensure uniqueness
+  return parentTreeId ? `${parentTreeId}::${originalId}` : originalId;
+};
+
+/**
+ * Extracts the original item ID from a tree ID.
+ * The tree ID format is `{parentTreeId}::{itemId}` for favorites, or just `{itemId}` for non-favorites.
+ *
+ * @param treeId - The tree ID to extract from
+ * @returns The original item ID
+ */
+export const getOriginalIdFromTreeId = (treeId: string): string => {
+  const parts = treeId.split("::");
+  return parts[parts.length - 1];
+};
+
+export const itemToTreeItem = (
+  item: Item,
+  parentTreeId?: string,
+  isFavoriteItem?: boolean,
+): TreeItem => {
+  const originalId = item.id;
+  const treeId = generateTreeId(originalId, parentTreeId, isFavoriteItem);
+
   return {
     ...item,
-    parentId: parentId,
+    id: treeId,
+    originalId,
+    parentId: parentTreeId,
     childrenCount: item.numchild_folder ?? 0,
     children:
-      item.children?.map((child) => itemToTreeItem(child, item.id)) ?? [],
+      item.children?.map((child) =>
+        itemToTreeItem(child, treeId, isFavoriteItem),
+      ) ?? [],
     nodeType: TreeViewNodeTypeEnum.NODE,
     title: getItemTitle(item),
   };
@@ -418,7 +421,7 @@ export const itemToTreeItem = (item: Item, parentId?: string): TreeItem => {
 
 export const itemsToTreeItems = (
   items: Item[],
-  parentId?: string
+  parentId?: string,
 ): TreeItem[] => {
   return items.map((item) => itemToTreeItem(item, parentId));
 };
