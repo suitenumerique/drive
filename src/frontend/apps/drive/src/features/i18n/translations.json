@@ -14,6 +14,27 @@
         "title": "You don't have the necessary permissions to access this page.",
         "button": "Home"
       },
+      "share_modal": {
+        "options": {
+          "link_reach": {
+            "authenticated": "Authenticated",
+            "public": "Public",
+            "restricted": "Restricted"
+          },
+          "subtext": {
+            "reader": "Can view only",
+            "editor": "Can view and edit content",
+            "admin": "Can edit and manage access",
+            "owner": "Full control and can delete"
+          },
+          "top_message": {
+            "only_owner": "You cannot change your role as you are the only owner.",
+            "to_lower_role": "Inherited. To lower role or remove access, edit the parent folder.",
+            "inherited_edit": "Inherited. To lower role or remove access, edit",
+            "parent_folder": "the parent folder."
+          }
+        }
+      },
       "file_download_modal": {
         "error": {
           "no_url_or_title": "This file has no URL or title."
@@ -131,12 +152,14 @@
       },
       "explorer": {
         "breadcrumbs": {
-          "spaces": "Spaces"
+          "spaces": "Spaces",
+          "all_folders": "All folders"
         },
         "modal": {
           "move": {
             "title": "Move",
             "move_button": "Move here",
+            "move_to_root": "Move to root",
             "description_one_item": "Choose the new location for <strong>{{name}}</strong>",
             "description_multiple_items": "Choose the new location for the <strong>{{count}}</strong> selected elements"
           }
@@ -170,10 +193,18 @@
           "last_update": "Last Update",
           "empty": {
             "default": "No folder found in the selected folder",
-            "caption": "Drop your files here",
+            "caption": {
+              "default": "This tab is empty",
+              "folder": "This folder is empty"
+            },
             "caption_no_create": "You do not have permission to add files",
-            "cta": "Or click \"Create\"",
-            "cta_no_create": "Readers cannot add files or create folders"
+            "cta": {
+              "default": "Import or create files and folders here.",
+              "recent": "Files and folders will appear here in order of their last modification.",
+              "shared_with_me": "Files and folders shared with you will appear here.",
+              "favorites": "Favorite files and folders will appear here.",
+              "no_create": "You cannot add files or create folders because you do not have the necessary permissions."
+            }
           },
           "no_url": "This resource does not have an URL",
           "actions": {
@@ -213,7 +244,7 @@
         "tree": {
           "trash": "Trash",
           "create": {
-            "label": "Create",
+            "label": "New",
             "folder": "New folder",
             "workspace": "New workspace"
           },
@@ -236,6 +267,7 @@
                 "title": "Transfer rights",
                 "description": "You are about to move the element <strong>{{sourceItem}}</strong> to the folder <strong>{{targetItem}}</strong>, your document will inherit the share of the target folder.",
                 "description_multiple": "You are about to move <strong>{{count}}</strong> elements to the folder <strong>{{targetItem}}</strong>, your documents will inherit the share of the target folder.",
+                "root_description": "Moved documents will be accessible via your 'My files' tab. People who had access to the documents only through inherited rights from a parent will no longer be able to access them.",
                 "confirm_button": "Move anyway",
                 "cancel_button": "Cancel"
               }
@@ -245,7 +277,11 @@
           "search": "Search",
           "personalSpace": "Personal Space",
           "shared_space": "Shared Space",
-          "public_space": "Public Space"
+          "public_space": "Public Space",
+          "recent": "Recents",
+          "my_files": "My files",
+          "shared_with_me": "Shared with me",
+          "favorites": "Starred"
         },
         "trash": {
           "title": "Trash",
@@ -265,6 +301,7 @@
           }
         },
         "search": {
+          "placeholder": "Search for a folder",
           "modal": {
             "title": "Search",
             "description": "The search function is under development and will be available soon.",
@@ -363,7 +400,7 @@
           },
           "share": {
             "modal": {
-              "title": "Share workspace"
+              "title": "Share"
             }
           },
           "rename": {
@@ -374,6 +411,21 @@
               "cancel": "Cancel",
               "submit": "Rename"
             }
+          }
+        },
+        "item": {
+          "actions": {
+            "view_info": "Information",
+            "delete_file": "Delete file",
+            "delete_folder": "Delete folder",
+            "share": "Share",
+            "share_view": "View shares",
+            "move": "Move",
+            "download": "Download",
+            "rename": "Rename",
+            "favorite": "Star",
+            "unfavorite": "Unstar",
+            "delete": "Delete"
           }
         }
       },
@@ -419,6 +471,27 @@
       "403": {
         "title": "Vous n'avez pas les permissions nécessaires pour accéder à cette page.",
         "button": "Accueil"
+      },
+      "share_modal": {
+        "options": {
+          "link_reach": {
+            "authenticated": "Authentifié",
+            "public": "Public",
+            "restricted": "Restreint"
+          },
+          "subtext": {
+            "reader": "Peut voir uniquement",
+            "editor": "Peut voir et modifier le contenu",
+            "admin": "Peut gérer les accès",
+            "owner": "Contrôle complet et peut supprimer"
+          },
+          "top_message": {
+            "only_owner": "Vous ne pouvez pas changer votre rôle car vous êtes le seul propriétaire.",
+            "to_lower_role": "Hérité. Pour réduire le rôle ou supprimer l'accès, modifiez le dossier parent.",
+            "inherited_edit": "Hérité. Pour réduire le rôle ou supprimer l'accès, modifiez",
+            "parent_folder": "le dossier parent."
+          }
+        }
       },
       "file_download_modal": {
         "error": {
@@ -537,12 +610,14 @@
       },
       "explorer": {
         "breadcrumbs": {
-          "spaces": "Espaces"
+          "spaces": "Espaces",
+          "all_folders": "Tous les dossiers"
         },
         "modal": {
           "move": {
             "title": "Déplacer",
             "move_button": "Déplacer ici",
+            "move_to_root": "Déplacer vers la racine",
             "description_one_item": "Choisissez le nouvel emplacement pour <strong>{{name}}</strong>",
             "description_multiple_items": "Choisissez le nouvel emplacement pour les <strong>{{count}}</strong> éléments sélectionnés"
           }
@@ -576,10 +651,19 @@
           "last_update": "Dernière modification",
           "empty": {
             "default": "Aucun dossier trouvé dans le dossier sélectionné",
-            "caption": "Déposez vos fichiers ici",
+            "caption": {
+              "default": "Cet onglet est vide",
+              "folder": "Ce dossier est vide"
+            },
+
             "caption_no_create": "Vous n'avez pas les droits pour ajouter des fichiers",
-            "cta": "Ou cliquez sur \"Créer\"",
-            "cta_no_create": "Les lecteurs ne peuvent pas ajouter de fichiers ou créer de dossiers"
+            "cta": {
+              "default": "Importez ou créez des fichiers et dossiers ici.",
+              "recent": "Les fichiers et dossiers apparaîtront ici dans l'ordre de leur dernière modification.",
+              "shared_with_me": "Les fichiers et dossiers partagés avec vous apparaîtront ici.",
+              "favorites": "Les fichiers et dossiers favoris apparaîtront ici.",
+              "no_create": "Vous ne pouvez pas ajouter de fichiers ou créer de dossiers car vous n'avez pas les droits nécessaires."
+            }
           },
           "no_url": "Cette ressource n'a pas d'URL",
           "actions": {
@@ -623,13 +707,17 @@
           "shared_space": "Espace partagé",
           "public_space": "Espace public",
           "search": "Rechercher",
+          "recent": "Récents",
+          "my_files": "Mes fichiers",
+          "shared_with_me": "Partagé avec moi",
+          "favorites": "Starred",
           "import": {
             "label": "Importer",
             "files": "Importer des fichiers",
             "folders": "Importer des dossiers"
           },
           "create": {
-            "label": "Créer",
+            "label": "Nouveau",
             "folder": "Nouveau dossier",
             "workspace": "Nouvel espace"
           },
@@ -639,6 +727,9 @@
               "settings_workspace": "Paramètre de l'espace",
               "settings_folder": "Paramètres du dossier",
               "delete_item": "Supprimer",
+              "delete_workspace": "Supprimer l'espace",
+              "delete_folder": "Supprimer le dossier",
+              "delete_file": "Supprimer le fichier",
               "share": "Partager",
               "share_view": "Voir les accès"
             },
@@ -647,6 +738,7 @@
                 "title": "Transfert de droits",
                 "description": "Vous êtes sur le point de déplacer l'élément <strong>{{sourceItem}}</strong> vers le dossier <strong>{{targetItem}}</strong>, votre document héritera du partage du dossier cible.",
                 "description_multiple": "Vous êtes sur le point de déplacer <strong>{{count}}</strong> éléments vers le dossier <strong>{{targetItem}}</strong>, vos documents hériteront du partage du dossier cible.",
+                "root_description": "Les documents déplacés seront accéssibles via votre onglet 'Mes fichiers'. Les personnes ayant le droit sur les documents uniquement via un accès hérité d'un parent ne pourront plus y accéder",
                 "confirm_button": "Déplacer quand même",
                 "cancel_button": "Annuler"
               }
@@ -671,6 +763,7 @@
           }
         },
         "search": {
+          "placeholder": "Rechercher un dossier",
           "modal": {
             "title": "Rechercher",
             "description": "La fonction de recherche est en cours de développement et sera bientôt disponible.",
@@ -711,9 +804,9 @@
         "workspaces": {
           "mainWorkspace": "Mon espace",
           "form": {
-            "title": "Nom de l'espace",
+            "title": "Nom du dossier",
             "description": "Description",
-            "settings": "Paramètres de l'espace"
+            "settings": "Paramètres du dossier"
           },
           "create": {
             "title": "Nouvel espace",
@@ -722,8 +815,8 @@
             "submit": "Créer l'espace"
           },
           "edit": {
-            "title": "Modifier l'espace",
-            "description": "Modifier les informations de l'espace",
+            "title": "Renommer le dossier",
+            "description": "Modifier le nom du dossier",
             "cancel": "Annuler",
             "submit": "Mettre à jour"
           }
@@ -773,7 +866,7 @@
           },
           "share": {
             "modal": {
-              "title": "Partager l'espace"
+              "title": "Partager"
             }
           },
           "rename": {
@@ -784,6 +877,21 @@
               "cancel": "Annuler",
               "submit": "Renommer"
             }
+          }
+        },
+        "item": {
+          "actions": {
+            "view_info": "Informations",
+            "delete_file": "Supprimer le fichier",
+            "delete_folder": "Supprimer le dossier",
+            "share": "Partager",
+            "share_view": "Voir les accès",
+            "move": "Déplacer",
+            "download": "Télécharger",
+            "rename": "Renommer",
+            "favorite": "Favoris",
+            "unfavorite": "Retirer des favoris",
+            "delete": "Supprimer"
           }
         }
       },
@@ -831,6 +939,27 @@
       "403": {
         "title": "U beschikt niet over de benodigde rechten om dit bestand te openen.",
         "button": "Home"
+      },
+      "share_modal": {
+        "options": {
+          "link_reach": {
+            "authenticated": "Geauthenticeerd",
+            "public": "Publiek",
+            "restricted": "Beperkt"
+          },
+          "subtext": {
+            "reader": "Kan alleen bekijken",
+            "editor": "Kan bekijken en bewerken",
+            "admin": "Kan beheren",
+            "owner": "Volledige controle en kan verwijderen"
+          },
+          "top_message": {
+            "only_owner": "U kunt uw rol niet wijzigen omdat u de enige eigenaar bent.",
+            "to_lower_role": "Herediteerd. Om de rol te verlagen of het toegang te verwijderen, bewerkt u de bovenliggende map.",
+            "inherited_edit": "Herediteerd. Om de rol te verlagen of het toegang te verwijderen, bewerkt u",
+            "parent_folder": "de bovenliggende map."
+          }
+        }
       },
       "file_download_modal": {
         "error": {
@@ -949,12 +1078,14 @@
       },
       "explorer": {
         "breadcrumbs": {
-          "spaces": "Werkruimten"
+          "spaces": "Werkruimten",
+          "all_folders": "Alle mappen"
         },
         "modal": {
           "move": {
             "title": "Verplaatsen",
             "move_button": "Hierheen verplaatsen",
+            "move_to_root": "Verplaats naar root",
             "description_one_item": "Kies de nieuwe locatie voor <strong>{{name}}</strong>",
             "description_multiple_items": "Kies de nieuwe locatie voor de <strong>{{count}}</strong> geselecteerde elementen"
           }
@@ -988,10 +1119,18 @@
           "last_update": "Laatste update",
           "empty": {
             "default": "Geen map gevonden in de geselecteerde map",
-            "caption": "Sleep uw bestanden hier heen",
+            "caption": {
+              "default": "Dit tabblad is leeg",
+              "folder": "Deze map is leeg"
+            },
             "caption_no_create": "U heeft geen toestemming om bestanden toe te voegen",
-            "cta": "Of klik op \"Maak\"",
-            "cta_no_create": "Lezers kunnen geen bestanden toevoegen of mappen aanmaken"
+            "cta": {
+              "default": "Importeer of maak bestanden en mappen hier aan.",
+              "recent": "Bestanden en mappen verschijnen hier in volgorde van hun laatste wijziging.",
+              "shared_with_me": "Bestanden en mappen die met u zijn gedeeld, verschijnen hier.",
+              "favorites": "Favoriete bestanden en mappen verschijnen hier.",
+              "no_create": "U kunt geen bestanden toevoegen of mappen aanmaken omdat u niet over de benodigde rechten beschikt."
+            }
           },
           "no_url": "Deze bron heeft geen URL",
           "actions": {
@@ -1031,7 +1170,7 @@
         "tree": {
           "trash": "Prullenbak",
           "create": {
-            "label": "Creëeren",
+            "label": "Nieuwe",
             "folder": "Nieuwe map",
             "workspace": "Nieuwe werkruimte"
           },
@@ -1054,6 +1193,7 @@
                 "title": "Rechten overdragen",
                 "description": "U staat op het punt het element <strong>{{sourceItem}}</strong> naar de map <strong>{{targetItem}}</strong> te verplaatsen. Uw document zal de rechten van de doelmap overnemen.",
                 "description_multiple": "U staat op het punt om <strong>{{count}}</strong> elementen naar de map <strong>{{targetItem}}</strong> te verplaatsen. Uw documenten zullen de rechten van de doelmap overnemen.",
+                "root_description": "De verplaatste documenten zullen toegankelijk zijn via uw 'Mijn bestanden' tab. Personen die alleen via een erfenisrecht van een bovenliggende map toegang hadden, zullen deze niet meer kunnen bereiken.",
                 "confirm_button": "Verplaats toch",
                 "cancel_button": "Annuleren"
               }
@@ -1063,7 +1203,11 @@
           "search": "Zoeken",
           "personalSpace": "Persoonlijke werkruimte",
           "shared_space": "Gedeelte werkruimte",
-          "public_space": "Publieke werkruimte"
+          "public_space": "Publieke werkruimte",
+          "recent": "Recenten",
+          "my_files": "Mijn bestanden",
+          "shared_with_me": "Gedeeld met mij",
+          "favorites": "Favorieten"
         },
         "trash": {
           "title": "Prullenbak",
@@ -1083,6 +1227,7 @@
           }
         },
         "search": {
+          "placeholder": "Zoek naar een map",
           "modal": {
             "title": "Zoeken",
             "description": "De zoekfunctie is in ontwikkeling en zal binnenkort beschikbaar zijn.",
@@ -1181,7 +1326,7 @@
           },
           "share": {
             "modal": {
-              "title": "Deel werkruimte"
+              "title": "Deel"
             }
           },
           "rename": {
@@ -1192,6 +1337,21 @@
               "cancel": "Annuleren",
               "submit": "Hernoem"
             }
+          }
+        },
+        "item": {
+          "actions": {
+            "view_info": "Informatie",
+            "delete_file": "Verwijder bestand",
+            "delete_folder": "Verwijder map",
+            "share": "Deel",
+            "share_view": "Bekijk delen",
+            "move": "Verplaats",
+            "download": "Download",
+            "rename": "Hernoem",
+            "favorite": "Favoriet",
+            "unfavorite": "Verwijder uit favorieten",
+            "delete": "Verwijder"
           }
         }
       },

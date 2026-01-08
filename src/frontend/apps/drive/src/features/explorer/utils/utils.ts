@@ -104,7 +104,10 @@ export const formatSize = (size: number) => {
   } ${units[unitIndex]}`;
 };
 
-export const getParentIdFromPath = (path: string) => {
+export const getParentIdFromPath = (path?: string) => {
+  if (!path) {
+    return undefined;
+  }
   const parts = path.split(".");
   if (parts.length === 1) {
     return undefined;
