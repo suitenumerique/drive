@@ -1,15 +1,28 @@
+import { APIError } from "@/features/api/APIError";
 import { getDriver } from "@/features/config/Config";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { ItemFilters } from "@/features/drivers/Driver";
+import { Item } from "@/features/drivers/types";
+import { HookUseQueryOptions } from "@/utils/useQueries";
+import {
+  useInfiniteQuery,
+  useQuery,
+  UseQueryOptions,
+  UseQueryResult,
+} from "@tanstack/react-query";
 
-export const useInfiniteItemAccesses = (itemId: string) => {
-  const driver = getDriver();
-  return useInfiniteQuery({
+export const useFavoriteItems = () => {
+  return useQuery({
+    queryKey: ["items", "favorites"],
+    queryFn: () => getDriver().getFavoriteItems(),
+  });
+};
+
+export const useItemAccesses = (itemId: string) => {
+  return useQuery({
     queryKey: ["itemAccesses", itemId],
-    queryFn: () => driver.getItemAccesses(itemId),
-    initialPageParam: 1,
-    getNextPageParam(lastPage, allPages) {
-      return lastPage.next ? allPages.length + 1 : undefined;
-    },
+    queryFn: () => getDriver().getItemAccesses(itemId),
+    staleTime: 0,
+    gcTime: 0,
   });
 };
 
@@ -41,7 +54,21 @@ export const useItems = () => {
   });
 };
 
-export const getRootItems = async () => {
-  const result = await getDriver().getItems();
+export const getRootItems = async (filters?: ItemFilters) => {
+  const result = await getDriver().getItems(filters);
   return result.children;
+};
+
+export const useItem = (
+  itemId: string,
+  options?: HookUseQueryOptions<Item>,
+): UseQueryResult<Item | undefined, APIError> => {
+  return useQuery<Item, APIError>({
+    queryKey: ["items", itemId],
+    queryFn: () => getDriver().getItem(itemId),
+    ...(options as Omit<
+      UseQueryOptions<Item, APIError>,
+      "queryKey" | "queryFn"
+    >),
+  });
 };
