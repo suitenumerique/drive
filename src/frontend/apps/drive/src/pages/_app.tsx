@@ -9,6 +9,7 @@ import {
 import type { NextPage } from "next";
 import type { AppProps } from "next/app";
 import { CunninghamProvider } from "@gouvfr-lasuite/ui-kit";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
   MutationCache,
   Query,
@@ -104,7 +105,7 @@ export default function MyApp({
   pageProps,
   router,
 }: AppPropsWithLayout) {
-  const [theme, setTheme] = useState<string>("default");
+  const [theme, setTheme] = useState<string>("anct");
 
   return (
     <AppContext.Provider value={{ theme, setTheme }}>
@@ -149,6 +150,9 @@ const MyAppInner = ({ Component, pageProps }: AppPropsWithLayout) => {
             </AnalyticsProvider>
           </ConfigProvider>
         </CunninghamProvider>
+        {process.env.NODE_ENV === "development" && (
+          <ReactQueryDevtools initialIsOpen={false} />
+        )}
       </QueryClientProvider>
     </>
   );
