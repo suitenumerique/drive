@@ -43,7 +43,10 @@ export default function TrashPage() {
       gridActionsCell={ExplorerGridTrashActionsCell}
       disableItemDragAndDrop={true}
       gridHeader={
-        <div className="explorer__content__breadcrumbs">
+        <div
+          className="explorer__content__breadcrumbs"
+          data-testid="trash-page-breadcrumbs"
+        >
           <div className="explorer__content__header__title">
             {t("explorer.trash.title")}
           </div>
