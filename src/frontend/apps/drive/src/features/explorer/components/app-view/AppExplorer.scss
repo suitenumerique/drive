@@ -42,14 +42,17 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
   }
 
   &__grid {
-    padding: 0px 14px;
-    padding-right: 24px;
-
     &__empty__image {
-      width: 280px !important;
-      height: 280px !important;
-      object-fit: contain;
+      width: 100%;
+      max-width: 140px !important;
       margin: 0 auto;
+    }
+
+    @media (min-width: $tablet) {
+      &__container {
+        padding: 0 14px;
+        padding-right: 24px;
+      }
     }
   }
   &__container {
@@ -137,6 +140,21 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 
         @media (max-width: $tablet) {
           display: flex;
+        }
+
+        &__default-route {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: var(--c--globals--font--sizes--sm);
+          color: var(--c--contextuals--content--semantic--neutral--primary);
+          font-weight: 600;
+          overflow: hidden;
+
+          img {
+            width: 18px;
+            height: 18px;
+          }
         }
 
         &__container {

@@ -52,6 +52,7 @@ export type EmbeddedExplorerGridProps = {
   displayMode?: GlobalExplorerContextType["displayMode"];
   canSelect?: (item: Item) => boolean;
   onFileClick?: (item: Item) => void;
+  disableKeyboardNavigation?: boolean;
 };
 
 const EMPTY_ARRAY: Item[] = [];
@@ -148,7 +149,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   const { onKeyDown } = useTableKeyboardNavigation({
     table,
     tableRef,
-    isDisabled: isActionModalOpen,
+    isDisabled: isActionModalOpen || props.disableKeyboardNavigation,
   });
 
   const handleCloseMoveModal = () => {

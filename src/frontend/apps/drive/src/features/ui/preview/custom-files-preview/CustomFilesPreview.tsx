@@ -1,6 +1,5 @@
 import { Item, ItemType } from "@/features/drivers/types";
 import { FilePreview, FilePreviewType } from "../files-preview/FilesPreview";
-import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import { useTranslation } from "react-i18next";
 import { useMemo } from "react";
 import { itemToPreviewFile } from "@/features/explorer/utils/utils";
@@ -12,14 +11,16 @@ import { ItemShareModal } from "@/features/explorer/components/modals/share/Item
 type CustomFilesPreviewProps = {
   currentItem?: Item;
   items: Item[];
+  onSetPreviewItem?: (item?: Item) => void;
 };
 
 export const CustomFilesPreview = ({
   currentItem,
   items,
+  onSetPreviewItem,
 }: CustomFilesPreviewProps) => {
   const { t } = useTranslation();
-  const { setPreviewItem } = useGlobalExplorer();
+
   const { handleDownloadItem } = useDownloadItem();
 
   const files = useMemo(() => {
@@ -29,12 +30,12 @@ export const CustomFilesPreview = ({
   }, [items]);
 
   const handleClosePreview = () => {
-    setPreviewItem(undefined);
+    onSetPreviewItem?.(undefined);
   };
 
   const handleChangePreviewItem = (file?: FilePreviewType) => {
     const item = items.find((item) => file?.id === item.id);
-    setPreviewItem(item);
+    onSetPreviewItem?.(item);
   };
 
   return (

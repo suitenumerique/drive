@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import clsx from "clsx";
 import { Loader, useCunningham } from "@openfun/cunningham-react";
-import gridEmpty from "@/assets/grid_empty.svg";
+import gridEmpty from "@/assets/grid_empty.png";
+import starEmpty from "@/assets/star_tab_empty.svg";
 import {
   AppExplorerProps,
   useAppExplorer,
@@ -14,6 +15,10 @@ import {
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
 import { InfiniteScroll } from "@/features/ui/components/infinite-scroll/InfiniteScroll";
+import { useRouter } from "next/router";
+import { DefaultRoute, getDefaultRouteId } from "@/utils/defaultRoutes";
+import { useMemo } from "react";
+import { canCreateChildren } from "@/utils/itemUtils";
 
 /**
  * Wrapper around EmbeddedExplorerGrid to display a list of items in a table.
@@ -27,6 +32,7 @@ import { InfiniteScroll } from "@/features/ui/components/infinite-scroll/Infinit
 export const AppExplorerGrid = (props: AppExplorerProps) => {
   const { t } = useTranslation();
   const { t: tc } = useCunningham();
+  const router = useRouter();
 
   const {
     setSelectedItems,
@@ -55,7 +61,31 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
 
   const isLoading = props.isLoading || props.childrenItems === undefined;
   const isEmpty = props.childrenItems?.length === 0;
-  const canCreateChildren = item?.abilities?.children_create;
+
+  const canAddChildren = item
+    ? canCreateChildren(item, router.pathname)
+    : false;
+
+  const defaultRouteId = getDefaultRouteId(router.pathname);
+  const emptyCTATranslationSuffix = useMemo(() => {
+    if (defaultRouteId === DefaultRoute.MY_FILES) {
+      return ".default";
+    }
+    if (defaultRouteId) {
+      return `.${defaultRouteId}`.replaceAll("-", "_");
+    }
+    if (!canAddChildren) {
+      return ".no_create";
+    }
+    return ".default";
+  }, [defaultRouteId, canAddChildren]);
+
+  const emptyCaptionTranslationSuffix = useMemo(() => {
+    if (defaultRouteId) {
+      return `.default`;
+    }
+    return ".folder";
+  }, [defaultRouteId]);
 
   const getContent = () => {
     if (isLoading) {
@@ -65,20 +95,20 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
       return (
         <div className="c__datagrid__empty-placeholder fs-h3 clr-greyscale-900 fw-bold">
           <img
-            src={gridEmpty.src}
+            src={
+              defaultRouteId === DefaultRoute.FAVORITES
+                ? starEmpty.src
+                : gridEmpty.src
+            }
             alt={t("components.datagrid.empty_alt")}
             className="explorer__grid__empty__image"
           />
           <div className="explorer__grid__empty">
             <div className="explorer__grid__empty__caption">
-              {canCreateChildren
-                ? t("explorer.grid.empty.caption")
-                : t("explorer.grid.empty.caption_no_create")}
+              {t(`explorer.grid.empty.caption${emptyCaptionTranslationSuffix}`)}
             </div>
             <div className="explorer__grid__empty__cta">
-              {canCreateChildren
-                ? t("explorer.grid.empty.cta")
-                : t("explorer.grid.empty.cta_no_create")}
+              {t(`explorer.grid.empty.cta${emptyCTATranslationSuffix}`)}
             </div>
           </div>
         </div>

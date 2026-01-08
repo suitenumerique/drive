@@ -257,6 +257,9 @@ export const FilePreviewNav: React.FC<FilePreviewNavProps> = ({
   onPrevious,
   onNext,
 }) => {
+  if (totalFiles === 1) {
+    return null;
+  }
   return (
     <div className="file-preview-nav" data-testid="file-preview-nav">
       <Button

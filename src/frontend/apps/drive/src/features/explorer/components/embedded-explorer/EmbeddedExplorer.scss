@@ -18,12 +18,49 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
     flex: 1;
   }
 
+  &__search {
+    width: 100%;
+    margin-bottom: var(--c--globals--spacings--xs);
+    &__container {
+      width: 100%;
+      margin-bottom: var(--c--globals--spacings--xs);
+      display: flex;
+      align-items: center;
+      gap: var(--c--globals--spacings--xs);
+      padding: calc(
+          var(--c--globals--spacings--base) + var(--c--globals--spacings--xxs)
+        )
+        calc(var(--c--globals--spacings--sm) + var(--c--globals--spacings--xs));
+
+      border-bottom: 1px solid var(--c--contextuals--border--surface--primary);
+
+      &__icon {
+        display: flex;
+        align-items: center;
+      }
+
+      input {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        color: var(--c--contextuals--content--semantic--neutral--primary);
+      }
+    }
+  }
+
   &__breadcrumbs {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
     padding: 0 0px;
+
+    &__last-item {
+      display: flex;
+      align-items: center;
+      gap: var(--c--globals--spacings--2xs);
+    }
   }
 
   &__empty {
@@ -130,7 +167,13 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
   }
 
   &.c__datagrid--empty {
+    min-height: 200px;
+    padding-bottom: 40px;
     border: none;
+
+    &-placeholder {
+      gap: 0px !important;
+    }
   }
 
   .c__datagrid__row__cell--actions {
@@ -149,8 +192,12 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
     justify-content: center;
   }
 
-  .c__datagrid__empty-placeholder img {
-    border: none;
+  .c__datagrid__empty-placeholder {
+    width: min(400px, 80%);
+    gap: 0px !important;
+    img {
+      border: none;
+    }
   }
 
   &__empty {
