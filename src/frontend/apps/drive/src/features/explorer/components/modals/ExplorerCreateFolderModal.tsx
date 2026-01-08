@@ -8,8 +8,6 @@ import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationCreateFolder } from "../../hooks/useMutations";
-import { itemToTreeItem } from "../GlobalExplorerContext";
-import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
 
 type Inputs = {
   title: string;
@@ -17,13 +15,12 @@ type Inputs = {
 
 export const ExplorerCreateFolderModal = (
   props: Pick<ModalProps, "isOpen" | "onClose"> & {
-    parentId: string;
+    parentId?: string;
   }
 ) => {
   const { t } = useTranslation();
   const form = useForm<Inputs>();
   const createFolder = useMutationCreateFolder();
-  const treeContext = useTreeContext();
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     form.reset();
@@ -33,12 +30,7 @@ export const ExplorerCreateFolderModal = (
         parentId: props.parentId,
       },
       {
-        onSuccess: (data) => {
-          treeContext?.treeData.addChild(
-            props.parentId,
-            itemToTreeItem(data),
-            0
-          );
+        onSuccess: () => {
           form.reset();
           props.onClose();
         },
@@ -71,6 +63,7 @@ export const ExplorerCreateFolderModal = (
           <RhfInput
             label={t("explorer.actions.createFolder.modal.label")}
             fullWidth={true}
+            data-testid="create-folder-input"
             autoFocus={true}
             {...form.register("title")}
           />
