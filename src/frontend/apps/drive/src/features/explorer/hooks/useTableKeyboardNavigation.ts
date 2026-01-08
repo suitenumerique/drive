@@ -24,6 +24,10 @@ export const useTableKeyboardNavigation = ({
     // the case by default, if we start the area selection from outside the table, the body will be focused instead of the table, making the
     // onKeyDown event not being triggered on table)
 
+    if (isDisabled) {
+      return;
+    }
+
     if (tableRef.current) {
       tableRef.current.focus({
         preventScroll: true,
