@@ -1,12 +1,9 @@
 import { APIError } from "@/features/api/APIError";
 import { getDriver } from "@/features/config/Config";
 import { Item } from "@/features/drivers/types";
-import { itemToPreviewFile } from "@/features/explorer/utils/utils";
-import { ItemInfo } from "@/features/items/components/ItemInfo";
-import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 import { GenericDisclaimer } from "@/features/ui/components/generic-disclaimer/GenericDisclaimer";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
-import { FilePreview } from "@/features/ui/preview/files-preview/FilesPreview";
+import { CustomFilesPreview } from "@/features/ui/preview/custom-files-preview/CustomFilesPreview";
 import { Icon } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@openfun/cunningham-react";
 import { useQuery } from "@tanstack/react-query";
@@ -17,7 +14,7 @@ export default function FilePage() {
   const { t } = useTranslation();
   const router = useRouter();
   const itemId = router.query.id as string;
-  const { handleDownloadItem } = useDownloadItem();
+
   // On 403, 401, the user is automatically redirected to the 401/403 page.
   const {
     data: item,
@@ -50,17 +47,7 @@ export default function FilePage() {
 
   return (
     <div>
-      <FilePreview
-        isOpen={true}
-        hideCloseButton={true}
-        hideNav={true}
-        title={t("file_preview.title")}
-        files={[itemToPreviewFile(item)]}
-        onChangeFile={() => void 0}
-        handleDownloadFile={() => handleDownloadItem(item)}
-        openedFileId={item.id}
-        sidebarContent={item && <ItemInfo item={item} />}
-      />
+      <CustomFilesPreview currentItem={item} items={[item]} />
     </div>
   );
 }
