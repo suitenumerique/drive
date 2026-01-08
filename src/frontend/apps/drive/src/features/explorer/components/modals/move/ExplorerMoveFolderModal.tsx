@@ -1,7 +1,7 @@
 import { getDriver } from "@/features/config/Config";
 import { Item, ItemType } from "@/features/drivers/types";
 import { Button, Modal, ModalSize, useModal } from "@openfun/cunningham-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   HorizontalSeparator,
   useResponsive,
@@ -17,6 +17,7 @@ import {
   useEmbeddedExplorer,
 } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorer";
 import { AddFolderButton } from "./AddFolderButton";
+import { useGlobalExplorer } from "../../GlobalExplorerContext";
 
 interface ExplorerMoveFolderProps {
   isOpen: boolean;
@@ -32,6 +33,9 @@ export const ExplorerMoveFolder = ({
   itemsToMove,
 }: ExplorerMoveFolderProps) => {
   const { isDesktop } = useResponsive();
+  const { itemId: currentItemId } = useGlobalExplorer();
+  const queryClient = useQueryClient();
+
   const { t } = useTranslation();
   const treeContext = useTreeContext<Item>();
   const moveItems = useMoveItems();
@@ -42,27 +46,28 @@ export const ExplorerMoveFolder = ({
     gridProps: {
       enableMetaKeySelection: false,
       gridActionsCell: () => <div />,
+      disableKeyboardNavigation: true,
     },
     itemsFilters: {
       type: ItemType.FOLDER,
     },
     itemsFilter: (items) => {
-      return items.filter(
-        (itemFiltered) =>
-          !itemsToMove.some((i) => {
-            return i.id === itemFiltered.id;
-          })
-      );
+      const filteredItems = items.filter((itemFiltered) => {
+        return !itemsToMove.some((i) => {
+          return i.id === itemFiltered.id;
+        });
+      });
+
+      return filteredItems;
     },
-    breadcrumbsRight: () =>
-      itemsExplorer.currentItemId ? (
-        <Button
-          size="small"
-          variant="tertiary"
-          icon={<AddFolderButton />}
-          onClick={createFolderModal.open}
-        />
-      ) : null,
+    breadcrumbsRight: () => (
+      <Button
+        size="small"
+        variant="tertiary"
+        icon={<AddFolderButton />}
+        onClick={createFolderModal.open}
+      />
+    ),
   });
 
   const moveConfirmationModal = useModal();
@@ -126,6 +131,16 @@ export const ExplorerMoveFolder = ({
             treeContext?.treeData.moveNode(id, newParentId, childrenCount);
             childrenCount++;
           });
+
+          // If the current item is moved, we invalidate the item and breadcrumb queries
+          if (ids.includes(currentItemId)) {
+            queryClient.invalidateQueries({
+              queryKey: ["item", currentItemId],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["breadcrumb", currentItemId],
+            });
+          }
         },
       }
     );
@@ -179,7 +194,7 @@ export const ExplorerMoveFolder = ({
           </div>
         }
         onClose={onCloseModal}
-        size={isDesktop ? ModalSize.LARGE : ModalSize.FULL}
+        size={isDesktop ? ModalSize.MEDIUM : ModalSize.FULL}
         rightActions={
           <div className="modal__move__footer">
             <Button variant="tertiary" onClick={onCloseModal}>
@@ -198,17 +213,17 @@ export const ExplorerMoveFolder = ({
         }
       >
         <div className="noPadding">
-          <HorizontalSeparator />
+          <HorizontalSeparator withPadding={false} />
           <div className="modal__move__explorer">
-            <EmbeddedExplorer {...itemsExplorer} />
+            <EmbeddedExplorer {...itemsExplorer} showSearch={true} />
           </div>
           <HorizontalSeparator />
         </div>
       </Modal>
-      {createFolderModal.isOpen && itemsExplorer.currentItemId && (
+      {createFolderModal.isOpen && (
         <ExplorerCreateFolderModal
           {...createFolderModal}
-          parentId={itemsExplorer.currentItemId}
+          parentId={itemsExplorer.currentItemId ?? undefined}
         />
       )}
       {moveConfirmationModal.isOpen && (
