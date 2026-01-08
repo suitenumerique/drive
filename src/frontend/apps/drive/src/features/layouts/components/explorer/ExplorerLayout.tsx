@@ -47,7 +47,9 @@ export const ExplorerLayout = ({
     // the minimal layout state is preserved; all other query params are dropped intentionally.
     const { minimal } = router.query;
     const query = minimal ? { minimal } : {};
-    router.push({ pathname: `/explorer/items/${e.item.id}`, query });
+    // If the itemId is a favorite item, we need to get the favorite items. cf onLoadChildren in GlobalExplorerProvider.tsx
+    const id = e.item.id.split("_")[0];
+    router.push({ pathname: `/explorer/items/${id}`, query });
   };
 
   return (
