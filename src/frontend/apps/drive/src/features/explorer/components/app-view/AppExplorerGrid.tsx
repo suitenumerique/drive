@@ -2,7 +2,7 @@ import { Item } from "@/features/drivers/types";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import clsx from "clsx";
-import { Loader, useCunningham } from "@openfun/cunningham-react";
+import { Loader, useCunningham } from "@gouvfr-lasuite/cunningham-react";
 import gridEmpty from "@/assets/grid_empty.png";
 import starEmpty from "@/assets/star_tab_empty.svg";
 import {

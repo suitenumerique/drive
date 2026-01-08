@@ -2,7 +2,7 @@ import { CellContext } from "@tanstack/react-table";
 import { Item, LinkReach } from "@/features/drivers/types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Draggable } from "@/features/explorer/components/Draggable";
-import { Tooltip } from "@openfun/cunningham-react";
+import { Tooltip } from "@gouvfr-lasuite/cunningham-react";
 import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { useDisableDragGridItem } from "@/features/explorer/components/embedded-explorer/hooks";
 import { removeFileExtension } from "../../utils/mimeTypes";

@@ -1,4 +1,4 @@
-import { Button } from "@openfun/cunningham-react";
+import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { login } from "../Auth";
 import { useTranslation } from "react-i18next";
 import { SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL } from "@/features/api/fetchApi";

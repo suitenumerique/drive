@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, ReactNode } from "react";
-import { Loader, useCunningham } from "@openfun/cunningham-react";
+import { Loader, useCunningham } from "@gouvfr-lasuite/cunningham-react";
 
 interface InfiniteScrollProps {
   /** Whether there are more items to load */
