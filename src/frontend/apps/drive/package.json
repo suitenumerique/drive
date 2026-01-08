@@ -16,8 +16,8 @@
     "yarn": "1.22.22"
   },
   "dependencies": {
-    "@gouvfr-lasuite/ui-kit": "0.18.4",
-    "@openfun/cunningham-react": "4.0.0",
+    "@gouvfr-lasuite/ui-kit": "0.19.5",
+    "@gouvfr-lasuite/cunningham-react": "4.1.0",
     "@tanstack/react-query": "5.90.10",
     "@tanstack/react-table": "8.21.3",
     "@viselect/react": "3.9.0",
