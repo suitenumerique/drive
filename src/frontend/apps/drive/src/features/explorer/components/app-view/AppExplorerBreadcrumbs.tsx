@@ -1,4 +1,4 @@
-import { Button, useModal } from "@openfun/cunningham-react";
+import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
 import {
   NavigationEventType,
   useGlobalExplorer,

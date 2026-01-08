@@ -9,7 +9,7 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DropdownMenu } from "@gouvfr-lasuite/ui-kit";
-import { Button, Decision, useModal } from "@openfun/cunningham-react";
+import { Button, Decision, useModal } from "@gouvfr-lasuite/cunningham-react";
 import undoIcon from "@/assets/icons/undo.svg";
 import cancelIcon from "@/assets/icons/cancel.svg";
 

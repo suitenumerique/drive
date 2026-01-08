@@ -18,7 +18,7 @@ import {
   NavigationEventType,
   useGlobalExplorer,
 } from "../GlobalExplorerContext";
-import { useModal } from "@openfun/cunningham-react";
+import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { ExplorerTreeItemActions } from "./ExplorerTreeItemActions";
 import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWorkspaceModal";
 import { ItemIcon } from "../icons/ItemIcon";

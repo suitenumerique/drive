@@ -1,6 +1,11 @@
 import { getDriver } from "@/features/config/Config";
 import { Item, ItemType, Role } from "@/features/drivers/types";
-import { Button, Modal, ModalSize, useModal } from "@openfun/cunningham-react";
+import {
+  Button,
+  Modal,
+  ModalSize,
+  useModal,
+} from "@gouvfr-lasuite/cunningham-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   HorizontalSeparator,
