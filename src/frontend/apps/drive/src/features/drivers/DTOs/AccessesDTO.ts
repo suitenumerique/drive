@@ -1,20 +1,25 @@
-import { Role } from "../types";
+import { LinkReach, LinkRole, Role } from "../types";
 
 export type DTOCreateAccess = {
-    itemId: string;
-    userId: string;
-    role: Role;  
+  itemId: string;
+  userId: string;
+  role: Role;
 };
-  
 
 export type DTOUpdateAccess = {
-    itemId: string;
-    accessId: string;
-    user_id: string;
-    role: Role;  
+  itemId: string;
+  accessId: string;
+  user_id: string;
+  role: Role;
 };
 
 export type DTODeleteAccess = {
-    itemId: string;
-    accessId: string;
-}
+  itemId: string;
+  accessId: string;
+};
+
+export type DTOUpdateLinkConfiguration = {
+  itemId: string;
+  link_reach: LinkReach;
+  link_role?: LinkRole | null;
+};

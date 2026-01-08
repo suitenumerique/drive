@@ -42,12 +42,17 @@ export type Item = {
     short_name: string;
   };
   type: ItemType;
+  ancestors_link_reach: LinkReach | null;
+  ancestors_link_role: LinkRole | null;
+  computed_link_reach: LinkReach | null;
+  computed_link_role: LinkRole | null;
   deleted_at?: Date;
   upload_state: string;
   updated_at: Date;
   description: string;
   is_wopi_supported?: boolean;
   created_at: Date;
+  is_favorite?: boolean;
   children?: Item[];
   parents?: Item[];
   breadcrumb?: ItemBreadcrumb[];
@@ -61,6 +66,7 @@ export type Item = {
   size?: number;
   mimetype?: string;
   user_roles?: Role[];
+  user_role?: Role;
   link_reach?: LinkReach;
   link_role?: LinkRole;
   abilities: {
@@ -74,6 +80,7 @@ export type Item = {
     link_configuration: boolean;
     media_auth: boolean;
     move: boolean;
+    link_select_options: Record<LinkReach, LinkRole[] | null>;
     partial_update: boolean;
     restore: boolean;
     retrieve: boolean;
@@ -101,6 +108,15 @@ export type Access = {
   role: string;
   team: string;
   user: User;
+  is_explicit: boolean;
+  max_role: Role;
+  max_ancestors_role: Role;
+  parent_id_max_role?: string; // Just for UI purposes
+  item: {
+    id: string;
+    path: string;
+    depth: number;
+  };
   abilities: {
     destroy: boolean;
     partial_update: boolean;
