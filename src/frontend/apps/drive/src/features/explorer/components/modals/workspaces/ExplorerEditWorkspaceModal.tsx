@@ -3,7 +3,7 @@ import {
   Modal,
   ModalProps,
   ModalSize,
-} from "@openfun/cunningham-react";
+} from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
 
 import { Item } from "@/features/drivers/types";

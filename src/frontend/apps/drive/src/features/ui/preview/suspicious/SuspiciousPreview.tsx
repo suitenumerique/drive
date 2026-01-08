@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-import { Button } from "@openfun/cunningham-react";
+import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
 import mimeSuspicious from "@/assets/files/icons/suspicious_file.svg";
 

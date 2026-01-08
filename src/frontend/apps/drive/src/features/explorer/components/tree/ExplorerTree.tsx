@@ -1,4 +1,4 @@
-import { useModal } from "@openfun/cunningham-react";
+import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import { Item, TreeItem } from "@/features/drivers/types";

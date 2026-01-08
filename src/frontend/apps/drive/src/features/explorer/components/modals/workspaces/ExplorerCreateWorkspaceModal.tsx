@@ -3,7 +3,7 @@ import {
   Modal,
   ModalProps,
   ModalSize,
-} from "@openfun/cunningham-react";
+} from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { WorkspaceForm } from "./WorkspaceForm";

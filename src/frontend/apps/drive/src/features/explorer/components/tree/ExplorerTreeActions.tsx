@@ -2,7 +2,7 @@ import { DropdownMenu, useDropdownMenu } from "@gouvfr-lasuite/ui-kit";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import createFolderSvg from "@/assets/icons/create_folder.svg";
 import createWorkspaceSvg from "@/assets/icons/create_workspace.svg";
-import { Button } from "@openfun/cunningham-react";
+import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { ExplorerSearchButton } from "@/features/explorer/components/app-view/ExplorerSearchButton";
 
