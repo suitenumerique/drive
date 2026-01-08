@@ -266,6 +266,7 @@
             "move": {
               "confirmation_modal": {
                 "title": "Transfer rights",
+                "aria_label": "Move confirmation modal",
                 "description": "You are about to move the element <strong>{{sourceItem}}</strong> to the folder <strong>{{targetItem}}</strong>, your document will inherit the share of the target folder.",
                 "description_multiple": "You are about to move <strong>{{count}}</strong> elements to the folder <strong>{{targetItem}}</strong>, your documents will inherit the share of the target folder.",
                 "root_description": "Moved documents will be accessible via your 'My files' tab. People who had access to the documents only through inherited rights from a parent will no longer be able to access them.",
@@ -738,6 +739,7 @@
             "move": {
               "confirmation_modal": {
                 "title": "Transfert de droits",
+                "aria_label": "Modal de confirmation de déplacement",
                 "description": "Vous êtes sur le point de déplacer l'élément <strong>{{sourceItem}}</strong> vers le dossier <strong>{{targetItem}}</strong>, votre document héritera du partage du dossier cible.",
                 "description_multiple": "Vous êtes sur le point de déplacer <strong>{{count}}</strong> éléments vers le dossier <strong>{{targetItem}}</strong>, vos documents hériteront du partage du dossier cible.",
                 "root_description": "Les documents déplacés seront accéssibles via votre onglet 'Mes fichiers'. Les personnes ayant le droit sur les documents uniquement via un accès hérité d'un parent ne pourront plus y accéder",
@@ -1194,6 +1196,7 @@
             "move": {
               "confirmation_modal": {
                 "title": "Rechten overdragen",
+                "aria_label": "Verplaatsen bevestigingsmodal",
                 "description": "U staat op het punt het element <strong>{{sourceItem}}</strong> naar de map <strong>{{targetItem}}</strong> te verplaatsen. Uw document zal de rechten van de doelmap overnemen.",
                 "description_multiple": "U staat op het punt om <strong>{{count}}</strong> elementen naar de map <strong>{{targetItem}}</strong> te verplaatsen. Uw documenten zullen de rechten van de doelmap overnemen.",
                 "root_description": "De verplaatste documenten zullen toegankelijk zijn via uw 'Mijn bestanden' tab. Personen die alleen via een erfenisrecht van een bovenliggende map toegang hadden, zullen deze niet meer kunnen bereiken.",
