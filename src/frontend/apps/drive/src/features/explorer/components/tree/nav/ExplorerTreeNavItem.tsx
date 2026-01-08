@@ -29,6 +29,8 @@ export const ExplorerTreeNavItem = ({
     <div
       className={`explorer__tree__nav__item ${isActive ? "active" : ""}`}
       onClick={handleClick}
+      aria-label={label}
+      role="link"
     >
       <div className="explorer__tree__nav__item__icon">{icon}</div>
       <div className="explorer__tree__nav__item__label">{label}</div>

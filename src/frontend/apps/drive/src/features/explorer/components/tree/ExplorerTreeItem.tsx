@@ -1,5 +1,11 @@
-import { Item, TreeItem, TreeItemData } from "@/features/drivers/types";
 import {
+  Item,
+  ItemType,
+  TreeItem,
+  TreeItemData,
+} from "@/features/drivers/types";
+import {
+  Icon,
   IconSize,
   NodeRendererProps,
   TreeDataItem,
@@ -16,15 +22,15 @@ import { useModal } from "@openfun/cunningham-react";
 import { ExplorerTreeItemActions } from "./ExplorerTreeItemActions";
 import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWorkspaceModal";
 import { ItemIcon } from "../icons/ItemIcon";
-import publicSpaceIcon from "@/assets/folder/folder-tiny-public.svg";
-import sharedSpaceIcon from "@/assets/folder/folder-tiny-shared.svg";
-import { itemIsWorkspace } from "@/features/drivers/utils";
-import { WorkspaceCategory } from "../../constants";
+import { useRouter } from "next/router";
+import { DefaultRoute } from "@/utils/defaultRoutes";
 
 type ExplorerTreeItemProps = NodeRendererProps<TreeDataItem<TreeItem>>;
 
 export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
-  const { onNavigate } = useGlobalExplorer();
+  const { onNavigate, setPreviewItem, setPreviewItems } = useGlobalExplorer();
+  const router = useRouter();
+
   const item: TreeViewDataType<TreeItemData> = props.node.data.value;
   const editModal = useModal();
 
@@ -33,8 +39,20 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
       <DroppableNodeTree id={props.node.id} item={item} nodeTree={props}>
         <TreeViewItem
           {...props}
+          testId={`tree_item`}
           onClick={() => {
+            if (
+              item.nodeType === TreeViewNodeTypeEnum.NODE &&
+              item.type === ItemType.FILE
+            ) {
+              setPreviewItems([item as Item]);
+              setPreviewItem(item as Item);
+              return;
+            }
             if (item.nodeType === TreeViewNodeTypeEnum.SIMPLE_NODE) {
+              if (item.id === DefaultRoute.FAVORITES) {
+                router.push("/explorer/items/favorites");
+              }
               return;
             }
             onNavigate({
@@ -45,7 +63,7 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
         >
           <div className="explorer__tree__item" data-testid="tree_item_content">
             <div className="explorer__tree__item__content">
-              <ExplorerTreeItemIcon item={item} size={IconSize.SMALL} />
+              <ExplorerTreeItemIcon item={item} size={IconSize.MEDIUM} />
               {/* 
                 We need to check the nodeType because the generic type T in TreeViewDataType 
                 is only available for nodes of type NODE
@@ -56,9 +74,16 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
                 </span>
               )}
               {item.nodeType === TreeViewNodeTypeEnum.SIMPLE_NODE && (
-                <span className="explorer__tree__item__title">
-                  {item.label}
-                </span>
+                <>
+                  <Icon
+                    size={IconSize.SMALL}
+                    name={"star_border"}
+                    color="var(--c--contextuals--content--semantic--neutral--tertiary)"
+                  />
+                  <span className="explorer__tree__item__title">
+                    {item.label}
+                  </span>
+                </>
               )}
             </div>
 
@@ -87,28 +112,9 @@ export const ExplorerTreeItemIcon = ({
   item: TreeViewDataType<TreeItem>;
   size?: IconSize;
 }) => {
-  if (item.nodeType === TreeViewNodeTypeEnum.SIMPLE_NODE) {
-    const isPublcNode = item.id === WorkspaceCategory.PUBLIC_SPACE;
-    const isSharedNode = item.id === WorkspaceCategory.SHARED_SPACE;
-    if (isPublcNode) {
-      return <img src={publicSpaceIcon.src} alt="" />;
-    }
-    if (isSharedNode) {
-      return <img src={sharedSpaceIcon.src} alt="" />;
-    }
-  }
-
   if (item.nodeType === TreeViewNodeTypeEnum.NODE) {
-    const isWorkspace = itemIsWorkspace(item as Item);
-    const isMainWorkspace = item.main_workspace;
-    const isSimpleFolder = !isWorkspace && !isMainWorkspace;
     return (
-      <ItemIcon
-        item={item as Item}
-        type="mini"
-        isTree
-        size={isSimpleFolder ? IconSize.SMALL : IconSize.X_SMALL}
-      />
+      <ItemIcon item={item as Item} type="mini" isTree size={IconSize.SMALL} />
     );
   }
 
