@@ -19,7 +19,7 @@ export const Breadcrumbs = ({
 }: BreadcrumbsProps) => {
   const { t } = useTranslation();
   return (
-    <div className="c__breadcrumbs">
+    <div className="c__breadcrumbs" data-testid="explorer-breadcrumbs">
       {displayBack && (
         <Button
           icon={<span className="material-icons">arrow_back</span>}

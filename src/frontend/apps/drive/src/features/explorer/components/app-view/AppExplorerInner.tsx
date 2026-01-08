@@ -32,7 +32,6 @@ export const AppExplorerInner = (props: AppExplorerProps) => {
   const showFilters = props.showFilters ?? true;
   const ref = useRef<Item[]>([]);
   ref.current = selectedItems;
-
   const onSelectionStart = ({ event, selection }: SelectionEvent) => {
     if (!event?.ctrlKey && !event?.metaKey) {
       selection.clearSelection();
@@ -168,7 +167,10 @@ export const AppExplorerInner = (props: AppExplorerProps) => {
 
             <div className="explorer__content">
               {props.gridHeader ? props.gridHeader : <AppExplorerBreadcrumbs />}
-              <AppExplorerGrid {...props} />
+
+              <div className="explorer__grid__container">
+                <AppExplorerGrid {...props} />
+              </div>
             </div>
           </div>
         </div>
