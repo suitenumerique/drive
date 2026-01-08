@@ -160,6 +160,7 @@
             "title": "Move",
             "move_button": "Move here",
             "move_to_root": "Move to root",
+            "aria_label": "Move folder modal",
             "description_one_item": "Choose the new location for <strong>{{name}}</strong>",
             "description_multiple_items": "Choose the new location for the <strong>{{count}}</strong> selected elements"
           }
@@ -624,6 +625,7 @@
             "title": "Déplacer",
             "move_button": "Déplacer ici",
             "move_to_root": "Déplacer vers la racine",
+            "aria_label": "Modal de déplacement de dossier",
             "description_one_item": "Choisissez le nouvel emplacement pour <strong>{{name}}</strong>",
             "description_multiple_items": "Choisissez le nouvel emplacement pour les <strong>{{count}}</strong> éléments sélectionnés"
           }
@@ -1098,6 +1100,7 @@
             "title": "Verplaatsen",
             "move_button": "Hierheen verplaatsen",
             "move_to_root": "Verplaats naar root",
+            "aria_label": "Map verplaatsen modal",
             "description_one_item": "Kies de nieuwe locatie voor <strong>{{name}}</strong>",
             "description_multiple_items": "Kies de nieuwe locatie voor de <strong>{{count}}</strong> geselecteerde elementen"
           }
