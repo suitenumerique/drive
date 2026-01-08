@@ -1,13 +1,12 @@
 import { getGlobalExplorerLayout } from "@/features/layouts/components/explorer/ExplorerLayout";
-import { WorkspaceType } from "@/features/drivers/types";
 import WorkspacesExplorer from "@/features/explorer/components/workspaces-explorer/WorkspacesExplorer";
-export default function PublicPage() {
+import { ItemFiltersOrdering } from "@/features/drivers/Driver";
+export default function RecentPage() {
   return (
     <WorkspacesExplorer
-      defaultFilters={{ workspaces: WorkspaceType.PUBLIC }}
-      showFilters={false}
+      defaultFilters={{ ordering: ItemFiltersOrdering.UPDATED_AT_DESC }}
     />
   );
 }
 
-PublicPage.getLayout = getGlobalExplorerLayout;
+RecentPage.getLayout = getGlobalExplorerLayout;
