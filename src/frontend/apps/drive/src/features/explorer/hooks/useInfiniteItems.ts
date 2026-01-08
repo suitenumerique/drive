@@ -4,14 +4,15 @@ import { ItemFilters } from "@/features/drivers/Driver";
 
 export const useInfiniteItems = (
   filters: ItemFilters = {},
+  queryKey: string[] = ["items", "infinite"],
   enabled: boolean = true
 ) => {
+  const effectiveQueryKey = [
+    ...queryKey,
+    ...(Object.keys(filters).length ? [JSON.stringify(filters)] : []),
+  ];
   return useInfiniteQuery({
-    queryKey: [
-      "items",
-      "infinite",
-      ...(Object.keys(filters).length ? [JSON.stringify(filters)] : []),
-    ],
+    queryKey: effectiveQueryKey,
     queryFn: ({ pageParam = 1 }) => {
       return getDriver().getItems({
         page: pageParam,
