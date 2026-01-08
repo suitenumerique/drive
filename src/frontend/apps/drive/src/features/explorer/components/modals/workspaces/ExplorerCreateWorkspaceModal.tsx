@@ -8,7 +8,6 @@ import { useTranslation } from "react-i18next";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { WorkspaceForm } from "./WorkspaceForm";
 import { useMutationCreateWorskpace } from "@/features/explorer/hooks/useMutations";
-import { useAddWorkspaceNode } from "@/features/explorer/components/tree/hooks/useAddTreeNode";
 
 type Inputs = {
   title: string;
@@ -22,7 +21,6 @@ export const ExplorerCreateWorkspaceModal = (
   const form = useForm<Inputs>();
   const createWorkspace = useMutationCreateWorskpace();
 
-  const { addWorkspaceNode } = useAddWorkspaceNode();
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     form.reset();
     createWorkspace.mutate(
@@ -30,8 +28,7 @@ export const ExplorerCreateWorkspaceModal = (
         ...data,
       },
       {
-        onSuccess: (data) => {
-          addWorkspaceNode(data);
+        onSuccess: () => {
           props.onClose();
         },
       }
