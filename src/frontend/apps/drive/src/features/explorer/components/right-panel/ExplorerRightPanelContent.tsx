@@ -1,6 +1,6 @@
 import { Item, ItemUploadState } from "@/features/drivers/types";
 import { ItemIcon } from "../icons/ItemIcon";
-import { Button, useModal } from "@openfun/cunningham-react";
+import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import { InfoRow } from "@/features/ui/components/info/InfoRow";
 import { useTranslation } from "react-i18next";

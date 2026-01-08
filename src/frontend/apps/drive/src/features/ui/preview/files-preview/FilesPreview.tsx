@@ -4,7 +4,7 @@ import {
   removeFileExtension,
 } from "@/features/explorer/utils/mimeTypes";
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
-import { Button, Modal, ModalSize } from "@openfun/cunningham-react";
+import { Button, Modal, ModalSize } from "@gouvfr-lasuite/cunningham-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { ImageViewer } from "../image-viewer/ImageViewer";
 import { VideoPlayer } from "../video-player/VideoPlayer";

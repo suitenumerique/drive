@@ -1,4 +1,4 @@
-import { Button } from "@openfun/cunningham-react";
+import { Button } from "@gouvfr-lasuite/cunningham-react";
 import React, { ReactElement, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 

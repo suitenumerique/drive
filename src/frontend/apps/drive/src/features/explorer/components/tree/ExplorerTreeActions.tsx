@@ -1,11 +1,9 @@
 import { DropdownMenu, useDropdownMenu } from "@gouvfr-lasuite/ui-kit";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import createFolderSvg from "@/assets/icons/create_folder.svg";
-import { Button } from "@openfun/cunningham-react";
+import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { ExplorerSearchButton } from "@/features/explorer/components/app-view/ExplorerSearchButton";
-import { isMyFilesRoute } from "@/utils/defaultRoutes";
-import { useRouter } from "next/router";
 
 type ExplorerTreeActionsProps = {
   openCreateFolderModal: () => void;
@@ -16,10 +14,9 @@ export const ExplorerTreeActions = ({
 }: ExplorerTreeActionsProps) => {
   const { t } = useTranslation();
   const { treeIsInitialized, item } = useGlobalExplorer();
-  const router = useRouter();
-  const isMyFiles = isMyFilesRoute(router.pathname);
+
   const createMenu = useDropdownMenu();
-  const showMenu = isMyFiles || item?.abilities?.children_create;
+  const showMenu = item ? item?.abilities?.children_create : true;
 
   if (!treeIsInitialized) {
     return null;
@@ -41,7 +38,6 @@ export const ExplorerTreeActions = ({
           onOpenChange={createMenu.setIsOpen}
         >
           <Button
-            disabled={!showMenu}
             icon={<span className="material-icons">add</span>}
             onClick={() => createMenu.setIsOpen(true)}
           >

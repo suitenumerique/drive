@@ -1,5 +1,5 @@
 import { Item, ItemUploadState } from "@/features/drivers/types";
-import { ModalSize, useModals } from "@openfun/cunningham-react";
+import { ModalSize, useModals } from "@gouvfr-lasuite/cunningham-react";
 import { downloadFile } from "../utils";
 import { useAuth } from "@/features/auth/Auth";
 import { useTranslation } from "react-i18next";

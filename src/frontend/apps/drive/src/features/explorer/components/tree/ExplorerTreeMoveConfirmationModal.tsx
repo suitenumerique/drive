@@ -1,5 +1,5 @@
 import { Item } from "@/features/drivers/types";
-import { Button, Modal, ModalSize } from "@openfun/cunningham-react";
+import { Button, Modal, ModalSize } from "@gouvfr-lasuite/cunningham-react";
 import { Trans, useTranslation } from "react-i18next";
 
 export type ConfirmationMoveState = {
