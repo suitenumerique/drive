@@ -9,6 +9,7 @@ import {
 import clsx from "clsx";
 import { useEffect, useRef } from "react";
 import { canDrop } from "../ExplorerDndProvider";
+import { DefaultRoute } from "@/utils/defaultRoutes";
 
 type DroppableNodeTreeProps = {
   id: string;
@@ -21,6 +22,9 @@ type DroppableNodeTreeProps = {
 export const DroppableNodeTree = (props: DroppableNodeTreeProps) => {
   const treeContext = useTreeContext();
   const { active } = useDndContext();
+  const isDropDisabled =
+    props.item.nodeType !== TreeViewNodeTypeEnum.NODE &&
+    props.item.id !== DefaultRoute.FAVORITES;
 
   const canDropItem = active
     ? canDrop(active?.data?.current?.item, props.item as TreeItem)
@@ -28,8 +32,7 @@ export const DroppableNodeTree = (props: DroppableNodeTreeProps) => {
 
   const { isOver, setNodeRef } = useDroppable({
     id: props.id,
-    disabled:
-      props.disabled || props.item.nodeType !== TreeViewNodeTypeEnum.NODE,
+    disabled: props.disabled || isDropDisabled,
     data: {
       item: props.item,
       nodeTree: props.nodeTree,
@@ -70,7 +73,7 @@ export const DroppableNodeTree = (props: DroppableNodeTreeProps) => {
     };
   }, [isOver]);
 
-  if (props.item.nodeType !== TreeViewNodeTypeEnum.NODE) {
+  if (isDropDisabled) {
     return (
       <div className="explorer__tree__item__droppable">{props.children}</div>
     );
