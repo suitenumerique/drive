@@ -475,7 +475,7 @@ class ItemViewSet(
     def _compute_ancestors_link_definition(self, items):
         """
         Compute ancestors link definition for the items collection.
-        On the collection, we look for the deepest items, compute ancestors link definition 
+        On the collection, we look for the deepest items, compute ancestors link definition
         for each item and aggregate them in order to inject it in the serializer context.
         """
         if not items:
@@ -838,19 +838,22 @@ class ItemViewSet(
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
-        target_item_id = validated_data["target_item_id"]
-        try:
-            target_item = models.Item.objects.get(
-                id=target_item_id, ancestors_deleted_at__isnull=True
-            )
-        except models.Item.DoesNotExist as excpt:
-            raise drf.exceptions.ValidationError(
-                {"target_item_id": "Target parent item does not exist."},
-                code="item_move_target_does_not_exist",
-            ) from excpt
+        target_item_id = validated_data.get("target_item_id")
+        if not target_item_id:
+            target_item = None
+        else:
+            try:
+                target_item = models.Item.objects.get(
+                    id=target_item_id, ancestors_deleted_at__isnull=True
+                )
+            except models.Item.DoesNotExist as excpt:
+                raise drf.exceptions.ValidationError(
+                    {"target_item_id": "Target parent item does not exist."},
+                    code="item_move_target_does_not_exist",
+                ) from excpt
 
         message = None
-        if not target_item.get_abilities(user).get("children_create"):
+        if target_item and not target_item.get_abilities(user).get("children_create"):
             message = (
                 "You do not have permission to move items "
                 "as a child to this target item."
@@ -862,6 +865,20 @@ class ItemViewSet(
             )
 
         item.move(target_item)
+
+        # If the item is moved to the root and the user does not have an access on the item,
+        # create an owner access for the user. Otherwise, the item will be invisible for the user.
+        if (
+            not target_item
+            and not models.ItemAccess.objects.filter(item=item, user=user).exists()
+        ):
+            models.ItemAccess.objects.create(
+                item=item,
+                user=self.request.user,
+                role=models.RoleChoices.OWNER,
+            )
+            item.creator = user
+            item.save(update_fields=["creator"])
 
         return drf.response.Response(
             {"message": "item moved successfully."}, status=status.HTTP_200_OK
