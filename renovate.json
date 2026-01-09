@@ -22,6 +22,12 @@
             "allowedVersions": "<6.0.0"
         },
         {
+            "groupName": "allowed mozilla-django-oidc versions",
+            "matchManagers": ["pep621"],
+            "matchPackageNames": ["mozilla-django-oidc"],
+            "allowedVersions": "<5.0.0"
+        },
+        {
             "description": "Disable requires-python updates - managed manually",
             "matchManagers": ["pep621"],
             "matchPackageNames": ["python"],
