@@ -330,6 +330,70 @@ class ListItemSerializer(serializers.ModelSerializer):
         )
 
 
+class ListItemLightSerializer(ListItemSerializer):
+    """
+    Serialize items with limited fields to avoid N+1 queries on the
+    nb_accesses and compute_link_(reach|role) attributes.
+    """
+
+    class Meta:
+        model = models.Item
+        fields = [
+            "id",
+            "abilities",
+            "created_at",
+            "creator",
+            "depth",
+            "is_favorite",
+            "link_role",
+            "link_reach",
+            "numchild",
+            "numchild_folder",
+            "path",
+            "title",
+            "updated_at",
+            "user_role",
+            "type",
+            "upload_state",
+            "url",
+            "url_preview",
+            "filename",
+            "mimetype",
+            "main_workspace",
+            "size",
+            "description",
+            "deleted_at",
+            "hard_delete_at",
+            "is_wopi_supported",
+        ]
+        read_only_fields = [
+            "id",
+            "abilities",
+            "created_at",
+            "creator",
+            "depth",
+            "is_favorite",
+            "link_role",
+            "link_reach",
+            "numchild",
+            "numchild_folder",
+            "path",
+            "updated_at",
+            "user_role",
+            "type",
+            "upload_state",
+            "url",
+            "url_preview",
+            "mimetype",
+            "main_workspace",
+            "size",
+            "description",
+            "deleted_at",
+            "hard_delete_at",
+            "is_wopi_supported",
+        ]
+
+
 class SearchItemSerializer(ListItemSerializer):
     """Serialize items for search."""
 
