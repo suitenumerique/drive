@@ -881,6 +881,20 @@ class ItemViewSet(
             utils.flat_to_nested(serializer.data), status=drf.status.HTTP_200_OK
         )
 
+    @drf.decorators.action(
+        url_path="recents",
+        detail=False,
+        methods=["get"],
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def recents(self, request, *args, **kwargs):
+        """Get list of favorite items for the current user."""
+
+        queryset = self.get_search_queryset(request)
+        queryset = queryset.order_by('-updated_at')
+
+        return self.get_response_for_queryset(queryset)
+
     @drf.decorators.action(detail=True, methods=["get"])
     def breadcrumb(self, request, *args, **kwargs):
         """
