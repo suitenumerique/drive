@@ -348,6 +348,8 @@ class ItemViewSet(
     tree_serializer_class = serializers.ListItemSerializer
     search_serializer_class = serializers.SearchItemSerializer
     breadcrumb_serializer_class = serializers.BreadcrumbItemSerializer
+    recents_serializer_class = serializers.ListItemLightSerializer
+    favorite_list_serializer_class = serializers.ListItemLightSerializer
 
     def _filter_suspicious_items(self, queryset, user):
         """
@@ -404,6 +406,41 @@ class ItemViewSet(
                 & ~db.Q(link_reach=LinkReachChoices.RESTRICTED)
             )
         )
+
+    def get_queryset_for_descendants(self):
+        """
+        Filter a queryset on all top level the user has access to
+        and all items that are children of the top level items.
+
+        The queryset is not annoated to let the function caller annotate it as needed.
+        """
+
+        user = self.request.user
+        queryset = self.get_queryset()
+
+        all_accessible_paths = queryset.order_by("path").values_list("path", flat=True)
+
+        if not all_accessible_paths:
+            return queryset.none()
+
+        # Among the results, we may have items that are ancestors/descendants
+        # of each other. In this case we want to keep only the highest ancestors.
+        root_paths = utils.filter_root_paths(
+            all_accessible_paths,
+            skip_sorting=True,
+        )
+
+        path_list = db.Q()
+        for path in root_paths:
+            path_list |= db.Q(path__descendants=path)
+
+        queryset = self.queryset.select_related("creator")
+        # Remove items with upload_state SUSPICIOUS for non-creators
+        queryset = self._filter_suspicious_items(queryset, user)
+        queryset = queryset.filter(path_list)
+        queryset = queryset.filter(ancestors_deleted_at__isnull=True)
+
+        return queryset
 
     def filter_queryset(self, queryset):
         """Override to apply annotations to generic views."""
@@ -482,7 +519,7 @@ class ItemViewSet(
         return drf.response.Response(status=status.HTTP_204_NO_CONTENT)
 
     def list(self, request, *args, **kwargs):
-        """List items with pagination and filtering."""
+        """List top level items with pagination and filtering."""
         # Not calling filter_queryset. We do our own cooking.
         queryset = self.get_queryset()
 
@@ -661,13 +698,26 @@ class ItemViewSet(
     def favorite_list(self, request, *args, **kwargs):
         """Get list of favorite items for the current user."""
         user = request.user
+        queryset = self.get_queryset_for_descendants()
+        queryset = queryset.annotate(
+            is_favorite=db.Value(True, output_field=db.BooleanField())
+        )
+        queryset = queryset.annotate_user_roles(user)
+
+        filterset = ItemFilter(
+            self.request.GET, queryset=queryset, request=self.request
+        )
+        if not filterset.is_valid():
+            raise drf.exceptions.ValidationError(filterset.errors)
+
+        queryset = filterset.filter_queryset(queryset)
 
         favorite_items_ids = models.ItemFavorite.objects.filter(user=user).values_list(
             "item_id", flat=True
         )
 
-        queryset = self.get_queryset()
         queryset = queryset.filter(id__in=favorite_items_ids)
+
         return self.get_response_for_queryset(queryset)
 
     @drf.decorators.action(
@@ -948,6 +998,32 @@ class ItemViewSet(
             utils.flat_to_nested(serializer.data), status=drf.status.HTTP_200_OK
         )
 
+    @drf.decorators.action(
+        url_path="recents",
+        detail=False,
+        methods=["get"],
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def recents(self, request, *args, **kwargs):
+        """Get list of favorite items for the current user."""
+        user = self.request.user
+        queryset = self.get_queryset_for_descendants()
+
+        filterset = ItemFilter(
+            self.request.GET, queryset=queryset, request=self.request
+        )
+        if not filterset.is_valid():
+            raise drf.exceptions.ValidationError(filterset.errors)
+
+        queryset = filterset.filter_queryset(queryset)
+
+        queryset = queryset.annotate_is_favorite(user)
+        queryset = queryset.annotate_user_roles(user)
+
+        queryset = queryset.order_by("-updated_at")
+
+        return self.get_response_for_queryset(queryset)
+
     @drf.decorators.action(detail=True, methods=["get"])
     def breadcrumb(self, request, *args, **kwargs):
         """
@@ -1038,6 +1114,7 @@ class ItemViewSet(
         queryset = self.queryset
         indexer = get_file_indexer()
 
+        queryset = queryset.select_related("creator")
         filterset = SearchItemFilter(
             request.GET, queryset=queryset, request=self.request
         )
@@ -1052,8 +1129,12 @@ class ItemViewSet(
         item_access_queryset = models.ItemAccess.objects.select_related("item").filter(
             db.Q(user=user) | db.Q(team__in=user.teams),
             item__deleted_at__isnull=True,
-            item__path__depth=1,
         )
+
+        # Remove items with upload_state SUSPICIOUS for non-creators
+        queryset = self._filter_suspicious_items(queryset, user)
+
+        queryset = queryset.annotate_is_favorite(user)
 
         if workspace:
             item_access_queryset = item_access_queryset.filter(item__id=workspace)
@@ -1064,8 +1145,15 @@ class ItemViewSet(
         if not top_level_items:
             return self.get_response_for_queryset(queryset.none())
 
+        # Among the results, we may have items that are ancestors/descendants
+        # of each other. In this case we want to keep only the highest ancestors.
+        root_paths = utils.filter_root_paths(
+            top_level_items,
+            skip_sorting=True,
+        )
+
         path_list = db.Q()
-        for top_level_item in top_level_items:
+        for top_level_item in root_paths:
             path_list |= db.Q(path__descendants=top_level_item)
 
         queryset = queryset.filter(path_list)
@@ -1084,7 +1172,6 @@ class ItemViewSet(
         # Without the indexer, the "title" filtering is kept
         queryset = filterset.filter_queryset(queryset)
         queryset = queryset.annotate_user_roles(user)
-        queryset = queryset.annotate_is_favorite(user)
 
         page = self.paginate_queryset(queryset)
 
