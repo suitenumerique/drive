@@ -810,10 +810,10 @@ class MoveItemSerializer(serializers.Serializer):
         }
 
     Notes:
-        - The `target_item_id` is mandatory.
+        - The `target_item_id` is optional. If not provided, the item will be moved to the root.
     """
 
-    target_item_id = serializers.UUIDField(required=True)
+    target_item_id = serializers.UUIDField(required=False)
 
 
 class SDKRelayEventSerializer(serializers.Serializer):

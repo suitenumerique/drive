@@ -987,7 +987,7 @@ class Item(TreeModel, BaseModel):
         """
         Move an item to a new position in the tree.
         """
-        if target.type != ItemTypeChoices.FOLDER:
+        if target and target.type != ItemTypeChoices.FOLDER:
             raise ValidationError(
                 {
                     "target": ValidationError(
@@ -1002,7 +1002,11 @@ class Item(TreeModel, BaseModel):
         if self.depth > 1:
             # Store old parent id in order to update its numchild and numchild_folder
             old_parent_id = self.parent().id
-        self.path = f"{target.path!s}.{self.id!s}"
+        if target:
+            self.path = f"{target.path!s}.{self.id!s}"
+        else:
+            self.path = str(self.id)
+
         self.save(update_fields=["path"])
         target_update = {
             "numchild": models.F("numchild") + 1,
@@ -1018,7 +1022,8 @@ class Item(TreeModel, BaseModel):
             target_update["numchild_folder"] = models.F("numchild_folder") + 1
 
         # update target numchild and numchild_folder
-        self._meta.model.objects.filter(pk=target.id).update(**target_update)
+        if target:
+            self._meta.model.objects.filter(pk=target.id).update(**target_update)
 
         # update old parent numchild and numchild_folder
         if old_parent_id and not ignore_parent_numchild_update:
