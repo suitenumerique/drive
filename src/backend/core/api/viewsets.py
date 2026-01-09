@@ -606,14 +606,10 @@ class ItemViewSet(
     )
     def favorite_list(self, request, *args, **kwargs):
         """Get list of favorite items for the current user."""
-        user = request.user
 
-        favorite_items_ids = models.ItemFavorite.objects.filter(user=user).values_list(
-            "item_id", flat=True
-        )
+        queryset = self.get_search_queryset(request)
+        queryset = queryset.filter(is_favorite=True)
 
-        queryset = self.get_queryset()
-        queryset = queryset.filter(id__in=favorite_items_ids)
         return self.get_response_for_queryset(queryset)
 
     @drf.decorators.action(
@@ -918,17 +914,8 @@ class ItemViewSet(
         serializer = self.get_serializer(breadcrumb, many=True)
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
-    @drf.decorators.action(
-        detail=False,
-        methods=["get"],
-        url_path="search",
-        pagination_class=drf.pagination.PageNumberPagination,
-    )
-    def search(self, request, *args, **kwargs):
-        """
-        Search for items using filterset.
-        """
 
+    def get_search_queryset(self, request):
         queryset = self.queryset
         filterset = SearchItemFilter(
             request.GET, queryset=queryset, request=self.request
@@ -946,6 +933,11 @@ class ItemViewSet(
             item__path__depth=1,
         )
 
+        # Remove items with upload_state SUSPICIOUS for non-creators
+        queryset = self._filter_suspicious_items(queryset, user)            
+
+        queryset = queryset.annotate_is_favorite(user)
+
         if workspace:
             item_access_queryset = item_access_queryset.filter(item__id=workspace)
 
@@ -953,7 +945,7 @@ class ItemViewSet(
         # Then look for all items that are children of the top level items
 
         if not top_level_items:
-            return self.get_response_for_queryset(queryset.none())
+            return queryset.none()
 
         path_list = db.Q()
         for top_level_item in top_level_items:
@@ -962,8 +954,21 @@ class ItemViewSet(
         queryset = queryset.filter(path_list)
         queryset = filterset.filter_queryset(queryset)
         queryset = queryset.annotate_user_roles(user)
-        queryset = queryset.annotate_is_favorite(user)
+        
+        return queryset
 
+    @drf.decorators.action(
+        detail=False,
+        methods=["get"],
+        url_path="search",
+        pagination_class=drf.pagination.PageNumberPagination,
+    )
+    def search(self, request, *args, **kwargs):
+        """
+        Search for items using filterset.
+        """
+
+        queryset = self.get_search_queryset(request)
         page = self.paginate_queryset(queryset)
 
         if page is not None:
