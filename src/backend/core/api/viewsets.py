@@ -676,19 +676,22 @@ class ItemViewSet(
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
-        target_item_id = validated_data["target_item_id"]
-        try:
-            target_item = models.Item.objects.get(
-                id=target_item_id, ancestors_deleted_at__isnull=True
-            )
-        except models.Item.DoesNotExist as excpt:
-            raise drf.exceptions.ValidationError(
-                {"target_item_id": "Target parent item does not exist."},
-                code="item_move_target_does_not_exist",
-            ) from excpt
+        target_item_id = validated_data.get("target_item_id")
+        if not target_item_id:
+            target_item = None
+        else:
+            try:
+                target_item = models.Item.objects.get(
+                    id=target_item_id, ancestors_deleted_at__isnull=True
+                )
+            except models.Item.DoesNotExist as excpt:
+                raise drf.exceptions.ValidationError(
+                    {"target_item_id": "Target parent item does not exist."},
+                    code="item_move_target_does_not_exist",
+                ) from excpt
 
         message = None
-        if not target_item.get_abilities(user).get("children_create"):
+        if target_item and not target_item.get_abilities(user).get("children_create"):
             message = (
                 "You do not have permission to move items "
                 "as a child to this target item."

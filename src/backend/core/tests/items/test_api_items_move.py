@@ -648,3 +648,54 @@ def test_api_items_move_suspicious_item_should_work_for_creator():
     # Verify that the item has moved
     suspicious_item.refresh_from_db()
     assert suspicious_item.parent() == target
+
+
+def test_api_items_move_to_root():
+    """
+    Creators should be able to move their own items to the root.
+    """
+    creator = factories.UserFactory()
+    client = APIClient()
+    client.force_login(creator)
+
+    folder = factories.ItemFactory(
+        creator=creator,
+        users=[(creator, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+        title="folder",
+    )
+
+    item = factories.ItemFactory(
+        creator=creator,
+        parent=folder,
+        users=[(creator, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+        title="folder child",
+    )
+
+    folder.refresh_from_db()
+    assert folder.numchild_folder == 1
+    assert folder.numchild == 1
+
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/move/",
+        data={},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"message": "item moved successfully."}
+
+    # Verify that the item has moved
+    item.refresh_from_db()
+    assert item.parent() is None
+
+    folder.refresh_from_db()
+    assert folder.numchild == 0
+    assert folder.numchild_folder == 0
+
+    # Verify that the item is available in the root
+    response = client.get(f"/api/v1.0/items/")
+    
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+    assert response.json()["results"][0]["id"] == str(item.id)
+    assert response.json()["results"][1]["id"] == str(folder.id)
