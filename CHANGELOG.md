@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.11.0] - 2026-01-12
+
 ### Added
 
 - ✨(backend) add async indexation of items on save (or access save)
@@ -29,6 +31,7 @@ and this project adheres to
 - 🐛(front) fix responsive gaufre
 - 🐛(docker-hub) fix mistake in docker user
 - 🐛(backend) stop renaming file when no title is provided
+- 🐛(front) fix delete item label
 
 ## [v0.10.1] - 2025-12-05
 
@@ -234,7 +237,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.10.1...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.11.0...main
+[0.11.0]: https://github.com/suitenumerique/drive/releases/v0.11.0
 [0.10.1]: https://github.com/suitenumerique/drive/releases/v0.10.1
 [0.10.0]: https://github.com/suitenumerique/drive/releases/v0.10.0
 [0.9.0]: https://github.com/suitenumerique/drive/releases/v0.9.0
