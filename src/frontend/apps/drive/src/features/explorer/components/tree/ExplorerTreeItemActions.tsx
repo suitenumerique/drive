@@ -123,9 +123,7 @@ export const ExplorerTreeItemActions = ({
               },
               {
                 icon: <span className="material-icons">delete</span>,
-                label: !isWorkspace
-                  ? t("explorer.tree.workspace.options.delete_folder")
-                  : t("explorer.tree.workspace.options.delete_workspace"),
+                label: t("explorer.tree.workspace.options.delete_item"),
                 value: "delete",
                 isHidden: !item.abilities?.destroy || item.main_workspace,
                 callback: onDelete,

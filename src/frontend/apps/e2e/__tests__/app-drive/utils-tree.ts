@@ -102,11 +102,11 @@ export const expectTreeItemIsSelected = async (
 
 export const deleteFolderInTree = async (page: Page, itemTitle: string) => {
   await clickOnMoreActionsButtonFromItem(page, itemTitle);
-  await page.getByRole("menuitem", { name: "Delete folder" }).click();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
   await expect(page.getByText("Item deleted")).toBeVisible();
 };
 
 export const deleteWorkspaceInTree = async (page: Page, itemTitle: string) => {
   await clickOnMoreActionsButtonFromItem(page, itemTitle);
-  await page.getByRole("menuitem", { name: "Delete workspace" }).click();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
 };

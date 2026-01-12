@@ -35,6 +35,7 @@ export const ItemActionDropdown = ({
   const router = useRouter();
   const { setRightPanelForcedItem, setRightPanelOpen } = useGlobalExplorer();
   const isWorkspace = itemIsWorkspace(item);
+
   const { handleDownloadItem } = useDownloadItem();
   const { deleteItems: deleteItem } = useDeleteItem();
   const shareWorkspaceModal = useModal();
@@ -163,9 +164,7 @@ export const ItemActionDropdown = ({
           },
           {
             icon: <span className="material-icons">delete</span>,
-            label: !isWorkspace
-              ? t("explorer.tree.workspace.options.delete_folder")
-              : t("explorer.tree.workspace.options.delete_workspace"),
+            label: t("explorer.tree.workspace.options.delete_item"),
             value: "delete",
             showSeparator: true,
             isHidden: !item.abilities?.destroy || item.main_workspace,

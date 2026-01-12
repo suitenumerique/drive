@@ -227,8 +227,7 @@
               "info": "Information",
               "settings_workspace": "Workspace settings",
               "settings_folder": "Folder settings",
-              "delete_workspace": "Delete workspace",
-              "delete_folder": "Delete folder",
+              "delete_item": "Delete",
               "share": "Share",
               "share_view": "View shares"
             },
@@ -639,8 +638,7 @@
               "info": "Informations",
               "settings_workspace": "Paramètre de l'espace",
               "settings_folder": "Paramètres du dossier",
-              "delete_workspace": "Supprimer l'espace",
-              "delete_folder": "Supprimer le dossier",
+              "delete_item": "Supprimer",
               "share": "Partager",
               "share_view": "Voir les accès"
             },
@@ -1047,8 +1045,7 @@
               "info": "Informatie",
               "settings_workspace": "Werkruimte instellingen",
               "settings_folder": "Map instellingen",
-              "delete_workspace": "Verwijder werkruimte",
-              "delete_folder": "Verwijder map",
+              "delete_item": "Verwijder",
               "share": "Deel",
               "share_view": "Bekijk delen"
             },
