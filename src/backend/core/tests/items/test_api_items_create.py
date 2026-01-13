@@ -162,6 +162,26 @@ def test_api_items_create_file_authenticated_extension_not_allowed():
     }
 
 
+def test_api_items_create_file_authenticated_extension_case_insensitive():
+    """
+    Creating a file item with an extension, no matter the case used, should be allowed.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.JPG",
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+    item = Item.objects.exclude(id=user.get_main_workspace().id).get()
+    assert item.title == "file.JPG"
+
+
 def test_api_items_create_file_authenticated_not_checking_extension(settings):
     """
     Creating a file item with an extension not allowed should fail.

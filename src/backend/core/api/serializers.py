@@ -435,7 +435,7 @@ class CreateItemSerializer(ItemSerializer):
 
             if settings.RESTRICT_UPLOAD_FILE_TYPE:
                 _root, extension = splitext(attrs["filename"])
-                if extension not in settings.FILE_EXTENSIONS_ALLOWED:
+                if extension.lower() not in settings.FILE_EXTENSIONS_ALLOWED:
                     logger.info(
                         "create_item: file extension not allowed %s for filename %s",
                         extension,
