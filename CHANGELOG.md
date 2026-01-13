@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 📌(backend) pin celery to version<5.6.0
+- 🐛(backend) make extension checking case insensitive
+
 ## [v0.11.0] - 2026-01-12
 
 ### Added
