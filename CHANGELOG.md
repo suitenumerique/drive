@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.11.1] - 2026-01-13
+
 ### Fixed
 
 - 📌(backend) pin celery to version<5.6.0
@@ -242,18 +244,19 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.11.0...main
-[0.11.0]: https://github.com/suitenumerique/drive/releases/v0.11.0
-[0.10.1]: https://github.com/suitenumerique/drive/releases/v0.10.1
-[0.10.0]: https://github.com/suitenumerique/drive/releases/v0.10.0
-[0.9.0]: https://github.com/suitenumerique/drive/releases/v0.9.0
-[0.8.1]: https://github.com/suitenumerique/drive/releases/v0.8.1
-[0.8.0]: https://github.com/suitenumerique/drive/releases/v0.8.0
-[0.7.0]: https://github.com/suitenumerique/drive/releases/v0.7.0
-[0.6.0]: https://github.com/suitenumerique/drive/releases/v0.6.0
-[0.5.0]: https://github.com/suitenumerique/drive/releases/v0.5.0
-[0.4.0]: https://github.com/suitenumerique/drive/releases/v0.4.0
-[0.3.0]: https://github.com/suitenumerique/drive/releases/v0.3.0
-[0.2.0]: https://github.com/suitenumerique/drive/releases/v0.2.0
-[0.1.1]: https://github.com/suitenumerique/drive/releases/v0.1.1
-[0.1.0]: https://github.com/suitenumerique/drive/releases/v0.1.0
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.11.1...main
+[v0.11.1]: https://github.com/suitenumerique/drive/releases/v0.11.1
+[v0.11.0]: https://github.com/suitenumerique/drive/releases/v0.11.0
+[v0.10.1]: https://github.com/suitenumerique/drive/releases/v0.10.1
+[v0.10.0]: https://github.com/suitenumerique/drive/releases/v0.10.0
+[v0.9.0]: https://github.com/suitenumerique/drive/releases/v0.9.0
+[v0.8.1]: https://github.com/suitenumerique/drive/releases/v0.8.1
+[v0.8.0]: https://github.com/suitenumerique/drive/releases/v0.8.0
+[v0.7.0]: https://github.com/suitenumerique/drive/releases/v0.7.0
+[v0.6.0]: https://github.com/suitenumerique/drive/releases/v0.6.0
+[v0.5.0]: https://github.com/suitenumerique/drive/releases/v0.5.0
+[v0.4.0]: https://github.com/suitenumerique/drive/releases/v0.4.0
+[v0.3.0]: https://github.com/suitenumerique/drive/releases/v0.3.0
+[v0.2.0]: https://github.com/suitenumerique/drive/releases/v0.2.0
+[v0.1.1]: https://github.com/suitenumerique/drive/releases/v0.1.1
+[v0.1.0]: https://github.com/suitenumerique/drive/releases/v0.1.0
