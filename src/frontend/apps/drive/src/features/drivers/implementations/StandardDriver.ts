@@ -1,5 +1,11 @@
 import { fetchAPI } from "@/features/api/fetchApi";
-import { Driver, Entitlements, ItemFilters, UserFilters, PaginatedChildrenResult } from "../Driver";
+import {
+  Driver,
+  Entitlements,
+  ItemFilters,
+  UserFilters,
+  PaginatedChildrenResult,
+} from "../Driver";
 import {
   DTODeleteInvitation,
   DTOCreateInvitation,
@@ -316,6 +322,30 @@ export class StandardDriver extends Driver {
     progressHandler?.(100);
 
     return item;
+  }
+
+  async createFileFromTemplate(data: {
+    parentId: string;
+    extension: string;
+    title: string;
+  }): Promise<Item> {
+    const response = await fetchAPI(
+      `items/${data.parentId}/children/from-template/`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          extension: data.extension,
+          title: data.title,
+        }),
+      },
+      {
+        // When entitlements are falsy, the backend returns a 403 error.
+        // We don't want to redirect to the login page in this case, instead
+        // we want to show an error.
+        redirectOn40x: false,
+      }
+    );
+    return jsonToItem(await response.json());
   }
 
   async deleteItems(ids: string[]): Promise<void> {

@@ -89,14 +89,17 @@ export const MIME_TO_FORMAT_TRANSLATION_KEY = {
 export const MIME_MAP = {
   [MimeCategory.CALC]: [
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.oasis.opendocument.spreadsheet",
     "text/csv",
   ],
   [MimeCategory.PDF]: ["application/pdf"],
   [MimeCategory.DOC]: [
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.oasis.opendocument.text",
   ],
   [MimeCategory.POWERPOINT]: [
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.oasis.opendocument.presentation",
   ],
   [MimeCategory.ARCHIVE]: [
     "application/zip",

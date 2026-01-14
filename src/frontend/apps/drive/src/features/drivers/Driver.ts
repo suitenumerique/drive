@@ -103,6 +103,11 @@ export abstract class Driver {
     parentId: string;
     filename: string;
   }): Promise<Item>;
+  abstract createFileFromTemplate(data: {
+    parentId: string;
+    extension: string;
+    title: string;
+  }): Promise<Item>;
   abstract deleteItems(ids: string[]): Promise<void>;
   abstract hardDeleteItems(ids: string[]): Promise<void>;
   abstract getWopiInfo(itemId: string): Promise<WopiInfo>;

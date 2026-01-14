@@ -143,7 +143,6 @@ class WopiViewSet(viewsets.ViewSet):
         Implementation of the Wopi PutFile file operation
         https://learn.microsoft.com/en-us/microsoft-365/cloud-storage-partner-program/rest/files/putfile
         """
-
         if request.META.get(HTTP_X_WOPI_OVERRIDE) != "PUT":
             return Response(status=404)
 
@@ -154,7 +153,6 @@ class WopiViewSet(viewsets.ViewSet):
             return Response(status=401)
 
         lock_value = request.META.get(HTTP_X_WOPI_LOCK)
-
         if lock_value:
             lock_service = LockService(item)
             current_lock_value = lock_service.get_lock(default="")
@@ -162,10 +160,10 @@ class WopiViewSet(viewsets.ViewSet):
                 return Response(status=409, headers={X_WOPI_LOCK: current_lock_value})
         else:
             # Check if the body is 0 bytes
-            body_size = int(request.META.get("CONTENT_LENGTH") or 0)
+            body_size = item.size or 0
             if body_size > 0:
                 return Response(status=409, headers={X_WOPI_LOCK: ""})
-
+        
         try:
             file = ContentFile(request.body)
         except RequestDataTooBig:
@@ -179,6 +177,7 @@ class WopiViewSet(viewsets.ViewSet):
         )
         item.size = file.size
         item.save(update_fields=["size", "updated_at"])
+
         return Response(
             status=200, headers={X_WOPI_ITEMVERSION: updated_file["VersionId"]}
         )

@@ -23,6 +23,28 @@ export const useMutationCreateFile = () => {
   });
 };
 
+export const useMutationCreateFileFromTemplate = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      ...payload: Parameters<typeof driver.createFileFromTemplate>
+    ) => {
+      return driver.createFileFromTemplate(...payload);
+    },
+    onSuccess: (data, variables) => {
+      if (variables.parentId) {
+        queryClient.invalidateQueries({
+          queryKey: ["items", variables.parentId],
+        });
+      }
+    },
+    meta: {
+      showErrorOn403: true,
+    },
+  });
+};
+
 export const useMutationDeleteItems = () => {
   const driver = getDriver();
   const queryClient = useQueryClient();
