@@ -26,7 +26,7 @@ from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.translation import get_language, override
 from django.utils.translation import gettext_lazy as _
-
+from django.core.files.storage import default_storage
 from django_ltree.managers import TreeManager, TreeQuerySet
 from django_ltree.models import TreeModel
 from timezone_field import TimeZoneField
@@ -807,6 +807,7 @@ class Item(TreeModel, BaseModel):
             "breadcrumb": can_get,
             "children_list": can_get,
             "children_create": can_update and user.is_authenticated,
+            "children_from_template": can_update and user.is_authenticated,
             "destroy": can_destroy,
             "hard_delete": can_destroy,
             "favorite": can_get and user.is_authenticated,
@@ -1061,6 +1062,44 @@ class Item(TreeModel, BaseModel):
             if self.type == ItemTypeChoices.FOLDER:
                 update["numchild_folder"] = models.F("numchild_folder") - 1
             self._meta.model.objects.filter(pk=old_parent_id).update(**update)
+
+    def detect_file_size(self):
+        s3_client = default_storage.connection.meta.client
+        head_response = s3_client.head_object(
+            Bucket=default_storage.bucket_name, Key=self.file_key
+        )
+        file_size = head_response["ContentLength"]
+        return file_size
+
+    def detect_mimetype(self):
+        s3_client = default_storage.connection.meta.client
+
+        file_size = self.detect_file_size()
+
+        if file_size > 2048:
+            range_response = s3_client.get_object(
+                Bucket=default_storage.bucket_name,
+                Key=self.file_key,
+                Range="bytes=0-2047",
+            )
+            file_head = range_response["Body"].read()
+        else:
+            file_head = s3_client.get_object(
+                Bucket=default_storage.bucket_name, Key=self.file_key
+            )["Body"].read()
+
+        # Use improved MIME type detection combining magic bytes and file extension
+        # Import is here to avoid circular import
+        from core.api import utils
+        mimetype = utils.detect_mimetype(file_head, filename=self.filename)        
+        return (mimetype, file_size)
+
+    def refresh_mimetype(self):
+        """Refresh the mimetype of the item."""
+        mimetype, file_size = self.detect_mimetype()
+        self.mimetype = mimetype
+        self.size = file_size
+        self.save(update_fields=["mimetype", "size"])
 
 
 class LinkTrace(BaseModel):
