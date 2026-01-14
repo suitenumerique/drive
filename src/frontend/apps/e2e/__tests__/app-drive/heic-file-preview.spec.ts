@@ -1,6 +1,7 @@
 import test, { expect } from "@playwright/test";
 import { clearDb, login } from "./utils-common";
 import path from "path";
+import { clickToMyFiles } from "./utils-navigate";
 
 test("Display HEIC not supported message when opening a HEIC file", async ({
   page,
@@ -8,7 +9,8 @@ test("Display HEIC not supported message when opening a HEIC file", async ({
   await clearDb();
   await login(page, "drive@example.com");
   await page.goto("/");
-  await expect(page.getByText("Drop your files here")).toBeVisible();
+  await clickToMyFiles(page);
+  await expect(page.getByText("This tab is empty")).toBeVisible();
 
   // Use the real HEIC file from assets
   const heicFilePath = path.join(__dirname, "/assets/test-image.heic");
