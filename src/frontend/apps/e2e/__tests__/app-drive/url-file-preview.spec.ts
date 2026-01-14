@@ -1,7 +1,7 @@
-import test, { BrowserContext, expect, Page } from "@playwright/test";
+import test, { BrowserContext, expect } from "@playwright/test";
 import { clearDb, login } from "./utils-common";
 import path from "path";
-import { readFileSync } from "fs";
+import { clickToMyFiles } from "./utils-navigate";
 
 const grantClipboardPermissions = async (
   browserName: string,
@@ -25,7 +25,8 @@ test("Share url leads to standalone file preview", async ({
   await clearDb();
   await login(page, "drive@example.com");
   await page.goto("/");
-  await expect(page.getByText("Drop your files here")).toBeVisible();
+  await clickToMyFiles(page);
+  await expect(page.getByText("This tab is empty")).toBeVisible();
 
   //   Start waiting for file chooser before clicking. Note no await.
   const fileChooserPromise = page.waitForEvent("filechooser");
@@ -35,7 +36,7 @@ test("Share url leads to standalone file preview", async ({
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(path.join(__dirname, "/assets/pv_cm.pdf"));
 
-  await expect(page.getByText("Drop your files here")).not.toBeVisible();
+  await expect(page.getByText("This tab is empty")).not.toBeVisible();
   await page
     .getByRole("button", { name: "More actions for pv_cm.pdf" })
     .nth(1)
