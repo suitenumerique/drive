@@ -1,17 +1,18 @@
 import { expect, Page } from "@playwright/test";
 
-export const getItemTree = async (page: Page, itemTitle: string) => {
+export const getItemTree = async (
+  page: Page,
+  itemTitle: string,
+  isVisible: boolean = true
+) => {
   const item = page.getByRole("treeitem").filter({ hasText: itemTitle });
   let itemTree = item.first();
-  await expect(itemTree).toBeVisible();
+  if (isVisible) {
+    await expect(itemTree).toBeVisible();
+  } else {
+    await expect(itemTree).not.toBeVisible();
+  }
   return itemTree;
-};
-
-export const toggleItemInTree = async (page: Page, itemTitle: string) => {
-  const item = await getItemTree(page, itemTitle);
-  const arrow = item.getByText("keyboard_arrow_right");
-  await expect(arrow).toBeVisible();
-  await arrow.click();
 };
 
 export const getItemContent = async (page: Page, itemTitle: string) => {
@@ -47,19 +48,6 @@ export const clickOnMoreActionsButtonFromItem = async (
   });
   await expect(moreActionsButton).toBeVisible();
   await moreActionsButton.click();
-};
-
-export const addChildrenFromTreeItem = async (
-  page: Page,
-  itemTitle: string,
-  childrenTitle: string
-) => {
-  await clickOnAddChildrenButtonFromItem(page, itemTitle);
-  const modal = page.getByRole("dialog");
-  await expect(modal).toBeVisible();
-  await page.getByText("Folder name").click();
-  await page.getByRole("textbox", { name: "Folder name" }).fill(childrenTitle);
-  await page.getByRole("button", { name: "Create" }).click();
 };
 
 export const openTreeNode = async (page: Page, itemTitle: string) => {

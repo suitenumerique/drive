@@ -1,8 +1,9 @@
 import { expect, Page } from "@playwright/test";
 import { expectTreeItemIsSelected } from "./utils-tree";
+import { PageOrLocator } from "./utils/types-utils";
 
 export const expectExplorerBreadcrumbs = async (
-  page: Page,
+  page: PageOrLocator,
   expected: string[],
   hidden: string[] = []
 ) => {
@@ -33,4 +34,29 @@ export const expectCurrentFolder = async (
     isSelected
   );
   await expectExplorerBreadcrumbs(page, expected);
+};
+
+export const expectDefaultRoute = async (
+  page: Page,
+  breadcrumbLabel: string,
+  route: string
+) => {
+  const defaultRouteButton = page.getByTestId("default-route-button");
+  await expect(defaultRouteButton).toBeVisible();
+  await expect(defaultRouteButton).toContainText(breadcrumbLabel);
+  const currentUrl = page.url();
+  expect(currentUrl).toContain(route);
+};
+
+export const clickOnBreadcrumbButtonAction = async (
+  page: Page,
+  actionName: string
+) => {
+  const breadcrumbs = page.getByTestId("explorer-breadcrumbs");
+  await expect(breadcrumbs).toBeVisible();
+  const lastBreadcrumbButton = breadcrumbs
+    .getByTestId("breadcrumb-button")
+    .last();
+  await lastBreadcrumbButton.click();
+  await page.getByRole("menuitem", { name: actionName }).click();
 };
