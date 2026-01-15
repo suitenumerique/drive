@@ -14,6 +14,8 @@ import os
 import tomllib
 from socket import gethostbyname, gethostname
 
+from boto3.s3.transfer import TransferConfig
+
 from django.utils.translation import gettext_lazy as _
 
 import dj_database_url
