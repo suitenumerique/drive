@@ -90,6 +90,10 @@ This document lists all configurable environment variables for the Drive applica
 | `POSTHOG_KEY` | PostHog analytics API key | `None` |
 | `REDIS_URL` | Redis connection URL | `redis://redis:6379/0` |
 | `RESTRICT_UPLOAD_FILE_TYPE` | Boolean to enable or not upload restriction based on file type (extension + mimetype) | `True` |
+| `S3_TRANSFER_CONFIG_MULTIPART_THRESHOLD` | `multipart_threshold` value for the `TransferConfig` configuration | `8388608` (8MB) |
+| `S3_TRANSFER_CONFIG_MULTIPART_CHUNKSIZE` | `multipart_chunksize` value for the `TransferConfig` configuration | `8388608` (8MB) |
+| `S3_TRANSFER_CONFIG_MAX_CONCURRENCY` | `max_concurrency` value for the `TransferConfig` configuration | `10` |
+| `S3_TRANSFER_CONFIG_USE_THREADS` | `use_threads` value for the `TransfertConfig` configuration | `True` |
 | `SEARCH_INDEXER_ALLOWED_MIMETYPES` | Indexable files mimetypes | `["text/"]` |
 | `SEARCH_INDEXER_CLASS` | Class of the backend for item indexation & search ||
 | `SEARCH_INDEXER_BATCH_SIZE` | Size of each batch for indexation of all items | `1000` |

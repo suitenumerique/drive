@@ -19,6 +19,7 @@ from django.utils.translation import gettext_lazy as _
 import dj_database_url
 import posthog
 import sentry_sdk
+from boto3.s3.transfer import TransferConfig
 from configurations import Configuration, values
 from lasuite.configuration.values import SecretFileValue
 from sentry_sdk.integrations.django import DjangoIntegration
@@ -28,6 +29,10 @@ from sentry_sdk.integrations.django import DjangoIntegration
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.environ.get("DATA_DIR", os.path.join("/", "data"))
+
+KB = 1024
+MB = 1024 * KB
+GB = 1024 * MB
 
 
 def get_release():
@@ -125,7 +130,7 @@ class Base(Configuration):
         default=50, environ_name="SEARCH_INDEXER_QUERY_LIMIT", environ_prefix=None
     )
     SEARCH_INDEXER_CONTENT_MAX_SIZE = values.PositiveIntegerValue(
-        2 * (2**20),  # 2MB
+        2 * MB,
         environ_name="SEARCH_INDEXER_CONTENT_MAX_SIZE",
         environ_prefix=None,
     )
@@ -150,6 +155,30 @@ class Base(Configuration):
     STORAGES = {
         "default": {
             "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": {
+                "transfer_config": TransferConfig(
+                    use_threads=values.BooleanValue(
+                        default=True,
+                        environ_name="S3_TRANSFER_CONFIG_USE_THREADS",
+                        environ_prefix=None,
+                    ),
+                    multipart_threshold=values.PositiveIntegerValue(
+                        default=8 * MB,
+                        environ_name="S3_TRANSFER_CONFIG_MULTIPART_THRESHOLD",
+                        environ_prefix=None,
+                    ),
+                    multipart_chunksize=values.PositiveIntegerValue(
+                        default=8 * MB,
+                        environ_name="S3_TRANSFER_CONFIG_MULTIPART_CHUNKSIZE",
+                        environ_prefix=None,
+                    ),
+                    max_concurrency=values.PositiveIntegerValue(
+                        default=10,
+                        environ_name="S3_TRANSFER_CONFIG_MAX_CONCURRENCY",
+                        environ_prefix=None,
+                    ),
+                ),
+            },
         },
         "staticfiles": {
             "BACKEND": values.Value(
@@ -206,7 +235,7 @@ class Base(Configuration):
     # This is used to limit the size of the request body in memory.
     # This also limits the size of the file that can be uploaded to the server.
     DATA_UPLOAD_MAX_MEMORY_SIZE = values.PositiveIntegerValue(
-        2 * (2**30),  # 2GB
+        2 * GB,
         environ_name="DATA_UPLOAD_MAX_MEMORY_SIZE",
         environ_prefix=None,
     )
