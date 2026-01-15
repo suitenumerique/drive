@@ -12,7 +12,7 @@ releases:
   - name: dev-backend
     namespace: {{ .Namespace }}
     chart: dev-backends/dev-backend
-    version: 0.0.3
+    version: 0.0.6
     values:
       - postgres:
           enabled: true
@@ -76,6 +76,49 @@ releases:
             username: drive
             password: drive
             email: drive@example.com
+      - dsproxy:
+          enabled: false
+          aws_url: https://drive-minio.127.0.0.1.nip.io
+          image: demarchenumerique/ds-proxy:v2.0.0-alpha.2
+          command:
+            - /bin/sh
+            - "-c"
+            - |
+              /dsproxy/ds_proxy proxy --address=0.0.0.0:4444 --verify-ssl-certificate=false --password-file /etc/dsproxy/PASSWORD \
+              --salt "$SALT" --keyring-file /etc/dsproxy/keyring.toml --upstream-url ${AWS_URL} \
+              --local-encryption-directory /var/tmp/local_encryption/ --s3-access-key ${AWS_ACCESS_KEY} \
+              --s3-secret-key ${AWS_SECRET_KEY} --s3-region ${AWS_REGION}
+            # Extra volume mounts to manage our local custom CA and avoid to set ssl_verify: false
+          ingress:
+            enabled: true
+            hostname: drive-dsproxy.127.0.0.1.nip.io
+            tls:
+              enabled: true
+          localSecret:
+            enabled: true
+          envVars:
+            RUST_LOG: debug,ds_proxy::http::handlers::fetch=trace,ds_proxy::http::handlers::forward=trace,ds_proxy::config=trace
+            RUST_BACKTRACE: full
+            SALT:
+              secretKeyRef:
+                name: dev-backend-dsproxy
+                key: SALT
+            AWS_ACCESS_KEY:
+              secretKeyRef:
+                name: dev-backend-dsproxy
+                key: AWS_ACCESS_KEY
+            AWS_SECRET_KEY:
+              secretKeyRef:
+                name: dev-backend-dsproxy
+                key: AWS_SECRET_KEY
+            AWS_URL:
+              secretKeyRef:
+                name: dev-backend-dsproxy
+                key: AWS_URL
+            AWS_REGION:
+              secretKeyRef:
+                name: dev-backend-dsproxy
+                key: AWS_REGION
 
   - name: drive
     version: {{ .Values.version }}
