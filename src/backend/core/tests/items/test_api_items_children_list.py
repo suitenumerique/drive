@@ -1251,3 +1251,142 @@ def test_api_items_children_list_suspicious_item_should_not_work_for_anonymous()
     assert content["count"] == 0
     item_ids = [item["id"] for item in content["results"]]
     assert str(suspicious_item.id) not in item_ids
+
+
+def test_api_items_children_list_computed_link_reach_and_role():
+    """
+    In order to correctly test the computed link reach and the computed link role,
+    we need to create a hierarchy of items with different link reaches and roles and
+    control them. The ItemFactory randomly choose the link reaches and roles for the items
+    and this is not something we want here.
+    """
+
+    grand_parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        title="root",
+        link_reach="authenticated",
+        link_role="reader",
+    )
+
+    parent = factories.ItemFactory(
+        parent=grand_parent,
+        type=models.ItemTypeChoices.FOLDER,
+        title="parent",
+        link_reach="restricted",  # default value
+        link_role="reader",  # default value
+    )
+
+    item = factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FOLDER,
+        title="item",
+        link_reach="restricted",  # default value
+        link_role="reader",  # default value
+    )
+
+    child = factories.ItemFactory(
+        parent=item,
+        type=models.ItemTypeChoices.FOLDER,
+        title="child",
+        link_reach="public",
+        link_role="editor",  # default value
+    )
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "count": 1,
+        "next": None,
+        "previous": None,
+        "results": [
+            {
+                "abilities": item.get_abilities(user),
+                "ancestors_link_reach": "authenticated",
+                "ancestors_link_role": "reader",
+                "computed_link_reach": "authenticated",
+                "computed_link_role": "reader",
+                "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
+                "creator": {
+                    "id": str(item.creator.id),
+                    "full_name": item.creator.full_name,
+                    "short_name": item.creator.short_name,
+                },
+                "depth": 3,
+                "id": str(item.id),
+                "is_favorite": False,
+                "link_reach": "restricted",
+                "link_role": "reader",
+                "numchild": 1,
+                "numchild_folder": 1,
+                "nb_accesses": 0,
+                "path": str(item.path),
+                "title": "item",
+                "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
+                "user_role": None,
+                "type": models.ItemTypeChoices.FOLDER,
+                "upload_state": None,
+                "url": None,
+                "url_preview": None,
+                "mimetype": None,
+                "main_workspace": False,
+                "filename": None,
+                "size": None,
+                "description": None,
+                "deleted_at": None,
+                "hard_delete_at": None,
+                "is_wopi_supported": False,
+            }
+        ],
+    }
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/children/")
+    assert response.status_code == 200
+    assert response.json() == {
+        "count": 1,
+        "next": None,
+        "previous": None,
+        "results": [
+            {
+                "abilities": child.get_abilities(user),
+                "ancestors_link_reach": "authenticated",
+                "ancestors_link_role": "reader",
+                "computed_link_reach": "public",
+                "computed_link_role": "editor",
+                "created_at": child.created_at.isoformat().replace("+00:00", "Z"),
+                "creator": {
+                    "id": str(child.creator.id),
+                    "full_name": child.creator.full_name,
+                    "short_name": child.creator.short_name,
+                },
+                "depth": 4,
+                "id": str(child.id),
+                "is_favorite": False,
+                "link_reach": "public",
+                "link_role": "editor",
+                "numchild": 0,
+                "numchild_folder": 0,
+                "nb_accesses": 0,
+                "path": str(child.path),
+                "title": "child",
+                "updated_at": child.updated_at.isoformat().replace("+00:00", "Z"),
+                "user_role": None,
+                "type": models.ItemTypeChoices.FOLDER,
+                "upload_state": None,
+                "url": None,
+                "url_preview": None,
+                "mimetype": None,
+                "main_workspace": False,
+                "filename": None,
+                "size": None,
+                "description": None,
+                "deleted_at": None,
+                "hard_delete_at": None,
+                "is_wopi_supported": False,
+            }
+        ],
+    }
