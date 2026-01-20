@@ -2,8 +2,8 @@
 # drive package
 #
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.9.26,<0.10.0"]
+build-backend = "uv_build"
 
 [project]
 name = "drive"
@@ -21,8 +21,7 @@ classifiers = [
 ]
 description = "An application managing files in a workspace."
 keywords = ["Django", "Contacts", "Templates", "RBAC"]
-license = { file = "LICENSE" }
-readme = "README.md"
+license = "MIT"
 requires-python = "~=3.13.0"
 dependencies = [
     "boto3==1.42.19",
@@ -92,12 +91,13 @@ dev = [
     "types-requests==2.32.4.20250913",
 ]
 
-[tool.setuptools]
-packages = { find = { where = ["."], exclude = ["tests"] } }
-zip-safe = true
-
-[tool.distutils.bdist_wheel]
-universal = true
+[tool.uv.build-backend]
+module-root = ""
+source-exclude = [
+    "**/tests/**",
+    "**/test_*.py",
+    "**/tests.py",
+]
 
 [tool.ruff]
 exclude = [

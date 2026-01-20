@@ -25,8 +25,8 @@ jobs:
         with:
           python-version: "3.13.9"
           cache: 'pip'
-      - name: Upgrade pip and setuptools
-        run: pip install --upgrade pip setuptools
+      - name: Upgrade pip
+        run: pip install --upgrade pip
       - name: Install development dependencies
         run: pip install --user .
         working-directory: src/backend
