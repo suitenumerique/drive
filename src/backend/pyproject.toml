@@ -28,7 +28,7 @@ dependencies = [
     "boto3==1.42.19",
     "Brotli==1.2.0",
     "dj-database-url==3.0.1",
-    "celery[redis]==5.5.3",
+    "celery[redis]==5.6.2",
     "defusedxml==0.7.1",
     "django<6.0.0",
     "django-celery-beat==2.8.1",
