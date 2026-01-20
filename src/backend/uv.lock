@@ -498,19 +498,20 @@ wheels = [
 
 [[package]]
 name = "django-lasuite"
-version = "0.0.22"
+version = "0.0.23"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
     { name = "djangorestframework" },
     { name = "joserfc" },
     { name = "mozilla-django-oidc" },
+    { name = "pyjwt" },
     { name = "requests" },
     { name = "requests-toolbelt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5b/01/017dfb0d5a595ce55f062e622e6d14035864a679f457dc8bcb5f1881a51a/django_lasuite-0.0.22.tar.gz", hash = "sha256:fe9058510c920b4c780294b594d5bddae43691b0c7e585eab14a8f26ba37b61c", size = 33680, upload-time = "2025-12-08T14:04:29.357Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/59/a7/4dc94272ad9cb9d8ea0af6731c551d51d9196b0f93a4976b2b41b3eb4038/django_lasuite-0.0.23.tar.gz", hash = "sha256:34bc2bf84feab8694846cbdb573762f02c79e355384d0dc5b395e0e416dfb12d", size = 34228, upload-time = "2026-01-14T14:02:56.313Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/ca/38702f28f582317b8cd920e2a98a138df680175bd7d85181479929bebc46/django_lasuite-0.0.22-py3-none-any.whl", hash = "sha256:2d3bf34be260dfde1cdcd13b12764cf15ea0c35d70e27c87b57b730a0aba9f42", size = 52034, upload-time = "2025-12-08T14:04:28.265Z" },
+    { url = "https://files.pythonhosted.org/packages/13/9f/5956361330194e9b8a33388dfb107ea08a7cf12ddccc48608f7cc2c2ca4e/django_lasuite-0.0.23-py3-none-any.whl", hash = "sha256:8726ca7d8ed6c12078e5168ead9dff51706bf9e73dc84921c8d211fef31961ff", size = 52543, upload-time = "2026-01-14T14:02:54.479Z" },
 ]
 
 [package.optional-dependencies]
@@ -738,7 +739,7 @@ requires-dist = [
     { name = "django-debug-toolbar", marker = "extra == 'dev'", specifier = "==6.1.0" },
     { name = "django-extensions", marker = "extra == 'dev'", specifier = "==4.1" },
     { name = "django-filter", specifier = "==25.2" },
-    { name = "django-lasuite", extras = ["all"], specifier = "==0.0.22" },
+    { name = "django-lasuite", extras = ["all"], specifier = "==0.0.23" },
     { name = "django-ltree", git = "https://github.com/mariocesar/django-ltree?rev=5d955bc82021a50c522ee524106f6709e3b414e4" },
     { name = "django-parler", specifier = "==2.3" },
     { name = "django-redis", specifier = "==6.0.0" },
