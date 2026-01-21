@@ -158,7 +158,7 @@ def test_api_items_recents_mixing_explicit_and_inherited_accesses(
     client = APIClient()
     client.force_login(user)
 
-    with django_assert_num_queries(11):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/recents/")
     assert response.status_code == 200
     content = response.json()
