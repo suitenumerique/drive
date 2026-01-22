@@ -18,9 +18,7 @@ import {
   NavigationEventType,
   useGlobalExplorer,
 } from "../GlobalExplorerContext";
-import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { ExplorerTreeItemActions } from "./ExplorerTreeItemActions";
-import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWorkspaceModal";
 import { ItemIcon } from "../icons/ItemIcon";
 import { useRouter } from "next/router";
 import { DefaultRoute } from "@/utils/defaultRoutes";
@@ -32,7 +30,6 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
   const router = useRouter();
 
   const item: TreeViewDataType<TreeItemData> = props.node.data.value;
-  const editModal = useModal();
 
   return (
     <>
@@ -88,18 +85,10 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
             </div>
 
             {item?.nodeType === TreeViewNodeTypeEnum.NODE && (
-              <ExplorerTreeItemActions item={item as Item} />
+              <ExplorerTreeItemActions item={item as Item}  />
             )}
           </div>
-          {editModal.isOpen && (
-            <ExplorerEditWorkspaceModal
-              {...editModal}
-              item={item as Item}
-              onClose={() => {
-                editModal.close();
-              }}
-            />
-          )}
+          
         </TreeViewItem>
       </DroppableNodeTree>
     </>
