@@ -15,8 +15,8 @@ import {
   useMutationDeleteInvitation,
   useMutationUpdateAccess,
   useMutationUpdateInvitation,
-  useMutationUpdateLinkConfiguration,
-} from "@/features/explorer/hooks/useMutations";
+} from "@/features/explorer/hooks/useMutationsAccesses";
+import { useMutationUpdateLinkConfiguration } from "@/features/explorer/hooks/useMutations";
 import {
   useInfiniteItemInvitations,
   useItem,
@@ -48,7 +48,7 @@ export const ItemShareModal = ({
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const copyToClipboard = useClipboard();
-  const itemId = initialItem.id;
+  const itemId = initialItem.originalId ?? initialItem.id;
   const { data: item } = useItem(itemId, {
     enabled: isOpen,
     initialData: initialItem,
@@ -118,8 +118,8 @@ export const ItemShareModal = ({
       })
     );
 
-    await Promise.all(promises);
-    await Promise.all(promisesInvitation);
+    await Promise.all([...promises, ...promisesInvitation]);
+
 
     queryClient.invalidateQueries({
       queryKey: ["itemAccesses", itemId],
@@ -134,8 +134,6 @@ export const ItemShareModal = ({
     if (!data) {
       return [];
     }
-
-    // return data;
 
     const accessesByUserId = new Map<string, Access>();
 
@@ -166,26 +164,9 @@ export const ItemShareModal = ({
         return access;
       }
 
-      // Find the access with max_role equal to max_ancestors_role and same user/team
-      const parentAccess = data.find((candidateAccess) => {
-        const sameUser =
-          access.user?.id && candidateAccess.user?.id
-            ? access.user.id === candidateAccess.user.id
-            : false;
-        const sameTeam =
-          access.team && candidateAccess.team
-            ? access.team === candidateAccess.team
-            : false;
-
-        return (
-          (sameUser || sameTeam) &&
-          candidateAccess.max_role === access.max_ancestors_role
-        );
-      });
-
       return {
         ...access,
-        parent_id_max_role: parentAccess?.item.id,
+        parent_id_max_role: access.max_ancestors_role_item_id,
       };
     });
   }, [data]);
@@ -289,6 +270,14 @@ export const ItemShareModal = ({
     return undefined;
   }, [linkRoleChoices, parentItemId]);
 
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    }
+  }, []);
+
   const updateLinkConfiguration = useMutationUpdateLinkConfiguration();
 
   return (
@@ -347,7 +336,11 @@ export const ItemShareModal = ({
       accessRoleTopMessage={(access) => {
         const availableRoles = access.abilities.set_role_to;
         if (access.item.id !== itemId) {
-          return <RedirectionToParentItem itemId={access.item.id} />;
+          return (
+            <RedirectionToParentItem
+              itemId={access.max_ancestors_role_item_id}
+            />
+          );
         }
 
         if (
@@ -364,7 +357,6 @@ export const ItemShareModal = ({
       }}
       getAccessRoles={(access) => {
         const availableRoles = access.abilities.set_role_to;
-        // const availableRoles = [Role.EDITOR, Role.ADMIN, Role.OWNER];
 
         const isDisabled = (role: Role) => {
           return !availableRoles.includes(role) && access.role !== role;
@@ -457,7 +449,7 @@ const RedirectionToParentItem = ({ itemId }: { itemId: string }) => {
 
   return (
     <div>
-      {t("share_modal.options.top_message.inherited_edit")}
+      {t("share_modal.options.top_message.inherited_edit")}{" "}
       <button
         type="button"
         className="workspace-share-modal__parent-folder-link"
