@@ -6,6 +6,9 @@ import { baseApiUrl } from "../api/utils";
 import { APIError } from "../api/APIError";
 import { posthog } from "posthog-js";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
+import { attemptSilentLogin, canAttemptSilentLogin } from "./silentLogin";
+import { authUrl } from "./authUrl";
+import { useConfig } from "../config/ConfigProvider";
 
 export const logout = () => {
   window.location.replace(new URL("logout/", baseApiUrl()).href);
@@ -13,10 +16,7 @@ export const logout = () => {
 };
 
 export const login = (returnTo?: string) => {
-  const url = new URL("authenticate/", baseApiUrl());
-  if (returnTo) {
-    url.searchParams.set("returnTo", returnTo);
-  }
+  const url = authUrl({ returnTo });
   window.location.replace(url.href);
 };
 
@@ -32,9 +32,9 @@ export const useAuth = () => React.useContext(AuthContext);
 
 export const Auth = ({
   children,
-  redirect,
 }: PropsWithChildren & { redirect?: boolean }) => {
   const [user, setUser] = useState<User | null>();
+  const { config } = useConfig();
 
   const init = async () => {
     try {
@@ -45,8 +45,12 @@ export const Auth = ({
       setUser(data);
       return data;
     } catch (error) {
-      if (redirect && error instanceof APIError && error.code === 401) {
-        login();
+      if (config.FRONTEND_SILENT_LOGIN_ENABLED && error instanceof APIError && error.code === 401) {
+        if (canAttemptSilentLogin()) {
+          attemptSilentLogin(30);
+        } else {
+          setUser(null);
+        }
       } else {
         setUser(null);
       }
