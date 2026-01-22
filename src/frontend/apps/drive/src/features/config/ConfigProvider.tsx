@@ -9,7 +9,7 @@ export interface ConfigContextType {
 }
 
 export const ConfigContext = createContext<ConfigContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export const useConfig = () => {
@@ -27,6 +27,8 @@ export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (config?.FRONTEND_THEME) {
       setTheme(config.FRONTEND_THEME);
+    } else {
+      setTheme("default");
     }
   }, [config?.FRONTEND_THEME, setTheme]);
 
