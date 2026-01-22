@@ -11,13 +11,13 @@ import { ItemShareModal } from "@/features/explorer/components/modals/share/Item
 type CustomFilesPreviewProps = {
   currentItem?: Item;
   items: Item[];
-  onSetPreviewItem?: (item?: Item) => void;
+  setPreviewItem?: (item?: Item) => void;
 };
 
 export const CustomFilesPreview = ({
   currentItem,
   items,
-  onSetPreviewItem,
+  setPreviewItem,
 }: CustomFilesPreviewProps) => {
   const { t } = useTranslation();
 
@@ -30,12 +30,12 @@ export const CustomFilesPreview = ({
   }, [items]);
 
   const handleClosePreview = () => {
-    onSetPreviewItem?.(undefined);
+    setPreviewItem?.(undefined);
   };
 
   const handleChangePreviewItem = (file?: FilePreviewType) => {
     const item = items.find((item) => file?.id === item.id);
-    onSetPreviewItem?.(item);
+    setPreviewItem?.(item);
   };
 
   return (
