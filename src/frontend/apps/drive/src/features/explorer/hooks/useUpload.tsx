@@ -13,8 +13,8 @@ import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { FileUploadToast } from "../components/toasts/FileUploadToast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getEntitlements } from "@/utils/entitlements";
-import { useCanCreateChildren } from "@/utils/itemUtils";
-import { getMyFilesQueryKey, isMyFilesRoute } from "@/utils/defaultRoutes";
+import { useCanCreateChildren } from "@/features/items/utils";
+import { getMyFilesQueryKey } from "@/utils/defaultRoutes";
 import { useRouter } from "next/router";
 
 type FileUpload = FileWithPath & {
@@ -121,10 +121,11 @@ const useUpload = ({ item }: { item: Item }) => {
 
   // Create the folders and assign each file a parentId.
   const createFoldersFromDrop = async (
-    parentItem: Item,
+    parentItem: Item | undefined,
     folderUploads: FolderUpload[]
   ) => {
     const promises = [];
+
     for (const folder of folderUploads) {
       promises.push(
         () =>
@@ -136,15 +137,16 @@ const useUpload = ({ item }: { item: Item }) => {
               },
               {
                 onSuccess: async (createdFolder) => {
-                  if (isMyFilesRoute(router.pathname)) {
+                  
                     queryClient.invalidateQueries({
                       queryKey: getMyFilesQueryKey(),
                     });
-                  } else {
-                    queryClient.invalidateQueries({
-                      queryKey: ["items", parentItem.id],
-                    });
-                  }
+                  
+                    if (parentItem) {
+                      queryClient.invalidateQueries({
+                        queryKey: ["items", parentItem.id],
+                      });
+                    }
 
                   folder.files.forEach((file) => {
                     file.parentId = createdFolder.id;
@@ -167,7 +169,7 @@ const useUpload = ({ item }: { item: Item }) => {
     upload.folder.files.forEach((file) => {
       file.parentId = item?.id;
     });
-    await createFoldersFromDrop(item!, upload.folder.children);
+    await createFoldersFromDrop(item, upload.folder.children);
   };
 
   return {
