@@ -18,7 +18,7 @@ import { InfiniteScroll } from "@/features/ui/components/infinite-scroll/Infinit
 import { useRouter } from "next/router";
 import { DefaultRoute, getDefaultRouteId } from "@/utils/defaultRoutes";
 import { useMemo } from "react";
-import { canCreateChildren } from "@/utils/itemUtils";
+import { canCreateChildren } from "@/features/items/utils";
 
 /**
  * Wrapper around EmbeddedExplorerGrid to display a list of items in a table.

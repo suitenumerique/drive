@@ -3,13 +3,13 @@ import { Item, ItemBreadcrumb } from "@/features/drivers/types";
 import { useTranslation } from "react-i18next";
 import { EmbeddedExplorerGridBreadcrumbs } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridBreadcrumbs";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NavigationEvent } from "@/features/explorer/components/GlobalExplorerContext";
+import { NavigationEvent, getOriginalIdFromTreeId } from "@/features/explorer/components/GlobalExplorerContext";
 import { useQuery } from "@tanstack/react-query";
 import { Spinner } from "@gouvfr-lasuite/ui-kit";
 import { ItemFilters } from "@/features/drivers/Driver";
 import {
-  EmbeddedExplorerGrid,
-  EmbeddedExplorerGridProps,
+    EmbeddedExplorerGrid,
+    EmbeddedExplorerGridProps,
 } from "./EmbeddedExplorerGrid";
 import { useAuth } from "@/features/auth/Auth";
 import { useInfiniteChildren } from "../../hooks/useInfiniteChildren";
@@ -77,8 +77,9 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
   // Update breadcrumbs when navigating
   const onNavigate = (event: NavigationEvent) => {
     let item = event.item as Item;
-    if (item.id.includes("_")) {
-      item = { ...item, id: item.id.split("_")[0] };
+    // Extract the original item ID from the tree ID (handles favorites path format)
+    if (item.id.includes("::")) {
+      item = { ...item, id: getOriginalIdFromTreeId(item.id) };
     }
     props.gridProps?.setSelectedItems?.([]);
     props.setCurrentItemId?.(item?.id ?? null);
@@ -86,9 +87,7 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
     setSearchQuery("");
   };
 
-  const rootItemsQuery = useInfiniteRecentItems(props.itemsFilters, [
-    "rootItems",
-  ]);
+  const rootItemsQuery = useInfiniteRecentItems(props.itemsFilters, [" "]);
 
   const { data: searchItems, isLoading: isSearchItemsLoading } = useQuery({
     queryKey: ["searchItems", searchQuery],
@@ -143,22 +142,12 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
     if (isSearchItemsLoading) {
       return itemsRef.current;
     }
-    let items = [];
-    // If no itemId, we are in the root, we explorer spaces
+    let items: Item[] = [];
+
     if (searchQuery !== "") {
       items = searchItems ?? [];
     } else if (props.currentItemId === null) {
-      if (user?.main_workspace) {
-        items.push(user.main_workspace);
-      }
       items = items.concat(rootItems ?? []);
-
-      // Sort items to put main_workspace first
-      items = items.sort((a, b) => {
-        if (a.main_workspace && !b.main_workspace) return -1;
-        if (!a.main_workspace && b.main_workspace) return 1;
-        return 0;
-      });
     } else {
       items = itemChildren ?? [];
     }
