@@ -31,11 +31,9 @@ def test_get_file_content_connected_user_with_access():
         item=item, user=user, role=models.RoleChoices.EDITOR
     )
 
-    upload_file = default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=item.file_key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+    head_response = default_storage.connection.meta.client.head_object(
+        Bucket=default_storage.bucket_name, Key=item.file_key
     )
 
     service = AccessUserItemService()
@@ -48,7 +46,7 @@ def test_get_file_content_connected_user_with_access():
     )
     assert response.status_code == 200
     assert response.streaming_content
-    assert response.headers["X-WOPI-ItemVersion"] == upload_file["VersionId"]
+    assert response.headers["X-WOPI-ItemVersion"] == head_response["VersionId"]
     assert response.headers["Content-Length"] == "8"
 
 
@@ -116,12 +114,7 @@ def test_get_file_content_max_expected_size():
         item=item, user=user, role=models.RoleChoices.EDITOR
     )
 
-    default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=item.file_key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
-    )
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)

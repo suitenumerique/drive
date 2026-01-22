@@ -245,12 +245,7 @@ def test_api_items_media_auth_related_filename_with_spaces():
     filename = "image with & spaces.txt"
     key = f"item/{item.pk!s}/{filename:s}"
 
-    default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
-    )
+    default_storage.save(key, BytesIO(b"my prose"))
 
     original_url = quote(f"http://localhost/media/{key:s}")
     now = timezone.now()

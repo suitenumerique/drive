@@ -32,11 +32,9 @@ def test_check_file_info_connected_user_with_access():
         item=item, user=user, role=models.RoleChoices.EDITOR
     )
 
-    upload_file = default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=item.file_key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+    head_response = default_storage.connection.meta.client.head_object(
+        Bucket=default_storage.bucket_name, Key=item.file_key
     )
 
     service = AccessUserItemService()
@@ -55,7 +53,7 @@ def test_check_file_info_connected_user_with_access():
         "UserFriendlyName": user.full_name,
         "Size": 8,
         "UserId": str(user.id),
-        "Version": upload_file["VersionId"],
+        "Version": head_response["VersionId"],
         "UserCanWrite": True,
         "UserCanRename": True,
         "UserCanPresent": False,
@@ -96,11 +94,9 @@ def test_check_file_info_connected_user_reader_access():
         item=item, user=user, role=models.RoleChoices.READER
     )
 
-    upload_file = default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=item.file_key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+    head_response = default_storage.connection.meta.client.head_object(
+        Bucket=default_storage.bucket_name, Key=item.file_key
     )
 
     service = AccessUserItemService()
@@ -119,7 +115,7 @@ def test_check_file_info_connected_user_reader_access():
         "UserFriendlyName": user.full_name,
         "Size": 8,
         "UserId": str(user.id),
-        "Version": upload_file["VersionId"],
+        "Version": head_response["VersionId"],
         "UserCanWrite": False,
         "UserCanRename": False,
         "UserCanPresent": False,
@@ -190,11 +186,9 @@ def test_check_file_info_anonymous_user_with_access():
     )
     user = AnonymousUser()
 
-    upload_file = default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=item.file_key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+    head_response = default_storage.connection.meta.client.head_object(
+        Bucket=default_storage.bucket_name, Key=item.file_key
     )
 
     service = AccessUserItemService()
@@ -213,7 +207,7 @@ def test_check_file_info_anonymous_user_with_access():
         "UserFriendlyName": None,
         "Size": 8,
         "UserId": str(user.id),
-        "Version": upload_file["VersionId"],
+        "Version": head_response["VersionId"],
         "UserCanWrite": False,
         "UserCanRename": False,
         "UserCanPresent": False,

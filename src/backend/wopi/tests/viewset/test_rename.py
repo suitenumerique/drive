@@ -38,12 +38,7 @@ def test_rename_file_success():
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
 
-    default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=item.file_key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
-    )
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
     client = APIClient()
     response = client.post(
         f"/api/v1.0/wopi/files/{item.id}/",
@@ -83,12 +78,7 @@ def test_rename_file_success_accept_json():
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
 
-    default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=item.file_key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
-    )
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
     client = APIClient()
     response = client.post(
         f"/api/v1.0/wopi/files/{item.id}/",
@@ -199,12 +189,7 @@ def test_rename_file_with_lock():
     factories.UserItemAccessFactory(
         item=item, user=user, role=models.RoleChoices.EDITOR
     )
-    default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=item.file_key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
-    )
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -289,12 +274,7 @@ def test_rename_file_storage_error():
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
 
-    default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=item.file_key,
-        Body=BytesIO(b"my prose"),
-        ContentType="text/plain",
-    )
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
 
     client = APIClient()
     with (
