@@ -7,6 +7,7 @@ import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { useDisableDragGridItem } from "@/features/explorer/components/embedded-explorer/hooks";
 import { removeFileExtension } from "../../utils/mimeTypes";
 import { Icon, IconSize } from "@gouvfr-lasuite/ui-kit";
+import { useEmbeddedExplorerGirdContext } from "./EmbeddedExplorerGrid";
 export type EmbeddedExplorerGridNameCellProps = CellContext<Item, string> & {
   children?: React.ReactNode;
 };
@@ -17,7 +18,10 @@ export const EmbeddedExplorerGridNameCell = (
   const item = params.row.original;
   const ref = useRef<HTMLSpanElement>(null);
   const [isOverflown, setIsOverflown] = useState(false);
-
+  const { selectedItemsMap, disableItemDragAndDrop } =
+    useEmbeddedExplorerGirdContext();
+  const isSelected = !!selectedItemsMap[item.id];
+  const canMove = item.abilities?.move;
   const disableDrag = useDisableDragGridItem(item);
 
   const renderTitle = () => {
@@ -28,7 +32,7 @@ export const EmbeddedExplorerGridNameCell = (
         id={params.cell.id + "-title"}
         item={item}
         style={{ display: "flex", overflow: "hidden" }}
-        disabled={disableDrag} // If it's selected then we can drag on the entire cell
+        disabled={disableItemDragAndDrop || isSelected || !canMove} // If it's selected then we can drag on the entire cell
       >
         <div style={{ display: "flex", overflow: "hidden" }}>
           <span className="explorer__grid__item__name__text" ref={ref}>

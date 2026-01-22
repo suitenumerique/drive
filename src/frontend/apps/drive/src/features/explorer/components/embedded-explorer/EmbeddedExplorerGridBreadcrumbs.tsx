@@ -83,7 +83,7 @@ const BaseBreadcrumbs = ({
     }
     const breadcrumbsItems: BreadcrumbItem[] = [];
 
-    if (defaultRouteData) {
+    if (defaultRouteData && !showSpacesItem) {
       breadcrumbsItems.push({
         content: (
           <div

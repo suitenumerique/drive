@@ -241,6 +241,9 @@
           },
           "workspace": {
             "label": "Workspace"
+          },
+          "folders": {
+            "label": "Folders"
           }
         },
         "tree": {
@@ -704,6 +707,9 @@
           },
           "workspace": {
             "label": "Espace"
+          },
+          "folders": {
+            "label": "Dossiers"
           }
         },
         "tree": {
@@ -1175,6 +1181,9 @@
           },
           "workspace": {
             "label": "Werkruimte"
+          },
+          "folders": {
+            "label": "Mappen"
           }
         },
         "tree": {
