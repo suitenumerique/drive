@@ -1,31 +1,21 @@
-import { APIError } from "@/features/api/APIError";
-import { getDriver } from "@/features/config/Config";
-import { Item } from "@/features/drivers/types";
 import { GenericDisclaimer } from "@/features/ui/components/generic-disclaimer/GenericDisclaimer";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
 import { CustomFilesPreview } from "@/features/ui/preview/custom-files-preview/CustomFilesPreview";
 import { Icon } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@gouvfr-lasuite/cunningham-react";
-import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
+import { useItem } from "@/features/explorer/hooks/useQueries";
 
 export default function FilePage() {
   const { t } = useTranslation();
   const router = useRouter();
   const itemId = router.query.id as string;
 
+  const { data: item, isLoading, error } = useItem(itemId);
+
   // On 403, 401, the user is automatically redirected to the 401/403 page.
-  const {
-    data: item,
-    isLoading,
-    error,
-  } = useQuery<Item, APIError>({
-    queryKey: ["items", itemId],
-    queryFn: async () => {
-      return getDriver().getItem(itemId);
-    },
-  });
+
   // If the error is a 401 or 403, we want to show the spinner page because an auto redirect is happening.
   if (isLoading || (error && [401, 403].includes(error.code))) {
     return <SpinnerPage />;
