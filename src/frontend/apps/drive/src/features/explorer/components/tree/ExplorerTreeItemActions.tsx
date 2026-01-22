@@ -22,6 +22,7 @@ export const ExplorerTreeItemActions = ({
       >
         <ItemActionDropdown
           item={item}
+          itemId={item.originalId ?? item.id}
           isOpen={isOpen}
           minimal={true}
           setIsOpen={setIsOpen}

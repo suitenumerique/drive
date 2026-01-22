@@ -21,7 +21,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ExplorerTreeItem } from "./ExplorerTreeItem";
 import { useMoveItems } from "../../api/useMoveItem";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
-import { ExplorerCreateWorkspaceModal } from "../modals/workspaces/ExplorerCreateWorkspaceModal";
 import { ExplorerTreeActions } from "./ExplorerTreeActions";
 import { ExplorerTreeNav } from "./nav/ExplorerTreeNav";
 import { addItemsMovedToast } from "../toasts/addItemsMovedToast";
@@ -93,7 +92,7 @@ export const ExplorerTree = () => {
   }, [treeContext?.treeData.nodes]);
 
   const createFolderModal = useModal();
-  const createWorkspaceModal = useModal();
+  
 
   const handleMove = (result: TreeViewMoveResult) => {
     move.mutate(
@@ -114,7 +113,7 @@ export const ExplorerTree = () => {
     <div className="explorer__tree">
       <ExplorerTreeActions
         openCreateFolderModal={createFolderModal.open}
-        openCreateWorkspaceModal={createWorkspaceModal.open}
+        
       />
       <HorizontalSeparator withPadding={false} />
 
@@ -190,7 +189,7 @@ export const ExplorerTree = () => {
         <LeftPanelMobile />
       </div>
       <ExplorerCreateFolderModal {...createFolderModal} parentId={itemId} />
-      <ExplorerCreateWorkspaceModal {...createWorkspaceModal} />
+      
       {moveState && moveConfirmationModal.isOpen && (
         <ExplorerTreeMoveConfirmationModal
           isOpen={moveConfirmationModal.isOpen}
