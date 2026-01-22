@@ -154,7 +154,11 @@ class Base(Configuration):
 
     STORAGES = {
         "default": {
-            "BACKEND": "storages.backends.s3.S3Storage",
+            "BACKEND": values.Value(
+                "storages.backends.s3.S3Storage",
+                environ_name="STORAGES_DEFAULT_BACKEND",
+                environ_prefix=None,
+            ),
             "OPTIONS": {
                 "transfer_config": TransferConfig(
                     use_threads=values.BooleanValue(
