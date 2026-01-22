@@ -1024,6 +1024,9 @@ class Base(Configuration):
     FRONTEND_HIDE_GAUFRE = values.BooleanValue(
         default=False, environ_name="FRONTEND_HIDE_GAUFRE", environ_prefix=None
     )
+    FRONTEND_SILENT_LOGIN_ENABLED = values.BooleanValue(
+        default=False, environ_name="FRONTEND_SILENT_LOGIN_ENABLED", environ_prefix=None
+    )
     THEME_CUSTOMIZATION_FILE_PATH = values.Value(
         os.path.join(BASE_DIR, "drive/configuration/theme/default.json"),
         environ_name="THEME_CUSTOMIZATION_FILE_PATH",
@@ -1059,6 +1062,7 @@ class Base(Configuration):
         default=True,
         environ_name="OIDC_CREATE_USER",
     )
+    OIDC_AUTHENTICATE_CLASS = "lasuite.oidc_login.views.OIDCAuthenticationRequestView"
     OIDC_CALLBACK_CLASS = "core.authentication.views.OIDCAuthenticationCallbackView"
     OIDC_RP_SIGN_ALGO = values.Value(
         "RS256", environ_name="OIDC_RP_SIGN_ALGO", environ_prefix=None
