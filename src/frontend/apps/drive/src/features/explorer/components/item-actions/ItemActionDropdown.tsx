@@ -1,5 +1,4 @@
 import { Item, ItemType } from "@/features/drivers/types";
-import { itemIsWorkspace } from "@/features/drivers/utils";
 import { DropdownMenu, useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { t } from "i18next";
@@ -11,7 +10,6 @@ import { ItemShareModal } from "../modals/share/ItemShareModal";
 import { useDeleteItem } from "../../hooks/useDeleteItem";
 import { ExplorerMoveFolder } from "../modals/move/ExplorerMoveFolderModal";
 import { getParentIdFromPath } from "../../utils/utils";
-import { ExplorerEditWorkspaceModal } from "../modals/workspaces/ExplorerEditWorkspaceModal";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import {
@@ -22,6 +20,7 @@ import { DefaultRoute } from "@/utils/defaultRoutes";
 
 export type ItemActionDropdownProps = {
   item: Item;
+  itemId?: string;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   trigger: React.ReactNode;
@@ -31,6 +30,7 @@ export type ItemActionDropdownProps = {
 
 export const ItemActionDropdown = ({
   item,
+  itemId,
   isOpen,
   setIsOpen,
   trigger,
@@ -39,8 +39,8 @@ export const ItemActionDropdown = ({
 }: ItemActionDropdownProps) => {
   const router = useRouter();
   const { setRightPanelForcedItem, setRightPanelOpen } = useGlobalExplorer();
-  const isWorkspace = itemIsWorkspace(item);
-
+  const effectiveItemId = itemId ?? item.originalId ?? item.id;
+  
   const { handleDownloadItem } = useDownloadItem();
   const { deleteItems: deleteItem } = useDeleteItem();
   const treeContext = useTreeContext();
@@ -48,7 +48,7 @@ export const ItemActionDropdown = ({
 
   const renameModal = useModal();
   const moveModal = useModal();
-  const editWorkspaceModal = useModal();
+  
   const explorerContext = useGlobalExplorer();
 
   const { mutateAsync: deleteFavoriteItem } = useMutationDeleteFavoriteItem();
@@ -64,7 +64,7 @@ export const ItemActionDropdown = ({
   };
 
   const handleDelete = async () => {
-    await deleteItem([item.id]);
+    await deleteItem([effectiveItemId]);
     const currentItem = explorerContext.item;
     if (!currentItem) return;
 
@@ -81,31 +81,28 @@ export const ItemActionDropdown = ({
   };
 
   const handleFavorite = async () => {
-    await createFavoriteItem(item.id, {
+    await createFavoriteItem(effectiveItemId, {
       onSuccess: () => {
-        // We add the path level to the id to avoid conflicts with the same id inside the tree for favorite items.
-        const id = item.id + "_0";
-        const itemTree = itemToTreeItem({ ...item, id }, undefined);
+        // Generate a unique tree ID for the favorite item
+        const itemTree = itemToTreeItem(item, DefaultRoute.FAVORITES, true);
         treeContext?.treeData.addChild(DefaultRoute.FAVORITES, itemTree);
       },
     });
   };
 
   const handleUnfavorite = async () => {
-    await deleteFavoriteItem(item.id);
+    await deleteFavoriteItem(effectiveItemId);
   };
 
   useEffect(() => {
     onModalOpenChange?.(
       renameModal.isOpen ||
         shareItemModal.isOpen ||
-        editWorkspaceModal.isOpen ||
         moveModal.isOpen
     );
   }, [
     renameModal.isOpen,
     shareItemModal.isOpen,
-    editWorkspaceModal.isOpen,
     moveModal.isOpen,
   ]);
 
@@ -150,11 +147,9 @@ export const ItemActionDropdown = ({
             isHidden: !item.abilities?.update,
             value: "edit",
             callback: () => {
-              if (isWorkspace) {
-                editWorkspaceModal.open();
-              } else {
+              
                 renameModal.open();
-              }
+              
             },
             showSeparator: true,
           },
@@ -183,26 +178,18 @@ export const ItemActionDropdown = ({
         {trigger}
       </DropdownMenu>
       {renameModal.isOpen && (
-        <ExplorerRenameItemModal {...renameModal} item={item} key={item.id} />
+        <ExplorerRenameItemModal {...renameModal} item={item} key={effectiveItemId} />
       )}
       {canViewShareModal && shareItemModal.isOpen && (
-        <ItemShareModal {...shareItemModal} item={item} key={item.id} />
+        <ItemShareModal {...shareItemModal} item={item} key={effectiveItemId} />
       )}
 
-      {editWorkspaceModal.isOpen && (
-        <ExplorerEditWorkspaceModal
-          {...editWorkspaceModal}
-          item={item as Item}
-          onClose={() => {
-            editWorkspaceModal.close();
-          }}
-        />
-      )}
+      
       {moveModal.isOpen && (
         <ExplorerMoveFolder
           {...moveModal}
           itemsToMove={[item]}
-          key={item.id}
+          key={effectiveItemId}
           initialFolderId={getParentIdFromPath(item.path)}
         />
       )}

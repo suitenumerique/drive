@@ -231,19 +231,20 @@ export const GlobalExplorerProvider = ({
       <TreeProvider
         initialTreeData={[]}
         initialNodeId={initialId}
-        onLoadChildren={async (itemId, page) => {
-          // Currently, we append a _X suffix at the end of favorite item IDs to differentiate them
-          // when a node containing a favorite child is opened. This avoids duplicate IDs in the tree component,
-          // which would otherwise cause errors. Therefore, we need to remove the _X suffix for API requests.
-          const id = itemId.split("_")[0];
-          if (id === DefaultRoute.FAVORITES) {
+        onLoadChildren={async (treeId, page) => {
+          // Extract the original item ID from the tree ID for API requests.
+          // Tree IDs for favorites follow the format: `parentTreeId::itemId` (e.g., `favorites::abc123`)
+          const originalId = getOriginalIdFromTreeId(treeId);
+          const isFavoriteItem = treeId.startsWith(DefaultRoute.FAVORITES);
+
+          if (originalId === DefaultRoute.FAVORITES) {
             const response = await driver.getFavoriteItems({
               page: page,
               type: ItemType.FOLDER,
             });
 
             const result = response.children.map((item) =>
-              itemToTreeItem(item, id, true)
+              itemToTreeItem(item, treeId, true)
             ) as TreeViewDataType<Item>[];
 
             return {
@@ -251,12 +252,12 @@ export const GlobalExplorerProvider = ({
               pagination: response.pagination,
             };
           }
-          const data = await driver.getChildren(id, {
+          const data = await driver.getChildren(originalId, {
             page: page,
             type: ItemType.FOLDER,
           });
           const result = data.children.map((item) =>
-            itemToTreeItem(item, id)
+            itemToTreeItem(item, treeId, isFavoriteItem)
           ) as TreeViewDataType<Item>[];
 
           return {
@@ -264,9 +265,19 @@ export const GlobalExplorerProvider = ({
             pagination: data.pagination,
           };
         }}
-        onRefresh={async (id) => {
-          const item = await driver.getItem(id);
-          return itemToTreeItem(item) as TreeViewDataType<Item>;
+        onRefresh={async (treeId) => {
+          const originalId = getOriginalIdFromTreeId(treeId);
+          const isFavoriteItem = treeId.startsWith(DefaultRoute.FAVORITES);
+          const item = await driver.getItem(originalId);
+          // Extract parent tree ID from current tree ID
+          const parentTreeId = treeId.includes("::")
+            ? treeId.substring(0, treeId.lastIndexOf("::"))
+            : undefined;
+          return itemToTreeItem(
+            item,
+            parentTreeId,
+            isFavoriteItem
+          ) as TreeViewDataType<Item>;
         }}
       >
         <TreeProviderInitializer>
@@ -291,7 +302,7 @@ export const GlobalExplorerProvider = ({
       <CustomFilesPreview
         currentItem={previewItem}
         items={previewItems}
-        onSetPreviewItem={setPreviewItem}
+        setPreviewItem={setPreviewItem}
       />
     </GlobalExplorerContext.Provider>
   );
@@ -320,7 +331,7 @@ const TreeProviderInitializer = ({
 
     const favorites = response.children.map((item) =>
       itemToTreeItem(item, DefaultRoute.FAVORITES, true)
-    ) as TreeViewDataType<Item>[];
+    );
 
     const favoritesNode: TreeViewDataType<TreeItem> = {
       id: DefaultRoute.FAVORITES,
@@ -344,23 +355,59 @@ const TreeProviderInitializer = ({
   return children;
 };
 
+/**
+ * Generates a unique tree ID based on the parent tree ID and the original item ID.
+ * This ensures uniqueness even when the same item appears multiple times in the tree
+ * (e.g., once in favorites and once as a child of an opened favorite folder).
+ *
+ * Format: `{parentTreeId}::{itemId}` for favorite items, or just `{itemId}` for non-favorite items.
+ *
+ * @param originalId - The original item ID
+ * @param parentTreeId - The parent's tree ID (which may already contain the path)
+ * @param isFavoriteItem - Whether this item is in the favorites branch
+ * @returns A unique tree ID
+ */
+export const generateTreeId = (
+  originalId: string,
+  parentTreeId?: string,
+  isFavoriteItem?: boolean
+): string => {
+  if (!isFavoriteItem) {
+    return originalId;
+  }
+  // For favorite items, build a path-based ID to ensure uniqueness
+  return parentTreeId ? `${parentTreeId}::${originalId}` : originalId;
+};
+
+/**
+ * Extracts the original item ID from a tree ID.
+ * The tree ID format is `{parentTreeId}::{itemId}` for favorites, or just `{itemId}` for non-favorites.
+ *
+ * @param treeId - The tree ID to extract from
+ * @returns The original item ID
+ */
+export const getOriginalIdFromTreeId = (treeId: string): string => {
+  const parts = treeId.split("::");
+  return parts[parts.length - 1];
+};
+
 export const itemToTreeItem = (
   item: Item,
-  parentId?: string,
+  parentTreeId?: string,
   isFavoriteItem?: boolean
 ): TreeItem => {
-  const pathLevel = item.path.split(".").length - 1;
-  // We add the path level to the id to avoid conflicts with the same id inside the tree.
-  // This is useful when we have a favorite item that is a child of another item.
-  const id = item.id + (isFavoriteItem ? `_${pathLevel}` : "");
+  const originalId = item.id;
+  const treeId = generateTreeId(originalId, parentTreeId, isFavoriteItem);
+
   return {
     ...item,
-    id,
-    parentId: parentId,
+    id: treeId,
+    originalId,
+    parentId: parentTreeId,
     childrenCount: item.numchild_folder ?? 0,
     children:
       item.children?.map((child) =>
-        itemToTreeItem(child, item.id, isFavoriteItem)
+        itemToTreeItem(child, treeId, isFavoriteItem)
       ) ?? [],
     nodeType: TreeViewNodeTypeEnum.NODE,
     title: getItemTitle(item),
