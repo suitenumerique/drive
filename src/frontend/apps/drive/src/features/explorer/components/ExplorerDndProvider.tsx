@@ -1,18 +1,18 @@
 import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-  KeyboardSensor,
-  Modifier,
-  MouseSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
+    DndContext,
+    DragEndEvent,
+    DragOverlay,
+    DragStartEvent,
+    KeyboardSensor,
+    Modifier,
+    MouseSensor,
+    TouchSensor,
+    useSensor,
+    useSensors,
 } from "@dnd-kit/core";
 import { getEventCoordinates } from "@dnd-kit/utilities";
 import { useMoveItems } from "../api/useMoveItem";
-import { itemToTreeItem, useGlobalExplorer } from "./GlobalExplorerContext";
+import { itemToTreeItem, useGlobalExplorer, getOriginalIdFromTreeId } from "./GlobalExplorerContext";
 import { Item, TreeItem } from "@/features/drivers/types";
 import { ExplorerDragOverlay } from "./tree/ExploreDragOverlay";
 import { TreeViewNodeTypeEnum, useTreeContext } from "@gouvfr-lasuite/ui-kit";
@@ -20,8 +20,8 @@ import { addItemsMovedToast } from "./toasts/addItemsMovedToast";
 import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { createContext, useContext, useState } from "react";
 import {
-  ConfirmationMoveState,
-  ExplorerTreeMoveConfirmationModal,
+    ConfirmationMoveState,
+    ExplorerTreeMoveConfirmationModal,
 } from "./tree/ExplorerTreeMoveConfirmationModal";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { useMutationCreateFavoriteItem } from "../hooks/useMutations";
@@ -77,9 +77,8 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
   const sensors = useSensors(mouseSensor, touchSensor, keyboardSensor);
   const handleCreateFavoriteItem = async (item: Item) => {
     await createFavoriteItem(item.id);
-    // We add the path level to the id to avoid conflicts with the same id inside the tree for favorite items.
-    const id = item.id + "_0";
-    const itemTree = itemToTreeItem({ ...item, id }, undefined);
+    // Generate a unique tree ID for the favorite item
+    const itemTree = itemToTreeItem(item, DefaultRoute.FAVORITES, true);
     treeContext?.treeData.addChild(DefaultRoute.FAVORITES, itemTree);
   };
 
@@ -128,18 +127,21 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
     const activeItemRaw = active.data.current?.item as Item;
     const overItemRaw = over?.data.current?.item as Item;
 
-    // We need to remove the _X suffix from the id which was added to prevent conflicts with the same id inside the tree for favorite items.
-    const activeItem = { ...activeItemRaw, id: activeItemRaw.id.split("_")[0] };
-    const overItem = { ...overItemRaw, id: overItemRaw.id.split("_")[0] };
+    // Extract the original item ID from the tree ID (handles favorites path format)
+    const activeItem = { ...activeItemRaw, id: getOriginalIdFromTreeId(activeItemRaw.id) };
+    const overItemId = overItemRaw?.id ? getOriginalIdFromTreeId(overItemRaw.id) : undefined;
 
-    if (overItem?.id === DefaultRoute.FAVORITES && activeItem) {
+    if (overItemId === DefaultRoute.FAVORITES && activeItem) {
       await handleCreateFavoriteItem(activeItem);
       return;
     }
 
-    if (!activeItem || !overItem) {
+    if (!activeItem || !overItemRaw || !overItemId) {
       return;
     }
+
+    const overItem = { ...overItemRaw, id: overItemId };
+
     if (activeItem.id === overItem.id) {
       return;
     }
@@ -231,9 +233,9 @@ export const snapToTopLeft: Modifier = ({
 };
 
 export const canDrop = (activeItem: Item, overItem: Item | TreeItem) => {
-  // We remove the path level from the id to avoid conflicts with the same id inside the tree for favorite items.
-  const overItemId = overItem.id.split("_")[0];
-  const activeItemId = activeItem.id.split("_")[0];
+  // Extract the original item ID from the tree ID (handles favorites path format)
+  const overItemId = overItem?.id ? getOriginalIdFromTreeId(overItem.id) : undefined;
+  const activeItemId = getOriginalIdFromTreeId(activeItem.id);
 
   if (overItemId === DefaultRoute.FAVORITES) {
     return true;
