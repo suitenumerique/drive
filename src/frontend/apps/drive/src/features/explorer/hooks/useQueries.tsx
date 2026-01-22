@@ -1,8 +1,14 @@
+import { APIError } from "@/features/api/APIError";
 import { getDriver } from "@/features/config/Config";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { Item } from "@/features/drivers/types";
 import { HookUseQueryOptions } from "@/utils/useQueries";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  UseQueryOptions,
+  UseQueryResult,
+} from "@tanstack/react-query";
 
 export const useFavoriteItems = () => {
   return useQuery({
@@ -54,10 +60,13 @@ export const getRootItems = async (filters?: ItemFilters) => {
 export const useItem = (
   itemId: string,
   options?: HookUseQueryOptions<Item>
-) => {
-  return useQuery({
+): UseQueryResult<Item | undefined, APIError> => {
+  return useQuery<Item, APIError>({
     queryKey: ["items", itemId],
     queryFn: () => getDriver().getItem(itemId),
-    ...options,
+    ...(options as Omit<
+      UseQueryOptions<Item, APIError>,
+      "queryKey" | "queryFn"
+    >),
   });
 };

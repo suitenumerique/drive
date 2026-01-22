@@ -1,6 +1,6 @@
 import { getDriver } from "@/features/config/Config";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRemoveItemsFromPaginatedList } from "./useManageItemsToPaginatedList";
+import { useRemoveItemsFromPaginatedList } from "../hooks/useOptimisticPagination";
 import {
   getMyFilesQueryKey,
   getRecentItemsQueryKey,

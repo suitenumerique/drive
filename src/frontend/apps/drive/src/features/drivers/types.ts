@@ -26,6 +26,7 @@ export enum ItemUploadState {
 
 export type ItemBreadcrumb = {
   id: string;
+  originalId?: string; // Used to identify all occurrences of the same item in the tree
   title: string;
   path: string;
   depth: number;
@@ -34,6 +35,7 @@ export type ItemBreadcrumb = {
 
 export type Item = {
   id: string;
+  originalId?: string; // Used to identify all occurrences of the same item in the tree
   title: string;
   filename: string;
   creator: {
@@ -93,6 +95,11 @@ export type Item = {
 
 export type TreeItemData = Omit<Item, "children"> & {
   parentId?: string;
+  /**
+   * The original item ID (without tree path prefix).
+   * Used to identify all occurrences of the same item in the tree.
+   */
+  originalId: string;
 };
 
 export type TreeItem = TreeViewDataType<TreeItemData>;
@@ -111,6 +118,7 @@ export type Access = {
   is_explicit: boolean;
   max_role: Role;
   max_ancestors_role: Role;
+  max_ancestors_role_item_id: string;
   parent_id_max_role?: string; // Just for UI purposes
   item: {
     id: string;
