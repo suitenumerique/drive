@@ -215,7 +215,12 @@
           "create": {
             "label": "Create",
             "folder": "New folder",
-            "workspace": "New workspace"
+            "workspace": "New workspace",
+            "file": {
+              "doc": "New text document",
+              "powerpoint": "New slides",
+              "calc": "New spreadsheet"
+            }
           },
           "import": {
             "label": "Import",
@@ -328,6 +333,15 @@
               "title": "Create folder",
               "label": "Folder name",
               "placeholder": "Enter folder name",
+              "cancel": "Cancel",
+              "submit": "Create"
+            }
+          },
+          "createFile": {
+            "modal": {
+              "title": "Create file",
+              "label": "File name",
+              "placeholder": "Enter file name",
               "cancel": "Cancel",
               "submit": "Create"
             }
@@ -631,6 +645,11 @@
           "create": {
             "label": "Créer",
             "folder": "Nouveau dossier",
+            "file": {
+              "doc": "Nouveau document texte",
+              "powerpoint": "Nouvelles diapositives",
+              "calc": "Nouveau tableau de calcul"
+            },
             "workspace": "Nouvel espace"
           },
           "workspace": {
@@ -734,6 +753,15 @@
               "title": "Créer un dossier",
               "label": "Nom du dossier",
               "placeholder": "Entrez le nom du dossier",
+              "cancel": "Annuler",
+              "submit": "Créer"
+            }
+          },
+          "createFile": {
+            "modal": {
+              "title": "Créer un fichier",
+              "label": "Nom du fichier",
+              "placeholder": "Entrez le nom du fichier",
               "cancel": "Annuler",
               "submit": "Créer"
             }
@@ -1033,6 +1061,11 @@
           "create": {
             "label": "Creëeren",
             "folder": "Nieuwe map",
+            "file": {
+              "doc": "Nieuw tekstdocument",
+              "powerpoint": "Nieuwe presentatie",
+              "calc": "Nieuwe spreadsheet"
+            },
             "workspace": "Nieuwe werkruimte"
           },
           "import": {
@@ -1148,6 +1181,15 @@
               "placeholder": "Voer mapnaam in",
               "cancel": "Annuleren",
               "submit": "Bewerken"
+            }
+          },
+          "createFile": {
+            "modal": {
+              "title": "Bestand maken",
+              "label": "Bestandsnaam",
+              "placeholder": "Voer bestandsnaam in",
+              "cancel": "Annuleren",
+              "submit": "Maken"
             }
           },
           "upload": {

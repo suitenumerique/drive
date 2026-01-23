@@ -5,7 +5,9 @@ import logging
 from datetime import timedelta
 from os.path import splitext
 from urllib.parse import quote
+import os
 
+from django.apps import apps
 from django.conf import settings
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
@@ -476,7 +478,49 @@ class CreateItemSerializer(ItemSerializer):
         return 0
 
     def update(self, instance, validated_data):
-        raise NotImplementedError("Update method can not be used.")
+        raise NotImplementedError("Update method can not be used.")        
+
+
+class CreateItemFromTemplateSerializer(serializers.Serializer):
+    """Serializer used to create a new item from a template file"""
+
+    extension = serializers.CharField(
+        max_length=10,
+        required=True,
+        help_text="File extension (e.g., 'odt', 'ods', ...)",
+    )
+    title = serializers.CharField(
+        max_length=255,
+        required=True,
+        allow_blank=True,
+        help_text="Title for the new file",
+    )
+
+    def validate_extension(self, value):
+        """Validate that the extension is valid and the template file exists."""
+        extension = value.lstrip(".").lower().replace("_", "").replace("-", "")
+
+        # Extension should be alphanumeric with some common characters
+        if not extension or not extension.isalnum():
+            raise serializers.ValidationError(
+                _("Invalid extension format."),
+                code="invalid_extension_format",
+            )
+
+        # Check if template file exists
+        core_app_config = apps.get_app_config("core")
+        template_dir = os.path.join(core_app_config.path, "file_templates")
+        template_path = os.path.join(template_dir, f"template.{extension}")
+
+        if not os.path.exists(template_path):
+            raise serializers.ValidationError(
+                _("Template file not found for extension '{extension}'.").format(
+                    extension=extension
+                ),
+                code="template_file_not_found",
+            )
+
+        return extension
 
 
 class BreadcrumbItemSerializer(serializers.ModelSerializer):
