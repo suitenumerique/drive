@@ -4,7 +4,6 @@
 import json
 import logging
 import re
-from collections import defaultdict
 from urllib.parse import unquote, urlparse
 
 from django.conf import settings
@@ -1537,78 +1536,70 @@ class ItemAccessViewSet(
         queryset = super().filter_queryset(queryset)
         return queryset.filter(**{self.resource_field_name: self.kwargs["resource_id"]})
 
-    # pylint: disable=too-many-locals
     def list(self, request, *args, **kwargs):
         """
-        List item accesses for an item.
-        The list contains accesses for the item and its ancestors.
-        Only the deepest access for each items in the hierarchy is returned.
+        List item accesses for an item and its ancestors.
 
-        Return an empty list for users without access to the item.
+        Returns the deepest access per target (user/team) with computed max_ancestors_role.
+        For inherited accesses (not on current item), max_ancestors_role equals the access's role.
 
-        If the user is privileged, return all accesses.
-        If the user is not privileged, return only the accesses with privileged roles
-        to not leak information to non-privileged users.
-
-        The accesses are ordered by item depth and creation date.
+        Non-privileged users only see privileged roles to prevent information leakage.
+        Results are ordered by item depth and creation date.
         """
         user = request.user
-
         role = self.item.get_role(user)
         if not role:
             return drf.response.Response([])
 
+        # Get all accesses from ancestors (including current item)
         ancestors_qs = models.Item.objects.filter(
             path__ancestors=self.item.path, ancestors_deleted_at__isnull=True
         )
         accesses_qs = self.get_queryset().filter(item__in=ancestors_qs)
         if role not in PRIVILEGED_ROLES:
-            # Restrict the queryset to only privileged roles
-            # to not leak information to non-privileged users
             accesses_qs = accesses_qs.filter(role__in=PRIVILEGED_ROLES)
 
-        accesses_qs = accesses_qs.annotate_user_roles(user)
-        accesses = list(accesses_qs.order_by("item__path", "created_at").iterator())
-
-        request_target_keys = {f"user:{user.id}"}
-        request_target_keys.update(
-            f"team:{team}" for team in getattr(user, "teams", [])
+        accesses_qs = accesses_qs.annotate_user_roles(user).order_by(
+            "item__path", "created_at"
         )
 
+        # Track max role and keep only deepest access per target
         max_role_by_target = {}
-        # Keep in this dict the deepest access for each target
-        # This is the access that will be returned to the user
-        accesses_by_target = defaultdict(list)
-        for access in accesses:
-            previous = max_role_by_target.get(access.target_key)
+        deepest_access_by_target = {}
+
+        for access in accesses_qs.iterator():
+            target = access.target_key
+            previous = max_role_by_target.get(target)
             previous_role = previous["role"] if previous else None
+
+            # Set max_ancestors_role from previous accesses in hierarchy
             access.max_ancestors_role = previous_role
             access.max_ancestors_role_item_id = (
                 previous["item_id"] if previous else None
             )
 
-            max_role_by_target[access.target_key] = {
+            max_role_by_target[target] = {
                 "role": models.RoleChoices.max(previous_role, access.role),
                 "item_id": access.item_id,
             }
+            deepest_access_by_target[target] = access
 
-            accesses_by_target[access.target_key] = access
+        # For inherited accesses, max_ancestors_role should reflect their own position
+        for access in deepest_access_by_target.values():
+            if access.max_ancestors_role and access.item_id != self.item.id:
+                access.max_ancestors_role = access.role
+                access.max_ancestors_role_item_id = access.item_id
 
-        # Reorder accesses by their corresponding item depth and creation date
+        # Sort by depth and creation date, then serialize
         selected_accesses = sorted(
-            accesses_by_target.values(),
-            key=lambda access: (access.item.depth, access.created_at),
+            deepest_access_by_target.values(),
+            key=lambda a: (a.item.depth, a.created_at),
         )
 
-        # serialize and return the response
-        context = self.get_serializer_context()
-        serializer_class = self.get_serializer_class()
-        serialized_data = []
-        for access in selected_accesses:
-            serializer = serializer_class(access, context=context)
-            serialized_data.append(serializer.data)
-
-        return drf.response.Response(serialized_data)
+        serializer = self.get_serializer_class()(
+            selected_accesses, many=True, context=self.get_serializer_context()
+        )
+        return drf.response.Response(serializer.data)
 
     def update(self, request, *args, **kwargs):
         """

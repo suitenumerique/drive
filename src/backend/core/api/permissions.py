@@ -120,9 +120,7 @@ class ItemAccessPermission(IsAuthenticated):
 
     def has_object_permission(self, request, view, obj):
         """Check permission for a given object."""
-        abilities = obj.get_abilities(
-            request.user, is_explicit=str(view.item.id) == str(obj.item_id)
-        )
+        abilities = obj.get_abilities(request.user)
 
         requested_role = request.data.get("role")
         if requested_role and requested_role not in abilities.get("set_role_to", []):
