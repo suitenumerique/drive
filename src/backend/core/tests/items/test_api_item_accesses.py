@@ -174,11 +174,15 @@ def test_api_item_accesses_list_authenticated_related_non_privileged(
                 else None,
                 "team": access.team,
                 "role": access.role,
-                "max_ancestors_role": None,
-                "max_ancestors_role_item_id": None,
+                "max_ancestors_role": None
+                if access.item_id == item.id
+                else access.role,
+                "max_ancestors_role_item_id": None
+                if access.item_id == item.id
+                else str(access.item_id),
                 "max_role": access.role,
                 "abilities": access.get_abilities(user),
-                "is_explicit": str(access.item_id) == str(item.id),
+                "is_explicit": access.item_id == item.id,
             }
             for access in privileged_accesses
         ],
@@ -277,13 +281,17 @@ def test_api_item_accesses_list_authenticated_related_privileged(
                 }
                 if access.user
                 else None,
-                "max_ancestors_role": None,
-                "max_ancestors_role_item_id": None,
+                "max_ancestors_role": None
+                if access.item_id == item.id
+                else access.role,
+                "max_ancestors_role_item_id": None
+                if access.item_id == item.id
+                else str(access.item_id),
                 "max_role": access.role,
                 "team": access.team,
                 "role": access.role,
                 "abilities": access.get_abilities(user),
-                "is_explicit": str(access.item_id) == str(item.id),
+                "is_explicit": access.item_id == item.id,
             }
             for access in ancestors_accesses + item_accesses
         ],
@@ -1242,9 +1250,6 @@ def test_api_item_accesses_update_to_same_role_as_max_ancestors_role():
     assert not models.ItemAccess.objects.filter(item=item, user=other_user).exists()
 
 
-# Delete
-
-
 def test_api_item_accesses_delete_anonymous():
     """Anonymous users should not be allowed to destroy an item access."""
     user = factories.UserFactory()
@@ -1816,10 +1821,492 @@ def test_api_item_accesses_other_user_accesses():
                 "update": True,
                 "partial_update": True,
                 "retrieve": True,
-                "set_role_to": ["owner"],
+                "set_role_to": ["reader", "editor", "administrator", "owner"],
             },
             "max_ancestors_role": None,
             "max_ancestors_role_item_id": None,
+            "max_role": "administrator",
+            "is_explicit": False,
+        },
+    ]
+
+
+def test_api_item_accesses_with_inherited_accesses():
+    """Test the list of item accesses with inherited accesses."""
+
+    user = factories.UserFactory()
+
+    collaborator = factories.UserFactory()
+
+    grand_parent_access = factories.UserItemAccessFactory(
+        item__title="A",
+        item__creator=user,
+        user=user,
+        role=models.RoleChoices.OWNER,
+        item__type=models.ItemTypeChoices.FOLDER,
+    )
+    grand_parent = grand_parent_access.item
+    parent = factories.ItemFactory(
+        title="B",
+        parent=grand_parent,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    item = factories.ItemFactory(
+        title="C",
+        parent=parent,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
+    factories.UserItemAccessFactory(item=grand_parent, user=collaborator, role="reader")
+    administrator_access = factories.UserItemAccessFactory(
+        item=parent, user=collaborator, role="administrator"
+    )
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
+
+    assert response.status_code == 200
+    content = response.json()
+
+    assert content == [
+        {
+            "id": str(grand_parent_access.id),
+            "item": {
+                "id": str(grand_parent.id),
+                "path": str(grand_parent.path),
+                "depth": grand_parent.depth,
+            },
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "language": user.language,
+                "full_name": user.full_name,
+                "short_name": user.short_name,
+            },
+            "team": "",
+            "role": "owner",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": True,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": None,
+            "max_ancestors_role_item_id": None,
+            "max_role": "owner",
+            "is_explicit": False,
+        },
+        {
+            "id": str(administrator_access.id),
+            "item": {
+                "id": str(parent.id),
+                "path": str(parent.path),
+                "depth": parent.depth,
+            },
+            "user": {
+                "id": str(collaborator.id),
+                "email": collaborator.email,
+                "language": collaborator.language,
+                "full_name": collaborator.full_name,
+                "short_name": collaborator.short_name,
+            },
+            "team": "",
+            "role": "administrator",
+            "abilities": {
+                "destroy": True,
+                "update": True,
+                "partial_update": True,
+                "retrieve": True,
+                "set_role_to": ["owner"],
+            },
+            "max_ancestors_role": "administrator",
+            "max_ancestors_role_item_id": str(parent.id),
+            "max_role": "administrator",
+            "is_explicit": False,
+        },
+    ]
+
+
+def test_api_item_accesses_inherited_from_root():
+    """
+    Test the max_ancestors_role and max_ancestors_role_item_id for accesses depending
+    of the context it is called from.
+    """
+    user = factories.UserFactory()
+    collaborator = factories.UserFactory()
+
+    root = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, title="A", creator=user
+    )
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, title="B", parent=root, creator=user
+    )
+
+    user_root_access = factories.UserItemAccessFactory(
+        item=root, user=user, role="owner"
+    )
+    collaborator_root_access = factories.UserItemAccessFactory(
+        item=root, user=collaborator, role="administrator"
+    )
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get(f"/api/v1.0/items/{root.id!s}/accesses/")
+    assert response.status_code == 200
+    content = response.json()
+
+    assert content == [
+        {
+            "id": str(user_root_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "language": user.language,
+                "full_name": user.full_name,
+                "short_name": user.short_name,
+            },
+            "team": "",
+            "role": "owner",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": True,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": None,
+            "max_ancestors_role_item_id": None,
+            "max_role": "owner",
+            "is_explicit": True,
+        },
+        {
+            "id": str(collaborator_root_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(collaborator.id),
+                "email": collaborator.email,
+                "language": collaborator.language,
+                "full_name": collaborator.full_name,
+                "short_name": collaborator.short_name,
+            },
+            "team": "",
+            "role": "administrator",
+            "abilities": {
+                "destroy": True,
+                "update": True,
+                "partial_update": True,
+                "retrieve": True,
+                "set_role_to": ["reader", "editor", "administrator", "owner"],
+            },
+            "max_ancestors_role": None,
+            "max_ancestors_role_item_id": None,
+            "max_role": "administrator",
+            "is_explicit": True,
+        },
+    ]
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
+
+    assert response.status_code == 200
+    content = response.json()
+
+    assert content == [
+        {
+            "id": str(user_root_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "language": user.language,
+                "full_name": user.full_name,
+                "short_name": user.short_name,
+            },
+            "team": "",
+            "role": "owner",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": True,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": "owner",
+            "max_ancestors_role_item_id": str(root.id),
+            "max_role": "owner",
+            "is_explicit": False,
+        },
+        {
+            "id": str(collaborator_root_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(collaborator.id),
+                "email": collaborator.email,
+                "language": collaborator.language,
+                "full_name": collaborator.full_name,
+                "short_name": collaborator.short_name,
+            },
+            "team": "",
+            "role": "administrator",
+            "abilities": {
+                "destroy": True,
+                "update": True,
+                "partial_update": True,
+                "retrieve": True,
+                "set_role_to": ["owner"],
+            },
+            "max_ancestors_role": "administrator",
+            "max_ancestors_role_item_id": str(root.id),
+            "max_role": "administrator",
+            "is_explicit": False,
+        },
+    ]
+
+
+def test_api_item_accesses_in_tree():
+    """
+    Test list accesses when a user has access only on a subtree.
+    """
+
+    user = factories.UserFactory()
+    collaborator = factories.UserFactory()
+
+    root = factories.ItemFactory(creator=user, type=models.ItemTypeChoices.FOLDER)
+    user_root_access = factories.UserItemAccessFactory(
+        item=root, user=user, role=models.RoleChoices.OWNER
+    )
+
+    # user has inherited access on this item and collaborator will have an explicit one.
+    folder1 = factories.ItemFactory(
+        parent=root, creator=user, type=models.ItemTypeChoices.FOLDER
+    )
+    collaborator_folder1_access = factories.UserItemAccessFactory(
+        item=folder1, user=collaborator, role=models.RoleChoices.ADMIN
+    )
+
+    # Both user have inherited access on this file
+    file1 = factories.ItemFactory(
+        parent=folder1, type=models.ItemTypeChoices.FILE, creator=collaborator
+    )
+
+    # Create a client for the owner user
+    client = APIClient()
+    client.force_login(user)
+
+    # First accesses on folder1 for user
+    response = client.get(f"/api/v1.0/items/{folder1.id!s}/accesses/")
+    assert response.status_code == 200
+
+    content = response.json()
+
+    assert content == [
+        {
+            "id": str(user_root_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "language": user.language,
+                "full_name": user.full_name,
+                "short_name": user.short_name,
+            },
+            "team": "",
+            "role": "owner",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": True,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": "owner",
+            "max_ancestors_role_item_id": str(root.id),
+            "max_role": "owner",
+            "is_explicit": False,
+        },
+        {
+            "id": str(collaborator_folder1_access.id),
+            "item": {
+                "id": str(folder1.id),
+                "path": str(folder1.path),
+                "depth": folder1.depth,
+            },
+            "user": {
+                "id": str(collaborator.id),
+                "email": collaborator.email,
+                "language": collaborator.language,
+                "full_name": collaborator.full_name,
+                "short_name": collaborator.short_name,
+            },
+            "team": "",
+            "role": "administrator",
+            "abilities": {
+                "destroy": True,
+                "update": True,
+                "partial_update": True,
+                "retrieve": True,
+                "set_role_to": ["reader", "editor", "administrator", "owner"],
+            },
+            "max_ancestors_role": None,
+            "max_ancestors_role_item_id": None,
+            "max_role": "administrator",
+            "is_explicit": True,
+        },
+    ]
+
+    # Then accesses on file1 for user
+    response = client.get(f"/api/v1.0/items/{file1.id!s}/accesses/")
+    assert response.status_code == 200
+
+    content = response.json()
+
+    assert content == [
+        {
+            "id": str(user_root_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "language": user.language,
+                "full_name": user.full_name,
+                "short_name": user.short_name,
+            },
+            "team": "",
+            "role": "owner",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": True,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": "owner",
+            "max_ancestors_role_item_id": str(root.id),
+            "max_role": "owner",
+            "is_explicit": False,
+        },
+        {
+            "id": str(collaborator_folder1_access.id),
+            "item": {
+                "id": str(folder1.id),
+                "path": str(folder1.path),
+                "depth": folder1.depth,
+            },
+            "user": {
+                "id": str(collaborator.id),
+                "email": collaborator.email,
+                "language": collaborator.language,
+                "full_name": collaborator.full_name,
+                "short_name": collaborator.short_name,
+            },
+            "team": "",
+            "role": "administrator",
+            "abilities": {
+                "destroy": True,
+                "update": True,
+                "partial_update": True,
+                "retrieve": True,
+                "set_role_to": ["owner"],
+            },
+            "max_ancestors_role": "administrator",
+            "max_ancestors_role_item_id": str(folder1.id),
+            "max_role": "administrator",
+            "is_explicit": False,
+        },
+    ]
+
+    client = APIClient()
+    client.force_login(collaborator)
+
+    response = client.get(f"/api/v1.0/items/{file1.id!s}/accesses/")
+    assert response.status_code == 200
+
+    content = response.json()
+
+    assert len(content) == 2
+
+    assert content == [
+        {
+            "id": str(user_root_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "language": user.language,
+                "full_name": user.full_name,
+                "short_name": user.short_name,
+            },
+            "team": "",
+            "role": "owner",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": False,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": "owner",
+            "max_ancestors_role_item_id": str(root.id),
+            "max_role": "owner",
+            "is_explicit": False,
+        },
+        {
+            "id": str(collaborator_folder1_access.id),
+            "item": {
+                "id": str(folder1.id),
+                "path": str(folder1.path),
+                "depth": folder1.depth,
+            },
+            "user": {
+                "id": str(collaborator.id),
+                "email": collaborator.email,
+                "language": collaborator.language,
+                "full_name": collaborator.full_name,
+                "short_name": collaborator.short_name,
+            },
+            "team": "",
+            "role": "administrator",
+            "abilities": {
+                "destroy": True,
+                "update": False,
+                "partial_update": False,
+                "retrieve": True,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": "administrator",
+            "max_ancestors_role_item_id": str(folder1.id),
             "max_role": "administrator",
             "is_explicit": False,
         },
