@@ -1290,18 +1290,15 @@ class ItemAccess(BaseModel):
             if user_role == RoleChoices.OWNER:
                 set_role_to.append(RoleChoices.OWNER)
 
+        ancestors_role_priority = RoleChoices.get_priority(self.max_ancestors_role)
         if is_explicit:
             # Filter out roles that would be lower than the one the user already has
-            ancestors_role_priority = RoleChoices.get_priority(self.max_ancestors_role)
             set_role_to = [
                 candidate_role
                 for candidate_role in set_role_to
                 if RoleChoices.get_priority(candidate_role) >= ancestors_role_priority
             ]
         else:
-            ancestors_role_priority = RoleChoices.get_priority(
-                self.max_ancestors_role or self.role
-            )
             set_role_to = [
                 candidate_role
                 for candidate_role in set_role_to
