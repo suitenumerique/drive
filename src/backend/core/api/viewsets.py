@@ -572,7 +572,6 @@ class ItemViewSet(
 
         return drf.response.Response(serializer.data)
 
-    @transaction.atomic
     def perform_create(self, serializer):
         """Set the current user as creator and owner of the newly created object."""
         obj = models.Item.objects.create_child(
@@ -911,12 +910,11 @@ class ItemViewSet(
                     )
                 )
 
-            with transaction.atomic():
-                child_item = models.Item.objects.create_child(
-                    creator=request.user,
-                    parent=item,
-                    **serializer.validated_data,
-                )
+            child_item = models.Item.objects.create_child(
+                creator=request.user,
+                parent=item,
+                **serializer.validated_data,
+            )
 
             # Set the created instance to the serializer
             serializer.instance = child_item
