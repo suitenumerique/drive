@@ -437,6 +437,7 @@ class ItemViewSet(
         # Remove items with upload_state SUSPICIOUS for non-creators
         queryset = self._filter_suspicious_items(queryset, user)
         queryset = queryset.filter(path_list)
+        queryset = queryset.filter(ancestors_deleted_at__isnull=True)
 
         return queryset
 

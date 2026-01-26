@@ -152,6 +152,9 @@ def test_api_items_recents_mixing_explicit_and_inherited_accesses(
     other_items[0].updated_at = timezone.now()
     other_items[0].save()
 
+    # delete other_items 2, should not be in the results
+    other_items[2].soft_delete()
+
     client = APIClient()
     client.force_login(user)
 
@@ -159,12 +162,11 @@ def test_api_items_recents_mixing_explicit_and_inherited_accesses(
         response = client.get("/api/v1.0/items/recents/")
     assert response.status_code == 200
     content = response.json()
-    assert content["count"] == 8
+    assert content["count"] == 7
     assert content["results"][0]["id"] == str(other_items[0].id)
     assert content["results"][1]["id"] == str(items[0].id)
     assert content["results"][2]["id"] == str(parent.id)
-    assert content["results"][3]["id"] == str(other_items[2].id)
-    assert content["results"][4]["id"] == str(other_items[1].id)
-    assert content["results"][5]["id"] == str(other_parent.id)
-    assert content["results"][6]["id"] == str(items[2].id)
-    assert content["results"][7]["id"] == str(items[1].id)
+    assert content["results"][3]["id"] == str(other_items[1].id)
+    assert content["results"][4]["id"] == str(other_parent.id)
+    assert content["results"][5]["id"] == str(items[2].id)
+    assert content["results"][6]["id"] == str(items[1].id)
