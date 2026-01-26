@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(global) implement silent login feature and configuration integration
+
 ## [v0.11.1] - 2026-01-13
 
 ### Fixed
