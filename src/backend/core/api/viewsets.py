@@ -755,6 +755,14 @@ class ItemViewSet(
         )
         queryset = queryset.annotate_user_roles(user)
 
+        filterset = ItemFilter(
+            self.request.GET, queryset=queryset, request=self.request
+        )
+        if not filterset.is_valid():
+            raise drf.exceptions.ValidationError(filterset.errors)
+
+        queryset = filterset.filter_queryset(queryset)
+
         favorite_items_ids = models.ItemFavorite.objects.filter(user=user).values_list(
             "item_id", flat=True
         )
@@ -1070,6 +1078,14 @@ class ItemViewSet(
         """Get list of favorite items for the current user."""
         user = self.request.user
         queryset = self.get_queryset_for_descendants()
+
+        filterset = ItemFilter(
+            self.request.GET, queryset=queryset, request=self.request
+        )
+        if not filterset.is_valid():
+            raise drf.exceptions.ValidationError(filterset.errors)
+
+        queryset = filterset.filter_queryset(queryset)
 
         queryset = queryset.annotate_is_favorite(user)
         queryset = queryset.annotate_user_roles(user)
