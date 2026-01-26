@@ -760,7 +760,7 @@ class Item(TreeModel, BaseModel):
         can_update = (
             is_owner_or_admin or role == RoleChoices.EDITOR
         ) and not is_deleted
-        can_create_children = can_update and user.is_authenticated
+        can_update_connected = can_update and user.is_authenticated
         can_hard_delete = (
             is_owner
             if self.is_root
@@ -773,7 +773,7 @@ class Item(TreeModel, BaseModel):
             "accesses_view": has_access_role,
             "breadcrumb": can_get,
             "children_list": can_get,
-            "children_create": can_create_children,
+            "children_create": can_update_connected,
             "destroy": can_destroy,
             "hard_delete": can_hard_delete,
             "favorite": can_get and user.is_authenticated,
@@ -787,7 +787,7 @@ class Item(TreeModel, BaseModel):
             "media_auth": can_get,
             "partial_update": can_update,
             "update": can_update,
-            "upload_ended": can_update and user.is_authenticated,
+            "upload_ended": can_update_connected,
             "wopi": can_get,
         }
 
