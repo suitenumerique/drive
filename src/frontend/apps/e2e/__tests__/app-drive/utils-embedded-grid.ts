@@ -1,16 +1,36 @@
-import { expect, Page } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { PageOrLocator } from "./utils/types-utils";
 
-export const getRowItem = async (page: Page, itemName: string) => {
-  const row = page
+const getRowLocator = (page: PageOrLocator, itemName: string) => {
+  return page
     .getByRole("row", { name: itemName })
     .filter({ hasText: itemName })
     .first();
+};
 
+export const expectRowItem = async (page: PageOrLocator, itemName: string) => {
+  const row = getRowLocator(page, itemName);
+  await expect(row).toBeVisible();
+};
+
+export const expectRowItemIsNotVisible = async (
+  page: PageOrLocator,
+  itemName: string
+) => {
+  const row = getRowLocator(page, itemName);
+  await expect(row).not.toBeVisible();
+};
+
+export const getRowItem = async (page: PageOrLocator, itemName: string) => {
+  const row = getRowLocator(page, itemName);
   await expect(row).toBeVisible();
   return row;
 };
 
-export const getRowItemActions = async (page: Page, itemName: string) => {
+export const getRowItemActions = async (
+  page: PageOrLocator,
+  itemName: string
+) => {
   const row = await getRowItem(page, itemName);
   const actions = row
     .getByRole("button", {
@@ -23,13 +43,13 @@ export const getRowItemActions = async (page: Page, itemName: string) => {
 };
 
 export const clickOnRowItemActions = async (
-  page: Page,
+  page: PageOrLocator,
   itemName: string,
   actionName: string
 ) => {
   const actions = await getRowItemActions(page, itemName);
   await actions.click({ force: true }); // Because dnd-kit add an aria-disabled attribute on parent and playwright don't interact with it
-  const action = page.getByRole("menuitem", { name: "Info" });
+  const action = page.getByRole("menuitem", { name: actionName });
   await expect(action).toBeVisible();
   await action.click();
 };

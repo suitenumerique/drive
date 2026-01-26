@@ -1,15 +1,14 @@
 import { Item, ItemUploadState } from "@/features/drivers/types";
 import { ItemIcon } from "../icons/ItemIcon";
-import { Button, useModal } from "@openfun/cunningham-react";
+import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import { InfoRow } from "@/features/ui/components/info/InfoRow";
 import { useTranslation } from "react-i18next";
 
 import multipleSelection from "@/assets/mutliple-selection.png";
 import emptySelection from "@/assets/empty-selection.png";
-import { itemIsWorkspace } from "@/features/drivers/utils";
 import { IconSize } from "@gouvfr-lasuite/ui-kit";
-import { WorkspaceShareModal } from "../modals/share/WorkspaceShareModal";
+import { ItemShareModal } from "../modals/share/ItemShareModal";
 import { ItemInfo } from "@/features/items/components/ItemInfo";
 
 type ExplorerRightPanelContentProps = {
@@ -29,9 +28,6 @@ export const ExplorerRightPanelContent = ({
     firstSelectedItem?.upload_state === ItemUploadState.SUSPICIOUS ||
     firstSelectedItem?.upload_state ===
       ItemUploadState.FILE_TOO_LARGE_TO_ANALYZE;
-  const isWorkspace = firstSelectedItem
-    ? itemIsWorkspace(firstSelectedItem)
-    : false;
 
   if (!firstSelectedItem) {
     return (
@@ -110,7 +106,7 @@ export const ExplorerRightPanelContent = ({
               </div>
             </div>
           )}
-          {isWorkspace && (
+          {
             <InfoRow
               label={t("explorer.rightPanel.sharing")}
               rightContent={
@@ -130,13 +126,13 @@ export const ExplorerRightPanelContent = ({
                 )
               }
             />
-          )}
+          }
         </div>
 
         <ItemInfo item={firstSelectedItem} />
       </div>
-      {firstSelectedItem && isWorkspace && shareModal.isOpen && (
-        <WorkspaceShareModal
+      {firstSelectedItem && shareModal.isOpen && (
+        <ItemShareModal
           isOpen={shareModal.isOpen}
           onClose={shareModal.close}
           item={firstSelectedItem}

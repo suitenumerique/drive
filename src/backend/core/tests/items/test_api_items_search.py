@@ -44,49 +44,15 @@ def test_api_items_search_authenticated_without_filters():
 
     response = client.get("/api/v1.0/items/search/")
     assert response.status_code == 200
-    assert response.data["count"] == 4
+    assert response.data["count"] == 3
 
     assert response.json()["results"] == [
         {
-            "abilities": user.get_main_workspace().get_abilities(user),
-            "created_at": user.get_main_workspace()
-            .created_at.isoformat()
-            .replace("+00:00", "Z"),
-            "creator": {
-                "id": str(user.get_main_workspace().creator.id),
-                "full_name": user.get_main_workspace().creator.full_name,
-                "short_name": user.get_main_workspace().creator.short_name,
-            },
-            "deleted_at": None,
-            "depth": 1,
-            "description": None,
-            "filename": None,
-            "hard_delete_at": None,
-            "id": str(user.get_main_workspace().id),
-            "is_favorite": False,
-            "is_wopi_supported": False,
-            "link_reach": user.get_main_workspace().link_reach,
-            "link_role": user.get_main_workspace().link_role,
-            "main_workspace": True,
-            "mimetype": None,
-            "nb_accesses": 1,
-            "numchild": 0,
-            "numchild_folder": 0,
-            "parents": [],
-            "path": str(user.get_main_workspace().path),
-            "size": None,
-            "title": "Workspace",
-            "type": "folder",
-            "updated_at": user.get_main_workspace()
-            .updated_at.isoformat()
-            .replace("+00:00", "Z"),
-            "upload_state": None,
-            "url": None,
-            "url_preview": None,
-            "user_roles": ["owner"],
-        },
-        {
             "abilities": top_parent.get_abilities(user),
+            "ancestors_link_reach": None,
+            "ancestors_link_role": None,
+            "computed_link_reach": top_parent.computed_link_reach,
+            "computed_link_role": top_parent.computed_link_role,
             "created_at": top_parent.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
                 "id": str(top_parent.creator.id),
@@ -117,10 +83,14 @@ def test_api_items_search_authenticated_without_filters():
             "upload_state": None,
             "url": None,
             "url_preview": None,
-            "user_roles": [top_parent_access.role],
+            "user_role": top_parent_access.role,
         },
         {
             "abilities": parent.get_abilities(user),
+            "ancestors_link_reach": parent.ancestors_link_reach,
+            "ancestors_link_role": parent.ancestors_link_role,
+            "computed_link_reach": parent.computed_link_reach,
+            "computed_link_role": parent.computed_link_role,
             "created_at": parent.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
                 "id": str(parent.creator.id),
@@ -145,6 +115,10 @@ def test_api_items_search_authenticated_without_filters():
             "parents": [
                 {
                     "abilities": top_parent.get_abilities(user),
+                    "ancestors_link_reach": top_parent.ancestors_link_reach,
+                    "ancestors_link_role": top_parent.ancestors_link_role,
+                    "computed_link_reach": top_parent.computed_link_reach,
+                    "computed_link_role": top_parent.computed_link_role,
                     "created_at": top_parent.created_at.isoformat().replace(
                         "+00:00", "Z"
                     ),
@@ -178,7 +152,7 @@ def test_api_items_search_authenticated_without_filters():
                     "upload_state": None,
                     "url": None,
                     "url_preview": None,
-                    "user_roles": [top_parent_access.role],
+                    "user_role": top_parent_access.role,
                 }
             ],
             "path": str(parent.path),
@@ -189,10 +163,14 @@ def test_api_items_search_authenticated_without_filters():
             "upload_state": None,
             "url": None,
             "url_preview": None,
-            "user_roles": [top_parent_access.role],
+            "user_role": top_parent_access.role,
         },
         {
             "abilities": children.get_abilities(user),
+            "ancestors_link_reach": children.ancestors_link_reach,
+            "ancestors_link_role": children.ancestors_link_role,
+            "computed_link_reach": children.computed_link_reach,
+            "computed_link_role": children.computed_link_role,
             "created_at": children.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
                 "id": str(children.creator.id),
@@ -217,6 +195,10 @@ def test_api_items_search_authenticated_without_filters():
             "parents": [
                 {
                     "abilities": top_parent.get_abilities(user),
+                    "ancestors_link_reach": top_parent.ancestors_link_reach,
+                    "ancestors_link_role": top_parent.ancestors_link_role,
+                    "computed_link_reach": top_parent.computed_link_reach,
+                    "computed_link_role": top_parent.computed_link_role,
                     "created_at": top_parent.created_at.isoformat().replace(
                         "+00:00", "Z"
                     ),
@@ -250,10 +232,14 @@ def test_api_items_search_authenticated_without_filters():
                     "upload_state": None,
                     "url": None,
                     "url_preview": None,
-                    "user_roles": [top_parent_access.role],
+                    "user_role": top_parent_access.role,
                 },
                 {
                     "abilities": parent.get_abilities(user),
+                    "ancestors_link_reach": parent.ancestors_link_reach,
+                    "ancestors_link_role": parent.ancestors_link_role,
+                    "computed_link_reach": parent.computed_link_reach,
+                    "computed_link_role": parent.computed_link_role,
                     "created_at": parent.created_at.isoformat().replace("+00:00", "Z"),
                     "creator": {
                         "id": str(parent.creator.id),
@@ -283,7 +269,7 @@ def test_api_items_search_authenticated_without_filters():
                     "upload_state": None,
                     "url": None,
                     "url_preview": None,
-                    "user_roles": [top_parent_access.role],
+                    "user_role": top_parent_access.role,
                 },
             ],
             "path": str(children.path),
@@ -294,7 +280,7 @@ def test_api_items_search_authenticated_without_filters():
             "upload_state": "pending",
             "url": None,
             "url_preview": None,
-            "user_roles": [top_parent_access.role],
+            "user_role": top_parent_access.role,
         },
     ]
 
@@ -357,7 +343,7 @@ def test_api_items_search_authenticated_not_existing_filter():
 
     response = client.get("/api/v1.0/items/search/?foo=bar")
     assert response.status_code == 200
-    assert response.data["count"] == 4
+    assert response.data["count"] == 3
 
 
 @pytest.mark.parametrize(
@@ -406,6 +392,27 @@ def test_api_items_search_authenticated_with_title_filter(query, nb_results):
     assert response.data["count"] == nb_results
 
 
+def test_api_items_search_authenticated_with_title_filter_on_top_level_file():
+    """
+    Authenticated users should be able to search for items by title.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    factories.ItemFactory(
+        title="Item 1", users=[user], type=models.ItemTypeChoices.FILE
+    )
+
+    response = client.get("/api/v1.0/items/search/?title=Item")
+    assert response.status_code == 200
+    assert response.data["count"] == 1
+
+    response = client.get("/api/v1.0/items/search/?title=Item 2")
+    assert response.status_code == 200
+    assert response.data["count"] == 0
+
+
 def test_api_items_search_authenticated_by_type():
     """
     Authenticated users should be able to search for items by type.
@@ -423,8 +430,11 @@ def test_api_items_search_authenticated_by_type():
     factories.ItemFactory.create_batch(
         3, parent=top_parent, type=models.ItemTypeChoices.FOLDER
     )
+    other_top_parent = factories.ItemFactory(
+        title="Item 2", users=[user], type=models.ItemTypeChoices.FOLDER
+    )
     factories.ItemFactory.create_batch(
-        3, parent=user.get_main_workspace(), type=models.ItemTypeChoices.FILE
+        3, parent=other_top_parent, type=models.ItemTypeChoices.FILE
     )
 
     deleted_file = factories.ItemFactory(
@@ -438,15 +448,7 @@ def test_api_items_search_authenticated_by_type():
 
     response = client.get("/api/v1.0/items/search/?type=folder")
     assert response.status_code == 200
-    assert (
-        response.data["count"] == 3
-    )  # top_parent and user.get_main_workspace() are removed.
-
-    response = client.get("/api/v1.0/items/search/?type=workspace")
-    assert response.status_code == 200
-    assert (
-        response.data["count"] == 2
-    )  # top_parent and user.get_main_workspace() are workspaces.
+    assert response.data["count"] == 5
 
 
 def test_api_items_search_authenticated_filter_scopes():
@@ -466,8 +468,11 @@ def test_api_items_search_authenticated_filter_scopes():
     factories.ItemFactory.create_batch(
         3, parent=top_parent, type=models.ItemTypeChoices.FOLDER
     )
+    other_top_parent = factories.ItemFactory(
+        title="Item 2", users=[user], type=models.ItemTypeChoices.FOLDER
+    )
     factories.ItemFactory.create_batch(
-        3, parent=user.get_main_workspace(), type=models.ItemTypeChoices.FILE
+        3, parent=other_top_parent, type=models.ItemTypeChoices.FILE
     )
 
     deleted_file = factories.ItemFactory(
@@ -513,17 +518,18 @@ def test_api_items_search_authenticated_by_workspace():
     factories.ItemFactory.create_batch(
         3, parent=parent, type=models.ItemTypeChoices.FOLDER
     )
+    other_top_parent = factories.ItemFactory(
+        title="Item 2", users=[user], type=models.ItemTypeChoices.FOLDER
+    )
     factories.ItemFactory.create_batch(
-        3, parent=user.get_main_workspace(), type=models.ItemTypeChoices.FILE
+        3, parent=other_top_parent, type=models.ItemTypeChoices.FILE
     )
 
     response = client.get(f"/api/v1.0/items/search/?workspace={parent.id}")
     assert response.status_code == 200
     assert response.data["count"] == 7  # 6 children + 1 parent
 
-    response = client.get(
-        f"/api/v1.0/items/search/?workspace={user.get_main_workspace().id}"
-    )
+    response = client.get(f"/api/v1.0/items/search/?workspace={other_top_parent.id}")
     assert response.status_code == 200
     assert response.data["count"] == 4  # 3 children + 1 parent
 
@@ -548,6 +554,9 @@ def test_api_items_search_authenticated_combined_filters():
         "Annual Review 2024",
     ]
     parent_childrens = {parent.id: [] for parent in parents}
+    other_top_parent = factories.ItemFactory(
+        title="Item 2", users=[user], type=models.ItemTypeChoices.FOLDER
+    )
     for title in titles:
         parent = random.choice(parents)
         children = factories.ItemFactory(
@@ -555,7 +564,7 @@ def test_api_items_search_authenticated_combined_filters():
         )
         factories.ItemFactory(
             title=title,
-            parent=user.get_main_workspace(),
+            parent=other_top_parent,
             type=models.ItemTypeChoices.FILE,
         )
         parent_childrens[parent.id].append(children)
@@ -579,7 +588,7 @@ def test_api_items_search_authenticated_combined_filters():
     assert response.data["count"] == len(parent_childrens[parents[2].id])
 
     response = client.get(
-        f"/api/v1.0/items/search/?type=file&workspace={user.get_main_workspace().id}&title=Project"
+        f"/api/v1.0/items/search/?type=file&workspace={other_top_parent.id}&title=Project"
     )
     assert response.status_code == 200
     assert response.data["count"] == 2
@@ -642,14 +651,20 @@ def test_api_items_search_excludes_children_of_deleted_folders():
     client = APIClient()
     client.force_login(user)
 
+    top_parent = factories.ItemFactory(
+        title="Item 1",
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
     parent = factories.ItemFactory(
         title="folder A",
-        parent=user.get_main_workspace(),
+        parent=top_parent,
         type=models.ItemTypeChoices.FOLDER,
     )
     factories.ItemFactory(
         title="folder B",
-        parent=user.get_main_workspace(),
+        parent=top_parent,
         type=models.ItemTypeChoices.FOLDER,
     )
     factories.ItemFactory(
@@ -678,14 +693,20 @@ def test_api_items_search_deleted_folder_and_children_in_recycle_bin():
     client = APIClient()
     client.force_login(user)
 
+    top_parent = factories.ItemFactory(
+        title="Item 1",
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
     parent = factories.ItemFactory(
         title="folder A",
-        parent=user.get_main_workspace(),
+        parent=top_parent,
         type=models.ItemTypeChoices.FOLDER,
     )
     factories.ItemFactory(
         title="folder B",
-        parent=user.get_main_workspace(),
+        parent=top_parent,
         type=models.ItemTypeChoices.FOLDER,
     )
     factories.ItemFactory(

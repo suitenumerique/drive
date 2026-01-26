@@ -132,7 +132,7 @@ export const ExplorerFilterWorkspace = (props: {
 
   return (
     <Filter
-      label={t("explorer.filters.workspace.label")}
+      label={t("explorer.filters.folders.label")}
       options={options}
       selectedKey={props.value ?? null} // undefined would trigger "uncontrolled components become controlled" warning.
       onSelectionChange={props.onChange}

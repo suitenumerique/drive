@@ -77,7 +77,6 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "id": str(item.id),
                 "link_reach": item.link_reach,
                 "link_role": item.link_role,
-                "nb_accesses": item.nb_accesses,
                 "numchild": item.numchild,
                 "numchild_folder": item.numchild_folder,
                 "path": str(item.path),
@@ -88,7 +87,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "url": None,
                 "url_preview": None,
                 "mimetype": None,
-                "user_roles": ["reader"],
+                "user_role": "reader",
                 "main_workspace": False,
                 "filename": item.filename,
                 "size": None,
@@ -96,6 +95,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "is_favorite": True,
             }
         ],
     }
@@ -151,3 +151,68 @@ def test_api_item_favorite_list_with_suspicious_items():
     item_ids = [item["id"] for item in content["results"]]
     assert str(suspicious_item.id) in item_ids
     assert str(normal_item.id) in item_ids
+
+
+def test_api_item_favorite_list_children():
+    """
+    Children items should be listed in favorite list too.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent_item = factories.ItemFactory(
+        creator=user,
+        type=models.ItemTypeChoices.FOLDER,
+        title="parent",
+    )
+    child_item = factories.ItemFactory(
+        creator=user,
+        parent=parent_item,
+        type=models.ItemTypeChoices.FOLDER,
+        title="child",
+        favorited_by=[user],
+    )
+
+    factories.UserItemAccessFactory(item=parent_item, user=user)
+
+    response = client.get("/api/v1.0/items/favorite_list/")
+    assert response.status_code == 200
+    content = response.json()
+    assert content["count"] == 1
+    assert content["results"][0]["id"] == str(child_item.id)
+
+
+def test_api_item_favorite_list_filtering(django_assert_num_queries):
+    """
+    Test filtering the favorite list by type.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, users=[(user, models.RoleChoices.EDITOR)]
+    )
+    child_item = factories.ItemFactory(
+        parent=parent_item, type=models.ItemTypeChoices.FOLDER, favorited_by=[user]
+    )
+    file_item = factories.ItemFactory(
+        parent=parent_item, type=models.ItemTypeChoices.FILE, favorited_by=[user]
+    )
+
+    with django_assert_num_queries(5):
+        response = client.get("/api/v1.0/items/favorite_list/?type=folder")
+
+    assert response.status_code == 200
+    content = response.json()
+    assert content["count"] == 1
+    assert content["results"][0]["id"] == str(child_item.id)
+
+    with django_assert_num_queries(5):
+        response = client.get("/api/v1.0/items/favorite_list/?type=file")
+
+    assert response.status_code == 200
+    content = response.json()
+    assert content["count"] == 1
+    assert content["results"][0]["id"] == str(file_item.id)

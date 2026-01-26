@@ -98,14 +98,18 @@ def create_dev_users():
 
 def create_item(user):
     """Create file item with the given user as creator"""
-    workspace = user.get_main_workspace()
+    parent = factories.ItemFactory(
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
         update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.AUTHENTICATED,
         link_role=models.LinkRoleChoices.READER,
         creator=user,
-        parent=workspace,
+        parent=parent,
         title=fake.sentence(nb_words=4),
         filename="content.txt",
         description=fake.sentence(nb_words=10),

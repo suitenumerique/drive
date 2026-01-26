@@ -1,12 +1,13 @@
 import { CellContext } from "@tanstack/react-table";
-import { Item } from "@/features/drivers/types";
-import { useEffect, useRef, useState } from "react";
+import { Item, LinkReach } from "@/features/drivers/types";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Draggable } from "@/features/explorer/components/Draggable";
-import { Tooltip } from "@openfun/cunningham-react";
+import { Tooltip } from "@gouvfr-lasuite/cunningham-react";
 import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { useDisableDragGridItem } from "@/features/explorer/components/embedded-explorer/hooks";
-import { useEmbeddedExplorerGirdContext } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGrid";
 import { removeFileExtension } from "../../utils/mimeTypes";
+import { Icon, IconSize } from "@gouvfr-lasuite/ui-kit";
+import { useEmbeddedExplorerGirdContext } from "./EmbeddedExplorerGrid";
 export type EmbeddedExplorerGridNameCellProps = CellContext<Item, string> & {
   children?: React.ReactNode;
 };
@@ -59,6 +60,16 @@ export const EmbeddedExplorerGridNameCell = (
     };
   }, [item.title]);
 
+  const rightIcon = useMemo(() => {
+    let icon: string | null = null;
+    if (item.link_reach === LinkReach.PUBLIC) {
+      icon = "public";
+    } else if (item.nb_accesses && item.nb_accesses > 1) {
+      icon = "people";
+    }
+    return icon;
+  }, [item.link_reach, item.nb_accesses]);
+
   return (
     <Draggable id={params.cell.id} item={item} disabled={disableDrag}>
       <div className="explorer__grid__item__name">
@@ -67,6 +78,13 @@ export const EmbeddedExplorerGridNameCell = (
           <Tooltip content={item.title}>{renderTitle()}</Tooltip>
         ) : (
           renderTitle()
+        )}
+        {rightIcon && (
+          <Icon
+            name={rightIcon}
+            size={IconSize.SMALL}
+            color="var(--c--contextuals--content--semantic--neutral--tertiary)"
+          />
         )}
       </div>
     </Draggable>

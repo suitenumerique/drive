@@ -13,7 +13,7 @@ import {
   Decision,
   useModal,
   useModals,
-} from "@openfun/cunningham-react";
+} from "@gouvfr-lasuite/cunningham-react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import undoIcon from "@/assets/icons/undo_blue.svg";
@@ -43,7 +43,10 @@ export default function TrashPage() {
       gridActionsCell={ExplorerGridTrashActionsCell}
       disableItemDragAndDrop={true}
       gridHeader={
-        <div className="explorer__content__breadcrumbs">
+        <div
+          className="explorer__content__breadcrumbs"
+          data-testid="trash-page-breadcrumbs"
+        >
           <div className="explorer__content__header__title">
             {t("explorer.trash.title")}
           </div>

@@ -1,5 +1,5 @@
 import { Item } from "@/features/drivers/types";
-import { Button, Modal, ModalSize } from "@openfun/cunningham-react";
+import { Button, Modal, ModalSize } from "@gouvfr-lasuite/cunningham-react";
 import { Trans, useTranslation } from "react-i18next";
 
 export type ConfirmationMoveState = {
@@ -15,6 +15,7 @@ type ExplorerTreeMoveConfirmationModalProps = {
   targetItem: Item;
   onMove: () => void;
   itemsCount?: number;
+  isMoveToRoot?: boolean;
 };
 
 export const ExplorerTreeMoveConfirmationModal = ({
@@ -23,6 +24,7 @@ export const ExplorerTreeMoveConfirmationModal = ({
   sourceItem,
   targetItem,
   itemsCount = 1,
+  isMoveToRoot = false,
   onMove,
 }: ExplorerTreeMoveConfirmationModalProps) => {
   const { t } = useTranslation();
@@ -31,6 +33,9 @@ export const ExplorerTreeMoveConfirmationModal = ({
       isOpen={isOpen}
       onClose={onClose}
       size={ModalSize.MEDIUM}
+      aria-label={t(
+        "explorer.tree.workspace.move.confirmation_modal.aria_label"
+      )}
       rightActions={
         <>
           <Button variant="bordered" onClick={onClose}>
@@ -47,18 +52,26 @@ export const ExplorerTreeMoveConfirmationModal = ({
     >
       <div>
         <p>
-          <Trans
-            i18nKey={
-              itemsCount > 1
-                ? "explorer.tree.workspace.move.confirmation_modal.description_multiple"
-                : "explorer.tree.workspace.move.confirmation_modal.description"
-            }
-            values={{
-              count: itemsCount,
-              sourceItem: sourceItem.title,
-              targetItem: targetItem.title,
-            }}
-          />
+          {isMoveToRoot ? (
+            <Trans
+              i18nKey={
+                "explorer.tree.workspace.move.confirmation_modal.root_description"
+              }
+            />
+          ) : (
+            <Trans
+              i18nKey={
+                itemsCount > 1
+                  ? "explorer.tree.workspace.move.confirmation_modal.description_multiple"
+                  : "explorer.tree.workspace.move.confirmation_modal.description"
+              }
+              values={{
+                count: itemsCount,
+                sourceItem: sourceItem.title,
+                targetItem: targetItem.title,
+              }}
+            />
+          )}
         </p>
       </div>
     </Modal>

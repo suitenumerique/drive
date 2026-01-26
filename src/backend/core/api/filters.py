@@ -1,6 +1,6 @@
 """API filters for drive' core application."""
 
-from django.db.models import Exists, OuterRef, Q, TextChoices
+from django.db.models import Q, TextChoices
 from django.utils.translation import gettext_lazy as _
 
 import django_filters
@@ -44,13 +44,6 @@ class SearchItemFilter(ItemFilter):
         method="filter_workspace", label=_("Workspace")
     )
 
-    type = django_filters.ChoiceFilter(
-        field_name="type",
-        label=_("Type"),
-        choices=models.ItemTypeChoices.choices + [("workspace", _("Workspace"))],
-        method="filter_type",
-    )
-
     scope = django_filters.MultipleChoiceFilter(
         field_name="scopes",
         label=_("Scopes"),
@@ -89,20 +82,6 @@ class SearchItemFilter(ItemFilter):
         """
         return queryset
 
-    def filter_type(self, queryset, name, value):
-        """
-        Filter items based on their type.
-        """
-        if value == "workspace":
-            return queryset.filter(path__depth=1, type=models.ItemTypeChoices.FOLDER)
-        if value == "folder":
-            return queryset.filter(
-                path__depth__gt=1, type=models.ItemTypeChoices.FOLDER
-            )
-        if value == "file":
-            return queryset.filter(type=models.ItemTypeChoices.FILE)
-        return queryset
-
     def filter_scope(self, queryset, name, value):
         """Filter items based on their scopes."""
         to_filter = Q()
@@ -126,15 +105,9 @@ class ListItemFilter(ItemFilter):
         method="filter_is_favorite", label=_("Favorite")
     )
 
-    workspaces = django_filters.ChoiceFilter(
-        label=_("Workspaces"),
-        choices=WorkspacesChoices.choices,
-        method="filter_workspaces",
-    )
-
     class Meta:
         model = models.Item
-        fields = ["is_creator_me", "is_favorite", "title"]
+        fields = ["is_creator_me", "is_favorite", "title", "type"]
 
     # pylint: disable=unused-argument
     def filter_is_creator_me(self, queryset, name, value):
@@ -174,24 +147,3 @@ class ListItemFilter(ItemFilter):
             return queryset
 
         return queryset.filter(is_favorite=bool(value))
-
-    def filter_workspaces(self, queryset, name, value):
-        """Filter items based on their workspace."""
-        user = self.request.user
-
-        if not user.is_authenticated or not value:
-            return queryset
-
-        item_access_queryset = models.ItemAccess.objects.filter(
-            Q(user=user) | Q(team__in=user.teams),
-            item__path__ancestors=OuterRef("path"),
-        )
-
-        if value == WorkspacesChoices.PUBLIC:
-            return queryset.filter(link_reach=models.LinkReachChoices.PUBLIC).filter(
-                ~Q(Exists(item_access_queryset))
-            )
-        if value == WorkspacesChoices.SHARED:
-            return queryset.filter(Exists(item_access_queryset))
-
-        return queryset

@@ -1,18 +1,15 @@
 import test, { expect } from "@playwright/test";
-import { clearDb, getStorageState, login } from "./utils-common";
+import { clearDb, login } from "./utils-common";
 
 test("Create a folder", async ({ page }) => {
   await clearDb();
   await login(page, "drive@example.com");
 
   await page.goto("/");
+  await expect(page.getByText("This tab is empty")).toBeVisible();
+  await expect(page.getByText("Import or create files and")).toBeVisible();
+  await page.getByRole("button", { name: "Create Folder" }).click();
 
-  await expect(page.getByText("Drop your files here")).toBeVisible();
-  await expect(
-    page.getByRole("cell", { name: "My first folder" })
-  ).not.toBeVisible();
-  await page.getByRole("button", { name: "add Create" }).click();
-  await page.getByText("New folder").click();
   await page
     .getByRole("textbox", { name: "Folder name" })
     .fill("My first folder");

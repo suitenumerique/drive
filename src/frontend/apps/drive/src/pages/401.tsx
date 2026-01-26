@@ -1,7 +1,7 @@
 import { login } from "@/features/auth/Auth";
 import { getSimpleLayout } from "@/features/layouts/components/simple/SimpleLayout";
 import { GenericDisclaimer } from "@/features/ui/components/generic-disclaimer/GenericDisclaimer";
-import { Button } from "@openfun/cunningham-react";
+import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
 
 export default function UnauthorizedPage() {
