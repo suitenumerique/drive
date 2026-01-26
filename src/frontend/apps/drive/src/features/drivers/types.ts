@@ -165,6 +165,7 @@ export type ApiConfig = {
   FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH?: string;
   FRONTEND_THEME?: string;
   FRONTEND_HIDE_GAUFRE?: boolean;
+  FRONTEND_SILENT_LOGIN_ENABLED?: boolean;
   theme_customization?: ThemeCustomization;
 };
 
