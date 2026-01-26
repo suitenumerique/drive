@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - 🏗️(ds_proxy) introduce how to use ds_proxy with Drive
+- ✨(global) implement silent login feature and configuration integration
 
 ### Changed
 
@@ -23,7 +24,6 @@ and this project adheres to
 ### Security
 
 - 🔒️(backend) prevent mismatch mimetype between object storage and application
-
 
 ## [v0.11.1] - 2026-01-13
 
