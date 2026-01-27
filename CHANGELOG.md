@@ -12,6 +12,10 @@ and this project adheres to
 
 - 🏗️ (ds_proxy) introduce how to use ds_proxy with Drive
 
+### Fixed 
+
+- 🐛(backend) correctly configure celery beat to run wopi configuration
+
 ## [v0.11.1] - 2026-01-13
 
 ### Fixed

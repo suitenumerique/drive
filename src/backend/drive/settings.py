@@ -833,7 +833,6 @@ class Base(Configuration):
         "drf_standardized_errors",
         # Third party apps
         "corsheaders",
-        "django_celery_beat",
         "django_filters",
         "dockerflow.django",
         "rest_framework",
@@ -1049,7 +1048,6 @@ class Base(Configuration):
     # Celery
     CELERY_BROKER_URL = values.Value("redis://redis:6379/0")
     CELERY_BROKER_TRANSPORT_OPTIONS = values.DictValue({})
-    CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
     # Session
     SESSION_ENGINE = "django.contrib.sessions.backends.cache"
@@ -1389,6 +1387,21 @@ class Base(Configuration):
     )
     WOPI_DISABLE_CHAT = values.IntegerValue(
         0, environ_name="WOPI_DISABLE_CHAT", environ_prefix=None
+    )
+
+    WOPI_CONFIGURATION_CRONTAB_MINUTE = values.Value(
+        0, environ_name="WOPI_CONFIGURATION_CRONTAB_MINUTE", environ_prefix=None
+    )
+    WOPI_CONFIGURATION_CRONTAB_HOUR = values.Value(
+        3, environ_name="WOPI_CONFIGURATION_CRONTAB_HOUR", environ_prefix=None
+    )
+    WOPI_CONFIGURATION_CRONTAB_DAY_OF_MONTH = values.Value(
+        "*", environ_name="WOPI_CONFIGURATION_CRONTAB_DAY_OF_MONTH", environ_prefix=None
+    )
+    WOPI_CONFIGURATION_CRONTAB_MONTH_OF_YEAR = values.Value(
+        "*",
+        environ_name="WOPI_CONFIGURATION_CRONTAB_MONTH_OF_YEAR",
+        environ_prefix=None,
     )
 
     # Malware detection
