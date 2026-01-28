@@ -302,3 +302,57 @@ def test_api_item_upload_ended_mimetype_not_allowed_not_checking_mimetype(settin
     assert item.size == 8
 
     assert response.json()["mimetype"] == "text/plain"
+
+
+def test_api_upload_ended_mismatch_mimetype_with_object_storage(caplog):
+    """
+    Object on storage should have the same mimetype than the one saved in the
+    Item object.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=ItemTypeChoices.FILE,
+        filename="my_file.pdf",
+        title="my_file.pdf",
+        users=[(user, "owner")],
+    )
+
+    s3_client = default_storage.connection.meta.client
+
+    s3_client.put_object(
+        Bucket=default_storage.bucket_name,
+        Key=item.file_key,
+        ContentType="text/html",
+        Body=BytesIO(
+            b'<meta http-equiv="refresh" content="0; url=https://fichiers.numerique.gouv.fr">'
+        ),
+        Metadata={
+            "foo": "bar",
+        },
+    )
+
+    head_object = s3_client.head_object(
+        Bucket=default_storage.bucket_name, Key=item.file_key
+    )
+
+    assert head_object["ContentType"] == "text/html"
+    with caplog.at_level(logging.INFO, logger="core.api.viewsets"):
+        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+    assert (
+        "upload_ended: content type mismatch between object storage and item, "
+        "updating from text/html to application/pdf" in caplog.text
+    )
+    assert response.status_code == 200
+
+    item.refresh_from_db()
+
+    assert item.mimetype == "application/pdf"
+
+    head_object = s3_client.head_object(
+        Bucket=default_storage.bucket_name, Key=item.file_key
+    )
+    assert head_object["ContentType"] == "application/pdf"
+    assert head_object["Metadata"] == {"foo": "bar"}

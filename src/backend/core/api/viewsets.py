@@ -23,6 +23,7 @@ from django.utils.text import slugify
 
 import posthog
 import rest_framework as drf
+from botocore.exceptions import ClientError
 from corsheaders.middleware import (
     ACCESS_CONTROL_ALLOW_METHODS,
     ACCESS_CONTROL_ALLOW_ORIGIN,
@@ -708,6 +709,7 @@ class ItemViewSet(
             )["Body"].read()
 
         # Use improved MIME type detection combining magic bytes and file extension
+        logger.info("upload_ended: detecting mimetype for file: %s", item.file_key)
         mimetype = utils.detect_mimetype(file_head, filename=item.filename)
 
         if (
@@ -730,6 +732,35 @@ class ItemViewSet(
         item.size = file_size
 
         item.save(update_fields=["upload_state", "mimetype", "size"])
+
+        if head_response["ContentType"] != mimetype:
+            logger.info(
+                "upload_ended: content type mismatch between object storage and item,"
+                " updating from %s to %s",
+                head_response["ContentType"],
+                mimetype,
+            )
+            try:
+                s3_client.copy_object(
+                    Bucket=default_storage.bucket_name,
+                    Key=item.file_key,
+                    CopySource={
+                        "Bucket": default_storage.bucket_name,
+                        "Key": item.file_key,
+                    },
+                    ContentType=mimetype,
+                    Metadata=head_response["Metadata"],
+                    MetadataDirective="REPLACE",
+                )
+            except ClientError as error:
+                # Log an exception but don't stop the action.
+                logger.exception(
+                    "Changing content type of item %s on object storage failed with error code %s"
+                    " and error message %s",
+                    item.id,
+                    error.response["Error"]["Code"],
+                    error.response["Error"]["Message"],
+                )
 
         malware_detection.analyse_file(item.file_key, item_id=item.id)
 
