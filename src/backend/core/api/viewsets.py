@@ -882,6 +882,26 @@ class ItemViewSet(
             status=status.HTTP_200_OK,
         )
 
+
+    @drf.decorators.action(
+        detail=True,
+        methods=["get"],
+    )
+    def download(self, request, *args, **kwargs):
+        """
+        Restore a soft-deleted item if it was deleted less than x days ago.
+        """
+        item = self.get_object()
+        serializer = serializers.ItemSerializer(item)
+        print(serializer.data)
+        url = serializer.data.get("url")
+        if url:
+            return drf_response.Response(
+                status=status.HTTP_302_FOUND,
+                headers={"Location": url}
+            )
+        raise drf.exceptions.PermissionDenied()
+
     @drf.decorators.action(
         detail=True,
         methods=["get", "post"],
