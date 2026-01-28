@@ -16,6 +16,14 @@ This document lists all configurable environment variables for the Drive applica
 | `AWS_S3_REGION_NAME` | AWS S3 region name for file storage | `None` |
 | `AWS_S3_SECRET_ACCESS_KEY` | AWS S3 secret access key for file storage | `None` |
 | `AWS_S3_UPLOAD_POLICY_EXPIRATION` | AWS S3 upload policy expiration time in seconds | `86400` (24h) |
+| `AWS_S3_MIRRORING_ACCESS_KEY_ID` | AWS S3 access key id for the mirroring bucket | None |
+| `AWS_S3_MIRRORING_SECRET_ACCESS_KEY` | AWS S3 secret access key for the mirroring bucket | None |
+| `AWS_S3_MIRRORING_STORAGE_BUCKET_NAME` | AWS S3 bucket name for the mirroring bucket | None |
+| `AWS_S3_MIRRORING_ENDPOINT_URL` | AWS S3 endpoint url for the mirroring bucket | None |
+| `AWS_S3_MIRRORING_REGION_NAME` | AWS S3 region name for the mirroring bucket | None |
+| `AWS_S3_MIRRORING_SIGNATURE_VERSION` | AWS S3 signature version for the mirroring bucket | `s3v4` |
+| `AWS_S3_MIRRORING_REQUEST_CHECKSUM_CALCULATION` | AWS S3 request checksum calculation config for the mirroring bucket | `when_supported` |
+| `AWS_S3_MIRRORING_RESPONSE_CHECKSUM_VALIDATION` | AWS S3 response checksum calculation config for the mirroring bucket | `when_supported` |
 | `AWS_STORAGE_BUCKET_NAME` | AWS S3 bucket name for file storage | `drive-media-storage` |
 | `CACHES_DEFAULT_TIMEOUT` | Default cache timeout in seconds | `30` |
 | `CELERY_BROKER_URL` | Celery broker URL for task queue | `redis://redis:6379/0` |
