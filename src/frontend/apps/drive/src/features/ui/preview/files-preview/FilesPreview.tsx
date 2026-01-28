@@ -9,7 +9,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ImageViewer } from "../image-viewer/ImageViewer";
 import { VideoPlayer } from "../video-player/VideoPlayer";
 import { AudioPlayer } from "../audio-player/AudioPlayer";
-import { PreviewPdf } from "../pdf-preview/PreviewPdf";
 
 import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
 import { FileIcon } from "@/features/explorer/components/icons/ItemIcon";
@@ -17,7 +16,23 @@ import { useTranslation } from "react-i18next";
 import { SuspiciousPreview } from "../suspicious/SuspiciousPreview";
 import { WopiEditor } from "../wopi/WopiEditor";
 import posthog from "posthog-js";
+import dynamic from "next/dynamic";
 
+const PreviewPdf = dynamic(
+  () => import("../pdf-preview/PreviewPdf")
+    .then((mod) => {
+      console.log('PreviewPdf module loaded:', mod);
+      return mod.PreviewPdf;
+    })
+    .catch((err) => {
+      console.error('Error loading PreviewPdf:', err);
+      return () => <div>Error loading PDF viewer</div>;
+    }),
+  { 
+    ssr: false,
+    loading: () => <div>Loading PDF...</div>
+  }
+);
 export type FilePreviewType = {
   id: string;
   size: number;
