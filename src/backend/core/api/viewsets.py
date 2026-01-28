@@ -49,6 +49,7 @@ from core.services.search_indexers import (
     get_visited_items_ids_of,
 )
 from core.tasks.item import process_item_deletion, rename_file
+from core.tasks.storage import mirror_file
 from wopi.services import access as access_service
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
 
@@ -733,6 +734,7 @@ class ItemViewSet(
                 )
 
         malware_detection.analyse_file(item.file_key, item_id=item.id)
+        mirror_file.delay(item.file_key)
 
         serializer = self.get_serializer(item)
 
