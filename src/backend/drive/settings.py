@@ -14,8 +14,6 @@ import os
 import tomllib
 from socket import gethostbyname, gethostname
 
-from boto3.s3.transfer import TransferConfig
-
 from django.utils.translation import gettext_lazy as _
 
 import dj_database_url
@@ -234,6 +232,43 @@ class Base(Configuration):
     )
     AWS_S3_DOMAIN_REPLACE = values.Value(
         environ_name="AWS_S3_DOMAIN_REPLACE",
+        environ_prefix=None,
+    )
+
+    # Miroring S3 settings
+    AWS_S3_MIRRORING_ACCESS_KEY_ID = SecretFileValue(
+        environ_name="AWS_S3_MIRRORING_ACCESS_KEY_ID",
+        environ_prefix=None,
+    )
+    AWS_S3_MIRRORING_SECRET_ACCESS_KEY = SecretFileValue(
+        environ_name="AWS_S3_MIRRORING_SECRET_ACCESS_KEY",
+        environ_prefix=None,
+    )
+    AWS_S3_MIRRORING_STORAGE_BUCKET_NAME = values.Value(
+        environ_name="AWS_S3_MIRRORING_STORAGE_BUCKET_NAME",
+        environ_prefix=None,
+    )
+    AWS_S3_MIRRORING_ENDPOINT_URL = values.Value(
+        environ_name="AWS_S3_MIRRORING_ENDPOINT_URL",
+        environ_prefix=None,
+    )
+    AWS_S3_MIRRORING_REGION_NAME = values.Value(
+        environ_name="AWS_S3_MIRRORING_REGION_NAME",
+        environ_prefix=None,
+    )
+    AWS_S3_MIRRORING_SIGNATURE_VERSION = values.Value(
+        "s3v4",
+        environ_name="AWS_S3_MIRRORING_SIGNATURE_VERSION",
+        environ_prefix=None,
+    )
+    AWS_S3_MIRRORING_REQUEST_CHECKSUM_CALCULATION = values.Value(
+        "when_supported",
+        environ_name="AWS_S3_MIRRORING_REQUEST_CHECKSUM_CALCULATION",
+        environ_prefix=None,
+    )
+    AWS_S3_MIRRORING_RESPONSE_CHECKSUM_VALIDATION = values.Value(
+        "when_supported",
+        environ_name="AWS_S3_MIRRORING_RESPONSE_CHECKSUM_VALIDATION",
         environ_prefix=None,
     )
 
