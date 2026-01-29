@@ -28,6 +28,7 @@ share/python-wheels/
 MANIFEST
 .DS_Store
 .next/
+celerybeat-schedule*
 
 # Translations	# Translations
 *.mo

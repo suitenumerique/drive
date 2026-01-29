@@ -20,6 +20,10 @@ and this project adheres to
 
 - 🔒️(backend) prevent mismatch mimetype between object storage and application
 
+### Fixed 
+
+- 🐛(backend) correctly configure celery beat to run wopi configuration
+
 ## [v0.11.1] - 2026-01-13
 
 ### Fixed
