@@ -9,12 +9,59 @@ import 'react-pdf/dist/Page/TextLayer.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-// const options = ;
+const options = {
+  cMapUrl: '/cmaps/',
+  standardFontDataUrl: '/standard_fonts/',
+  wasmUrl: '/wasm/',
+  isEvalSupported: false,
+};
 
 const BASE_WIDTH = 800;
 const ZOOM_STEP = 0.25;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2;
+
+
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  timeout = 300
+): ((...args: Parameters<T>) => void) & { cancel: () => void } {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const debouncedFunc = (...args: Parameters<T>) => {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+    timer = setTimeout(() => {
+      func(...args);
+    }, timeout);
+  };
+  debouncedFunc.cancel = () => {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+  };
+  return debouncedFunc;
+}
+
+const useDebouncedResize = () => {
+  const [size, setSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+
+  useEffect(() => {
+    const handleResize = debounce(() => {
+      setSize({ width: window.innerWidth, height: window.innerHeight });
+    }, 100);
+    window.addEventListener("resize", handleResize);
+    return () => {
+      handleResize.cancel();
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  return size;
+};
 
 export function PreviewPdf({ src }: { src: string }) {
   const [file, setFile] = useState<File | null>(null);
@@ -26,6 +73,20 @@ export function PreviewPdf({ src }: { src: string }) {
   const [error, setError] = useState<string | null>(null);
   const modals = useModals();
   const { t } = useTranslation();
+  const size = useDebouncedResize();
+
+  const getWidth = () => {
+    if (size.width < BASE_WIDTH) {
+      return size.width;
+    }
+    return BASE_WIDTH;
+  }
+
+  
+  const [width, setWidth] = useState(getWidth());
+  useEffect(() => {
+    setWidth(getWidth());
+  }, [size.width]);
 
   useEffect(() => {
     const fetchPdf = async () => {
@@ -164,15 +225,10 @@ export function PreviewPdf({ src }: { src: string }) {
           style={{ transform: `scale(${zoom})` }}
           onClick={handlePdfClick}
         >
-          <Document file={file} onLoadSuccess={onDocumentLoadSuccess} options={{
-  cMapUrl: '/cmaps/',
-  standardFontDataUrl: '/standard_fonts/',
-  wasmUrl: '/wasm/',
-  isEvalSupported: false,
-}}>
+          <Document file={file} onLoadSuccess={onDocumentLoadSuccess} options={options}>
             <Page
               pageNumber={currentPage}
-              width={BASE_WIDTH}
+              width={width}
             />
           </Document>
         </div>
