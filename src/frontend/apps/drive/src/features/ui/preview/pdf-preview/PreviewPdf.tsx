@@ -1,18 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { Button } from '@openfun/cunningham-react';
+import { Button, useModals } from '@openfun/cunningham-react';
 import { Icon } from '@gouvfr-lasuite/ui-kit';
+import { useTranslation } from 'react-i18next';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-const options = {
-  cMapUrl: '/cmaps/',
-  standardFontDataUrl: '/standard_fonts/',
-  wasmUrl: '/wasm/',
-};
+// const options = ;
 
 const BASE_WIDTH = 800;
 const ZOOM_STEP = 0.25;
@@ -27,6 +24,8 @@ export function PreviewPdf({ src }: { src: string }) {
   const [pageInputValue, setPageInputValue] = useState<string>('1');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const modals = useModals();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const fetchPdf = async () => {
@@ -110,6 +109,30 @@ export function PreviewPdf({ src }: { src: string }) {
     setZoom(1);
   }, []);
 
+  const handlePdfClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const anchor = target.closest('a');
+
+    if (anchor && anchor.href) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      modals.confirmationModal({
+        title: t('file_preview.external_link.title'),
+        children: (<div>
+          <p>{t('file_preview.external_link.description')}</p>
+          <pre className="pdf-preview__external-link">{anchor.href}</pre>
+          <p>{t('file_preview.external_link.confirm_question')}</p>
+        </div>),
+        onDecide: (decision) => {
+          if (decision === 'yes') {
+            window.open(anchor.href, '_blank', 'noopener,noreferrer');
+          }
+        },
+      });
+    }
+  }, [modals, t]);
+
   if (isLoading) {
     return (
       <div className="pdf-preview">
@@ -139,8 +162,14 @@ export function PreviewPdf({ src }: { src: string }) {
         <div
           className="pdf-preview__page-wrapper"
           style={{ transform: `scale(${zoom})` }}
+          onClick={handlePdfClick}
         >
-          <Document file={file} onLoadSuccess={onDocumentLoadSuccess} options={options}>
+          <Document file={file} onLoadSuccess={onDocumentLoadSuccess} options={{
+  cMapUrl: '/cmaps/',
+  standardFontDataUrl: '/standard_fonts/',
+  wasmUrl: '/wasm/',
+  isEvalSupported: false,
+}}>
             <Page
               pageNumber={currentPage}
               width={BASE_WIDTH}
