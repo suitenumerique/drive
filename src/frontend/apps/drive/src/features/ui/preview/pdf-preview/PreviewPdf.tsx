@@ -6,6 +6,7 @@ import { Icon } from '@gouvfr-lasuite/ui-kit';
 import { useTranslation } from 'react-i18next';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
+import { TransformComponent, TransformWrapper, useControls } from 'react-zoom-pan-pinch';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -67,6 +68,7 @@ export function PreviewPdf({ src }: { src: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [numPages, setNumPages] = useState<number>(1);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  
   const [zoom, setZoom] = useState<number>(1);
   const [pageInputValue, setPageInputValue] = useState<string>('1');
   const [isLoading, setIsLoading] = useState(true);
@@ -158,17 +160,17 @@ export function PreviewPdf({ src }: { src: string }) {
     }
   };
 
-  const zoomIn = useCallback(() => {
-    setZoom((prev) => Math.min(MAX_ZOOM, prev + ZOOM_STEP));
-  }, []);
+  // const zoomIn = useCallback(() => {
+  //   setZoom((prev) => Math.min(MAX_ZOOM, prev + ZOOM_STEP));
+  // }, []);
 
-  const zoomOut = useCallback(() => {
-    setZoom((prev) => Math.max(MIN_ZOOM, prev - ZOOM_STEP));
-  }, []);
+  // const zoomOut = useCallback(() => {
+  //   setZoom((prev) => Math.max(MIN_ZOOM, prev - ZOOM_STEP));
+  // }, []);
 
-  const resetZoom = useCallback(() => {
-    setZoom(1);
-  }, []);
+  // const resetZoom = useCallback(() => {
+  //   setZoom(1);
+  // }, []);
 
   const handlePdfClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -218,85 +220,96 @@ export function PreviewPdf({ src }: { src: string }) {
   }
 
   return (
-    <div className="pdf-preview">
-      <div className="pdf-preview__container">
-        <div
-          className="pdf-preview__page-wrapper"
-          style={{ transform: `scale(${zoom})` }}
-          onClick={handlePdfClick}
-        >
-          <Document file={file} onLoadSuccess={onDocumentLoadSuccess} options={options}>
-            <Page
-              pageNumber={currentPage}
-              width={width}
-            />
-          </Document>
+    <TransformWrapper wheel={{ disabled: true }}>
+      <div className="pdf-preview">
+        <div className="pdf-preview__container">
+          
+            <TransformComponent>
+              <div
+                className="pdf-preview__page-wrapper"
+                onClick={handlePdfClick}
+              >
+                <Document file={file} onLoadSuccess={onDocumentLoadSuccess} options={options}>
+                  <Page
+                    pageNumber={currentPage}
+                    width={width}
+                  />
+                </Document>
+              </div>
+            </TransformComponent>
+          
+        </div>
+        <div className="pdf-preview__controls">
+          <div className="pdf-preview__page-nav">
+            <Button
+              variant="tertiary"
+              color="neutral"
+              onClick={goToPreviousPage}
+              disabled={currentPage <= 1}
+              aria-label="Previous page"
+            >
+              <Icon name="chevron_left" />
+            </Button>
+            <div className="pdf-preview__page-indicator">
+              <input
+                type="text"
+                className="pdf-preview__page-input"
+                value={pageInputValue}
+                onChange={handlePageInputChange}
+                onBlur={handlePageInputSubmit}
+                onKeyDown={handlePageInputKeyDown}
+                aria-label="Current page"
+              />
+              <span className="pdf-preview__page-total">/ {numPages}</span>
+            </div>
+            <Button
+              variant="tertiary"
+              color="neutral"
+              onClick={goToNextPage}
+              disabled={currentPage >= numPages}
+              aria-label="Next page"
+            >
+              <Icon name="chevron_right" />
+            </Button>
+          </div>
+          <div className="controls-vertical-separator" />
+          <Controls />
         </div>
       </div>
-      <div className="pdf-preview__controls">
-        <div className="pdf-preview__page-nav">
-          <Button
-            variant="tertiary"
-            color="neutral"
-            onClick={goToPreviousPage}
-            disabled={currentPage <= 1}
-            aria-label="Previous page"
-          >
-            <Icon name="chevron_left" />
-          </Button>
-          <div className="pdf-preview__page-indicator">
-            <input
-              type="text"
-              className="pdf-preview__page-input"
-              value={pageInputValue}
-              onChange={handlePageInputChange}
-              onBlur={handlePageInputSubmit}
-              onKeyDown={handlePageInputKeyDown}
-              aria-label="Current page"
-            />
-            <span className="pdf-preview__page-total">/ {numPages}</span>
-          </div>
-          <Button
-            variant="tertiary"
-            color="neutral"
-            onClick={goToNextPage}
-            disabled={currentPage >= numPages}
-            aria-label="Next page"
-          >
-            <Icon name="chevron_right" />
-          </Button>
-        </div>
-        <div className="controls-vertical-separator" />
-        <div className="zoom-control">
-          <Button
-            variant="tertiary"
-            color="neutral"
-            onClick={zoomOut}
-            disabled={zoom <= MIN_ZOOM}
-            aria-label="Zoom out"
-          >
-            <Icon name="zoom_out" />
-          </Button>
-          <div
-            className="zoom-control__value"
-            role="button"
-            onClick={resetZoom}
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && resetZoom()}
-          >
-            {Math.round(zoom * 100)}%
-          </div>
-          <Button
-            variant="tertiary"
-            color="neutral"
-            onClick={zoomIn}
-            disabled={zoom >= MAX_ZOOM}
-            aria-label="Zoom in"
-          >
-            <Icon name="zoom_in" />
-          </Button>
-        </div>
-      </div>
-    </div>
+    </TransformWrapper>
   );
+}
+
+const Controls = () => {
+  const { zoomIn, zoomOut, resetTransform, ...rest } = useControls();
+  console.log(rest);
+  return <div className="zoom-control">
+    <Button
+      variant="tertiary"
+      color="neutral"
+      onClick={() => zoomOut()}
+      // disabled={zoom <= MIN_ZOOM}
+      aria-label="Zoom out"
+    >
+      <Icon name="zoom_out" />
+    </Button>
+    <div
+      className="zoom-control__value"
+      role="button"
+      onClick={() => resetTransform()}
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && resetTransform()}
+    >
+      Reset
+    </div>
+    <Button
+      variant="tertiary"
+      color="neutral"
+      onClick={() => zoomIn()}
+      // disabled={zoom >= MAX_ZOOM}
+      aria-label="Zoom in"
+    >
+      <Icon name="zoom_in" />
+    </Button>
+  </div>
 }
