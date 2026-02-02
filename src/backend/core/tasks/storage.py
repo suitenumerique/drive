@@ -1,7 +1,7 @@
 """Tasks related to storage."""
 
-from functools import cache
 import logging
+from functools import cache
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -9,13 +9,13 @@ from django.core.files.storage import default_storage
 import boto3
 import botocore
 
+from core.api.utils import get_item_file_head_object
+from core.models import MirrorItemTask, MirrorItemTaskStatusChoices
+
 from drive.celery_app import app
 
 logger = logging.getLogger(__name__)
 
-
-class MissingMirroringConfigurationError(ValueError):
-    """Exception raised when the mirroring S3 bucket configuration is missing."""
 
 @cache
 def get_mirror_s3_client():
@@ -25,9 +25,7 @@ def get_mirror_s3_client():
         or not settings.AWS_S3_MIRRORING_SECRET_ACCESS_KEY
         or not settings.AWS_S3_MIRRORING_ENDPOINT_URL
     ):
-        raise MissingMirroringConfigurationError(
-            "Missing required configuration for mirroring S3 bucket"
-        )
+        return None
 
     return boto3.client(
         "s3",
@@ -43,24 +41,45 @@ def get_mirror_s3_client():
     )
 
 
-@app.task
-def mirror_file(name):
+@app.task()
+def mirror_file(mirror_task_id):
     """Copy the file to the mirroring S3 bucket."""
-    try:
-        mirror_s3_client = get_mirror_s3_client()
-    except MissingMirroringConfigurationError:
+    mirror_s3_client = get_mirror_s3_client()
+    if not mirror_s3_client:
         logger.info("Mirroring S3 bucket is not configured, skipping mirroring")
         return
 
+    try:
+        mirror_task = MirrorItemTask.objects.select_related("item").get(
+            id=mirror_task_id
+        )
+    except MirrorItemTask.DoesNotExist:
+        logger.error("Mirror task %s does not exist", mirror_task_id)
+        return
+
+    if mirror_task.status != MirrorItemTaskStatusChoices.PENDING:
+        logger.info("Mirror task %s is not pending, skipping mirroring", mirror_task_id)
+        return
+
+    mirror_task.status = MirrorItemTaskStatusChoices.PROCESSING
+    mirror_task.save(update_fields=["status", "updated_at"])
+    item_key = mirror_task.item.file_key
+
     mirror_bucket = settings.AWS_S3_MIRRORING_STORAGE_BUCKET_NAME
 
-    logger.info("Starting mirror of file %s to bucket %s", name, mirror_bucket)
+    logger.info("Starting mirror of file %s to bucket %s", item_key, mirror_bucket)
 
-    with default_storage.open(name, mode="rb") as source_file:
+    head_object = get_item_file_head_object(mirror_task.item)
+
+    with default_storage.open(item_key, mode="rb") as source_file:
         mirror_s3_client.put_object(
             Bucket=mirror_bucket,
-            Key=name,
+            Key=item_key,
             Body=source_file,
+            ContentType=mirror_task.item.mimetype,
+            Metadata=head_object["Metadata"],
         )
 
-    logger.info("Successfully mirrored file %s to bucket %s", name, mirror_bucket)
+    logger.info("Successfully mirrored file %s to bucket %s", item_key, mirror_bucket)
+    mirror_task.status = MirrorItemTaskStatusChoices.COMPLETED
+    mirror_task.save(update_fields=["status", "updated_at"])

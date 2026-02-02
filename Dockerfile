@@ -9,19 +9,19 @@ RUN python -m pip install --upgrade pip
 
 # Upgrade system packages to install security updates
 RUN apk update && \
-  apk upgrade && \
-  apk add git
+    apk upgrade && \
+    apk add git
 
 # ---- Back-end builder image ----
 FROM base AS back-builder
 
 
-ENV UV_COMPILE_BYTECODE=1 
+ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
 # Disable Python downloads, because we want to use the system interpreter
 # across both images. If using a managed Python version, it needs to be
-# copied from the build image into the final image; 
+# copied from the build image into the final image;
 ENV UV_PYTHON_DOWNLOADS=0
 
 # install uv
@@ -52,10 +52,11 @@ RUN yarn install --frozen-lockfile && \
 FROM base AS link-collector
 ARG DRIVE_STATIC_ROOT=/data/static
 
-# Install pango & rdfind
+# Install libmagic, pango & rdfind
 RUN apk add \
-  pango \
-  rdfind
+    libmagic \
+    pango \
+    rdfind
 
 WORKDIR /app
 
@@ -80,16 +81,16 @@ ENV PYTHONUNBUFFERED=1
 
 # Install required system libs
 RUN apk add \
-  cairo \
-  file \
-  font-noto \
-  font-noto-emoji \
-  gettext \
-  gdk-pixbuf \
-  libffi-dev \
-  pandoc \
-  pango \
-  shared-mime-info
+    cairo \
+    file \
+    font-noto \
+    font-noto-emoji \
+    gettext \
+    gdk-pixbuf \
+    libffi-dev \
+    pandoc \
+    pango \
+    shared-mime-info
 
 RUN wget https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types -O /etc/mime.types
 

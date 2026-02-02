@@ -2,7 +2,7 @@
 
 from storages.backends.s3 import S3Storage
 
-from core.tasks.storage import mirror_file
+from core.services.mirror import mirror_item_from_file_key
 
 # pylint: disable=abstract-method
 
@@ -14,5 +14,5 @@ class S3MirroringStorage(S3Storage):
         """Dispatch a celery task to mirror the file on the other S3 buckets."""
         name = super().save(name, content, max_length)
 
-        mirror_file.delay(name)
+        mirror_item_from_file_key(name)
         return name

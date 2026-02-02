@@ -77,6 +77,15 @@ class ItemUploadStateChoices(models.TextChoices):
     READY = "ready", _("Ready")
 
 
+class MirrorItemTaskStatusChoices(models.TextChoices):
+    """Defines the possible statuses for a mirroring task."""
+
+    PENDING = "pending", _("Pending")
+    PROCESSING = "processing", _("Processing")
+    COMPLETED = "completed", _("Completed")
+    FAILED = "failed", _("Failed")
+
+
 class DuplicateEmailError(Exception):
     """Raised when an email is already associated with a pre-existing user."""
 
@@ -1034,6 +1043,31 @@ class Item(TreeModel, BaseModel):
             if self.type == ItemTypeChoices.FOLDER:
                 update["numchild_folder"] = models.F("numchild_folder") - 1
             self._meta.model.objects.filter(pk=old_parent_id).update(**update)
+
+
+class MirrorItemTask(BaseModel):
+    """Model managing a status for a mirroring task."""
+
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="mirror_tasks",
+    )
+    status = models.CharField(
+        max_length=25,
+        choices=MirrorItemTaskStatusChoices.choices,
+        default=MirrorItemTaskStatusChoices.PENDING,
+    )
+    error_details = models.TextField(null=True, blank=True)
+    retries = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = "drive_mirror_item_task"
+        verbose_name = _("Mirror item task")
+        verbose_name_plural = _("Mirror item tasks")
+
+    def __str__(self):
+        return f"Mirror task for item {self.item!s} with status {self.status!s}"
 
 
 class LinkTrace(BaseModel):
