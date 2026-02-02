@@ -47,6 +47,7 @@ This document lists all configurable environment variables for the Drive applica
 | `FILE_EXTENSIONS_ALLOWED` | List of file extension allowed to be uploaded | See in the settings.py file |
 | `FILE_MIMETYPE_ALLOWED` | List of file mimetype allowed to be uploaded | See in the setings.py file |
 | `FRONTEND_THEME` | Frontend theme configuration | `None` |
+| `FRONTEND_EXTERNAL_HOME_URL` | Frontend external home url to redirect to | `None` |
 | `FRONTEND_FEEDBACK_BUTTON_SHOW` | Show feedback button | `False` |
 | `FRONTEND_FEEDBACK_BUTTON_IDLE` | Make feedback button idle (e.g. to bind to external library) | `False` |
 | `FRONTEND_FEEDBACK_ITEMS` | Dictionary of feedback items with URLs | `{}` |
