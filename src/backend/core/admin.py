@@ -6,7 +6,8 @@ from django.utils.translation import gettext_lazy as _
 
 from lasuite.malware_detection import malware_detection
 
-from . import models
+from core import models
+from core.tasks.storage import mirror_file
 
 
 @admin.register(models.User)
@@ -211,3 +212,38 @@ class InvitationAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         obj.issuer = request.user
         obj.save()
+
+
+@admin.register(models.MirrorItemTask)
+class MirrorItemTaskAdmin(admin.ModelAdmin):
+    """Admin interface to handle MirrorItemTask"""
+
+    list_display = (
+        "id",
+        "item",
+        "status",
+        "updated_at",
+        "created_at",
+    )
+
+    list_filter = ("status",)
+    search_fields = (
+        "id",
+        "item",
+    )
+    readonly_fields = (
+        "id",
+        "created_at",
+        "updated_at",
+    )
+    ordering = ("-created_at",)
+    actions = ("trigger_new_mirroring",)
+
+    def trigger_new_mirroring(self, request, queryset):
+        """Retrigger the mirroring file task no matter the current record status"""
+
+        for mirror_item_task in queryset:
+            mirror_item_task.status = models.MirrorItemTaskStatusChoices.PENDING
+            mirror_item_task.save(update_fields=["status", "updated_at"])
+
+            mirror_file.delay(mirror_item_task.id)
