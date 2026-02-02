@@ -166,6 +166,7 @@ export type ApiConfig = {
   FRONTEND_THEME?: string;
   FRONTEND_HIDE_GAUFRE?: boolean;
   FRONTEND_SILENT_LOGIN_ENABLED?: boolean;
+  FRONTEND_EXTERNAL_HOME_URL?: string;
   theme_customization?: ThemeCustomization;
 };
 

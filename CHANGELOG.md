@@ -12,6 +12,7 @@ and this project adheres to
 
 - 🏗️(ds_proxy) introduce how to use ds_proxy with Drive
 - ✨(global) implement silent login feature and configuration integration
+- ✨(global) implement external home URL redirect
 
 ### Changed
 
