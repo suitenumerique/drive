@@ -16,9 +16,14 @@ and this project adheres to
 
 - 🔥(backend) remove usage of atomic transaction for item creation
 
+### Fixed
+
+- 🐛(backend) correctly configure celery beat to run wopi configuration
+
 ### Security
 
 - 🔒️(backend) prevent mismatch mimetype between object storage and application
+
 
 ## [v0.11.1] - 2026-01-13
 

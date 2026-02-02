@@ -17,13 +17,18 @@ WOPI_DEFAULT_CONFIGURATION = {
 }
 
 
-@celery_app.on_after_configure.connect
+@celery_app.on_after_finalize.connect
 def setup_periodic_tasks(sender: Celery, **kwargs):
     """Setup periodic tasks."""
     sender.add_periodic_task(
-        crontab(minute="0"),
+        crontab(
+            minute=settings.WOPI_CONFIGURATION_CRONTAB_MINUTE,
+            hour=settings.WOPI_CONFIGURATION_CRONTAB_HOUR,
+            day_of_month=settings.WOPI_CONFIGURATION_CRONTAB_DAY_OF_MONTH,
+            month_of_year=settings.WOPI_CONFIGURATION_CRONTAB_MONTH_OF_YEAR,
+        ),
         configure_wopi_clients.s(),
-        name="configure_wopi_clients_every_hour",
+        name="configure_wopi_clients",
         serializer="json",
     )
 
