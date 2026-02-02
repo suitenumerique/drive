@@ -3,9 +3,12 @@
 
 import json
 import logging
+import os
 import re
+from io import BytesIO
 from urllib.parse import unquote, urlparse
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.fields import ArrayField
@@ -20,6 +23,7 @@ from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.text import slugify
+from django.utils.translation import gettext_lazy as _
 
 import posthog
 import rest_framework as drf
@@ -689,27 +693,7 @@ class ItemViewSet(
                 )
             )
 
-        s3_client = default_storage.connection.meta.client
-
-        head_response = s3_client.head_object(
-            Bucket=default_storage.bucket_name, Key=item.file_key
-        )
-        file_size = head_response["ContentLength"]
-
-        if file_size > 2048:
-            range_response = s3_client.get_object(
-                Bucket=default_storage.bucket_name,
-                Key=item.file_key,
-                Range="bytes=0-2047",
-            )
-            file_head = range_response["Body"].read()
-        else:
-            file_head = s3_client.get_object(
-                Bucket=default_storage.bucket_name, Key=item.file_key
-            )["Body"].read()
-
-        # Use improved MIME type detection combining magic bytes and file extension
-        mimetype = utils.detect_mimetype(file_head, filename=item.filename)
+        mimetype, file_size = utils.detect_item_mimetype_and_file_size(item)
 
         if (
             settings.RESTRICT_UPLOAD_FILE_TYPE
@@ -959,6 +943,104 @@ class ItemViewSet(
                 "request": request,
                 "paths_links_mapping": paths_links_mapping,
             },
+        )
+
+    @drf.decorators.action(
+        detail=True,
+        methods=["post"],
+        url_path="children/from-template",
+    )
+    @transaction.atomic
+    def children_from_template(self, request, *args, **kwargs):
+        """
+        Create a new file child item from a template file.
+
+        The template file is read from core/file_templates/template.{extension}
+        and automatically uploaded to storage.
+        """
+
+        item = self.get_object()
+
+        serializer = serializers.CreateItemFromTemplateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        extension = serializer.validated_data.get("extension")
+
+        # Check upload permissions
+        entitlements_backend = get_entitlements_backend()
+        can_upload = entitlements_backend.can_upload(self.request.user)
+        if not can_upload["result"]:
+            raise drf.exceptions.PermissionDenied(
+                detail=can_upload.get(
+                    "message", "You do not have permission to upload files."
+                )
+            )
+
+        # Get template file path
+        core_app_config = apps.get_app_config("core")
+        template_dir = os.path.join(core_app_config.path, "file_templates")
+        template_path = os.path.join(template_dir, f"template.{extension}")
+
+        # Read template file
+        try:
+            with open(template_path, "rb") as template_file:
+                template_content = template_file.read()
+        except FileNotFoundError as exc:
+            raise drf.exceptions.ValidationError(
+                {
+                    "extension": _(
+                        "Template file not found for extension '{extension}'."
+                    ).format(extension=extension)
+                },
+                code="template_file_not_found",
+            ) from exc
+        except OSError as e:
+            logger.error(
+                "Error reading template file %s: %s",
+                template_path,
+                str(e),
+            )
+            raise drf.exceptions.ValidationError(
+                {"extension": _("Error reading template file.")},
+                code="template_file_read_error",
+            ) from e
+
+        filename = f"{serializer.validated_data.get('title')}.{extension}"
+        child_item = models.Item.objects.create_child(
+            creator=request.user,
+            parent=item,
+            type=models.ItemTypeChoices.FILE,
+            title=serializer.validated_data.get("title"),
+            filename=filename,
+        )
+
+        # Upload template file to storage
+        try:
+            default_storage.save(child_item.file_key, BytesIO(template_content))
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.error(
+                "Error uploading template file to storage for item %s: %s",
+                child_item.id,
+                str(e),
+            )
+            self._complete_item_deletion(child_item)
+            raise drf.exceptions.ValidationError(
+                {"detail": _("Error uploading file to storage.")},
+                code="storage_upload_error",
+            ) from e
+
+        child_item.upload_state = models.ItemUploadStateChoices.READY
+        child_item.mimetype = utils.detect_mimetype(template_content, filename)
+        child_item.size = len(template_content)
+        child_item.save(update_fields=["upload_state", "mimetype", "size"])
+
+        # Serialize and return the created item
+        response_serializer = serializers.ItemSerializer(
+            child_item, context=self.get_serializer_context()
+        )
+
+        headers = self.get_success_headers(response_serializer.data)
+        return drf.response.Response(
+            response_serializer.data, status=status.HTTP_201_CREATED, headers=headers
         )
 
     @drf.decorators.action(detail=True, methods=["get"])

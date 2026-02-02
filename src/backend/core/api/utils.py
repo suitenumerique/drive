@@ -213,3 +213,51 @@ def detect_mimetype(file_buffer: bytes, filename: str | None = None) -> str:
 
     # Default to content-based detection (most reliable)
     return mimetype_from_content or "application/octet-stream"
+
+
+def detect_file_size(item):
+    """
+    Detect the file size of an item.
+
+    Args:
+        item: The item to detect the file size of.
+
+    Returns:
+        int: The file size in bytes.
+    """
+    s3_client = default_storage.connection.meta.client
+    head_response = s3_client.head_object(
+        Bucket=default_storage.bucket_name, Key=item.file_key
+    )
+    file_size = head_response["ContentLength"]
+    return file_size
+
+
+def detect_item_mimetype_and_file_size(item):
+    """
+    Detect the mimetype and the file size of an item.
+
+    Args:
+        item: The item to detect the mimetype and the file size of.
+
+    Returns:
+        tuple: The mimetype and the file size.
+    """
+    s3_client = default_storage.connection.meta.client
+
+    file_size = detect_file_size(item)
+
+    if file_size > 2048:
+        range_response = s3_client.get_object(
+            Bucket=default_storage.bucket_name,
+            Key=item.file_key,
+            Range="bytes=0-2047",
+        )
+        file_head = range_response["Body"].read()
+    else:
+        file_head = s3_client.get_object(
+            Bucket=default_storage.bucket_name, Key=item.file_key
+        )["Body"].read()
+
+    mimetype = detect_mimetype(file_head, filename=item.filename)
+    return (mimetype, file_size)

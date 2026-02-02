@@ -2,10 +2,12 @@
 
 import json
 import logging
+import os
 from datetime import timedelta
 from os.path import splitext
 from urllib.parse import quote
 
+from django.apps import apps
 from django.conf import settings
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
@@ -477,6 +479,43 @@ class CreateItemSerializer(ItemSerializer):
 
     def update(self, instance, validated_data):
         raise NotImplementedError("Update method can not be used.")
+
+
+class CreateItemFromTemplateSerializer(serializers.Serializer):
+    """Serializer used to create a new item from a template file"""
+
+    TEMPLATE_EXTENSION_CHOICES = [
+        ("odt", "odt"),
+        ("ods", "ods"),
+        ("odp", "odp"),
+    ]
+
+    extension = serializers.ChoiceField(
+        choices=TEMPLATE_EXTENSION_CHOICES,
+        required=True,
+        help_text="File extension for the new document",
+    )
+    title = serializers.CharField(
+        max_length=255,
+        required=True,
+        help_text="Title for the new file",
+    )
+
+    def validate_extension(self, value):
+        """Validate that the template file exists for the given extension."""
+        core_app_config = apps.get_app_config("core")
+        template_dir = os.path.join(core_app_config.path, "file_templates")
+        template_path = os.path.join(template_dir, f"template.{value}")
+
+        if not os.path.exists(template_path):
+            raise serializers.ValidationError(
+                _("Template file not found for extension '{extension}'.").format(
+                    extension=value
+                ),
+                code="template_file_not_found",
+            )
+
+        return value
 
 
 class BreadcrumbItemSerializer(serializers.ModelSerializer):
