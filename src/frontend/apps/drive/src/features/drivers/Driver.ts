@@ -35,6 +35,7 @@ export type ItemFilters = {
   page?: number;
   page_size?: number;
   workspaces?: WorkspaceType;
+  is_creator_me?: boolean;
 };
 
 export type PaginatedChildrenResult = {
