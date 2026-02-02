@@ -12,9 +12,12 @@ import { Gaufre } from "@/features/ui/components/gaufre/Gaufre";
 import { UserProfile } from "@/features/ui/components/user/UserProfile";
 
 export const HeaderIcon = () => {
+  const { t } = useTranslation();
   return (
     <div className="drive__header__left">
-      <div className="drive__header__logo" />
+      <h1 className="drive__header__logo">
+        <span className="sr-only">{t("app_title")}</span>
+      </h1>
       <Feedback />
     </div>
   );

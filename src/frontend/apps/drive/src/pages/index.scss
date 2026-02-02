@@ -36,18 +36,18 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
         align-items: flex-start;
         max-width: 600px;
 
-        > h2 {
+        >h2 {
           text-align: left;
           font-size: 48px;
           line-height: 50px;
         }
 
-        > span {
+        >span {
           text-align: left;
         }
       }
 
-      > img {
+      >img {
         @media (max-width: $tablet) {
           display: none;
         }
@@ -76,7 +76,7 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
       }
 
       .c__header__right {
-        > * {
+        >* {
           display: none !important;
         }
       }
@@ -116,6 +116,24 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
+  // Reset h1 default styles when used as heading
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+// Screen reader only - visually hidden but accessible to assistive technologies
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .drive__logo-icon {
