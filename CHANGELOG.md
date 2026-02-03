@@ -23,6 +23,7 @@ and this project adheres to
 
 - 🐛(backend) correctly configure celery beat to run wopi configuration
 - 🐛(backend) fix files with # in filename causing SignatureDoesNotMatch
+- 🐛(global) fix wrong language used in WOPI editor for new users
 
 ### Security
 
