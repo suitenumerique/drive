@@ -103,7 +103,7 @@ export abstract class Driver {
   abstract deleteFavoriteItem(itemId: string): Promise<void>;
   abstract getItemAccesses(itemId: string): Promise<Access[]>;
   abstract createAccess(data: DTOCreateAccess): Promise<void>;
-  abstract updateAccess(payload: DTOUpdateAccess): Promise<Access>;
+  abstract updateAccess(payload: DTOUpdateAccess): Promise<Access | void>;
   abstract updateLinkConfiguration(
     payload: DTOUpdateLinkConfiguration
   ): Promise<void>;
