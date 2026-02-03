@@ -24,6 +24,14 @@ logger = logging.getLogger(__name__)
 class UserSerializer(serializers.ModelSerializer):
     """Serialize users."""
 
+    last_release_note_seen = serializers.RegexField(
+        r"^[0-9]+\.[0-9]+\.[0-9]+$",
+        max_length=85,
+        required=False,
+        allow_null=True,
+        allow_blank=False,
+    )
+
     class Meta:
         model = models.User
         fields = [
@@ -32,6 +40,7 @@ class UserSerializer(serializers.ModelSerializer):
             "full_name",
             "short_name",
             "language",
+            "last_release_note_seen",
         ]
         read_only_fields = ["id", "email", "full_name", "short_name"]
 

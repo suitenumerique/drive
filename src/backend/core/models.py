@@ -238,6 +238,13 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         help_text=_("Claims from the OIDC token."),
     )
 
+    last_release_note_seen = models.CharField(
+        _("last release note seen"),
+        max_length=85,
+        blank=True,
+        null=True,
+    )
+
     objects = UserManager()
 
     USERNAME_FIELD = "admin_email"
