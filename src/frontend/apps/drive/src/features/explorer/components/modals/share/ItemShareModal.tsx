@@ -253,8 +253,6 @@ export const ItemShareModal = ({
     }));
   }, [item, t]);
 
-  console.log("LINK ROLE CHOICES", linkRoleChoices);
-
   const parentItemId = useMemo(() => {
     const pathParts = item?.path.split(".");
     if (!pathParts) {
