@@ -81,7 +81,7 @@ def test_api_entitlements_anct_get_entitlements_both_true():
     assert len(responses.calls) == 1
     assert responses.calls[0].request.url.startswith(ENTITLEMENTS_URL)
     assert "siret" in responses.calls[0].request.url
-    assert f"account_id={user.id}" in responses.calls[0].request.url
+    assert f"account_id={user.sub}" in responses.calls[0].request.url
     assert "service_id=8" in responses.calls[0].request.url
     assert responses.calls[0].request.headers["X-Service-Auth"] == (
         f"Bearer {ENTITLEMENTS_BACKEND_PARAMETERS['token']}"
@@ -125,7 +125,7 @@ def test_api_entitlements_anct_get_entitlements_can_upload_false():
     assert len(responses.calls) == 1
     assert responses.calls[0].request.url.startswith(ENTITLEMENTS_URL)
     assert "siret" in responses.calls[0].request.url
-    assert f"account_id={user.id}" in responses.calls[0].request.url
+    assert f"account_id={user.sub}" in responses.calls[0].request.url
     assert "service_id=8" in responses.calls[0].request.url
     assert responses.calls[0].request.headers["X-Service-Auth"] == (
         f"Bearer {ENTITLEMENTS_BACKEND_PARAMETERS['token']}"
@@ -169,7 +169,7 @@ def test_api_entitlements_anct_get_entitlements_can_access_false():
     assert len(responses.calls) == 1
     assert responses.calls[0].request.url.startswith(ENTITLEMENTS_URL)
     assert "siret" in responses.calls[0].request.url
-    assert f"account_id={user.id}" in responses.calls[0].request.url
+    assert f"account_id={user.sub}" in responses.calls[0].request.url
     assert "service_id=8" in responses.calls[0].request.url
     assert responses.calls[0].request.headers["X-Service-Auth"] == (
         f"Bearer {ENTITLEMENTS_BACKEND_PARAMETERS['token']}"
@@ -213,7 +213,7 @@ def test_api_entitlements_anct_get_entitlements_cache():
     assert len(responses.calls) == 1
     assert responses.calls[0].request.url.startswith(ENTITLEMENTS_URL)
     assert "siret" in responses.calls[0].request.url
-    assert f"account_id={user.id}" in responses.calls[0].request.url
+    assert f"account_id={user.sub}" in responses.calls[0].request.url
     assert "service_id=8" in responses.calls[0].request.url
     assert responses.calls[0].request.headers["X-Service-Auth"] == (
         f"Bearer {ENTITLEMENTS_BACKEND_PARAMETERS['token']}"

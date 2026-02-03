@@ -101,7 +101,7 @@ def test_usage_metrics_list(api_key):
             {
                 "account": {
                     "type": "user",
-                    "id": str(user1.id),
+                    "id": str(user1.sub),
                     "email": user1.email,
                 },
                 "metrics": {
@@ -111,7 +111,7 @@ def test_usage_metrics_list(api_key):
             {
                 "account": {
                     "type": "user",
-                    "id": str(user2.id),
+                    "id": str(user2.sub),
                     "email": user2.email,
                 },
                 "metrics": {
@@ -134,7 +134,7 @@ def test_usage_metrics_list_filter_by_account_id(api_key):
     factories.ItemFactory(creator=user1, size=100)
 
     response = client.get(
-        f"/external_api/v1.0/metrics/usage/?account_id={user1.id}",
+        f"/external_api/v1.0/metrics/usage/?account_id={user1.sub}",
         HTTP_AUTHORIZATION=f"Api-Key {api_key}",
     )
     assert response.status_code == 200
@@ -146,7 +146,7 @@ def test_usage_metrics_list_filter_by_account_id(api_key):
             {
                 "account": {
                     "type": "user",
-                    "id": str(user1.id),
+                    "id": str(user1.sub),
                     "email": user1.email,
                 },
                 "metrics": {
@@ -184,7 +184,7 @@ def test_usage_metrics_exposed_claims(api_key):
             {
                 "account": {
                     "type": "user",
-                    "id": str(user1.id),
+                    "id": str(user1.sub),
                     "email": user1.email,
                 },
                 "iss": "https://example.com",
@@ -196,7 +196,7 @@ def test_usage_metrics_exposed_claims(api_key):
             {
                 "account": {
                     "type": "user",
-                    "id": str(user2.id),
+                    "id": str(user2.sub),
                     "email": user2.email,
                 },
                 "iss": "https://example2.com",

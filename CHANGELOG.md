@@ -16,6 +16,7 @@ and this project adheres to
 ### Changed
 
 - 🔥(backend) remove usage of atomic transaction for item creation
+- ♻️(backend) use sub claim instead of internal id for external anct APIs
 
 ### Fixed
 

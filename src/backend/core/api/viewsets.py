@@ -1751,7 +1751,7 @@ class UsageMetricViewset(drf.mixins.ListModelMixin, viewsets.GenericViewSet):
         queryset = self.queryset
 
         if self.request.query_params.get("account_id"):
-            queryset = queryset.filter(id=self.request.query_params.get("account_id"))
+            queryset = queryset.filter(sub=self.request.query_params.get("account_id"))
 
         return queryset
 

@@ -67,7 +67,7 @@ class ANCTEntitlementsBackend(EntitlementsBackend):
             params={
                 "siret": siret,
                 "account_type": "user",
-                "account_id": user.id,
+                "account_id": user.sub,
                 "service_id": parameters["service_id"],
             },
             headers={"X-Service-Auth": f"Bearer {parameters['token']}"},
