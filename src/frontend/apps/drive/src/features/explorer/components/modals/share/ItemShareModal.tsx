@@ -49,10 +49,16 @@ export const ItemShareModal = ({
   const queryClient = useQueryClient();
   const copyToClipboard = useClipboard();
   const itemId = initialItem.originalId ?? initialItem.id;
-  const { data: item } = useItem(itemId, {
+  const { data: item, refetch: refetchItem } = useItem(itemId, {
     enabled: isOpen,
     initialData: initialItem,
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      refetchItem();
+    }
+  }, [isOpen]);
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [queryValue, setQueryValue] = useState("");
@@ -264,7 +270,12 @@ export const ItemShareModal = ({
   const linkReachTopMessage = useMemo(() => {
     const hasDisabled = linkReachChoices.some((reach) => reach.isDisabled);
     if (hasDisabled && parentItemId) {
-      return <RedirectionToParentItem itemId={parentItemId} />;
+      return (
+        <RedirectionToParentItem
+          itemId={parentItemId}
+          afterRedirect={onClose}
+        />
+      );
     }
     return undefined;
   }, [linkReachChoices, parentItemId]);
@@ -272,7 +283,12 @@ export const ItemShareModal = ({
   const linkRoleTopMessage = useMemo(() => {
     const hasDisabled = linkRoleChoices.some((role) => role.isDisabled);
     if (hasDisabled && parentItemId) {
-      return <RedirectionToParentItem itemId={parentItemId} />;
+      return (
+        <RedirectionToParentItem
+          itemId={parentItemId}
+          afterRedirect={onClose}
+        />
+      );
     }
     return undefined;
   }, [linkRoleChoices, parentItemId]);
@@ -342,13 +358,28 @@ export const ItemShareModal = ({
       onInviteUser={(users, role) => onInviteUser(users, role as Role)}
       accessRoleTopMessage={(access) => {
         const availableRoles = access.abilities.set_role_to;
+        const maxNbRoles = Object.values(Role).length;
         if (
-          access.max_ancestors_role_item_id &&
-          access.max_ancestors_role_item_id !== itemId
+          ownerCount === 1 &&
+          availableRoles.length === 0 &&
+          access.role === Role.OWNER
         ) {
+          return t("share_modal.options.top_message.only_owner");
+        }
+        if (availableRoles.length === 0 && access.role !== Role.OWNER) {
+          return t("share_modal.options.top_message.to_lower_role");
+        }
+
+        const canDelete = access.abilities.destroy && access.is_explicit;
+
+        const showRedirection =
+          !canDelete || availableRoles.length < maxNbRoles;
+
+        if (showRedirection) {
           return (
             <RedirectionToParentItem
               itemId={access.max_ancestors_role_item_id}
+              afterRedirect={onClose}
             />
           );
         }
@@ -400,22 +431,24 @@ export const ItemShareModal = ({
         ];
       }}
       outsideSearchContent={
-        <ShareModalCopyLinkFooter
-          onCopyLink={() => {
-            if (item?.type === ItemType.FILE) {
-              copyToClipboard(
-                `${window.location.origin}/explorer/items/files/${itemId}`,
-              );
-            } else {
-              copyToClipboard(
-                `${window.location.origin}/explorer/items/${itemId}`,
-              );
-            }
-          }}
-          onOk={() => {
-            onClose();
-          }}
-        />
+        <>
+          <ShareModalCopyLinkFooter
+            onCopyLink={() => {
+              if (item?.type === ItemType.FILE) {
+                copyToClipboard(
+                  `${window.location.origin}/explorer/items/files/${itemId}`,
+                );
+              } else {
+                copyToClipboard(
+                  `${window.location.origin}/explorer/items/${itemId}`,
+                );
+              }
+            }}
+            onOk={() => {
+              onClose();
+            }}
+          />
+        </>
       }
       linkSettings={true}
       accessRoleKey="max_role"
@@ -453,9 +486,23 @@ export const ItemShareModal = ({
   );
 };
 
-const RedirectionToParentItem = ({ itemId }: { itemId: string }) => {
+type RedirectionToParentItemProps = {
+  itemId: string;
+  afterRedirect?: () => void;
+};
+
+const RedirectionToParentItem = ({
+  itemId,
+  afterRedirect,
+}: RedirectionToParentItemProps) => {
   const { t } = useTranslation();
   const router = useRouter();
+
+  const handleRedirectToParentItem = () => {
+    router.push(`/explorer/items/${itemId}`).then(() => {
+      afterRedirect?.();
+    });
+  };
 
   return (
     <div>
@@ -463,9 +510,7 @@ const RedirectionToParentItem = ({ itemId }: { itemId: string }) => {
       <button
         type="button"
         className="workspace-share-modal__parent-folder-link"
-        onClick={() => {
-          router.push(`/explorer/items/${itemId}`);
-        }}
+        onClick={handleRedirectToParentItem}
       >
         {t("share_modal.options.top_message.parent_folder")}
       </button>
