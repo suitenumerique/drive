@@ -537,6 +537,7 @@ class ItemViewSet(
         """Set the current user as creator and owner of the newly created object."""
         obj = models.Item.objects.create_child(
             creator=self.request.user,
+            link_reach=LinkReachChoices.RESTRICTED,
             **serializer.validated_data,
         )
         serializer.instance = obj
@@ -867,6 +868,7 @@ class ItemViewSet(
 
         # If the item is moved to the root and the user does not have an access on the item,
         # create an owner access for the user. Otherwise, the item will be invisible for the user.
+        update_fields = []
         if (
             not target_item
             and not models.ItemAccess.objects.filter(item=item, user=user).exists()
@@ -877,7 +879,22 @@ class ItemViewSet(
                 role=models.RoleChoices.OWNER,
             )
             item.creator = user
-            item.save(update_fields=["creator"])
+            update_fields.append("creator")
+
+        # When moving an item to the root and no link_reach is set
+        # Force it to be restricted.
+        if not target_item and not item.link_reach:
+            item.link_reach = LinkReachChoices.RESTRICTED
+            update_fields.append("link_reach")
+
+        if target_item:
+            # When moving an item in an other item, force it to be sync
+            # with its parent's link reach.
+            item.link_reach = None
+            update_fields.append("link_reach")
+
+        if update_fields:
+            item.save(update_fields=update_fields)
 
         return drf.response.Response(
             {"message": "item moved successfully."}, status=status.HTTP_200_OK
@@ -1290,6 +1307,7 @@ class ItemViewSet(
         """Update link configuration with specific rights (cf get_abilities)."""
         # Check permissions first
         item = self.get_object()
+        previous_link_reach = item.link_reach
 
         # Deserialize and validate the data
         serializer = serializers.LinkItemSerializer(
@@ -1298,6 +1316,11 @@ class ItemViewSet(
         serializer.is_valid(raise_exception=True)
 
         serializer.save()
+
+        if models.LinkReachChoices.get_priority(
+            item.link_reach
+        ) >= models.LinkReachChoices.get_priority(previous_link_reach):
+            item.descendants().update(link_reach=None)
 
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
@@ -1603,7 +1626,9 @@ class ItemAccessViewSet(
 
         # For inherited accesses, max_ancestors_role should reflect their own position
         for access in deepest_access_by_target.values():
-            if access.max_ancestors_role and access.item_id != self.item.id:
+            if (access.max_ancestors_role and access.item_id != self.item.id) or (
+                access.item.is_root and access.item_id != self.item.id
+            ):
                 access.max_ancestors_role = access.role
                 access.max_ancestors_role_item_id = access.item_id
 

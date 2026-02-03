@@ -13,7 +13,6 @@ from faker import Faker
 from faker.providers import file
 from lasuite.drf.models.choices import (
     LinkReachChoices,
-    LinkRoleChoices,
     RoleChoices,
 )
 
@@ -68,8 +67,7 @@ class ItemFactory(factory.django.DjangoModelFactory):
     title = factory.Sequence(lambda n: f"item{n}")
     creator = factory.SubFactory(UserFactory)
     deleted_at = None
-    link_reach = factory.fuzzy.FuzzyChoice([a[0] for a in LinkReachChoices.choices])
-    link_role = factory.fuzzy.FuzzyChoice([r[0] for r in LinkRoleChoices.choices])
+    link_reach = LinkReachChoices.RESTRICTED
     type = factory.fuzzy.FuzzyChoice([t[0] for t in models.ItemTypeChoices.choices])
     filename = factory.lazy_attribute(
         lambda o: fake.file_name() if o.type == models.ItemTypeChoices.FILE else None

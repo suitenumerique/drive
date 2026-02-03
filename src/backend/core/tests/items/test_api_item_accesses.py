@@ -174,8 +174,10 @@ def test_api_item_accesses_list_authenticated_related_non_privileged(
                 else None,
                 "team": access.team,
                 "role": access.role,
-                "max_ancestors_role": None,
-                "max_ancestors_role_item_id": None,
+                "max_ancestors_role": access.role if access.item.is_root else None,
+                "max_ancestors_role_item_id": str(access.item_id)
+                if access.item.is_root
+                else None,
                 "max_role": access.role,
                 "abilities": access.get_abilities(user),
                 "is_explicit": str(access.item_id) == str(item.id),
@@ -277,8 +279,10 @@ def test_api_item_accesses_list_authenticated_related_privileged(
                 }
                 if access.user
                 else None,
-                "max_ancestors_role": None,
-                "max_ancestors_role_item_id": None,
+                "max_ancestors_role": access.role if access.item.is_root else None,
+                "max_ancestors_role_item_id": str(access.item_id)
+                if access.item.is_root
+                else None,
                 "max_role": access.role,
                 "team": access.team,
                 "role": access.role,
@@ -1543,8 +1547,8 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
                 "retrieve": False,
                 "set_role_to": [],
             },
-            "max_ancestors_role": None,
-            "max_ancestors_role_item_id": None,
+            "max_ancestors_role": other_admin_access.role,
+            "max_ancestors_role_item_id": str(root.id),
             "max_role": "administrator",
             "is_explicit": False,
         },
@@ -1571,8 +1575,8 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
                 "retrieve": False,
                 "set_role_to": [],
             },
-            "max_ancestors_role": None,
-            "max_ancestors_role_item_id": None,
+            "max_ancestors_role": other_owner_access.role,
+            "max_ancestors_role_item_id": str(root.id),
             "max_role": "owner",
             "is_explicit": False,
         },
@@ -1643,8 +1647,8 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
                 "retrieve": False,
                 "set_role_to": [],
             },
-            "max_ancestors_role": None,
-            "max_ancestors_role_item_id": None,
+            "max_ancestors_role": other_admin_access.role,
+            "max_ancestors_role_item_id": str(root.id),
             "max_role": "administrator",
             "is_explicit": False,
         },
@@ -1671,8 +1675,8 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
                 "retrieve": False,
                 "set_role_to": [],
             },
-            "max_ancestors_role": None,
-            "max_ancestors_role_item_id": None,
+            "max_ancestors_role": other_owner_access.role,
+            "max_ancestors_role_item_id": str(root.id),
             "max_role": "owner",
             "is_explicit": False,
         },
@@ -1699,8 +1703,8 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
                 "retrieve": False,
                 "set_role_to": [],
             },
-            "max_ancestors_role": None,
-            "max_ancestors_role_item_id": None,
+            "max_ancestors_role": owner_access.role,
+            "max_ancestors_role_item_id": str(root.id),
             "max_role": "owner",
             "is_explicit": False,
         },
@@ -1787,8 +1791,8 @@ def test_api_item_accesses_other_user_accesses():
                 "retrieve": True,
                 "set_role_to": [],
             },
-            "max_ancestors_role": None,
-            "max_ancestors_role_item_id": None,
+            "max_ancestors_role": "owner",
+            "max_ancestors_role_item_id": str(grand_parent.id),
             "max_role": "owner",
             "is_explicit": False,
         },
@@ -1813,10 +1817,10 @@ def test_api_item_accesses_other_user_accesses():
                 "update": True,
                 "partial_update": True,
                 "retrieve": True,
-                "set_role_to": ["reader", "editor", "administrator", "owner"],
+                "set_role_to": ["owner"],
             },
-            "max_ancestors_role": None,
-            "max_ancestors_role_item_id": None,
+            "max_ancestors_role": "administrator",
+            "max_ancestors_role_item_id": str(grand_parent.id),
             "max_role": "administrator",
             "is_explicit": False,
         },
@@ -1886,8 +1890,8 @@ def test_api_item_accesses_with_inherited_accesses():
                 "retrieve": True,
                 "set_role_to": [],
             },
-            "max_ancestors_role": None,
-            "max_ancestors_role_item_id": None,
+            "max_ancestors_role": "owner",
+            "max_ancestors_role_item_id": str(grand_parent.id),
             "max_role": "owner",
             "is_explicit": False,
         },
@@ -1916,6 +1920,159 @@ def test_api_item_accesses_with_inherited_accesses():
             },
             "max_ancestors_role": "administrator",
             "max_ancestors_role_item_id": str(parent.id),
+            "max_role": "administrator",
+            "is_explicit": False,
+        },
+    ]
+
+
+def test_api_item_accesses_inherited_from_root():
+    """
+    Test the max_ancestors_role and max_ancestors_role_item_id for accesses depending
+    of the context it is called from.
+    """
+    user = factories.UserFactory()
+    collaborator = factories.UserFactory()
+
+    root = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, title="A", creator=user
+    )
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, title="B", parent=root, creator=user
+    )
+
+    user_root_access = factories.UserItemAccessFactory(
+        item=root, user=user, role="owner"
+    )
+    collaborator_root_access = factories.UserItemAccessFactory(
+        item=root, user=collaborator, role="administrator"
+    )
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get(f"/api/v1.0/items/{root.id!s}/accesses/")
+    assert response.status_code == 200
+    content = response.json()
+
+    assert content == [
+        {
+            "id": str(user_root_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "language": user.language,
+                "full_name": user.full_name,
+                "short_name": user.short_name,
+            },
+            "team": "",
+            "role": "owner",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": True,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": None,
+            "max_ancestors_role_item_id": None,
+            "max_role": "owner",
+            "is_explicit": True,
+        },
+        {
+            "id": str(collaborator_root_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(collaborator.id),
+                "email": collaborator.email,
+                "language": collaborator.language,
+                "full_name": collaborator.full_name,
+                "short_name": collaborator.short_name,
+            },
+            "team": "",
+            "role": "administrator",
+            "abilities": {
+                "destroy": True,
+                "update": True,
+                "partial_update": True,
+                "retrieve": True,
+                "set_role_to": ["reader", "editor", "administrator", "owner"],
+            },
+            "max_ancestors_role": None,
+            "max_ancestors_role_item_id": None,
+            "max_role": "administrator",
+            "is_explicit": True,
+        },
+    ]
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
+
+    assert response.status_code == 200
+    content = response.json()
+
+    assert content == [
+        {
+            "id": str(user_root_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(user.id),
+                "email": user.email,
+                "language": user.language,
+                "full_name": user.full_name,
+                "short_name": user.short_name,
+            },
+            "team": "",
+            "role": "owner",
+            "abilities": {
+                "destroy": False,
+                "update": False,
+                "partial_update": False,
+                "retrieve": True,
+                "set_role_to": [],
+            },
+            "max_ancestors_role": "owner",
+            "max_ancestors_role_item_id": str(root.id),
+            "max_role": "owner",
+            "is_explicit": False,
+        },
+        {
+            "id": str(collaborator_root_access.id),
+            "item": {
+                "id": str(root.id),
+                "path": str(root.path),
+                "depth": root.depth,
+            },
+            "user": {
+                "id": str(collaborator.id),
+                "email": collaborator.email,
+                "language": collaborator.language,
+                "full_name": collaborator.full_name,
+                "short_name": collaborator.short_name,
+            },
+            "team": "",
+            "role": "administrator",
+            "abilities": {
+                "destroy": True,
+                "update": True,
+                "partial_update": True,
+                "retrieve": True,
+                "set_role_to": ["owner"],
+            },
+            "max_ancestors_role": "administrator",
+            "max_ancestors_role_item_id": str(root.id),
             "max_role": "administrator",
             "is_explicit": False,
         },

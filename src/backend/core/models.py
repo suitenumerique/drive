@@ -426,7 +426,8 @@ class Item(TreeModel, BaseModel):
     link_reach = models.CharField(
         max_length=20,
         choices=LinkReachChoices.choices,
-        default=LinkReachChoices.RESTRICTED,
+        null=True,
+        blank=True,
     )
     link_role = models.CharField(
         max_length=20, choices=LinkRoleChoices.choices, default=LinkRoleChoices.READER
