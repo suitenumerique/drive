@@ -11,6 +11,7 @@ import { ExplorerRightPanelContent } from "@/features/explorer/components/right-
 import { GlobalLayout } from "../global/GlobalLayout";
 import { LeftPanelMobile } from "../left-panel/LeftPanelMobile";
 import { useRouter } from "next/router";
+import { useSyncUserLanguage } from "../../hooks/useSyncUserLanguage";
 
 export const getGlobalExplorerLayout = (page: React.ReactElement) => {
   return <GlobalExplorerLayout>{page}</GlobalExplorerLayout>;
@@ -49,6 +50,8 @@ export const ExplorerLayout = ({
     const query = minimal ? { minimal } : {};
     router.push({ pathname: `/explorer/items/${e.item.id}`, query });
   };
+
+  useSyncUserLanguage();
 
   return (
     <GlobalExplorerProvider
