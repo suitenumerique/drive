@@ -42,6 +42,7 @@ export const ItemActionDropdown = ({
   const router = useRouter();
   const { setRightPanelForcedItem, setRightPanelOpen } = useGlobalExplorer();
   const effectiveItemId = itemId ?? item.originalId ?? item.id;
+  const effectiveItem = { ...item, id: effectiveItemId };
 
   const { handleDownloadItem } = useDownloadItem();
   const { deleteItems: deleteItem } = useDeleteItem();
@@ -179,20 +180,24 @@ export const ItemActionDropdown = ({
       {renameModal.isOpen && (
         <ExplorerRenameItemModal
           {...renameModal}
-          item={item}
+          item={effectiveItem}
           key={effectiveItemId}
         />
       )}
       {canViewShareModal && shareItemModal.isOpen && (
-        <ItemShareModal {...shareItemModal} item={item} key={effectiveItemId} />
+        <ItemShareModal
+          {...shareItemModal}
+          item={effectiveItem}
+          key={effectiveItemId}
+        />
       )}
 
       {moveModal.isOpen && (
         <ExplorerMoveFolder
           {...moveModal}
-          itemsToMove={[item]}
+          itemsToMove={[effectiveItem]}
           key={effectiveItemId}
-          initialFolderId={getParentIdFromPath(item.path)}
+          initialFolderId={getParentIdFromPath(effectiveItem.path)}
         />
       )}
     </>
