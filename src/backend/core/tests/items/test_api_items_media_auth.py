@@ -385,3 +385,48 @@ def test_api_items_media_auth_suspicious_item_creator():
         in authorization
     )
     assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
+
+
+def test_api_items_media_auth_filename_with_hash():
+    """Files with '#' in their filename should not cause a SignatureDoesNotMatch."""
+    item = factories.ItemFactory(
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        filename="Spécial #4.pdf",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"my prose"),
+    )
+    original_url = f"http://localhost/media/{quote(item.file_key)}"
+    response = APIClient().get(
+        "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
+    )
+
+    assert response.status_code == 200
+
+    authorization = response["Authorization"]
+    assert "AWS4-HMAC-SHA256 Credential=" in authorization
+    assert (
+        "SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature="
+        in authorization
+    )
+    assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
+
+    s3_url = urlparse(settings.AWS_S3_ENDPOINT_URL)
+    file_url = (
+        f"{settings.AWS_S3_ENDPOINT_URL}/drive-media-storage/{quote(item.file_key)}"
+    )
+    response = requests.get(
+        file_url,
+        headers={
+            "authorization": authorization,
+            "x-amz-date": response["x-amz-date"],
+            "x-amz-content-sha256": response["x-amz-content-sha256"],
+            "Host": f"{s3_url.hostname}:{s3_url.port}",
+        },
+        timeout=1,
+    )
+    assert response.content.decode("utf-8") == "my prose"

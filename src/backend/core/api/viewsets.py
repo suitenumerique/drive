@@ -1340,12 +1340,12 @@ class ItemViewSet(
             logger.debug("Missing HTTP_X_ORIGINAL_URL header in subrequest")
             raise drf.exceptions.PermissionDenied()
 
-        parsed_url = urlparse(unquote(original_url))
-        match = pattern.search(parsed_url.path)
+        parsed_url = urlparse(original_url)
+        match = pattern.search(unquote(parsed_url.path))
 
         # If the path does not match the pattern, try to extract the parameters from the query
         if not match:
-            match = pattern.search(parsed_url.query)
+            match = pattern.search(unquote(parsed_url.query))
 
         if not match:
             logger.debug(

@@ -20,6 +20,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(backend) correctly configure celery beat to run wopi configuration
+- 🐛(backend) fix files with # in filename causing SignatureDoesNotMatch
 
 ### Security
 
