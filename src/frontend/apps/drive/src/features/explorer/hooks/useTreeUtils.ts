@@ -1,4 +1,9 @@
-import { useTreeContext, TreeDataItem, TreeViewDataType, TreeViewNodeTypeEnum } from "@gouvfr-lasuite/ui-kit";
+import {
+  useTreeContext,
+  TreeDataItem,
+  TreeViewDataType,
+  TreeViewNodeTypeEnum,
+} from "@gouvfr-lasuite/ui-kit";
 import { TreeItem, TreeItemData } from "@/features/drivers/types";
 
 /**
@@ -21,11 +26,11 @@ export const useTreeUtils = () => {
     const matchingIds: string[] = [];
 
     const searchNodes = (
-      nodes: TreeDataItem<TreeViewDataType<TreeItem>>[]
+      nodes: TreeDataItem<TreeViewDataType<TreeItem>>[],
     ): void => {
       for (const node of nodes) {
         const nodeValue = node.value as TreeViewDataType<TreeItemData>;
-        
+
         // Check if this node's originalId matches
         if (
           nodeValue.nodeType === TreeViewNodeTypeEnum.NODE &&
@@ -45,8 +50,6 @@ export const useTreeUtils = () => {
       searchNodes(treeContext.treeData.nodes);
     }
 
-    console.log("matchingIds", matchingIds);
-
     return matchingIds;
   };
 
@@ -64,8 +67,19 @@ export const useTreeUtils = () => {
     return treeIds.length;
   };
 
+  const updateNodeByOriginalId = (
+    originalId: string,
+    partialUpdate: Partial<TreeItem>,
+  ): void => {
+    const treeIds = findAllTreeIdsByOriginalId(originalId);
+    for (const treeId of treeIds) {
+      treeContext?.treeData.updateNode(treeId, partialUpdate);
+    }
+  };
+
   return {
     findAllTreeIdsByOriginalId,
     deleteAllByOriginalId,
+    updateNodeByOriginalId,
   };
 };

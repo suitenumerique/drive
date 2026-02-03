@@ -44,7 +44,7 @@ export const ExplorerTree = () => {
 
   const treeContext = useTreeContext<TreeItem>();
   const [initialOpenState, setInitialOpenState] = useState<OpenMap | undefined>(
-    undefined
+    undefined,
   );
 
   const { itemId, treeIsInitialized } = useGlobalExplorer();
@@ -68,7 +68,7 @@ export const ExplorerTree = () => {
 
     // Browse the data to initialize the opened nodes
     const openLoadedNodes = (
-      items: TreeDataItem<TreeViewDataType<TreeItem>>[]
+      items: TreeDataItem<TreeViewDataType<TreeItem>>[],
     ) => {
       items.forEach((item) => {
         if (
@@ -92,7 +92,6 @@ export const ExplorerTree = () => {
   }, [treeContext?.treeData.nodes]);
 
   const createFolderModal = useModal();
-  
 
   const handleMove = (result: TreeViewMoveResult) => {
     move.mutate(
@@ -105,16 +104,13 @@ export const ExplorerTree = () => {
         onSuccess: () => {
           addItemsMovedToast(1);
         },
-      }
+      },
     );
   };
 
   return (
     <div className="explorer__tree">
-      <ExplorerTreeActions
-        openCreateFolderModal={createFolderModal.open}
-        
-      />
+      <ExplorerTreeActions openCreateFolderModal={createFolderModal.open} />
       <HorizontalSeparator withPadding={false} />
 
       <ExplorerTreeNavDefault />
@@ -130,10 +126,10 @@ export const ExplorerTree = () => {
             }
 
             const parent = treeContext?.treeData.getNode(
-              moveResult.newParentId
+              moveResult.newParentId,
             ) as Item | undefined;
             const oldParent = treeContext?.treeData.getNode(
-              moveResult.oldParentId
+              moveResult.oldParentId,
             ) as Item | undefined;
 
             if (!parent || !oldParent) {
@@ -189,7 +185,7 @@ export const ExplorerTree = () => {
         <LeftPanelMobile />
       </div>
       <ExplorerCreateFolderModal {...createFolderModal} parentId={itemId} />
-      
+
       {moveState && moveConfirmationModal.isOpen && (
         <ExplorerTreeMoveConfirmationModal
           isOpen={moveConfirmationModal.isOpen}
@@ -227,7 +223,7 @@ export const ExplorerTreeNavDefault = () => {
     }
 
     const nodes: ExplorerTreeNavNode[] = ORDERED_DEFAULT_ROUTES.filter(
-      (route) => route.id !== DefaultRoute.FAVORITES
+      (route) => route.id !== DefaultRoute.FAVORITES,
     ).map((route) => ({
       id: route.id,
       label: t(route.label),
