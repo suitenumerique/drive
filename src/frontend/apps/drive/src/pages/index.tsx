@@ -116,19 +116,26 @@ HomePage.getLayout = function getLayout(page: React.ReactElement) {
           enableResize
           hideLeftPanelOnDesktop={true}
           leftPanelContent={<LeftPanelMobile />}
-          icon={
-            <div className="drive__header__left">
-              <img src={logoGouv.src} alt="" />
-              <div className="drive__header__logo" />
-              <Feedback />
-            </div>
-          }
+          icon={<HomeHeaderIcon />}
           rightHeaderContent={<HeaderRight />}
         >
           {page}
           <Toaster />
         </MainLayout>
       </GlobalLayout>
+    </div>
+  );
+};
+
+const HomeHeaderIcon = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="drive__header__left">
+      <img src={logoGouv.src} alt="" aria-hidden="true" />
+      <h1 className="drive__header__logo">
+        <span className="sr-only">{t("app_title")}</span>
+      </h1>
+      <Feedback />
     </div>
   );
 };
