@@ -79,7 +79,7 @@ export const ItemActionDropdown = ({
     if (redirectId) {
       router.push(`/explorer/items/${redirectId}`);
     } else {
-      router.push(`/explorer/items/my_files`);
+      router.push(`/explorer/items/my-files`);
     }
   };
 

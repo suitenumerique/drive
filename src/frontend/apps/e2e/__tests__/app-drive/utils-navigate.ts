@@ -13,7 +13,7 @@ export const clickToRecent = async (page: Page) => {
 
 export const clickToMyFiles = async (page: Page) => {
   await page.getByRole("link", { name: "My files" }).click();
-  await expectDefaultRoute(page, "My files", "/explorer/items/my_files");
+  await expectDefaultRoute(page, "My files", "/explorer/items/my-files");
 };
 
 export const clickToSharedWithMe = async (page: Page) => {

@@ -34,7 +34,7 @@ export default function HomePage() {
         sessionStorage.removeItem(SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL);
         window.location.href = attemptedUrl;
       } else {
-        window.location.href = `/explorer/items/my_files`;
+        window.location.href = `/explorer/items/my-files`;
       }
     }
   }, [user]);

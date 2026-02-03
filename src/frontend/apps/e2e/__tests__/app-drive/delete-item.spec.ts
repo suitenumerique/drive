@@ -35,5 +35,5 @@ test("Check that if we delete the current folder, it redirects to the parent fol
   await createFolderInCurrentFolder(page, "Test");
   await navigateToFolder(page, "Test", ["Test"]);
   await deleteCurrentFolder(page);
-  await expectDefaultRoute(page, "My files", "/explorer/items/my_files");
+  await expectDefaultRoute(page, "My files", "/explorer/items/my-files");
 });

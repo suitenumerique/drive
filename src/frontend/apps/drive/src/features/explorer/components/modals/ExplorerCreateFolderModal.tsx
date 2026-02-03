@@ -40,7 +40,7 @@ export const ExplorerCreateFolderModal = ({
           form.reset();
           props.onClose();
           if (!props.parentId || !canCreateChildren) {
-            router.push(`/explorer/items/my_files`);
+            router.push(`/explorer/items/my-files`);
           }
         },
       },
