@@ -74,7 +74,7 @@ export const ItemShareModal = ({
         label: t(`roles.${role}`),
         value: role,
       })),
-    [t]
+    [t],
   );
 
   /**
@@ -86,7 +86,7 @@ export const ItemShareModal = ({
     {
       enabled: queryValue !== undefined && queryValue !== "",
       placeholderData: (previousData) => previousData,
-    }
+    },
   );
 
   // Used for the initial data
@@ -107,7 +107,7 @@ export const ItemShareModal = ({
         itemId: itemId,
         userId: user.id,
         role: role as Role,
-      })
+      }),
     );
 
     const promisesInvitation = inviteByEmail.map((user) =>
@@ -115,11 +115,10 @@ export const ItemShareModal = ({
         itemId: itemId,
         email: user.email,
         role: role as Role,
-      })
+      }),
     );
 
     await Promise.all([...promises, ...promisesInvitation]);
-
 
     queryClient.invalidateQueries({
       queryKey: ["itemAccesses", itemId],
@@ -155,17 +154,21 @@ export const ItemShareModal = ({
     // return result;
     // Find parent_id_max_role for each access
     return result.map((access) => {
+      const result = {
+        ...access,
+        can_delete: access.abilities.destroy,
+      };
       if (!access.max_ancestors_role) {
-        return access;
+        return result;
       }
 
       // Only search for parent if max_ancestors_role is different from max_role
       if (access.max_ancestors_role === access.max_role) {
-        return access;
+        return result;
       }
 
       return {
-        ...access,
+        ...result,
         parent_id_max_role: access.max_ancestors_role_item_id,
       };
     });
@@ -238,6 +241,10 @@ export const ItemShareModal = ({
     const linkRoleOptions = options[currentLinkReach];
     const availableRoles = linkRoleOptions || [];
 
+    if (availableRoles.length === 0) {
+      return [];
+    }
+
     return Object.values(LinkRole).map((role) => ({
       value: role,
       label: t(`roles.${role}`),
@@ -245,6 +252,8 @@ export const ItemShareModal = ({
       isDisabled: !availableRoles.includes(role),
     }));
   }, [item, t]);
+
+  console.log("LINK ROLE CHOICES", linkRoleChoices);
 
   const parentItemId = useMemo(() => {
     const pathParts = item?.path.split(".");
@@ -275,7 +284,7 @@ export const ItemShareModal = ({
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-    }
+    };
   }, []);
 
   const updateLinkConfiguration = useMutationUpdateLinkConfiguration();
@@ -335,7 +344,10 @@ export const ItemShareModal = ({
       onInviteUser={(users, role) => onInviteUser(users, role as Role)}
       accessRoleTopMessage={(access) => {
         const availableRoles = access.abilities.set_role_to;
-        if (access.item.id !== itemId) {
+        if (
+          access.max_ancestors_role_item_id &&
+          access.max_ancestors_role_item_id !== itemId
+        ) {
           return (
             <RedirectionToParentItem
               itemId={access.max_ancestors_role_item_id}
@@ -394,11 +406,11 @@ export const ItemShareModal = ({
           onCopyLink={() => {
             if (item?.type === ItemType.FILE) {
               copyToClipboard(
-                `${window.location.origin}/explorer/items/files/${itemId}`
+                `${window.location.origin}/explorer/items/files/${itemId}`,
               );
             } else {
               copyToClipboard(
-                `${window.location.origin}/explorer/items/${itemId}`
+                `${window.location.origin}/explorer/items/${itemId}`,
               );
             }
           }}

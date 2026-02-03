@@ -10,8 +10,8 @@ import { Item } from "@/features/drivers/types";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationRenameItem } from "../../hooks/useMutations";
 import { useRef } from "react";
-import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import { removeFileExtension } from "../../utils/mimeTypes";
+import { useTreeUtils } from "../../hooks/useTreeUtils";
 
 type Inputs = {
   title: string;
@@ -20,9 +20,9 @@ type Inputs = {
 export const ExplorerRenameItemModal = (
   props: Pick<ModalProps, "isOpen" | "onClose"> & {
     item: Item;
-  }
+  },
 ) => {
-  const treeContext = useTreeContext<Item>();
+  const treeUtils = useTreeUtils();
   const { t } = useTranslation();
   const form = useForm<Inputs>({
     defaultValues: {
@@ -40,11 +40,11 @@ export const ExplorerRenameItemModal = (
       },
       {
         onSuccess: () => {
-          treeContext?.treeData.updateNode(props.item.id, {
+          treeUtils.updateNodeByOriginalId(props.item.id, {
             title: data.title,
           });
         },
-      }
+      },
     );
 
     props.onClose();

@@ -8,33 +8,42 @@ import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationCreateFolder } from "../../hooks/useMutations";
+import { useRouter } from "next/router";
 
 type Inputs = {
   title: string;
 };
 
-export const ExplorerCreateFolderModal = (
-  props: Pick<ModalProps, "isOpen" | "onClose"> & {
-    parentId?: string;
-  }
-) => {
+type ExplorerCreateFolderModalProps = Pick<ModalProps, "isOpen" | "onClose"> & {
+  parentId?: string;
+  canCreateChildren?: boolean;
+};
+
+export const ExplorerCreateFolderModal = ({
+  canCreateChildren = true,
+  ...props
+}: ExplorerCreateFolderModalProps) => {
   const { t } = useTranslation();
   const form = useForm<Inputs>();
   const createFolder = useMutationCreateFolder();
+  const router = useRouter();
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     form.reset();
     createFolder.mutate(
       {
         ...data,
-        parentId: props.parentId,
+        parentId: canCreateChildren ? props.parentId : undefined,
       },
       {
         onSuccess: () => {
           form.reset();
           props.onClose();
+          if (!props.parentId || !canCreateChildren) {
+            router.push(`/explorer/items/my_files`);
+          }
         },
-      }
+      },
     );
   };
 
