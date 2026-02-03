@@ -98,7 +98,7 @@ export const useRefreshItemCache = () => {
   ) => {
     if (partialUpdate) {
       updateItemInPaginatedList(["items"], itemId, partialUpdate);
-      queryClient.setQueryData(["item", itemId], (old: Item) => {
+      queryClient.setQueryData(["items", itemId], (old: Item) => {
         return {
           ...old,
           ...partialUpdate,
@@ -109,7 +109,7 @@ export const useRefreshItemCache = () => {
         queryKey: ["items"],
       });
       queryClient.invalidateQueries({
-        queryKey: ["item", itemId],
+        queryKey: ["items", itemId],
       });
       moreQueriesToInvalidate?.forEach((queryKey) => {
         queryClient.invalidateQueries({
@@ -148,7 +148,7 @@ export const useRefreshFavoriteCache = () => {
   return (itemId: string, isFavorite: boolean) => {
     const moreQueriesToInvalidate: QueryKey[] = [
       ["items", "infinite", JSON.stringify({ is_favorite: isFavorite })],
-      ["item", itemId],
+      ["items", itemId],
     ];
 
     const rootFavoriteTreeId = generateTreeId(

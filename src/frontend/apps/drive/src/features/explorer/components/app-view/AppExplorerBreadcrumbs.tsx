@@ -46,6 +46,7 @@ export const AppExplorerBreadcrumbs = () => {
       <div className="explorer__content__breadcrumbs">
         <EmbeddedExplorerGridBreadcrumbs
           currentItemId={item?.id}
+          item={item}
           showMenuLastItem={true}
           onGoBack={(item) => {
             onNavigate({

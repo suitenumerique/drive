@@ -1,4 +1,3 @@
-import { getDriver } from "@/features/config/Config";
 import { Item, ItemType, Role } from "@/features/drivers/types";
 import {
   Button,
@@ -6,7 +5,7 @@ import {
   ModalSize,
   useModal,
 } from "@gouvfr-lasuite/cunningham-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   HorizontalSeparator,
   useResponsive,
@@ -24,6 +23,7 @@ import {
 import { AddFolderButton } from "./AddFolderButton";
 import { useGlobalExplorer } from "../../GlobalExplorerContext";
 import { useRef } from "react";
+import { useItem } from "@/features/explorer/hooks/useQueries";
 
 interface ExplorerMoveFolderProps {
   isOpen: boolean;
@@ -87,9 +87,7 @@ export const ExplorerMoveFolder = ({
   const moveConfirmationModal = useModal();
   const createFolderModal = useModal();
 
-  const { data: item } = useQuery({
-    queryKey: ["item", itemsExplorer.currentItemId],
-    queryFn: () => getDriver().getItem(itemsExplorer.currentItemId!),
+  const { data: item } = useItem(itemsExplorer.currentItemId!, {
     enabled: !!itemsExplorer.currentItemId,
   });
 
@@ -155,7 +153,7 @@ export const ExplorerMoveFolder = ({
           // If the current item is moved, we invalidate the item and breadcrumb queries
           if (ids.includes(currentItemId)) {
             queryClient.invalidateQueries({
-              queryKey: ["item", currentItemId],
+              queryKey: ["items", currentItemId],
             });
             queryClient.invalidateQueries({
               queryKey: ["breadcrumb", currentItemId],
