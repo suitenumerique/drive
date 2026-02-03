@@ -465,7 +465,30 @@
           "picker_label_other": "{{count}} files selected",
           "save_label": "Choose a destination for the file",
           "save": "Save",
-          "cannot_pick": "You don’t have permission to share this file because you’re only a viewer."
+          "cannot_pick": "You don't have permission to share this file because you're only a viewer."
+        }
+      },
+      "release_notes": {
+        "labels": {
+          "app_name": "Updates to Drive",
+          "see_whats_new": "See what's new"
+        },
+        "v0_11_1": {
+          "main_title": "Advanced sharing",
+          "steps": {
+            "0": {
+              "title": "Share folders",
+              "description": "You can now share an entire folder. People you invite also get access to everything inside it. If you already use Fichiers, you can find your previous spaces as shared folders."
+            },
+            "1": {
+              "title": "Advanced roles and access management",
+              "description": "Set roles and access links for your folders and files to make teamwork easier."
+            },
+            "2": {
+              "title": "New \"Move\" window",
+              "description": "Move your files and folders more easily with a new \"Move\" window, including on mobile."
+            }
+          }
         }
       }
     }
@@ -948,6 +971,29 @@
           "save": "Enregistrer",
           "cannot_pick": "Vous n'avez pas les droits pour partager ce fichier car vous n'êtes qu'un lecteur."
         }
+      },
+      "release_notes": {
+        "labels": {
+          "app_name": "Mise à jours de Fichiers",
+          "see_whats_new": "Voir les nouveautés"
+        },
+        "v0_11_1": {
+          "main_title": "Partages avancés",
+          "steps": {
+            "0": {
+              "title": "Partager des dossiers",
+              "description": "Vous pouvez maintenant partager un dossier entier. Les personnes que vous invitez ont également accès à tout ce qu'il contient. Si vous utilisez déjà Fichiers, vous pouvez retrouver vos anciens espaces sous forme de dossiers partagés."
+            },
+            "1": {
+              "title": "Gestion avancée des rôles et des accès",
+              "description": "Définissez des rôles et des liens d'accès pour vos dossiers et fichiers afin de faciliter le travail en équipe."
+            },
+            "2": {
+              "title": "Nouvelle fenêtre \"Déplacer\"",
+              "description": "Déplacez vos fichiers et dossiers plus facilement grâce à une nouvelle fenêtre \"Déplacer\", y compris sur mobile."
+            }
+          }
+        }
       }
     }
   },
@@ -1418,6 +1464,29 @@
           "save_label": "Kies een bestemming voor het bestand",
           "save": "bewaren",
           "cannot_pick": "Je hebt geen toestemming om dit bestand te delen omdat je alleen lees-rechten hebt."
+        }
+      },
+      "release_notes": {
+        "labels": {
+          "app_name": "Wat is er nieuw",
+          "see_whats_new": "Zie wat er nieuw is"
+        },
+        "v0_11_1": {
+          "main_title": "Wat is er nieuw",
+          "steps": {
+            "0": {
+              "title": "Mappen delen",
+              "description": "U kunt nu een hele map delen. Mensen die u uitnodigt krijgen ook toegang tot alles wat erin zit. Als u Fichiers al gebruikt, kunt u uw vorige werkruimten terugvinden als gedeelde mappen."
+            },
+            "1": {
+              "title": "Geavanceerd rollen- en toegangsbeheer",
+              "description": "Stel rollen en toegangslinks in voor uw mappen en bestanden om samenwerking te vergemakkelijken."
+            },
+            "2": {
+              "title": "Nieuw \"Verplaatsen\" venster",
+              "description": "Verplaats uw bestanden en mappen gemakkelijker met een nieuw \"Verplaatsen\" venster, ook op mobiel."
+            }
+          }
         }
       }
     }

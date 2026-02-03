@@ -165,6 +165,7 @@ export type User = {
   full_name: string;
   short_name: string;
   language: string;
+  last_release_note_seen?: string | null;
 };
 
 export type LocalizedThemeCustomization<T> = {
@@ -191,6 +192,7 @@ export type ApiConfig = {
   FRONTEND_HIDE_GAUFRE?: boolean;
   FRONTEND_SILENT_LOGIN_ENABLED?: boolean;
   FRONTEND_EXTERNAL_HOME_URL?: string;
+  FRONTEND_RELEASE_NOTE_ENABLED?: boolean;
   theme_customization?: ThemeCustomization;
 };
 

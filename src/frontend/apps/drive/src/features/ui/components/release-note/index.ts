@@ -1,0 +1,1 @@
+export { ReleaseNoteAuto } from "./ReleaseNoteAuto";
