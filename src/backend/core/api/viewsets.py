@@ -1897,6 +1897,7 @@ class ConfigView(drf.views.APIView):
             "FRONTEND_HIDE_GAUFRE",
             "FRONTEND_SILENT_LOGIN_ENABLED",
             "FRONTEND_EXTERNAL_HOME_URL",
+            "FRONTEND_RELEASE_NOTE_ENABLED",
             "MEDIA_BASE_URL",
             "POSTHOG_KEY",
             "POSTHOG_HOST",
