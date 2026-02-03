@@ -11,8 +11,7 @@ import { NavigationItem } from "../GlobalExplorerContext";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 import clsx from "clsx";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
-import { useQuery } from "@tanstack/react-query";
-import { getDriver } from "@/features/config/Config";
+import { useItem } from "../../hooks/useQueries";
 import { useRouter } from "next/router";
 import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
 import { ItemShareModal } from "../modals/share/ItemShareModal";
@@ -21,6 +20,7 @@ type BaseBreadcrumbsProps = {
   onGoBack?: (item: Item | ItemBreadcrumb) => void;
   goToSpaces?: () => void;
   currentItemId?: string | null;
+  item?: Item;
   showAllFolderItem?: boolean;
   showMenuLastItem?: boolean;
   forcedBreadcrumbsItems?: ItemBreadcrumb[];
@@ -52,6 +52,7 @@ const BaseBreadcrumbs = ({
   showAllFolderItem: showSpacesItem = false,
   showMenuLastItem = false,
   currentItemId,
+  item: itemFromProps,
   forcedBreadcrumbsItems,
 }: BaseBreadcrumbsProps) => {
   const { t, i18n } = useTranslation();
@@ -60,11 +61,11 @@ const BaseBreadcrumbs = ({
   const defaultRouteData = getDefaultRoute(router.pathname);
   const { data: breadcrumb } = useBreadcrumbQuery(currentItemId);
 
-  const { data: item } = useQuery({
-    queryKey: ["item", currentItemId],
-    queryFn: () => getDriver().getItem(currentItemId!),
-    enabled: !!currentItemId,
+  const { data: fetchedItem } = useItem(currentItemId!, {
+    enabled: !!currentItemId && !itemFromProps,
   });
+
+  const item = itemFromProps ?? fetchedItem;
 
   const handleGoBack = (item: Item | ItemBreadcrumb) => {
     onGoBack?.(item);
