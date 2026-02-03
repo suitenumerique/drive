@@ -1,10 +1,15 @@
 import { getDriver } from "@/features/config/Config";
 import { Item } from "@/features/drivers/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useGlobalExplorer, generateTreeId } from "../components/GlobalExplorerContext";
-import { useAddItemToPaginatedList, useRemoveItemsFromPaginatedList } from "./useOptimisticPagination";
+import {
+  useGlobalExplorer,
+  generateTreeId,
+} from "../components/GlobalExplorerContext";
+import {
+  useAddItemToPaginatedList,
+  useRemoveItemsFromPaginatedList,
+} from "./useOptimisticPagination";
 import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
-import { getParentIdFromPath } from "../utils/utils";
 import {
   useRefreshQueryCacheAfterMutation,
   useDeleteMutationCallbacks,
@@ -38,8 +43,10 @@ export const useMutationCreateFile = () => {
 export const useMutationDeleteItems = () => {
   const driver = getDriver();
   const { item } = useGlobalExplorer();
-  const parentId = getParentIdFromPath(item?.path);
-  const mutationCallbacks = useDeleteMutationCallbacks(parentId);
+
+  const mutationCallbacks = useDeleteMutationCallbacks(
+    item?.originalId ?? item?.id,
+  );
 
   return useMutation({
     mutationFn: async (...payload: Parameters<typeof driver.deleteItems>) => {
@@ -68,7 +75,6 @@ export const useMutationHardDeleteItems = () => {
 export const useMutationRenameItem = () => {
   const driver = getDriver();
   const refreshItemCache = useRefreshItemCache();
-
 
   return useMutation({
     mutationFn: async (...payload: Parameters<typeof driver.updateItem>) => {
@@ -114,10 +120,11 @@ export const useMutationCreateFolder = () => {
   });
 };
 
-
 export const useMutationUpdateLinkConfiguration = () => {
   const driver = getDriver();
   const refreshItemCache = useRefreshItemCache();
+  const queryClient = useQueryClient();
+  const refreshQueryCacheAfterMutation = useRefreshQueryCacheAfterMutation();
   return useMutation({
     mutationFn: async (
       ...payload: Parameters<typeof driver.updateLinkConfiguration>
@@ -125,7 +132,13 @@ export const useMutationUpdateLinkConfiguration = () => {
       await driver.updateLinkConfiguration(...payload);
     },
     onSuccess: (_, variables) => {
-      refreshItemCache(variables.itemId);
+      queryClient.invalidateQueries({
+        queryKey: ["items", variables.itemId],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["itemAccesses"],
+      });
     },
   });
 };
@@ -193,12 +206,11 @@ export const useMutationUpdateWorkspace = () => {
   });
 };
 
-
-
 export const useMutationCreateFavoriteItem = () => {
   const driver = getDriver();
 
   const refreshFavoriteCache = useRefreshFavoriteCache();
+  const refreshItemCache = useRefreshItemCache();
 
   return useMutation({
     mutationFn: (...payload: Parameters<typeof driver.createFavoriteItem>) => {
@@ -206,6 +218,7 @@ export const useMutationCreateFavoriteItem = () => {
     },
     onSuccess: (_, itemId: string) => {
       refreshFavoriteCache(itemId, true);
+      refreshItemCache(itemId, { is_favorite: true });
     },
   });
 };
@@ -215,6 +228,7 @@ export const useMutationDeleteFavoriteItem = () => {
   const treeContext = useTreeContext();
   const removeItems = useRemoveItemsFromPaginatedList();
   const refreshFavoriteCache = useRefreshFavoriteCache();
+  const refreshItemCache = useRefreshItemCache();
   return useMutation({
     mutationFn: (...payload: Parameters<typeof driver.deleteFavoriteItem>) => {
       return driver.deleteFavoriteItem(...payload);
@@ -222,9 +236,17 @@ export const useMutationDeleteFavoriteItem = () => {
     onSuccess: (_data, itemId: string) => {
       // Only delete the root favorite node (directly under favorites)
       // Children of opened favorite folders should remain visible
-      const rootFavoriteTreeId = generateTreeId(itemId, DefaultRoute.FAVORITES, true);
+      const rootFavoriteTreeId = generateTreeId(
+        itemId,
+        DefaultRoute.FAVORITES,
+        true,
+      );
       treeContext?.treeData.deleteNode(rootFavoriteTreeId);
-      removeItems(["items", "infinite", JSON.stringify({ is_favorite: true })], [itemId]);
+      removeItems(
+        ["items", "infinite", JSON.stringify({ is_favorite: true })],
+        [itemId],
+      );
+      refreshItemCache(itemId, { is_favorite: false });
       refreshFavoriteCache(itemId, false);
     },
   });

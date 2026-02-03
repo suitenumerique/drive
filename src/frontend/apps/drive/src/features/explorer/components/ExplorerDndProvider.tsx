@@ -1,18 +1,22 @@
 import {
-    DndContext,
-    DragEndEvent,
-    DragOverlay,
-    DragStartEvent,
-    KeyboardSensor,
-    Modifier,
-    MouseSensor,
-    TouchSensor,
-    useSensor,
-    useSensors,
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  KeyboardSensor,
+  Modifier,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
 } from "@dnd-kit/core";
 import { getEventCoordinates } from "@dnd-kit/utilities";
 import { useMoveItems } from "../api/useMoveItem";
-import { itemToTreeItem, useGlobalExplorer, getOriginalIdFromTreeId } from "./GlobalExplorerContext";
+import {
+  itemToTreeItem,
+  useGlobalExplorer,
+  getOriginalIdFromTreeId,
+} from "./GlobalExplorerContext";
 import { Item, TreeItem } from "@/features/drivers/types";
 import { ExplorerDragOverlay } from "./tree/ExploreDragOverlay";
 import { TreeViewNodeTypeEnum, useTreeContext } from "@gouvfr-lasuite/ui-kit";
@@ -20,8 +24,8 @@ import { addItemsMovedToast } from "./toasts/addItemsMovedToast";
 import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { createContext, useContext, useState } from "react";
 import {
-    ConfirmationMoveState,
-    ExplorerTreeMoveConfirmationModal,
+  ConfirmationMoveState,
+  ExplorerTreeMoveConfirmationModal,
 } from "./tree/ExplorerTreeMoveConfirmationModal";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { useMutationCreateFavoriteItem } from "../hooks/useMutations";
@@ -54,10 +58,10 @@ export const useDragItemContext = () => {
 export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
   const moveConfirmationModal = useModal();
   const [overedItemIds, setOveredItemIds] = useState<Record<string, boolean>>(
-    {}
+    {},
   );
   const [moveState, setMoveState] = useState<ConfirmationMoveState | undefined>(
-    undefined
+    undefined,
   );
   const { itemId, selectedItems, setSelectedItems } = useGlobalExplorer();
   const { mutateAsync: createFavoriteItem } = useMutationCreateFavoriteItem();
@@ -117,7 +121,7 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
           // Reset the selected items after the move
           setSelectedItems([]);
         },
-      }
+      },
     );
   };
 
@@ -128,8 +132,13 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
     const overItemRaw = over?.data.current?.item as Item;
 
     // Extract the original item ID from the tree ID (handles favorites path format)
-    const activeItem = { ...activeItemRaw, id: getOriginalIdFromTreeId(activeItemRaw.id) };
-    const overItemId = overItemRaw?.id ? getOriginalIdFromTreeId(overItemRaw.id) : undefined;
+    const activeItem = {
+      ...activeItemRaw,
+      id: getOriginalIdFromTreeId(activeItemRaw.id),
+    };
+    const overItemId = overItemRaw?.id
+      ? getOriginalIdFromTreeId(overItemRaw.id)
+      : undefined;
 
     if (overItemId === DefaultRoute.FAVORITES && activeItem) {
       await handleCreateFavoriteItem(activeItem);
@@ -160,6 +169,7 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
         sourceItem: activeItem,
         targetItem: overItem,
       });
+      setOveredItemIds({});
       moveConfirmationModal.open();
       return;
     }
@@ -234,7 +244,9 @@ export const snapToTopLeft: Modifier = ({
 
 export const canDrop = (activeItem: Item, overItem: Item | TreeItem) => {
   // Extract the original item ID from the tree ID (handles favorites path format)
-  const overItemId = overItem?.id ? getOriginalIdFromTreeId(overItem.id) : undefined;
+  const overItemId = overItem?.id
+    ? getOriginalIdFromTreeId(overItem.id)
+    : undefined;
   const activeItemId = getOriginalIdFromTreeId(activeItem.id);
 
   if (overItemId === DefaultRoute.FAVORITES) {

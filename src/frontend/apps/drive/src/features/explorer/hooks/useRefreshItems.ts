@@ -9,9 +9,7 @@ import { DefaultRoute } from "@/utils/defaultRoutes";
 import { generateTreeId } from "../components/GlobalExplorerContext";
 
 export const useGetQueryKeyToRefresh = () => {
-  
   return (parentId?: string) => {
-    
     const queryKeys = [["items", "infinite"]];
     if (parentId) {
       queryKeys.push(["items", parentId, "children"]);
@@ -30,18 +28,18 @@ export const useRefreshQueryCacheAfterMutation = () => {
 
   return (parentId?: string) => {
     const queryKey = getQueryKey(parentId);
-    
+
     for (const key of queryKey) {
-        queryClient.invalidateQueries({
-            queryKey: key,
-        });
+      queryClient.invalidateQueries({
+        queryKey: key,
+      });
     }
   };
 };
 
 export const useDeleteMutationCallbacks = (
   parentId?: string,
-  defaultQueryKey?: string[][]
+  defaultQueryKey?: string[][],
 ) => {
   const queryClient = useQueryClient();
   const getQueryKey = useGetQueryKeyToRefresh();
@@ -58,12 +56,14 @@ export const useDeleteMutationCallbacks = (
       returnPreviousItems.set(key, previousItems ?? []);
       removeItems(key, itemIds);
     });
-   
+
     return { previousItems: returnPreviousItems };
   };
 
   const onError = (_err: unknown, _variables: unknown, context: unknown) => {
-    const returnPreviousItems = context as { previousItems: Map<string[], Item[]> };
+    const returnPreviousItems = context as {
+      previousItems: Map<string[], Item[]>;
+    };
     returnPreviousItems.previousItems.forEach((previousItems, key) => {
       queryClient.setQueryData(key, previousItems);
     });
@@ -94,7 +94,7 @@ export const useRefreshItemCache = () => {
   return async (
     itemId: string,
     partialUpdate?: Partial<Item>,
-    moreQueriesToInvalidate?: QueryKey[]
+    moreQueriesToInvalidate?: QueryKey[],
   ) => {
     if (partialUpdate) {
       updateItemInPaginatedList(["items"], itemId, partialUpdate);
@@ -144,21 +144,22 @@ export const useOnSuccessAccessOrInvitationMutation = () => {
 export const useRefreshFavoriteCache = () => {
   const queryClient = useQueryClient();
   const treeContext = useTreeContext();
-  
+
   return (itemId: string, isFavorite: boolean) => {
     const moreQueriesToInvalidate: QueryKey[] = [
       ["items", "infinite", JSON.stringify({ is_favorite: isFavorite })],
       ["item", itemId],
     ];
 
-  
-    const rootFavoriteTreeId = generateTreeId(itemId, DefaultRoute.FAVORITES, true);
+    const rootFavoriteTreeId = generateTreeId(
+      itemId,
+      DefaultRoute.FAVORITES,
+      true,
+    );
     treeContext?.treeData.deleteNode(rootFavoriteTreeId);
 
     queryClient.invalidateQueries({
       queryKey: moreQueriesToInvalidate,
     });
-
-    
   };
 };
