@@ -276,6 +276,14 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
     font-weight: 700;
     font-size: 11px;
     width: fit-content;
+    min-width: 120px;
+
+    &__cannot-move {
+      background-color: var(
+        --c--contextuals--background--semantic--error--primary
+      );
+      color: var(--c--contextuals--content--semantic--error--on-error, #fff);
+    }
   }
 }
 
