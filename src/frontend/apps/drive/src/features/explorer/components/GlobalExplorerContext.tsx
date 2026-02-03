@@ -70,7 +70,7 @@ export const useGlobalExplorer = () => {
   const context = useContext(GlobalExplorerContext);
   if (!context) {
     throw new Error(
-      "useGlobalExplorer must be used within an GlobalExplorerProvider"
+      "useGlobalExplorer must be used within an GlobalExplorerProvider",
     );
   }
   return context;
@@ -244,7 +244,7 @@ export const GlobalExplorerProvider = ({
             });
 
             const result = response.children.map((item) =>
-              itemToTreeItem(item, treeId, true)
+              itemToTreeItem(item, treeId, true),
             ) as TreeViewDataType<Item>[];
 
             return {
@@ -257,7 +257,7 @@ export const GlobalExplorerProvider = ({
             type: ItemType.FOLDER,
           });
           const result = data.children.map((item) =>
-            itemToTreeItem(item, treeId, isFavoriteItem)
+            itemToTreeItem(item, treeId, isFavoriteItem),
           ) as TreeViewDataType<Item>[];
 
           return {
@@ -276,7 +276,7 @@ export const GlobalExplorerProvider = ({
           return itemToTreeItem(
             item,
             parentTreeId,
-            isFavoriteItem
+            isFavoriteItem,
           ) as TreeViewDataType<Item>;
         }}
       >
@@ -318,6 +318,7 @@ const TreeProviderInitializer = ({
 }) => {
   const { setTreeIsInitialized } = useGlobalExplorer();
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   const treeContext = useTreeContext<TreeItem>();
 
@@ -330,7 +331,7 @@ const TreeProviderInitializer = ({
     });
 
     const favorites = response.children.map((item) =>
-      itemToTreeItem(item, DefaultRoute.FAVORITES, true)
+      itemToTreeItem(item, DefaultRoute.FAVORITES, true),
     );
 
     const favoritesNode: TreeViewDataType<TreeItem> = {
@@ -349,8 +350,12 @@ const TreeProviderInitializer = ({
 
   // TODO: Move to global tree context?
   useEffect(() => {
+    if (!user) {
+      return;
+    }
+
     initialTree();
-  }, []);
+  }, [user]);
 
   return children;
 };
@@ -370,7 +375,7 @@ const TreeProviderInitializer = ({
 export const generateTreeId = (
   originalId: string,
   parentTreeId?: string,
-  isFavoriteItem?: boolean
+  isFavoriteItem?: boolean,
 ): string => {
   if (!isFavoriteItem) {
     return originalId;
@@ -394,7 +399,7 @@ export const getOriginalIdFromTreeId = (treeId: string): string => {
 export const itemToTreeItem = (
   item: Item,
   parentTreeId?: string,
-  isFavoriteItem?: boolean
+  isFavoriteItem?: boolean,
 ): TreeItem => {
   const originalId = item.id;
   const treeId = generateTreeId(originalId, parentTreeId, isFavoriteItem);
@@ -407,7 +412,7 @@ export const itemToTreeItem = (
     childrenCount: item.numchild_folder ?? 0,
     children:
       item.children?.map((child) =>
-        itemToTreeItem(child, treeId, isFavoriteItem)
+        itemToTreeItem(child, treeId, isFavoriteItem),
       ) ?? [],
     nodeType: TreeViewNodeTypeEnum.NODE,
     title: getItemTitle(item),
@@ -416,7 +421,7 @@ export const itemToTreeItem = (
 
 export const itemsToTreeItems = (
   items: Item[],
-  parentId?: string
+  parentId?: string,
 ): TreeItem[] => {
   return items.map((item) => itemToTreeItem(item, parentId));
 };

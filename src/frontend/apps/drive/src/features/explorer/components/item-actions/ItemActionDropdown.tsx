@@ -4,6 +4,8 @@ import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { t } from "i18next";
 import { itemToTreeItem, useGlobalExplorer } from "../GlobalExplorerContext";
 import settingsSvg from "@/assets/icons/settings.svg";
+import starredSvg from "@/assets/icons/starred.svg";
+import unstarredSvg from "@/assets/icons/starred-slash.svg";
 import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 import { ExplorerRenameItemModal } from "../modals/ExplorerRenameItemModal";
 import { ItemShareModal } from "../modals/share/ItemShareModal";
@@ -40,7 +42,7 @@ export const ItemActionDropdown = ({
   const router = useRouter();
   const { setRightPanelForcedItem, setRightPanelOpen } = useGlobalExplorer();
   const effectiveItemId = itemId ?? item.originalId ?? item.id;
-  
+
   const { handleDownloadItem } = useDownloadItem();
   const { deleteItems: deleteItem } = useDeleteItem();
   const treeContext = useTreeContext();
@@ -48,7 +50,7 @@ export const ItemActionDropdown = ({
 
   const renameModal = useModal();
   const moveModal = useModal();
-  
+
   const explorerContext = useGlobalExplorer();
 
   const { mutateAsync: deleteFavoriteItem } = useMutationDeleteFavoriteItem();
@@ -96,15 +98,9 @@ export const ItemActionDropdown = ({
 
   useEffect(() => {
     onModalOpenChange?.(
-      renameModal.isOpen ||
-        shareItemModal.isOpen ||
-        moveModal.isOpen
+      renameModal.isOpen || shareItemModal.isOpen || moveModal.isOpen,
     );
-  }, [
-    renameModal.isOpen,
-    shareItemModal.isOpen,
-    moveModal.isOpen,
-  ]);
+  }, [renameModal.isOpen, shareItemModal.isOpen, moveModal.isOpen]);
 
   return (
     <>
@@ -147,14 +143,17 @@ export const ItemActionDropdown = ({
             isHidden: !item.abilities?.update,
             value: "edit",
             callback: () => {
-              
-                renameModal.open();
-              
+              renameModal.open();
             },
             showSeparator: true,
           },
           {
-            icon: <span className="material-icons">favorite</span>,
+            icon: (
+              <img
+                src={item.is_favorite ? unstarredSvg.src : starredSvg.src}
+                alt=""
+              />
+            ),
             label: item.is_favorite
               ? t("explorer.item.actions.unfavorite")
               : t("explorer.item.actions.favorite"),
@@ -178,13 +177,16 @@ export const ItemActionDropdown = ({
         {trigger}
       </DropdownMenu>
       {renameModal.isOpen && (
-        <ExplorerRenameItemModal {...renameModal} item={item} key={effectiveItemId} />
+        <ExplorerRenameItemModal
+          {...renameModal}
+          item={item}
+          key={effectiveItemId}
+        />
       )}
       {canViewShareModal && shareItemModal.isOpen && (
         <ItemShareModal {...shareItemModal} item={item} key={effectiveItemId} />
       )}
 
-      
       {moveModal.isOpen && (
         <ExplorerMoveFolder
           {...moveModal}
