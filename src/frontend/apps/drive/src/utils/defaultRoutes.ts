@@ -11,7 +11,7 @@ import starredBreadcrumbIcon from "@/assets/icons/defaultTabs/breadcrumbs/starre
 import trashBreadcrumbIcon from "@/assets/icons/defaultTabs/breadcrumbs/trash.svg";
 
 export enum DefaultRoute {
-  MY_FILES = "my_files",
+  MY_FILES = "my-files",
   RECENT = "recent",
   SHARED_WITH_ME = "shared-with-me",
   FAVORITES = "favorites",
@@ -37,7 +37,7 @@ export const ORDERED_DEFAULT_ROUTES: DefaultRouteData[] = [
   {
     id: DefaultRoute.MY_FILES,
     label: "explorer.tree.my_files",
-    route: "/explorer/items/my_files",
+    route: "/explorer/items/my-files",
     iconName: "person_outline",
     iconSrc: myFilesIcon.src,
     breadcrumbIconSrc: myFilesBreadcrumbIcon.src,

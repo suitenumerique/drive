@@ -162,7 +162,7 @@ export const ExplorerBreadcrumbsMobile = () => {
                 if (parent?.id === DefaultRoute.SHARED_WITH_ME) {
                   router.push("/explorer/items/shared-with-me");
                 } else if (parent?.id === DefaultRoute.MY_FILES) {
-                  router.push("/explorer/items/my_files");
+                  router.push("/explorer/items/my-files");
                 } else if (parent?.id === DefaultRoute.FAVORITES) {
                   router.push("/explorer/items/favorites");
                 } else if (parent?.id === DefaultRoute.RECENT) {
