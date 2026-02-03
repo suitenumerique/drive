@@ -12,4 +12,5 @@ export interface User {
   email: string;
   language: string;
   main_workspace: Item;
+  last_release_note_seen?: string | null;
 }

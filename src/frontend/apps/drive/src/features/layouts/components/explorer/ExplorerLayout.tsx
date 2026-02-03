@@ -12,6 +12,7 @@ import { GlobalLayout } from "../global/GlobalLayout";
 import { LeftPanelMobile } from "../left-panel/LeftPanelMobile";
 import { useRouter } from "next/router";
 import { Item } from "@/features/drivers/types";
+import { ReleaseNoteAuto } from "@/features/ui/components/release-note";
 
 export const getGlobalExplorerLayout = (page: React.ReactElement) => {
   return <GlobalExplorerLayout>{page}</GlobalExplorerLayout>;
@@ -24,6 +25,7 @@ export const GlobalExplorerLayout = ({
 }) => {
   return (
     <GlobalLayout>
+      <ReleaseNoteAuto />
       <ExplorerLayout>{children}</ExplorerLayout>
     </GlobalLayout>
   );
