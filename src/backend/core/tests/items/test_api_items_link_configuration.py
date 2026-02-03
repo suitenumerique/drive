@@ -433,3 +433,118 @@ def test_api_items_link_configuration_update_invalid_role_for_reach_validation()
         ],
         "type": "validation_error",
     }
+
+
+def test_api_items_link_configuration_sync_link_reach_descendants():
+    """
+    When updating the link configuration of an item, sync the link reach of the descendants
+    when the updated link reach is higher than the previous one.
+    """
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    folder1 = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        type=models.ItemTypeChoices.FOLDER,
+        title="Folder 1",
+    )
+    folder2 = factories.ItemFactory(
+        parent=folder1,
+        type=models.ItemTypeChoices.FOLDER,
+        title="Folder 2",
+        link_reach=None,
+    )
+    folder3 = factories.ItemFactory(
+        parent=folder2,
+        type=models.ItemTypeChoices.FOLDER,
+        title="Folder 3",
+        link_reach=None,
+    )
+
+    assert folder1.link_reach == models.LinkReachChoices.RESTRICTED
+    assert folder1.computed_link_reach == models.LinkReachChoices.RESTRICTED
+
+    assert folder2.link_reach is None
+    assert folder2.computed_link_reach == models.LinkReachChoices.RESTRICTED
+
+    assert folder3.link_reach is None
+    assert folder3.computed_link_reach == models.LinkReachChoices.RESTRICTED
+
+    # First update folder 2 to authenticated
+
+    response = client.put(
+        f"/api/v1.0/items/{folder2.id!s}/link-configuration/",
+        {
+            "link_reach": models.LinkReachChoices.AUTHENTICATED,
+            "link_role": folder2.link_role,
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+
+    # in order to remove all computed values, we need to create a new item instance
+    folder1 = models.Item.objects.get(pk=folder1.pk)
+    folder2 = models.Item.objects.get(pk=folder2.pk)
+    folder3 = models.Item.objects.get(pk=folder3.pk)
+
+    assert folder1.link_reach == models.LinkReachChoices.RESTRICTED
+    assert folder1.computed_link_reach == models.LinkReachChoices.RESTRICTED
+
+    assert folder2.link_reach == models.LinkReachChoices.AUTHENTICATED
+    assert folder2.computed_link_reach == models.LinkReachChoices.AUTHENTICATED
+
+    assert folder3.link_reach is None
+    assert folder3.computed_link_reach == models.LinkReachChoices.AUTHENTICATED
+
+    # Then update folder 3 to public
+    response = client.put(
+        f"/api/v1.0/items/{folder3.id!s}/link-configuration/",
+        {
+            "link_reach": models.LinkReachChoices.PUBLIC,
+            "link_role": folder3.link_role,
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+
+    # in order to remove all computed values, we need to create a new item instance
+    folder1 = models.Item.objects.get(pk=folder1.pk)
+    folder2 = models.Item.objects.get(pk=folder2.pk)
+    folder3 = models.Item.objects.get(pk=folder3.pk)
+
+    assert folder1.link_reach == models.LinkReachChoices.RESTRICTED
+    assert folder1.computed_link_reach == models.LinkReachChoices.RESTRICTED
+
+    assert folder2.link_reach == models.LinkReachChoices.AUTHENTICATED
+    assert folder2.computed_link_reach == models.LinkReachChoices.AUTHENTICATED
+
+    assert folder3.link_reach == models.LinkReachChoices.PUBLIC
+    assert folder3.computed_link_reach == models.LinkReachChoices.PUBLIC
+
+    # Finally update folder 1 to public, all descendants should be in sync with it
+    response = client.put(
+        f"/api/v1.0/items/{folder1.id!s}/link-configuration/",
+        {
+            "link_reach": models.LinkReachChoices.PUBLIC,
+            "link_role": folder1.link_role,
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+
+    # in order to remove all computed values, we need to create a new item instance
+    folder1 = models.Item.objects.get(pk=folder1.pk)
+    folder2 = models.Item.objects.get(pk=folder2.pk)
+    folder3 = models.Item.objects.get(pk=folder3.pk)
+
+    assert folder1.link_reach == models.LinkReachChoices.PUBLIC
+    assert folder1.computed_link_reach == models.LinkReachChoices.PUBLIC
+
+    assert folder2.link_reach is None
+    assert folder2.computed_link_reach == models.LinkReachChoices.PUBLIC
+
+    assert folder3.link_reach is None
+    assert folder3.computed_link_reach == models.LinkReachChoices.PUBLIC
