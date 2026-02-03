@@ -17,9 +17,9 @@
       "share_modal": {
         "options": {
           "link_reach": {
-            "authenticated": "Authenticated",
+            "authenticated": "Connected",
             "public": "Public",
-            "restricted": "Restricted"
+            "restricted": "Private"
           },
           "subtext": {
             "reader": "Can view only",
@@ -164,6 +164,12 @@
             "description_one_item": "Choose the new location for <strong>{{name}}</strong>",
             "description_multiple_items": "Choose the new location for the <strong>{{count}}</strong> selected elements"
           }
+        },
+        "drag_overlay": {
+          "files_selected_one": "{{count}} file selected",
+          "files_selected_other": "{{count}} files selected",
+          "cannot_move_file": "You don't have the rights to move this document",
+          "cannot_move_folder": "You don't have the rights to move this folder"
         },
         "rightPanel": {
           "suspicious": {
@@ -482,9 +488,9 @@
       "share_modal": {
         "options": {
           "link_reach": {
-            "authenticated": "Authentifié",
+            "authenticated": "Connecté",
             "public": "Public",
-            "restricted": "Restreint"
+            "restricted": "Privé"
           },
           "subtext": {
             "reader": "Peut voir uniquement",
@@ -630,6 +636,12 @@
             "description_multiple_items": "Choisissez le nouvel emplacement pour les <strong>{{count}}</strong> éléments sélectionnés"
           }
         },
+        "drag_overlay": {
+          "files_selected_one": "{{count}} fichier sélectionné",
+          "files_selected_other": "{{count}} fichiers sélectionnés",
+          "cannot_move_file": "Vous n'avez pas les droits pour déplacer ce document",
+          "cannot_move_folder": "Vous n'avez pas les droits pour déplacer ce dossier"
+        },
         "rightPanel": {
           "suspicious": {
             "text": "Ce fichier semble suspect. Il n'est visible que pour vous."
@@ -721,8 +733,8 @@
           "search": "Rechercher",
           "recent": "Récents",
           "my_files": "Mes fichiers",
-          "shared_with_me": "Partagé avec moi",
-          "favorites": "Starred",
+          "shared_with_me": "Partagés avec moi",
+          "favorites": "Favoris",
           "import": {
             "label": "Importer",
             "files": "Importer des fichiers",
@@ -957,9 +969,9 @@
       "share_modal": {
         "options": {
           "link_reach": {
-            "authenticated": "Geauthenticeerd",
+            "authenticated": "Verbonden",
             "public": "Publiek",
-            "restricted": "Beperkt"
+            "restricted": "Privé"
           },
           "subtext": {
             "reader": "Kan alleen bekijken",
@@ -1104,6 +1116,12 @@
             "description_one_item": "Kies de nieuwe locatie voor <strong>{{name}}</strong>",
             "description_multiple_items": "Kies de nieuwe locatie voor de <strong>{{count}}</strong> geselecteerde elementen"
           }
+        },
+        "drag_overlay": {
+          "files_selected_one": "{{count}} bestand geselecteerd",
+          "files_selected_other": "{{count}} bestanden geselecteerd",
+          "cannot_move_file": "U heeft niet de rechten om dit document te verplaatsen",
+          "cannot_move_folder": "U heeft niet de rechten om deze map te verplaatsen"
         },
         "rightPanel": {
           "suspicious": {

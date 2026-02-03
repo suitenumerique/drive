@@ -108,7 +108,8 @@ export const getParentIdFromPath = (path?: string) => {
   if (!path) {
     return undefined;
   }
-  const parts = path.split(".");
+  const clonedPath = path + "";
+  const parts = clonedPath.split(".");
   if (parts.length === 1) {
     return undefined;
   }
