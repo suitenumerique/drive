@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Item, ItemBreadcrumb } from "@/features/drivers/types";
+import { Item, ItemBreadcrumb, LinkReach } from "@/features/drivers/types";
 import { getDefaultRoute } from "@/utils/defaultRoutes";
 import {
   BreadcrumbItem,
@@ -191,6 +191,28 @@ export const BreadcrumbItemButton = ({
 export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
   const [isOpen, setIsOpen] = useState(false);
   const shareModal = useModal();
+  const icon = useMemo(() => {
+    if (item.computed_link_reach === LinkReach.PUBLIC) {
+      return (
+        <Icon
+          name="public"
+          size={IconSize.SMALL}
+          color="var(--c--contextuals--content--semantic--neutral--tertiary)"
+        />
+      );
+    }
+    if (item.nb_accesses && item.nb_accesses > 1) {
+      return (
+        <Icon
+          name="people"
+          size={IconSize.SMALL}
+          color="var(--c--contextuals--content--semantic--neutral--tertiary)"
+        />
+      );
+    }
+
+    return null;
+  }, [item]);
 
   return (
     <div className="embedded-explorer__breadcrumbs__last-item">
@@ -207,18 +229,12 @@ export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
           />
         }
       />
-      {item.nb_accesses && item.nb_accesses > 1 && (
+      {icon && (
         <>
           <Button
             variant="tertiary"
             size="small"
-            icon={
-              <Icon
-                name="people"
-                size={IconSize.SMALL}
-                color="var(--c--contextuals--content--semantic--neutral--tertiary)"
-              />
-            }
+            icon={icon}
             onClick={() => shareModal.open()}
           />
           {shareModal.isOpen && <ItemShareModal {...shareModal} item={item} />}
