@@ -21,6 +21,8 @@ export const useItemAccesses = (itemId: string) => {
   return useQuery({
     queryKey: ["itemAccesses", itemId],
     queryFn: () => getDriver().getItemAccesses(itemId),
+    staleTime: 0,
+    gcTime: 0,
   });
 };
 
@@ -59,7 +61,7 @@ export const getRootItems = async (filters?: ItemFilters) => {
 
 export const useItem = (
   itemId: string,
-  options?: HookUseQueryOptions<Item>
+  options?: HookUseQueryOptions<Item>,
 ): UseQueryResult<Item | undefined, APIError> => {
   return useQuery<Item, APIError>({
     queryKey: ["items", itemId],
