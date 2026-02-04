@@ -250,6 +250,10 @@
         "trash": {
           "title": "Trash",
           "description": "Automatic deletion after 30 days",
+          "empty": {
+            "caption": "Your trash is empty",
+            "cta": "Deleted items will appear here"
+          },
           "navigate": {
             "modal": {
               "title": "This folder is in the trash",
@@ -656,6 +660,10 @@
         "trash": {
           "title": "Corbeille",
           "description": "Suppression automatique après 30 jours",
+          "empty": {
+            "caption": "Votre corbeille est vide",
+            "cta": "Les éléments supprimés apparaîtront ici"
+          },
           "navigate": {
             "modal": {
               "title": "Ce dossier est dans la corbeille",
@@ -1068,6 +1076,10 @@
         "trash": {
           "title": "Prullenbak",
           "description": "Automatisch verwijderen na 30 dagen",
+          "empty": {
+            "caption": "Uw prullenbak is leeg",
+            "cta": "Verwijderde items verschijnen hier"
+          },
           "navigate": {
             "modal": {
               "title": "Deze map bevindt zich in de prullenbak",

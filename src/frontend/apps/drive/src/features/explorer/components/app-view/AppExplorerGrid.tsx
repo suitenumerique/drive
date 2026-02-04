@@ -62,6 +62,10 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
       return <Loader aria-label={tc("components.datagrid.loader_aria")} />;
     }
     if (isEmpty) {
+      // Use custom empty placeholder if provided
+      if (props.emptyPlaceholder) {
+        return props.emptyPlaceholder;
+      }
       return (
         <div className="c__datagrid__empty-placeholder fs-h3 clr-greyscale-900 fw-bold">
           <img
