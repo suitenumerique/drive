@@ -208,6 +208,13 @@
           },
           "workspace": {
             "label": "Workspace"
+          },
+          "createdBy": {
+            "label": "Created by",
+            "options": {
+              "me": "Me",
+              "others": "Others"
+            }
           }
         },
         "tree": {
@@ -614,6 +621,13 @@
           },
           "workspace": {
             "label": "Espace"
+          },
+          "createdBy": {
+            "label": "Créé par",
+            "options": {
+              "me": "Moi",
+              "others": "Autres"
+            }
           }
         },
         "tree": {
@@ -1026,6 +1040,13 @@
           },
           "workspace": {
             "label": "Werkruimte"
+          },
+          "createdBy": {
+            "label": "Gemaakt door",
+            "options": {
+              "me": "Mij",
+              "others": "Anderen"
+            }
           }
         },
         "tree": {

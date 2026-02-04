@@ -13,6 +13,8 @@ import { ItemIcon } from "../icons/ItemIcon";
 import { getItemTitle } from "../../utils/utils";
 
 const ALL = "all";
+const CREATED_BY_ME = "true";
+const CREATED_BY_OTHERS = "false";
 
 export const handleFilterChange = (
   filters: ItemFilters = {},
@@ -48,11 +50,33 @@ export const ExplorerFilters = () => {
     onFiltersChange?.(handleFilterChange(filters, name, value));
   };
 
+  const onCreatedByChange = (value: Key | null) => {
+    if (value === ALL) {
+      const newFilters = { ...filters };
+      delete newFilters.is_creator_me;
+      onFiltersChange?.(newFilters);
+    } else if (value === CREATED_BY_ME) {
+      onFiltersChange?.({ ...filters, is_creator_me: true });
+    } else if (value === CREATED_BY_OTHERS) {
+      onFiltersChange?.({ ...filters, is_creator_me: false });
+    }
+  };
+
   return (
     <div className="explorer__filters">
       <ExplorerFilterType
         value={filters?.type ?? null}
         onChange={(value) => onChange("type", value)}
+      />
+      <ExplorerFilterCreatedBy
+        value={
+          filters?.is_creator_me === true
+            ? CREATED_BY_ME
+            : filters?.is_creator_me === false
+              ? CREATED_BY_OTHERS
+              : null
+        }
+        onChange={onCreatedByChange}
       />
     </div>
   );
@@ -169,6 +193,50 @@ export const ExplorerFilterScope = (props: {
       label={t("explorer.filters.scopes.label")}
       options={options}
       selectedKey={props.value ?? null} // undefined would trigger "uncontrolled components become controlled" warning.
+      onSelectionChange={props.onChange}
+    />
+  );
+};
+
+export const ExplorerFilterCreatedBy = (props: {
+  value: string | null;
+  onChange: (value: Key | null) => void;
+}) => {
+  const { t } = useTranslation();
+
+  const options: FilterOption[] = useMemo(
+    () => [
+      {
+        label: t("explorer.filters.createdBy.options.me"),
+        value: CREATED_BY_ME,
+        render: () => (
+          <div className="explorer__filters__item">
+            <span className="material-icons">person</span>
+            {t("explorer.filters.createdBy.options.me")}
+          </div>
+        ),
+      },
+      {
+        label: t("explorer.filters.createdBy.options.others"),
+        value: CREATED_BY_OTHERS,
+        render: () => (
+          <div className="explorer__filters__item">
+            <span className="material-icons">people</span>
+            {t("explorer.filters.createdBy.options.others")}
+          </div>
+        ),
+        showSeparator: true,
+      },
+      getResetOption(t),
+    ],
+    [t]
+  );
+
+  return (
+    <Filter
+      label={t("explorer.filters.createdBy.label")}
+      options={options}
+      selectedKey={props.value ?? null}
       onSelectionChange={props.onChange}
     />
   );
