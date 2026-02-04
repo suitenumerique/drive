@@ -1027,6 +1027,9 @@ class Base(Configuration):
     FRONTEND_SILENT_LOGIN_ENABLED = values.BooleanValue(
         default=False, environ_name="FRONTEND_SILENT_LOGIN_ENABLED", environ_prefix=None
     )
+    FRONTEND_EXTERNAL_HOME_URL = values.Value(
+        None, environ_name="FRONTEND_EXTERNAL_HOME_URL", environ_prefix=None
+    )
     THEME_CUSTOMIZATION_FILE_PATH = values.Value(
         os.path.join(BASE_DIR, "drive/configuration/theme/default.json"),
         environ_name="THEME_CUSTOMIZATION_FILE_PATH",

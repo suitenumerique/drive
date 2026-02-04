@@ -1340,12 +1340,12 @@ class ItemViewSet(
             logger.debug("Missing HTTP_X_ORIGINAL_URL header in subrequest")
             raise drf.exceptions.PermissionDenied()
 
-        parsed_url = urlparse(unquote(original_url))
-        match = pattern.search(parsed_url.path)
+        parsed_url = urlparse(original_url)
+        match = pattern.search(unquote(parsed_url.path))
 
         # If the path does not match the pattern, try to extract the parameters from the query
         if not match:
-            match = pattern.search(parsed_url.query)
+            match = pattern.search(unquote(parsed_url.query))
 
         if not match:
             logger.debug(
@@ -1624,6 +1624,7 @@ class ConfigView(drf.views.APIView):
             "FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH",
             "FRONTEND_HIDE_GAUFRE",
             "FRONTEND_SILENT_LOGIN_ENABLED",
+            "FRONTEND_EXTERNAL_HOME_URL",
             "MEDIA_BASE_URL",
             "POSTHOG_KEY",
             "POSTHOG_HOST",
@@ -1751,7 +1752,7 @@ class UsageMetricViewset(drf.mixins.ListModelMixin, viewsets.GenericViewSet):
         queryset = self.queryset
 
         if self.request.query_params.get("account_id"):
-            queryset = queryset.filter(id=self.request.query_params.get("account_id"))
+            queryset = queryset.filter(sub=self.request.query_params.get("account_id"))
 
         return queryset
 

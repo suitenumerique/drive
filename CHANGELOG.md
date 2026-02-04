@@ -12,14 +12,17 @@ and this project adheres to
 
 - 🏗️(ds_proxy) introduce how to use ds_proxy with Drive
 - ✨(global) implement silent login feature and configuration integration
+- ✨(global) implement external home URL redirect
 
 ### Changed
 
 - 🔥(backend) remove usage of atomic transaction for item creation
+- ♻️(backend) use sub claim instead of internal id for external anct APIs
 
 ### Fixed
 
 - 🐛(backend) correctly configure celery beat to run wopi configuration
+- 🐛(backend) fix files with # in filename causing SignatureDoesNotMatch
 
 ### Security
 

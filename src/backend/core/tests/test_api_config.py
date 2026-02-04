@@ -35,6 +35,7 @@ pytestmark = pytest.mark.django_db
     POSTHOG_HOST="https://eu.i.posthog-test.com",
     SENTRY_DSN="https://sentry.test/123",
     THEME_CUSTOMIZATION_FILE_PATH="",
+    FRONTEND_EXTERNAL_HOME_URL="https://test.com",
 )
 @pytest.mark.parametrize("is_authenticated", [False, True])
 def test_api_config(is_authenticated):
@@ -61,6 +62,7 @@ def test_api_config(is_authenticated):
         "FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH": "https://test.com",
         "FRONTEND_HIDE_GAUFRE": True,
         "FRONTEND_SILENT_LOGIN_ENABLED": True,
+        "FRONTEND_EXTERNAL_HOME_URL": "https://test.com",
         "LANGUAGES": [
             ["en-us", "English"],
             ["fr-fr", "French"],

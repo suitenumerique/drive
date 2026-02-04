@@ -30,7 +30,7 @@ class UsageMetricSerializer(serializers.BaseSerializer):
         output = {
             "account": {
                 "type": "user",
-                "id": instance.id,
+                "id": instance.sub,
                 "email": instance.email,
             },
             "metrics": {
