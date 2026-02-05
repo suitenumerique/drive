@@ -121,9 +121,8 @@ export const useMutationCreateFolder = () => {
 
 export const useMutationUpdateLinkConfiguration = () => {
   const driver = getDriver();
-  const refreshItemCache = useRefreshItemCache();
   const queryClient = useQueryClient();
-  const refreshQueryCacheAfterMutation = useRefreshQueryCacheAfterMutation();
+
   return useMutation({
     mutationFn: async (
       ...payload: Parameters<typeof driver.updateLinkConfiguration>

@@ -15,7 +15,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { getEntitlements } from "@/utils/entitlements";
 import { useCanCreateChildren } from "@/features/items/utils";
 import { getMyFilesQueryKey } from "@/utils/defaultRoutes";
-import { useRouter } from "next/router";
 
 type FileUpload = FileWithPath & {
   parentId?: string;
@@ -36,7 +35,6 @@ type Upload = {
 };
 
 const useUpload = ({ item }: { item: Item }) => {
-  const router = useRouter();
   const createFolder = useMutationCreateFolder();
   const queryClient = useQueryClient();
 
@@ -122,7 +120,7 @@ const useUpload = ({ item }: { item: Item }) => {
   // Create the folders and assign each file a parentId.
   const createFoldersFromDrop = async (
     parentItem: Item | undefined,
-    folderUploads: FolderUpload[]
+    folderUploads: FolderUpload[],
   ) => {
     const promises = [];
 
@@ -137,16 +135,15 @@ const useUpload = ({ item }: { item: Item }) => {
               },
               {
                 onSuccess: async (createdFolder) => {
-                  
+                  queryClient.invalidateQueries({
+                    queryKey: getMyFilesQueryKey(),
+                  });
+
+                  if (parentItem) {
                     queryClient.invalidateQueries({
-                      queryKey: getMyFilesQueryKey(),
+                      queryKey: ["items", parentItem.id],
                     });
-                  
-                    if (parentItem) {
-                      queryClient.invalidateQueries({
-                        queryKey: ["items", parentItem.id],
-                      });
-                    }
+                  }
 
                   folder.files.forEach((file) => {
                     file.parentId = createdFolder.id;
@@ -154,9 +151,9 @@ const useUpload = ({ item }: { item: Item }) => {
                   await createFoldersFromDrop(createdFolder, folder.children);
                   resolve();
                 },
-              }
+              },
             );
-          })
+          }),
       );
     }
     for (const promise of promises) {
@@ -258,11 +255,11 @@ export const useUploadZone = ({ item }: { item: Item }) => {
               `explorer.actions.upload.toast${canUpload ? "" : "_no_rights"}`,
               {
                 title: item?.title,
-              }
+              },
             )}
           </span>
         </ToasterItem>,
-        { autoClose: false }
+        { autoClose: false },
       );
     },
     onDragLeave: (event) => {
@@ -300,7 +297,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
               // We need to set this to null in order to re-show the toast when the user drops another file later.
               fileUploadsToastId.current = null;
             },
-          }
+          },
         );
       }
 
@@ -317,7 +314,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
               {entitlements.can_upload.message ||
                 t("entitlements.can_upload.cannot_upload")}
             </span>
-          </ToasterItem>
+          </ToasterItem>,
         );
         return;
       }
@@ -336,7 +333,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
               // We need to set this to null in order to re-show the toast when the user drops another file later.
               fileUploadsToastId.current = null;
             },
-          }
+          },
         );
       }
       dismissDragToast();
@@ -399,9 +396,9 @@ export const useUploadZone = ({ item }: { item: Item }) => {
                   onSettled: () => {
                     resolve();
                   },
-                }
+                },
               );
-            })
+            }),
         );
       }
       for (const promise of promises) {
@@ -437,7 +434,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
     const unloadCallback = (event: BeforeUnloadEvent) => {
       if (
         [UploadingStep.CREATE_FOLDERS, UploadingStep.UPLOAD_FILES].includes(
-          uploadingState.step
+          uploadingState.step,
         )
       ) {
         event.preventDefault();

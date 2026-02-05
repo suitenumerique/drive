@@ -1,5 +1,4 @@
 import { Button } from "@gouvfr-lasuite/cunningham-react";
-import { useTranslation } from "react-i18next";
 import { Item } from "@/features/drivers/types";
 import clsx from "clsx";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
@@ -11,7 +10,6 @@ export type ExplorerTreeItemActionsProps = {
 export const ExplorerTreeItemActions = ({
   item,
 }: ExplorerTreeItemActionsProps) => {
-  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   return (
     <>
