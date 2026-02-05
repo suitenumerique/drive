@@ -197,8 +197,8 @@ export const GlobalExplorerProvider = ({
    * Preview states.
    */
   const [previewItem, setPreviewItem] = useState<Item | undefined>(undefined);
-
   const [previewItems, setPreviewItems] = useState<Item[]>([]);
+
 
   return (
     <GlobalExplorerContext.Provider
@@ -303,6 +303,7 @@ export const GlobalExplorerProvider = ({
         currentItem={previewItem}
         items={previewItems}
         setPreviewItem={setPreviewItem}
+        onItemsChange={setPreviewItems}
       />
     </GlobalExplorerContext.Provider>
   );

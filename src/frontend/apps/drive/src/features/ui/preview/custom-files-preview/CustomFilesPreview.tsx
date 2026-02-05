@@ -7,17 +7,21 @@ import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 import { ItemInfo } from "@/features/items/components/ItemInfo";
 import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
 import { ItemShareModal } from "@/features/explorer/components/modals/share/ItemShareModal";
+import { useRefreshItemCache } from "@/features/explorer/hooks/useRefreshItems";
 
 type CustomFilesPreviewProps = {
   currentItem?: Item;
   items: Item[];
   setPreviewItem?: (item?: Item) => void;
+  /** Used for optimistic updates only ( when the file is renamed in the preview ) */
+  onItemsChange?: (items: Item[]) => void;
 };
 
 export const CustomFilesPreview = ({
   currentItem,
   items,
   setPreviewItem,
+  onItemsChange,
 }: CustomFilesPreviewProps) => {
   const { t } = useTranslation();
 
@@ -38,6 +42,15 @@ export const CustomFilesPreview = ({
     setPreviewItem?.(item);
   };
 
+
+  const refreshItemCache = useRefreshItemCache();
+  const handleFileRename = (file: FilePreviewType, newName: string) => {
+    // Optimistic update of the items in the preview.
+    onItemsChange?.(items.map((item) => item.id === file.id ? { ...item, title: newName } : item));
+    // Update the item in the explorer if needed.
+    refreshItemCache(file.id, { title: newName });
+  };
+
   return (
     <FilePreview
       isOpen={!!currentItem}
@@ -51,6 +64,7 @@ export const CustomFilesPreview = ({
         <CustomFilesPreviewRightHeader currentItem={currentItem} />
       }
       sidebarContent={currentItem && <ItemInfo item={currentItem} />}
+      onFileRename={handleFileRename}
     />
   );
 };
