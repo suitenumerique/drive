@@ -1499,7 +1499,9 @@ class ItemViewSet(
             if request.user.is_authenticated
             else settings.LANGUAGE_CODE
         )
-        launch_url = compute_wopi_launch_url(wopi_client, get_file_info, language)
+        launch_url = compute_wopi_launch_url(
+            wopi_client["url"], get_file_info, language
+        )
 
         return drf.response.Response(
             {
