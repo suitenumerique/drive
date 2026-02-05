@@ -86,7 +86,10 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
                 if mimetype in settings.WOPI_EXCLUDED_MIMETYPES:
                     continue
 
-                wopi_configuration["mimetypes"][mimetype] = action.get("urlsrc")
+                wopi_configuration["mimetypes"][mimetype] = {
+                    "url": action.get("urlsrc"),
+                    "client": client,
+                }
 
             else:
                 extension = action.get("ext")
@@ -94,7 +97,10 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
                 if extension in settings.WOPI_EXCLUDED_EXTENSIONS:
                     continue
 
-                wopi_configuration["extensions"][extension] = action.get("urlsrc")
+                wopi_configuration["extensions"][extension] = {
+                    "url": action.get("urlsrc"),
+                    "client": client,
+                }
 
     cache.set(
         WOPI_CONFIGURATION_CACHE_KEY,

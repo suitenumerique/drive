@@ -48,10 +48,16 @@ def test_configure_wopi_clients(settings):
     # pylint: disable=line-too-long
     assert cache.get(WOPI_CONFIGURATION_CACHE_KEY) == {
         "mimetypes": {
-            "application/vnd.oasis.opendocument.text": "http://localhost:9980/browser/0968141f2c/cool.html?",
+            "application/vnd.oasis.opendocument.text": {
+                "url": "http://localhost:9980/browser/0968141f2c/cool.html?",
+                "client": "vendorA",
+            },
         },
         "extensions": {
-            "odt": "http://localhost:9980/browser/0968141f2c/cool.html?",
+            "odt": {
+                "url": "http://localhost:9980/browser/0968141f2c/cool.html?",
+                "client": "vendorA",
+            },
         },
     }
 

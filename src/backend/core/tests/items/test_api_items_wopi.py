@@ -39,7 +39,10 @@ def configure_wopi_settings(valid_mimetype, valid_wopi_launch_url):
         WOPI_CONFIGURATION_CACHE_KEY,
         {
             "mimetypes": {
-                valid_mimetype: valid_wopi_launch_url,
+                valid_mimetype: {
+                    "url": valid_wopi_launch_url,
+                    "client": "vendorA",
+                },
             },
             "extensions": {},
         },
