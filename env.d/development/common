@@ -77,6 +77,9 @@ WOPI_CLIENTS="collabora,onlyoffice"
 WOPI_COLLABORA_DISCOVERY_URL="http://collabora:9980/hosting/discovery"
 WOPI_ONLYOFFICE_DISCOVERY_URL=http://onlyoffice/hosting/discovery
 WOPI_SRC_BASE_URL=http://app-dev:8000
+# Disable rename for Collabora by default because if does not post messages when renaming a file.
+# So the frontend cannot reflect renaming operations.
+WOPI_COLLABORA_OPTIONS={"SupportsRename": false}
 
 # Indexer
 # SEARCH_INDEXER_CLASS="core.services.search_indexers.SearchIndexer"
