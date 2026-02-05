@@ -89,9 +89,9 @@ MultiUserTest(
       userA.page,
       "user@webkit.test",
       ["Editor", "Administrator", "Owner"],
-      ["Reader"]
+      ["Reader"],
     );
-  }
+  },
 );
 
 MultiUserTest(
@@ -107,17 +107,17 @@ MultiUserTest(
     await createFolderInCurrentFolder(userA.page, "Folder");
     await navigateToFolder(userA.page, "Folder", ["Folder"]);
     await openShareModal(userA.page);
-    await selectLinkReach(userA.page, "Authenticated");
-    await expectLinkReachSelected(userA.page, "Authenticated");
+    await selectLinkReach(userA.page, "Connected");
+    await expectLinkReachSelected(userA.page, "Connected");
     await closeShareModal(userA.page);
     await createFolderInCurrentFolder(userA.page, "Sub folder");
     await navigateToFolder(userA.page, "Sub folder", ["Folder", "Sub folder"]);
     await openShareModal(userA.page);
-    await expectLinkReachSelected(userA.page, "Authenticated");
+    await expectLinkReachSelected(userA.page, "Connected");
     await expectAllowedLinkReach(
       userA.page,
-      ["Authenticated", "Public"],
-      ["Restricted"]
+      ["Connected", "Public"],
+      ["Private"],
     );
-  }
+  },
 );
