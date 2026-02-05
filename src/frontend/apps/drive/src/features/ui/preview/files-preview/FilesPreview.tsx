@@ -4,7 +4,7 @@ import {
   removeFileExtension,
 } from "@/features/explorer/utils/mimeTypes";
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
-import { Button, Modal, ModalSize } from "@openfun/cunningham-react";
+import { Button, Modal, ModalSize } from "@gouvfr-lasuite/cunningham-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { ImageViewer } from "../image-viewer/ImageViewer";
 import { VideoPlayer } from "../video-player/VideoPlayer";
@@ -46,6 +46,7 @@ interface FilePreviewProps {
   handleDownloadFile?: (file?: FilePreviewType) => void;
   hideCloseButton?: boolean;
   hideNav?: boolean;
+  onFileRename?: (file: FilePreviewType, newName: string) => void;
 }
 
 export const FilePreview = ({
@@ -61,6 +62,7 @@ export const FilePreview = ({
   handleDownloadFile,
   hideCloseButton,
   hideNav,
+  onFileRename,
 }: FilePreviewProps) => {
   const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(initialIndexFile);
@@ -91,7 +93,7 @@ export const FilePreview = ({
       return <SuspiciousPreview handleDownload={handleDownload} />;
     }
     if (currentFile.is_wopi_supported) {
-      return <WopiEditor item={currentFile} />;
+      return <WopiEditor item={currentFile} onFileRename={onFileRename} />;
     }
 
     switch (currentFile.category) {
@@ -257,6 +259,9 @@ export const FilePreviewNav: React.FC<FilePreviewNavProps> = ({
   onPrevious,
   onNext,
 }) => {
+  if (totalFiles === 1) {
+    return null;
+  }
   return (
     <div className="file-preview-nav" data-testid="file-preview-nav">
       <Button

@@ -47,22 +47,20 @@ def test_api_items_list_format():
         favorited_by=[user, *other_users],
         link_traces=other_users,
         type=models.ItemTypeChoices.FOLDER,
+        title="item 1",
     )
     item2 = factories.ItemFactory(
         users=factories.UserFactory.create_batch(2),
         favorited_by=[user, *other_users],
         link_traces=other_users,
         type=models.ItemTypeChoices.FILE,
+        title="item 2",
+        mimetype="image/png",
+        filename="logo.png",
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     access = factories.UserItemAccessFactory(item=item, user=user)
-    factories.UserItemAccessFactory(item=item2, user=user)
-
-    # User has visited this file but should not be present in the list view
-    factories.ItemFactory(
-        type=models.ItemTypeChoices.FILE,
-        link_reach="public",
-        link_traces=[user],
-    )
+    access2 = factories.UserItemAccessFactory(item=item2, user=user)
 
     # hard deleted item should not appear
     hard_deleted_item = factories.ItemFactory(
@@ -72,10 +70,13 @@ def test_api_items_list_format():
     )
     factories.UserItemAccessFactory(item=hard_deleted_item, user=user)
 
-    item2.upload_state = models.ItemUploadStateChoices.READY
-    item2.filename = "logo.png"
-    item2.mimetype = "image/png"
-    item2.save()
+    # User has visited this file and should be present in the list view
+    item3 = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach="public",
+        link_traces=[user],
+        title="item 3",
+    )
 
     response = client.get("/api/v1.0/items/")
 
@@ -83,15 +84,93 @@ def test_api_items_list_format():
     content = response.json()
     results = content.pop("results")
     assert content == {
-        "count": 1,
+        "count": 3,
         "next": None,
         "previous": None,
     }
-    assert len(results) == 1
+    assert len(results) == 3
     assert results == [
+        {
+            "id": str(item3.id),
+            "abilities": item3.get_abilities(user),
+            "ancestors_link_reach": item3.ancestors_link_reach,
+            "ancestors_link_role": item3.ancestors_link_role,
+            "computed_link_reach": item3.computed_link_reach,
+            "computed_link_role": item3.computed_link_role,
+            "created_at": item3.created_at.isoformat().replace("+00:00", "Z"),
+            "creator": {
+                "id": str(item3.creator.id),
+                "full_name": item3.creator.full_name,
+                "short_name": item3.creator.short_name,
+            },
+            "depth": 1,
+            "is_favorite": False,
+            "link_reach": item3.link_reach,
+            "link_role": item3.link_role,
+            "nb_accesses": 0,
+            "numchild": 0,
+            "numchild_folder": 0,
+            "path": str(item3.path),
+            "title": item3.title,
+            "updated_at": item3.updated_at.isoformat().replace("+00:00", "Z"),
+            "user_role": None,
+            "type": models.ItemTypeChoices.FILE,
+            "upload_state": item3.upload_state,
+            "url": None,
+            "url_preview": None,
+            "mimetype": item3.mimetype,
+            "main_workspace": False,
+            "filename": item3.filename,
+            "size": None,
+            "description": None,
+            "deleted_at": None,
+            "hard_delete_at": None,
+            "is_wopi_supported": False,
+        },
+        {
+            "id": str(item2.id),
+            "abilities": item2.get_abilities(user),
+            "ancestors_link_reach": item2.ancestors_link_reach,
+            "ancestors_link_role": item2.ancestors_link_role,
+            "computed_link_reach": item2.computed_link_reach,
+            "computed_link_role": item2.computed_link_role,
+            "created_at": item2.created_at.isoformat().replace("+00:00", "Z"),
+            "creator": {
+                "id": str(item2.creator.id),
+                "full_name": item2.creator.full_name,
+                "short_name": item2.creator.short_name,
+            },
+            "depth": 1,
+            "is_favorite": True,
+            "link_reach": item2.link_reach,
+            "link_role": item2.link_role,
+            "nb_accesses": 3,
+            "numchild": 0,
+            "numchild_folder": 0,
+            "path": str(item2.path),
+            "title": item2.title,
+            "updated_at": item2.updated_at.isoformat().replace("+00:00", "Z"),
+            "user_role": access2.role,
+            "type": models.ItemTypeChoices.FILE,
+            "upload_state": item2.upload_state,
+            "url": f"http://localhost:8083/media/item/{item2.id!s}/logo.png",
+            "url_preview": f"http://localhost:8083/media/preview/item/{item2.id!s}/logo.png",
+            "mimetype": item2.mimetype,
+            "main_workspace": False,
+            "filename": item2.filename,
+            "size": None,
+            "description": None,
+            "deleted_at": None,
+            "hard_delete_at": None,
+            "is_wopi_supported": False,
+        },
         {
             "id": str(item.id),
             "abilities": item.get_abilities(user),
+            "ancestors_link_reach": item.ancestors_link_reach,
+            "ancestors_link_role": item.ancestors_link_role,
+            "computed_link_reach": item.computed_link_reach,
+            "computed_link_role": item.computed_link_role,
             "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
             "creator": {
                 "id": str(item.creator.id),
@@ -108,7 +187,7 @@ def test_api_items_list_format():
             "path": str(item.path),
             "title": item.title,
             "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-            "user_roles": [access.role],
+            "user_role": access.role,
             "type": models.ItemTypeChoices.FOLDER,
             "upload_state": None,
             "url": None,
@@ -206,11 +285,11 @@ def test_api_items_list_authenticated_direct(django_assert_num_queries):
         str(child4_with_access.id),
     }
 
-    with django_assert_num_queries(8):
+    with django_assert_num_queries(10):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
@@ -289,7 +368,7 @@ def test_api_items_list_authenticated_link_reach_restricted(
     )
     models.LinkTrace.objects.create(item=folder_item, user=user)
 
-    with django_assert_num_queries(5):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
@@ -298,11 +377,9 @@ def test_api_items_list_authenticated_link_reach_restricted(
 
     assert response.status_code == 200
     results = response.json()["results"]
-    # Only the folder item is returned but not the other items even though the user
-    # visited it earlier (probably b/c it previously had public or authenticated reach...)
-    # only items of type folder are return.
-    assert len(results) == 1
+    assert len(results) == 2
     assert results[0]["id"] == str(folder_item.id)
+    assert results[1]["id"] == str(other_item.id)
 
 
 def test_api_items_list_authenticated_link_reach_public_or_authenticated(
@@ -334,17 +411,11 @@ def test_api_items_list_authenticated_link_reach_public_or_authenticated(
         link_reach=random.choice(["public", "authenticated"]),
         type=models.ItemTypeChoices.FOLDER,
     )
-    factories.ItemFactory(
-        link_traces=[user],
-        link_reach=random.choice(["public", "authenticated"]),
-        parent=hidden_item,
-        type=models.ItemTypeChoices.FILE,
-    )
     visible_child = factories.ItemFactory(
         link_traces=[user],
         link_reach=random.choice(["public", "authenticated"]),
         parent=hidden_item,
-        type=models.ItemTypeChoices.FOLDER,
+        type=models.ItemTypeChoices.FILE,
     )
 
     expected_ids = {
@@ -353,11 +424,11 @@ def test_api_items_list_authenticated_link_reach_public_or_authenticated(
         str(visible_child.id),
     }
 
-    with django_assert_num_queries(7):
+    with django_assert_num_queries(8):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(5):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
@@ -417,7 +488,7 @@ def test_api_items_list_pagination(
 
 
 def test_api_items_list_authenticated_distinct():
-    """A item with several related users should only be listed once."""
+    """An item with several related users should only be listed once."""
     user = factories.UserFactory()
 
     client = APIClient()
@@ -459,7 +530,7 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
     )
 
     url = "/api/v1.0/items/"
-    with django_assert_num_queries(9):
+    with django_assert_num_queries(11):
         response = client.get(url)
 
     # nb_accesses should now be cached
@@ -468,7 +539,7 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 5
+    assert len(results) == 7
 
     assert all(result["is_favorite"] is False for result in results)
 
@@ -481,7 +552,7 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
 
     assert response.status_code == 200
     results = response.json()["results"]
-    assert len(results) == 5
+    assert len(results) == 7
 
     # Check if the "is_favorite" annotation is correctly set for the favorited items
     favorited_ids = {str(doc.id) for doc in special_items}

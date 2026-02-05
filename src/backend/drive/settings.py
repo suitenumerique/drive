@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
+import json
 import os
 import tomllib
 from socket import gethostbyname, gethostname
@@ -1524,6 +1525,13 @@ class Base(Configuration):
         if cls.WOPI_CLIENTS:
             for wopi_client in cls.WOPI_CLIENTS:
                 wopi_client_upper = wopi_client.upper()
+
+                options_raw = os.environ.get(f"WOPI_{wopi_client_upper}_OPTIONS", "{}")
+                try:
+                    options = json.loads(options_raw)
+                except json.JSONDecodeError:
+                    options = {}
+
                 cls.WOPI_CLIENTS_CONFIGURATION[wopi_client] = {
                     "discovery_url": values.Value(
                         None,
@@ -1533,6 +1541,7 @@ class Base(Configuration):
                     ),
                     "mimetypes": {},
                     "extensions": {},
+                    "options": options,
                 }
 
 

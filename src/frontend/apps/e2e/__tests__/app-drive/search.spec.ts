@@ -1,9 +1,7 @@
 import test, { expect } from "@playwright/test";
 import { clearDb, login, runFixture } from "./utils-common";
-import {
-  expectCurrentFolder,
-  expectExplorerBreadcrumbs,
-} from "./utils-explorer";
+import { expectExplorerBreadcrumbs } from "./utils-explorer";
+import { clickToMyFiles } from "./utils-navigate";
 
 test("Search somes items and shows them in the search modal", async ({
   page,
@@ -57,7 +55,7 @@ test("Search folder and click on it", async ({ page }) => {
   await login(page, "drive@example.com");
 
   await page.goto("/");
-  await expectCurrentFolder(page, ["My workspace"]);
+  await clickToMyFiles(page);
 
   await page.getByRole("button", { name: "Search" }).click();
 
@@ -75,7 +73,7 @@ test("Search file and click on it", async ({ page }) => {
   await login(page, "drive@example.com");
 
   await page.goto("/");
-  await expectCurrentFolder(page, ["My workspace"]);
+  await clickToMyFiles(page);
   await page.getByRole("button", { name: "Search" }).click();
 
   const input = page.getByRole("combobox", { name: "Quick search input" });
@@ -94,7 +92,7 @@ test("Search folder from trash and cannot navigate to it", async ({ page }) => {
   await login(page, "drive@example.com");
 
   await page.goto("/");
-  await expectCurrentFolder(page, ["My workspace"]);
+  await clickToMyFiles(page);
 
   await page.getByRole("button", { name: "Search" }).click();
 
@@ -135,7 +133,7 @@ test("Search a deleted file and click on it", async ({ page }) => {
   await login(page, "drive@example.com");
 
   await page.goto("/");
-  await expectCurrentFolder(page, ["My workspace"]);
+  await clickToMyFiles(page);
   await page.getByRole("button", { name: "Search" }).click();
 
   const input = page.getByRole("combobox", { name: "Quick search input" });

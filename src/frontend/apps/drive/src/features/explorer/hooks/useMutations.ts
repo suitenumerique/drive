@@ -1,21 +1,38 @@
 import { getDriver } from "@/features/config/Config";
 import { Item } from "@/features/drivers/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useGlobalExplorer } from "../components/GlobalExplorerContext";
+import {
+  useGlobalExplorer,
+  generateTreeId,
+} from "../components/GlobalExplorerContext";
+import {
+  useAddItemToPaginatedList,
+  useRemoveItemsFromPaginatedList,
+} from "./useOptimisticPagination";
+import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import {
+  useRefreshQueryCacheAfterMutation,
+  useDeleteMutationCallbacks,
+  useRefreshItemCache,
+  useRefreshFavoriteCache,
+} from "./useRefreshItems";
+import { DefaultRoute } from "@/utils/defaultRoutes";
+
+// ============================================================================
+// MUTATIONS
+// ============================================================================
 
 export const useMutationCreateFile = () => {
   const driver = getDriver();
-  const queryClient = useQueryClient();
+  const refresh = useRefreshQueryCacheAfterMutation();
+
   return useMutation({
     mutationFn: async (...payload: Parameters<typeof driver.createFile>) => {
       return driver.createFile(...payload);
     },
     onSuccess: (data, variables) => {
-      if (variables.parentId) {
-        queryClient.invalidateQueries({
-          queryKey: ["items", variables.parentId],
-        });
-      }
+      console.log("data", data);
+      refresh(variables.parentId);
     },
     meta: {
       showErrorOn403: true,
@@ -25,53 +42,25 @@ export const useMutationCreateFile = () => {
 
 export const useMutationDeleteItems = () => {
   const driver = getDriver();
-  const queryClient = useQueryClient();
   const { item } = useGlobalExplorer();
+
+  const mutationCallbacks = useDeleteMutationCallbacks(
+    item?.originalId ?? item?.id,
+  );
+
   return useMutation({
     mutationFn: async (...payload: Parameters<typeof driver.deleteItems>) => {
       await driver.deleteItems(...payload);
     },
-    onMutate: async (itemIds) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({
-        queryKey: ["items", item!.id, "children"],
-      });
-
-      // Snapshot the previous value
-      const previousItems = queryClient.getQueryData([
-        "items",
-        item!.id,
-        "children",
-      ]);
-
-      // Optimistically update to the new value
-      queryClient.setQueryData(
-        ["items", item!.id, "children"],
-        (old: Item[]) =>
-          old ? old.filter((i: Item) => !itemIds.includes(i.id)) : old
-      );
-
-      // Return a context object with the snapshotted value
-      return { previousItems };
-    },
-    onError: (err, variables, context) => {
-      // If the mutation fails, use the context returned from onMutate to roll back
-      queryClient.setQueryData(
-        ["items", item!.id, "children"],
-        context?.previousItems
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["items", item!.id],
-      });
-    },
+    ...mutationCallbacks,
   });
 };
 
 export const useMutationHardDeleteItems = () => {
   const driver = getDriver();
-  const queryClient = useQueryClient();
+  const mutationCallbacks = useDeleteMutationCallbacks(undefined, [
+    ["items", "trash"],
+  ]);
 
   return useMutation({
     mutationFn: async (
@@ -79,107 +68,76 @@ export const useMutationHardDeleteItems = () => {
     ) => {
       await driver.hardDeleteItems(...payload);
     },
-    onMutate: async (itemIds) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({
-        queryKey: ["items", "trash"],
-      });
-
-      // Snapshot the previous value
-      const previousItems = queryClient.getQueryData(["items", "trash"]);
-
-      // Optimistically update to the new value
-      queryClient.setQueryData(["items", "trash"], (old: Item[]) =>
-        old ? old.filter((i: Item) => !itemIds.includes(i.id)) : old
-      );
-
-      // Return a context object with the snapshotted value
-      return { previousItems };
-    },
-    onError: (err, variables, context) => {
-      // If the mutation fails, use the context returned from onMutate to roll back
-      queryClient.setQueryData(["items", "trash"], context?.previousItems);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["items", "trash"],
-      });
-    },
+    ...mutationCallbacks,
   });
 };
 
 export const useMutationRenameItem = () => {
   const driver = getDriver();
-  const queryClient = useQueryClient();
-  const { item } = useGlobalExplorer();
+  const refreshItemCache = useRefreshItemCache();
+
   return useMutation({
     mutationFn: async (...payload: Parameters<typeof driver.updateItem>) => {
       await driver.updateItem(...payload);
     },
-    onMutate: async (itemUpdated) => {
-      await queryClient.cancelQueries({
-        queryKey: ["items", item!.id, "children"],
-      });
-      const previousItems = queryClient.getQueryData([
-        "items",
-        item!.id,
-        "children",
-      ]);
-      queryClient.setQueryData(
-        ["items", item!.id, "children"],
-        (old: Item[]) =>
-          old
-            ? old.map((i: Item) =>
-                i.id === itemUpdated.id ? { ...i, ...itemUpdated } : i
-              )
-            : old
-      );
-      return { previousItems };
+    onMutate: async (...payload: Parameters<typeof driver.updateItem>) => {
+      if (!payload[0].id) {
+        return;
+      }
+      await refreshItemCache(payload[0].id!, { title: payload[0].title });
     },
-    onError: (err, variables, context) => {
-      queryClient.setQueryData(
-        ["items", item!.id, "children"],
-        context?.previousItems
-      );
+    onError: (_error, variables) => {
+      if (!variables.id) {
+        return;
+      }
+
+      refreshItemCache(variables.id);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["items", item!.id, "children"],
-      });
+
+    onSuccess: (_, itemUpdated) => {
+      if (!itemUpdated?.id) {
+        return;
+      }
+      refreshItemCache(itemUpdated.id, itemUpdated);
     },
   });
 };
 
 export const useMutationCreateFolder = () => {
-  const queryClient = useQueryClient();
   const driver = getDriver();
+  const addItemToTopOfPaginatedList = useAddItemToPaginatedList();
 
   return useMutation({
     mutationFn: (...payload: Parameters<typeof driver.createFolder>) => {
       return driver.createFolder(...payload);
     },
     onSuccess: (data, variables) => {
-      if (variables.parentId) {
-        queryClient.invalidateQueries({
-          queryKey: ["items", variables.parentId],
-        });
-      }
+      const queryKey = variables.parentId
+        ? ["items", variables.parentId, "children"]
+        : ["items", "infinite", JSON.stringify({ is_creator_me: true })];
+      addItemToTopOfPaginatedList(queryKey, data);
     },
   });
 };
 
-export const useMutationUpdateItem = () => {
+export const useMutationUpdateLinkConfiguration = () => {
   const driver = getDriver();
+  const refreshItemCache = useRefreshItemCache();
   const queryClient = useQueryClient();
-  const { item } = useGlobalExplorer();
+  const refreshQueryCacheAfterMutation = useRefreshQueryCacheAfterMutation();
   return useMutation({
-    mutationFn: async (...payload: Parameters<typeof driver.updateItem>) => {
-      await driver.updateItem(...payload);
+    mutationFn: async (
+      ...payload: Parameters<typeof driver.updateLinkConfiguration>
+    ) => {
+      await driver.updateLinkConfiguration(...payload);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["items", item!.id],
-        exact: true,
+        queryKey: ["items", variables.itemId],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["itemAccesses"],
       });
     },
   });
@@ -248,98 +206,48 @@ export const useMutationUpdateWorkspace = () => {
   });
 };
 
-// TODO: Make optimistic once the tree is implemented
-export const useMutationDeleteWorskpace = () => {
-  const queryClient = useQueryClient();
+export const useMutationCreateFavoriteItem = () => {
   const driver = getDriver();
 
+  const refreshFavoriteCache = useRefreshFavoriteCache();
+  const refreshItemCache = useRefreshItemCache();
+
   return useMutation({
-    mutationFn: (...payload: Parameters<typeof driver.deleteWorkspace>) => {
-      return driver.deleteWorkspace(...payload);
+    mutationFn: (...payload: Parameters<typeof driver.createFavoriteItem>) => {
+      return driver.createFavoriteItem(...payload);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["items"],
-      });
+    onSuccess: (_, itemId: string) => {
+      refreshFavoriteCache(itemId, true);
+      refreshItemCache(itemId, { is_favorite: true });
     },
   });
 };
 
-export const useMutationCreateAccess = () => {
+export const useMutationDeleteFavoriteItem = () => {
   const driver = getDriver();
-
+  const treeContext = useTreeContext();
+  const removeItems = useRemoveItemsFromPaginatedList();
+  const refreshFavoriteCache = useRefreshFavoriteCache();
+  const refreshItemCache = useRefreshItemCache();
   return useMutation({
-    mutationFn: (...payload: Parameters<typeof driver.createAccess>) => {
-      return driver.createAccess(...payload);
+    mutationFn: (...payload: Parameters<typeof driver.deleteFavoriteItem>) => {
+      return driver.deleteFavoriteItem(...payload);
     },
-  });
-};
-
-export const useMutationCreateInvitation = () => {
-  const driver = getDriver();
-  return useMutation({
-    mutationFn: (...payload: Parameters<typeof driver.createInvitation>) => {
-      return driver.createInvitation(...payload);
-    },
-  });
-};
-
-export const useMutationUpdateInvitation = () => {
-  const driver = getDriver();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (...payload: Parameters<typeof driver.updateInvitation>) => {
-      return driver.updateInvitation(...payload);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["itemInvitations", variables.itemId],
-      });
-    },
-  });
-};
-
-export const useMutationUpdateAccess = () => {
-  const driver = getDriver();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (...payload: Parameters<typeof driver.updateAccess>) => {
-      return driver.updateAccess(...payload);
-    },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["itemAccesses", variables.itemId],
-      });
-    },
-  });
-};
-
-export const useMutationDeleteAccess = () => {
-  const driver = getDriver();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (...payload: Parameters<typeof driver.deleteAccess>) => {
-      return driver.deleteAccess(...payload);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["itemAccesses", variables.itemId],
-      });
-    },
-  });
-};
-
-export const useMutationDeleteInvitation = () => {
-  const driver = getDriver();
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (...payload: Parameters<typeof driver.deleteInvitation>) => {
-      return driver.deleteInvitation(...payload);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["itemInvitations", variables.itemId],
-      });
+    onSuccess: (_data, itemId: string) => {
+      // Only delete the root favorite node (directly under favorites)
+      // Children of opened favorite folders should remain visible
+      const rootFavoriteTreeId = generateTreeId(
+        itemId,
+        DefaultRoute.FAVORITES,
+        true,
+      );
+      treeContext?.treeData.deleteNode(rootFavoriteTreeId);
+      removeItems(
+        ["items", "infinite", JSON.stringify({ is_favorite: true })],
+        [itemId],
+      );
+      refreshItemCache(itemId, { is_favorite: false });
+      refreshFavoriteCache(itemId, false);
     },
   });
 };

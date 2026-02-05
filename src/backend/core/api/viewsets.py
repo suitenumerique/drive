@@ -8,7 +8,6 @@ from urllib.parse import unquote, urlparse
 
 from django.conf import settings
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.search import TrigramSimilarity
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -19,6 +18,7 @@ from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.utils.decorators import method_decorator
+from django.utils.functional import cached_property
 from django.utils.text import slugify
 
 import posthog
@@ -28,6 +28,7 @@ from corsheaders.middleware import (
     ACCESS_CONTROL_ALLOW_METHODS,
     ACCESS_CONTROL_ALLOW_ORIGIN,
 )
+from lasuite.drf.models.choices import PRIVILEGED_ROLES, LinkReachChoices
 from lasuite.malware_detection import malware_detection
 from lasuite.oidc_login.decorators import refresh_oidc_access_token
 from rest_framework import filters, status, viewsets
@@ -242,99 +243,6 @@ class UserViewSet(
         )
 
 
-class ResourceAccessViewsetMixin:
-    """Mixin with methods common to all access viewsets."""
-
-    def get_permissions(self):
-        """User only needs to be authenticated to list resource accesses"""
-        if self.action == "list":
-            permission_classes = [permissions.IsAuthenticated]
-        else:
-            return super().get_permissions()
-
-        return [permission() for permission in permission_classes]
-
-    def get_serializer_context(self):
-        """Extra context provided to the serializer class."""
-        context = super().get_serializer_context()
-        context["resource_id"] = self.kwargs["resource_id"]
-        return context
-
-    def get_queryset(self):
-        """Return the queryset according to the action."""
-        queryset = super().get_queryset()
-        queryset = queryset.filter(
-            **{self.resource_field_name: self.kwargs["resource_id"]}
-        )
-
-        if self.action == "list":
-            user = self.request.user
-            teams = user.teams
-            user_roles_query = (
-                queryset.filter(
-                    db.Q(user=user) | db.Q(team__in=teams),
-                    **{self.resource_field_name: self.kwargs["resource_id"]},
-                )
-                .values(self.resource_field_name)
-                .annotate(roles_array=ArrayAgg("role"))
-                .values("roles_array")
-            )
-
-            # Limit to resource access instances related to a resource THAT also has
-            # a resource access
-            # instance for the logged-in user (we don't want to list only the resource
-            # access instances pointing to the logged-in user)
-            queryset = (
-                queryset.filter(
-                    db.Q(**{f"{self.resource_field_name}__accesses__user": user})
-                    | db.Q(
-                        **{f"{self.resource_field_name}__accesses__team__in": teams}
-                    ),
-                    **{self.resource_field_name: self.kwargs["resource_id"]},
-                )
-                .annotate(user_roles=db.Subquery(user_roles_query))
-                .distinct()
-            )
-        return queryset
-
-    def destroy(self, request, *args, **kwargs):
-        """Forbid deleting the last owner access"""
-        instance = self.get_object()
-        resource = getattr(instance, self.resource_field_name)
-
-        # Check if the access being deleted is the last owner access for the resource
-        if (
-            instance.role == "owner"
-            and resource.accesses.filter(role="owner").count() == 1
-        ):
-            return drf.response.Response(
-                {"detail": "Cannot delete the last owner access for the resource."},
-                status=drf.status.HTTP_403_FORBIDDEN,
-            )
-
-        return super().destroy(request, *args, **kwargs)
-
-    def perform_update(self, serializer):
-        """Check that we don't change the role if it leads to losing the last owner."""
-        instance = serializer.instance
-
-        # Check if the role is being updated and the new role is not "owner"
-        if (
-            "role" in self.request.data
-            and self.request.data["role"] != models.RoleChoices.OWNER
-        ):
-            resource = getattr(instance, self.resource_field_name)
-            # Check if the access being updated is the last owner access for the resource
-            if (
-                instance.role == models.RoleChoices.OWNER
-                and resource.accesses.filter(role=models.RoleChoices.OWNER).count() == 1
-            ):
-                message = "Cannot change the role to a non-owner role for the last owner access."
-                raise drf.exceptions.PermissionDenied({"detail": message})
-
-        serializer.save()
-
-
 class ItemMetadata(drf.metadata.SimpleMetadata):
     """Custom metadata class to add information"""
 
@@ -428,7 +336,7 @@ class ItemViewSet(
     ordering_fields = ["created_at", "updated_at", "title", "type"]
     pagination_class = Pagination
     permission_classes = [
-        permissions.ItemAccessPermission,
+        permissions.ItemPermission,
     ]
     queryset = models.Item.objects.filter(hard_deleted_at__isnull=True)
     serializer_class = serializers.ItemSerializer
@@ -439,44 +347,8 @@ class ItemViewSet(
     tree_serializer_class = serializers.ListItemSerializer
     search_serializer_class = serializers.SearchItemSerializer
     breadcrumb_serializer_class = serializers.BreadcrumbItemSerializer
-
-    def annotate_is_favorite(self, queryset):
-        """
-        Annotate item queryset with the favorite status for the current user.
-        """
-        user = self.request.user
-
-        if user.is_authenticated:
-            favorite_exists_subquery = models.ItemFavorite.objects.filter(
-                item_id=db.OuterRef("pk"), user=user
-            )
-            return queryset.annotate(is_favorite=db.Exists(favorite_exists_subquery))
-
-        return queryset.annotate(is_favorite=db.Value(False))
-
-    def annotate_user_roles(self, queryset):
-        """
-        Annotate item queryset with the roles of the current user
-        on the item or its ancestors.
-        """
-        user = self.request.user
-        output_field = ArrayField(base_field=db.CharField())
-
-        if user.is_authenticated:
-            user_roles_subquery = models.ItemAccess.objects.filter(
-                db.Q(user=user) | db.Q(team__in=user.teams),
-                item__path__ancestors=db.OuterRef("path"),
-            ).values_list("role", flat=True)
-
-            return queryset.annotate(
-                user_roles=db.Func(
-                    user_roles_subquery, function="ARRAY", output_field=output_field
-                )
-            )
-
-        return queryset.annotate(
-            user_roles=db.Value([], output_field=output_field),
-        )
+    recents_serializer_class = serializers.ListItemLightSerializer
+    favorite_list_serializer_class = serializers.ListItemLightSerializer
 
     def _filter_suspicious_items(self, queryset, user):
         """
@@ -530,27 +402,115 @@ class ItemViewSet(
             db.Q(id__in=access_items_ids)
             | (
                 db.Q(id__in=traced_items_ids)
-                & ~db.Q(link_reach=models.LinkReachChoices.RESTRICTED)
+                & ~db.Q(link_reach=LinkReachChoices.RESTRICTED)
             )
         )
+
+    def get_queryset_for_descendants(self):
+        """
+        Filter a queryset on all top level the user has access to
+        and all items that are children of the top level items.
+
+        The queryset is not annoated to let the function caller annotate it as needed.
+        """
+
+        user = self.request.user
+        queryset = self.get_queryset()
+
+        all_accessible_paths = queryset.order_by("path").values_list("path", flat=True)
+
+        if not all_accessible_paths:
+            return queryset.none()
+
+        # Among the results, we may have items that are ancestors/descendants
+        # of each other. In this case we want to keep only the highest ancestors.
+        root_paths = utils.filter_root_paths(
+            all_accessible_paths,
+            skip_sorting=True,
+        )
+
+        path_list = db.Q()
+        for path in root_paths:
+            path_list |= db.Q(path__descendants=path)
+
+        queryset = self.queryset.select_related("creator")
+        # Remove items with upload_state SUSPICIOUS for non-creators
+        queryset = self._filter_suspicious_items(queryset, user)
+        queryset = queryset.filter(path_list)
+        queryset = queryset.filter(ancestors_deleted_at__isnull=True)
+
+        return queryset
 
     def filter_queryset(self, queryset):
         """Override to apply annotations to generic views."""
         queryset = super().filter_queryset(queryset)
-        queryset = self.annotate_is_favorite(queryset)
-        queryset = self.annotate_user_roles(queryset)
+        user = self.request.user
+        queryset = queryset.annotate_is_favorite(user)
+        queryset = queryset.annotate_user_roles(user)
         return queryset
 
-    def get_response_for_queryset(self, queryset, context=None):
+    def get_response_for_queryset(
+        self, queryset, context=None, with_ancestors_link_definition=False
+    ):
         """Return paginated response for the queryset if requested."""
         context = context or self.get_serializer_context()
         page = self.paginate_queryset(queryset)
         if page is not None:
-            serializer = self.get_serializer(page, many=True, context=context)
-            return self.get_paginated_response(serializer.data)
+            items = list(page)
+            if with_ancestors_link_definition:
+                paths_links_mapping = self._compute_ancestors_link_definition(items)
+                context["paths_links_mapping"] = paths_links_mapping
+            serializer = self.get_serializer(items, many=True, context=context)
+            result = self.get_paginated_response(serializer.data)
+            return result
 
-        serializer = self.get_serializer(queryset, many=True, context=context)
+        items = list(queryset)
+        if with_ancestors_link_definition:
+            paths_links_mapping = self._compute_ancestors_link_definition(items)
+            context["paths_links_mapping"] = paths_links_mapping
+        serializer = self.get_serializer(items, many=True, context=context)
         return drf.response.Response(serializer.data)
+
+    def _compute_ancestors_link_definition(self, items):
+        """
+        Compute ancestors link definition for the items collection.
+        On the collection, we look for the deepest items, compute ancestors link definition
+        for each item and aggregate them in order to inject it in the serializer context.
+        """
+        if not items:
+            return {}
+
+        # Find deepest items and group them by parent path
+        # Items at the same depth in multiple trees (same parent path) share the same ancestors,
+        items_sorted = sorted(items, key=lambda x: len(x.path), reverse=True)
+        items_by_tree = {}  # Group deepest items by parent_path
+        seen_paths = set()  # Track all paths we've processed
+
+        for item in items_sorted:
+            # Check if this item is a parent of any longer path we've already seen
+            # A descendant path would start with the item's path followed by a dot
+            item_path_prefix = f"{item.path}."
+            has_descendants = any(
+                seen_path.startswith(item_path_prefix) for seen_path in seen_paths
+            )
+
+            if not has_descendants:
+                # Get parent path (empty string for root items)
+                parent_path = str(item.path[:-1]) if item.depth > 1 else ""
+                if parent_path not in items_by_tree:
+                    items_by_tree[parent_path] = item
+
+            # Add this item's path to the set for future checks (shorter paths)
+            seen_paths.add(str(item.path))
+
+        # Compute ancestors links paths mapping for one item per tree group and aggregate
+        paths_links_mapping = {}
+        for item in items_by_tree.values():
+            item_mapping = item.compute_ancestors_links_paths_mapping()
+            paths_links_mapping |= item_mapping
+
+        # Update the serializer context with the aggregated mapping
+        return paths_links_mapping
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -577,6 +537,7 @@ class ItemViewSet(
         """Set the current user as creator and owner of the newly created object."""
         obj = models.Item.objects.create_child(
             creator=self.request.user,
+            link_reach=LinkReachChoices.RESTRICTED,
             **serializer.validated_data,
         )
         serializer.instance = obj
@@ -610,14 +571,9 @@ class ItemViewSet(
         return drf.response.Response(status=status.HTTP_204_NO_CONTENT)
 
     def list(self, request, *args, **kwargs):
-        """List items with pagination and filtering."""
+        """List top level items with pagination and filtering."""
         # Not calling filter_queryset. We do our own cooking.
         queryset = self.get_queryset()
-
-        # exclude main workspace
-        queryset = queryset.filter(main_workspace=False)
-        # filter only on folder types
-        queryset = queryset.filter(type=models.ItemTypeChoices.FOLDER)
 
         filterset = ListItemFilter(
             self.request.GET, queryset=queryset, request=self.request
@@ -627,10 +583,10 @@ class ItemViewSet(
         filter_data = filterset.form.cleaned_data
 
         # Filter as early as possible on fields that are available on the model
-        for field in ["is_creator_me", "title", "workspaces"]:
+        for field in ["is_creator_me", "title", "type"]:
             queryset = filterset.filters[field].filter(queryset, filter_data[field])
-
-        queryset = self.annotate_user_roles(queryset)
+        user = request.user
+        queryset = queryset.annotate_user_roles(user)
 
         # Among the results, we may have items that are ancestors/descendants
         # of each other. In this case we want to keep only the highest ancestors.
@@ -647,7 +603,7 @@ class ItemViewSet(
         )
 
         # Annotate favorite status and filter if applicable as late as possible
-        queryset = self.annotate_is_favorite(queryset)
+        queryset = queryset.annotate_is_favorite(user)
         queryset = filterset.filters["is_favorite"].filter(
             queryset, filter_data["is_favorite"]
         )
@@ -794,14 +750,29 @@ class ItemViewSet(
     def favorite_list(self, request, *args, **kwargs):
         """Get list of favorite items for the current user."""
         user = request.user
+        queryset = self.get_queryset_for_descendants()
+        queryset = queryset.annotate(
+            is_favorite=db.Value(True, output_field=db.BooleanField())
+        )
+        queryset = queryset.annotate_user_roles(user)
+
+        filterset = ItemFilter(
+            self.request.GET, queryset=queryset, request=self.request
+        )
+        if not filterset.is_valid():
+            raise drf.exceptions.ValidationError(filterset.errors)
+
+        queryset = filterset.filter_queryset(queryset)
 
         favorite_items_ids = models.ItemFavorite.objects.filter(user=user).values_list(
             "item_id", flat=True
         )
 
-        queryset = self.get_queryset()
         queryset = queryset.filter(id__in=favorite_items_ids)
-        return self.get_response_for_queryset(queryset)
+
+        return self.get_response_for_queryset(
+            queryset, with_ancestors_link_definition=True
+        )
 
     @drf.decorators.action(
         detail=False,
@@ -846,7 +817,7 @@ class ItemViewSet(
         queryset = filterset.qs
 
         # Only annotate with user roles for the filtered set if needed by serializer
-        queryset = self.annotate_user_roles(queryset)
+        queryset = queryset.annotate_user_roles(user)
 
         return self.get_response_for_queryset(queryset)
 
@@ -867,19 +838,22 @@ class ItemViewSet(
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
-        target_item_id = validated_data["target_item_id"]
-        try:
-            target_item = models.Item.objects.get(
-                id=target_item_id, ancestors_deleted_at__isnull=True
-            )
-        except models.Item.DoesNotExist as excpt:
-            raise drf.exceptions.ValidationError(
-                {"target_item_id": "Target parent item does not exist."},
-                code="item_move_target_does_not_exist",
-            ) from excpt
+        target_item_id = validated_data.get("target_item_id")
+        if not target_item_id:
+            target_item = None
+        else:
+            try:
+                target_item = models.Item.objects.get(
+                    id=target_item_id, ancestors_deleted_at__isnull=True
+                )
+            except models.Item.DoesNotExist as excpt:
+                raise drf.exceptions.ValidationError(
+                    {"target_item_id": "Target parent item does not exist."},
+                    code="item_move_target_does_not_exist",
+                ) from excpt
 
         message = None
-        if not target_item.get_abilities(user).get("children_create"):
+        if target_item and not target_item.get_abilities(user).get("children_create"):
             message = (
                 "You do not have permission to move items "
                 "as a child to this target item."
@@ -891,6 +865,36 @@ class ItemViewSet(
             )
 
         item.move(target_item)
+
+        # If the item is moved to the root and the user does not have an access on the item,
+        # create an owner access for the user. Otherwise, the item will be invisible for the user.
+        update_fields = []
+        if (
+            not target_item
+            and not models.ItemAccess.objects.filter(item=item, user=user).exists()
+        ):
+            models.ItemAccess.objects.create(
+                item=item,
+                user=self.request.user,
+                role=models.RoleChoices.OWNER,
+            )
+            item.creator = user
+            update_fields.append("creator")
+
+        # When moving an item to the root and no link_reach is set
+        # Force it to be restricted.
+        if not target_item and not item.link_reach:
+            item.link_reach = LinkReachChoices.RESTRICTED
+            update_fields.append("link_reach")
+
+        if target_item:
+            # When moving an item in an other item, force it to be sync
+            # with its parent's link reach.
+            item.link_reach = None
+            update_fields.append("link_reach")
+
+        if update_fields:
+            item.save(update_fields=update_fields)
 
         return drf.response.Response(
             {"message": "item moved successfully."}, status=status.HTTP_200_OK
@@ -1063,9 +1067,10 @@ class ItemViewSet(
             .order_by("created_at")
         )
 
-        tree = self.annotate_user_roles(tree)
-        tree = self.annotate_is_favorite(tree)
-        tree = self._filter_suspicious_items(tree, request.user)
+        user = request.user
+        tree = tree.annotate_user_roles(user)
+        tree = tree.annotate_is_favorite(user)
+        tree = self._filter_suspicious_items(tree, user)
 
         serializer = self.get_serializer(
             tree,
@@ -1078,6 +1083,34 @@ class ItemViewSet(
 
         return drf.response.Response(
             utils.flat_to_nested(serializer.data), status=drf.status.HTTP_200_OK
+        )
+
+    @drf.decorators.action(
+        url_path="recents",
+        detail=False,
+        methods=["get"],
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def recents(self, request, *args, **kwargs):
+        """Get list of favorite items for the current user."""
+        user = self.request.user
+        queryset = self.get_queryset_for_descendants()
+
+        filterset = ItemFilter(
+            self.request.GET, queryset=queryset, request=self.request
+        )
+        if not filterset.is_valid():
+            raise drf.exceptions.ValidationError(filterset.errors)
+
+        queryset = filterset.filter_queryset(queryset)
+
+        queryset = queryset.annotate_is_favorite(user)
+        queryset = queryset.annotate_user_roles(user)
+
+        queryset = queryset.order_by("-updated_at")
+
+        return self.get_response_for_queryset(
+            queryset, with_ancestors_link_definition=True
         )
 
     @drf.decorators.action(detail=True, methods=["get"])
@@ -1133,8 +1166,8 @@ class ItemViewSet(
         ]
 
         queryset = queryset.filter(pk__in=result_ids)
-        queryset = self.annotate_user_roles(queryset)
-        queryset = self.annotate_is_favorite(queryset)
+        queryset = queryset.annotate_user_roles(user)
+        queryset = queryset.annotate_is_favorite(user)
 
         files_by_uuid = {str(d.pk): d for d in queryset}
         ordered_files = [files_by_uuid[id] for id in result_ids if id in files_by_uuid]
@@ -1170,6 +1203,7 @@ class ItemViewSet(
         queryset = self.queryset
         indexer = get_file_indexer()
 
+        queryset = queryset.select_related("creator")
         filterset = SearchItemFilter(
             request.GET, queryset=queryset, request=self.request
         )
@@ -1183,10 +1217,13 @@ class ItemViewSet(
         user = request.user
         item_access_queryset = models.ItemAccess.objects.select_related("item").filter(
             db.Q(user=user) | db.Q(team__in=user.teams),
-            item__type=models.ItemTypeChoices.FOLDER,
             item__deleted_at__isnull=True,
-            item__path__depth=1,
         )
+
+        # Remove items with upload_state SUSPICIOUS for non-creators
+        queryset = self._filter_suspicious_items(queryset, user)
+
+        queryset = queryset.annotate_is_favorite(user)
 
         if workspace:
             item_access_queryset = item_access_queryset.filter(item__id=workspace)
@@ -1197,8 +1234,15 @@ class ItemViewSet(
         if not top_level_items:
             return self.get_response_for_queryset(queryset.none())
 
+        # Among the results, we may have items that are ancestors/descendants
+        # of each other. In this case we want to keep only the highest ancestors.
+        root_paths = utils.filter_root_paths(
+            top_level_items,
+            skip_sorting=True,
+        )
+
         path_list = db.Q()
-        for top_level_item in top_level_items:
+        for top_level_item in root_paths:
             path_list |= db.Q(path__descendants=top_level_item)
 
         queryset = queryset.filter(path_list)
@@ -1216,9 +1260,7 @@ class ItemViewSet(
 
         # Without the indexer, the "title" filtering is kept
         queryset = filterset.filter_queryset(queryset)
-
-        queryset = self.annotate_user_roles(queryset)
-        queryset = self.annotate_is_favorite(queryset)
+        queryset = queryset.annotate_user_roles(user)
 
         page = self.paginate_queryset(queryset)
 
@@ -1265,6 +1307,7 @@ class ItemViewSet(
         """Update link configuration with specific rights (cf get_abilities)."""
         # Check permissions first
         item = self.get_object()
+        previous_link_reach = item.link_reach
 
         # Deserialize and validate the data
         serializer = serializers.LinkItemSerializer(
@@ -1273,6 +1316,11 @@ class ItemViewSet(
         serializer.is_valid(raise_exception=True)
 
         serializer.save()
+
+        if models.LinkReachChoices.get_priority(
+            item.link_reach
+        ) >= models.LinkReachChoices.get_priority(previous_link_reach):
+            item.descendants().update(link_reach=None)
 
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
@@ -1294,18 +1342,28 @@ class ItemViewSet(
                     {"detail": "item already marked as favorite"},
                     status=drf.status.HTTP_200_OK,
                 )
+            # At this point the annotation is_favorite is already made by the
+            # queryset.annotate_is_favorite(user) and its value is False.
+            # If we want a fresh data we have to make a new queryset, apply the annotation
+            # and get the item again.
+            # To avoid all of this we directly set item.is_favorite to True.
+            item.is_favorite = True
+            serializer = self.get_serializer(item)
             return drf.response.Response(
-                {"detail": "item marked as favorite"},
-                status=drf.status.HTTP_201_CREATED,
+                serializer.data, status=drf.status.HTTP_201_CREATED
             )
 
         # Handle DELETE method to unmark as favorite
         deleted, _ = models.ItemFavorite.objects.filter(item=item, user=user).delete()
         if deleted:
-            return drf.response.Response(
-                {"detail": "item unmarked as favorite"},
-                status=drf.status.HTTP_204_NO_CONTENT,
-            )
+            # At this point the annotation is_favorite is already made by the
+            # queryset.annotate_is_favorite(user) and its value is True.
+            # If we want a fresh data we have to make a new queryset, apply the annotation
+            # and get the item again.
+            # To avoid all of this we directly set item.is_favorite to False.
+            item.is_favorite = False
+            serializer = self.get_serializer(item)
+            return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
         return drf.response.Response(
             {"detail": "item was already not marked as favorite"},
             status=drf.status.HTTP_200_OK,
@@ -1441,7 +1499,9 @@ class ItemViewSet(
             if request.user.is_authenticated
             else settings.LANGUAGE_CODE
         )
-        launch_url = compute_wopi_launch_url(wopi_client, get_file_info, language)
+        launch_url = compute_wopi_launch_url(
+            wopi_client["url"], get_file_info, language
+        )
 
         return drf.response.Response(
             {
@@ -1454,12 +1514,9 @@ class ItemViewSet(
 
 
 class ItemAccessViewSet(
-    ResourceAccessViewsetMixin,
     drf.mixins.CreateModelMixin,
     drf.mixins.DestroyModelMixin,
-    drf.mixins.ListModelMixin,
     drf.mixins.RetrieveModelMixin,
-    drf.mixins.UpdateModelMixin,
     viewsets.GenericViewSet,
 ):
     """
@@ -1487,22 +1544,227 @@ class ItemAccessViewSet(
     """
 
     lookup_field = "pk"
-    pagination_class = Pagination
-    permission_classes = [permissions.IsAuthenticated, permissions.AccessPermission]
-    queryset = models.ItemAccess.objects.select_related("user").all()
+    permission_classes = [permissions.ItemAccessPermission]
+    queryset = models.ItemAccess.objects.select_related("user", "item").all()
     resource_field_name = "item"
     serializer_class = serializers.ItemAccessSerializer
 
-    def perform_create(self, serializer):
-        """Add a new access to the item and send an email to the new added user."""
+    @cached_property
+    def item(self):
+        """Get related item from resource ID in url and annotate user roles."""
+        try:
+            return models.Item.objects.annotate_user_roles(self.request.user).get(
+                pk=self.kwargs["resource_id"]
+            )
+        except models.Item.DoesNotExist as excpt:
+            raise drf.exceptions.NotFound() from excpt
+
+    def get_serializer_class(self):
+        """Use light serializer for unprivileged users."""
+        return (
+            serializers.ItemAccessSerializer
+            if self.item.get_role(self.request.user) in PRIVILEGED_ROLES
+            else serializers.ItemAccessLightSerializer
+        )
+
+    def get_serializer_context(self):
+        """Extra context provided to the serializer class."""
+        context = super().get_serializer_context()
+        context["resource_id"] = self.kwargs["resource_id"]
+        return context
+
+    def filter_queryset(self, queryset):
+        """Override to filter on related resource."""
+        queryset = super().filter_queryset(queryset)
+        return queryset.filter(**{self.resource_field_name: self.kwargs["resource_id"]})
+
+    def list(self, request, *args, **kwargs):
+        """
+        List item accesses for an item and its ancestors.
+
+        Returns the deepest access per target (user/team) with computed max_ancestors_role.
+        For inherited accesses (not on current item), max_ancestors_role equals the access's role.
+
+        Non-privileged users only see privileged roles to prevent information leakage.
+        Results are ordered by item depth and creation date.
+        """
+        user = request.user
+        role = self.item.get_role(user)
+        if not role:
+            return drf.response.Response([])
+
+        # Get all accesses from ancestors (including current item)
+        ancestors_qs = models.Item.objects.filter(
+            path__ancestors=self.item.path, ancestors_deleted_at__isnull=True
+        )
+        accesses_qs = self.get_queryset().filter(item__in=ancestors_qs)
+        if role not in PRIVILEGED_ROLES:
+            accesses_qs = accesses_qs.filter(role__in=PRIVILEGED_ROLES)
+
+        accesses_qs = accesses_qs.annotate_user_roles(user).order_by(
+            "item__path", "created_at"
+        )
+
+        # Track max role and keep only deepest access per target
+        max_role_by_target = {}
+        deepest_access_by_target = {}
+
+        for access in accesses_qs.iterator():
+            target = access.target_key
+            previous = max_role_by_target.get(target)
+            previous_role = previous["role"] if previous else None
+
+            # Set max_ancestors_role from previous accesses in hierarchy
+            access.max_ancestors_role = previous_role
+            access.max_ancestors_role_item_id = (
+                previous["item_id"] if previous else None
+            )
+
+            max_role_by_target[target] = {
+                "role": models.RoleChoices.max(previous_role, access.role),
+                "item_id": access.item_id,
+            }
+            deepest_access_by_target[target] = access
+
+        # For inherited accesses, max_ancestors_role should reflect their own position
+        for access in deepest_access_by_target.values():
+            if (access.max_ancestors_role and access.item_id != self.item.id) or (
+                access.item.is_root and access.item_id != self.item.id
+            ):
+                access.max_ancestors_role = access.role
+                access.max_ancestors_role_item_id = access.item_id
+
+        # Sort by depth and creation date, then serialize
+        selected_accesses = sorted(
+            deepest_access_by_target.values(),
+            key=lambda a: (a.item.depth, a.created_at),
+        )
+
+        serializer = self.get_serializer_class()(
+            selected_accesses, many=True, context=self.get_serializer_context()
+        )
+        return drf.response.Response(serializer.data)
+
+    def update(self, request, *args, **kwargs):
+        """
+        We not use the update mixin to apply a specific behavior we can't implement using
+        perform_update method.
+
+        If the role is updated and is the same role as the max ancestors role,
+        we don't want to have two consecutive explicit accesses with the same role.
+        We have to delete the current access, this item will have an inherited access
+        with the correct role.
+        """
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        role = serializer.validated_data.get("role")
+
+        # Check if the role is being updated and the new role is not "owner"
+        if role and role != models.RoleChoices.OWNER:
+            # Check if the access being updated is the last owner access for the resource
+            if (
+                self.item.is_root
+                and instance.role == models.RoleChoices.OWNER
+                and self.item.accesses.filter(role=models.RoleChoices.OWNER).count()
+                == 1
+            ):
+                message = "Cannot change the role to a non-owner role for the last owner access."
+                raise drf.exceptions.PermissionDenied({"detail": message})
+
+        if role and instance.max_ancestors_role == role:
+            # The submitted role is the same as the max ancestors role,
+            # We don't want to have two consecutive explicit accesses with the same role.
+            # We have to delete the current access, this item will have an inherited access
+            # with the correct role.
+            instance.delete()
+            return drf.response.Response(status=drf.status.HTTP_204_NO_CONTENT)
+
         access = serializer.save()
 
-        access.item.send_invitation_email(
-            access.user.email,
-            access.role,
-            self.request.user,
-            self.request.user.language or settings.LANGUAGE_CODE,
-        )
+        self._syncronize_descendants_accesses(access)
+
+        return drf.response.Response(serializer.data)
+
+    def partial_update(self, request, *args, **kwargs):
+        """Partial update the item access."""
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        """
+        Actually create the new item access:
+        - Ensures the `item_id` is explicitly set from the URL
+        - If the assigned role is `OWNER`, checks that the requesting user is an owner
+          of the item. This is the only permission check deferred until this step;
+          all other access checks are handled earlier in the permission lifecycle.
+        - Sends an invitation email to the newly added user after saving the access.
+        """
+        role = serializer.validated_data.get("role")
+        if (
+            role == models.RoleChoices.OWNER
+            and self.item.get_role(self.request.user) != models.RoleChoices.OWNER
+        ):
+            raise drf.exceptions.PermissionDenied(
+                "Only owners of an item can assign other users as owners."
+            )
+
+        # Look for the max ancestors role of the item for the current user.
+        ancestor_qs = (
+            self.item.ancestors() | models.Item.objects.filter(pk=self.item.pk)
+        ).filter(ancestors_deleted_at__isnull=True)
+        ancestors_roles = models.ItemAccess.objects.filter(
+            item__in=ancestor_qs, user=serializer.validated_data.get("user")
+        ).values_list("role", flat=True)
+        max_ancestors_role = models.RoleChoices.max(*ancestors_roles)
+
+        if models.RoleChoices.get_priority(
+            max_ancestors_role
+        ) >= models.RoleChoices.get_priority(role):
+            raise drf.exceptions.ValidationError(
+                {
+                    "role": (
+                        f"The role {role} you are trying to assign is lower or equal"
+                        f" than the max ancestors role {max_ancestors_role}."
+                    ),
+                }
+            )
+
+        access = serializer.save(item_id=self.kwargs["resource_id"])
+        self._syncronize_descendants_accesses(access)
+        if access.user:
+            access.item.send_invitation_email(
+                access.user.email,
+                access.role,
+                self.request.user,
+                self.request.user.language or settings.LANGUAGE_CODE,
+            )
+
+    def _syncronize_descendants_accesses(self, access):
+        """
+        Syncronize the accesses of the descendants of the item
+        by removing accesses with roles lower than the current user's role.
+        """
+        descendants = self.item.descendants().filter(ancestors_deleted_at__isnull=True)
+
+        condition_filter = db.Q()
+        if access.user:
+            condition_filter |= db.Q(user=access.user)
+        if access.team:
+            condition_filter |= db.Q(team=access.team)
+
+        role_priority = models.RoleChoices.get_priority(access.role)
+
+        lower_roles = [
+            role
+            for role in models.RoleChoices.values
+            if models.RoleChoices.get_priority(role) <= role_priority
+        ]
+
+        models.ItemAccess.objects.filter(
+            condition_filter, item__in=descendants, role__in=lower_roles
+        ).delete()
 
 
 class InvitationViewset(
@@ -1534,10 +1796,7 @@ class InvitationViewset(
 
     lookup_field = "id"
     pagination_class = Pagination
-    permission_classes = [
-        permissions.CanCreateInvitationPermission,
-        permissions.AccessPermission,
-    ]
+    permission_classes = [permissions.InvitationPermission]
     queryset = (
         models.Invitation.objects.all().select_related("item").order_by("-created_at")
     )
@@ -1574,11 +1833,11 @@ class InvitationViewset(
                 queryset.filter(
                     db.Q(
                         item__accesses__user=user,
-                        item__accesses__role__in=models.PRIVILEGED_ROLES,
+                        item__accesses__role__in=PRIVILEGED_ROLES,
                     )
                     | db.Q(
                         item__accesses__team__in=teams,
-                        item__accesses__role__in=models.PRIVILEGED_ROLES,
+                        item__accesses__role__in=PRIVILEGED_ROLES,
                     ),
                 )
                 # Abilities are computed based on logged-in user's role and

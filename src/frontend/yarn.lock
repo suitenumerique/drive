@@ -777,22 +777,58 @@
   dependencies:
     tslib "^2.8.0"
 
+"@gouvfr-lasuite/cunningham-react@4.1.0":
+  version "4.1.0"
+  resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/cunningham-react/-/cunningham-react-4.1.0.tgz#3a1347a7e05f9add18462d5b1ded3e26635bdd37"
+  integrity sha512-r6QKi4qcPEG4Vxe7rKt89d7I2KYD9gvOKxkzlDAVBjo9DYnQ4ZM9T5tG/W0/oBbcURTFqxINfFhaF8CyviiOjw==
+  dependencies:
+    "@fontsource-variable/roboto-flex" "5.2.5"
+    "@fontsource/material-icons-outlined" "5.2.5"
+    "@gouvfr-lasuite/cunningham-tokens" "*"
+    "@internationalized/date" "3.8.0"
+    "@react-aria/calendar" "3.8.0"
+    "@react-aria/datepicker" "3.14.2"
+    "@react-aria/i18n" "3.12.8"
+    "@react-stately/calendar" "3.8.0"
+    "@react-stately/datepicker" "3.14.0"
+    "@tanstack/react-table" "8.21.3"
+    "@types/react-modal" "3.16.3"
+    chromatic "11.28.2"
+    classnames "2.5.1"
+    downshift "9.0.9"
+    react-aria "3.39.0"
+    react-aria-components "1.8.0"
+    react-modal "3.16.3"
+    react-stately "3.37.0"
+
+"@gouvfr-lasuite/cunningham-tokens@*", "@gouvfr-lasuite/cunningham-tokens@3.1.0":
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/cunningham-tokens/-/cunningham-tokens-3.1.0.tgz#39d957e6322f7c10b463dc8eeed8fdbb3e006788"
+  integrity sha512-7HP7E1vjxv3FbFn21XuEqbjQPHP5xucWU0D8+Oj02nIeKLL+0eArTL2GB+c2rPFBt0tAzaLI6A3WlsimOjHN4A==
+  dependencies:
+    chalk "4.1.2"
+    commander "13.1.0"
+    deepmerge "4.3.1"
+    figlet "1.8.1"
+    ts-node "10.9.2"
+
 "@gouvfr-lasuite/integration@1.0.2":
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/integration/-/integration-1.0.2.tgz#ed0000f4b738c5a19bb60f5b80a9a2f5d9414234"
   integrity sha512-npOotZQSyu6SffHiPP+jQVOkJ3qW2KE2cANhEK92sNLX9uZqQaCqljO5GhzsBmh0lB76fiXnrr9i8SIpnDUSZg==
 
-"@gouvfr-lasuite/ui-kit@0.18.4":
-  version "0.18.4"
-  resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/ui-kit/-/ui-kit-0.18.4.tgz#536a8e1873d3eca80d0734735d87d3eec4934938"
-  integrity sha512-D/oUexk73khJHBERr0l2S7uVMziUkPpnlrO2+JeTFGCr/7LwAdNBoxnbsVMBlb+S6WeNAkJQV53DmalTLs6GlA==
+"@gouvfr-lasuite/ui-kit@0.19.4":
+  version "0.19.4"
+  resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/ui-kit/-/ui-kit-0.19.4.tgz#3bf058164266dc86634f523c8650e4a4b7726c83"
+  integrity sha512-jQsXPsUvsufb7yfteij1umzuBhPWHAka3wCcfwKFZN4X0SF/buXQQ/VBUbzspxA4FuuOhMrbSQ9bY4pKwhq5mQ==
   dependencies:
     "@dnd-kit/core" "6.3.1"
     "@dnd-kit/modifiers" "9.0.0"
     "@dnd-kit/sortable" "10.0.0"
     "@fontsource/material-icons" "5.2.5"
+    "@gouvfr-lasuite/cunningham-react" "4.1.0"
+    "@gouvfr-lasuite/cunningham-tokens" "3.1.0"
     "@gouvfr-lasuite/integration" "1.0.2"
-    "@openfun/cunningham-react" "4.0.0"
     "@types/node" "22.10.7"
     clsx "2.1.1"
     cmdk "1.0.4"
@@ -1399,41 +1435,6 @@
   version "1.0.39"
   resolved "https://registry.yarnpkg.com/@nolyfill/is-core-module/-/is-core-module-1.0.39.tgz#3dc35ba0f1e66b403c00b39344f870298ebb1c8e"
   integrity sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==
-
-"@openfun/cunningham-react@4.0.0":
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/@openfun/cunningham-react/-/cunningham-react-4.0.0.tgz#5d273c72a2ced76cf060931b546238b7ee75c6ec"
-  integrity sha512-2JgIRDl2UE/PMcOrjjfxbhFRwEwF7JFAaPoN/Xjq+sOYHP6WasRxFRrkwhnuZ5ZU7lOpzaAFyPtkawoBF6GsEQ==
-  dependencies:
-    "@fontsource-variable/roboto-flex" "5.2.5"
-    "@fontsource/material-icons-outlined" "5.2.5"
-    "@internationalized/date" "3.8.0"
-    "@openfun/cunningham-tokens" "*"
-    "@react-aria/calendar" "3.8.0"
-    "@react-aria/datepicker" "3.14.2"
-    "@react-aria/i18n" "3.12.8"
-    "@react-stately/calendar" "3.8.0"
-    "@react-stately/datepicker" "3.14.0"
-    "@tanstack/react-table" "8.21.3"
-    "@types/react-modal" "3.16.3"
-    chromatic "11.28.2"
-    classnames "2.5.1"
-    downshift "9.0.9"
-    react-aria "3.39.0"
-    react-aria-components "1.8.0"
-    react-modal "3.16.3"
-    react-stately "3.37.0"
-
-"@openfun/cunningham-tokens@*":
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/@openfun/cunningham-tokens/-/cunningham-tokens-3.0.0.tgz#2346ebcb7d18a35cbbb1c4f4c501f238173a3c8c"
-  integrity sha512-YMLLL7CaQA1+kuSVxf3UgXNjdyeX6Dj2Kdlz/9+lX2ePm51rPxZsEGXWeUVafNLFH+T/zpsajiEzgJ9mBEJd5w==
-  dependencies:
-    chalk "4.1.2"
-    commander "13.1.0"
-    deepmerge "4.3.1"
-    figlet "1.8.1"
-    ts-node "10.9.2"
 
 "@parcel/watcher-android-arm64@2.5.1":
   version "2.5.1"

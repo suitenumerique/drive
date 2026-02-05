@@ -4,6 +4,7 @@ import logging
 import uuid
 from os.path import splitext
 
+from django.conf import settings as django_settings
 from django.core.exceptions import RequestDataTooBig
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -20,6 +21,7 @@ from core.models import Item
 from wopi.authentication import WopiAccessTokenAuthentication
 from wopi.permissions import AccessTokenPermission
 from wopi.services.lock import LockService
+from wopi.utils import get_wopi_client_config
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +95,19 @@ class WopiViewSet(viewsets.ViewSet):
             "SupportsUserInfo": False,
             "DownloadUrl": f"/media/{item.file_key}",
         }
+
+        wopi_client = get_wopi_client_config(item, request.user)
+        if wopi_client:
+            client_name = wopi_client.get("client", "")
+            client_config = django_settings.WOPI_CLIENTS_CONFIGURATION.get(
+                client_name, {}
+            )
+            client_options = client_config.get("options", {})
+            if "SupportsRename" in client_options:
+                properties["SupportsRename"] = client_options["SupportsRename"]
+                if not client_options["SupportsRename"]:
+                    properties["UserCanRename"] = False
+
         return Response(properties, status=200)
 
     @action(detail=True, methods=["get", "post"], url_path="contents")

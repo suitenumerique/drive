@@ -28,11 +28,13 @@ def test_valid_wopi_configuration(monkeypatch):
             "discovery_url": "https://vendorA.com/hosting/discovery",
             "mimetypes": {},
             "extensions": {},
+            "options": {},
         },
         "vendorB": {
             "discovery_url": "https://vendorB.com/hosting/discovery",
             "mimetypes": {},
             "extensions": {},
+            "options": {},
         },
     }
 
