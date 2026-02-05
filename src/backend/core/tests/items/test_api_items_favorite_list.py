@@ -201,7 +201,7 @@ def test_api_item_favorite_list_filtering(django_assert_num_queries):
         parent=parent_item, type=models.ItemTypeChoices.FILE, favorited_by=[user]
     )
 
-    with django_assert_num_queries(5):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/favorite_list/?type=folder")
 
     assert response.status_code == 200
@@ -209,7 +209,7 @@ def test_api_item_favorite_list_filtering(django_assert_num_queries):
     assert content["count"] == 1
     assert content["results"][0]["id"] == str(child_item.id)
 
-    with django_assert_num_queries(5):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/favorite_list/?type=file")
 
     assert response.status_code == 200

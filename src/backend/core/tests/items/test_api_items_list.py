@@ -285,11 +285,11 @@ def test_api_items_list_authenticated_direct(django_assert_num_queries):
         str(child4_with_access.id),
     }
 
-    with django_assert_num_queries(10):
+    with django_assert_num_queries(11):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(6):
+    with django_assert_num_queries(7):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
@@ -327,11 +327,11 @@ def test_api_items_list_authenticated_via_team(
 
     expected_ids = {str(item.id) for item in items_team1 + items_team2}
 
-    with django_assert_num_queries(9):
+    with django_assert_num_queries(10):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(5):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
@@ -368,11 +368,11 @@ def test_api_items_list_authenticated_link_reach_restricted(
     )
     models.LinkTrace.objects.create(item=folder_item, user=user)
 
-    with django_assert_num_queries(6):
+    with django_assert_num_queries(8):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(6):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
@@ -424,11 +424,11 @@ def test_api_items_list_authenticated_link_reach_public_or_authenticated(
         str(visible_child.id),
     }
 
-    with django_assert_num_queries(8):
+    with django_assert_num_queries(12):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(5):
+    with django_assert_num_queries(9):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
@@ -530,11 +530,11 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
     )
 
     url = "/api/v1.0/items/"
-    with django_assert_num_queries(11):
+    with django_assert_num_queries(12):
         response = client.get(url)
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(5):
         response = client.get(url)
 
     assert response.status_code == 200
@@ -547,7 +547,7 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
     for item in special_items:
         models.ItemFavorite.objects.create(item=item, user=user)
 
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(5):
         response = client.get(url)
 
     assert response.status_code == 200
@@ -561,3 +561,42 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
             assert result["is_favorite"] is True
         else:
             assert result["is_favorite"] is False
+
+
+def test_api_items_list_with_link_traces_related_to_restricted_items():
+    """
+    Ensure that items with link traces related to restricted items are not listed.
+    """
+    owner = factories.UserFactory()
+    user = factories.UserFactory()
+
+    root = factories.ItemFactory(
+        link_reach="restricted",
+        creator=owner,
+        users=[(owner, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    factories.ItemFactory(
+        parent=root,
+        link_reach=None,  # force inheritance from root
+        creator=user,
+        type=models.ItemTypeChoices.FOLDER,
+        link_traces=[
+            user
+        ],  # User has created the child when root was public or authenticated
+    )
+
+    user_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get("/api/v1.0/items/")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 1
+    assert results[0]["id"] == str(user_item.id)

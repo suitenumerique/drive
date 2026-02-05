@@ -28,7 +28,11 @@ from corsheaders.middleware import (
     ACCESS_CONTROL_ALLOW_METHODS,
     ACCESS_CONTROL_ALLOW_ORIGIN,
 )
-from lasuite.drf.models.choices import PRIVILEGED_ROLES, LinkReachChoices
+from lasuite.drf.models.choices import (
+    PRIVILEGED_ROLES,
+    LinkReachChoices,
+    get_equivalent_link_definition,
+)
 from lasuite.malware_detection import malware_detection
 from lasuite.oidc_login.decorators import refresh_oidc_access_token
 from rest_framework import filters, status, viewsets
@@ -394,16 +398,26 @@ class ItemViewSet(
         ).values_list("item_id", flat=True)
 
         # ...or that were previously accessed and are not restricted
-        traced_items_ids = models.LinkTrace.objects.filter(user=user).values_list(
-            "item_id", flat=True
+        # For this we look for all items that have a link trace for the current user
+        # and that are not in the access_items_ids list.
+        # and we compute the ancestors link definition for each item.
+        # Then we filter out the items that are restricted.
+        traced_items = models.Item.objects.filter(
+            db.Q(link_traces__user=user) & ~db.Q(id__in=access_items_ids)
+        ).order_by("path")
+        ancestors_link_definition = self._compute_ancestors_link_definition(
+            traced_items
         )
+        traced_items_ids = []
+        for item in traced_items:
+            links = ancestors_link_definition.get(str(item.path[:-1]), [])
+            item.ancestors_link_definition = get_equivalent_link_definition(links)
+            if item.computed_link_reach != LinkReachChoices.RESTRICTED:
+                traced_items_ids.append(item.id)
 
+        # Among all these items remove them that are restricted
         return queryset.filter(
-            db.Q(id__in=access_items_ids)
-            | (
-                db.Q(id__in=traced_items_ids)
-                & ~db.Q(link_reach=LinkReachChoices.RESTRICTED)
-            )
+            db.Q(id__in=access_items_ids) | (db.Q(id__in=traced_items_ids))
         )
 
     def get_queryset_for_descendants(self):

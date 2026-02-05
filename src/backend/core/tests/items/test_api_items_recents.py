@@ -158,7 +158,7 @@ def test_api_items_recents_mixing_explicit_and_inherited_accesses(
     client = APIClient()
     client.force_login(user)
 
-    with django_assert_num_queries(6):
+    with django_assert_num_queries(7):
         response = client.get("/api/v1.0/items/recents/")
     assert response.status_code == 200
     content = response.json()
@@ -225,7 +225,7 @@ def test_api_items_recents_filtering(django_assert_num_queries):
     client = APIClient()
     client.force_login(user)
 
-    with django_assert_num_queries(6):
+    with django_assert_num_queries(7):
         response = client.get("/api/v1.0/items/recents/?type=folder")
 
     assert response.status_code == 200
@@ -234,7 +234,7 @@ def test_api_items_recents_filtering(django_assert_num_queries):
     assert content["results"][0]["id"] == str(parent.id)
     assert content["results"][1]["id"] == str(other_parent.id)
 
-    with django_assert_num_queries(6):
+    with django_assert_num_queries(7):
         response = client.get("/api/v1.0/items/recents/?type=file")
 
     assert response.status_code == 200
