@@ -33,6 +33,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "@/features/auth/Auth";
 
 type WorkspaceShareModalProps = {
   isOpen: boolean;
@@ -47,6 +48,7 @@ export const ItemShareModal = ({
 }: WorkspaceShareModalProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const copyToClipboard = useClipboard();
   const itemId = initialItem.originalId ?? initialItem.id;
   const { data: item, refetch: refetchItem } = useItem(itemId, {
@@ -359,19 +361,24 @@ export const ItemShareModal = ({
       accessRoleTopMessage={(access) => {
         const availableRoles = access.abilities.set_role_to;
         const maxNbRoles = Object.values(Role).length;
-        if (
+        const isLastOwner =
           ownerCount === 1 &&
           availableRoles.length === 0 &&
-          access.role === Role.OWNER
-        ) {
+          access.role === Role.OWNER;
+        if (isLastOwner) {
+          // If the current user is not the last owner, we don't show the message
+          if (user?.id !== access.user.id) {
+            return undefined;
+          }
+
           return t("share_modal.options.top_message.only_owner");
         }
-        if (availableRoles.length === 0 && access.role !== Role.OWNER) {
-          return t("share_modal.options.top_message.to_lower_role");
+
+        if (access.is_explicit) {
+          return undefined;
         }
 
         const canDelete = access.abilities.destroy && access.is_explicit;
-
         const showRedirection =
           !canDelete || availableRoles.length < maxNbRoles;
 
