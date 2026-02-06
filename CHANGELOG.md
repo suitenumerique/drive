@@ -8,6 +8,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(global) implement advanced shared management system
+
+### Removed
+
+- 🔥(global) remove notion of workspace
+
 ## [v0.12.0] - 2026-02-06
 
 ### Added
