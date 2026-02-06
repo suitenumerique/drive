@@ -113,11 +113,14 @@ def test_api_item_upload_ended_success():
         BytesIO(b"my prose"),
     )
 
-    with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
+    with (
+        mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file,
+        mock.patch("core.api.viewsets.mirror_item") as mock_mirror_item,
+    ):
         response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
-
+    mock_mirror_item.assert_called_once_with(item)
     assert response.status_code == 200
 
     item.refresh_from_db()
@@ -139,10 +142,14 @@ def test_api_item_upload_ended_empty_file():
 
     default_storage.save(item.file_key, BytesIO(b""))
 
-    with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
+    with (
+        mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file,
+        mock.patch("core.api.viewsets.mirror_item") as mock_mirror_item,
+    ):
         response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
+    mock_mirror_item.assert_called_once_with(item)
     assert response.status_code == 200
 
     item.refresh_from_db()
