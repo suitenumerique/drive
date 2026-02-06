@@ -1,11 +1,20 @@
 import { fetchAPI } from "@/features/api/fetchApi";
-import { Driver, Entitlements, ItemFilters, UserFilters, PaginatedChildrenResult } from "../Driver";
+import {
+  Driver,
+  Entitlements,
+  ItemFilters,
+  UserFilters,
+  PaginatedChildrenResult,
+} from "../Driver";
 import {
   DTODeleteInvitation,
   DTOCreateInvitation,
   DTOUpdateInvitation,
 } from "../DTOs/InvitationDTO";
-import { DTOCreateAccess } from "../DTOs/AccessesDTO";
+import {
+  DTOCreateAccess,
+  DTOUpdateLinkConfiguration,
+} from "../DTOs/AccessesDTO";
 import { DTOUpdateAccess } from "../DTOs/AccessesDTO";
 import {
   Access,
@@ -112,7 +121,7 @@ export class StandardDriver extends Driver {
 
   async getChildren(
     id: string,
-    filters?: ItemFilters
+    filters?: ItemFilters,
   ): Promise<PaginatedChildrenResult> {
     const params = {
       page: 1,
@@ -142,14 +151,17 @@ export class StandardDriver extends Driver {
     return jsonToItem(data);
   }
 
-  async moveItem(id: string, parentId: string): Promise<void> {
+  async moveItem(id: string, parentId?: string): Promise<void> {
+    const payload = {
+      ...(parentId ? { target_item_id: parentId } : {}),
+    };
     await fetchAPI(`items/${id}/move/`, {
       method: "POST",
-      body: JSON.stringify({ target_item_id: parentId }),
+      body: JSON.stringify(payload),
     });
   }
 
-  async getItemAccesses(itemId: string): Promise<APIList<Access>> {
+  async getItemAccesses(itemId: string): Promise<Access[]> {
     const response = await fetchAPI(`items/${itemId}/accesses/`);
     const data = await response.json();
     return data;
@@ -171,15 +183,30 @@ export class StandardDriver extends Driver {
     });
   }
 
+  async updateLinkConfiguration(
+    payload: DTOUpdateLinkConfiguration,
+  ): Promise<void> {
+    const { itemId, ...rest } = payload;
+    await fetchAPI(`items/${itemId}/link-configuration/`, {
+      method: "PUT",
+      body: JSON.stringify(rest),
+    });
+  }
+
   async updateAccess({
     itemId,
     accessId,
     ...payload
-  }: DTOUpdateAccess): Promise<Access> {
+  }: DTOUpdateAccess): Promise<Access | void> {
     const response = await fetchAPI(`items/${itemId}/accesses/${accessId}/`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
+
+    if (response.status === 204) {
+      return;
+    }
+
     const data = await response.json();
     return data;
   }
@@ -201,7 +228,7 @@ export class StandardDriver extends Driver {
       `items/${payload.itemId}/invitations/${payload.invitationId}/`,
       {
         method: "DELETE",
-      }
+      },
     );
   }
 
@@ -211,7 +238,7 @@ export class StandardDriver extends Driver {
       {
         method: "PATCH",
         body: JSON.stringify(payload),
-      }
+      },
     );
     const data = await response.json();
     return data;
@@ -223,7 +250,7 @@ export class StandardDriver extends Driver {
     return data;
   }
 
-  async moveItems(ids: string[], parentId: string): Promise<void> {
+  async moveItems(ids: string[], parentId?: string): Promise<void> {
     for (const id of ids) {
       await this.moveItem(id, parentId);
     }
@@ -234,7 +261,8 @@ export class StandardDriver extends Driver {
     parentId?: string;
   }): Promise<Item> {
     const { parentId, ...rest } = data;
-    const response = await fetchAPI(`items/${parentId}/children/`, {
+    const url = parentId ? `items/${parentId}/children/` : `items/`;
+    const response = await fetchAPI(url, {
       method: "POST",
       body: JSON.stringify({
         ...rest,
@@ -268,15 +296,63 @@ export class StandardDriver extends Driver {
     return this.deleteItems([id]);
   }
 
+  async getRecentItems(
+    filters?: ItemFilters,
+  ): Promise<PaginatedChildrenResult> {
+    const response = await fetchAPI(`items/recents/`, {
+      params: { ...filters, page_size: 200 },
+    });
+    const data = await response.json();
+    return {
+      children: jsonToItems(data.results),
+      pagination: {
+        currentPage: filters?.page ?? 1,
+        totalCount: data.count,
+        hasMore: data.next !== null,
+      },
+    };
+  }
+
+  async getFavoriteItems(
+    filters?: ItemFilters,
+  ): Promise<PaginatedChildrenResult> {
+    const response = await fetchAPI(`items/favorite_list/`, {
+      params: { ...filters, page_size: 200 },
+    });
+
+    const data = await response.json();
+    return {
+      children: jsonToItems(data.results),
+      pagination: {
+        currentPage: filters?.page ?? 1,
+        totalCount: data.count,
+        hasMore: data.next !== null,
+      },
+    };
+  }
+
+  async createFavoriteItem(itemId: string): Promise<void> {
+    await fetchAPI(`items/${itemId}/favorite/`, {
+      method: "POST",
+    });
+  }
+
+  async deleteFavoriteItem(itemId: string): Promise<void> {
+    await fetchAPI(`items/${itemId}/favorite/`, {
+      method: "DELETE",
+    });
+  }
+
   async createFile(data: {
-    parentId: string;
+    parentId?: string;
     file: File;
     filename: string;
     progressHandler?: (progress: number) => void;
   }): Promise<Item> {
     const { parentId, file, progressHandler, ...rest } = data;
+    const url = parentId ? `items/${parentId}/children/` : `items/`;
     const response = await fetchAPI(
-      `items/${parentId}/children/`,
+      url,
       {
         method: "POST",
         body: JSON.stringify({
@@ -289,7 +365,7 @@ export class StandardDriver extends Driver {
         // We don't want to redirect to the login page in this case, instead
         // we want to show an error.
         redirectOn40x: false,
-      }
+      },
     );
     const item = jsonToItem(await response.json());
     if (!item.policy) {
@@ -374,7 +450,7 @@ const jsonToItem = (data: any): Item => {
 export const uploadFile = (
   url: string,
   file: File,
-  progressHandler: (progress: number) => void
+  progressHandler: (progress: number) => void,
 ) =>
   new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -400,7 +476,7 @@ export const uploadFile = (
     xhr.upload.addEventListener("progress", (progressEvent) => {
       if (progressEvent.lengthComputable) {
         progressHandler(
-          Math.floor((progressEvent.loaded / progressEvent.total) * 100)
+          Math.floor((progressEvent.loaded / progressEvent.total) * 100),
         );
       }
     });

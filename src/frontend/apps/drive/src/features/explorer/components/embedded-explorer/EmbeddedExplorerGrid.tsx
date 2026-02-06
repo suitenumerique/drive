@@ -34,7 +34,7 @@ import clsx from "clsx";
 import { isTablet } from "@/features/ui/components/responsive/ResponsiveDivs";
 import { Droppable } from "@/features/explorer/components/Droppable";
 import { useDragItemContext } from "@/features/explorer/components/ExplorerDndProvider";
-import { useModal } from "@openfun/cunningham-react";
+import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { ExplorerMoveFolder } from "@/features/explorer/components/modals/move/ExplorerMoveFolderModal";
 
 export type EmbeddedExplorerGridProps = {
@@ -52,6 +52,7 @@ export type EmbeddedExplorerGridProps = {
   displayMode?: GlobalExplorerContextType["displayMode"];
   canSelect?: (item: Item) => boolean;
   onFileClick?: (item: Item) => void;
+  disableKeyboardNavigation?: boolean;
 };
 
 const EMPTY_ARRAY: Item[] = [];
@@ -148,7 +149,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   const { onKeyDown } = useTableKeyboardNavigation({
     table,
     tableRef,
-    isDisabled: isActionModalOpen,
+    isDisabled: isActionModalOpen || props.disableKeyboardNavigation,
   });
 
   const handleCloseMoveModal = () => {

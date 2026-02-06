@@ -13,6 +13,8 @@ import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { FileUploadToast } from "../components/toasts/FileUploadToast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getEntitlements } from "@/utils/entitlements";
+import { useCanCreateChildren } from "@/features/items/utils";
+import { getMyFilesQueryKey } from "@/utils/defaultRoutes";
 
 type FileUpload = FileWithPath & {
   parentId?: string;
@@ -117,10 +119,11 @@ const useUpload = ({ item }: { item: Item }) => {
 
   // Create the folders and assign each file a parentId.
   const createFoldersFromDrop = async (
-    parentItem: Item,
-    folderUploads: FolderUpload[]
+    parentItem: Item | undefined,
+    folderUploads: FolderUpload[],
   ) => {
     const promises = [];
+
     for (const folder of folderUploads) {
       promises.push(
         () =>
@@ -128,22 +131,29 @@ const useUpload = ({ item }: { item: Item }) => {
             createFolder.mutate(
               {
                 title: folder.item.title!,
-                parentId: parentItem.id,
+                parentId: parentItem?.id,
               },
               {
                 onSuccess: async (createdFolder) => {
                   queryClient.invalidateQueries({
-                    queryKey: ["items", parentItem.id],
+                    queryKey: getMyFilesQueryKey(),
                   });
+
+                  if (parentItem) {
+                    queryClient.invalidateQueries({
+                      queryKey: ["items", parentItem.id],
+                    });
+                  }
+
                   folder.files.forEach((file) => {
                     file.parentId = createdFolder.id;
                   });
                   await createFoldersFromDrop(createdFolder, folder.children);
                   resolve();
                 },
-              }
+              },
             );
-          })
+          }),
       );
     }
     for (const promise of promises) {
@@ -154,9 +164,9 @@ const useUpload = ({ item }: { item: Item }) => {
   // Assign each file a parentId and create the folders if it is a folder upload.
   const handleHierarchy = async (upload: Upload) => {
     upload.folder.files.forEach((file) => {
-      file.parentId = item!.id;
+      file.parentId = item?.id;
     });
-    await createFoldersFromDrop(item!, upload.folder.children);
+    await createFoldersFromDrop(item, upload.folder.children);
   };
 
   return {
@@ -187,7 +197,10 @@ const pathNicefy = (path: string) => {
 
 export const useUploadZone = ({ item }: { item: Item }) => {
   const { t } = useTranslation();
+
   const createFile = useMutationCreateFile();
+
+  const canCreateChildren = useCanCreateChildren(item);
 
   const fileDragToastId = useRef<Id | null>(null);
   const fileUploadsToastId = useRef<Id | null>(null);
@@ -199,7 +212,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
   const { filesToUpload, handleHierarchy } = useUpload({ item: item! });
 
   const validateDrop = () => {
-    const canUpload = item?.abilities?.children_create ?? false;
+    const canUpload = canCreateChildren;
     if (!canUpload) {
       return {
         code: "no-upload-rights",
@@ -229,7 +242,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         return;
       }
 
-      const canUpload = item?.abilities?.children_create ?? false;
+      const canUpload = canCreateChildren;
 
       fileDragToastId.current = addToast(
         <ToasterItem
@@ -242,11 +255,11 @@ export const useUploadZone = ({ item }: { item: Item }) => {
               `explorer.actions.upload.toast${canUpload ? "" : "_no_rights"}`,
               {
                 title: item?.title,
-              }
+              },
             )}
           </span>
         </ToasterItem>,
-        { autoClose: false }
+        { autoClose: false },
       );
     },
     onDragLeave: (event) => {
@@ -265,7 +278,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
       dismissDragToast();
     },
     onDrop: async (acceptedFiles) => {
-      if (!(item?.abilities?.children_create ?? false)) {
+      if (!canCreateChildren) {
         dismissDragToast();
         return;
       }
@@ -284,7 +297,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
               // We need to set this to null in order to re-show the toast when the user drops another file later.
               fileUploadsToastId.current = null;
             },
-          }
+          },
         );
       }
 
@@ -301,7 +314,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
               {entitlements.can_upload.message ||
                 t("entitlements.can_upload.cannot_upload")}
             </span>
-          </ToasterItem>
+          </ToasterItem>,
         );
         return;
       }
@@ -320,7 +333,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
               // We need to set this to null in order to re-show the toast when the user drops another file later.
               fileUploadsToastId.current = null;
             },
-          }
+          },
         );
       }
       dismissDragToast();
@@ -357,7 +370,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
                 {
                   filename: file.name,
                   file,
-                  parentId: file.parentId!,
+                  parentId: file.parentId,
                   progressHandler: (progress) => {
                     setUploadingState((prev) => {
                       const newState = {
@@ -383,9 +396,9 @@ export const useUploadZone = ({ item }: { item: Item }) => {
                   onSettled: () => {
                     resolve();
                   },
-                }
+                },
               );
-            })
+            }),
         );
       }
       for (const promise of promises) {
@@ -419,7 +432,11 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
   useEffect(() => {
     const unloadCallback = (event: BeforeUnloadEvent) => {
-      if ([UploadingStep.CREATE_FOLDERS, UploadingStep.UPLOAD_FILES].includes(uploadingState.step)) {
+      if (
+        [UploadingStep.CREATE_FOLDERS, UploadingStep.UPLOAD_FILES].includes(
+          uploadingState.step,
+        )
+      ) {
         event.preventDefault();
       }
       return "";

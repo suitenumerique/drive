@@ -12,7 +12,7 @@ import {
   Toaster,
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
-import { Button } from "@openfun/cunningham-react";
+import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { useConfig } from "@/features/config/ConfigProvider";
 import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
 import { SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL } from "@/features/api/fetchApi";
@@ -34,7 +34,7 @@ export default function HomePage() {
         sessionStorage.removeItem(SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL);
         window.location.href = attemptedUrl;
       } else {
-        window.location.href = `/explorer/items/${user.main_workspace.id}`;
+        window.location.href = `/explorer/items/my-files`;
       }
     }
   }, [user]);

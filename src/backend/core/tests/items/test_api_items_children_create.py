@@ -11,6 +11,7 @@ from uuid import uuid4
 from django.utils import timezone
 
 import pytest
+from freezegun import freeze_time
 from rest_framework.test import APIClient
 
 from core import factories
@@ -123,9 +124,7 @@ def test_api_items_children_create_authenticated_success(reach, role, depth):
                 link_reach=reach, link_role=role, type=ItemTypeChoices.FOLDER
             )
         else:
-            item = factories.ItemFactory(
-                parent=item, link_role="reader", type=ItemTypeChoices.FOLDER
-            )
+            item = factories.ItemFactory(parent=item, type=ItemTypeChoices.FOLDER)
 
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/children/",
@@ -139,7 +138,8 @@ def test_api_items_children_create_authenticated_success(reach, role, depth):
 
     child = Item.objects.get(id=response.json()["id"])
     assert child.title == "file.txt"
-    assert child.link_reach == "restricted"
+    assert child.computed_link_reach == reach
+    assert child.link_reach is None
     assert not child.accesses.filter(role="owner", user=user).exists()
 
 
@@ -197,22 +197,23 @@ def test_api_items_children_create_related_success(role, depth):
             )
             factories.UserItemAccessFactory(user=user, item=item, role=role)
         else:
-            item = factories.ItemFactory(
-                parent=item, link_reach="restricted", type=ItemTypeChoices.FOLDER
-            )
+            item = factories.ItemFactory(parent=item, type=ItemTypeChoices.FOLDER)
 
-    response = client.post(
-        f"/api/v1.0/items/{item.id!s}/children/",
-        {
-            "type": ItemTypeChoices.FILE,
-            "filename": "file.txt",
-        },
-    )
+    now = timezone.now()
+    with freeze_time(now):
+        response = client.post(
+            f"/api/v1.0/items/{item.id!s}/children/",
+            {
+                "type": ItemTypeChoices.FILE,
+                "filename": "file.txt",
+            },
+        )
 
     assert response.status_code == 201
     child = Item.objects.get(id=response.json()["id"])
     assert child.title == "file.txt"
-    assert child.link_reach == "restricted"
+    assert child.computed_link_reach == "restricted"
+    assert child.link_reach is None
     assert not child.accesses.filter(role="owner", user=user).exists()
 
     assert response.json().get("policy") is not None
@@ -229,9 +230,9 @@ def test_api_items_children_create_related_success(role, depth):
 
     assert query_params.pop("X-Amz-Algorithm") == ["AWS4-HMAC-SHA256"]
     assert query_params.pop("X-Amz-Credential") == [
-        f"drive/{timezone.now().strftime('%Y%m%d')}/us-east-1/s3/aws4_request"
+        f"drive/{now.strftime('%Y%m%d')}/eu-east-1/s3/aws4_request"
     ]
-    assert query_params.pop("X-Amz-Date") == [timezone.now().strftime("%Y%m%dT%H%M%SZ")]
+    assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
     assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
     assert query_params.pop("X-Amz-Signature") is not None
@@ -257,22 +258,23 @@ def test_api_items_children_create_related_success_override_s3_endpoint(settings
             )
             factories.UserItemAccessFactory(user=user, item=item, role="owner")
         else:
-            item = factories.ItemFactory(
-                parent=item, link_reach="restricted", type=ItemTypeChoices.FOLDER
-            )
+            item = factories.ItemFactory(parent=item, type=ItemTypeChoices.FOLDER)
 
-    response = client.post(
-        f"/api/v1.0/items/{item.id!s}/children/",
-        {
-            "type": ItemTypeChoices.FILE,
-            "filename": "file.txt",
-        },
-    )
+    now = timezone.now()
+    with freeze_time(now):
+        response = client.post(
+            f"/api/v1.0/items/{item.id!s}/children/",
+            {
+                "type": ItemTypeChoices.FILE,
+                "filename": "file.txt",
+            },
+        )
 
     assert response.status_code == 201
     child = Item.objects.get(id=response.json()["id"])
     assert child.title == "file.txt"
-    assert child.link_reach == "restricted"
+    assert child.computed_link_reach == "restricted"
+    assert child.link_reach is None
     assert not child.accesses.filter(role="owner", user=user).exists()
 
     assert response.json().get("policy") is not None
@@ -289,9 +291,9 @@ def test_api_items_children_create_related_success_override_s3_endpoint(settings
 
     assert query_params.pop("X-Amz-Algorithm") == ["AWS4-HMAC-SHA256"]
     assert query_params.pop("X-Amz-Credential") == [
-        f"drive/{timezone.now().strftime('%Y%m%d')}/us-east-1/s3/aws4_request"
+        f"drive/{now.strftime('%Y%m%d')}/eu-east-1/s3/aws4_request"
     ]
-    assert query_params.pop("X-Amz-Date") == [timezone.now().strftime("%Y%m%dT%H%M%SZ")]
+    assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
     assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
     assert query_params.pop("X-Amz-Signature") is not None

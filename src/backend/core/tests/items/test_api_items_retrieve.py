@@ -12,6 +12,7 @@ from django.core.cache import cache
 from django.utils import timezone
 
 import pytest
+from lasuite.drf.models.choices import RoleChoices
 from rest_framework.test import APIClient
 
 from core import factories, models
@@ -29,6 +30,10 @@ def test_api_items_retrieve_anonymous_public_standalone():
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(AnonymousUser()),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -45,7 +50,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": [],
+        "user_role": None,
         "type": item.type,
         "upload_state": models.ItemUploadStateChoices.PENDING
         if item.type == models.ItemTypeChoices.FILE
@@ -83,6 +88,10 @@ def test_api_items_retrieve_anonymous_public_parent():
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(AnonymousUser()),
+        "ancestors_link_reach": "public",
+        "ancestors_link_role": grand_parent.link_role,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -99,7 +108,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": [],
+        "user_role": None,
         "type": item.type,
         "upload_state": models.ItemUploadStateChoices.PENDING
         if item.type == models.ItemTypeChoices.FILE
@@ -182,6 +191,10 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -198,7 +211,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": [],
+        "user_role": None,
         "type": item.type,
         "upload_state": models.ItemUploadStateChoices.PENDING
         if item.type == models.ItemTypeChoices.FILE
@@ -242,6 +255,10 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": reach,
+        "ancestors_link_role": grand_parent.link_role,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -258,7 +275,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": [],
+        "user_role": None,
         "type": item.type,
         "upload_state": models.ItemUploadStateChoices.PENDING
         if item.type == models.ItemTypeChoices.FILE
@@ -380,6 +397,10 @@ def test_api_items_retrieve_authenticated_related_direct():
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "creator": {
             "id": str(item.creator.id),
             "full_name": item.creator.full_name,
@@ -396,7 +417,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": [access.role],
+        "user_role": access.role,
         "type": item.type,
         "upload_state": models.ItemUploadStateChoices.PENDING
         if item.type == models.ItemTypeChoices.FILE
@@ -442,6 +463,10 @@ def test_api_items_retrieve_authenticated_related_parent():
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": "restricted",
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "creator": {
             "id": str(item.creator.id),
             "full_name": item.creator.full_name,
@@ -458,7 +483,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": [access.role],
+        "user_role": access.role,
         "type": item.type,
         "upload_state": models.ItemUploadStateChoices.PENDING
         if item.type == models.ItemTypeChoices.FILE
@@ -582,16 +607,16 @@ def test_api_items_retrieve_authenticated_related_team_none(mock_user_teams):
 
 
 @pytest.mark.parametrize(
-    "teams,roles",
+    "teams,role",
     [
-        [["readers"], ["reader"]],
-        [["unknown", "readers"], ["reader"]],
-        [["editors"], ["editor"]],
-        [["unknown", "editors"], ["editor"]],
+        [["readers"], "reader"],
+        [["unknown", "readers"], "reader"],
+        [["editors"], "editor"],
+        [["unknown", "editors"], "editor"],
     ],
 )
 def test_api_items_retrieve_authenticated_related_team_members(
-    teams, roles, mock_user_teams
+    teams, role, mock_user_teams
 ):
     """
     Authenticated users should be allowed to retrieve an item to which they
@@ -622,6 +647,10 @@ def test_api_items_retrieve_authenticated_related_team_members(
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -638,7 +667,7 @@ def test_api_items_retrieve_authenticated_related_team_members(
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": roles,
+        "user_role": role,
         "type": item.type,
         "upload_state": models.ItemUploadStateChoices.PENDING
         if item.type == models.ItemTypeChoices.FILE
@@ -657,15 +686,15 @@ def test_api_items_retrieve_authenticated_related_team_members(
 
 
 @pytest.mark.parametrize(
-    "teams,roles",
+    "teams,role",
     [
-        [["administrators"], ["administrator"]],
-        [["editors", "administrators"], ["administrator", "editor"]],
-        [["unknown", "administrators"], ["administrator"]],
+        [["administrators"], "administrator"],
+        [["editors", "administrators"], "administrator"],
+        [["unknown", "administrators"], "administrator"],
     ],
 )
 def test_api_items_retrieve_authenticated_related_team_administrators(
-    teams, roles, mock_user_teams
+    teams, role, mock_user_teams
 ):
     """
     Authenticated users should be allowed to retrieve an item to which they
@@ -696,6 +725,10 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -712,7 +745,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": roles,
+        "user_role": role,
         "type": item.type,
         "upload_state": models.ItemUploadStateChoices.PENDING
         if item.type == models.ItemTypeChoices.FILE
@@ -731,17 +764,15 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
 
 
 @pytest.mark.parametrize(
-    "teams,roles",
+    "teams",
     [
-        [["owners"], ["owner"]],
-        [["owners", "administrators"], ["owner", "administrator"]],
-        [["members", "administrators", "owners"], ["owner", "administrator"]],
-        [["unknown", "owners"], ["owner"]],
+        ["owners"],
+        ["owners", "administrators"],
+        ["members", "administrators", "owners"],
+        ["unknown", "owners"],
     ],
 )
-def test_api_items_retrieve_authenticated_related_team_owners(
-    teams, roles, mock_user_teams
-):
+def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_teams):
     """
     Authenticated users should be allowed to retrieve a restricted item to which
     they are related via a team whatever the role.
@@ -770,6 +801,10 @@ def test_api_items_retrieve_authenticated_related_team_owners(
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -786,7 +821,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": roles,
+        "user_role": "owner",
         "type": item.type,
         "upload_state": models.ItemUploadStateChoices.PENDING
         if item.type == models.ItemTypeChoices.FILE
@@ -804,7 +839,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(
     }
 
 
-def test_api_items_retrieve_user_roles(django_assert_num_queries):
+def test_api_items_retrieve_user_role(django_assert_num_queries):
     """
     Roles should be annotated on querysets taking into account all items ancestors.
     """
@@ -831,15 +866,16 @@ def test_api_items_retrieve_user_roles(django_assert_num_queries):
         factories.UserItemAccessFactory(item=parent, user=user),
         factories.UserItemAccessFactory(item=item, user=user),
     )
-    expected_roles = {access.role for access in accesses}
+    ancestors_roles = {access.role for access in accesses}
+    expected_role = RoleChoices.max(*ancestors_roles)
 
-    with django_assert_num_queries(11):
+    with django_assert_num_queries(10):
         response = client.get(f"/api/v1.0/items/{item.id!s}/")
 
     assert response.status_code == 200
 
-    user_roles = response.json()["user_roles"]
-    assert set(user_roles) == expected_roles
+    user_role = response.json()["user_role"]
+    assert user_role == expected_role
 
 
 def test_api_items_retrieve_numqueries_with_link_trace(django_assert_num_queries):
@@ -885,7 +921,7 @@ def test_api_items_retrieve_soft_deleted_anonymous(reach, depth):
                 parent=items[-1], type=models.ItemTypeChoices.FOLDER, creator=user
             )
         )
-    assert models.Item.objects.count() == depth + 1  # +1 for the main workspace
+    assert models.Item.objects.count() == depth
 
     response = APIClient().get(f"/api/v1.0/items/{items[-1].id!s}/")
 
@@ -951,7 +987,7 @@ def test_api_items_retrieve_soft_deleted_authenticated(reach, depth):
                 parent=items[-1], type=models.ItemTypeChoices.FOLDER, creator=user
             )
         )
-    assert models.Item.objects.count() == depth + 1  # +1 for the main workspace
+    assert models.Item.objects.count() == depth
 
     response = client.get(f"/api/v1.0/items/{items[-1].id!s}/")
 
@@ -1020,7 +1056,7 @@ def test_api_items_retrieve_soft_deleted_related(role, depth):
                 parent=items[-1], type=models.ItemTypeChoices.FOLDER, creator=user
             )
         )
-    assert models.Item.objects.count() == depth + 1  # +1 for the main workspace
+    assert models.Item.objects.count() == depth
     item = items[-1]
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
@@ -1075,7 +1111,7 @@ def test_api_items_retrieve_permanently_deleted_related(role, depth):
                 parent=items[-1], type=models.ItemTypeChoices.FOLDER, creator=user
             )
         )
-    assert models.Item.objects.count() == depth + 1  # +1 for the main workspace
+    assert models.Item.objects.count() == depth
     item = items[-1]
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
@@ -1138,6 +1174,10 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -1154,7 +1194,7 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": [models.RoleChoices.OWNER],
+        "user_role": models.RoleChoices.OWNER,
         "type": models.ItemTypeChoices.FILE,
         "upload_state": upload_state,
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
@@ -1206,6 +1246,10 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -1222,7 +1266,7 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": [models.RoleChoices.OWNER],
+        "user_role": models.RoleChoices.OWNER,
         "type": models.ItemTypeChoices.FILE,
         "upload_state": upload_state,
         "url": f"http://localhost:8083/media/item/{item.id!s}/document.odt",
@@ -1264,6 +1308,10 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -1280,7 +1328,7 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": [models.RoleChoices.OWNER],
+        "user_role": models.RoleChoices.OWNER,
         "type": models.ItemTypeChoices.FILE,
         "upload_state": models.ItemUploadStateChoices.READY,
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo%20with%20spaces.png",
@@ -1405,6 +1453,10 @@ def test_api_items_retrieve_file_analysing_not_creator():
     assert response.json() == {
         "id": str(item.id),
         "abilities": item.get_abilities(user),
+        "ancestors_link_reach": None,
+        "ancestors_link_role": None,
+        "computed_link_reach": item.computed_link_reach,
+        "computed_link_role": item.computed_link_role,
         "created_at": item.created_at.isoformat().replace("+00:00", "Z"),
         "creator": {
             "id": str(item.creator.id),
@@ -1422,7 +1474,7 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "path": str(item.path),
         "title": item.title,
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
-        "user_roles": [access.role],
+        "user_role": access.role,
         "type": models.ItemTypeChoices.FILE,
         "upload_state": models.ItemUploadStateChoices.ANALYZING,
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",

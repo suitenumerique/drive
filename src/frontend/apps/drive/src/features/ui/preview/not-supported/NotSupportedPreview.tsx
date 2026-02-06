@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { FilePreviewType } from "../files-preview/FilesPreview";
 
-import { Button } from "@openfun/cunningham-react";
+import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
 import { FileIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { useCallback } from "react";

@@ -1,10 +1,12 @@
-import { useModal } from "@openfun/cunningham-react";
+import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
-import publicSpaceIcon from "@/assets/folder/folder-tiny-public.svg";
-import sharedSpaceIcon from "@/assets/folder/folder-tiny-shared.svg";
-import folderPersonalIcon from "@/assets/folder/folder-tiny-perso.svg";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
-import { Item, TreeItem, WorkspaceType } from "@/features/drivers/types";
+import { Item, TreeItem } from "@/features/drivers/types";
+import {
+  DefaultRoute,
+  getDefaultRoute,
+  ORDERED_DEFAULT_ROUTES,
+} from "@/utils/defaultRoutes";
 import {
   HorizontalSeparator,
   OpenMap,
@@ -19,24 +21,21 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ExplorerTreeItem } from "./ExplorerTreeItem";
 import { useMoveItems } from "../../api/useMoveItem";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
-import { ExplorerCreateWorkspaceModal } from "../modals/workspaces/ExplorerCreateWorkspaceModal";
 import { ExplorerTreeActions } from "./ExplorerTreeActions";
 import { ExplorerTreeNav } from "./nav/ExplorerTreeNav";
 import { addItemsMovedToast } from "../toasts/addItemsMovedToast";
 import { ExplorerTreeMoveConfirmationModal } from "./ExplorerTreeMoveConfirmationModal";
 import { canDrop } from "../ExplorerDndProvider";
 import React from "react";
-import clsx from "clsx";
 import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
-import { WorkspaceCategory } from "../../constants";
-import { getDriver } from "@/features/config/Config";
 import { useAuth } from "@/features/auth/Auth";
+import { ExplorerTreeNavItem } from "./nav/ExplorerTreeNavItem";
 import { useRouter } from "next/router";
 
 export const ExplorerTree = () => {
-  const { t, i18n } = useTranslation();
   const move = useMoveItems();
   const moveConfirmationModal = useModal();
+  const router = useRouter();
   const [moveState, setMoveState] = useState<{
     moveCallback: () => void;
     sourceItem: Item;
@@ -45,10 +44,17 @@ export const ExplorerTree = () => {
 
   const treeContext = useTreeContext<TreeItem>();
   const [initialOpenState, setInitialOpenState] = useState<OpenMap | undefined>(
-    undefined
+    undefined,
   );
 
   const { itemId, treeIsInitialized } = useGlobalExplorer();
+  const defaultSelectedNodeId = useMemo(() => {
+    const defaultRoute = getDefaultRoute(router.pathname);
+    if (defaultRoute) {
+      return defaultRoute.id;
+    }
+    return itemId;
+  }, [itemId, router.pathname]);
 
   // Initialize the opened nodes when the tree is initialized.
   useEffect(() => {
@@ -62,7 +68,7 @@ export const ExplorerTree = () => {
 
     // Browse the data to initialize the opened nodes
     const openLoadedNodes = (
-      items: TreeDataItem<TreeViewDataType<TreeItem>>[]
+      items: TreeDataItem<TreeViewDataType<TreeItem>>[],
     ) => {
       items.forEach((item) => {
         if (
@@ -85,36 +91,7 @@ export const ExplorerTree = () => {
     setInitialOpenState(initialOpenedNodes);
   }, [treeContext?.treeData.nodes]);
 
-  // When the language changes, we update the tree titles to be sure they are translated
-  useEffect(() => {
-    if (!treeIsInitialized) {
-      return;
-    }
-
-    const treeData = treeContext?.treeData;
-
-    // No main workspace when being anon on a public workspace.
-    if (treeData?.getNode("PERSONAL_SPACE")) {
-      treeData?.updateNode("PERSONAL_SPACE", {
-        headerTitle: t("explorer.workspaces.mainWorkspace"),
-      });
-    }
-
-    if (treeData?.getNode(WorkspaceCategory.SHARED_SPACE)) {
-      treeData.updateNode(WorkspaceCategory.SHARED_SPACE, {
-        headerTitle: t("explorer.tree.shared_space"),
-      });
-    }
-
-    if (treeData?.getNode(WorkspaceCategory.PUBLIC_SPACE)) {
-      treeData.updateNode(WorkspaceCategory.PUBLIC_SPACE, {
-        headerTitle: t("explorer.tree.public_space"),
-      });
-    }
-  }, [i18n.language, t, treeIsInitialized]);
-
   const createFolderModal = useModal();
-  const createWorkspaceModal = useModal();
 
   const handleMove = (result: TreeViewMoveResult) => {
     move.mutate(
@@ -127,24 +104,20 @@ export const ExplorerTree = () => {
         onSuccess: () => {
           addItemsMovedToast(1);
         },
-      }
+      },
     );
   };
 
   return (
     <div className="explorer__tree">
-      <ExplorerTreeActions
-        openCreateFolderModal={createFolderModal.open}
-        openCreateWorkspaceModal={createWorkspaceModal.open}
-      />
+      <ExplorerTreeActions openCreateFolderModal={createFolderModal.open} />
       <HorizontalSeparator withPadding={false} />
 
-      <ExplorerTreeMobile />
+      <ExplorerTreeNavDefault />
 
       {initialOpenState && (
         <TreeView
-          // selectedNodeId={itemId}
-
+          selectedNodeId={defaultSelectedNodeId}
           afterMove={handleMove}
           beforeMove={(moveResult, moveCallback) => {
             // TODO: this comes from the tree in the ui-kit, it needs to be explained in the documentation
@@ -153,10 +126,10 @@ export const ExplorerTree = () => {
             }
 
             const parent = treeContext?.treeData.getNode(
-              moveResult.newParentId
+              moveResult.newParentId,
             ) as Item | undefined;
             const oldParent = treeContext?.treeData.getNode(
-              moveResult.oldParentId
+              moveResult.oldParentId,
             ) as Item | undefined;
 
             if (!parent || !oldParent) {
@@ -187,16 +160,18 @@ export const ExplorerTree = () => {
 
             return item.abilities?.move ?? false;
           }}
+          paddingTop={0}
           canDrop={(args) => {
             const parent = args.parentNode?.data.value as Item | undefined;
             const activeItem = args.dragNodes[0].data.value as Item;
             const canDropResult = parent ? canDrop(activeItem, parent) : true;
 
-            return (
+            const result =
               args.index === 0 &&
               args.parentNode?.willReceiveDrop === true &&
-              canDropResult
-            );
+              canDropResult;
+
+            return result;
           }}
           renderNode={ExplorerTreeItem}
           rootNodeId={"root"}
@@ -210,7 +185,7 @@ export const ExplorerTree = () => {
         <LeftPanelMobile />
       </div>
       <ExplorerCreateFolderModal {...createFolderModal} parentId={itemId} />
-      <ExplorerCreateWorkspaceModal {...createWorkspaceModal} />
+
       {moveState && moveConfirmationModal.isOpen && (
         <ExplorerTreeMoveConfirmationModal
           isOpen={moveConfirmationModal.isOpen}
@@ -230,99 +205,55 @@ export const ExplorerTree = () => {
   );
 };
 
-type ExplorerTreeMobileNode = {
+type ExplorerTreeNavNode = {
   id: string;
   label: string;
   route: string;
-  icon: string;
+  icon: React.ReactNode | string;
 };
 
-export const ExplorerTreeMobile = () => {
+export const ExplorerTreeNavDefault = () => {
   const { t } = useTranslation();
-  const router = useRouter();
   const { user } = useAuth();
-  const { setIsLeftPanelOpen, mobileNodesRefreshTrigger } = useGlobalExplorer();
-  const [nodes, setNodes] = useState<ExplorerTreeMobileNode[]>([]);
-  const driver = useMemo(() => getDriver(), []);
+  const [nodes, setNodes] = useState<ExplorerTreeNavNode[]>([]);
 
   const initTree = useCallback(async () => {
     if (!user) {
       return;
     }
-    const mainWorkspace = user.main_workspace;
-    const sharedWorkspaces = await driver.getItems({
-      workspaces: WorkspaceType.SHARED,
-      page: 1,
-    });
-    const publicWorkspaces = await driver.getItems({
-      workspaces: WorkspaceType.PUBLIC,
-      page: 1,
-    });
 
-    const nodes: ExplorerTreeMobileNode[] = [
-      {
-        id: mainWorkspace.id,
-        label: t("explorer.workspaces.mainWorkspace"),
-        route: `/explorer/items/${mainWorkspace.id}`,
-        icon: folderPersonalIcon.src,
-      },
-    ];
+    const nodes: ExplorerTreeNavNode[] = ORDERED_DEFAULT_ROUTES.filter(
+      (route) => route.id !== DefaultRoute.FAVORITES,
+    ).map((route) => ({
+      id: route.id,
+      label: t(route.label),
+      route: route.route,
+      icon: (
+        <img
+          src={route.iconSrc}
+          alt={route.label}
+          width={16}
+          height={16}
+          className="explorer__tree__nav__icon"
+        />
+      ),
+    }));
 
-    if (sharedWorkspaces.children.length > 0) {
-      nodes.push({
-        id: "shared",
-        label: t("explorer.tree.shared_space"),
-        route: `/explorer/items/shared`,
-        icon: sharedSpaceIcon.src,
-      });
-    }
-    if (publicWorkspaces.children.length > 0) {
-      nodes.push({
-        id: "public",
-        label: t("explorer.tree.public_space"),
-        route: `/explorer/items/public`,
-        icon: publicSpaceIcon.src,
-      });
-    }
     setNodes(nodes);
   }, [user, t]);
 
   useEffect(() => {
     initTree();
-  }, [initTree, mobileNodesRefreshTrigger]);
+  }, [initTree]);
 
   if (!nodes) {
     return null;
   }
 
-  const renderNode = (node: ExplorerTreeMobileNode) => {
-    const isSelected = router.asPath === node.route;
-
-    return (
-      <div
-        id={`explorer__tree__mobile__node--${node.id}`}
-        className={clsx(
-          "explorer__tree__mobile__item",
-          "explorer__tree__mobile__node",
-          {
-            "explorer__tree__mobile__node--selected": isSelected,
-          }
-        )}
-        onClick={() => {
-          router.push(node.route);
-          setIsLeftPanelOpen(false);
-        }}
-      >
-        <img src={node.icon} alt="" />
-        <span>{node.label}</span>
-      </div>
-    );
-  };
-
   return (
-    <div className="explorer__tree__mobile">
+    <div className="explorer__tree__nav">
       {nodes.map((node) => (
-        <React.Fragment key={node.id}>{renderNode(node)}</React.Fragment>
+        <ExplorerTreeNavItem key={node.id} {...node} />
       ))}
     </div>
   );

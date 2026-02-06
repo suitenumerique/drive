@@ -1,0 +1,45 @@
+name: Build mail templates reusable workflow
+
+on:
+  workflow_call:
+
+jobs:
+  build-mails:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/mail
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Restore the mail templates
+        uses: actions/cache@v4
+        id: mail-templates
+        with:
+          path: "src/backend/core/templates/mail"
+          key: mail-templates-${{ hashFiles('src/mail/mjml') }}
+
+      - name: Install yarn
+        if: steps.mail-templates.outputs.cache-hit != 'true'
+        run: npm install -g yarn
+
+      - name: Install node dependencies
+        if: steps.mail-templates.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile
+
+      - name: Build mails
+        if: steps.mail-templates.outputs.cache-hit != 'true'
+        run: yarn build
+
+      - name: Cache mail templates
+        if: steps.mail-templates.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: "src/backend/core/templates/mail"
+          key: mail-templates-${{ hashFiles('src/mail/mjml') }}

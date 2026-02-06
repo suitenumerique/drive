@@ -1,4 +1,4 @@
-import { Button, useModal } from "@openfun/cunningham-react";
+import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
 import {
   NavigationEventType,
   useGlobalExplorer,
@@ -14,30 +14,39 @@ import { EmbeddedExplorerGridBreadcrumbs } from "@/features/explorer/components/
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
 import { ImportDropdown } from "../item-actions/ImportDropdown";
 import { useTranslation } from "react-i18next";
-import { WorkspaceCategory } from "../../constants";
 import { useRouter } from "next/router";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
 import { useMemo } from "react";
-import { itemIsWorkspace } from "@/features/drivers/utils";
+import {
+  DefaultRoute,
+  getDefaultRouteId,
+  isDefaultRoute,
+  ORDERED_DEFAULT_ROUTES,
+} from "@/utils/defaultRoutes";
 
 export const AppExplorerBreadcrumbs = () => {
-  const { item, onNavigate, treeIsInitialized } = useGlobalExplorer();
+  const { item, onNavigate } = useGlobalExplorer();
+  const router = useRouter();
   const { t } = useTranslation();
   const createFolderModal = useModal();
   const importDropdown = useDropdownMenu();
+  const onDefaultRoute = isDefaultRoute(router.pathname);
+  const defaultRouteId = getDefaultRouteId(router.pathname);
 
-  if (!item || !treeIsInitialized) {
+  const showActions =
+    (onDefaultRoute && defaultRouteId === DefaultRoute.MY_FILES) ||
+    (!onDefaultRoute && item?.abilities.children_create);
+
+  if (!item && !onDefaultRoute) {
     return null;
   }
 
   return (
     <>
-      <div
-        className="explorer__content__breadcrumbs"
-        data-testid="explorer-breadcrumbs"
-      >
+      <div className="explorer__content__breadcrumbs">
         <EmbeddedExplorerGridBreadcrumbs
-          currentItemId={item.id}
+          currentItemId={item?.id}
+          item={item}
           showMenuLastItem={true}
           onGoBack={(item) => {
             onNavigate({
@@ -47,35 +56,38 @@ export const AppExplorerBreadcrumbs = () => {
           }}
         />
 
-        <div className="explorer__content__breadcrumbs__actions">
-          <ImportDropdown
-            importMenu={importDropdown}
-            trigger={
-              <Button
-                variant="tertiary"
-                size="small"
-                onClick={() => {
-                  importDropdown.setIsOpen(true);
-                }}
-              >
-                {t("explorer.tree.import.label")}
-              </Button>
-            }
-          />
-          <Button
-            icon={<img src={createFolderSvg.src} alt="Create Folder" />}
-            variant="tertiary"
-            size="small"
-            onClick={() => {
-              createFolderModal.open();
-            }}
-          />
-        </div>
+        {showActions && (
+          <div className="explorer__content__breadcrumbs__actions">
+            <ImportDropdown
+              importMenu={importDropdown}
+              trigger={
+                <Button
+                  variant="tertiary"
+                  size="small"
+                  onClick={() => {
+                    importDropdown.setIsOpen(true);
+                  }}
+                >
+                  {t("explorer.tree.import.label")}
+                </Button>
+              }
+            />
+            <Button
+              icon={<img src={createFolderSvg.src} alt="Create Folder" />}
+              variant="tertiary"
+              data-testid="create-folder-button"
+              size="small"
+              onClick={() => {
+                createFolderModal.open();
+              }}
+            />
+          </div>
+        )}
       </div>
       <div className="explorer__content__separator">
         <HorizontalSeparator withPadding={false} />
       </div>
-      <ExplorerCreateFolderModal {...createFolderModal} parentId={item.id} />
+      <ExplorerCreateFolderModal {...createFolderModal} parentId={item?.id} />
     </>
   );
 };
@@ -83,9 +95,13 @@ export const AppExplorerBreadcrumbs = () => {
 export const ExplorerBreadcrumbsMobile = () => {
   const router = useRouter();
   const { t } = useTranslation();
-  const { item, onNavigate, treeIsInitialized } = useGlobalExplorer();
+  const { item, onNavigate } = useGlobalExplorer();
   const { data: breadcrumb } = useBreadcrumbQuery(item?.id);
-  const currentIsWorkspace = item ? itemIsWorkspace(item) : false;
+
+  const defaultRouteId = getDefaultRouteId(router.pathname);
+  const defaultRouteData = ORDERED_DEFAULT_ROUTES.find(
+    (route) => route.id === defaultRouteId
+  );
 
   const items = useMemo(() => {
     if (!breadcrumb) {
@@ -101,8 +117,19 @@ export const ExplorerBreadcrumbsMobile = () => {
     };
   }, [breadcrumb]);
 
-  if (!item || !treeIsInitialized) {
-    return null;
+  if (!item && defaultRouteData) {
+    return (
+      <div className="explorer__content__breadcrumbs--mobile">
+        <div className="explorer__content__breadcrumbs--mobile__default-route">
+          <img
+            src={defaultRouteData.breadcrumbIconSrc}
+            alt={defaultRouteData.label}
+          />
+
+          {t(defaultRouteData.label)}
+        </div>
+      </div>
+    );
   }
 
   if (!items) {
@@ -133,13 +160,14 @@ export const ExplorerBreadcrumbsMobile = () => {
               color="neutral"
               icon={<span className="material-icons">chevron_left</span>}
               onClick={() => {
-                if (
-                  currentIsWorkspace ||
-                  parent?.id === WorkspaceCategory.SHARED_SPACE
-                ) {
-                  router.push("/explorer/items/shared");
-                } else if (parent?.id === WorkspaceCategory.PUBLIC_SPACE) {
-                  router.push("/explorer/items/public");
+                if (parent?.id === DefaultRoute.SHARED_WITH_ME) {
+                  router.push("/explorer/items/shared-with-me");
+                } else if (parent?.id === DefaultRoute.MY_FILES) {
+                  router.push("/explorer/items/my-files");
+                } else if (parent?.id === DefaultRoute.FAVORITES) {
+                  router.push("/explorer/items/favorites");
+                } else if (parent?.id === DefaultRoute.RECENT) {
+                  router.push("/explorer/items/recent");
                 } else {
                   onNavigate({
                     type: NavigationEventType.ITEM,

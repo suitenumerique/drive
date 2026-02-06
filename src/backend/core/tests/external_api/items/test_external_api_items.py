@@ -730,11 +730,9 @@ def test_api_items_accesses_resource_server_allowed(
 
     assert response.status_code == 200
     content = response.json()
-    assert "results" in content
-    assert "count" in content
     # Verify the accesses are in the results
-    assert content["count"] >= 2
-    access_ids = [result["id"] for result in content["results"]]
+    assert len(content) >= 2
+    access_ids = [result["id"] for result in content]
     assert str(user_access.id) in access_ids
     assert str(other_access.id) in access_ids
 

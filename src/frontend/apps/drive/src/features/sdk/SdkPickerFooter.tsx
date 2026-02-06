@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { getDriver } from "../config/Config";
 import { useEffect, useRef, useState } from "react";
 import { Item, LinkReach, LinkRole } from "../drivers/types";
-import { Button } from "@openfun/cunningham-react";
+import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { Spinner } from "@gouvfr-lasuite/ui-kit";
 import { ClientMessageType, SDKRelayManager } from "./SdkRelayManager";
 

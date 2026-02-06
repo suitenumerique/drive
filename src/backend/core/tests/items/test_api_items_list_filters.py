@@ -2,7 +2,6 @@
 Tests for items API endpoint in drive's core app: list
 """
 
-import operator
 import random
 from urllib.parse import urlencode
 
@@ -47,7 +46,6 @@ def test_api_items_list_filter_and_access_rights():
             favorited_by=random_favorited_by(),
             creator=random.choice([user, other_user]),
         ),
-        user.get_main_workspace(),
     ]
     listed_ids = [str(doc.id) for doc in listed_items]
     word_list = [word for doc in listed_items for word in doc.title.split(" ")]
@@ -105,75 +103,6 @@ def test_api_items_list_filter_and_access_rights():
     # Ensure all items in results respect expected access rights
     for result in results:
         assert result["id"] in listed_ids
-
-
-# Filters: ordering
-
-
-def test_api_items_list_ordering_default():
-    """items should be ordered by descending "updated_at" by default"""
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
-
-    factories.ItemFactory.create_batch(
-        4, users=[user], type=models.ItemTypeChoices.FOLDER
-    )
-
-    response = client.get("/api/v1.0/items/")
-
-    assert response.status_code == 200
-    results = response.json()["results"]
-    assert len(results) == 4
-
-    # Check that results are sorted by descending "updated_at" as expected
-    for i in range(3):
-        assert operator.ge(results[i]["updated_at"], results[i + 1]["updated_at"])
-
-
-def test_api_items_list_ordering_by_fields():
-    """It should be possible to order by several fields"""
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
-
-    factories.ItemFactory.create_batch(
-        4, users=[user], type=models.ItemTypeChoices.FOLDER
-    )
-
-    for parameter in [
-        "created_at",
-        "-created_at",
-        "is_favorite",
-        "-is_favorite",
-        "title",
-        "-title",
-        "updated_at",
-        "-updated_at",
-    ]:
-        is_descending = parameter.startswith("-")
-        field = parameter.lstrip("-")
-        querystring = f"?ordering={parameter}"
-
-        response = client.get(f"/api/v1.0/items/{querystring:s}")
-        assert response.status_code == 200
-        results = response.json()["results"]
-        assert len(results) == 4
-
-        # Check that results are sorted by the field in querystring as expected
-        compare = operator.ge if is_descending else operator.le
-        for i in range(3):
-            operator1 = (
-                results[i][field].lower()
-                if isinstance(results[i][field], str)
-                else results[i][field]
-            )
-            operator2 = (
-                results[i + 1][field].lower()
-                if isinstance(results[i + 1][field], str)
-                else results[i + 1][field]
-            )
-            assert compare(operator1, operator2)
 
 
 # Filters: unknown field
@@ -395,9 +324,7 @@ def test_api_items_list_filter_title(query, nb_results):
             if random.choice([True, False])
             else None
         )
-        factories.ItemFactory(
-            title=title, users=[user], parent=parent, type=models.ItemTypeChoices.FOLDER
-        )
+        factories.ItemFactory(title=title, users=[user], parent=parent)
 
     # Perform the search query
     response = client.get(f"/api/v1.0/items/?title={query:s}")
@@ -411,71 +338,81 @@ def test_api_items_list_filter_title(query, nb_results):
         assert query.lower().strip() in result["title"].lower()
 
 
-# Filters: workspace
+# Filters: type
 
 
-def test_api_items_list_filter_workspace_public():
+def test_api_items_list_filter_type():
     """
-    Authenticated users should be able to filter items by their workspace.
+    Authenticated users should be able to filter items by their type.
     """
+
     user = factories.UserFactory()
+
     client = APIClient()
     client.force_login(user)
 
-    public_item_with_link_trace = factories.ItemFactory(
-        link_reach="public",
-        link_traces=[user],
-        type=models.ItemTypeChoices.FOLDER,
+    # create 2 folders, main workspace is already a folder, means 3 folders in total
+    folders = factories.UserItemAccessFactory.create_batch(
+        2, user=user, item__type=models.ItemTypeChoices.FOLDER
     )
-    public_item_with_user_access = factories.ItemFactory(
-        users=[user], type=models.ItemTypeChoices.FOLDER
-    )
+    folders_ids = {str(folder.item.id) for folder in folders}
 
-    factories.ItemFactory.create_batch(
-        3, link_reach="public", type=models.ItemTypeChoices.FOLDER
+    # create 2 files
+    files = factories.UserItemAccessFactory.create_batch(
+        2, user=user, item__type=models.ItemTypeChoices.FILE
     )
+    files_ids = {str(file.item.id) for file in files}
 
-    response = client.get("/api/v1.0/items/")
+    # Filter by type: folder
+    response = client.get("/api/v1.0/items/?type=folder")
 
     assert response.status_code == 200
-    results = response.json()["results"]
-    assert len(results) == 2
-    assert results[0]["id"] == str(public_item_with_user_access.id)
-    assert results[1]["id"] == str(public_item_with_link_trace.id)
+    assert response.json()["count"] == 2
 
-    response = client.get("/api/v1.0/items/?workspaces=public")
+    results = response.json()["results"]
+
+    # Ensure all results are folders
+    results_ids = {result["id"] for result in results}
+    assert results_ids == folders_ids
+    for result in results:
+        assert result["type"] == models.ItemTypeChoices.FOLDER
+
+    # Filter by type: file
+    response = client.get("/api/v1.0/items/?type=file")
+
     assert response.status_code == 200
+    assert response.json()["count"] == 2
     results = response.json()["results"]
-    assert len(results) == 1
 
-    assert results[0]["id"] == str(public_item_with_link_trace.id)
+    # Ensure all results are files
+    results_ids = {result["id"] for result in results}
+    assert results_ids == files_ids
+    for result in results:
+        assert result["type"] == models.ItemTypeChoices.FILE
 
 
-def test_api_items_list_filter_workspace_shared():
+def test_api_items_list_filter_unknown_type():
     """
-    Authenticated users should be able to filter items by their workspace.
+    Filtering by an unknown type should return an empty list
     """
+
     user = factories.UserFactory()
+
     client = APIClient()
     client.force_login(user)
 
-    shared_item_with_user_access = factories.ItemFactory(
-        users=[user], type=models.ItemTypeChoices.FOLDER
-    )
-    shared_item_with_link_trace = factories.ItemFactory(
-        link_reach="public", link_traces=[user], type=models.ItemTypeChoices.FOLDER
-    )
-    factories.ItemFactory.create_batch(3, type=models.ItemTypeChoices.FOLDER)
+    factories.UserItemAccessFactory.create_batch(3, user=user)
 
-    response = client.get("/api/v1.0/items/")
-    assert response.status_code == 200
-    results = response.json()["results"]
-    assert len(results) == 2
-    assert results[0]["id"] == str(shared_item_with_link_trace.id)
-    assert results[1]["id"] == str(shared_item_with_user_access.id)
+    response = client.get("/api/v1.0/items/?type=unknown")
 
-    response = client.get("/api/v1.0/items/?workspaces=shared")
-    assert response.status_code == 200
-    results = response.json()["results"]
-    assert len(results) == 1
-    assert results[0]["id"] == str(shared_item_with_user_access.id)
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "type",
+                "code": "invalid",
+                "detail": "Select a valid choice. unknown is not one of the available choices.",
+            },
+        ],
+        "type": "validation_error",
+    }
