@@ -16,6 +16,10 @@ and this project adheres to
 
 - 🔥(global) remove notion of workspace
 
+### Fixed
+
+- 🐛(backend) manage ole2 compound document format
+
 ## [v0.12.0] - 2026-02-06
 
 ### Added

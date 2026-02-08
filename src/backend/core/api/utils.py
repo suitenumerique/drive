@@ -202,6 +202,7 @@ def detect_mimetype(file_buffer: bytes, filename: str | None = None) -> str:
     # Generic/unreliable MIME types that we should try to improve
     generic_types = {
         "application/octet-stream",
+        "application/x-ole-storage",  # used by .xls, .doc and .ppt
         "application/zip",
         "text/plain",
     }
