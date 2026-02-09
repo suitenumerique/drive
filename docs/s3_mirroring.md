@@ -26,3 +26,13 @@ For the second object storage, used for mirroring, you have to set this settings
 Once the mirror object storage configured, you have to change the storage class to use. set this settings
 
 - `STORAGES_DEFAULT_BACKEND` to `core.storage.s3_mirroring_storage.S3MirroringStorage`
+
+## Migrate from one bucket to the other.
+
+The mirroring feature has been developed to ease the migration from one bucket located in one cloud provider to an other bucket located in an other cloud provider. 
+
+The scenario to makge the migration is this one :
+
+- Enable the mirroring by configuring it (see documentation before). The mirrored bucket should be the future one used after the migration completed
+- Run the management command `prepare_mirroring_items_history`, its purpose is to put in the `mirror_item_task` all the existing items in order to mirror them
+- Then, run the management command `process_pending_mirror_tasks` periodically. This management command will put in a celery queue the tasks to process by batch of 100 items. You can configure a cron to trigger this management command every 5 or 10 minutes for example. You should monitor it to determint the interval between tasks.
