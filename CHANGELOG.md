@@ -19,6 +19,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(backend) manage ole2 compound document format
+- ♻️(backend) increase user short_name field length
 
 ## [v0.12.0] - 2026-02-06
 
