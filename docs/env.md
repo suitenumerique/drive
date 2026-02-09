@@ -26,8 +26,6 @@ This document lists all configurable environment variables for the Drive applica
 | `AWS_S3_MIRRORING_RESPONSE_CHECKSUM_VALIDATION` | AWS S3 response checksum calculation config for the mirroring bucket | `when_supported` |
 | `AWS_STORAGE_BUCKET_NAME` | AWS S3 bucket name for file storage | `drive-media-storage` |
 | `CACHES_DEFAULT_TIMEOUT` | Default cache timeout in seconds | `30` |
-| `CELERY_BROKER_URL` | Celery broker URL for task queue | `redis://redis:6379/0` |
-| `CELERY_TASK_ROUTES` | Celery task routing configuration. Use this to route specific tasks to dedicated queues, e.g. `{"core.tasks.storage.mirror_file": {"queue": "mirror"}}` | `{}` |
 | `CORS_ALLOW_ALL_ORIGINS` | Allow all origins for CORS | `False` |
 | `CORS_ALLOWED_ORIGINS` | List of allowed origins for CORS | `[]` |
 | `CORS_ALLOWED_ORIGIN_REGEXES` | List of allowed origin regexes for CORS | `[]` |
@@ -41,6 +39,8 @@ This document lists all configurable environment variables for the Drive applica
 | `DB_PASSWORD` | Database password | `pass` |
 | `DB_PORT` | Database port | `5432` |
 | `DB_USER` | Database user | `dinum` |
+| `DJANGO_CELERY_BROKER_URL` | Celery broker URL for task queue | `redis://redis:6379/0` |
+| `DJANGO_CELERY_TASK_ROUTES` | Celery task routing configuration. Use this to route specific tasks to dedicated queues, e.g. `{"core.tasks.storage.mirror_file": {"queue": "mirror"}}` | `{}` |
 | `EMAIL_BACKEND` | Email backend for sending emails | `django.core.mail.backends.smtp.EmailBackend` |
 | `EMAIL_BRAND_NAME` | Brand name for email templates | `None` |
 | `EMAIL_FROM` | Default sender email address | `from@example.com` |

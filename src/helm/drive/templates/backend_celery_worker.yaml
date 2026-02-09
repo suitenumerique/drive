@@ -1,48 +1,50 @@
 {{- $envVars := include "drive.common.env" (list . .Values.backend) -}}
 {{- $fullName := include "drive.backend.fullname" . -}}
-{{- $component := "backend-celery-worker" -}}
+{{- range $worker := .Values.backend.celeryWorkers }}
+{{- $component := printf "backend-celery-worker-%s" $worker.name }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $fullName }}-celery
-  namespace: {{ .Release.Namespace | quote }}
+  name: {{ $fullName }}-celery-{{ $worker.name }}
+  namespace: {{ $.Release.Namespace | quote }}
   annotations:
-    {{- with .Values.backend.dpAnnotations }}
+    {{- with $.Values.backend.dpAnnotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
   labels:
-    {{- include "drive.common.labels" (list . $component) | nindent 4 }}
+    {{- include "drive.common.labels" (list $ $component) | nindent 4 }}
 spec:
-  replicas: {{ .Values.backend.celery.replicas }}
+  replicas: {{ $worker.replicas }}
   selector:
     matchLabels:
-      {{- include "drive.common.selectorLabels" (list . $component) | nindent 6 }}
+      {{- include "drive.common.selectorLabels" (list $ $component) | nindent 6 }}
   template:
     metadata:
       annotations:
-        {{- with .Values.backend.podAnnotations }}
+        {{- with $.Values.backend.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
       labels:
-        {{- include "drive.common.selectorLabels" (list . $component) | nindent 8 }}
+        {{- include "drive.common.selectorLabels" (list $ $component) | nindent 8 }}
     spec:
       {{- if $.Values.image.credentials }}
       imagePullSecrets:
-        - name: {{ include "drive.secret.dockerconfigjson.name" (dict "fullname" (include "drive.fullname" .) "imageCredentials" $.Values.image.credentials) }}
+        - name: {{ include "drive.secret.dockerconfigjson.name" (dict "fullname" (include "drive.fullname" $) "imageCredentials" $.Values.image.credentials) }}
       {{- end}}
-      shareProcessNamespace: {{ .Values.backend.shareProcessNamespace }}
+      shareProcessNamespace: {{ $.Values.backend.shareProcessNamespace }}
       containers:
-        {{- with .Values.backend.sidecars }}
+        {{- with $.Values.backend.sidecars }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
-        - name: {{ .Chart.Name }}
-          image: "{{ (.Values.backend.image | default dict).repository | default .Values.image.repository }}:{{ (.Values.backend.image | default dict).tag | default .Values.image.tag }}"
-          imagePullPolicy: {{ (.Values.backend.image | default dict).pullPolicy | default .Values.image.pullPolicy }}
-          {{- with .Values.backend.celery.command }}
+        - name: {{ $.Chart.Name }}
+          image: "{{ ($.Values.backend.image | default dict).repository | default $.Values.image.repository }}:{{ ($.Values.backend.image | default dict).tag | default $.Values.image.tag }}"
+          imagePullPolicy: {{ ($.Values.backend.image | default dict).pullPolicy | default $.Values.image.pullPolicy }}
+          {{- with $worker.command }}
           command:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.backend.celery.args }}
+          {{- with $worker.args }}
           args:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -50,61 +52,61 @@ spec:
             {{- if $envVars}}
             {{- $envVars | indent 12 }}
             {{- end }}
-          {{- with .Values.backend.securityContext }}
+          {{- with $.Values.backend.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if .Values.backend.celery.probes.liveness }}
+          {{- if $worker.probes.liveness }}
           livenessProbe:
-            {{- include "drive.probes.abstract" (merge .Values.backend.celery.probes.liveness (dict "targetPort" .Values.backend.service.targetPort )) | nindent 12 }}
+            {{- include "drive.probes.abstract" (merge $worker.probes.liveness (dict "targetPort" $.Values.backend.service.targetPort )) | nindent 12 }}
           {{- end }}
-          {{- if .Values.backend.celery.probes.readiness }}
+          {{- if $worker.probes.readiness }}
           readinessProbe:
-            {{- include "drive.probes.abstract" (merge .Values.backend.celery.probes.readiness (dict "targetPort" .Values.backend.service.targetPort )) | nindent 12 }}
+            {{- include "drive.probes.abstract" (merge $worker.probes.readiness (dict "targetPort" $.Values.backend.service.targetPort )) | nindent 12 }}
           {{- end }}
-          {{- if .Values.backend.celery.probes.startup }}
+          {{- if $worker.probes.startup }}
           startupProbe:
-            {{- include "drive.probes.abstract" (merge .Values.backend.celery.probes.startup (dict "targetPort" .Values.backend.service.targetPort )) | nindent 12 }}
+            {{- include "drive.probes.abstract" (merge $worker.probes.startup (dict "targetPort" $.Values.backend.service.targetPort )) | nindent 12 }}
           {{- end }}
-          {{- with .Values.backend.celery.resources }}
+          {{- with $worker.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           volumeMounts:
-            {{- range $index, $value := .Values.mountFiles }}
+            {{- range $index, $value := $.Values.mountFiles }}
             - name: "files-{{ $index }}"
               mountPath: {{ $value.path }}
               subPath: content
             {{- end }}
-            {{- range $name, $volume := .Values.backend.persistence }}
+            {{- range $name, $volume := $.Values.backend.persistence }}
             - name: "{{ $name }}"
               mountPath: "{{ $volume.mountPath }}"
             {{- end }}
-            {{- range .Values.backend.extraVolumeMounts }}
+            {{- range $.Values.backend.extraVolumeMounts }}
             - name: {{ .name }}
               mountPath: {{ .mountPath }}
               subPath: {{ .subPath | default "" }}
               readOnly: {{ .readOnly }}
             {{- end }}
-      {{- with .Values.backend.nodeSelector }}
+      {{- with $.Values.backend.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.backend.affinity }}
+      {{- with $.Values.backend.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.backend.tolerations }}
+      {{- with $.Values.backend.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
-        {{- range $index, $value := .Values.mountFiles }}
+        {{- range $index, $value := $.Values.mountFiles }}
         - name: "files-{{ $index }}"
           configMap:
             name: "{{ include "drive.fullname" $ }}-files-{{ $index }}"
         {{- end }}
-        {{- range $name, $volume := .Values.backend.persistence }}
+        {{- range $name, $volume := $.Values.backend.persistence }}
         - name: "{{ $name }}"
           {{- if eq $volume.type "emptyDir" }}
           emptyDir: {}
@@ -113,7 +115,7 @@ spec:
             claimName: "{{ $fullName }}-{{ $name }}"
           {{- end }}
         {{- end }}
-        {{- range .Values.backend.extraVolumes }}
+        {{- range $.Values.backend.extraVolumes }}
         - name: {{ .name }}
           {{- if .existingClaim }}
           persistentVolumeClaim:
@@ -134,3 +136,4 @@ spec:
           emptyDir: {}
           {{- end }}
         {{- end }}
+{{- end }}

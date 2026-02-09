@@ -65,6 +65,7 @@ backend:
     AWS_S3_REGION_NAME: eu-east-1
     STORAGES_STATICFILES_BACKEND: django.contrib.staticfiles.storage.StaticFilesStorage
     MEDIA_BASE_URL: https://drive.127.0.0.1.nip.io
+    DJANGO_CELERY_TASK_ROUTES: "{'core.tasks.storage.mirror_file': {'queue': 'mirror'}, 'lasuite.malware_detection.tasks.*': {'queue': 'malware_detection'}}"
   migrate:
     command:
       - "/bin/sh"
@@ -102,6 +103,56 @@ backend:
         items:
         - key: cacert.pem
           path: cacert.pem
+
+  celeryWorkers:
+    - name: default
+      replicas: 1
+      command: []
+      args: ["celery", "-A", "drive.celery_app", "worker", "-l", "INFO", "-n", "drive@%h"]
+      resources: {}
+      probes:
+        liveness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+        readiness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+    - name: mirror
+      replicas: 1
+      command: []
+      args: ["celery", "-A", "drive.celery_app", "worker", "-l", "INFO", "-Q", "mirror", "-n", "drive@%h"]
+      resources: {}
+      probes:
+        liveness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+        readiness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+    - name: malware-detection
+      replicas: 1
+      command: []
+      args: ["celery", "-A", "drive.celery_app", "worker", "-l", "INFO", "-Q", "malware_detection", "-n", "drive@%h"]
+      resources: {}
+      probes:
+        liveness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+        readiness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
 
 frontend:
   envVars:
