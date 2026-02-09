@@ -1095,6 +1095,7 @@ class Base(Configuration):
     # Celery
     CELERY_BROKER_URL = values.Value("redis://redis:6379/0")
     CELERY_BROKER_TRANSPORT_OPTIONS = values.DictValue({})
+    CELERY_TASK_ROUTES = values.DictValue({})
 
     # Session
     SESSION_ENGINE = "django.contrib.sessions.backends.cache"

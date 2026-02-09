@@ -27,6 +27,7 @@ This document lists all configurable environment variables for the Drive applica
 | `AWS_STORAGE_BUCKET_NAME` | AWS S3 bucket name for file storage | `drive-media-storage` |
 | `CACHES_DEFAULT_TIMEOUT` | Default cache timeout in seconds | `30` |
 | `CELERY_BROKER_URL` | Celery broker URL for task queue | `redis://redis:6379/0` |
+| `CELERY_TASK_ROUTES` | Celery task routing configuration. Use this to route specific tasks to dedicated queues, e.g. `{"core.tasks.storage.mirror_file": {"queue": "mirror"}}` | `{}` |
 | `CORS_ALLOW_ALL_ORIGINS` | Allow all origins for CORS | `False` |
 | `CORS_ALLOWED_ORIGINS` | List of allowed origins for CORS | `[]` |
 | `CORS_ALLOWED_ORIGIN_REGEXES` | List of allowed origin regexes for CORS | `[]` |
