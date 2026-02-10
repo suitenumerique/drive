@@ -1,6 +1,7 @@
 name: Frontend Workflow
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -64,6 +65,7 @@ jobs:
 
   test-e2e:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     needs: [install-front, build-mails]
     strategy:
       matrix:
