@@ -1,6 +1,6 @@
 # Story 11.1: Drive-integrated CT-S3 runner with explicit audience model and deterministic reports
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -47,9 +47,30 @@ So that self-host deployments can prove the `/media` + SigV4 + upload/preview co
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
+
 ### Debug Log References
+
+- `_bmad-output/implementation-artifacts/runs/20260210-212117-11.1/report.md`
 
 ### Completion Notes List
 
+- Added `./bin/ct_s3` Docker-first entrypoint and `ct_s3` Django management command.
+- Implemented audience-aware CT-S3 checks with explicit `INTERNAL_PROXY` vs `EXTERNAL_BROWSER` reporting.
+- Encoded connect_url vs signed_host invariants using safe (hashed) evidence only.
+- Wrote deterministic CT-S3 artifacts under `_bmad-output/implementation-artifacts/ct-s3/` with `latest.txt`.
+- Documented execution and artifacts in `docs/ct-s3.md`.
+
 ### File List
 
+- `bin/ct_s3`
+- `docs/ct-s3.md`
+- `docs/failure-class-glossary.md`
+- `src/backend/core/ct_s3/__init__.py`
+- `src/backend/core/ct_s3/constants.py`
+- `src/backend/core/ct_s3/http_client.py`
+- `src/backend/core/ct_s3/runner.py`
+- `src/backend/core/ct_s3/safe.py`
+- `src/backend/core/ct_s3/types.py`
+- `src/backend/core/management/commands/ct_s3.py`
+- `_bmad-output/implementation-artifacts/runs/20260210-212117-11.1/report.md`
