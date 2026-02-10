@@ -198,7 +198,11 @@ DB_PORT: 5432
 
 ### Find s3 bucket connection values
 
-Drive uses an S3 bucket to store files, so if you have a provider, obtain the necessary information to use it. If you don't, you can install a local minio testing environment as follow:
+Drive uses an S3 bucket to store files, so if you have a provider, obtain the necessary information to use it.
+
+Note: in this fork (`Apoze/drive`), the **Docker Compose baseline** uses **SeaweedFS S3 gateway**. The MinIO setup below is a **Kubernetes-only testing fixture** and is not the blocking/baseline storage provider promise.
+
+If you don't have an S3 provider for Kubernetes, you can install a local MinIO testing environment as follow:
 
 ```
 $ helm install --repo https://suitenumerique.github.io/helm-dev-backend -f docs/examples/helm/minio.values.yaml minio dev-backend

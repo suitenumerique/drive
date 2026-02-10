@@ -1,0 +1,8 @@
+{
+  "generated": "2026-02-08T16:08:01+00:00",
+  "result": "pass",
+  "requested_gates": [
+    "backend.lint"
+  ],
+  "note": "preflight_only"
+}

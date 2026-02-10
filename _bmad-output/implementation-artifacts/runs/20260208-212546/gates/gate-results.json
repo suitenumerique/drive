@@ -1,0 +1,16 @@
+[
+  {
+    "gate_id": "no_leak.scan_bmad_output",
+    "result": "pass",
+    "duration_ms": 164,
+    "failure_class": null,
+    "next_action_hint": null
+  },
+  {
+    "gate_id": "mirror.verify_registry",
+    "result": "pass",
+    "duration_ms": 64,
+    "failure_class": null,
+    "next_action_hint": null
+  }
+]

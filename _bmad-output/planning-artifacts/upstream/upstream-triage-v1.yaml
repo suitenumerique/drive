@@ -1,0 +1,9 @@
+version: 1
+name: upstream-triage-v1
+upstream_repo: suitenumerique/drive
+generated: "2026-02-08"
+outputs:
+  backlog_md: drive-open-backlog.md
+  issues_json: drive-open-issues.json
+  prs_json: drive-open-prs.json
+note: "Reference-only planning input; not an upstreaming workflow requirement."

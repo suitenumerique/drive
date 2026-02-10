@@ -1,0 +1,107 @@
+# generated: 2026-02-08T17:29:47.681763+00:00
+# project: drive
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+
+generated: '2026-02-08T17:29:47.681763+00:00'
+project: drive
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+development_status:
+  epic-1: in-progress
+  1-1-canonical-drive-public-url-validation-and-deterministic-derivations: ready-for-dev
+  1-2-separate-allowlists-for-redirect-uris-vs-origins-hosts-derived-from-drive-public-url: ready-for-dev
+  epic-1-retrospective: optional
+  epic-2: in-progress
+  2-1-docker-first-edge-contract-documentation-configuration-validation-smoke-checks: ready-for-dev
+  2-2-nginx-reference-edge-configuration-dev-prod-aligned-for-media-auth-request-sigv4-propagation: ready-for-dev
+  2-3-tls-posture-for-public-surfaces-prod-https-only-dev-override-explicit-no-mixed-modes: ready-for-dev
+  2-4-docker-first-backup-restore-runbook-deterministic-post-restore-smoke-checklist: ready-for-dev
+  2-5-docker-first-upgrade-rollback-runbook-deterministic-post-action-smoke-checklist: ready-for-dev
+  epic-2-retrospective: optional
+  epic-3: backlog
+  3-1-byo-oidc-authentication-refs-only-secrets-config-validation-smoke-login-proof: backlog
+  3-2-entitlements-enforcement-for-access-and-uploads-api-ui-gating: backlog
+  3-3-external-api-allowlist-for-resources-and-actions-strict-no-wildcards: backlog
+  3-4-resource-server-mode-external-api-is-disabled-by-default-and-token-authenticated: backlog
+  epic-3-retrospective: optional
+  epic-4: backlog
+  4-1-browse-workspaces-and-navigate-folders-deterministic-ordering-abilities-contract: backlog
+  4-2-create-folders-in-the-explorer-capability-driven-clean-validation: backlog
+  4-3-s3-presigned-upload-flow-create-file-presigned-put-upload-ended: backlog
+  4-4-download-files-via-media-edge-contract-range-support: backlog
+  4-5-preview-supported-files-via-media-preview-deterministic-availability: backlog
+  4-6-operator-configurable-upload-part-chunk-sizing-documented-defaults-deterministic-validation: backlog
+  epic-4-retrospective: optional
+  epic-5: backlog
+  5-1-time-bounded-long-running-operations-no-infinite-loading-with-actionable-fallback-states: backlog
+  5-2-no-leak-error-contract-client-generic-operator-facing-failure-class-and-safe-evidence: backlog
+  5-3-deterministic-recovery-patterns-for-uploads-and-media-edge-failures-cleanup-actionable-next-steps: backlog
+  epic-5-retrospective: optional
+  epic-6: backlog
+  6-1-configure-s3-item-share-links-reach-role-and-publish-a-canonical-public-url: backlog
+  6-2-open-s3-public-share-links-without-an-authenticated-session-token-enforced: backlog
+  epic-6-retrospective: optional
+  epic-7: backlog
+  7-1-operator-configured-mounts-registry-mount-id-provider-enabled-with-deterministic-validation: backlog
+  7-2-discover-mounts-and-capabilities-api-ui-entry-point-constants-enforced: backlog
+  7-3-browse-mount-paths-with-deterministic-ordering-pagination-and-virtual-entry-identifiers: backlog
+  7-4-enforce-capability-gating-across-mount-actions-no-dead-actions-deterministic-errors: backlog
+  7-5-create-mountprovider-share-links-for-virtual-entries-capability-driven: backlog
+  7-6-enforce-deterministic-public-mountprovider-share-link-semantics-404-410-and-out-of-band-change-behavior: backlog
+  epic-7-retrospective: optional
+  epic-8: backlog
+  8-1-refs-only-secret-fields-for-mounts-never-store-return-log-secret-material: backlog
+  8-2-centralized-secret-resolver-with-deterministic-precedence-file-env-and-bounded-refresh: backlog
+  8-3-safe-connection-session-reuse-across-secret-rotation-no-stale-credentials-no-leaks: backlog
+  epic-8-retrospective: optional
+  epic-9: backlog
+  9-1-smb-mount-configuration-schema-and-deterministic-validation-refs-only-secrets: backlog
+  9-2-smb-provider-implements-the-mount-browse-contract-list-stat-with-deterministic-ordering: backlog
+  9-3-smb-streaming-download-with-range-support-where-applicable: backlog
+  9-4-smb-streaming-upload-large-file-capable-with-deterministic-finalize-semantics: backlog
+  9-5-smb-preview-support-is-explicit-capability-driven-and-deterministic: backlog
+  epic-9-retrospective: optional
+  epic-10: backlog
+  10-1-wopi-enablement-configuration-host-allowlist-https-posture-health-gating: backlog
+  10-2-capability-driven-wopi-action-exposure-per-backend-no-dead-buttons: backlog
+  10-3-reverse-proxy-compatible-wopi-launch-flow-with-short-lived-tokens: backlog
+  10-4-s3-wopi-prerequisite-validation-bucket-versioning-with-operator-guidance: backlog
+  10-5-mountprovider-wopi-semantics-version-string-locks-ttl-release-conflict-streaming-save-pipeline: backlog
+  epic-10-retrospective: optional
+  epic-11: in-progress
+  11-1-drive-integrated-ct-s3-runner-with-explicit-audience-model-and-deterministic-reports: ready-for-dev
+  11-2-encode-seaweedfs-as-the-blocking-baseline-profile-repeatable-checks-runbook-alignment: done
+  11-3-safe-evidence-allow-listing-for-ct-s3-no-leak-by-construction: ready-for-dev
+  epic-11-retrospective: optional
+  epic-12: backlog
+  12-1-gates-runner-executes-stable-gate-ids-and-writes-deterministic-artifacts: ready-for-dev
+  12-2-standardize-failure-class-next-action-hint-across-gates-and-operator-facing-artifacts: ready-for-dev
+  12-3-strict-mirror-enforcement-bmad-registry-source-of-truth-github-fork-mirror-only: backlog
+  12-4-wire-ct-s3-and-no-leak-scanning-into-ci-with-strict-scope-enforce-dependency-automation-policy: ready-for-dev
+  epic-12-retrospective: optional
