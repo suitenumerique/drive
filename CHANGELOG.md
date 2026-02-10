@@ -13,6 +13,10 @@ and this project adheres to
 - ✨(backend) allow configuring celery task routes via `CELERY_TASK_ROUTES`
 - ✨(global) implement advanced shared management system
 
+### Changed
+
+- 🚸(oidc) ignore case when fallback on email #535
+
 ### Removed
 
 - 🔥(global) remove notion of workspace
