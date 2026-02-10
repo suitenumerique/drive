@@ -38,10 +38,10 @@ development_status:
   1-2-separate-allowlists-for-redirect-uris-vs-origins-hosts-derived-from-drive-public-url: done
   epic-1-retrospective: optional
   epic-2: in-progress
-  2-1-docker-first-edge-contract-documentation-configuration-validation-smoke-checks: review
-  2-2-nginx-reference-edge-configuration-dev-prod-aligned-for-media-auth-request-sigv4-propagation: review
+  2-1-docker-first-edge-contract-documentation-configuration-validation-smoke-checks: done
+  2-2-nginx-reference-edge-configuration-dev-prod-aligned-for-media-auth-request-sigv4-propagation: done
   2-3-tls-posture-for-public-surfaces-prod-https-only-dev-override-explicit-no-mixed-modes: done
-  2-4-docker-first-backup-restore-runbook-deterministic-post-restore-smoke-checklist: review
+  2-4-docker-first-backup-restore-runbook-deterministic-post-restore-smoke-checklist: done
   2-5-docker-first-upgrade-rollback-runbook-deterministic-post-action-smoke-checklist: ready-for-dev
   epic-2-retrospective: optional
   epic-3: backlog
@@ -95,9 +95,9 @@ development_status:
   10-5-mountprovider-wopi-semantics-version-string-locks-ttl-release-conflict-streaming-save-pipeline: backlog
   epic-10-retrospective: optional
   epic-11: in-progress
-  11-1-drive-integrated-ct-s3-runner-with-explicit-audience-model-and-deterministic-reports: review
+  11-1-drive-integrated-ct-s3-runner-with-explicit-audience-model-and-deterministic-reports: done
   11-2-encode-seaweedfs-as-the-blocking-baseline-profile-repeatable-checks-runbook-alignment: done
-  11-3-safe-evidence-allow-listing-for-ct-s3-no-leak-by-construction: review
+  11-3-safe-evidence-allow-listing-for-ct-s3-no-leak-by-construction: done
   epic-11-retrospective: optional
   epic-12: backlog
   12-1-gates-runner-executes-stable-gate-ids-and-writes-deterministic-artifacts: ready-for-dev

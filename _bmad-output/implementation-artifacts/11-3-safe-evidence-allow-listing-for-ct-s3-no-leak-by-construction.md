@@ -1,6 +1,6 @@
 # Story 11.3: Safe evidence allow-listing for CT-S3 (no-leak by construction)
 
-Status: review
+Status: done
 
 ## Story
 

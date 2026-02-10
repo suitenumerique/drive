@@ -1,6 +1,6 @@
 # Story 2.2: Nginx reference edge configuration (dev/prod aligned) for `/media` auth_request + SigV4 propagation
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

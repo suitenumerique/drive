@@ -1,6 +1,6 @@
 # Story 2.1: Docker-first edge contract documentation + configuration validation + smoke checks
 
-Status: in-progress
+Status: done
 
 Story Key: `2-1-docker-first-edge-contract-documentation-configuration-validation-smoke-checks`
 Generated: 2026-02-08

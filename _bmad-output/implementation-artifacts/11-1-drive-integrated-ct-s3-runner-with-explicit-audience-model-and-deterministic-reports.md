@@ -1,6 +1,6 @@
 # Story 11.1: Drive-integrated CT-S3 runner with explicit audience model and deterministic reports
 
-Status: review
+Status: done
 
 ## Story
 
