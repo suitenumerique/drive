@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from django.core.files.storage import default_storage
 
+import botocore
 import pytest
 
 from core.factories import MirrorItemTaskFactory
@@ -16,6 +17,9 @@ from core.tasks.storage import (
 )
 
 pytestmark = pytest.mark.django_db
+
+# As the task is bound, we need to ignore this error.
+# pylint: disable=no-value-for-parameter
 
 
 @pytest.fixture(autouse=True)
@@ -138,3 +142,66 @@ def test_mirror_file(settings, caplog):
             f"Successfully mirrored file {item.file_key} to bucket test_mirror"
             in caplog.text
         )
+
+
+def test_mirror_files_retry(settings):
+    """Test mirror_file retry mechanism."""
+
+    settings.AWS_S3_MIRRORING_STORAGE_BUCKET_NAME = "test_mirror"
+
+    mirror_item_task = MirrorItemTaskFactory(
+        item__type=ItemTypeChoices.FILE,
+        item__filename="test_mirror.txt",
+        item__mimetype="text/plain",
+        status=MirrorItemTaskStatusChoices.PENDING,
+    )
+
+    assert mirror_item_task.retries == 0
+
+    with (
+        mock.patch(
+            "core.tasks.storage.get_mirror_s3_client"
+        ) as mock_get_mirror_s3_client,
+        pytest.raises(botocore.exceptions.ClientError),
+    ):
+        mock_mirror_s3_client = mock.MagicMock()
+        mock_get_mirror_s3_client.return_value = mock_mirror_s3_client
+        # No file exists on the origin bucket, The task will fail
+        mirror_file(mirror_item_task.id)
+
+    mirror_item_task.refresh_from_db()
+
+    assert mirror_item_task.status == MirrorItemTaskStatusChoices.PENDING
+    assert mirror_item_task.retries == 1
+
+
+def test_mirror_file_max_retries_exceeded(settings):
+    """Test mirror_file with max retries exceeded should store the task as failed."""
+
+    settings.AWS_S3_MIRRORING_STORAGE_BUCKET_NAME = "test_mirror"
+
+    mirror_item_task = MirrorItemTaskFactory(
+        item__type=ItemTypeChoices.FILE,
+        item__filename="test_mirror.txt",
+        item__mimetype="text/plain",
+        status=MirrorItemTaskStatusChoices.PENDING,
+    )
+
+    with (
+        mock.patch(
+            "core.tasks.storage.get_mirror_s3_client"
+        ) as mock_get_mirror_s3_client,
+    ):
+        mock_mirror_s3_client = mock.MagicMock()
+        mock_get_mirror_s3_client.return_value = mock_mirror_s3_client
+        # No file exists on the origin bucket, The task will fail
+        mirror_file.max_retries = 0
+        mirror_file(mirror_item_task.id)
+
+    mirror_item_task.refresh_from_db()
+
+    assert mirror_item_task.status == MirrorItemTaskStatusChoices.FAILED
+    assert (
+        mirror_item_task.error_details
+        == "An error occurred (404) when calling the HeadObject operation: Not Found"
+    )
