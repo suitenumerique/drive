@@ -82,7 +82,7 @@ def _failure_from_http_client_error(exc: HttpClientError) -> tuple[str, str]:
 def _signed_get_headers_for_key(key: str) -> tuple[str, dict[str, str]]:
     signed_request = api_utils.generate_s3_authorization_headers(key)
     url = str(signed_request.url)
-    headers = {k: v for k, v in signed_request.headers.items()}
+    headers = dict(signed_request.headers)
     # Ensure Host is explicit and stable for reporting.
     signed_host = urlsplit(url).netloc
     headers.setdefault("Host", signed_host)
@@ -111,7 +111,7 @@ def _connect_url_for_presigned_url(
     return connect_url, signed_parts.netloc
 
 
-def run_ct_s3(
+def run_ct_s3(  # noqa: PLR0912, PLR0915
     *,
     profile_id: str = constants.PROFILE_SEAWEEDFS_S3,
     run_id: str | None = None,
@@ -291,7 +291,7 @@ def run_ct_s3(
                     evidence={**profile_safe},
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             add_result(
                 CheckResult(
                     check_id=check_id,
@@ -393,7 +393,7 @@ def run_ct_s3(
                     evidence={**profile_safe},
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             add_result(
                 CheckResult(
                     check_id=check_id,
@@ -480,7 +480,7 @@ def run_ct_s3(
                     evidence={**profile_safe},
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             add_result(
                 CheckResult(
                     check_id=check_id,
@@ -632,7 +632,7 @@ def run_ct_s3(
                     evidence={**profile_safe},
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             add_result(
                 CheckResult(
                     check_id=check_id,
@@ -758,7 +758,7 @@ def run_ct_s3(
                     evidence={**profile_safe},
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             add_result(
                 CheckResult(
                     check_id=check_id,
@@ -812,7 +812,7 @@ def run_ct_s3(
                     },
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             add_result(
                 CheckResult(
                     check_id=check_id,

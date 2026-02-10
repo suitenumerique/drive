@@ -41,7 +41,7 @@ def http_request(
     status, the response is still returned (no exception).
     """
     request_headers = dict(headers or {})
-    req = urllib.request.Request(url, data=body, method=method)
+    req = urllib.request.Request(url, data=body, method=method)  # noqa: S310
     for key, value in request_headers.items():
         req.add_header(key, value)
 
