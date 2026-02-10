@@ -1,9 +1,11 @@
 _bmad-output/implementation-artifacts/2-1-docker-first-edge-contract-documentation-configuration-validation-smoke-checks.md
 _bmad-output/implementation-artifacts/latest.txt
+_bmad-output/implementation-artifacts/prompts/2.1-dev.md
 _bmad-output/implementation-artifacts/runs/20260210-171951-2.1/commands.log
 _bmad-output/implementation-artifacts/runs/20260210-171951-2.1/files-changed.txt
 _bmad-output/implementation-artifacts/runs/20260210-171951-2.1/gates.md
 _bmad-output/implementation-artifacts/runs/20260210-171951-2.1/report.md
+_bmad-output/implementation-artifacts/sprint-status.yaml
 CHANGELOG.md
 docker/files/development/etc/nginx/conf.d/default.conf
 docker/files/production/etc/nginx/conf.d/default.conf
@@ -12,6 +14,9 @@ docs/installation/README.md
 docs/selfhost/edge-contract.md
 docs/selfhost/README.md
 docs/selfhost/smoke-checklist.md
+.github/PULL_REQUEST_TEMPLATE.md
+.github/workflows/docker-hub.yml
+.github/workflows/drive-frontend.yml
 src/backend/core/management/commands/config_preflight.py
 src/backend/core/tests/commands/test_config_preflight.py
 src/nginx/servers.conf.erb
