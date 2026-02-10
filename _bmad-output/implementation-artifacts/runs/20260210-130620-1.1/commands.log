@@ -1,0 +1,2 @@
+2026-02-10T13:06:20Z  make lint
+2026-02-10T13:06:20Z  bin/pytest core/tests/test_settings.py core/tests/test_public_url.py -q
