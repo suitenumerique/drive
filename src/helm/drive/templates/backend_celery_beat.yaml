@@ -1,3 +1,5 @@
+{{- if .Values.backend.celeryBeat.enabled -}}
+
 {{- $envVars := include "drive.common.env" (list . .Values.backend) -}}
 {{- $fullName := include "drive.backend.fullname" . -}}
 {{- $component := "backend-celery-beat" -}}
@@ -134,3 +136,4 @@ spec:
           emptyDir: {}
           {{- end }}
         {{- end }}
+{{- end }}

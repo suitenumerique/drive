@@ -11,6 +11,8 @@ import { ExplorerRightPanelContent } from "@/features/explorer/components/right-
 import { GlobalLayout } from "../global/GlobalLayout";
 import { LeftPanelMobile } from "../left-panel/LeftPanelMobile";
 import { useRouter } from "next/router";
+import { useSyncUserLanguage } from "../../hooks/useSyncUserLanguage";
+import { Item } from "@/features/drivers/types";
 
 export const getGlobalExplorerLayout = (page: React.ReactElement) => {
   return <GlobalExplorerLayout>{page}</GlobalExplorerLayout>;
@@ -46,9 +48,14 @@ export const ExplorerLayout = ({
     // Only keep "minimal" in the query string so that when navigating, to keep the minimal layout on the next page
     // the minimal layout state is preserved; all other query params are dropped intentionally.
     const { minimal } = router.query;
+    const item = e.item as Item;
     const query = minimal ? { minimal } : {};
-    router.push({ pathname: `/explorer/items/${e.item.id}`, query });
+    // If the itemId is a favorite item, we need to get the favorite items. cf onLoadChildren in GlobalExplorerProvider.tsx
+    const id = item.originalId ?? item.id;
+    router.push({ pathname: `/explorer/items/${id}`, query });
   };
+
+  useSyncUserLanguage();
 
   return (
     <GlobalExplorerProvider

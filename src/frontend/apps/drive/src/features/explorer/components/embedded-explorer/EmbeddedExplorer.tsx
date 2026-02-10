@@ -1,20 +1,22 @@
 import clsx from "clsx";
-import { Item } from "@/features/drivers/types";
+import { Item, ItemBreadcrumb } from "@/features/drivers/types";
 import { useTranslation } from "react-i18next";
 import { EmbeddedExplorerGridBreadcrumbs } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridBreadcrumbs";
-import { useMemo, useState } from "react";
-import { NavigationEvent } from "@/features/explorer/components/GlobalExplorerContext";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { NavigationEvent, getOriginalIdFromTreeId } from "@/features/explorer/components/GlobalExplorerContext";
 import { useQuery } from "@tanstack/react-query";
 import { Spinner } from "@gouvfr-lasuite/ui-kit";
 import { ItemFilters } from "@/features/drivers/Driver";
 import {
-  EmbeddedExplorerGrid,
-  EmbeddedExplorerGridProps,
+    EmbeddedExplorerGrid,
+    EmbeddedExplorerGridProps,
 } from "./EmbeddedExplorerGrid";
-import { getRootItems } from "../../hooks/useQueries";
 import { useAuth } from "@/features/auth/Auth";
 import { useInfiniteChildren } from "../../hooks/useInfiniteChildren";
 import { InfiniteScroll } from "@/features/ui/components/infinite-scroll/InfiniteScroll";
+import { getDriver } from "@/features/config/Config";
+import { EmbeddedExplorerSearchInput } from "./EmbeddedExplorerSearchInput";
+import { useInfiniteRecentItems } from "../../hooks/useInfiniteItems";
 
 export type EmbeddedExplorerProps = {
   breadcrumbsRight?: () => React.ReactNode;
@@ -26,6 +28,7 @@ export type EmbeddedExplorerProps = {
   currentItemId?: string | null;
   setCurrentItemId?: (itemId: string | null) => void;
   itemsFilters?: ItemFilters;
+  showSearch?: boolean;
 };
 
 export const useEmbeddedExplorer = (props: EmbeddedExplorerProps) => {
@@ -65,17 +68,35 @@ export const useEmbeddedExplorer = (props: EmbeddedExplorerProps) => {
 export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const itemsRef = useRef<Item[]>([]);
+
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [inputSearchValue, setInputSearchValue] = useState<string>("");
+  const timeoutRef = useRef<NodeJS.Timeout>(null);
 
   // Update breadcrumbs when navigating
   const onNavigate = (event: NavigationEvent) => {
-    const item = event.item as Item;
+    let item = event.item as Item;
+    // Extract the original item ID from the tree ID (handles favorites path format)
+    if (item.id.includes("::")) {
+      item = { ...item, id: getOriginalIdFromTreeId(item.id) };
+    }
     props.gridProps?.setSelectedItems?.([]);
     props.setCurrentItemId?.(item?.id ?? null);
+    setInputSearchValue("");
+    setSearchQuery("");
   };
 
-  const { data: rootItems } = useQuery({
-    queryKey: ["rootItems"],
-    queryFn: getRootItems,
+  const rootItemsQuery = useInfiniteRecentItems(props.itemsFilters, [" "]);
+
+  const { data: searchItems, isLoading: isSearchItemsLoading } = useQuery({
+    queryKey: ["searchItems", searchQuery],
+    queryFn: () =>
+      getDriver().searchItems({
+        title: searchQuery,
+        ...props.itemsFilters,
+      }),
+    enabled: searchQuery !== "",
   });
 
   const infiniteChildrenQuery = useInfiniteChildren(
@@ -101,25 +122,32 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
     props.currentItemId,
   ]);
 
+  const rootItems = useMemo(() => {
+    return rootItemsQuery?.data?.pages.flatMap((page) => page.children) ?? [];
+  }, [rootItemsQuery.data]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
   const items = useMemo(() => {
     // If itemChildren are not loaded yet, we want to return undefined in order to display loading state.
     if (itemChildren === undefined && props.currentItemId) {
       return undefined;
     }
-    let items = [];
-    // If no itemId, we are in the root, we explorer spaces
-    if (props.currentItemId === null) {
-      if (user?.main_workspace) {
-        items.push(user.main_workspace);
-      }
-      items = items.concat(rootItems ?? []);
+    if (isSearchItemsLoading) {
+      return itemsRef.current;
+    }
+    let items: Item[] = [];
 
-      // Sort items to put main_workspace first
-      items = items.sort((a, b) => {
-        if (a.main_workspace && !b.main_workspace) return -1;
-        if (!a.main_workspace && b.main_workspace) return 1;
-        return 0;
-      });
+    if (searchQuery !== "") {
+      items = searchItems ?? [];
+    } else if (props.currentItemId === null) {
+      items = items.concat(rootItems ?? []);
     } else {
       items = itemChildren ?? [];
     }
@@ -138,6 +166,7 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
       return item;
     });
 
+    itemsRef.current = items;
     return items;
   }, [
     props.currentItemId,
@@ -145,11 +174,29 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
     itemChildren,
     user?.main_workspace,
     props.itemsFilter,
+    searchItems,
+    searchQuery,
+    isSearchItemsLoading,
     t,
   ]);
 
   const isEmpty = items?.length === 0;
   const isLoading = items === undefined;
+
+  const handleSearch = (query: string) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    setInputSearchValue(query);
+    if (query === "") {
+      setSearchQuery("");
+      return;
+    }
+    timeoutRef.current = setTimeout(() => {
+      setSearchQuery(query);
+    }, 300);
+  };
 
   const getContent = () => {
     if (isLoading) {
@@ -178,13 +225,22 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
       />
     );
 
+    const hasNextPage =
+      infiniteChildrenQuery.hasNextPage || rootItemsQuery.hasNextPage;
+    const isFetchingNextPage =
+      infiniteChildrenQuery.isFetchingNextPage ||
+      rootItemsQuery.isFetchingNextPage;
+    const fetchNextPage = props.currentItemId
+      ? infiniteChildrenQuery.fetchNextPage
+      : rootItemsQuery.fetchNextPage;
+
     // Add infinite scroll for folder children (not for root items)
-    if (props.currentItemId !== null && infiniteChildrenQuery.hasNextPage) {
+    if (hasNextPage) {
       return (
         <InfiniteScroll
-          hasNextPage={infiniteChildrenQuery.hasNextPage}
-          isFetchingNextPage={infiniteChildrenQuery.isFetchingNextPage}
-          fetchNextPage={infiniteChildrenQuery.fetchNextPage}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          fetchNextPage={fetchNextPage}
         >
           {gridContent}
         </InfiniteScroll>
@@ -194,35 +250,63 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
     return gridContent;
   };
 
+  const forcedBreadcrumbsItems: ItemBreadcrumb[] | undefined = useMemo(() => {
+    if (searchQuery !== "") {
+      return [
+        {
+          id: "search",
+          title: t("explorer.search.results_title", "Search results"),
+          path: "",
+          depth: 0,
+          main_workspace: false,
+        },
+      ];
+    }
+    return undefined;
+  }, [searchQuery, searchItems, t]);
+
   return (
-    <div
-      className={clsx("embedded-explorer", {
-        "embedded-explorer--compact": props.isCompact,
-      })}
-    >
-      <div className="embedded-explorer__container">
-        <div className="embedded-explorer__breadcrumbs">
-          <EmbeddedExplorerGridBreadcrumbs
-            currentItemId={props.currentItemId ?? null}
-            showSpacesItem={true}
-            goToSpaces={() => {
-              props.setCurrentItemId?.(null);
-            }}
-            onGoBack={(item) => {
-              props.setCurrentItemId?.(item?.id ?? null);
-            }}
+    <>
+      <div
+        className={clsx("embedded-explorer", {
+          "embedded-explorer--compact": props.isCompact,
+        })}
+      >
+        {props.showSearch && (
+          <EmbeddedExplorerSearchInput
+            onSearch={handleSearch}
+            value={inputSearchValue}
           />
-          {props.breadcrumbsRight?.()}
-        </div>
-        <div
-          className={clsx("c__datagrid explorer__grid", {
-            "c__datagrid--empty": isEmpty,
-            "c__datagrid--loading": isLoading,
-          })}
-        >
-          {getContent()}
+        )}
+        <div className="embedded-explorer__container">
+          <div className="embedded-explorer__breadcrumbs">
+            <EmbeddedExplorerGridBreadcrumbs
+              currentItemId={props.currentItemId ?? null}
+              forcedBreadcrumbsItems={forcedBreadcrumbsItems}
+              showAllFolderItem={true}
+              goToSpaces={() => {
+                props.setCurrentItemId?.(null);
+              }}
+              onGoBack={(item) => {
+                let currentItemId: string | null = item?.id ?? null;
+                if (item.id === "search") {
+                  currentItemId = null;
+                }
+                props.setCurrentItemId?.(currentItemId);
+              }}
+            />
+            {props.breadcrumbsRight?.()}
+          </div>
+          <div
+            className={clsx("c__datagrid explorer__grid", {
+              "c__datagrid--empty": isEmpty,
+              "c__datagrid--loading": isLoading,
+            })}
+          >
+            {getContent()}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };

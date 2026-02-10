@@ -1,10 +1,10 @@
-import { Button } from "@openfun/cunningham-react";
+import { Button } from "@gouvfr-lasuite/cunningham-react";
 
 import {
   DecisionModalProps,
   Modal,
   ModalSize,
-} from "@openfun/cunningham-react";
+} from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
 
 export const HardDeleteConfirmationModal = ({

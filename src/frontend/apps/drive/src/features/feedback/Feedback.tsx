@@ -5,7 +5,7 @@ import {
   Modal,
   ModalSize,
   useModal,
-} from "@openfun/cunningham-react";
+} from "@gouvfr-lasuite/cunningham-react";
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useConfig } from "../config/ConfigProvider";

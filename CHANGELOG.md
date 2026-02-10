@@ -10,6 +10,21 @@ and this project adheres to
 
 ### Added
 
+- ✨(global) implement advanced shared management system
+
+### Removed
+
+- 🔥(global) remove notion of workspace
+
+### Fixed
+
+- 🐛(backend) manage ole2 compound document format
+- ♻️(backend) increase user short_name field length
+
+## [v0.12.0] - 2026-02-06
+
+### Added
+
 - 🏗️(ds_proxy) introduce how to use ds_proxy with Drive
 - ✨(global) implement silent login feature and configuration integration
 - ✨(global) implement external home URL redirect
@@ -23,6 +38,7 @@ and this project adheres to
 
 - 🐛(backend) correctly configure celery beat to run wopi configuration
 - 🐛(backend) fix files with # in filename causing SignatureDoesNotMatch
+- 🐛(global) fix wrong language used in WOPI editor for new users
 
 ### Security
 
@@ -264,7 +280,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.11.1...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.12.0...main
+[v0.12.0]: https://github.com/suitenumerique/drive/releases/v0.12.0
 [v0.11.1]: https://github.com/suitenumerique/drive/releases/v0.11.1
 [v0.11.0]: https://github.com/suitenumerique/drive/releases/v0.11.0
 [v0.10.1]: https://github.com/suitenumerique/drive/releases/v0.10.1
@@ -280,3 +297,4 @@ and this project adheres to
 [v0.2.0]: https://github.com/suitenumerique/drive/releases/v0.2.0
 [v0.1.1]: https://github.com/suitenumerique/drive/releases/v0.1.1
 [v0.1.0]: https://github.com/suitenumerique/drive/releases/v0.1.0
+## [v0.11.1] - 2026-01-13

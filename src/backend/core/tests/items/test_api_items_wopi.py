@@ -211,6 +211,39 @@ def test_api_items_wopi_authenticated_can_access_retricted_item(
     )
 
 
+def test_api_items_wopi_authenticated_user_language_null(
+    timestamp_now, valid_mimetype, valid_wopi_launch_url, settings
+):
+    """
+    When user language is None (e.g. new OIDC user), WOPI endpoint
+    should fall back to settings.LANGUAGE_CODE.
+    """
+    settings.WOPI_SRC_BASE_URL = "http://app-dev:8000"
+    user = factories.UserFactory(language=None)
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        type=models.ItemTypeChoices.FILE,
+        mimetype=valid_mimetype,
+    )
+    item.upload_state = models.ItemUploadStateChoices.READY
+    item.save()
+    factories.UserItemAccessFactory(user=user, item=item)
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get(f"/api/v1.0/items/{item.id!s}/wopi/")
+    wopi_src = quote_plus(f"http://app-dev:8000/api/v1.0/wopi/files/{item.id!s}")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["access_token"] is not None
+    assert data["access_token_ttl"] > timestamp_now
+    assert data["launch_url"] == (
+        f"{valid_wopi_launch_url}?WOPISrc={wopi_src}"
+        f"&closebutton=false&lang={settings.LANGUAGE_CODE}"
+    )
+
+
 def test_api_items_wopi_authenticated_user_item_not_file():
     """Authenticated user can not access item that is not a file."""
     user = factories.UserFactory()

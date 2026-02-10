@@ -1,4 +1,4 @@
-import { useModals } from "@openfun/cunningham-react";
+import { useModals } from "@gouvfr-lasuite/cunningham-react";
 import i18n from "@/features/i18n/initI18n";
 
 export const messageModalTrashNavigate = (

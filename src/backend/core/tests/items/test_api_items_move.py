@@ -145,34 +145,26 @@ def test_api_tems_move_file_authenticated_target_roles_mocked(
     client = APIClient()
     client.force_login(user)
 
-    power_roles = ["administrator", "owner", "editor"]
+    power_roles = ["administrator", "owner"]
+    children_create_roles = power_roles + ["editor"]
 
     item_parent = factories.ItemFactory(
         users=[(user, random.choice(power_roles))],
         type=models.ItemTypeChoices.FOLDER,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
     item = factories.ItemFactory(
-        users=[(user, random.choice(power_roles))],
         type=models.ItemTypeChoices.FILE,
         parent=item_parent,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
 
     target_parent = factories.ItemFactory(
         users=[(user, target_parent_role)],
         type=models.ItemTypeChoices.FOLDER,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
     _sibling1, target, _sibling2 = factories.ItemFactory.create_batch(
         3,
         parent=target_parent,
         type=models.ItemTypeChoices.FOLDER,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
     models.ItemAccess.objects.create(item=target, user=user, role=target_role)
     target_children = factories.ItemFactory.create_batch(2, parent=target)
@@ -183,7 +175,14 @@ def test_api_tems_move_file_authenticated_target_roles_mocked(
     )
 
     item.refresh_from_db()
-    if target_role in power_roles or target_parent_role in power_roles:
+    target.refresh_from_db()
+    target_parent.refresh_from_db()
+    if (
+        target_role in children_create_roles
+        or target_parent_role in children_create_roles
+        or target.computed_link_role in children_create_roles
+        or target_parent.computed_link_role in children_create_roles
+    ):
         assert response.status_code == 200
         assert response.json() == {"message": "item moved successfully."}
 
@@ -219,20 +218,17 @@ def test_api_items_move_authenticated_target_roles_mocked(
     client = APIClient()
     client.force_login(user)
 
-    power_roles = ["administrator", "owner", "editor"]
+    power_roles = ["administrator", "owner"]
+    children_create_roles = power_roles + ["editor"]
 
     item_parent = factories.ItemFactory(
         users=[(user, random.choice(power_roles))],
         type=models.ItemTypeChoices.FOLDER,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
     item = factories.ItemFactory(
         users=[(user, random.choice(power_roles))],
         type=models.ItemTypeChoices.FOLDER,
         parent=item_parent,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
 
     # children
@@ -243,15 +239,11 @@ def test_api_items_move_authenticated_target_roles_mocked(
     target_parent = factories.ItemFactory(
         users=[(user, target_parent_role)],
         type=models.ItemTypeChoices.FOLDER,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
     _sibling1, target, _sibling2 = factories.ItemFactory.create_batch(
         3,
         parent=target_parent,
         type=models.ItemTypeChoices.FOLDER,
-        link_reach=models.LinkReachChoices.RESTRICTED,
-        link_role=models.LinkRoleChoices.READER,
     )
 
     models.ItemAccess.objects.create(item=target, user=user, role=target_role)
@@ -263,7 +255,14 @@ def test_api_items_move_authenticated_target_roles_mocked(
     )
 
     item.refresh_from_db()
-    if target_role in power_roles or target_parent_role in power_roles:
+    target.refresh_from_db()
+    target_parent.refresh_from_db()
+    if (
+        target_role in children_create_roles
+        or target_parent_role in children_create_roles
+        or target.computed_link_role in children_create_roles
+        or target_parent.computed_link_role in children_create_roles
+    ):
         assert response.status_code == 200
         assert response.json() == {"message": "item moved successfully."}
 
@@ -619,9 +618,15 @@ def test_api_items_move_suspicious_item_should_work_for_creator():
     client = APIClient()
     client.force_login(creator)
 
+    folder = factories.ItemFactory(
+        creator=creator,
+        users=[(creator, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
     suspicious_item = factories.ItemFactory(
         creator=creator,
-        parent=creator.get_main_workspace(),
+        parent=folder,
         update_upload_state=models.ItemUploadStateChoices.SUSPICIOUS,
         users=[(creator, models.RoleChoices.OWNER)],
         type=models.ItemTypeChoices.FILE,
@@ -643,3 +648,155 @@ def test_api_items_move_suspicious_item_should_work_for_creator():
     # Verify that the item has moved
     suspicious_item.refresh_from_db()
     assert suspicious_item.parent() == target
+
+
+def test_api_items_move_to_root():
+    """
+    Creators should be able to move their own items to the root.
+    The user that moves the item become the creator of the item.
+    """
+    creator = factories.UserFactory()
+    mover = factories.UserFactory()
+    client = APIClient()
+    client.force_login(mover)
+
+    folder = factories.ItemFactory(
+        creator=creator,
+        users=[(creator, models.RoleChoices.OWNER), (mover, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+        title="folder",
+    )
+
+    item = factories.ItemFactory(
+        creator=creator,
+        parent=folder,
+        type=models.ItemTypeChoices.FOLDER,
+        title="folder child",
+    )
+
+    folder.refresh_from_db()
+    assert folder.numchild_folder == 1
+    assert folder.numchild == 1
+
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/move/",
+        data={},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"message": "item moved successfully."}
+
+    # Verify that the item has moved
+    item.refresh_from_db()
+    assert item.parent() is None
+
+    folder.refresh_from_db()
+    assert folder.numchild == 0
+    assert folder.numchild_folder == 0
+
+    # Verify that the item is available in the root
+    response = client.get("/api/v1.0/items/")
+
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+    assert response.json()["results"][0]["id"] == str(item.id)
+    assert response.json()["results"][1]["id"] == str(folder.id)
+
+    item.refresh_from_db()
+    assert item.creator == mover
+
+
+def test_api_items_move_to_root_force_link_reach():
+    """
+    When moving an item to the root and no link_reach is set, force it to be restricted.
+    """
+    creator = factories.UserFactory()
+    mover = factories.UserFactory()
+    client = APIClient()
+    client.force_login(mover)
+
+    folder = factories.ItemFactory(
+        creator=creator,
+        users=[(creator, models.RoleChoices.OWNER), (mover, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+        title="folder",
+    )
+
+    item = factories.ItemFactory(
+        creator=creator,
+        parent=folder,
+        type=models.ItemTypeChoices.FOLDER,
+        title="folder child",
+        link_reach=None,
+    )
+
+    folder.refresh_from_db()
+    assert folder.numchild_folder == 1
+    assert folder.numchild == 1
+
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/move/",
+        data={},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"message": "item moved successfully."}
+
+    # Verify that the item has moved
+    item.refresh_from_db()
+    assert item.parent() is None
+
+    folder.refresh_from_db()
+    assert folder.numchild == 0
+    assert folder.numchild_folder == 0
+
+    # Verify that the item is available in the root
+    response = client.get("/api/v1.0/items/")
+
+    assert response.status_code == 200
+    assert response.json()["count"] == 2
+    assert response.json()["results"][0]["id"] == str(item.id)
+    assert response.json()["results"][1]["id"] == str(folder.id)
+
+    item.refresh_from_db()
+    assert item.creator == mover
+    assert item.link_reach == models.LinkReachChoices.RESTRICTED
+
+
+def test_api_items_force_syncing_link_reach_with_parents():
+    """
+    When moving an item in an other item, force it to be sync with its parent's link reach.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+    )
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        parent=parent,
+        link_reach=models.LinkReachChoices.AUTHENTICATED,
+    )
+
+    target = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.PUBLIC,
+    )
+
+    assert item.link_reach == models.LinkReachChoices.AUTHENTICATED
+    assert item.computed_link_reach == models.LinkReachChoices.AUTHENTICATED
+
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/move/",
+        data={"target_item_id": str(target.id)},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"message": "item moved successfully."}
+
+    item.refresh_from_db()
+
+    assert item.link_reach is None
+    assert item.computed_link_reach == models.LinkReachChoices.AUTHENTICATED

@@ -27,11 +27,18 @@
   }
 
   &__explorer {
-    padding: 0 var(--c--globals--spacings--md);
     overflow-y: auto;
+
+    .embedded-explorer__container {
+      padding: 0 var(--c--globals--spacings--md);
+    }
   }
 }
 
 .add-folder-icon {
   color: var(--c--contextuals--content--semantic--brand--tertiary);
+}
+
+.move-to-root-button {
+  margin-left: var(--c--globals--spacings--xs);
 }

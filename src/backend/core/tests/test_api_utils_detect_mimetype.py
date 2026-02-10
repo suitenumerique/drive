@@ -144,3 +144,15 @@ def test_detect_mimetype_powerpoint_ppt():
         "application/vnd.ms-powerpoint",
         "application/mspowerpoint",
     ]
+
+
+def test_detect_mimetype_ole_storage():
+    """
+    Microsoft files .xls .doc .ppt can use the mimetype application/x-ole-storage
+    for Microsoft OLE2/Compound File Binary Format. In that case we want to rely on the extension
+    """
+
+    xls_ole_content = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+    mimetype = utils.detect_mimetype(xls_ole_content, filename="document.xls")
+
+    assert mimetype == "application/vnd.ms-excel"

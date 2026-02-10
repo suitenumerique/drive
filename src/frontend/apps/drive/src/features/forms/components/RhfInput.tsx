@@ -1,6 +1,10 @@
 import { Controller, useFormContext } from "react-hook-form";
-import { Input, TextArea, TextAreaProps } from "@openfun/cunningham-react";
-import { InputProps } from "@openfun/cunningham-react";
+import {
+  Input,
+  TextArea,
+  TextAreaProps,
+  InputProps,
+} from "@gouvfr-lasuite/cunningham-react";
 
 export const RhfInput = (props: InputProps & { name: string }) => {
   const { control, setValue } = useFormContext();

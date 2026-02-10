@@ -1,0 +1,17 @@
+.workspace-share-modal {
+  &__parent-folder-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+    font: inherit;
+
+    &:focus {
+      outline: 2px solid
+        var(--c--contextuals--content--semantic--brand--primary);
+      outline-offset: 2px;
+    }
+  }
+}

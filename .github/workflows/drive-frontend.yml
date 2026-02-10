@@ -14,6 +14,9 @@ jobs:
     with:
       node_version: "22.x"
 
+  build-mails:
+    uses: ./.github/workflows/build-mails.yml
+
   lint-front:
     runs-on: ubuntu-latest
     needs: install-front
@@ -61,7 +64,7 @@ jobs:
 
   test-e2e:
     runs-on: ubuntu-latest
-    needs: install-front
+    needs: [install-front, build-mails]
     strategy:
       matrix:
         browser:
@@ -83,6 +86,12 @@ jobs:
           path: "src/frontend/**/node_modules"
           key: front-node_modules-${{ hashFiles('src/frontend/**/yarn.lock') }}
           fail-on-cache-miss: true
+
+      - name: Restore the mail templates
+        uses: actions/cache@v4
+        with:
+          path: "src/backend/core/templates/mail"
+          key: mail-templates-${{ hashFiles('src/mail/mjml') }}
 
       - name: Install Playwright Browsers
         run: |
