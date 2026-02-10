@@ -1,6 +1,6 @@
 # Story 2.4: Docker-first backup/restore runbook + deterministic post-restore smoke checklist
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -69,9 +69,20 @@ and explicitly states what is out of scope / not required (e.g., ephemeral cache
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
+
 ### Debug Log References
+
+- `_bmad-output/implementation-artifacts/runs/20260210-212117-2.4/report.md`
 
 ### Completion Notes List
 
+- Added a Docker-first backup/restore runbook covering Postgres + S3 bucket preservation.
+- Included explicit no-leak guidance (avoid secrets, avoid signed URLs/SigV4).
+- Added a deterministic post-restore smoke checklist (login/browse/preview/upload/media/share).
+
 ### File List
 
+- `docs/installation/backup-restore.md`
+- `docs/installation/README.md`
+- `_bmad-output/implementation-artifacts/runs/20260210-212117-2.4/report.md`
