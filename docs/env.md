@@ -32,6 +32,8 @@ This document lists all configurable environment variables for the Drive applica
 | `DB_PASSWORD` | Database password | `pass` |
 | `DB_PORT` | Database port | `5432` |
 | `DB_USER` | Database user | `dinum` |
+| `DRIVE_ALLOW_INSECURE_HTTP` | Allow `http://` in `DRIVE_PUBLIC_URL` in production posture (dev-only override). | `False` |
+| `DRIVE_PUBLIC_URL` | Canonical public base URL (scheme + host only). Validated and normalized (trailing slash removed). | `None` |
 | `EMAIL_BACKEND` | Email backend for sending emails | `django.core.mail.backends.smtp.EmailBackend` |
 | `EMAIL_BRAND_NAME` | Brand name for email templates | `None` |
 | `EMAIL_FROM` | Default sender email address | `from@example.com` |
@@ -121,3 +123,18 @@ This document lists all configurable environment variables for the Drive applica
 | `WOPI_CONFIGURATION_CRONTAB_HOUR` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `3` |
 | `WOPI_CONFIGURATION_CRONTAB_DAY_OF_MONTH` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `*` |
 | `WOPI_CONFIGURATION_CRONTAB_MONTH_OF_YEAR` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `*` |
+
+## `DRIVE_PUBLIC_URL` examples
+
+Production (HTTPS):
+
+```bash
+DRIVE_PUBLIC_URL=https://drive.example.com
+```
+
+Local/dev-only override when running a production posture config:
+
+```bash
+DRIVE_PUBLIC_URL=http://localhost:3000
+DRIVE_ALLOW_INSECURE_HTTP=true
+```

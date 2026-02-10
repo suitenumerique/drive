@@ -1,0 +1,13 @@
+_bmad-output/implementation-artifacts/1-1-canonical-drive-public-url-validation-and-deterministic-derivations.md
+_bmad-output/implementation-artifacts/latest.txt
+_bmad-output/implementation-artifacts/sprint-status.yaml
+_bmad-output/implementation-artifacts/runs/20260210-125506-1.1/report.md
+_bmad-output/implementation-artifacts/runs/20260210-125506-1.1/commands.log
+_bmad-output/implementation-artifacts/runs/20260210-125506-1.1/files-changed.txt
+_bmad-output/implementation-artifacts/runs/20260210-125506-1.1/gates.md
+docs/env.md
+docs/failure-class-glossary.md
+src/backend/core/tests/test_public_url.py
+src/backend/core/tests/test_settings.py
+src/backend/core/utils/public_url.py
+src/backend/drive/settings.py

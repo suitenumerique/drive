@@ -1,6 +1,6 @@
 # Story 1.1: Canonical `DRIVE_PUBLIC_URL` validation and deterministic derivations
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -85,6 +85,26 @@ GPT-5.2 (Codex CLI)
 
 ### Debug Log References
 
+- `_bmad-output/implementation-artifacts/runs/20260210-125506-1.1/report.md`
+- `_bmad-output/implementation-artifacts/runs/20260210-130620-1.1/report.md`
+
 ### Completion Notes List
 
+- Added `DRIVE_PUBLIC_URL` + `DRIVE_ALLOW_INSECURE_HTTP` settings inputs in `drive.settings.Base`.
+- Implemented deterministic validation/normalization helper in `core.utils.public_url` (no query/fragment/userinfo; path empty or `/`; trailing slash removed; HTTPS enforced in production posture unless overridden).
+- Wired validation into `Base.post_setup` (fail-fast, no-leak error message containing stable `failure_class` + `next_action_hint`).
+- Added targeted tests covering AC 1–4, including a no-leak regression test.
+- Updated operator docs (`docs/env.md`) and failure class glossary.
+- Fixed backend lint stability for this change by removing an incompatible `pylint` option from `src/backend/.pylintrc` and adding minimal docstrings required by the lint rules.
+
 ### File List
+
+- `src/backend/core/utils/public_url.py`
+- `src/backend/drive/settings.py`
+- `src/backend/core/tests/test_public_url.py`
+- `src/backend/core/tests/test_settings.py`
+- `src/backend/.pylintrc`
+- `docs/env.md`
+- `docs/failure-class-glossary.md`
+- `_bmad-output/implementation-artifacts/runs/20260210-125506-1.1/report.md`
+- `_bmad-output/implementation-artifacts/runs/20260210-130620-1.1/report.md`

@@ -59,6 +59,7 @@ src/backend/core/templates/mail/
 
 # Logs
 *.log
+!_bmad-output/implementation-artifacts/runs/**/commands.log
 
 # Terraform
 .terraform

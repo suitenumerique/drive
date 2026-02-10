@@ -1,0 +1,3 @@
+src/backend/core/tests/test_public_url.py
+src/backend/core/utils/public_url.py
+src/backend/.pylintrc
