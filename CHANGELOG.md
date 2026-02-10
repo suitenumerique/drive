@@ -12,6 +12,7 @@ and this project adheres to
 
 - ✨(backend) allow configuring celery task routes via `CELERY_TASK_ROUTES`
 - ✨(global) implement advanced shared management system
+- ✨(global) add release notes
 
 ### Changed
 
