@@ -8,7 +8,7 @@ from io import StringIO
 from django.core.management import call_command
 from django.test.utils import override_settings
 
-import pytest
+# pylint: disable=missing-function-docstring
 
 
 def _run_preflight() -> tuple[int, dict]:
@@ -90,4 +90,3 @@ def test_config_preflight_manual_checks_are_deterministic(monkeypatch):
         "edge.media.contract",
         "edge.media.signed_host_invariants",
     ]
-

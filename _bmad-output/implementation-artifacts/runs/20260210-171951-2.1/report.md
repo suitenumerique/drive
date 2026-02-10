@@ -19,10 +19,20 @@ See `files-changed.txt`.
 Per operator instruction, lint/tests/smoke are to be run by a developer and the results
 recorded here.
 
-- `make lint`: PENDING
-- `make test-back`: PENDING
-- `python src/backend/manage.py config_preflight`: PENDING
-- `docker compose up -d` (infra smoke): PENDING
+Executed (UTC): 2026-02-10T17:44:40Z
+
+- `make lint`: PASS
+- `make test-back src/backend/core/tests/commands/test_config_preflight.py`: PASS
+- `docker compose run --rm --no-deps app-dev python manage.py config_preflight`: PASS
+  - `ok=true`, `errors=[]` (manual checks emitted)
+- `docker compose up -d`: PASS
+- `docker compose ps`: PASS
+
+Notes:
+
+- Initial `docker compose up -d` attempts failed with ENOSPC while building frontend layers.
+  Mitigation applied: prune Docker caches/unused volumes and make `frontend-dev` opt-in via
+  compose profile to keep infra smoke deterministic under constrained disk.
 
 ## Evidence / outputs
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -19,6 +19,8 @@ from core.utils.public_url import (
 
 @dataclass(frozen=True, slots=True)
 class PreflightError:
+    """Structured preflight validation error for operator-facing diagnostics."""
+
     field: str
     failure_class: str
     next_action_hint: str
@@ -81,6 +83,8 @@ def _validate_s3_domain_replace(
 
 
 class Command(BaseCommand):
+    """Django management command emitting deterministic config + edge checklist."""
+
     help = "Validate edge-related config and print a proxy-agnostic checklist."
 
     def handle(self, *args: Any, **options: Any) -> None:
@@ -142,7 +146,7 @@ class Command(BaseCommand):
         errors_sorted = sorted(errors, key=lambda e: e.field)
         payload: dict[str, Any] = {
             "ok": len(errors_sorted) == 0,
-            "errors": [e.__dict__ for e in errors_sorted],
+            "errors": [asdict(e) for e in errors_sorted],
             "manual_checks": [
                 {
                     "id": "edge.media.contract",
@@ -183,4 +187,3 @@ class Command(BaseCommand):
         self.stdout.write(json.dumps(payload, indent=2, sort_keys=True))
         if errors_sorted:
             raise SystemExit(1)
-
