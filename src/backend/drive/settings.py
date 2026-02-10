@@ -24,6 +24,8 @@ from configurations import Configuration, values
 from lasuite.configuration.values import SecretFileValue
 from sentry_sdk.integrations.django import DjangoIntegration
 
+from core.utils.public_url import PublicUrlValidationError, normalize_drive_public_url
+
 # pylint: disable=too-many-lines
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -190,6 +192,14 @@ class Base(Configuration):
 
     FEATURES_INDEXED_SEARCH = values.BooleanValue(
         default=True, environ_name="FEATURES_INDEXED_SEARCH", environ_prefix=None
+    )
+
+    # Canonical public base URL (optional rollout, validated when set)
+    DRIVE_PUBLIC_URL = values.Value(
+        default=None, environ_name="DRIVE_PUBLIC_URL", environ_prefix=None
+    )
+    DRIVE_ALLOW_INSECURE_HTTP = values.BooleanValue(
+        default=False, environ_name="DRIVE_ALLOW_INSECURE_HTTP", environ_prefix=None
     )
 
     # Posthog
@@ -1516,6 +1526,20 @@ class Base(Configuration):
                 "Both OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION and "
                 "OIDC_ALLOW_DUPLICATE_EMAILS cannot be set to True simultaneously. "
             )
+
+        if cls.DRIVE_PUBLIC_URL is not None:
+            try:
+                cls.DRIVE_PUBLIC_URL = normalize_drive_public_url(
+                    cls.DRIVE_PUBLIC_URL,
+                    production_posture=not bool(cls.DEBUG),
+                    allow_insecure_http=bool(cls.DRIVE_ALLOW_INSECURE_HTTP),
+                )
+            except PublicUrlValidationError as exc:
+                raise ValueError(
+                    "Invalid DRIVE_PUBLIC_URL configuration. "
+                    f"failure_class={exc.failure_class} "
+                    f"next_action_hint={exc.next_action_hint}"
+                ) from None
 
         if cls.POSTHOG_KEY is not None:
             posthog.api_key = cls.POSTHOG_KEY

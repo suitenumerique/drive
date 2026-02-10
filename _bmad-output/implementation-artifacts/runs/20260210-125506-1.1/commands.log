@@ -1,0 +1,77 @@
+2026-02-10T12:55:27Z  docker compose run --rm app-dev pytest core/tests/test_settings.py core/tests/test_public_url.py -q
+ Container drive-mailcatcher-1 Running 
+ Container drive-seaweedfs-master-1 Running 
+ Container drive-collabora-1 Running 
+ Container drive-redis-1 Running 
+ Container drive-postgresql-1 Running 
+ Container drive-seaweedfs-volume-1 Running 
+ Container drive-onlyoffice-1 Running 
+ Container drive-celery-dev-1 Running 
+ Container drive-seaweedfs-filer-1 Running 
+ Container drive-seaweedfs-s3-1 Running 
+ Container drive-seaweedfs-s3-1 Waiting 
+ Container drive-seaweedfs-s3-1 Healthy 
+ Container drive-createbuckets-1 Starting 
+ Container drive-createbuckets-1 Started 
+ Container drive-collabora-1 Waiting 
+ Container drive-onlyoffice-1 Waiting 
+ Container drive-postgresql-1 Waiting 
+ Container drive-postgresql-1 Healthy 
+ Container drive-onlyoffice-1 Healthy 
+ Container drive-collabora-1 Healthy 
+ Container drive-app-dev-run-f4c7827540dc Creating 
+ Container drive-app-dev-run-f4c7827540dc Created 
+🐳(entrypoint) creating user running in the container...
+🐳(entrypoint) running your command: pytest core/tests/test_settings.py core/tests/test_public_url.py -q
+============================= test session starts ==============================
+platform linux -- Python 3.13.9, pytest-9.0.2, pluggy-1.6.0
+django: version: 5.2.9, settings: drive.settings (from env), configuration: Development (from env)
+rootdir: /app
+configfile: pyproject.toml
+plugins: cov-7.0.0, django-4.11.1, xdist-3.8.0, pyfakefs-6.0.0, icdiff-0.9, Faker-38.2.0
+collected 14 items
+
+core/tests/test_settings.py ......                                       [ 42%]
+core/tests/test_public_url.py ........                                   [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/django/conf/__init__.py:190
+  /app/.venv/lib/python3.13/site-packages/django/conf/__init__.py:190: RemovedInDjango60Warning: The FORMS_URLFIELD_ASSUME_HTTPS transitional setting is deprecated.
+    warnings.warn(
+
+.venv/lib/python3.13/site-packages/_pytest/cacheprovider.py:475
+  /app/.venv/lib/python3.13/site-packages/_pytest/cacheprovider.py:475: PytestCacheWarning: cache could not write path /app/.pytest_cache/v/cache/nodeids: [Errno 13] Permission denied: '/app/.pytest_cache/v/cache/nodeids'
+    config.cache.set("cache/nodeids", sorted(self.cached_nodeids))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 14 passed, 2 warnings in 0.07s ========================
+2026-02-10T12:55:37Z  make lint
+lint:ruff-format started…
+ Container drive-app-dev-run-c5d8176e6e6e Creating 
+ Container drive-app-dev-run-c5d8176e6e6e Created 
+🐳(entrypoint) creating user running in the container...
+🐳(entrypoint) running your command: ruff format .
+167 files left unchanged
+lint:ruff-check started…
+ Container drive-app-dev-run-873da64cd681 Creating 
+ Container drive-app-dev-run-873da64cd681 Created 
+🐳(entrypoint) creating user running in the container...
+🐳(entrypoint) running your command: ruff check . --fix
+All checks passed!
+lint:pylint started…
+bin/pylint --diff-only=origin/main
+🙋(user) ID: 0
+🐳(compose) project, file: '/root/Apoze/drive/compose.yaml'
+ Container drive-app-dev-run-9999a8a5fa2a Creating 
+ Container drive-app-dev-run-9999a8a5fa2a Created 
+🐳(entrypoint) creating user running in the container...
+🐳(entrypoint) running your command: pylint core/tests/test_settings.py drive/settings.py
+************* Module /app/.pylintrc
+.pylintrc:1:0: E0015: Unrecognized option found: suggestion-mode (unrecognized-option)
+
+--------------------------------------------------------------------
+Your code has been rated at 10.00/10 (previous run: 10.00/10, +0.00)
+
+
+NOTE: make test-back was executed earlier in this session and failed with 27 failing tests (1090 passed).
+      Failures were outside Story 1.1 scope; targeted Story 1.1 tests were re-run above and passed.
