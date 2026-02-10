@@ -1,0 +1,14 @@
+# commands (agent-run; no secrets)
+
+gh pr view 21 --repo Apoze/drive
+
+git fetch origin --prune
+git checkout story/11.3-ct-s3-evidence-allowlist-v2
+git merge origin/main
+git push origin story/11.3-ct-s3-evidence-allowlist-v2
+
+docker compose -f compose.yaml ps
+DOCKER_USER=0 docker compose -f compose.yaml up -d postgresql redis mailcatcher seaweedfs-master seaweedfs-volume seaweedfs-filer seaweedfs-s3 createbuckets
+
+make lint
+make test-back src/backend/core/tests/test_ct_s3_evidence.py

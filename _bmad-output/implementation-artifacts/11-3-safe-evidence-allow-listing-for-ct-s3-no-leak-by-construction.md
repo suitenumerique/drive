@@ -1,6 +1,6 @@
 # Story 11.3: Safe evidence allow-listing for CT-S3 (no-leak by construction)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -41,9 +41,23 @@ So that reports help debugging without exposing credentials, paths, internal URL
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
+
 ### Debug Log References
+
+- `_bmad-output/implementation-artifacts/runs/20260210-212117-11.3/report.md`
 
 ### Completion Notes List
 
+- Added an explicit evidence allow-list for CT-S3 and enforced it at evidence creation time.
+- Added regression tests for unknown/invalid evidence shapes without echoing sensitive values.
+- Documented safe evidence rules in `docs/ct-s3.md`.
+
 ### File List
 
+- `docs/ct-s3.md`
+- `src/backend/core/ct_s3/evidence.py`
+- `src/backend/core/ct_s3/runner.py`
+- `src/backend/core/ct_s3/types.py`
+- `src/backend/core/tests/test_ct_s3_evidence.py`
+- `_bmad-output/implementation-artifacts/runs/20260210-212117-11.3/report.md`
