@@ -60,13 +60,13 @@ def test_api_item_recents_authenticated_with_recent_items():
         type=models.ItemTypeChoices.FOLDER,
         title="child",
     )
-    child_item_child = factories.ItemFactory(
+    child_item_file1 = factories.ItemFactory(
         creator=user,
         parent=child_item,
         type=models.ItemTypeChoices.FILE,
         title="child child file",
     )
-    child_item_file = factories.ItemFactory(
+    child_item_file2 = factories.ItemFactory(
         creator=user,
         parent=child_item,
         type=models.ItemTypeChoices.FILE,
@@ -86,8 +86,8 @@ def test_api_item_recents_authenticated_with_recent_items():
     )
 
     # Make this item the most recent item.
-    child_item_child.updated_at = timezone.now()
-    child_item_child.save()
+    child_item_file1.updated_at = timezone.now()
+    child_item_file1.save()
 
     factories.UserItemAccessFactory(item=parent_item, user=user)
     factories.UserItemAccessFactory(item=parent2_item, user=user)
@@ -95,13 +95,10 @@ def test_api_item_recents_authenticated_with_recent_items():
     response = client.get("/api/v1.0/items/recents/")
     assert response.status_code == 200
     content = response.json()
-    assert content["count"] == 6
-    assert content["results"][0]["id"] == str(child_item_child.id)
+    assert content["count"] == 3
+    assert content["results"][0]["id"] == str(child_item_file1.id)
     assert content["results"][1]["id"] == str(child2_item_file.id)
-    assert content["results"][2]["id"] == str(parent2_item.id)
-    assert content["results"][3]["id"] == str(child_item_file.id)
-    assert content["results"][4]["id"] == str(child_item.id)
-    assert content["results"][5]["id"] == str(parent_item.id)
+    assert content["results"][2]["id"] == str(child_item_file2.id)
 
 
 def test_api_items_recents_mixing_explicit_and_inherited_accesses(
@@ -160,83 +157,6 @@ def test_api_items_recents_mixing_explicit_and_inherited_accesses(
 
     with django_assert_num_queries(7):
         response = client.get("/api/v1.0/items/recents/")
-    assert response.status_code == 200
-    content = response.json()
-    assert content["count"] == 7
-    assert content["results"][0]["id"] == str(other_items[0].id)
-    assert content["results"][1]["id"] == str(items[0].id)
-    assert content["results"][2]["id"] == str(parent.id)
-    assert content["results"][3]["id"] == str(other_items[1].id)
-    assert content["results"][4]["id"] == str(other_parent.id)
-    assert content["results"][5]["id"] == str(items[2].id)
-    assert content["results"][6]["id"] == str(items[1].id)
-
-
-def test_api_items_recents_filtering(django_assert_num_queries):
-    """
-    Test filtering the recents items by type.
-    """
-
-    user = factories.UserFactory()
-    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
-    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
-    items = factories.ItemFactory.create_batch(
-        3, parent=parent, type=models.ItemTypeChoices.FILE, update_upload_state="ready"
-    )
-
-    # not accessible items
-    other_root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
-    factories.ItemFactory.create_batch(
-        3,
-        parent=other_root,
-        type=models.ItemTypeChoices.FILE,
-        update_upload_state="ready",
-    )
-
-    # other accessible items in an other tree
-    other_parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
-    other_items = factories.ItemFactory.create_batch(
-        3,
-        parent=other_parent,
-        type=models.ItemTypeChoices.FILE,
-        update_upload_state="ready",
-    )
-    factories.UserItemAccessFactory(item=other_parent, user=user, role="editor")
-
-    # Give access to the user to the parent item
-    access = factories.UserItemAccessFactory(item=parent, user=user, role="editor")
-    assert access.user == user
-
-    # modify parent
-    parent.updated_at = timezone.now()
-    parent.save()
-
-    # modify 1 item
-    items[0].updated_at = timezone.now()
-    items[0].save()
-
-    # modify 1 other item
-    other_items[0].updated_at = timezone.now()
-    other_items[0].save()
-
-    # delete other_items 2, should not be in the results
-    other_items[2].soft_delete()
-
-    client = APIClient()
-    client.force_login(user)
-
-    with django_assert_num_queries(7):
-        response = client.get("/api/v1.0/items/recents/?type=folder")
-
-    assert response.status_code == 200
-    content = response.json()
-    assert content["count"] == 2
-    assert content["results"][0]["id"] == str(parent.id)
-    assert content["results"][1]["id"] == str(other_parent.id)
-
-    with django_assert_num_queries(7):
-        response = client.get("/api/v1.0/items/recents/?type=file")
-
     assert response.status_code == 200
     content = response.json()
     assert content["count"] == 5

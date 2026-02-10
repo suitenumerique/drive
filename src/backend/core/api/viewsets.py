@@ -1117,8 +1117,13 @@ class ItemViewSet(
         )
         if not filterset.is_valid():
             raise drf.exceptions.ValidationError(filterset.errors)
+        filter_data = filterset.form.cleaned_data
 
-        queryset = filterset.filter_queryset(queryset)
+        # Filter as early as possible on fields that are available on the model
+        for field in ["title"]:
+            queryset = filterset.filters[field].filter(queryset, filter_data[field])
+
+        queryset = queryset.filter(type=models.ItemTypeChoices.FILE)
 
         queryset = queryset.annotate_is_favorite(user)
         queryset = queryset.annotate_user_roles(user)
