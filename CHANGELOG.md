@@ -20,6 +20,7 @@ and this project adheres to
 
 - 🐛(backend) manage ole2 compound document format
 - ♻️(backend) increase user short_name field length
+- ✨(frontend) sync backend user language to browser on load
 
 ## [v0.12.0] - 2026-02-06
 
