@@ -1,6 +1,6 @@
 # Story 2.4: Docker-first backup/restore runbook + deterministic post-restore smoke checklist
 
-Status: review
+Status: done
 
 ## Story
 
