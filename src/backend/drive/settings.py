@@ -24,7 +24,10 @@ from configurations import Configuration, values
 from lasuite.configuration.values import SecretFileValue
 from sentry_sdk.integrations.django import DjangoIntegration
 
-from core.utils.public_url import PublicUrlValidationError, normalize_drive_public_url
+from core.utils.public_url import (
+    PublicUrlValidationError,
+    normalize_public_surface_base_url,
+)
 
 # pylint: disable=too-many-lines
 
@@ -47,6 +50,55 @@ def get_release():
         return pyproject_data["project"]["version"]
     except (FileNotFoundError, KeyError):
         return "NA"  # Default: not available
+
+
+def _validate_public_surface_base_url(
+    raw: str,
+    *,
+    setting_name: str,
+    https_only_posture: bool,
+    debug: bool,
+    allow_insecure_http: bool,
+) -> str:
+    try:
+        return normalize_public_surface_base_url(
+            raw,
+            setting_name=setting_name,
+            https_only_posture=https_only_posture,
+            debug=debug,
+            allow_insecure_http=allow_insecure_http,
+        )
+    except PublicUrlValidationError as exc:
+        raise ValueError(
+            f"Invalid {setting_name} configuration. "
+            f"failure_class={exc.failure_class} "
+            f"next_action_hint={exc.next_action_hint}"
+        ) from None
+
+
+def _normalize_oidc_redirect_allowed_hosts(
+    raw_hosts: list[str],
+    *,
+    https_only_posture: bool,
+    debug: bool,
+    allow_insecure_http: bool,
+) -> list[str]:
+    normalized_hosts: list[str] = []
+    for item in raw_hosts:
+        candidate = str(item).strip()
+        if "://" in candidate:
+            normalized_hosts.append(
+                _validate_public_surface_base_url(
+                    candidate,
+                    setting_name="OIDC_REDIRECT_ALLOWED_HOSTS",
+                    https_only_posture=https_only_posture,
+                    debug=debug,
+                    allow_insecure_http=allow_insecure_http,
+                )
+            )
+        else:
+            normalized_hosts.append(candidate)
+    return normalized_hosts
 
 
 class Base(Configuration):
@@ -1527,19 +1579,38 @@ class Base(Configuration):
                 "OIDC_ALLOW_DUPLICATE_EMAILS cannot be set to True simultaneously. "
             )
 
+        https_only_posture = bool(getattr(cls, "SECURE_SSL_REDIRECT", False))
+        debug = bool(cls.DEBUG)
+        allow_insecure_http = bool(cls.DRIVE_ALLOW_INSECURE_HTTP)
+
         if cls.DRIVE_PUBLIC_URL is not None:
-            try:
-                cls.DRIVE_PUBLIC_URL = normalize_drive_public_url(
-                    cls.DRIVE_PUBLIC_URL,
-                    production_posture=not bool(cls.DEBUG),
-                    allow_insecure_http=bool(cls.DRIVE_ALLOW_INSECURE_HTTP),
-                )
-            except PublicUrlValidationError as exc:
-                raise ValueError(
-                    "Invalid DRIVE_PUBLIC_URL configuration. "
-                    f"failure_class={exc.failure_class} "
-                    f"next_action_hint={exc.next_action_hint}"
-                ) from None
+            cls.DRIVE_PUBLIC_URL = _validate_public_surface_base_url(
+                cls.DRIVE_PUBLIC_URL,
+                setting_name="DRIVE_PUBLIC_URL",
+                https_only_posture=https_only_posture,
+                debug=debug,
+                allow_insecure_http=allow_insecure_http,
+            )
+
+        if cls.WOPI_SRC_BASE_URL is not None:
+            cls.WOPI_SRC_BASE_URL = _validate_public_surface_base_url(
+                cls.WOPI_SRC_BASE_URL,
+                setting_name="WOPI_SRC_BASE_URL",
+                https_only_posture=https_only_posture,
+                debug=debug,
+                allow_insecure_http=allow_insecure_http,
+            )
+
+        if https_only_posture:
+            cls.OIDC_REDIRECT_REQUIRE_HTTPS = True
+
+        if cls.OIDC_REDIRECT_ALLOWED_HOSTS:
+            cls.OIDC_REDIRECT_ALLOWED_HOSTS = _normalize_oidc_redirect_allowed_hosts(
+                cls.OIDC_REDIRECT_ALLOWED_HOSTS,
+                https_only_posture=https_only_posture,
+                debug=debug,
+                allow_insecure_http=allow_insecure_http,
+            )
 
         if cls.POSTHOG_KEY is not None:
             posthog.api_key = cls.POSTHOG_KEY

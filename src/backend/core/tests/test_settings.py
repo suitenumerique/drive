@@ -37,6 +37,9 @@ def test_drive_public_url_is_noop_when_unset():
         """Fake test settings."""
 
         DRIVE_PUBLIC_URL = None
+        WOPI_CLIENTS = []
+        WOPI_SRC_BASE_URL = None
+        OIDC_REDIRECT_ALLOWED_HOSTS = []
 
     TestSettings().post_setup()
 
@@ -48,6 +51,9 @@ def test_drive_public_url_trailing_slash_is_normalized():
         """Fake test settings."""
 
         DRIVE_PUBLIC_URL = "https://drive.example.com/"
+        WOPI_CLIENTS = []
+        WOPI_SRC_BASE_URL = None
+        OIDC_REDIRECT_ALLOWED_HOSTS = []
 
     TestSettings().post_setup()
     assert TestSettings.DRIVE_PUBLIC_URL == "https://drive.example.com"
@@ -60,6 +66,9 @@ def test_drive_public_url_rejects_query_and_does_not_leak_input():
         """Fake test settings."""
 
         DRIVE_PUBLIC_URL = "https://drive.example.com/?token=super-secret"
+        WOPI_CLIENTS = []
+        WOPI_SRC_BASE_URL = None
+        OIDC_REDIRECT_ALLOWED_HOSTS = []
 
     with pytest.raises(ValueError) as excinfo:
         TestSettings().post_setup()
@@ -72,14 +81,18 @@ def test_drive_public_url_rejects_query_and_does_not_leak_input():
 
 
 def test_drive_public_url_rejects_http_in_production_posture_without_override():
-    """HTTP should be rejected in production posture unless explicitly overridden."""
+    """HTTPS-only posture rejects HTTP."""
 
     class TestSettings(Base):
         """Fake test settings."""
 
         DEBUG = False
+        SECURE_SSL_REDIRECT = True
         DRIVE_PUBLIC_URL = "http://drive.example.com"
         DRIVE_ALLOW_INSECURE_HTTP = False
+        WOPI_CLIENTS = []
+        WOPI_SRC_BASE_URL = None
+        OIDC_REDIRECT_ALLOWED_HOSTS = []
 
     with pytest.raises(ValueError) as excinfo:
         TestSettings().post_setup()
@@ -87,15 +100,79 @@ def test_drive_public_url_rejects_http_in_production_posture_without_override():
     assert "failure_class=config.public_url.https_required" in str(excinfo.value)
 
 
-def test_drive_public_url_allows_http_in_production_posture_with_override():
-    """Dev-only override should allow HTTP even when running in production posture."""
+def test_drive_public_url_rejects_http_in_https_only_posture_even_with_override():
+    """HTTPS-only posture should reject HTTP even if the override is set."""
 
     class TestSettings(Base):
         """Fake test settings."""
 
         DEBUG = False
+        SECURE_SSL_REDIRECT = True
         DRIVE_PUBLIC_URL = "http://drive.example.com/"
         DRIVE_ALLOW_INSECURE_HTTP = True
+        WOPI_CLIENTS = []
+        WOPI_SRC_BASE_URL = None
+        OIDC_REDIRECT_ALLOWED_HOSTS = []
+
+    with pytest.raises(ValueError) as excinfo:
+        TestSettings().post_setup()
+
+    assert "failure_class=config.public_url.https_required" in str(excinfo.value)
+
+
+def test_drive_public_url_allows_http_in_dev_with_override():
+    """Dev-only override allows HTTP when DEBUG=true."""
+
+    class TestSettings(Base):
+        """Fake test settings."""
+
+        DEBUG = True
+        DRIVE_PUBLIC_URL = "http://drive.example.com/"
+        DRIVE_ALLOW_INSECURE_HTTP = True
+        WOPI_CLIENTS = []
+        WOPI_SRC_BASE_URL = None
+        OIDC_REDIRECT_ALLOWED_HOSTS = []
 
     TestSettings().post_setup()
     assert TestSettings.DRIVE_PUBLIC_URL == "http://drive.example.com"
+
+
+def test_wopi_src_base_url_rejects_http_in_https_only_posture():
+    """WOPI public surface must be HTTPS in HTTPS-only posture (no mixed TLS)."""
+
+    class TestSettings(Base):
+        """Fake test settings."""
+
+        DEBUG = False
+        SECURE_SSL_REDIRECT = True
+        WOPI_CLIENTS = []
+        WOPI_SRC_BASE_URL = "http://wopi.example.com"
+        OIDC_REDIRECT_ALLOWED_HOSTS = []
+
+    with pytest.raises(ValueError) as excinfo:
+        TestSettings().post_setup()
+
+    assert "Invalid WOPI_SRC_BASE_URL configuration." in str(excinfo.value)
+    assert "failure_class=config.public_url.https_required" in str(excinfo.value)
+
+
+def test_oidc_redirect_allowed_hosts_rejects_http_in_https_only_posture():
+    """OIDC redirect origins must not contain http:// in HTTPS-only posture."""
+
+    class TestSettings(Base):
+        """Fake test settings."""
+
+        DEBUG = False
+        SECURE_SSL_REDIRECT = True
+        WOPI_CLIENTS = []
+        WOPI_SRC_BASE_URL = None
+        OIDC_REDIRECT_ALLOWED_HOSTS = [
+            "http://localhost:3000",
+            "https://drive.example.com",
+        ]
+
+    with pytest.raises(ValueError) as excinfo:
+        TestSettings().post_setup()
+
+    assert "Invalid OIDC_REDIRECT_ALLOWED_HOSTS configuration." in str(excinfo.value)
+    assert "failure_class=config.public_url.https_required" in str(excinfo.value)

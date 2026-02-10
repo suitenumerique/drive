@@ -32,7 +32,7 @@ This document lists all configurable environment variables for the Drive applica
 | `DB_PASSWORD` | Database password | `pass` |
 | `DB_PORT` | Database port | `5432` |
 | `DB_USER` | Database user | `dinum` |
-| `DRIVE_ALLOW_INSECURE_HTTP` | Allow `http://` in `DRIVE_PUBLIC_URL` in production posture (dev-only override). | `False` |
+| `DRIVE_ALLOW_INSECURE_HTTP` | Dev-only override to allow `http://` on public-surface base URLs (only when `DEBUG=True`). | `False` |
 | `DRIVE_PUBLIC_URL` | Canonical public base URL (scheme + host only). Validated and normalized (trailing slash removed). | `None` |
 | `EMAIL_BACKEND` | Email backend for sending emails | `django.core.mail.backends.smtp.EmailBackend` |
 | `EMAIL_BRAND_NAME` | Brand name for email templates | `None` |
@@ -132,9 +132,15 @@ Production (HTTPS):
 DRIVE_PUBLIC_URL=https://drive.example.com
 ```
 
-Local/dev-only override when running a production posture config:
+Development-only HTTP override (requires both `DEBUG=True` and `DRIVE_ALLOW_INSECURE_HTTP=true`):
 
 ```bash
 DRIVE_PUBLIC_URL=http://localhost:3000
 DRIVE_ALLOW_INSECURE_HTTP=true
 ```
+
+Notes:
+
+- In production posture, public surfaces are **HTTPS-only** (no mixed TLS modes).
+- In production posture, `http://` is rejected even if `DRIVE_ALLOW_INSECURE_HTTP=true`.
+- The same posture applies to other public-surface base URLs such as `WOPI_SRC_BASE_URL` and any URL-form entries in `OIDC_REDIRECT_ALLOWED_HOSTS`.

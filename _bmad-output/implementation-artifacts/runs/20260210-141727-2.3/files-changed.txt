@@ -1,0 +1,13 @@
+_bmad-output/implementation-artifacts/2-3-tls-posture-for-public-surfaces-prod-https-only-dev-override-explicit-no-mixed-modes.md
+_bmad-output/implementation-artifacts/latest.txt
+_bmad-output/implementation-artifacts/sprint-status.yaml
+_bmad-output/implementation-artifacts/runs/20260210-141727-2.3/report.md
+_bmad-output/implementation-artifacts/runs/20260210-141727-2.3/commands.log
+_bmad-output/implementation-artifacts/runs/20260210-141727-2.3/files-changed.txt
+_bmad-output/implementation-artifacts/runs/20260210-141727-2.3/gates.md
+docs/env.md
+env.d/development/common
+src/backend/core/tests/test_public_url.py
+src/backend/core/tests/test_settings.py
+src/backend/core/utils/public_url.py
+src/backend/drive/settings.py

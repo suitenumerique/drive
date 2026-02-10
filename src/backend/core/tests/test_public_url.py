@@ -2,7 +2,12 @@
 
 import pytest
 
-from core.utils.public_url import PublicUrlValidationError, normalize_drive_public_url
+from core.utils.public_url import (
+    PublicUrlValidationError,
+    join_public_url,
+    normalize_drive_public_url,
+    normalize_public_surface_base_url,
+)
 
 
 def test_normalize_drive_public_url_removes_trailing_slash():
@@ -11,7 +16,8 @@ def test_normalize_drive_public_url_removes_trailing_slash():
     assert (
         normalize_drive_public_url(
             "https://drive.example.com/",
-            production_posture=True,
+            https_only_posture=True,
+            debug=False,
             allow_insecure_http=False,
         )
         == "https://drive.example.com"
@@ -34,7 +40,8 @@ def test_normalize_drive_public_url_rejects_non_canonical_components(raw):
     with pytest.raises(PublicUrlValidationError) as excinfo:
         normalize_drive_public_url(
             raw,
-            production_posture=True,
+            https_only_posture=True,
+            debug=False,
             allow_insecure_http=False,
         )
 
@@ -42,27 +49,55 @@ def test_normalize_drive_public_url_rejects_non_canonical_components(raw):
     assert excinfo.value.next_action_hint
 
 
-def test_normalize_drive_public_url_requires_https_in_production_posture():
-    """Production posture requires HTTPS unless a dev-only override is set."""
+def test_normalize_drive_public_url_requires_https_in_https_only_posture():
+    """HTTPS-only posture rejects HTTP regardless of override."""
 
     with pytest.raises(PublicUrlValidationError) as excinfo:
         normalize_drive_public_url(
             "http://drive.example.com",
-            production_posture=True,
-            allow_insecure_http=False,
+            https_only_posture=True,
+            debug=False,
+            allow_insecure_http=True,
         )
 
     assert excinfo.value.failure_class == "config.public_url.https_required"
 
 
-def test_normalize_drive_public_url_allows_http_in_production_posture_with_override():
-    """The dev-only override allows HTTP even in production posture."""
+def test_normalize_drive_public_url_allows_http_in_dev_with_override():
+    """HTTP is allowed only when DEBUG=true and the centralized override is enabled."""
 
     assert (
         normalize_drive_public_url(
             "http://drive.example.com/",
-            production_posture=True,
+            https_only_posture=False,
+            debug=True,
             allow_insecure_http=True,
         )
         == "http://drive.example.com"
+    )
+
+
+def test_normalize_public_surface_base_url_accepts_wopi_src_base_url_https():
+    """WOPI public-surface base URLs should be normalized the same way."""
+
+    assert (
+        normalize_public_surface_base_url(
+            "https://wopi.example.com/",
+            setting_name="WOPI_SRC_BASE_URL",
+            https_only_posture=True,
+            debug=False,
+            allow_insecure_http=False,
+        )
+        == "https://wopi.example.com"
+    )
+
+
+def test_join_public_url_avoids_double_slashes():
+    """URL derivations should not introduce double slashes."""
+
+    assert join_public_url("https://drive.example.com", "/api/v1.0/") == (
+        "https://drive.example.com/api/v1.0/"
+    )
+    assert join_public_url("https://drive.example.com/", "api/v1.0/") == (
+        "https://drive.example.com/api/v1.0/"
     )

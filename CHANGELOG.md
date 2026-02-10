@@ -21,6 +21,10 @@ and this project adheres to
 - 🐛(backend) manage ole2 compound document format
 - ♻️(backend) increase user short_name field length
 
+### Security
+
+- 🔒️(backend) enforce HTTPS-only public surfaces in production (dev-only HTTP override)
+
 ## [v0.12.0] - 2026-02-06
 
 ### Added
