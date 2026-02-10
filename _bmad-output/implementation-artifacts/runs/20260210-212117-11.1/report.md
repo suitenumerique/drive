@@ -2,8 +2,8 @@
 
 - Run ID: `20260210-212117-11.1`
 - Date (UTC): 2026-02-10
-- Branch: `story/11.1-ct-s3-runner`
-- PR: #11 (draft)
+- Branch: `story/11.1-ct-s3-runner-v2`
+- PR: #20
 
 ## Goal
 
@@ -23,17 +23,19 @@ Deliver a Drive-integrated CT-S3 runner that:
   with a `latest.txt` pointer.
 - Documented how to run CT-S3 in `docs/ct-s3.md`.
 
-## Verification (dev-owned)
+## Verification
 
-The developer (human) must run and record results (agent does not run lint/tests/smokes):
+- `make lint`: PASS
+- Backend tests (compose): PASS
+  - Prereq used for parity with CI expectations:
+    - `python manage.py compilemessages`
+  - Command used:
+    - `docker compose run ... app-dev pytest`
+- `./bin/ct_s3 --profile seaweedfs-s3`: FAIL
+  - CT-S3 artifacts written under `_bmad-output/implementation-artifacts/ct-s3/`
+    (see `latest.txt`)
 
-- `./bin/ct_s3 --profile seaweedfs-s3`
-- Optional strictness: `./bin/ct_s3 --strict-range-206`
-- Recommended repo gates:
-  - `make lint`
-  - `make test-back`
-
-Record outcomes in `gates.md` after running.
+Record outcomes in `gates.md`.
 
 ## Artifacts
 
@@ -44,4 +46,3 @@ Record outcomes in `gates.md` after running.
 
 - Confirm CT-S3 behavior in at least one intentional failure scenario and ensure
   artifacts remain no-leak in that case.
-
