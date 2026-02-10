@@ -95,7 +95,7 @@ development_status:
   10-5-mountprovider-wopi-semantics-version-string-locks-ttl-release-conflict-streaming-save-pipeline: backlog
   epic-10-retrospective: optional
   epic-11: in-progress
-  11-1-drive-integrated-ct-s3-runner-with-explicit-audience-model-and-deterministic-reports: ready-for-dev
+  11-1-drive-integrated-ct-s3-runner-with-explicit-audience-model-and-deterministic-reports: in-progress
   11-2-encode-seaweedfs-as-the-blocking-baseline-profile-repeatable-checks-runbook-alignment: done
   11-3-safe-evidence-allow-listing-for-ct-s3-no-leak-by-construction: ready-for-dev
   epic-11-retrospective: optional
