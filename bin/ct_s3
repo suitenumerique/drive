@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+source "$(dirname "${BASH_SOURCE[0]}")/_config.sh"
+
+_django_manage ct_s3 "$@"
+
