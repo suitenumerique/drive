@@ -1,6 +1,6 @@
 # Story 1.1: Canonical `DRIVE_PUBLIC_URL` validation and deterministic derivations
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
