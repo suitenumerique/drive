@@ -38,7 +38,7 @@ development_status:
   1-2-separate-allowlists-for-redirect-uris-vs-origins-hosts-derived-from-drive-public-url: done
   epic-1-retrospective: optional
   epic-2: in-progress
-  2-1-docker-first-edge-contract-documentation-configuration-validation-smoke-checks: ready-for-dev
+  2-1-docker-first-edge-contract-documentation-configuration-validation-smoke-checks: in-progress
   2-2-nginx-reference-edge-configuration-dev-prod-aligned-for-media-auth-request-sigv4-propagation: ready-for-dev
   2-3-tls-posture-for-public-surfaces-prod-https-only-dev-override-explicit-no-mixed-modes: done
   2-4-docker-first-backup-restore-runbook-deterministic-post-restore-smoke-checklist: ready-for-dev
