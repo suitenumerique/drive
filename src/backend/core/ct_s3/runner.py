@@ -17,6 +17,7 @@ from botocore.exceptions import ClientError
 from core.api import utils as api_utils
 
 from . import constants
+from .evidence import build_evidence
 from .http_client import HttpClientError, http_request
 from .safe import safe_str_hash, sha256_16
 from .types import CheckResult, ProviderProfile, RunnerOptions
@@ -126,7 +127,7 @@ def run_ct_s3(
     def add_result(result: CheckResult) -> None:
         results.append(result)
 
-    profile_safe = _evidence_base(profile)
+    profile_safe = build_evidence(_evidence_base(profile))
 
     # --- CT-S3-003 (EXTERNAL_BROWSER): presign targets browser host
     check_id = "CT-S3-003"

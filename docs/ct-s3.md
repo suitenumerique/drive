@@ -42,3 +42,14 @@ CT-S3 artifacts must never contain:
 - signed URLs or query signatures,
 - raw object keys or internal URLs.
 
+### Safe evidence allow-list
+
+CT-S3 reports include `evidence` objects that are **allow-listed** at creation
+time. Allowed values are limited to:
+
+- status codes and request ids,
+- truncated hashes (for hosts/keys), and
+- small booleans/integers needed for determinism.
+
+If a CT-S3 check attempts to emit a non-allow-listed evidence field, the runner
+fails fast rather than risk leaking sensitive data.
