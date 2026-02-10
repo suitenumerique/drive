@@ -7,6 +7,10 @@ Start here:
 
 - `docs/selfhost/README.md`
 
+Runbooks:
+
+- `docs/installation/backup-restore.md`
+
 ## Kubernetes (reference-only)
 
 Kubernetes/Helm documentation and manifests remain available **as-is** as
@@ -16,4 +20,3 @@ the v1 scope.
 See:
 
 - `docs/installation/kubernetes.md`
-

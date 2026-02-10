@@ -24,7 +24,7 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--out-dir",
-            default="_bmad-output/implementation-artifacts/ct-s3",
+            default="/_bmad-output/implementation-artifacts/ct-s3",
             help="Output directory root for CT-S3 artifacts.",
         )
         parser.add_argument(

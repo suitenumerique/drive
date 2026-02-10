@@ -12,3 +12,10 @@ git push origin story/11.1-ct-s3-runner
 make lint
 make test-back
 
+# executed (agent) — 2026-02-10
+make lint
+DOCKER_USER=0 docker compose --profile minio-fixture up -d minio createbuckets-minio
+DOCKER_USER=0 docker compose up -d postgresql redis mailcatcher
+./bin/ct_s3 --profile seaweedfs-s3
+DOCKER_USER=0 docker compose run --rm --no-deps -e DJANGO_CONFIGURATION=Test -e WOPI_SRC_BASE_URL=https://app-dev:8000 -e OIDC_REDIRECT_ALLOWED_HOSTS=localhost:8083,localhost:3000 -e OIDC_OP_JWKS_ENDPOINT=/endpoint-for-test-purpose-only app-dev python manage.py compilemessages --ignore=.venv/**/*
+DOCKER_USER=0 docker compose run --rm --no-deps -e DJANGO_CONFIGURATION=Test -e WOPI_SRC_BASE_URL=https://app-dev:8000 -e OIDC_REDIRECT_ALLOWED_HOSTS=localhost:8083,localhost:3000 -e OIDC_OP_JWKS_ENDPOINT=/endpoint-for-test-purpose-only -e AWS_S3_ENDPOINT_URL=http://minio:9000 -e AWS_S3_REGION_NAME=eu-east-1 -e AWS_S3_DOMAIN_REPLACE=http://localhost:9000 app-dev pytest -q

@@ -24,6 +24,7 @@ from .types import CheckResult, ProviderProfile, RunnerOptions
 
 
 def _now_utc_compact() -> str:
+    """Return a compact UTC timestamp used for deterministic run ids."""
     return time.strftime("%Y%m%d-%H%M%S", time.gmtime())
 
 
@@ -37,6 +38,7 @@ def _make_key(run_id: str, check_id: str, filename: str) -> str:
 
 
 def resolve_provider_profile(profile_id: str) -> ProviderProfile:
+    """Resolve the S3 provider profile from settings/default storage."""
     bucket_name = default_storage.bucket_name
 
     internal_endpoint_url = getattr(settings, "AWS_S3_ENDPOINT_URL", None) or ""
@@ -83,7 +85,7 @@ def _failure_from_http_client_error(exc: HttpClientError) -> tuple[str, str]:
 def _signed_get_headers_for_key(key: str) -> tuple[str, dict[str, str]]:
     signed_request = api_utils.generate_s3_authorization_headers(key)
     url = str(signed_request.url)
-    headers = {k: v for k, v in signed_request.headers.items()}
+    headers = dict(signed_request.headers)
     # Ensure Host is explicit and stable for reporting.
     signed_host = urlsplit(url).netloc
     headers.setdefault("Host", signed_host)
@@ -95,7 +97,9 @@ def _presigned_put_url_for_key(key_base: str, filename: str) -> str:
     return str(api_utils.generate_upload_policy(item_like))
 
 
-def _connect_url_for_presigned_url(connect_base_url: str, signed_url: str) -> tuple[str, str]:
+def _connect_url_for_presigned_url(
+    connect_base_url: str, signed_url: str
+) -> tuple[str, str]:
     signed_parts = urlsplit(signed_url)
     connect_parts = urlsplit(connect_base_url)
     connect_url = urlunsplit(
@@ -110,12 +114,13 @@ def _connect_url_for_presigned_url(connect_base_url: str, signed_url: str) -> tu
     return connect_url, signed_parts.netloc
 
 
-def run_ct_s3(
+def run_ct_s3(  # noqa: PLR0912, PLR0915 # pylint: disable=too-many-branches,too-many-statements,too-many-locals
     *,
     profile_id: str = constants.PROFILE_SEAWEEDFS_S3,
     run_id: str | None = None,
     options: RunnerOptions | None = None,
 ) -> dict:
+    """Run CT-S3 checks and return a deterministic report dictionary."""
     run_id = run_id or _now_utc_compact()
     options = options or RunnerOptions()
 
@@ -214,7 +219,10 @@ def run_ct_s3(
                         ok=False,
                         title=title,
                         failure_class="s3.signature.host_mismatch_external",
-                        next_action_hint="Ensure AWS_S3_DOMAIN_REPLACE matches the host used by browsers.",
+                        next_action_hint=(
+                            "Ensure AWS_S3_DOMAIN_REPLACE matches the host used "
+                            "by browsers."
+                        ),
                         evidence={
                             **profile_safe,
                             "signed_host_hash": sha256_16(signed_parts.netloc),
@@ -262,7 +270,9 @@ def run_ct_s3(
                             audience=constants.AUDIENCE_EXTERNAL_BROWSER,
                             ok=ok,
                             title=title,
-                            failure_class=None if ok else "s3.http.presigned_put_failed",
+                            failure_class=None
+                            if ok
+                            else "s3.http.presigned_put_failed",
                             next_action_hint=None
                             if ok
                             else "Check S3 endpoint, host signing, and required headers.",
@@ -288,7 +298,7 @@ def run_ct_s3(
                     evidence={**profile_safe},
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 # pylint: disable=broad-exception-caught
             add_result(
                 CheckResult(
                     check_id=check_id,
@@ -334,7 +344,10 @@ def run_ct_s3(
                         ok=False,
                         title=title,
                         failure_class="s3.signature.host_mismatch_internal",
-                        next_action_hint="Ensure AWS_S3_ENDPOINT_URL host matches the signed request host.",
+                        next_action_hint=(
+                            "Ensure AWS_S3_ENDPOINT_URL host matches the signed "
+                            "request host."
+                        ),
                         evidence={
                             **profile_safe,
                             "signed_host_hash": sha256_16(signed_host),
@@ -390,7 +403,7 @@ def run_ct_s3(
                     evidence={**profile_safe},
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 # pylint: disable=broad-exception-caught
             add_result(
                 CheckResult(
                     check_id=check_id,
@@ -421,7 +434,9 @@ def run_ct_s3(
     else:
         try:
             key = _make_key(run_id, check_id, "ct-s3-range.txt")
-            s3_client.put_object(Bucket=profile.bucket_name, Key=key, Body=b"0123456789")
+            s3_client.put_object(
+                Bucket=profile.bucket_name, Key=key, Body=b"0123456789"
+            )
 
             url, headers = _signed_get_headers_for_key(key)
             range_headers = dict(headers)
@@ -475,7 +490,7 @@ def run_ct_s3(
                     evidence={**profile_safe},
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 # pylint: disable=broad-exception-caught
             add_result(
                 CheckResult(
                     check_id=check_id,
@@ -627,7 +642,7 @@ def run_ct_s3(
                     evidence={**profile_safe},
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 # pylint: disable=broad-exception-caught
             add_result(
                 CheckResult(
                     check_id=check_id,
@@ -681,7 +696,10 @@ def run_ct_s3(
                         ok=False,
                         title=title_ext,
                         failure_class="s3.signature.host_mismatch_external",
-                        next_action_hint="Ensure AWS_S3_DOMAIN_REPLACE matches the host used by browsers.",
+                        next_action_hint=(
+                            "Ensure AWS_S3_DOMAIN_REPLACE matches the host used "
+                            "by browsers."
+                        ),
                         evidence={
                             **profile_safe,
                             "signed_host_hash": sha256_16(signed_parts.netloc),
@@ -753,7 +771,7 @@ def run_ct_s3(
                     evidence={**profile_safe},
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 # pylint: disable=broad-exception-caught
             add_result(
                 CheckResult(
                     check_id=check_id,
@@ -807,7 +825,7 @@ def run_ct_s3(
                     },
                 )
             )
-        except Exception:
+        except Exception:  # noqa: BLE001 # pylint: disable=broad-exception-caught
             add_result(
                 CheckResult(
                     check_id=check_id,
@@ -875,6 +893,7 @@ def run_ct_s3(
 
 
 def render_human_report(report: dict) -> str:
+    """Render a minimal human-readable report without leaking sensitive data."""
     results = report["results"]
     total = len(results)
     passed = sum(1 for r in results if r["ok"])
@@ -900,4 +919,5 @@ def render_human_report(report: dict) -> str:
 
 
 def dumps_json(report: dict) -> str:
+    """Serialize the report as deterministic JSON (stable ordering)."""
     return json.dumps(report, sort_keys=True, indent=2) + "\n"
