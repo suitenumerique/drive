@@ -39,6 +39,8 @@ Each failure should also emit:
 - `s3.signature.host_mismatch_internal`
 - `s3.signature.host_mismatch_external`
 - `s3.signature.security_token_not_forwarded`
+- `s3.http.presigned_put_failed`
+- `s3.http.signed_get_failed`
 - `s3.http.put_missing_required_header_x_amz_acl`
 - `s3.http.range_not_206_strict` (optional strict check)
 - `s3.http.copy_metadata_replace_not_applied`

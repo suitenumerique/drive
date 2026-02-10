@@ -149,6 +149,7 @@ services:
       - "8071:8000"
     volumes:
       - ./src/backend:/app
+      - ./_bmad-output:/_bmad-output
       - ./data/static:/data/static
       - /app/.venv
     networks:
