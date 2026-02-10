@@ -1,0 +1,9 @@
+[
+  {
+    "gate_id": "s3.contracts.seaweedfs",
+    "result": "skip",
+    "duration_ms": 7,
+    "failure_class": "s3.contracts.not_implemented",
+    "next_action_hint": "Implement Epic 11 / Story 11.1 (Drive-integrated CT-S3 runner) before making this gate blocking."
+  }
+]

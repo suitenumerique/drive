@@ -1,0 +1,6 @@
+# SeaweedFS S3 gateway (dev baseline)
+#
+# Note: SeaweedFS uses these names (not AWS_S3_*).
+AWS_ACCESS_KEY_ID=drive
+AWS_SECRET_ACCESS_KEY=password
+

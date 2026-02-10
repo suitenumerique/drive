@@ -26,15 +26,83 @@ services:
     ports:
       - "1081:1080"
 
+  # Baseline S3 provider (Sprint 0): SeaweedFS S3 gateway
+  seaweedfs-master:
+    image: chrislusf/seaweedfs:latest
+    command: ["master", "-ip=seaweedfs-master", "-port=9333", "-mdir=/data"]
+    volumes:
+      - ./data/seaweedfs/master:/data
+
+  seaweedfs-volume:
+    image: chrislusf/seaweedfs:latest
+    command:
+      [
+        "volume",
+        "-ip=seaweedfs-volume",
+        "-port=8080",
+        "-dir=/data",
+        "-mserver=seaweedfs-master:9333",
+      ]
+    depends_on:
+      - seaweedfs-master
+    volumes:
+      - ./data/seaweedfs/volume:/data
+
+  seaweedfs-filer:
+    image: chrislusf/seaweedfs:latest
+    command: ["filer", "-ip=seaweedfs-filer", "-port=8888", "-master=seaweedfs-master:9333"]
+    depends_on:
+      - seaweedfs-master
+      - seaweedfs-volume
+    volumes:
+      - ./data/seaweedfs/filer:/data
+
+  seaweedfs-s3:
+    image: chrislusf/seaweedfs:latest
+    command: ["s3", "-ip.bind=0.0.0.0", "-port=8333", "-filer=seaweedfs-filer:8888"]
+    env_file:
+      - env.d/development/seaweedfs-s3
+    depends_on:
+      - seaweedfs-filer
+    ports:
+      - "9000:8333"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "code=$$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8333/); test \"$$code\" = \"200\" -o \"$$code\" = \"403\"",
+        ]
+      interval: 1s
+      timeout: 5s
+      retries: 300
+
+  createbuckets:
+    image: minio/mc
+    env_file:
+      - env.d/development/common
+    depends_on:
+      seaweedfs-s3:
+        condition: service_healthy
+        restart: true
+    entrypoint: >
+      sh -c "
+      /usr/bin/mc alias set drive http://seaweedfs-s3:8333 $${AWS_S3_ACCESS_KEY_ID} $${AWS_S3_SECRET_ACCESS_KEY} && \
+      /usr/bin/mc mb -p drive/drive-media-storage || true && \
+      /usr/bin/mc version enable drive/drive-media-storage || true && \
+      exit 0;"
+
+  # Optional fixture: MinIO (non-baseline; not used for blocking gates)
   minio:
+    profiles: ["minio-fixture"]
     user: ${DOCKER_USER:-1000}
     image: minio/minio
     environment:
       - MINIO_ROOT_USER=drive
       - MINIO_ROOT_PASSWORD=password
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      # Published on 9100/9101 to avoid clashing with the baseline SeaweedFS gateway (9000).
+      - "9100:9000"
+      - "9101:9001"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 1s
@@ -43,19 +111,22 @@ services:
     entrypoint: ""
     command: minio server --console-address :9001 /data
     volumes:
-      - ./data/media:/data
+      - ./data/minio:/data
 
-  createbuckets:
+  createbuckets-minio:
+    profiles: ["minio-fixture"]
     image: minio/mc
+    env_file:
+      - env.d/development/common
     depends_on:
       minio:
         condition: service_healthy
         restart: true
     entrypoint: >
       sh -c "
-      /usr/bin/mc alias set drive http://minio:9000 drive password && \
-      /usr/bin/mc mb drive/drive-media-storage && \
-      /usr/bin/mc version enable drive/drive-media-storage && \
+      /usr/bin/mc alias set drive http://minio:9000 $${AWS_S3_ACCESS_KEY_ID} $${AWS_S3_SECRET_ACCESS_KEY} && \
+      /usr/bin/mc mb -p drive/drive-media-storage || true && \
+      /usr/bin/mc version enable drive/drive-media-storage || true && \
       exit 0;"
 
   app-dev:
@@ -102,7 +173,8 @@ services:
 
   ds-proxy:
     image: demarchenumerique/ds-proxy:v2.0.0-alpha.2
-    command: ["proxy", "--address", "0.0.0.0:4444", "--password-file", "/etc/dsproxy/PASSWORD", "--salt", "12345678901234567890123456789012", "--keyring-file", "/etc/dsproxy/keyring.toml", "--upstream-url", "http://minio:9000", "--local-encryption-directory", "/var/tmp/local_encryption/", "--s3-access-key", "drive", "--s3-secret-key", "password", "--s3-region", "us-east-1"]
+    profiles: ["ds-proxy"]
+    command: ["proxy", "--address", "0.0.0.0:4444", "--password-file", "/etc/dsproxy/PASSWORD", "--salt", "12345678901234567890123456789012", "--keyring-file", "/etc/dsproxy/keyring.toml", "--upstream-url", "http://seaweedfs-s3:8333", "--local-encryption-directory", "/var/tmp/local_encryption/", "--s3-access-key", "drive", "--s3-secret-key", "password", "--s3-region", "us-east-1"]
     ports:
       - "4444:4444"
     environment:

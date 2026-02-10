@@ -80,6 +80,9 @@ dependency-related or migration-related issues.
 
 Your Docker services should now be up and running! 🎉
 
+By default, the Docker Compose stack uses **SeaweedFS S3 gateway** as the S3-compatible storage backend (published at <http://localhost:9000>).  
+MinIO remains available as an optional **non-baseline** fixture via the `minio-fixture` compose profile.
+
 You can access the project by going to <http://localhost:3000>.
 
 You will be prompted to log in. The default credentials are:

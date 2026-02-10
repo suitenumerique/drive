@@ -1,0 +1,24 @@
+{
+  "generated": "2026-02-08T21:25:47+00:00",
+  "result": "pass",
+  "requested_gates": [
+    "no_leak.scan_bmad_output",
+    "mirror.verify_registry"
+  ],
+  "gate_results": [
+    {
+      "gate_id": "no_leak.scan_bmad_output",
+      "result": "pass",
+      "duration_ms": 164,
+      "failure_class": null,
+      "next_action_hint": null
+    },
+    {
+      "gate_id": "mirror.verify_registry",
+      "result": "pass",
+      "duration_ms": 64,
+      "failure_class": null,
+      "next_action_hint": null
+    }
+  ]
+}

@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Drive — UX Design Directions</title>
+    <link rel="stylesheet" href="../../src/frontend/apps/drive/src/styles/cunningham-tokens.css" />
+    <style>
+      :root {
+        --bg: var(--c--globals--colors--gray-025, #f6f8f9);
+        --surface: var(--c--globals--colors--gray-000, #ffffff);
+        --text: var(--c--globals--colors--gray-900, #181b24);
+        --muted: var(--c--globals--colors--gray-600, #555e74);
+        --border: var(--c--globals--colors--gray-100, #dfe2ea);
+        --primary: var(--c--globals--colors--brand-550, #3e5de7);
+        --primary-bg: var(--c--globals--colors--brand-050, #edf0ff);
+        --info: var(--c--globals--colors--info-550, #2f6abb);
+        --success: var(--c--globals--colors--success-550, #367664);
+        --warning: var(--c--globals--colors--warning-550, #a75400);
+        --danger: var(--c--globals--colors--error-550, #cf202d);
+        --shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+        --r: 12px;
+        --gap: 12px;
+        --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: var(--font);
+        color: var(--text);
+        background: var(--bg);
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--border);
+        background: var(--surface);
+        padding: 16px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow: auto;
+      }
+
+      .sidebar h1 {
+        font-size: 14px;
+        margin: 0 0 10px 0;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .sidebar .meta {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.4;
+        margin-bottom: 16px;
+      }
+
+      .dir-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .dir-btn {
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        cursor: pointer;
+      }
+      .dir-btn strong { display: block; font-size: 14px; }
+      .dir-btn span { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+      .dir-btn[aria-current="true"] {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(62, 93, 231, 0.15);
+        background: var(--primary-bg);
+      }
+
+      .viewer {
+        padding: 18px;
+        overflow: auto;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .note {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+
+      .frame {
+        width: min(1200px, calc(100vw - 380px));
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .app-header {
+        height: 56px;
+        display: grid;
+        grid-template-columns: 240px 1fr 260px;
+        align-items: center;
+        gap: 12px;
+        padding: 0 12px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+      }
+
+      .logo {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        font-weight: 700;
+      }
+      .logo-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: var(--primary);
+      }
+
+      .crumbs {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 13px;
+        color: var(--muted);
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      .crumbs strong { color: var(--text); font-weight: 600; }
+
+      .hdr-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        align-items: center;
+      }
+      .pill {
+        border: 1px solid var(--border);
+        background: var(--surface);
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .pill.primary {
+        border-color: rgba(62, 93, 231, 0.35);
+        background: rgba(62, 93, 231, 0.08);
+        color: var(--primary);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 280px 1fr 320px;
+        min-height: 680px;
+      }
+
+      .panel {
+        border-right: 1px solid var(--border);
+        background: var(--surface);
+      }
+      .panel.right { border-right: 0; border-left: 1px solid var(--border); }
+
+      .tree, .main, .rightpanel { padding: 12px; }
+
+      .tree h3 {
+        margin: 0 0 10px 0;
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .tree .node {
+        padding: 8px 10px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .tree .node.active { background: rgba(62, 93, 231, 0.08); border: 1px solid rgba(62, 93, 231, 0.25); }
+      .tree .node .name { font-size: 13px; }
+      .tree .node .badge { font-size: 11px; color: var(--muted); }
+
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .btn {
+        border: 1px solid var(--border);
+        background: var(--surface);
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .btn.primary {
+        border-color: rgba(62, 93, 231, 0.35);
+        background: rgba(62, 93, 231, 0.1);
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th, td {
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+        vertical-align: middle;
+      }
+      th { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+      tr.sel { background: rgba(62, 93, 231, 0.08); }
+
+      .rightpanel h3 {
+        margin: 0 0 10px 0;
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 10px;
+      }
+      .card .title { font-weight: 700; font-size: 13px; }
+      .card .sub { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+      .kvs { margin-top: 10px; display: grid; gap: 6px; }
+      .kv { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--muted); }
+      .kv code { color: var(--text); background: var(--bg); padding: 2px 6px; border-radius: 8px; border: 1px solid var(--border); }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--muted);
+      }
+      .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--muted); }
+      .status.ok .dot { background: var(--success); }
+      .status.warn .dot { background: var(--warning); }
+      .status.bad .dot { background: var(--danger); }
+
+      .banner {
+        border: 1px solid var(--border);
+        background: var(--bg);
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+      .banner strong { color: var(--text); }
+      .banner .actions { margin-top: 8px; display: flex; gap: 8px; }
+
+      .toast {
+        position: relative;
+        margin-top: 14px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--surface);
+        padding: 12px;
+      }
+      .toast .row { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+      .toast .row strong { font-size: 13px; }
+      .toast .row span { font-size: 12px; color: var(--muted); }
+      .bar {
+        height: 8px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-top: 10px;
+      }
+      .bar > div { height: 100%; width: 62%; background: rgba(62, 93, 231, 0.45); }
+
+      .direction { display: none; }
+      .direction.active { display: block; }
+      .direction .desc { margin: 0 0 10px 0; color: var(--muted); font-size: 13px; }
+
+      /* Direction-specific variations */
+      .dir-dense table td, .dir-dense table th { padding-top: 8px; padding-bottom: 8px; }
+      .dir-balanced .layout { grid-template-columns: 260px 1fr 360px; }
+      .dir-balanced .rightpanel .card { padding: 14px; }
+      .dir-route .layout { grid-template-columns: 0 1fr 0; }
+      .dir-route .panel { display: none; }
+      .dir-route .main { padding: 16px; }
+      .dir-route .app-header { grid-template-columns: 240px 1fr 320px; }
+      .dir-route .crumbs strong { color: var(--primary); }
+      .dir-route .main .diag-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .dir-route .main .banner { background: rgba(47, 106, 187, 0.06); border-color: rgba(47, 106, 187, 0.25); }
+      .dir-mount .rightpanel .tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+      .dir-mount .rightpanel .tabs .pill { cursor: pointer; }
+      .dir-mount .rightpanel .tabs .pill.primary { font-weight: 700; }
+      .field {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: var(--surface);
+        font-size: 12px;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+      .field code { color: var(--text); background: var(--bg); padding: 2px 6px; border-radius: 8px; border: 1px solid var(--border); }
+      .field .state { display: inline-flex; gap: 8px; align-items: center; }
+      .field .state .dot { background: var(--success); }
+      .wopi {
+        height: 240px;
+        border: 1px dashed rgba(62, 93, 231, 0.35);
+        border-radius: 12px;
+        background: rgba(62, 93, 231, 0.04);
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 10px;
+      }
+      .wopi strong { color: var(--text); }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <h1>Design directions</h1>
+        <div class="meta">
+          Visual exploration constrained by:
+          <ul>
+            <li>Strict alignment with existing tokens / UI kit</li>
+            <li>Desktop-first dense explorer</li>
+            <li>Balanced spacing allowed for operator/diagnostics surfaces</li>
+            <li>No infinite loading; capability-driven; no-leak posture</li>
+          </ul>
+        </div>
+        <div class="dir-list" role="listbox" aria-label="Design directions list">
+          <button class="dir-btn" data-dir="d1" aria-current="true">
+            <strong>D1 — Explorer baseline</strong>
+            <span>Dense, anchored, minimal new surfaces.</span>
+          </button>
+          <button class="dir-btn" data-dir="d2">
+            <strong>D2 — Diagnostics in right panel</strong>
+            <span>Non-invasive: operator health in right panel.</span>
+          </button>
+          <button class="dir-btn" data-dir="d3">
+            <strong>D3 — Settings/Diagnostics route</strong>
+            <span>Scalable: dedicated diagnostics page.</span>
+          </button>
+          <button class="dir-btn" data-dir="d4">
+            <strong>D4 — State-first banners</strong>
+            <span>Still working / feature disabled / actionable errors.</span>
+          </button>
+          <button class="dir-btn" data-dir="d5">
+            <strong>D5 — Preview/WOPI clarity</strong>
+            <span>Eligible files; explicit enabled/healthy; no ambiguity.</span>
+          </button>
+          <button class="dir-btn" data-dir="d6">
+            <strong>D6 — Mount secrets UX</strong>
+            <span>Secret ref only; validate/refresh; no-leak.</span>
+          </button>
+          <button class="dir-btn" data-dir="d7">
+            <strong>D7 — Extra-dense explorer</strong>
+            <span>More compact rows; same patterns.</span>
+          </button>
+          <button class="dir-btn" data-dir="d8">
+            <strong>D8 — Balanced diagnostics</strong>
+            <span>Cards + runbook guidance; proxy-agnostic contracts.</span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="viewer">
+        <div class="topbar">
+          <div class="note">
+            Open this file in a browser and switch directions on the left.<br />
+            Each direction keeps the same tokens, but explores layout/placement/state patterns.
+          </div>
+          <div class="note">
+            Tip: look for <strong>context-preserving</strong>, <strong>state clarity</strong>, and <strong>operator diagnosability</strong>.
+          </div>
+        </div>
+
+        <!-- D1 -->
+        <section class="direction active" id="d1">
+          <p class="desc">Baseline explorer: dense, anchored, and predictable. Upload status shown as a non-blocking toast.</p>
+          <div class="frame">
+            <div class="app-header">
+              <div class="logo"><span class="logo-dot"></span> Drive</div>
+              <div class="crumbs"><span>Workspace</span> › <strong>Finance</strong> › <span>2026</span></div>
+              <div class="hdr-actions">
+                <span class="pill">Search</span>
+                <span class="pill">Help</span>
+                <span class="pill primary">User</span>
+              </div>
+            </div>
+            <div class="layout">
+              <div class="panel">
+                <div class="tree">
+                  <h3>Workspaces</h3>
+                  <div class="node active"><span class="name">Finance</span><span class="badge">12</span></div>
+                  <div class="node"><span class="name">Shared</span><span class="badge">4</span></div>
+                  <div class="node"><span class="name">Public</span><span class="badge">1</span></div>
+                  <div class="node"><span class="name">Trash</span><span class="badge">3</span></div>
+                </div>
+              </div>
+              <div class="main">
+                <div class="toolbar">
+                  <div>
+                    <button class="btn primary">Upload</button>
+                    <button class="btn">New folder</button>
+                    <button class="btn">Move</button>
+                  </div>
+                  <div class="status ok"><span class="dot"></span> Ready</div>
+                </div>
+                <table>
+                  <thead>
+                    <tr><th>Name</th><th>Modified</th><th>Size</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>📁 2025</td><td>Yesterday</td><td>—</td></tr>
+                    <tr class="sel"><td>📄 Budget-Q1.xlsx</td><td>2h ago</td><td>248 KB</td></tr>
+                    <tr><td>📄 Report.pdf</td><td>Mon</td><td>2.3 MB</td></tr>
+                    <tr><td>📄 Notes.txt</td><td>Feb 1</td><td>8 KB</td></tr>
+                  </tbody>
+                </table>
+                <div class="toast" aria-label="Upload toast (example)">
+                  <div class="row"><strong>Uploading 2 files…</strong><span>Queue visible even if you navigate</span></div>
+                  <div class="bar"><div></div></div>
+                </div>
+              </div>
+              <div class="panel right">
+                <div class="rightpanel">
+                  <h3>Details</h3>
+                  <div class="card">
+                    <div class="title">Budget-Q1.xlsx</div>
+                    <div class="sub">Eligible actions shown only when available.</div>
+                    <div class="kvs">
+                      <div class="kv"><span>Preview</span><code>Eligible</code></div>
+                      <div class="kv"><span>WOPI</span><code>Enabled & healthy</code></div>
+                      <div class="kv"><span>Share</span><code>Restricted</code></div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="title">Share link</div>
+                    <div class="sub">Clear modes + copy action (no dead buttons).</div>
+                    <div class="kvs">
+                      <div class="kv"><span>Mode</span><code>Restricted</code></div>
+                      <div class="kv"><span>Copy link</span><code>Action</code></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- D2 -->
+        <section class="direction" id="d2">
+          <p class="desc">Diagnostics as a right-panel mode: non-invasive, capability-driven, and aligned with explorer mental model.</p>
+          <div class="frame dir-balanced">
+            <div class="app-header">
+              <div class="logo"><span class="logo-dot"></span> Drive</div>
+              <div class="crumbs"><span>Workspace</span> › <strong>Finance</strong> › <span>2026</span></div>
+              <div class="hdr-actions">
+                <span class="pill">Search</span>
+                <span class="pill primary">Diagnostics</span>
+              </div>
+            </div>
+            <div class="layout">
+              <div class="panel"><div class="tree"><h3>Workspaces</h3><div class="node active"><span class="name">Finance</span><span class="badge">12</span></div><div class="node"><span class="name">Mounts</span><span class="badge">1</span></div></div></div>
+              <div class="main">
+                <div class="banner">
+                  <strong>Operator Diagnostics</strong> — surfaces INTERNAL/PROXY vs EXTERNAL/BROWSER audiences with safe evidence only.
+                  <div class="actions">
+                    <button class="btn primary">Run quick diagnostics</button>
+                    <button class="btn">Export support bundle</button>
+                  </div>
+                </div>
+                <table>
+                  <thead><tr><th>Name</th><th>Modified</th><th>Size</th></tr></thead>
+                  <tbody>
+                    <tr><td>📄 Report.pdf</td><td>Mon</td><td>2.3 MB</td></tr>
+                    <tr class="sel"><td>📄 Budget-Q1.xlsx</td><td>2h ago</td><td>248 KB</td></tr>
+                    <tr><td>📄 Notes.txt</td><td>Feb 1</td><td>8 KB</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="panel right">
+                <div class="rightpanel">
+                  <h3>Storage & Proxy Health</h3>
+                  <div class="card">
+                    <div class="title">S3 INTERNAL/PROXY</div>
+                    <div class="sub">Signed host invariant; safe evidence on failure.</div>
+                    <div class="kvs">
+                      <div class="kv"><span>Status</span><span class="status ok"><span class="dot"></span> Pass</span></div>
+                      <div class="kv"><span>failure_class</span><code>—</code></div>
+                      <div class="kv"><span>request_id</span><code>abc123…</code></div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="title">S3 EXTERNAL/BROWSER</div>
+                    <div class="sub">Presigned flow; public host expectations.</div>
+                    <div class="kvs">
+                      <div class="kv"><span>Status</span><span class="status warn"><span class="dot"></span> Degraded</span></div>
+                      <div class="kv"><span>failure_class</span><code>s3.audience.mismatch</code></div>
+                      <div class="kv"><span>next_action</span><code>Check edge contract</code></div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="title">/media edge contract</div>
+                    <div class="sub">Proxy-agnostic guidance: required behaviors, not one proxy.</div>
+                    <div class="kvs">
+                      <div class="kv"><span>auth subrequest</span><code>OK</code></div>
+                      <div class="kv"><span>SigV4 headers</span><code>Forwarded</code></div>
+                      <div class="kv"><span>STS token</span><code>Optional</code></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- D3 -->
+        <section class="direction" id="d3">
+          <p class="desc">Dedicated “Settings/Diagnostics” route: scalable, clearer mental separation, still aligned with existing tokens/patterns.</p>
+          <div class="frame dir-route">
+            <div class="app-header">
+              <div class="logo"><span class="logo-dot"></span> Drive</div>
+              <div class="crumbs"><strong>Settings</strong> › <span>Diagnostics</span></div>
+              <div class="hdr-actions">
+                <span class="pill">Help</span>
+                <span class="pill primary">Export bundle</span>
+              </div>
+            </div>
+            <div class="layout">
+              <div class="main">
+                <div class="banner">
+                  <strong>Storage & Proxy Health</strong> — safe evidence only (no-leak) and audience-aware (INTERNAL/PROXY vs EXTERNAL/BROWSER).
+                  <div class="actions">
+                    <button class="btn primary">Run quick diagnostics</button>
+                    <button class="btn">Open runbook</button>
+                  </div>
+                </div>
+                <div class="diag-grid">
+                  <div class="card">
+                    <div class="title">S3 INTERNAL/PROXY</div>
+                    <div class="sub">Expected signed_host matches used host.</div>
+                    <div class="kvs">
+                      <div class="kv"><span>Status</span><span class="status ok"><span class="dot"></span> Pass</span></div>
+                      <div class="kv"><span>request_id</span><code>9f…</code></div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="title">S3 EXTERNAL/BROWSER</div>
+                    <div class="sub">Presign + PUT check.</div>
+                    <div class="kvs">
+                      <div class="kv"><span>Status</span><span class="status bad"><span class="dot"></span> Fail</span></div>
+                      <div class="kv"><span>failure_class</span><code>s3.presign.signature_mismatch</code></div>
+                      <div class="kv"><span>next_action</span><code>Verify edge host replacement</code></div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="title">/media edge contract</div>
+                    <div class="sub">Guidance describes required behaviors; implementation is proxy-agnostic.</div>
+                    <div class="kvs">
+                      <div class="kv"><span>auth_request</span><code>OK</code></div>
+                      <div class="kv"><span>SigV4 headers</span><code>Missing</code></div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="title">Mounts health</div>
+                    <div class="sub">SMB gateway connectivity status.</div>
+                    <div class="kvs">
+                      <div class="kv"><span>Status</span><span class="status warn"><span class="dot"></span> Degraded</span></div>
+                      <div class="kv"><span>failure_class</span><code>mount.smb.auth_failed</code></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- D4 -->
+        <section class="direction" id="d4">
+          <p class="desc">State-first direction: banners encode “still working”, “feature not enabled”, and actionable errors without changing the visual system.</p>
+          <div class="frame">
+            <div class="app-header">
+              <div class="logo"><span class="logo-dot"></span> Drive</div>
+              <div class="crumbs"><span>Workspace</span> › <strong>Finance</strong> › <span>2026</span></div>
+              <div class="hdr-actions">
+                <span class="pill">Search</span>
+                <span class="pill primary">Status</span>
+              </div>
+            </div>
+            <div class="layout">
+              <div class="panel"><div class="tree"><h3>Workspaces</h3><div class="node active"><span class="name">Finance</span><span class="badge">12</span></div><div class="node"><span class="name">Mounts</span><span class="badge">1</span></div></div></div>
+              <div class="main">
+                <div class="banner">
+                  <strong>Still working…</strong> Preview is taking longer than expected.<br />
+                  You can keep browsing. If this persists: retry or contact admin (no-leak diagnostics available).
+                  <div class="actions">
+                    <button class="btn primary">Retry</button>
+                    <button class="btn">Contact admin</button>
+                  </div>
+                </div>
+                <div class="banner">
+                  <strong>Feature not enabled</strong> — WOPI is disabled or unhealthy for this backend.
+                  <div class="actions">
+                    <button class="btn primary">Open runbook</button>
+                    <button class="btn">Learn more</button>
+                  </div>
+                </div>
+                <table>
+                  <thead><tr><th>Name</th><th>Modified</th><th>Size</th></tr></thead>
+                  <tbody>
+                    <tr><td>📄 Report.pdf</td><td>Mon</td><td>2.3 MB</td></tr>
+                    <tr class="sel"><td>📄 Budget-Q1.xlsx</td><td>2h ago</td><td>248 KB</td></tr>
+                  </tbody>
+                </table>
+                <div class="toast">
+                  <div class="row"><strong>Upload failed</strong><span>Actionable next step; no sensitive info</span></div>
+                  <div class="kvs">
+                    <div class="kv"><span>Reason</span><code>network_interrupted</code></div>
+                    <div class="kv"><span>Next</span><code>Retry upload</code></div>
+                  </div>
+                </div>
+              </div>
+              <div class="panel right"><div class="rightpanel"><h3>Details</h3><div class="card"><div class="title">Budget-Q1.xlsx</div><div class="sub">Explicit states; no ambiguity.</div></div></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- D5 -->
+        <section class="direction" id="d5">
+          <p class="desc">Preview/WOPI clarity: eligibility, permissions, and “enabled & healthy” are explicit; no indefinite loading.</p>
+          <div class="frame">
+            <div class="app-header">
+              <div class="logo"><span class="logo-dot"></span> Drive</div>
+              <div class="crumbs"><span>Workspace</span> › <strong>Finance</strong> › <span>2026</span></div>
+              <div class="hdr-actions">
+                <span class="pill">Search</span>
+                <span class="pill primary">Preview</span>
+              </div>
+            </div>
+            <div class="layout">
+              <div class="panel"><div class="tree"><h3>Workspaces</h3><div class="node active"><span class="name">Finance</span><span class="badge">12</span></div></div></div>
+              <div class="main">
+                <div class="banner">
+                  <strong>Opening in Office…</strong> If this takes too long, you can retry or download the file.
+                  <div class="actions">
+                    <button class="btn primary">Retry</button>
+                    <button class="btn">Download</button>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="title">Eligibility & Status</div>
+                  <div class="kvs">
+                    <div class="kv"><span>File type</span><code>Eligible</code></div>
+                    <div class="kv"><span>Permissions</span><code>Can edit</code></div>
+                    <div class="kv"><span>WOPI integration</span><code>Enabled & healthy</code></div>
+                  </div>
+                  <div class="wopi">
+                    <div>
+                      <strong>WOPI iframe placeholder</strong><br />
+                      Time-bounded operation → “still working / retry / contact admin”
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="panel right">
+                <div class="rightpanel">
+                  <h3>Next actions</h3>
+                  <div class="card"><div class="title">Share</div><div class="sub">Shown only if permitted.</div></div>
+                  <div class="card"><div class="title">Download</div><div class="sub">Always available fallback.</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- D6 -->
+        <section class="direction dir-mount" id="d6">
+          <p class="desc">Mount secrets UX: secret reference only, validate/refresh actions, and explicit “configured” states (no-leak).</p>
+          <div class="frame">
+            <div class="app-header">
+              <div class="logo"><span class="logo-dot"></span> Drive</div>
+              <div class="crumbs"><span>Settings</span> › <strong>Mounts</strong> › <span>SMB — FinanceShare</span></div>
+              <div class="hdr-actions">
+                <span class="pill">Help</span>
+                <span class="pill primary">Validate</span>
+              </div>
+            </div>
+            <div class="layout">
+              <div class="panel"><div class="tree"><h3>Settings</h3><div class="node active"><span class="name">Mounts</span><span class="badge">1</span></div><div class="node"><span class="name">Diagnostics</span><span class="badge">—</span></div></div></div>
+              <div class="main">
+                <div class="card">
+                  <div class="title">Connection (non-secret)</div>
+                  <div class="kvs">
+                    <div class="kv"><span>Server</span><code>smb.example.org</code></div>
+                    <div class="kv"><span>Share</span><code>finance</code></div>
+                    <div class="kv"><span>Base path</span><code>/2026</code></div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="title">Secrets</div>
+                  <div class="sub">Never reveal the password; show reference + status only.</div>
+                  <div class="kvs">
+                    <div class="field">
+                      <div>
+                        <div><strong>password_secret_ref</strong></div>
+                        <div class="sub">Stored in infra secret manager</div>
+                      </div>
+                      <div class="state"><span class="dot"></span><code>configured</code></div>
+                    </div>
+                    <div class="kv"><span>Last refresh</span><code>2026-02-04 00:12Z</code></div>
+                    <div class="kv"><span>Last successful auth</span><code>2026-02-04 00:13Z</code></div>
+                  </div>
+                  <div class="actions" style="margin-top:10px; display:flex; gap:8px;">
+                    <button class="btn primary">Validate connection</button>
+                    <button class="btn">Refresh / Re-check</button>
+                  </div>
+                </div>
+              </div>
+              <div class="panel right">
+                <div class="rightpanel">
+                  <h3>Result</h3>
+                  <div class="card">
+                    <div class="title">Validation</div>
+                    <div class="kvs">
+                      <div class="kv"><span>Status</span><span class="status ok"><span class="dot"></span> Pass</span></div>
+                      <div class="kv"><span>failure_class</span><code>—</code></div>
+                      <div class="kv"><span>next_action</span><code>—</code></div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="title">No-leak policy</div>
+                    <div class="sub">Outputs show safe evidence only.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- D7 -->
+        <section class="direction" id="d7">
+          <p class="desc">Extra-dense explorer: same patterns, tighter row spacing for heavy daily use (desktop-first).</p>
+          <div class="frame dir-dense">
+            <div class="app-header">
+              <div class="logo"><span class="logo-dot"></span> Drive</div>
+              <div class="crumbs"><span>Workspace</span> › <strong>Finance</strong> › <span>2026</span></div>
+              <div class="hdr-actions">
+                <span class="pill">Search</span>
+                <span class="pill primary">Dense</span>
+              </div>
+            </div>
+            <div class="layout">
+              <div class="panel"><div class="tree"><h3>Workspaces</h3><div class="node active"><span class="name">Finance</span><span class="badge">12</span></div><div class="node"><span class="name">Shared</span><span class="badge">4</span></div></div></div>
+              <div class="main">
+                <div class="toolbar">
+                  <div>
+                    <button class="btn primary">Upload</button>
+                    <button class="btn">New folder</button>
+                  </div>
+                  <div class="status ok"><span class="dot"></span> Ready</div>
+                </div>
+                <table>
+                  <thead><tr><th>Name</th><th>Modified</th><th>Size</th></tr></thead>
+                  <tbody>
+                    <tr><td>📁 2025</td><td>Yesterday</td><td>—</td></tr>
+                    <tr class="sel"><td>📄 Budget-Q1.xlsx</td><td>2h ago</td><td>248 KB</td></tr>
+                    <tr><td>📄 Report.pdf</td><td>Mon</td><td>2.3 MB</td></tr>
+                    <tr><td>📄 Notes.txt</td><td>Feb 1</td><td>8 KB</td></tr>
+                    <tr><td>📄 Invoices.csv</td><td>Jan 30</td><td>88 KB</td></tr>
+                    <tr><td>📄 Payroll.xlsx</td><td>Jan 28</td><td>412 KB</td></tr>
+                  </tbody>
+                </table>
+                <div class="toast">
+                  <div class="row"><strong>Uploading…</strong><span>Visible across folder navigation</span></div>
+                  <div class="bar"><div style="width:34%"></div></div>
+                </div>
+              </div>
+              <div class="panel right"><div class="rightpanel"><h3>Details</h3><div class="card"><div class="title">Budget-Q1.xlsx</div><div class="sub">Dense details panel.</div></div></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- D8 -->
+        <section class="direction" id="d8">
+          <p class="desc">Balanced diagnostics: readable cards + proxy-agnostic runbook guidance, within existing tokens.</p>
+          <div class="frame dir-route">
+            <div class="app-header">
+              <div class="logo"><span class="logo-dot"></span> Drive</div>
+              <div class="crumbs"><strong>Diagnostics</strong> › <span>Storage & Proxy Health</span></div>
+              <div class="hdr-actions">
+                <span class="pill">Help</span>
+                <span class="pill primary">Run</span>
+                <span class="pill">Export</span>
+              </div>
+            </div>
+            <div class="layout">
+              <div class="main">
+                <div class="banner">
+                  <strong>Runbook-style guidance (proxy-agnostic)</strong><br />
+                  Guidance describes required edge contracts (media auth request, headers propagation, public URL invariants), not a single reverse proxy.
+                </div>
+                <div class="diag-grid">
+                  <div class="card">
+                    <div class="title">Audience: INTERNAL/PROXY</div>
+                    <div class="sub">Signed host must match used host; safe evidence only.</div>
+                    <div class="kvs">
+                      <div class="kv"><span>Status</span><span class="status ok"><span class="dot"></span> Pass</span></div>
+                      <div class="kv"><span>request_id</span><code>aa…</code></div>
+                      <div class="kv"><span>hash</span><code>sha256:…</code></div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="title">Audience: EXTERNAL/BROWSER</div>
+                    <div class="sub">Presigned PUT: host/origin must be consistent.</div>
+                    <div class="kvs">
+                      <div class="kv"><span>Status</span><span class="status warn"><span class="dot"></span> Degraded</span></div>
+                      <div class="kv"><span>failure_class</span><code>presign.host_mismatch</code></div>
+                      <div class="kv"><span>next_action</span><code>Verify DRIVE_PUBLIC_URL mapping</code></div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="title">Mount share semantics</div>
+                    <div class="sub">410 means token valid but target moved/deleted out-of-band.</div>
+                    <div class="kvs">
+                      <div class="kv"><span>404</span><code>invalid token</code></div>
+                      <div class="kv"><span>410</span><code>target missing</code></div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="title">No infinite loading</div>
+                    <div class="sub">Long-running operations degrade into “still working / retry / contact admin”.</div>
+                    <div class="kvs">
+                      <div class="kv"><span>UI state</span><code>time-bounded</code></div>
+                      <div class="kv"><span>support bundle</span><code>no-leak</code></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const buttons = Array.from(document.querySelectorAll('.dir-btn'));
+      const sections = Array.from(document.querySelectorAll('.direction'));
+      const select = (id) => {
+        for (const btn of buttons) btn.setAttribute('aria-current', btn.dataset.dir === id ? 'true' : 'false');
+        for (const sec of sections) sec.classList.toggle('active', sec.id === id);
+        try { history.replaceState({}, '', '#' + id); } catch {}
+      };
+      for (const btn of buttons) btn.addEventListener('click', () => select(btn.dataset.dir));
+      const initial = (location.hash || '#d1').slice(1);
+      if (sections.some(s => s.id === initial)) select(initial);
+    </script>
+  </body>
+</html>
+

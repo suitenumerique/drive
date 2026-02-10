@@ -28,7 +28,7 @@ AWS_S3_SECRET_ACCESS_KEY=password
 AWS_S3_REGION_NAME=us-east-1
 AWS_S3_SIGNATURE_VERSION=s3v4
 AWS_S3_DOMAIN_REPLACE=http://localhost:9000
-AWS_S3_ENDPOINT_URL=http://minio:9000
+AWS_S3_ENDPOINT_URL=http://seaweedfs-s3:8333
 # To use with ds-proxy
 # AWS_S3_DOMAIN_REPLACE=http://localhost:4444/upstream
 # AWS_S3_ENDPOINT_URL=http://ds-proxy:4444/upstream
