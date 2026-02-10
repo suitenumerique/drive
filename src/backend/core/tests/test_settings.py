@@ -175,4 +175,73 @@ def test_oidc_redirect_allowed_hosts_rejects_http_in_https_only_posture():
         TestSettings().post_setup()
 
     assert "Invalid OIDC_REDIRECT_ALLOWED_HOSTS configuration." in str(excinfo.value)
-    assert "failure_class=config.public_url.https_required" in str(excinfo.value)
+    assert "failure_class=config.allowlist.origin.https_required" in str(excinfo.value)
+
+
+def test_split_allowlists_derive_and_merge_into_consumers():
+    """Canonical values from DRIVE_PUBLIC_URL must be included and additions merged."""
+
+    class TestSettings(Base):
+        """Fake test settings."""
+
+        DEBUG = True
+        SECURE_SSL_REDIRECT = False
+        DRIVE_ALLOW_INSECURE_HTTP = True
+        DRIVE_PUBLIC_URL = "http://drive.example.com"
+
+        DRIVE_ALLOWED_REDIRECT_URIS = ["http://other.example.com/callback"]
+        DRIVE_ALLOWED_ORIGINS = ["http://sdk.example.com"]
+        DRIVE_ALLOWED_HOSTS = ["extra-host.example.com:8443"]
+
+        OIDC_REDIRECT_ALLOWED_HOSTS = [
+            "http://legacy.example.com",
+            "legacy2.example.com:9443",
+        ]
+        SDK_CORS_ALLOWED_ORIGINS = ["http://legacy-origin.example.com"]
+
+        WOPI_CLIENTS = []
+        WOPI_SRC_BASE_URL = None
+
+    TestSettings().post_setup()
+
+    assert TestSettings.OIDC_REDIRECT_ALLOWED_HOSTS == [
+        "drive.example.com",
+        "extra-host.example.com:8443",
+        "legacy.example.com",
+        "legacy2.example.com:9443",
+        "other.example.com",
+    ]
+    assert TestSettings.SDK_CORS_ALLOWED_ORIGINS == [
+        "http://drive.example.com",
+        "http://legacy-origin.example.com",
+        "http://sdk.example.com",
+    ]
+
+
+def test_split_allowlists_fail_fast_no_leak_on_bad_redirect_uri():
+    """Invalid allowlist entries should fail fast without leaking the raw value."""
+
+    class TestSettings(Base):
+        """Fake test settings."""
+
+        DEBUG = True
+        SECURE_SSL_REDIRECT = False
+        DRIVE_ALLOW_INSECURE_HTTP = True
+        DRIVE_PUBLIC_URL = "http://drive.example.com"
+
+        DRIVE_ALLOWED_REDIRECT_URIS = ["http://other.example.com/cb?token=super-secret"]
+
+        OIDC_REDIRECT_ALLOWED_HOSTS = []
+        SDK_CORS_ALLOWED_ORIGINS = []
+
+        WOPI_CLIENTS = []
+        WOPI_SRC_BASE_URL = None
+
+    with pytest.raises(ValueError) as excinfo:
+        TestSettings().post_setup()
+
+    message = str(excinfo.value)
+    assert "Invalid DRIVE_ALLOWED_REDIRECT_URIS configuration." in message
+    assert "failure_class=config.allowlist.redirect_uri.invalid" in message
+    assert "super-secret" not in message
+    assert "token=" not in message

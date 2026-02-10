@@ -33,6 +33,9 @@ This document lists all configurable environment variables for the Drive applica
 | `DB_PORT` | Database port | `5432` |
 | `DB_USER` | Database user | `dinum` |
 | `DRIVE_ALLOW_INSECURE_HTTP` | Dev-only override to allow `http://` on public-surface base URLs (only when `DEBUG=True`). | `False` |
+| `DRIVE_ALLOWED_HOSTS` | Additional allowed hosts (hostnames only) for redirect safety checks (no wildcards). Canonical host derived from `DRIVE_PUBLIC_URL` is always included when set. | `[]` |
+| `DRIVE_ALLOWED_ORIGINS` | Additional allowed origins (scheme://host[:port]) for SDK relay CORS (no wildcards). Canonical origin derived from `DRIVE_PUBLIC_URL` is always included when set. | `[]` |
+| `DRIVE_ALLOWED_REDIRECT_URIS` | Additional allowed redirect targets (absolute URIs incl. path) used to derive allowed hosts (no wildcards). Canonical root URI derived from `DRIVE_PUBLIC_URL` is always included when set. | `[]` |
 | `DRIVE_PUBLIC_URL` | Canonical public base URL (scheme + host only). Validated and normalized (trailing slash removed). | `None` |
 | `EMAIL_BACKEND` | Email backend for sending emails | `django.core.mail.backends.smtp.EmailBackend` |
 | `EMAIL_BRAND_NAME` | Brand name for email templates | `None` |
@@ -144,3 +147,24 @@ Notes:
 - In production posture, public surfaces are **HTTPS-only** (no mixed TLS modes).
 - In production posture, `http://` is rejected even if `DRIVE_ALLOW_INSECURE_HTTP=true`.
 - The same posture applies to other public-surface base URLs such as `WOPI_SRC_BASE_URL` and any URL-form entries in `OIDC_REDIRECT_ALLOWED_HOSTS`.
+
+## Split allowlists (derived from `DRIVE_PUBLIC_URL`)
+
+When `DRIVE_PUBLIC_URL` is set, Drive always derives and includes canonical defaults:
+
+- Canonical origin: `DRIVE_PUBLIC_URL` (origin form, no trailing slash)
+- Canonical host: host (and port if present) extracted from `DRIVE_PUBLIC_URL`
+- Canonical redirect URI: `DRIVE_PUBLIC_URL/` (root path)
+
+Operator additions are additive and validated deterministically (no wildcards):
+
+```bash
+# Redirect targets (absolute URIs incl. path). Used to derive allowed hosts for OIDC returnTo.
+DRIVE_ALLOWED_REDIRECT_URIS=https://extra.example.com/after-login
+
+# Explicit extra hosts for OIDC returnTo validation (hostnames only).
+DRIVE_ALLOWED_HOSTS=extra.example.com
+
+# SDK relay CORS origins (origin form only).
+DRIVE_ALLOWED_ORIGINS=https://sdk.example.com
+```

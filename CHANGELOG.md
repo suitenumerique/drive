@@ -26,6 +26,7 @@ and this project adheres to
 
 - 🔒️(backend) enforce HTTPS-only public surfaces in production
   (dev-only HTTP override)
+- 🔐(backend) derive split allowlists from DRIVE_PUBLIC_URL (no wildcards)
 
 ## [v0.12.0] - 2026-02-06
 

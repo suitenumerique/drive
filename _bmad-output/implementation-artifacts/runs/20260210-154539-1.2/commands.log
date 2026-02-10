@@ -1,0 +1,53 @@
+2026-02-10T15:45:39Z  make lint
+lint:ruff-format started…
+ Container drive-app-dev-run-5fdde276a337 Creating 
+ Container drive-app-dev-run-5fdde276a337 Created 
+🐳(entrypoint) creating user running in the container...
+🐳(entrypoint) running your command: ruff format .
+170 files left unchanged
+lint:ruff-check started…
+ Container drive-app-dev-run-ad76f20bd6f4 Creating 
+ Container drive-app-dev-run-ad76f20bd6f4 Created 
+🐳(entrypoint) creating user running in the container...
+🐳(entrypoint) running your command: ruff check . --fix
+All checks passed!
+lint:pylint started…
+bin/pylint --diff-only=origin/main
+🙋(user) ID: 0
+🐳(compose) project, file: '/root/Apoze/drive/compose.yaml'
+ Container drive-app-dev-run-159cb1581904 Creating 
+ Container drive-app-dev-run-159cb1581904 Created 
+🐳(entrypoint) creating user running in the container...
+🐳(entrypoint) running your command: pylint core/tests/test_settings.py drive/settings.py
+
+--------------------------------------------------------------------
+Your code has been rated at 10.00/10 (previous run: 10.00/10, +0.00)
+
+2026-02-10T15:45:57Z  docker compose run --rm --no-deps app-dev pytest core/tests/test_settings.py core/tests/test_public_url.py core/tests/test_allowlists.py -q
+ Container drive-app-dev-run-d28413d6abc5 Creating 
+ Container drive-app-dev-run-d28413d6abc5 Created 
+🐳(entrypoint) creating user running in the container...
+🐳(entrypoint) running your command: pytest core/tests/test_settings.py core/tests/test_public_url.py core/tests/test_allowlists.py -q
+============================= test session starts ==============================
+platform linux -- Python 3.13.9, pytest-9.0.2, pluggy-1.6.0
+django: version: 5.2.9, settings: drive.settings (from env), configuration: Development (from env)
+rootdir: /app
+configfile: pyproject.toml
+plugins: cov-7.0.0, django-4.11.1, xdist-3.8.0, pyfakefs-6.0.0, icdiff-0.9, Faker-38.2.0
+collected 28 items
+
+core/tests/test_settings.py ...........                                  [ 39%]
+core/tests/test_public_url.py ..........                                 [ 75%]
+core/tests/test_allowlists.py .......                                    [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/django/conf/__init__.py:190
+  /app/.venv/lib/python3.13/site-packages/django/conf/__init__.py:190: RemovedInDjango60Warning: The FORMS_URLFIELD_ASSUME_HTTPS transitional setting is deprecated.
+    warnings.warn(
+
+.venv/lib/python3.13/site-packages/_pytest/cacheprovider.py:475
+  /app/.venv/lib/python3.13/site-packages/_pytest/cacheprovider.py:475: PytestCacheWarning: cache could not write path /app/.pytest_cache/v/cache/nodeids: [Errno 13] Permission denied: '/app/.pytest_cache/v/cache/nodeids'
+    config.cache.set("cache/nodeids", sorted(self.cached_nodeids))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 28 passed, 2 warnings in 0.12s ========================

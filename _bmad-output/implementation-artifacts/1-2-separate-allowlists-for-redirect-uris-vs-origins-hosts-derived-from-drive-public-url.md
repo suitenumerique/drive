@@ -1,6 +1,6 @@
 # Story 1.2: Separate allowlists for redirect URIs vs origins/hosts (derived from `DRIVE_PUBLIC_URL`)
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -90,6 +90,28 @@ GPT-5.2 (Codex CLI)
 
 ### Debug Log References
 
+- `_bmad-output/implementation-artifacts/runs/20260210-154539-1.2/report.md`
+
 ### Completion Notes List
 
+- Mapped OIDC redirect validation: `mozilla_django_oidc.views.get_next_url()` validates the `returnTo` URL using `OIDC_REDIRECT_ALLOWED_HOSTS` (host-only) and `OIDC_REDIRECT_REQUIRE_HTTPS`.
+- Implemented split allowlists derived from `DRIVE_PUBLIC_URL` with deterministic validation/normalization and no wildcards:
+  - redirect targets: `DRIVE_ALLOWED_REDIRECT_URIS` (absolute URIs with path)
+  - SDK relay origins: `DRIVE_ALLOWED_ORIGINS` (origin form only)
+  - redirect hosts: `DRIVE_ALLOWED_HOSTS` (host[:port] only)
+- Canonical defaults derived from `DRIVE_PUBLIC_URL` are always included when set.
+- Wired computed allowlists into consumers in `Base.post_setup`:
+  - `OIDC_REDIRECT_ALLOWED_HOSTS` (hosts only; legacy URL-form entries supported)
+  - `SDK_CORS_ALLOWED_ORIGINS` (origins; legacy entries merged)
+- Added unit + integration tests and updated docs + changelog.
+
 ### File List
+
+- `src/backend/core/utils/allowlists.py`
+- `src/backend/drive/settings.py`
+- `src/backend/core/tests/test_allowlists.py`
+- `src/backend/core/tests/test_settings.py`
+- `docs/env.md`
+- `docs/failure-class-glossary.md`
+- `CHANGELOG.md`
+- `_bmad-output/implementation-artifacts/runs/20260210-154539-1.2/report.md`
