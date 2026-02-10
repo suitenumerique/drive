@@ -1,6 +1,6 @@
 # Story 2.1: Docker-first edge contract documentation + configuration validation + smoke checks
 
-Status: ready-for-dev
+Status: in-progress
 
 Story Key: `2-1-docker-first-edge-contract-documentation-configuration-validation-smoke-checks`
 Generated: 2026-02-08
@@ -184,8 +184,26 @@ GPT-5.2 (Codex CLI)
 
 ### Debug Log References
 
+- Run report: `_bmad-output/implementation-artifacts/runs/20260210-171951-2.1/report.md`
+
 ### Completion Notes List
 
-- Ultimate context engine analysis completed - comprehensive developer guide created
+- Implemented Docker-first self-host docs under `docs/selfhost/`.
+- Added deterministic `config_preflight` command for edge-related config + checklist.
+- Added targeted backend tests for preflight determinism and failure classes.
+- Updated Nginx reference configs to forward optional `X-Amz-Security-Token`.
+- Gates (lint/tests/smoke) are recorded as dev-owned and pending in the run report.
 
 ### File List
+
+- `docs/selfhost/README.md`
+- `docs/selfhost/edge-contract.md`
+- `docs/selfhost/smoke-checklist.md`
+- `docs/installation/README.md`
+- `src/backend/core/management/commands/config_preflight.py`
+- `src/backend/core/tests/commands/test_config_preflight.py`
+- `docs/failure-class-glossary.md`
+- `docker/files/development/etc/nginx/conf.d/default.conf`
+- `docker/files/production/etc/nginx/conf.d/default.conf`
+- `src/nginx/servers.conf.erb`
+- `CHANGELOG.md`

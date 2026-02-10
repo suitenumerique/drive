@@ -15,6 +15,10 @@ Each failure should also emit:
 
 - `config.public_url.invalid`
 - `config.public_url.https_required`
+- `config.s3.endpoint_url.missing`
+- `config.s3.endpoint_url.invalid`
+- `config.s3.domain_replace.invalid`
+- `config.s3.domain_replace.https_required`
 - `config.allowlist.redirect_uri.invalid`
 - `config.allowlist.redirect_uri.https_required`
 - `config.allowlist.redirect_uri.wildcard`

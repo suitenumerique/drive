@@ -2,7 +2,18 @@
 
 source "$(dirname "${BASH_SOURCE[0]}")/_config.sh"
 
+args=()
+for arg in "$@"; do
+    if [[ "$arg" == src/backend/* ]]; then
+        args+=("${arg#src/backend/}")
+    else
+        args+=("$arg")
+    fi
+done
+
 _dc_run \
     -e DJANGO_CONFIGURATION=Test \
+    -e WOPI_SRC_BASE_URL=https://app-dev:8000 \
+    -e OIDC_REDIRECT_ALLOWED_HOSTS=localhost:8083,localhost:3000 \
     app-dev \
-    pytest "$@"
+    pytest "${args[@]}"

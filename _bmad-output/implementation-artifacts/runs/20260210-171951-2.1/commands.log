@@ -1,0 +1,35 @@
+# Story 2.1 — commands log
+# Note: Per operator instruction, lint/tests/smoke are to be executed by a developer
+# and the results pasted into this report. This agent did not run them.
+
+# Suggested verification commands (DEV RUN):
+# make lint
+# make test-back
+# python src/backend/manage.py config_preflight
+# docker compose up -d  (infra smoke)
+2026-02-10T17:31:46Z  make lint
+2026-02-10T17:32:19Z  make lint
+2026-02-10T17:32:59Z  make lint
+2026-02-10T17:33:28Z  make test-back src/backend/core/tests/commands/test_config_preflight.py
+2026-02-10T17:35:22Z  make test-back src/backend/core/tests/commands/test_config_preflight.py
+2026-02-10T17:35:56Z  make test-back src/backend/core/tests/commands/test_config_preflight.py
+2026-02-10T17:36:22Z  make test-back src/backend/core/tests/commands/test_config_preflight.py
+2026-02-10T17:36:45Z  make test-back src/backend/core/tests/commands/test_config_preflight.py
+2026-02-10T17:37:00Z  docker compose run --rm --no-deps app-dev python manage.py config_preflight
+2026-02-10T17:37:13Z  docker compose up -d
+2026-02-10T17:38:35Z  df -h
+2026-02-10T17:38:35Z  docker system df
+2026-02-10T17:38:37Z  docker builder prune -af
+2026-02-10T17:38:41Z  docker system prune -af
+2026-02-10T17:38:43Z  docker system df
+2026-02-10T17:38:44Z  df -h
+2026-02-10T17:38:49Z  docker compose up -d
+2026-02-10T17:40:33Z  df -h
+2026-02-10T17:40:33Z  docker system df
+2026-02-10T17:40:34Z  docker volume prune -f
+2026-02-10T17:40:39Z  docker system prune -af
+2026-02-10T17:40:45Z  df -h
+2026-02-10T17:40:45Z  docker system df
+2026-02-10T17:40:50Z  docker compose up -d
+2026-02-10T17:44:18Z  docker compose up -d
+2026-02-10T17:44:23Z  docker compose ps
