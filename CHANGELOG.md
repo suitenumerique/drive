@@ -20,6 +20,7 @@ and this project adheres to
 
 - 🐛(backend) manage ole2 compound document format
 - ♻️(backend) increase user short_name field length
+- 🐛(docker) avoid downloading mime.types at build time (CI stability)
 
 ### Security
 
