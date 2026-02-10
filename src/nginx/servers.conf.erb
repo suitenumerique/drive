@@ -41,11 +41,13 @@ server {
         auth_request_set $authHeader $upstream_http_authorization;
         auth_request_set $authDate $upstream_http_x_amz_date;
         auth_request_set $authContentSha256 $upstream_http_x_amz_content_sha256;
+        auth_request_set $authSecurityToken $upstream_http_x_amz_security_token;
 
         # Pass specific headers from the auth response
         proxy_set_header Authorization $authHeader;
         proxy_set_header X-Amz-Date $authDate;
         proxy_set_header X-Amz-Content-SHA256 $authContentSha256;
+        proxy_set_header X-Amz-Security-Token $authSecurityToken;
 
         # Get resource from Object Storage
         proxy_pass <%= ENV["AWS_S3_BUCKET_INTERNAL_URL"] %>;
@@ -60,11 +62,13 @@ server {
         auth_request_set $authHeader $upstream_http_authorization;
         auth_request_set $authDate $upstream_http_x_amz_date;
         auth_request_set $authContentSha256 $upstream_http_x_amz_content_sha256;
+        auth_request_set $authSecurityToken $upstream_http_x_amz_security_token;
 
         # Pass specific headers from the auth response
         proxy_set_header Authorization $authHeader;
         proxy_set_header X-Amz-Date $authDate;
         proxy_set_header X-Amz-Content-SHA256 $authContentSha256;
+        proxy_set_header X-Amz-Security-Token $authSecurityToken;
 
         # Get resource from Object Storage
         proxy_pass <%= ENV["AWS_S3_BUCKET_INTERNAL_URL"] %>;

@@ -11,6 +11,8 @@ and this project adheres to
 ### Added
 
 - ✨(global) implement advanced shared management system
+- 📝(docs) add Docker-first self-host edge contract docs
+- ✨(backend) add deterministic config_preflight edge validations
 
 ### Removed
 

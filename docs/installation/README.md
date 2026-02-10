@@ -1,12 +1,19 @@
 # Installation
-If you want to install Drive you've come to the right place.
 
-For now we only have a documentation to install it on Kubernetes. We will more than happy to improve this documentation with other methods.
+Drive v1 is **Docker-first** for self-hosting on a single machine (Compose
+baseline).
 
-Feel free to make a PR to add ones that are not listed after 🙏
+Start here:
 
-## Kubernetes
-We (Drive maintainers) are only using the Kubernetes deployment method in production. We can only provide advanced support for this method.
-Please follow the instructions laid out [here](/docs/installation/kubernetes.md).
+- `docs/selfhost/README.md`
 
+## Kubernetes (reference-only)
+
+Kubernetes/Helm documentation and manifests remain available **as-is** as
+reference material. They are not the v1 baseline and are not hardened as part of
+the v1 scope.
+
+See:
+
+- `docs/installation/kubernetes.md`
 

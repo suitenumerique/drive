@@ -1,0 +1,9 @@
+# Story 2.1 — commands log
+# Note: Per operator instruction, lint/tests/smoke are to be executed by a developer
+# and the results pasted into this report. This agent did not run them.
+
+# Suggested verification commands (DEV RUN):
+# make lint
+# make test-back
+# python src/backend/manage.py config_preflight
+# docker compose up -d  (infra smoke)

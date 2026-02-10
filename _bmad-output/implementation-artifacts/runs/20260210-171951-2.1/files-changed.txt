@@ -1,0 +1,6 @@
+CHANGELOG.md
+docker/files/development/etc/nginx/conf.d/default.conf
+docker/files/production/etc/nginx/conf.d/default.conf
+docs/failure-class-glossary.md
+docs/installation/README.md
+src/nginx/servers.conf.erb
