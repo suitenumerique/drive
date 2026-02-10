@@ -23,7 +23,8 @@ and this project adheres to
 
 ### Security
 
-- 🔒️(backend) enforce HTTPS-only public surfaces in production (dev-only HTTP override)
+- 🔒️(backend) enforce HTTPS-only public surfaces in production
+  (dev-only HTTP override)
 
 ## [v0.12.0] - 2026-02-06
 
