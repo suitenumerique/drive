@@ -94,7 +94,9 @@ def _presigned_put_url_for_key(key_base: str, filename: str) -> str:
     return str(api_utils.generate_upload_policy(item_like))
 
 
-def _connect_url_for_presigned_url(connect_base_url: str, signed_url: str) -> tuple[str, str]:
+def _connect_url_for_presigned_url(
+    connect_base_url: str, signed_url: str
+) -> tuple[str, str]:
     signed_parts = urlsplit(signed_url)
     connect_parts = urlsplit(connect_base_url)
     connect_url = urlunsplit(
@@ -261,7 +263,9 @@ def run_ct_s3(
                             audience=constants.AUDIENCE_EXTERNAL_BROWSER,
                             ok=ok,
                             title=title,
-                            failure_class=None if ok else "s3.http.presigned_put_failed",
+                            failure_class=None
+                            if ok
+                            else "s3.http.presigned_put_failed",
                             next_action_hint=None
                             if ok
                             else "Check S3 endpoint, host signing, and required headers.",
@@ -420,7 +424,9 @@ def run_ct_s3(
     else:
         try:
             key = _make_key(run_id, check_id, "ct-s3-range.txt")
-            s3_client.put_object(Bucket=profile.bucket_name, Key=key, Body=b"0123456789")
+            s3_client.put_object(
+                Bucket=profile.bucket_name, Key=key, Body=b"0123456789"
+            )
 
             url, headers = _signed_get_headers_for_key(key)
             range_headers = dict(headers)
