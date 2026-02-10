@@ -65,9 +65,32 @@ So that I can deploy Drive behind Nginx (or replicate the same behavior in anoth
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
+
 ### Debug Log References
+
+_bmad-output/implementation-artifacts/runs/20260210-181553-2.2/report.md  
+_bmad-output/implementation-artifacts/runs/20260210-181553-2.2/commands.log  
+_bmad-output/implementation-artifacts/runs/20260210-181553-2.2/gates.md
 
 ### Completion Notes List
 
+- Aligned dev/prod Nginx reference config for `/media/` and `/media/preview/`
+  using `auth_request` to `/api/v1.0/items/media-auth/`.
+- Forwarded SigV4 headers from `media-auth` to the upstream S3 request:
+  `Authorization`, `X-Amz-Date`, `X-Amz-Content-SHA256`, and optional
+  `X-Amz-Security-Token` when present.
+- Enforced no-leak defaults: `/media-auth` is `internal` and `access_log` is off
+  for `/media*` and `/media-auth` locations.
+
 ### File List
 
+- docker/files/development/etc/nginx/conf.d/default.conf
+- docker/files/production/etc/nginx/conf.d/default.conf
+- src/nginx/servers.conf.erb
+- _bmad-output/implementation-artifacts/latest.txt
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+- _bmad-output/implementation-artifacts/runs/20260210-181553-2.2/report.md
+- _bmad-output/implementation-artifacts/runs/20260210-181553-2.2/commands.log
+- _bmad-output/implementation-artifacts/runs/20260210-181553-2.2/files-changed.txt
+- _bmad-output/implementation-artifacts/runs/20260210-181553-2.2/gates.md
