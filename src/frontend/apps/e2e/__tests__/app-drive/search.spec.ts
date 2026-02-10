@@ -19,7 +19,7 @@ test("Search somes items and shows them in the search modal", async ({
 
   // Expect no results before typing.
   let searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(0);
+  await expect(searchItems).toHaveCount(0);
 
   await input.fill("me");
 
@@ -108,7 +108,7 @@ test("Search folder from trash and cannot navigate to it", async ({ page }) => {
   await page.getByRole("option", { name: "Recycle bin" }).click();
 
   searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(1);
+  await expect(searchItems).toHaveCount(1, { timeout: 15000 });
 
   const button = page.getByRole("option", { name: "I am deleted" });
   await button.click();
@@ -145,7 +145,7 @@ test("Search a deleted file and click on it", async ({ page }) => {
   await page.getByRole("option", { name: "Recycle bin" }).click();
 
   let searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(1);
+  await expect(searchItems).toHaveCount(1, { timeout: 15000 });
 
   const button = page.getByRole("option", { name: "Resume" });
   await button.click();
