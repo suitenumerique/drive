@@ -29,6 +29,7 @@ and this project adheres to
 - 🔒️(backend) enforce HTTPS-only public surfaces in production
   (dev-only HTTP override)
 - 🔐(backend) derive split allowlists from DRIVE_PUBLIC_URL (no wildcards)
+- 🔒️(nginx) internalize /media-auth and forward SigV4 headers for /media*
 
 ## [v0.12.0] - 2026-02-06
 
