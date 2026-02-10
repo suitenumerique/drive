@@ -1,5 +1,4 @@
 # Gates — Story 11.3
 
-- `make lint`: PENDING (dev-owned)
-- `make test-back`: PENDING (dev-owned)
-
+- `make lint`: PASS
+- `make test-back src/backend/core/tests/test_ct_s3_evidence.py`: PASS

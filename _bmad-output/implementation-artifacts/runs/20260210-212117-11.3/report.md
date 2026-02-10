@@ -2,8 +2,8 @@
 
 - Run ID: `20260210-212117-11.3`
 - Date (UTC): 2026-02-10
-- Branch: `story/11.3-ct-s3-evidence-allowlist` (stacked on `story/11.1-ct-s3-runner`)
-- PR: #18 (draft)
+- Branch: `story/11.3-ct-s3-evidence-allowlist-v2` (base: `main`)
+- PR: #21
 
 ## Goal
 
@@ -19,12 +19,12 @@ schema at evidence creation time, with regression tests.
   without echoing sensitive values.
 - Documented the safe evidence rules in `docs/ct-s3.md`.
 
-## Verification (dev-owned)
+## Verification (agent-run)
 
-The developer (human) must run and record results (agent does not run lint/tests):
+- `docker compose up -d ...`: PASS (infra baseline up)
+- `make lint`: PASS
+- `make test-back src/backend/core/tests/test_ct_s3_evidence.py`: PASS
 
-- `make lint`
-- `make test-back`
-
-Record outcomes in `gates.md` after running.
-
+Details and full command transcript are in:
+- `_bmad-output/implementation-artifacts/runs/20260210-212117-11.3/commands.log`
+- `_bmad-output/implementation-artifacts/runs/20260210-212117-11.3/gates.md`
