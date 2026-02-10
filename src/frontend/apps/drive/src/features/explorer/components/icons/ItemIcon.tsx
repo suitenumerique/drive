@@ -7,7 +7,6 @@ import {
   getMimeCategory,
   ICONS,
 } from "../../utils/mimeTypes";
-import { itemIsWorkspace } from "@/features/drivers/utils";
 import {
   getContainerSize,
   getIconSize,
@@ -32,14 +31,6 @@ export const ItemIcon = ({
   type = "normal",
   isTree = false,
 }: ItemIconProps) => {
-  const isWorkspace = itemIsWorkspace(item) || item.main_workspace;
-
-  if (isWorkspace) {
-    return (
-      <WorkspaceIcon isMainWorkspace={item.main_workspace} iconSize={size} />
-    );
-  }
-
   const mimeIcon = getItemIcon(item, type, isTree);
   const imgSize = getIconSize(size);
 
@@ -55,7 +46,7 @@ export const ItemIcon = ({
   );
 };
 
-type WorkspaceIconProps = {
+export type WorkspaceIconProps = {
   isMainWorkspace?: boolean;
   iconSize?: IconSize;
 };
@@ -87,6 +78,24 @@ export const WorkspaceIcon = ({
     <div className="workspace-icon-container" style={style}>
       <Icon name="groups" size={iconSize} color="white" />
     </div>
+  );
+};
+
+type FolderIconProps = {
+  iconSize?: IconSize;
+};
+
+export const FolderIcon = ({ iconSize = IconSize.MEDIUM }: FolderIconProps) => {
+  const containerSize = useMemo(() => getContainerSize(iconSize), [iconSize]);
+
+  return (
+    <img
+      draggable="false"
+      src={folderIcon.src}
+      alt=""
+      width={containerSize}
+      height={containerSize}
+    />
   );
 };
 

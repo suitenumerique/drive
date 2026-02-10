@@ -380,16 +380,16 @@ wheels = [
 
 [[package]]
 name = "django"
-version = "5.2.9"
+version = "5.2.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asgiref" },
     { name = "sqlparse" },
     { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/eb/1c/188ce85ee380f714b704283013434976df8d3a2df8e735221a02605b6794/django-5.2.9.tar.gz", hash = "sha256:16b5ccfc5e8c27e6c0561af551d2ea32852d7352c67d452ae3e76b4f6b2ca495", size = 10848762, upload-time = "2025-12-02T14:01:08.418Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/17/f2/3e57ef696b95067e05ae206171e47a8e53b9c84eec56198671ef9eaa51a6/django-5.2.11.tar.gz", hash = "sha256:7f2d292ad8b9ee35e405d965fbbad293758b858c34bbf7f3df551aeeac6f02d3", size = 10885017, upload-time = "2026-02-03T13:52:50.554Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/17/b0/7f42bfc38b8f19b78546d47147e083ed06e12fc29c42da95655e0962c6c2/django-5.2.9-py3-none-any.whl", hash = "sha256:3a4ea88a70370557ab1930b332fd2887a9f48654261cdffda663fef5976bb00a", size = 8290652, upload-time = "2025-12-02T14:01:03.485Z" },
+    { url = "https://files.pythonhosted.org/packages/91/a7/2b112ab430575bf3135b8304ac372248500d99c352f777485f53fdb9537e/django-5.2.11-py3-none-any.whl", hash = "sha256:e7130df33ada9ab5e5e929bc19346a20fe383f5454acb2cc004508f242ee92c0", size = 8291375, upload-time = "2026-02-03T13:52:42.47Z" },
 ]
 
 [[package]]
@@ -493,11 +493,14 @@ all = [
 
 [[package]]
 name = "django-ltree"
-version = "0.5.3"
-source = { git = "https://github.com/mariocesar/django-ltree?rev=5d955bc82021a50c522ee524106f6709e3b414e4#5d955bc82021a50c522ee524106f6709e3b414e4" }
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
-    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3b/85/3eeac295d6aec12dbbc11f45e54c8777edd5771db00cfea4321f461940bd/django_ltree-0.6.0.tar.gz", hash = "sha256:8ed3d92eb4b1e2cc28082ec96a965cbc302c6ac9080778536d93b18861dfe122", size = 11728, upload-time = "2025-11-12T14:15:11.904Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/46/e7/871fc762dfaaedbb050f0f16b471e2270b36ca1a079a37ced8a3d66c2519/django_ltree-0.6.0-py3-none-any.whl", hash = "sha256:0eddae2400e853cb4c747e7251035c8022b2c6ed23c68e9f733a5a04ed543c1a", size = 9431, upload-time = "2025-11-12T14:15:10.819Z" },
 ]
 
 [[package]]
@@ -631,7 +634,7 @@ wheels = [
 
 [[package]]
 name = "drive"
-version = "0.11.1"
+version = "0.12.0"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },
@@ -709,7 +712,7 @@ requires-dist = [
     { name = "django-extensions", marker = "extra == 'dev'", specifier = "==4.1" },
     { name = "django-filter", specifier = "==25.2" },
     { name = "django-lasuite", extras = ["all"], specifier = "==0.0.23" },
-    { name = "django-ltree", git = "https://github.com/mariocesar/django-ltree?rev=5d955bc82021a50c522ee524106f6709e3b414e4" },
+    { name = "django-ltree", specifier = "==0.6.0" },
     { name = "django-parler", specifier = "==2.3" },
     { name = "django-redis", specifier = "==6.0.0" },
     { name = "django-storages", extras = ["s3"], specifier = "==1.14.6" },

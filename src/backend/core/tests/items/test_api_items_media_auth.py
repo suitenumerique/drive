@@ -12,6 +12,7 @@ from django.utils import timezone
 
 import pytest
 import requests
+from freezegun import freeze_time
 from rest_framework.test import APIClient
 
 from core import factories, models
@@ -33,9 +34,11 @@ def test_api_items_media_auth_anonymous_public():
         BytesIO(b"my prose"),
     )
     original_url = f"http://localhost/media/{item.file_key:s}"
-    response = APIClient().get(
-        "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
-    )
+    now = timezone.now()
+    with freeze_time(now):
+        response = APIClient().get(
+            "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
+        )
 
     assert response.status_code == 200
 
@@ -45,7 +48,7 @@ def test_api_items_media_auth_anonymous_public():
         "SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature="
         in authorization
     )
-    assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
+    assert response["X-Amz-Date"] == now.strftime("%Y%m%dT%H%M%SZ")
 
     s3_url = urlparse(settings.AWS_S3_ENDPOINT_URL)
     file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{item.file_key:s}"
@@ -103,9 +106,11 @@ def test_api_items_media_auth_authenticated_public_or_authenticated(reach):
     )
 
     original_url = f"http://localhost/media/{item.file_key:s}"
-    response = client.get(
-        "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
-    )
+    now = timezone.now()
+    with freeze_time(now):
+        response = client.get(
+            "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
+        )
 
     assert response.status_code == 200
 
@@ -115,7 +120,7 @@ def test_api_items_media_auth_authenticated_public_or_authenticated(reach):
         "SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature="
         in authorization
     )
-    assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
+    assert response["X-Amz-Date"] == now.strftime("%Y%m%dT%H%M%SZ")
 
     s3_url = urlparse(settings.AWS_S3_ENDPOINT_URL)
     file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{item.file_key:s}"
@@ -190,9 +195,11 @@ def test_api_items_media_auth_related(via, mock_user_teams, upload_state):
     )
 
     original_url = f"http://localhost/media/{item.file_key:s}"
-    response = client.get(
-        "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
-    )
+    now = timezone.now()
+    with freeze_time(now):
+        response = client.get(
+            "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
+        )
 
     assert response.status_code == 200
 
@@ -202,7 +209,7 @@ def test_api_items_media_auth_related(via, mock_user_teams, upload_state):
         "SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature="
         in authorization
     )
-    assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
+    assert response["X-Amz-Date"] == now.strftime("%Y%m%dT%H%M%SZ")
 
     s3_url = urlparse(settings.AWS_S3_ENDPOINT_URL)
     file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{item.file_key:s}"
@@ -246,9 +253,11 @@ def test_api_items_media_auth_related_filename_with_spaces():
     )
 
     original_url = quote(f"http://localhost/media/{key:s}")
-    response = client.get(
-        "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
-    )
+    now = timezone.now()
+    with freeze_time(now):
+        response = client.get(
+            "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
+        )
 
     assert response.status_code == 200
 
@@ -258,7 +267,7 @@ def test_api_items_media_auth_related_filename_with_spaces():
         "SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature="
         in authorization
     )
-    assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
+    assert response["X-Amz-Date"] == now.strftime("%Y%m%dT%H%M%SZ")
 
     s3_url = urlparse(settings.AWS_S3_ENDPOINT_URL)
     file_url = f"{settings.AWS_S3_ENDPOINT_URL:s}/drive-media-storage/{key:s}"
@@ -372,9 +381,11 @@ def test_api_items_media_auth_suspicious_item_creator():
     key = f"item/{item.pk!s}/{filename:s}"
 
     original_url = quote(f"http://localhost/media/{key:s}")
-    response = client.get(
-        "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
-    )
+    now = timezone.now()
+    with freeze_time(now):
+        response = client.get(
+            "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
+        )
 
     assert response.status_code == 200
 
@@ -384,7 +395,7 @@ def test_api_items_media_auth_suspicious_item_creator():
         "SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature="
         in authorization
     )
-    assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
+    assert response["X-Amz-Date"] == now.strftime("%Y%m%dT%H%M%SZ")
 
 
 def test_api_items_media_auth_filename_with_hash():
@@ -401,9 +412,11 @@ def test_api_items_media_auth_filename_with_hash():
         BytesIO(b"my prose"),
     )
     original_url = f"http://localhost/media/{quote(item.file_key)}"
-    response = APIClient().get(
-        "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
-    )
+    now = timezone.now()
+    with freeze_time(now):
+        response = APIClient().get(
+            "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
+        )
 
     assert response.status_code == 200
 
@@ -413,12 +426,13 @@ def test_api_items_media_auth_filename_with_hash():
         "SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature="
         in authorization
     )
-    assert response["X-Amz-Date"] == timezone.now().strftime("%Y%m%dT%H%M%SZ")
+    assert response["X-Amz-Date"] == now.strftime("%Y%m%dT%H%M%SZ")
 
     s3_url = urlparse(settings.AWS_S3_ENDPOINT_URL)
     file_url = (
         f"{settings.AWS_S3_ENDPOINT_URL}/drive-media-storage/{quote(item.file_key)}"
     )
+
     response = requests.get(
         file_url,
         headers={

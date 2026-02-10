@@ -12,7 +12,7 @@ import {
   useSdkContext,
 } from "@/features/layouts/components/sdk/SdkLayout";
 import { PickerFooter } from "@/features/sdk/SdkPickerFooter";
-import { Tooltip } from "@openfun/cunningham-react";
+import { Tooltip } from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
 
 function canPickItem(item: Item) {

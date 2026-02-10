@@ -10,6 +10,6 @@ import { Item } from "../drivers/types";
 export interface User {
   id: string;
   email: string;
-  language: string;
+  language: string | null;
   main_workspace: Item;
 }

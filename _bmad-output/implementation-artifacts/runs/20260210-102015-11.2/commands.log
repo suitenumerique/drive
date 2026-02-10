@@ -1,0 +1,8 @@
+2026-02-10T10:17:33Z  docker compose -f compose.yaml ps
+2026-02-10T10:17:38Z  docker compose -f compose.yaml up -d seaweedfs-s3 createbuckets
+2026-02-10T10:18:01Z  docker compose -f compose.yaml ps
+2026-02-10T10:18:06Z  docker compose -f compose.yaml ps -a
+2026-02-10T10:18:20Z  docker logs --tail 50 drive-createbuckets-1
+2026-02-10T10:18:26Z  curl -s -o /dev/null -w "HTTP %{http_code}\n" http://127.0.0.1:9000/
+2026-02-10T10:18:33Z  docker run --rm --network drive_default --entrypoint /bin/sh minio/mc -c "mc alias set drive http://seaweedfs-s3:8333 <redacted_access_key> <redacted_secret_key> >/dev/null && mc ls drive/"
+

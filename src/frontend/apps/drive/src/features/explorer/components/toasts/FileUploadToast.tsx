@@ -1,5 +1,5 @@
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
-import { Button } from "@openfun/cunningham-react";
+import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";

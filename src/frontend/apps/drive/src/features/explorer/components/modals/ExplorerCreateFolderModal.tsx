@@ -3,46 +3,47 @@ import {
   Modal,
   ModalProps,
   ModalSize,
-} from "@openfun/cunningham-react";
+} from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationCreateFolder } from "../../hooks/useMutations";
-import { itemToTreeItem } from "../GlobalExplorerContext";
-import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import { useRouter } from "next/router";
 
 type Inputs = {
   title: string;
 };
 
-export const ExplorerCreateFolderModal = (
-  props: Pick<ModalProps, "isOpen" | "onClose"> & {
-    parentId: string;
-  }
-) => {
+type ExplorerCreateFolderModalProps = Pick<ModalProps, "isOpen" | "onClose"> & {
+  parentId?: string;
+  canCreateChildren?: boolean;
+};
+
+export const ExplorerCreateFolderModal = ({
+  canCreateChildren = true,
+  ...props
+}: ExplorerCreateFolderModalProps) => {
   const { t } = useTranslation();
   const form = useForm<Inputs>();
   const createFolder = useMutationCreateFolder();
-  const treeContext = useTreeContext();
+  const router = useRouter();
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     form.reset();
     createFolder.mutate(
       {
         ...data,
-        parentId: props.parentId,
+        parentId: canCreateChildren ? props.parentId : undefined,
       },
       {
-        onSuccess: (data) => {
-          treeContext?.treeData.addChild(
-            props.parentId,
-            itemToTreeItem(data),
-            0
-          );
+        onSuccess: () => {
           form.reset();
           props.onClose();
+          if (!props.parentId || !canCreateChildren) {
+            router.push(`/explorer/items/my-files`);
+          }
         },
-      }
+      },
     );
   };
 
@@ -71,6 +72,7 @@ export const ExplorerCreateFolderModal = (
           <RhfInput
             label={t("explorer.actions.createFolder.modal.label")}
             fullWidth={true}
+            data-testid="create-folder-input"
             autoFocus={true}
             {...form.register("title")}
           />

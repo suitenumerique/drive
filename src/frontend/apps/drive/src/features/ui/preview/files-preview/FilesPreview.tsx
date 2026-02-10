@@ -4,7 +4,7 @@ import {
   removeFileExtension,
 } from "@/features/explorer/utils/mimeTypes";
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
-import { Button, Modal, ModalSize } from "@openfun/cunningham-react";
+import { Button, Modal, ModalSize } from "@gouvfr-lasuite/cunningham-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { ImageViewer } from "../image-viewer/ImageViewer";
 import { VideoPlayer } from "../video-player/VideoPlayer";
@@ -257,6 +257,9 @@ export const FilePreviewNav: React.FC<FilePreviewNavProps> = ({
   onPrevious,
   onNext,
 }) => {
+  if (totalFiles === 1) {
+    return null;
+  }
   return (
     <div className="file-preview-nav" data-testid="file-preview-nav">
       <Button

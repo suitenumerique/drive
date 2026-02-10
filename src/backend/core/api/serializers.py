@@ -10,7 +10,8 @@ from django.conf import settings
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
-from rest_framework import exceptions, serializers
+from lasuite.drf.models.choices import LinkReachChoices, get_equivalent_link_definition
+from rest_framework import serializers
 
 from core import models
 from core.api import utils
@@ -18,6 +19,30 @@ from core.storage import get_storage_compute_backend
 from wopi import utils as wopi_utils
 
 logger = logging.getLogger(__name__)
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """Serialize users."""
+
+    class Meta:
+        model = models.User
+        fields = [
+            "id",
+            "email",
+            "full_name",
+            "short_name",
+            "language",
+        ]
+        read_only_fields = ["id", "email", "full_name", "short_name"]
+
+
+class UserLightSerializer(UserSerializer):
+    """Serialize users with limited fields."""
+
+    class Meta:
+        model = models.User
+        fields = ["id", "full_name", "short_name"]
+        read_only_fields = ["id", "full_name", "short_name"]
 
 
 # pylint: disable=abstract-method
@@ -42,85 +67,121 @@ class UsageMetricSerializer(serializers.BaseSerializer):
         return output
 
 
-class UserLiteSerializer(serializers.ModelSerializer):
-    """Serialize users with limited fields."""
+class ItemLightSerializer(serializers.ModelSerializer):
+    """Minimal item serializer for nesting in item accesses."""
 
     class Meta:
-        model = models.User
-        fields = ["id", "full_name", "short_name"]
-        read_only_fields = ["id", "full_name", "short_name"]
+        model = models.Item
+        fields = ["id", "path", "depth"]
+        read_only_fields = ["id", "path", "depth"]
 
 
-class BaseAccessSerializer(serializers.ModelSerializer):
-    """Serialize template accesses."""
+class ItemAccessSerializer(serializers.ModelSerializer):
+    """Serialize item accesses."""
 
+    user_id = serializers.PrimaryKeyRelatedField(
+        queryset=models.User.objects.all(),
+        write_only=True,
+        source="user",
+        required=False,
+        allow_null=True,
+    )
+    user = UserSerializer(read_only=True)
+    team = serializers.CharField(required=False, allow_blank=True)
     abilities = serializers.SerializerMethodField(read_only=True)
+    max_role = serializers.SerializerMethodField(read_only=True)
+    item = ItemLightSerializer(read_only=True)
+    is_explicit = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = models.ItemAccess
+        resource_field_name = "item"
+        fields = [
+            "id",
+            "user",
+            "user_id",
+            "team",
+            "role",
+            "abilities",
+            "max_ancestors_role",
+            "max_ancestors_role_item_id",
+            "max_role",
+            "item",
+            "is_explicit",
+        ]
+        read_only_fields = [
+            "id",
+            "abilities",
+            "max_ancestors_role",
+            "max_ancestors_role_item_id",
+            "max_role",
+            "item",
+            "is_explicit",
+        ]
+
+    def get_abilities(self, instance):
+        """Return abilities of the logged-in user on the instance."""
+        request = self.context.get("request")
+        if request:
+            return instance.get_abilities(
+                request.user, is_explicit=self.get_is_explicit(instance)
+            )
+        return {}
+
+    def get_max_role(self, instance):
+        """Return max_ancestors_role if annotated; else None."""
+        return models.RoleChoices.max(
+            instance.max_ancestors_role,
+            instance.role,
+        )
+
+    def get_is_explicit(self, instance):
+        """Return whether the item access is explicit."""
+        item_id = self.context.get("resource_id")
+        if not item_id:
+            return False
+
+        return str(instance.item_id) == str(item_id)
 
     def update(self, instance, validated_data):
         """Make "user" field is readonly but only on update."""
         validated_data.pop("user", None)
+        validated_data.pop("team", None)
         return super().update(instance, validated_data)
 
-    def get_abilities(self, access) -> dict:
-        """Return abilities of the logged-in user on the instance."""
-        request = self.context.get("request")
-        if request:
-            return access.get_abilities(request.user)
-        return {}
 
-    def validate(self, attrs):
-        """
-        Check access rights specific to writing (create/update)
-        """
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        role = attrs.get("role")
+class ItemAccessLightSerializer(ItemAccessSerializer):
+    """Serialize item accesses with limited fields."""
 
-        # Update
-        if self.instance:
-            can_set_role_to = self.instance.get_abilities(user)["set_role_to"]
+    user = UserLightSerializer(read_only=True)
 
-            if role and role not in can_set_role_to:
-                message = (
-                    f"You are only allowed to set role to {', '.join(can_set_role_to)}"
-                    if can_set_role_to
-                    else "You are not allowed to set this role for this template."
-                )
-                raise exceptions.PermissionDenied(message)
-
-        # Create
-        else:
-            try:
-                resource_id = self.context["resource_id"]
-            except KeyError as exc:
-                raise exceptions.ValidationError(
-                    "You must set a resource ID in kwargs to create a new access."
-                ) from exc
-
-            if not self.Meta.model.objects.filter(  # pylint: disable=no-member
-                Q(user=user) | Q(team__in=user.teams),
-                role__in=[models.RoleChoices.OWNER, models.RoleChoices.ADMIN],
-                **{self.Meta.resource_field_name: resource_id},  # pylint: disable=no-member
-            ).exists():
-                raise exceptions.PermissionDenied(
-                    "You are not allowed to manage accesses for this resource."
-                )
-
-            if (
-                role == models.RoleChoices.OWNER
-                and not self.Meta.model.objects.filter(  # pylint: disable=no-member
-                    Q(user=user) | Q(team__in=user.teams),
-                    role=models.RoleChoices.OWNER,
-                    **{self.Meta.resource_field_name: resource_id},  # pylint: disable=no-member
-                ).exists()
-            ):
-                raise exceptions.PermissionDenied(
-                    "Only owners of a resource can assign other users as owners."
-                )
-
-        # pylint: disable=no-member
-        attrs[f"{self.Meta.resource_field_name}_id"] = self.context["resource_id"]
-        return attrs
+    class Meta:
+        model = models.ItemAccess
+        resource_field_name = "item"
+        fields = [
+            "id",
+            "item",
+            "user",
+            "team",
+            "role",
+            "abilities",
+            "max_ancestors_role",
+            "max_ancestors_role_item_id",
+            "max_role",
+            "is_explicit",
+        ]
+        read_only_fields = [
+            "id",
+            "item",
+            "user",
+            "team",
+            "role",
+            "abilities",
+            "max_ancestors_role",
+            "max_ancestors_role_item_id",
+            "max_role",
+            "is_explicit",
+        ]
 
 
 class ListItemSerializer(serializers.ModelSerializer):
@@ -129,10 +190,10 @@ class ListItemSerializer(serializers.ModelSerializer):
     abilities = serializers.SerializerMethodField(read_only=True)
     is_favorite = serializers.BooleanField(read_only=True)
     nb_accesses = serializers.IntegerField(read_only=True)
-    user_roles = serializers.SerializerMethodField()
+    user_role = serializers.SerializerMethodField()
     url = serializers.SerializerMethodField()
     url_preview = serializers.SerializerMethodField()
-    creator = UserLiteSerializer(read_only=True)
+    creator = UserLightSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
 
@@ -141,6 +202,10 @@ class ListItemSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "abilities",
+            "ancestors_link_reach",
+            "ancestors_link_role",
+            "computed_link_reach",
+            "computed_link_role",
             "created_at",
             "creator",
             "depth",
@@ -153,7 +218,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "path",
             "title",
             "updated_at",
-            "user_roles",
+            "user_role",
             "type",
             "upload_state",
             "url",
@@ -170,6 +235,10 @@ class ListItemSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "abilities",
+            "ancestors_link_reach",
+            "ancestors_link_role",
+            "computed_link_reach",
+            "computed_link_role",
             "created_at",
             "creator",
             "depth",
@@ -181,7 +250,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "numchild_folder",
             "path",
             "updated_at",
-            "user_roles",
+            "user_role",
             "type",
             "upload_state",
             "url",
@@ -195,29 +264,33 @@ class ListItemSerializer(serializers.ModelSerializer):
             "is_wopi_supported",
         ]
 
+    def to_representation(self, instance):
+        """Precompute once per instance"""
+        paths_links_mapping = self.context.get("paths_links_mapping")
+
+        if paths_links_mapping is not None:
+            links = paths_links_mapping.get(str(instance.path[:-1]), [])
+            instance.ancestors_link_definition = get_equivalent_link_definition(links)
+
+        return super().to_representation(instance)
+
     def get_abilities(self, item) -> dict:
         """Return abilities of the logged-in user on the instance."""
         request = self.context.get("request")
-        if request:
-            paths_links_mapping = self.context.get("paths_links_mapping", None)
-            # Retrieve ancestor links from paths_links_mapping (if provided)
-            ancestors_links = (
-                paths_links_mapping.get(str(item.path[:-1]))
-                if paths_links_mapping
-                else None
-            )
-            return item.get_abilities(request.user, ancestors_links=ancestors_links)
-        return {}
+        if not request:
+            return {}
 
-    def get_user_roles(self, item):
+        return item.get_abilities(request.user)
+
+    def get_user_role(self, item):
         """
         Return roles of the logged-in user for the current item,
         taking into account ancestors.
         """
         request = self.context.get("request")
         if request:
-            return item.get_roles(request.user)
-        return []
+            return item.get_role(request.user)
+        return None
 
     def get_url(self, item):
         """Return the URL of the item."""
@@ -257,19 +330,11 @@ class ListItemSerializer(serializers.ModelSerializer):
         )
 
 
-class SearchItemSerializer(ListItemSerializer):
-    """Serialize items for search."""
-
-    parents = ListItemSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = models.Item
-        fields = ListItemSerializer.Meta.fields + ["parents"]
-        read_only_fields = ListItemSerializer.Meta.read_only_fields + ["parents"]
-
-
-class ItemSerializer(ListItemSerializer):
-    """Serialize items with all fields for display in detail views."""
+class ListItemLightSerializer(ListItemSerializer):
+    """
+    Serialize items with limited fields to avoid N+1 queries on the
+    nb_accesses and compute_link_(reach|role) attributes.
+    """
 
     class Meta:
         model = models.Item
@@ -282,13 +347,12 @@ class ItemSerializer(ListItemSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
-            "nb_accesses",
             "numchild",
             "numchild_folder",
             "path",
             "title",
             "updated_at",
-            "user_roles",
+            "user_role",
             "type",
             "upload_state",
             "url",
@@ -309,12 +373,95 @@ class ItemSerializer(ListItemSerializer):
             "creator",
             "depth",
             "is_favorite",
-            "nb_accesses",
+            "link_role",
+            "link_reach",
             "numchild",
             "numchild_folder",
             "path",
             "updated_at",
-            "user_roles",
+            "user_role",
+            "type",
+            "upload_state",
+            "url",
+            "url_preview",
+            "mimetype",
+            "main_workspace",
+            "size",
+            "description",
+            "deleted_at",
+            "hard_delete_at",
+            "is_wopi_supported",
+        ]
+
+
+class SearchItemSerializer(ListItemSerializer):
+    """Serialize items for search."""
+
+    parents = ListItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = models.Item
+        fields = ListItemSerializer.Meta.fields + ["parents"]
+        read_only_fields = ListItemSerializer.Meta.read_only_fields + ["parents"]
+
+
+class ItemSerializer(ListItemSerializer):
+    """Serialize items with all fields for display in detail views."""
+
+    class Meta:
+        model = models.Item
+        fields = [
+            "id",
+            "abilities",
+            "ancestors_link_reach",
+            "ancestors_link_role",
+            "computed_link_reach",
+            "computed_link_role",
+            "created_at",
+            "creator",
+            "depth",
+            "is_favorite",
+            "link_role",
+            "link_reach",
+            "nb_accesses",
+            "numchild",
+            "numchild_folder",
+            "path",
+            "title",
+            "updated_at",
+            "user_role",
+            "type",
+            "upload_state",
+            "url",
+            "url_preview",
+            "filename",
+            "mimetype",
+            "main_workspace",
+            "size",
+            "description",
+            "deleted_at",
+            "hard_delete_at",
+            "is_wopi_supported",
+        ]
+        read_only_fields = [
+            "id",
+            "abilities",
+            "ancestors_link_reach",
+            "ancestors_link_role",
+            "computed_link_reach",
+            "computed_link_role",
+            "created_at",
+            "creator",
+            "depth",
+            "is_favorite",
+            "nb_accesses",
+            "link_role",
+            "link_reach",
+            "numchild",
+            "numchild_folder",
+            "path",
+            "updated_at",
+            "user_role",
             "type",
             "upload_state",
             "url",
@@ -358,6 +505,10 @@ class CreateItemSerializer(ItemSerializer):
         fields = [
             "id",
             "abilities",
+            "ancestors_link_reach",
+            "ancestors_link_role",
+            "computed_link_reach",
+            "computed_link_role",
             "created_at",
             "creator",
             "depth",
@@ -370,7 +521,7 @@ class CreateItemSerializer(ItemSerializer):
             "path",
             "title",
             "updated_at",
-            "user_roles",
+            "user_role",
             "type",
             "upload_state",
             "url",
@@ -383,6 +534,10 @@ class CreateItemSerializer(ItemSerializer):
         ]
         read_only_fields = [
             "abilities",
+            "ancestors_link_reach",
+            "ancestors_link_role",
+            "computed_link_reach",
+            "computed_link_role",
             "created_at",
             "creator",
             "depth",
@@ -394,7 +549,7 @@ class CreateItemSerializer(ItemSerializer):
             "numchild_folder",
             "path",
             "updated_at",
-            "user_roles",
+            "user_role",
             "upload_state",
             "url",
             "policy",
@@ -488,51 +643,13 @@ class BreadcrumbItemSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "title", "path", "depth", "main_workspace"]
 
 
-class UserSerializer(serializers.ModelSerializer):
-    """Serialize users."""
-
-    class Meta:
-        model = models.User
-        fields = [
-            "id",
-            "email",
-            "full_name",
-            "short_name",
-            "language",
-        ]
-        read_only_fields = ["id", "email", "full_name", "short_name"]
-
-
 class UserMeSerializer(UserSerializer):
     """Serialize users for me endpoint."""
 
-    main_workspace = ItemSerializer(
-        source="get_main_workspace", read_only=True, required=False
-    )
-
     class Meta:
         model = models.User
-        fields = UserSerializer.Meta.fields + ["main_workspace"]
-        read_only_fields = UserSerializer.Meta.read_only_fields + ["main_workspace"]
-
-
-class ItemAccessSerializer(BaseAccessSerializer):
-    """Serialize item accesses."""
-
-    user_id = serializers.PrimaryKeyRelatedField(
-        queryset=models.User.objects.all(),
-        write_only=True,
-        source="user",
-        required=False,
-        allow_null=True,
-    )
-    user = UserSerializer(read_only=True)
-
-    class Meta:
-        model = models.ItemAccess
-        resource_field_name = "item"
-        fields = ["id", "user", "user_id", "team", "role", "abilities"]
-        read_only_fields = ["id", "abilities"]
+        fields = UserSerializer.Meta.fields
+        read_only_fields = UserSerializer.Meta.read_only_fields
 
 
 class LinkItemSerializer(serializers.ModelSerializer):
@@ -541,12 +658,68 @@ class LinkItemSerializer(serializers.ModelSerializer):
     We expose it separately from item in order to simplify and secure access control.
     """
 
+    link_reach = serializers.ChoiceField(
+        choices=LinkReachChoices.choices, required=True
+    )
+
     class Meta:
         model = models.Item
         fields = [
             "link_role",
             "link_reach",
         ]
+
+    def validate(self, attrs):
+        """Validate that link_role and link_reach are compatible using get_select_options."""
+        link_reach = attrs.get("link_reach")
+        link_role = attrs.get("link_role")
+
+        if not link_reach:
+            raise serializers.ValidationError(
+                {"link_reach": _("This field is required.")}
+            )
+
+        # Get available options based on ancestors' link definition
+        available_options = LinkReachChoices.get_select_options(
+            **self.instance.ancestors_link_definition
+        )
+
+        # Validate link_reach is allowed
+        if link_reach not in available_options:
+            msg = _(
+                "Link reach '%(link_reach)s' is not allowed based on parent item configuration."
+            )
+            raise serializers.ValidationError(
+                {"link_reach": msg % {"link_reach": link_reach}}
+            )
+
+        # Validate link_role is compatible with link_reach
+        allowed_roles = available_options[link_reach]
+
+        # Restricted reach: link_role must be None
+        if link_reach == LinkReachChoices.RESTRICTED:
+            if link_role is not None:
+                raise serializers.ValidationError(
+                    {
+                        "link_role": (
+                            "Cannot set link_role when link_reach is 'restricted'. "
+                            "Link role must be null for restricted reach."
+                        )
+                    }
+                )
+        # Non-restricted: link_role must be in allowed roles
+        elif link_role not in allowed_roles:
+            allowed_roles_str = ", ".join(allowed_roles) if allowed_roles else "none"
+            raise serializers.ValidationError(
+                {
+                    "link_role": (
+                        f"Link role '{link_role}' is not allowed for link reach '{link_reach}'. "
+                        f"Allowed roles: {allowed_roles_str}"
+                    )
+                }
+            )
+
+        return attrs
 
 
 class InvitationSerializer(serializers.ModelSerializer):
@@ -637,10 +810,10 @@ class MoveItemSerializer(serializers.Serializer):
         }
 
     Notes:
-        - The `target_item_id` is mandatory.
+        - The `target_item_id` is optional. If not provided, the item will be moved to the root.
     """
 
-    target_item_id = serializers.UUIDField(required=True)
+    target_item_id = serializers.UUIDField(required=False)
 
 
 class SDKRelayEventSerializer(serializers.Serializer):

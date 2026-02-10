@@ -20,6 +20,30 @@ export const HeaderIcon = () => {
   );
 };
 
+export const LANGUAGES = [
+  {
+    label: "Français",
+    value: "fr-fr",
+    shortLabel: "FR",
+  },
+  {
+    label: "English",
+    value: "en-us",
+    shortLabel: "EN",
+  },
+  {
+    label: "Nederlands",
+    value: "nl-nl",
+    shortLabel: "NL",
+  },
+  {
+    label: "Deutsch",
+    value: "de-de",
+    shortLabel: "DE",
+  },
+];
+
+
 export const HeaderRight = ({
   displaySearch,
   currentItem,
@@ -29,6 +53,7 @@ export const HeaderRight = ({
 }) => {
   const { user } = useAuth();
 
+  
   const isMinimalLayout = useIsMinimalLayout();
 
   const { isTablet } = useResponsive();
@@ -43,6 +68,7 @@ export const HeaderRight = ({
     }
     return {};
   }, [currentItem, isMinimalLayout]);
+
 
   return (
     <>
@@ -60,6 +86,7 @@ export const HeaderRight = ({
   );
 };
 
+
 export const LanguagePickerUserMenu = () => {
   const { i18n } = useTranslation();
   const { user, refreshUser } = useAuth();
@@ -68,32 +95,12 @@ export const LanguagePickerUserMenu = () => {
 
   // We must set the language to lowercase because django does not use "en-US", but "en-us".
 
-  const languages = [
-    {
-      label: "Français",
-      value: "fr-fr",
-      shortLabel: "FR",
-      isChecked: selectedLanguage === "fr-fr",
-    },
-    {
-      label: "English",
-      value: "en-us",
-      shortLabel: "EN",
-      isChecked: selectedLanguage === "en-us",
-    },
-    {
-      label: "Nederlands",
-      value: "nl-nl",
-      shortLabel: "NL",
-      isChecked: selectedLanguage === "nl-nl",
-    },
-    {
-      label: "Deutsch",
-      value: "de-de",
-      shortLabel: "DE",
-      isChecked: selectedLanguage === "de-de",
-    },
-  ];
+  const languages = useMemo(() => {
+    return LANGUAGES.map((language) => ({
+      ...language,
+      isChecked: language.value === selectedLanguage,
+    }));
+  }, [selectedLanguage]);
 
   const onChange = (value: string) => {
     setSelectedLanguage(value);

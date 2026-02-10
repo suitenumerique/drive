@@ -108,10 +108,13 @@ def test_api_item_accesses_create_authenticated_reader_or_editor(
     assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
 
 
+@pytest.mark.parametrize("depth", [1, 2, 3])
 @pytest.mark.parametrize("via", VIA)
-def test_api_item_accesses_create_authenticated_administrator(via, mock_user_teams):
+def test_api_item_accesses_create_authenticated_administrator(
+    via, depth, mock_user_teams
+):
     """
-    Administrators of an item should be able to create item accesses
+    Administrators of an item (direct or by heritage) should be able to create item accesses
     except for the "owner" role.
     An email should be sent to the accesses to notify them of the adding.
     """
@@ -120,14 +123,23 @@ def test_api_item_accesses_create_authenticated_administrator(via, mock_user_tea
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory()
+    items = []
+    for i in range(depth):
+        parent = items[i - 1] if i > 0 else None
+        items.append(
+            factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+        )
+
     if via == USER:
-        factories.UserItemAccessFactory(item=item, user=user, role="administrator")
+        factories.UserItemAccessFactory(item=items[0], user=user, role="administrator")
     elif via == TEAM:
         mock_user_teams.return_value = ["lasuite", "unknown"]
-        factories.TeamItemAccessFactory(item=item, team="lasuite", role="administrator")
+        factories.TeamItemAccessFactory(
+            item=items[0], team="lasuite", role="administrator"
+        )
 
     other_user = factories.UserFactory()
+    item = items[-1]
     assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
     # It should not be allowed to create an owner access
     response = client.post(
@@ -145,7 +157,7 @@ def test_api_item_accesses_create_authenticated_administrator(via, mock_user_tea
             {
                 "attr": None,
                 "code": "permission_denied",
-                "detail": "Only owners of a resource can assign other users as owners.",
+                "detail": "Only owners of an item can assign other users as owners.",
             },
         ],
         "type": "client_error",
@@ -179,6 +191,15 @@ def test_api_item_accesses_create_authenticated_administrator(via, mock_user_tea
         "team": "",
         "role": role,
         "user": other_user,
+        "item": {
+            "id": str(item.id),
+            "path": str(item.path),
+            "depth": item.depth,
+        },
+        "max_ancestors_role": None,
+        "max_ancestors_role_item_id": None,
+        "max_role": role,
+        "is_explicit": True,
     }
     assert len(mail.outbox) == 1
     email = mail.outbox[0]
@@ -192,10 +213,12 @@ def test_api_item_accesses_create_authenticated_administrator(via, mock_user_tea
     assert "items/" + str(item.id) + "/" in email_content
 
 
+@pytest.mark.parametrize("depth", [1, 2, 3])
 @pytest.mark.parametrize("via", VIA)
-def test_api_item_accesses_create_authenticated_owner(via, mock_user_teams):
+def test_api_item_accesses_create_authenticated_owner(via, depth, mock_user_teams):
     """
-    Owners of an item should be able to create item accesses whatever the role.
+    Owners of an item (direct or by heritage) should be able to create item accesses whatever
+    the role.
     An email should be sent to the accesses to notify them of the adding.
     """
     user = factories.UserFactory(language=settings.LANGUAGE_CODE)
@@ -203,14 +226,21 @@ def test_api_item_accesses_create_authenticated_owner(via, mock_user_teams):
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory()
+    items = []
+    for i in range(depth):
+        parent = items[i - 1] if i > 0 else None
+        items.append(
+            factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+        )
+
     if via == USER:
-        factories.UserItemAccessFactory(item=item, user=user, role="owner")
+        factories.UserItemAccessFactory(item=items[0], user=user, role="owner")
     elif via == TEAM:
         mock_user_teams.return_value = ["lasuite", "unknown"]
-        factories.TeamItemAccessFactory(item=item, team="lasuite", role="owner")
+        factories.TeamItemAccessFactory(item=items[0], team="lasuite", role="owner")
 
     other_user = factories.UserFactory()
+    item = items[-1]
     assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
     role = random.choice([role[0] for role in models.RoleChoices.choices])
 
@@ -231,10 +261,19 @@ def test_api_item_accesses_create_authenticated_owner(via, mock_user_teams):
     other_user = serializers.UserSerializer(instance=other_user).data
     assert response.json() == {
         "id": str(new_item_access.id),
+        "is_explicit": True,
         "user": other_user,
         "team": "",
         "role": role,
         "abilities": new_item_access.get_abilities(user),
+        "max_ancestors_role": None,
+        "max_ancestors_role_item_id": None,
+        "max_role": role,
+        "item": {
+            "id": str(item.id),
+            "path": str(item.path),
+            "depth": item.depth,
+        },
     }
     assert len(mail.outbox) == 1
     email = mail.outbox[0]
@@ -246,3 +285,188 @@ def test_api_item_accesses_create_authenticated_owner(via, mock_user_teams):
         f"on the following item: {item.title}"
     ) in email_content
     assert "items/" + str(item.id) + "/" in email_content
+
+
+def test_api_item_accesses_create_authenticated_owner_multiple_accesses():
+    """
+    Owners of an item (direct or by heritage) should able to create multiple accesses
+    for the same user in the same tree. The role should be higher than the previous
+    created access.
+    """
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{root.id!s}/accesses/",
+        {
+            "user_id": str(other_user.id),
+            "role": "editor",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+
+    # Creating an access on parent should be allowed but will fail because the role
+    # is not strictly higher than the previous access.
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/accesses/",
+        {
+            "user_id": str(other_user.id),
+            "role": "editor",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "role",
+                "code": "invalid",
+                "detail": (
+                    "The role editor you are trying to assign is lower or equal than the "
+                    "max ancestors role editor."
+                ),
+            },
+        ],
+        "type": "validation_error",
+    }
+
+    # Creating an access on parent should be allowed if the role is higher
+    # than the previous access.
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/accesses/",
+        {
+            "user_id": str(other_user.id),
+            "role": "administrator",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+
+
+def test_api_item_accesses_create_authenticated_owner_syncronize_descendants_accesses():
+    """
+    Owners of an item (direct or by heritage) should be able to create item accesses
+    and syncronize the accesses of the descendants of the item.
+    """
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+
+    factories.UserItemAccessFactory(item=root, user=other_user, role="reader")
+    factories.UserItemAccessFactory(item=item, user=other_user, role="editor")
+
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 1
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/accesses/",
+        {
+            "user_id": str(other_user.id),
+            "role": "administrator",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 0
+
+
+def test_api_item_accesses_create_authenticated_owner_syncronize_descendants_accesses_same_role():
+    """
+    Owners of an item (direct or by heritage) should be able to create item accesses
+    and syncronize the accesses of the descendants of the item.
+    """
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+
+    factories.UserItemAccessFactory(item=root, user=other_user, role="reader")
+    factories.UserItemAccessFactory(item=item, user=other_user, role="editor")
+
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 1
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/accesses/",
+        {
+            "user_id": str(other_user.id),
+            "role": "editor",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 0
+
+
+def test_api_item_accesses_create_authenticated_owner_syncronize_descendants_accesses_no_lower():
+    """
+    Owners of an item (direct or by heritage) should be able to create item accesses
+    and syncronize the accesses of the descendants of the item.
+    """
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+
+    factories.UserItemAccessFactory(item=root, user=other_user, role="reader")
+    factories.UserItemAccessFactory(item=item, user=other_user, role="owner")
+
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 1
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/accesses/",
+        {
+            "user_id": str(other_user.id),
+            "role": "editor",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+
+    # access on item should be kept
+    assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 1

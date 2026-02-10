@@ -1,0 +1,4 @@
+2026-02-10T11:06:12Z  docker compose -f compose.yaml up -d seaweedfs-s3 createbuckets
+2026-02-10T11:06:36Z  docker run --rm --network drive_default --entrypoint /bin/sh minio/mc -c "mc alias set drive http://seaweedfs-s3:8333 drive <redacted_secret> >/dev/null && echo hello >/tmp/hello.txt && mc cp /tmp/hello.txt drive/drive-media-storage/hello.txt && mc stat drive/drive-media-storage/hello.txt"
+2026-02-10T11:06:49Z  docker run --rm --network drive_default --entrypoint /bin/sh minio/mc -c "mc alias set drive http://seaweedfs-s3:8333 drive <redacted_secret> >/dev/null && mc version enable drive/drive-media-storage && mc version info drive/drive-media-storage"
+2026-02-10T11:07:00Z  docker logs --tail 200 drive-seaweedfs-s3-1
