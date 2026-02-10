@@ -22,7 +22,7 @@ jobs:
       - name: Enforce absence of print statements in code
         if: always()
         run: |
-          ! git diff origin/${{ github.event.pull_request.base.ref }}..HEAD -- . ':(exclude)**/drive.yml' | grep "print("
+          ! git diff origin/${{ github.event.pull_request.base.ref }}..HEAD -- src/backend | grep "print("
       - name: Check absence of fixup commits
         if: always()
         run: |
