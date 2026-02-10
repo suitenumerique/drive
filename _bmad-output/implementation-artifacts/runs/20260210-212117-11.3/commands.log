@@ -1,0 +1,12 @@
+# commands (agent-run; no secrets)
+
+gh pr view 18
+
+git checkout story/11.3-ct-s3-evidence-allowlist
+git merge story/11.1-ct-s3-runner
+git push origin story/11.3-ct-s3-evidence-allowlist
+
+# dev-owned verification commands (to run locally; record results in gates.md)
+make lint
+make test-back
+
