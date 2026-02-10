@@ -15,6 +15,9 @@ PYTHONPATH=/app
 
 # Drive settings
 
+# TLS posture (dev-only override)
+DRIVE_ALLOW_INSECURE_HTTP=True
+
 # Mail
 DJANGO_EMAIL_BRAND_NAME="La Suite Numérique"
 DJANGO_EMAIL_HOST="mailcatcher"

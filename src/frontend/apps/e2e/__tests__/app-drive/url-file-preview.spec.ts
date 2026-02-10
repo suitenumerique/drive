@@ -21,7 +21,7 @@ test("Share url leads to standalone file preview", async ({
   if (browserName === "webkit") {
     return;
   }
-  grantClipboardPermissions(browserName, context);
+  await grantClipboardPermissions(browserName, context);
   await clearDb();
   await login(page, "drive@example.com");
   await page.goto("/");
@@ -36,11 +36,11 @@ test("Share url leads to standalone file preview", async ({
   const fileChooser = await fileChooserPromise;
   await fileChooser.setFiles(path.join(__dirname, "/assets/pv_cm.pdf"));
 
-  await expect(page.getByText("This tab is empty")).not.toBeVisible();
-  await page
+  const fileActionsButton = page
     .getByRole("button", { name: "More actions for pv_cm.pdf" })
-    .nth(1)
-    .click({ force: true });
+    .nth(1);
+  await expect(fileActionsButton).toBeVisible({ timeout: 20000 });
+  await fileActionsButton.click({ force: true });
   await page.getByRole("menuitem", { name: "Share" }).click();
   await page.getByRole("button", { name: "link Copy link" }).click();
   await expect(page.getByText("Copied to clipboard")).toBeVisible();

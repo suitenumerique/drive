@@ -1,6 +1,6 @@
 # Story 2.3: TLS posture for public surfaces (prod HTTPS-only, dev override explicit, no mixed modes)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -60,9 +60,27 @@ So that `DRIVE_PUBLIC_URL`-derived URLs are safe and consistent across redirects
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
+
 ### Debug Log References
+
+- `_bmad-output/implementation-artifacts/runs/20260210-141727-2.3/report.md`
 
 ### Completion Notes List
 
+- Centralized TLS posture for public surfaces:
+  - HTTPS-only in production posture (rejects `http://` even if `DRIVE_ALLOW_INSECURE_HTTP=true`).
+  - DEV-only HTTP override: `http://` accepted only when `DEBUG=true` and `DRIVE_ALLOW_INSECURE_HTTP=true`.
+- Enforced “no mixed TLS modes” for validated public surfaces (DRIVE_PUBLIC_URL, WOPI_SRC_BASE_URL, URL-form OIDC redirect entries) under HTTPS-only posture.
+- Added `join_public_url()` helper to build derived public URLs without double slashes.
+- Updated operator docs to make the dev-only override and HTTPS-only production posture explicit.
+
 ### File List
 
+- `src/backend/core/utils/public_url.py`
+- `src/backend/drive/settings.py`
+- `src/backend/core/tests/test_public_url.py`
+- `src/backend/core/tests/test_settings.py`
+- `env.d/development/common`
+- `docs/env.md`
+- `_bmad-output/implementation-artifacts/runs/20260210-141727-2.3/report.md`
