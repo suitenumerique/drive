@@ -35,7 +35,7 @@ story_location: _bmad-output/implementation-artifacts
 development_status:
   epic-1: in-progress
   1-1-canonical-drive-public-url-validation-and-deterministic-derivations: done
-  1-2-separate-allowlists-for-redirect-uris-vs-origins-hosts-derived-from-drive-public-url: ready-for-dev
+  1-2-separate-allowlists-for-redirect-uris-vs-origins-hosts-derived-from-drive-public-url: done
   epic-1-retrospective: optional
   epic-2: in-progress
   2-1-docker-first-edge-contract-documentation-configuration-validation-smoke-checks: ready-for-dev

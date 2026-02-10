@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 import os
 import tomllib
 from socket import gethostbyname, gethostname
+from urllib.parse import urlsplit
 
 from django.utils.translation import gettext_lazy as _
 
@@ -24,6 +25,15 @@ from configurations import Configuration, values
 from lasuite.configuration.values import SecretFileValue
 from sentry_sdk.integrations.django import DjangoIntegration
 
+from core.utils.allowlists import (
+    AllowlistValidationError,
+    TlsPosture,
+    extract_host_from_url_form,
+    merge_allowlist,
+    normalize_allowlisted_host,
+    normalize_allowlisted_origin,
+    normalize_allowlisted_redirect_uri,
+)
 from core.utils.public_url import (
     PublicUrlValidationError,
     normalize_public_surface_base_url,
@@ -83,22 +93,136 @@ def _normalize_oidc_redirect_allowed_hosts(
     debug: bool,
     allow_insecure_http: bool,
 ) -> list[str]:
+    posture = TlsPosture(
+        https_only_posture=https_only_posture,
+        debug=debug,
+        allow_insecure_http=allow_insecure_http,
+    )
     normalized_hosts: list[str] = []
     for item in raw_hosts:
         candidate = str(item).strip()
-        if "://" in candidate:
-            normalized_hosts.append(
-                _validate_public_surface_base_url(
-                    candidate,
-                    setting_name="OIDC_REDIRECT_ALLOWED_HOSTS",
-                    https_only_posture=https_only_posture,
-                    debug=debug,
-                    allow_insecure_http=allow_insecure_http,
+        try:
+            if "://" in candidate:
+                normalized_hosts.append(
+                    extract_host_from_url_form(
+                        candidate,
+                        setting_name="OIDC_REDIRECT_ALLOWED_HOSTS",
+                        posture=posture,
+                    )
                 )
-            )
-        else:
-            normalized_hosts.append(candidate)
+            else:
+                normalized_hosts.append(
+                    normalize_allowlisted_host(
+                        candidate,
+                        setting_name="OIDC_REDIRECT_ALLOWED_HOSTS",
+                    )
+                )
+        except AllowlistValidationError as exc:
+            raise ValueError(
+                "Invalid OIDC_REDIRECT_ALLOWED_HOSTS configuration. "
+                f"failure_class={exc.failure_class} "
+                f"next_action_hint={exc.next_action_hint}"
+            ) from None
     return normalized_hosts
+
+
+def _normalize_list_with_error(
+    raw_values: list[str],
+    *,
+    setting_name: str,
+    normalizer,
+) -> list[str]:
+    normalized: list[str] = []
+    for item in raw_values:
+        try:
+            normalized.append(normalizer(item))
+        except AllowlistValidationError as exc:
+            raise ValueError(
+                f"Invalid {setting_name} configuration. "
+                f"failure_class={exc.failure_class} "
+                f"next_action_hint={exc.next_action_hint}"
+            ) from None
+    return normalized
+
+
+def _apply_split_allowlists(
+    cls,
+    *,
+    https_only_posture: bool,
+    debug: bool,
+    allow_insecure_http: bool,
+) -> None:
+    """Compute and apply split allowlists derived from DRIVE_PUBLIC_URL (if set)."""
+    if cls.DRIVE_PUBLIC_URL is None:
+        return
+
+    posture = TlsPosture(
+        https_only_posture=https_only_posture,
+        debug=debug,
+        allow_insecure_http=allow_insecure_http,
+    )
+
+    canonical_origin = cls.DRIVE_PUBLIC_URL
+    canonical_host = urlsplit(canonical_origin).netloc
+    canonical_redirect_uri = f"{canonical_origin}/"
+
+    redirect_uri_additions = _normalize_list_with_error(
+        list(cls.DRIVE_ALLOWED_REDIRECT_URIS or []),
+        setting_name="DRIVE_ALLOWED_REDIRECT_URIS",
+        normalizer=lambda v: normalize_allowlisted_redirect_uri(
+            v,
+            setting_name="DRIVE_ALLOWED_REDIRECT_URIS",
+            posture=posture,
+        ),
+    )
+    origin_additions = _normalize_list_with_error(
+        list(cls.DRIVE_ALLOWED_ORIGINS or []),
+        setting_name="DRIVE_ALLOWED_ORIGINS",
+        normalizer=lambda v: normalize_allowlisted_origin(
+            v,
+            setting_name="DRIVE_ALLOWED_ORIGINS",
+            posture=posture,
+        ),
+    )
+    host_additions = _normalize_list_with_error(
+        list(cls.DRIVE_ALLOWED_HOSTS or []),
+        setting_name="DRIVE_ALLOWED_HOSTS",
+        normalizer=lambda v: normalize_allowlisted_host(
+            v,
+            setting_name="DRIVE_ALLOWED_HOSTS",
+        ),
+    )
+
+    redirect_uris = merge_allowlist(
+        [canonical_redirect_uri],
+        redirect_uri_additions,
+    )
+
+    legacy_oidc_hosts = _normalize_oidc_redirect_allowed_hosts(
+        list(cls.OIDC_REDIRECT_ALLOWED_HOSTS or []),
+        https_only_posture=https_only_posture,
+        debug=debug,
+        allow_insecure_http=allow_insecure_http,
+    )
+    redirect_hosts = [urlsplit(u).netloc for u in redirect_uris]
+    cls.OIDC_REDIRECT_ALLOWED_HOSTS = merge_allowlist(
+        [canonical_host],
+        host_additions + redirect_hosts + legacy_oidc_hosts,
+    )
+
+    legacy_sdk_origins = _normalize_list_with_error(
+        list(cls.SDK_CORS_ALLOWED_ORIGINS or []),
+        setting_name="SDK_CORS_ALLOWED_ORIGINS",
+        normalizer=lambda v: normalize_allowlisted_origin(
+            v,
+            setting_name="SDK_CORS_ALLOWED_ORIGINS",
+            posture=posture,
+        ),
+    )
+    cls.SDK_CORS_ALLOWED_ORIGINS = merge_allowlist(
+        [canonical_origin],
+        origin_additions + legacy_sdk_origins,
+    )
 
 
 class Base(Configuration):
@@ -252,6 +376,23 @@ class Base(Configuration):
     )
     DRIVE_ALLOW_INSECURE_HTTP = values.BooleanValue(
         default=False, environ_name="DRIVE_ALLOW_INSECURE_HTTP", environ_prefix=None
+    )
+
+    # Split allowlists (operator additions). Canonical defaults are derived from DRIVE_PUBLIC_URL.
+    DRIVE_ALLOWED_REDIRECT_URIS = values.ListValue(
+        default=[],
+        environ_name="DRIVE_ALLOWED_REDIRECT_URIS",
+        environ_prefix=None,
+    )
+    DRIVE_ALLOWED_ORIGINS = values.ListValue(
+        default=[],
+        environ_name="DRIVE_ALLOWED_ORIGINS",
+        environ_prefix=None,
+    )
+    DRIVE_ALLOWED_HOSTS = values.ListValue(
+        default=[],
+        environ_name="DRIVE_ALLOWED_HOSTS",
+        environ_prefix=None,
     )
 
     # Posthog
@@ -1591,6 +1732,13 @@ class Base(Configuration):
                 debug=debug,
                 allow_insecure_http=allow_insecure_http,
             )
+
+        _apply_split_allowlists(
+            cls,
+            https_only_posture=https_only_posture,
+            debug=debug,
+            allow_insecure_http=allow_insecure_http,
+        )
 
         if cls.WOPI_SRC_BASE_URL is not None:
             cls.WOPI_SRC_BASE_URL = _validate_public_surface_base_url(

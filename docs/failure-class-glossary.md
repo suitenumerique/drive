@@ -15,6 +15,14 @@ Each failure should also emit:
 
 - `config.public_url.invalid`
 - `config.public_url.https_required`
+- `config.allowlist.redirect_uri.invalid`
+- `config.allowlist.redirect_uri.https_required`
+- `config.allowlist.redirect_uri.wildcard`
+- `config.allowlist.origin.invalid`
+- `config.allowlist.origin.https_required`
+- `config.allowlist.origin.wildcard`
+- `config.allowlist.host.invalid`
+- `config.allowlist.host.wildcard`
 
 ## S3 Contract Tests (CT-S3-*) — `s3.*`
 

@@ -1,0 +1,14 @@
+CHANGELOG.md
+docs/env.md
+docs/failure-class-glossary.md
+src/backend/core/utils/allowlists.py
+src/backend/drive/settings.py
+src/backend/core/tests/test_allowlists.py
+src/backend/core/tests/test_settings.py
+_bmad-output/implementation-artifacts/1-2-separate-allowlists-for-redirect-uris-vs-origins-hosts-derived-from-drive-public-url.md
+_bmad-output/implementation-artifacts/latest.txt
+_bmad-output/implementation-artifacts/sprint-status.yaml
+_bmad-output/implementation-artifacts/runs/20260210-154539-1.2/report.md
+_bmad-output/implementation-artifacts/runs/20260210-154539-1.2/commands.log
+_bmad-output/implementation-artifacts/runs/20260210-154539-1.2/files-changed.txt
+_bmad-output/implementation-artifacts/runs/20260210-154539-1.2/gates.md
