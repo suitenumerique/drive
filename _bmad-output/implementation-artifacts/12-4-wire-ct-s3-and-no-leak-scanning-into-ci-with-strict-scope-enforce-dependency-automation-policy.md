@@ -1,6 +1,6 @@
 # Story 12.4: Wire CT-S3 and no-leak scanning into CI with strict scope; enforce dependency automation policy
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -55,9 +55,21 @@ So that v1 promises are enforced without noisy false positives or scope drift.
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
+
 ### Debug Log References
+
+- `_bmad-output/implementation-artifacts/runs/20260211-105317-12.4/report.md`
 
 ### Completion Notes List
 
+- Wired CT-S3 and no-leak scanning into CI via stable gates runner `gate_id`s.
+- Added PR-only Chrome+axe a11y smoke gate with retained artifacts.
+- Validated dependency automation policy (Renovate; no Dependabot PR config).
+
 ### File List
 
+- `.github/workflows/gates.yml`
+- `.github/workflows/drive-frontend.yml`
+- `src/frontend/apps/e2e/__tests__/app-drive/a11y-axe.spec.ts`
+- `_bmad-output/implementation-artifacts/runs/20260211-105317-12.4/report.md`

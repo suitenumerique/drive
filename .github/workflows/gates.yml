@@ -1,0 +1,67 @@
+name: Gates (v1)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  dependency-automation-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Enforce Renovate-only PR automation
+        run: |
+          set -euo pipefail
+          if [ ! -f renovate.json ]; then
+            echo "failure_class=dependency.automation.policy_violation"
+            echo "next_action_hint=Add renovate.json; use Renovate for version bumps."
+            exit 1
+          fi
+          if [ -f .github/dependabot.yml ]; then
+            echo "failure_class=dependency.automation.policy_violation"
+            echo "next_action_hint=Remove .github/dependabot.yml; keep Dependabot for alerts only."
+            exit 1
+          fi
+
+  v1-gates:
+    if: github.event_name == "workflow_dispatch"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Start SeaweedFS baseline (CT-S3)
+        run: |
+          docker compose up -d \
+            seaweedfs-master \
+            seaweedfs-volume \
+            seaweedfs-filer \
+            seaweedfs-s3 \
+            createbuckets
+      - name: Upload gates runner artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gates-run
+          path: _bmad-output/implementation-artifacts/runs/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload CT-S3 artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ct-s3
+          path: _bmad-output/implementation-artifacts/ct-s3/
+          if-no-files-found: warn
+          retention-days: 7
+

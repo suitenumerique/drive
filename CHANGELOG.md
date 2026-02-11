@@ -12,6 +12,8 @@ and this project adheres to
 
 - ✨(global) implement advanced shared management system
 - 📝(docs) add Docker-first self-host edge contract docs
+- 🧪(ci) add gates workflow (CT-S3 + no-leak scan)
+- 🧪(ci) add PR chrome + axe a11y smoke gate
 - ✨(backend) add deterministic config_preflight edge validations
 
 ### Removed
