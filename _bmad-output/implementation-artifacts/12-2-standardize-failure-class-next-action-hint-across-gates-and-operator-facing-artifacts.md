@@ -1,6 +1,6 @@
 # Story 12.2: Standardize `failure_class` + `next_action_hint` across gates and operator-facing artifacts
 
-Status: review
+Status: done
 
 ## Story
 

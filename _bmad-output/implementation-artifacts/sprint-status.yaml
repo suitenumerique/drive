@@ -42,7 +42,7 @@ development_status:
   2-2-nginx-reference-edge-configuration-dev-prod-aligned-for-media-auth-request-sigv4-propagation: done
   2-3-tls-posture-for-public-surfaces-prod-https-only-dev-override-explicit-no-mixed-modes: done
   2-4-docker-first-backup-restore-runbook-deterministic-post-restore-smoke-checklist: done
-  2-5-docker-first-upgrade-rollback-runbook-deterministic-post-action-smoke-checklist: review
+  2-5-docker-first-upgrade-rollback-runbook-deterministic-post-action-smoke-checklist: done
   epic-2-retrospective: optional
   epic-3: backlog
   3-1-byo-oidc-authentication-refs-only-secrets-config-validation-smoke-login-proof: backlog
@@ -101,7 +101,7 @@ development_status:
   epic-11-retrospective: optional
   epic-12: backlog
   12-1-gates-runner-executes-stable-gate-ids-and-writes-deterministic-artifacts: ready-for-dev
-  12-2-standardize-failure-class-next-action-hint-across-gates-and-operator-facing-artifacts: review
+  12-2-standardize-failure-class-next-action-hint-across-gates-and-operator-facing-artifacts: done
   12-3-strict-mirror-enforcement-bmad-registry-source-of-truth-github-fork-mirror-only: backlog
-  12-4-wire-ct-s3-and-no-leak-scanning-into-ci-with-strict-scope-enforce-dependency-automation-policy: review
+  12-4-wire-ct-s3-and-no-leak-scanning-into-ci-with-strict-scope-enforce-dependency-automation-policy: done
   epic-12-retrospective: optional

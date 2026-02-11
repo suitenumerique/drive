@@ -1,6 +1,6 @@
 # Story 12.4: Wire CT-S3 and no-leak scanning into CI with strict scope; enforce dependency automation policy
 
-Status: review
+Status: done
 
 ## Story
 
