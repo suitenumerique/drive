@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
+from django.conf import settings as django_settings
 from django.utils import timezone
 
 import pytest
@@ -127,7 +128,7 @@ def test_api_items_create_file_authenticated_success():
 
     assert query_params.pop("X-Amz-Algorithm") == ["AWS4-HMAC-SHA256"]
     assert query_params.pop("X-Amz-Credential") == [
-        f"drive/{now.strftime('%Y%m%d')}/eu-east-1/s3/aws4_request"
+        f"drive/{now.strftime('%Y%m%d')}/{django_settings.AWS_S3_REGION_NAME}/s3/aws4_request"
     ]
     assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]

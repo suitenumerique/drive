@@ -9,6 +9,7 @@ import pytest
 
 from core import factories, models
 from core.tasks.item import process_item_deletion
+from core.utils.no_leak import sha256_16
 
 pytestmark = pytest.mark.django_db
 
@@ -36,7 +37,7 @@ def test_process_item_deletion_item_does_not_exist(caplog):
     assert "Item 1 does not exist" in caplog.records[0].message
 
 
-def test_process_item_deletion_item_file_is_ready():
+def test_process_item_deletion_item_file_is_ready(caplog):
     """Test the process deletion task when the item file is ready."""
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
@@ -46,7 +47,10 @@ def test_process_item_deletion_item_file_is_ready():
     item.hard_delete()
     default_storage.save(item.file_key, BytesIO(b"my prose"))
 
-    process_item_deletion(item.id)
+    with caplog.at_level(logging.INFO, logger="core.tasks.item"):
+        process_item_deletion(item.id)
+        assert item.file_key not in caplog.text
+        assert sha256_16(item.file_key) in caplog.text
 
     assert not models.Item.objects.filter(id=item.id).exists()
     assert not default_storage.exists(item.file_key)

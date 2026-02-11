@@ -2,20 +2,10 @@
 
 from __future__ import annotations
 
-import hashlib
 from collections.abc import Mapping
 
-
-def sha256_16(value: str) -> str:
-    """Return a stable, truncated SHA-256 digest (hex) for safe correlation."""
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
-
-
-def safe_str_hash(value: str | None) -> str | None:
-    """Hash a potentially sensitive string; returns None if missing."""
-    if value is None:
-        return None
-    return sha256_16(value)
+# Re-export safe hashing helpers for CT-S3 callers.
+from core.utils.no_leak import safe_str_hash, sha256_16  # pylint: disable=unused-import
 
 
 def pick_headers(headers: Mapping[str, str], allowed: set[str]) -> dict[str, str]:

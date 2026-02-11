@@ -4,7 +4,7 @@
 import json
 import logging
 import re
-from urllib.parse import unquote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 from django.conf import settings
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -49,6 +49,7 @@ from core.services.search_indexers import (
     get_visited_items_ids_of,
 )
 from core.tasks.item import process_item_deletion, rename_file
+from core.utils.no_leak import safe_str_hash
 from wopi.services import access as access_service
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
 
@@ -679,7 +680,12 @@ class ItemViewSet(
             )["Body"].read()
 
         # Use improved MIME type detection combining magic bytes and file extension
-        logger.info("upload_ended: detecting mimetype for file: %s", item.file_key)
+        file_key_hash = safe_str_hash(item.file_key)
+        logger.info(
+            "upload_ended: detecting mimetype (item_id=%s file_key_hash=%s)",
+            item.id,
+            file_key_hash,
+        )
         mimetype = utils.detect_mimetype(file_head, filename=item.filename)
 
         if (
@@ -688,9 +694,11 @@ class ItemViewSet(
         ):
             self._complete_item_deletion(item)
             logger.info(
-                "upload_ended: mimetype not allowed %s for filename %s",
+                "upload_ended: mimetype not allowed (item_id=%s file_key_hash=%s "
+                "mimetype=%s)",
+                item.id,
+                file_key_hash,
                 mimetype,
-                item.filename,
             )
             raise drf.exceptions.ValidationError(
                 detail="The file type is not allowed.",
@@ -711,26 +719,47 @@ class ItemViewSet(
                 mimetype,
             )
             try:
+                escaped_key = quote(item.file_key, safe="/")
+                copy_source = f"/{default_storage.bucket_name}/{escaped_key}"
                 s3_client.copy_object(
                     Bucket=default_storage.bucket_name,
                     Key=item.file_key,
-                    CopySource={
-                        "Bucket": default_storage.bucket_name,
-                        "Key": item.file_key,
-                    },
+                    CopySource=copy_source,
                     ContentType=mimetype,
                     Metadata=head_response["Metadata"],
                     MetadataDirective="REPLACE",
                 )
             except ClientError as error:
-                # Log an exception but don't stop the action.
+                # Compatibility: some S3 gateways reject CopyObject. Try a
+                # streaming GET→PUT fallback (no-leak logs).
                 logger.exception(
-                    "Changing content type of item %s on object storage failed with error code %s"
-                    " and error message %s",
+                    "upload_ended: content-type update failed "
+                    "(item_id=%s file_key_hash=%s error_code=%s)",
                     item.id,
+                    file_key_hash,
                     error.response["Error"]["Code"],
-                    error.response["Error"]["Message"],
                 )
+                try:
+                    obj = s3_client.get_object(
+                        Bucket=default_storage.bucket_name,
+                        Key=item.file_key,
+                    )
+                    s3_client.put_object(
+                        Bucket=default_storage.bucket_name,
+                        Key=item.file_key,
+                        Body=obj["Body"].read(),
+                        ContentType=mimetype,
+                        Metadata=head_response["Metadata"],
+                        ACL="private",
+                    )
+                except ClientError as fallback_error:
+                    logger.exception(
+                        "upload_ended: content-type update fallback failed "
+                        "(item_id=%s file_key_hash=%s error_code=%s)",
+                        item.id,
+                        file_key_hash,
+                        fallback_error.response["Error"]["Code"],
+                    )
 
         malware_detection.analyse_file(item.file_key, item_id=item.id)
 

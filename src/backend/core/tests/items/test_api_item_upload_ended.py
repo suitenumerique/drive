@@ -12,6 +12,7 @@ from rest_framework.test import APIClient
 from core import factories, models
 from core.api.viewsets import malware_detection
 from core.models import ItemTypeChoices, ItemUploadStateChoices, LinkRoleChoices
+from core.utils.no_leak import sha256_16
 
 pytestmark = pytest.mark.django_db
 
@@ -97,7 +98,7 @@ def test_api_item_upload_ended_on_wrong_upload_state():
     }
 
 
-def test_api_item_upload_ended_success():
+def test_api_item_upload_ended_success(caplog):
     """
     Users should be able to end an upload on items that are files and in the UPLOADING upload state.
     """
@@ -114,7 +115,10 @@ def test_api_item_upload_ended_success():
     )
 
     with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
-        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+        with caplog.at_level(logging.INFO, logger="core.api.viewsets"):
+            response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+            assert item.file_key not in caplog.text
+            assert sha256_16(item.file_key) in caplog.text
 
     mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
 
@@ -263,10 +267,11 @@ def test_api_item_upload_ended_mimetype_not_allowed(settings, caplog):
         response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     assert response.status_code == 400
-    assert (
-        "upload_ended: mimetype not allowed text/plain for filename my_file.txt"
-        in caplog.text
-    )
+    assert "upload_ended: mimetype not allowed" in caplog.text
+    assert "text/plain" in caplog.text
+    assert item.filename not in caplog.text
+    assert item.file_key not in caplog.text
+    assert sha256_16(item.file_key) in caplog.text
 
     assert not models.Item.objects.filter(id=item.id).exists()
     assert not default_storage.exists(item.file_key)
