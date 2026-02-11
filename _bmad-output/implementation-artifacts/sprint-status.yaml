@@ -39,9 +39,9 @@ development_status:
 
   5-3-deterministic-recovery-patterns-for-uploads-and-media-edge-failures-cleanup-actionable-next-steps: done
   epic-5-retrospective: optional
-  epic-6: backlog
-  6-1-configure-s3-item-share-links-reach-role-and-publish-a-canonical-public-url: ready-for-dev
-  6-2-open-s3-public-share-links-without-an-authenticated-session-token-enforced: ready-for-dev
+  epic-6: done
+  6-1-configure-s3-item-share-links-reach-role-and-publish-a-canonical-public-url: done
+  6-2-open-s3-public-share-links-without-an-authenticated-session-token-enforced: done
   epic-6-retrospective: optional
   epic-7: backlog
   7-1-operator-configured-mounts-registry-mount-id-provider-enabled-with-deterministic-validation: ready-for-dev
@@ -75,9 +75,9 @@ development_status:
   11-2-encode-seaweedfs-as-the-blocking-baseline-profile-repeatable-checks-runbook-alignment: done
   11-3-safe-evidence-allow-listing-for-ct-s3-no-leak-by-construction: done
   epic-11-retrospective: optional
-  epic-12: in-progress
+  epic-12: done
   12-1-gates-runner-executes-stable-gate-ids-and-writes-deterministic-artifacts: done
   12-2-standardize-failure-class-next-action-hint-across-gates-and-operator-facing-artifacts: done
-  12-3-strict-mirror-enforcement-bmad-registry-source-of-truth-github-fork-mirror-only: ready-for-dev
+  12-3-strict-mirror-enforcement-bmad-registry-source-of-truth-github-fork-mirror-only: done
   12-4-wire-ct-s3-and-no-leak-scanning-into-ci-with-strict-scope-enforce-dependency-automation-policy: done
   epic-12-retrospective: optional
