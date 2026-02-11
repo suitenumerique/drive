@@ -1,0 +1,8 @@
+gate_id=docs.consistency
+cmd=docs.consistency (check changed docs/_bmad-output text files)
+result=pass duration_ms=0
+
+gate_id=frontend.lint
+cmd=make frontend-lint
+result=pass duration_ms=4072
+

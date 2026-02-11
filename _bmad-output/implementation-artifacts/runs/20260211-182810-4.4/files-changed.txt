@@ -1,0 +1,5 @@
+docker/files/development/etc/nginx/conf.d/default.conf
+docs/selfhost/edge-contract.md
+docs/selfhost/smoke-checklist.md
+src/frontend/apps/drive/src/features/explorer/components/item-actions/ItemActionDropdown.tsx
+src/nginx/servers.conf.erb
