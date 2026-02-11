@@ -148,3 +148,70 @@ def test_config_preflight_rejects_oidc_http_in_https_only_posture(monkeypatch):
     assert code == 1
     err = next(e for e in payload["errors"] if e["field"] == "OIDC_OP_TOKEN_ENDPOINT")
     assert err["failure_class"] == "config.oidc.endpoint_url.https_required"
+
+
+def test_config_preflight_rejects_multipart_chunksize_gt_threshold(monkeypatch):
+    _set_minimal_oidc_env(monkeypatch)
+    monkeypatch.setenv("AWS_S3_ENDPOINT_URL", "http://seaweedfs-s3:8333")
+    monkeypatch.delenv("AWS_S3_DOMAIN_REPLACE", raising=False)
+
+    monkeypatch.setenv("S3_TRANSFER_CONFIG_MULTIPART_THRESHOLD", "8388608")
+    monkeypatch.setenv("S3_TRANSFER_CONFIG_MULTIPART_CHUNKSIZE", "16777216")
+
+    code, payload = _run_preflight()
+
+    assert code == 1
+    err = next(
+        e
+        for e in payload["errors"]
+        if e["field"] == "S3_TRANSFER_CONFIG_MULTIPART_CHUNKSIZE"
+    )
+    assert (
+        err["failure_class"]
+        == "config.s3.transfer_config.multipart_chunksize.gt_threshold"
+    )
+
+
+def test_config_preflight_rejects_multipart_chunksize_out_of_bounds(monkeypatch):
+    _set_minimal_oidc_env(monkeypatch)
+    monkeypatch.setenv("AWS_S3_ENDPOINT_URL", "http://seaweedfs-s3:8333")
+    monkeypatch.delenv("AWS_S3_DOMAIN_REPLACE", raising=False)
+
+    monkeypatch.setenv("S3_TRANSFER_CONFIG_MULTIPART_CHUNKSIZE", "1")
+
+    code, payload = _run_preflight()
+
+    assert code == 1
+    err = next(
+        e
+        for e in payload["errors"]
+        if e["field"] == "S3_TRANSFER_CONFIG_MULTIPART_CHUNKSIZE"
+    )
+    assert (
+        err["failure_class"]
+        == "config.s3.transfer_config.multipart_chunksize.out_of_bounds"
+    )
+
+
+def test_config_preflight_rejects_multipart_threshold_invalid_type_no_leak(
+    monkeypatch,
+):
+    _set_minimal_oidc_env(monkeypatch)
+    monkeypatch.setenv("AWS_S3_ENDPOINT_URL", "http://seaweedfs-s3:8333")
+    monkeypatch.delenv("AWS_S3_DOMAIN_REPLACE", raising=False)
+
+    monkeypatch.setenv("S3_TRANSFER_CONFIG_MULTIPART_THRESHOLD", "not-an-int")
+
+    code, payload = _run_preflight()
+
+    assert code == 1
+    err = next(
+        e
+        for e in payload["errors"]
+        if e["field"] == "S3_TRANSFER_CONFIG_MULTIPART_THRESHOLD"
+    )
+    assert (
+        err["failure_class"]
+        == "config.s3.transfer_config.multipart_threshold.invalid_type"
+    )
+    assert "not-an-int" not in json.dumps(payload)
