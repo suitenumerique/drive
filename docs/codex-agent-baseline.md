@@ -34,8 +34,9 @@ or acceptance criteria). Those belong in the per-session text prompt.
 The Codex dev agent runs the required lint/tests/smoke and records results in
 the story run report. No secrets in logs/artifacts.
 
-The dev agent should stop at “ready for review” and report back; merging is
-handled by the review/maintainer loop.
+The dev agent should stop at “ready for review” for each story, but should
+only send a recap message once the **assigned batch** of stories is complete
+(unless blocked). Merging is handled by the review/maintainer loop.
 
 Do **not** wait for GitHub checks to complete before continuing work. GitHub is
 treated as a mirror; your “PASS” evidence is what you ran and recorded in the
