@@ -129,6 +129,24 @@ This document lists all configurable environment variables for the Drive applica
 | `WOPI_CONFIGURATION_CRONTAB_DAY_OF_MONTH` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `*` |
 | `WOPI_CONFIGURATION_CRONTAB_MONTH_OF_YEAR` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `*` |
 
+## S3 TransferConfig tuning (backend-mediated transfers)
+
+Drive configures boto3 `TransferConfig` via the `S3_TRANSFER_CONFIG_*` env vars.
+These settings primarily affect **backend-mediated** transfers (server-side S3
+interactions, and any flows using boto3 `TransferConfig`, e.g. WOPI save flows).
+
+They do **not** affect browser presigned PUT uploads (`EXTERNAL_BROWSER`) unless
+multipart upload is explicitly implemented in the browser client.
+
+Notes:
+
+- Values are integers in **bytes**.
+- Constraints enforced by `config_preflight`:
+  - `S3_TRANSFER_CONFIG_MULTIPART_CHUNKSIZE`: 5MB–5GB
+  - `S3_TRANSFER_CONFIG_MULTIPART_THRESHOLD`: 5MB–5TB
+  - `S3_TRANSFER_CONFIG_MULTIPART_CHUNKSIZE` must be `<=` threshold
+  - `S3_TRANSFER_CONFIG_MAX_CONCURRENCY`: 1–256
+
 ## `DRIVE_PUBLIC_URL` examples
 
 Production (HTTPS):

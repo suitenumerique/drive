@@ -26,6 +26,16 @@ class PreflightError:
     next_action_hint: str
 
 
+MB = 1024 * 1024
+GB = 1024 * MB
+TB = 1024 * GB
+
+S3_MULTIPART_MIN_PART_BYTES = 5 * MB
+S3_MULTIPART_MAX_PART_BYTES = 5 * GB
+S3_MAX_OBJECT_BYTES = 5 * TB
+S3_TRANSFER_CONFIG_MAX_CONCURRENCY_MAX = 256
+
+
 def _normalize_required_endpoint_url(raw: str) -> None:
     candidate = (raw or "").strip()
     if not candidate:
@@ -211,6 +221,138 @@ def _validate_s3_preflight(
                     next_action_hint=exc.next_action_hint,
                 )
             )
+
+    return errors
+
+
+def _parse_env_int(raw: str) -> int:
+    candidate = (raw or "").strip()
+    try:
+        return int(candidate, 10)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("invalid_int") from exc
+
+
+def _get_effective_positive_int(
+    field: str,
+    *,
+    default: int,
+    errors: list[PreflightError],
+    unit_hint: str,
+    failure_class_prefix: str,
+) -> int:
+    raw = os.environ.get(field, "")
+    if not (raw or "").strip():
+        return default
+
+    try:
+        value = _parse_env_int(raw)
+    except ValueError:
+        errors.append(
+            PreflightError(
+                field=field,
+                failure_class=f"{failure_class_prefix}.invalid_type",
+                next_action_hint=f"Set {field} to a positive integer {unit_hint}.",
+            )
+        )
+        return default
+
+    if value <= 0:
+        errors.append(
+            PreflightError(
+                field=field,
+                failure_class=f"{failure_class_prefix}.non_positive",
+                next_action_hint=f"Set {field} to a positive integer {unit_hint}.",
+            )
+        )
+        return default
+
+    return value
+
+
+def _validate_s3_transfer_config_preflight() -> list[PreflightError]:
+    """
+    Validate boto3 TransferConfig sizing/concurrency settings deterministically.
+
+    These settings primarily affect backend-mediated transfers (e.g. server-side
+    interactions and any flows using boto3 TransferConfig) and do not affect
+    EXTERNAL_BROWSER presigned PUT uploads unless multipart is implemented in the
+    browser client.
+    """
+    errors: list[PreflightError] = []
+
+    # Defaults are defined in src/backend/drive/settings.py
+    threshold = _get_effective_positive_int(
+        "S3_TRANSFER_CONFIG_MULTIPART_THRESHOLD",
+        default=8 * MB,
+        errors=errors,
+        unit_hint="number of bytes",
+        failure_class_prefix="config.s3.transfer_config.multipart_threshold",
+    )
+    chunksize = _get_effective_positive_int(
+        "S3_TRANSFER_CONFIG_MULTIPART_CHUNKSIZE",
+        default=8 * MB,
+        errors=errors,
+        unit_hint="number of bytes",
+        failure_class_prefix="config.s3.transfer_config.multipart_chunksize",
+    )
+    max_concurrency = _get_effective_positive_int(
+        "S3_TRANSFER_CONFIG_MAX_CONCURRENCY",
+        default=10,
+        errors=errors,
+        unit_hint="count",
+        failure_class_prefix="config.s3.transfer_config.max_concurrency",
+    )
+
+    if (
+        chunksize < S3_MULTIPART_MIN_PART_BYTES
+        or chunksize > S3_MULTIPART_MAX_PART_BYTES
+    ):
+        errors.append(
+            PreflightError(
+                field="S3_TRANSFER_CONFIG_MULTIPART_CHUNKSIZE",
+                failure_class="config.s3.transfer_config.multipart_chunksize.out_of_bounds",
+                next_action_hint=(
+                    "Use a multipart chunksize between 5MB and 5GB (bytes). "
+                    f"Example: {8 * MB}."
+                ),
+            )
+        )
+
+    if threshold < S3_MULTIPART_MIN_PART_BYTES or threshold > S3_MAX_OBJECT_BYTES:
+        errors.append(
+            PreflightError(
+                field="S3_TRANSFER_CONFIG_MULTIPART_THRESHOLD",
+                failure_class="config.s3.transfer_config.multipart_threshold.out_of_bounds",
+                next_action_hint=(
+                    "Use a multipart threshold between 5MB and 5TB (bytes). "
+                    f"Example: {8 * MB}."
+                ),
+            )
+        )
+
+    if chunksize > threshold:
+        errors.append(
+            PreflightError(
+                field="S3_TRANSFER_CONFIG_MULTIPART_CHUNKSIZE",
+                failure_class="config.s3.transfer_config.multipart_chunksize.gt_threshold",
+                next_action_hint=(
+                    "Ensure S3_TRANSFER_CONFIG_MULTIPART_CHUNKSIZE is <= "
+                    "S3_TRANSFER_CONFIG_MULTIPART_THRESHOLD."
+                ),
+            )
+        )
+
+    if max_concurrency < 1 or max_concurrency > S3_TRANSFER_CONFIG_MAX_CONCURRENCY_MAX:
+        errors.append(
+            PreflightError(
+                field="S3_TRANSFER_CONFIG_MAX_CONCURRENCY",
+                failure_class="config.s3.transfer_config.max_concurrency.out_of_bounds",
+                next_action_hint=(
+                    "Use a max concurrency between 1 and 256. Example: 10."
+                ),
+            )
+        )
 
     return errors
 
@@ -439,6 +581,7 @@ class Command(BaseCommand):
                 allow_insecure_http=allow_insecure_http,
             )
         )
+        errors.extend(_validate_s3_transfer_config_preflight())
         errors.extend(
             _validate_oidc_preflight(
                 https_only_posture=https_only_posture,

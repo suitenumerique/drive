@@ -1,6 +1,6 @@
 # Story 4.6: Operator-configurable upload part/chunk sizing (documented defaults + deterministic validation)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -44,14 +44,23 @@ Establish cross-cutting patterns (time-bounded long-running states, actionable e
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- `_bmad-output/implementation-artifacts/runs/20260211-170200-4.6/run-report.md`
 
 ### Completion Notes List
-
+- Document `S3_TRANSFER_CONFIG_*` defaults/limits and clarify affected flows.
+- Add deterministic `config_preflight` validation for unsafe multipart sizing and
+  invalid combinations (incl. no-leak messaging).
+- Add tests for the new preflight failure classes and hints.
+- Verification recorded in run artifacts (gates PASS).
 
 ### File List
-
-
+- `src/backend/core/management/commands/config_preflight.py`
+- `src/backend/core/tests/commands/test_config_preflight.py`
+- `docs/env.md`
+- `docs/ds_proxy.md`
+- `CHANGELOG.md`
+- `src/backend/core/tests/items/test_api_items_list_ordering.py`
+- `_bmad-output/implementation-artifacts/runs/20260211-170200-4.6/`
