@@ -1489,11 +1489,13 @@ def test_api_items_retrieve_file_analysing_not_creator():
     }
 
 
-def test_api_items_retrieve_wopi_supported():
+def test_api_items_retrieve_wopi_supported(settings):
     """
     The `is_wopi_supported` field should be true if the item is a file and the
     `WopiEnabled` setting is true.
     """
+    settings.WOPI_CLIENTS = ["vendorA"]
+
     cache.set(
         WOPI_CONFIGURATION_CACHE_KEY,
         {
@@ -1517,7 +1519,8 @@ def test_api_items_retrieve_wopi_supported():
     item.save()
     factories.UserItemAccessFactory(item=item, user=user, role="owner")
 
-    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+    with mock.patch("wopi.utils.is_wopi_backend_supported", return_value=True):
+        response = client.get(f"/api/v1.0/items/{item.id!s}/")
 
     assert response.status_code == 200
     assert response.json()["is_wopi_supported"] is True
