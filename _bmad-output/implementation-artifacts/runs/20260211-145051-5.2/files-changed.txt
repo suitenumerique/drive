@@ -1,0 +1,12 @@
+_bmad-output/implementation-artifacts/5-2-no-leak-error-contract-client-generic-operator-facing-failure-class-and-safe-evidence.md
+_bmad-output/implementation-artifacts/sprint-status.yaml
+src/backend/core/api/viewsets.py
+src/backend/core/ct_s3/safe.py
+src/backend/core/malware_detection.py
+src/backend/core/tasks/item.py
+src/backend/core/tests/items/test_api_item_upload_ended.py
+src/backend/core/tests/items/test_api_items_children_create.py
+src/backend/core/tests/items/test_api_items_create.py
+src/backend/core/tests/tasks/items/test_process_deletion.py
+src/backend/core/tests/test_malware_detection.py
+src/backend/core/utils/no_leak.py

@@ -5,10 +5,14 @@ Tasks related to items.
 import hashlib
 import logging
 from os.path import splitext
+from urllib.parse import quote
 
 from django.core.files.storage import default_storage
 
+from botocore.exceptions import ClientError
+
 from core.models import Item, ItemTypeChoices, ItemUploadStateChoices
+from core.utils.no_leak import safe_str_hash
 
 from drive.celery_app import app
 
@@ -35,7 +39,7 @@ def process_item_deletion(item_id):
         return
 
     if item.type == ItemTypeChoices.FILE:
-        logger.info("Deleting file %s", item.file_key)
+        logger.info("Deleting file (file_key_hash=%s)", safe_str_hash(item.file_key))
         default_storage.delete(item.file_key)
 
     if item.type == ItemTypeChoices.FOLDER:
@@ -86,15 +90,32 @@ def rename_file(item_id, new_title):
 
     s3_client = default_storage.connection.meta.client
 
-    s3_client.copy_object(
-        Bucket=default_storage.bucket_name,
-        CopySource={
-            "Bucket": default_storage.bucket_name,
-            "Key": from_file_key,
-        },
-        Key=to_file_key,
-        MetadataDirective="COPY",
-    )
+    escaped_key = quote(from_file_key, safe="/")
+    copy_source = f"/{default_storage.bucket_name}/{escaped_key}"
+    try:
+        s3_client.copy_object(
+            Bucket=default_storage.bucket_name,
+            CopySource=copy_source,
+            Key=to_file_key,
+            MetadataDirective="COPY",
+        )
+    except ClientError:
+        head = s3_client.head_object(
+            Bucket=default_storage.bucket_name,
+            Key=from_file_key,
+        )
+        obj = s3_client.get_object(
+            Bucket=default_storage.bucket_name,
+            Key=from_file_key,
+        )
+        s3_client.put_object(
+            Bucket=default_storage.bucket_name,
+            Key=to_file_key,
+            Body=obj["Body"].read(),
+            ContentType=head.get("ContentType"),
+            Metadata=head.get("Metadata", {}),
+            ACL="private",
+        )
 
     s3_client.delete_object(
         Bucket=default_storage.bucket_name,
