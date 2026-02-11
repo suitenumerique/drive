@@ -1,0 +1,19 @@
+{
+  "catalog_version": "v1",
+  "diff_base": "origin/main",
+  "gate_results": [
+    {
+      "duration_ms": 3870,
+      "failure_class": null,
+      "gate_id": "frontend.lint",
+      "next_action_hint": null,
+      "result": "pass"
+    }
+  ],
+  "git_head": "fe74ac89243a0692b01a94e6cbb34cfdee04b165",
+  "requested_gates": null,
+  "result": "pass",
+  "selected_gates": [
+    "frontend.lint"
+  ]
+}

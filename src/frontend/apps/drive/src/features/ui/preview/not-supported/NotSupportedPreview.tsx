@@ -10,12 +10,14 @@ interface NotSupportedPreviewProps {
   file: FilePreviewType;
   onDownload?: (file: FilePreviewType) => void;
   title?: string;
+  description?: string;
 }
 
 export const NotSupportedPreview = ({
   file,
   onDownload,
   title,
+  description,
 }: NotSupportedPreviewProps) => {
   const { t } = useTranslation();
 
@@ -32,7 +34,7 @@ export const NotSupportedPreview = ({
         {title || t("file_preview.unsupported.title")}
       </p>
       <p className="file-preview-unsupported__description">
-        {t("file_preview.unsupported.description")}
+        {description || t("file_preview.unsupported.description")}
       </p>
 
       {onDownload && (

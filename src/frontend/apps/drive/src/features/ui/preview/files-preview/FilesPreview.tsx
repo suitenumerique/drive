@@ -24,8 +24,8 @@ export type FilePreviewType = {
   title: string;
   mimetype: string;
   is_wopi_supported?: boolean;
-  url_preview: string;
-  url: string;
+  url_preview?: string;
+  url?: string;
 };
 
 type FilePreviewData = FilePreviewType & {
@@ -94,12 +94,24 @@ export const FilePreview = ({
       return <WopiEditor item={currentFile} />;
     }
 
+    if (!currentFile.url_preview) {
+      return (
+        <NotSupportedPreview
+          title={t("file_preview.unavailable.title")}
+          description={t("file_preview.unavailable.description")}
+          file={currentFile}
+          onDownload={handleDownload}
+        />
+      );
+    }
+
     switch (currentFile.category) {
       case MimeCategory.IMAGE:
         if (currentFile.mimetype.includes("heic")) {
           return (
             <NotSupportedPreview
               title={t("file_preview.unsupported.heic_title")}
+              description={t("file_preview.unsupported.description")}
               file={currentFile}
               onDownload={handleDownload}
             />

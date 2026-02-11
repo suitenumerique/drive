@@ -68,6 +68,10 @@
           "loading": "Loading document...",
           "error": "An error occurred while loading the document."
         },
+        "unavailable": {
+          "title": "Preview not available",
+          "description": "This file cannot be previewed. Download it to view it."
+        },
         "unsupported": {
           "title": "File type not supported for preview",
           "description": "To view the file, download it to your device.",
@@ -566,6 +570,10 @@
         "wopi": {
           "loading": "Chargement du document...",
           "error": "Une erreur est survenue lors du chargement du document."
+        },
+        "unavailable": {
+          "title": "Prévisualisation non disponible",
+          "description": "Ce fichier ne peut pas être prévisualisé. Téléchargez-le pour l'ouvrir."
         },
         "unsupported": {
           "title": "Type de fichier non supporté pour la prévisualisation",
@@ -1075,6 +1083,10 @@
         "wopi": {
           "loading": "Document laden...",
           "error": "Er is een fout opgetreden tijdens het laden van het document."
+        },
+        "unavailable": {
+          "title": "Voorbeeld niet beschikbaar",
+          "description": "Dit bestand kan niet worden bekeken. Download het om het te openen."
         },
         "unsupported": {
           "title": "Bestandstype niet ondersteund voor voorbeeld",
