@@ -12,6 +12,19 @@ B+ subset policy (v1):
 from __future__ import annotations
 
 import hashlib
+import re
+
+_STORY_FILE_RE = re.compile(
+    r"(?P<path>_bmad-output/implementation-artifacts/(?!prompts/)[^\s)]+\.md)"
+)
+
+
+def extract_story_file_path_from_pr_body(pr_body: str) -> str | None:
+    """Extract the BMAD story file path from a PR body (if present)."""
+    m = _STORY_FILE_RE.search(pr_body or "")
+    if not m:
+        return None
+    return m.group("path")
 
 
 def _strip_trailing_ws(lines: list[str]) -> list[str]:
