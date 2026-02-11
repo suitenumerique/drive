@@ -4,6 +4,7 @@ from django.conf import settings
 
 from lasuite.oidc_resource_server.authentication import ResourceServerAuthentication
 from rest_framework import permissions
+from rest_framework.exceptions import NotAuthenticated
 
 
 class ResourceServerClientPermission(permissions.BasePermission):
@@ -23,12 +24,11 @@ class ResourceServerClientPermission(permissions.BasePermission):
         if not isinstance(
             request.successful_authenticator, ResourceServerAuthentication
         ):
-            # Not a resource server request
-            return False
+            raise NotAuthenticated()
 
         # Check if the user is authenticated
         if not request.user.is_authenticated:
-            return False
+            raise NotAuthenticated()
         if (
             hasattr(view, "resource_server_actions")
             and view.action not in view.resource_server_actions

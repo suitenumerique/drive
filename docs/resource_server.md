@@ -13,7 +13,10 @@ OIDC_RESOURCE_SERVER_ENABLED=True
 OIDC_OP_URL=
 OIDC_OP_INTROSPECTION_ENDPOINT=
 OIDC_RS_CLIENT_ID=
-OIDC_RS_CLIENT_SECRET=
+# Refs-only secret configuration (do not set OIDC_RS_CLIENT_SECRET directly)
+OIDC_RS_CLIENT_SECRET_FILE=/run/secrets/drive_oidc_rs_client_secret
+# or:
+OIDC_RS_CLIENT_SECRET_ENV=DRIVE_OIDC_RS_CLIENT_SECRET
 OIDC_RS_AUDIENCE_CLAIM=
 OIDC_RS_ALLOWED_AUDIENCES=
 ```
@@ -23,6 +26,9 @@ It implements the resource server using `django-lasuite`, see the [documentation
 ## Customise allowed routes
 
 Configure the `EXTERNAL_API` setting to control which routes and actions are available in the external API. Set it via the `EXTERNAL_API` environment variable (as JSON) or in Django settings.
+
+External API routes are disabled by default. You must explicitly enable at
+least one resource to expose `/external_api/v1.0/...` routes.
 
 Default configuration:
 
@@ -52,6 +58,7 @@ EXTERNAL_API = {
 - `items`: Controls `/external_api/v1.0/items/`. Available actions: `list`, `retrieve`, `create`, `update`, `partial_update`, `destroy`, `children`, `upload_ended`, `move`, `restore`, `trashbin`, `hard_delete`, `tree`, `breadcrumb`, `link_configuration`, `favorite`, `media_auth`, `wopi`
 - `item_access`: Controls `/external_api/v1.0/items/{id}/accesses/`. Available actions: `list`, `retrieve`, `create`, `update`, `partial_update`, `destroy`
 - `item_invitation`: Controls `/external_api/v1.0/items/{id}/invitations/`. Available actions: `list`, `retrieve`, `create`, `update`, `partial_update`, `destroy`
+- `users`: Controls `/external_api/v1.0/users/`. Available actions: `list`, `retrieve`, `create`, `update`, `partial_update`, `destroy`, `get_me`
 
 Each endpoint has `enabled` (boolean) and `actions` (list of allowed actions).
 

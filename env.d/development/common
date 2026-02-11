@@ -61,7 +61,10 @@ OIDC_OP_URL=http://localhost:8083/realms/drive
 OIDC_OP_INTROSPECTION_ENDPOINT = http://nginx:8083/realms/drive/protocol/openid-connect/token/introspect
 OIDC_RESOURCE_SERVER_ENABLED=False
 OIDC_RS_CLIENT_ID=drive
-OIDC_RS_CLIENT_SECRET=ThisIsAnExampleKeyForDevPurposeOnly
+# Refs-only secret configuration (do not set OIDC_RS_CLIENT_SECRET directly).
+# When enabling the resource server, configure one of:
+# - OIDC_RS_CLIENT_SECRET_FILE=/run/secrets/drive_oidc_rs_client_secret
+# - OIDC_RS_CLIENT_SECRET_ENV=DRIVE_OIDC_RS_CLIENT_SECRET
 OIDC_RS_AUDIENCE_CLAIM="client_id"  # The claim used to identify the audience
 OIDC_RS_ALLOWED_AUDIENCES=""
 

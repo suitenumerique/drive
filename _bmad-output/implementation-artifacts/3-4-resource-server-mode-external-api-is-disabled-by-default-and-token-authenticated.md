@@ -1,6 +1,6 @@
 # Story 3.4: Resource Server mode (external API) is disabled-by-default and token-authenticated
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -52,13 +52,35 @@ End users can browse workspaces, create folders, upload/download files, and prev
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
 
+- `_bmad-output/implementation-artifacts/runs/20260211-124250-3.4/commands.log`
+- `_bmad-output/implementation-artifacts/runs/20260211-124250-3.4/gates.md`
 
 ### Completion Notes List
 
+- External API routes are disabled by default (no routes unless enabled).
+- Missing/invalid bearer token yields clean `401` with generic details (no-leak).
+- Non-allowlisted audiences yield deterministic `403`.
+- `OIDC_RS_CLIENT_SECRET` uses refs-only configuration (file/env ref precedence).
 
 ### File List
 
-
+- `docs/resource_server.md`
+- `env.d/development/common`
+- `src/backend/drive/settings.py`
+- `src/backend/core/urls.py`
+- `src/backend/core/external_api/authentication.py`
+- `src/backend/core/external_api/viewsets.py`
+- `src/backend/core/external_api/permissions.py`
+- `src/backend/core/utils/secret_refs.py`
+- `src/backend/core/tests/conftest.py`
+- `src/backend/core/tests/external_api/items/test_external_api_items.py`
+- `_bmad-output/implementation-artifacts/latest.txt`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+- `_bmad-output/implementation-artifacts/runs/20260211-124250-3.4/report.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-124250-3.4/commands.log`
+- `_bmad-output/implementation-artifacts/runs/20260211-124250-3.4/gates.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-124250-3.4/files-changed.txt`

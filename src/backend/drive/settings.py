@@ -1537,7 +1537,7 @@ class Base(Configuration):
         None, environ_name="OIDC_RS_CLIENT_ID", environ_prefix=None
     )
 
-    OIDC_RS_CLIENT_SECRET = values.Value(
+    OIDC_RS_CLIENT_SECRET = SecretRefValue(
         None, environ_name="OIDC_RS_CLIENT_SECRET", environ_prefix=None
     )
 
