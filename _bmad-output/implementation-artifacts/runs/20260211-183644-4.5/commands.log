@@ -1,0 +1,4 @@
+gate_id=frontend.lint
+cmd=make frontend-lint
+result=pass duration_ms=3870
+

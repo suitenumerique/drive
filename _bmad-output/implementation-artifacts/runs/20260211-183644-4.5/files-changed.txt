@@ -1,0 +1,4 @@
+src/frontend/apps/drive/src/features/explorer/utils/utils.ts
+src/frontend/apps/drive/src/features/i18n/translations.json
+src/frontend/apps/drive/src/features/ui/preview/files-preview/FilesPreview.tsx
+src/frontend/apps/drive/src/features/ui/preview/not-supported/NotSupportedPreview.tsx

@@ -1,6 +1,6 @@
 # Story 4.5: Preview supported files via `/media/preview` (deterministic availability)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -41,13 +41,29 @@ So that I can quickly inspect content without downloading.
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
+
 
 ### Debug Log References
+
+- `_bmad-output/implementation-artifacts/runs/20260211-183644-4.5/`
 
 
 ### Completion Notes List
 
+- Preview availability is derived from backend `url_preview` (no UI heuristics).
+- When `url_preview` is absent, the UI shows an explicit “preview not available”
+  state with no dead actions.
+
 
 ### File List
 
+- `_bmad-output/implementation-artifacts/runs/20260211-183644-4.5/report.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-183644-4.5/commands.log`
+- `_bmad-output/implementation-artifacts/runs/20260211-183644-4.5/files-changed.txt`
+- `_bmad-output/implementation-artifacts/runs/20260211-183644-4.5/gates.md`
+- `src/frontend/apps/drive/src/features/explorer/utils/utils.ts`
+- `src/frontend/apps/drive/src/features/i18n/translations.json`
+- `src/frontend/apps/drive/src/features/ui/preview/files-preview/FilesPreview.tsx`
+- `src/frontend/apps/drive/src/features/ui/preview/not-supported/NotSupportedPreview.tsx`
 
