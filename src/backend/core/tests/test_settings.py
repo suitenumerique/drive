@@ -156,8 +156,10 @@ def test_wopi_src_base_url_rejects_http_in_https_only_posture():
     assert "failure_class=config.public_url.https_required" in str(excinfo.value)
 
 
-def test_wopi_src_base_url_defaults_to_drive_public_url_when_wopi_enabled():
+def test_wopi_src_base_url_defaults_to_drive_public_url_when_wopi_enabled(monkeypatch):
     """When WOPI is enabled, WOPI_SRC_BASE_URL defaults to DRIVE_PUBLIC_URL."""
+
+    monkeypatch.setenv("WOPI_VENDORA_DISCOVERY_URL", "http://vendorA/hosting/discovery")
 
     class TestSettings(Base):
         """Fake test settings."""
@@ -175,8 +177,10 @@ def test_wopi_src_base_url_defaults_to_drive_public_url_when_wopi_enabled():
     assert TestSettings.WOPI_SRC_BASE_URL == "http://drive.example.com"
 
 
-def test_wopi_src_base_url_requires_drive_public_url_when_enabled_and_unset():
+def test_wopi_src_base_url_requires_drive_public_url_when_enabled_and_unset(monkeypatch):
     """WOPI enabled must fail fast if neither DRIVE_PUBLIC_URL nor WOPI_SRC_BASE_URL is set."""
+
+    monkeypatch.setenv("WOPI_VENDORA_DISCOVERY_URL", "http://vendorA/hosting/discovery")
 
     class TestSettings(Base):
         """Fake test settings."""

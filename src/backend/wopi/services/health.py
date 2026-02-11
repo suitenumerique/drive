@@ -76,9 +76,10 @@ def get_wopi_health() -> WopiHealth:
         ),
     }
 
-    if getattr(settings, "WOPI_SRC_BASE_URL", None) is None and getattr(
-        settings, "DRIVE_PUBLIC_URL", None
-    ) is None:
+    if (
+        getattr(settings, "WOPI_SRC_BASE_URL", None) is None
+        and getattr(settings, "DRIVE_PUBLIC_URL", None) is None
+    ):
         return WopiHealth(
             enabled=True,
             healthy=False,
@@ -141,4 +142,3 @@ def get_wopi_health() -> WopiHealth:
         state="enabled_healthy",
         evidence=evidence,
     )
-

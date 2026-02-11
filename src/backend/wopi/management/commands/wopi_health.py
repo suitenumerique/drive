@@ -23,4 +23,3 @@ class Command(BaseCommand):
         ok = bool(payload.get("healthy", False) or payload.get("state") == "disabled")
         if not ok:
             raise SystemExit(1)
-

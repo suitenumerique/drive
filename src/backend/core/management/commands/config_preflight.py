@@ -101,6 +101,32 @@ def _normalize_required_absolute_url(
         raise ValueError("invalid")
 
 
+def _normalize_required_http_url_any_tls(raw: str) -> None:
+    """
+    Validate a required absolute http(s) URL without enforcing TLS posture.
+
+    This is used for URLs that are not necessarily public-surface endpoints
+    (e.g. internal service discovery).
+    """
+    candidate = (raw or "").strip()
+    if not candidate:
+        raise ValueError("missing")
+
+    parsed = urlsplit(candidate)
+    scheme = (parsed.scheme or "").lower()
+    if scheme not in {"http", "https"}:
+        raise ValueError("invalid")
+
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("invalid")
+
+    if parsed.query or parsed.fragment:
+        raise ValueError("invalid")
+
+    if not parsed.hostname:
+        raise ValueError("invalid")
+
+
 def _validate_oidc_secret_ref() -> None:
     """
     Validate OIDC client secret is refs-only.
@@ -562,10 +588,6 @@ def _validate_oidc_secret_ref_field() -> list[PreflightError]:
 
 
 def _validate_wopi_preflight(
-    *,
-    https_only_posture: bool,
-    debug: bool,
-    allow_insecure_http: bool,
 ) -> list[PreflightError]:
     """
     Validate WOPI enablement config deterministically (no live I/O, no-leak).
@@ -623,37 +645,19 @@ def _validate_wopi_preflight(
             continue
 
         try:
-            _normalize_required_absolute_url(
-                raw,
-                https_only_posture=https_only_posture,
-                debug=debug,
-                allow_insecure_http=allow_insecure_http,
-            )
+            _normalize_required_http_url_any_tls(raw)
         except ValueError as exc:
-            reason = str(exc)
-            if reason == "https_required":
-                errors.append(
-                    PreflightError(
-                        field=env_name,
-                        failure_class="config.wopi.discovery_url.https_required",
-                        next_action_hint=(
-                            f"Use https:// for {env_name} in production (HTTPS-only). "
-                            "HTTP is dev-only and requires DEBUG=true and "
-                            "DRIVE_ALLOW_INSECURE_HTTP=true."
-                        ),
-                    )
+            _ = exc
+            errors.append(
+                PreflightError(
+                    field=env_name,
+                    failure_class="config.wopi.discovery_url.invalid",
+                    next_action_hint=(
+                        f"Set {env_name} to an absolute http(s) URL with a host. "
+                        "Remove userinfo/query/fragment."
+                    ),
                 )
-            else:
-                errors.append(
-                    PreflightError(
-                        field=env_name,
-                        failure_class="config.wopi.discovery_url.invalid",
-                        next_action_hint=(
-                            f"Set {env_name} to an absolute http(s) URL with a host. "
-                            "Remove userinfo/query/fragment."
-                        ),
-                    )
-                )
+            )
 
     return errors
 
@@ -687,11 +691,7 @@ class Command(BaseCommand):
             )
         )
         errors.extend(
-            _validate_wopi_preflight(
-                https_only_posture=https_only_posture,
-                debug=debug,
-                allow_insecure_http=allow_insecure_http,
-            )
+            _validate_wopi_preflight()
         )
 
         errors_sorted = sorted(errors, key=lambda e: e.field)
