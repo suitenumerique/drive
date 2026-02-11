@@ -1,5 +1,7 @@
 """Drive core authentication views."""
 
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
 from django.http import HttpResponseRedirect
 
 from lasuite.oidc_login.views import (
@@ -19,7 +21,25 @@ class OIDCAuthenticationCallbackView(LaSuiteOIDCAuthenticationCallbackView):
     def get(self, request):
         try:
             return super().get(request)
-        except UserCannotAccessApp:
-            return HttpResponseRedirect(
-                self.failure_url + "?auth_error=user_cannot_access_app"
+        except UserCannotAccessApp as exc:
+            safe_message = str(exc).replace("\r", " ").replace("\n", " ").strip()
+            if len(safe_message) > 200:
+                safe_message = safe_message[:200]
+
+            parsed = urlsplit(self.failure_url)
+            query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+            query["auth_error"] = "user_cannot_access_app"
+            if safe_message:
+                query["auth_error_message"] = safe_message
+
+            merged_query = urlencode(query, doseq=True)
+            failure_url = urlunsplit(
+                (
+                    parsed.scheme,
+                    parsed.netloc,
+                    parsed.path,
+                    merged_query,
+                    parsed.fragment,
+                )
             )
+            return HttpResponseRedirect(failure_url)

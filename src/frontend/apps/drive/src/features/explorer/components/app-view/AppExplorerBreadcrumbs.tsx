@@ -17,6 +17,8 @@ import { useTranslation } from "react-i18next";
 import { useRouter } from "next/router";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
 import { useMemo } from "react";
+import { useEntitlementsQuery } from "@/features/entitlements/useEntitlementsQuery";
+import { addToast, ToasterItem } from "@/features/ui/components/toaster/Toaster";
 import {
   DefaultRoute,
   getDefaultRouteId,
@@ -32,6 +34,10 @@ export const AppExplorerBreadcrumbs = () => {
   const importDropdown = useDropdownMenu();
   const onDefaultRoute = isDefaultRoute(router.pathname);
   const defaultRouteId = getDefaultRouteId(router.pathname);
+  const { data: entitlements } = useEntitlementsQuery();
+  const canUpload = entitlements?.can_upload?.result ?? true;
+  const cannotUploadMessage =
+    entitlements?.can_upload?.message || t("entitlements.can_upload.cannot_upload");
 
   const showActions =
     (onDefaultRoute && defaultRouteId === DefaultRoute.MY_FILES) ||
@@ -58,20 +64,36 @@ export const AppExplorerBreadcrumbs = () => {
 
         {showActions && (
           <div className="explorer__content__breadcrumbs__actions">
-            <ImportDropdown
-              importMenu={importDropdown}
-              trigger={
-                <Button
-                  variant="tertiary"
-                  size="small"
-                  onClick={() => {
-                    importDropdown.setIsOpen(true);
-                  }}
-                >
-                  {t("explorer.tree.import.label")}
-                </Button>
-              }
-            />
+            {canUpload ? (
+              <ImportDropdown
+                importMenu={importDropdown}
+                trigger={
+                  <Button
+                    variant="tertiary"
+                    size="small"
+                    onClick={() => {
+                      importDropdown.setIsOpen(true);
+                    }}
+                  >
+                    {t("explorer.tree.import.label")}
+                  </Button>
+                }
+              />
+            ) : (
+              <Button
+                variant="tertiary"
+                size="small"
+                onClick={() => {
+                  addToast(
+                    <ToasterItem type="error">
+                      <span>{cannotUploadMessage}</span>
+                    </ToasterItem>,
+                  );
+                }}
+              >
+                {t("explorer.tree.import.label")}
+              </Button>
+            )}
             <Button
               icon={<img src={createFolderSvg.src} alt="Create Folder" />}
               variant="tertiary"
