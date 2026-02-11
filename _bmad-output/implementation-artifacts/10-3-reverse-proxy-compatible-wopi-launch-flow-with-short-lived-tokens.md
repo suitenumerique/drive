@@ -31,13 +31,25 @@ So that WOPI works in self-host environments without direct internal network acc
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
 
+- Run folder: `_bmad-output/implementation-artifacts/runs/20260211-222743-10.3/`
+- Gates: `_bmad-output/implementation-artifacts/runs/20260211-222743-10.3/run-report.md`
+- Commands: `_bmad-output/implementation-artifacts/runs/20260211-222743-10.3/commands.log`
 
 ### Completion Notes List
 
+- Built absolute `WOPISrc` using `WOPI_SRC_BASE_URL`, `DRIVE_PUBLIC_URL`, or request base.
+- Added an explicit base-url override to the launch URL builder for proxy-aware flows.
+- Shortened default `WOPI_ACCESS_TOKEN_TIMEOUT` and updated `docs/env.md`.
 
 ### File List
 
-
+- `src/backend/core/api/viewsets.py`
+- `src/backend/wopi/utils/__init__.py`
+- `src/backend/core/tests/items/test_api_items_wopi.py`
+- `src/backend/drive/settings.py`
+- `docs/env.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-222743-10.3/`
