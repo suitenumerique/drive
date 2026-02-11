@@ -1,0 +1,27 @@
+{
+  "catalog_version": "v1",
+  "diff_base": "origin/main",
+  "gate_results": [
+    {
+      "duration_ms": 0,
+      "failure_class": null,
+      "gate_id": "docs.consistency",
+      "next_action_hint": null,
+      "result": "pass"
+    },
+    {
+      "duration_ms": 4072,
+      "failure_class": null,
+      "gate_id": "frontend.lint",
+      "next_action_hint": null,
+      "result": "pass"
+    }
+  ],
+  "git_head": "42d840d46044e7fb7d3c577d36a2aed5e5103c07",
+  "requested_gates": null,
+  "result": "pass",
+  "selected_gates": [
+    "docs.consistency",
+    "frontend.lint"
+  ]
+}

@@ -1,6 +1,6 @@
 # Story 4.4: Download files via `/media` (edge contract, Range support)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -44,13 +44,26 @@ So that I can access my content outside the explorer.
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
 
+- `_bmad-output/implementation-artifacts/runs/20260211-182810-4.4/report.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-182810-4.4/run-report.md`
 
 ### Completion Notes List
 
+- Edge contract: forward `Range`/`If-Range` and force Range support in nginx
+  reference configs for `/media` and `/media/preview`.
+- UI: avoid dead Download actions by hiding Download when `item.url` is absent.
+- Docs: update edge contract + smoke checklist with a deterministic Range check.
+- Gates: `docs.consistency` PASS, `frontend.lint` PASS.
 
 ### File List
 
-
+- `docker/files/development/etc/nginx/conf.d/default.conf`
+- `src/nginx/servers.conf.erb`
+- `docs/selfhost/edge-contract.md`
+- `docs/selfhost/smoke-checklist.md`
+- `src/frontend/apps/drive/src/features/explorer/components/item-actions/ItemActionDropdown.tsx`
+- `_bmad-output/implementation-artifacts/runs/20260211-182810-4.4/report.md`

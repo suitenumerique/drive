@@ -133,7 +133,7 @@ export const ItemActionDropdown = ({
           {
             icon: <span className="material-icons">download</span>,
             label: t("explorer.item.actions.download"),
-            isHidden: item.type === ItemType.FOLDER || minimal,
+            isHidden: item.type === ItemType.FOLDER || minimal || !item.url,
             value: "download",
             showSeparator: true,
             callback: handleDownload,
