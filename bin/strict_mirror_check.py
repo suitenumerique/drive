@@ -33,7 +33,7 @@ def _load_pr_body_from_event(event_path: Path) -> str | None:
 _STORY_FILE_RE = re.compile(
     r"(?P<path>_bmad-output/implementation-artifacts/(?!prompts/)[^\s)]+\.md)"
 )
-_FP_RE = re.compile(r"BMAD-FP-BP:\\s*(?P<fp>sha256:[0-9a-f]{64})")
+_FP_RE = re.compile(r"BMAD-FP-BP:\s*(?P<fp>sha256:[0-9a-f]{64})")
 
 
 def _extract_story_file_path(pr_body: str) -> str | None:
