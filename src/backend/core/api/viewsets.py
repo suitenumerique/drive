@@ -675,8 +675,8 @@ class ItemViewSet(
             )
 
         s3_client = default_storage.connection.meta.client
-        head_response, file_size, file_head = self._get_item_head_for_mimetype_detection(
-            item, s3_client
+        head_response, file_size, file_head = (
+            self._get_item_head_for_mimetype_detection(item, s3_client)
         )
 
         # Use improved MIME type detection combining magic bytes and file extension

@@ -421,7 +421,7 @@ class ItemManager(TreeManager.from_queryset(ItemQuerySet)):
         return item
 
 
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods,too-many-instance-attributes
 class Item(TreeModel, BaseModel):
     """Item in the tree."""
 
@@ -848,6 +848,7 @@ class Item(TreeModel, BaseModel):
             "partial_update": can_update,
             "update": can_update,
             "upload_ended": can_update and user.is_authenticated,
+            "upload_policy": can_update and user.is_authenticated,
             "wopi": can_get,
         }
 

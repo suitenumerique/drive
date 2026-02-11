@@ -465,7 +465,7 @@ export class StandardDriver extends Driver {
       );
       const payload = await response.json();
       policy = payload?.policy;
-    } catch (error) {
+    } catch (_error) {
       throw new UploadError({
         message: i18n.t("explorer.actions.upload.errors.reinitiate_failed"),
         kind: "create_failed",
