@@ -5,6 +5,7 @@ from urllib.parse import quote_plus, urlencode, urlparse
 
 from django.conf import settings
 from django.core.cache import cache
+from django.core.files.storage import default_storage
 
 from core import models
 from wopi.tasks.configure_wopi import (
@@ -13,6 +14,19 @@ from wopi.tasks.configure_wopi import (
 )
 
 LAUNCH_URL_PLACEHOLDER_REGEX = r"(<(?P<name>[a-z]+)=(?P<placeholder>[a-zA-Z0-9_]+)&?>)"
+
+
+def is_wopi_backend_supported() -> bool:
+    """
+    Return whether the configured storage backend supports the WOPI flows.
+
+    Current WOPI implementation uses S3 operations via django-storages, so it
+    requires a backend exposing an S3-like client and a bucket name.
+    """
+    bucket_name = getattr(default_storage, "bucket_name", None)
+    connection = getattr(default_storage, "connection", None)
+    client = getattr(getattr(connection, "meta", None), "client", None)
+    return bool(bucket_name and client)
 
 
 def is_item_wopi_supported(item, user):
@@ -26,6 +40,12 @@ def get_wopi_client_config(item, user):
     """make
     Get the WOPI client configuration for an item.
     """
+    if not getattr(settings, "WOPI_CLIENTS", []):
+        return None
+
+    if not is_wopi_backend_supported():
+        return None
+
     if (
         item.type != models.ItemTypeChoices.FILE
         or item.upload_state == models.ItemUploadStateChoices.SUSPICIOUS
