@@ -11,6 +11,10 @@ This is meant to be **generic** (not story-specific).
 
 ## Golden rules
 
+0) **Local files are the source of truth; GitHub PRs are a mirror**
+   - Prefer verifying from committed repo artifacts (`_bmad-output/...`) first.
+   - Use GitHub checks only to confirm merge requirements are satisfied.
+
 1) **No re-running tests in review mode**
    - The dev agent runs the checks and records results in the run artifacts.
    - The review agent only **verifies** that evidence exists and is coherent.
@@ -71,6 +75,7 @@ Use `gh` to verify:
 - Commit messages pass `lint-git` (gitmoji + body, lines ≤ 80)
 
 Do **not wait** on the ignored workflows listed above.
+Also avoid “watching” required checks in a blocking way.
 
 If `CHANGELOG.md` isn’t touched, ensure PR has label `noChangeLog`.
 Note: adding the label after a workflow run may not retroactively skip an
@@ -78,7 +83,12 @@ already-triggered `check-changelog` job; a new push is the simplest retrigger.
 
 ### 3) Merge + cleanup (if everything is OK)
 
-- Merge with `gh pr merge <n> --merge --delete-branch`
+- Prefer auto-merge to avoid idle waiting:
+  - `gh pr merge <n> --repo Apoze/drive --auto --merge --delete-branch`
+  - Then move on; GitHub will merge when required checks go green.
+
+- If it is already green and you want an immediate merge:
+  - `gh pr merge <n> --repo Apoze/drive --merge --delete-branch`
   - If CI requirements prevent merging but evidence is correct, use
     `--admin` only when necessary.
 - Ensure the remote branch is deleted.
@@ -114,4 +124,7 @@ gh api --paginate repos/Apoze/drive/branches --jq '.[].name' | sort
 
 # Merge + delete branch
 gh pr merge <n> --repo Apoze/drive --merge --delete-branch
+
+# Auto-merge (recommended to avoid waiting)
+gh pr merge <n> --repo Apoze/drive --auto --merge --delete-branch
 ```
