@@ -1,6 +1,6 @@
 # Story 10.1: WOPI enablement configuration (host allowlist, HTTPS posture, health gating)
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
