@@ -65,6 +65,7 @@ def test_models_sub_item_abilities_downgraded():
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "upload_policy": True,
         "wopi": True,
     }
 
@@ -97,6 +98,7 @@ def test_models_sub_item_abilities_downgraded():
         "tree": True,
         "update": False,
         "upload_ended": False,
+        "upload_policy": False,
         "wopi": True,
     }
 
@@ -128,6 +130,7 @@ def test_models_items_root_get_abilities_owner(django_assert_num_queries):
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "upload_policy": True,
         "wopi": True,
     }
     with django_assert_num_queries(1):
@@ -154,6 +157,7 @@ def test_models_items_root_get_abilities_owner(django_assert_num_queries):
         "tree": False,
         "update": False,
         "upload_ended": False,
+        "upload_policy": False,
         "wopi": False,
     }
 
@@ -185,6 +189,7 @@ def test_models_items_root_get_abilities_administrator(django_assert_num_queries
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "upload_policy": True,
         "wopi": True,
     }
     with django_assert_num_queries(1):
@@ -225,6 +230,7 @@ def test_models_items_root_get_abilities_editor_user(django_assert_num_queries):
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "upload_policy": True,
         "wopi": True,
     }
     with django_assert_num_queries(1):
@@ -266,6 +272,7 @@ def test_models_items_root_get_abilities_reader_user(django_assert_num_queries):
         "tree": True,
         "update": access_from_link,
         "upload_ended": access_from_link,
+        "upload_policy": access_from_link,
         "wopi": True,
     }
     with django_assert_num_queries(1):
