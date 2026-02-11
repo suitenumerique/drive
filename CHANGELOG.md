@@ -12,8 +12,9 @@ and this project adheres to
 
 - ✨(global) implement advanced shared management system
 - 📝(docs) add Docker-first self-host edge contract docs
-- 🧪(ci) add gates workflow (CT-S3 + no-leak scan)
-- 🧪(ci) add PR chrome + axe a11y smoke gate
+- 📝(docs) document deterministic failure reporting schema
+- 📝(docs) add Docker-first upgrade/rollback runbooks + smoke checklist updates
+- 🧪(ci) add gates workflow (v1 gates wired; non-blocking on PRs)
 - ✨(backend) add deterministic config_preflight edge validations
 
 ### Removed

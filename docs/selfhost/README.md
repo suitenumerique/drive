@@ -13,9 +13,10 @@ This folder is the entry point for **v1 self-hosting** documentation.
 
 - `docs/selfhost/edge-contract.md` — proxy-agnostic `/media` edge contract
 - `docs/selfhost/smoke-checklist.md` — deterministic smoke checklist (operator-run)
+- `docs/selfhost/upgrade.md` — Docker-first upgrade runbook (operator-run)
+- `docs/selfhost/rollback.md` — Docker-first rollback runbook (operator-run)
 
 ## Storage backend (compose baseline)
 
 The Docker Compose baseline uses an **S3-compatible object storage**.
 In this repo, the compose baseline is **SeaweedFS S3 gateway** (see `compose.yaml`).
-
