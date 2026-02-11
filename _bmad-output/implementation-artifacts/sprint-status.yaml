@@ -21,13 +21,13 @@ development_status:
   3-3-external-api-allowlist-for-resources-and-actions-strict-no-wildcards: done
   3-4-resource-server-mode-external-api-is-disabled-by-default-and-token-authenticated: done
   epic-3-retrospective: optional
-  epic-4: backlog
+  epic-4: in-progress
   4-1-browse-workspaces-and-navigate-folders-deterministic-ordering-abilities-contract: done
-  4-2-create-folders-in-the-explorer-capability-driven-clean-validation: ready-for-dev
-  4-3-s3-presigned-upload-flow-create-file-presigned-put-upload-ended: ready-for-dev
+  4-2-create-folders-in-the-explorer-capability-driven-clean-validation: done
+  4-3-s3-presigned-upload-flow-create-file-presigned-put-upload-ended: done
   4-4-download-files-via-media-edge-contract-range-support: ready-for-dev
   4-5-preview-supported-files-via-media-preview-deterministic-availability: ready-for-dev
-  4-6-operator-configurable-upload-part-chunk-sizing-documented-defaults-deterministic-validation: ready-for-dev
+  4-6-operator-configurable-upload-part-chunk-sizing-documented-defaults-deterministic-validation: done
   epic-4-retrospective: optional
   epic-5: backlog
   5-1-time-bounded-long-running-operations-no-infinite-loading-with-actionable-fallback-states: done
