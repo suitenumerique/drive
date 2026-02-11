@@ -1,3 +1,5 @@
+"""CT-S3 artifact schema smoke tests (failure_class + next_action_hint)."""
+
 from dataclasses import asdict
 
 from core.ct_s3 import constants
@@ -5,6 +7,7 @@ from core.ct_s3.types import CheckResult
 
 
 def test_ct_s3_check_result_schema_includes_failure_fields() -> None:
+    """Serialize a passing CheckResult with explicit failure fields present."""
     result = CheckResult(
         check_id="CT-S3-TEST",
         audience=constants.AUDIENCE_INTERNAL_PROXY,
@@ -24,6 +27,7 @@ def test_ct_s3_check_result_schema_includes_failure_fields() -> None:
 
 
 def test_ct_s3_check_result_schema_failure_fields_are_strings_on_failure() -> None:
+    """Serialize a failing CheckResult with string failure fields."""
     result = CheckResult(
         check_id="CT-S3-TEST-FAIL",
         audience=constants.AUDIENCE_EXTERNAL_BROWSER,

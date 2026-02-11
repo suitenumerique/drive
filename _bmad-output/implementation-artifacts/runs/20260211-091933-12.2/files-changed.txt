@@ -1,0 +1,7 @@
+src/backend/core/tests/test_ct_s3_failure_schema.py
+_bmad-output/implementation-artifacts/latest.txt
+_bmad-output/implementation-artifacts/12-2-standardize-failure-class-next-action-hint-across-gates-and-operator-facing-artifacts.md
+_bmad-output/implementation-artifacts/runs/20260211-091933-12.2/report.md
+_bmad-output/implementation-artifacts/runs/20260211-091933-12.2/commands.log
+_bmad-output/implementation-artifacts/runs/20260211-091933-12.2/files-changed.txt
+_bmad-output/implementation-artifacts/runs/20260211-091933-12.2/gates.md
