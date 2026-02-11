@@ -101,7 +101,7 @@ development_status:
   epic-11-retrospective: optional
   epic-12: backlog
   12-1-gates-runner-executes-stable-gate-ids-and-writes-deterministic-artifacts: ready-for-dev
-  12-2-standardize-failure-class-next-action-hint-across-gates-and-operator-facing-artifacts: ready-for-dev
+  12-2-standardize-failure-class-next-action-hint-across-gates-and-operator-facing-artifacts: review
   12-3-strict-mirror-enforcement-bmad-registry-source-of-truth-github-fork-mirror-only: backlog
   12-4-wire-ct-s3-and-no-leak-scanning-into-ci-with-strict-scope-enforce-dependency-automation-policy: ready-for-dev
   epic-12-retrospective: optional
