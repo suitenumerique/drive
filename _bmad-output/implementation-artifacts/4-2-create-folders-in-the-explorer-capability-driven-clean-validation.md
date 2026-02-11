@@ -1,6 +1,6 @@
 # Story 4.2: Create folders in the explorer (capability-driven + clean validation)
 
-Status: review
+Status: done
 
 ## Story
 
