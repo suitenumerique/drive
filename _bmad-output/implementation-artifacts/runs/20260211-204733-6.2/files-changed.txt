@@ -1,0 +1,8 @@
+_bmad-output/implementation-artifacts/6-2-open-s3-public-share-links-without-an-authenticated-session-token-enforced.md
+src/backend/core/api/serializers_share_links.py
+src/backend/core/api/viewsets.py
+src/backend/core/tests/items/test_api_items_media_auth.py
+src/backend/core/tests/share_links/test_api_share_links_browse.py
+src/backend/core/urls.py
+src/backend/core/utils/share_links.py
+src/frontend/apps/drive/src/pages/share/[token].tsx
