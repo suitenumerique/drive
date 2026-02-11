@@ -404,7 +404,7 @@ export class StandardDriver extends Driver {
     await fetchAPI(
       `items/${item.id}/upload-ended/`,
       { method: "POST" },
-      { timeoutMs: finalizeBounds.fail_ms },
+      { redirectOn40x: false, timeoutMs: finalizeBounds.fail_ms },
     );
 
     progressHandler?.(100);

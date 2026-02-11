@@ -3,6 +3,7 @@ Tests for items API endpoint in drive's core app: create
 """
 
 from concurrent.futures import ThreadPoolExecutor
+from unittest import mock
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
@@ -57,6 +58,48 @@ def test_api_items_create_authenticated_success():
     assert item.link_reach == "restricted"
     assert item.accesses.filter(role="owner", user=user).exists()
     assert item.type == ItemTypeChoices.FOLDER
+
+
+@pytest.mark.parametrize("message", [None, "Hello World"])
+@mock.patch("core.api.viewsets.get_entitlements_backend")
+def test_api_items_create_entitlements_backend_returns_falsy(
+    mock_get_entitlements_backend, message
+):
+    """
+    Test that the API returns a 403 when the entitlements backend returns a falsy result.
+    """
+    mock_entitlement_backend = mock.Mock()
+    return_value = {"result": False}
+    if message:
+        return_value["message"] = message
+    mock_entitlement_backend.can_upload.return_value = return_value
+    mock_get_entitlements_backend.return_value = mock_entitlement_backend
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.txt",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 403
+    assert not Item.objects.exists()
+    assert response.json() == {
+        "type": "client_error",
+        "errors": [
+            {
+                "code": "permission_denied",
+                "detail": message or "You do not have permission to upload files.",
+                "attr": None,
+            }
+        ],
+    }
 
 
 def test_api_items_create_file_authenticated_no_filename():

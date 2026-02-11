@@ -565,6 +565,18 @@ class ItemViewSet(
 
     def perform_create(self, serializer):
         """Set the current user as creator and owner of the newly created object."""
+        entitlements_backend = get_entitlements_backend()
+        can_upload = entitlements_backend.can_upload(self.request.user)
+        if (
+            serializer.validated_data.get("type") == models.ItemTypeChoices.FILE
+            and not can_upload["result"]
+        ):
+            raise drf.exceptions.PermissionDenied(
+                detail=can_upload.get(
+                    "message", "You do not have permission to upload files."
+                )
+            )
+
         obj = models.Item.objects.create_child(
             creator=self.request.user,
             link_reach=LinkReachChoices.RESTRICTED,
