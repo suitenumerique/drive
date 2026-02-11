@@ -1,6 +1,6 @@
 # Story 4.6: Operator-configurable upload part/chunk sizing (documented defaults + deterministic validation)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
