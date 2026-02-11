@@ -1,0 +1,2 @@
+make lint
+bin/pytest core/tests/commands/test_config_preflight.py
