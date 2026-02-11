@@ -35,6 +35,12 @@ This is meant to be **generic** (not story-specific).
    - PR base must be `main` (avoid stacked PRs).
    - Delete remote branch after merge.
 
+5) **Prompt routing (new dev convo vs same dev convo)**
+   - If a PR needs fixes, return a pasteable prompt intended for the **same**
+     Codex dev conversation that produced the PR (fast context reuse).
+   - If everything is OK and you are preparing *new* stories, return a prompt
+     intended for a **new** Codex dev conversation (clean context).
+
 ---
 
 ## What the dev agent must provide back (message format)
