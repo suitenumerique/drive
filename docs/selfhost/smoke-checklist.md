@@ -3,15 +3,23 @@
 This checklist is designed to be **deterministic** and **operator-run**.
 It intentionally does not depend on any specific reverse proxy.
 
+Perform these checks in order; each check must have a clear PASS/FAIL outcome.
+
 ## 0) Preflight configuration (deterministic)
 
-Run:
+Run one of:
 
 - `python src/backend/manage.py config_preflight`
+- `docker compose run --rm app-dev python manage.py config_preflight`
 
-Expected:
+PASS:
 
-- Exit code `0` and `ok=true`, or exit code `1` with deterministic `errors[]`.
+- Exit code `0` and `ok=true`.
+
+FAIL (expected shape):
+
+- Exit code `1` with deterministic `errors[]` containing `failure_class` +
+  `next_action_hint`.
 
 Common failure classes:
 
@@ -20,46 +28,85 @@ Common failure classes:
 - `config.s3.domain_replace.invalid`
 - `config.s3.domain_replace.https_required`
 
-## 1) Auth (dev vs prod)
+## 1) Login (OIDC)
 
-- **Production:** bring your own OIDC provider.
+- **Production:** use your operator-provided external OIDC IdP.
 - **Development:** Keycloak is a fixture only.
 
-Expected:
+Action:
 
-- You can log in and reach the Drive UI without mixed TLS modes.
+- Log in and land in the Drive UI.
 
-## 2) Basic navigation
+PASS:
 
-Expected:
+- Explorer renders; no infinite loading; no mixed TLS modes.
 
-- You can browse a workspace and folders.
+## 2) Browse (workspace/folder)
 
-## 3) Upload (EXTERNAL_BROWSER)
+Action:
 
-Expected:
+- Open a known workspace/folder with existing content.
 
-- A browser upload succeeds using a presigned PUT.
-- If uploads fail with `403`, check the **signed host** and whether your browser is
-  using `AWS_S3_DOMAIN_REPLACE` (when set).
+PASS:
 
-## 4) Media download via `/media` (INTERNAL_PROXY)
+- File list renders; navigation works.
 
-Expected:
+## 3) Preview (existing file)
 
-- Downloading a file via `/media/...` succeeds through your reverse proxy.
+Action:
 
-If you observe `403 SignatureDoesNotMatch` from the S3 upstream:
+- Open preview for a known previewable file.
 
-- Verify the proxy forwards SigV4 headers from the auth subrequest response:
-  - `Authorization`, `X-Amz-Date`, `X-Amz-Content-SHA256`
-  - `X-Amz-Security-Token` when using temporary credentials
-- Verify the upstream **Host** header matches `AWS_S3_ENDPOINT_URL`.
+PASS:
 
-## 5) Media preview via `/media/preview` (INTERNAL_PROXY)
+- Preview renders, **or** shows a clear actionable state (no infinite loading;
+  no-leak).
 
-Expected:
+## 4) Upload (existing folder)
 
-- Preview media (when applicable) is fetched via `/media/preview/...` and authorized
-  by the same `media-auth` contract.
+Action:
 
+- Upload a small test file.
+
+PASS:
+
+- Upload completes and the file appears in the expected folder.
+
+FAIL (acceptable):
+
+- A clear actionable error that does not leak secrets.
+
+## 5) Media access via `/media` (edge contract)
+
+Action:
+
+- Download/open an existing file that uses the `/media/...` flow through your
+  reverse proxy.
+
+PASS:
+
+- The file loads successfully.
+
+FAIL (acceptable):
+
+- A clear actionable no-leak error that references the `/media` edge contract.
+  See `docs/selfhost/edge-contract.md`.
+
+## 6) Public share link (if enabled)
+
+Action:
+
+- Open an existing public share link in a private window.
+
+PASS:
+
+- Share opens, **or** shows a clear actionable state (no infinite loading;
+  no-leak).
+
+### Mount-backed share link semantics (MountProvider targets, if applicable)
+
+If you test a mount-backed public share link:
+
+- PASS: it respects the documented semantics:
+  - `404` when the target cannot be found,
+  - `410` when the share existed but the target is gone (out-of-band change).
