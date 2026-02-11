@@ -39,7 +39,8 @@ This is meant to be **generic** (not story-specific).
 
 ## What the dev agent must provide back (message format)
 
-When the dev agent reports completion, it must include:
+When the dev agent reports completion, it must include a single recap message
+for the **batch** of stories it worked on (unless blocked), with for each PR:
 - PR number + URL
 - branch name
 - run report path (repo-relative), e.g.
@@ -105,10 +106,12 @@ Return a short message the user can paste to the dev agent, including:
 ### 5) If OK: scaffold next story PR(s)
 
 Prepare the next story(ies) by:
-- creating the story branch and draft PR
-- adding label `noChangeLog` as needed
-- creating a prompt under
+- selecting the next items from
+  `_bmad-output/planning-artifacts/development-order.md`
+- pointing the dev agent at the existing prompt under
   `_bmad-output/implementation-artifacts/prompts/<story>-dev.md`
+- avoiding empty “scaffold” PRs with no code changes (create a PR only when
+  story work starts), unless there is a concrete repo change needed to unblock.
 
 When merging multiple story PRs:
 - Prefer a single “tracking sync” PR to update global tracker files:
