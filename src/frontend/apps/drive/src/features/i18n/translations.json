@@ -74,7 +74,8 @@
         }
       },
       "common": {
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "retry": "Retry"
       },
       "clipboard": {
         "success": "Copied to clipboard",
@@ -88,7 +89,14 @@
       "my_account": "My Account",
       "api": {
         "error": {
-          "unexpected": "An unexpected error occurred."
+          "unexpected": "An unexpected error occurred.",
+          "timeout": "This is taking longer than expected. Please retry."
+        }
+      },
+      "operations": {
+        "long_running": {
+          "still_working": "Still working. You can retry or contact your administrator.",
+          "failed": "This operation is taking too long. Please retry or contact your administrator."
         }
       },
       "home": {
@@ -545,7 +553,8 @@
         }
       },
       "common": {
-        "cancel": "Annuler"
+        "cancel": "Annuler",
+        "retry": "Réessayer"
       },
       "clipboard": {
         "success": "Copié dans le presse-papiers",
@@ -559,7 +568,14 @@
       "my_account": "Mon Compte",
       "api": {
         "error": {
-          "unexpected": "Une erreur inattendue est survenue."
+          "unexpected": "Une erreur inattendue est survenue.",
+          "timeout": "Cela prend plus de temps que prévu. Veuillez réessayer."
+        }
+      },
+      "operations": {
+        "long_running": {
+          "still_working": "Toujours en cours. Vous pouvez réessayer ou contacter votre administrateur.",
+          "failed": "L'opération prend trop de temps. Veuillez réessayer ou contacter votre administrateur."
         }
       },
       "home": {
@@ -1026,7 +1042,8 @@
         }
       },
       "common": {
-        "cancel": "Annuleren"
+        "cancel": "Annuleren",
+        "retry": "Opnieuw proberen"
       },
       "clipboard": {
         "success": "Gekopieërd naar klembord",
@@ -1040,7 +1057,14 @@
       "my_account": "Mijn account",
       "api": {
         "error": {
-          "unexpected": "Er is een onverwachte fout opgetreden."
+          "unexpected": "Er is een onverwachte fout opgetreden.",
+          "timeout": "Dit duurt langer dan verwacht. Probeer opnieuw."
+        }
+      },
+      "operations": {
+        "long_running": {
+          "still_working": "Nog bezig. Probeer opnieuw of neem contact op met je beheerder.",
+          "failed": "Deze actie duurt te lang. Probeer opnieuw of neem contact op met je beheerder."
         }
       },
       "home": {

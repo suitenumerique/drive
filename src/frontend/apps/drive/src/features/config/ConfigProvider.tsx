@@ -3,6 +3,11 @@ import { useApiConfig } from "./useApiConfig";
 import { ApiConfig } from "@/features/drivers/types";
 import { createContext, useContext, useEffect } from "react";
 import { useAppContext } from "@/pages/_app";
+import { setRuntimeConfig } from "./runtimeConfig";
+import { Button } from "@gouvfr-lasuite/cunningham-react";
+import { useTranslation } from "react-i18next";
+import { getOperationTimeBound } from "@/features/operations/timeBounds";
+import { useTimeBoundedPhase } from "@/features/operations/useTimeBoundedPhase";
 
 export interface ConfigContextType {
   config: ApiConfig;
@@ -21,7 +26,8 @@ export const useConfig = () => {
 };
 
 export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
-  const { data: config } = useApiConfig();
+  const { t } = useTranslation();
+  const { data: config, isLoading, isError, refetch } = useApiConfig();
   const { setTheme } = useAppContext();
 
   useEffect(() => {
@@ -32,10 +38,42 @@ export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [config?.FRONTEND_THEME, setTheme]);
 
+  useEffect(() => {
+    if (config) {
+      setRuntimeConfig(config);
+    }
+  }, [config]);
+
+  const bounds = getOperationTimeBound("config_load");
+  const phase = useTimeBoundedPhase(isLoading, bounds);
+
+  if (isError) {
+    return (
+      <div className="global-loader">
+        <div>{t("operations.long_running.failed")}</div>
+        <Button variant="tertiary" onClick={() => refetch()}>
+          {t("common.retry")}
+        </Button>
+      </div>
+    );
+  }
+
   if (!config) {
     return (
       <div className="global-loader">
         <Spinner size="xl" />
+        {phase !== "loading" && (
+          <div>
+            {phase === "still_working"
+              ? t("operations.long_running.still_working")
+              : t("operations.long_running.failed")}
+          </div>
+        )}
+        {phase === "failed" && (
+          <Button variant="tertiary" onClick={() => refetch()}>
+            {t("common.retry")}
+          </Button>
+        )}
       </div>
     );
   }

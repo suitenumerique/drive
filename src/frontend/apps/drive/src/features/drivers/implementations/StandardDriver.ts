@@ -1,4 +1,8 @@
 import { fetchAPI } from "@/features/api/fetchApi";
+import { getRuntimeConfig } from "@/features/config/runtimeConfig";
+import { AppError } from "@/features/errors/AppError";
+import i18n from "@/features/i18n/initI18n";
+import { getOperationTimeBound } from "@/features/operations/timeBounds";
 import {
   Driver,
   Entitlements,
@@ -31,7 +35,10 @@ import { DTODeleteAccess } from "../DTOs/AccessesDTO";
 
 export class StandardDriver extends Driver {
   async getConfig(): Promise<ApiConfig> {
-    const response = await fetchAPI(`config/`);
+    const bounds = getOperationTimeBound("config_load");
+    const response = await fetchAPI(`config/`, undefined, {
+      timeoutMs: bounds.fail_ms,
+    });
     const data = await response.json();
     return data;
   }
@@ -349,6 +356,11 @@ export class StandardDriver extends Driver {
     filename: string;
     progressHandler?: (progress: number) => void;
   }): Promise<Item> {
+    const config = getRuntimeConfig();
+    const createBounds = getOperationTimeBound("upload_create", config);
+    const uploadPutBounds = getOperationTimeBound("upload_put", config);
+    const finalizeBounds = getOperationTimeBound("upload_finalize", config);
+
     const { parentId, file, progressHandler, ...rest } = data;
     const url = parentId ? `items/${parentId}/children/` : `items/`;
     const response = await fetchAPI(
@@ -365,11 +377,12 @@ export class StandardDriver extends Driver {
         // We don't want to redirect to the login page in this case, instead
         // we want to show an error.
         redirectOn40x: false,
+        timeoutMs: createBounds.fail_ms,
       },
     );
     const item = jsonToItem(await response.json());
     if (!item.policy) {
-      throw new Error("No policy found");
+      throw new AppError(i18n.t("api.error.unexpected"));
     }
 
     // We don't want to call the progress handler with 100% when the upload is done.
@@ -381,13 +394,18 @@ export class StandardDriver extends Driver {
       progressHandler?.(progress);
     };
 
-    await uploadFile(item.policy, file, (progress) => {
-      progressHandlerProxy(progress);
-    });
+    await uploadFile(
+      item.policy,
+      file,
+      (progress) => progressHandlerProxy(progress),
+      uploadPutBounds.fail_ms,
+    );
 
-    await fetchAPI(`items/${item.id}/upload-ended/`, {
-      method: "POST",
-    });
+    await fetchAPI(
+      `items/${item.id}/upload-ended/`,
+      { method: "POST" },
+      { timeoutMs: finalizeBounds.fail_ms },
+    );
 
     progressHandler?.(100);
 
@@ -411,7 +429,11 @@ export class StandardDriver extends Driver {
   }
 
   async getWopiInfo(itemId: string): Promise<WopiInfo> {
-    const response = await fetchAPI(`items/${itemId}/wopi/`);
+    const config = getRuntimeConfig();
+    const bounds = getOperationTimeBound("wopi_info", config);
+    const response = await fetchAPI(`items/${itemId}/wopi/`, undefined, {
+      timeoutMs: bounds.fail_ms,
+    });
     const data = await response.json();
     return data;
   }
@@ -451,6 +473,7 @@ export const uploadFile = (
   url: string,
   file: File,
   progressHandler: (progress: number) => void,
+  timeoutMs?: number,
 ) =>
   new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -458,8 +481,19 @@ export const uploadFile = (
     xhr.setRequestHeader("X-amz-acl", "private");
     xhr.setRequestHeader("Content-Type", file.type);
 
-    xhr.addEventListener("error", reject);
-    xhr.addEventListener("abort", reject);
+    if (timeoutMs !== undefined) {
+      xhr.timeout = timeoutMs;
+    }
+
+    const rejectUnexpected = () => {
+      reject(new AppError(i18n.t("api.error.unexpected")));
+    };
+
+    xhr.addEventListener("error", rejectUnexpected);
+    xhr.addEventListener("abort", rejectUnexpected);
+    xhr.addEventListener("timeout", () => {
+      reject(new AppError(i18n.t("api.error.timeout")));
+    });
 
     xhr.addEventListener("readystatechange", () => {
       if (xhr.readyState === 4) {
@@ -469,7 +503,7 @@ export const uploadFile = (
           progressHandler(100);
           return resolve(true);
         }
-        reject(new Error(`Failed to perform the upload on ${url}.`));
+        rejectUnexpected();
       }
     });
 

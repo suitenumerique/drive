@@ -9,6 +9,10 @@ import { ToastContentProps } from "react-toastify";
 import { getIconByMimeType } from "../icons/ItemIcon";
 import { UploadingState } from "@/features/explorer/hooks/useUpload";
 import { Spinner } from "@gouvfr-lasuite/ui-kit";
+import { useConfig } from "@/features/config/ConfigProvider";
+import { getOperationTimeBound } from "@/features/operations/timeBounds";
+import { useTimeBoundedPhase } from "@/features/operations/useTimeBoundedPhase";
+import { useMemo } from "react";
 
 export const FileUploadToast = (
   props: {
@@ -16,6 +20,7 @@ export const FileUploadToast = (
   } & Partial<ToastContentProps>
 ) => {
   const { t } = useTranslation();
+  const { config } = useConfig();
   const [isOpen, setIsOpen] = useState(true);
   const pendingFilesCount = Object.values(
     props.uploadingState.filesMeta
@@ -27,6 +32,12 @@ export const FileUploadToast = (
   const simpleMode =
     props.uploadingState.step === "preparing" ||
     props.uploadingState.step === "create_folders";
+
+  const simpleModeBounds = useMemo(
+    () => getOperationTimeBound("upload_create", config),
+    [config],
+  );
+  const simpleModePhase = useTimeBoundedPhase(simpleMode, simpleModeBounds);
 
   useEffect(() => {
     if (props.uploadingState.step === "upload_files") {
@@ -75,6 +86,12 @@ export const FileUploadToast = (
                 <Spinner />
                 {t(
                   `explorer.actions.upload.steps.${props.uploadingState.step}`
+                )}
+                {simpleModePhase === "still_working" && (
+                  <span> {t("operations.long_running.still_working")}</span>
+                )}
+                {simpleModePhase === "failed" && (
+                  <span> {t("operations.long_running.failed")}</span>
                 )}
               </>
             ) : (

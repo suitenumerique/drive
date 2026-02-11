@@ -191,6 +191,10 @@ export type ApiConfig = {
   FRONTEND_HIDE_GAUFRE?: boolean;
   FRONTEND_SILENT_LOGIN_ENABLED?: boolean;
   FRONTEND_EXTERNAL_HOME_URL?: string;
+  FRONTEND_OPERATION_TIME_BOUNDS_MS?: Record<
+    string,
+    { still_working_ms: number; fail_ms: number }
+  >;
   theme_customization?: ThemeCustomization;
 };
 
