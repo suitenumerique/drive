@@ -1,0 +1,9 @@
+[
+  {
+    "gate_id": "no_leak.scan_bmad_output",
+    "result": "pass",
+    "duration_ms": 40,
+    "failure_class": null,
+    "next_action_hint": null
+  }
+]

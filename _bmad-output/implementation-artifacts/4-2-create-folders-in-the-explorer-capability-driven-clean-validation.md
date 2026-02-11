@@ -37,14 +37,24 @@ So that I can organize my content.
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- `_bmad-output/implementation-artifacts/runs/20260211-164716-4.2/run-report.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-165142-4.2-no-leak/run-report.md`
 
 ### Completion Notes List
-
+- Fix Explorer tree create-folder labels (capability-driven action surface).
+- Add deterministic API coverage for children folder creation:
+  - forbidden (`children_create=false`) returns clean `client_error`
+  - missing title returns stable `validation_error` code
+  - created folder is returned by children listing
+- Verification recorded in run artifacts (gates PASS).
 
 ### File List
-
-
+- `CHANGELOG.md`
+- `src/frontend/apps/drive/src/features/explorer/components/tree/ExplorerTreeActions.tsx`
+- `src/backend/core/tests/items/test_api_items_children_create.py`
+- `src/backend/core/tests/items/test_api_items_list_ordering.py`
+- `_bmad-output/implementation-artifacts/runs/20260211-164716-4.2/`
+- `_bmad-output/implementation-artifacts/runs/20260211-165142-4.2-no-leak/`
