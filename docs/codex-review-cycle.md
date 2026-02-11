@@ -69,6 +69,80 @@ The dev agent **must not** ask the review agent to run checks.
 
 ---
 
+## How to prompt the Codex dev agent (templates)
+
+These are **copy/paste** templates you (review/maintainer) can return to the
+user to start a **new** Codex dev conversation (new stories) or to request
+**fixes** in the **same** dev conversation (existing PRs).
+
+### Template A — New Codex dev conversation (implement a batch)
+
+Replace the placeholders in `<>`. Keep the prompt **story-focused**: reference
+the source-of-truth file paths instead of pasting long docs.
+
+```text
+Tu es Codex (dev) dans le repo /root/Apoze/drive.
+
+Avant toute action, ouvre et applique :
+- docs/codex-agent-baseline.md
+
+Objectif
+- Implémenter un batch de <N> stories (2–4, par défaut 3) en suivant STRICTEMENT
+  leurs “source de vérité” (_bmad-output/implementation-artifacts/*.md).
+- Une branche + une PR par story (base main). Pas de PRs stacked.
+- Ne pas attendre les checks GitHub non-bloquants (DockerHub/Crowdin/e2e).
+- No-leak: ne jamais mettre de secrets/signed URLs/SigV4/tokens dans diffs/logs.
+
+Stories à faire (dans cet ordre)
+1) <story-id> — <story file path>
+2) <story-id> — <story file path>
+3) <story-id> — <story file path>
+
+Pour CHAQUE story
+- Créer une branche `story/<id>-<slug>` + PR vers `main`.
+- Faire les changements minimaux (Docker-first, ne pas toucher K8s/Helm).
+- Exécuter les vérifs exigées par la story (lint/tests/smokes) et consigner les
+  résultats dans les artefacts.
+- Traçabilité (si la story l’exige, sinon ne pas inventer) :
+  - `_bmad-output/implementation-artifacts/runs/<YYYYMMDD-HHMMSS>-<id>/`
+    avec `report.md`, `gates.md`, `commands.log`, `files-changed.txt`.
+  - Si présents : `run-report.md` / `run-report.json` (runner).
+  - Mettre à jour le “Dev Agent Record” du story file (référence le run).
+  - Ne pas modifier `latest.txt` / `sprint-status.yaml` sauf exigence explicite
+    de la story (sinon PR “tracking sync” séparée).
+
+Sortie attendue (UN SEUL message, quand tout le batch est terminé)
+- Pour chaque PR : numéro + URL, branche, chemin `runs/.../report.md`,
+  résumé des gates (PASS/FAIL) tel que dans `gates.md`.
+- Signaler tout blocage/FAIL avec le texte exact (no-leak).
+```
+
+### Template B — Fixes in-place (same dev conversation / same PRs)
+
+Use this when checks are failing or evidence is missing.
+
+```text
+Tu continues dans /root/Apoze/drive sur les PRs/branches déjà ouvertes (ne crée
+pas de nouvelles PRs, sauf si demandé explicitement).
+
+Avant toute action, applique :
+- docs/codex-agent-baseline.md
+
+Problèmes à corriger (exactement)
+1) <PR/branch>: <what failed/missing> — <file/path/gate name>
+2) <PR/branch>: <what failed/missing> — <file/path/gate name>
+
+Contraintes
+- Fix minimal, no-leak, pas de changements hors scope.
+- Si tu modifies l’historique pour réparer `lint-git`, force-push uniquement
+  avec `--force-with-lease` et explique dans `report.md` ce qui a changé.
+
+À fournir
+- Push les corrections + mise à jour des run artifacts si requis.
+- Retourne un récap unique avec l’état final des checks requis (sans attendre
+  les workflows non-bloquants).
+```
+
 ## Review agent procedure (when user pastes “retour dev”)
 
 ### 1) Verify the run artifacts exist and are coherent
