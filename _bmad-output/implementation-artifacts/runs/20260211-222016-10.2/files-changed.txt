@@ -1,0 +1,7 @@
+_bmad-output/implementation-artifacts/10-2-capability-driven-wopi-action-exposure-per-backend-no-dead-buttons.md
+src/backend/core/api/viewsets.py
+src/backend/core/tests/items/test_api_items_wopi.py
+src/backend/wopi/tests/test_utils.py
+src/backend/wopi/utils/__init__.py
+src/frontend/apps/drive/src/features/i18n/translations.json
+src/frontend/apps/drive/src/features/ui/preview/wopi/WopiEditor.tsx

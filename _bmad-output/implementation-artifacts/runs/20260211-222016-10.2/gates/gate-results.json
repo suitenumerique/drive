@@ -1,0 +1,37 @@
+[
+  {
+    "gate_id": "backend.lint",
+    "result": "pass",
+    "duration_ms": 25047,
+    "failure_class": null,
+    "next_action_hint": null
+  },
+  {
+    "gate_id": "backend.tests",
+    "result": "pass",
+    "duration_ms": 136517,
+    "failure_class": null,
+    "next_action_hint": null
+  },
+  {
+    "gate_id": "docs.consistency",
+    "result": "pass",
+    "duration_ms": 0,
+    "failure_class": null,
+    "next_action_hint": null
+  },
+  {
+    "gate_id": "frontend.lint",
+    "result": "pass",
+    "duration_ms": 3806,
+    "failure_class": null,
+    "next_action_hint": null
+  },
+  {
+    "gate_id": "no_leak.scan_bmad_output",
+    "result": "pass",
+    "duration_ms": 43,
+    "failure_class": null,
+    "next_action_hint": null
+  }
+]
