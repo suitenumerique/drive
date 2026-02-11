@@ -37,7 +37,9 @@
       },
       "file_download_modal": {
         "error": {
-          "no_url_or_title": "This file has no URL or title."
+          "no_url_or_title": "This file has no URL or title.",
+          "not_ready": "This file is not ready yet. Please retry later.",
+          "upload_expired": "This upload did not complete. Please retry uploading the file."
         },
         "suspicious": {
           "title": "This file is suspicious"
@@ -185,6 +187,9 @@
           },
           "file_too_large_to_analyze": {
             "text": "This file is too large to scan. It may be unsafe to download."
+          },
+          "expired": {
+            "text": "This upload did not complete in time. Please retry the upload or delete this item."
           },
           "multipleSelection": {
             "text": "Multiple files selected",
@@ -393,6 +398,19 @@
           "upload": {
             "toast": "Drop your files here to transfer them in {{title}}",
             "toast_no_rights": "You don't have the necessary rights to transfer files in {{title}}",
+            "actions": {
+              "retry": "Retry",
+              "reinitiate": "Re-initiate",
+              "contact_admin": "Contact admin"
+            },
+            "errors": {
+              "put_failed": "Upload failed. Please retry.",
+              "policy_expired": "Upload link expired. Please re-initiate the upload.",
+              "storage_unavailable": "Upload failed due to a temporary storage issue. Please retry.",
+              "finalize_failed": "Upload completed but could not be finalized. Please retry.",
+              "timeout": "Upload timed out. Please retry.",
+              "reinitiate_failed": "Could not re-initiate the upload. Please contact your administrator."
+            },
             "steps": {
               "preparing": "Preparing the transfer...",
               "create_folders": "Creation of folders in progress..."
@@ -400,6 +418,8 @@
             "files": {
               "description_one": "{{count}} file being transferred",
               "description_other": "{{count}} files being transferred",
+              "description_failed_one": "{{count}} upload failed",
+              "description_failed_other": "{{count}} uploads failed",
               "description_done_one": "{{count}} file transferred",
               "description_done_other": "{{count}} files transferred"
             }
@@ -516,7 +536,9 @@
       },
       "file_download_modal": {
         "error": {
-          "no_url_or_title": "Ce fichier n'a pas d'URL ou de titre. "
+          "no_url_or_title": "Ce fichier n'a pas d'URL ou de titre.",
+          "not_ready": "Ce fichier n'est pas encore disponible. Veuillez réessayer plus tard.",
+          "upload_expired": "Ce transfert n'a pas pu être finalisé. Veuillez relancer le transfert."
         },
         "suspicious": {
           "title": "Ce fichier est suspect"
@@ -664,6 +686,9 @@
           },
           "file_too_large_to_analyze": {
             "text": "Ce fichier est trop volumineux pour être analysé. Il peut être dangereux de le télécharger."
+          },
+          "expired": {
+            "text": "Ce transfert n'a pas pu être finalisé à temps. Réessayez ou supprimez cet élément."
           },
           "multipleSelection": {
             "text": "Plusieurs fichiers sélectionnés",
@@ -876,6 +901,19 @@
           "upload": {
             "toast": "Déposez vos fichiers ici pour les transférer dans {{title}}",
             "toast_no_rights": "Vous n'avez pas les droits nécessaires pour transférer des fichiers dans {{title}}",
+            "actions": {
+              "retry": "Réessayer",
+              "reinitiate": "Relancer",
+              "contact_admin": "Contacter l'administrateur"
+            },
+            "errors": {
+              "put_failed": "Le transfert a échoué. Veuillez réessayer.",
+              "policy_expired": "Le lien de transfert a expiré. Veuillez relancer le transfert.",
+              "storage_unavailable": "Le transfert a échoué à cause d'un problème temporaire. Veuillez réessayer.",
+              "finalize_failed": "Le transfert a réussi mais n'a pas pu être finalisé. Veuillez réessayer.",
+              "timeout": "Le transfert a expiré. Veuillez réessayer.",
+              "reinitiate_failed": "Impossible de relancer le transfert. Veuillez contacter votre administrateur."
+            },
             "steps": {
               "preparing": "Préparation du transfert...",
               "create_folders": "Création des dossiers en cours..."
@@ -883,6 +921,8 @@
             "files": {
               "description_one": "{{count}} fichier en cours de transfert",
               "description_other": "{{count}} fichiers en cours de transfert",
+              "description_failed_one": "{{count}} transfert a échoué",
+              "description_failed_other": "{{count}} transferts ont échoué",
               "description_done_one": "{{count}} fichier transféré",
               "description_done_other": "{{count}} fichiers transférés"
             }
@@ -1005,7 +1045,9 @@
       },
       "file_download_modal": {
         "error": {
-          "no_url_or_title": "Dit bestand heeft geen URL of titel."
+          "no_url_or_title": "Dit bestand heeft geen URL of titel.",
+          "not_ready": "Dit bestand is nog niet klaar. Probeer het later opnieuw.",
+          "upload_expired": "Deze upload is niet afgerond. Probeer het bestand opnieuw te uploaden."
         },
         "suspicious": {
           "title": "Dit bestand is verdacht"
@@ -1153,6 +1195,9 @@
           },
           "file_too_large_to_analyze": {
             "text": "Dit bestand is te groot om te scannen. Het downloaden ervan is mogelijk onveilig."
+          },
+          "expired": {
+            "text": "Deze upload is niet op tijd afgerond. Probeer opnieuw of verwijder dit item."
           },
           "multipleSelection": {
             "text": "Meerdere bestanden geselecteerd",
@@ -1361,6 +1406,19 @@
           "upload": {
             "toast": "Zet uw bestanden hier neer om ze over te zetten in {{title}}",
             "toast_no_rights": "U beschikt niet over de benodigde rechten om bestanden over te dragen in {{title}}",
+            "actions": {
+              "retry": "Opnieuw proberen",
+              "reinitiate": "Opnieuw starten",
+              "contact_admin": "Contact opnemen"
+            },
+            "errors": {
+              "put_failed": "Upload mislukt. Probeer opnieuw.",
+              "policy_expired": "Uploadlink verlopen. Start de upload opnieuw.",
+              "storage_unavailable": "Upload mislukt door een tijdelijk probleem. Probeer opnieuw.",
+              "finalize_failed": "Upload is gelukt maar kon niet worden afgerond. Probeer opnieuw.",
+              "timeout": "Upload time-out. Probeer opnieuw.",
+              "reinitiate_failed": "Upload opnieuw starten is mislukt. Neem contact op met uw beheerder."
+            },
             "steps": {
               "preparing": "Voorbereiding van de overdracht...",
               "create_folders": "Creatie van mappen in progress..."
@@ -1368,6 +1426,8 @@
             "files": {
               "description_one": "{{count}} bestand wordt verplaatst",
               "description_other": "{{count}} bestanden wordt verplaatst",
+              "description_failed_one": "{{count}} upload mislukt",
+              "description_failed_other": "{{count}} uploads mislukt",
               "description_done_one": "{{count}} bestand verplaatst",
               "description_done_other": "{{count}} bestanden verplaatst"
             }

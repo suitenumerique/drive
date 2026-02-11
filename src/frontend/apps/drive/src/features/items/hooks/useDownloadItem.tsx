@@ -15,17 +15,24 @@ export const useDownloadItem = () => {
   const modals = useModals();
   const { user } = useAuth();
   const handleDownloadItem = async (item?: Item) => {
+    const itemState = item?.upload_state;
     if (!item?.url || !item?.title) {
+      const message =
+        itemState === ItemUploadState.EXPIRED
+          ? t("file_download_modal.error.upload_expired")
+          : itemState === ItemUploadState.PENDING ||
+              itemState === ItemUploadState.ANALYZING
+            ? t("file_download_modal.error.not_ready")
+            : t("file_download_modal.error.no_url_or_title");
       addToast(
         <ToasterItem type="error">
           <span className="material-icons">error</span>
-          <span>{t("file_download_modal.error.no_url_or_title")}</span>
+          <span>{message}</span>
         </ToasterItem>
       );
       return;
     }
 
-    const itemState = item?.upload_state;
     const isCreator = item?.creator.id === user?.id;
     const isFileTooLarge =
       itemState === ItemUploadState.FILE_TOO_LARGE_TO_ANALYZE;

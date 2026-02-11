@@ -21,7 +21,7 @@ from core import factories, models
 
 pytestmark = pytest.mark.django_db
 
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines,duplicate-code
 
 
 def test_models_items_str():
@@ -261,6 +261,7 @@ def test_models_items_get_abilities_forbidden(
         "tree": False,
         "update": False,
         "upload_ended": False,
+        "upload_policy": False,
         "wopi": False,
     }
     nb_queries = 1 if is_authenticated else 0
@@ -308,6 +309,7 @@ def test_models_items_get_abilities_reader(
         "tree": True,
         "update": False,
         "upload_ended": False,
+        "upload_policy": False,
         "wopi": True,
     }
     nb_queries = 1 if is_authenticated else 0
@@ -359,6 +361,7 @@ def test_models_items_get_abilities_editor(
         "tree": True,
         "update": True,
         "upload_ended": is_authenticated,
+        "upload_policy": is_authenticated,
         "wopi": True,
     }
     nb_queries = 1 if is_authenticated else 0
@@ -403,6 +406,7 @@ def test_models_items_not_root_get_abilities_owner(django_assert_num_queries):
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "upload_policy": True,
         "wopi": True,
     }
     with django_assert_num_queries(1):
@@ -429,6 +433,7 @@ def test_models_items_not_root_get_abilities_owner(django_assert_num_queries):
         "tree": False,
         "update": False,
         "upload_ended": False,
+        "upload_policy": False,
         "wopi": False,
     }
 
@@ -463,6 +468,7 @@ def test_models_items_not_root_get_abilities_administrator(django_assert_num_que
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "upload_policy": True,
         "wopi": True,
     }
     with django_assert_num_queries(1):
@@ -506,6 +512,7 @@ def test_models_items_not_root_get_abilities_editor_user(django_assert_num_queri
         "tree": True,
         "update": True,
         "upload_ended": True,
+        "upload_policy": True,
         "wopi": True,
     }
     with django_assert_num_queries(1):
@@ -554,6 +561,7 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "tree": True,
         "update": access_from_link,
         "upload_ended": access_from_link,
+        "upload_policy": access_from_link,
         "wopi": True,
     }
     with django_assert_num_queries(2):

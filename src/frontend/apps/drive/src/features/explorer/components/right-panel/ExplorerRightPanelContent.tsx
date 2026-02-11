@@ -27,7 +27,8 @@ export const ExplorerRightPanelContent = ({
   const showWarning =
     firstSelectedItem?.upload_state === ItemUploadState.SUSPICIOUS ||
     firstSelectedItem?.upload_state ===
-      ItemUploadState.FILE_TOO_LARGE_TO_ANALYZE;
+      ItemUploadState.FILE_TOO_LARGE_TO_ANALYZE ||
+    firstSelectedItem?.upload_state === ItemUploadState.EXPIRED;
 
   if (!firstSelectedItem) {
     return (

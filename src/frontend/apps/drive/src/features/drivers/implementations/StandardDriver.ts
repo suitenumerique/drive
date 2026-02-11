@@ -1,6 +1,7 @@
 import { fetchAPI } from "@/features/api/fetchApi";
 import { getRuntimeConfig } from "@/features/config/runtimeConfig";
 import { AppError } from "@/features/errors/AppError";
+import { UploadError } from "@/features/errors/UploadError";
 import i18n from "@/features/i18n/initI18n";
 import { getOperationTimeBound } from "@/features/operations/timeBounds";
 import {
@@ -394,22 +395,109 @@ export class StandardDriver extends Driver {
       progressHandler?.(progress);
     };
 
-    await uploadFile(
-      item.policy,
-      file,
-      (progress) => progressHandlerProxy(progress),
-      uploadPutBounds.fail_ms,
-    );
+    try {
+      await uploadFile(
+        item.policy,
+        file,
+        (progress) => progressHandlerProxy(progress),
+        uploadPutBounds.fail_ms,
+        { itemId: item.id },
+      );
+    } catch (error) {
+      if (error instanceof UploadError) {
+        throw error;
+      }
+      throw new UploadError({
+        message: i18n.t("explorer.actions.upload.errors.put_failed"),
+        kind: "put_failed",
+        nextAction: "retry",
+        itemId: item.id,
+      });
+    }
 
-    await fetchAPI(
-      `items/${item.id}/upload-ended/`,
-      { method: "POST" },
-      { redirectOn40x: false, timeoutMs: finalizeBounds.fail_ms },
-    );
+    try {
+      await fetchAPI(
+        `items/${item.id}/upload-ended/`,
+        { method: "POST" },
+        { redirectOn40x: false, timeoutMs: finalizeBounds.fail_ms },
+      );
+    } catch (error) {
+      if (error instanceof UploadError) {
+        throw error;
+      }
+      throw new UploadError({
+        message: i18n.t("explorer.actions.upload.errors.finalize_failed"),
+        kind: "finalize_failed",
+        nextAction: "retry",
+        itemId: item.id,
+      });
+    }
 
     progressHandler?.(100);
 
     return item;
+  }
+
+  async reinitiateFileUpload(data: {
+    itemId: string;
+    file: File;
+    filename: string;
+    progressHandler?: (progress: number) => void;
+  }): Promise<void> {
+    const config = getRuntimeConfig();
+    const createBounds = getOperationTimeBound("upload_create", config);
+    const uploadPutBounds = getOperationTimeBound("upload_put", config);
+    const finalizeBounds = getOperationTimeBound("upload_finalize", config);
+
+    const progressHandlerProxy = (progress: number) => {
+      if (progress === 100) {
+        return;
+      }
+      data.progressHandler?.(progress);
+    };
+
+    let policy: string;
+    try {
+      const response = await fetchAPI(
+        `items/${data.itemId}/upload-policy/`,
+        { method: "POST" },
+        { redirectOn40x: false, timeoutMs: createBounds.fail_ms },
+      );
+      const payload = await response.json();
+      policy = payload?.policy;
+    } catch {
+      throw new UploadError({
+        message: i18n.t("explorer.actions.upload.errors.reinitiate_failed"),
+        kind: "create_failed",
+        nextAction: "contact_admin",
+        itemId: data.itemId,
+      });
+    }
+
+    if (!policy) {
+      throw new UploadError({
+        message: i18n.t("explorer.actions.upload.errors.reinitiate_failed"),
+        kind: "create_failed",
+        nextAction: "contact_admin",
+        itemId: data.itemId,
+      });
+    }
+
+    await uploadFile(
+      policy,
+      data.file,
+      (progress) => progressHandlerProxy(progress),
+      uploadPutBounds.fail_ms,
+      { itemId: data.itemId },
+    );
+
+    await fetchAPI(
+      `items/${data.itemId}/upload-ended/`,
+      { method: "POST" },
+      { redirectOn40x: false, timeoutMs: finalizeBounds.fail_ms },
+    );
+
+    data.progressHandler?.(100);
   }
 
   async deleteItems(ids: string[]): Promise<void> {
@@ -474,6 +562,7 @@ export const uploadFile = (
   file: File,
   progressHandler: (progress: number) => void,
   timeoutMs?: number,
+  opts?: { itemId?: string },
 ) =>
   new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -485,14 +574,41 @@ export const uploadFile = (
       xhr.timeout = timeoutMs;
     }
 
-    const rejectUnexpected = () => {
-      reject(new AppError(i18n.t("api.error.unexpected")));
+    const rejectWith = (params: {
+      message: string;
+      kind: "put_failed" | "timeout";
+      nextAction: "retry" | "reinitiate" | "contact_admin";
+    }) => {
+      reject(
+        new UploadError({
+          message: params.message,
+          kind: params.kind,
+          nextAction: params.nextAction,
+          itemId: opts?.itemId,
+        }),
+      );
     };
 
-    xhr.addEventListener("error", rejectUnexpected);
-    xhr.addEventListener("abort", rejectUnexpected);
+    xhr.addEventListener("error", () =>
+      rejectWith({
+        message: i18n.t("explorer.actions.upload.errors.put_failed"),
+        kind: "put_failed",
+        nextAction: "retry",
+      }),
+    );
+    xhr.addEventListener("abort", () =>
+      rejectWith({
+        message: i18n.t("explorer.actions.upload.errors.put_failed"),
+        kind: "put_failed",
+        nextAction: "retry",
+      }),
+    );
     xhr.addEventListener("timeout", () => {
-      reject(new AppError(i18n.t("api.error.timeout")));
+      rejectWith({
+        message: i18n.t("explorer.actions.upload.errors.timeout"),
+        kind: "timeout",
+        nextAction: "retry",
+      });
     });
 
     xhr.addEventListener("readystatechange", () => {
@@ -503,7 +619,26 @@ export const uploadFile = (
           progressHandler(100);
           return resolve(true);
         }
-        rejectUnexpected();
+        const status = xhr.status;
+        if (status === 400 || status === 403) {
+          return rejectWith({
+            message: i18n.t("explorer.actions.upload.errors.policy_expired"),
+            kind: "put_failed",
+            nextAction: "reinitiate",
+          });
+        }
+        if (status >= 500) {
+          return rejectWith({
+            message: i18n.t("explorer.actions.upload.errors.storage_unavailable"),
+            kind: "put_failed",
+            nextAction: "retry",
+          });
+        }
+        return rejectWith({
+          message: i18n.t("explorer.actions.upload.errors.put_failed"),
+          kind: "put_failed",
+          nextAction: "retry",
+        });
       }
     });
 

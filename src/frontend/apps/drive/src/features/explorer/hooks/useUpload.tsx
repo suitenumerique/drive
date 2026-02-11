@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
 import { Item } from "@/features/drivers/types";
 import { FileWithPath, useDropzone } from "react-dropzone";
@@ -16,6 +16,9 @@ import { getEntitlements } from "@/utils/entitlements";
 import { useEntitlementsQuery } from "@/features/entitlements/useEntitlementsQuery";
 import { useCanCreateChildren } from "@/features/items/utils";
 import { getMyFilesQueryKey } from "@/utils/defaultRoutes";
+import { UploadError } from "@/features/errors/UploadError";
+import { errorToString } from "@/features/api/APIError";
+import { getDriver } from "@/features/config/Config";
 
 type FileUpload = FileWithPath & {
   parentId?: string;
@@ -200,6 +203,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
   const { t } = useTranslation();
 
   const createFile = useMutationCreateFile();
+  const driver = getDriver();
 
   const canCreateChildren = useCanCreateChildren(item);
   const { data: entitlements } = useEntitlementsQuery();
@@ -216,6 +220,80 @@ export const useUploadZone = ({ item }: { item: Item }) => {
   });
 
   const { filesToUpload, handleHierarchy } = useUpload({ item: item! });
+
+  const setFileMeta = useCallback((path: string, meta: Partial<FileUploadMeta>) => {
+    setUploadingState((prev) => ({
+      ...prev,
+      filesMeta: {
+        ...prev.filesMeta,
+        [path]: {
+          ...prev.filesMeta[path],
+          ...meta,
+        } as FileUploadMeta,
+      },
+    }));
+  }, []);
+
+  const handleRetry = useCallback(async (path: string) => {
+    const meta = uploadingState.filesMeta[path];
+    if (!meta) {
+      return;
+    }
+
+    setUploadingState((prev) => ({
+      ...prev,
+      step: UploadingStep.UPLOAD_FILES,
+    }));
+
+    setFileMeta(path, {
+      progress: 0,
+      status: "in_progress",
+      error: undefined,
+    });
+
+    try {
+      if (meta.itemId) {
+        await driver.reinitiateFileUpload({
+          itemId: meta.itemId,
+          file: meta.file,
+          filename: meta.file.name,
+          progressHandler: (progress) => {
+            setFileMeta(path, { progress, status: "in_progress" });
+          },
+        });
+      } else {
+        await new Promise<void>((resolve, reject) => {
+          createFile.mutate(
+            {
+              filename: meta.file.name,
+              file: meta.file,
+              parentId: (meta.file as FileUpload).parentId,
+              progressHandler: (progress) => {
+                setFileMeta(path, { progress, status: "in_progress" });
+              },
+            },
+            {
+              onSuccess: () => resolve(),
+              onError: (error) => reject(error),
+            },
+          );
+        });
+      }
+
+      setFileMeta(path, { progress: 100, status: "done" });
+    } catch (error) {
+      const nextAction =
+        error instanceof UploadError ? error.nextAction : "retry";
+      setFileMeta(path, {
+        status: "failed",
+        itemId: error instanceof UploadError ? error.itemId : meta.itemId,
+        error: {
+          message: errorToString(error),
+          nextAction,
+        },
+      });
+    }
+  }, [createFile, driver, setFileMeta, uploadingState.filesMeta]);
 
   const validateDrop = () => {
     if (!canUpload) {
@@ -295,7 +373,10 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
       if (!fileUploadsToastId.current) {
         fileUploadsToastId.current = addToast(
-          <FileUploadToast uploadingState={uploadingState} />,
+          <FileUploadToast
+            uploadingState={uploadingState}
+            onRetry={handleRetry}
+          />,
           {
             autoClose: false,
             onClose: () => {
@@ -331,7 +412,10 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
       if (!fileUploadsToastId.current) {
         fileUploadsToastId.current = addToast(
-          <FileUploadToast uploadingState={uploadingState} />,
+          <FileUploadToast
+            uploadingState={uploadingState}
+            onRetry={handleRetry}
+          />,
           {
             autoClose: false,
             onClose: () => {
@@ -357,6 +441,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         newUploadingState.filesMeta[pathNicefy(file.path!)] = {
           file,
           progress: 0,
+          status: "in_progress",
         };
       }
       setUploadingState(newUploadingState);
@@ -377,25 +462,24 @@ export const useUploadZone = ({ item }: { item: Item }) => {
                   file,
                   parentId: file.parentId,
                   progressHandler: (progress) => {
-                    setUploadingState((prev) => {
-                      const newState = {
-                        ...prev,
-                        filesMeta: {
-                          ...prev.filesMeta,
-                          [pathNicefy(file.path!)]: { file, progress },
-                        },
-                      };
-                      return newState;
+                    setFileMeta(pathNicefy(file.path!), {
+                      file,
+                      progress,
+                      status: "in_progress",
                     });
                   },
                 },
                 {
-                  onError: () => {
-                    setUploadingState((prev) => {
-                      // Remove the file from the uploading state on error
-                      const newState = { ...prev };
-                      delete newState.filesMeta[pathNicefy(file.path!)];
-                      return newState;
+                  onError: (error) => {
+                    const nextAction =
+                      error instanceof UploadError ? error.nextAction : "retry";
+                    setFileMeta(pathNicefy(file.path!), {
+                      status: "failed",
+                      itemId: error instanceof UploadError ? error.itemId : undefined,
+                      error: {
+                        message: errorToString(error),
+                        nextAction,
+                      },
                     });
                   },
                   onSettled: () => {
@@ -429,11 +513,16 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         fileUploadsToastId.current = null;
       } else {
         toast.update(fileUploadsToastId.current, {
-          render: <FileUploadToast uploadingState={uploadingState} />,
+          render: (
+            <FileUploadToast
+              uploadingState={uploadingState}
+              onRetry={handleRetry}
+            />
+          ),
         });
       }
     }
-  }, [uploadingState]);
+  }, [handleRetry, uploadingState]);
 
   useEffect(() => {
     const unloadCallback = (event: BeforeUnloadEvent) => {

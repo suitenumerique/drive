@@ -13,7 +13,16 @@ import {
 import { ExplorerSelectionBar } from "@/features/explorer/components/app-view/ExplorerSelectionBar";
 import { ExplorerFilters } from "@/features/explorer/components/app-view/ExplorerFilters";
 import { AppExplorerGrid } from "@/features/explorer/components/app-view/AppExplorerGrid";
-export type FileUploadMeta = { file: File; progress: number };
+export type FileUploadMeta = {
+  file: File;
+  progress: number;
+  status?: "in_progress" | "failed" | "done";
+  itemId?: string;
+  error?: {
+    message: string;
+    nextAction: "retry" | "reinitiate" | "contact_admin";
+  };
+};
 
 /**
  * - Handles the area selection of items

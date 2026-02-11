@@ -662,18 +662,7 @@ class ItemViewSet(
         """
 
         item = self.get_object()
-
-        if item.type != models.ItemTypeChoices.FILE:
-            raise drf.exceptions.ValidationError(
-                {"item": "This action is only available for items of type FILE."},
-                code="item_upload_type_unavailable",
-            )
-
-        if item.upload_state != models.ItemUploadStateChoices.PENDING:
-            raise drf.exceptions.ValidationError(
-                {"item": "This action is only available for items in PENDING state."},
-                code="item_upload_state_not_pending",
-            )
+        self._ensure_upload_ended_item_is_pending_file(item)
 
         entitlements_backend = get_entitlements_backend()
         can_upload = entitlements_backend.can_upload(self.request.user)
@@ -686,23 +675,9 @@ class ItemViewSet(
             )
 
         s3_client = default_storage.connection.meta.client
-
-        head_response = s3_client.head_object(
-            Bucket=default_storage.bucket_name, Key=item.file_key
+        head_response, file_size, file_head = (
+            self._get_item_head_for_mimetype_detection(item, s3_client)
         )
-        file_size = head_response["ContentLength"]
-
-        if file_size > 2048:
-            range_response = s3_client.get_object(
-                Bucket=default_storage.bucket_name,
-                Key=item.file_key,
-                Range="bytes=0-2047",
-            )
-            file_head = range_response["Body"].read()
-        else:
-            file_head = s3_client.get_object(
-                Bucket=default_storage.bucket_name, Key=item.file_key
-            )["Body"].read()
 
         # Use improved MIME type detection combining magic bytes and file extension
         file_key_hash = safe_str_hash(item.file_key)
@@ -803,6 +778,98 @@ class ItemViewSet(
             )
 
         return drf_response.Response(serializer.data, status=status.HTTP_200_OK)
+
+    def _ensure_upload_ended_item_is_pending_file(self, item):
+        if item.type != models.ItemTypeChoices.FILE:
+            raise drf.exceptions.ValidationError(
+                {"item": "This action is only available for items of type FILE."},
+                code="item_upload_type_unavailable",
+            )
+
+        if item.effective_upload_state() == models.ItemUploadStateChoices.EXPIRED:
+            file_key_hash = safe_str_hash(item.file_key) if item.filename else None
+            logger.info(
+                "upload_ended: pending upload expired "
+                "(failure_class=upload.session.expired "
+                "next_action_hint=Re-initiate upload (refresh policy) "
+                "item_id=%s file_key_hash=%s)",
+                item.id,
+                file_key_hash,
+            )
+            item.upload_state = models.ItemUploadStateChoices.EXPIRED
+            item.save(update_fields=["upload_state", "updated_at"])
+            raise drf.exceptions.ValidationError(
+                {"item": "This upload session has expired. Please retry the upload."},
+                code="item_upload_state_expired",
+            )
+
+        if item.upload_state != models.ItemUploadStateChoices.PENDING:
+            raise drf.exceptions.ValidationError(
+                {"item": "This action is only available for items in PENDING state."},
+                code="item_upload_state_not_pending",
+            )
+
+    def _get_item_head_for_mimetype_detection(self, item, s3_client):
+        head_response = s3_client.head_object(
+            Bucket=default_storage.bucket_name, Key=item.file_key
+        )
+        file_size = head_response["ContentLength"]
+
+        if file_size <= 2048:
+            body = s3_client.get_object(
+                Bucket=default_storage.bucket_name, Key=item.file_key
+            )["Body"]
+            return head_response, file_size, body.read()
+
+        body = s3_client.get_object(
+            Bucket=default_storage.bucket_name,
+            Key=item.file_key,
+            Range="bytes=0-2047",
+        )["Body"]
+        return head_response, file_size, body.read()
+
+    @drf.decorators.action(detail=True, methods=["post"], url_path="upload-policy")
+    def upload_policy(self, request, *args, **kwargs):
+        """
+        Re-initiate a pending upload on an existing item by returning a fresh presigned PUT
+        policy URL.
+
+        This supports deterministic retry without creating duplicate "ghost" items.
+        """
+        item = self.get_object()
+
+        if item.type != models.ItemTypeChoices.FILE:
+            raise drf.exceptions.ValidationError(
+                {"item": "This action is only available for items of type FILE."},
+                code="item_upload_type_unavailable",
+            )
+
+        if item.upload_state not in {
+            models.ItemUploadStateChoices.PENDING,
+            models.ItemUploadStateChoices.EXPIRED,
+        }:
+            raise drf.exceptions.ValidationError(
+                {"item": "This action is only available for items in PENDING state."},
+                code="item_upload_state_not_pending",
+            )
+
+        entitlements_backend = get_entitlements_backend()
+        can_upload = entitlements_backend.can_upload(self.request.user)
+        if not can_upload["result"]:
+            self._complete_item_deletion(item)
+            raise drf.exceptions.PermissionDenied(
+                detail=can_upload.get(
+                    "message", "You do not have permission to upload files."
+                )
+            )
+
+        # Refresh pending session window deterministically.
+        item.restart_pending_upload()
+
+        return drf_response.Response(
+            {"policy": utils.generate_upload_policy(item)},
+            status=status.HTTP_200_OK,
+        )
 
     def _complete_item_deletion(self, item):
         """Completely delete an item."""
@@ -1530,8 +1597,21 @@ class ItemViewSet(
             logger.debug("Item '%s' is not a file", item.id)
             raise drf.exceptions.PermissionDenied()
 
-        if item.upload_state == models.ItemUploadStateChoices.PENDING:
-            logger.debug("Item '%s' is not ready", item.id)
+        effective_upload_state = item.effective_upload_state()
+        if effective_upload_state in {
+            models.ItemUploadStateChoices.PENDING,
+            models.ItemUploadStateChoices.EXPIRED,
+        }:
+            file_key_hash = safe_str_hash(item.file_key) if item.filename else None
+            logger.info(
+                "media_auth: denying access for not-ready item "
+                "(failure_class=s3.drive.media_auth_http_403 "
+                "next_action_hint=Wait for upload to finalize or re-initiate upload; "
+                "audience=INTERNAL_PROXY item_id=%s upload_state=%s file_key_hash=%s)",
+                item.id,
+                effective_upload_state,
+                file_key_hash,
+            )
             raise drf.exceptions.PermissionDenied()
 
         if url_params.get("preview") and not utils.is_previewable_item(item):
