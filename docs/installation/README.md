@@ -10,6 +10,8 @@ Start here:
 Runbooks:
 
 - `docs/installation/backup-restore.md`
+- `docs/selfhost/upgrade.md`
+- `docs/selfhost/rollback.md`
 
 ## Kubernetes (reference-only)
 

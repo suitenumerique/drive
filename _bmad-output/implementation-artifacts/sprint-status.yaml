@@ -42,7 +42,7 @@ development_status:
   2-2-nginx-reference-edge-configuration-dev-prod-aligned-for-media-auth-request-sigv4-propagation: done
   2-3-tls-posture-for-public-surfaces-prod-https-only-dev-override-explicit-no-mixed-modes: done
   2-4-docker-first-backup-restore-runbook-deterministic-post-restore-smoke-checklist: done
-  2-5-docker-first-upgrade-rollback-runbook-deterministic-post-action-smoke-checklist: ready-for-dev
+  2-5-docker-first-upgrade-rollback-runbook-deterministic-post-action-smoke-checklist: review
   epic-2-retrospective: optional
   epic-3: backlog
   3-1-byo-oidc-authentication-refs-only-secrets-config-validation-smoke-login-proof: backlog
