@@ -102,10 +102,7 @@ def _apply_wopi_enablement_defaults(
 
     WOPI is considered enabled when WOPI_CLIENTS is non-empty.
     """
-    if not cls.WOPI_CLIENTS:
-        return
-
-    if cls.WOPI_SRC_BASE_URL is None:
+    if cls.WOPI_CLIENTS and cls.WOPI_SRC_BASE_URL is None:
         if cls.DRIVE_PUBLIC_URL is not None:
             cls.WOPI_SRC_BASE_URL = cls.DRIVE_PUBLIC_URL
         else:
@@ -115,6 +112,9 @@ def _apply_wopi_enablement_defaults(
                 "next_action_hint=Set DRIVE_PUBLIC_URL (recommended) or "
                 "WOPI_SRC_BASE_URL to the canonical public base URL."
             )
+
+    if cls.WOPI_SRC_BASE_URL is None:
+        return
 
     cls.WOPI_SRC_BASE_URL = _validate_public_surface_base_url(
         cls.WOPI_SRC_BASE_URL,

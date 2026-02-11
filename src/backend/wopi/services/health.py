@@ -42,6 +42,7 @@ class WopiHealth:
     evidence: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """Render as a JSON-serializable dict with evidence always present."""
         payload = asdict(self)
         payload["evidence"] = payload["evidence"] or {}
         return payload

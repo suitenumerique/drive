@@ -587,8 +587,7 @@ def _validate_oidc_secret_ref_field() -> list[PreflightError]:
         ]
 
 
-def _validate_wopi_preflight(
-) -> list[PreflightError]:
+def _validate_wopi_preflight() -> list[PreflightError]:
     """
     Validate WOPI enablement config deterministically (no live I/O, no-leak).
 
@@ -690,9 +689,7 @@ class Command(BaseCommand):
                 allow_insecure_http=allow_insecure_http,
             )
         )
-        errors.extend(
-            _validate_wopi_preflight()
-        )
+        errors.extend(_validate_wopi_preflight())
 
         errors_sorted = sorted(errors, key=lambda e: e.field)
         payload: dict[str, Any] = {

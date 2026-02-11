@@ -177,7 +177,9 @@ def test_wopi_src_base_url_defaults_to_drive_public_url_when_wopi_enabled(monkey
     assert TestSettings.WOPI_SRC_BASE_URL == "http://drive.example.com"
 
 
-def test_wopi_src_base_url_requires_drive_public_url_when_enabled_and_unset(monkeypatch):
+def test_wopi_src_base_url_requires_drive_public_url_when_enabled_and_unset(
+    monkeypatch,
+):
     """WOPI enabled must fail fast if neither DRIVE_PUBLIC_URL nor WOPI_SRC_BASE_URL is set."""
 
     monkeypatch.setenv("WOPI_VENDORA_DISCOVERY_URL", "http://vendorA/hosting/discovery")
