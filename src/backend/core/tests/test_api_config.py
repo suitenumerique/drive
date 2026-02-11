@@ -63,6 +63,15 @@ def test_api_config(is_authenticated):
         "FRONTEND_HIDE_GAUFRE": True,
         "FRONTEND_SILENT_LOGIN_ENABLED": True,
         "FRONTEND_EXTERNAL_HOME_URL": "https://test.com",
+        "FRONTEND_OPERATION_TIME_BOUNDS_MS": {
+            "config_load": {"still_working_ms": 3000, "fail_ms": 15000},
+            "preview_pdf": {"still_working_ms": 3000, "fail_ms": 15000},
+            "upload_finalize": {"still_working_ms": 5000, "fail_ms": 60000},
+            "upload_create": {"still_working_ms": 5000, "fail_ms": 20000},
+            "upload_put": {"still_working_ms": 10000, "fail_ms": 900000},
+            "wopi_iframe": {"still_working_ms": 5000, "fail_ms": 60000},
+            "wopi_info": {"still_working_ms": 5000, "fail_ms": 20000},
+        },
         "LANGUAGES": [
             ["en-us", "English"],
             ["fr-fr", "French"],

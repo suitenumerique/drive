@@ -1,5 +1,7 @@
 import { baseApiUrl, isJson } from "./utils";
 import { APIError } from "./APIError";
+import i18n from "@/features/i18n/initI18n";
+import { AppError } from "@/features/errors/AppError";
 
 /**
  * Retrieves the CSRF token from the document's cookies.
@@ -29,6 +31,7 @@ const redirect = (url: string, saveRedirectAfterLoginUrl = true) => {
 
 export interface fetchAPIOptions {
   redirectOn40x?: boolean;
+  timeoutMs?: number;
 }
 
 export const fetchAPI = async (
@@ -44,15 +47,35 @@ export const fetchAPI = async (
   }
   const csrfToken = getCSRFToken();
 
-  const response = await fetch(apiUrl, {
-    ...init,
-    credentials: "include",
-    headers: {
-      ...init?.headers,
-      "Content-Type": "application/json",
-      ...(csrfToken && { "X-CSRFToken": csrfToken }),
-    },
-  });
+  const timeoutMs = options?.timeoutMs;
+  const timeoutController = timeoutMs ? new AbortController() : null;
+  const timeoutId =
+    timeoutController && timeoutMs
+      ? globalThis.setTimeout(() => timeoutController.abort(), timeoutMs)
+      : null;
+
+  let response: Response;
+  try {
+    response = await fetch(apiUrl, {
+      ...init,
+      credentials: "include",
+      signal: timeoutController?.signal ?? init?.signal,
+      headers: {
+        ...init?.headers,
+        "Content-Type": "application/json",
+        ...(csrfToken && { "X-CSRFToken": csrfToken }),
+      },
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new AppError(i18n.t("api.error.timeout"));
+    }
+    throw error;
+  } finally {
+    if (timeoutId !== null) {
+      globalThis.clearTimeout(timeoutId);
+    }
+  }
 
   const redirectOn40x = options?.redirectOn40x ?? true;
   if (response.status === 401 && redirectOn40x) {

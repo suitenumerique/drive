@@ -56,6 +56,7 @@ PSQL_E2E 				= ./bin/postgres_e2e
 # -- Frontend
 PATH_FRONT          	= ./src/frontend
 PATH_FRONT_DRIVE  		= $(PATH_FRONT)/apps/drive
+FRONT_YARN           	= $(COMPOSE_RUN) -w /app/src/frontend node yarn
 
 # ==============================================================================
 # RULES
@@ -347,7 +348,7 @@ frontend-development-install: ## install the frontend locally
 .PHONY: frontend-development-install
 
 frontend-lint: ## run the frontend linter
-	cd $(PATH_FRONT) && yarn lint
+		@$(FRONT_YARN) lint
 .PHONY: frontend-lint
 
 run-frontend-development: ## Run the frontend in development mode

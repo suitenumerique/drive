@@ -1357,6 +1357,21 @@ class Base(Configuration):
     FRONTEND_EXTERNAL_HOME_URL = values.Value(
         None, environ_name="FRONTEND_EXTERNAL_HOME_URL", environ_prefix=None
     )
+    # Time-bounds for long-running UI operations (ms).
+    # The UI should follow a consistent progression: loading → still working → failed.
+    FRONTEND_OPERATION_TIME_BOUNDS_MS = values.DictValue(
+        {
+            "config_load": {"still_working_ms": 3000, "fail_ms": 15000},
+            "wopi_info": {"still_working_ms": 5000, "fail_ms": 20000},
+            "wopi_iframe": {"still_working_ms": 5000, "fail_ms": 60000},
+            "preview_pdf": {"still_working_ms": 3000, "fail_ms": 15000},
+            "upload_create": {"still_working_ms": 5000, "fail_ms": 20000},
+            "upload_put": {"still_working_ms": 10000, "fail_ms": 900000},
+            "upload_finalize": {"still_working_ms": 5000, "fail_ms": 60000},
+        },
+        environ_name="FRONTEND_OPERATION_TIME_BOUNDS_MS",
+        environ_prefix=None,
+    )
     THEME_CUSTOMIZATION_FILE_PATH = values.Value(
         os.path.join(BASE_DIR, "drive/configuration/theme/default.json"),
         environ_name="THEME_CUSTOMIZATION_FILE_PATH",
