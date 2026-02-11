@@ -1,0 +1,21 @@
+name: Strict Mirror (BMAD)
+
+on:
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  strict-mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check BMAD strict mirror fingerprint (B+)
+        run: |
+          set -euo pipefail
+          python3 bin/strict_mirror_check.py --event-path "${GITHUB_EVENT_PATH}"
+

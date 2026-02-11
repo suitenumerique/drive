@@ -1,6 +1,6 @@
 # Story 12.3: Strict mirror enforcement (BMAD registry source-of-truth; GitHub fork mirror only)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -33,14 +33,23 @@ So that GitHub remains a strict projection of BMAD local artifacts/registry and 
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- `_bmad-output/implementation-artifacts/runs/20260211-205935-12.3/report.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-205935-12.3/run-report.md`
 
 ### Completion Notes List
-
+- Add a B+ fingerprint function over canonical story sections (excludes dynamic
+  fields like status/runs/timestamps and Dev Agent Record).
+- Add a PR check that validates `BMAD-FP-BP: sha256:...` in PR bodies and fails
+  deterministically with `failure_class` + `next_action_hint` on drift.
+- Gates: `backend.lint` PASS, `backend.tests` PASS, `docs.consistency` PASS,
+  `no_leak.scan_bmad_output` PASS.
 
 ### File List
-
-
+- `.github/workflows/strict-mirror.yml`
+- `bin/strict_mirror_check.py`
+- `src/backend/core/tests/test_strict_mirror_fingerprint.py`
+- `src/backend/core/utils/strict_mirror.py`
+- `_bmad-output/implementation-artifacts/runs/20260211-205935-12.3/report.md`
