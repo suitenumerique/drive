@@ -156,6 +156,42 @@ def test_wopi_src_base_url_rejects_http_in_https_only_posture():
     assert "failure_class=config.public_url.https_required" in str(excinfo.value)
 
 
+def test_wopi_src_base_url_defaults_to_drive_public_url_when_wopi_enabled():
+    """When WOPI is enabled, WOPI_SRC_BASE_URL defaults to DRIVE_PUBLIC_URL."""
+
+    class TestSettings(Base):
+        """Fake test settings."""
+
+        DEBUG = True
+        SECURE_SSL_REDIRECT = False
+        DRIVE_ALLOW_INSECURE_HTTP = True
+        DRIVE_PUBLIC_URL = "http://drive.example.com/"
+
+        WOPI_CLIENTS = ["vendorA"]
+        WOPI_SRC_BASE_URL = None
+        OIDC_REDIRECT_ALLOWED_HOSTS = []
+
+    TestSettings().post_setup()
+    assert TestSettings.WOPI_SRC_BASE_URL == "http://drive.example.com"
+
+
+def test_wopi_src_base_url_requires_drive_public_url_when_enabled_and_unset():
+    """WOPI enabled must fail fast if neither DRIVE_PUBLIC_URL nor WOPI_SRC_BASE_URL is set."""
+
+    class TestSettings(Base):
+        """Fake test settings."""
+
+        DRIVE_PUBLIC_URL = None
+        WOPI_CLIENTS = ["vendorA"]
+        WOPI_SRC_BASE_URL = None
+        OIDC_REDIRECT_ALLOWED_HOSTS = []
+
+    with pytest.raises(ValueError) as excinfo:
+        TestSettings().post_setup()
+
+    assert "failure_class=config.wopi.src_base_url.missing" in str(excinfo.value)
+
+
 def test_oidc_redirect_allowed_hosts_rejects_http_in_https_only_posture():
     """OIDC redirect origins must not contain http:// in HTTPS-only posture."""
 

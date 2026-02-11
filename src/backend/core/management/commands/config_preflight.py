@@ -561,6 +561,103 @@ def _validate_oidc_secret_ref_field() -> list[PreflightError]:
         ]
 
 
+def _validate_wopi_preflight(
+    *,
+    https_only_posture: bool,
+    debug: bool,
+    allow_insecure_http: bool,
+) -> list[PreflightError]:
+    """
+    Validate WOPI enablement config deterministically (no live I/O, no-leak).
+
+    WOPI is considered enabled when WOPI_CLIENTS is non-empty.
+    """
+    clients = list(getattr(settings, "WOPI_CLIENTS", []) or [])
+    if not clients:
+        return []
+
+    errors: list[PreflightError] = []
+
+    wopi_src_base_url = getattr(settings, "WOPI_SRC_BASE_URL", None)
+    drive_public_url = getattr(settings, "DRIVE_PUBLIC_URL", None)
+    if wopi_src_base_url is None and drive_public_url is None:
+        errors.append(
+            PreflightError(
+                field="WOPI_SRC_BASE_URL",
+                failure_class="config.wopi.src_base_url.missing",
+                next_action_hint=(
+                    "Set DRIVE_PUBLIC_URL (recommended) or WOPI_SRC_BASE_URL to the "
+                    "canonical public base URL."
+                ),
+            )
+        )
+
+    for client in clients:
+        client_upper = str(client).strip().upper()
+        if not client_upper:
+            continue
+
+        env_name = f"WOPI_{client_upper}_DISCOVERY_URL"
+        raw = os.environ.get(env_name, "")
+        if not (raw or "").strip():
+            errors.append(
+                PreflightError(
+                    field=env_name,
+                    failure_class="config.wopi.discovery_url.missing",
+                    next_action_hint=(
+                        f"Set {env_name} to an absolute https:// URL to the "
+                        "WOPI discovery endpoint."
+                    ),
+                )
+            )
+            continue
+
+        if "*" in raw:
+            errors.append(
+                PreflightError(
+                    field=env_name,
+                    failure_class="config.wopi.discovery_url.wildcard",
+                    next_action_hint="Remove wildcards; provide explicit URLs only.",
+                )
+            )
+            continue
+
+        try:
+            _normalize_required_absolute_url(
+                raw,
+                https_only_posture=https_only_posture,
+                debug=debug,
+                allow_insecure_http=allow_insecure_http,
+            )
+        except ValueError as exc:
+            reason = str(exc)
+            if reason == "https_required":
+                errors.append(
+                    PreflightError(
+                        field=env_name,
+                        failure_class="config.wopi.discovery_url.https_required",
+                        next_action_hint=(
+                            f"Use https:// for {env_name} in production (HTTPS-only). "
+                            "HTTP is dev-only and requires DEBUG=true and "
+                            "DRIVE_ALLOW_INSECURE_HTTP=true."
+                        ),
+                    )
+                )
+            else:
+                errors.append(
+                    PreflightError(
+                        field=env_name,
+                        failure_class="config.wopi.discovery_url.invalid",
+                        next_action_hint=(
+                            f"Set {env_name} to an absolute http(s) URL with a host. "
+                            "Remove userinfo/query/fragment."
+                        ),
+                    )
+                )
+
+    return errors
+
+
 class Command(BaseCommand):
     """Django management command emitting deterministic config + edge checklist."""
 
@@ -584,6 +681,13 @@ class Command(BaseCommand):
         errors.extend(_validate_s3_transfer_config_preflight())
         errors.extend(
             _validate_oidc_preflight(
+                https_only_posture=https_only_posture,
+                debug=debug,
+                allow_insecure_http=allow_insecure_http,
+            )
+        )
+        errors.extend(
+            _validate_wopi_preflight(
                 https_only_posture=https_only_posture,
                 debug=debug,
                 allow_insecure_http=allow_insecure_http,

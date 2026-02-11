@@ -1887,6 +1887,18 @@ class Base(Configuration):
             allow_insecure_http=allow_insecure_http,
         )
 
+        wopi_enabled = bool(cls.WOPI_CLIENTS)
+        if wopi_enabled and cls.WOPI_SRC_BASE_URL is None:
+            if cls.DRIVE_PUBLIC_URL is not None:
+                cls.WOPI_SRC_BASE_URL = cls.DRIVE_PUBLIC_URL
+            else:
+                raise ValueError(
+                    "Invalid WOPI_SRC_BASE_URL configuration. "
+                    "failure_class=config.wopi.src_base_url.missing "
+                    "next_action_hint=Set DRIVE_PUBLIC_URL (recommended) or "
+                    "WOPI_SRC_BASE_URL to the canonical public base URL."
+                )
+
         if cls.WOPI_SRC_BASE_URL is not None:
             cls.WOPI_SRC_BASE_URL = _validate_public_surface_base_url(
                 cls.WOPI_SRC_BASE_URL,
