@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-import pytest
 from django.utils import timezone
+
+import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
@@ -98,4 +99,3 @@ def test_api_item_upload_policy_refreshes_pending_window(settings):
     assert item.upload_state == models.ItemUploadStateChoices.PENDING
     assert item.upload_started_at is not None
     assert item.upload_started_at > old_started_at
-
