@@ -1,0 +1,12 @@
+gate_id=backend.lint
+cmd=make lint
+result=pass duration_ms=24306
+
+gate_id=backend.tests
+cmd=make test-back
+result=pass duration_ms=139762
+
+gate_id=frontend.lint
+cmd=make frontend-lint
+result=pass duration_ms=3784
+
