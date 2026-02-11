@@ -1,0 +1,14 @@
+# Commands (Story 12.4 / PR #26)
+
+- `make lint`
+  - PASS
+
+- `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/gates.yml','r',encoding='utf-8'))"`
+  - PASS
+- `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/drive-frontend.yml','r',encoding='utf-8'))"`
+  - PASS
+
+- `test -f renovate.json`
+  - PASS
+- `test ! -f .github/dependabot.yml`
+  - PASS

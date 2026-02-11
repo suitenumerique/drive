@@ -131,3 +131,4 @@ jobs:
           name: report-${{ matrix.browser }}
           path: src/frontend/apps/e2e/report/
           retention-days: 7
+

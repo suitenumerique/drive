@@ -14,6 +14,7 @@ and this project adheres to
 - 📝(docs) add Docker-first self-host edge contract docs
 - 📝(docs) document deterministic failure reporting schema
 - 📝(docs) add Docker-first upgrade/rollback runbooks + smoke checklist updates
+- 🧪(ci) add gates workflow (v1 gates wired; non-blocking on PRs)
 - ✨(backend) add deterministic config_preflight edge validations
 
 ### Removed
