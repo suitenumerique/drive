@@ -41,6 +41,7 @@ from core.utils.public_url import (
     PublicUrlValidationError,
     normalize_public_surface_base_url,
 )
+from core.utils.secret_refs import SecretRefValue
 
 # pylint: disable=too-many-lines
 
@@ -1399,7 +1400,7 @@ class Base(Configuration):
     OIDC_RP_CLIENT_ID = values.Value(
         "drive", environ_name="OIDC_RP_CLIENT_ID", environ_prefix=None
     )
-    OIDC_RP_CLIENT_SECRET = SecretFileValue(
+    OIDC_RP_CLIENT_SECRET = SecretRefValue(
         None,
         environ_name="OIDC_RP_CLIENT_SECRET",
         environ_prefix=None,

@@ -47,6 +47,15 @@ jobs:
             seaweedfs-filer \
             seaweedfs-s3 \
             createbuckets
+
+      - name: Run gates runner (stable gate_id)
+        run: |
+          chmod +x bin/agent-check.sh
+          chmod +x bin/agent_check.py
+          bin/agent-check.sh \
+            --tag gha \
+            --gate no_leak.scan_bmad_output \
+            --gate s3.contracts.seaweedfs
       - name: Upload gates runner artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -64,4 +73,3 @@ jobs:
           path: _bmad-output/implementation-artifacts/ct-s3/
           if-no-files-found: warn
           retention-days: 7
-

@@ -40,6 +40,8 @@ Action:
 PASS:
 
 - Explorer renders; no infinite loading; no mixed TLS modes.
+- Optional proof: in the same browser session, `GET /api/v1.0/users/me/`
+  returns `200`.
 
 ## 2) Browse (workspace/folder)
 

@@ -1,6 +1,6 @@
 # Story 12.1: Gates runner executes stable `gate_id`s and writes deterministic artifacts
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -45,9 +45,24 @@ So that CI and local runs produce consistent, machine-readable results with pres
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
+
 ### Debug Log References
+
+- `_bmad-output/implementation-artifacts/runs/20260211-114147-12.1/report.md`
 
 ### Completion Notes List
 
+- Implemented a deterministic gates runner keyed by stable `gate_id`.
+- Runner writes deterministic artifacts under `_bmad-output/implementation-artifacts/`
+  and updates the stable `latest.txt` pointer.
+- Wired `.github/workflows/gates.yml` `v1-gates` job to execute gates via the
+  new runner.
+
 ### File List
 
+- `.github/workflows/gates.yml`
+- `bin/agent-check.sh`
+- `bin/agent_check.py`
+- `docs/gates-runner.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-114147-12.1/report.md`

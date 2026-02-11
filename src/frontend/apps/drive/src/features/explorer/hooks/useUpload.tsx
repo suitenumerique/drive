@@ -13,6 +13,7 @@ import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { FileUploadToast } from "../components/toasts/FileUploadToast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getEntitlements } from "@/utils/entitlements";
+import { useEntitlementsQuery } from "@/features/entitlements/useEntitlementsQuery";
 import { useCanCreateChildren } from "@/features/items/utils";
 import { getMyFilesQueryKey } from "@/utils/defaultRoutes";
 
@@ -201,6 +202,11 @@ export const useUploadZone = ({ item }: { item: Item }) => {
   const createFile = useMutationCreateFile();
 
   const canCreateChildren = useCanCreateChildren(item);
+  const { data: entitlements } = useEntitlementsQuery();
+  const canUploadByEntitlements = entitlements?.can_upload?.result ?? true;
+  const cannotUploadMessage =
+    entitlements?.can_upload?.message || t("entitlements.can_upload.cannot_upload");
+  const canUpload = canCreateChildren && canUploadByEntitlements;
 
   const fileDragToastId = useRef<Id | null>(null);
   const fileUploadsToastId = useRef<Id | null>(null);
@@ -212,11 +218,12 @@ export const useUploadZone = ({ item }: { item: Item }) => {
   const { filesToUpload, handleHierarchy } = useUpload({ item: item! });
 
   const validateDrop = () => {
-    const canUpload = canCreateChildren;
     if (!canUpload) {
       return {
         code: "no-upload-rights",
-        message: t("explorer.actions.upload.toast_no_rights"),
+        message: canCreateChildren
+          ? cannotUploadMessage
+          : t("explorer.actions.upload.toast_no_rights"),
       };
     }
     return null;
@@ -241,8 +248,6 @@ export const useUploadZone = ({ item }: { item: Item }) => {
       if (fileDragToastId.current) {
         return;
       }
-
-      const canUpload = canCreateChildren;
 
       fileDragToastId.current = addToast(
         <ToasterItem

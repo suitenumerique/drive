@@ -1,6 +1,6 @@
 # Story 3.2: Entitlements enforcement for access and uploads (API + UI gating)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -43,13 +43,22 @@ So that I can restrict access and uploads deterministically without leaking sens
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
 
+- `_bmad-output/implementation-artifacts/runs/20260211-121338-3.2/report.md`
 
 ### Completion Notes List
 
+- Surfaced a safe entitlements message when OIDC access is denied (`can_access=false`).
+- Added UI gating for uploads based on `GET /api/v1.0/entitlements/` (`can_upload`).
 
 ### File List
 
-
+- `src/backend/core/authentication/views.py`
+- `src/backend/core/tests/authentication/test_views.py`
+- `src/frontend/apps/drive/src/features/entitlements/useEntitlementsQuery.ts`
+- `src/frontend/apps/drive/src/features/explorer/hooks/useUpload.tsx`
+- `src/frontend/apps/drive/src/features/explorer/components/app-view/AppExplorerBreadcrumbs.tsx`
+- `_bmad-output/implementation-artifacts/runs/20260211-121338-3.2/report.md`

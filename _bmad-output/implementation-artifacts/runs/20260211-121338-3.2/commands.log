@@ -1,0 +1,3 @@
+make lint
+bin/pytest core/tests/authentication/test_views.py
+DOCKER_USER=0:0 docker compose run --rm node sh -lc 'cd /app/src/frontend && yarn install --frozen-lockfile && yarn lint'
