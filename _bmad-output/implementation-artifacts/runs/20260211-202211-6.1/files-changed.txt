@@ -1,0 +1,6 @@
+_bmad-output/implementation-artifacts/6-1-configure-s3-item-share-links-reach-role-and-publish-a-canonical-public-url.md
+src/backend/core/api/serializers.py
+src/backend/core/tests/items/test_api_items_share_url.py
+src/backend/core/utils/share_links.py
+src/frontend/apps/drive/src/features/drivers/types.ts
+src/frontend/apps/drive/src/features/explorer/components/modals/share/ItemShareModal.tsx

@@ -1,6 +1,6 @@
 # Story 6.1: Configure S3 item share links (reach/role) and publish a canonical public URL
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -34,14 +34,24 @@ So that I can share access according to Drive’s sharing model.
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- `_bmad-output/implementation-artifacts/runs/20260211-202211-6.1/report.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-202211-6.1/run-report.md`
 
 ### Completion Notes List
-
+- Expose canonical `share_url` for public link reach, derived from
+  `DRIVE_PUBLIC_URL`.
+- Add deterministic, unforgeable share tokens (HMAC) for item share URLs.
+- Disable link reach/role controls when link configuration is not permitted.
+- Gates: `backend.lint` PASS, `backend.tests` PASS, `frontend.lint` PASS,
+  `docs.consistency` PASS, `no_leak.scan_bmad_output` PASS.
 
 ### File List
-
-
+- `src/backend/core/api/serializers.py`
+- `src/backend/core/tests/items/test_api_items_share_url.py`
+- `src/backend/core/utils/share_links.py`
+- `src/frontend/apps/drive/src/features/drivers/types.ts`
+- `src/frontend/apps/drive/src/features/explorer/components/modals/share/ItemShareModal.tsx`
+- `_bmad-output/implementation-artifacts/runs/20260211-202211-6.1/report.md`

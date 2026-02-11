@@ -55,6 +55,7 @@ export const ItemShareModal = ({
     enabled: isOpen,
     initialData: initialItem,
   });
+  const canConfigureLink = !!item?.abilities?.link_configuration;
 
   useEffect(() => {
     if (isOpen) {
@@ -211,6 +212,13 @@ export const ItemShareModal = ({
   };
 
   const linkReachChoices = useMemo(() => {
+    if (!canConfigureLink) {
+      return Object.values(LinkReach).map((reach) => ({
+        value: reach,
+        label: t(`share_modal.options.link_reach.${reach}`),
+        isDisabled: true,
+      }));
+    }
     const options = item?.abilities.link_select_options;
     const availableReaches = options ? Object.keys(options) : [];
 
@@ -222,9 +230,17 @@ export const ItemShareModal = ({
         isDisabled: !isAvailable,
       };
     });
-  }, [item, t]);
+  }, [canConfigureLink, item, t]);
 
   const linkRoleChoices = useMemo(() => {
+    if (!canConfigureLink) {
+      return Object.values(LinkRole).map((role) => ({
+        value: role,
+        label: t(`roles.${role}`),
+        subText: t(`share_modal.options.subtext.${role}`),
+        isDisabled: true,
+      }));
+    }
     const options = item?.abilities.link_select_options;
 
     if (!options) {
@@ -259,7 +275,7 @@ export const ItemShareModal = ({
       subText: t(`share_modal.options.subtext.${role}`),
       isDisabled: !availableRoles.includes(role),
     }));
-  }, [item, t]);
+  }, [canConfigureLink, item, t]);
 
   const parentItemId = useMemo(() => {
     const pathParts = item?.path.split(".");
@@ -441,6 +457,13 @@ export const ItemShareModal = ({
         <>
           <ShareModalCopyLinkFooter
             onCopyLink={() => {
+              if (
+                item?.computed_link_reach === LinkReach.PUBLIC &&
+                item?.share_url
+              ) {
+                copyToClipboard(item.share_url);
+                return;
+              }
               if (item?.type === ItemType.FILE) {
                 copyToClipboard(
                   `${window.location.origin}/explorer/items/files/${itemId}`,
@@ -467,6 +490,9 @@ export const ItemShareModal = ({
       topLinkReachMessage={linkReachTopMessage}
       topLinkRoleMessage={linkRoleTopMessage}
       onUpdateLinkRole={(value) => {
+        if (!canConfigureLink) {
+          return;
+        }
         updateLinkConfiguration.mutate({
           itemId: itemId,
           link_reach:
@@ -477,6 +503,9 @@ export const ItemShareModal = ({
         });
       }}
       onUpdateLinkReach={(value) => {
+        if (!canConfigureLink) {
+          return;
+        }
         const linkRole =
           value === LinkReach.RESTRICTED
             ? undefined

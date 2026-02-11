@@ -35,12 +35,6 @@ This is meant to be **generic** (not story-specific).
    - PR base must be `main` (avoid stacked PRs).
    - Delete remote branch after merge.
 
-5) **Prompt routing (new dev convo vs same dev convo)**
-   - If a PR needs fixes, return a pasteable prompt intended for the **same**
-     Codex dev conversation that produced the PR (fast context reuse).
-   - If everything is OK and you are preparing *new* stories, return a prompt
-     intended for a **new** Codex dev conversation (clean context).
-
 ---
 
 ## What the dev agent must provide back (message format)
@@ -49,9 +43,8 @@ When the dev agent reports completion, it must include a single recap message
 for the **batch** of stories it worked on (unless blocked), with for each PR:
 - PR number + URL
 - branch name
-- run report path(s) (repo-relative):
-  - `.../report.md` (human summary)
-  - `.../run-report.md` (gate runner report, if present)
+- run report path (repo-relative), e.g.
+  `_bmad-output/implementation-artifacts/runs/<ts>-<story>/report.md`
 - gates summary (PASS/FAIL) as recorded in `gates.md`
 - list of commands executed (high-level) and where the full transcript is
   (`commands.log`)
@@ -67,7 +60,6 @@ The dev agent **must not** ask the review agent to run checks.
 
 From the run folder:
 - `report.md` references the correct PR/branch and describes what changed.
-- If present, `run-report.md` / `run-report.json` match the recorded gates.
 - `gates.md` contains the required checks with explicit PASS/FAIL.
 - `commands.log` includes the executed commands (safe, no secrets).
 - `files-changed.txt` matches `git diff --name-only origin/main..HEAD`.

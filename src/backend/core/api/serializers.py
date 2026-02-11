@@ -16,6 +16,8 @@ from rest_framework import serializers
 from core import models
 from core.api import utils
 from core.storage import get_storage_compute_backend
+from core.utils.public_url import join_public_url
+from core.utils.share_links import compute_item_share_token
 from wopi import utils as wopi_utils
 
 logger = logging.getLogger(__name__)
@@ -492,6 +494,33 @@ class ItemSerializer(ListItemSerializer):
 
     def create(self, validated_data):
         raise NotImplementedError("Create method can not be used.")
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        share_url = self.get_share_url(instance)
+        if share_url:
+            data["share_url"] = share_url
+        return data
+
+    def get_share_url(self, item):
+        """Return the canonical public share URL for the item when applicable."""
+        request = self.context.get("request")
+        if not request:
+            return None
+
+        public_base = getattr(settings, "DRIVE_PUBLIC_URL", None)
+        if not public_base:
+            return None
+
+        if item.computed_link_reach != LinkReachChoices.PUBLIC:
+            return None
+
+        abilities = item.get_abilities(request.user)
+        if not abilities.get("link_configuration", False):
+            return None
+
+        token = compute_item_share_token(item.id)
+        return join_public_url(public_base, f"share/{token}")
 
     def update(self, instance, validated_data):
         """Validate that the title is unique in the current path."""
