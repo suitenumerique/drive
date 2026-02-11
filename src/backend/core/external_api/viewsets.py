@@ -2,8 +2,6 @@
 
 from django.conf import settings
 
-from lasuite.oidc_resource_server.authentication import ResourceServerAuthentication
-
 from core.api.permissions import (
     InvitationPermission,
     IsSelf,
@@ -16,6 +14,7 @@ from core.api.viewsets import (
     ItemViewSet,
     UserViewSet,
 )
+from core.external_api.authentication import DriveResourceServerAuthentication
 from core.external_api.permissions import ResourceServerClientPermission
 
 # pylint: disable=too-many-ancestors
@@ -36,7 +35,7 @@ class ResourceServerRestrictionMixin:
 class ResourceServerItemViewSet(ResourceServerRestrictionMixin, ItemViewSet):
     """Resource Server Viewset for the Drive app."""
 
-    authentication_classes = [ResourceServerAuthentication]
+    authentication_classes = [DriveResourceServerAuthentication]
 
     permission_classes = [ResourceServerClientPermission & ItemPermission]
 
@@ -49,7 +48,7 @@ class ResourceServerItemViewSet(ResourceServerRestrictionMixin, ItemViewSet):
 class ResourceServerUserViewSet(ResourceServerRestrictionMixin, UserViewSet):
     """Resource Server Viewset for the Drive app."""
 
-    authentication_classes = [ResourceServerAuthentication]
+    authentication_classes = [DriveResourceServerAuthentication]
 
     permission_classes = [ResourceServerClientPermission & IsSelf]
 
@@ -64,7 +63,7 @@ class ResourceServerItemAccessViewSet(
 ):
     """Resource Server Viewset for ItemAccess."""
 
-    authentication_classes = [ResourceServerAuthentication]
+    authentication_classes = [DriveResourceServerAuthentication]
 
     permission_classes = [ResourceServerClientPermission & ItemAccessPermission]
 
@@ -79,7 +78,7 @@ class ResourceServerInvitationViewSet(
 ):
     """Resource Server Viewset for Invitations."""
 
-    authentication_classes = [ResourceServerAuthentication]
+    authentication_classes = [DriveResourceServerAuthentication]
 
     permission_classes = [ResourceServerClientPermission & InvitationPermission]
 

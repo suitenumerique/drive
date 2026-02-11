@@ -53,6 +53,26 @@ def test_api_items_list_connected_not_resource_server():
     assert response.status_code == 404
 
 
+def test_api_items_list_anonymous_resource_server_enabled_but_external_api_disabled_by_default():
+    """
+    Resource server mode can be enabled while external API routes remain disabled
+    by default until explicitly configured.
+    """
+    with override_settings(
+        OIDC_RESOURCE_SERVER_ENABLED=True,
+        EXTERNAL_API={
+            "items": {"enabled": False, "actions": []},
+            "item_access": {"enabled": False, "actions": []},
+            "item_invitation": {"enabled": False, "actions": []},
+            "users": {"enabled": False, "actions": []},
+        },
+    ):
+        reload_urls()
+        response = APIClient().get("/external_api/v1.0/items/")
+        assert response.status_code == 404
+    reload_urls()
+
+
 def test_api_items_list_connected_resource_server(
     user_token, resource_server_backend, user_specific_sub
 ):
@@ -68,6 +88,25 @@ def test_api_items_list_connected_resource_server(
     assert response.status_code == 200
 
 
+def test_api_items_list_connected_resource_server_missing_token(
+    resource_server_backend_conf,
+):
+    """Calls without a bearer token should be rejected with a clean 401."""
+    response = APIClient().get("/external_api/v1.0/items/")
+
+    assert response.status_code == 401
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
+    }
+
+
 def test_api_items_list_connected_resource_server_with_invalid_token(
     user_token, resource_server_backend
 ):
@@ -78,6 +117,23 @@ def test_api_items_list_connected_resource_server_with_invalid_token(
     response = client.get("/external_api/v1.0/items/")
 
     assert response.status_code == 401
+
+
+def test_api_items_list_connected_resource_server_audience_not_allowlisted(
+    settings, user_token, resource_server_backend, user_specific_sub
+):
+    """Valid tokens with non-allowlisted audiences should be rejected deterministically."""
+    settings.OIDC_RS_ALLOWED_AUDIENCES = []
+
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    item = factories.ItemFactory(link_reach=models.LinkReachChoices.RESTRICTED)
+    factories.UserItemAccessFactory(item=item, user=user_specific_sub, role="reader")
+
+    response = client.get("/external_api/v1.0/items/")
+
+    assert response.status_code == 403
 
 
 def test_api_items_retrieve_connected_resource_server_with_wrong_abilities(

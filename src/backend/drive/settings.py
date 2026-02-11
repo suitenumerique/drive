@@ -38,6 +38,7 @@ from core.utils.public_url import (
     PublicUrlValidationError,
     normalize_public_surface_base_url,
 )
+from core.utils.secret_refs import SecretRefValue
 
 # pylint: disable=too-many-lines
 
@@ -1413,7 +1414,7 @@ class Base(Configuration):
         None, environ_name="OIDC_RS_CLIENT_ID", environ_prefix=None
     )
 
-    OIDC_RS_CLIENT_SECRET = values.Value(
+    OIDC_RS_CLIENT_SECRET = SecretRefValue(
         None, environ_name="OIDC_RS_CLIENT_SECRET", environ_prefix=None
     )
 
@@ -1448,8 +1449,8 @@ class Base(Configuration):
     EXTERNAL_API = values.DictValue(
         default={
             "items": {
-                "enabled": True,
-                "actions": ["list", "retrieve", "children", "upload_ended"],
+                "enabled": False,
+                "actions": [],
             },
             "item_access": {
                 "enabled": False,
@@ -1460,8 +1461,8 @@ class Base(Configuration):
                 "actions": [],
             },
             "users": {
-                "enabled": True,
-                "actions": ["get_me"],
+                "enabled": False,
+                "actions": [],
             },
         },
         environ_name="EXTERNAL_API",

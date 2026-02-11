@@ -64,11 +64,13 @@ urlpatterns = [
 if settings.OIDC_RESOURCE_SERVER_ENABLED:
     # - Resource server routes
     external_api_router = DefaultRouter()
-    external_api_router.register(
-        "items",
-        external_api_viewsets.ResourceServerItemViewSet,
-        basename="resource_server_items",
-    )
+    items_access_config = settings.EXTERNAL_API.get("items", {})
+    if items_access_config.get("enabled", False):
+        external_api_router.register(
+            "items",
+            external_api_viewsets.ResourceServerItemViewSet,
+            basename="resource_server_items",
+        )
 
     users_access_config = settings.EXTERNAL_API.get("users", {})
     if users_access_config.get("enabled", False):
@@ -81,36 +83,42 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
     external_api_urls = [*external_api_router.urls]
 
     # - Resource server nested routes under items
-    external_api_item_related_router = DefaultRouter()
-    item_access_config = settings.EXTERNAL_API.get("item_access", {})
-    if item_access_config.get("enabled", False):
-        external_api_item_related_router.register(
-            "accesses",
-            external_api_viewsets.ResourceServerItemAccessViewSet,
-            basename="resource_server_item_accesses",
-        )
+    if items_access_config.get("enabled", False):
+        external_api_item_related_router = DefaultRouter()
 
-    item_invitation_config = settings.EXTERNAL_API.get("item_invitation", {})
-    if item_invitation_config.get("enabled", False):
-        external_api_item_related_router.register(
-            "invitations",
-            external_api_viewsets.ResourceServerInvitationViewSet,
-            basename="resource_server_invitations",
-        )
+        item_access_config = settings.EXTERNAL_API.get("item_access", {})
+        if item_access_config.get("enabled", False):
+            external_api_item_related_router.register(
+                "accesses",
+                external_api_viewsets.ResourceServerItemAccessViewSet,
+                basename="resource_server_item_accesses",
+            )
 
-    external_api_urls.append(
-        re_path(
-            r"^items/(?P<resource_id>[0-9a-z-]*)/",
-            include(external_api_item_related_router.urls),
-        )
-    )
+        item_invitation_config = settings.EXTERNAL_API.get("item_invitation", {})
+        if item_invitation_config.get("enabled", False):
+            external_api_item_related_router.register(
+                "invitations",
+                external_api_viewsets.ResourceServerInvitationViewSet,
+                basename="resource_server_invitations",
+            )
 
-    urlpatterns.append(
-        path(
-            f"external_api/{settings.API_VERSION}/",
-            include(external_api_urls),
+        if item_access_config.get("enabled", False) or item_invitation_config.get(
+            "enabled", False
+        ):
+            external_api_urls.append(
+                re_path(
+                    r"^items/(?P<resource_id>[0-9a-z-]*)/",
+                    include(external_api_item_related_router.urls),
+                )
+            )
+
+    if external_api_urls:
+        urlpatterns.append(
+            path(
+                f"external_api/{settings.API_VERSION}/",
+                include(external_api_urls),
+            )
         )
-    )
 
 if settings.METRICS_ENABLED:
     usage_metrics_router = DefaultRouter()
