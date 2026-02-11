@@ -1,6 +1,6 @@
 # Story 4.4: Download files via `/media` (edge contract, Range support)
 
-Status: review
+Status: done
 
 ## Story
 

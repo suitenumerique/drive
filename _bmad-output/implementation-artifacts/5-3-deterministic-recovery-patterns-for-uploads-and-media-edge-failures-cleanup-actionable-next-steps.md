@@ -1,6 +1,6 @@
 # Story 5.3: Deterministic recovery patterns for uploads and media/edge failures (cleanup + actionable next steps)
 
-Status: review
+Status: done
 
 ## Story
 
