@@ -35,6 +35,20 @@ This is meant to be **generic** (not story-specific).
    - PR base must be `main` (avoid stacked PRs).
    - Delete remote branch after merge.
 
+5) **Prompt routing (new dev convo vs same dev convo)**
+   - If a PR needs fixes, return a pasteable prompt intended for the **same**
+     Codex dev conversation that produced the PR (fast context reuse).
+   - If everything is OK and you are preparing *new* stories, return a prompt
+     intended for a **new** Codex dev conversation (clean context).
+
+6) **Batching (speed)**
+   - Dev work is executed in **batches** (multiple stories per dev conversation).
+   - Default batch size is **3 stories** (adjust to 2–4 based on scope/risk).
+   - Prefer picking the next **contiguous** `ready-for-dev` stories from
+     `_bmad-output/planning-artifacts/development-order.md` to minimize churn.
+   - Do not stop after the first PR: dev should continue the batch until all
+     assigned stories are complete (unless blocked).
+
 ---
 
 ## What the dev agent must provide back (message format)
@@ -43,8 +57,9 @@ When the dev agent reports completion, it must include a single recap message
 for the **batch** of stories it worked on (unless blocked), with for each PR:
 - PR number + URL
 - branch name
-- run report path (repo-relative), e.g.
-  `_bmad-output/implementation-artifacts/runs/<ts>-<story>/report.md`
+- run report path(s) (repo-relative):
+  - `.../report.md` (human summary)
+  - `.../run-report.md` (gate runner report, if present)
 - gates summary (PASS/FAIL) as recorded in `gates.md`
 - list of commands executed (high-level) and where the full transcript is
   (`commands.log`)
@@ -60,6 +75,7 @@ The dev agent **must not** ask the review agent to run checks.
 
 From the run folder:
 - `report.md` references the correct PR/branch and describes what changed.
+- If present, `run-report.md` / `run-report.json` match the recorded gates.
 - `gates.md` contains the required checks with explicit PASS/FAIL.
 - `commands.log` includes the executed commands (safe, no secrets).
 - `files-changed.txt` matches `git diff --name-only origin/main..HEAD`.
@@ -110,6 +126,7 @@ Prepare the next story(ies) by:
   `_bmad-output/planning-artifacts/development-order.md`
 - pointing the dev agent at the existing prompt under
   `_bmad-output/implementation-artifacts/prompts/<story>-dev.md`
+- assigning a **batch** (default 3 stories) to the dev agent
 - avoiding empty “scaffold” PRs with no code changes (create a PR only when
   story work starts), unless there is a concrete repo change needed to unblock.
 
