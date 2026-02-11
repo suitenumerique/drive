@@ -1,6 +1,6 @@
 # Story 2.5: Docker-first upgrade/rollback runbook + deterministic post-action smoke checklist
 
-Status: review
+Status: done
 
 ## Story
 
