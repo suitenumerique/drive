@@ -54,6 +54,11 @@ server {
         proxy_set_header X-Amz-Content-SHA256 $sigv4_content_sha256;
         proxy_set_header X-Amz-Security-Token $sigv4_security_token;
 
+        # Range support (forward client Range headers to S3 upstream).
+        proxy_set_header Range $http_range;
+        proxy_set_header If-Range $http_if_range;
+        proxy_force_ranges on;
+
         # Get resource from Object Storage
         proxy_pass <%= ENV["AWS_S3_BUCKET_INTERNAL_URL"] %>;
         proxy_set_header Host <%= ENV["AWS_S3_BUCKET_INTERNAL_HOST"] %>;
@@ -77,6 +82,11 @@ server {
         proxy_set_header X-Amz-Date $sigv4_amz_date;
         proxy_set_header X-Amz-Content-SHA256 $sigv4_content_sha256;
         proxy_set_header X-Amz-Security-Token $sigv4_security_token;
+
+        # Range support (forward client Range headers to S3 upstream).
+        proxy_set_header Range $http_range;
+        proxy_set_header If-Range $http_if_range;
+        proxy_force_ranges on;
 
         # Get resource from Object Storage
         proxy_pass <%= ENV["AWS_S3_BUCKET_INTERNAL_URL"] %>;

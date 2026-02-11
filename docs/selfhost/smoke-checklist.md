@@ -88,6 +88,8 @@ Action:
 PASS:
 
 - The file loads successfully.
+- Optional (Range): a request with `Range: bytes=0-1` returns `206 Partial Content`
+  when supported by your storage backend.
 
 FAIL (acceptable):
 

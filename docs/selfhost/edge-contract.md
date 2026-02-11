@@ -51,6 +51,14 @@ must copy into the **upstream S3 request**:
 If any required header is missing, the S3 upstream can return
 `403 SignatureDoesNotMatch` or similar authorization failures.
 
+## Range requests (recommended)
+
+To support large-file streaming and resumable behaviors, your proxy should allow
+HTTP Range requests to pass through `/media/...` and `/media/preview/...`:
+
+- Forward `Range` and `If-Range` request headers to the S3 upstream.
+- When the storage backend supports it, expect `206 Partial Content` responses.
+
 ## Signed host invariants (required)
 
 SigV4 signatures bind the request to a specific host.
@@ -75,4 +83,3 @@ Do not log SigV4 headers or full request URLs containing signatures:
 
 If you need diagnostics, prefer safe evidence (status codes, request IDs, and
 sanitized hostnames).
-
