@@ -10,6 +10,8 @@ from core import factories, models
 
 pytestmark = pytest.mark.django_db
 
+# pylint: disable=duplicate-code
+
 
 def test_models_sub_item_abilities_downgraded():
     """

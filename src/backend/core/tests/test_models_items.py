@@ -21,7 +21,7 @@ from core import factories, models
 
 pytestmark = pytest.mark.django_db
 
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines,duplicate-code
 
 
 def test_models_items_str():
