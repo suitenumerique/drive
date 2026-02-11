@@ -1,7 +1,10 @@
 # Codex Agent Baseline (Drive fork)
 
-This file is the canonical, reusable baseline to run Codex dev work in this repo.
-New prompts should reference this file instead of repeating the same constraints.
+This file contains **only** the stable, reusable baseline to run Codex **dev**
+work in this repo.
+
+It must **not** include story-specific instructions (PR numbers, story lists,
+or acceptance criteria). Those belong in the per-session text prompt.
 
 ## Non-negotiable constraints
 
@@ -18,20 +21,22 @@ New prompts should reference this file instead of repeating the same constraints
 ## Branching / PR workflow (speed + safety)
 
 - **One story = one branch + one PR**.
-- **Stacked PRs are allowed** when there is a strict dependency:
-  - Branch B can target branch A.
-  - After A merges, rebase/retarget B onto `main`.
+- PR base must be `main` (avoid stacked PRs).
 - Keep the repo clean:
   - After merge, delete the remote branch.
   - Avoid long-lived “work in progress” branches without a PR.
 
-## Verification ownership (dev-run)
+## Verification (dev-run)
 
-Per operator instruction for this fork:
-- The **developer (human) runs lint/tests/smoke** and records the results in the
-  story run report.
-- The agent must **not** run those checks “to validate”; it may only read the
-  report and ensure the results are present and consistent.
+The Codex dev agent runs the required lint/tests/smoke and records results in
+the story run report. No secrets in logs/artifacts.
+
+The dev agent should stop at “ready for review” and report back; merging is
+handled by the review/maintainer loop.
+
+**Important**: do not claim “PASS” unless the evidence is **committed and
+pushed** in the PR branch (run folder + updated pointers). Local-only runs are
+not verifiable and will be treated as missing.
 
 ## Commit conventions (CI blockers)
 
@@ -61,8 +66,9 @@ Do not wait for the following workflows/checks (treated as non-blocking here):
 When a story requires traceability artifacts, follow the story’s exact format:
 - Create `_bmad-output/implementation-artifacts/runs/<ts>-<story>/` with:
   - `report.md`, `commands.log`, `files-changed.txt`, `gates.md`
+- `git add` + commit + push the run folder (and any pointer/status updates),
+  so reviewers can verify them from the PR.
 - Update:
   - `_bmad-output/implementation-artifacts/latest.txt`
   - `_bmad-output/implementation-artifacts/sprint-status.yaml`
   - The story file “Dev Agent Record” section
-
