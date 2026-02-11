@@ -1,11 +1,15 @@
 """Test the ordering of items."""
 
 import operator
+from uuid import UUID
+
+from django.utils import timezone
 
 import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
+from freezegun import freeze_time
 
 pytestmark = pytest.mark.django_db
 
@@ -120,3 +124,38 @@ def test_api_items_list_ordering_by_fields():
                 else results[i + 1][field]
             )
             assert compare(operator1, operator2)
+
+
+def test_api_items_list_ordering_deterministic_tie_breaker_id():
+    """
+    Ordering must be deterministic for stable pagination boundaries.
+
+    When the requested ordering fields are tied, the API must apply a stable
+    tie-breaker (id) so paging does not skip/duplicate items.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    now = timezone.now()
+    with freeze_time(now):
+        item1 = factories.ItemFactory(
+            id=UUID("00000000-0000-0000-0000-000000000001"),
+            users=[user],
+            type=models.ItemTypeChoices.FOLDER,
+            title="Same",
+        )
+        item2 = factories.ItemFactory(
+            id=UUID("00000000-0000-0000-0000-000000000002"),
+            users=[user],
+            type=models.ItemTypeChoices.FOLDER,
+            title="Same",
+        )
+
+    response = client.get("/api/v1.0/items/?ordering=title&page_size=1&page=1")
+    assert response.status_code == 200
+    assert [r["id"] for r in response.json()["results"]] == [str(item1.id)]
+
+    response = client.get("/api/v1.0/items/?ordering=title&page_size=1&page=2")
+    assert response.status_code == 200
+    assert [r["id"] for r in response.json()["results"]] == [str(item2.id)]
