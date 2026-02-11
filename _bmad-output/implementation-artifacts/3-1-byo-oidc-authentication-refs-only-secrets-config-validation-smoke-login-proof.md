@@ -1,6 +1,6 @@
 # Story 3.1: BYO OIDC authentication (refs-only secrets, config validation, smoke login proof)
 
-Status: review
+Status: done
 
 ## Story
 
