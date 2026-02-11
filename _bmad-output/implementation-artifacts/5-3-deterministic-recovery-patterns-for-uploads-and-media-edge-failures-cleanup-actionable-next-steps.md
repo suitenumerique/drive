@@ -1,6 +1,6 @@
 # Story 5.3: Deterministic recovery patterns for uploads and media/edge failures (cleanup + actionable next steps)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -50,13 +50,43 @@ Users can create share links for S3 items; public access is token-based and work
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
 
+- `_bmad-output/implementation-artifacts/runs/20260211-181806-5.3/report.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-181806-5.3/run-report.md`
 
 ### Completion Notes List
 
+- Deterministic pending TTL: `pending` uploads are surfaced as `expired` after
+  `ITEM_UPLOAD_PENDING_TTL_SECONDS` (no infinite pending states).
+- Idempotent retry: add `upload-policy` endpoint to refresh presigned PUT policy
+  on the same item to avoid duplicate "ghost" items.
+- No-leak: client-facing errors remain generic; operator-facing logs include
+  `failure_class` + `next_action_hint` and safe evidence only.
+- Gates: `backend.lint` PASS, `backend.tests` PASS, `frontend.lint` PASS.
 
 ### File List
 
-
+- `src/backend/core/models.py`
+- `src/backend/core/migrations/0018_item_upload_started_at.py`
+- `src/backend/drive/settings.py`
+- `src/backend/core/api/serializers.py`
+- `src/backend/core/api/viewsets.py`
+- `src/backend/core/tests/items/test_api_item_upload_recovery.py`
+- `src/backend/core/tests/test_models_items.py`
+- `src/backend/core/tests/test_models_items_root.py`
+- `src/frontend/apps/drive/src/features/errors/UploadError.ts`
+- `src/frontend/apps/drive/src/features/drivers/implementations/StandardDriver.ts`
+- `src/frontend/apps/drive/src/features/drivers/types.ts`
+- `src/frontend/apps/drive/src/features/explorer/hooks/useMutations.ts`
+- `src/frontend/apps/drive/src/features/explorer/hooks/useUpload.tsx`
+- `src/frontend/apps/drive/src/features/explorer/components/toasts/FileUploadToast.tsx`
+- `src/frontend/apps/drive/src/features/explorer/components/right-panel/ExplorerRightPanelContent.tsx`
+- `src/frontend/apps/drive/src/features/explorer/components/app-view/AppExplorerInner.tsx`
+- `src/frontend/apps/drive/src/features/items/hooks/useDownloadItem.tsx`
+- `src/frontend/apps/drive/src/features/i18n/translations.json`
+- `docs/env.md`
+- `docs/failure-class-glossary.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-181806-5.3/report.md`
