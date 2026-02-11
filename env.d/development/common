@@ -44,7 +44,8 @@ OIDC_OP_TOKEN_ENDPOINT=http://nginx:8083/realms/drive/protocol/openid-connect/to
 OIDC_OP_USER_ENDPOINT=http://nginx:8083/realms/drive/protocol/openid-connect/userinfo
 
 OIDC_RP_CLIENT_ID=drive
-OIDC_RP_CLIENT_SECRET=ThisIsAnExampleKeyForDevPurposeOnly
+OIDC_RP_CLIENT_SECRET_ENV=OIDC_RP_CLIENT_SECRET_VALUE
+OIDC_RP_CLIENT_SECRET_VALUE=ThisIsAnExampleKeyForDevPurposeOnly
 OIDC_RP_SIGN_ALGO=RS256
 OIDC_RP_SCOPES="openid email"
 

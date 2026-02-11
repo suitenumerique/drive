@@ -65,7 +65,8 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
     # - Resource server routes
     external_api_router = DefaultRouter()
     items_access_config = settings.EXTERNAL_API.get("items", {})
-    if items_access_config.get("enabled", False):
+    items_enabled = bool(items_access_config.get("enabled", False))
+    if items_enabled:
         external_api_router.register(
             "items",
             external_api_viewsets.ResourceServerItemViewSet,
@@ -82,10 +83,9 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
 
     external_api_urls = [*external_api_router.urls]
 
-    # - Resource server nested routes under items
-    if items_access_config.get("enabled", False):
+    if items_enabled:
+        # - Resource server nested routes under items
         external_api_item_related_router = DefaultRouter()
-
         item_access_config = settings.EXTERNAL_API.get("item_access", {})
         if item_access_config.get("enabled", False):
             external_api_item_related_router.register(
@@ -102,9 +102,7 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
                 basename="resource_server_invitations",
             )
 
-        if item_access_config.get("enabled", False) or item_invitation_config.get(
-            "enabled", False
-        ):
+        if external_api_item_related_router.urls:
             external_api_urls.append(
                 re_path(
                     r"^items/(?P<resource_id>[0-9a-z-]*)/",

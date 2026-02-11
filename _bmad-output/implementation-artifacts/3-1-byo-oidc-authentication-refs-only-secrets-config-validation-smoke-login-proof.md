@@ -1,6 +1,6 @@
 # Story 3.1: BYO OIDC authentication (refs-only secrets, config validation, smoke login proof)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -45,13 +45,29 @@ So that the deployment is self-host reliable (no surprises) without coupling v1 
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
 
+- `_bmad-output/implementation-artifacts/runs/20260211-120101-3.1/report.md`
 
 ### Completion Notes List
 
+- Enforced refs-only OIDC client secret configuration (file/env-ref precedence).
+- Extended `config_preflight` with deterministic OIDC validation (no-leak).
+- Updated docs/examples to reflect BYO OIDC and refs-only secrets.
 
 ### File List
 
-
+- `src/backend/core/utils/secret_refs.py`
+- `src/backend/drive/settings.py`
+- `src/backend/core/management/commands/config_preflight.py`
+- `src/backend/core/tests/commands/test_config_preflight.py`
+- `docs/env.md`
+- `docs/failure-class-glossary.md`
+- `docs/selfhost/smoke-checklist.md`
+- `docs/installation/kubernetes.md`
+- `docs/examples/helm/drive.values.yaml`
+- `src/helm/env.d/dev/values.drive.yaml.gotmpl`
+- `env.d/development/common`
+- `_bmad-output/implementation-artifacts/runs/20260211-120101-3.1/report.md`

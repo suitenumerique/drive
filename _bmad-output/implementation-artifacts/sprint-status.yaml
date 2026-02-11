@@ -16,9 +16,9 @@ development_status:
   2-5-docker-first-upgrade-rollback-runbook-deterministic-post-action-smoke-checklist: done
   epic-2-retrospective: optional
   epic-3: in-progress
-  3-1-byo-oidc-authentication-refs-only-secrets-config-validation-smoke-login-proof: ready-for-dev
-  3-2-entitlements-enforcement-for-access-and-uploads-api-ui-gating: ready-for-dev
-  3-3-external-api-allowlist-for-resources-and-actions-strict-no-wildcards: ready-for-dev
+  3-1-byo-oidc-authentication-refs-only-secrets-config-validation-smoke-login-proof: review
+  3-2-entitlements-enforcement-for-access-and-uploads-api-ui-gating: review
+  3-3-external-api-allowlist-for-resources-and-actions-strict-no-wildcards: review
   3-4-resource-server-mode-external-api-is-disabled-by-default-and-token-authenticated: review
   epic-3-retrospective: optional
   epic-4: backlog
@@ -70,8 +70,8 @@ development_status:
   11-2-encode-seaweedfs-as-the-blocking-baseline-profile-repeatable-checks-runbook-alignment: done
   11-3-safe-evidence-allow-listing-for-ct-s3-no-leak-by-construction: done
   epic-11-retrospective: optional
-  epic-12: backlog
-  12-1-gates-runner-executes-stable-gate-ids-and-writes-deterministic-artifacts: ready-for-dev
+  epic-12: in-progress
+  12-1-gates-runner-executes-stable-gate-ids-and-writes-deterministic-artifacts: review
   12-2-standardize-failure-class-next-action-hint-across-gates-and-operator-facing-artifacts: done
   12-3-strict-mirror-enforcement-bmad-registry-source-of-truth-github-fork-mirror-only: ready-for-dev
   12-4-wire-ct-s3-and-no-leak-scanning-into-ci-with-strict-scope-enforce-dependency-automation-policy: done

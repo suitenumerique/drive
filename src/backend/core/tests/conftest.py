@@ -70,18 +70,9 @@ def resource_server_backend_setup(settings):
             "enabled": True,
             "actions": ["list", "retrieve", "children", "upload_ended"],
         },
-        "item_access": {
-            "enabled": False,
-            "actions": [],
-        },
-        "item_invitation": {
-            "enabled": False,
-            "actions": [],
-        },
-        "users": {
-            "enabled": True,
-            "actions": ["get_me"],
-        },
+        "item_access": {"enabled": False, "actions": []},
+        "item_invitation": {"enabled": False, "actions": []},
+        "users": {"enabled": True, "actions": ["get_me"]},
     }
 
 

@@ -60,7 +60,13 @@ EXTERNAL_API = {
 - `item_invitation`: Controls `/external_api/v1.0/items/{id}/invitations/`. Available actions: `list`, `retrieve`, `create`, `update`, `partial_update`, `destroy`
 - `users`: Controls `/external_api/v1.0/users/`. Available actions: `list`, `retrieve`, `create`, `update`, `partial_update`, `destroy`, `get_me`
 
-Each endpoint has `enabled` (boolean) and `actions` (list of allowed actions). Only actions explicitly listed are accessible.
+Each endpoint has `enabled` (boolean) and `actions` (list of allowed actions).
+
+Rules:
+
+- Resources not enabled are not exposed under `/external_api/v1.0/...` (`404`).
+- Enabled resources only allow actions explicitly listed (`403` when disallowed).
+- No wildcards: allowlist action names (not raw path prefixes).
 
 ## Request Drive
 

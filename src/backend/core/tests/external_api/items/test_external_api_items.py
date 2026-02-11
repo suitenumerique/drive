@@ -9,6 +9,7 @@ because the resource server viewsets inherit from the api viewsets.
 from datetime import timedelta
 from io import BytesIO
 
+from django.conf import settings as django_settings
 from django.core.files.storage import default_storage
 from django.test import override_settings
 from django.utils import timezone
@@ -86,6 +87,25 @@ def test_api_items_list_connected_resource_server(
     response = client.get("/external_api/v1.0/items/")
 
     assert response.status_code == 200
+
+
+def test_api_items_routes_not_exposed_when_items_disabled(
+    user_token, resource_server_backend_conf
+):
+    """Items routes should be 404 when the items resource is not enabled."""
+    django_settings.EXTERNAL_API = {
+        "items": {"enabled": False, "actions": []},
+        "item_access": {"enabled": False, "actions": []},
+        "item_invitation": {"enabled": False, "actions": []},
+        "users": {"enabled": True, "actions": ["get_me"]},
+    }
+    reload_urls()
+
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    response = client.get("/external_api/v1.0/items/")
+    assert response.status_code == 404
 
 
 def test_api_items_list_connected_resource_server_missing_token(

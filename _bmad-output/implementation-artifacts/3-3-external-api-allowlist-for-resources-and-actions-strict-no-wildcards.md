@@ -1,6 +1,6 @@
 # Story 3.3: External API allowlist for resources and actions (strict, no wildcards)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -43,13 +43,24 @@ So that only explicitly permitted endpoints/actions are exposed (disabled-by-def
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
 
+- `_bmad-output/implementation-artifacts/runs/20260211-122401-3.3/report.md`
 
 ### Completion Notes List
 
+- External API resources are now truly enablement-gated (disabled resources 404).
+- Added deterministic EXTERNAL_API config validation (strict, no wildcards).
 
 ### File List
 
-
+- `src/backend/core/urls.py`
+- `src/backend/drive/settings.py`
+- `docs/resource_server.md`
+- `docs/failure-class-glossary.md`
+- `src/backend/core/tests/conftest.py`
+- `src/backend/core/tests/test_settings.py`
+- `src/backend/core/tests/external_api/items/test_external_api_items.py`
+- `_bmad-output/implementation-artifacts/runs/20260211-122401-3.3/report.md`

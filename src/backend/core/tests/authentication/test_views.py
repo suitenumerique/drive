@@ -8,12 +8,16 @@ from django.test.utils import override_settings
 
 import posthog
 import pytest
+from lasuite.oidc_login.views import (
+    OIDCAuthenticationCallbackView as LaSuiteOIDCAuthenticationCallbackView,
+)
 from mozilla_django_oidc.auth import (
     OIDCAuthenticationBackend as MozillaOIDCAuthenticationBackend,
 )
 
 from core import factories
 from core.authentication.backends import OIDCAuthenticationBackend
+from core.authentication.exceptions import UserCannotAccessApp
 from core.authentication.views import (
     OIDCAuthenticationCallbackView,
 )
@@ -67,3 +71,29 @@ def test_view_login_callback_authorized_by_default(
     mocked_feature_enabled.assert_not_called()
     assert response.status_code == 302
     assert response.url == "/auth/success"
+
+
+@override_settings(
+    LOGIN_REDIRECT_URL_FAILURE="/auth/failure",
+    LOGIN_REDIRECT_URL="/auth/success",
+)
+@mock.patch.object(
+    LaSuiteOIDCAuthenticationCallbackView,
+    "get",
+    side_effect=UserCannotAccessApp("Uploads are disabled for this user."),
+)
+def test_view_login_callback_denied_includes_safe_message(mocked_super_get):
+    """Denied users should be redirected with a safe, operator-actionable hint."""
+    request = RequestFactory().get("/callback/")
+    middleware = SessionMiddleware(get_response=lambda x: x)
+    middleware.process_request(request)
+    request.session.save()
+
+    callback_view = OIDCAuthenticationCallbackView.as_view()
+    response = callback_view(request)
+
+    mocked_super_get.assert_called_once()
+    assert response.status_code == 302
+    assert response.url.startswith("/auth/failure?")
+    assert "auth_error=user_cannot_access_app" in response.url
+    assert "auth_error_message=" in response.url
