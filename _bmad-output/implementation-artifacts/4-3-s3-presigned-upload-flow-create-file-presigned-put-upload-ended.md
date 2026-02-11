@@ -1,6 +1,6 @@
 # Story 4.3: S3 presigned upload flow (create file → presigned PUT → upload-ended)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -41,14 +41,23 @@ So that I can add content reliably to my drive.
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- `_bmad-output/implementation-artifacts/runs/20260211-171406-4.3/run-report.md`
 
 ### Completion Notes List
-
+- Enforce `can_upload` entitlements on file creation (root `/items/`), preventing
+  orphaned pending items when uploads are not allowed.
+- Keep EXTERNAL_BROWSER upload finalization errors in-app by disabling 40x
+  redirects for `upload-ended` in the presigned upload driver flow.
+- Add deterministic API test coverage for entitlement-denied file creation.
+- Verification recorded in run artifacts (gates PASS).
 
 ### File List
-
-
+- `src/backend/core/api/viewsets.py`
+- `src/backend/core/tests/items/test_api_items_create.py`
+- `src/frontend/apps/drive/src/features/drivers/implementations/StandardDriver.ts`
+- `CHANGELOG.md`
+- `src/backend/core/tests/items/test_api_items_list_ordering.py`
+- `_bmad-output/implementation-artifacts/runs/20260211-171406-4.3/`
