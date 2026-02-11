@@ -39,6 +39,7 @@ export type Item = {
   originalId?: string; // Used to identify all occurrences of the same item in the tree
   title: string;
   filename: string;
+  share_url?: string | null;
   creator: {
     id: string;
     full_name: string;

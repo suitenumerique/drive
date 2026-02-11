@@ -18,6 +18,7 @@ and this project adheres to
 - ✨(backend) add deterministic config_preflight edge validations
 - ✨(backend) validate S3 TransferConfig multipart sizing preflight
 - ✨(uploads) deterministic recovery patterns (pending TTL + retry)
+- ✨(share) expose canonical public share URLs (DRIVE_PUBLIC_URL)
 
 ### Removed
 
