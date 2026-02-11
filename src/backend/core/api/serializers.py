@@ -283,9 +283,7 @@ class ListItemSerializer(serializers.ModelSerializer):
         if not request:
             return {}
 
-        abilities = item.get_abilities(request.user)
-        abilities["wopi"] = wopi_utils.is_item_wopi_supported(item, request.user)
-        return abilities
+        return item.get_abilities(request.user)
 
     def get_user_role(self, item):
         """
