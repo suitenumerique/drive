@@ -1,0 +1,7 @@
+# Commands (Story 12.2 / PR #25)
+
+- `make lint`
+  - PASS
+- `bin/pytest src/backend/core/tests/test_ct_s3_failure_schema.py`
+  - PASS
+

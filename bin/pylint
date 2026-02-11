@@ -30,7 +30,12 @@ if [[ -n "${diff_from}" ]]; then
     # Run pylint only on modified files located in src/backend
     # (excluding deleted files and migration files)
     # shellcheck disable=SC2207
-    paths=($(git diff "${diff_from}" --name-only --diff-filter=d -- src/backend ':!**/migrations/*.py' | grep -E '^src/backend/.*\.py$'))
+    paths=($(git diff "${diff_from}" --name-only --diff-filter=d -- src/backend ':!**/migrations/*.py' | grep -E '^src/backend/.*\.py$' || true))
+fi
+
+if [[ ${#paths[@]} -eq 0 ]]; then
+    echo "lint:pylint skipped (no modified backend python files)"
+    exit 0
 fi
 
 # Fix docker vs local path when project sources are mounted as a volume

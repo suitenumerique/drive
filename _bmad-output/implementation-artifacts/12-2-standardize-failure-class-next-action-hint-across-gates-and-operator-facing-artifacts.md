@@ -1,6 +1,6 @@
 # Story 12.2: Standardize `failure_class` + `next_action_hint` across gates and operator-facing artifacts
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -41,9 +41,25 @@ So that troubleshooting is consistent across CT-S3, mounts integration checks, E
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
+
 ### Debug Log References
+
+- `_bmad-output/implementation-artifacts/runs/20260211-091933-12.2/report.md`
 
 ### Completion Notes List
 
+- Documented a stable failure reporting schema (`failure_class`,
+  `next_action_hint`, optional `audience`, safe evidence).
+- Expanded `docs/failure-class-glossary.md` to include gate runner and no-leak
+  scan failure classes.
+- Added targeted backend tests locking CT-S3 result schema fields.
+
 ### File List
 
+- `docs/failure-reporting-schema.md`
+- `docs/failure-class-glossary.md`
+- `src/backend/core/tests/test_ct_s3_failure_schema.py`
+- `bin/pylint`
+- `CHANGELOG.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-091933-12.2/report.md`

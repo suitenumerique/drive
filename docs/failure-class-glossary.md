@@ -58,8 +58,21 @@ Each failure should also emit:
 - `e2e.test.timeout`
 - `e2e.test.selector_unstable`
 
+## Gates runner / CI — `gate.*`
+
+- `gate.catalog.invalid`
+- `gate.backend.lint_failed`
+- `gate.backend.tests_failed`
+- `gate.frontend.lint_failed`
+- `gate.docs.consistency_failed`
+
+## No-leak scanning — `no_leak.*`
+
+- `no_leak.scan.match_found`
+
 ## Mounts / SMB — `mount.*`
 
+- `mount.integration.not_implemented`
 - `mount.smb.env.unreachable`
 - `mount.smb.env.auth_failed`
 - `mount.smb.env.share_not_found`
@@ -70,3 +83,7 @@ Each failure should also emit:
 - `mount.smb.upload_timeout`
 - `mount.smb.atomic_rename_failed`
 - `mount.smb.range_unsupported`
+
+## Mirror / strict projection — `mirror.*`
+
+- `mirror.verify.not_implemented`
