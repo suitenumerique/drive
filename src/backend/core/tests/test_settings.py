@@ -245,3 +245,65 @@ def test_split_allowlists_fail_fast_no_leak_on_bad_redirect_uri():
     assert "failure_class=config.allowlist.redirect_uri.invalid" in message
     assert "super-secret" not in message
     assert "token=" not in message
+
+
+def test_external_api_config_rejects_wildcards_no_leak():
+    """EXTERNAL_API must be strict (no wildcards) with deterministic errors."""
+
+    class TestSettings(Base):
+        """Fake test settings."""
+
+        OIDC_RESOURCE_SERVER_ENABLED = True
+        EXTERNAL_API = {
+            "items": {"enabled": True, "actions": ["list", "*"]},
+        }
+
+    with pytest.raises(ValueError) as excinfo:
+        TestSettings().post_setup()
+
+    message = str(excinfo.value)
+    assert "Invalid EXTERNAL_API configuration." in message
+    assert "failure_class=config.external_api.action.wildcard" in message
+
+
+def test_external_api_config_requires_items_for_nested_resources():
+    """Nested resources under items require items to be enabled."""
+
+    class TestSettings(Base):
+        """Fake test settings."""
+
+        OIDC_RESOURCE_SERVER_ENABLED = True
+        EXTERNAL_API = {
+            "items": {"enabled": False, "actions": []},
+            "item_access": {"enabled": True, "actions": ["list"]},
+        }
+
+    with pytest.raises(ValueError) as excinfo:
+        TestSettings().post_setup()
+
+    assert "failure_class=config.external_api.dependency.items_required" in str(
+        excinfo.value
+    )
+
+
+def test_external_api_config_dedupes_and_sorts_actions_deterministically():
+    """External API actions list should be deterministic (deduped + sorted)."""
+
+    class TestSettings(Base):
+        """Fake test settings."""
+
+        OIDC_RESOURCE_SERVER_ENABLED = True
+        EXTERNAL_API = {
+            "items": {
+                "enabled": True,
+                "actions": ["retrieve", "list", "list", "children"],
+            },
+            "users": {"enabled": True, "actions": ["get_me"]},
+        }
+
+    TestSettings().post_setup()
+    assert TestSettings.EXTERNAL_API["items"]["actions"] == [
+        "children",
+        "list",
+        "retrieve",
+    ]

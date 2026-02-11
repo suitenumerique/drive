@@ -27,6 +27,12 @@ Each failure should also emit:
 - `config.allowlist.origin.wildcard`
 - `config.allowlist.host.invalid`
 - `config.allowlist.host.wildcard`
+- `config.external_api.invalid`
+- `config.external_api.resource.unknown`
+- `config.external_api.resource.invalid`
+- `config.external_api.action.invalid`
+- `config.external_api.action.wildcard`
+- `config.external_api.dependency.items_required`
 
 ## S3 Contract Tests (CT-S3-*) — `s3.*`
 

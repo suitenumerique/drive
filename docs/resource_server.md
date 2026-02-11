@@ -29,8 +29,8 @@ Default configuration:
 ```python
 EXTERNAL_API = {
     "items": {
-        "enabled": True,
-        "actions": ["list", "retrieve", "children", "upload_ended"],
+        "enabled": False,
+        "actions": [],
     },
     "item_access": {
         "enabled": False,
@@ -41,8 +41,8 @@ EXTERNAL_API = {
         "actions": [],
     },
     "users": {
-        "enabled": True,
-        "actions": ["get_me"],
+        "enabled": False,
+        "actions": [],
     }
 }
 ```
@@ -53,7 +53,13 @@ EXTERNAL_API = {
 - `item_access`: Controls `/external_api/v1.0/items/{id}/accesses/`. Available actions: `list`, `retrieve`, `create`, `update`, `partial_update`, `destroy`
 - `item_invitation`: Controls `/external_api/v1.0/items/{id}/invitations/`. Available actions: `list`, `retrieve`, `create`, `update`, `partial_update`, `destroy`
 
-Each endpoint has `enabled` (boolean) and `actions` (list of allowed actions). Only actions explicitly listed are accessible.
+Each endpoint has `enabled` (boolean) and `actions` (list of allowed actions).
+
+Rules:
+
+- Resources not enabled are not exposed under `/external_api/v1.0/...` (`404`).
+- Enabled resources only allow actions explicitly listed (`403` when disallowed).
+- No wildcards: allowlist action names (not raw path prefixes).
 
 ## Request Drive
 

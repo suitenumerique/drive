@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 
 import os
 import tomllib
+
+# External API validation (Resource Server mode)
+from dataclasses import dataclass
 from socket import gethostbyname, gethostname
 from urllib.parse import urlsplit
 
@@ -223,6 +226,126 @@ def _apply_split_allowlists(
         [canonical_origin],
         origin_additions + legacy_sdk_origins,
     )
+
+
+@dataclass(frozen=True, slots=True)
+class ExternalApiValidationError(ValueError):
+    """Structured validation error for EXTERNAL_API allowlisting (no-leak)."""
+
+    failure_class: str
+    next_action_hint: str
+
+
+def _external_api_error(
+    *, failure_class: str, next_action_hint: str
+) -> ExternalApiValidationError:
+    return ExternalApiValidationError(
+        failure_class=failure_class,
+        next_action_hint=next_action_hint,
+    )
+
+
+def _normalize_external_api_actions(raw_actions) -> list[str]:
+    if raw_actions is None:
+        return []
+    if not isinstance(raw_actions, list):
+        raise _external_api_error(
+            failure_class="config.external_api.action.invalid",
+            next_action_hint=(
+                "Set EXTERNAL_API.<resource>.actions to a JSON array of action names."
+            ),
+        )
+
+    normalized_actions: list[str] = []
+    for action in raw_actions:
+        candidate = str(action).strip()
+        if not candidate:
+            continue
+        if "*" in candidate:
+            raise _external_api_error(
+                failure_class="config.external_api.action.wildcard",
+                next_action_hint="Remove wildcards; allowlist explicit action names only.",
+            )
+        if "/" in candidate or " " in candidate:
+            raise _external_api_error(
+                failure_class="config.external_api.action.invalid",
+                next_action_hint="Allowlist action names only (e.g. list, retrieve, children).",
+            )
+        normalized_actions.append(candidate)
+
+    return sorted(set(normalized_actions))
+
+
+def _normalize_external_api_resource_config(cfg) -> dict:
+    if cfg is None:
+        cfg = {}
+    if not isinstance(cfg, dict):
+        raise _external_api_error(
+            failure_class="config.external_api.resource.invalid",
+            next_action_hint=(
+                "Each EXTERNAL_API resource must be an object with enabled (bool) "
+                "and actions (list of strings)."
+            ),
+        )
+
+    enabled = cfg.get("enabled", False)
+    if not isinstance(enabled, bool):
+        raise _external_api_error(
+            failure_class="config.external_api.resource.invalid",
+            next_action_hint="Set EXTERNAL_API.<resource>.enabled to a boolean (true/false).",
+        )
+
+    return {
+        "enabled": enabled,
+        "actions": _normalize_external_api_actions(cfg.get("actions", [])),
+    }
+
+
+def _validate_external_api_config(raw) -> dict:
+    """
+    Validate and normalize EXTERNAL_API config deterministically (strict, no wildcards).
+
+    Missing resources are treated as disabled. Actions are normalized and sorted.
+    """
+    if raw is None:
+        raw = {}
+    if not isinstance(raw, dict):
+        raise _external_api_error(
+            failure_class="config.external_api.invalid",
+            next_action_hint=(
+                "Set EXTERNAL_API to a JSON object mapping resources to "
+                "{enabled: bool, actions: [string]}."
+            ),
+        )
+
+    allowed_resources = {"items", "users", "item_access", "item_invitation"}
+    unknown_resources = sorted(set(raw.keys()) - allowed_resources)
+    if unknown_resources:
+        raise _external_api_error(
+            failure_class="config.external_api.resource.unknown",
+            next_action_hint=(
+                "Remove unknown EXTERNAL_API resource keys; allowed: "
+                "items, users, item_access, item_invitation."
+            ),
+        )
+
+    normalized: dict[str, dict] = {}
+    for resource in sorted(allowed_resources):
+        normalized[resource] = _normalize_external_api_resource_config(
+            raw.get(resource, {})
+        )
+
+    if not normalized["items"]["enabled"] and (
+        normalized["item_access"]["enabled"] or normalized["item_invitation"]["enabled"]
+    ):
+        raise _external_api_error(
+            failure_class="config.external_api.dependency.items_required",
+            next_action_hint=(
+                "Enable EXTERNAL_API.items before enabling item_access or item_invitation."
+            ),
+        )
+
+    return normalized
 
 
 class Base(Configuration):
@@ -1448,8 +1571,8 @@ class Base(Configuration):
     EXTERNAL_API = values.DictValue(
         default={
             "items": {
-                "enabled": True,
-                "actions": ["list", "retrieve", "children", "upload_ended"],
+                "enabled": False,
+                "actions": [],
             },
             "item_access": {
                 "enabled": False,
@@ -1460,8 +1583,8 @@ class Base(Configuration):
                 "actions": [],
             },
             "users": {
-                "enabled": True,
-                "actions": ["get_me"],
+                "enabled": False,
+                "actions": [],
             },
         },
         environ_name="EXTERNAL_API",
@@ -1759,6 +1882,16 @@ class Base(Configuration):
                 debug=debug,
                 allow_insecure_http=allow_insecure_http,
             )
+
+        if cls.OIDC_RESOURCE_SERVER_ENABLED:
+            try:
+                cls.EXTERNAL_API = _validate_external_api_config(cls.EXTERNAL_API)
+            except ExternalApiValidationError as exc:
+                raise ValueError(
+                    "Invalid EXTERNAL_API configuration. "
+                    f"failure_class={exc.failure_class} "
+                    f"next_action_hint={exc.next_action_hint}"
+                ) from None
 
         if cls.POSTHOG_KEY is not None:
             posthog.api_key = cls.POSTHOG_KEY
