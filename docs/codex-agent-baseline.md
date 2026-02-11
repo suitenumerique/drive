@@ -76,6 +76,14 @@ Do not wait for the following workflows/checks (treated as non-blocking here):
 When a story requires traceability artifacts, follow the story’s exact format:
 - Create `_bmad-output/implementation-artifacts/runs/<ts>-<story>/` with:
   - `report.md`, `commands.log`, `files-changed.txt`, `gates.md`
+
+Some stories and tools also use a **gate runner report**:
+- `run-report.md` and `run-report.json` (machine-oriented, deterministic)
+
+Rule of thumb:
+- Always include `report.md` (human summary).
+- If you run gates via a runner that produces `run-report.*`, commit them too,
+  and have `report.md` link to `run-report.md`.
 - `git add` + commit + push the run folder (and any pointer/status updates),
   so reviewers can verify them from the PR.
 - Always update (per-story, low-conflict):
