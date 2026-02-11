@@ -110,6 +110,13 @@ Prepare the next story(ies) by:
 - creating a prompt under
   `_bmad-output/implementation-artifacts/prompts/<story>-dev.md`
 
+When merging multiple story PRs:
+- Prefer a single “tracking sync” PR to update global tracker files:
+  - `_bmad-output/implementation-artifacts/latest.txt`
+  - `_bmad-output/implementation-artifacts/sprint-status.yaml`
+  - story file `Status:` fields (optional, but recommended)
+- This avoids repeated merge conflicts across active story branches.
+
 ---
 
 ## Useful `gh` commands (review mode)

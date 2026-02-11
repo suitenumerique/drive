@@ -77,10 +77,20 @@ When a story requires traceability artifacts, follow the story’s exact format:
   - `report.md`, `commands.log`, `files-changed.txt`, `gates.md`
 - `git add` + commit + push the run folder (and any pointer/status updates),
   so reviewers can verify them from the PR.
-- Update:
-  - `_bmad-output/implementation-artifacts/latest.txt`
-  - `_bmad-output/implementation-artifacts/sprint-status.yaml`
-  - The story file “Dev Agent Record” section
+- Always update (per-story, low-conflict):
+  - The story file “Dev Agent Record” section (points to the run folder)
+
+Global tracker files (high-conflict; prefer batching):
+- `_bmad-output/implementation-artifacts/latest.txt`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+Preferred approach:
+- Do **not** touch the global tracker files in every story PR.
+- Instead, do a separate “tracking sync” PR that updates `latest.txt` and
+  `sprint-status.yaml` after a batch of story PRs is merged.
+
+If a specific story explicitly requires updating the global tracker files:
+- Keep those edits in a **single final commit** (easier conflict resolution).
 
 If your PR becomes `CONFLICTING` after other merges:
 - Prefer a **merge-from-main** commit (no force-push): `git fetch origin` then
