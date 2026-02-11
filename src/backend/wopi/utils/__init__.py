@@ -53,14 +53,20 @@ def get_wopi_client_config(item, user):
     return result
 
 
-def compute_wopi_launch_url(launch_url, get_file_info_path, lang=None):
+def compute_wopi_launch_url(
+    launch_url,
+    get_file_info_path,
+    lang=None,
+    *,
+    wopi_src_base_url: str | None = None,
+):
     """
     Compute the WOPI launch URL for an item.
     """
     launch_url = launch_url.rstrip("?")
     launch_url = launch_url.rstrip("&")
 
-    wopi_src_base_url = settings.WOPI_SRC_BASE_URL
+    wopi_src_base_url = wopi_src_base_url or settings.WOPI_SRC_BASE_URL
     wopi_src = get_file_info_path
     if wopi_src_base_url:
         wopi_src = f"{wopi_src_base_url}{get_file_info_path}"

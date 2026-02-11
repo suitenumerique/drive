@@ -1656,7 +1656,19 @@ class ItemViewSet(
             if request.user.is_authenticated and request.user.language
             else settings.LANGUAGE_CODE
         )
-        launch_url = compute_wopi_launch_url(wopi_client, get_file_info, language)
+        wopi_src_base_url = (
+            getattr(settings, "WOPI_SRC_BASE_URL", None)
+            or getattr(settings, "DRIVE_PUBLIC_URL", None)
+            or request.build_absolute_uri("/").rstrip("/")
+        )
+        wopi_src_base_url = str(wopi_src_base_url).rstrip("/")
+
+        launch_url = compute_wopi_launch_url(
+            wopi_client,
+            get_file_info,
+            language,
+            wopi_src_base_url=wopi_src_base_url,
+        )
 
         return drf.response.Response(
             {
