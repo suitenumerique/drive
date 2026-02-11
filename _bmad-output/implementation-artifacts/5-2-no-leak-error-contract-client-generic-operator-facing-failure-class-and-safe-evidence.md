@@ -1,6 +1,6 @@
 # Story 5.2: No-leak error contract (client-generic) + operator-facing `failure_class` and safe evidence
 
-Status: review
+Status: done
 
 ## Story
 

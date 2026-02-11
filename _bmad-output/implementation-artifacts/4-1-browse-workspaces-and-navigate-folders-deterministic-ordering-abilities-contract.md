@@ -1,6 +1,6 @@
 # Story 4.1: Browse workspaces and navigate folders (deterministic ordering + abilities contract)
 
-Status: review
+Status: done
 
 ## Story
 

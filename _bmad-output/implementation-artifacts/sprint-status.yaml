@@ -22,7 +22,7 @@ development_status:
   3-4-resource-server-mode-external-api-is-disabled-by-default-and-token-authenticated: done
   epic-3-retrospective: optional
   epic-4: backlog
-  4-1-browse-workspaces-and-navigate-folders-deterministic-ordering-abilities-contract: ready-for-dev
+  4-1-browse-workspaces-and-navigate-folders-deterministic-ordering-abilities-contract: done
   4-2-create-folders-in-the-explorer-capability-driven-clean-validation: ready-for-dev
   4-3-s3-presigned-upload-flow-create-file-presigned-put-upload-ended: ready-for-dev
   4-4-download-files-via-media-edge-contract-range-support: ready-for-dev
@@ -30,8 +30,8 @@ development_status:
   4-6-operator-configurable-upload-part-chunk-sizing-documented-defaults-deterministic-validation: ready-for-dev
   epic-4-retrospective: optional
   epic-5: backlog
-  5-1-time-bounded-long-running-operations-no-infinite-loading-with-actionable-fallback-states: ready-for-dev
-  5-2-no-leak-error-contract-client-generic-operator-facing-failure-class-and-safe-evidence: ready-for-dev
+  5-1-time-bounded-long-running-operations-no-infinite-loading-with-actionable-fallback-states: done
+  5-2-no-leak-error-contract-client-generic-operator-facing-failure-class-and-safe-evidence: done
   5-3-deterministic-recovery-patterns-for-uploads-and-media-edge-failures-cleanup-actionable-next-steps: ready-for-dev
   epic-5-retrospective: optional
   epic-6: backlog

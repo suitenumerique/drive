@@ -1,6 +1,6 @@
 # Story 5.1: Time-bounded long-running operations (no infinite loading) with actionable fallback states
 
-Status: review
+Status: done
 
 ## Story
 
