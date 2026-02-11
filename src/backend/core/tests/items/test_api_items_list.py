@@ -30,9 +30,17 @@ def test_api_items_list_anonymous(reach, role):
 
     response = APIClient().get("/api/v1.0/items/")
 
-    assert response.status_code == 200
-    results = response.json()["results"]
-    assert len(results) == 0
+    assert response.status_code == 401
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "not_authenticated",
+                "detail": "Authentication credentials were not provided.",
+            },
+        ],
+        "type": "client_error",
+    }
 
 
 def test_api_items_list_format():

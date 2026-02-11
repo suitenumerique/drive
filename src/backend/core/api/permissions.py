@@ -133,6 +133,10 @@ class ItemPermission(permissions.BasePermission):
     """Subclass to handle soft deletion specificities."""
 
     def has_permission(self, request, view):
+        # Browsing the user's workspaces is authenticated-only.
+        if view.action == "list":
+            return request.user.is_authenticated
+
         return request.user.is_authenticated or view.action not in [
             "create",
             "trashbin",

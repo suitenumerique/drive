@@ -355,6 +355,21 @@ class ItemViewSet(
     recents_serializer_class = serializers.ListItemLightSerializer
     favorite_list_serializer_class = serializers.ListItemLightSerializer
 
+    def _apply_deterministic_ordering(self, queryset):
+        """
+        Apply DRF ordering and always add a stable tie-breaker.
+
+        Deterministic ordering is required for stable pagination boundaries.
+        """
+        ordering_filter = filters.OrderingFilter()
+        ordering = ordering_filter.get_ordering(self.request, queryset, self)
+        if not ordering:
+            ordering = getattr(self, "ordering", None) or []
+        ordering = list(ordering)
+        if "id" not in {field.lstrip("-") for field in ordering}:
+            ordering.append("id")
+        return queryset.order_by(*ordering)
+
     def _filter_suspicious_items(self, queryset, user):
         """
         Filter out items with SUSPICIOUS upload_state for non-creators.
@@ -624,9 +639,7 @@ class ItemViewSet(
         )
 
         # Apply ordering only now that everyting is filtered and annotated
-        queryset = filters.OrderingFilter().filter_queryset(
-            self.request, queryset, self
-        )
+        queryset = self._apply_deterministic_ordering(queryset)
 
         return self.get_response_for_queryset(queryset)
 
@@ -1014,9 +1027,7 @@ class ItemViewSet(
         queryset = filterset.qs
 
         # Apply ordering only now that everything is filtered and annotated
-        queryset = filters.OrderingFilter().filter_queryset(
-            self.request, queryset, self
-        )
+        queryset = self._apply_deterministic_ordering(queryset)
 
         # Pre-compute number of accesses
         item_nb_accesses = item.nb_accesses
