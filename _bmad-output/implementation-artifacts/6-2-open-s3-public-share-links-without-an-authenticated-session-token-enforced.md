@@ -1,6 +1,6 @@
 # Story 6.2: Open S3 public share links without an authenticated session (token-enforced)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -38,14 +38,25 @@ Framework epic (contract-level): configure mounts, enable/disable without impact
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- `_bmad-output/implementation-artifacts/runs/20260211-204733-6.2/report.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-204733-6.2/run-report.md`
 
 ### Completion Notes List
-
+- Add token-enforced public share browse API: `share-links/:token/browse/`.
+- Add unauthenticated public share page: `/share/:token`.
+- Enforce `share_token` for unauthenticated `/media` access via `media-auth`.
+- Gates: `backend.lint` PASS, `backend.tests` PASS, `frontend.lint` PASS,
+  `docs.consistency` PASS, `no_leak.scan_bmad_output` PASS.
 
 ### File List
-
-
+- `src/backend/core/api/serializers_share_links.py`
+- `src/backend/core/api/viewsets.py`
+- `src/backend/core/tests/items/test_api_items_media_auth.py`
+- `src/backend/core/tests/share_links/test_api_share_links_browse.py`
+- `src/backend/core/urls.py`
+- `src/backend/core/utils/share_links.py`
+- `src/frontend/apps/drive/src/pages/share/[token].tsx`
+- `_bmad-output/implementation-artifacts/runs/20260211-204733-6.2/report.md`
