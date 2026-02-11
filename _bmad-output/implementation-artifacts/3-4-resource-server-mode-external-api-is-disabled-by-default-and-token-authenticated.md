@@ -1,6 +1,6 @@
 # Story 3.4: Resource Server mode (external API) is disabled-by-default and token-authenticated
 
-Status: review
+Status: done
 
 ## Story
 

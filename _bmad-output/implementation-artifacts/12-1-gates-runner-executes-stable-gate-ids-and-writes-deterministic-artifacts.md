@@ -1,6 +1,6 @@
 # Story 12.1: Gates runner executes stable `gate_id`s and writes deterministic artifacts
 
-Status: review
+Status: done
 
 ## Story
 

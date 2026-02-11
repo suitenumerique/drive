@@ -1,6 +1,6 @@
 # Story 3.2: Entitlements enforcement for access and uploads (API + UI gating)
 
-Status: review
+Status: done
 
 ## Story
 

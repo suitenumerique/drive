@@ -1,6 +1,6 @@
 # Story 3.3: External API allowlist for resources and actions (strict, no wildcards)
 
-Status: review
+Status: done
 
 ## Story
 
