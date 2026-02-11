@@ -78,10 +78,12 @@ This document lists all configurable environment variables for the Drive applica
 | `OIDC_OP_LOGOUT_ENDPOINT` | OIDC provider logout endpoint | `None` |
 | `OIDC_OP_TOKEN_ENDPOINT` | OIDC provider token endpoint | `None` |
 | `OIDC_OP_USER_ENDPOINT` | OIDC provider user endpoint | `None` |
+| `OIDC_OP_URL` | OIDC issuer/base URL (discovery reference) | `None` |
 | `OIDC_REDIRECT_ALLOWED_HOSTS` | List of allowed hosts for OIDC redirects | `[]` |
 | `OIDC_REDIRECT_REQUIRE_HTTPS` | Require HTTPS for OIDC redirects | `False` |
 | `OIDC_RP_CLIENT_ID` | OIDC client ID | `drive` |
-| `OIDC_RP_CLIENT_SECRET` | OIDC client secret | `None` |
+| `OIDC_RP_CLIENT_SECRET_FILE` | File path to the OIDC client secret (refs-only) | `None` |
+| `OIDC_RP_CLIENT_SECRET_ENV` | Env var name holding the OIDC client secret (refs-only) | `None` |
 | `OIDC_RP_SCOPES` | OIDC scopes | `openid email` |
 | `OIDC_RP_SIGN_ALGO` | OIDC signing algorithm | `RS256` |
 | `OIDC_STORE_ACCESS_TOKEN` | Store OIDC access token | `False` |

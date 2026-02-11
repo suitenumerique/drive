@@ -135,7 +135,7 @@ OIDC_OP_TOKEN_ENDPOINT: https://drive-keycloak.127.0.0.1.nip.io/realms/drive/pro
 OIDC_OP_USER_ENDPOINT: https://drive-keycloak.127.0.0.1.nip.io/realms/drive/protocol/openid-connect/userinfo
 OIDC_OP_LOGOUT_ENDPOINT: https://drive-keycloak.127.0.0.1.nip.io/realms/drive/protocol/openid-connect/logout
 OIDC_RP_CLIENT_ID: drive
-OIDC_RP_CLIENT_SECRET: ThisIsAnExampleKeyForDevPurposeOnly
+OIDC_RP_CLIENT_SECRET_FILE: /run/secrets/oidc_rp_client_secret
 OIDC_RP_SIGN_ALGO: RS256
 OIDC_RP_SCOPES: "openid email"
 OIDC_USER_FIELD_TO_SHORTNAME: "given_name"

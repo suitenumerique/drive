@@ -27,6 +27,21 @@ Each failure should also emit:
 - `config.allowlist.origin.wildcard`
 - `config.allowlist.host.invalid`
 - `config.allowlist.host.wildcard`
+- `config.oidc.endpoint_url.missing`
+- `config.oidc.endpoint_url.invalid`
+- `config.oidc.endpoint_url.https_required`
+- `config.oidc.op_url.invalid`
+- `config.oidc.op_url.https_required`
+- `config.oidc.client_id.missing`
+- `config.oidc.client_secret.missing`
+- `config.oidc.client_secret.direct_value_forbidden`
+- `config.oidc.client_secret.file_missing`
+- `config.oidc.client_secret.file_unreadable`
+- `config.oidc.client_secret.env_ref_missing`
+- `config.secret.direct_value_forbidden`
+- `config.secret.file_missing`
+- `config.secret.file_unreadable`
+- `config.secret.env_ref_missing`
 
 ## S3 Contract Tests (CT-S3-*) — `s3.*`
 
