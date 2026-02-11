@@ -22,6 +22,9 @@ or acceptance criteria). Those belong in the per-session text prompt.
 
 - **One story = one branch + one PR**.
 - PR base must be `main` (avoid stacked PRs).
+- Treat PRs as a **mirror** of the repo-local source of truth:
+  - project communication and traceability live under `_bmad-output/...`
+  - PRs exist to sync/track that work on GitHub
 - Keep the repo clean:
   - After merge, delete the remote branch.
   - Avoid long-lived “work in progress” branches without a PR.
@@ -33,6 +36,10 @@ the story run report. No secrets in logs/artifacts.
 
 The dev agent should stop at “ready for review” and report back; merging is
 handled by the review/maintainer loop.
+
+Do **not** wait for GitHub checks to complete before continuing work. GitHub is
+treated as a mirror; your “PASS” evidence is what you ran and recorded in the
+run artifacts.
 
 **Important**: do not claim “PASS” unless the evidence is **committed and
 pushed** in the PR branch (run folder + updated pointers). Local-only runs are
@@ -74,3 +81,9 @@ When a story requires traceability artifacts, follow the story’s exact format:
   - `_bmad-output/implementation-artifacts/latest.txt`
   - `_bmad-output/implementation-artifacts/sprint-status.yaml`
   - The story file “Dev Agent Record” section
+
+If your PR becomes `CONFLICTING` after other merges:
+- Prefer a **merge-from-main** commit (no force-push): `git fetch origin` then
+  `git merge origin/main`, resolve conflicts, commit, push.
+- Conflicts commonly happen in shared tracker files like `latest.txt` and
+  `sprint-status.yaml`.
