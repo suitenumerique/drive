@@ -139,6 +139,76 @@ When merging multiple story PRs:
 
 ---
 
+## Dev prompt templates (review → dev handoff)
+
+These templates are what the **review/maintainer** should paste to the user,
+who then pastes it into the Codex **dev** conversation.
+
+### A) New dev conversation (batch of stories)
+
+Fill the batch list from `_bmad-output/planning-artifacts/development-order.md`
+(default: next 3 contiguous `ready-for-dev` stories).
+
+```text
+Tu es Codex (dev) dans `/root/Apoze/drive`.
+
+Avant toute action, lis et applique `docs/codex-agent-baseline.md`.
+
+Objectif: terminer ce batch de stories (ne pas s'arrêter après la première) :
+- <Story X> — prompt: `_bmad-output/implementation-artifacts/prompts/<X>-dev.md`
+- <Story Y> — prompt: `_bmad-output/implementation-artifacts/prompts/<Y>-dev.md`
+- <Story Z> — prompt: `_bmad-output/implementation-artifacts/prompts/<Z>-dev.md`
+
+Règles:
+- 1 story = 1 branche = 1 PR (base `main`, pas de stacked PRs).
+- No-leak strict (aucun secret/URL signée/SigV4/tokens dans logs/diffs/artifacts).
+- Ne touche pas `_bmad-output/implementation-artifacts/latest.txt` ni
+  `_bmad-output/implementation-artifacts/sprint-status.yaml` dans les PRs story
+  (je ferai un tracking sync après merge), sauf si la story l'exige explicitement.
+- CI commit-lint: gitmoji valide + body non vide + lignes <= 80.
+  Astuce: utilise `git commit -F <file>` (évite les `-m` avec `\\n`).
+- `check-changelog`:
+  - garde le label GitHub `noChangeLog` tant que la PR est draft/kickoff.
+  - quand tu passes une story en ready-for-review: enlève `noChangeLog` et ajoute
+    une entrée `CHANGELOG.md` (lignes <= 80).
+- Strict mirror (si applicable): le body de la PR doit contenir
+  - `Story file: _bmad-output/implementation-artifacts/<story>.md`
+  - `BMAD-FP-BP: sha256:...`
+  Pour calculer le fingerprint:
+  `printf 'Story file: <path>\\n' | python3 bin/strict_mirror_check.py --print`
+
+Traceability (si demandée par la story):
+- créer `_bmad-output/implementation-artifacts/runs/<YYYYMMDD-HHMMSS>-<id>/`
+  avec `report.md`, `gates.md`, `commands.log`, `files-changed.txt`
+  (+ `run-report.*` si généré), et les commit/push dans la branche.
+- mettre à jour le story file:
+  - `Status: review`
+  - section “Dev Agent Record” complétée (pointe vers le run).
+
+Fin de batch uniquement (sauf blocage): envoie un seul récap listant, pour chaque
+story: PR + branche + chemin `runs/.../report.md` (+ `run-report.md` si présent)
++ résumé `gates.md` (PASS/FAIL) + risques/notes.
+```
+
+### B) Correction d'une PR existante (même conversation dev)
+
+```text
+Tu continues dans la MÊME conversation (et sur la même branche/PR).
+
+PR à corriger: <PR #> — branche `<branch>`.
+
+Problème bloquant:
+- <résumer précisément le gate qui échoue + le message d'erreur, sans secrets>
+
+À faire:
+- <liste d’actions précises, fichiers à modifier, commandes à relancer>
+- mettre à jour/compléter les run artifacts si nécessaire (sans no-leak).
+
+Quand c'est corrigé:
+- push les commits
+- renvoyer un mini récap: PR + check(s) maintenant PASS + run artifact path.
+```
+
 ## Useful `gh` commands (review mode)
 
 ```bash
