@@ -6,10 +6,10 @@ from uuid import UUID
 from django.utils import timezone
 
 import pytest
+from freezegun import freeze_time
 from rest_framework.test import APIClient
 
 from core import factories, models
-from freezegun import freeze_time
 
 pytestmark = pytest.mark.django_db
 

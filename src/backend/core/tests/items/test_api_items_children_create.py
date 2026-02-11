@@ -98,6 +98,16 @@ def test_api_items_children_create_authenticated_forbidden(reach, role, depth):
     )
 
     assert response.status_code == 403
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "permission_denied",
+                "detail": "You do not have permission to perform this action.",
+            },
+        ],
+        "type": "client_error",
+    }
     assert Item.objects.count() == items_created
 
 
@@ -142,6 +152,61 @@ def test_api_items_children_create_authenticated_success(reach, role, depth):
     assert child.computed_link_reach == reach
     assert child.link_reach is None
     assert not child.accesses.filter(role="owner", user=user).exists()
+
+
+def test_api_items_children_create_authenticated_title_null():
+    """It should not be possible to create a folder without a title."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    access = factories.UserItemAccessFactory(
+        user=user, role="editor", item__type=ItemTypeChoices.FOLDER
+    )
+
+    response = client.post(
+        f"/api/v1.0/items/{access.item.id!s}/children/",
+        {"type": ItemTypeChoices.FOLDER},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "title",
+                "code": "item_create_folder_title_required",
+                "detail": "This field is required for folders.",
+            },
+        ],
+        "type": "validation_error",
+    }
+
+
+def test_api_items_children_create_folder_success_appears_in_children_list():
+    """Created folders should appear when listing the parent's children."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent = factories.ItemFactory(link_reach="restricted", type=ItemTypeChoices.FOLDER)
+    factories.UserItemAccessFactory(user=user, item=parent, role="owner")
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/children/",
+        {
+            "type": ItemTypeChoices.FOLDER,
+            "title": "my folder",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    created_id = response.json()["id"]
+
+    list_response = client.get(f"/api/v1.0/items/{parent.id!s}/children/")
+    assert list_response.status_code == 200
+    assert created_id in {r["id"] for r in list_response.json()["results"]}
 
 
 @pytest.mark.parametrize("depth", [1, 2, 3])

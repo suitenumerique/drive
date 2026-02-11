@@ -28,7 +28,7 @@ export const ExplorerTreeActions = ({
           options={[
             {
               icon: <img src={createFolderSvg.src} alt="" />,
-              label: t("explorer.tree.create.folder"),
+              label: t("explorer.actions.createFolder.modal.title"),
               value: "info",
               isHidden: !showMenu,
               callback: openCreateFolderModal,
@@ -41,7 +41,7 @@ export const ExplorerTreeActions = ({
             icon={<span className="material-icons">add</span>}
             onClick={() => createMenu.setIsOpen(true)}
           >
-            {t("explorer.tree.create.label")}
+            {t("explorer.tree.createFolder")}
           </Button>
         </DropdownMenu>
       </div>
