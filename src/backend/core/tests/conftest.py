@@ -65,6 +65,15 @@ def resource_server_backend_setup(settings):
     settings.OIDC_OP_INTROSPECTION_ENDPOINT = "https://oidc.example.com/introspect"
     settings.OIDC_RS_SCOPES = ["openid", "groups"]
     settings.OIDC_RS_ALLOWED_AUDIENCES = ["some_service_provider"]
+    settings.EXTERNAL_API = {
+        "items": {
+            "enabled": True,
+            "actions": ["list", "retrieve", "children", "upload_ended"],
+        },
+        "item_access": {"enabled": False, "actions": []},
+        "item_invitation": {"enabled": False, "actions": []},
+        "users": {"enabled": True, "actions": ["get_me"]},
+    }
 
 
 @pytest.fixture

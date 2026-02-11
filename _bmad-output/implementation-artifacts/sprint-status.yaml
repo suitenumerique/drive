@@ -18,7 +18,7 @@ development_status:
   epic-3: in-progress
   3-1-byo-oidc-authentication-refs-only-secrets-config-validation-smoke-login-proof: review
   3-2-entitlements-enforcement-for-access-and-uploads-api-ui-gating: review
-  3-3-external-api-allowlist-for-resources-and-actions-strict-no-wildcards: ready-for-dev
+  3-3-external-api-allowlist-for-resources-and-actions-strict-no-wildcards: review
   3-4-resource-server-mode-external-api-is-disabled-by-default-and-token-authenticated: ready-for-dev
   epic-3-retrospective: optional
   epic-4: backlog
