@@ -1,0 +1,18 @@
+# Updated 2026-02-11T12:44:31Z
+_bmad-output/implementation-artifacts/3-4-resource-server-mode-external-api-is-disabled-by-default-and-token-authenticated.md
+_bmad-output/implementation-artifacts/latest.txt
+_bmad-output/implementation-artifacts/runs/20260211-124250-3.4/commands.log
+_bmad-output/implementation-artifacts/runs/20260211-124250-3.4/files-changed.txt
+_bmad-output/implementation-artifacts/runs/20260211-124250-3.4/gates.md
+_bmad-output/implementation-artifacts/runs/20260211-124250-3.4/report.md
+_bmad-output/implementation-artifacts/sprint-status.yaml
+docs/resource_server.md
+env.d/development/common
+src/backend/core/external_api/authentication.py
+src/backend/core/external_api/permissions.py
+src/backend/core/external_api/viewsets.py
+src/backend/core/tests/conftest.py
+src/backend/core/tests/external_api/items/test_external_api_items.py
+src/backend/core/urls.py
+src/backend/core/utils/secret_refs.py
+src/backend/drive/settings.py

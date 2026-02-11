@@ -15,11 +15,11 @@ development_status:
   2-4-docker-first-backup-restore-runbook-deterministic-post-restore-smoke-checklist: done
   2-5-docker-first-upgrade-rollback-runbook-deterministic-post-action-smoke-checklist: done
   epic-2-retrospective: optional
-  epic-3: backlog
+  epic-3: in-progress
   3-1-byo-oidc-authentication-refs-only-secrets-config-validation-smoke-login-proof: ready-for-dev
   3-2-entitlements-enforcement-for-access-and-uploads-api-ui-gating: ready-for-dev
   3-3-external-api-allowlist-for-resources-and-actions-strict-no-wildcards: ready-for-dev
-  3-4-resource-server-mode-external-api-is-disabled-by-default-and-token-authenticated: ready-for-dev
+  3-4-resource-server-mode-external-api-is-disabled-by-default-and-token-authenticated: review
   epic-3-retrospective: optional
   epic-4: backlog
   4-1-browse-workspaces-and-navigate-folders-deterministic-ordering-abilities-contract: ready-for-dev
