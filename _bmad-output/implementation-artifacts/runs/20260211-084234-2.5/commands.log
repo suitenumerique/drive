@@ -1,0 +1,16 @@
+# Commands (Story 2.5 / PR #23)
+
+Working directory: repo root
+
+## Doc content checks (no-leak + Docker-first)
+
+- `rg -n "kubernetes|helm" docs/selfhost/upgrade.md docs/selfhost/rollback.md docs/selfhost/smoke-checklist.md`
+  - PASS: no matches
+- `rg -n "AWS_SECRET|AWS_ACCESS|X-Amz-|Authorization:" docs/selfhost/upgrade.md docs/selfhost/rollback.md docs/selfhost/smoke-checklist.md`
+  - PASS: no matches
+
+## Link sanity
+
+- `test -f docs/selfhost/edge-contract.md`
+  - PASS
+

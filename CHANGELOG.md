@@ -13,6 +13,7 @@ and this project adheres to
 - ✨(global) implement advanced shared management system
 - 📝(docs) add Docker-first self-host edge contract docs
 - 📝(docs) document deterministic failure reporting schema
+- 📝(docs) add Docker-first upgrade/rollback runbooks + smoke checklist updates
 - ✨(backend) add deterministic config_preflight edge validations
 
 ### Removed

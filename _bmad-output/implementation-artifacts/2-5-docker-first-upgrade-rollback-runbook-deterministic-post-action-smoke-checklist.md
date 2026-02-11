@@ -1,6 +1,6 @@
 # Story 2.5: Docker-first upgrade/rollback runbook + deterministic post-action smoke checklist
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -61,9 +61,25 @@ So that I can apply updates safely and recover quickly if something goes wrong, 
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
+
 ### Debug Log References
+
+- `_bmad-output/implementation-artifacts/runs/20260211-084234-2.5/report.md`
 
 ### Completion Notes List
 
+- Added Docker-first upgrade and rollback runbooks with explicit ordering.
+- Documented rollback safety: DB restore may be required after migrations.
+- Expanded the deterministic post-action smoke checklist to include required
+  PASS/FAIL outcomes (login/browse/preview/upload/media/share).
+
 ### File List
 
+- `docs/selfhost/upgrade.md`
+- `docs/selfhost/rollback.md`
+- `docs/selfhost/smoke-checklist.md`
+- `docs/selfhost/README.md`
+- `docs/installation/README.md`
+- `CHANGELOG.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-084234-2.5/report.md`

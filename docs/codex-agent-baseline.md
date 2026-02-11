@@ -34,6 +34,10 @@ the story run report. No secrets in logs/artifacts.
 The dev agent should stop at “ready for review” and report back; merging is
 handled by the review/maintainer loop.
 
+**Important**: do not claim “PASS” unless the evidence is **committed and
+pushed** in the PR branch (run folder + updated pointers). Local-only runs are
+not verifiable and will be treated as missing.
+
 ## Commit conventions (CI blockers)
 
 - Commit title format must be valid gitmoji:
@@ -62,6 +66,8 @@ Do not wait for the following workflows/checks (treated as non-blocking here):
 When a story requires traceability artifacts, follow the story’s exact format:
 - Create `_bmad-output/implementation-artifacts/runs/<ts>-<story>/` with:
   - `report.md`, `commands.log`, `files-changed.txt`, `gates.md`
+- `git add` + commit + push the run folder (and any pointer/status updates),
+  so reviewers can verify them from the PR.
 - Update:
   - `_bmad-output/implementation-artifacts/latest.txt`
   - `_bmad-output/implementation-artifacts/sprint-status.yaml`
