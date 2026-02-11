@@ -1,0 +1,5 @@
+.github/workflows/strict-mirror.yml
+_bmad-output/implementation-artifacts/12-3-strict-mirror-enforcement-bmad-registry-source-of-truth-github-fork-mirror-only.md
+bin/strict_mirror_check.py
+src/backend/core/tests/test_strict_mirror_fingerprint.py
+src/backend/core/utils/strict_mirror.py
