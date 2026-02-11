@@ -1,6 +1,6 @@
 # Story 4.5: Preview supported files via `/media/preview` (deterministic availability)
 
-Status: review
+Status: done
 
 ## Story
 
