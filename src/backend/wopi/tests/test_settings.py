@@ -39,11 +39,12 @@ def test_valid_wopi_configuration(monkeypatch):
     }
 
 
-def test_wopi_configuration_missing_discovery_url(monkeypatch):
+def test_wopi_configuration_missing_discovery_url():
     """
     When a WOPI client is missing the discovery url configuration, a ValueError should be
     raised.
     """
+
     class TestSettings(Base):
         """Fake test settings."""
 

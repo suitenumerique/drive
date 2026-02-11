@@ -6,9 +6,23 @@ import importlib.util
 from pathlib import Path
 
 
+def _find_repo_root(start: Path) -> Path:
+    """
+    Find the repository root regardless of checkout depth.
+
+    This test suite runs in different environments (CI runner paths, docker mounts).
+    Avoid brittle `parents[N]` assumptions and instead locate the root by marker files.
+    """
+    start = start.resolve()
+    for candidate in (start, *start.parents):
+        if (candidate / "bin" / "strict_mirror_check.py").is_file():
+            return candidate
+    raise AssertionError("Could not find repo root containing bin/strict_mirror_check.py")
+
+
 def _load_checker_module():
     """Load `bin/strict_mirror_check.py` as a Python module for unit tests."""
-    repo_root = Path(__file__).resolve().parents[4]
+    repo_root = _find_repo_root(Path(__file__))
     checker_path = repo_root / "bin" / "strict_mirror_check.py"
     spec = importlib.util.spec_from_file_location("strict_mirror_check", checker_path)
     assert spec and spec.loader
