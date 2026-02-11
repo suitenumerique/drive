@@ -4,7 +4,8 @@
 import json
 import logging
 import re
-from urllib.parse import quote, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
+from uuid import UUID
 
 from django.conf import settings
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -50,11 +51,13 @@ from core.services.search_indexers import (
 )
 from core.tasks.item import process_item_deletion, rename_file
 from core.utils.no_leak import safe_str_hash
+from core.utils.share_links import validate_item_share_token
 from wopi.services import access as access_service
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
 
 from . import permissions, serializers, utils
 from .filters import ItemFilter, ListItemFilter, SearchItemFilter
+from .serializers_share_links import PublicShareItemSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -1593,6 +1596,14 @@ class ItemViewSet(
         url_params, _, _, item = self._authorize_subrequest(
             request, MEDIA_STORAGE_URL_PATTERN
         )
+        if not request.user.is_authenticated:
+            original_url = request.META.get("HTTP_X_ORIGINAL_URL", "")
+            parsed = urlparse(original_url)
+            share_token = parse_qs(parsed.query).get("share_token", [None])[0]
+            share_item_id = validate_item_share_token(share_token or "")
+            if share_item_id != item.id:
+                raise drf.exceptions.PermissionDenied()
+
         if item.type != models.ItemTypeChoices.FILE:
             logger.debug("Item '%s' is not a file", item.id)
             raise drf.exceptions.PermissionDenied()
@@ -1654,6 +1665,87 @@ class ItemViewSet(
                 "launch_url": launch_url,
             },
             status=drf.status.HTTP_200_OK,
+        )
+
+
+class ShareLinkViewSet(viewsets.GenericViewSet):
+    """Open/browse token-enforced public share links (unauthenticated)."""
+
+    permission_classes = [AllowAny]
+    pagination_class = Pagination
+    queryset = models.Item.objects.filter(hard_deleted_at__isnull=True)
+    lookup_value_regex = r"[^/]+"
+
+    def _get_root_item(self, token: str) -> models.Item:
+        item_id = validate_item_share_token(token)
+        if item_id is None:
+            raise drf.exceptions.NotFound()
+
+        try:
+            item = self.queryset.get(id=item_id, ancestors_deleted_at__isnull=True)
+        except models.Item.DoesNotExist as exc:
+            raise drf.exceptions.NotFound() from exc
+
+        if item.computed_link_reach != LinkReachChoices.PUBLIC:
+            raise drf.exceptions.NotFound()
+
+        return item
+
+    @drf.decorators.action(detail=True, methods=["get"], url_path="browse")
+    def browse(self, request, pk=None):
+        """Browse the shared item subtree rooted at the share token."""
+        token = pk or ""
+        root = self._get_root_item(token)
+
+        target_raw = request.query_params.get("item_id")
+        if not target_raw:
+            target = root
+        else:
+            try:
+                target_id = UUID(target_raw)
+            except ValueError as exc:
+                raise drf.exceptions.NotFound() from exc
+
+            if target_id == root.id:
+                target = root
+            else:
+                target = self.queryset.filter(
+                    id=target_id,
+                    path__descendants=root.path,
+                    ancestors_deleted_at__isnull=True,
+                ).first()
+                if target is None:
+                    raise drf.exceptions.NotFound()
+
+        if target.computed_link_reach != LinkReachChoices.PUBLIC:
+            raise drf.exceptions.NotFound()
+
+        item_data = PublicShareItemSerializer(
+            target, context={"share_token": token}
+        ).data
+
+        if target.type != models.ItemTypeChoices.FOLDER:
+            return drf.response.Response(
+                {"root_item_id": str(root.id), "item": item_data, "children": None}
+            )
+
+        children_qs = (
+            target.children()
+            .filter(deleted_at__isnull=True, hard_deleted_at__isnull=True)
+            .order_by("type", "title", "id")
+        )
+        page = self.paginate_queryset(children_qs)
+        children_data = PublicShareItemSerializer(
+            page, many=True, context={"share_token": token}
+        ).data
+        children_payload = self.get_paginated_response(children_data).data
+
+        return drf.response.Response(
+            {
+                "root_item_id": str(root.id),
+                "item": item_data,
+                "children": children_payload,
+            }
         )
 
 

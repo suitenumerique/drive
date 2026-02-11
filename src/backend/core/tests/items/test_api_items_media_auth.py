@@ -17,12 +17,13 @@ from rest_framework.test import APIClient
 
 from core import factories, models
 from core.tests.conftest import TEAM, USER, VIA
+from core.utils.share_links import compute_item_share_token
 
 pytestmark = pytest.mark.django_db
 
 
 def test_api_items_media_auth_anonymous_public():
-    """Anonymous users should be able to retrieve attachments linked to a public item"""
+    """Anonymous users should be able to retrieve public attachments with a share token."""
     item = factories.ItemFactory(
         link_reach="public",
         type=models.ItemTypeChoices.FILE,
@@ -33,7 +34,8 @@ def test_api_items_media_auth_anonymous_public():
         item.file_key,
         BytesIO(b"my prose"),
     )
-    original_url = f"http://localhost/media/{item.file_key:s}"
+    share_token = compute_item_share_token(item.id)
+    original_url = f"http://localhost/media/{item.file_key:s}?share_token={share_token}"
     now = timezone.now()
     with freeze_time(now):
         response = APIClient().get(
@@ -63,6 +65,23 @@ def test_api_items_media_auth_anonymous_public():
         timeout=1,
     )
     assert response.content.decode("utf-8") == "my prose"
+
+
+def test_api_items_media_auth_anonymous_public_requires_share_token():
+    """Anonymous users should not be able to retrieve public attachments without a share token."""
+    item = factories.ItemFactory(
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    original_url = f"http://localhost/media/{item.file_key:s}"
+    response = APIClient().get(
+        "/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url
+    )
+
+    assert response.status_code == 403
+    assert "Authorization" not in response
 
 
 @pytest.mark.parametrize("reach", ["authenticated", "restricted"])
@@ -399,7 +418,7 @@ def test_api_items_media_auth_suspicious_item_creator():
 
 
 def test_api_items_media_auth_filename_with_hash():
-    """Files with '#' in their filename should not cause a SignatureDoesNotMatch."""
+    """Files with '#' in their filename should not break token-enforced media auth."""
     item = factories.ItemFactory(
         link_reach="public",
         type=models.ItemTypeChoices.FILE,
@@ -411,7 +430,10 @@ def test_api_items_media_auth_filename_with_hash():
         item.file_key,
         BytesIO(b"my prose"),
     )
-    original_url = f"http://localhost/media/{quote(item.file_key)}"
+    share_token = compute_item_share_token(item.id)
+    original_url = (
+        f"http://localhost/media/{quote(item.file_key)}?share_token={share_token}"
+    )
     now = timezone.now()
     with freeze_time(now):
         response = APIClient().get(
