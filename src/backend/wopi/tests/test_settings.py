@@ -7,7 +7,6 @@ from drive.settings import Base
 
 def test_valid_wopi_configuration(monkeypatch):
     """Valid WOPI configuration should be correctly loaded."""
-    monkeypatch.setenv("DRIVE_PUBLIC_URL", "https://drive.example.test")
     monkeypatch.setenv(
         "WOPI_VENDORA_DISCOVERY_URL", "https://vendorA.com/hosting/discovery"
     )
@@ -20,6 +19,8 @@ def test_valid_wopi_configuration(monkeypatch):
         """Fake test settings."""
 
         WOPI_CLIENTS = ["vendorA", "vendorB"]
+        DRIVE_PUBLIC_URL = "https://drive.example.test"
+        WOPI_SRC_BASE_URL = None
         WOPI_CLIENTS_CONFIGURATION = {}
 
     TestSettings.post_setup()
@@ -43,16 +44,16 @@ def test_wopi_configuration_missing_discovery_url(monkeypatch):
     When a WOPI client is missing the discovery url configuration, a ValueError should be
     raised.
     """
-    monkeypatch.setenv("DRIVE_PUBLIC_URL", "https://drive.example.test")
-
     class TestSettings(Base):
         """Fake test settings."""
 
         WOPI_CLIENTS = ["vendorA"]
+        DRIVE_PUBLIC_URL = "https://drive.example.test"
+        WOPI_SRC_BASE_URL = None
         WOPI_CLIENTS_CONFIGURATION = {}
 
     with pytest.raises(ValueError) as excinfo:
-        TestSettings().post_setup()
+        TestSettings.post_setup()
 
     assert str(excinfo.value) == (
         "Value 'WOPI_VENDORA_DISCOVERY_URL' is required to be set as the environment"
