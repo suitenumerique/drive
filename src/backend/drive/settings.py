@@ -553,6 +553,14 @@ class Base(Configuration):
         environ_name="AWS_S3_UPLOAD_POLICY_EXPIRATION",
         environ_prefix=None,
     )
+    # Pending upload TTL (seconds). After this window, PENDING items are treated
+    # deterministically as EXPIRED on user-facing surfaces, to avoid infinite
+    # "pending" states when uploads do not finalize.
+    ITEM_UPLOAD_PENDING_TTL_SECONDS = values.PositiveIntegerValue(
+        60 * 60,  # 1 hour
+        environ_name="ITEM_UPLOAD_PENDING_TTL_SECONDS",
+        environ_prefix=None,
+    )
     AWS_S3_DOMAIN_REPLACE = values.Value(
         environ_name="AWS_S3_DOMAIN_REPLACE",
         environ_prefix=None,

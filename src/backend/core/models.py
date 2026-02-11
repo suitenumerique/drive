@@ -68,6 +68,7 @@ class ItemUploadStateChoices(models.TextChoices):
     """Defines the possible states of an item."""
 
     PENDING = "pending", _("Pending")
+    EXPIRED = "expired", _("Expired")
     ANALYZING = "analyzing", _("Analyzing")
     SUSPICIOUS = "suspicious", _("Suspicious")
     FILE_TOO_LARGE_TO_ANALYZE = (
@@ -457,6 +458,14 @@ class Item(TreeModel, BaseModel):
         null=True,
         blank=True,
     )
+    upload_started_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_(
+            "Timestamp used to compute pending upload TTL. Set when a file enters "
+            "PENDING state and refreshed when a pending upload is re-initiated."
+        ),
+    )
     numchild = models.PositiveIntegerField(default=0)
     numchild_folder = models.PositiveIntegerField(default=0)
     mimetype = models.CharField(max_length=255, null=True, blank=True)
@@ -526,11 +535,59 @@ class Item(TreeModel, BaseModel):
 
         if self.created_at is None and self.type == ItemTypeChoices.FILE:
             self.upload_state = ItemUploadStateChoices.PENDING
+            self.upload_started_at = timezone.now()
+
+        if (
+            self.type == ItemTypeChoices.FILE
+            and self.upload_state == ItemUploadStateChoices.PENDING
+            and self.upload_started_at is None
+        ):
+            self.upload_started_at = timezone.now()
 
         if not self.path:
             self.path = str(self.id)
 
         return super().save(*args, **kwargs)
+
+    def effective_upload_state(self) -> str | None:
+        """
+        Return the effective upload state, applying the pending TTL deterministically.
+
+        The database value may remain `pending` until an explicit transition occurs,
+        but user-facing surfaces should treat an over-TTL pending item as `expired`.
+        """
+        if self.upload_state != ItemUploadStateChoices.PENDING:
+            return self.upload_state
+
+        if not self.upload_started_at:
+            return self.upload_state
+
+        ttl_seconds = getattr(settings, "ITEM_UPLOAD_PENDING_TTL_SECONDS", None)
+        if not ttl_seconds:
+            return self.upload_state
+
+        expires_at = self.upload_started_at + timedelta(seconds=int(ttl_seconds))
+        return (
+            ItemUploadStateChoices.EXPIRED
+            if timezone.now() > expires_at
+            else ItemUploadStateChoices.PENDING
+        )
+
+    def restart_pending_upload(self) -> None:
+        """Restart a pending upload session for this item (idempotent retry target)."""
+        if self.type != ItemTypeChoices.FILE:
+            raise ValidationError(
+                {
+                    "type": ValidationError(
+                        _("This action is only available for items of type FILE."),
+                        code="item_upload_type_unavailable",
+                    )
+                }
+            )
+
+        self.upload_state = ItemUploadStateChoices.PENDING
+        self.upload_started_at = timezone.now()
+        self.save(update_fields=["upload_state", "upload_started_at", "updated_at"])
 
     def delete(self, using=None, keep_parents=False):
         if self.deleted_at is None and self.ancestors_deleted_at is None:

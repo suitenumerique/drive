@@ -91,6 +91,10 @@ Each failure should also emit:
 
 - `no_leak.scan.match_found`
 
+## Uploads — `upload.*`
+
+- `upload.session.expired`
+
 ## Mounts / SMB — `mount.*`
 
 - `mount.integration.not_implemented`

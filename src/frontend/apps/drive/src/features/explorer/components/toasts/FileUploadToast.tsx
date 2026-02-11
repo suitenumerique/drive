@@ -17,17 +17,20 @@ import { useMemo } from "react";
 export const FileUploadToast = (
   props: {
     uploadingState: UploadingState;
+    onRetry?: (path: string) => void;
   } & Partial<ToastContentProps>
 ) => {
   const { t } = useTranslation();
   const { config } = useConfig();
   const [isOpen, setIsOpen] = useState(true);
-  const pendingFilesCount = Object.values(
-    props.uploadingState.filesMeta
-  ).filter((meta) => meta.progress < 100).length;
-  const doneFilesCount = Object.values(props.uploadingState.filesMeta).filter(
-    (meta) => meta.progress >= 100
+  const metas = Object.values(props.uploadingState.filesMeta);
+  const inProgressFilesCount = metas.filter(
+    (meta) => meta.status !== "failed" && meta.progress < 100,
   ).length;
+  const doneFilesCount = metas.filter(
+    (meta) => meta.status !== "failed" && meta.progress >= 100,
+  ).length;
+  const failedFilesCount = metas.filter((meta) => meta.status === "failed").length;
   // Does not show the files list and the open button.
   const simpleMode =
     props.uploadingState.step === "preparing" ||
@@ -46,10 +49,10 @@ export const FileUploadToast = (
   }, [props.uploadingState.step]);
 
   useEffect(() => {
-    if (pendingFilesCount === 0) {
+    if (inProgressFilesCount === 0) {
       setIsOpen(false);
     }
-  }, [pendingFilesCount]);
+  }, [inProgressFilesCount]);
 
   return (
     <ToasterItem className="file-upload-toast__item">
@@ -72,7 +75,19 @@ export const FileUploadToast = (
                     </span>
                   </div>
                   <div className="file-upload-toast__files__item__progress">
-                    <CircularProgress progress={meta.progress} />
+                    {meta.status === "failed" ? (
+                      <Button
+                        variant="secondary"
+                        size="small"
+                        onClick={() => props.onRetry?.(name)}
+                      >
+                        {t(
+                          `explorer.actions.upload.actions.${meta.error?.nextAction ?? "retry"}`,
+                        )}
+                      </Button>
+                    ) : (
+                      <CircularProgress progress={meta.progress} />
+                    )}
                   </div>
                 </div>
               );
@@ -96,15 +111,19 @@ export const FileUploadToast = (
               </>
             ) : (
               <>
-                {pendingFilesCount > 0
+                {inProgressFilesCount > 0
                   ? t("explorer.actions.upload.files.description", {
-                      count: pendingFilesCount,
+                      count: inProgressFilesCount,
                     })
-                  : doneFilesCount > 0
-                    ? t("explorer.actions.upload.files.description_done", {
-                        count: doneFilesCount,
+                  : failedFilesCount > 0
+                    ? t("explorer.actions.upload.files.description_failed", {
+                        count: failedFilesCount,
                       })
-                    : null}
+                    : doneFilesCount > 0
+                      ? t("explorer.actions.upload.files.description_done", {
+                          count: doneFilesCount,
+                        })
+                      : null}
               </>
             )}
           </div>
@@ -124,7 +143,7 @@ export const FileUploadToast = (
 
             <Button
               onClick={props.closeToast}
-              disabled={pendingFilesCount > 0}
+              disabled={inProgressFilesCount > 0}
               variant="tertiary"
               size="small"
               icon={<span className="material-icons">close</span>}

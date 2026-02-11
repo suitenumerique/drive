@@ -191,6 +191,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     is_favorite = serializers.BooleanField(read_only=True)
     nb_accesses = serializers.IntegerField(read_only=True)
     user_role = serializers.SerializerMethodField()
+    upload_state = serializers.SerializerMethodField(read_only=True)
     url = serializers.SerializerMethodField()
     url_preview = serializers.SerializerMethodField()
     creator = UserLightSerializer(read_only=True)
@@ -292,11 +293,20 @@ class ListItemSerializer(serializers.ModelSerializer):
             return item.get_role(request.user)
         return None
 
+    def get_upload_state(self, item):
+        """Return the effective upload state (pending TTL applied deterministically)."""
+        return item.effective_upload_state()
+
     def get_url(self, item):
         """Return the URL of the item."""
+        effective_upload_state = item.effective_upload_state()
         if (
             item.type != models.ItemTypeChoices.FILE
-            or item.upload_state == models.ItemUploadStateChoices.PENDING
+            or effective_upload_state
+            in {
+                models.ItemUploadStateChoices.PENDING,
+                models.ItemUploadStateChoices.EXPIRED,
+            }
             or item.filename is None
         ):
             return None
@@ -305,9 +315,14 @@ class ListItemSerializer(serializers.ModelSerializer):
 
     def get_url_preview(self, item):
         """Return the URL of the item."""
+        effective_upload_state = item.effective_upload_state()
         if (
             item.type != models.ItemTypeChoices.FILE
-            or item.upload_state == models.ItemUploadStateChoices.PENDING
+            or effective_upload_state
+            in {
+                models.ItemUploadStateChoices.PENDING,
+                models.ItemUploadStateChoices.EXPIRED,
+            }
             or item.filename is None
             or not utils.is_previewable_item(item)
         ):

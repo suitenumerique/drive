@@ -16,6 +16,7 @@ This document lists all configurable environment variables for the Drive applica
 | `AWS_S3_REGION_NAME` | AWS S3 region name for file storage | `None` |
 | `AWS_S3_SECRET_ACCESS_KEY` | AWS S3 secret access key for file storage | `None` |
 | `AWS_S3_UPLOAD_POLICY_EXPIRATION` | AWS S3 upload policy expiration time in seconds | `86400` (24h) |
+| `ITEM_UPLOAD_PENDING_TTL_SECONDS` | Pending upload TTL in seconds (after which pending items are treated as expired) | `3600` (1h) |
 | `AWS_STORAGE_BUCKET_NAME` | AWS S3 bucket name for file storage | `drive-media-storage` |
 | `CACHES_DEFAULT_TIMEOUT` | Default cache timeout in seconds | `30` |
 | `CELERY_BROKER_URL` | Celery broker URL for task queue | `redis://redis:6379/0` |
