@@ -50,6 +50,8 @@ not verifiable and will be treated as missing.
 
 - PRs must update `CHANGELOG.md` unless the PR has label `noChangeLog`.
 - For scaffolds (prompts/status-only), prefer label `noChangeLog`.
+- Add the `noChangeLog` label **before** expecting CI to pass. If CI already ran
+  without it, push a follow-up commit to retrigger checks after adding the label.
 
 ## GitHub checks: blocking vs non-blocking
 

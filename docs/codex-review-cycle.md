@@ -73,6 +73,8 @@ Use `gh` to verify:
 Do **not wait** on the ignored workflows listed above.
 
 If `CHANGELOG.md` isn’t touched, ensure PR has label `noChangeLog`.
+Note: adding the label after a workflow run may not retroactively skip an
+already-triggered `check-changelog` job; a new push is the simplest retrigger.
 
 ### 3) Merge + cleanup (if everything is OK)
 
@@ -113,4 +115,3 @@ gh api --paginate repos/Apoze/drive/branches --jq '.[].name' | sort
 # Merge + delete branch
 gh pr merge <n> --repo Apoze/drive --merge --delete-branch
 ```
-
