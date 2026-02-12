@@ -5,14 +5,15 @@ import { PageOrLocator } from "./utils/types-utils";
 export const expectExplorerBreadcrumbs = async (
   page: PageOrLocator,
   expected: string[],
-  hidden: string[] = []
+  hidden: string[] = [],
 ) => {
   const breadcrumbs = page.getByTestId("explorer-breadcrumbs");
   await expect(breadcrumbs).toBeVisible();
 
   // Check the order of breadcrumbs
   if (expected.length >= 1) {
-    const breadcrumbButtons = breadcrumbs.getByTestId("breadcrumb-button");
+    const breadcrumbButtons = breadcrumbs.getByRole("button");
+    await expect(breadcrumbButtons).toHaveCount(expected.length);
 
     // Check each breadcrumb appears in the correct order
     for (let i = 0; i < expected.length; i++) {
@@ -26,12 +27,12 @@ export const expectExplorerBreadcrumbs = async (
 export const expectCurrentFolder = async (
   page: Page,
   expected: string[],
-  isSelected: boolean = false
+  isSelected: boolean = false,
 ) => {
   await expectTreeItemIsSelected(
     page,
     expected[expected.length - 1],
-    isSelected
+    isSelected,
   );
   await expectExplorerBreadcrumbs(page, expected);
 };
@@ -39,18 +40,17 @@ export const expectCurrentFolder = async (
 export const expectDefaultRoute = async (
   page: Page,
   breadcrumbLabel: string,
-  route: string
+  route: string,
 ) => {
   const defaultRouteButton = page.getByTestId("default-route-button");
   await expect(defaultRouteButton).toBeVisible();
   await expect(defaultRouteButton).toContainText(breadcrumbLabel);
-  const currentUrl = page.url();
-  expect(currentUrl).toContain(route);
+  await page.waitForURL((url) => url.toString().includes(route));
 };
 
 export const clickOnBreadcrumbButtonAction = async (
   page: Page,
-  actionName: string
+  actionName: string,
 ) => {
   const breadcrumbs = page.getByTestId("explorer-breadcrumbs");
   await expect(breadcrumbs).toBeVisible();
