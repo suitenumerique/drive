@@ -1,6 +1,6 @@
 # Story 9.1: SMB mount configuration schema and deterministic validation (refs-only secrets)
 
-Status: review
+Status: done
 
 ## Story
 
