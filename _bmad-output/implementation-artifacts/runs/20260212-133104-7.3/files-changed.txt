@@ -1,0 +1,10 @@
+CHANGELOG.md
+src/backend/core/api/serializers_mounts.py
+src/backend/core/api/viewsets.py
+src/backend/core/mounts/__init__.py
+src/backend/core/mounts/paths.py
+src/backend/core/mounts/providers/__init__.py
+src/backend/core/mounts/providers/base.py
+src/backend/core/mounts/providers/static.py
+src/backend/core/mounts/registry.py
+src/backend/core/tests/mounts/test_api_mounts_browse.py

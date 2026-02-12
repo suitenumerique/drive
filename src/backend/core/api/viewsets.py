@@ -38,12 +38,16 @@ from lasuite.malware_detection import malware_detection
 from lasuite.oidc_login.decorators import refresh_oidc_access_token
 from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
+from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.throttling import UserRateThrottle
 from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
 from core.entitlements import get_entitlements_backend
+from core.mounts.paths import MountPathNormalizationError, normalize_mount_path
+from core.mounts.providers.base import MountEntry, MountProviderError
+from core.mounts.registry import get_mount_provider
 from core.services.mirror import mirror_item
 from core.services.mount_capabilities import normalize_mount_capabilities
 from core.services.sdk_relay import SDKRelayManager
@@ -67,6 +71,7 @@ from wopi.utils import (
 
 from . import permissions, serializers, utils
 from .filters import ItemFilter, ListItemFilter, SearchItemFilter
+from .serializers_mounts import MountBrowseResponseSerializer, MountEntrySerializer
 from .serializers_share_links import PublicShareItemSerializer
 
 logger = logging.getLogger(__name__)
@@ -2348,6 +2353,14 @@ class MountViewSet(viewsets.ViewSet):
         mounts = list(getattr(settings, "MOUNTS_REGISTRY", []) or [])
         return [m for m in mounts if bool(m.get("enabled", True))]
 
+    def _get_enabled_mount_or_404(self, mount_id: str) -> dict:
+        for mount in self._enabled_mounts():
+            if mount.get("mount_id") == mount_id:
+                return mount
+        raise drf.exceptions.NotFound(
+            drf.exceptions.ErrorDetail("Mount not found.", code="mount.not_found")
+        )
+
     def _discovery_mount(self, mount: dict) -> dict:
         params = mount.get("params") or {}
         capabilities_raw = (
@@ -2375,12 +2388,138 @@ class MountViewSet(viewsets.ViewSet):
         Disabled mounts are treated as not found for end-user surfaces.
         """
         target = mount_id or self.kwargs.get(self.lookup_url_kwarg) or ""
-        for mount in self._enabled_mounts():
-            if mount.get("mount_id") == target:
-                return drf.response.Response(
-                    self._discovery_mount(mount), status=status.HTTP_200_OK
-                )
-
-        raise drf.exceptions.NotFound(
-            drf.exceptions.ErrorDetail("Mount not found.", code="mount.not_found")
+        mount = self._get_enabled_mount_or_404(target)
+        return drf.response.Response(
+            self._discovery_mount(mount), status=status.HTTP_200_OK
         )
+
+    class _MountBrowsePagination(LimitOffsetPagination):
+        default_limit = int(settings.REST_FRAMEWORK.get("PAGE_SIZE", 20))
+        max_limit = int(getattr(settings, "MAX_PAGE_SIZE", 200))
+
+    def _mount_entry_abilities(self, entry: MountEntry) -> dict[str, bool]:
+        return {
+            "children_list": entry.entry_type == "folder",
+            "upload": False,
+            "download": False,
+            "preview": False,
+            "wopi": False,
+            "share_link_create": False,
+        }
+
+    def _mount_entry_payload(
+        self, *, mount_id: str, entry: MountEntry
+    ) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "mount_id": mount_id,
+            "normalized_path": entry.normalized_path,
+            "entry_type": entry.entry_type,
+            "name": entry.name,
+            "abilities": self._mount_entry_abilities(entry),
+        }
+        if entry.size is not None:
+            payload["size"] = entry.size
+        if entry.modified_at is not None:
+            payload["modified_at"] = entry.modified_at
+        return payload
+
+    @drf.decorators.action(detail=True, methods=["get"], url_path="browse")
+    def browse(self, request, mount_id: str | None = None):
+        """
+        GET /api/v1.0/mounts/{mount_id}/browse/?path=/&limit=..&offset=..
+
+        Browse a mount path and list children with deterministic ordering and
+        contract-level pagination.
+        """
+
+        target = mount_id or self.kwargs.get(self.lookup_url_kwarg) or ""
+        mount = self._get_enabled_mount_or_404(target)
+
+        params = mount.get("params") if isinstance(mount.get("params"), dict) else {}
+        capabilities = normalize_mount_capabilities((params or {}).get("capabilities"))
+
+        raw_path = request.query_params.get("path")
+        try:
+            normalized_path = normalize_mount_path(raw_path)
+        except MountPathNormalizationError as exc:
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Invalid mount path.", code="mount.path.invalid"
+                    )
+                }
+            ) from exc
+
+        provider = get_mount_provider(str(mount.get("provider") or ""))
+
+        try:
+            entry = provider.stat(mount=mount, normalized_path=normalized_path)
+        except MountProviderError as exc:
+            if exc.public_code == "mount.path.not_found":
+                raise drf.exceptions.NotFound(
+                    drf.exceptions.ErrorDetail(
+                        "Mount path not found.", code="mount.path.not_found"
+                    )
+                ) from exc
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        exc.public_message, code=exc.public_code
+                    )
+                }
+            ) from exc
+
+        entry_payload = self._mount_entry_payload(mount_id=target, entry=entry)
+
+        if entry.entry_type != "folder":
+            payload = {
+                "mount_id": target,
+                "normalized_path": entry.normalized_path,
+                "capabilities": capabilities,
+                "entry": entry_payload,
+                "children": None,
+            }
+            MountBrowseResponseSerializer(data=payload).is_valid(raise_exception=True)
+            return drf.response.Response(payload, status=status.HTTP_200_OK)
+
+        try:
+            children = provider.list_children(
+                mount=mount, normalized_path=normalized_path
+            )
+        except MountProviderError as exc:
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        exc.public_message, code=exc.public_code
+                    )
+                }
+            ) from exc
+
+        children_sorted = sorted(
+            children,
+            key=lambda e: (
+                0 if e.entry_type == "folder" else 1,
+                str(e.name).casefold(),
+                e.normalized_path,
+            ),
+        )
+
+        paginator = self._MountBrowsePagination()
+        page = paginator.paginate_queryset(children_sorted, request, view=self)
+        page_payload = [
+            self._mount_entry_payload(mount_id=target, entry=e) for e in page
+        ]
+        MountEntrySerializer(data=page_payload, many=True).is_valid(
+            raise_exception=True
+        )
+        children_payload = paginator.get_paginated_response(page_payload).data
+
+        payload = {
+            "mount_id": target,
+            "normalized_path": entry.normalized_path,
+            "capabilities": capabilities,
+            "entry": entry_payload,
+            "children": children_payload,
+        }
+        MountBrowseResponseSerializer(data=payload).is_valid(raise_exception=True)
+        return drf.response.Response(payload, status=status.HTTP_200_OK)
