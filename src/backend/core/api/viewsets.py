@@ -2347,7 +2347,9 @@ class MountViewSet(viewsets.ViewSet):
 
     def _discovery_mount(self, mount: dict) -> dict:
         params = mount.get("params") or {}
-        capabilities_raw = params.get("capabilities") if isinstance(params, dict) else {}
+        capabilities_raw = (
+            params.get("capabilities") if isinstance(params, dict) else {}
+        )
         capabilities = normalize_mount_capabilities(capabilities_raw)
         return {
             "mount_id": mount.get("mount_id"),

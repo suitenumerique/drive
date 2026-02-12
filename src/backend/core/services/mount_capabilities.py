@@ -28,4 +28,3 @@ def normalize_mount_capabilities(raw: Any) -> dict[str, bool]:
         value = raw.get(key, False)
         normalized[key] = value if isinstance(value, bool) else False
     return normalized
-
