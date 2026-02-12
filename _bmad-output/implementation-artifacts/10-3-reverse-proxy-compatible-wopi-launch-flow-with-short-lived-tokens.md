@@ -1,6 +1,6 @@
 # Story 10.3: Reverse-proxy-compatible WOPI launch flow with short-lived tokens
 
-Status: in-progress
+Status: done
 
 ## Story
 

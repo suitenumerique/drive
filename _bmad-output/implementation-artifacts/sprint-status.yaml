@@ -63,10 +63,10 @@ development_status:
   9-4-smb-streaming-upload-large-file-capable-with-deterministic-finalize-semantics: ready-for-dev
   9-5-smb-preview-support-is-explicit-capability-driven-and-deterministic: ready-for-dev
   epic-9-retrospective: optional
-  epic-10: backlog
-  10-1-wopi-enablement-configuration-host-allowlist-https-posture-health-gating: ready-for-dev
-  10-2-capability-driven-wopi-action-exposure-per-backend-no-dead-buttons: ready-for-dev
-  10-3-reverse-proxy-compatible-wopi-launch-flow-with-short-lived-tokens: ready-for-dev
+  epic-10: in-progress
+  10-1-wopi-enablement-configuration-host-allowlist-https-posture-health-gating: done
+  10-2-capability-driven-wopi-action-exposure-per-backend-no-dead-buttons: done
+  10-3-reverse-proxy-compatible-wopi-launch-flow-with-short-lived-tokens: done
   10-4-s3-wopi-prerequisite-validation-bucket-versioning-with-operator-guidance: ready-for-dev
   10-5-mountprovider-wopi-semantics-version-string-locks-ttl-release-conflict-streaming-save-pipeline: ready-for-dev
   epic-10-retrospective: optional
