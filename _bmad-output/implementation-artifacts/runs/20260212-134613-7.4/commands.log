@@ -1,0 +1,20 @@
+gate_id=backend.lint
+cmd=make lint
+result=pass duration_ms=25723
+
+gate_id=backend.tests
+cmd=make test-back
+result=pass duration_ms=80125
+
+gate_id=frontend.lint
+cmd=make frontend-lint
+result=pass duration_ms=3832
+
+gate_id=docs.consistency
+cmd=docs.consistency (check changed docs/_bmad-output text files)
+result=pass duration_ms=0
+
+gate_id=no_leak.scan_bmad_output
+cmd=no_leak.scan_bmad_output (scan _bmad-output text artifacts)
+result=pass duration_ms=49
+
