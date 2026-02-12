@@ -8,6 +8,36 @@ import {
 } from "@/features/drivers/types";
 import i18n from "@/features/i18n/initI18n";
 import { FilePreviewType } from "@/features/ui/preview/files-preview/FilesPreview";
+import { DefaultRoute } from "@/utils/defaultRoutes";
+
+export const SESSION_STORAGE_KEY_FROM_ROUTE = "fromRoute";
+export const SESSION_STORAGE_KEY_MANUAL_NAVIGATION_ITEM_ID =
+  "manualNavigationItemId";
+
+export const setFromRoute = (fromRoute: DefaultRoute) => {
+  sessionStorage.setItem(SESSION_STORAGE_KEY_FROM_ROUTE, fromRoute);
+};
+
+export const clearFromRoute = () => {
+  sessionStorage.removeItem(SESSION_STORAGE_KEY_FROM_ROUTE);
+};
+
+export const getFromRoute = () => {
+  return sessionStorage.getItem(
+    SESSION_STORAGE_KEY_FROM_ROUTE,
+  ) as DefaultRoute | null;
+};
+
+export const setManualNavigationItemId = (itemId: string) => {
+  sessionStorage.setItem(SESSION_STORAGE_KEY_MANUAL_NAVIGATION_ITEM_ID, itemId);
+};
+
+export const getManualNavigationItemId = () => {
+  return sessionStorage.getItem(
+    SESSION_STORAGE_KEY_MANUAL_NAVIGATION_ITEM_ID,
+  ) as string | null;
+};
+
 /**
  * Temporary solution to redirect to the last visited item, by default the personal root folder.
  * But we are waiting for the backend to be ready to handle this.

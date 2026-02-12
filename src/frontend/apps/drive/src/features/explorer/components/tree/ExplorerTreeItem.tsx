@@ -22,6 +22,7 @@ import { ExplorerTreeItemActions } from "./ExplorerTreeItemActions";
 import { ItemIcon } from "../icons/ItemIcon";
 import { useRouter } from "next/router";
 import { DefaultRoute } from "@/utils/defaultRoutes";
+import { setFromRoute } from "../../utils/utils";
 
 type ExplorerTreeItemProps = NodeRendererProps<TreeDataItem<TreeItem>>;
 
@@ -52,6 +53,7 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
               }
               return;
             }
+            setFromRoute(DefaultRoute.FAVORITES);
             onNavigate({
               type: NavigationEventType.ITEM,
               item: item as Item,

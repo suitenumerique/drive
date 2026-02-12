@@ -11,7 +11,7 @@ import { ExplorerRenameItemModal } from "../modals/ExplorerRenameItemModal";
 import { ItemShareModal } from "../modals/share/ItemShareModal";
 import { useDeleteItem } from "../../hooks/useDeleteItem";
 import { ExplorerMoveFolder } from "../modals/move/ExplorerMoveFolderModal";
-import { getParentIdFromPath } from "../../utils/utils";
+import { getParentIdFromPath, setManualNavigationItemId } from "../../utils/utils";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 import {
@@ -77,6 +77,7 @@ export const ItemActionDropdown = ({
     const redirectId: string | undefined = parentId;
 
     if (redirectId) {
+      setManualNavigationItemId(redirectId);
       router.push(`/explorer/items/${redirectId}`);
     } else {
       router.push(`/explorer/items/my-files`);

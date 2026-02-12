@@ -28,7 +28,7 @@ import {
 } from "../../app-view/ExplorerFilters";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { Key } from "react-aria-components";
-import { getItemTitle } from "@/features/explorer/utils/utils";
+import { clearFromRoute, getItemTitle } from "@/features/explorer/utils/utils";
 import { messageModalTrashNavigate } from "../../trash/utils";
 import { useIsMinimalLayout } from "@/utils/useLayout";
 
@@ -41,7 +41,7 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
   const [inputValue, setInputValue] = useState<string>("");
   const isMinimalLayout = useIsMinimalLayout();
   const [filters, setFilters] = useState<ItemFilters>(
-    props.defaultFilters || {}
+    props.defaultFilters || {},
   );
 
   const searchUserTimeoutRef = useRef<NodeJS.Timeout>(null);
@@ -91,6 +91,7 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
       if (item.deleted_at) {
         messageModalTrashNavigate(modals);
       } else {
+        clearFromRoute();
         onNavigate({
           item,
           type: NavigationEventType.ITEM,
@@ -126,7 +127,7 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
           }
           // We select the input content when the modal is opened.
           const input = ref?.querySelector(
-            ".quick-search-input-container input"
+            ".quick-search-input-container input",
           ) as HTMLInputElement;
           input?.focus();
           input?.select();

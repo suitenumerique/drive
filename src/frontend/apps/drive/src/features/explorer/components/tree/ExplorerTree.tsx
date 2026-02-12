@@ -112,9 +112,8 @@ export const ExplorerTree = () => {
     <div className="explorer__tree">
       <ExplorerTreeActions openCreateFolderModal={createFolderModal.open} />
       <HorizontalSeparator withPadding={false} />
-
       <ExplorerTreeNavDefault />
-
+      
       {initialOpenState && (
         <TreeView
           selectedNodeId={defaultSelectedNodeId}
@@ -177,15 +176,12 @@ export const ExplorerTree = () => {
           rootNodeId={"root"}
         />
       )}
-
       <ExplorerTreeNav />
-
       <div className="explorer__tree__mobile-navs">
         <HorizontalSeparator />
         <LeftPanelMobile />
       </div>
       <ExplorerCreateFolderModal {...createFolderModal} parentId={itemId} />
-
       {moveState && moveConfirmationModal.isOpen && (
         <ExplorerTreeMoveConfirmationModal
           isOpen={moveConfirmationModal.isOpen}

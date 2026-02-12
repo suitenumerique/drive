@@ -14,6 +14,7 @@ import { useRouter } from "next/router";
 import { useSyncUserLanguage } from "../../hooks/useSyncUserLanguage";
 import { Item } from "@/features/drivers/types";
 import { ReleaseNoteAuto } from "@/features/ui/components/release-note";
+import { setManualNavigationItemId } from "@/features/explorer/utils/utils";
 
 export const getGlobalExplorerLayout = (page: React.ReactElement) => {
   return <GlobalExplorerLayout>{page}</GlobalExplorerLayout>;
@@ -54,6 +55,7 @@ export const ExplorerLayout = ({
     const query = minimal ? { minimal } : {};
     // If the itemId is a favorite item, we need to get the favorite items. cf onLoadChildren in GlobalExplorerProvider.tsx
     const id = item.originalId ?? item.id;
+    setManualNavigationItemId(id);
     router.push({ pathname: `/explorer/items/${id}`, query });
   };
 
