@@ -1,6 +1,6 @@
 # Story 10.2: Capability-driven WOPI action exposure per backend (no dead buttons)
 
-Status: in-progress
+Status: done
 
 ## Story
 
