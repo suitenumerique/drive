@@ -31,6 +31,7 @@ and this project adheres to
 - ✨(mounts) prevent stale session reuse across secret rotation
   (version-bound pool)
 - ✨(mounts) browse mount paths with deterministic ordering and pagination
+- ✨(mounts) implement SMB MountProvider browse (stat/list)
 - ✨(mounts) capability-gate mount action endpoints (preview/upload/wopi)
 - ✨(mounts) create share links for mount virtual entries
 - ✨(wopi) disable WOPI when S3 bucket versioning is disabled
