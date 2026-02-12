@@ -1,6 +1,6 @@
 # Story 7.4: Enforce capability gating across mount actions (no dead actions, deterministic errors)
 
-Status: review
+Status: done
 
 ## Story
 
@@ -60,4 +60,3 @@ GPT-5.2 (Codex CLI)
 - `src/frontend/apps/drive/src/features/i18n/translations.json`
 - `CHANGELOG.md`
 - `_bmad-output/implementation-artifacts/runs/20260212-134613-7.4/`
-
