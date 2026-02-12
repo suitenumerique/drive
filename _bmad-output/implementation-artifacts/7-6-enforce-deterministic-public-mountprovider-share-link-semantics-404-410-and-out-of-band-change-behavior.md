@@ -1,6 +1,6 @@
 # Story 7.6: Enforce deterministic public MountProvider share-link semantics (404/410) and out-of-band change behavior
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -43,14 +43,26 @@ Operators can reference secrets (ref/path) in mount configuration; the system re
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- `_bmad-output/implementation-artifacts/runs/20260212-151233-7.6/`
 
 ### Completion Notes List
-
+- Added unauthenticated public browse endpoint for MountProvider share links with
+  deterministic `404` (invalid token) vs `410` (known token, missing target)
+  semantics and generic/no-leak responses.
+- Added operator-facing log lines for `404/410` failures with deterministic
+  `failure_class` + `next_action_hint` and allow-listed safe evidence only.
+- Ensured mount path evidence uses HMAC-based `path_hash` (no raw mount paths).
+- Added a dedicated public frontend route for mount share links that shows an
+  explicit “Link expired or target moved” state on `410`.
 
 ### File List
-
-
+- `src/backend/core/api/serializers_mounts.py`
+- `src/backend/core/api/viewsets.py`
+- `src/backend/core/urls.py`
+- `src/backend/core/utils/keyed_hash.py`
+- `src/backend/core/tests/mounts/test_api_mount_share_links_public_browse.py`
+- `src/frontend/apps/drive/src/pages/share/mount/[token].tsx`
+- `_bmad-output/implementation-artifacts/runs/20260212-151233-7.6/`

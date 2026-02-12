@@ -3,6 +3,7 @@
 
 import json
 import logging
+import posixpath
 import re
 import secrets
 from urllib.parse import parse_qs, quote, unquote, urlparse
@@ -39,6 +40,7 @@ from lasuite.malware_detection import malware_detection
 from lasuite.oidc_login.decorators import refresh_oidc_access_token
 from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
+from rest_framework.exceptions import APIException
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import AllowAny
 from rest_framework.throttling import UserRateThrottle
@@ -57,6 +59,7 @@ from core.services.search_indexers import (
     get_visited_items_ids_of,
 )
 from core.tasks.item import process_item_deletion, rename_file
+from core.utils.keyed_hash import hmac_sha256_16
 from core.utils.no_leak import safe_str_hash
 from core.utils.public_url import join_public_url
 from core.utils.share_links import validate_item_share_token
@@ -78,6 +81,8 @@ from .serializers_mounts import (
     MountEntrySerializer,
     MountShareLinkCreateRequestSerializer,
     MountShareLinkCreateResponseSerializer,
+    MountShareLinkPublicBrowseResponseSerializer,
+    MountShareLinkPublicEntrySerializer,
 )
 from .serializers_share_links import PublicShareItemSerializer
 
@@ -95,6 +100,14 @@ MEDIA_STORAGE_URL_PATTERN = re.compile(
 
 
 # pylint: disable=too-many-ancestors
+
+
+class MountShareLinkGone(APIException):
+    """Public mount share link is known but no longer resolvable (410 Gone)."""
+
+    status_code = 410
+    default_detail = "Link expired or target moved."
+    default_code = "mount.share_link.gone"
 
 
 class NestedGenericViewSet(viewsets.GenericViewSet):
@@ -1823,6 +1836,232 @@ class ShareLinkViewSet(viewsets.GenericViewSet):
                 "children": children_payload,
             }
         )
+
+
+class MountShareLinkViewSet(viewsets.GenericViewSet):
+    """Open/browse MountProvider share links (unauthenticated)."""
+
+    permission_classes = [AllowAny]
+    lookup_value_regex = r"[^/]+"
+
+    class _PublicMountBrowsePagination(LimitOffsetPagination):
+        default_limit = int(settings.REST_FRAMEWORK.get("PAGE_SIZE", 20))
+        max_limit = int(getattr(settings, "MAX_PAGE_SIZE", 200))
+
+    def _enabled_mount(self, mount_id: str) -> dict | None:
+        mounts = list(getattr(settings, "MOUNTS_REGISTRY", []) or [])
+        for mount in mounts:
+            if not bool(mount.get("enabled", True)):
+                continue
+            if mount.get("mount_id") == mount_id:
+                return mount
+        return None
+
+    def _token_hash(self, token: str) -> str:
+        return hmac_sha256_16(salt="drive.mount.share_token_hash.v1", value=token)
+
+    def _path_hash(self, *, mount_id: str, normalized_path: str) -> str:
+        return hmac_sha256_16(
+            salt="drive.mount.path_hash.v1",
+            value=f"{mount_id}:{normalized_path}",
+        )
+
+    def _relative_path_from_request(self, request) -> str:
+        raw_path = request.query_params.get("path")
+        try:
+            return normalize_mount_path(raw_path)
+        except MountPathNormalizationError as exc:
+            raise drf.exceptions.NotFound(
+                drf.exceptions.ErrorDetail(
+                    "Link unavailable.", code="mount.share_link.not_found"
+                )
+            ) from exc
+
+    def _join_under_root(self, *, root: str, rel: str) -> str:
+        root_norm = normalize_mount_path(root)
+        rel_norm = normalize_mount_path(rel)
+        if rel_norm == "/":
+            return root_norm
+        if root_norm == "/":
+            return rel_norm
+        return normalize_mount_path(root_norm.rstrip("/") + rel_norm)
+
+    def _rel_under_root(self, *, root: str, absolute: str) -> str:
+        root_norm = normalize_mount_path(root)
+        abs_norm = normalize_mount_path(absolute)
+        if root_norm == "/":
+            return abs_norm
+        if abs_norm == root_norm:
+            return "/"
+        prefix = root_norm.rstrip("/") + "/"
+        if not abs_norm.startswith(prefix):
+            return "/"
+        return normalize_mount_path("/" + abs_norm[len(prefix) :].lstrip("/"))
+
+    def _entry_payload(
+        self, *, normalized_path: str, entry: MountEntry
+    ) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "normalized_path": normalized_path,
+            "entry_type": entry.entry_type,
+            "name": entry.name,
+        }
+        if entry.size is not None:
+            payload["size"] = entry.size
+        if entry.modified_at is not None:
+            payload["modified_at"] = entry.modified_at
+        return payload
+
+    @drf.decorators.action(detail=True, methods=["get"], url_path="browse")
+    def browse(self, request, pk=None):  # pylint: disable=too-many-locals
+        """
+        GET /api/v1.0/mount-share-links/{token}/browse/?path=/&limit=..&offset=..
+
+        Browse a MountProvider public share link rooted at the stored
+        (mount_id, normalized_path) mapping, without exposing mount internals.
+        """
+        token = pk or ""
+        token_hash = self._token_hash(token)
+
+        try:
+            link = models.MountShareLink.objects.get(token=token)
+        except models.MountShareLink.DoesNotExist as exc:
+            logger.info(
+                "mount_share_open: not_found "
+                "(failure_class=mount.drive.share_token_invalid "
+                "next_action_hint=Verify the share link token and retry "
+                "token_hash=%s)",
+                token_hash,
+            )
+            raise drf.exceptions.NotFound(
+                drf.exceptions.ErrorDetail(
+                    "Link unavailable.", code="mount.share_link.not_found"
+                )
+            ) from exc
+
+        mount_id = str(link.mount_id or "").strip()
+        root_abs = normalize_mount_path(link.normalized_path)
+        mount = self._enabled_mount(mount_id)
+        if mount is None:
+            logger.info(
+                "mount_share_open: gone "
+                "(failure_class=mount.drive.share_target_missing "
+                "next_action_hint=Ask the sender to create a new link "
+                "mount_id=%s path_hash=%s token_hash=%s)",
+                mount_id,
+                self._path_hash(mount_id=mount_id, normalized_path=root_abs),
+                token_hash,
+            )
+            raise MountShareLinkGone()
+
+        rel = self._relative_path_from_request(request)
+        target_abs = self._join_under_root(root=root_abs, rel=rel)
+
+        provider = get_mount_provider(str(mount.get("provider") or ""))
+        try:
+            entry_abs = provider.stat(mount=mount, normalized_path=target_abs)
+        except MountProviderError as exc:
+            if exc.public_code == "mount.path.not_found":
+                logger.info(
+                    "mount_share_open: gone "
+                    "(failure_class=mount.drive.share_target_missing "
+                    "next_action_hint=Ask the sender to create a new link "
+                    "mount_id=%s path_hash=%s token_hash=%s)",
+                    mount_id,
+                    self._path_hash(mount_id=mount_id, normalized_path=target_abs),
+                    token_hash,
+                )
+                raise MountShareLinkGone() from None
+            logger.info(
+                "mount_share_open: failed "
+                "(failure_class=%s next_action_hint=%s mount_id=%s token_hash=%s)",
+                exc.failure_class,
+                exc.next_action_hint,
+                mount_id,
+                token_hash,
+            )
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Link unavailable.", code="mount.share_link.failed"
+                    )
+                }
+            ) from None
+
+        rel_path = self._rel_under_root(
+            root=root_abs, absolute=entry_abs.normalized_path
+        )
+        entry_payload = self._entry_payload(normalized_path=rel_path, entry=entry_abs)
+        MountShareLinkPublicEntrySerializer(data=entry_payload).is_valid(
+            raise_exception=True
+        )
+
+        if entry_abs.entry_type != "folder":
+            payload = {
+                "normalized_path": rel_path,
+                "entry": entry_payload,
+                "children": None,
+            }
+            MountShareLinkPublicBrowseResponseSerializer(data=payload).is_valid(
+                raise_exception=True
+            )
+            return drf.response.Response(payload, status=status.HTTP_200_OK)
+
+        try:
+            children_abs = provider.list_children(
+                mount=mount, normalized_path=target_abs
+            )
+        except MountProviderError as exc:
+            logger.info(
+                "mount_share_open: children_failed "
+                "(failure_class=%s next_action_hint=%s mount_id=%s token_hash=%s)",
+                exc.failure_class,
+                exc.next_action_hint,
+                mount_id,
+                token_hash,
+            )
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Link unavailable.", code="mount.share_link.failed"
+                    )
+                }
+            ) from None
+
+        children_payload: list[dict[str, object]] = []
+        for child in children_abs:
+            rel_child = self._rel_under_root(
+                root=root_abs, absolute=child.normalized_path
+            )
+            children_payload.append(
+                self._entry_payload(normalized_path=rel_child, entry=child)
+            )
+
+        children_sorted = sorted(
+            children_payload,
+            key=lambda e: (
+                0 if e.get("entry_type") == "folder" else 1,
+                str(e.get("name") or "").casefold(),
+                posixpath.normpath(str(e.get("normalized_path") or "/")),
+            ),
+        )
+
+        paginator = self._PublicMountBrowsePagination()
+        page = paginator.paginate_queryset(children_sorted, request, view=self)
+        MountShareLinkPublicEntrySerializer(data=page, many=True).is_valid(
+            raise_exception=True
+        )
+        children_page = paginator.get_paginated_response(page).data
+
+        payload = {
+            "normalized_path": rel_path,
+            "entry": entry_payload,
+            "children": children_page,
+        }
+        MountShareLinkPublicBrowseResponseSerializer(data=payload).is_valid(
+            raise_exception=True
+        )
+        return drf.response.Response(payload, status=status.HTTP_200_OK)
 
 
 class ItemAccessViewSet(
