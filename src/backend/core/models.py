@@ -1503,3 +1503,32 @@ class Invitation(BaseModel):
             "partial_update": is_admin_or_owner,
             "retrieve": is_admin_or_owner,
         }
+
+
+class MountShareLink(BaseModel):
+    """Share link mapping for MountProvider virtual entries."""
+
+    token = models.CharField(max_length=128, unique=True)
+    mount_id = models.CharField(max_length=64, db_index=True)
+    normalized_path = models.TextField()
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="mount_share_links",
+    )
+
+    class Meta:
+        db_table = "drive_mount_share_link"
+        verbose_name = _("Mount share link")
+        verbose_name_plural = _("Mount share links")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["mount_id", "normalized_path"],
+                name="mount_share_link_mount_id_path_unique",
+            ),
+        ]
+
+    def __str__(self):
+        return f"MountShareLink(mount_id={self.mount_id}, id={self.id})"

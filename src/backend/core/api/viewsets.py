@@ -4,6 +4,7 @@
 import json
 import logging
 import re
+import secrets
 from urllib.parse import parse_qs, quote, unquote, urlparse
 from uuid import UUID
 
@@ -13,8 +14,8 @@ from django.contrib.postgres.search import TrigramSimilarity
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
+from django.db import IntegrityError, transaction
 from django.db import models as db
-from django.db import transaction
 from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
 from django.urls import reverse
@@ -57,6 +58,7 @@ from core.services.search_indexers import (
 )
 from core.tasks.item import process_item_deletion, rename_file
 from core.utils.no_leak import safe_str_hash
+from core.utils.public_url import join_public_url
 from core.utils.share_links import validate_item_share_token
 from wopi.services import access as access_service
 from wopi.tasks.configure_wopi import (
@@ -71,7 +73,12 @@ from wopi.utils import (
 
 from . import permissions, serializers, utils
 from .filters import ItemFilter, ListItemFilter, SearchItemFilter
-from .serializers_mounts import MountBrowseResponseSerializer, MountEntrySerializer
+from .serializers_mounts import (
+    MountBrowseResponseSerializer,
+    MountEntrySerializer,
+    MountShareLinkCreateRequestSerializer,
+    MountShareLinkCreateResponseSerializer,
+)
 from .serializers_share_links import PublicShareItemSerializer
 
 logger = logging.getLogger(__name__)
@@ -2427,25 +2434,29 @@ class MountViewSet(viewsets.ViewSet):
                 detail=drf.exceptions.ErrorDetail(public_message, code=public_code)
             )
 
-    def _mount_entry_abilities(self, entry: MountEntry) -> dict[str, bool]:
+    def _mount_entry_abilities(
+        self, *, entry: MountEntry, capabilities: dict[str, bool]
+    ) -> dict[str, bool]:
         return {
             "children_list": entry.entry_type == "folder",
             "upload": False,
             "download": False,
             "preview": False,
             "wopi": False,
-            "share_link_create": False,
+            "share_link_create": bool(capabilities.get("mount.share_link", False)),
         }
 
     def _mount_entry_payload(
-        self, *, mount_id: str, entry: MountEntry
+        self, *, mount_id: str, entry: MountEntry, capabilities: dict[str, bool]
     ) -> dict[str, object]:
         payload: dict[str, object] = {
             "mount_id": mount_id,
             "normalized_path": entry.normalized_path,
             "entry_type": entry.entry_type,
             "name": entry.name,
-            "abilities": self._mount_entry_abilities(entry),
+            "abilities": self._mount_entry_abilities(
+                entry=entry, capabilities=capabilities
+            ),
         }
         if entry.size is not None:
             payload["size"] = entry.size
@@ -2487,7 +2498,9 @@ class MountViewSet(viewsets.ViewSet):
                 }
             ) from exc
 
-        entry_payload = self._mount_entry_payload(mount_id=target, entry=entry)
+        entry_payload = self._mount_entry_payload(
+            mount_id=target, entry=entry, capabilities=capabilities
+        )
 
         if entry.entry_type != "folder":
             payload = {
@@ -2525,7 +2538,10 @@ class MountViewSet(viewsets.ViewSet):
         paginator = self._MountBrowsePagination()
         page = paginator.paginate_queryset(children_sorted, request, view=self)
         page_payload = [
-            self._mount_entry_payload(mount_id=target, entry=e) for e in page
+            self._mount_entry_payload(
+                mount_id=target, entry=e, capabilities=capabilities
+            )
+            for e in page
         ]
         MountEntrySerializer(data=page_payload, many=True).is_valid(
             raise_exception=True
@@ -2541,6 +2557,100 @@ class MountViewSet(viewsets.ViewSet):
         }
         MountBrowseResponseSerializer(data=payload).is_valid(raise_exception=True)
         return drf.response.Response(payload, status=status.HTTP_200_OK)
+
+    @drf.decorators.action(detail=True, methods=["post"], url_path="share-links")
+    def share_links(self, request, mount_id: str | None = None):
+        """Create (or return) a share link for a mount virtual entry."""
+
+        target = mount_id or self.kwargs.get(self.lookup_url_kwarg) or ""
+        mount = self._get_enabled_mount_or_404(target)
+        capabilities = self._mount_capabilities(mount)
+        self._require_capability(
+            capabilities=capabilities,
+            capability_key="mount.share_link",
+            public_code="mount.share_link.disabled",
+            public_message="Share links are not enabled for this mount.",
+        )
+
+        public_base = getattr(settings, "DRIVE_PUBLIC_URL", None)
+        if not public_base:
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Public sharing is not configured.",
+                        code="config.public_url.missing",
+                    )
+                }
+            )
+
+        req = MountShareLinkCreateRequestSerializer(data=request.data)
+        req.is_valid(raise_exception=True)
+        try:
+            normalized_path = normalize_mount_path(req.validated_data.get("path"))
+        except MountPathNormalizationError as exc:
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Invalid mount path.", code="mount.path.invalid"
+                    )
+                }
+            ) from exc
+
+        provider = get_mount_provider(str(mount.get("provider") or ""))
+        try:
+            provider.stat(mount=mount, normalized_path=normalized_path)
+        except MountProviderError as exc:
+            if exc.public_code == "mount.path.not_found":
+                raise drf.exceptions.NotFound(
+                    drf.exceptions.ErrorDetail(
+                        "Mount path not found.", code="mount.path.not_found"
+                    )
+                ) from exc
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        exc.public_message, code=exc.public_code
+                    )
+                }
+            ) from exc
+
+        link = models.MountShareLink.objects.filter(
+            mount_id=target,
+            normalized_path=normalized_path,
+        ).first()
+        if link is None:
+            for _ in range(5):
+                token = secrets.token_urlsafe(32)
+                try:
+                    link, _created = models.MountShareLink.objects.get_or_create(
+                        mount_id=target,
+                        normalized_path=normalized_path,
+                        defaults={"token": token, "created_by": request.user},
+                    )
+                    break
+                except IntegrityError:
+                    continue
+            else:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "detail": drf.exceptions.ErrorDetail(
+                            "Share link could not be created.",
+                            code="mount.share_link.create_failed",
+                        )
+                    }
+                )
+
+        share_url = join_public_url(public_base, f"share/mount/{link.token}")
+        payload = {
+            "mount_id": target,
+            "normalized_path": normalized_path,
+            "token": link.token,
+            "share_url": share_url,
+        }
+        MountShareLinkCreateResponseSerializer(data=payload).is_valid(
+            raise_exception=True
+        )
+        return drf.response.Response(payload, status=status.HTTP_201_CREATED)
 
     @drf.decorators.action(detail=True, methods=["get"], url_path="preview")
     def preview(self, request, mount_id: str | None = None):
