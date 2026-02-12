@@ -1,0 +1,8 @@
+_bmad-output/implementation-artifacts/8-1-refs-only-secret-fields-for-mounts-never-store-return-log-secret-material.md
+_bmad-output/implementation-artifacts/runs/20260212-091451-8.1/commands.log
+_bmad-output/implementation-artifacts/runs/20260212-091451-8.1/files-changed.txt
+_bmad-output/implementation-artifacts/runs/20260212-091451-8.1/gates.md
+_bmad-output/implementation-artifacts/runs/20260212-091451-8.1/report.md
+CHANGELOG.md
+src/backend/core/management/commands/config_preflight.py
+src/backend/core/tests/commands/test_config_preflight.py

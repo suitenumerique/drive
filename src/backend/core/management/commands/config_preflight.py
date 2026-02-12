@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import asdict, dataclass
 from typing import Any
 from urllib.parse import urlsplit
@@ -661,6 +662,241 @@ def _validate_wopi_preflight() -> list[PreflightError]:
     return errors
 
 
+_SECRET_ENV_NAME_RE = re.compile(r"^[A-Z0-9_]{1,128}$")
+
+
+def _validate_secret_ref_env_var_name(ref_name: str) -> None:
+    candidate = (ref_name or "").strip()
+    if not candidate:
+        raise ValueError("missing")
+    if not _SECRET_ENV_NAME_RE.fullmatch(candidate):
+        raise ValueError("invalid")
+    if not (os.environ.get(candidate) or "").strip():
+        raise ValueError("env_ref_missing")
+
+
+def _validate_secret_ref_file_path(path: str) -> None:
+    candidate = (path or "").strip()
+    if not candidate:
+        raise ValueError("missing")
+    if not os.path.exists(candidate):
+        raise ValueError("file_missing")
+    try:
+        with open(candidate, encoding="utf-8") as file:
+            _ = file.read(1)
+    except (OSError, PermissionError) as err:
+        raise ValueError("file_unreadable") from err
+
+
+def _load_mounts_registry_config() -> tuple[Any | None, list[PreflightError]]:
+    """
+    Load mounts registry JSON from env/file for deterministic validation.
+
+    Precedence:
+    - MOUNTS_REGISTRY_FILE (JSON file) if set
+    - MOUNTS_REGISTRY (JSON string) if set
+    """
+    raw_file = (os.environ.get("MOUNTS_REGISTRY_FILE") or "").strip()
+    raw_json = (os.environ.get("MOUNTS_REGISTRY") or "").strip()
+
+    data: Any | None = None
+    errors: list[PreflightError] = []
+
+    if raw_file:
+        try:
+            with open(raw_file, encoding="utf-8") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            errors.append(
+                PreflightError(
+                    field="MOUNTS_REGISTRY_FILE",
+                    failure_class="config.mounts.registry.file_missing",
+                    next_action_hint=(
+                        "Ensure MOUNTS_REGISTRY_FILE points to an existing file."
+                    ),
+                )
+            )
+        except (OSError, PermissionError):
+            errors.append(
+                PreflightError(
+                    field="MOUNTS_REGISTRY_FILE",
+                    failure_class="config.mounts.registry.file_unreadable",
+                    next_action_hint=(
+                        "Ensure MOUNTS_REGISTRY_FILE is readable by the process."
+                    ),
+                )
+            )
+        except json.JSONDecodeError:
+            errors.append(
+                PreflightError(
+                    field="MOUNTS_REGISTRY_FILE",
+                    failure_class="config.mounts.registry.file_invalid_json",
+                    next_action_hint=(
+                        "Ensure MOUNTS_REGISTRY_FILE contains valid JSON (a list)."
+                    ),
+                )
+            )
+        return data, errors
+
+    if raw_json:
+        try:
+            data = json.loads(raw_json)
+        except json.JSONDecodeError:
+            errors.append(
+                PreflightError(
+                    field="MOUNTS_REGISTRY",
+                    failure_class="config.mounts.registry.invalid_json",
+                    next_action_hint=(
+                        "Ensure MOUNTS_REGISTRY is valid JSON (a list of mounts)."
+                    ),
+                )
+            )
+        return data, errors
+
+    return None, []
+
+
+def _validate_mounts_secret_fields_preflight() -> list[PreflightError]:
+    """
+    Validate mounts secret fields are refs-only (no direct secret material).
+
+    Rules (v1):
+    - forbid direct secret values on common credential keys like `password`, `token`, ...
+    - allow refs-only fields:
+      - `*_secret_ref`: env var name (must exist and be set)
+      - `*_secret_path`: file path (must exist and be readable)
+    """
+    data, load_errors = _load_mounts_registry_config()
+    if load_errors:
+        return load_errors
+    if data is None:
+        return []
+
+    if not isinstance(data, list):
+        return [
+            PreflightError(
+                field="MOUNTS_REGISTRY",
+                failure_class="config.mounts.registry.invalid_type",
+                next_action_hint="Set mounts registry as a JSON list of mount objects.",
+            )
+        ]
+
+    direct_secret_keys = {
+        "password",
+        "passphrase",
+        "token",
+        "api_key",
+        "client_secret",
+        "access_key_id",
+        "secret_access_key",
+    }
+
+    def _err(fc: str, hint: str) -> PreflightError:
+        return PreflightError(
+            field="MOUNTS_REGISTRY",
+            failure_class=fc,
+            next_action_hint=hint,
+        )
+
+    def _validate_secret_ref_value(value: Any) -> list[PreflightError]:
+        if not isinstance(value, str):
+            return [
+                _err(
+                    "config.mounts.secrets.secret_ref.invalid_type",
+                    "Set mounts[*].*_secret_ref to an env var name string.",
+                )
+            ]
+        try:
+            _validate_secret_ref_env_var_name(value)
+            return []
+        except ValueError as exc:
+            reason = str(exc)
+            mapping = {
+                "missing": (
+                    "config.mounts.secrets.secret_ref.missing",
+                    "Set mounts[*].*_secret_ref to an env var name.",
+                ),
+                "invalid": (
+                    "config.mounts.secrets.secret_ref.invalid",
+                    "Use an env var name like MOUNT_PASSWORD (A-Z0-9_).",
+                ),
+                "env_ref_missing": (
+                    "config.mounts.secrets.secret_ref.env_ref_missing",
+                    "Ensure mounts[*].*_secret_ref references a set env var.",
+                ),
+            }
+            fc, hint = mapping.get(
+                reason,
+                (
+                    "config.mounts.secrets.secret_ref.env_ref_missing",
+                    "Ensure mounts[*].*_secret_ref references a set env var.",
+                ),
+            )
+            return [_err(fc, hint)]
+
+    def _validate_secret_path_value(value: Any) -> list[PreflightError]:
+        if not isinstance(value, str):
+            return [
+                _err(
+                    "config.mounts.secrets.secret_path.invalid_type",
+                    "Set mounts[*].*_secret_path to a file path string.",
+                )
+            ]
+        try:
+            _validate_secret_ref_file_path(value)
+            return []
+        except ValueError as exc:
+            reason = str(exc)
+            mapping = {
+                "missing": (
+                    "config.mounts.secrets.secret_path.missing",
+                    "Set mounts[*].*_secret_path to an existing file path.",
+                ),
+                "file_missing": (
+                    "config.mounts.secrets.secret_path.file_missing",
+                    "Ensure mounts[*].*_secret_path points to an existing file.",
+                ),
+                "file_unreadable": (
+                    "config.mounts.secrets.secret_path.file_unreadable",
+                    "Ensure mounts[*].*_secret_path is readable by the process.",
+                ),
+            }
+            fc, hint = mapping.get(
+                reason,
+                (
+                    "config.mounts.secrets.secret_path.file_unreadable",
+                    "Ensure mounts[*].*_secret_path is readable by the process.",
+                ),
+            )
+            return [_err(fc, hint)]
+
+    errors: list[PreflightError] = []
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+
+        for key, value in entry.items():
+            key_l = str(key).strip().lower()
+
+            if key_l in direct_secret_keys and isinstance(value, str) and value.strip():
+                errors.append(
+                    _err(
+                        "config.mounts.secrets.direct_value_forbidden",
+                        "Do not set secret values directly in MOUNTS_REGISTRY. "
+                        "Use refs-only fields like `password_secret_ref` and/or "
+                        "`password_secret_path`.",
+                    )
+                )
+                continue
+
+            if key_l.endswith("_secret_ref"):
+                errors.extend(_validate_secret_ref_value(value))
+            elif key_l.endswith("_secret_path"):
+                errors.extend(_validate_secret_path_value(value))
+
+    return errors
+
+
 class Command(BaseCommand):
     """Django management command emitting deterministic config + edge checklist."""
 
@@ -690,6 +926,7 @@ class Command(BaseCommand):
             )
         )
         errors.extend(_validate_wopi_preflight())
+        errors.extend(_validate_mounts_secret_fields_preflight())
 
         errors_sorted = sorted(errors, key=lambda e: e.field)
         payload: dict[str, Any] = {

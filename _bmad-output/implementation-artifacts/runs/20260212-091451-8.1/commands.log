@@ -1,0 +1,4 @@
+# Story 8.1 verification commands (no-leak)
+
+make lint
+make test-back
