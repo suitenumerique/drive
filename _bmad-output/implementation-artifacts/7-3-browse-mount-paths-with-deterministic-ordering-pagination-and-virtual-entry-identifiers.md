@@ -1,6 +1,6 @@
 # Story 7.3: Browse mount paths with deterministic ordering/pagination and virtual entry identifiers
 
-Status: review
+Status: done
 
 ## Story
 
@@ -62,4 +62,3 @@ GPT-5.2 (Codex CLI)
 - `src/backend/core/tests/mounts/test_api_mounts_browse.py`
 - `CHANGELOG.md`
 - `_bmad-output/implementation-artifacts/runs/20260212-133104-7.3/`
-

@@ -1,4 +1,4 @@
-generated: '2026-02-12T11:14:28+00:00'
+generated: '2026-02-12T14:36:22+00:00'
 project: drive
 project_key: NOKEY
 tracking_system: file-system
@@ -46,9 +46,9 @@ development_status:
   epic-7: in-progress
   7-1-operator-configured-mounts-registry-mount-id-provider-enabled-with-deterministic-validation: done
   7-2-discover-mounts-and-capabilities-api-ui-entry-point-constants-enforced: done
-  7-3-browse-mount-paths-with-deterministic-ordering-pagination-and-virtual-entry-identifiers: ready-for-dev
-  7-4-enforce-capability-gating-across-mount-actions-no-dead-actions-deterministic-errors: ready-for-dev
-  7-5-create-mountprovider-share-links-for-virtual-entries-capability-driven: ready-for-dev
+  7-3-browse-mount-paths-with-deterministic-ordering-pagination-and-virtual-entry-identifiers: done
+  7-4-enforce-capability-gating-across-mount-actions-no-dead-actions-deterministic-errors: done
+  7-5-create-mountprovider-share-links-for-virtual-entries-capability-driven: done
   7-6-enforce-deterministic-public-mountprovider-share-link-semantics-404-410-and-out-of-band-change-behavior: ready-for-dev
   epic-7-retrospective: optional
   epic-8: in-progress

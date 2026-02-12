@@ -1,6 +1,6 @@
 # Story 7.5: Create MountProvider share links for virtual entries (capability-driven)
 
-Status: review
+Status: done
 
 ## Story
 
@@ -66,4 +66,3 @@ GPT-5.2 (Codex CLI)
 - `src/frontend/apps/drive/src/features/i18n/translations.json`
 - `CHANGELOG.md`
 - `_bmad-output/implementation-artifacts/runs/20260212-140328-7.5/`
-
