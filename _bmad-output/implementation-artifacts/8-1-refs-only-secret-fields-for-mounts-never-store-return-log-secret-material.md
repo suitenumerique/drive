@@ -34,14 +34,21 @@ So that secret values are never stored in the database, returned by APIs, or lea
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- `_bmad-output/implementation-artifacts/runs/20260212-091451-8.1/commands.log`
 
 ### Completion Notes List
-
+- Added refs-only validation for mount secret fields in `config_preflight`.
+- Ensured preflight output remains no-leak (no secret values or file paths echoed).
+- Verified: `make lint`, `make test-back` (PASS).
 
 ### File List
-
-
+- `src/backend/core/management/commands/config_preflight.py`
+- `src/backend/core/tests/commands/test_config_preflight.py`
+- `CHANGELOG.md`
+- `_bmad-output/implementation-artifacts/runs/20260212-091451-8.1/report.md`
+- `_bmad-output/implementation-artifacts/runs/20260212-091451-8.1/gates.md`
+- `_bmad-output/implementation-artifacts/runs/20260212-091451-8.1/commands.log`
+- `_bmad-output/implementation-artifacts/runs/20260212-091451-8.1/files-changed.txt`

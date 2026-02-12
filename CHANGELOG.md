@@ -42,6 +42,7 @@ and this project adheres to
   (dev-only HTTP override)
 - 🔐(backend) derive split allowlists from DRIVE_PUBLIC_URL (no wildcards)
 - 🔒️(nginx) internalize /media-auth and forward SigV4 headers for /media*
+- 🔒️(mounts) enforce refs-only mount secret fields (config_preflight)
 
 ## [v0.12.0] - 2026-02-06
 
