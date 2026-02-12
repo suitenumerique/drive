@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from core.mounts.providers import static
+from core.mounts.providers import smb, static
 from core.mounts.providers.base import MountProvider, MountProviderError
 
 _PROVIDERS: dict[str, MountProvider] = {
     "static": static,
+    "smb": smb,
 }
 
 
