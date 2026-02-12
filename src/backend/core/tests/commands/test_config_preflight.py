@@ -110,6 +110,26 @@ def test_config_preflight_manual_checks_are_deterministic(monkeypatch):
     ]
 
 
+def test_config_preflight_wopi_enabled_requires_discovery_url(monkeypatch):
+    _set_minimal_oidc_env(monkeypatch)
+    monkeypatch.setenv("AWS_S3_ENDPOINT_URL", "http://seaweedfs-s3:8333")
+    monkeypatch.delenv("AWS_S3_DOMAIN_REPLACE", raising=False)
+    monkeypatch.delenv("WOPI_VENDORA_DISCOVERY_URL", raising=False)
+
+    with override_settings(
+        WOPI_CLIENTS=["vendorA"],
+        DRIVE_PUBLIC_URL="https://drive.example.com",
+        WOPI_SRC_BASE_URL=None,
+    ):
+        code, payload = _run_preflight()
+
+    assert code == 1
+    err = next(
+        e for e in payload["errors"] if e["field"] == "WOPI_VENDORA_DISCOVERY_URL"
+    )
+    assert err["failure_class"] == "config.wopi.discovery_url.missing"
+
+
 def test_config_preflight_rejects_oidc_direct_secret_no_leak(monkeypatch):
     monkeypatch.setenv(
         "OIDC_OP_AUTHORIZATION_ENDPOINT", "https://oidc.example.com/auth"

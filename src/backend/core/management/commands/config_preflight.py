@@ -101,6 +101,32 @@ def _normalize_required_absolute_url(
         raise ValueError("invalid")
 
 
+def _normalize_required_http_url_any_tls(raw: str) -> None:
+    """
+    Validate a required absolute http(s) URL without enforcing TLS posture.
+
+    This is used for URLs that are not necessarily public-surface endpoints
+    (e.g. internal service discovery).
+    """
+    candidate = (raw or "").strip()
+    if not candidate:
+        raise ValueError("missing")
+
+    parsed = urlsplit(candidate)
+    scheme = (parsed.scheme or "").lower()
+    if scheme not in {"http", "https"}:
+        raise ValueError("invalid")
+
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("invalid")
+
+    if parsed.query or parsed.fragment:
+        raise ValueError("invalid")
+
+    if not parsed.hostname:
+        raise ValueError("invalid")
+
+
 def _validate_oidc_secret_ref() -> None:
     """
     Validate OIDC client secret is refs-only.
@@ -561,6 +587,80 @@ def _validate_oidc_secret_ref_field() -> list[PreflightError]:
         ]
 
 
+def _validate_wopi_preflight() -> list[PreflightError]:
+    """
+    Validate WOPI enablement config deterministically (no live I/O, no-leak).
+
+    WOPI is considered enabled when WOPI_CLIENTS is non-empty.
+    """
+    clients = list(getattr(settings, "WOPI_CLIENTS", []) or [])
+    if not clients:
+        return []
+
+    errors: list[PreflightError] = []
+
+    wopi_src_base_url = getattr(settings, "WOPI_SRC_BASE_URL", None)
+    drive_public_url = getattr(settings, "DRIVE_PUBLIC_URL", None)
+    if wopi_src_base_url is None and drive_public_url is None:
+        errors.append(
+            PreflightError(
+                field="WOPI_SRC_BASE_URL",
+                failure_class="config.wopi.src_base_url.missing",
+                next_action_hint=(
+                    "Set DRIVE_PUBLIC_URL (recommended) or WOPI_SRC_BASE_URL to the "
+                    "canonical public base URL."
+                ),
+            )
+        )
+
+    for client in clients:
+        client_upper = str(client).strip().upper()
+        if not client_upper:
+            continue
+
+        env_name = f"WOPI_{client_upper}_DISCOVERY_URL"
+        raw = os.environ.get(env_name, "")
+        if not (raw or "").strip():
+            errors.append(
+                PreflightError(
+                    field=env_name,
+                    failure_class="config.wopi.discovery_url.missing",
+                    next_action_hint=(
+                        f"Set {env_name} to an absolute https:// URL to the "
+                        "WOPI discovery endpoint."
+                    ),
+                )
+            )
+            continue
+
+        if "*" in raw:
+            errors.append(
+                PreflightError(
+                    field=env_name,
+                    failure_class="config.wopi.discovery_url.wildcard",
+                    next_action_hint="Remove wildcards; provide explicit URLs only.",
+                )
+            )
+            continue
+
+        try:
+            _normalize_required_http_url_any_tls(raw)
+        except ValueError as exc:
+            _ = exc
+            errors.append(
+                PreflightError(
+                    field=env_name,
+                    failure_class="config.wopi.discovery_url.invalid",
+                    next_action_hint=(
+                        f"Set {env_name} to an absolute http(s) URL with a host. "
+                        "Remove userinfo/query/fragment."
+                    ),
+                )
+            )
+
+    return errors
+
+
 class Command(BaseCommand):
     """Django management command emitting deterministic config + edge checklist."""
 
@@ -589,6 +689,7 @@ class Command(BaseCommand):
                 allow_insecure_http=allow_insecure_http,
             )
         )
+        errors.extend(_validate_wopi_preflight())
 
         errors_sorted = sorted(errors, key=lambda e: e.field)
         payload: dict[str, Any] = {

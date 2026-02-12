@@ -21,6 +21,7 @@ and this project adheres to
 - ✨(uploads) deterministic recovery patterns (pending TTL + retry)
 - ✨(share) expose canonical public share URLs (DRIVE_PUBLIC_URL)
 - ✨(share) open token-enforced public share links without auth
+- ✨(wopi) add safe-by-default enablement configuration + health checks
 - ✨(wopi) gate WOPI support by backend capability
 
 ### Removed
