@@ -42,6 +42,8 @@ Each failure should also emit:
 - `config.secret.file_missing`
 - `config.secret.file_unreadable`
 - `config.secret.env_ref_missing`
+- `config.secret.missing`
+- `config.secret.malformed`
 - `config.external_api.invalid`
 - `config.external_api.resource.unknown`
 - `config.external_api.resource.invalid`
