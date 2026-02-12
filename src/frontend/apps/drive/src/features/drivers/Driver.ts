@@ -21,6 +21,7 @@ import {
   WopiInfo,
   WorkspaceType,
   MountDiscovery,
+  MountBrowseResponse,
 } from "./types";
 
 export enum ItemFiltersScope {
@@ -138,4 +139,10 @@ export abstract class Driver {
   abstract getEntitlements(): Promise<Entitlements>;
 
   abstract getMountsDiscovery(): Promise<MountDiscovery[]>;
+  abstract browseMount(params: {
+    mountId: string;
+    path?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<MountBrowseResponse>;
 }

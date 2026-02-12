@@ -32,6 +32,7 @@ import {
   User,
   WopiInfo,
   MountDiscovery,
+  MountBrowseResponse,
 } from "../types";
 import { DTODeleteAccess } from "../DTOs/AccessesDTO";
 
@@ -535,6 +536,26 @@ export class StandardDriver extends Driver {
 
   async getMountsDiscovery(): Promise<MountDiscovery[]> {
     const response = await fetchAPI(`mounts/`);
+    const data = await response.json();
+    return data;
+  }
+
+  async browseMount(params: {
+    mountId: string;
+    path?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<MountBrowseResponse> {
+    const path = params.path ?? "/";
+    const limit = params.limit ?? 20;
+    const offset = params.offset ?? 0;
+
+    const query = new URLSearchParams({
+      path,
+      limit: String(limit),
+      offset: String(offset),
+    });
+    const response = await fetchAPI(`mounts/${params.mountId}/browse/?${query}`);
     const data = await response.json();
     return data;
   }
