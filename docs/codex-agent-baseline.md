@@ -3,6 +3,11 @@
 This file contains **only** the stable, reusable baseline to run Codex **dev**
 work in this repo.
 
+Review/maintainer note:
+- This baseline is **primarily** for dev work, but the review/maintainer agent
+  should also follow the same no-leak + CI/commit constraints when it creates
+  a “tracking sync” PR or any maintainer-side changes.
+
 It must **not** include story-specific instructions (PR numbers, story lists,
 or acceptance criteria). Those belong in the per-session text prompt.
 

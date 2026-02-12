@@ -143,6 +143,46 @@ Contraintes
   les workflows non-bloquants).
 ```
 
+---
+
+## How to prompt the Codex review/maintainer agent (template)
+
+This is the recommended **copy/paste** prompt to start a new Codex
+review/maintainer conversation. Keep it short and let this file and
+`docs/codex-agent-baseline.md` carry the reusable rules.
+
+```text
+Tu es Codex reviewer/maintainer dans le repo /root/Apoze/drive.
+
+Avant toute action, lis et applique :
+- docs/codex-review-cycle.md
+- docs/codex-agent-baseline.md
+
+Rappels (anti-dérive)
+- Ne relance aucun test/lint/smoke.
+- GitHub PRs = miroir ; source de vérité = run artifacts committés.
+- Ne pas attendre les checks non-bloquants listés dans docs/codex-review-cycle.md.
+
+Sortie attendue (format obligatoire, local-first)
+Pour chaque PR, rends EXACTEMENT dans cet ordre :
+1) Local artifacts: OK/KO (paths)
+   - vérifie sur le head SHA le run folder + `report.md`, `gates.md`,
+     `commands.log`, `files-changed.txt`
+   - vérifie que le story file “Dev Agent Record” pointe vers le run
+2) GitHub status: OK/KO
+   - base=main, mergeable, checks requis green (sans attendre les non-bloquants)
+3) Action:
+   - si OK : merge PR(s) + supprime branches distantes + fais une PR “tracking sync”
+     si nécessaire + prépare la suite + donne le prompt pour NOUVELLE conversation
+     Codex dev (batch de 3 stories par défaut).
+   - si KO : dis exactement ce qui manque/échoue + donne un prompt de correction à
+     coller dans la MÊME conversation Codex dev qui a produit ces PRs.
+
+Je colle ensuite :
+Retour de l’agent Codex dev :
+<coller ici>
+```
+
 ## Review agent procedure (when user pastes “retour dev”)
 
 ### 0) Mandatory review output format (make “local-first” visible)
