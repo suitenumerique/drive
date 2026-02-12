@@ -26,6 +26,7 @@ and this project adheres to
 - ✨(wopi) make launch flow reverse-proxy friendly (short-lived tokens)
 - ✨(mounts) add validated mounts registry + enabled-only discovery
 - ✨(mounts) add mounts discovery capabilities API + UI entry point
+- ✨(mounts) add centralized refs-only secret resolver (bounded refresh)
 - ✨(wopi) disable WOPI when S3 bucket versioning is disabled
 
 ### Removed

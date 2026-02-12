@@ -1869,6 +1869,12 @@ class Base(Configuration):
         environ_name="MOUNTS_REGISTRY_FILE",
         environ_prefix=None,
     )
+    # Bounded secret refresh window for refs-only mount/provider secrets.
+    MOUNTS_SECRET_REFRESH_SECONDS = values.IntegerValue(
+        60,
+        environ_name="MOUNTS_SECRET_REFRESH_SECONDS",
+        environ_prefix=None,
+    )
     MOUNTS_REGISTRY: list[dict] = []
 
     # Malware detection
