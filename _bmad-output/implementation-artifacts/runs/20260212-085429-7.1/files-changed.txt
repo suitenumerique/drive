@@ -1,0 +1,13 @@
+_bmad-output/implementation-artifacts/7-1-operator-configured-mounts-registry-mount-id-provider-enabled-with-deterministic-validation.md
+_bmad-output/implementation-artifacts/runs/20260212-085429-7.1/commands.log
+_bmad-output/implementation-artifacts/runs/20260212-085429-7.1/files-changed.txt
+_bmad-output/implementation-artifacts/runs/20260212-085429-7.1/gates.md
+_bmad-output/implementation-artifacts/runs/20260212-085429-7.1/report.md
+CHANGELOG.md
+docs/env.md
+src/backend/core/api/viewsets.py
+src/backend/core/services/mounts_registry.py
+src/backend/core/tests/mounts/test_api_mounts.py
+src/backend/core/tests/test_mounts_registry.py
+src/backend/core/urls.py
+src/backend/drive/settings.py
