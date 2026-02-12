@@ -1,6 +1,6 @@
 # Story 7.2: Discover mounts and capabilities (API + UI entry point, constants enforced)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

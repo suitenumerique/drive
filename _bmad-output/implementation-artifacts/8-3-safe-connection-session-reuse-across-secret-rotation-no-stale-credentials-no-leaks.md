@@ -1,6 +1,6 @@
 # Story 8.3: Safe connection/session reuse across secret rotation (no stale credentials, no leaks)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

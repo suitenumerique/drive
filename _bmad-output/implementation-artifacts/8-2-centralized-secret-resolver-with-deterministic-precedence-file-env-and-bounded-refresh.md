@@ -1,6 +1,6 @@
 # Story 8.2: Centralized secret resolver with deterministic precedence (file > env) and bounded refresh
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

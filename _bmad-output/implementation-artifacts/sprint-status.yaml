@@ -1,4 +1,4 @@
-generated: '2026-02-08T17:29:47.681763+00:00'
+generated: '2026-02-12T11:14:28+00:00'
 project: drive
 project_key: NOKEY
 tracking_system: file-system
@@ -45,7 +45,7 @@ development_status:
   epic-6-retrospective: optional
   epic-7: in-progress
   7-1-operator-configured-mounts-registry-mount-id-provider-enabled-with-deterministic-validation: done
-  7-2-discover-mounts-and-capabilities-api-ui-entry-point-constants-enforced: ready-for-dev
+  7-2-discover-mounts-and-capabilities-api-ui-entry-point-constants-enforced: done
   7-3-browse-mount-paths-with-deterministic-ordering-pagination-and-virtual-entry-identifiers: ready-for-dev
   7-4-enforce-capability-gating-across-mount-actions-no-dead-actions-deterministic-errors: ready-for-dev
   7-5-create-mountprovider-share-links-for-virtual-entries-capability-driven: ready-for-dev
@@ -53,8 +53,8 @@ development_status:
   epic-7-retrospective: optional
   epic-8: in-progress
   8-1-refs-only-secret-fields-for-mounts-never-store-return-log-secret-material: done
-  8-2-centralized-secret-resolver-with-deterministic-precedence-file-env-and-bounded-refresh: ready-for-dev
-  8-3-safe-connection-session-reuse-across-secret-rotation-no-stale-credentials-no-leaks: ready-for-dev
+  8-2-centralized-secret-resolver-with-deterministic-precedence-file-env-and-bounded-refresh: done
+  8-3-safe-connection-session-reuse-across-secret-rotation-no-stale-credentials-no-leaks: done
   epic-8-retrospective: optional
   epic-9: backlog
   9-1-smb-mount-configuration-schema-and-deterministic-validation-refs-only-secrets: ready-for-dev
