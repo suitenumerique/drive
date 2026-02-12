@@ -119,6 +119,7 @@ This document lists all configurable environment variables for the Drive applica
 | `TRASHBIN_CUTOFF_DAYS` | Number of days before items are permanently deleted from trash | `30` |
 | `MOUNTS_REGISTRY` | JSON list of operator-configured mounts (mount_id, display_name, provider, enabled, params) | `None` |
 | `MOUNTS_REGISTRY_FILE` | Path to a JSON file containing the mounts registry (takes precedence over `MOUNTS_REGISTRY`) | `None` |
+| `MOUNTS_SECRET_REFRESH_SECONDS` | Bounded refresh window (seconds) for refs-only mount/provider secrets | `60` |
 | `WOPI_CLIENTS` | List of client name. These client names will be used in the post_setup | [] |
 | `WOPI_{CLIENT_NAME}_DISCOVERY_URL` | The discovery url for each client present in the `WOPI_CLIENTS`. if `WOPI_CLIENTS=vendorA` then set `WOPI_VENDORA_DISCOVERY_URL` | |
 | `WOPI_EXCLUDED_MIMETYPES` | List of mimetypes excluded when parsing the discovery url | See settings.py module |
@@ -131,6 +132,20 @@ This document lists all configurable environment variables for the Drive applica
 | `WOPI_CONFIGURATION_CRONTAB_HOUR` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `3` |
 | `WOPI_CONFIGURATION_CRONTAB_DAY_OF_MONTH` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `*` |
 | `WOPI_CONFIGURATION_CRONTAB_MONTH_OF_YEAR` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `*` |
+
+## Mount secret resolution (v1)
+
+Some mount/provider configs support refs-only secret fields (e.g. `password_secret_*`)
+inside the mounts registry JSON.
+
+Deterministic precedence when both are set:
+
+- `*_secret_path` (file) **wins** over `*_secret_ref` (env var name)
+
+Runtime refresh:
+
+- Secrets are cached and refreshed within the bounded window configured by
+  `MOUNTS_SECRET_REFRESH_SECONDS`.
 
 ## S3 TransferConfig tuning (backend-mediated transfers)
 
