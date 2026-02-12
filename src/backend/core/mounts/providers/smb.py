@@ -44,6 +44,8 @@ class _SmbConfig:
 
     @property
     def auth_username(self) -> str:
+        """Return the SMB auth username (domain\\username when domain is set)."""
+
         if not self.domain:
             return self.username
         return f"{self.domain}\\{self.username}"
@@ -108,7 +110,9 @@ def _load_config(  # noqa: PLR0912
     if not isinstance(base_path_raw, str):
         raise _config_error(
             failure_class="mount.smb.config.base_path_invalid",
-            next_action_hint="Set mounts[*].params.base_path to a mount path string like '/subdir'.",
+            next_action_hint=(
+                "Set mounts[*].params.base_path to a mount path string like '/subdir'."
+            ),
         )
     try:
         base_path = normalize_mount_path(base_path_raw)

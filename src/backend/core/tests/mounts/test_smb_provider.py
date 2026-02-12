@@ -37,6 +37,8 @@ class _FakeDirEntry:
         )
 
     def stat(self):
+        """Return a minimal stat-like object."""
+
         return self._st
 
 
@@ -118,7 +120,7 @@ def test_smb_provider_maps_share_not_found(monkeypatch):
         _ = server
 
     def _stat(path: str, **kwargs):
-        raise BadNetworkName()
+        raise BadNetworkName()  # pylint: disable=no-value-for-parameter
 
     monkeypatch.setattr(smb_provider.smbclient, "register_session", _register_session)
     monkeypatch.setattr(smb_provider.smbclient, "stat", _stat)
@@ -136,7 +138,7 @@ def test_smb_provider_maps_auth_failure(monkeypatch):
         _ = server
 
     def _stat(path: str, **kwargs):
-        raise LogonFailure()
+        raise LogonFailure()  # pylint: disable=no-value-for-parameter
 
     monkeypatch.setattr(smb_provider.smbclient, "register_session", _register_session)
     monkeypatch.setattr(smb_provider.smbclient, "stat", _stat)
