@@ -33,7 +33,8 @@ def test_api_mount_download_streams_full_response(monkeypatch, settings):
 
     content = b"0123456789"
 
-    def _fake_stat(*, _mount: dict, normalized_path: str) -> MountEntry:
+    def _fake_stat(*, mount: dict, normalized_path: str) -> MountEntry:
+        _ = mount
         return MountEntry(
             entry_type="file",
             normalized_path=normalized_path,
@@ -43,7 +44,8 @@ def test_api_mount_download_streams_full_response(monkeypatch, settings):
         )
 
     @contextlib.contextmanager
-    def _fake_open_read(*, _mount: dict, _normalized_path: str):
+    def _fake_open_read(*, mount: dict, normalized_path: str):
+        _ = (mount, normalized_path)
         yield io.BytesIO(content)
 
     monkeypatch.setattr("core.mounts.providers.smb.stat", _fake_stat)
@@ -69,7 +71,8 @@ def test_api_mount_download_supports_single_range(monkeypatch, settings):
 
     content = b"0123456789"
 
-    def _fake_stat(*, _mount: dict, normalized_path: str) -> MountEntry:
+    def _fake_stat(*, mount: dict, normalized_path: str) -> MountEntry:
+        _ = mount
         return MountEntry(
             entry_type="file",
             normalized_path=normalized_path,
@@ -79,7 +82,8 @@ def test_api_mount_download_supports_single_range(monkeypatch, settings):
         )
 
     @contextlib.contextmanager
-    def _fake_open_read(*, _mount: dict, _normalized_path: str):
+    def _fake_open_read(*, mount: dict, normalized_path: str):
+        _ = (mount, normalized_path)
         yield io.BytesIO(content)
 
     monkeypatch.setattr("core.mounts.providers.smb.stat", _fake_stat)
@@ -109,7 +113,8 @@ def test_api_mount_download_rejects_unsatisfiable_range(monkeypatch, settings):
 
     content = b"0123456789"
 
-    def _fake_stat(*, _mount: dict, normalized_path: str) -> MountEntry:
+    def _fake_stat(*, mount: dict, normalized_path: str) -> MountEntry:
+        _ = mount
         return MountEntry(
             entry_type="file",
             normalized_path=normalized_path,
@@ -119,7 +124,8 @@ def test_api_mount_download_rejects_unsatisfiable_range(monkeypatch, settings):
         )
 
     @contextlib.contextmanager
-    def _fake_open_read(*, _mount: dict, _normalized_path: str):
+    def _fake_open_read(*, mount: dict, normalized_path: str):
+        _ = (mount, normalized_path)
         yield io.BytesIO(content)
 
     monkeypatch.setattr("core.mounts.providers.smb.stat", _fake_stat)
