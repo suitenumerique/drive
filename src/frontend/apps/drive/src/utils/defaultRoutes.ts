@@ -15,6 +15,7 @@ export enum DefaultRoute {
   RECENT = "recent",
   SHARED_WITH_ME = "shared-with-me",
   FAVORITES = "favorites",
+  MOUNTS = "mounts",
   TRASH = "trash",
 }
 export type DefaultRouteData = {
@@ -57,6 +58,14 @@ export const ORDERED_DEFAULT_ROUTES: DefaultRouteData[] = [
     iconName: "star_border",
     iconSrc: starredIcon.src,
     breadcrumbIconSrc: starredBreadcrumbIcon.src,
+  },
+  {
+    id: DefaultRoute.MOUNTS,
+    label: "explorer.tree.mounts",
+    route: "/explorer/mounts",
+    iconName: "folder_open",
+    iconSrc: myFilesIcon.src,
+    breadcrumbIconSrc: myFilesBreadcrumbIcon.src,
   },
 ];
 

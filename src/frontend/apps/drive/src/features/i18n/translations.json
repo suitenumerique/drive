@@ -317,7 +317,27 @@
           "recent": "Recents",
           "my_files": "My files",
           "shared_with_me": "Shared with me",
-          "favorites": "Starred"
+          "favorites": "Starred",
+          "mounts": "Mounts"
+        },
+        "mounts": {
+          "title": "Mounts",
+          "loading": "Loading mounts...",
+          "error": "Failed to load mounts.",
+          "empty": "No mounts configured.",
+          "provider": "Provider",
+          "capability": {
+            "available": "Available",
+            "unavailable": "Unavailable"
+          },
+          "capabilities": {
+            "mount": {
+              "upload": "Upload",
+              "preview": "Preview",
+              "wopi": "Online editing",
+              "share_link": "Share link"
+            }
+          }
         },
         "trash": {
           "title": "Trash",
@@ -798,6 +818,7 @@
           "my_files": "Mes fichiers",
           "shared_with_me": "Partagés avec moi",
           "favorites": "Favoris",
+          "mounts": "Montages",
           "import": {
             "label": "Importer",
             "files": "Importer des fichiers",
@@ -830,6 +851,25 @@
                 "confirm_button": "Déplacer quand même",
                 "cancel_button": "Annuler"
               }
+            }
+          }
+        },
+        "mounts": {
+          "title": "Montages",
+          "loading": "Chargement des montages...",
+          "error": "Impossible de charger les montages.",
+          "empty": "Aucun montage configuré.",
+          "provider": "Fournisseur",
+          "capability": {
+            "available": "Disponible",
+            "unavailable": "Indisponible"
+          },
+          "capabilities": {
+            "mount": {
+              "upload": "Téléverser",
+              "preview": "Prévisualiser",
+              "wopi": "Édition en ligne",
+              "share_link": "Lien de partage"
             }
           }
         },
@@ -1347,7 +1387,27 @@
           "recent": "Recenten",
           "my_files": "Mijn bestanden",
           "shared_with_me": "Gedeeld met mij",
-          "favorites": "Favorieten"
+          "favorites": "Favorieten",
+          "mounts": "Mounts"
+        },
+        "mounts": {
+          "title": "Mounts",
+          "loading": "Mounts laden...",
+          "error": "Mounts konden niet worden geladen.",
+          "empty": "Geen mounts geconfigureerd.",
+          "provider": "Provider",
+          "capability": {
+            "available": "Beschikbaar",
+            "unavailable": "Niet beschikbaar"
+          },
+          "capabilities": {
+            "mount": {
+              "upload": "Uploaden",
+              "preview": "Voorbeeld",
+              "wopi": "Online bewerken",
+              "share_link": "Deellink"
+            }
+          }
         },
         "trash": {
           "title": "Prullenbak",

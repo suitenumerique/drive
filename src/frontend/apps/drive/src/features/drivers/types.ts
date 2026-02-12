@@ -212,3 +212,10 @@ export enum WorkspaceType {
   PUBLIC = "public",
   SHARED = "shared",
 }
+
+export type MountDiscovery = {
+  mount_id: string;
+  display_name: string;
+  provider: string;
+  capabilities: Record<string, boolean>;
+};
