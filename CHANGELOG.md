@@ -23,6 +23,7 @@ and this project adheres to
 - ✨(share) open token-enforced public share links without auth
 - ✨(wopi) add safe-by-default enablement configuration + health checks
 - ✨(wopi) gate WOPI support by backend capability
+- ✨(wopi) make launch flow reverse-proxy friendly (short-lived tokens)
 
 ### Removed
 

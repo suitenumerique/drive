@@ -1770,9 +1770,9 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
-    # We recommend using an access_token_ttl value that makes the access token valid for 10 hours.
+    # WOPI access tokens should be time-bounded (short-lived) to reduce exposure risk.
     WOPI_ACCESS_TOKEN_TIMEOUT = values.IntegerValue(
-        60 * 60 * 10, environ_name="WOPI_ACCESS_TOKEN_TIMEOUT", environ_prefix=None
+        60 * 60, environ_name="WOPI_ACCESS_TOKEN_TIMEOUT", environ_prefix=None
     )
     WOPI_LOCK_TIMEOUT = values.IntegerValue(
         30 * 60, environ_name="WOPI_LOCK_TIMEOUT", environ_prefix=None
