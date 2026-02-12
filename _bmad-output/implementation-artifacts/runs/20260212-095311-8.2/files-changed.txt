@@ -1,0 +1,7 @@
+CHANGELOG.md
+docs/env.md
+docs/failure-class-glossary.md
+src/backend/core/services/secret_resolver.py
+src/backend/core/tests/utils/test_secret_resolver.py
+src/backend/core/utils/secret_resolver.py
+src/backend/drive/settings.py
