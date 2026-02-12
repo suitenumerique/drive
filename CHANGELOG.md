@@ -27,6 +27,7 @@ and this project adheres to
 - ✨(wopi) make launch flow reverse-proxy friendly (short-lived tokens)
 - ✨(mounts) add validated mounts registry + enabled-only discovery
 - ✨(mounts) add mounts discovery capabilities API + UI entry point
+- ✨(mounts) validate SMB mount configuration schema (refs-only secrets)
 - ✨(mounts) add centralized refs-only secret resolver (bounded refresh)
 - ✨(mounts) prevent stale session reuse across secret rotation
   (version-bound pool)

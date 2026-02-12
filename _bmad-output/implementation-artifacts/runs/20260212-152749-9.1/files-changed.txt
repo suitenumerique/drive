@@ -1,0 +1,4 @@
+docs/env.md
+src/backend/core/services/mounts_registry.py
+src/backend/core/tests/mounts/test_api_mounts.py
+src/backend/core/tests/test_mounts_registry.py
