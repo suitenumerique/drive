@@ -266,6 +266,27 @@ def test_api_users_retrieve_me_authenticated():
         "full_name": user.full_name,
         "short_name": user.short_name,
         "language": user.language,
+        "last_release_note_seen": None,
+    }
+
+
+def test_api_users_retrieve_me_authenticated_with_release_note():
+    """Authenticated users should see their last_release_note_seen value on the "/users/me" path."""
+    user = factories.UserFactory(last_release_note_seen="0.11.1")
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get("/api/v1.0/users/me/")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": str(user.id),
+        "email": user.email,
+        "full_name": user.full_name,
+        "short_name": user.short_name,
+        "language": user.language,
+        "last_release_note_seen": "0.11.1",
     }
 
 
@@ -517,8 +538,8 @@ def test_api_users_patch_anonymous():
 
 def test_api_users_patch_authenticated_self():
     """
-    Authenticated users should be able to patch their own user but only "language"
-    and "timezone" fields.
+    Authenticated users should be able to patch their own user but only "language",
+    "timezone" and "last_release_note_seen" fields.
     """
     user = factories.UserFactory()
 
@@ -527,7 +548,9 @@ def test_api_users_patch_authenticated_self():
 
     old_user_values = dict(serializers.UserSerializer(instance=user).data)
     new_user_values = dict(
-        serializers.UserSerializer(instance=factories.UserFactory()).data
+        serializers.UserSerializer(
+            instance=factories.UserFactory(last_release_note_seen="1.2.3")
+        ).data
     )
 
     for key, new_value in new_user_values.items():
@@ -541,10 +564,66 @@ def test_api_users_patch_authenticated_self():
     user.refresh_from_db()
     user_values = dict(serializers.UserSerializer(instance=user).data)
     for key, value in user_values.items():
-        if key in ["language", "timezone"]:
+        if key in ["language", "timezone", "last_release_note_seen"]:
             assert value == new_user_values[key]
         else:
             assert value == old_user_values[key]
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "<script>alert('xss')</script>",
+        "v1.2.3",
+        "1.2",
+        "abc",
+        "1.2.3.4",
+        "../etc/passwd",
+        "",
+    ],
+)
+def test_api_users_patch_last_release_note_seen_invalid(value):
+    """Patching last_release_note_seen with an invalid value should return 400."""
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.patch(
+        f"/api/v1.0/users/{user.id!s}/",
+        {"last_release_note_seen": value},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    user.refresh_from_db()
+    assert user.last_release_note_seen is None
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "0.11.1",
+        "1.0.0",
+        "12.345.6",
+    ],
+)
+def test_api_users_patch_last_release_note_seen_valid(value):
+    """Patching last_release_note_seen with a valid semver value should succeed."""
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.patch(
+        f"/api/v1.0/users/{user.id!s}/",
+        {"last_release_note_seen": value},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    user.refresh_from_db()
+    assert user.last_release_note_seen == value
 
 
 def test_api_users_patch_authenticated_other():

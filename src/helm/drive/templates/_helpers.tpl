@@ -140,15 +140,6 @@ Requires top level scope
 {{- end }}
 
 {{/*
-Full name for celery
-
-Requires top level scope
-*/}}
-{{- define "drive.celery.fullname" -}}
-{{ include "drive.fullname" . }}-celery
-{{- end }}
-
-{{/*
 Full name for the frontend
 
 Requires top level scope

@@ -16,12 +16,12 @@ RUN apk update && \
 FROM base AS back-builder
 
 
-ENV UV_COMPILE_BYTECODE=1 
+ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 
 # Disable Python downloads, because we want to use the system interpreter
 # across both images. If using a managed Python version, it needs to be
-# copied from the build image into the final image; 
+# copied from the build image into the final image;
 ENV UV_PYTHON_DOWNLOADS=0
 
 # install uv
@@ -31,12 +31,12 @@ WORKDIR /app
 
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=src/backend/uv.lock,target=uv.lock \
-    --mount=type=bind,source=src/backend/pyproject.toml,target=pyproject.toml \
-    uv sync --locked --no-install-project --no-dev
+  --mount=type=bind,source=src/backend/uv.lock,target=uv.lock \
+  --mount=type=bind,source=src/backend/pyproject.toml,target=pyproject.toml \
+  uv sync --locked --no-install-project --no-dev
 COPY src/backend /app
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev
+  uv sync --locked --no-dev
 
 # ---- mails ----
 FROM node:20 AS mail-builder
@@ -46,14 +46,15 @@ COPY ./src/mail /mail/app
 WORKDIR /mail/app
 
 RUN yarn install --frozen-lockfile && \
-    yarn build
+  yarn build
 
 # ---- static link collector ----
 FROM base AS link-collector
 ARG DRIVE_STATIC_ROOT=/data/static
 
-# Install pango & rdfind
+# Install libmagic, pango & rdfind
 RUN apk add \
+  libmagic \
   pango \
   rdfind
 
@@ -67,7 +68,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 # collectstatic
 RUN DJANGO_CONFIGURATION=Build \
-    python manage.py collectstatic --noinput
+  python manage.py collectstatic --noinput
 
 # Replace duplicated file by a symlink to decrease the overall size of the
 # final image
@@ -92,6 +93,7 @@ RUN apk add \
   pango \
   shared-mime-info
 
+RUN wget https://raw.githubusercontent.com/suitenumerique/django-lasuite/refs/heads/main/assets/conf/mime.types -O /etc/mime.types
 # Copy entrypoint
 COPY ./docker/files/usr/local/bin/entrypoint /usr/local/bin/entrypoint
 
@@ -109,7 +111,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 # Generate compiled translation messages
 RUN DJANGO_CONFIGURATION=Build \
-    python manage.py compilemessages --ignore=".venv/**/*"
+  python manage.py compilemessages --ignore=".venv/**/*"
 
 
 # We wrap commands run in this container by the following entrypoint that
@@ -128,7 +130,7 @@ RUN apk add postgresql-client
 
 # Install development dependencies
 RUN --mount=from=ghcr.io/astral-sh/uv:0.9.10,source=/uv,target=/bin/uv \
-    uv sync --all-extras --locked
+  uv sync --all-extras --locked
 
 # Restore the un-privileged user running the application
 ARG DOCKER_USER
@@ -137,7 +139,7 @@ USER ${DOCKER_USER}
 # Target database host (e.g. database engine following docker compose services
 # name) & port
 ENV DB_HOST=postgresql \
-    DB_PORT=5432
+  DB_PORT=5432
 
 # Run django development server
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

@@ -555,6 +555,42 @@ def test_api_item_invitations_create_cannot_invite_existing_users():
     }
 
 
+def test_api_item_invitations_create_cannot_invite_existing_users_case_insensitive():
+    """
+    It should not be possible to invite already existing users, even with different email case.
+    """
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "owner")])
+    _existing_user = factories.UserFactory(email="john.doe@example.com")
+
+    # Build an invitation to the email of an existing identity with different case
+    invitation_values = {
+        "email": "JOHN.DOE@EXAMPLE.COM",
+        "role": random.choice(models.RoleChoices.values),
+    }
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/invitations/",
+        invitation_values,
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "type": "validation_error",
+        "errors": [
+            {
+                "code": "invitation_email_already_registered",
+                "detail": "This email is already associated to a registered user.",
+                "attr": "email",
+            }
+        ],
+    }
+
+
 # Update
 
 

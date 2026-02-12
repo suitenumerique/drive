@@ -174,3 +174,12 @@ class InvitationFactory(factory.django.DjangoModelFactory):
     item = factory.SubFactory(ItemFactory)
     role = factory.fuzzy.FuzzyChoice([role[0] for role in RoleChoices.choices])
     issuer = factory.SubFactory(UserFactory)
+
+
+class MirrorItemTaskFactory(factory.django.DjangoModelFactory):
+    """A factory to create mirror item tasks for testing."""
+
+    class Meta:
+        model = models.MirrorItemTask
+
+    item = factory.SubFactory(ItemFactory)
