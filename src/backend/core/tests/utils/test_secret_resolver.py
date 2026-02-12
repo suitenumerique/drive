@@ -1,3 +1,5 @@
+"""Unit tests for centralized secret resolver semantics (no-leak, deterministic)."""
+
 import os
 from pathlib import Path
 
@@ -7,17 +9,27 @@ from core.utils.secret_resolver import SecretResolutionError, SecretResolver
 
 
 class _Clock:
+    """Deterministic monotonic clock for bounded refresh tests."""
+
     def __init__(self) -> None:
+        """Create a new controllable monotonic clock."""
+
         self.now = 0.0
 
     def tick(self, seconds: float) -> None:
+        """Advance time by `seconds`."""
+
         self.now += seconds
 
     def __call__(self) -> float:
+        """Return the current monotonic time value."""
+
         return self.now
 
 
 def test_secret_resolver_precedence_file_over_env(tmp_path, monkeypatch):
+    """File-backed secrets take precedence over env-backed secrets."""
+
     clock = _Clock()
     resolver = SecretResolver(refresh_seconds=60, now_mono=clock)
 
@@ -35,6 +47,8 @@ def test_secret_resolver_precedence_file_over_env(tmp_path, monkeypatch):
 
 
 def test_secret_resolver_file_detects_change_within_refresh_window(tmp_path):
+    """File-backed secrets can refresh early when file metadata changes."""
+
     clock = _Clock()
     resolver = SecretResolver(refresh_seconds=60, now_mono=clock)
 
@@ -45,7 +59,8 @@ def test_secret_resolver_file_detects_change_within_refresh_window(tmp_path):
     assert first.value == "v1"
 
     secret_file.write_text("v2\n", encoding="utf-8")
-    os.utime(secret_file, None)
+    st = secret_file.stat()
+    os.utime(secret_file, (st.st_mtime + 2, st.st_mtime + 2))
 
     second = resolver.resolve(secret_path=str(secret_file), secret_ref=None)
     assert second.value == "v2"
@@ -53,6 +68,8 @@ def test_secret_resolver_file_detects_change_within_refresh_window(tmp_path):
 
 
 def test_secret_resolver_env_refresh_is_bounded(monkeypatch):
+    """Env-backed secrets refresh on the configured bounded window."""
+
     clock = _Clock()
     resolver = SecretResolver(refresh_seconds=10, now_mono=clock)
 
@@ -72,6 +89,8 @@ def test_secret_resolver_env_refresh_is_bounded(monkeypatch):
 
 
 def test_secret_resolver_env_missing_is_no_leak(monkeypatch):
+    """Missing env secrets fail deterministically without leaking."""
+
     clock = _Clock()
     resolver = SecretResolver(refresh_seconds=60, now_mono=clock)
 
@@ -85,6 +104,8 @@ def test_secret_resolver_env_missing_is_no_leak(monkeypatch):
 
 
 def test_secret_resolver_file_missing_is_no_leak(tmp_path):
+    """Missing file secrets fail deterministically without leaking raw paths."""
+
     clock = _Clock()
     resolver = SecretResolver(refresh_seconds=60, now_mono=clock)
 
@@ -96,4 +117,3 @@ def test_secret_resolver_file_missing_is_no_leak(tmp_path):
     assert err.failure_class == "config.secret.file_missing"
     assert "path_sha256_16" in err.safe_evidence
     assert err.safe_evidence["path_sha256_16"] != ""
-

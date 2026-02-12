@@ -14,6 +14,8 @@ SecretSource = Literal["file", "env"]
 
 
 class SecretResolutionEvidence(TypedDict, total=False):
+    """Allow-listed, no-leak evidence for operator-facing diagnostics."""
+
     source: SecretSource
     path_sha256_16: str
     env_var: str
@@ -55,10 +57,14 @@ class _CachedSecret:
 
 
 def _sha256_16(data: bytes) -> str:
+    """Compute a short, stable SHA256 prefix for safe evidence/versioning."""
+
     return hashlib.sha256(data).hexdigest()[:16]
 
 
 def _path_sha256_16(path: str) -> str:
+    """Hash a path string for safe evidence (never include raw paths)."""
+
     return _sha256_16(path.encode("utf-8", errors="replace"))
 
 
@@ -103,6 +109,8 @@ class SecretResolver:
         secret_path: str | None,
         secret_ref: str | None,
     ) -> ResolvedSecret:
+        """Resolve a secret with deterministic precedence: file path > env ref."""
+
         path = (secret_path or "").strip() or None
         ref = (secret_ref or "").strip() or None
 
@@ -118,6 +126,8 @@ class SecretResolver:
         )
 
     def _resolve_file(self, path: str) -> ResolvedSecret:
+        """Resolve a file-backed secret with bounded refresh semantics."""
+
         key = ("file", path)
         now = self._now_mono()
 
@@ -127,7 +137,10 @@ class SecretResolver:
         if cached and (now - cached.resolved_at_mono) < self._refresh_seconds:
             st = _safe_stat(path)
             if st and cached.file_mtime_ns is not None and cached.file_size is not None:
-                if st.st_mtime_ns == cached.file_mtime_ns and st.st_size == cached.file_size:
+                if (
+                    st.st_mtime_ns == cached.file_mtime_ns
+                    and st.st_size == cached.file_size
+                ):
                     return cached.resolved
             else:
                 return cached.resolved
@@ -138,6 +151,8 @@ class SecretResolver:
         return refreshed.resolved
 
     def _resolve_env(self, env_var: str) -> ResolvedSecret:
+        """Resolve an env-backed secret with bounded refresh semantics."""
+
         key = ("env", env_var)
         now = self._now_mono()
 
@@ -153,6 +168,8 @@ class SecretResolver:
         return refreshed.resolved
 
     def _read_env(self, env_var: str) -> _CachedSecret:
+        """Read and validate an env var secret value (refs-only, no-leak)."""
+
         value = (os.environ.get(env_var) or "").strip()
         if not value:
             raise SecretResolutionError(
@@ -166,10 +183,14 @@ class SecretResolver:
             )
 
         raw = value.encode("utf-8", errors="strict")
-        resolved = ResolvedSecret(value=value, version_sha256_16=_sha256_16(raw), source="env")
+        resolved = ResolvedSecret(
+            value=value, version_sha256_16=_sha256_16(raw), source="env"
+        )
         return _CachedSecret(resolved=resolved, resolved_at_mono=self._now_mono())
 
     def _read_file(self, path: str) -> _CachedSecret:
+        """Read and validate a file secret value (refs-only, no-leak)."""
+
         p = Path(path)
         if not p.exists():
             raise SecretResolutionError(
@@ -245,6 +266,8 @@ class SecretResolver:
 
 
 def _safe_stat(path: str):
+    """Best-effort `stat` (never raises)."""
+
     try:
         return os.stat(path)
     except OSError:
