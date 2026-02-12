@@ -6,8 +6,6 @@ for deterministic contract tests and demos. It performs no IO.
 
 from __future__ import annotations
 
-from typing import Any
-
 from core.mounts.paths import (
     MountPathNormalizationError,
     normalize_mount_path,
@@ -101,6 +99,7 @@ def _parse_entries(mount: dict) -> dict[str, MountEntry]:
 
 
 def stat(*, mount: dict, normalized_path: str) -> MountEntry:
+    """Return metadata for a target path."""
     entries = _parse_entries(mount)
     try:
         return entries[normalized_path]
@@ -114,6 +113,7 @@ def stat(*, mount: dict, normalized_path: str) -> MountEntry:
 
 
 def list_children(*, mount: dict, normalized_path: str) -> list[MountEntry]:
+    """List immediate child entries under a folder path."""
     entries = _parse_entries(mount)
     parent = entries.get(normalized_path)
     if parent is None:

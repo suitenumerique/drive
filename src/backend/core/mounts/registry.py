@@ -11,6 +11,7 @@ _PROVIDERS: dict[str, MountProvider] = {
 
 
 def get_mount_provider(provider_name: str) -> MountProvider:
+    """Return a registered provider by name; raises MountProviderError if missing."""
     provider = _PROVIDERS.get((provider_name or "").strip().lower())
     if provider is None:
         raise MountProviderError(

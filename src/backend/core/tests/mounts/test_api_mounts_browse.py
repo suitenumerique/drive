@@ -111,6 +111,7 @@ def test_api_mounts_browse_rejects_parent_traversal(settings):
 
 
 def test_api_mounts_browse_missing_path_is_404(settings):
+    """Unknown paths return a deterministic 404."""
     settings.MOUNTS_REGISTRY = [
         _make_static_mount(
             mount_id="alpha-mount",

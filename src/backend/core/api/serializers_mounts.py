@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+# pylint: disable=abstract-method
+
 
 class MountEntryAbilitiesSerializer(serializers.Serializer):
     """Per-entry abilities used by the Explorer to avoid dead actions."""
