@@ -218,6 +218,18 @@ From the run folder:
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` reflects the story
   state (in-progress → review/done when merged).
 
+### 1.b) Scope conformance (anti scope creep)
+
+Before merging, confirm the PR is **strictly within** the story’s Acceptance
+Criteria / tasks, and does not add opportunistic behavior outside the planned
+epics/PRD/architecture constraints.
+
+Practical checks (local-first):
+- Use `files-changed.txt` + the story file to sanity-check intent vs changes.
+- If there are unexpected UI/UX changes, new endpoints, migrations, or new
+  “provider” behavior not explicitly requested, treat it as **KO** and request
+  a minimal correction (revert/split) before merge.
+
 ### 2) Verify PR status and required checks
 
 Use `gh` to verify:
