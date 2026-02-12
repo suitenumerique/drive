@@ -1,6 +1,6 @@
 # Story 9.3: SMB streaming download with Range support where applicable
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -33,13 +33,21 @@ So that large downloads work efficiently and reliably.
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- Run: `_bmad-output/implementation-artifacts/runs/20260212-163414-9.3/`
+- Gates report: `_bmad-output/implementation-artifacts/runs/20260212-163414-9.3/run-report.md`
+- Commands: `_bmad-output/implementation-artifacts/runs/20260212-163414-9.3/commands.log`
 
 ### Completion Notes List
-
+- Implemented streaming mount downloads for SMB provider (no full buffering).
+- Added single `Range: bytes=...` support when provider supports range reads.
+- Added tests for full and partial responses + unsatisfiable ranges.
 
 ### File List
-
+- `src/backend/core/api/viewsets.py`
+- `src/backend/core/mounts/providers/smb.py`
+- `src/backend/core/tests/mounts/test_api_mounts_download_streaming.py`
+- `_bmad-output/implementation-artifacts/9-3-smb-streaming-download-with-range-support-where-applicable.md`
+- `_bmad-output/implementation-artifacts/runs/20260212-163414-9.3/`

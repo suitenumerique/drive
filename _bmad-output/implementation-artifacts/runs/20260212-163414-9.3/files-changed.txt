@@ -1,0 +1,4 @@
+_bmad-output/implementation-artifacts/9-3-smb-streaming-download-with-range-support-where-applicable.md
+src/backend/core/api/viewsets.py
+src/backend/core/mounts/providers/smb.py
+src/backend/core/tests/mounts/test_api_mounts_download_streaming.py
