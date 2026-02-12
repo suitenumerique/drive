@@ -1,0 +1,6 @@
+src/backend/core/api/serializers_mounts.py
+src/backend/core/api/viewsets.py
+src/backend/core/tests/mounts/test_api_mount_share_links_public_browse.py
+src/backend/core/urls.py
+src/backend/core/utils/keyed_hash.py
+src/frontend/apps/drive/src/pages/share/mount/[token].tsx
