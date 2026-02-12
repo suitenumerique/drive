@@ -34,14 +34,26 @@ So that mounts can be managed without changing S3-backed behavior.
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- `_bmad-output/implementation-artifacts/runs/20260212-085429-7.1/commands.log`
 
 ### Completion Notes List
-
+- Added mounts registry parsing/validation from env or file (deterministic, no-leak).
+- Added enabled-only mounts discovery API (`/api/v1.0/mounts/`).
+- Verified: `make lint`, `make test-back` (PASS).
 
 ### File List
-
-
+- `src/backend/core/services/mounts_registry.py`
+- `src/backend/drive/settings.py`
+- `src/backend/core/api/viewsets.py`
+- `src/backend/core/urls.py`
+- `src/backend/core/tests/mounts/test_api_mounts.py`
+- `src/backend/core/tests/test_mounts_registry.py`
+- `docs/env.md`
+- `CHANGELOG.md`
+- `_bmad-output/implementation-artifacts/runs/20260212-085429-7.1/report.md`
+- `_bmad-output/implementation-artifacts/runs/20260212-085429-7.1/gates.md`
+- `_bmad-output/implementation-artifacts/runs/20260212-085429-7.1/commands.log`
+- `_bmad-output/implementation-artifacts/runs/20260212-085429-7.1/files-changed.txt`

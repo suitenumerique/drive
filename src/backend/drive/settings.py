@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
+import json
 import os
 import tomllib
 
@@ -123,6 +124,67 @@ def _apply_wopi_enablement_defaults(
         debug=debug,
         allow_insecure_http=allow_insecure_http,
     )
+
+
+def _apply_mounts_registry_defaults(cls) -> None:
+    """
+    Parse and validate the operator-configured mounts registry (no-leak).
+
+    Sources (file takes precedence):
+    - MOUNTS_REGISTRY_FILE: JSON file containing a list of mounts
+    - MOUNTS_REGISTRY: JSON string containing a list of mounts
+    """
+    # pylint: disable=import-outside-toplevel
+    from core.services.mounts_registry import (  # noqa: PLC0415
+        MountRegistryValidationError,
+        validate_mounts_registry,
+    )
+
+    raw_file = (getattr(cls, "MOUNTS_REGISTRY_FILE", None) or "").strip()
+    raw_json = (getattr(cls, "MOUNTS_REGISTRY_RAW", None) or "").strip()
+
+    if raw_file:
+        try:
+            with open(raw_file, encoding="utf-8") as f:
+                raw = json.load(f)
+        except FileNotFoundError:
+            raise ValueError(
+                "Invalid MOUNTS_REGISTRY_FILE configuration. "
+                "failure_class=mount.config.file_missing "
+                "next_action_hint=Ensure MOUNTS_REGISTRY_FILE points to an existing file."
+            ) from None
+        except (OSError, PermissionError):
+            raise ValueError(
+                "Invalid MOUNTS_REGISTRY_FILE configuration. "
+                "failure_class=mount.config.file_unreadable "
+                "next_action_hint=Ensure MOUNTS_REGISTRY_FILE is readable by the process."
+            ) from None
+        except json.JSONDecodeError:
+            raise ValueError(
+                "Invalid MOUNTS_REGISTRY_FILE configuration. "
+                "failure_class=mount.config.file.invalid_json "
+                "next_action_hint=Ensure MOUNTS_REGISTRY_FILE contains valid JSON."
+            ) from None
+    elif raw_json:
+        try:
+            raw = json.loads(raw_json)
+        except json.JSONDecodeError:
+            raise ValueError(
+                "Invalid MOUNTS_REGISTRY configuration. "
+                "failure_class=mount.config.registry.invalid_json "
+                "next_action_hint=Ensure MOUNTS_REGISTRY is valid JSON (a list of mounts)."
+            ) from None
+    else:
+        raw = []
+
+    try:
+        cls.MOUNTS_REGISTRY = validate_mounts_registry(raw)
+    except MountRegistryValidationError as exc:
+        raise ValueError(
+            "Invalid MOUNTS_REGISTRY configuration. "
+            f"failure_class={exc.failure_class} "
+            f"next_action_hint={exc.next_action_hint}"
+        ) from None
 
 
 def _normalize_oidc_redirect_allowed_hosts(
@@ -1796,6 +1858,19 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # Mounts (operator-configured registry, v1)
+    MOUNTS_REGISTRY_RAW = values.Value(
+        None,
+        environ_name="MOUNTS_REGISTRY",
+        environ_prefix=None,
+    )
+    MOUNTS_REGISTRY_FILE = values.Value(
+        None,
+        environ_name="MOUNTS_REGISTRY_FILE",
+        environ_prefix=None,
+    )
+    MOUNTS_REGISTRY: list[dict] = []
+
     # Malware detection
     MALWARE_DETECTION = {
         "BACKEND": values.Value(
@@ -1928,6 +2003,8 @@ class Base(Configuration):
             debug=debug,
             allow_insecure_http=allow_insecure_http,
         )
+
+        _apply_mounts_registry_defaults(cls)
 
         if https_only_posture:
             cls.OIDC_REDIRECT_REQUIRE_HTTPS = True

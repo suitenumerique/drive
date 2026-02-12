@@ -117,6 +117,8 @@ This document lists all configurable environment variables for the Drive applica
 | `SPECTACULAR_SETTINGS_ENABLE_DJANGO_DEPLOY_CHECK` | Enable Django deploy check in Spectacular | `False` |
 | `STORAGES_STATICFILES_BACKEND` | Backend for static files storage | `whitenoise.storage.CompressedManifestStaticFilesStorage` |
 | `TRASHBIN_CUTOFF_DAYS` | Number of days before items are permanently deleted from trash | `30` |
+| `MOUNTS_REGISTRY` | JSON list of operator-configured mounts (mount_id, display_name, provider, enabled, params) | `None` |
+| `MOUNTS_REGISTRY_FILE` | Path to a JSON file containing the mounts registry (takes precedence over `MOUNTS_REGISTRY`) | `None` |
 | `WOPI_CLIENTS` | List of client name. These client names will be used in the post_setup | [] |
 | `WOPI_{CLIENT_NAME}_DISCOVERY_URL` | The discovery url for each client present in the `WOPI_CLIENTS`. if `WOPI_CLIENTS=vendorA` then set `WOPI_VENDORA_DISCOVERY_URL` | |
 | `WOPI_EXCLUDED_MIMETYPES` | List of mimetypes excluded when parsing the discovery url | See settings.py module |

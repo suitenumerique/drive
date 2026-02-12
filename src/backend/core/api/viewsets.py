@@ -2330,3 +2330,37 @@ class EntitlementsViewset(viewsets.ViewSet):
                 if callable(method):
                     entitlements[method_name] = method(request.user)
         return drf.response.Response(entitlements)
+
+
+class MountViewSet(viewsets.ViewSet):
+    """List configured mounts for end-user discovery (enabled only)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = "mount_id"
+    lookup_url_kwarg = "mount_id"
+    lookup_value_regex = r"[a-z0-9][a-z0-9._-]{1,62}[a-z0-9]"
+
+    def _enabled_mounts(self) -> list[dict]:
+        mounts = list(getattr(settings, "MOUNTS_REGISTRY", []) or [])
+        return [m for m in mounts if bool(m.get("enabled", True))]
+
+    def list(self, request):
+        """
+        GET /api/v1.0/mounts/
+        """
+        return drf.response.Response(self._enabled_mounts(), status=status.HTTP_200_OK)
+
+    def retrieve(self, request, mount_id: str | None = None):
+        """
+        GET /api/v1.0/mounts/{mount_id}/
+
+        Disabled mounts are treated as not found for end-user surfaces.
+        """
+        target = mount_id or self.kwargs.get(self.lookup_url_kwarg) or ""
+        for mount in self._enabled_mounts():
+            if mount.get("mount_id") == target:
+                return drf.response.Response(mount, status=status.HTTP_200_OK)
+
+        raise drf.exceptions.NotFound(
+            drf.exceptions.ErrorDetail("Mount not found.", code="mount.not_found")
+        )
