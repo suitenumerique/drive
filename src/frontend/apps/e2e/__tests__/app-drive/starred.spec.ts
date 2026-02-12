@@ -54,7 +54,7 @@ test("Add an item to starred and one of it's children to starred and verify it's
   await page.goto("/");
   await clickToMyFiles(page);
   await createFolderInCurrentFolder(page, "John");
-  await navigateToFolder(page, "John", ["John"]);
+  await navigateToFolder(page, "John", ["My files", "John"]);
   await createFolderInCurrentFolder(page, "Doe");
   await clickOnBreadcrumbButtonAction(page, "Star");
   await starItem(page, "Doe");

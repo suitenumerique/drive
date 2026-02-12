@@ -16,13 +16,13 @@ test("Checks that if one of the parents of the current folder is deleted, it red
   await page.goto("/");
   await clickToMyFiles(page);
   await createFolderInCurrentFolder(page, "Test");
-  await navigateToFolder(page, "Test", ["Test"]);
+  await navigateToFolder(page, "Test", ["My files", "Test"]);
   const testUrl = page.url();
   await createFolderInCurrentFolder(page, "SubTest");
-  await navigateToFolder(page, "SubTest", ["Test", "SubTest"]);
+  await navigateToFolder(page, "SubTest", ["My files", "Test", "SubTest"]);
   await deleteCurrentFolder(page);
   await expect(page).toHaveURL(testUrl);
-  await expectExplorerBreadcrumbs(page, ["Test"]);
+  await expectExplorerBreadcrumbs(page, ["My files", "Test"]);
 });
 
 test("Check that if we delete the current folder, it redirects to the parent folder", async ({
@@ -33,7 +33,7 @@ test("Check that if we delete the current folder, it redirects to the parent fol
   await page.goto("/");
   await clickToMyFiles(page);
   await createFolderInCurrentFolder(page, "Test");
-  await navigateToFolder(page, "Test", ["Test"]);
+  await navigateToFolder(page, "Test", ["My files", "Test"]);
   await deleteCurrentFolder(page);
   await expectDefaultRoute(page, "My files", "/explorer/items/my-files");
 });

@@ -58,7 +58,7 @@ MultiUserTest("Share folder with user", async ({ userA, userB }) => {
   await expectRowItemIsNotVisible(userB.page, "Folder");
 
   // User A navigates to the folder and shares it with User B
-  await navigateToFolder(userA.page, "Folder", ["Folder"]);
+  await navigateToFolder(userA.page, "Folder", ["My files", "Folder"]);
   await shareCurrentItemWithWebkitUser(userA.page, "Reader");
 
   // User B navigates to the shared with me folder and expects the folder to be visible
@@ -78,11 +78,11 @@ MultiUserTest(
     await userA.page.goto("/");
     await clickToMyFiles(userA.page);
     await createFolderInCurrentFolder(userA.page, "Folder");
-    await navigateToFolder(userA.page, "Folder", ["Folder"]);
+    await navigateToFolder(userA.page, "Folder", ["My files", "Folder"]);
     await shareCurrentItemWithWebkitUser(userA.page, "Editor");
     await closeShareModal(userA.page);
     await createFolderInCurrentFolder(userA.page, "Sub folder");
-    await navigateToFolder(userA.page, "Sub folder", ["Folder", "Sub folder"]);
+    await navigateToFolder(userA.page, "Sub folder", ["My files", "Folder", "Sub folder"]);
     await clickOnBreadcrumbButtonAction(userA.page, "Share");
 
     await expectAllowedRoles(
@@ -105,13 +105,13 @@ MultiUserTest(
     await userA.page.goto("/");
     await clickToMyFiles(userA.page);
     await createFolderInCurrentFolder(userA.page, "Folder");
-    await navigateToFolder(userA.page, "Folder", ["Folder"]);
+    await navigateToFolder(userA.page, "Folder", ["My files", "Folder"]);
     await openShareModal(userA.page);
     await selectLinkReach(userA.page, "Connected");
     await expectLinkReachSelected(userA.page, "Connected");
     await closeShareModal(userA.page);
     await createFolderInCurrentFolder(userA.page, "Sub folder");
-    await navigateToFolder(userA.page, "Sub folder", ["Folder", "Sub folder"]);
+    await navigateToFolder(userA.page, "Sub folder", ["My files", "Folder", "Sub folder"]);
     await openShareModal(userA.page);
     await expectLinkReachSelected(userA.page, "Connected");
     await expectAllowedLinkReach(
