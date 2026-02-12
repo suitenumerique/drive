@@ -60,9 +60,8 @@ def _normalize_optional_timeout_seconds(value: Any) -> int | None:
     return value
 
 
-def _normalize_smb_params(  # noqa: PLR0912
-    params: dict[str, Any],
-) -> dict[str, Any]:  # pylint: disable=too-many-branches
+def _normalize_smb_params(params: dict[str, Any]) -> dict[str, Any]:  # noqa: PLR0912
+    # pylint: disable=too-many-branches
     """Normalize SMB mount params with defaults (deterministic, no-leak)."""
 
     normalized = dict(params)
@@ -128,9 +127,8 @@ def _is_json_primitive(value: Any) -> bool:
     return False
 
 
-def validate_mounts_registry(  # noqa: PLR0912, PLR0915
-    raw: Any,
-) -> list[dict[str, Any]]:  # pylint: disable=too-many-branches,too-many-statements
+def validate_mounts_registry(raw: Any) -> list[dict[str, Any]]:  # noqa: PLR0912, PLR0915
+    # pylint: disable=too-many-branches,too-many-statements
     """
     Validate mounts registry definitions.
 
