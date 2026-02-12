@@ -33,6 +33,7 @@ import {
   WopiInfo,
   MountDiscovery,
   MountBrowseResponse,
+  MountShareLinkCreateResponse,
 } from "../types";
 import { DTODeleteAccess } from "../DTOs/AccessesDTO";
 
@@ -556,6 +557,18 @@ export class StandardDriver extends Driver {
       offset: String(offset),
     });
     const response = await fetchAPI(`mounts/${params.mountId}/browse/?${query}`);
+    const data = await response.json();
+    return data;
+  }
+
+  async createMountShareLink(params: {
+    mountId: string;
+    path: string;
+  }): Promise<MountShareLinkCreateResponse> {
+    const response = await fetchAPI(`mounts/${params.mountId}/share-links/`, {
+      method: "POST",
+      body: JSON.stringify({ path: params.path }),
+    });
     const data = await response.json();
     return data;
   }

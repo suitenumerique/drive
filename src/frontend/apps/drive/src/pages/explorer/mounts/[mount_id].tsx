@@ -23,6 +23,8 @@ function MountAction(props: {
   label: string;
   capabilityEnabled: boolean;
   abilityEnabled: boolean;
+  onClick?: () => void;
+  disabled?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -30,12 +32,14 @@ function MountAction(props: {
     return null;
   }
 
+  const isDisabled = Boolean(props.disabled) || !props.abilityEnabled;
+
   if (!props.abilityEnabled) {
     return (
       <div>
-        <button type="button" disabled>
+        <Button variant="tertiary" disabled>
           {props.label}
-        </button>
+        </Button>
         <div>{t("explorer.mounts.actions.unavailable")}</div>
       </div>
     );
@@ -43,7 +47,9 @@ function MountAction(props: {
 
   return (
     <div>
-      <button type="button">{props.label}</button>
+      <Button variant="tertiary" disabled={isDisabled} onClick={props.onClick}>
+        {props.label}
+      </Button>
     </div>
   );
 }
@@ -55,6 +61,8 @@ export default function MountBrowsePage() {
 
   const [path, setPath] = useState("/");
   const [offset, setOffset] = useState(0);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
 
   const {
     data: browse,
@@ -113,6 +121,24 @@ export default function MountBrowsePage() {
   const capabilityWopi = Boolean(browse.capabilities?.["mount.wopi"]);
   const capabilityShareLink = Boolean(browse.capabilities?.["mount.share_link"]);
 
+  const createShareLink = async () => {
+    setShareLoading(true);
+    try {
+      const res = await getDriver().createMountShareLink({
+        mountId,
+        path: browse.normalized_path,
+      });
+      setShareUrl(res.share_url);
+      try {
+        await navigator.clipboard.writeText(res.share_url);
+      } catch {
+        // Ignore clipboard errors; the URL is still rendered for manual copy.
+      }
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
   return (
     <div>
       <h1>
@@ -152,6 +178,8 @@ export default function MountBrowsePage() {
             label={t("explorer.mounts.actions.share")}
             capabilityEnabled={capabilityShareLink}
             abilityEnabled={browse.entry.abilities.share_link_create}
+            disabled={shareLoading}
+            onClick={createShareLink}
           />
         </>
       ) : (
@@ -170,8 +198,17 @@ export default function MountBrowsePage() {
             label={t("explorer.mounts.actions.share")}
             capabilityEnabled={capabilityShareLink}
             abilityEnabled={browse.entry.abilities.share_link_create}
+            disabled={shareLoading}
+            onClick={createShareLink}
           />
         </>
+      )}
+
+      {shareUrl && (
+        <div>
+          <div>{t("explorer.mounts.actions.share_url")}:</div>
+          <code>{shareUrl}</code>
+        </div>
       )}
 
       <h2>{t("explorer.mounts.children.title")}</h2>
@@ -224,4 +261,3 @@ export default function MountBrowsePage() {
 }
 
 MountBrowsePage.getLayout = getGlobalExplorerLayout;
-

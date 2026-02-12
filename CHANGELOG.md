@@ -32,6 +32,7 @@ and this project adheres to
   (version-bound pool)
 - ✨(mounts) browse mount paths with deterministic ordering and pagination
 - ✨(mounts) capability-gate mount action endpoints (preview/upload/wopi)
+- ✨(mounts) create share links for mount virtual entries
 - ✨(wopi) disable WOPI when S3 bucket versioning is disabled
 - ✨(global) add release notes
 

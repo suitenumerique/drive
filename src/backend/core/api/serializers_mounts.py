@@ -47,3 +47,18 @@ class MountBrowseResponseSerializer(serializers.Serializer):
     capabilities = serializers.DictField(child=serializers.BooleanField())
     entry = MountEntrySerializer()
     children = MountBrowseChildrenSerializer(allow_null=True)
+
+
+class MountShareLinkCreateRequestSerializer(serializers.Serializer):
+    """Request body for mount share link creation."""
+
+    path = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
+class MountShareLinkCreateResponseSerializer(serializers.Serializer):
+    """Response payload for mount share link creation."""
+
+    mount_id = serializers.CharField()
+    normalized_path = serializers.CharField()
+    token = serializers.CharField()
+    share_url = serializers.CharField()

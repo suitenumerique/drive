@@ -22,6 +22,7 @@ import {
   WorkspaceType,
   MountDiscovery,
   MountBrowseResponse,
+  MountShareLinkCreateResponse,
 } from "./types";
 
 export enum ItemFiltersScope {
@@ -145,4 +146,9 @@ export abstract class Driver {
     limit?: number;
     offset?: number;
   }): Promise<MountBrowseResponse>;
+
+  abstract createMountShareLink(params: {
+    mountId: string;
+    path: string;
+  }): Promise<MountShareLinkCreateResponse>;
 }

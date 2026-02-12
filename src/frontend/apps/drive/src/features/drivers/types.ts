@@ -257,3 +257,10 @@ export type MountBrowseResponse = {
   entry: MountVirtualEntry;
   children: MountBrowseChildren | null;
 };
+
+export type MountShareLinkCreateResponse = {
+  mount_id: string;
+  normalized_path: string;
+  token: string;
+  share_url: string;
+};
