@@ -1,6 +1,6 @@
 # Story 10.1: WOPI enablement configuration (host allowlist, HTTPS posture, health gating)
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -35,13 +35,31 @@ So that WOPI is safe-by-default and “enabled & healthy” is explicit and oper
 
 ### Agent Model Used
 
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
 
+- Run folder: `_bmad-output/implementation-artifacts/runs/20260211-234347-10.1/`
+- Gates: `_bmad-output/implementation-artifacts/runs/20260211-234347-10.1/run-report.md`
+- Commands: `_bmad-output/implementation-artifacts/runs/20260211-234347-10.1/commands.log`
 
 ### Completion Notes List
 
+- Defaulted `WOPI_SRC_BASE_URL` to `DRIVE_PUBLIC_URL` when WOPI is enabled.
+- Added deterministic `config_preflight` checks for WOPI enablement/discovery URLs.
+- Added `python manage.py wopi_health` to expose enabled/healthy status (no-leak).
+- Updated WOPI settings tests to set `DRIVE_PUBLIC_URL` when WOPI is enabled.
 
 ### File List
 
-
+- `src/backend/drive/settings.py`
+- `src/backend/core/management/commands/config_preflight.py`
+- `src/backend/wopi/services/health.py`
+- `src/backend/wopi/management/commands/wopi_health.py`
+- `src/backend/core/tests/test_settings.py`
+- `src/backend/core/tests/commands/test_config_preflight.py`
+- `docs/env.md`
+- `_bmad-output/implementation-artifacts/runs/20260211-215958-10.1/`
+- `_bmad-output/implementation-artifacts/runs/20260211-225555-10.1/`
+- `_bmad-output/implementation-artifacts/runs/20260211-233642-10.1/`
+- `_bmad-output/implementation-artifacts/runs/20260211-234347-10.1/`

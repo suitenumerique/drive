@@ -121,7 +121,7 @@ This document lists all configurable environment variables for the Drive applica
 | `WOPI_{CLIENT_NAME}_DISCOVERY_URL` | The discovery url for each client present in the `WOPI_CLIENTS`. if `WOPI_CLIENTS=vendorA` then set `WOPI_VENDORA_DISCOVERY_URL` | |
 | `WOPI_EXCLUDED_MIMETYPES` | List of mimetypes excluded when parsing the discovery url | See settings.py module |
 | `WOPI_EXCLUDED_EXTENSIONS` | List of extensions excluded when parsing the discovery url | See settings.py module |
-| `WOPI_SRC_BASE_URL` | The backend url | None |
+| `WOPI_SRC_BASE_URL` | WOPI backend public base URL. When WOPI is enabled and this is unset, it defaults to `DRIVE_PUBLIC_URL`. | None |
 | `WOPI_ACCESS_TOKEN_TIMEOUT` | TTL in seconds for the access_token_ttl sent to the WOPI client | `3600` (1h) |
 | `WOPI_LOCK_TIMEOUT` | TTL for the lock acquired by a WOPI client | `1800` (30 min) |
 | `WOPI_DISABLE_CHAT` | Disable chat in the WOPI client interface | `0` |
