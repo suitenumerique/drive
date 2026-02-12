@@ -9,9 +9,8 @@ import pytest
 from smbprotocol.exceptions import BadNetworkName, LogonFailure, SMBOSError
 from smbprotocol.header import NtStatus
 
-from core.mounts.providers.base import MountProviderError
 from core.mounts.providers import smb as smb_provider
-
+from core.mounts.providers.base import MountProviderError
 
 pytestmark = pytest.mark.django_db
 
@@ -33,7 +32,9 @@ def _mount(*, password_ref: str = "SMB_PASSWORD") -> dict:
 class _FakeDirEntry:
     def __init__(self, *, name: str, st_mode: int, st_size: int = 0) -> None:
         self.name = name
-        self._st = SimpleNamespace(st_mode=st_mode, st_size=st_size, st_mtime=1700000000)
+        self._st = SimpleNamespace(
+            st_mode=st_mode, st_size=st_size, st_mtime=1700000000
+        )
 
     def stat(self):
         return self._st
@@ -143,4 +144,3 @@ def test_smb_provider_maps_auth_failure(monkeypatch):
     with pytest.raises(MountProviderError) as excinfo:
         smb_provider.stat(mount=_mount(), normalized_path="/")
     assert excinfo.value.failure_class == "mount.smb.env.auth_failed"
-

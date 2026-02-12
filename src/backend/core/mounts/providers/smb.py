@@ -15,13 +15,13 @@ from smbprotocol.exceptions import (
     AccessDenied,
     BadNetworkName,
     LogonFailure,
+    NoSuchFile,
+    ObjectNameNotFound,
+    ObjectPathNotFound,
     PasswordExpired,
     SMBAuthenticationError,
     SMBConnectionClosed,
     SMBOSError,
-    NoSuchFile,
-    ObjectNameNotFound,
-    ObjectPathNotFound,
     WrongPassword,
 )
 
@@ -50,7 +50,9 @@ class _SmbConfig:
 
 
 _SESSION_LOCK = threading.Lock()
-_SESSIONS: dict[str, RotatingResource[tuple[_SmbConfig, str], tuple[str, str, int, str]]] = {}
+_SESSIONS: dict[
+    str, RotatingResource[tuple[_SmbConfig, str], tuple[str, str, int, str]]
+] = {}
 
 
 def _config_error(*, failure_class: str, next_action_hint: str) -> MountProviderError:
@@ -62,7 +64,10 @@ def _config_error(*, failure_class: str, next_action_hint: str) -> MountProvider
     )
 
 
-def _load_config(mount: dict[str, Any]) -> tuple[_SmbConfig, str | None, str | None]:
+def _load_config(  # noqa: PLR0912
+    mount: dict[str, Any],
+) -> tuple[_SmbConfig, str | None, str | None]:
+    # pylint: disable=too-many-branches
     params = mount.get("params") if isinstance(mount.get("params"), dict) else {}
 
     server = str(params.get("server") or "").strip()
@@ -115,7 +120,9 @@ def _load_config(mount: dict[str, Any]) -> tuple[_SmbConfig, str | None, str | N
 
     connect_timeout_seconds_raw = params.get("connect_timeout_seconds", 60)
     connect_timeout_seconds = (
-        connect_timeout_seconds_raw if isinstance(connect_timeout_seconds_raw, int) else None
+        connect_timeout_seconds_raw
+        if isinstance(connect_timeout_seconds_raw, int)
+        else None
     )
     if connect_timeout_seconds is None or connect_timeout_seconds < 1:
         raise _config_error(
@@ -141,7 +148,9 @@ def _load_config(mount: dict[str, Any]) -> tuple[_SmbConfig, str | None, str | N
         )
 
     secret_ref = mount.get("password_secret_ref") or params.get("password_secret_ref")
-    secret_path = mount.get("password_secret_path") or params.get("password_secret_path")
+    secret_path = mount.get("password_secret_path") or params.get(
+        "password_secret_path"
+    )
     secret_ref = str(secret_ref).strip() if isinstance(secret_ref, str) else None
     secret_path = str(secret_path).strip() if isinstance(secret_path, str) else None
     if secret_ref == "":
@@ -168,7 +177,13 @@ def _session_pool_key(mount: dict[str, Any], config: _SmbConfig) -> str:
     return f"{config.server}:{config.share}:{config.auth_username}:{config.port}"
 
 
-def _ensure_session(*, mount: dict[str, Any], config: _SmbConfig, secret_path: str | None, secret_ref: str | None) -> None:
+def _ensure_session(
+    *,
+    mount: dict[str, Any],
+    config: _SmbConfig,
+    secret_path: str | None,
+    secret_ref: str | None,
+) -> None:
     key = _session_pool_key(mount, config)
 
     def _credentials_provider() -> tuple[tuple[_SmbConfig, str], str]:
@@ -199,7 +214,9 @@ def _ensure_session(*, mount: dict[str, Any], config: _SmbConfig, secret_path: s
     with _SESSION_LOCK:
         pool = _SESSIONS.get(key)
         if pool is None:
-            pool = RotatingResource(credentials_provider=_credentials_provider, factory=_factory)
+            pool = RotatingResource(
+                credentials_provider=_credentials_provider, factory=_factory
+            )
             _SESSIONS[key] = pool
 
     try:
@@ -231,7 +248,9 @@ def _combined_path(*, base_path: str, normalized_path: str) -> str:
 
 
 def _unc_path(*, config: _SmbConfig, normalized_path: str) -> str:
-    combined = _combined_path(base_path=config.base_path, normalized_path=normalized_path)
+    combined = _combined_path(
+        base_path=config.base_path, normalized_path=normalized_path
+    )
     rel = combined.lstrip("/")
     rel_win = rel.replace("/", "\\")
     base = f"\\\\{config.server}\\{config.share}"
@@ -285,9 +304,16 @@ def _map_exc(*, exc: Exception, op: str) -> MountProviderError:
             public_code="mount.smb.env.unreachable",
         )
 
-    if isinstance(exc, (SMBOSError, FileNotFoundError, NoSuchFile, ObjectNameNotFound, ObjectPathNotFound)) or (
-        isinstance(exc, OSError) and getattr(exc, "errno", None) == errno.ENOENT
-    ):
+    if isinstance(
+        exc,
+        (
+            SMBOSError,
+            FileNotFoundError,
+            NoSuchFile,
+            ObjectNameNotFound,
+            ObjectPathNotFound,
+        ),
+    ) or (isinstance(exc, OSError) and getattr(exc, "errno", None) == errno.ENOENT):
         return MountProviderError(
             failure_class="mount.path.not_found",
             next_action_hint="Verify the path exists in the mount and retry.",
@@ -327,7 +353,11 @@ def stat(*, mount: dict, normalized_path: str) -> MountEntry:
 
     is_dir = statlib.S_ISDIR(getattr(st, "st_mode", 0))
     entry_type = "folder" if is_dir else "file"
-    name = "/" if normalize_mount_path(normalized_path) == "/" else normalized_path.strip("/").split("/")[-1]
+    name = (
+        "/"
+        if normalize_mount_path(normalized_path) == "/"
+        else normalized_path.strip("/").split("/")[-1]
+    )
 
     modified_at = None
     if getattr(st, "st_mtime", None) is not None:
@@ -371,7 +401,9 @@ def list_children(*, mount: dict, normalized_path: str) -> list[MountEntry]:
             continue
 
         try:
-            child_path = normalize_mount_path(posixpath.join(normalize_mount_path(normalized_path), name))
+            child_path = normalize_mount_path(
+                posixpath.join(normalize_mount_path(normalized_path), name)
+            )
         except MountPathNormalizationError:
             continue
 
@@ -406,4 +438,3 @@ def list_children(*, mount: dict, normalized_path: str) -> list[MountEntry]:
             e.normalized_path,
         ),
     )
-
