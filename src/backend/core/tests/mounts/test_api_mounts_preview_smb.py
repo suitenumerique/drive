@@ -9,7 +9,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from core import factories
-from core.mounts.providers.base import MountEntry, MountProviderError
+from core.mounts.providers.base import MountEntry
 
 pytestmark = pytest.mark.django_db
 
@@ -105,7 +105,7 @@ def test_api_mount_preview_returns_not_previewable(monkeypatch, settings):
     assert resp.json()["errors"][0]["code"] == "mount.preview.not_previewable"
 
 
-def test_api_mount_preview_is_capability_gated(monkeypatch, settings):
+def test_api_mount_preview_is_capability_gated(settings):
     """When mount.preview is disabled -> 403."""
 
     settings.MOUNTS_REGISTRY = [
