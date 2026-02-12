@@ -19,6 +19,11 @@ from wopi.utils import (
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def _enable_wopi(settings):
+    settings.WOPI_CLIENTS = ["vendorA"]
+
+
 def test_is_item_wopi_supported():
     """Test the is_item_wopi_supported function."""
     user = UserFactory()

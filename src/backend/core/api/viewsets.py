@@ -53,7 +53,15 @@ from core.tasks.item import process_item_deletion, rename_file
 from core.utils.no_leak import safe_str_hash
 from core.utils.share_links import validate_item_share_token
 from wopi.services import access as access_service
-from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
+from wopi.tasks.configure_wopi import (
+    WOPI_CONFIGURATION_CACHE_KEY,
+    WOPI_DEFAULT_CONFIGURATION,
+)
+from wopi.utils import (
+    compute_wopi_launch_url,
+    get_wopi_client_config,
+    is_wopi_backend_supported,
+)
 
 from . import permissions, serializers, utils
 from .filters import ItemFilter, ListItemFilter, SearchItemFilter
@@ -1642,9 +1650,50 @@ class ItemViewSet(
         """
         item = self.get_object()
 
+        if not settings.WOPI_CLIENTS:
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Online editing is not enabled for this deployment.",
+                        code="wopi.not_enabled",
+                    )
+                }
+            )
+
+        if not is_wopi_backend_supported():
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Online editing is not available on this storage backend.",
+                        code="wopi.backend_unsupported",
+                    )
+                }
+            )
+
+        wopi_configuration = cache.get(
+            WOPI_CONFIGURATION_CACHE_KEY, default=WOPI_DEFAULT_CONFIGURATION
+        )
+        if not wopi_configuration or (
+            not wopi_configuration.get("mimetypes")
+            and not wopi_configuration.get("extensions")
+        ):
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Online editing is not configured (WOPI discovery missing).",
+                        code="wopi.discovery_missing",
+                    )
+                }
+            )
+
         if not (wopi_client := get_wopi_client_config(item, request.user)):
             raise drf.exceptions.ValidationError(
-                {"detail": "This item does not suport WOPI integration."}
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Online editing is not available for this file.",
+                        code="wopi.file_unavailable",
+                    )
+                }
             )
 
         service = access_service.AccessUserItemService()

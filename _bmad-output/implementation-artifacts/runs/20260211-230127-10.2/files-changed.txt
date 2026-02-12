@@ -1,0 +1,17 @@
+_bmad-output/implementation-artifacts/10-2-capability-driven-wopi-action-exposure-per-backend-no-dead-buttons.md
+_bmad-output/implementation-artifacts/runs/20260211-222016-10.2/commands.log
+_bmad-output/implementation-artifacts/runs/20260211-222016-10.2/files-changed.txt
+_bmad-output/implementation-artifacts/runs/20260211-222016-10.2/gates.md
+_bmad-output/implementation-artifacts/runs/20260211-222016-10.2/gates/docs.consistency.evidence.json
+_bmad-output/implementation-artifacts/runs/20260211-222016-10.2/gates/gate-results.json
+_bmad-output/implementation-artifacts/runs/20260211-222016-10.2/gates/no_leak.scan_bmad_output.evidence.json
+_bmad-output/implementation-artifacts/runs/20260211-222016-10.2/report.md
+_bmad-output/implementation-artifacts/runs/20260211-222016-10.2/run-report.json
+_bmad-output/implementation-artifacts/runs/20260211-222016-10.2/run-report.md
+src/backend/core/api/viewsets.py
+src/backend/core/tests/items/test_api_items_retrieve.py
+src/backend/core/tests/items/test_api_items_wopi.py
+src/backend/wopi/tests/test_utils.py
+src/backend/wopi/utils/__init__.py
+src/frontend/apps/drive/src/features/i18n/translations.json
+src/frontend/apps/drive/src/features/ui/preview/wopi/WopiEditor.tsx

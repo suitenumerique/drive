@@ -33,8 +33,9 @@ def fixture_valid_wopi_launch_url():
 
 
 @pytest.fixture(autouse=True, name="configure_wopi_settings")
-def configure_wopi_settings(valid_mimetype, valid_wopi_launch_url):
+def configure_wopi_settings(valid_mimetype, valid_wopi_launch_url, settings):
     """Configure WOPI settings for testing."""
+    settings.WOPI_CLIENTS = ["vendorA"]
     cache.set(
         WOPI_CONFIGURATION_CACHE_KEY,
         {
@@ -137,8 +138,8 @@ def test_api_items_wopi_anonymous_user_not_item_file():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
-                "code": "invalid",
+                "detail": "Online editing is not available for this file.",
+                "code": "wopi.file_unavailable",
                 "attr": "detail",
             }
         ],
@@ -163,8 +164,8 @@ def test_api_items_wopi_anonymous_item_file_mimetype_not_supported():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
-                "code": "invalid",
+                "detail": "Online editing is not available for this file.",
+                "code": "wopi.file_unavailable",
                 "attr": "detail",
             }
         ],
@@ -187,8 +188,8 @@ def test_api_items_wopi_anonymous_user_item_not_ready():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
-                "code": "invalid",
+                "detail": "Online editing is not available for this file.",
+                "code": "wopi.file_unavailable",
                 "attr": "detail",
             }
         ],
@@ -287,8 +288,8 @@ def test_api_items_wopi_authenticated_user_item_not_file():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
-                "code": "invalid",
+                "detail": "Online editing is not available for this file.",
+                "code": "wopi.file_unavailable",
                 "attr": "detail",
             }
         ],
@@ -316,8 +317,8 @@ def test_api_items_wopi_authenticated_user_item_mimetype_not_supported():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
-                "code": "invalid",
+                "detail": "Online editing is not available for this file.",
+                "code": "wopi.file_unavailable",
                 "attr": "detail",
             }
         ],
