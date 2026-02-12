@@ -9,4 +9,3 @@ def hmac_sha256_16(*, salt: str, value: str) -> str:
     """Return a stable, keyed SHA-256 digest prefix (hex) for correlation."""
 
     return salted_hmac(str(salt), str(value)).hexdigest()[:16]
-

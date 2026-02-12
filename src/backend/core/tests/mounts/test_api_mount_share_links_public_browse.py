@@ -94,4 +94,3 @@ def test_api_mount_share_links_browse_success_returns_relative_paths_only(settin
     assert payload["entry"]["entry_type"] == "folder"
     assert payload["children"]["count"] == 1
     assert payload["children"]["results"][0]["normalized_path"] == "/b.txt"
-
