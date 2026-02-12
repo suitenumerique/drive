@@ -66,7 +66,13 @@
         },
         "wopi": {
           "loading": "Loading document...",
-          "error": "An error occurred while loading the document."
+          "error": "An error occurred while loading the document.",
+          "unavailable": {
+            "not_enabled": "Online editing is not enabled for this deployment.",
+            "backend_unsupported": "Online editing is not available on this storage backend.",
+            "discovery_missing": "Online editing is not configured yet. Please retry later.",
+            "file_unavailable": "Online editing is not available for this file."
+          }
         },
         "unavailable": {
           "title": "Preview not available",
@@ -81,6 +87,7 @@
       },
       "common": {
         "cancel": "Cancel",
+        "contact_admin": "Contact admin",
         "retry": "Retry"
       },
       "clipboard": {
@@ -569,7 +576,13 @@
         },
         "wopi": {
           "loading": "Chargement du document...",
-          "error": "Une erreur est survenue lors du chargement du document."
+          "error": "Une erreur est survenue lors du chargement du document.",
+          "unavailable": {
+            "not_enabled": "L’édition en ligne n’est pas activée sur ce déploiement.",
+            "backend_unsupported": "L’édition en ligne n’est pas disponible sur ce stockage.",
+            "discovery_missing": "L’édition en ligne n’est pas encore configurée. Réessayez plus tard.",
+            "file_unavailable": "L’édition en ligne n’est pas disponible pour ce fichier."
+          }
         },
         "unavailable": {
           "title": "Prévisualisation non disponible",
@@ -584,6 +597,7 @@
       },
       "common": {
         "cancel": "Annuler",
+        "contact_admin": "Contacter l'administrateur",
         "retry": "Réessayer"
       },
       "clipboard": {
@@ -1082,7 +1096,13 @@
         },
         "wopi": {
           "loading": "Document laden...",
-          "error": "Er is een fout opgetreden tijdens het laden van het document."
+          "error": "Er is een fout opgetreden tijdens het laden van het document.",
+          "unavailable": {
+            "not_enabled": "Online bewerken is niet ingeschakeld voor deze omgeving.",
+            "backend_unsupported": "Online bewerken is niet beschikbaar voor deze opslag.",
+            "discovery_missing": "Online bewerken is nog niet geconfigureerd. Probeer later opnieuw.",
+            "file_unavailable": "Online bewerken is niet beschikbaar voor dit bestand."
+          }
         },
         "unavailable": {
           "title": "Voorbeeld niet beschikbaar",
@@ -1097,6 +1117,7 @@
       },
       "common": {
         "cancel": "Annuleren",
+        "contact_admin": "Contact opnemen",
         "retry": "Opnieuw proberen"
       },
       "clipboard": {

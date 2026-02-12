@@ -8,6 +8,7 @@ import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { useConfig } from "@/features/config/ConfigProvider";
 import { getOperationTimeBound } from "@/features/operations/timeBounds";
 import { useTimeBoundedPhase } from "@/features/operations/useTimeBoundedPhase";
+import { APIError, errorToString } from "@/features/api/APIError";
 
 interface WopiEditorProps {
   item: FilePreviewType;
@@ -33,6 +34,7 @@ export const WopiEditor = ({ item }: WopiEditorProps) => {
     data: wopiInfo,
     isLoading,
     isError,
+    error,
     refetch,
   } = useQuery({
     queryKey: ["item", item.id, "wopi"],
@@ -73,12 +75,37 @@ export const WopiEditor = ({ item }: WopiEditorProps) => {
   }
 
   if (isError || !wopiInfo) {
+    const apiCode =
+      error instanceof APIError ? error.data?.errors?.[0]?.code : null;
+    const unavailableKey =
+      apiCode === "wopi.not_enabled"
+        ? "not_enabled"
+        : apiCode === "wopi.backend_unsupported"
+          ? "backend_unsupported"
+          : apiCode === "wopi.discovery_missing"
+            ? "discovery_missing"
+            : apiCode === "wopi.file_unavailable"
+              ? "file_unavailable"
+              : null;
+
+    const message = unavailableKey
+      ? t(`file_preview.wopi.unavailable.${unavailableKey}`)
+      : errorToString(error);
+    const nextAction =
+      unavailableKey === "not_enabled" || unavailableKey === "backend_unsupported"
+        ? "contact_admin"
+        : "retry";
+
     return (
       <div>
-        <div>{t("operations.long_running.failed")}</div>
-        <Button variant="tertiary" onClick={() => refetch()}>
-          {t("common.retry")}
-        </Button>
+        <div>{message}</div>
+        {nextAction === "retry" ? (
+          <Button variant="tertiary" onClick={() => refetch()}>
+            {t("common.retry")}
+          </Button>
+        ) : (
+          <div>{t("common.contact_admin")}</div>
+        )}
         <ErrorPreview file={item} />
       </div>
     );
