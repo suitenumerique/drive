@@ -1,0 +1,23 @@
+[
+  {
+    "gate_id": "backend.lint",
+    "result": "pass",
+    "duration_ms": 19068,
+    "failure_class": null,
+    "next_action_hint": null
+  },
+  {
+    "gate_id": "backend.tests",
+    "result": "pass",
+    "duration_ms": 79934,
+    "failure_class": null,
+    "next_action_hint": null
+  },
+  {
+    "gate_id": "docs.consistency",
+    "result": "pass",
+    "duration_ms": 0,
+    "failure_class": null,
+    "next_action_hint": null
+  }
+]
