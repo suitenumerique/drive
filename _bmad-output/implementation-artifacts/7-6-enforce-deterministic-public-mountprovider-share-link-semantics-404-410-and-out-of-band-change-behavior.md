@@ -1,6 +1,6 @@
 # Story 7.6: Enforce deterministic public MountProvider share-link semantics (404/410) and out-of-band change behavior
 
-Status: review
+Status: done
 
 ## Story
 

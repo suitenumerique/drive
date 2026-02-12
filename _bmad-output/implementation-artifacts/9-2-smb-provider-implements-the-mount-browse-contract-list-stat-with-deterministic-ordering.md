@@ -1,6 +1,6 @@
 # Story 9.2: SMB provider implements the mount browse contract (list/stat) with deterministic ordering
 
-Status: review
+Status: done
 
 ## Story
 
