@@ -30,6 +30,7 @@ and this project adheres to
 - ✨(mounts) add centralized refs-only secret resolver (bounded refresh)
 - ✨(mounts) prevent stale session reuse across secret rotation
   (version-bound pool)
+- ✨(mounts) browse mount paths with deterministic ordering and pagination
 - ✨(wopi) disable WOPI when S3 bucket versioning is disabled
 - ✨(global) add release notes
 
