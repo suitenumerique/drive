@@ -157,6 +157,24 @@ Runtime refresh:
 - Secrets are cached and refreshed within the bounded window configured by
   `MOUNTS_SECRET_REFRESH_SECONDS`.
 
+## SMB mount params (v1)
+
+For mounts with `provider: "smb"`, the following keys are validated
+deterministically under `mounts[*].params`:
+
+- `server` (required): SMB server host/IP
+- `share` (required): share name
+- `username` (required): username
+- `port` (optional): integer port, defaults to `445`
+- `domain` / `workgroup` (optional): string
+- `base_path` (optional): share subpath mounted as `/` (mount path semantics)
+- `connect_timeout_seconds` / `operation_timeout_seconds` (optional): integers (seconds)
+
+Password credentials must be provided via refs-only secret fields (never as a
+direct `password` value):
+
+- `password_secret_path` (file) and/or `password_secret_ref` (env var name)
+
 ## S3 TransferConfig tuning (backend-mediated transfers)
 
 Drive configures boto3 `TransferConfig` via the `S3_TRANSFER_CONFIG_*` env vars.

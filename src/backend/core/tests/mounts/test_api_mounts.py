@@ -16,14 +16,22 @@ def test_api_mounts_list_excludes_disabled_mounts(settings):
             "display_name": "Alpha",
             "provider": "smb",
             "enabled": True,
-            "params": {"host": "smb.internal"},
+            "params": {
+                "server": "smb.internal",
+                "share": "finance",
+                "username": "svc",
+            },
         },
         {
             "mount_id": "beta-mount",
             "display_name": "Beta",
             "provider": "smb",
             "enabled": False,
-            "params": {"host": "smb.internal"},
+            "params": {
+                "server": "smb.internal",
+                "share": "finance",
+                "username": "svc",
+            },
         },
     ]
 
@@ -78,7 +86,9 @@ def test_api_mounts_discovery_is_no_leak(settings):
             "provider": "smb",
             "enabled": True,
             "params": {
-                "host": "smb.internal",
+                "server": "smb.internal",
+                "share": "finance",
+                "username": "svc",
                 "capabilities": {"mount.upload": True},
             },
             "password_secret_ref": "MOUNT_ALPHA_PASSWORD",
