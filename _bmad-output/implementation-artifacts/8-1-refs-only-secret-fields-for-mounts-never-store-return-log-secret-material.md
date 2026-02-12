@@ -1,6 +1,6 @@
 # Story 8.1: Refs-only secret fields for mounts (never store/return/log secret material)
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

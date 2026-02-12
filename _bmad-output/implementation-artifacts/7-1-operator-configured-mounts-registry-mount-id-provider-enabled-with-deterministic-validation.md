@@ -1,6 +1,6 @@
 # Story 7.1: Operator-configured mounts registry (mount_id, provider, enabled) with deterministic validation
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

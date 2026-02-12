@@ -1,6 +1,6 @@
 # Story 10.4: S3 WOPI prerequisite validation (bucket versioning) with operator guidance
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

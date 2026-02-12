@@ -43,16 +43,16 @@ development_status:
   6-1-configure-s3-item-share-links-reach-role-and-publish-a-canonical-public-url: done
   6-2-open-s3-public-share-links-without-an-authenticated-session-token-enforced: done
   epic-6-retrospective: optional
-  epic-7: backlog
-  7-1-operator-configured-mounts-registry-mount-id-provider-enabled-with-deterministic-validation: ready-for-dev
+  epic-7: in-progress
+  7-1-operator-configured-mounts-registry-mount-id-provider-enabled-with-deterministic-validation: done
   7-2-discover-mounts-and-capabilities-api-ui-entry-point-constants-enforced: ready-for-dev
   7-3-browse-mount-paths-with-deterministic-ordering-pagination-and-virtual-entry-identifiers: ready-for-dev
   7-4-enforce-capability-gating-across-mount-actions-no-dead-actions-deterministic-errors: ready-for-dev
   7-5-create-mountprovider-share-links-for-virtual-entries-capability-driven: ready-for-dev
   7-6-enforce-deterministic-public-mountprovider-share-link-semantics-404-410-and-out-of-band-change-behavior: ready-for-dev
   epic-7-retrospective: optional
-  epic-8: backlog
-  8-1-refs-only-secret-fields-for-mounts-never-store-return-log-secret-material: ready-for-dev
+  epic-8: in-progress
+  8-1-refs-only-secret-fields-for-mounts-never-store-return-log-secret-material: done
   8-2-centralized-secret-resolver-with-deterministic-precedence-file-env-and-bounded-refresh: ready-for-dev
   8-3-safe-connection-session-reuse-across-secret-rotation-no-stale-credentials-no-leaks: ready-for-dev
   epic-8-retrospective: optional
@@ -67,7 +67,7 @@ development_status:
   10-1-wopi-enablement-configuration-host-allowlist-https-posture-health-gating: done
   10-2-capability-driven-wopi-action-exposure-per-backend-no-dead-buttons: done
   10-3-reverse-proxy-compatible-wopi-launch-flow-with-short-lived-tokens: done
-  10-4-s3-wopi-prerequisite-validation-bucket-versioning-with-operator-guidance: ready-for-dev
+  10-4-s3-wopi-prerequisite-validation-bucket-versioning-with-operator-guidance: done
   10-5-mountprovider-wopi-semantics-version-string-locks-ttl-release-conflict-streaming-save-pipeline: ready-for-dev
   epic-10-retrospective: optional
   epic-11: in-progress
