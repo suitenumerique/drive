@@ -1,0 +1,11 @@
+CHANGELOG.md
+src/backend/core/api/viewsets.py
+src/backend/core/services/mount_capabilities.py
+src/backend/core/tests/mounts/test_api_mounts.py
+src/frontend/apps/drive/src/features/drivers/Driver.ts
+src/frontend/apps/drive/src/features/drivers/implementations/StandardDriver.ts
+src/frontend/apps/drive/src/features/drivers/types.ts
+src/frontend/apps/drive/src/features/i18n/translations.json
+src/frontend/apps/drive/src/features/mounts/constants.ts
+src/frontend/apps/drive/src/pages/explorer/mounts/index.tsx
+src/frontend/apps/drive/src/utils/defaultRoutes.ts
