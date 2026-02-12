@@ -78,6 +78,15 @@ class ItemUploadStateChoices(models.TextChoices):
     READY = "ready", _("Ready")
 
 
+class MirrorItemTaskStatusChoices(models.TextChoices):
+    """Defines the possible statuses for a mirroring task."""
+
+    PENDING = "pending", _("Pending")
+    PROCESSING = "processing", _("Processing")
+    COMPLETED = "completed", _("Completed")
+    FAILED = "failed", _("Failed")
+
+
 class DuplicateEmailError(Exception):
     """Raised when an email is already associated with a pre-existing user."""
 
@@ -138,11 +147,11 @@ class UserManager(auth_models.UserManager):
 
             if settings.OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION:
                 try:
-                    return self.get(email=email)
+                    return self.get(email__iexact=email)
                 except self.model.DoesNotExist:
                     pass
             elif (
-                self.filter(email=email).exists()
+                self.filter(email__iexact=email).exists()
                 and not settings.OIDC_ALLOW_DUPLICATE_EMAILS
             ):
                 raise DuplicateEmailError(
@@ -228,6 +237,13 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         blank=True,
         default=dict,
         help_text=_("Claims from the OIDC token."),
+    )
+
+    last_release_note_seen = models.CharField(
+        _("last release note seen"),
+        max_length=85,
+        blank=True,
+        null=True,
     )
 
     objects = UserManager()
@@ -1094,6 +1110,31 @@ class Item(TreeModel, BaseModel):
             self._meta.model.objects.filter(pk=old_parent_id).update(**update)
 
 
+class MirrorItemTask(BaseModel):
+    """Model managing a status for a mirroring task."""
+
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="mirror_tasks",
+    )
+    status = models.CharField(
+        max_length=25,
+        choices=MirrorItemTaskStatusChoices.choices,
+        default=MirrorItemTaskStatusChoices.PENDING,
+    )
+    error_details = models.TextField(null=True, blank=True)
+    retries = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = "drive_mirror_item_task"
+        verbose_name = _("Mirror item task")
+        verbose_name_plural = _("Mirror item tasks")
+
+    def __str__(self):
+        return f"Mirror task for item {self.item!s} with status {self.status!s}"
+
+
 class LinkTrace(BaseModel):
     """
     Relation model to trace accesses to an item via a link by a logged-in user.
@@ -1415,7 +1456,7 @@ class Invitation(BaseModel):
 
         # Check if an identity already exists for the provided email
         if (
-            User.objects.filter(email=self.email).exists()
+            User.objects.filter(email__iexact=self.email).exists()
             and not settings.OIDC_ALLOW_DUPLICATE_EMAILS
         ):
             raise ValidationError(

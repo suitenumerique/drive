@@ -172,15 +172,15 @@ class WopiViewSet(viewsets.ViewSet):
             return Response(status=413)
 
         s3_client = default_storage.connection.meta.client
-        updated_file = s3_client.put_object(
-            Bucket=default_storage.bucket_name,
-            Key=item.file_key,
-            Body=file,
-        )
+        default_storage.save(item.file_key, file)
         item.size = file.size
         item.save(update_fields=["size", "updated_at"])
+
+        head_response = s3_client.head_object(
+            Bucket=default_storage.bucket_name, Key=item.file_key
+        )
         return Response(
-            status=200, headers={X_WOPI_ITEMVERSION: updated_file["VersionId"]}
+            status=200, headers={X_WOPI_ITEMVERSION: head_response["VersionId"]}
         )
 
     def detail_post(self, request, pk=None):

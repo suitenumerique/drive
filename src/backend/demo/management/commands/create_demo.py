@@ -116,12 +116,7 @@ def create_item(user):
         mimetype="text/plain",
     )
 
-    default_storage.connection.meta.client.put_object(
-        Bucket=default_storage.bucket_name,
-        Key=item.file_key,
-        Body=BytesIO(fake.sentence(nb_words=50).encode()),
-        ContentType="text/plain",
-    )
+    default_storage.save(item.file_key, BytesIO(fake.sentence(nb_words=50).encode()))
 
     return item
 

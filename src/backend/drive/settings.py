@@ -553,7 +553,11 @@ class Base(Configuration):
 
     STORAGES = {
         "default": {
-            "BACKEND": "storages.backends.s3.S3Storage",
+            "BACKEND": values.Value(
+                "storages.backends.s3.S3Storage",
+                environ_name="STORAGES_DEFAULT_BACKEND",
+                environ_prefix=None,
+            ),
             "OPTIONS": {
                 "transfer_config": TransferConfig(
                     use_threads=values.BooleanValue(
@@ -660,6 +664,43 @@ class Base(Configuration):
     )
     AWS_S3_DOMAIN_REPLACE = values.Value(
         environ_name="AWS_S3_DOMAIN_REPLACE",
+        environ_prefix=None,
+    )
+
+    # Mirroring S3 settings
+    AWS_S3_MIRRORING_ACCESS_KEY_ID = SecretFileValue(
+        environ_name="AWS_S3_MIRRORING_ACCESS_KEY_ID",
+        environ_prefix=None,
+    )
+    AWS_S3_MIRRORING_SECRET_ACCESS_KEY = SecretFileValue(
+        environ_name="AWS_S3_MIRRORING_SECRET_ACCESS_KEY",
+        environ_prefix=None,
+    )
+    AWS_S3_MIRRORING_STORAGE_BUCKET_NAME = values.Value(
+        environ_name="AWS_S3_MIRRORING_STORAGE_BUCKET_NAME",
+        environ_prefix=None,
+    )
+    AWS_S3_MIRRORING_ENDPOINT_URL = values.Value(
+        environ_name="AWS_S3_MIRRORING_ENDPOINT_URL",
+        environ_prefix=None,
+    )
+    AWS_S3_MIRRORING_REGION_NAME = values.Value(
+        environ_name="AWS_S3_MIRRORING_REGION_NAME",
+        environ_prefix=None,
+    )
+    AWS_S3_MIRRORING_SIGNATURE_VERSION = values.Value(
+        "s3v4",
+        environ_name="AWS_S3_MIRRORING_SIGNATURE_VERSION",
+        environ_prefix=None,
+    )
+    AWS_S3_MIRRORING_REQUEST_CHECKSUM_CALCULATION = values.Value(
+        "when_supported",
+        environ_name="AWS_S3_MIRRORING_REQUEST_CHECKSUM_CALCULATION",
+        environ_prefix=None,
+    )
+    AWS_S3_MIRRORING_RESPONSE_CHECKSUM_VALIDATION = values.Value(
+        "when_supported",
+        environ_name="AWS_S3_MIRRORING_RESPONSE_CHECKSUM_VALIDATION",
         environ_prefix=None,
     )
 
@@ -1462,6 +1503,10 @@ class Base(Configuration):
     FRONTEND_EXTERNAL_HOME_URL = values.Value(
         None, environ_name="FRONTEND_EXTERNAL_HOME_URL", environ_prefix=None
     )
+    FRONTEND_RELEASE_NOTE_ENABLED = values.BooleanValue(
+        default=True, environ_name="FRONTEND_RELEASE_NOTE_ENABLED", environ_prefix=None
+    )
+
     # Time-bounds for long-running UI operations (ms).
     # The UI should follow a consistent progression: loading → still working → failed.
     FRONTEND_OPERATION_TIME_BOUNDS_MS = values.DictValue(
@@ -1501,6 +1546,7 @@ class Base(Configuration):
     # Celery
     CELERY_BROKER_URL = values.Value("redis://redis:6379/0")
     CELERY_BROKER_TRANSPORT_OPTIONS = values.DictValue({})
+    CELERY_TASK_ROUTES = values.DictValue({})
 
     # Session
     SESSION_ENGINE = "django.contrib.sessions.backends.cache"

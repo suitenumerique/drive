@@ -17,9 +17,16 @@ This document lists all configurable environment variables for the Drive applica
 | `AWS_S3_SECRET_ACCESS_KEY` | AWS S3 secret access key for file storage | `None` |
 | `AWS_S3_UPLOAD_POLICY_EXPIRATION` | AWS S3 upload policy expiration time in seconds | `86400` (24h) |
 | `ITEM_UPLOAD_PENDING_TTL_SECONDS` | Pending upload TTL in seconds (after which pending items are treated as expired) | `3600` (1h) |
+| `AWS_S3_MIRRORING_ACCESS_KEY_ID` | AWS S3 access key id for the mirroring bucket | None |
+| `AWS_S3_MIRRORING_SECRET_ACCESS_KEY` | AWS S3 secret access key for the mirroring bucket | None |
+| `AWS_S3_MIRRORING_STORAGE_BUCKET_NAME` | AWS S3 bucket name for the mirroring bucket | None |
+| `AWS_S3_MIRRORING_ENDPOINT_URL` | AWS S3 endpoint url for the mirroring bucket | None |
+| `AWS_S3_MIRRORING_REGION_NAME` | AWS S3 region name for the mirroring bucket | None |
+| `AWS_S3_MIRRORING_SIGNATURE_VERSION` | AWS S3 signature version for the mirroring bucket | `s3v4` |
+| `AWS_S3_MIRRORING_REQUEST_CHECKSUM_CALCULATION` | AWS S3 request checksum calculation config for the mirroring bucket | `when_supported` |
+| `AWS_S3_MIRRORING_RESPONSE_CHECKSUM_VALIDATION` | AWS S3 response checksum calculation config for the mirroring bucket | `when_supported` |
 | `AWS_STORAGE_BUCKET_NAME` | AWS S3 bucket name for file storage | `drive-media-storage` |
 | `CACHES_DEFAULT_TIMEOUT` | Default cache timeout in seconds | `30` |
-| `CELERY_BROKER_URL` | Celery broker URL for task queue | `redis://redis:6379/0` |
 | `CORS_ALLOW_ALL_ORIGINS` | Allow all origins for CORS | `False` |
 | `CORS_ALLOWED_ORIGINS` | List of allowed origins for CORS | `[]` |
 | `CORS_ALLOWED_ORIGIN_REGEXES` | List of allowed origin regexes for CORS | `[]` |
@@ -38,6 +45,8 @@ This document lists all configurable environment variables for the Drive applica
 | `DRIVE_ALLOWED_ORIGINS` | Additional allowed origins (scheme://host[:port]) for SDK relay CORS (no wildcards). Canonical origin derived from `DRIVE_PUBLIC_URL` is always included when set. | `[]` |
 | `DRIVE_ALLOWED_REDIRECT_URIS` | Additional allowed redirect targets (absolute URIs incl. path) used to derive allowed hosts (no wildcards). Canonical root URI derived from `DRIVE_PUBLIC_URL` is always included when set. | `[]` |
 | `DRIVE_PUBLIC_URL` | Canonical public base URL (scheme + host only). Validated and normalized (trailing slash removed). | `None` |
+| `DJANGO_CELERY_BROKER_URL` | Celery broker URL for task queue | `redis://redis:6379/0` |
+| `DJANGO_CELERY_TASK_ROUTES` | Celery task routing configuration. Use this to route specific tasks to dedicated queues, e.g. `{"core.tasks.storage.mirror_file": {"queue": "mirror"}}` | `{}` |
 | `EMAIL_BACKEND` | Email backend for sending emails | `django.core.mail.backends.smtp.EmailBackend` |
 | `EMAIL_BRAND_NAME` | Brand name for email templates | `None` |
 | `EMAIL_FROM` | Default sender email address | `from@example.com` |
@@ -61,6 +70,7 @@ This document lists all configurable environment variables for the Drive applica
 | `FRONTEND_FEEDBACK_MESSAGES_WIDGET_API_URL` | API URL for feedback messages widget | `None` |
 | `FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL` | Channel for feedback messages widget | `None` |
 | `FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH` | Path for feedback messages widget | `None` |
+| `FRONTEND_RELEASE_NOTE_ENABLED` | Enable release notes modal on connexion | `True` |
 | `ITEM_FILE_MAX_SIZE` | Maximum file size for uploads in bytes | `5368709120` (5GB) |
 | `LANGUAGE_CODE` | Default language code | `en-us` |
 | `LOGIN_REDIRECT_URL` | URL to redirect after successful login | `None` |

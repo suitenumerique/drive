@@ -45,6 +45,7 @@ from rest_framework_api_key.permissions import HasAPIKey
 from core import enums, models
 from core.entitlements import get_entitlements_backend
 from core.services.mount_capabilities import normalize_mount_capabilities
+from core.services.mirror import mirror_item
 from core.services.sdk_relay import SDKRelayManager
 from core.services.search_indexers import (
     get_file_indexer,
@@ -774,6 +775,7 @@ class ItemViewSet(
                     )
 
         malware_detection.analyse_file(item.file_key, item_id=item.id)
+        mirror_item(item)
 
         serializer = self.get_serializer(item)
 
@@ -2182,6 +2184,7 @@ class ConfigView(drf.views.APIView):
             "FRONTEND_SILENT_LOGIN_ENABLED",
             "FRONTEND_EXTERNAL_HOME_URL",
             "FRONTEND_OPERATION_TIME_BOUNDS_MS",
+            "FRONTEND_RELEASE_NOTE_ENABLED",
             "MEDIA_BASE_URL",
             "POSTHOG_KEY",
             "POSTHOG_HOST",

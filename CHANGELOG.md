@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(backend) allow configuring celery task routes via `CELERY_TASK_ROUTES`
 - ✨(global) implement advanced shared management system
 - 📝(docs) add Docker-first self-host edge contract docs
 - 📝(docs) document deterministic failure reporting schema
@@ -30,6 +31,11 @@ and this project adheres to
 - ✨(mounts) prevent stale session reuse across secret rotation
   (version-bound pool)
 - ✨(wopi) disable WOPI when S3 bucket versioning is disabled
+- ✨(global) add release notes
+
+### Changed
+
+- 🚸(oidc) ignore case when fallback on email #535
 
 ### Removed
 
