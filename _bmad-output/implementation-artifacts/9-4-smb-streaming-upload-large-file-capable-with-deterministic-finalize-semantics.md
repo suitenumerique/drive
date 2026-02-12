@@ -1,6 +1,6 @@
 # Story 9.4: SMB streaming upload (large-file capable) with deterministic finalize semantics
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -46,5 +46,4 @@ So that large uploads succeed reliably without creating “ghost” entries on f
 
 
 ### File List
-
 
