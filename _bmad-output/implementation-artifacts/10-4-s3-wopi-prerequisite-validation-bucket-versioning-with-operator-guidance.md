@@ -29,14 +29,25 @@ So that operators can remediate instead of debugging opaque runtime failures.
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- `_bmad-output/implementation-artifacts/runs/20260212-084105-10.4/commands.log`
 
 ### Completion Notes List
-
+- Added deterministic S3 bucket versioning prerequisite check for WOPI.
+- Surfaced `failure_class` + `next_action_hint` on operator-facing WOPI health.
+- Verified: `make lint`, `make test-back` (PASS).
 
 ### File List
-
-
+- `src/backend/wopi/services/s3_prerequisites.py`
+- `src/backend/wopi/services/health.py`
+- `src/backend/wopi/utils/__init__.py`
+- `src/backend/wopi/tests/conftest.py`
+- `src/backend/wopi/tests/services/test_health.py`
+- `src/backend/core/tests/items/test_api_items_wopi.py`
+- `CHANGELOG.md`
+- `_bmad-output/implementation-artifacts/runs/20260212-084105-10.4/report.md`
+- `_bmad-output/implementation-artifacts/runs/20260212-084105-10.4/gates.md`
+- `_bmad-output/implementation-artifacts/runs/20260212-084105-10.4/commands.log`
+- `_bmad-output/implementation-artifacts/runs/20260212-084105-10.4/files-changed.txt`

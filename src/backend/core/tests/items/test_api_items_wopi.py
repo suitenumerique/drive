@@ -9,6 +9,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
+from wopi.services.s3_prerequisites import WOPI_S3_BUCKET_VERSIONING_CACHE_KEY
 from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
 
 pytestmark = pytest.mark.django_db
@@ -37,6 +38,16 @@ def configure_wopi_settings(valid_mimetype, valid_wopi_launch_url, settings):
     """Configure WOPI settings for testing."""
     settings.WOPI_CLIENTS = ["vendorA"]
     cache.set(
+        WOPI_S3_BUCKET_VERSIONING_CACHE_KEY,
+        {
+            "ok": True,
+            "status": "Enabled",
+            "failure_class": None,
+            "next_action_hint": None,
+            "evidence": {"s3_backend_available": True},
+        },
+    )
+    cache.set(
         WOPI_CONFIGURATION_CACHE_KEY,
         {
             "mimetypes": {
@@ -45,6 +56,43 @@ def configure_wopi_settings(valid_mimetype, valid_wopi_launch_url, settings):
             "extensions": {},
         },
     )
+
+
+def test_api_items_wopi_bucket_versioning_disabled(valid_mimetype, settings):
+    """WOPI init fails fast when S3 bucket versioning is not enabled."""
+    settings.WOPI_SRC_BASE_URL = "http://app-dev:8000"
+    cache.set(
+        WOPI_S3_BUCKET_VERSIONING_CACHE_KEY,
+        {
+            "ok": False,
+            "status": "Disabled",
+            "failure_class": "wopi.prereq.s3.bucket_versioning.disabled",
+            "next_action_hint": "Enable bucket versioning.",
+            "evidence": {"s3_backend_available": True},
+        },
+    )
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.PUBLIC,
+        type=models.ItemTypeChoices.FILE,
+        mimetype=valid_mimetype,
+    )
+    item.upload_state = models.ItemUploadStateChoices.READY
+    item.save()
+
+    client = APIClient()
+    response = client.get(f"/api/v1.0/items/{item.id!s}/wopi/")
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "detail": "Online editing is not available on this storage backend.",
+                "code": "wopi.backend_unsupported",
+                "attr": "detail",
+            }
+        ],
+        "type": "validation_error",
+    }
 
 
 def test_api_items_wopi_not_existing_item():

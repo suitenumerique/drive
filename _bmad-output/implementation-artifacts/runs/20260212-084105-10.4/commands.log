@@ -1,0 +1,4 @@
+# Story 10.4 verification commands (no-leak)
+
+make lint
+make test-back
