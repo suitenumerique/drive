@@ -69,4 +69,3 @@ def test_rotating_resource_factory_failure_is_no_leak():
     err = excinfo.value
     assert err.failure_class == "mount.session.init_failed"
     assert "pw1" not in str(err)
-

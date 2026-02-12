@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import threading
-from typing import Callable, Generic, TypeVar, TypedDict
+from typing import Callable, Generic, TypedDict, TypeVar
 
 CredentialsT = TypeVar("CredentialsT")
 ResourceT = TypeVar("ResourceT")
@@ -69,7 +69,7 @@ class RotatingResource(Generic[CredentialsT, ResourceT]):
 
             try:
                 resource = self._factory(credentials)
-            except Exception:
+            except Exception:  # noqa: BLE001 # pylint: disable=broad-exception-caught
                 raise RotatingResourceError(
                     failure_class="mount.session.init_failed",
                     next_action_hint=(
@@ -82,4 +82,3 @@ class RotatingResource(Generic[CredentialsT, ResourceT]):
             self._resource = resource
             self._version = version
             return resource
-
