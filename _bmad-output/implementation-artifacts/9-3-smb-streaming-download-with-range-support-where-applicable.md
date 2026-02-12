@@ -1,6 +1,6 @@
 # Story 9.3: SMB streaming download with Range support where applicable
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -42,5 +42,4 @@ So that large downloads work efficiently and reliably.
 
 
 ### File List
-
 
