@@ -90,6 +90,41 @@ def _validate_public_surface_base_url(
         ) from None
 
 
+def _apply_wopi_enablement_defaults(
+    cls,
+    *,
+    https_only_posture: bool,
+    debug: bool,
+    allow_insecure_http: bool,
+) -> None:
+    """
+    Apply WOPI safe-by-default defaults/validations when WOPI is enabled.
+
+    WOPI is considered enabled when WOPI_CLIENTS is non-empty.
+    """
+    if cls.WOPI_CLIENTS and cls.WOPI_SRC_BASE_URL is None:
+        if cls.DRIVE_PUBLIC_URL is not None:
+            cls.WOPI_SRC_BASE_URL = cls.DRIVE_PUBLIC_URL
+        else:
+            raise ValueError(
+                "Invalid WOPI_SRC_BASE_URL configuration. "
+                "failure_class=config.wopi.src_base_url.missing "
+                "next_action_hint=Set DRIVE_PUBLIC_URL (recommended) or "
+                "WOPI_SRC_BASE_URL to the canonical public base URL."
+            )
+
+    if cls.WOPI_SRC_BASE_URL is None:
+        return
+
+    cls.WOPI_SRC_BASE_URL = _validate_public_surface_base_url(
+        cls.WOPI_SRC_BASE_URL,
+        setting_name="WOPI_SRC_BASE_URL",
+        https_only_posture=https_only_posture,
+        debug=debug,
+        allow_insecure_http=allow_insecure_http,
+    )
+
+
 def _normalize_oidc_redirect_allowed_hosts(
     raw_hosts: list[str],
     *,
@@ -1887,14 +1922,12 @@ class Base(Configuration):
             allow_insecure_http=allow_insecure_http,
         )
 
-        if cls.WOPI_SRC_BASE_URL is not None:
-            cls.WOPI_SRC_BASE_URL = _validate_public_surface_base_url(
-                cls.WOPI_SRC_BASE_URL,
-                setting_name="WOPI_SRC_BASE_URL",
-                https_only_posture=https_only_posture,
-                debug=debug,
-                allow_insecure_http=allow_insecure_http,
-            )
+        _apply_wopi_enablement_defaults(
+            cls,
+            https_only_posture=https_only_posture,
+            debug=debug,
+            allow_insecure_http=allow_insecure_http,
+        )
 
         if https_only_posture:
             cls.OIDC_REDIRECT_REQUIRE_HTTPS = True

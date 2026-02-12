@@ -1,0 +1,8 @@
+_bmad-output/implementation-artifacts/10-1-wopi-enablement-configuration-host-allowlist-https-posture-health-gating.md
+docs/env.md
+src/backend/core/management/commands/config_preflight.py
+src/backend/core/tests/commands/test_config_preflight.py
+src/backend/core/tests/test_settings.py
+src/backend/drive/settings.py
+src/backend/wopi/management/commands/wopi_health.py
+src/backend/wopi/services/health.py

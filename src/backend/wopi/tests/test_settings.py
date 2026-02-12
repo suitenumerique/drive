@@ -19,6 +19,8 @@ def test_valid_wopi_configuration(monkeypatch):
         """Fake test settings."""
 
         WOPI_CLIENTS = ["vendorA", "vendorB"]
+        DRIVE_PUBLIC_URL = "https://drive.example.test"
+        WOPI_SRC_BASE_URL = None
         WOPI_CLIENTS_CONFIGURATION = {}
 
     TestSettings.post_setup()
@@ -47,10 +49,12 @@ def test_wopi_configuration_missing_discovery_url():
         """Fake test settings."""
 
         WOPI_CLIENTS = ["vendorA"]
+        DRIVE_PUBLIC_URL = "https://drive.example.test"
+        WOPI_SRC_BASE_URL = None
         WOPI_CLIENTS_CONFIGURATION = {}
 
     with pytest.raises(ValueError) as excinfo:
-        TestSettings().post_setup()
+        TestSettings.post_setup()
 
     assert str(excinfo.value) == (
         "Value 'WOPI_VENDORA_DISCOVERY_URL' is required to be set as the environment"
