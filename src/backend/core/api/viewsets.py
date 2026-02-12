@@ -44,6 +44,7 @@ from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
 from core.entitlements import get_entitlements_backend
+from core.services.mount_capabilities import normalize_mount_capabilities
 from core.services.sdk_relay import SDKRelayManager
 from core.services.search_indexers import (
     get_file_indexer,
@@ -2333,7 +2334,7 @@ class EntitlementsViewset(viewsets.ViewSet):
 
 
 class MountViewSet(viewsets.ViewSet):
-    """List configured mounts for end-user discovery (enabled only)."""
+    """Mount discovery endpoint (enabled only, no-leak)."""
 
     permission_classes = [permissions.IsAuthenticated]
     lookup_field = "mount_id"
@@ -2344,11 +2345,25 @@ class MountViewSet(viewsets.ViewSet):
         mounts = list(getattr(settings, "MOUNTS_REGISTRY", []) or [])
         return [m for m in mounts if bool(m.get("enabled", True))]
 
+    def _discovery_mount(self, mount: dict) -> dict:
+        params = mount.get("params") or {}
+        capabilities_raw = (
+            params.get("capabilities") if isinstance(params, dict) else {}
+        )
+        capabilities = normalize_mount_capabilities(capabilities_raw)
+        return {
+            "mount_id": mount.get("mount_id"),
+            "display_name": mount.get("display_name"),
+            "provider": mount.get("provider"),
+            "capabilities": capabilities,
+        }
+
     def list(self, request):
         """
         GET /api/v1.0/mounts/
         """
-        return drf.response.Response(self._enabled_mounts(), status=status.HTTP_200_OK)
+        mounts = [self._discovery_mount(m) for m in self._enabled_mounts()]
+        return drf.response.Response(mounts, status=status.HTTP_200_OK)
 
     def retrieve(self, request, mount_id: str | None = None):
         """
@@ -2359,7 +2374,9 @@ class MountViewSet(viewsets.ViewSet):
         target = mount_id or self.kwargs.get(self.lookup_url_kwarg) or ""
         for mount in self._enabled_mounts():
             if mount.get("mount_id") == target:
-                return drf.response.Response(mount, status=status.HTTP_200_OK)
+                return drf.response.Response(
+                    self._discovery_mount(mount), status=status.HTTP_200_OK
+                )
 
         raise drf.exceptions.NotFound(
             drf.exceptions.ErrorDetail("Mount not found.", code="mount.not_found")

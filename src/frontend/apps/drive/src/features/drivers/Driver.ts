@@ -20,6 +20,7 @@ import {
   User,
   WopiInfo,
   WorkspaceType,
+  MountDiscovery,
 } from "./types";
 
 export enum ItemFiltersScope {
@@ -135,4 +136,6 @@ export abstract class Driver {
   abstract getWopiInfo(itemId: string): Promise<WopiInfo>;
 
   abstract getEntitlements(): Promise<Entitlements>;
+
+  abstract getMountsDiscovery(): Promise<MountDiscovery[]>;
 }

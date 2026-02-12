@@ -31,6 +31,7 @@ import {
   ItemType,
   User,
   WopiInfo,
+  MountDiscovery,
 } from "../types";
 import { DTODeleteAccess } from "../DTOs/AccessesDTO";
 
@@ -528,6 +529,12 @@ export class StandardDriver extends Driver {
 
   async getEntitlements(): Promise<Entitlements> {
     const response = await fetchAPI(`entitlements/`);
+    const data = await response.json();
+    return data;
+  }
+
+  async getMountsDiscovery(): Promise<MountDiscovery[]> {
+    const response = await fetchAPI(`mounts/`);
     const data = await response.json();
     return data;
   }

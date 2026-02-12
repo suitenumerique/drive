@@ -34,14 +34,29 @@ So that the Explorer can render mount surfaces and actions without dead buttons.
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- `_bmad-output/implementation-artifacts/runs/20260212-101451-7.2/`
 
 ### Completion Notes List
-
+- Updated mounts discovery endpoint to return a no-leak schema with a capability
+  map keyed by contract constants.
+- Added `/explorer/mounts` UI entry point wired to discovery and capability
+  rendering (no dead actions).
+- Added backend helper to normalize/enforce capability keys.
+- Updated backend tests for the new discovery schema and no-leak constraints.
 
 ### File List
-
-
+- `src/backend/core/services/mount_capabilities.py`
+- `src/backend/core/api/viewsets.py`
+- `src/backend/core/tests/mounts/test_api_mounts.py`
+- `src/frontend/apps/drive/src/features/mounts/constants.ts`
+- `src/frontend/apps/drive/src/features/drivers/Driver.ts`
+- `src/frontend/apps/drive/src/features/drivers/types.ts`
+- `src/frontend/apps/drive/src/features/drivers/implementations/StandardDriver.ts`
+- `src/frontend/apps/drive/src/utils/defaultRoutes.ts`
+- `src/frontend/apps/drive/src/pages/explorer/mounts/index.tsx`
+- `src/frontend/apps/drive/src/features/i18n/translations.json`
+- `CHANGELOG.md`
+- `_bmad-output/implementation-artifacts/runs/20260212-101451-7.2/`
