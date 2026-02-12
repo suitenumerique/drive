@@ -60,7 +60,7 @@ def _normalize_optional_timeout_seconds(value: Any) -> int | None:
     return value
 
 
-def _normalize_smb_params(params: dict[str, Any]) -> dict[str, Any]:
+def _normalize_smb_params(params: dict[str, Any]) -> dict[str, Any]:  # noqa: PLR0912
     """Normalize SMB mount params with defaults (deterministic, no-leak)."""
 
     normalized = dict(params)
@@ -98,10 +98,16 @@ def _normalize_smb_params(params: dict[str, Any]) -> dict[str, Any]:
         except MountPathNormalizationError as exc:
             raise ValueError("base_path.invalid_value") from exc
 
-    for timeout_key in ("connect_timeout_seconds", "operation_timeout_seconds", "timeout_seconds"):
+    for timeout_key in (
+        "connect_timeout_seconds",
+        "operation_timeout_seconds",
+        "timeout_seconds",
+    ):
         if timeout_key not in normalized:
             continue
-        normalized[timeout_key] = _normalize_optional_timeout_seconds(normalized.get(timeout_key))
+        normalized[timeout_key] = _normalize_optional_timeout_seconds(
+            normalized.get(timeout_key)
+        )
 
     return normalized
 
@@ -120,7 +126,7 @@ def _is_json_primitive(value: Any) -> bool:
     return False
 
 
-def validate_mounts_registry(raw: Any) -> list[dict[str, Any]]:
+def validate_mounts_registry(raw: Any) -> list[dict[str, Any]]:  # noqa: PLR0912, PLR0915
     """
     Validate mounts registry definitions.
 
