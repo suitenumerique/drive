@@ -59,8 +59,8 @@ from core.services.search_indexers import (
     get_visited_items_ids_of,
 )
 from core.tasks.item import process_item_deletion, rename_file
-from core.utils.no_leak import safe_str_hash
 from core.utils.keyed_hash import hmac_sha256_16
+from core.utils.no_leak import safe_str_hash
 from core.utils.public_url import join_public_url
 from core.utils.share_links import validate_item_share_token
 from wopi.services import access as access_service
@@ -103,6 +103,8 @@ MEDIA_STORAGE_URL_PATTERN = re.compile(
 
 
 class MountShareLinkGone(APIException):
+    """Public mount share link is known but no longer resolvable (410 Gone)."""
+
     status_code = 410
     default_detail = "Link expired or target moved."
     default_code = "mount.share_link.gone"
@@ -1896,7 +1898,9 @@ class MountShareLinkViewSet(viewsets.GenericViewSet):
             return "/"
         return normalize_mount_path("/" + abs_norm[len(prefix) :].lstrip("/"))
 
-    def _entry_payload(self, *, normalized_path: str, entry: MountEntry) -> dict[str, object]:
+    def _entry_payload(
+        self, *, normalized_path: str, entry: MountEntry
+    ) -> dict[str, object]:
         payload: dict[str, object] = {
             "normalized_path": normalized_path,
             "entry_type": entry.entry_type,
@@ -1909,7 +1913,7 @@ class MountShareLinkViewSet(viewsets.GenericViewSet):
         return payload
 
     @drf.decorators.action(detail=True, methods=["get"], url_path="browse")
-    def browse(self, request, pk=None):
+    def browse(self, request, pk=None):  # pylint: disable=too-many-locals
         """
         GET /api/v1.0/mount-share-links/{token}/browse/?path=/&limit=..&offset=..
 
@@ -1984,7 +1988,9 @@ class MountShareLinkViewSet(viewsets.GenericViewSet):
                 }
             ) from None
 
-        rel_path = self._rel_under_root(root=root_abs, absolute=entry_abs.normalized_path)
+        rel_path = self._rel_under_root(
+            root=root_abs, absolute=entry_abs.normalized_path
+        )
         entry_payload = self._entry_payload(normalized_path=rel_path, entry=entry_abs)
         MountShareLinkPublicEntrySerializer(data=entry_payload).is_valid(
             raise_exception=True
@@ -2002,7 +2008,9 @@ class MountShareLinkViewSet(viewsets.GenericViewSet):
             return drf.response.Response(payload, status=status.HTTP_200_OK)
 
         try:
-            children_abs = provider.list_children(mount=mount, normalized_path=target_abs)
+            children_abs = provider.list_children(
+                mount=mount, normalized_path=target_abs
+            )
         except MountProviderError as exc:
             logger.info(
                 "mount_share_open: children_failed "
@@ -2022,8 +2030,12 @@ class MountShareLinkViewSet(viewsets.GenericViewSet):
 
         children_payload: list[dict[str, object]] = []
         for child in children_abs:
-            rel_child = self._rel_under_root(root=root_abs, absolute=child.normalized_path)
-            children_payload.append(self._entry_payload(normalized_path=rel_child, entry=child))
+            rel_child = self._rel_under_root(
+                root=root_abs, absolute=child.normalized_path
+            )
+            children_payload.append(
+                self._entry_payload(normalized_path=rel_child, entry=child)
+            )
 
         children_sorted = sorted(
             children_payload,
