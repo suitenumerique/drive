@@ -6,8 +6,11 @@ import { AppExplorer } from "@/features/explorer/components/app-view/AppExplorer
 import { setFromRoute } from "@/features/explorer/utils/utils";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { useEffect } from "react";
+import { ItemType } from "@/features/drivers/types";
 export default function RecentPage() {
-  const [filters, setFilters] = useState<ItemFilters>({});
+  const [filters, setFilters] = useState<ItemFilters>({
+    type: ItemType.FILE,
+  });
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteRecentItems(filters);
