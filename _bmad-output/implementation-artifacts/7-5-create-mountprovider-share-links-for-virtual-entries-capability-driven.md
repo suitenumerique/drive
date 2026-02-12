@@ -1,6 +1,6 @@
 # Story 7.5: Create MountProvider share links for virtual entries (capability-driven)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -34,14 +34,36 @@ So that I can share mount content consistently with S3 sharing.
 ## Dev Agent Record
 
 ### Agent Model Used
+GPT-5.2 (Codex CLI)
 
 
 ### Debug Log References
+- `_bmad-output/implementation-artifacts/runs/20260212-140328-7.5/`
 
 
 ### Completion Notes List
+- Added `MountShareLink` model + migration to map share tokens to mount virtual
+  entries `(mount_id, normalized_path)`.
+- Implemented `POST /api/v1.0/mounts/{mount_id}/share-links/` gated by
+  `mount.share_link`, with deterministic path normalization and
+  `DRIVE_PUBLIC_URL`-derived share URLs.
+- Updated mount browse UI to create and display mount share links when the
+  capability is enabled.
+- Added backend tests covering capability gating, path normalization, and
+  idempotent token creation.
 
 
 ### File List
-
+- `src/backend/core/models.py`
+- `src/backend/core/migrations/0021_mount_share_link.py`
+- `src/backend/core/api/serializers_mounts.py`
+- `src/backend/core/api/viewsets.py`
+- `src/backend/core/tests/mounts/test_api_mounts_share_links_create.py`
+- `src/frontend/apps/drive/src/features/drivers/types.ts`
+- `src/frontend/apps/drive/src/features/drivers/Driver.ts`
+- `src/frontend/apps/drive/src/features/drivers/implementations/StandardDriver.ts`
+- `src/frontend/apps/drive/src/pages/explorer/mounts/[mount_id].tsx`
+- `src/frontend/apps/drive/src/features/i18n/translations.json`
+- `CHANGELOG.md`
+- `_bmad-output/implementation-artifacts/runs/20260212-140328-7.5/`
 

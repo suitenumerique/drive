@@ -1,0 +1,57 @@
+{
+  "catalog_version": "v1",
+  "diff_base": "origin/main",
+  "gate_results": [
+    {
+      "duration_ms": 25692,
+      "failure_class": null,
+      "gate_id": "backend.lint",
+      "next_action_hint": null,
+      "result": "pass"
+    },
+    {
+      "duration_ms": 84769,
+      "failure_class": null,
+      "gate_id": "backend.tests",
+      "next_action_hint": null,
+      "result": "pass"
+    },
+    {
+      "duration_ms": 0,
+      "failure_class": null,
+      "gate_id": "docs.consistency",
+      "next_action_hint": null,
+      "result": "pass"
+    },
+    {
+      "duration_ms": 3794,
+      "failure_class": null,
+      "gate_id": "frontend.lint",
+      "next_action_hint": null,
+      "result": "pass"
+    },
+    {
+      "duration_ms": 50,
+      "failure_class": null,
+      "gate_id": "no_leak.scan_bmad_output",
+      "next_action_hint": null,
+      "result": "pass"
+    }
+  ],
+  "git_head": "b8a691e4ee022b056d2f11e99e77ce869c990d61",
+  "requested_gates": [
+    "backend.lint",
+    "backend.tests",
+    "frontend.lint",
+    "docs.consistency",
+    "no_leak.scan_bmad_output"
+  ],
+  "result": "pass",
+  "selected_gates": [
+    "backend.lint",
+    "backend.tests",
+    "frontend.lint",
+    "docs.consistency",
+    "no_leak.scan_bmad_output"
+  ]
+}
