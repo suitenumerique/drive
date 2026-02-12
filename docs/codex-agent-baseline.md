@@ -15,6 +15,11 @@ or acceptance criteria). Those belong in the per-session text prompt.
 
 - **Docker-first**: prefer compose-path changes; keep changes minimal.
 - **Do not remove/modify existing K8s/Helm assets**: they stay reference-only.
+- **Do not add out-of-scope features**:
+  - Implement only what the story asks for (AC/tasks).
+  - Avoid opportunistic refactors or UI/UX changes unless explicitly required.
+  - If a dependency is missing (e.g. a provider not implemented yet), implement
+    only the deterministic contract surface and keep runtime behavior safe.
 - **No-leak** (mandatory):
   - Never put secrets in diffs, docs, artifacts, or logs.
   - Do not paste signed URLs, SigV4 headers, credentials, tokens, or secret refs.
@@ -22,6 +27,18 @@ or acceptance criteria). Those belong in the per-session text prompt.
 - **Fail-fast validation** when a story requires it:
   - Deterministic `failure_class` + `next_action_hint`.
   - Error messages must be actionable and must not echo sensitive inputs.
+
+## Tooling available (Codex dev environment)
+
+- `git` is available (branching/commits/merge-from-main/push).
+- GitHub CLI `gh` is available and may be used when it helps:
+  - Create/update PRs (`gh pr create`, `gh pr edit`, `gh pr view`, `gh pr checks`)
+  - Manage labels (e.g. add `noChangeLog` early)
+  - Confirm required checks are green (do not wait on non-blocking checks)
+
+If `gh` or `git push` fails due to auth/permissions:
+- Record the exact error text in the run artifacts (no secrets).
+- Stop and report the blocker (do not claim “pushed” / “PR updated”).
 
 ## Branching / PR workflow (speed + safety)
 
