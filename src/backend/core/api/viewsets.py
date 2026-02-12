@@ -19,6 +19,7 @@ from django.db import IntegrityError, transaction
 from django.db import models as db
 from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
+from django.http import HttpResponse, StreamingHttpResponse
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
@@ -3010,26 +3011,147 @@ class MountViewSet(viewsets.ViewSet):
         """
         Download a mount entry.
 
-        This endpoint is contract-level and currently returns a deterministic
-        no-leak error when download is not available.
+        This endpoint streams content for providers that support download.
         """
 
         target = mount_id or self.kwargs.get(self.lookup_url_kwarg) or ""
-        self._get_enabled_mount_or_404(target)
+        mount = self._get_enabled_mount_or_404(target)
         normalized_path = self._normalized_path_from_request(request)
-        logger.info(
-            "mount_download: unavailable "
-            "(failure_class=mount.download.unavailable "
-            "next_action_hint=Configure a provider that supports download "
-            "mount_id=%s path_hash=%s)",
-            target,
-            safe_str_hash(normalized_path),
+
+        provider = get_mount_provider(str(mount.get("provider") or ""))
+
+        if not hasattr(provider, "open_read"):
+            logger.info(
+                "mount_download: unavailable "
+                "(failure_class=mount.download.unavailable "
+                "next_action_hint=Configure a provider that supports download "
+                "mount_id=%s path_hash=%s)",
+                target,
+                safe_str_hash(normalized_path),
+            )
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Download is not available for this mount.",
+                        code="mount.download.unavailable",
+                    )
+                }
+            )
+
+        try:
+            entry = provider.stat(mount=mount, normalized_path=normalized_path)
+        except MountProviderError as exc:
+            if exc.public_code == "mount.path.not_found":
+                raise drf.exceptions.NotFound(
+                    drf.exceptions.ErrorDetail(
+                        "Mount path not found.", code="mount.path.not_found"
+                    )
+                ) from exc
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        exc.public_message, code=exc.public_code
+                    )
+                }
+            ) from exc
+
+        if entry.entry_type != "file":
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Mount path is not a file.", code="mount.path.not_a_file"
+                    )
+                }
+            )
+
+        total_size = int(entry.size or 0)
+        range_header = str(request.META.get("HTTP_RANGE") or "").strip()
+        supports_range = bool(
+            getattr(provider, "supports_range_reads", lambda **_: False)(mount=mount)
         )
-        raise drf.exceptions.ValidationError(
-            {
-                "detail": drf.exceptions.ErrorDetail(
-                    "Download is not available for this mount.",
-                    code="mount.download.unavailable",
-                )
-            }
+
+        def _parse_range(
+            *, header_value: str, size: int
+        ) -> tuple[int, int] | None | str:
+            if not header_value or not header_value.startswith("bytes="):
+                return None
+            if not supports_range:
+                return None
+
+            spec = header_value[len("bytes=") :].strip()
+            if "," in spec:
+                return "invalid"
+            if "-" not in spec:
+                return "invalid"
+            start_s, end_s = (s.strip() for s in spec.split("-", 1))
+
+            if size <= 0:
+                return "unsatisfiable"
+
+            try:
+                if start_s == "":
+                    suffix_len = int(end_s)
+                    if suffix_len <= 0:
+                        return "invalid"
+                    start = max(size - suffix_len, 0)
+                    end = size - 1
+                else:
+                    start = int(start_s)
+                    end = int(end_s) if end_s != "" else size - 1
+            except ValueError:
+                return "invalid"
+
+            if start < 0 or end < start:
+                return "invalid"
+            if start >= size:
+                return "unsatisfiable"
+            end = min(end, size - 1)
+            return (start, end)
+
+        parsed_range = _parse_range(header_value=range_header, size=total_size)
+        if parsed_range in {"invalid", "unsatisfiable"}:
+            resp = HttpResponse(status=416)
+            resp["Accept-Ranges"] = "bytes"
+            resp["Content-Range"] = f"bytes */{total_size}"
+            return resp
+
+        start, end = (0, max(total_size - 1, 0))
+        status_code = 200
+        if isinstance(parsed_range, tuple):
+            start, end = parsed_range
+            status_code = 206
+
+        chunk_size = 64 * 1024
+        content_length = (end - start + 1) if total_size > 0 else 0
+
+        def _stream():
+            try:
+                with provider.open_read(mount=mount, normalized_path=normalized_path) as f:
+                    if start:
+                        f.seek(start)
+                    remaining = content_length
+                    while remaining > 0:
+                        data = f.read(min(chunk_size, remaining))
+                        if not data:
+                            break
+                        remaining -= len(data)
+                        yield data
+            except MountProviderError:
+                return
+            except Exception:  # noqa: BLE001
+                return
+
+        filename = str(entry.name or "download")
+        content_type = "application/octet-stream"
+        resp = StreamingHttpResponse(
+            streaming_content=_stream(),
+            content_type=content_type,
+            status=status_code,
         )
+        if supports_range:
+            resp["Accept-Ranges"] = "bytes"
+        resp["Content-Disposition"] = f"attachment; filename*=UTF-8''{quote(filename)}"
+        resp["Content-Length"] = str(content_length)
+        if status_code == 206:
+            resp["Content-Range"] = f"bytes {start}-{end}/{total_size}"
+        return resp
