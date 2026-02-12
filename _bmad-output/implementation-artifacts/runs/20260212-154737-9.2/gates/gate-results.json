@@ -1,0 +1,16 @@
+[
+  {
+    "gate_id": "backend.lint",
+    "result": "pass",
+    "duration_ms": 18198,
+    "failure_class": null,
+    "next_action_hint": null
+  },
+  {
+    "gate_id": "backend.tests",
+    "result": "pass",
+    "duration_ms": 83954,
+    "failure_class": null,
+    "next_action_hint": null
+  }
+]
