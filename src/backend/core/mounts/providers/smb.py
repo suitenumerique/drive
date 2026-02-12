@@ -7,7 +7,7 @@ import errno
 import posixpath
 import stat as statlib
 import threading
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
 from typing import Any
 
@@ -460,7 +460,7 @@ def list_children(*, mount: dict, normalized_path: str) -> list[MountEntry]:
     )
 
 
-def supports_range_reads(*, mount: dict) -> bool:  # noqa: ARG001
+def supports_range_reads(*, _mount: dict) -> bool:
     """Return whether this provider supports range reads (v2: download)."""
 
     return True
@@ -491,7 +491,5 @@ def open_read(*, mount: dict, normalized_path: str):
     try:
         yield f
     finally:
-        try:
+        with suppress(Exception):
             f.close()
-        except Exception:  # noqa: BLE001
-            pass

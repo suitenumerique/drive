@@ -15,6 +15,8 @@ pytestmark = pytest.mark.django_db
 
 
 def _make_smb_mount(*, mount_id: str) -> dict:
+    """Return a minimal SMB mount registry entry for API tests."""
+
     return {
         "mount_id": mount_id,
         "display_name": mount_id,
@@ -25,11 +27,13 @@ def _make_smb_mount(*, mount_id: str) -> dict:
 
 
 def test_api_mount_download_streams_full_response(monkeypatch, settings):
+    """Download returns a streaming 200 response for SMB mounts."""
+
     settings.MOUNTS_REGISTRY = [_make_smb_mount(mount_id="alpha-mount")]
 
     content = b"0123456789"
 
-    def _fake_stat(*, mount: dict, normalized_path: str) -> MountEntry:  # noqa: ARG001
+    def _fake_stat(*, _mount: dict, normalized_path: str) -> MountEntry:
         return MountEntry(
             entry_type="file",
             normalized_path=normalized_path,
@@ -39,7 +43,7 @@ def test_api_mount_download_streams_full_response(monkeypatch, settings):
         )
 
     @contextlib.contextmanager
-    def _fake_open_read(*, mount: dict, normalized_path: str):  # noqa: ARG001
+    def _fake_open_read(*, _mount: dict, _normalized_path: str):
         yield io.BytesIO(content)
 
     monkeypatch.setattr("core.mounts.providers.smb.stat", _fake_stat)
@@ -59,11 +63,13 @@ def test_api_mount_download_streams_full_response(monkeypatch, settings):
 
 
 def test_api_mount_download_supports_single_range(monkeypatch, settings):
+    """Download supports a single bytes Range request with 206 semantics."""
+
     settings.MOUNTS_REGISTRY = [_make_smb_mount(mount_id="alpha-mount")]
 
     content = b"0123456789"
 
-    def _fake_stat(*, mount: dict, normalized_path: str) -> MountEntry:  # noqa: ARG001
+    def _fake_stat(*, _mount: dict, normalized_path: str) -> MountEntry:
         return MountEntry(
             entry_type="file",
             normalized_path=normalized_path,
@@ -73,7 +79,7 @@ def test_api_mount_download_supports_single_range(monkeypatch, settings):
         )
 
     @contextlib.contextmanager
-    def _fake_open_read(*, mount: dict, normalized_path: str):  # noqa: ARG001
+    def _fake_open_read(*, _mount: dict, _normalized_path: str):
         yield io.BytesIO(content)
 
     monkeypatch.setattr("core.mounts.providers.smb.stat", _fake_stat)
@@ -97,11 +103,13 @@ def test_api_mount_download_supports_single_range(monkeypatch, settings):
 
 
 def test_api_mount_download_rejects_unsatisfiable_range(monkeypatch, settings):
+    """Download returns 416 for unsatisfiable Range requests."""
+
     settings.MOUNTS_REGISTRY = [_make_smb_mount(mount_id="alpha-mount")]
 
     content = b"0123456789"
 
-    def _fake_stat(*, mount: dict, normalized_path: str) -> MountEntry:  # noqa: ARG001
+    def _fake_stat(*, _mount: dict, normalized_path: str) -> MountEntry:
         return MountEntry(
             entry_type="file",
             normalized_path=normalized_path,
@@ -111,7 +119,7 @@ def test_api_mount_download_rejects_unsatisfiable_range(monkeypatch, settings):
         )
 
     @contextlib.contextmanager
-    def _fake_open_read(*, mount: dict, normalized_path: str):  # noqa: ARG001
+    def _fake_open_read(*, _mount: dict, _normalized_path: str):
         yield io.BytesIO(content)
 
     monkeypatch.setattr("core.mounts.providers.smb.stat", _fake_stat)

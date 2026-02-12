@@ -2704,6 +2704,101 @@ class MountViewSet(viewsets.ViewSet):
             payload["modified_at"] = entry.modified_at
         return payload
 
+    def _mount_entry_file_or_400(
+        self,
+        *,
+        provider,
+        mount: dict,
+        normalized_path: str,
+    ) -> MountEntry:
+        try:
+            entry = provider.stat(mount=mount, normalized_path=normalized_path)
+        except MountProviderError as exc:
+            if exc.public_code == "mount.path.not_found":
+                raise drf.exceptions.NotFound(
+                    drf.exceptions.ErrorDetail(
+                        "Mount path not found.", code="mount.path.not_found"
+                    )
+                ) from exc
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        exc.public_message, code=exc.public_code
+                    )
+                }
+            ) from exc
+
+        if entry.entry_type != "file":
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Mount path is not a file.", code="mount.path.not_a_file"
+                    )
+                }
+            )
+
+        return entry
+
+    @staticmethod
+    def _parse_single_bytes_range(
+        *, header_value: str, size: int
+    ) -> tuple[int, int] | None:
+        if not header_value or not header_value.startswith("bytes="):
+            return None
+
+        spec = header_value[len("bytes=") :].strip()
+        if "," in spec or "-" not in spec:
+            raise ValueError("invalid_range")
+
+        if size <= 0:
+            raise IndexError("unsatisfiable_range")
+
+        start_s, end_s = (s.strip() for s in spec.split("-", 1))
+        try:
+            if start_s == "":
+                suffix_len = int(end_s)
+                if suffix_len <= 0:
+                    raise ValueError("invalid_range")
+                start = max(size - suffix_len, 0)
+                end = size - 1
+            else:
+                start = int(start_s)
+                end = int(end_s) if end_s != "" else size - 1
+        except ValueError as exc:
+            raise ValueError("invalid_range") from exc
+
+        if start < 0 or end < start:
+            raise ValueError("invalid_range")
+        if start >= size:
+            raise IndexError("unsatisfiable_range")
+        end = min(end, size - 1)
+        return (start, end)
+
+    @staticmethod
+    def _iter_provider_file(
+        *,
+        provider,
+        mount: dict,
+        normalized_path: str,
+        slice_spec: tuple[int, int, int],
+    ):
+        start, length, chunk_size = slice_spec
+        try:
+            with provider.open_read(mount=mount, normalized_path=normalized_path) as f:
+                if start:
+                    f.seek(start)
+                remaining = length
+                while remaining > 0:
+                    data = f.read(min(chunk_size, remaining))
+                    if not data:
+                        break
+                    remaining -= len(data)
+                    yield data
+        except MountProviderError:
+            return
+        except (OSError, ValueError):
+            return
+
     @drf.decorators.action(detail=True, methods=["get"], url_path="browse")
     def browse(self, request, mount_id: str | None = None):
         """
@@ -3038,31 +3133,11 @@ class MountViewSet(viewsets.ViewSet):
                 }
             )
 
-        try:
-            entry = provider.stat(mount=mount, normalized_path=normalized_path)
-        except MountProviderError as exc:
-            if exc.public_code == "mount.path.not_found":
-                raise drf.exceptions.NotFound(
-                    drf.exceptions.ErrorDetail(
-                        "Mount path not found.", code="mount.path.not_found"
-                    )
-                ) from exc
-            raise drf.exceptions.ValidationError(
-                {
-                    "detail": drf.exceptions.ErrorDetail(
-                        exc.public_message, code=exc.public_code
-                    )
-                }
-            ) from exc
-
-        if entry.entry_type != "file":
-            raise drf.exceptions.ValidationError(
-                {
-                    "detail": drf.exceptions.ErrorDetail(
-                        "Mount path is not a file.", code="mount.path.not_a_file"
-                    )
-                }
-            )
+        entry = self._mount_entry_file_or_400(
+            provider=provider,
+            mount=mount,
+            normalized_path=normalized_path,
+        )
 
         total_size = int(entry.size or 0)
         range_header = str(request.META.get("HTTP_RANGE") or "").strip()
@@ -3070,50 +3145,17 @@ class MountViewSet(viewsets.ViewSet):
             getattr(provider, "supports_range_reads", lambda **_: False)(mount=mount)
         )
 
-        def _parse_range(
-            *, header_value: str, size: int
-        ) -> tuple[int, int] | None | str:
-            if not header_value or not header_value.startswith("bytes="):
-                return None
-            if not supports_range:
-                return None
-
-            spec = header_value[len("bytes=") :].strip()
-            if "," in spec:
-                return "invalid"
-            if "-" not in spec:
-                return "invalid"
-            start_s, end_s = (s.strip() for s in spec.split("-", 1))
-
-            if size <= 0:
-                return "unsatisfiable"
-
+        parsed_range: tuple[int, int] | None = None
+        if supports_range and range_header:
             try:
-                if start_s == "":
-                    suffix_len = int(end_s)
-                    if suffix_len <= 0:
-                        return "invalid"
-                    start = max(size - suffix_len, 0)
-                    end = size - 1
-                else:
-                    start = int(start_s)
-                    end = int(end_s) if end_s != "" else size - 1
-            except ValueError:
-                return "invalid"
-
-            if start < 0 or end < start:
-                return "invalid"
-            if start >= size:
-                return "unsatisfiable"
-            end = min(end, size - 1)
-            return (start, end)
-
-        parsed_range = _parse_range(header_value=range_header, size=total_size)
-        if parsed_range in {"invalid", "unsatisfiable"}:
-            resp = HttpResponse(status=416)
-            resp["Accept-Ranges"] = "bytes"
-            resp["Content-Range"] = f"bytes */{total_size}"
-            return resp
+                parsed_range = self._parse_single_bytes_range(
+                    header_value=range_header, size=total_size
+                )
+            except (ValueError, IndexError):
+                resp = HttpResponse(status=416)
+                resp["Accept-Ranges"] = "bytes"
+                resp["Content-Range"] = f"bytes */{total_size}"
+                return resp
 
         start, end = (0, max(total_size - 1, 0))
         status_code = 200
@@ -3124,27 +3166,15 @@ class MountViewSet(viewsets.ViewSet):
         chunk_size = 64 * 1024
         content_length = (end - start + 1) if total_size > 0 else 0
 
-        def _stream():
-            try:
-                with provider.open_read(mount=mount, normalized_path=normalized_path) as f:
-                    if start:
-                        f.seek(start)
-                    remaining = content_length
-                    while remaining > 0:
-                        data = f.read(min(chunk_size, remaining))
-                        if not data:
-                            break
-                        remaining -= len(data)
-                        yield data
-            except MountProviderError:
-                return
-            except Exception:  # noqa: BLE001
-                return
-
         filename = str(entry.name or "download")
         content_type = "application/octet-stream"
         resp = StreamingHttpResponse(
-            streaming_content=_stream(),
+            streaming_content=self._iter_provider_file(
+                provider=provider,
+                mount=mount,
+                normalized_path=normalized_path,
+                slice_spec=(start, content_length, chunk_size),
+            ),
             content_type=content_type,
             status=status_code,
         )
