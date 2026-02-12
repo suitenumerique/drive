@@ -48,7 +48,7 @@ def test_api_users_list_authenticated():
 
 def test_api_users_list_query_inactive():
     """Inactive users should not be listed."""
-    user = factories.UserFactory()
+    user = factories.UserFactory(email="alice@example.com")
     client = APIClient()
     client.force_login(user)
 
