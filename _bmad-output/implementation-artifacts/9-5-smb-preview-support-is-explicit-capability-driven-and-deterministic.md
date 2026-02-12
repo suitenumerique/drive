@@ -1,6 +1,6 @@
 # Story 9.5: SMB preview support is explicit, capability-driven, and deterministic
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -46,5 +46,4 @@ WOPI actions appear only when prerequisites are met per backend; if S3 prerequis
 
 
 ### File List
-
 
