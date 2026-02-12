@@ -8,6 +8,7 @@ from django.core.cache import cache
 from django.core.files.storage import default_storage
 
 from core import models
+from wopi.services.s3_prerequisites import check_wopi_s3_bucket_versioning
 from wopi.tasks.configure_wopi import (
     WOPI_CONFIGURATION_CACHE_KEY,
     WOPI_DEFAULT_CONFIGURATION,
@@ -26,7 +27,10 @@ def is_wopi_backend_supported() -> bool:
     bucket_name = getattr(default_storage, "bucket_name", None)
     connection = getattr(default_storage, "connection", None)
     client = getattr(getattr(connection, "meta", None), "client", None)
-    return bool(bucket_name and client)
+    if not (bucket_name and client):
+        return False
+
+    return bool(check_wopi_s3_bucket_versioning().ok)
 
 
 def is_item_wopi_supported(item, user):

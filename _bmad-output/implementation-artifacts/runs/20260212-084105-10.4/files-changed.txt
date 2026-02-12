@@ -1,0 +1,11 @@
+_bmad-output/implementation-artifacts/runs/20260212-084105-10.4/commands.log
+_bmad-output/implementation-artifacts/runs/20260212-084105-10.4/files-changed.txt
+_bmad-output/implementation-artifacts/runs/20260212-084105-10.4/gates.md
+_bmad-output/implementation-artifacts/runs/20260212-084105-10.4/report.md
+CHANGELOG.md
+src/backend/core/tests/items/test_api_items_wopi.py
+src/backend/wopi/services/health.py
+src/backend/wopi/services/s3_prerequisites.py
+src/backend/wopi/tests/conftest.py
+src/backend/wopi/tests/services/test_health.py
+src/backend/wopi/utils/__init__.py

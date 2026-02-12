@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 from django.conf import settings
 from django.core.cache import cache
 
+from wopi.services.s3_prerequisites import check_wopi_s3_bucket_versioning
 from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
 
 
@@ -50,7 +51,7 @@ class WopiHealth:
 
 def get_wopi_health() -> WopiHealth:
     """
-    Compute WOPI health state without any network I/O.
+    Compute WOPI health state.
 
     States:
     - disabled
@@ -90,6 +91,18 @@ def get_wopi_health() -> WopiHealth:
                 "Set DRIVE_PUBLIC_URL (recommended) or WOPI_SRC_BASE_URL to the "
                 "canonical public base URL."
             ),
+            evidence=evidence,
+        )
+
+    s3_versioning = check_wopi_s3_bucket_versioning()
+    evidence.update(s3_versioning.to_evidence())
+    if not s3_versioning.ok:
+        return WopiHealth(
+            enabled=True,
+            healthy=False,
+            state="enabled_unhealthy",
+            failure_class=s3_versioning.failure_class,
+            next_action_hint=s3_versioning.next_action_hint,
             evidence=evidence,
         )
 
