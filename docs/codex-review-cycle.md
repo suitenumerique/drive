@@ -145,6 +145,26 @@ Contraintes
 
 ## Review agent procedure (when user pastes “retour dev”)
 
+### 0) Mandatory review output format (make “local-first” visible)
+
+In your review response, always show verification in this order:
+
+1) **Local run artifacts (source of truth)**:
+   - confirm the run folder exists on the PR head SHA
+   - confirm `report.md`, `gates.md`, `commands.log`, `files-changed.txt`
+   - confirm `gates.md` matches the reported gate results
+   - confirm the story file “Dev Agent Record” references the run
+
+2) **GitHub PR status (mirror / merge mechanics)**:
+   - base `main`, mergeable, required checks green
+   - do **not** wait for the non-blocking workflows listed above
+
+Use a fixed, scan-friendly structure like:
+
+- Local artifacts: OK/KO (paths)
+- GitHub status: OK/KO (mergeable/checks)
+- Action: merge/cleanup OR fix prompt OR next batch prompt
+
 ### 1) Verify the run artifacts exist and are coherent
 
 From the run folder:
