@@ -101,6 +101,8 @@ class SecretResolver:
 
     @property
     def refresh_seconds(self) -> int:
+        """Return the bounded refresh window (seconds)."""
+
         return self._refresh_seconds
 
     def resolve(
