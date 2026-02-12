@@ -221,3 +221,39 @@ export type MountDiscovery = {
   provider: string;
   capabilities: Record<string, boolean>;
 };
+
+export type MountEntryType = "file" | "folder";
+
+export type MountEntryAbilities = {
+  children_list: boolean;
+  upload: boolean;
+  download: boolean;
+  preview: boolean;
+  wopi: boolean;
+  share_link_create: boolean;
+};
+
+export type MountVirtualEntry = {
+  mount_id: string;
+  normalized_path: string;
+  entry_type: MountEntryType;
+  name: string;
+  size?: number | null;
+  modified_at?: string | null;
+  abilities: MountEntryAbilities;
+};
+
+export type MountBrowseChildren = {
+  count: number;
+  next?: string | null;
+  previous?: string | null;
+  results: MountVirtualEntry[];
+};
+
+export type MountBrowseResponse = {
+  mount_id: string;
+  normalized_path: string;
+  capabilities: Record<string, boolean>;
+  entry: MountVirtualEntry;
+  children: MountBrowseChildren | null;
+};

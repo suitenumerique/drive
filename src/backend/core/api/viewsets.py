@@ -2397,6 +2397,36 @@ class MountViewSet(viewsets.ViewSet):
         default_limit = int(settings.REST_FRAMEWORK.get("PAGE_SIZE", 20))
         max_limit = int(getattr(settings, "MAX_PAGE_SIZE", 200))
 
+    def _mount_capabilities(self, mount: dict) -> dict[str, bool]:
+        params = mount.get("params") if isinstance(mount.get("params"), dict) else {}
+        return normalize_mount_capabilities((params or {}).get("capabilities"))
+
+    def _normalized_path_from_request(self, request) -> str:
+        raw_path = request.query_params.get("path")
+        try:
+            return normalize_mount_path(raw_path)
+        except MountPathNormalizationError as exc:
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Invalid mount path.", code="mount.path.invalid"
+                    )
+                }
+            ) from exc
+
+    def _require_capability(
+        self,
+        *,
+        capabilities: dict[str, bool],
+        capability_key: str,
+        public_code: str,
+        public_message: str,
+    ) -> None:
+        if not bool(capabilities.get(capability_key, False)):
+            raise drf.exceptions.PermissionDenied(
+                detail=drf.exceptions.ErrorDetail(public_message, code=public_code)
+            )
+
     def _mount_entry_abilities(self, entry: MountEntry) -> dict[str, bool]:
         return {
             "children_list": entry.entry_type == "folder",
@@ -2435,20 +2465,8 @@ class MountViewSet(viewsets.ViewSet):
         target = mount_id or self.kwargs.get(self.lookup_url_kwarg) or ""
         mount = self._get_enabled_mount_or_404(target)
 
-        params = mount.get("params") if isinstance(mount.get("params"), dict) else {}
-        capabilities = normalize_mount_capabilities((params or {}).get("capabilities"))
-
-        raw_path = request.query_params.get("path")
-        try:
-            normalized_path = normalize_mount_path(raw_path)
-        except MountPathNormalizationError as exc:
-            raise drf.exceptions.ValidationError(
-                {
-                    "detail": drf.exceptions.ErrorDetail(
-                        "Invalid mount path.", code="mount.path.invalid"
-                    )
-                }
-            ) from exc
+        capabilities = self._mount_capabilities(mount)
+        normalized_path = self._normalized_path_from_request(request)
 
         provider = get_mount_provider(str(mount.get("provider") or ""))
 
@@ -2523,3 +2541,146 @@ class MountViewSet(viewsets.ViewSet):
         }
         MountBrowseResponseSerializer(data=payload).is_valid(raise_exception=True)
         return drf.response.Response(payload, status=status.HTTP_200_OK)
+
+    @drf.decorators.action(detail=True, methods=["get"], url_path="preview")
+    def preview(self, request, mount_id: str | None = None):
+        """
+        Preview a mount entry (capability-gated).
+
+        This endpoint is contract-level and currently returns a deterministic
+        no-leak error when preview is not available.
+        """
+
+        target = mount_id or self.kwargs.get(self.lookup_url_kwarg) or ""
+        mount = self._get_enabled_mount_or_404(target)
+        capabilities = self._mount_capabilities(mount)
+        self._require_capability(
+            capabilities=capabilities,
+            capability_key="mount.preview",
+            public_code="mount.preview.disabled",
+            public_message="Preview is not enabled for this mount.",
+        )
+
+        normalized_path = self._normalized_path_from_request(request)
+        logger.info(
+            "mount_preview: unavailable "
+            "(failure_class=mount.preview.unavailable "
+            "next_action_hint=Enable mount preview or configure a provider that "
+            "supports preview "
+            "mount_id=%s path_hash=%s)",
+            target,
+            safe_str_hash(normalized_path),
+        )
+        raise drf.exceptions.ValidationError(
+            {
+                "detail": drf.exceptions.ErrorDetail(
+                    "Preview is not available for this mount.",
+                    code="mount.preview.unavailable",
+                )
+            }
+        )
+
+    @drf.decorators.action(detail=True, methods=["get"], url_path="wopi")
+    def wopi(self, request, mount_id: str | None = None):
+        """
+        WOPI init for mount entries (capability-gated).
+
+        This endpoint is contract-level and currently returns a deterministic
+        no-leak error when WOPI is not available.
+        """
+
+        target = mount_id or self.kwargs.get(self.lookup_url_kwarg) or ""
+        mount = self._get_enabled_mount_or_404(target)
+        capabilities = self._mount_capabilities(mount)
+        self._require_capability(
+            capabilities=capabilities,
+            capability_key="mount.wopi",
+            public_code="mount.wopi.disabled",
+            public_message="Online editing is not enabled for this mount.",
+        )
+
+        normalized_path = self._normalized_path_from_request(request)
+        logger.info(
+            "mount_wopi: unavailable "
+            "(failure_class=mount.wopi.unavailable "
+            "next_action_hint=Enable mount WOPI or configure a provider that "
+            "supports WOPI "
+            "mount_id=%s path_hash=%s)",
+            target,
+            safe_str_hash(normalized_path),
+        )
+        raise drf.exceptions.ValidationError(
+            {
+                "detail": drf.exceptions.ErrorDetail(
+                    "Online editing is not available for this mount.",
+                    code="mount.wopi.unavailable",
+                )
+            }
+        )
+
+    @drf.decorators.action(detail=True, methods=["post"], url_path="upload")
+    def upload(self, request, mount_id: str | None = None):
+        """
+        Upload to a mount folder (capability-gated).
+
+        This endpoint is contract-level and currently returns a deterministic
+        no-leak error when upload is not available.
+        """
+
+        target = mount_id or self.kwargs.get(self.lookup_url_kwarg) or ""
+        mount = self._get_enabled_mount_or_404(target)
+        capabilities = self._mount_capabilities(mount)
+        self._require_capability(
+            capabilities=capabilities,
+            capability_key="mount.upload",
+            public_code="mount.upload.disabled",
+            public_message="Upload is not enabled for this mount.",
+        )
+
+        normalized_path = self._normalized_path_from_request(request)
+        logger.info(
+            "mount_upload: unavailable "
+            "(failure_class=mount.upload.unavailable "
+            "next_action_hint=Enable mount upload or configure a provider that "
+            "supports upload "
+            "mount_id=%s path_hash=%s)",
+            target,
+            safe_str_hash(normalized_path),
+        )
+        raise drf.exceptions.ValidationError(
+            {
+                "detail": drf.exceptions.ErrorDetail(
+                    "Upload is not available for this mount.",
+                    code="mount.upload.unavailable",
+                )
+            }
+        )
+
+    @drf.decorators.action(detail=True, methods=["get"], url_path="download")
+    def download(self, request, mount_id: str | None = None):
+        """
+        Download a mount entry.
+
+        This endpoint is contract-level and currently returns a deterministic
+        no-leak error when download is not available.
+        """
+
+        target = mount_id or self.kwargs.get(self.lookup_url_kwarg) or ""
+        self._get_enabled_mount_or_404(target)
+        normalized_path = self._normalized_path_from_request(request)
+        logger.info(
+            "mount_download: unavailable "
+            "(failure_class=mount.download.unavailable "
+            "next_action_hint=Configure a provider that supports download "
+            "mount_id=%s path_hash=%s)",
+            target,
+            safe_str_hash(normalized_path),
+        )
+        raise drf.exceptions.ValidationError(
+            {
+                "detail": drf.exceptions.ErrorDetail(
+                    "Download is not available for this mount.",
+                    code="mount.download.unavailable",
+                )
+            }
+        )

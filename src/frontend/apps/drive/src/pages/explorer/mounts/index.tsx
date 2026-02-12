@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@gouvfr-lasuite/cunningham-react";
+import Link from "next/link";
 import { getDriver } from "@/features/config/Config";
 import { getGlobalExplorerLayout } from "@/features/layouts/components/explorer/ExplorerLayout";
 import { MOUNT_CAPABILITY_KEYS } from "@/features/mounts/constants";
@@ -47,6 +48,11 @@ export default function MountsPage() {
               <div>
                 {t("explorer.mounts.provider")}: {mount.provider}
               </div>
+              <div>
+                <Link href={`/explorer/mounts/${mount.mount_id}`}>
+                  {t("explorer.mounts.browse")}
+                </Link>
+              </div>
               <ul>
                 {MOUNT_CAPABILITY_KEYS.map((key) => {
                   const supported = Boolean(mount.capabilities?.[key]);
@@ -72,4 +78,3 @@ export default function MountsPage() {
 }
 
 MountsPage.getLayout = getGlobalExplorerLayout;
-

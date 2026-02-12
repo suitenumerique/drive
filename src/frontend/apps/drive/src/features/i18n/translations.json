@@ -323,9 +323,26 @@
         "mounts": {
           "title": "Mounts",
           "loading": "Loading mounts...",
+          "browse": "Browse",
+          "browse_loading": "Loading mount...",
+          "browse_error": "Failed to load mount.",
           "error": "Failed to load mounts.",
           "empty": "No mounts configured.",
           "provider": "Provider",
+          "path": "Path",
+          "actions": {
+            "title": "Actions",
+            "unavailable": "Unavailable. Please contact an administrator.",
+            "upload": "Upload",
+            "preview": "Preview",
+            "wopi": "Online editing",
+            "share": "Share link"
+          },
+          "children": {
+            "title": "Children",
+            "none": "This entry has no children.",
+            "empty": "Folder is empty."
+          },
           "capability": {
             "available": "Available",
             "unavailable": "Unavailable"
@@ -880,9 +897,26 @@
         "mounts": {
           "title": "Montages",
           "loading": "Chargement des montages...",
+          "browse": "Parcourir",
+          "browse_loading": "Chargement du montage...",
+          "browse_error": "Impossible de charger le montage.",
           "error": "Impossible de charger les montages.",
           "empty": "Aucun montage configuré.",
           "provider": "Fournisseur",
+          "path": "Chemin",
+          "actions": {
+            "title": "Actions",
+            "unavailable": "Indisponible. Veuillez contacter un administrateur.",
+            "upload": "Téléverser",
+            "preview": "Prévisualiser",
+            "wopi": "Édition en ligne",
+            "share": "Lien de partage"
+          },
+          "children": {
+            "title": "Enfants",
+            "none": "Cette entrée n'a pas d'enfants.",
+            "empty": "Le dossier est vide."
+          },
           "capability": {
             "available": "Disponible",
             "unavailable": "Indisponible"
@@ -1439,9 +1473,26 @@
         "mounts": {
           "title": "Mounts",
           "loading": "Mounts laden...",
+          "browse": "Bladeren",
+          "browse_loading": "Mount laden...",
+          "browse_error": "Mount kon niet worden geladen.",
           "error": "Mounts konden niet worden geladen.",
           "empty": "Geen mounts geconfigureerd.",
           "provider": "Provider",
+          "path": "Pad",
+          "actions": {
+            "title": "Acties",
+            "unavailable": "Niet beschikbaar. Neem contact op met een beheerder.",
+            "upload": "Uploaden",
+            "preview": "Voorbeeld",
+            "wopi": "Online bewerken",
+            "share": "Deellink"
+          },
+          "children": {
+            "title": "Kinderen",
+            "none": "Deze entry heeft geen kinderen.",
+            "empty": "Map is leeg."
+          },
           "capability": {
             "available": "Beschikbaar",
             "unavailable": "Niet beschikbaar"
