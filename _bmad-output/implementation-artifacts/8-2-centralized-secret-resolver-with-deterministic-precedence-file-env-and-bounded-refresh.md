@@ -37,14 +37,25 @@ So that providers can fetch secrets consistently without restarts and without du
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- `_bmad-output/implementation-artifacts/runs/20260212-095311-8.2/`
 
 ### Completion Notes List
-
+- Implemented centralized runtime secret resolver with deterministic precedence:
+  file path > env ref.
+- Added bounded refresh window via `MOUNTS_SECRET_REFRESH_SECONDS` (default 60s).
+- Added deterministic, no-leak `SecretResolutionError` with `failure_class` +
+  `next_action_hint` and allow-listed safe evidence.
+- Added unit tests covering precedence, bounded refresh, and no-leak failures.
 
 ### File List
-
-
+- `src/backend/core/utils/secret_resolver.py`
+- `src/backend/core/services/secret_resolver.py`
+- `src/backend/core/tests/utils/test_secret_resolver.py`
+- `src/backend/drive/settings.py`
+- `docs/env.md`
+- `docs/failure-class-glossary.md`
+- `CHANGELOG.md`
+- `_bmad-output/implementation-artifacts/runs/20260212-095311-8.2/`
