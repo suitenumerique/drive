@@ -235,3 +235,88 @@ def test_config_preflight_rejects_multipart_threshold_invalid_type_no_leak(
         == "config.s3.transfer_config.multipart_threshold.invalid_type"
     )
     assert "not-an-int" not in json.dumps(payload)
+
+
+def test_config_preflight_rejects_mount_direct_secret_no_leak(monkeypatch):
+    _set_minimal_oidc_env(monkeypatch)
+    monkeypatch.setenv("AWS_S3_ENDPOINT_URL", "http://seaweedfs-s3:8333")
+    monkeypatch.delenv("AWS_S3_DOMAIN_REPLACE", raising=False)
+    monkeypatch.delenv("MOUNTS_REGISTRY_FILE", raising=False)
+
+    monkeypatch.setenv(
+        "MOUNTS_REGISTRY",
+        json.dumps(
+            [
+                {
+                    "mount_id": "alpha-mount",
+                    "display_name": "Alpha",
+                    "provider": "smb",
+                    "enabled": True,
+                    "password": "super-secret-value",
+                }
+            ]
+        ),
+    )
+
+    code, payload = _run_preflight()
+
+    assert code == 1
+    err = next(e for e in payload["errors"] if e["field"] == "MOUNTS_REGISTRY")
+    assert err["failure_class"] == "config.mounts.secrets.direct_value_forbidden"
+    assert "super-secret-value" not in json.dumps(payload)
+
+
+def test_config_preflight_accepts_mount_password_secret_ref(monkeypatch):
+    _set_minimal_oidc_env(monkeypatch)
+    monkeypatch.setenv("AWS_S3_ENDPOINT_URL", "http://seaweedfs-s3:8333")
+    monkeypatch.delenv("AWS_S3_DOMAIN_REPLACE", raising=False)
+    monkeypatch.delenv("MOUNTS_REGISTRY_FILE", raising=False)
+
+    monkeypatch.setenv("MOUNT_ALPHA_PASSWORD", "dummy-secret")
+    monkeypatch.setenv(
+        "MOUNTS_REGISTRY",
+        json.dumps(
+            [
+                {
+                    "mount_id": "alpha-mount",
+                    "display_name": "Alpha",
+                    "provider": "smb",
+                    "enabled": True,
+                    "password_secret_ref": "MOUNT_ALPHA_PASSWORD",
+                }
+            ]
+        ),
+    )
+
+    code, payload = _run_preflight()
+
+    assert code == 0
+    assert payload["ok"] is True
+
+
+def test_config_preflight_rejects_mount_password_secret_ref_missing_env(monkeypatch):
+    _set_minimal_oidc_env(monkeypatch)
+    monkeypatch.setenv("AWS_S3_ENDPOINT_URL", "http://seaweedfs-s3:8333")
+    monkeypatch.delenv("AWS_S3_DOMAIN_REPLACE", raising=False)
+    monkeypatch.delenv("MOUNTS_REGISTRY_FILE", raising=False)
+
+    monkeypatch.setenv(
+        "MOUNTS_REGISTRY",
+        json.dumps(
+            [
+                {
+                    "mount_id": "alpha-mount",
+                    "display_name": "Alpha",
+                    "provider": "smb",
+                    "enabled": True,
+                    "password_secret_ref": "MOUNT_ALPHA_PASSWORD",
+                }
+            ]
+        ),
+    )
+
+    code, payload = _run_preflight()
+
+    assert code == 1
+    err = next(e for e in payload["errors"] if e["field"] == "MOUNTS_REGISTRY")
+    assert err["failure_class"] == "config.mounts.secrets.secret_ref.env_ref_missing"
