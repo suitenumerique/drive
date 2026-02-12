@@ -1529,3 +1529,6 @@ class MountShareLink(BaseModel):
                 name="mount_share_link_mount_id_path_unique",
             ),
         ]
+
+    def __str__(self):
+        return f"MountShareLink(mount_id={self.mount_id}, id={self.id})"

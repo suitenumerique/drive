@@ -33,7 +33,9 @@ def _make_static_mount(*, mount_id: str, share_enabled: bool) -> dict:
 
 
 def test_api_mounts_share_links_create_is_capability_gated(settings):
-    settings.MOUNTS_REGISTRY = [_make_static_mount(mount_id="alpha-mount", share_enabled=False)]
+    settings.MOUNTS_REGISTRY = [
+        _make_static_mount(mount_id="alpha-mount", share_enabled=False)
+    ]
 
     user = factories.UserFactory()
     client = APIClient()
@@ -50,7 +52,9 @@ def test_api_mounts_share_links_create_is_capability_gated(settings):
 
 @override_settings(DRIVE_PUBLIC_URL="https://drive.example.com")
 def test_api_mounts_share_links_create_stores_token_and_returns_share_url(settings):
-    settings.MOUNTS_REGISTRY = [_make_static_mount(mount_id="alpha-mount", share_enabled=True)]
+    settings.MOUNTS_REGISTRY = [
+        _make_static_mount(mount_id="alpha-mount", share_enabled=True)
+    ]
 
     user = factories.UserFactory()
     client = APIClient()
@@ -76,7 +80,9 @@ def test_api_mounts_share_links_create_stores_token_and_returns_share_url(settin
 
 @override_settings(DRIVE_PUBLIC_URL="https://drive.example.com")
 def test_api_mounts_share_links_create_is_idempotent(settings):
-    settings.MOUNTS_REGISTRY = [_make_static_mount(mount_id="alpha-mount", share_enabled=True)]
+    settings.MOUNTS_REGISTRY = [
+        _make_static_mount(mount_id="alpha-mount", share_enabled=True)
+    ]
 
     user = factories.UserFactory()
     client = APIClient()
@@ -96,7 +102,9 @@ def test_api_mounts_share_links_create_is_idempotent(settings):
     assert r1.status_code == 201
     assert r2.status_code == 201
     assert r1.json()["token"] == r2.json()["token"]
-    assert models.MountShareLink.objects.filter(
-        mount_id="alpha-mount", normalized_path="/a/b.txt"
-    ).count() == 1
-
+    assert (
+        models.MountShareLink.objects.filter(
+            mount_id="alpha-mount", normalized_path="/a/b.txt"
+        ).count()
+        == 1
+    )
