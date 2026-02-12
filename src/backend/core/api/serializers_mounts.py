@@ -62,3 +62,30 @@ class MountShareLinkCreateResponseSerializer(serializers.Serializer):
     normalized_path = serializers.CharField()
     token = serializers.CharField()
     share_url = serializers.CharField()
+
+
+class MountShareLinkPublicEntrySerializer(serializers.Serializer):
+    """Public mount share link entry (no mount_id; relative paths only)."""
+
+    normalized_path = serializers.CharField()
+    entry_type = serializers.ChoiceField(choices=["file", "folder"])
+    name = serializers.CharField()
+    size = serializers.IntegerField(required=False, allow_null=True)
+    modified_at = serializers.DateTimeField(required=False, allow_null=True)
+
+
+class MountShareLinkPublicBrowseChildrenSerializer(serializers.Serializer):
+    """Limit/offset paginated public children payload (DRF-compatible)."""
+
+    count = serializers.IntegerField()
+    next = serializers.CharField(required=False, allow_null=True)
+    previous = serializers.CharField(required=False, allow_null=True)
+    results = MountShareLinkPublicEntrySerializer(many=True)
+
+
+class MountShareLinkPublicBrowseResponseSerializer(serializers.Serializer):
+    """Public browse response: current entry + children if folder."""
+
+    normalized_path = serializers.CharField()
+    entry = MountShareLinkPublicEntrySerializer()
+    children = MountShareLinkPublicBrowseChildrenSerializer(allow_null=True)
