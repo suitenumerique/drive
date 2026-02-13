@@ -1,0 +1,16 @@
+NAME                       IMAGE                              COMMAND                  SERVICE            CREATED          STATUS                    PORTS
+drive-app-dev-1            drive:backend-development          "/usr/local/bin/entr…"   app-dev            29 seconds ago   Up Less than a second     0.0.0.0:8071->8000/tcp, [::]:8071->8000/tcp
+drive-celery-dev-1         drive:backend-development          "/usr/local/bin/entr…"   celery-dev         35 seconds ago   Up 26 seconds             
+drive-collabora-1          collabora/code:latest              "/start-collabora-on…"   collabora          35 seconds ago   Up 26 seconds (healthy)   0.0.0.0:9980->9980/tcp, [::]:9980->9980/tcp
+drive-kc_postgresql-1      postgres:14.3                      "docker-entrypoint.s…"   kc_postgresql      35 seconds ago   Up 26 seconds (healthy)   0.0.0.0:6433->5432/tcp, [::]:6433->5432/tcp
+drive-keycloak-1           quay.io/keycloak/keycloak:26.3.2   "/opt/keycloak/bin/k…"   keycloak           33 seconds ago   Up 25 seconds             8443/tcp, 0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp, 9000/tcp
+drive-mailcatcher-1        sj26/mailcatcher:latest            "mailcatcher --foreg…"   mailcatcher        35 seconds ago   Up 26 seconds             1025/tcp, 0.0.0.0:1081->1080/tcp, [::]:1081->1080/tcp
+drive-minio-1              minio/minio                        "minio server --cons…"   minio              2 days ago       Up 2 days (healthy)       0.0.0.0:9100->9000/tcp, [::]:9100->9000/tcp, 0.0.0.0:9101->9001/tcp, [::]:9101->9001/tcp
+drive-nginx-1              nginx:1.25                         "/docker-entrypoint.…"   nginx              26 seconds ago   Up Less than a second     80/tcp, 0.0.0.0:8083->8083/tcp, [::]:8083->8083/tcp
+drive-onlyoffice-1         onlyoffice/documentserver-de       "/app/ds/run-documen…"   onlyoffice         35 seconds ago   Up 26 seconds (healthy)   443/tcp, 0.0.0.0:9981->80/tcp, [::]:9981->80/tcp
+drive-postgresql-1         postgres:16                        "docker-entrypoint.s…"   postgresql         34 seconds ago   Up 26 seconds (healthy)   0.0.0.0:6434->5432/tcp, [::]:6434->5432/tcp
+drive-redis-1              redis:5                            "docker-entrypoint.s…"   redis              35 seconds ago   Up 26 seconds             0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+drive-seaweedfs-filer-1    chrislusf/seaweedfs:latest         "/entrypoint.sh file…"   seaweedfs-filer    33 seconds ago   Up 25 seconds             7333/tcp, 8080/tcp, 8333/tcp, 8888/tcp, 9333/tcp, 18080/tcp, 18888/tcp, 19333/tcp
+drive-seaweedfs-master-1   chrislusf/seaweedfs:latest         "/entrypoint.sh mast…"   seaweedfs-master   35 seconds ago   Up 26 seconds             7333/tcp, 8080/tcp, 8333/tcp, 8888/tcp, 9333/tcp, 18080/tcp, 18888/tcp, 19333/tcp
+drive-seaweedfs-s3-1       chrislusf/seaweedfs:latest         "/entrypoint.sh s3 -…"   seaweedfs-s3       33 seconds ago   Up 25 seconds (healthy)   7333/tcp, 8080/tcp, 8888/tcp, 9333/tcp, 18080/tcp, 18888/tcp, 19333/tcp, 0.0.0.0:9000->8333/tcp, [::]:9000->8333/tcp
+drive-seaweedfs-volume-1   chrislusf/seaweedfs:latest         "/entrypoint.sh volu…"   seaweedfs-volume   33 seconds ago   Up 26 seconds             7333/tcp, 8080/tcp, 8333/tcp, 8888/tcp, 9333/tcp, 18080/tcp, 18888/tcp, 19333/tcp
