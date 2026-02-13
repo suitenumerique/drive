@@ -110,8 +110,8 @@ build-backend: ## build the app-dev container
 .PHONY: build-backend
 
 build-frontend: cache ?=
-build-frontend: ## build the frontend container
-	@$(COMPOSE) build frontend-dev $(cache)
+build-frontend: ## fetch the frontend base image (frontend-dev no longer builds an image)
+	@$(COMPOSE) pull frontend-dev
 .PHONY: build-frontend-development
 
 down: ## stop and remove containers, networks, images, and volumes
