@@ -11,7 +11,7 @@ import { useEmbeddedExplorerGirdContext } from "./EmbeddedExplorerGrid";
 export type EmbeddedExplorerGridActionsCellProps = CellContext<Item, unknown>;
 
 export const EmbeddedExplorerGridActionsCell = (
-  params: EmbeddedExplorerGridActionsCellProps
+  params: EmbeddedExplorerGridActionsCellProps,
 ) => {
   const item = params.row.original;
   const { t } = useTranslation();
@@ -52,6 +52,7 @@ export const EmbeddedExplorerGridActionsCell = (
                 name: item.title,
               })}
               icon={<span className="material-icons">more_horiz</span>}
+              size="nano"
             />
           }
         />

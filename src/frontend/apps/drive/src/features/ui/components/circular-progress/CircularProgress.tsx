@@ -1,4 +1,4 @@
-import { CheckIcon } from "../icon/Icon";
+import { CheckIcon } from "@/features/ui/components/icon/CheckIcon";
 
 interface CircularProgressProps {
   progress: number;

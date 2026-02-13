@@ -1,14 +1,14 @@
 import { useTranslation } from "react-i18next";
-import trashIcon from "@/assets/icons/trash.svg";
 import { ExplorerTreeNavItem } from "./ExplorerTreeNavItem";
-import { HorizontalSeparator } from "@gouvfr-lasuite/ui-kit";
+import { HorizontalSeparator, IconSize } from "@gouvfr-lasuite/ui-kit";
+import { TrashIcon } from "@/features/ui/components/icon/TrashIcon";
 
 export const ExplorerTreeNav = () => {
   const { t } = useTranslation();
 
   const navItems = [
     {
-      icon: <img src={trashIcon.src} alt="" />,
+      icon: <TrashIcon size={IconSize.SMALL} />,
       label: t("explorer.tree.trash"),
       route: "/explorer/trash",
     },

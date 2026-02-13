@@ -121,10 +121,7 @@ export const ExplorerBreadcrumbsMobile = () => {
     return (
       <div className="explorer__content__breadcrumbs--mobile">
         <div className="explorer__content__breadcrumbs--mobile__default-route">
-          <img
-            src={defaultRouteData.breadcrumbIconSrc}
-            alt={defaultRouteData.label}
-          />
+          <defaultRouteData.icon size={IconSize.MEDIUM} />
 
           {t(defaultRouteData.label)}
         </div>

@@ -3,12 +3,49 @@
 
 $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 
+/**
+ * Mixin to apply border and background to a row of a datagrid.
+ * We need this complicated thing because we cannot apply background-color +
+ * border-radius + overflow: hidden on a tr, the background goes out of the border.
+ */
+@mixin row-border-background($border-color, $background-color) {
+  td {
+    background-color: $background-color;
+    border-top: 1px solid $border-color;
+    border-bottom: 1px solid $border-color;
+  }
+
+  td:first-child {
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-left: 1px solid $border-color;
+  }
+
+  td:nth-child(2) {
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+    border-left: 1px solid $border-color;
+  }
+
+  td:last-child {
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+    border-right: 1px solid $border-color;
+  }
+}
+
 .embedded-explorer {
   display: flex;
   flex-direction: column;
 
   @media (min-width: $tablet) {
     height: 300px;
+  }
+
+  &--with-search {
+    .embedded-explorer__container {
+      padding-top: var(--c--globals--spacings--xs);
+    }
   }
 
   &__container {
@@ -21,9 +58,9 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
   &__search {
     width: 100%;
     margin-bottom: var(--c--globals--spacings--xs);
+
     &__container {
       width: 100%;
-      margin-bottom: var(--c--globals--spacings--xs);
       display: flex;
       align-items: center;
       gap: var(--c--globals--spacings--xs);
@@ -39,12 +76,25 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
         align-items: center;
       }
 
+      .material-icons {
+        color: var(--c--contextuals--content--semantic--neutral--secondary);
+      }
+
       input {
         flex: 1;
         border: none;
         outline: none;
         background: transparent;
         color: var(--c--contextuals--content--semantic--neutral--primary);
+        font-family: var(--c--globals--font--families--base);
+        font-size: 16px;
+
+        &::placeholder {
+          font-family: var(--c--globals--font--families--base);
+          color: var(--c--contextuals--content--semantic--neutral--tertiary);
+          font-size: 16px;
+          font-weight: 400;
+        }
       }
     }
   }
@@ -96,7 +146,7 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
       display: flex;
       align-items: center;
       gap: 8px;
-      height: 48px;
+      height: 46px;
 
       &__info {
         display: flex;
@@ -259,25 +309,34 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
       }
 
       tr {
-        border-radius: 4px;
+        @include row-border-background(transparent, transparent);
+      }
+
+      tr:hover {
+        // Reset the default behavior from ui kit. We want to apply the style to the
+        // td, not the tr.
+        background-color: transparent;
+        @include row-border-background(
+          transparent,
+          var(--c--components--datagrid--body--background-color-hover)
+        );
       }
 
       tr.selected {
-        box-shadow: inset 0 0 0 1px
-          var(--c--contextuals--border--semantic--brand--tertiary);
-        border-radius: 4px;
-        background-color: var(
-          --c--contextuals--background--semantic--brand--tertiary
+        // box-shadow: inset 0 0 0 1px
+        //   var(--c--contextuals--border--semantic--brand--tertiary);
+        // border-radius: 4px;
+        @include row-border-background(
+          var(--c--contextuals--border--semantic--brand--tertiary),
+          var(--c--contextuals--background--semantic--brand--tertiary)
         );
       }
 
       tr.over {
-        background-color: var(
-          --c--contextuals--background--semantic--brand--tertiary
+        @include row-border-background(
+          var(--c--contextuals--border--semantic--brand--primary),
+          var(--c--contextuals--background--semantic--brand--tertiary)
         );
-        border-radius: 4px;
-        box-shadow: inset 0 0 0 2px
-          var(--c--contextuals--border--semantic--brand--primary);
       }
 
       tr {

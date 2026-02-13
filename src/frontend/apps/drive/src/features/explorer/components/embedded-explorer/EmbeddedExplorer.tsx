@@ -3,13 +3,16 @@ import { Item, ItemBreadcrumb } from "@/features/drivers/types";
 import { useTranslation } from "react-i18next";
 import { EmbeddedExplorerGridBreadcrumbs } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridBreadcrumbs";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NavigationEvent, getOriginalIdFromTreeId } from "@/features/explorer/components/GlobalExplorerContext";
+import {
+  NavigationEvent,
+  getOriginalIdFromTreeId,
+} from "@/features/explorer/components/GlobalExplorerContext";
 import { useQuery } from "@tanstack/react-query";
 import { Spinner } from "@gouvfr-lasuite/ui-kit";
 import { ItemFilters } from "@/features/drivers/Driver";
 import {
-    EmbeddedExplorerGrid,
-    EmbeddedExplorerGridProps,
+  EmbeddedExplorerGrid,
+  EmbeddedExplorerGridProps,
 } from "./EmbeddedExplorerGrid";
 import { useAuth } from "@/features/auth/Auth";
 import { useInfiniteChildren } from "../../hooks/useInfiniteChildren";
@@ -34,7 +37,7 @@ export type EmbeddedExplorerProps = {
 export const useEmbeddedExplorer = (props: EmbeddedExplorerProps) => {
   const [selectedItems, setSelectedItems] = useState<Item[]>([]);
   const [currentItemId, setCurrentItemId] = useState<string | null>(
-    props.initialFolderId ?? null
+    props.initialFolderId ?? null,
   );
 
   return {
@@ -101,7 +104,7 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
 
   const infiniteChildrenQuery = useInfiniteChildren(
     props.currentItemId ?? null,
-    props.itemsFilters ?? {}
+    props.itemsFilters ?? {},
   );
 
   // Extract children from infinite query pages
@@ -270,6 +273,7 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
       <div
         className={clsx("embedded-explorer", {
           "embedded-explorer--compact": props.isCompact,
+          "embedded-explorer--with-search": props.showSearch,
         })}
       >
         {props.showSearch && (
