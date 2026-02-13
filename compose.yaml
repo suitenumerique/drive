@@ -264,6 +264,7 @@ services:
       - ./src/frontend/:/home/frontend/
       - /home/frontend/node_modules
       - /home/frontend/apps/drive/node_modules
+      - /home/frontend/apps/drive/.next
     ports:
       - "3000:3000"
 
