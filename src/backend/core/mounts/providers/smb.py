@@ -337,7 +337,7 @@ def _map_exc(*, exc: Exception, op: str) -> MountProviderError:
         ),
         "read": (
             "mount.smb.read_failed",
-            "Verify SMB mount configuration and connectivity, then retry the preview.",
+            "Verify SMB mount configuration and connectivity, then retry the read operation.",
         ),
     }
     failure_class, next_action_hint = mapping.get(
@@ -459,10 +459,19 @@ def list_children(*, mount: dict, normalized_path: str) -> list[MountEntry]:
         ),
     )
 
+def supports_range_reads(*, _mount: dict) -> bool:
+    """Return whether this provider supports range reads (v2: download)."""
+
+    return True
+
 
 @contextmanager
 def open_read(*, mount: dict, normalized_path: str):
-    """Open a mount file for streaming reads."""
+    """
+    Open a mount file for streaming reads.
+
+    The returned file handle is suitable for `seek()` + chunked reads.
+    """
 
     config, secret_path, secret_ref = _load_config(mount)
     _ensure_session(
