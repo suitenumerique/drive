@@ -339,6 +339,16 @@
             "share": "Share link",
             "share_url": "Share URL"
           },
+          "preview_page": {
+            "title": "Preview",
+            "loading": "Loading preview...",
+            "missing_params": "Missing preview parameters.",
+            "not_available": "Preview is not available.",
+            "next_action": "Please contact an administrator.",
+            "access_denied": "Access denied.",
+            "error": "Failed to load preview.",
+            "open_new_tab": "Open in a new tab"
+          },
           "children": {
             "title": "Children",
             "none": "This entry has no children.",
@@ -913,6 +923,16 @@
             "wopi": "Édition en ligne",
             "share": "Lien de partage",
             "share_url": "URL de partage"
+          },
+          "preview_page": {
+            "title": "Prévisualisation",
+            "loading": "Chargement de la prévisualisation...",
+            "missing_params": "Paramètres de prévisualisation manquants.",
+            "not_available": "Prévisualisation indisponible.",
+            "next_action": "Veuillez contacter un administrateur.",
+            "access_denied": "Accès refusé.",
+            "error": "Impossible de charger la prévisualisation.",
+            "open_new_tab": "Ouvrir dans un nouvel onglet"
           },
           "children": {
             "title": "Enfants",
@@ -1490,6 +1510,16 @@
             "wopi": "Online bewerken",
             "share": "Deellink",
             "share_url": "Deel-URL"
+          },
+          "preview_page": {
+            "title": "Voorbeeld",
+            "loading": "Voorbeeld laden...",
+            "missing_params": "Voorbeeldparameters ontbreken.",
+            "not_available": "Voorbeeld is niet beschikbaar.",
+            "next_action": "Neem contact op met een beheerder.",
+            "access_denied": "Toegang geweigerd.",
+            "error": "Voorbeeld kon niet worden geladen.",
+            "open_new_tab": "Openen in nieuw tabblad"
           },
           "children": {
             "title": "Kinderen",

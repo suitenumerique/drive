@@ -101,6 +101,13 @@ export default function MountBrowsePage() {
     setOffset(0);
   };
 
+  const onPreviewEntry = (entry: MountVirtualEntry) => {
+    router.push({
+      pathname: "/explorer/mounts/[mount_id]/preview",
+      query: { mount_id: mountId, path: entry.normalized_path },
+    });
+  };
+
   if (isLoading) {
     return <div>{t("explorer.mounts.browse_loading")}</div>;
   }
@@ -188,6 +195,7 @@ export default function MountBrowsePage() {
             label={t("explorer.mounts.actions.preview")}
             capabilityEnabled={capabilityPreview}
             abilityEnabled={browse.entry.abilities.preview}
+            onClick={() => onPreviewEntry(browse.entry)}
           />
           <MountAction
             label={t("explorer.mounts.actions.wopi")}
@@ -225,7 +233,9 @@ export default function MountBrowsePage() {
                   {entry.name}
                 </button>
               ) : (
-                <span>{entry.name}</span>
+                <button type="button" onClick={() => onPreviewEntry(entry)}>
+                  {entry.name}
+                </button>
               )}{" "}
               <code>{entry.normalized_path}</code>
             </li>

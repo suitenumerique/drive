@@ -1,0 +1,51 @@
+{
+  "catalog_version": "v1",
+  "diff_base": "origin/main",
+  "gate_results": [
+    {
+      "duration_ms": 25594,
+      "failure_class": null,
+      "gate_id": "backend.lint",
+      "next_action_hint": null,
+      "result": "pass"
+    },
+    {
+      "duration_ms": 79017,
+      "failure_class": null,
+      "gate_id": "backend.tests",
+      "next_action_hint": null,
+      "result": "pass"
+    },
+    {
+      "duration_ms": 0,
+      "failure_class": null,
+      "gate_id": "docs.consistency",
+      "next_action_hint": null,
+      "result": "pass"
+    },
+    {
+      "duration_ms": 3794,
+      "failure_class": null,
+      "gate_id": "frontend.lint",
+      "next_action_hint": null,
+      "result": "pass"
+    },
+    {
+      "duration_ms": 52,
+      "failure_class": null,
+      "gate_id": "no_leak.scan_bmad_output",
+      "next_action_hint": null,
+      "result": "pass"
+    }
+  ],
+  "git_head": "9618f8599577a66eeae3e9562c1efb490304ffff",
+  "requested_gates": null,
+  "result": "pass",
+  "selected_gates": [
+    "backend.lint",
+    "backend.tests",
+    "docs.consistency",
+    "frontend.lint",
+    "no_leak.scan_bmad_output"
+  ]
+}

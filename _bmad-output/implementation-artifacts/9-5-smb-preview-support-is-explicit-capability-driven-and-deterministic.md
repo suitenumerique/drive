@@ -1,6 +1,6 @@
 # Story 9.5: SMB preview support is explicit, capability-driven, and deterministic
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -37,14 +37,26 @@ WOPI actions appear only when prerequisites are met per backend; if S3 prerequis
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- Run: `_bmad-output/implementation-artifacts/runs/20260212-171105-9.5/`
+- Gates report: `_bmad-output/implementation-artifacts/runs/20260212-171105-9.5/run-report.md`
+- Commands: `_bmad-output/implementation-artifacts/runs/20260212-171105-9.5/commands.log`
 
 ### Completion Notes List
-
+- Backend: implemented SMB mount preview streaming when `mount.preview=true`.
+- Backend: returns deterministic `mount.preview.not_previewable` when unsupported.
+- UI: added mount preview page with explicit "preview not available" state + next action.
+- UI: allows opening previews from the mounts explorer file list.
+- Added backend tests for preview success + not-previewable + capability gating.
 
 ### File List
-
-
+- `src/backend/core/api/viewsets.py`
+- `src/backend/core/mounts/providers/smb.py`
+- `src/backend/core/tests/mounts/test_api_mounts_preview_smb.py`
+- `src/frontend/apps/drive/src/pages/explorer/mounts/[mount_id].tsx`
+- `src/frontend/apps/drive/src/pages/explorer/mounts/[mount_id]/preview.tsx`
+- `src/frontend/apps/drive/src/features/i18n/translations.json`
+- `_bmad-output/implementation-artifacts/9-5-smb-preview-support-is-explicit-capability-driven-and-deterministic.md`
+- `_bmad-output/implementation-artifacts/runs/20260212-171105-9.5/`

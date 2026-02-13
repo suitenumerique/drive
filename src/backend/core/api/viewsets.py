@@ -2998,7 +2998,8 @@ class MountViewSet(viewsets.ViewSet):
             "children_list": entry.entry_type == "folder",
             "upload": False,
             "download": False,
-            "preview": False,
+            "preview": entry.entry_type == "file"
+            and bool(capabilities.get("mount.preview", False)),
             "wopi": False,
             "share_link_create": bool(capabilities.get("mount.share_link", False)),
         }
@@ -3115,6 +3116,20 @@ class MountViewSet(viewsets.ViewSet):
             return
         except (OSError, ValueError):
             return
+
+    @staticmethod
+    def _is_previewable_mimetype(mimetype: str | None) -> bool:
+        if not mimetype:
+            return False
+        for allowed in getattr(settings, "ITEM_PREVIEWABLE_MIME_TYPES", []) or []:
+            if not isinstance(allowed, str):
+                continue
+            if allowed.endswith("/"):
+                if mimetype.startswith(allowed):
+                    return True
+            elif mimetype == allowed:
+                return True
+        return False
 
     @drf.decorators.action(detail=True, methods=["get"], url_path="browse")
     def browse(self, request, mount_id: str | None = None):
@@ -3309,8 +3324,7 @@ class MountViewSet(viewsets.ViewSet):
         """
         Preview a mount entry (capability-gated).
 
-        This endpoint is contract-level and currently returns a deterministic
-        no-leak error when preview is not available.
+        This endpoint streams preview content for providers that support it.
         """
 
         target = mount_id or self.kwargs.get(self.lookup_url_kwarg) or ""
@@ -3324,23 +3338,104 @@ class MountViewSet(viewsets.ViewSet):
         )
 
         normalized_path = self._normalized_path_from_request(request)
-        logger.info(
-            "mount_preview: unavailable "
-            "(failure_class=mount.preview.unavailable "
-            "next_action_hint=Enable mount preview or configure a provider that "
-            "supports preview "
-            "mount_id=%s path_hash=%s)",
-            target,
-            safe_str_hash(normalized_path),
+
+        provider = get_mount_provider(str(mount.get("provider") or ""))
+        if not hasattr(provider, "open_read"):
+            logger.info(
+                "mount_preview: unavailable "
+                "(failure_class=mount.preview.unavailable "
+                "next_action_hint=Enable mount preview or configure a provider that "
+                "supports preview "
+                "mount_id=%s path_hash=%s)",
+                target,
+                safe_str_hash(normalized_path),
+            )
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Preview is not available for this mount.",
+                        code="mount.preview.unavailable",
+                    )
+                }
+            )
+
+        try:
+            entry = provider.stat(mount=mount, normalized_path=normalized_path)
+        except MountProviderError as exc:
+            if exc.public_code == "mount.path.not_found":
+                raise drf.exceptions.NotFound(
+                    drf.exceptions.ErrorDetail(
+                        "Mount path not found.", code="mount.path.not_found"
+                    )
+                ) from exc
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        exc.public_message, code=exc.public_code
+                    )
+                }
+            ) from exc
+
+        if entry.entry_type != "file":
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Mount path is not a file.", code="mount.path.not_a_file"
+                    )
+                }
+            )
+
+        try:
+            with provider.open_read(mount=mount, normalized_path=normalized_path) as f:
+                head = f.read(4096)
+        except MountProviderError as exc:
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        exc.public_message, code=exc.public_code
+                    )
+                }
+            ) from exc
+
+        mimetype = utils.detect_mimetype(head, filename=str(entry.name or ""))
+        if not self._is_previewable_mimetype(mimetype):
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Preview is not available for this file.",
+                        code="mount.preview.not_previewable",
+                    )
+                }
+            )
+
+        chunk_size = 64 * 1024
+
+        def _stream():
+            try:
+                with provider.open_read(
+                    mount=mount, normalized_path=normalized_path
+                ) as f:
+                    while True:
+                        data = f.read(chunk_size)
+                        if not data:
+                            break
+                        yield data
+            except MountProviderError:
+                return
+            except (OSError, ValueError):
+                return
+
+        filename = str(entry.name or "preview")
+        resp = StreamingHttpResponse(
+            streaming_content=_stream(),
+            content_type=mimetype,
+            status=status.HTTP_200_OK,
         )
-        raise drf.exceptions.ValidationError(
-            {
-                "detail": drf.exceptions.ErrorDetail(
-                    "Preview is not available for this mount.",
-                    code="mount.preview.unavailable",
-                )
-            }
-        )
+        resp["Cache-Control"] = "no-store"
+        resp["Content-Disposition"] = f"inline; filename*=UTF-8''{quote(filename)}"
+        if entry.size is not None:
+            resp["Content-Length"] = str(int(entry.size))
+        return resp
 
     @drf.decorators.action(detail=True, methods=["get"], url_path="wopi")
     def wopi(self, request, mount_id: str | None = None):

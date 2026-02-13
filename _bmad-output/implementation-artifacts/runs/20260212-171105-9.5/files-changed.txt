@@ -1,0 +1,7 @@
+_bmad-output/implementation-artifacts/9-5-smb-preview-support-is-explicit-capability-driven-and-deterministic.md
+src/backend/core/api/viewsets.py
+src/backend/core/mounts/providers/smb.py
+src/backend/core/tests/mounts/test_api_mounts_preview_smb.py
+src/frontend/apps/drive/src/features/i18n/translations.json
+src/frontend/apps/drive/src/pages/explorer/mounts/[mount_id].tsx
+src/frontend/apps/drive/src/pages/explorer/mounts/[mount_id]/preview.tsx

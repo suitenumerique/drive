@@ -333,7 +333,7 @@ def _map_exc(*, exc: Exception, op: str) -> MountProviderError:
             ),
             "read": (
                 "mount.smb.read_failed",
-                "Verify SMB mount configuration and connectivity, then retry the download.",
+                "Verify SMB mount configuration and connectivity, then retry the read operation.",
             ),
             "write": (
                 "mount.smb.write_failed",
