@@ -50,6 +50,10 @@ and this project adheres to
 
 - 🔒️(backend) prevent mismatch mimetype between object storage and application
 
+### Removed
+
+- ⚰️(scalingo) remove scalingo pgdump
+
 ## [v0.11.1] - 2026-01-13
 
 ### Fixed
