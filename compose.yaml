@@ -252,23 +252,14 @@ services:
   frontend-dev:
     profiles:
       - frontend
-    # Dev UX: avoid baking node_modules into an image layer (can be very disk-heavy).
-    # Instead, run from a stock Node image and install into the mounted volumes.
-    image: node:22-alpine
-    # Run as root so Yarn can write into the named node_modules volumes.
-    user: "0:0"
-    working_dir: /home/frontend
-    environment:
-      - HOME=/tmp
-      - NEXT_PUBLIC_API_ORIGIN=http://localhost:8071
-      # Keep yarn cache off the image filesystem.
-      - YARN_CACHE_FOLDER=/tmp/.yarn-cache
-    command:
-      [
-        "/bin/sh",
-        "-lc",
-        "yarn install --frozen-lockfile && cd apps/drive && yarn dev",
-      ]
+    user: "${DOCKER_USER:-1000}"
+    build:
+      context: .
+      dockerfile: ./src/frontend/Dockerfile
+      target: drive-dev
+      args:
+        API_ORIGIN: "http://localhost:8071"
+    image: drive:frontend-development
     volumes:
       - ./src/frontend/:/home/frontend/
       - /home/frontend/node_modules
