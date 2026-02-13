@@ -84,6 +84,10 @@ WOPI_CLIENTS="collabora,onlyoffice"
 WOPI_COLLABORA_DISCOVERY_URL="http://collabora:9980/hosting/discovery"
 WOPI_ONLYOFFICE_DISCOVERY_URL=http://onlyoffice/hosting/discovery
 WOPI_SRC_BASE_URL=http://app-dev:8000
+# Dev bootstrap: configure WOPI discovery frequently so `wopi_health` becomes healthy
+# without manual intervention (requires celery beat running).
+WOPI_CONFIGURATION_CRONTAB_MINUTE="*/1"
+WOPI_CONFIGURATION_CRONTAB_HOUR="*"
 
 # Indexer
 # SEARCH_INDEXER_CLASS="core.services.search_indexers.SearchIndexer"
