@@ -18,10 +18,18 @@ export const errorCauses = async (response: Response, data?: unknown) => {
 };
 
 export const getOrigin = () => {
-  return (
-    process.env.NEXT_PUBLIC_API_ORIGIN ||
-    (typeof window !== "undefined" ? window.location.origin : "")
-  );
+  const configuredOrigin = process.env.NEXT_PUBLIC_API_ORIGIN;
+  if (configuredOrigin) {
+    return configuredOrigin;
+  }
+
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  const apiPort = process.env.NEXT_PUBLIC_API_PORT || "8071";
+  const current = new URL(window.location.href);
+  return `${current.protocol}//${current.hostname}:${apiPort}`;
 };
 export const baseApiUrl = (apiVersion: string = "1.0") => {
   const origin = getOrigin();

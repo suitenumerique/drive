@@ -23,6 +23,7 @@ from django.db import models as db
 from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse, StreamingHttpResponse
+from django.middleware.csrf import get_token
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
@@ -2432,6 +2433,11 @@ class ConfigView(drf.views.APIView):
         GET /api/v1.0/config/
             Return a dictionary of public settings.
         """
+        # SPA clients may need a CSRF cookie even before any HTML page is served.
+        # Ensure it's available early so follow-up authenticated POST/PATCH requests
+        # (e.g. syncing user language on first login) don't fail with CSRF 403.
+        get_token(request)
+
         array_settings = [
             "CRISP_WEBSITE_ID",
             "ENVIRONMENT",

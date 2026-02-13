@@ -9,12 +9,43 @@ import { AppError } from "@/features/errors/AppError";
  * @returns {string|null} The CSRF token if found in the cookies, or null if not present.
  */
 function getCSRFToken() {
+  if (typeof document === "undefined") {
+    return null;
+  }
   return document.cookie
     .split(";")
     .filter((cookie) => cookie.trim().startsWith("csrftoken="))
     .map((cookie) => cookie.split("=")[1])
     .pop();
 }
+
+const isSafeMethod = (method?: string) => {
+  const upper = (method ?? "GET").toUpperCase();
+  return ["GET", "HEAD", "OPTIONS", "TRACE"].includes(upper);
+};
+
+let ensureCsrfCookieInFlight: Promise<void> | null = null;
+const ensureCsrfCookie = async () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (getCSRFToken()) {
+    return;
+  }
+  if (!ensureCsrfCookieInFlight) {
+    ensureCsrfCookieInFlight = (async () => {
+      try {
+        await fetch(new URL("config/", baseApiUrl("1.0")), {
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        });
+      } finally {
+        ensureCsrfCookieInFlight = null;
+      }
+    })();
+  }
+  await ensureCsrfCookieInFlight;
+};
 
 export const SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL =
   "redirect_after_login_url";
@@ -46,6 +77,10 @@ export const fetchAPI = async (
     });
   }
   const csrfToken = getCSRFToken();
+  if (!csrfToken && !isSafeMethod(init?.method)) {
+    await ensureCsrfCookie();
+  }
+  const ensuredCsrfToken = getCSRFToken();
 
   const timeoutMs = options?.timeoutMs;
   const timeoutController = timeoutMs ? new AbortController() : null;
@@ -63,7 +98,7 @@ export const fetchAPI = async (
       headers: {
         ...init?.headers,
         "Content-Type": "application/json",
-        ...(csrfToken && { "X-CSRFToken": csrfToken }),
+        ...(ensuredCsrfToken && { "X-CSRFToken": ensuredCsrfToken }),
       },
     });
   } catch (error) {

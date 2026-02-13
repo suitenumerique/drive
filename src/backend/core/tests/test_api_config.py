@@ -49,6 +49,7 @@ def test_api_config(is_authenticated):
 
     response = client.get("/api/v1.0/config/")
     assert response.status_code == HTTP_200_OK
+    assert response.cookies.get("csrftoken")
     assert response.json() == {
         "CRISP_WEBSITE_ID": "123",
         "ENVIRONMENT": "test",
