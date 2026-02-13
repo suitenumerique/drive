@@ -1,14 +1,10 @@
-import recentIcon from "@/assets/icons/defaultTabs/sidebar/recents.svg";
-import myFilesIcon from "@/assets/icons/defaultTabs/sidebar/my_files.svg";
-import sharedWithMeIcon from "@/assets/icons/defaultTabs/sidebar/shared_with_me.svg";
-import starredIcon from "@/assets/icons/defaultTabs/sidebar/starred.svg";
-import trashIcon from "@/assets/icons/defaultTabs/sidebar/trash.svg";
-
-import recentBreadcrumbIcon from "@/assets/icons/defaultTabs/breadcrumbs/recents.svg";
-import myFilesBreadcrumbIcon from "@/assets/icons/defaultTabs/breadcrumbs/my_files.svg";
-import sharedWithMeBreadcrumbIcon from "@/assets/icons/defaultTabs/breadcrumbs/shared_with_me.svg";
-import starredBreadcrumbIcon from "@/assets/icons/defaultTabs/breadcrumbs/starred.svg";
-import trashBreadcrumbIcon from "@/assets/icons/defaultTabs/breadcrumbs/trash.svg";
+import { RecentIcon } from "@/features/ui/components/icon/RecentIcon";
+import { MyFilesIcon } from "@/features/ui/components/icon/MyFilesIcon";
+import { SharedWithMeIcon } from "@/features/ui/components/icon/SharedWithMeIcon";
+import { StarredIcon } from "@/features/ui/components/icon/StarredIcon";
+import { TrashIcon } from "@/features/ui/components/icon/TrashIcon";
+import { JSX } from "react";
+import { IconProps } from "@gouvfr-lasuite/ui-kit";
 
 export enum DefaultRoute {
   MY_FILES = "my-files",
@@ -21,42 +17,32 @@ export type DefaultRouteData = {
   id: DefaultRoute;
   label: string;
   route: string;
-  iconName: string;
-  iconSrc: string;
-  breadcrumbIconSrc: string;
+  icon: (props: Partial<IconProps>) => JSX.Element;
 };
 export const ORDERED_DEFAULT_ROUTES: DefaultRouteData[] = [
   {
     id: DefaultRoute.RECENT,
     label: "explorer.tree.recent",
     route: "/explorer/items/recent",
-    iconName: "access_time",
-    iconSrc: recentIcon.src,
-    breadcrumbIconSrc: recentBreadcrumbIcon.src,
+    icon: RecentIcon,
   },
   {
     id: DefaultRoute.MY_FILES,
     label: "explorer.tree.my_files",
     route: "/explorer/items/my-files",
-    iconName: "person_outline",
-    iconSrc: myFilesIcon.src,
-    breadcrumbIconSrc: myFilesBreadcrumbIcon.src,
+    icon: MyFilesIcon,
   },
   {
     id: DefaultRoute.SHARED_WITH_ME,
     label: "explorer.tree.shared_with_me",
     route: "/explorer/items/shared-with-me",
-    iconName: "group",
-    iconSrc: sharedWithMeIcon.src,
-    breadcrumbIconSrc: sharedWithMeBreadcrumbIcon.src,
+    icon: SharedWithMeIcon,
   },
   {
     id: DefaultRoute.FAVORITES,
     label: "explorer.tree.favorites",
     route: "/explorer/items/favorites",
-    iconName: "star_border",
-    iconSrc: starredIcon.src,
-    breadcrumbIconSrc: starredBreadcrumbIcon.src,
+    icon: StarredIcon,
   },
 ];
 
@@ -64,13 +50,11 @@ export const TRASH_ROUTE_DATA: DefaultRouteData = {
   id: DefaultRoute.TRASH,
   label: "explorer.tree.trash",
   route: "/explorer/trash",
-  iconName: "delete",
-  iconSrc: trashIcon.src,
-  breadcrumbIconSrc: trashBreadcrumbIcon.src,
+  icon: TrashIcon,
 };
 
 export const getDefaultRoute = (
-  pathname: string
+  pathname: string,
 ): DefaultRouteData | undefined => {
   if (pathname === TRASH_ROUTE_DATA.route) {
     return TRASH_ROUTE_DATA;
@@ -79,7 +63,7 @@ export const getDefaultRoute = (
 };
 
 export const getDefaultRouteId = (
-  pathname: string
+  pathname: string,
 ): DefaultRoute | undefined => {
   return getDefaultRoute(pathname)?.id;
 };

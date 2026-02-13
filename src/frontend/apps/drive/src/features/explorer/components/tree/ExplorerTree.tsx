@@ -9,6 +9,7 @@ import {
 } from "@/utils/defaultRoutes";
 import {
   HorizontalSeparator,
+  IconSize,
   OpenMap,
   TreeDataItem,
   TreeView,
@@ -224,15 +225,7 @@ export const ExplorerTreeNavDefault = () => {
       id: route.id,
       label: t(route.label),
       route: route.route,
-      icon: (
-        <img
-          src={route.iconSrc}
-          alt={route.label}
-          width={16}
-          height={16}
-          className="explorer__tree__nav__icon"
-        />
-      ),
+      icon: <route.icon size={IconSize.SMALL} />,
     }));
 
     setNodes(nodes);

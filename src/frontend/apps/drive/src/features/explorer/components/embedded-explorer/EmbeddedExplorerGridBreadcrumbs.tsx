@@ -83,12 +83,7 @@ const BaseBreadcrumbs = ({
           router.push(defaultRouteData.route);
         }}
       >
-        <img
-          src={defaultRouteData.breadcrumbIconSrc}
-          alt={defaultRouteData.label}
-          width={24}
-          height={24}
-        />
+        {defaultRouteData.icon({ size: IconSize.MEDIUM })}
 
         {t(defaultRouteData.label)}
       </div>
