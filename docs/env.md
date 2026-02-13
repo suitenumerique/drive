@@ -130,6 +130,9 @@ This document lists all configurable environment variables for the Drive applica
 | `MOUNTS_REGISTRY` | JSON list of operator-configured mounts (mount_id, display_name, provider, enabled, params) | `None` |
 | `MOUNTS_REGISTRY_FILE` | Path to a JSON file containing the mounts registry (takes precedence over `MOUNTS_REGISTRY`) | `None` |
 | `MOUNTS_SECRET_REFRESH_SECONDS` | Bounded refresh window (seconds) for refs-only mount/provider secrets | `60` |
+| `MOUNTS_UPLOAD_MAX_BYTES` | Max upload size (bytes) for backend-mediated mount uploads | `10737418240` (10GB) |
+| `MOUNTS_UPLOAD_MAX_SECONDS` | Max wall time (seconds) for backend-mediated mount uploads | `3600` (1h) |
+| `MOUNTS_UPLOAD_MAX_CONCURRENCY_PER_MOUNT` | Max concurrent mount uploads per mount (per process) | `2` |
 | `WOPI_CLIENTS` | List of client name. These client names will be used in the post_setup | [] |
 | `WOPI_{CLIENT_NAME}_DISCOVERY_URL` | The discovery url for each client present in the `WOPI_CLIENTS`. if `WOPI_CLIENTS=vendorA` then set `WOPI_VENDORA_DISCOVERY_URL` | |
 | `WOPI_EXCLUDED_MIMETYPES` | List of mimetypes excluded when parsing the discovery url | See settings.py module |
@@ -156,6 +159,17 @@ Runtime refresh:
 
 - Secrets are cached and refreshed within the bounded window configured by
   `MOUNTS_SECRET_REFRESH_SECONDS`.
+
+## Mount uploads (v1)
+
+Backend-mediated mount uploads are time-bounded and size-bounded to avoid
+infinite requests and excessive backend resource use.
+
+Defaults (override via env):
+
+- `MOUNTS_UPLOAD_MAX_BYTES`: maximum upload size (bytes)
+- `MOUNTS_UPLOAD_MAX_SECONDS`: maximum wall time (seconds) per upload
+- `MOUNTS_UPLOAD_MAX_CONCURRENCY_PER_MOUNT`: per-process concurrency cap
 
 ## SMB mount params (v1)
 
