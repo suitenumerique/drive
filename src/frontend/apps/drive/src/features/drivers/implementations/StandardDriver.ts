@@ -503,6 +503,24 @@ export class StandardDriver extends Driver {
     data.progressHandler?.(100);
   }
 
+  async createOdfDocument(data: {
+    parentId?: string;
+    kind: "odt" | "ods" | "odp";
+    filename: string;
+  }): Promise<Item> {
+    const { parentId, kind, filename } = data;
+    const response = await fetchAPI(`items/new-odf/`, {
+      method: "POST",
+      body: JSON.stringify({
+        parent_id: parentId ?? null,
+        kind,
+        filename,
+      }),
+    });
+    const item = await response.json();
+    return jsonToItem(item);
+  }
+
   async deleteItems(ids: string[]): Promise<void> {
     for (const id of ids) {
       await fetchAPI(`items/${id}/`, {

@@ -454,6 +454,18 @@
               "submit": "Create"
             }
           },
+          "createOdf": {
+            "actions": {
+              "text": "New text document",
+              "spreadsheet": "New spreadsheet",
+              "slides": "New slides"
+            },
+            "defaults": {
+              "odt": "New text document.odt",
+              "ods": "New spreadsheet.ods",
+              "odp": "New slides.odp"
+            }
+          },
           "upload": {
             "toast": "Drop your files here to transfer them in {{title}}",
             "toast_no_rights": "You don't have the necessary rights to transfer files in {{title}}",
@@ -1037,6 +1049,18 @@
               "placeholder": "Entrez le nom du dossier",
               "cancel": "Annuler",
               "submit": "Créer"
+            }
+          },
+          "createOdf": {
+            "actions": {
+              "text": "Nouveau document texte",
+              "spreadsheet": "Nouveau tableur",
+              "slides": "Nouvelle présentation"
+            },
+            "defaults": {
+              "odt": "Nouveau document texte.odt",
+              "ods": "Nouveau tableur.ods",
+              "odp": "Nouvelle présentation.odp"
             }
           },
           "upload": {
@@ -1624,6 +1648,18 @@
               "placeholder": "Voer mapnaam in",
               "cancel": "Annuleren",
               "submit": "Bewerken"
+            }
+          },
+          "createOdf": {
+            "actions": {
+              "text": "Nieuw tekstdocument",
+              "spreadsheet": "Nieuw werkblad",
+              "slides": "Nieuwe presentatie"
+            },
+            "defaults": {
+              "odt": "Nieuw tekstdocument.odt",
+              "ods": "Nieuw werkblad.ods",
+              "odp": "Nieuwe presentatie.odp"
             }
           },
           "upload": {

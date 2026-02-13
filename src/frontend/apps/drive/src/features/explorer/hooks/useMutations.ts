@@ -40,6 +40,26 @@ export const useMutationCreateFile = () => {
   });
 };
 
+export const useMutationCreateOdfDocument = () => {
+  const driver = getDriver();
+  const refresh = useRefreshQueryCacheAfterMutation();
+
+  return useMutation({
+    mutationFn: async (
+      ...payload: Parameters<typeof driver.createOdfDocument>
+    ) => {
+      return driver.createOdfDocument(...payload);
+    },
+    onSuccess: (_data, variables) => {
+      refresh(variables.parentId);
+    },
+    meta: {
+      showErrorOn403: true,
+      noGlobalError: true,
+    },
+  });
+};
+
 export const useMutationDeleteItems = () => {
   const driver = getDriver();
   const { item } = useGlobalExplorer();

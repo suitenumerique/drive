@@ -15,6 +15,7 @@ from rest_framework import serializers
 
 from core import models
 from core.api import utils
+from core.services.odf_templates import build_minimal_odf_template_bytes
 from core.storage import get_storage_compute_backend
 from core.utils.public_url import join_public_url
 from core.utils.share_links import compute_item_share_token
@@ -685,6 +686,58 @@ class CreateItemSerializer(ItemSerializer):
 
     def update(self, instance, validated_data):
         raise NotImplementedError("Update method can not be used.")
+
+
+class CreateOdfDocumentSerializer(serializers.Serializer):
+    """
+    Create a new ODF document (odt/ods/odp) from a minimal, valid template.
+
+    This is intended for WOPI/Collabora flows: ODF files must not be 0-byte.
+    """
+
+    parent_id = serializers.UUIDField(required=False, allow_null=True)
+    kind = serializers.ChoiceField(choices=["odt", "ods", "odp"])
+    filename = serializers.CharField(max_length=255)
+
+    def validate_filename(self, value: str) -> str:
+        """Ensure the provided filename is safe and non-empty."""
+        candidate = str(value or "").strip()
+        candidate = candidate.rsplit("/", maxsplit=1)[-1].rsplit("\\", maxsplit=1)[-1]
+        candidate = candidate.strip()
+        if not candidate or candidate in {".", ".."} or "\x00" in candidate:
+            raise serializers.ValidationError(
+                _("Invalid filename."), code="item_create_file_invalid_filename"
+            )
+        return candidate
+
+    def validate(self, attrs):
+        kind = str(attrs.get("kind") or "").strip().lower()
+        filename = attrs.get("filename") or ""
+        _root, ext = splitext(filename)
+        ext = ext.lstrip(".").lower() if ext else ""
+
+        if ext != kind:
+            raise serializers.ValidationError(
+                {"filename": _("Filename extension does not match document type.")},
+                code="item_create_file_extension_mismatch",
+            )
+
+        if settings.RESTRICT_UPLOAD_FILE_TYPE:
+            if f".{ext}" not in settings.FILE_EXTENSIONS_ALLOWED:
+                raise serializers.ValidationError(
+                    {"filename": _("This file extension is not allowed.")},
+                    code="item_create_file_extension_not_allowed",
+                )
+
+        try:
+            build_minimal_odf_template_bytes(kind)
+        except ValueError:
+            raise serializers.ValidationError(
+                {"kind": _("Unsupported document type.")},
+                code="item_create_file_unsupported_kind",
+            ) from None
+
+        return attrs
 
 
 class BreadcrumbItemSerializer(serializers.ModelSerializer):

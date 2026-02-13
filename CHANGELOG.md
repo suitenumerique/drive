@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(wopi) add "New document" actions (odt/ods/odp) in explorer
 - ✨(backend) allow configuring celery task routes via `CELERY_TASK_ROUTES`
 - ✨(global) implement advanced shared management system
 - 📝(docs) add Docker-first self-host edge contract docs
