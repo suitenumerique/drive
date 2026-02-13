@@ -50,7 +50,6 @@ ingress:
   ## @param ingress.customBackends Add custom backends to ingress
   customBackends: []
 
-
 ## @param ingressAdmin.enabled whether to enable the Ingress or not
 ## @param ingressAdmin.className IngressClass to use for the Ingress
 ## @param ingressAdmin.host Host for the Ingress
@@ -61,7 +60,7 @@ ingressAdmin:
   host: drive.example.com
   path: /admin
   ## @param ingressAdmin.hosts Additional host to configure for the Ingress
-  hosts: [ ]
+  hosts: []
   #  - chart-example.local
   ## @param ingressAdmin.tls.enabled Weather to enable TLS for the Ingress
   ## @param ingressAdmin.tls.secretName Secret name for TLS config
@@ -83,7 +82,7 @@ ingressMedia:
   host: drive.example.com
   path: /media/(.*)
   ## @param ingressMedia.hosts Additional host to configure for the Ingress
-  hosts: [ ]
+  hosts: []
   #  - chart-example.local
   ## @param ingressMedia.tls.enabled Weather to enable TLS for the Ingress
   ## @param ingressMedia.tls.secretName Secret name for TLS config
@@ -117,7 +116,7 @@ ingressMediaPreview:
   host: drive.example.com
   path: /media/preview/(.*)
   ## @param ingressMediaPreview.hosts Additional host to configure for the Ingress
-  hosts: [ ]
+  hosts: []
   #  - chart-example.local
   ## @param ingressMediaPreview.tls.enabled Weather to enable TLS for the Ingress
   ## @param ingressMediaPreview.tls.secretName Secret name for TLS config
@@ -148,11 +147,9 @@ serviceMedia:
   port: 9000
   annotations: {}
 
-
 ## @section backend
 
 backend:
-
   ## @param backend.command Override the backend container command
   command: []
 
@@ -206,8 +203,8 @@ backend:
     targetPort: 8000
     annotations: {}
 
- ## @param backend.migrate.command backend migrate command
- ## @param backend.migrate.restartPolicy backend migrate job restart policy
+  ## @param backend.migrate.command backend migrate command
+  ## @param backend.migrate.restartPolicy backend migrate job restart policy
   migrate:
     command:
       - "python"
@@ -250,7 +247,7 @@ backend:
     name: ""
     command: []
     restartPolicy: Never
-    annotations: 
+    annotations:
       argocd.argoproj.io/hook: PostSync
 
   # List of cronjob to add
@@ -263,7 +260,6 @@ backend:
   #       - python manage.py flush --no-input
   ## @param backend.cronjobs Cronjob name, schedule, command
   cronjobs: []
-
 
   ## @param backend.themeCustomization.enabled Enable theme customization
   ## @param backend.themeCustomization.file_content Content of the theme customization file. Must be a json object.
@@ -279,17 +275,37 @@ backend:
     - name: default
       replicas: 1
       command: []
-      args: ["celery", "-A", "drive.celery_app", "worker", "-l", "INFO", "-n", "drive@%h"]
+      args:
+        [
+          "celery",
+          "-A",
+          "drive.celery_app",
+          "worker",
+          "-l",
+          "INFO",
+          "-n",
+          "drive@%h",
+        ]
       resources: {}
       probes:
         liveness:
           exec:
-            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+            command:
+              [
+                "/bin/sh",
+                "-c",
+                "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME",
+              ]
           initialDelaySeconds: 60
           timeoutSeconds: 5
         readiness:
           exec:
-            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+            command:
+              [
+                "/bin/sh",
+                "-c",
+                "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME",
+              ]
           initialDelaySeconds: 15
           timeoutSeconds: 5
 
@@ -312,16 +328,15 @@ backend:
     resources: {}
     probes:
       liveness:
-        exec: 
+        exec:
           command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping"]
         initialDelaySeconds: 60
         timeoutSeconds: 5
       readiness:
-        exec: 
+        exec:
           command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping"]
         initialDelaySeconds: 15
         timeoutSeconds: 5
-
 
   ## @param backend.probes.liveness.path [nullable] Configure path for backend HTTP liveness probe
   ## @param backend.probes.liveness.targetPort [nullable] Configure port for backend HTTP liveness probe
@@ -337,10 +352,10 @@ backend:
   ## @param backend.probes.readiness.initialDelaySeconds [nullable] Configure timeout for backend readiness probe
   probes:
     liveness:
-      path: /__heartbeat__
+      path: /__lbheartbeat__
       initialDelaySeconds: 10
     readiness:
-      path: /__lbheartbeat__
+      path: /__heartbeat__
       initialDelaySeconds: 10
 
   ## @param backend.resources Resource requirements for the backend container
@@ -472,7 +487,6 @@ frontend:
 ## @section posthog
 
 posthog:
-
   ## @param posthog.ingress.enabled Enable or disable the ingress resource creation
   ## @param posthog.ingress.className Kubernetes ingress class name to use (e.g., nginx, traefik)
   ## @param posthog.ingress.host Primary hostname for the ingress resource
@@ -487,12 +501,12 @@ posthog:
     className: null
     host: drive.example.com
     path: /
-    hosts: [ ]
+    hosts: []
     tls:
       enabled: true
-      additional: [ ]
+      additional: []
 
-    customBackends: [ ]
+    customBackends: []
     annotations: {}
 
   ## @param posthog.ingressAssets.enabled Enable or disable the ingress resource creation
@@ -509,14 +523,14 @@ posthog:
     className: null
     host: drive.example.com
     paths:
-    - /static
-    - /array
-    hosts: [ ]
+      - /static
+      - /array
+    hosts: []
     tls:
       enabled: true
-      additional: [ ]
+      additional: []
 
-    customBackends: [ ]
+    customBackends: []
     annotations: {}
 
   ## @param posthog.service.type Service type (e.g. ExternalName, ClusterIP, LoadBalancer)
