@@ -26,6 +26,8 @@ export interface AppExplorerProps {
   isLoading?: boolean;
   isMinimalLayout?: boolean;
   showFilters?: boolean;
+  // Custom empty placeholder when no items
+  emptyPlaceholder?: React.ReactNode;
 }
 
 export type AppExplorerType = AppExplorerProps;
