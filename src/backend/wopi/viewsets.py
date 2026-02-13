@@ -4,6 +4,7 @@ import logging
 import uuid
 from os.path import splitext
 
+from django.conf import settings
 from django.core.exceptions import RequestDataTooBig
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -16,10 +17,18 @@ from rest_framework.response import Response
 from sentry_sdk import capture_exception
 
 from core.api.utils import get_item_file_head_object
+from core.mounts.providers.base import MountProviderError
+from core.mounts.registry import get_mount_provider
 from core.models import Item
-from wopi.authentication import WopiAccessTokenAuthentication
-from wopi.permissions import AccessTokenPermission
-from wopi.services.lock import LockService
+from core.services.mount_capabilities import normalize_mount_capabilities
+from core.utils.no_leak import safe_str_hash
+from wopi.authentication import (
+    WopiAccessTokenAuthentication,
+    WopiMountAccessTokenAuthentication,
+)
+from wopi.permissions import AccessTokenPermission, MountAccessTokenPermission
+from wopi.services.lock import LockService, MountLockService
+from wopi.utils import compute_mount_entry_version
 
 logger = logging.getLogger(__name__)
 
@@ -231,6 +240,385 @@ class WopiViewSet(viewsets.ViewSet):
             return Response(status=409, headers={X_WOPI_LOCK: lock_service.get_lock()})
 
         lock_service.refresh_lock()
+        return Response(status=200)
+
+
+class MountWopiViewSet(viewsets.ViewSet):
+    """
+    WOPI ViewSet for mount-backed files.
+
+    This endpoint family never echoes mount paths and relies on safe correlation
+    hashes for operator-facing logs.
+    """
+
+    authentication_classes = [WopiMountAccessTokenAuthentication]
+    permission_classes = [MountAccessTokenPermission]
+
+    detail_post_actions = {
+        "LOCK": "_lock",
+        "GET_LOCK": "_get_lock",
+        "REFRESH_LOCK": "_refresh_lock",
+        "UNLOCK": "_unlock",
+    }
+
+    def get_file_id(self):
+        return uuid.UUID(self.kwargs.get("pk"))
+
+    def _enabled_mount(self, mount_id: str) -> dict | None:
+        mounts = list(getattr(settings, "MOUNTS_REGISTRY", []) or [])
+        for mount in mounts:
+            if not bool(mount.get("enabled", True)):
+                continue
+            if mount.get("mount_id") == mount_id:
+                return mount
+        return None
+
+    def _wopi_mount_or_none(self, mount_id: str) -> dict | None:
+        mount = self._enabled_mount(mount_id)
+        if not mount:
+            return None
+        capabilities = self._mount_capabilities(mount)
+        if not bool(capabilities.get("mount.wopi")):
+            return None
+        return mount
+
+    def _mount_capabilities(self, mount: dict) -> dict[str, bool]:
+        params = mount.get("params") if isinstance(mount.get("params"), dict) else {}
+        return normalize_mount_capabilities((params or {}).get("capabilities"))
+
+    def _provider_for_mount(self, mount: dict):
+        provider = get_mount_provider(str(mount.get("provider") or ""))
+        if not (hasattr(provider, "open_read") and hasattr(provider, "open_write")):
+            return None
+        return provider
+
+    def _stat_file(self, *, provider, mount: dict, mount_id: str, normalized_path: str):
+        try:
+            entry = provider.stat(mount=mount, normalized_path=normalized_path)
+        except MountProviderError as exc:
+            logger.info(
+                "mount_wopi_stat: failed "
+                "(failure_class=%s next_action_hint=%s mount_id=%s path_hash=%s)",
+                exc.failure_class,
+                exc.next_action_hint,
+                mount_id,
+                safe_str_hash(normalized_path),
+            )
+            return None, (404 if exc.public_code == "mount.path.not_found" else 500)
+
+        if entry.entry_type != "file":
+            return None, 404
+
+        return entry, 200
+
+    # pylint: disable=unused-argument
+    def retrieve(self, request, pk=None):
+        ctx = request.auth
+        mount_id = str(getattr(ctx, "mount_id", "") or "").strip()
+        normalized_path = str(getattr(ctx, "normalized_path", "") or "")
+
+        mount = self._wopi_mount_or_none(mount_id)
+        if not mount:
+            return Response(status=404)
+
+        provider = self._provider_for_mount(mount)
+        if not provider:
+            return Response(status=404)
+
+        entry, status_code = self._stat_file(
+            provider=provider,
+            mount=mount,
+            mount_id=mount_id,
+            normalized_path=normalized_path,
+        )
+        if not entry:
+            return Response(status=status_code)
+
+        version = compute_mount_entry_version(entry)
+        size = 0 if entry.size is None else int(entry.size)
+
+        properties = {
+            "BaseFileName": str(entry.name or "file"),
+            "OwnerId": mount_id,
+            "IsAnonymousUser": request.user.is_anonymous,
+            "UserFriendlyName": request.user.full_name
+            if not request.user.is_anonymous
+            else None,
+            "Size": size,
+            "UserId": str(request.user.id),
+            "Version": version,
+            "UserCanWrite": True,
+            "UserCanRename": False,
+            "UserCanPresent": False,
+            "UserCanAttend": False,
+            "UserCanNotWriteRelative": True,
+            "ReadOnly": False,
+            "SupportsRename": False,
+            "SupportsUpdate": True,
+            "SupportsDeleteFile": False,
+            "SupportsCobalt": False,
+            "SupportsContainers": False,
+            "SupportsEcosystem": False,
+            "SupportsGetFileWopiSrc": False,
+            "SupportsGetLock": True,
+            "SupportsLocks": True,
+            "SupportsUserInfo": False,
+        }
+        return Response(properties, status=200)
+
+    @action(detail=True, methods=["get", "post"], url_path="contents")
+    def file_content(self, request, pk=None):
+        if request.method == "GET":
+            return self._get_file_content(request, pk)
+        if request.method == "POST":
+            return self._put_file_content(request, pk)
+        return Response(status=405)
+
+    def _get_file_content(self, request, pk=None):
+        ctx = request.auth
+        mount_id = str(getattr(ctx, "mount_id", "") or "").strip()
+        normalized_path = str(getattr(ctx, "normalized_path", "") or "")
+
+        mount = self._wopi_mount_or_none(mount_id)
+        if not mount:
+            return Response(status=404)
+
+        provider = self._provider_for_mount(mount)
+        if not provider:
+            return Response(status=404)
+
+        entry, status_code = self._stat_file(
+            provider=provider,
+            mount=mount,
+            mount_id=mount_id,
+            normalized_path=normalized_path,
+        )
+        if not entry:
+            return Response(status=status_code)
+
+        max_expected_size = request.META.get("HTTP_X_WOPI_MAXEXPECTEDSIZE")
+        if max_expected_size and entry.size is not None:
+            if int(entry.size) > int(max_expected_size):
+                return Response(status=412)
+
+        chunk_size = 64 * 1024
+
+        def _stream():
+            try:
+                with provider.open_read(
+                    mount=mount, normalized_path=normalized_path
+                ) as f:
+                    while True:
+                        data = f.read(chunk_size)
+                        if not data:
+                            break
+                        yield data
+            except MountProviderError as exc:
+                logger.info(
+                    "mount_wopi_get_file: failed "
+                    "(failure_class=%s next_action_hint=%s mount_id=%s path_hash=%s)",
+                    exc.failure_class,
+                    exc.next_action_hint,
+                    mount_id,
+                    safe_str_hash(normalized_path),
+                )
+                return
+            except (OSError, ValueError):
+                return
+
+        headers = {"X-WOPI-ItemVersion": compute_mount_entry_version(entry)}
+        if entry.size is not None:
+            headers["Content-Length"] = str(int(entry.size))
+
+        return StreamingHttpResponse(
+            streaming_content=_stream(),
+            content_type="application/octet-stream",
+            headers=headers,
+            status=200,
+        )
+
+    def _put_file_content(self, request, pk=None):
+        if request.META.get(HTTP_X_WOPI_OVERRIDE) != "PUT":
+            return Response(status=404)
+
+        ctx = request.auth
+        mount_id = str(getattr(ctx, "mount_id", "") or "").strip()
+        normalized_path = str(getattr(ctx, "normalized_path", "") or "")
+
+        mount = self._wopi_mount_or_none(mount_id)
+        if not mount:
+            return Response(status=404)
+
+        provider = self._provider_for_mount(mount)
+        if not provider:
+            return Response(status=404)
+
+        lock_service = MountLockService(mount_id=mount_id, normalized_path=normalized_path)
+        lock_value = request.META.get(HTTP_X_WOPI_LOCK)
+
+        if lock_value:
+            current_lock_value = lock_service.get_lock(default="")
+            if current_lock_value != lock_value:
+                return Response(status=409, headers={X_WOPI_LOCK: current_lock_value})
+        else:
+            body_size = int(request.META.get("CONTENT_LENGTH") or 0)
+            if body_size > 0:
+                return Response(status=409, headers={X_WOPI_LOCK: ""})
+
+        try:
+            bytes_written = 0
+            chunk_size = 64 * 1024
+            stream = getattr(request, "_request", request)
+            with provider.open_write(mount=mount, normalized_path=normalized_path) as f:
+                while True:
+                    chunk = stream.read(chunk_size)
+                    if not chunk:
+                        break
+                    bytes_written += len(chunk)
+                    f.write(chunk)
+        except RequestDataTooBig:
+            return Response(status=413)
+        except MountProviderError as exc:
+            logger.info(
+                "mount_wopi_put_file: failed "
+                "(failure_class=%s next_action_hint=%s mount_id=%s path_hash=%s)",
+                exc.failure_class,
+                exc.next_action_hint,
+                mount_id,
+                safe_str_hash(normalized_path),
+            )
+            return Response(status=500)
+        except (OSError, ValueError) as exc:
+            logger.info(
+                "mount_wopi_put_file: failed "
+                "(failure_class=mount.wopi.save_failed "
+                "next_action_hint=Verify mount provider connectivity and retry "
+                "mount_id=%s path_hash=%s)",
+                mount_id,
+                safe_str_hash(normalized_path),
+            )
+            capture_exception(exc)
+            return Response(status=500)
+
+        entry, status_code = self._stat_file(
+            provider=provider,
+            mount=mount,
+            mount_id=mount_id,
+            normalized_path=normalized_path,
+        )
+        if not entry:
+            return Response(status=status_code)
+
+        logger.info(
+            "mount_wopi_put_file: ok (mount_id=%s path_hash=%s size=%sB)",
+            mount_id,
+            safe_str_hash(normalized_path),
+            bytes_written,
+        )
+        return Response(
+            status=200,
+            headers={X_WOPI_ITEMVERSION: compute_mount_entry_version(entry)},
+        )
+
+    def detail_post(self, request, pk=None):
+        if not request.META.get(HTTP_X_WOPI_OVERRIDE) in self.detail_post_actions:
+            return Response(status=404)
+        post_action = self.detail_post_actions[request.META.get(HTTP_X_WOPI_OVERRIDE)]
+        return getattr(self, post_action)(request, pk)
+
+    def _lock(self, request, pk=None):
+        lock_value = request.META.get(HTTP_X_WOPI_LOCK)
+        if not lock_value:
+            return Response(status=400)
+
+        if request.META.get(HTTP_X_WOPI_OLD_LOCK, False):
+            return self._unlock_and_relock(request, pk)
+
+        ctx = request.auth
+        mount_id = str(getattr(ctx, "mount_id", "") or "").strip()
+        normalized_path = str(getattr(ctx, "normalized_path", "") or "")
+        if not self._wopi_mount_or_none(mount_id):
+            return Response(status=404)
+        lock_service = MountLockService(mount_id=mount_id, normalized_path=normalized_path)
+
+        if not lock_service.is_locked():
+            lock_service.lock(lock_value)
+            return Response(status=200)
+
+        if not lock_service.is_lock_valid(lock_value):
+            return Response(status=409, headers={X_WOPI_LOCK: lock_service.get_lock()})
+
+        lock_service.refresh_lock()
+        return Response(status=200)
+
+    def _get_lock(self, request, pk=None):
+        ctx = request.auth
+        mount_id = str(getattr(ctx, "mount_id", "") or "").strip()
+        normalized_path = str(getattr(ctx, "normalized_path", "") or "")
+        if not self._wopi_mount_or_none(mount_id):
+            return Response(status=404)
+        lock_service = MountLockService(mount_id=mount_id, normalized_path=normalized_path)
+        return Response(
+            status=200, headers={X_WOPI_LOCK: lock_service.get_lock(default="")}
+        )
+
+    def _refresh_lock(self, request, pk=None):
+        lock_value = request.META.get(HTTP_X_WOPI_LOCK)
+        if not lock_value:
+            return Response(status=400)
+
+        ctx = request.auth
+        mount_id = str(getattr(ctx, "mount_id", "") or "").strip()
+        normalized_path = str(getattr(ctx, "normalized_path", "") or "")
+        if not self._wopi_mount_or_none(mount_id):
+            return Response(status=404)
+        lock_service = MountLockService(mount_id=mount_id, normalized_path=normalized_path)
+
+        current_lock_value = lock_service.get_lock(default="")
+        if current_lock_value != lock_value:
+            return Response(status=409, headers={X_WOPI_LOCK: current_lock_value})
+
+        lock_service.refresh_lock()
+        return Response(status=200)
+
+    def _unlock(self, request, pk=None):
+        lock_value = request.META.get(HTTP_X_WOPI_LOCK)
+        if not lock_value:
+            return Response(status=400)
+
+        ctx = request.auth
+        mount_id = str(getattr(ctx, "mount_id", "") or "").strip()
+        normalized_path = str(getattr(ctx, "normalized_path", "") or "")
+        if not self._wopi_mount_or_none(mount_id):
+            return Response(status=404)
+        lock_service = MountLockService(mount_id=mount_id, normalized_path=normalized_path)
+
+        current_lock_value = lock_service.get_lock(default="")
+        if current_lock_value != lock_value:
+            return Response(status=409, headers={X_WOPI_LOCK: current_lock_value})
+
+        lock_service.unlock()
+        return Response(status=200)
+
+    def _unlock_and_relock(self, request, pk=None):
+        old_lock_value = request.META.get(HTTP_X_WOPI_OLD_LOCK)
+        new_lock_value = request.META.get(HTTP_X_WOPI_LOCK)
+        if not old_lock_value or not new_lock_value:
+            return Response(status=400)
+
+        ctx = request.auth
+        mount_id = str(getattr(ctx, "mount_id", "") or "").strip()
+        normalized_path = str(getattr(ctx, "normalized_path", "") or "")
+        if not self._wopi_mount_or_none(mount_id):
+            return Response(status=404)
+        lock_service = MountLockService(mount_id=mount_id, normalized_path=normalized_path)
+
+        current_lock_value = lock_service.get_lock(default="")
+        if current_lock_value != old_lock_value:
+            return Response(status=409, headers={X_WOPI_LOCK: current_lock_value})
+
+        lock_service.unlock()
+        lock_service.lock(new_lock_value)
         return Response(status=200)
 
     def _get_lock(self, request, pk=None):
