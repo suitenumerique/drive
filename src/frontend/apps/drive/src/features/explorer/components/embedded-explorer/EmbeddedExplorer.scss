@@ -11,6 +11,12 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
     height: 300px;
   }
 
+  &--with-search {
+    .embedded-explorer__container {
+      padding-top: var(--c--globals--spacings--xs);
+    }
+  }
+
   &__container {
     display: flex;
     flex-direction: column;
@@ -21,9 +27,9 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
   &__search {
     width: 100%;
     margin-bottom: var(--c--globals--spacings--xs);
+
     &__container {
       width: 100%;
-      margin-bottom: var(--c--globals--spacings--xs);
       display: flex;
       align-items: center;
       gap: var(--c--globals--spacings--xs);
@@ -39,12 +45,25 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
         align-items: center;
       }
 
+      .material-icons {
+        color: var(--c--contextuals--content--semantic--neutral--secondary);
+      }
+
       input {
         flex: 1;
         border: none;
         outline: none;
         background: transparent;
         color: var(--c--contextuals--content--semantic--neutral--primary);
+        font-family: var(--c--globals--font--families--base);
+        font-size: 16px;
+
+        &::placeholder {
+          font-family: var(--c--globals--font--families--base);
+          color: var(--c--contextuals--content--semantic--neutral--tertiary);
+          font-size: 16px;
+          font-weight: 400;
+        }
       }
     }
   }

@@ -122,7 +122,7 @@ export const ExplorerMoveFolder = ({
   const handleMove = (
     ids: string[],
     newParentId: string | undefined,
-    oldParentId: string
+    oldParentId: string,
   ) => {
     moveItems.mutateAsync(
       {
@@ -160,7 +160,7 @@ export const ExplorerMoveFolder = ({
             });
           }
         },
-      }
+      },
     );
   };
 
@@ -226,6 +226,7 @@ export const ExplorerMoveFolder = ({
                 variant="tertiary"
                 onClick={onMoveToRoot}
                 className="move-to-root-button"
+                fullWidth={true}
               >
                 {t("explorer.modal.move.move_to_root")}
               </Button>
@@ -233,8 +234,8 @@ export const ExplorerMoveFolder = ({
           </>
         }
         rightActions={
-          <div className="modal__move__footer">
-            <Button variant="tertiary" onClick={onCloseModal}>
+          <>
+            <Button variant="tertiary" onClick={onCloseModal} fullWidth={true}>
               {t("common.cancel")}
             </Button>
             <Button
@@ -243,10 +244,11 @@ export const ExplorerMoveFolder = ({
                 itemsExplorer.selectedItems.length === 0
               }
               onClick={onMove}
+              fullWidth={true}
             >
               {t("explorer.modal.move.move_button")}
             </Button>
-          </div>
+          </>
         }
       >
         <div className="noPadding">
@@ -254,7 +256,7 @@ export const ExplorerMoveFolder = ({
           <div className="modal__move__explorer">
             <EmbeddedExplorer {...itemsExplorer} showSearch={true} />
           </div>
-          <HorizontalSeparator />
+          <HorizontalSeparator withPadding={false} />
         </div>
       </Modal>
       {createFolderModal.isOpen && (

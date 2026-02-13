@@ -10,27 +10,18 @@
     font-weight: 700;
     color: var(--c--contextuals--content--semantic--neutral--primary);
   }
+
   &__description {
-    font-size: var(--c--globals--font--sizes--body-small);
+    font-size: var(--c--components--modal--content-font-size);
     color: var(--c--contextuals--content--semantic--neutral--secondary);
     font-weight: 400;
   }
 
-  &__footer {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--c--globals--spacings--base);
-    padding: 0 var(--c--globals--spacings--base);
-    padding-bottom: var(--c--globals--spacings--base);
-  }
-
   &__explorer {
-    overflow-y: auto;
-
     .embedded-explorer__container {
-      padding: 0 var(--c--globals--spacings--md);
+      padding-left: var(--c--globals--spacings--md);
+      padding-right: var(--c--globals--spacings--md);
+      overflow-y: auto;
     }
   }
 }
@@ -39,6 +30,19 @@
   color: var(--c--contextuals--content--semantic--brand--tertiary);
 }
 
-.move-to-root-button {
-  margin-left: var(--c--globals--spacings--xs);
+.c__modal:has(.modal__move__explorer) {
+  // This prevents the bottom border radius to be cut by the footer.
+  overflow: hidden;
+
+  .c__modal__title {
+    padding: var(--c--globals--spacings--md) var(--c--globals--spacings--md)
+      var(--c--globals--spacings--sm) var(--c--globals--spacings--md);
+  }
+
+  .c__modal__footer {
+    margin-top: var(--c--globals--spacings--base);
+    padding-bottom: var(--c--globals--spacings--base);
+    padding-left: var(--c--globals--spacings--md);
+    padding-right: var(--c--globals--spacings--md);
+  }
 }
