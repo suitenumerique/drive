@@ -8,8 +8,9 @@ import re
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urlparse
 
-import pytest
 from django.core.cache import cache
+
+import pytest
 from rest_framework.test import APIClient
 
 from core import factories
@@ -75,9 +76,7 @@ def test_api_mount_wopi_init_issues_access_token_and_launch_url(monkeypatch, set
     assert "/api/v1.0/wopi/mount-files/" in payload["launch_url"]
 
 
-def test_wopi_mount_lock_and_put_file_streams_and_updates_version(
-    monkeypatch, settings
-):
+def _configure_mount_wopi_session(monkeypatch, settings) -> tuple[APIClient, str, str, dict]:
     settings.MOUNTS_REGISTRY = [_make_smb_mount(mount_id="alpha-mount")]
     settings.WOPI_CLIENTS = ["collabora"]
 
@@ -140,6 +139,14 @@ def test_wopi_mount_lock_and_put_file_streams_and_updates_version(
     access_token = init.json()["access_token"]
     file_id = _extract_file_id_from_launch_url(init.json()["launch_url"])
 
+    return api, access_token, file_id, state
+
+
+def test_wopi_mount_put_file_streams_and_updates_version(monkeypatch, settings):
+    api, access_token, file_id, state = _configure_mount_wopi_session(
+        monkeypatch, settings
+    )
+
     info1 = api.get(
         f"/api/v1.0/wopi/mount-files/{file_id}/",
         HTTP_AUTHORIZATION=f"Bearer {access_token}",
@@ -166,8 +173,7 @@ def test_wopi_mount_lock_and_put_file_streams_and_updates_version(
     )
     assert put.status_code == 200
     assert state["content"] == body
-    assert state["writes"], "expected open_write to be used"
-    assert state["writes"][-1] >= 2, "expected chunked streaming writes"
+    assert state["writes"][-1] >= 2
     assert "X-WOPI-ItemVersion" in put.headers
 
     info2 = api.get(
@@ -176,6 +182,20 @@ def test_wopi_mount_lock_and_put_file_streams_and_updates_version(
     )
     assert info2.status_code == 200
     assert info2.json()["Version"] != version1
+
+
+def test_wopi_mount_put_file_conflict_and_unlock(monkeypatch, settings):
+    api, access_token, file_id, _state = _configure_mount_wopi_session(
+        monkeypatch, settings
+    )
+
+    lock = api.post(
+        f"/api/v1.0/wopi/mount-files/{file_id}/",
+        HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        HTTP_X_WOPI_OVERRIDE="LOCK",
+        HTTP_X_WOPI_LOCK="lock-1",
+    )
+    assert lock.status_code == 200
 
     conflict = api.post(
         f"/api/v1.0/wopi/mount-files/{file_id}/contents/",

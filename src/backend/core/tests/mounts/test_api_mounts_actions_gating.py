@@ -1,7 +1,8 @@
 """Tests for mount action capability gating (no dead actions)."""
 
-import pytest
 from django.core.cache import cache
+
+import pytest
 from rest_framework.test import APIClient
 
 from core import factories

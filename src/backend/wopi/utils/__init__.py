@@ -119,9 +119,7 @@ def compute_mount_entry_version(entry: MountEntry) -> str:
     This version changes when mount metadata changes (size and/or modified_at).
     """
     size_part = "" if entry.size is None else str(int(entry.size))
-    modified_part = (
-        "" if entry.modified_at is None else entry.modified_at.isoformat()
-    )
+    modified_part = "" if entry.modified_at is None else entry.modified_at.isoformat()
     digest = sha256_16(f"mount:v1:{size_part}:{modified_part}")
     return f"m1-{digest}"
 

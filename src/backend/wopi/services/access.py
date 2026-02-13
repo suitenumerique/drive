@@ -13,8 +13,8 @@ from django.contrib.auth.models import AbstractUser, AnonymousUser
 from django.core.cache import cache
 from django.utils import timezone
 
-from core.mounts.paths import MountPathNormalizationError, normalize_mount_path
 from core.models import Item, User
+from core.mounts.paths import MountPathNormalizationError, normalize_mount_path
 
 
 class AccessError(Exception):
