@@ -9,6 +9,7 @@ import re
 import secrets
 import threading
 import time
+from io import BytesIO
 from urllib.parse import parse_qs, quote, unquote, urlparse
 from uuid import UUID
 
@@ -47,7 +48,7 @@ from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
 from rest_framework.exceptions import APIException
 from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 from rest_framework_api_key.permissions import HasAPIKey
 
@@ -58,6 +59,7 @@ from core.mounts.providers.base import MountEntry, MountProviderError
 from core.mounts.registry import get_mount_provider
 from core.services.mirror import mirror_item
 from core.services.mount_capabilities import normalize_mount_capabilities
+from core.services.odf_templates import build_minimal_odf_template_bytes
 from core.services.sdk_relay import SDKRelayManager
 from core.services.search_indexers import (
     get_file_indexer,
@@ -653,6 +655,111 @@ class ItemViewSet(
             if title and instance.title != title:
                 rename_file.delay(instance.id, title)
         serializer.save()
+
+    @drf.decorators.action(
+        detail=False,
+        methods=["post"],
+        url_path="new-odf",
+        permission_classes=[IsAuthenticated],
+    )
+    def new_odf(self, request, *args, **kwargs):
+        """
+        Create a new ODF document (odt/ods/odp) from a minimal, valid template.
+
+        This endpoint is designed for WOPI/Collabora flows: ODF files must not be
+        created as 0-byte placeholders.
+        """
+        serializer = serializers.CreateOdfDocumentSerializer(
+            data=request.data, context=self.get_serializer_context()
+        )
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        parent_id = serializer.validated_data.get("parent_id")
+        kind = serializer.validated_data["kind"]
+        filename = serializer.validated_data["filename"]
+
+        entitlements_backend = get_entitlements_backend()
+        can_upload = entitlements_backend.can_upload(user)
+        if not can_upload["result"]:
+            raise drf.exceptions.PermissionDenied(
+                detail=can_upload.get(
+                    "message", "You do not have permission to upload files."
+                )
+            )
+
+        parent = None
+        if parent_id:
+            try:
+                parent = (
+                    models.Item.objects.filter(
+                        hard_deleted_at__isnull=True,
+                        ancestors_deleted_at__isnull=True,
+                    )
+                    .readable_per_se(user)
+                    .get(id=parent_id)
+                )
+            except models.Item.DoesNotExist as exc:
+                raise drf.exceptions.NotFound from exc
+
+            if parent.type != models.ItemTypeChoices.FOLDER:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "parent_id": drf.exceptions.ErrorDetail(
+                            "Only folders can have children.",
+                            code="item_create_child_type_folder_only",
+                        )
+                    }
+                )
+
+            if not parent.get_abilities(user).get("children_create"):
+                raise drf.exceptions.PermissionDenied(
+                    detail="You do not have permission to create items in this folder."
+                )
+
+        mimetype, payload = build_minimal_odf_template_bytes(kind)
+
+        try:
+            with transaction.atomic():
+                if parent is not None:
+                    item = models.Item.objects.create_child(
+                        creator=user,
+                        parent=parent,
+                        type=models.ItemTypeChoices.FILE,
+                        title=filename,
+                        filename=filename,
+                        mimetype=mimetype,
+                    )
+                else:
+                    item = models.Item.objects.create_child(
+                        creator=user,
+                        link_reach=LinkReachChoices.RESTRICTED,
+                        type=models.ItemTypeChoices.FILE,
+                        title=filename,
+                        filename=filename,
+                        mimetype=mimetype,
+                    )
+                    models.ItemAccess.objects.create(
+                        item=item,
+                        user=user,
+                        role=models.RoleChoices.OWNER,
+                    )
+
+                default_storage.save(item.file_key, BytesIO(payload))
+                item.upload_state = models.ItemUploadStateChoices.READY
+                item.size = len(payload)
+                item.save(update_fields=["upload_state", "size"])
+        except Exception as exc:  # noqa: BLE001
+            # Best-effort cleanup (no-leak): avoid leaving a partially created object behind.
+            with contextlib.suppress(Exception):  # noqa: BLE001
+                if "item" in locals():
+                    default_storage.delete(locals()["item"].file_key)
+            raise APIException("Could not create document.") from exc
+
+        data = serializers.ItemSerializer(
+            item, context=self.get_serializer_context()
+        ).data
+        return drf.response.Response(data, status=status.HTTP_201_CREATED)
 
     @drf.decorators.action(detail=True, methods=["delete"], url_path="hard-delete")
     def hard_delete(self, request, *args, **kwargs):
