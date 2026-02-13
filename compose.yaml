@@ -336,12 +336,13 @@ services:
       timeout: 10s
     ports:
       - "9980:9980"
+    env_file:
+      - env.d/development/collabora
+      - env.d/development/collabora.${ENV_OVERRIDE:-local}
     environment:
       - extra_params=--o:ssl.enable=false
       - username=drive
       - password=password
-      - server_name=localhost:9980
-      - aliasgroup1=app-dev:8000
 
   onlyoffice:
     image: onlyoffice/documentserver-de
@@ -351,13 +352,18 @@ services:
       retries: 5
       start_period: 60s
       timeout: 10s
+    env_file:
+      - env.d/development/onlyoffice
+      - env.d/development/onlyoffice.${ENV_OVERRIDE:-local}
     environment:
       TZ: "Europe/Berlin"
       USE_UNAUTHORIZED_STORAGE: "true"
     ports:
       - "9981:80"
+    entrypoint: ["/usr/local/bin/onlyoffice-entrypoint.sh"]
     volumes:
-      - ./docker/onlyoffice/local-development.json:/etc/onlyoffice/documentserver/local-production-linux.json
+      - ./docker/onlyoffice/local-development.tmpl.json:/etc/onlyoffice/documentserver/local-production-linux.json.tmpl:ro
+      - ./docker/onlyoffice/onlyoffice-entrypoint.sh:/usr/local/bin/onlyoffice-entrypoint.sh:ro
       # Enable debug
       - ./docker/onlyoffice/log4js/production.json:/etc/onlyoffice/documentserver/log4js/production.json
 

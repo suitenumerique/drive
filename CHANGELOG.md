@@ -56,6 +56,7 @@ and this project adheres to
 - ♻️(backend) increase user short_name field length
 - 🐛(docker) avoid downloading mime.types at build time (CI stability)
 - 🔧(media) support Range downloads via /media edge
+- 🐛(wopi) fix editor launch URLs in LAN dev compose (avoid localhost)
 - 🐛(mounts) enforce deterministic public mount share-link 404/410 semantics
 
 ### Security

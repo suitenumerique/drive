@@ -1,0 +1,2 @@
+server_name=localhost:9980
+aliasgroup1=app-dev:8000
