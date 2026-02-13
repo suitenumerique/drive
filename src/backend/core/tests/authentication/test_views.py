@@ -3,6 +3,7 @@
 from unittest import mock
 
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.middleware.csrf import CsrfViewMiddleware
 from django.test import RequestFactory
 from django.test.utils import override_settings
 
@@ -71,6 +72,11 @@ def test_view_login_callback_authorized_by_default(
     mocked_feature_enabled.assert_not_called()
     assert response.status_code == 302
     assert response.url == "/auth/success"
+
+    response = CsrfViewMiddleware(get_response=lambda r: r).process_response(
+        request, response
+    )
+    assert response.cookies.get("csrftoken")
 
 
 @override_settings(

@@ -307,7 +307,6 @@ services:
       - --features=preview
       - --import-realm
       - --proxy=edge
-      - --hostname=http://localhost:8083
       - --hostname-strict=false
     environment:
       KEYCLOAK_ADMIN: admin

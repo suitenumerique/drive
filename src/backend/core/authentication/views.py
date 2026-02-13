@@ -3,6 +3,7 @@
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from django.http import HttpResponseRedirect
+from django.middleware.csrf import get_token
 
 from lasuite.oidc_login.views import (
     OIDCAuthenticationCallbackView as LaSuiteOIDCAuthenticationCallbackView,
@@ -20,6 +21,10 @@ class OIDCAuthenticationCallbackView(LaSuiteOIDCAuthenticationCallbackView):
 
     def get(self, request):
         try:
+            # Ensure a CSRF cookie is set during the login redirect flow so that
+            # subsequent XHR requests using SessionAuthentication can include the
+            # X-CSRFToken header.
+            get_token(request)
             return super().get(request)
         except UserCannotAccessApp as exc:
             safe_message = str(exc).replace("\r", " ").replace("\n", " ").strip()
