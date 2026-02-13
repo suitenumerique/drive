@@ -13,6 +13,9 @@ export const useSyncUserLanguage = () => {
   const { i18n } = useTranslation();
   const driver = getDriver();
 
+  // If user has no language, sync browser language to backend.
+  // So that way wopi editors will use the correct language.
+  // Frontend -> Backend.
   useEffect(() => {
     if (!user || user.language) {
       return;
@@ -32,4 +35,20 @@ export const useSyncUserLanguage = () => {
       void refreshUser?.();
     });
   }, [user, i18n.language, driver, refreshUser]);
+
+  // On first load, if user has a language, sync it to the browser.
+  // Deps is set on user?.id to prevent a new call when refreshing user.
+  // We only want to call this effect one time after user is fetched.
+  // Backend -> Frontend.
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+    if (!user.language) {
+      return;
+    }
+    i18n.changeLanguage(user.language).catch((err) => {
+      console.error("Error changing language", err);
+    });
+  }, [user?.id]);
 };
