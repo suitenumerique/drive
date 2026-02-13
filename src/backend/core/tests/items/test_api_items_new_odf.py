@@ -1,10 +1,13 @@
 """Tests for the items API endpoint creating new ODF documents."""
 
+# pylint: disable=missing-function-docstring
+
 from io import BytesIO
 from zipfile import ZipFile
 
-import pytest
 from django.core.files.storage import default_storage
+
+import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models

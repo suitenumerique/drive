@@ -15,8 +15,8 @@ from rest_framework import serializers
 
 from core import models
 from core.api import utils
-from core.storage import get_storage_compute_backend
 from core.services.odf_templates import build_minimal_odf_template_bytes
+from core.storage import get_storage_compute_backend
 from core.utils.public_url import join_public_url
 from core.utils.share_links import compute_item_share_token
 from wopi import utils as wopi_utils
@@ -700,6 +700,7 @@ class CreateOdfDocumentSerializer(serializers.Serializer):
     filename = serializers.CharField(max_length=255)
 
     def validate_filename(self, value: str) -> str:
+        """Ensure the provided filename is safe and non-empty."""
         candidate = str(value or "").strip()
         candidate = candidate.rsplit("/", maxsplit=1)[-1].rsplit("\\", maxsplit=1)[-1]
         candidate = candidate.strip()

@@ -13,6 +13,8 @@ from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile
 
 @dataclass(frozen=True, slots=True)
 class OdfTemplateSpec:
+    """ODF template spec used to build minimal valid documents."""
+
     extension: str
     mimetype: str
     content_xml: str
@@ -104,7 +106,8 @@ def _manifest_xml(mimetype: str) -> str:
         '  <manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/>\n'
         '  <manifest:file-entry manifest:full-path="styles.xml" manifest:media-type="text/xml"/>\n'
         '  <manifest:file-entry manifest:full-path="meta.xml" manifest:media-type="text/xml"/>\n'
-        '  <manifest:file-entry manifest:full-path="settings.xml" manifest:media-type="text/xml"/>\n'
+        '  <manifest:file-entry manifest:full-path="settings.xml" '
+        'manifest:media-type="text/xml"/>\n'
         "</manifest:manifest>\n"
     )
 

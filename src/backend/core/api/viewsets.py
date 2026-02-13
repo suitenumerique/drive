@@ -749,9 +749,9 @@ class ItemViewSet(
                 item.upload_state = models.ItemUploadStateChoices.READY
                 item.size = len(payload)
                 item.save(update_fields=["upload_state", "size"])
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             # Best-effort cleanup (no-leak): avoid leaving a partially created object behind.
-            with contextlib.suppress(Exception):  # noqa: BLE001
+            with contextlib.suppress(Exception):
                 if "item" in locals():
                     default_storage.delete(locals()["item"].file_key)
             raise APIException("Could not create document.") from exc
