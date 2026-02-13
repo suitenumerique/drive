@@ -113,6 +113,7 @@ class AccessUserMountEntry:
     file_id: UUID
 
     def to_dict(self) -> dict:
+        """Serialize the access context for cache storage."""
         return {
             "mount_id": str(self.mount_id),
             "normalized_path": str(self.normalized_path),
@@ -122,6 +123,7 @@ class AccessUserMountEntry:
 
     @classmethod
     def from_dict(cls, data: dict) -> "AccessUserMountEntry":
+        """Deserialize the access context from cache storage."""
         try:
             mount_id_raw = data["mount_id"]
             normalized_path_raw = data["normalized_path"]
@@ -178,6 +180,7 @@ class AccessUserMountEntryService:
         normalized_path: str,
         user: AbstractUser,
     ) -> tuple[str, int, UUID]:
+        """Create a short-lived WOPI access token bound to a mount entry."""
         if getattr(user, "is_anonymous", True):
             raise AccessUserMountEntryNotAllowed()
 
