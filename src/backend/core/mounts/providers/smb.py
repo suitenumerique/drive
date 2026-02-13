@@ -469,6 +469,7 @@ def list_children(*, mount: dict, normalized_path: str) -> list[MountEntry]:
         ),
     )
 
+
 def supports_range_reads(*, _mount: dict) -> bool:
     """Return whether this provider supports range reads (v2: download)."""
 
