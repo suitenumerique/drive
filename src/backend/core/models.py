@@ -21,6 +21,7 @@ from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.db import models, transaction
 from django.db.models.expressions import RawSQL
+from django.db.models.functions import Greatest
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.functional import cached_property
@@ -893,10 +894,10 @@ class Item(TreeModel, BaseModel):
         if self.depth > 1:
             parent = self.parent()
             update = {
-                "numchild": models.F("numchild") - 1,
+                "numchild": Greatest(models.F("numchild") - 1, 0),
             }
             if self.type == ItemTypeChoices.FOLDER:
-                update["numchild_folder"] = models.F("numchild_folder") - 1
+                update["numchild_folder"] = Greatest(models.F("numchild_folder") - 1, 0)
             self._meta.model.objects.filter(pk=parent.id).update(**update)
 
         # Mark all descendants as soft deleted
@@ -1046,9 +1047,9 @@ class Item(TreeModel, BaseModel):
 
         # update old parent numchild and numchild_folder
         if old_parent_id and not ignore_parent_numchild_update:
-            update = {"numchild": models.F("numchild") - 1}
+            update = {"numchild": Greatest(models.F("numchild") - 1, 0)}
             if self.type == ItemTypeChoices.FOLDER:
-                update["numchild_folder"] = models.F("numchild_folder") - 1
+                update["numchild_folder"] = Greatest(models.F("numchild_folder") - 1, 0)
             self._meta.model.objects.filter(pk=old_parent_id).update(**update)
 
 
