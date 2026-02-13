@@ -1,6 +1,6 @@
 # Story 9.4: SMB streaming upload (large-file capable) with deterministic finalize semantics
 
-Status: review
+Status: done
 
 ## Story
 

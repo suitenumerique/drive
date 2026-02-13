@@ -59,9 +59,9 @@ development_status:
   epic-9: backlog
   9-1-smb-mount-configuration-schema-and-deterministic-validation-refs-only-secrets: done
   9-2-smb-provider-implements-the-mount-browse-contract-list-stat-with-deterministic-ordering: done
-  9-3-smb-streaming-download-with-range-support-where-applicable: ready-for-dev
-  9-4-smb-streaming-upload-large-file-capable-with-deterministic-finalize-semantics: ready-for-dev
-  9-5-smb-preview-support-is-explicit-capability-driven-and-deterministic: ready-for-dev
+  9-3-smb-streaming-download-with-range-support-where-applicable: done
+  9-4-smb-streaming-upload-large-file-capable-with-deterministic-finalize-semantics: done
+  9-5-smb-preview-support-is-explicit-capability-driven-and-deterministic: done
   epic-9-retrospective: optional
   epic-10: in-progress
   10-1-wopi-enablement-configuration-host-allowlist-https-posture-health-gating: done
