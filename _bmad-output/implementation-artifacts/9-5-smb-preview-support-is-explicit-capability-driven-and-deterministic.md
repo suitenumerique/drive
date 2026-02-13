@@ -1,6 +1,6 @@
 # Story 9.5: SMB preview support is explicit, capability-driven, and deterministic
 
-Status: review
+Status: done
 
 ## Story
 
