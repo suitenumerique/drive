@@ -1,11 +1,14 @@
 """API endpoints"""
 # pylint: disable=too-many-lines
 
+import contextlib
 import json
 import logging
 import posixpath
 import re
 import secrets
+import threading
+import time
 from urllib.parse import parse_qs, quote, unquote, urlparse
 from uuid import UUID
 
@@ -98,6 +101,14 @@ MEDIA_STORAGE_URL_PATTERN = re.compile(
     f"{settings.MEDIA_URL:s}(?P<preview>preview/)?"
     f"(?P<key>{ITEM_FOLDER:s}/(?P<pk>{UUID_REGEX:s})/.*{FILE_EXT_REGEX:s})$"
 )
+
+
+class _MountUploadTooLarge(Exception):
+    """Internal sentinel for deterministic upload abort (size limit)."""
+
+
+class _MountUploadTimeout(Exception):
+    """Internal sentinel for deterministic upload abort (time limit)."""
 
 
 # pylint: disable=too-many-ancestors
@@ -2596,6 +2607,9 @@ class MountViewSet(viewsets.ViewSet):
     lookup_url_kwarg = "mount_id"
     lookup_value_regex = r"[a-z0-9][a-z0-9._-]{1,62}[a-z0-9]"
 
+    _UPLOAD_LOCK = threading.Lock()
+    _UPLOAD_SEMAPHORES: dict[str, threading.BoundedSemaphore] = {}
+
     def _enabled_mounts(self) -> list[dict]:
         mounts = list(getattr(settings, "MOUNTS_REGISTRY", []) or [])
         return [m for m in mounts if bool(m.get("enabled", True))]
@@ -2657,6 +2671,309 @@ class MountViewSet(viewsets.ViewSet):
                 {
                     "detail": drf.exceptions.ErrorDetail(
                         "Invalid mount path.", code="mount.path.invalid"
+                    )
+                }
+            ) from exc
+
+    @classmethod
+    def _upload_semaphore(cls, mount_id: str) -> threading.BoundedSemaphore:
+        limit = int(getattr(settings, "MOUNTS_UPLOAD_MAX_CONCURRENCY_PER_MOUNT", 1))
+        limit = max(limit, 1)
+
+        with cls._UPLOAD_LOCK:
+            sem = cls._UPLOAD_SEMAPHORES.get(mount_id)
+            if sem is None:
+                sem = threading.BoundedSemaphore(limit)
+                cls._UPLOAD_SEMAPHORES[mount_id] = sem
+            return sem
+
+    @staticmethod
+    def _sanitize_upload_filename(raw: str) -> str:
+        candidate = str(raw or "").strip()
+        candidate = (
+            candidate.rsplit("/", maxsplit=1)[-1].rsplit("\\", maxsplit=1)[-1].strip()
+        )
+        if not candidate or candidate in {".", ".."}:
+            raise ValueError("invalid_filename")
+        if "/" in candidate or "\\" in candidate or "\x00" in candidate:
+            raise ValueError("invalid_filename")
+        if len(candidate) > 255:
+            raise ValueError("filename_too_long")
+        return candidate
+
+    def _mount_entry_folder_or_400(
+        self,
+        *,
+        provider,
+        mount: dict,
+        normalized_path: str,
+    ) -> MountEntry:
+        try:
+            entry = provider.stat(mount=mount, normalized_path=normalized_path)
+        except MountProviderError as exc:
+            if exc.public_code == "mount.path.not_found":
+                raise drf.exceptions.NotFound(
+                    drf.exceptions.ErrorDetail(
+                        "Mount path not found.", code="mount.path.not_found"
+                    )
+                ) from exc
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        exc.public_message, code=exc.public_code
+                    )
+                }
+            ) from exc
+
+        if entry.entry_type != "folder":
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Mount path is not a folder.", code="mount.path.not_a_folder"
+                    )
+                }
+            )
+
+        return entry
+
+    def _mount_upload_provider_or_400(
+        self,
+        *,
+        mount: dict,
+        mount_id: str,
+        normalized_path: str,
+    ):
+        provider = get_mount_provider(str(mount.get("provider") or ""))
+        required = ("open_write", "rename", "remove")
+        if all(hasattr(provider, name) for name in required):
+            return provider
+
+        logger.info(
+            "mount_upload: unavailable "
+            "(failure_class=mount.upload.unavailable "
+            "next_action_hint=Enable mount upload or configure a provider that "
+            "supports upload "
+            "mount_id=%s path_hash=%s)",
+            mount_id,
+            safe_str_hash(normalized_path),
+        )
+        raise drf.exceptions.ValidationError(
+            {
+                "detail": drf.exceptions.ErrorDetail(
+                    "Upload is not available for this mount.",
+                    code="mount.upload.unavailable",
+                )
+            }
+        )
+
+    @staticmethod
+    def _mount_upload_file_or_400(request):
+        uploaded = request.FILES.get("file") or request.data.get("file")
+        if uploaded is None or not hasattr(uploaded, "chunks"):
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Missing upload file.", code="mount.upload.missing_file"
+                    )
+                }
+            )
+        return uploaded
+
+    def _mount_upload_paths_or_400(
+        self,
+        *,
+        folder_path: str,
+        filename: str,
+    ) -> tuple[str, str]:
+        try:
+            final_path = normalize_mount_path(posixpath.join(folder_path, filename))
+        except MountPathNormalizationError as exc:
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Invalid mount path.", code="mount.path.invalid"
+                    )
+                }
+            ) from exc
+
+        temp_name = f".drive-upload-{safe_str_hash(final_path)}.tmp"
+        temp_path = normalize_mount_path(posixpath.join(folder_path, temp_name))
+        return final_path, temp_path
+
+    @staticmethod
+    def _mount_upload_remove_stale_temp(
+        *, provider, mount: dict, temp_path: str
+    ) -> None:
+        try:
+            provider.remove(mount=mount, normalized_path=temp_path)
+        except MountProviderError as exc:
+            if exc.public_code != "mount.path.not_found":
+                raise
+
+    @staticmethod
+    def _mount_upload_ensure_target_missing(
+        *, provider, mount: dict, final_path: str
+    ) -> None:
+        try:
+            _ = provider.stat(mount=mount, normalized_path=final_path)
+        except MountProviderError as exc:
+            if exc.public_code == "mount.path.not_found":
+                return
+            raise
+        raise drf.exceptions.ValidationError(
+            {
+                "detail": drf.exceptions.ErrorDetail(
+                    "Target already exists.", code="mount.upload.target_exists"
+                )
+            }
+        )
+
+    @staticmethod
+    def _mount_upload_limits(*, uploaded) -> tuple[int, int]:
+        max_bytes = int(getattr(settings, "MOUNTS_UPLOAD_MAX_BYTES", 1) or 1)
+        max_seconds = int(getattr(settings, "MOUNTS_UPLOAD_MAX_SECONDS", 1) or 1)
+        max_bytes = max(max_bytes, 1)
+        max_seconds = max(max_seconds, 1)
+
+        known_size = getattr(uploaded, "size", None)
+        if isinstance(known_size, int) and known_size > max_bytes:
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Upload is too large.", code="mount.upload.too_large"
+                    )
+                }
+            )
+
+        return max_bytes, max_seconds
+
+    @staticmethod
+    def _mount_upload_write_temp(
+        *,
+        provider,
+        mount: dict,
+        uploaded,
+        write_spec: tuple[str, int, int],
+    ) -> int:
+        temp_path, max_bytes, max_seconds = write_spec
+        started = time.monotonic()
+        bytes_written = 0
+        chunk_size = 64 * 1024
+        with provider.open_write(mount=mount, normalized_path=temp_path) as f:
+            for chunk in uploaded.chunks(chunk_size):
+                if not chunk:
+                    continue
+                bytes_written += len(chunk)
+                if bytes_written > max_bytes:
+                    raise _MountUploadTooLarge()
+                if (time.monotonic() - started) > max_seconds:
+                    raise _MountUploadTimeout()
+                f.write(chunk)
+        return bytes_written
+
+    @staticmethod
+    def _mount_upload_cleanup_temp(*, provider, mount: dict, temp_path: str) -> None:
+        with contextlib.suppress(MountProviderError, Exception):
+            provider.remove(mount=mount, normalized_path=temp_path)
+
+    def _mount_upload_write_temp_or_400(
+        self,
+        *,
+        provider,
+        mount: dict,
+        uploaded,
+        write_spec: tuple[str, int, int],
+    ) -> int:
+        temp_path, max_bytes, max_seconds = write_spec
+        try:
+            return self._mount_upload_write_temp(
+                provider=provider,
+                mount=mount,
+                uploaded=uploaded,
+                write_spec=(temp_path, max_bytes, max_seconds),
+            )
+        except _MountUploadTimeout:
+            self._mount_upload_cleanup_temp(
+                provider=provider, mount=mount, temp_path=temp_path
+            )
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Upload timed out.", code="mount.upload.timeout"
+                    )
+                }
+            ) from None
+        except _MountUploadTooLarge:
+            self._mount_upload_cleanup_temp(
+                provider=provider, mount=mount, temp_path=temp_path
+            )
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Upload is too large.", code="mount.upload.too_large"
+                    )
+                }
+            ) from None
+        except MountProviderError as exc:
+            self._mount_upload_cleanup_temp(
+                provider=provider, mount=mount, temp_path=temp_path
+            )
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        exc.public_message, code=exc.public_code
+                    )
+                }
+            ) from exc
+        except OSError:
+            self._mount_upload_cleanup_temp(
+                provider=provider, mount=mount, temp_path=temp_path
+            )
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Upload failed.", code="mount.upload.failed"
+                    )
+                }
+            ) from None
+
+    @staticmethod
+    def _mount_upload_finalize_rename(
+        *,
+        provider,
+        mount: dict,
+        temp_path: str,
+        final_path: str,
+    ) -> None:
+        provider.rename(
+            mount=mount,
+            src_normalized_path=temp_path,
+            dst_normalized_path=final_path,
+        )
+
+    def _mount_upload_finalize_or_400(
+        self,
+        *,
+        provider,
+        mount: dict,
+        temp_path: str,
+        final_path: str,
+    ) -> None:
+        try:
+            self._mount_upload_finalize_rename(
+                provider=provider,
+                mount=mount,
+                temp_path=temp_path,
+                final_path=final_path,
+            )
+        except MountProviderError as exc:
+            self._mount_upload_cleanup_temp(
+                provider=provider, mount=mount, temp_path=temp_path
+            )
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        exc.public_message, code=exc.public_code
                     )
                 }
             ) from exc
@@ -3068,8 +3385,7 @@ class MountViewSet(viewsets.ViewSet):
         """
         Upload to a mount folder (capability-gated).
 
-        This endpoint is contract-level and currently returns a deterministic
-        no-leak error when upload is not available.
+        This endpoint streams content for providers that support upload.
         """
 
         target = mount_id or self.kwargs.get(self.lookup_url_kwarg) or ""
@@ -3083,22 +3399,99 @@ class MountViewSet(viewsets.ViewSet):
         )
 
         normalized_path = self._normalized_path_from_request(request)
-        logger.info(
-            "mount_upload: unavailable "
-            "(failure_class=mount.upload.unavailable "
-            "next_action_hint=Enable mount upload or configure a provider that "
-            "supports upload "
-            "mount_id=%s path_hash=%s)",
-            target,
-            safe_str_hash(normalized_path),
+
+        provider = self._mount_upload_provider_or_400(
+            mount=mount, mount_id=target, normalized_path=normalized_path
         )
-        raise drf.exceptions.ValidationError(
-            {
-                "detail": drf.exceptions.ErrorDetail(
-                    "Upload is not available for this mount.",
-                    code="mount.upload.unavailable",
-                )
-            }
+        uploaded = self._mount_upload_file_or_400(request)
+
+        try:
+            filename = self._sanitize_upload_filename(
+                str(getattr(uploaded, "name", ""))
+            )
+        except ValueError as exc:
+            code = (
+                "mount.upload.filename_too_long"
+                if str(exc) == "filename_too_long"
+                else "mount.upload.invalid_filename"
+            )
+            raise drf.exceptions.ValidationError(
+                {"detail": drf.exceptions.ErrorDetail("Invalid filename.", code=code)}
+            ) from None
+
+        _ = self._mount_entry_folder_or_400(
+            provider=provider, mount=mount, normalized_path=normalized_path
+        )
+
+        final_path, temp_path = self._mount_upload_paths_or_400(
+            folder_path=normalized_path,
+            filename=filename,
+        )
+
+        try:
+            self._mount_upload_remove_stale_temp(
+                provider=provider, mount=mount, temp_path=temp_path
+            )
+        except MountProviderError as exc:
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        exc.public_message, code=exc.public_code
+                    )
+                }
+            ) from exc
+
+        try:
+            self._mount_upload_ensure_target_missing(
+                provider=provider, mount=mount, final_path=final_path
+            )
+        except MountProviderError as exc:
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        exc.public_message, code=exc.public_code
+                    )
+                }
+            ) from exc
+
+        max_bytes, max_seconds = self._mount_upload_limits(uploaded=uploaded)
+
+        sem = self._upload_semaphore(target)
+        if not sem.acquire(blocking=False):
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Upload is busy; retry later.", code="mount.upload.busy"
+                    )
+                }
+            )
+
+        try:
+            bytes_written = self._mount_upload_write_temp_or_400(
+                provider=provider,
+                mount=mount,
+                uploaded=uploaded,
+                write_spec=(temp_path, max_bytes, max_seconds),
+            )
+        finally:
+            sem.release()
+
+        self._mount_upload_finalize_or_400(
+            provider=provider,
+            mount=mount,
+            temp_path=temp_path,
+            final_path=final_path,
+        )
+
+        logger.info(
+            "mount_upload: ok (mount_id=%s path_hash=%s size=%sB)",
+            target,
+            safe_str_hash(final_path),
+            bytes_written,
+        )
+        return drf.response.Response(
+            {"mount_id": target, "normalized_path": final_path},
+            status=status.HTTP_201_CREATED,
         )
 
     @drf.decorators.action(detail=True, methods=["get"], url_path="download")

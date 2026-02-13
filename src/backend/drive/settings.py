@@ -1921,6 +1921,22 @@ class Base(Configuration):
         environ_name="MOUNTS_SECRET_REFRESH_SECONDS",
         environ_prefix=None,
     )
+    # Mount uploads (backend-mediated, v1)
+    MOUNTS_UPLOAD_MAX_BYTES = values.PositiveIntegerValue(
+        10 * GB,
+        environ_name="MOUNTS_UPLOAD_MAX_BYTES",
+        environ_prefix=None,
+    )
+    MOUNTS_UPLOAD_MAX_SECONDS = values.PositiveIntegerValue(
+        60 * 60,
+        environ_name="MOUNTS_UPLOAD_MAX_SECONDS",
+        environ_prefix=None,
+    )
+    MOUNTS_UPLOAD_MAX_CONCURRENCY_PER_MOUNT = values.PositiveIntegerValue(
+        2,
+        environ_name="MOUNTS_UPLOAD_MAX_CONCURRENCY_PER_MOUNT",
+        environ_prefix=None,
+    )
     MOUNTS_REGISTRY: list[dict] = []
 
     # Malware detection

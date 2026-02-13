@@ -33,6 +33,7 @@ and this project adheres to
   (version-bound pool)
 - ✨(mounts) browse mount paths with deterministic ordering and pagination
 - ✨(mounts) implement SMB MountProvider browse (stat/list)
+- ✨(mounts) stream SMB mount uploads with deterministic finalize
 - ✨(mounts) stream SMB mount downloads (Range supported)
 - ✨(mounts) capability-gate mount action endpoints (preview/upload/wopi)
 - ✨(mounts) create share links for mount virtual entries

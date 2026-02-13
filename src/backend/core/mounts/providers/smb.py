@@ -263,15 +263,17 @@ def _unc_path(*, config: _SmbConfig, normalized_path: str) -> str:
 
 
 def _map_exc(*, exc: Exception, op: str) -> MountProviderError:
-    if isinstance(exc, BadNetworkName):
-        return MountProviderError(
-            failure_class="mount.smb.env.share_not_found",
-            next_action_hint="Verify the SMB server/share name and retry the operation.",
-            public_message="SMB share not found.",
-            public_code="mount.smb.env.share_not_found",
-        )
+    failure_class: str
+    next_action_hint: str
+    public_message: str
+    public_code: str
 
-    if isinstance(
+    if isinstance(exc, BadNetworkName):
+        failure_class = "mount.smb.env.share_not_found"
+        next_action_hint = "Verify the SMB server/share name and retry the operation."
+        public_message = "SMB share not found."
+        public_code = "mount.smb.env.share_not_found"
+    elif isinstance(
         exc,
         (
             SMBAuthenticationError,
@@ -281,35 +283,24 @@ def _map_exc(*, exc: Exception, op: str) -> MountProviderError:
             AccessDenied,
         ),
     ):
-        return MountProviderError(
-            failure_class="mount.smb.env.auth_failed",
-            next_action_hint="Verify SMB credentials (refs-only secrets) and retry the operation.",
-            public_message="SMB authentication failed.",
-            public_code="mount.smb.env.auth_failed",
+        failure_class = "mount.smb.env.auth_failed"
+        next_action_hint = (
+            "Verify SMB credentials (refs-only secrets) and retry the operation."
         )
-
-    if isinstance(exc, (SMBConnectionClosed, TimeoutError)):
-        return MountProviderError(
-            failure_class="mount.smb.env.unreachable",
-            next_action_hint="Verify the SMB server is reachable from the backend and retry.",
-            public_message="SMB mount is unreachable.",
-            public_code="mount.smb.env.unreachable",
+        public_message = "SMB authentication failed."
+        public_code = "mount.smb.env.auth_failed"
+    elif isinstance(exc, (SMBConnectionClosed, TimeoutError)) or (
+        isinstance(exc, OSError)
+        and getattr(exc, "errno", None)
+        in {errno.ECONNREFUSED, errno.EHOSTUNREACH, errno.ENETUNREACH, errno.ETIMEDOUT}
+    ):
+        failure_class = "mount.smb.env.unreachable"
+        next_action_hint = (
+            "Verify the SMB server is reachable from the backend and retry."
         )
-
-    if isinstance(exc, OSError) and getattr(exc, "errno", None) in {
-        errno.ECONNREFUSED,
-        errno.EHOSTUNREACH,
-        errno.ENETUNREACH,
-        errno.ETIMEDOUT,
-    }:
-        return MountProviderError(
-            failure_class="mount.smb.env.unreachable",
-            next_action_hint="Verify the SMB server is reachable from the backend and retry.",
-            public_message="SMB mount is unreachable.",
-            public_code="mount.smb.env.unreachable",
-        )
-
-    if isinstance(
+        public_message = "SMB mount is unreachable."
+        public_code = "mount.smb.env.unreachable"
+    elif isinstance(
         exc,
         (
             SMBOSError,
@@ -319,39 +310,58 @@ def _map_exc(*, exc: Exception, op: str) -> MountProviderError:
             ObjectPathNotFound,
         ),
     ) or (isinstance(exc, OSError) and getattr(exc, "errno", None) == errno.ENOENT):
-        return MountProviderError(
-            failure_class="mount.path.not_found",
-            next_action_hint="Verify the path exists in the mount and retry.",
-            public_message="Mount path not found.",
-            public_code="mount.path.not_found",
+        failure_class = "mount.path.not_found"
+        next_action_hint = "Verify the path exists in the mount and retry."
+        public_message = "Mount path not found."
+        public_code = "mount.path.not_found"
+    elif isinstance(exc, FileExistsError) or (
+        isinstance(exc, OSError) and getattr(exc, "errno", None) == errno.EEXIST
+    ):
+        failure_class = "mount.path.already_exists"
+        next_action_hint = "Choose a different target name/path and retry."
+        public_message = "Mount path already exists."
+        public_code = "mount.path.already_exists"
+    else:
+        mapping = {
+            "stat": (
+                "mount.smb.stat_failed",
+                "Verify SMB mount configuration and connectivity, then retry the stat operation.",
+            ),
+            "list": (
+                "mount.smb.list_failed",
+                "Verify SMB mount configuration and connectivity, then retry the list operation.",
+            ),
+            "read": (
+                "mount.smb.read_failed",
+                "Verify SMB mount configuration and connectivity, then retry the download.",
+            ),
+            "write": (
+                "mount.smb.write_failed",
+                "Verify SMB mount configuration and connectivity, then retry the upload.",
+            ),
+            "rename": (
+                "mount.smb.rename_failed",
+                "Verify SMB mount configuration and connectivity, then retry finalize.",
+            ),
+            "remove": (
+                "mount.smb.remove_failed",
+                "Verify SMB mount configuration and connectivity, then retry cleanup.",
+            ),
+        }
+        failure_class, next_action_hint = mapping.get(
+            op,
+            (
+                "mount.smb.operation_failed",
+                "Verify SMB mount configuration and connectivity, then retry the operation.",
+            ),
         )
-
-    mapping = {
-        "stat": (
-            "mount.smb.stat_failed",
-            "Verify SMB mount configuration and connectivity, then retry the stat operation.",
-        ),
-        "list": (
-            "mount.smb.list_failed",
-            "Verify SMB mount configuration and connectivity, then retry the list operation.",
-        ),
-        "read": (
-            "mount.smb.read_failed",
-            "Verify SMB mount configuration and connectivity, then retry the download.",
-        ),
-    }
-    failure_class, next_action_hint = mapping.get(
-        op,
-        (
-            "mount.smb.operation_failed",
-            "Verify SMB mount configuration and connectivity, then retry the operation.",
-        ),
-    )
+        public_message = "SMB operation failed."
+        public_code = failure_class
     return MountProviderError(
         failure_class=failure_class,
         next_action_hint=next_action_hint,
-        public_message="SMB operation failed.",
-        public_code=failure_class,
+        public_message=public_message,
+        public_code=public_code,
     )
 
 
@@ -493,3 +503,69 @@ def open_read(*, mount: dict, normalized_path: str):
     finally:
         with suppress(Exception):
             f.close()
+
+
+@contextmanager
+def open_write(*, mount: dict, normalized_path: str):
+    """
+    Open a mount file for streaming writes.
+
+    The returned file handle is suitable for chunked writes.
+    """
+
+    config, secret_path, secret_ref = _load_config(mount)
+    _ensure_session(
+        mount=mount,
+        config=config,
+        secret_path=secret_path,
+        secret_ref=secret_ref,
+    )
+
+    unc = _unc_path(config=config, normalized_path=normalized_path)
+    try:
+        f = smbclient.open_file(unc, mode="wb")
+    except Exception as exc:  # noqa: BLE001
+        raise _map_exc(exc=exc, op="write") from None
+
+    try:
+        yield f
+    finally:
+        with suppress(Exception):
+            f.close()
+
+
+def rename(*, mount: dict, src_normalized_path: str, dst_normalized_path: str) -> None:
+    """Best-effort rename for deterministic finalize semantics."""
+
+    config, secret_path, secret_ref = _load_config(mount)
+    _ensure_session(
+        mount=mount,
+        config=config,
+        secret_path=secret_path,
+        secret_ref=secret_ref,
+    )
+
+    src_unc = _unc_path(config=config, normalized_path=src_normalized_path)
+    dst_unc = _unc_path(config=config, normalized_path=dst_normalized_path)
+    try:
+        smbclient.rename(src_unc, dst_unc)
+    except Exception as exc:  # noqa: BLE001
+        raise _map_exc(exc=exc, op="rename") from None
+
+
+def remove(*, mount: dict, normalized_path: str) -> None:
+    """Remove a file at the given mount path (best-effort cleanup)."""
+
+    config, secret_path, secret_ref = _load_config(mount)
+    _ensure_session(
+        mount=mount,
+        config=config,
+        secret_path=secret_path,
+        secret_ref=secret_ref,
+    )
+
+    unc = _unc_path(config=config, normalized_path=normalized_path)
+    try:
+        smbclient.remove(unc)
+    except Exception as exc:  # noqa: BLE001
+        raise _map_exc(exc=exc, op="remove") from None
