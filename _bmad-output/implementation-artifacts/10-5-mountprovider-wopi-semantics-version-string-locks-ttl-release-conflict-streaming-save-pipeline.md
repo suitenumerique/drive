@@ -1,6 +1,6 @@
 # Story 10.5: MountProvider WOPI semantics: version string + locks (TTL/release/conflict) + streaming save pipeline
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -41,14 +41,26 @@ Developers/CI can run Drive-integrated S3 contract tests with explicit audiences
 ## Dev Agent Record
 
 ### Agent Model Used
-
+GPT-5.2 (Codex CLI)
 
 ### Debug Log References
-
+- Run artifacts: `_bmad-output/implementation-artifacts/runs/20260213-090718-10.5/`
 
 ### Completion Notes List
-
+- Implemented mount-backed WOPI init (token + launch URL) behind `mount.wopi=true`.
+- Added mount-backed WOPI endpoints with deterministic version string and lock TTL semantics.
+- PutFile streams request bytes to the provider (`open_write`) and returns `X-WOPI-ItemVersion`.
+- No-leak: no mount path echoing; logs use safe `path_hash` correlation.
 
 ### File List
-
-
+- CHANGELOG.md
+- src/backend/core/api/viewsets.py
+- src/backend/core/tests/mounts/test_api_mounts_actions_gating.py
+- src/backend/core/tests/mounts/test_api_mounts_wopi.py
+- src/backend/wopi/authentication.py
+- src/backend/wopi/permissions.py
+- src/backend/wopi/services/access.py
+- src/backend/wopi/services/lock.py
+- src/backend/wopi/urls.py
+- src/backend/wopi/utils/__init__.py
+- src/backend/wopi/viewsets.py

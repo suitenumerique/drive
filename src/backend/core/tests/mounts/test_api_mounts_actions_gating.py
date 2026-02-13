@@ -1,9 +1,12 @@
 """Tests for mount action capability gating (no dead actions)."""
 
+from django.core.cache import cache
+
 import pytest
 from rest_framework.test import APIClient
 
 from core import factories
+from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
 
 pytestmark = pytest.mark.django_db
 
@@ -72,6 +75,14 @@ def test_api_mount_action_is_capability_gated(
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
+
+    if endpoint == "wopi":
+        settings.WOPI_CLIENTS = ["collabora"]
+        cache.set(
+            WOPI_CONFIGURATION_CACHE_KEY,
+            {"mimetypes": {}, "extensions": {"txt": "https://wopi.example/edit?"}},
+            timeout=60,
+        )
 
     url = f"/api/v1.0/mounts/alpha-mount/{endpoint}/?path=/"
     resp = getattr(client, method)(url)

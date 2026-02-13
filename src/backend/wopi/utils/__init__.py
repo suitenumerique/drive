@@ -1,13 +1,16 @@
 """Utils for WOPI"""
 
 import re
-from urllib.parse import quote_plus, urlencode, urlparse
+from os.path import splitext
+from urllib.parse import urlencode, urlparse
 
 from django.conf import settings
 from django.core.cache import cache
 from django.core.files.storage import default_storage
 
 from core import models
+from core.mounts.providers.base import MountEntry
+from core.utils.no_leak import sha256_16
 from wopi.services.s3_prerequisites import check_wopi_s3_bucket_versioning
 from wopi.tasks.configure_wopi import (
     WOPI_CONFIGURATION_CACHE_KEY,
@@ -75,6 +78,50 @@ def get_wopi_client_config(item, user):
         result = wopi_configuration["mimetypes"][item.mimetype]
 
     return result
+
+
+def get_wopi_client_config_for_filename(
+    *,
+    filename: str,
+    mimetype: str | None = None,
+):
+    """
+    Return the WOPI client configuration for a mount-backed file.
+
+    Unlike `get_wopi_client_config` this does not depend on the S3 backend
+    (mount-backed WOPI is provider-driven).
+    """
+    if not getattr(settings, "WOPI_CLIENTS", []):
+        return None
+
+    wopi_configuration = cache.get(
+        WOPI_CONFIGURATION_CACHE_KEY, default=WOPI_DEFAULT_CONFIGURATION
+    )
+    if not wopi_configuration:
+        return None
+
+    _, ext = splitext(str(filename or ""))
+    ext_key = ext.lstrip(".") if ext else None
+
+    result = None
+    if ext_key and ext_key in wopi_configuration.get("extensions", {}):
+        result = wopi_configuration["extensions"][ext_key]
+    elif mimetype and mimetype in wopi_configuration.get("mimetypes", {}):
+        result = wopi_configuration["mimetypes"][mimetype]
+
+    return result
+
+
+def compute_mount_entry_version(entry: MountEntry) -> str:
+    """
+    Compute a deterministic application-level version string for a mount entry.
+
+    This version changes when mount metadata changes (size and/or modified_at).
+    """
+    size_part = "" if entry.size is None else str(int(entry.size))
+    modified_part = "" if entry.modified_at is None else entry.modified_at.isoformat()
+    digest = sha256_16(f"mount:v1:{size_part}:{modified_part}")
+    return f"m1-{digest}"
 
 
 def compute_wopi_launch_url(

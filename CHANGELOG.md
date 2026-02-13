@@ -38,6 +38,7 @@ and this project adheres to
 - ✨(mounts) capability-gate mount action endpoints (preview/upload/wopi)
 - ✨(mounts) add SMB mount preview support (capability-driven)
 - ✨(mounts) create share links for mount virtual entries
+- ✨(mounts) enable WOPI for mount-backed files (version/locks/streaming saves)
 - ✨(wopi) disable WOPI when S3 bucket versioning is disabled
 - ✨(global) add release notes
 

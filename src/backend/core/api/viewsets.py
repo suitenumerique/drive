@@ -75,6 +75,7 @@ from wopi.tasks.configure_wopi import (
 from wopi.utils import (
     compute_wopi_launch_url,
     get_wopi_client_config,
+    get_wopi_client_config_for_filename,
     is_wopi_backend_supported,
 )
 
@@ -3442,8 +3443,9 @@ class MountViewSet(viewsets.ViewSet):
         """
         WOPI init for mount entries (capability-gated).
 
-        This endpoint is contract-level and currently returns a deterministic
-        no-leak error when WOPI is not available.
+        This endpoint issues a short-lived WOPI access token bound to the
+        (mount_id, normalized_path) tuple and returns a launch URL for the
+        configured WOPI client (Collabora-only).
         """
 
         target = mount_id or self.kwargs.get(self.lookup_url_kwarg) or ""
@@ -3457,22 +3459,104 @@ class MountViewSet(viewsets.ViewSet):
         )
 
         normalized_path = self._normalized_path_from_request(request)
-        logger.info(
-            "mount_wopi: unavailable "
-            "(failure_class=mount.wopi.unavailable "
-            "next_action_hint=Enable mount WOPI or configure a provider that "
-            "supports WOPI "
-            "mount_id=%s path_hash=%s)",
-            target,
-            safe_str_hash(normalized_path),
+
+        if not settings.WOPI_CLIENTS:
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Online editing is not enabled for this deployment.",
+                        code="wopi.not_enabled",
+                    )
+                }
+            )
+
+        wopi_configuration = cache.get(
+            WOPI_CONFIGURATION_CACHE_KEY, default=WOPI_DEFAULT_CONFIGURATION
         )
-        raise drf.exceptions.ValidationError(
+        if not wopi_configuration or (
+            not wopi_configuration.get("mimetypes")
+            and not wopi_configuration.get("extensions")
+        ):
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Online editing is not configured (WOPI discovery missing).",
+                        code="wopi.discovery_missing",
+                    )
+                }
+            )
+
+        provider = get_mount_provider(str(mount.get("provider") or ""))
+        if not (hasattr(provider, "open_read") and hasattr(provider, "open_write")):
+            logger.info(
+                "mount_wopi: unavailable "
+                "(failure_class=mount.wopi.unavailable "
+                "next_action_hint=Configure a provider that supports WOPI "
+                "mount_id=%s path_hash=%s)",
+                target,
+                safe_str_hash(normalized_path),
+            )
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Online editing is not available for this mount.",
+                        code="mount.wopi.unavailable",
+                    )
+                }
+            )
+
+        entry = self._mount_entry_file_or_400(
+            provider=provider,
+            mount=mount,
+            normalized_path=normalized_path,
+        )
+
+        if not (
+            wopi_client := get_wopi_client_config_for_filename(filename=str(entry.name))
+        ):
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": drf.exceptions.ErrorDetail(
+                        "Online editing is not available for this file.",
+                        code="wopi.file_unavailable",
+                    )
+                }
+            )
+
+        service = access_service.AccessUserMountEntryService()
+        access_token, access_token_ttl, file_id = service.insert_new_access(
+            mount_id=target,
+            normalized_path=normalized_path,
+            user=request.user,
+        )
+
+        get_file_info = reverse("mount-files-detail", kwargs={"pk": file_id})
+        language = (
+            request.user.language
+            if request.user.is_authenticated and request.user.language
+            else settings.LANGUAGE_CODE
+        )
+        wopi_src_base_url = (
+            getattr(settings, "WOPI_SRC_BASE_URL", None)
+            or getattr(settings, "DRIVE_PUBLIC_URL", None)
+            or request.build_absolute_uri("/").rstrip("/")
+        )
+        wopi_src_base_url = str(wopi_src_base_url).rstrip("/")
+
+        launch_url = compute_wopi_launch_url(
+            wopi_client,
+            get_file_info,
+            language,
+            wopi_src_base_url=wopi_src_base_url,
+        )
+
+        return drf.response.Response(
             {
-                "detail": drf.exceptions.ErrorDetail(
-                    "Online editing is not available for this mount.",
-                    code="mount.wopi.unavailable",
-                )
-            }
+                "access_token": access_token,
+                "access_token_ttl": access_token_ttl,
+                "launch_url": launch_url,
+            },
+            status=drf.status.HTTP_200_OK,
         )
 
     @drf.decorators.action(detail=True, methods=["post"], url_path="upload")

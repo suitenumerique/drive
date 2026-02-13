@@ -1,0 +1,12 @@
+CHANGELOG.md
+_bmad-output/implementation-artifacts/10-5-mountprovider-wopi-semantics-version-string-locks-ttl-release-conflict-streaming-save-pipeline.md
+src/backend/core/api/viewsets.py
+src/backend/core/tests/mounts/test_api_mounts_actions_gating.py
+src/backend/core/tests/mounts/test_api_mounts_wopi.py
+src/backend/wopi/authentication.py
+src/backend/wopi/permissions.py
+src/backend/wopi/services/access.py
+src/backend/wopi/services/lock.py
+src/backend/wopi/urls.py
+src/backend/wopi/utils/__init__.py
+src/backend/wopi/viewsets.py

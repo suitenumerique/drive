@@ -6,7 +6,7 @@ https://learn.microsoft.com/en-us/microsoft-365/cloud-storage-partner-program/re
 from dataclasses import dataclass
 from datetime import timedelta
 from secrets import token_urlsafe
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, AnonymousUser
@@ -14,6 +14,7 @@ from django.core.cache import cache
 from django.utils import timezone
 
 from core.models import Item, User
+from core.mounts.paths import MountPathNormalizationError, normalize_mount_path
 
 
 class AccessError(Exception):
@@ -30,6 +31,10 @@ class AccessUserItemInvalidDataError(AccessError):
 
 class AccessUserItemNotAllowed(AccessError):
     """Exception for when a user is not allowed to access an item."""
+
+
+class AccessUserMountEntryNotAllowed(AccessError):
+    """Exception for when a user is not allowed to access a mount entry."""
 
 
 @dataclass
@@ -96,3 +101,110 @@ class AccessUserItemService:
         if data is None:
             raise AccessUserItemNotFoundError("Resource not found")
         return AccessUserItem.from_dict(data)
+
+
+@dataclass
+class AccessUserMountEntry:
+    """Access context for mount-backed WOPI operations."""
+
+    mount_id: str
+    normalized_path: str
+    user: AbstractUser
+    file_id: UUID
+
+    def to_dict(self) -> dict:
+        """Serialize the access context for cache storage."""
+        return {
+            "mount_id": str(self.mount_id),
+            "normalized_path": str(self.normalized_path),
+            "user": str(self.user.id) if not self.user.is_anonymous else None,
+            "file_id": str(self.file_id),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "AccessUserMountEntry":
+        """Deserialize the access context from cache storage."""
+        try:
+            mount_id_raw = data["mount_id"]
+            normalized_path_raw = data["normalized_path"]
+            file_id_raw = data["file_id"]
+            user_raw = data["user"]
+        except KeyError as error:
+            raise AccessUserItemInvalidDataError("Invalid data") from error
+
+        if not isinstance(mount_id_raw, str) or not mount_id_raw.strip():
+            raise AccessUserItemInvalidDataError("Invalid data")
+
+        if not isinstance(normalized_path_raw, str):
+            raise AccessUserItemInvalidDataError("Invalid data")
+
+        try:
+            normalized_path = normalize_mount_path(normalized_path_raw)
+        except MountPathNormalizationError as error:
+            raise AccessUserItemInvalidDataError("Invalid data") from error
+
+        try:
+            file_id = UUID(str(file_id_raw))
+        except (TypeError, ValueError) as error:
+            raise AccessUserItemInvalidDataError("Invalid data") from error
+
+        try:
+            user = (
+                User.objects.get(id=UUID(str(user_raw)))
+                if user_raw
+                else AnonymousUser()
+            )
+        except (User.DoesNotExist, ValueError, TypeError) as error:
+            raise AccessUserItemNotFoundError("Resource not found") from error
+
+        return cls(
+            mount_id=mount_id_raw.strip(),
+            normalized_path=normalized_path,
+            user=user,
+            file_id=file_id,
+        )
+
+
+class AccessUserMountEntryService:
+    """Service managing access tokens for mount-backed WOPI."""
+
+    @staticmethod
+    def generate_token() -> str:
+        """Generate a random access token."""
+        return token_urlsafe()
+
+    def insert_new_access(
+        self,
+        *,
+        mount_id: str,
+        normalized_path: str,
+        user: AbstractUser,
+    ) -> tuple[str, int, UUID]:
+        """Create a short-lived WOPI access token bound to a mount entry."""
+        if getattr(user, "is_anonymous", True):
+            raise AccessUserMountEntryNotAllowed()
+
+        token = self.generate_token()
+        file_id = uuid4()
+        access_user_mount = AccessUserMountEntry(
+            mount_id=str(mount_id or "").strip(),
+            normalized_path=normalize_mount_path(normalized_path),
+            user=user,
+            file_id=file_id,
+        )
+        token_eol = timezone.now() + timedelta(
+            seconds=settings.WOPI_ACCESS_TOKEN_TIMEOUT
+        )
+        cache.set(
+            token,
+            access_user_mount.to_dict(),
+            timeout=settings.WOPI_ACCESS_TOKEN_TIMEOUT,
+        )
+        return token, int(round(token_eol.timestamp())) * 1000, file_id
+
+    def get_access_user_mount_entry(self, token: str) -> AccessUserMountEntry:
+        """Resolve a mount-backed access token to its context."""
+        data = cache.get(token)
+        if data is None:
+            raise AccessUserItemNotFoundError("Resource not found")
+        return AccessUserMountEntry.from_dict(data)
