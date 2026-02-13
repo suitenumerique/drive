@@ -1,6 +1,6 @@
 # Story 10.5: MountProvider WOPI semantics: version string + locks (TTL/release/conflict) + streaming save pipeline
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -50,5 +50,4 @@ Developers/CI can run Drive-integrated S3 contract tests with explicit audiences
 
 
 ### File List
-
 
