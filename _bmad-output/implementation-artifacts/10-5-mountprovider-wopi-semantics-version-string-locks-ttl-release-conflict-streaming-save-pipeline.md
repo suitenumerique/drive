@@ -1,6 +1,6 @@
 # Story 10.5: MountProvider WOPI semantics: version string + locks (TTL/release/conflict) + streaming save pipeline
 
-Status: review
+Status: done
 
 ## Story
 

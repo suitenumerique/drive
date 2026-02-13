@@ -4,18 +4,18 @@ project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 development_status:
-  epic-1: in-progress
+  epic-1: done
   1-1-canonical-drive-public-url-validation-and-deterministic-derivations: done
   1-2-separate-allowlists-for-redirect-uris-vs-origins-hosts-derived-from-drive-public-url: done
   epic-1-retrospective: optional
-  epic-2: in-progress
+  epic-2: done
   2-1-docker-first-edge-contract-documentation-configuration-validation-smoke-checks: done
   2-2-nginx-reference-edge-configuration-dev-prod-aligned-for-media-auth-request-sigv4-propagation: done
   2-3-tls-posture-for-public-surfaces-prod-https-only-dev-override-explicit-no-mixed-modes: done
   2-4-docker-first-backup-restore-runbook-deterministic-post-restore-smoke-checklist: done
   2-5-docker-first-upgrade-rollback-runbook-deterministic-post-action-smoke-checklist: done
   epic-2-retrospective: optional
-  epic-3: in-progress
+  epic-3: done
   3-1-byo-oidc-authentication-refs-only-secrets-config-validation-smoke-login-proof: done
   3-2-entitlements-enforcement-for-access-and-uploads-api-ui-gating: done
   3-3-external-api-allowlist-for-resources-and-actions-strict-no-wildcards: done
@@ -43,7 +43,7 @@ development_status:
   6-1-configure-s3-item-share-links-reach-role-and-publish-a-canonical-public-url: done
   6-2-open-s3-public-share-links-without-an-authenticated-session-token-enforced: done
   epic-6-retrospective: optional
-  epic-7: in-progress
+  epic-7: done
   7-1-operator-configured-mounts-registry-mount-id-provider-enabled-with-deterministic-validation: done
   7-2-discover-mounts-and-capabilities-api-ui-entry-point-constants-enforced: done
   7-3-browse-mount-paths-with-deterministic-ordering-pagination-and-virtual-entry-identifiers: done
@@ -51,26 +51,26 @@ development_status:
   7-5-create-mountprovider-share-links-for-virtual-entries-capability-driven: done
   7-6-enforce-deterministic-public-mountprovider-share-link-semantics-404-410-and-out-of-band-change-behavior: done
   epic-7-retrospective: optional
-  epic-8: in-progress
+  epic-8: done
   8-1-refs-only-secret-fields-for-mounts-never-store-return-log-secret-material: done
   8-2-centralized-secret-resolver-with-deterministic-precedence-file-env-and-bounded-refresh: done
   8-3-safe-connection-session-reuse-across-secret-rotation-no-stale-credentials-no-leaks: done
   epic-8-retrospective: optional
-  epic-9: backlog
+  epic-9: done
   9-1-smb-mount-configuration-schema-and-deterministic-validation-refs-only-secrets: done
   9-2-smb-provider-implements-the-mount-browse-contract-list-stat-with-deterministic-ordering: done
   9-3-smb-streaming-download-with-range-support-where-applicable: done
   9-4-smb-streaming-upload-large-file-capable-with-deterministic-finalize-semantics: done
   9-5-smb-preview-support-is-explicit-capability-driven-and-deterministic: done
   epic-9-retrospective: optional
-  epic-10: in-progress
+  epic-10: done
   10-1-wopi-enablement-configuration-host-allowlist-https-posture-health-gating: done
   10-2-capability-driven-wopi-action-exposure-per-backend-no-dead-buttons: done
   10-3-reverse-proxy-compatible-wopi-launch-flow-with-short-lived-tokens: done
   10-4-s3-wopi-prerequisite-validation-bucket-versioning-with-operator-guidance: done
-  10-5-mountprovider-wopi-semantics-version-string-locks-ttl-release-conflict-streaming-save-pipeline: ready-for-dev
+  10-5-mountprovider-wopi-semantics-version-string-locks-ttl-release-conflict-streaming-save-pipeline: done
   epic-10-retrospective: optional
-  epic-11: in-progress
+  epic-11: done
   11-1-drive-integrated-ct-s3-runner-with-explicit-audience-model-and-deterministic-reports: done
   11-2-encode-seaweedfs-as-the-blocking-baseline-profile-repeatable-checks-runbook-alignment: done
   11-3-safe-evidence-allow-listing-for-ct-s3-no-leak-by-construction: done
