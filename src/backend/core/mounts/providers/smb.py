@@ -7,6 +7,7 @@ import errno
 import posixpath
 import stat as statlib
 import threading
+from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
 from typing import Any
 
@@ -325,11 +326,26 @@ def _map_exc(*, exc: Exception, op: str) -> MountProviderError:
             public_code="mount.path.not_found",
         )
 
-    failure_class = "mount.smb.stat_failed" if op == "stat" else "mount.smb.list_failed"
-    next_action_hint = (
-        "Verify SMB mount configuration and connectivity, then retry the stat operation."
-        if op == "stat"
-        else "Verify SMB mount configuration and connectivity, then retry the list operation."
+    mapping = {
+        "stat": (
+            "mount.smb.stat_failed",
+            "Verify SMB mount configuration and connectivity, then retry the stat operation.",
+        ),
+        "list": (
+            "mount.smb.list_failed",
+            "Verify SMB mount configuration and connectivity, then retry the list operation.",
+        ),
+        "read": (
+            "mount.smb.read_failed",
+            "Verify SMB mount configuration and connectivity, then retry the download.",
+        ),
+    }
+    failure_class, next_action_hint = mapping.get(
+        op,
+        (
+            "mount.smb.operation_failed",
+            "Verify SMB mount configuration and connectivity, then retry the operation.",
+        ),
     )
     return MountProviderError(
         failure_class=failure_class,
@@ -442,3 +458,38 @@ def list_children(*, mount: dict, normalized_path: str) -> list[MountEntry]:
             e.normalized_path,
         ),
     )
+
+
+def supports_range_reads(*, _mount: dict) -> bool:
+    """Return whether this provider supports range reads (v2: download)."""
+
+    return True
+
+
+@contextmanager
+def open_read(*, mount: dict, normalized_path: str):
+    """
+    Open a mount file for streaming reads.
+
+    The returned file handle is suitable for `seek()` + chunked reads.
+    """
+
+    config, secret_path, secret_ref = _load_config(mount)
+    _ensure_session(
+        mount=mount,
+        config=config,
+        secret_path=secret_path,
+        secret_ref=secret_ref,
+    )
+
+    unc = _unc_path(config=config, normalized_path=normalized_path)
+    try:
+        f = smbclient.open_file(unc, mode="rb")
+    except Exception as exc:  # noqa: BLE001
+        raise _map_exc(exc=exc, op="read") from None
+
+    try:
+        yield f
+    finally:
+        with suppress(Exception):
+            f.close()
