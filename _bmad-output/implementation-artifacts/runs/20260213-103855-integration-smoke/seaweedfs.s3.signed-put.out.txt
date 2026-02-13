@@ -1,0 +1,15 @@
+`/tmp/hello.txt` -> `drive/drive-media-storage/hello.txt`
+┌───────┬─────────────┬──────────┬─────────┐
+│ Total │ Transferred │ Duration │ Speed   │
+│ 6 B   │ 6 B         │ 00m00s   │ 445 B/s │
+└───────┴─────────────┴──────────┴─────────┘
+Name      : hello.txt
+Date      : 2026-02-13 10:39:46 UTC 
+Size      : 6 B    
+ETag      : b1946ac92492d2347c6235b4d2611184 
+VersionID : 676c37d00982465ab3885de38e905841 
+Type      : file 
+Metadata  :
+  Content-Type: text/plain 
+
+drive/drive-media-storage versioning is enabled

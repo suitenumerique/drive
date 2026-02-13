@@ -1,0 +1,49 @@
+ Container drive-app-dev-run-e17eb911f9a8 Creating 
+ Container drive-app-dev-run-e17eb911f9a8 Created 
+🐳(entrypoint) creating user running in the container...
+🐳(entrypoint) running your command: python manage.py config_preflight
+System check identified some issues:
+
+WARNINGS:
+?: (dockerflow.health.W001) Unapplied migration core.0018_item_upload_started_at
+?: (dockerflow.health.W001) Unapplied migration core.0018_mirroritemtask
+?: (dockerflow.health.W001) Unapplied migration core.0019_user_last_release_note_seen
+?: (dockerflow.health.W001) Unapplied migration core.0020_merge_0018_item_upload_started_at_0019_user_last_release_note_seen
+?: (dockerflow.health.W001) Unapplied migration core.0021_mount_share_link
+{
+  "errors": [],
+  "manual_checks": [
+    {
+      "audience": "INTERNAL_PROXY",
+      "backend_media_auth_path": "/api/v1.0/items/media-auth/",
+      "expected": "Proxy forwards SigV4 headers from media-auth response to the S3 upstream request.",
+      "id": "edge.media.contract",
+      "no_leak": [
+        "Do not log SigV4 headers or signed URLs."
+      ],
+      "required_sigv4_headers": [
+        "Authorization",
+        "X-Amz-Date",
+        "X-Amz-Content-SHA256",
+        "X-Amz-Security-Token (when present)"
+      ],
+      "routes": [
+        "/media/",
+        "/media/preview/",
+        "/media-auth"
+      ],
+      "title": "/media edge contract (proxy-agnostic)"
+    },
+    {
+      "audience": "INTERNAL_PROXY+EXTERNAL_BROWSER",
+      "expected": "Host used for signing must match the host seen by the upstream request (no host rewrite that breaks SigV4).",
+      "id": "edge.media.signed_host_invariants",
+      "notes": [
+        "INTERNAL_PROXY signing uses AWS_S3_ENDPOINT_URL.",
+        "EXTERNAL_BROWSER signing uses AWS_S3_DOMAIN_REPLACE when set."
+      ],
+      "title": "Signed host invariants"
+    }
+  ],
+  "ok": true
+}

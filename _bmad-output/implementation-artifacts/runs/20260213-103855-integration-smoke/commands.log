@@ -1,0 +1,8 @@
+[2026-02-13T10:38:55Z] bin/agent-check.sh --preflight --gate no_leak.scan_bmad_output
+[2026-02-13T10:38:55Z] docker compose down --remove-orphans
+[2026-02-13T10:38:56Z] docker compose up -d
+[2026-02-13T10:39:38Z] docker compose ps
+[2026-02-13T10:39:38Z] docker compose run --rm --no-deps app-dev python manage.py config_preflight
+[2026-02-13T10:39:45Z] docker compose up -d seaweedfs-s3 createbuckets
+[2026-02-13T10:39:46Z] docker run --rm --network drive_default --entrypoint /bin/sh minio/mc -c 'mc alias set drive http://seaweedfs-s3:8333 drive <REDACTED_PASSWORD> >/dev/null && echo hello >/tmp/hello.txt && mc cp /tmp/hello.txt drive/drive-media-storage/hello.txt && mc stat drive/drive-media-storage/hello.txt && mc version enable drive/drive-media-storage'
+[2026-02-13T10:39:47Z] docker compose run --rm --no-deps app-dev python manage.py wopi_health

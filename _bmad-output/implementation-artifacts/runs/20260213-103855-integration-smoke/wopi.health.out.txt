@@ -1,0 +1,31 @@
+ Container drive-app-dev-run-a9ecc5e81cc6 Creating 
+ Container drive-app-dev-run-a9ecc5e81cc6 Created 
+🐳(entrypoint) creating user running in the container...
+🐳(entrypoint) running your command: python manage.py wopi_health
+System check identified some issues:
+
+WARNINGS:
+?: (dockerflow.health.W001) Unapplied migration core.0018_item_upload_started_at
+?: (dockerflow.health.W001) Unapplied migration core.0018_mirroritemtask
+?: (dockerflow.health.W001) Unapplied migration core.0019_user_last_release_note_seen
+?: (dockerflow.health.W001) Unapplied migration core.0020_merge_0018_item_upload_started_at_0019_user_last_release_note_seen
+?: (dockerflow.health.W001) Unapplied migration core.0021_mount_share_link
+{
+  "enabled": true,
+  "evidence": {
+    "cached": false,
+    "cached_extensions_count": 0,
+    "cached_mimetypes_count": 0,
+    "drive_public_url_host_sha256_16": null,
+    "s3_backend_available": true,
+    "s3_bucket_versioning_ok": true,
+    "s3_bucket_versioning_status": "Enabled",
+    "wopi_clients_count": 2,
+    "wopi_src_base_url_host_sha256_16": "d32c79a800ad0c25"
+  },
+  "failure_class": "wopi.config.discovery.not_configured",
+  "healthy": false,
+  "next_action_hint": "Run WOPI discovery configuration (celery beat) or trigger it manually with `python manage.py trigger_wopi_configuration`.",
+  "state": "enabled_unhealthy"
+}
+
