@@ -57,7 +57,6 @@ and this project adheres to
 - 🐛(docker) avoid downloading mime.types at build time (CI stability)
 - 🔧(media) support Range downloads via /media edge
 - 🐛(mounts) enforce deterministic public mount share-link 404/410 semantics
-- 🔧(compose) mount Next.js .next to avoid EACCES in dev
 
 ### Security
 
