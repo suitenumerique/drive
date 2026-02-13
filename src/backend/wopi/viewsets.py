@@ -2,6 +2,7 @@
 
 import logging
 import uuid
+from datetime import timedelta
 from os.path import splitext
 
 from django.core.exceptions import RequestDataTooBig
@@ -9,6 +10,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import transaction
 from django.http import StreamingHttpResponse
+from django.utils.timezone import now
 
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -17,9 +19,11 @@ from sentry_sdk import capture_exception
 
 from core.api.utils import get_item_file_head_object
 from core.models import Item
-from wopi.authentication import WopiAccessTokenAuthentication
+from wopi.authentication import WopiAccessTokenAuthentication, get_access_token
+from wopi.exceptions import WopiRequestSignatureError
 from wopi.permissions import AccessTokenPermission
 from wopi.services.lock import LockService
+from wopi.utils import get_wopi_client_proof_keys, signature
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +31,9 @@ logger = logging.getLogger(__name__)
 HTTP_X_WOPI_LOCK = "HTTP_X_WOPI_LOCK"
 HTTP_X_WOPI_OLD_LOCK = "HTTP_X_WOPI_OLDLOCK"
 HTTP_X_WOPI_OVERRIDE = "HTTP_X_WOPI_OVERRIDE"
+HTTP_X_WOPI_TIMESTAMP = "HTTP_X_WOPI_TIMESTAMP"
+HTTP_X_WOPI_PROOF = "HTTP_X_WOPI_PROOF"
+HTTP_X_WOPI_PROOFOLD = "HTTP_X_WOPI_PROOFOLD"
 
 X_WOPI_INVALIDFILENAMERROR = "X-WOPI-InvalidFileNameError"
 X_WOPI_ITEMVERSION = "X-WOPI-ItemVersion"
@@ -54,6 +61,48 @@ class WopiViewSet(viewsets.ViewSet):
         """Get the file id from the URL path."""
         return uuid.UUID(self.kwargs.get("pk"))
 
+    def _verify_request_signature(self, request):
+        """Verify the request signature."""
+        proof_keys = get_wopi_client_proof_keys(request.auth.item, request.user)
+
+        if not proof_keys:
+            # The proof key is not provided by the wopi client,
+            # so we can't verify the request signature and the request is accepted
+            return
+
+        request_signature = request.META.get(HTTP_X_WOPI_PROOF)
+        request_signature_old = request.META.get(HTTP_X_WOPI_PROOFOLD)
+
+        if not request_signature:
+            raise WopiRequestSignatureError("No signature provided, request rejected")
+
+        string_timestamp = request.META.get(HTTP_X_WOPI_TIMESTAMP)
+        if not string_timestamp:
+            raise WopiRequestSignatureError("No timestamp provided, request rejected")
+        try:
+            timestamp = int(string_timestamp)
+        except ValueError as e:
+            raise WopiRequestSignatureError("Invalid timestamp provided") from e
+
+        datetime_timestamp = signature.ticks_to_datetime(timestamp)
+        if datetime_timestamp < now() - timedelta(minutes=20):
+            raise WopiRequestSignatureError("Timestamp is too old, request rejected")
+
+        access_token = get_access_token(request)
+        expected_proof = signature.build_expected_proof(
+            access_token,
+            request.build_absolute_uri(),
+            timestamp,
+        )
+
+        if not signature.verify_wopi_proof(
+            proof_keys,
+            request_signature,
+            request_signature_old,
+            expected_proof,
+        ):
+            raise WopiRequestSignatureError("Invalid request signature")
+
     # pylint: disable=unused-argument
     def retrieve(self, request, pk=None):
         """
@@ -62,6 +111,8 @@ class WopiViewSet(viewsets.ViewSet):
         """
         item = request.auth.item
         abilities = item.get_abilities(request.user)
+
+        self._verify_request_signature(request)
 
         head_object = get_item_file_head_object(item)
 
@@ -100,6 +151,7 @@ class WopiViewSet(viewsets.ViewSet):
         """
         Operations to get or put the file content.
         """
+        self._verify_request_signature(request)
         if request.method == "GET":
             return self._get_file_content(request, pk)
         if request.method == "POST":
@@ -197,6 +249,9 @@ class WopiViewSet(viewsets.ViewSet):
         """
         if not request.META.get(HTTP_X_WOPI_OVERRIDE) in self.detail_post_actions:
             return Response(status=404)
+
+        self._verify_request_signature(request)
+
         item = request.auth.item
         abilities = item.get_abilities(request.user)
 
