@@ -97,11 +97,13 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
       align-items: center;
       gap: 8px;
       height: 48px;
+      width: 100%;
 
       &__info {
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        flex: 1;
 
         &__title {
           display: flex;
@@ -119,6 +121,12 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
           color: var(--c--contextuals--content--semantic--neutral--secondary);
         }
       }
+
+      &__actions {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+      }
     }
 
     &__name {
@@ -132,7 +140,7 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
         max-width: 100%;
       }
 
-      > img {
+      >img {
         // Need to set width and height to prevent layout shift
         // and to make overflow calculations work correctly before
         // the image is loaded
@@ -211,6 +219,7 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
       color: var(--c--contextuals--content--semantic--neutral--primary);
       font-weight: 700;
     }
+
     &__cta {
       font-size: 12px;
       color: var(--c--contextuals--content--semantic--neutral--secondary);
@@ -253,6 +262,7 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
         border-top-left-radius: 4px;
         border-bottom-left-radius: 4px;
       }
+
       tr td:last-child {
         border-top-right-radius: 4px;
         border-bottom-right-radius: 4px;
@@ -263,21 +273,15 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
       }
 
       tr.selected {
-        box-shadow: inset 0 0 0 1px
-          var(--c--contextuals--border--semantic--brand--tertiary);
+        box-shadow: inset 0 0 0 1px var(--c--contextuals--border--semantic--brand--tertiary);
         border-radius: 4px;
-        background-color: var(
-          --c--contextuals--background--semantic--brand--tertiary
-        );
+        background-color: var(--c--contextuals--background--semantic--brand--tertiary);
       }
 
       tr.over {
-        background-color: var(
-          --c--contextuals--background--semantic--brand--tertiary
-        );
+        background-color: var(--c--contextuals--background--semantic--brand--tertiary);
         border-radius: 4px;
-        box-shadow: inset 0 0 0 2px
-          var(--c--contextuals--border--semantic--brand--primary);
+        box-shadow: inset 0 0 0 2px var(--c--contextuals--border--semantic--brand--primary);
       }
 
       tr {
@@ -289,6 +293,7 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 
   @media (max-width: $tablet) {
     table {
+
       tr td:first-child,
       tr th:first-child {
         padding-left: 0;
@@ -300,6 +305,7 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
       }
 
       thead {
+
         // We can't just simply hide the columns because the table
         // column will not size properly. We want the first column
         // to grow to fill the space.
@@ -312,13 +318,9 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
         }
 
         th:nth-child(2),
-        th:nth-child(3) {
-          display: none;
-        }
-
+        th:nth-child(3),
         th:nth-child(4) {
-          display: table-cell;
-          width: 40px;
+          display: none;
         }
       }
 
@@ -328,12 +330,9 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
         }
 
         td:nth-child(2),
-        td:nth-child(3) {
-          display: none;
-        }
-
+        td:nth-child(3),
         td:nth-child(4) {
-          height: 48px;
+          display: none;
         }
       }
     }
@@ -349,6 +348,7 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
       th {
         height: 0;
         line-height: 0;
+
         div {
           height: 0;
           line-height: 0;
