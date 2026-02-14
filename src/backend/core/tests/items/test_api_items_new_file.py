@@ -2,12 +2,17 @@
 
 # pylint: disable=missing-function-docstring
 
+from django.core.cache import cache
 from django.core.files.storage import default_storage
 
 import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
+from wopi.tasks.configure_wopi import (
+    WOPI_CONFIGURATION_CACHE_KEY,
+    WOPI_DEFAULT_CONFIGURATION,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -25,13 +30,45 @@ def test_api_items_new_file_creates_ooxml_placeholder_in_creating_state():
     client = APIClient()
     client.force_login(user)
 
-    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
-    factories.UserItemAccessFactory(user=user, item=parent, role="owner")
+    response = client.post(
+        "/api/v1.0/items/new-file/",
+        {
+            "filename_stem": "Rapport",
+            "extension": "docx",
+            "kind": "text",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    item = models.Item.objects.get(id=payload["id"])
+    assert item.filename == "Rapport.docx"
+    assert item.upload_state == models.ItemUploadStateChoices.READY
+    assert (item.size or 0) > 0
+    assert default_storage.exists(item.file_key)
+
+
+def test_api_items_new_file_creates_ooxml_placeholder_in_creating_state_when_editnew_supported(
+    settings,
+):
+    settings.WOPI_CLIENTS = ["vendorA"]
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            **WOPI_DEFAULT_CONFIGURATION,
+            "extensions_editnew": {"docx": "https://vendorA.test/editnew?"},
+        },
+        timeout=60,
+    )
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
 
     response = client.post(
         "/api/v1.0/items/new-file/",
         {
-            "parent_id": str(parent.id),
             "filename_stem": "Rapport",
             "extension": "docx",
             "kind": "text",

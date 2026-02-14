@@ -8,8 +8,8 @@ from datetime import timedelta
 from unittest import mock
 from urllib.parse import quote
 
-from django.contrib.auth.models import AnonymousUser
 from django.conf import settings
+from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.utils import timezone
 

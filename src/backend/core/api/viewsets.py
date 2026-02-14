@@ -61,6 +61,7 @@ from core.mounts.registry import get_mount_provider
 from core.services.mirror import mirror_item
 from core.services.mount_capabilities import normalize_mount_capabilities
 from core.services.odf_templates import build_minimal_odf_template_bytes
+from core.services.ooxml_templates import build_minimal_ooxml_template_bytes
 from core.services.sdk_relay import SDKRelayManager
 from core.services.search_indexers import (
     get_file_indexer,
@@ -710,8 +711,16 @@ class ItemViewSet(
 
         if extension in ooxml_mimetypes:
             mimetype = ooxml_mimetypes[extension]
-            payload = b""
-            return mimetype, payload, models.ItemUploadStateChoices.CREATING
+            editnew_client = get_wopi_client_config_for_filename(
+                filename=f"new.{extension}",
+                mimetype=mimetype,
+                action="editnew",
+            )
+            if editnew_client:
+                return mimetype, b"", models.ItemUploadStateChoices.CREATING
+
+            mimetype, payload = build_minimal_ooxml_template_bytes(extension)
+            return mimetype, payload, models.ItemUploadStateChoices.READY
 
         return "application/octet-stream", b"", models.ItemUploadStateChoices.READY
 

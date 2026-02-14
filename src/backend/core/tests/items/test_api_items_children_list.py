@@ -5,8 +5,8 @@ Tests for items API endpoint in drive's core app: retrieve
 import random
 from urllib.parse import quote
 
-from django.contrib.auth.models import AnonymousUser
 from django.conf import settings
+from django.contrib.auth.models import AnonymousUser
 
 import pytest
 from rest_framework.test import APIClient
