@@ -138,6 +138,12 @@ export abstract class Driver {
     kind: "odt" | "ods" | "odp";
     filename: string;
   }): Promise<Item>;
+  abstract createNewFile(data: {
+    parentId?: string;
+    filenameStem: string;
+    extension: string;
+    kind?: "text" | "sheet" | "slide";
+  }): Promise<Item>;
   abstract deleteItems(ids: string[]): Promise<void>;
   abstract hardDeleteItems(ids: string[]): Promise<void>;
   abstract getWopiInfo(itemId: string): Promise<WopiInfo>;

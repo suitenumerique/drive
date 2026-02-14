@@ -521,6 +521,25 @@ export class StandardDriver extends Driver {
     return jsonToItem(item);
   }
 
+  async createNewFile(data: {
+    parentId?: string;
+    filenameStem: string;
+    extension: string;
+    kind?: "text" | "sheet" | "slide";
+  }): Promise<Item> {
+    const response = await fetchAPI(`items/new-file/`, {
+      method: "POST",
+      body: JSON.stringify({
+        parent_id: data.parentId ?? null,
+        filename_stem: data.filenameStem,
+        extension: data.extension,
+        kind: data.kind ?? null,
+      }),
+    });
+    const item = await response.json();
+    return jsonToItem(item);
+  }
+
   async deleteItems(ids: string[]): Promise<void> {
     for (const id of ids) {
       await fetchAPI(`items/${id}/`, {
