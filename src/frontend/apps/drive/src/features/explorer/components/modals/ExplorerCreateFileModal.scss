@@ -1,0 +1,188 @@
+@use "@/styles/cunningham-tokens-sass" as *;
+
+.explorer__create-file__modal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__label {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--c--contextuals--content--semantic--neutral--primary);
+  }
+
+  &__filename-row {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+    align-items: center;
+  }
+
+  &__filename-input {
+    flex: 1;
+    height: 40px;
+    border-radius: 4px;
+    border: 1px solid
+      var(--c--contextuals--border--semantic--neutral--secondary);
+    padding: 0 12px;
+    font-family: var(--c--globals--font--families--base);
+    font-size: 14px;
+    outline: none;
+
+    &:focus {
+      // Use an inset ring to avoid being clipped by modal overflow constraints.
+      box-shadow: inset 0 0 0 2px
+        var(--c--contextuals--border--semantic--brand--primary);
+      border-color: var(--c--contextuals--border--semantic--brand--primary);
+    }
+  }
+
+  &__extension-suffix {
+    min-width: 72px;
+    height: 40px;
+    border-radius: 4px;
+    border: 1px solid
+      var(--c--contextuals--border--semantic--neutral--secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--c--globals--font--families--base);
+    font-size: 14px;
+    color: var(--c--contextuals--content--semantic--neutral--primary);
+    background-color: var(--c--contextuals--background--semantic--neutral--secondary);
+    user-select: none;
+  }
+
+  &__columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__column {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__list--scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 40px;
+    min-height: 40px;
+    flex: 0 0 40px;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    padding: 0 8px;
+    font-family: var(--c--globals--font--families--base);
+    font-size: 14px;
+    color: var(--c--contextuals--content--semantic--neutral--primary);
+
+    &:hover {
+      background-color: var(
+        --c--contextuals--background--semantic--contextual--primary
+      );
+    }
+
+    &.selected {
+      box-shadow: inset 0 0 0 1px
+        var(--c--contextuals--border--semantic--brand--tertiary);
+      background-color: var(
+        --c--contextuals--background--semantic--brand--tertiary
+      );
+    }
+  }
+
+  &__section-title {
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--c--contextuals--content--semantic--neutral--tertiary);
+  }
+
+  &__search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 8px;
+    border-radius: 4px;
+    border: 1px solid
+      var(--c--contextuals--border--semantic--neutral--secondary);
+    color: var(--c--contextuals--content--semantic--neutral--tertiary);
+
+    input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-family: var(--c--globals--font--families--base);
+      font-size: 14px;
+      color: var(--c--contextuals--content--semantic--neutral--primary);
+      background: transparent;
+    }
+  }
+
+  &__ext {
+    font-weight: 700;
+    min-width: 56px;
+  }
+
+  &__ext-label {
+    color: var(--c--contextuals--content--semantic--neutral--tertiary);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+// Make the modal steady (fixed size + controlled scroll).
+.c__modal:has(.explorer__create-file__modal) {
+  width: 600px;
+  max-width: calc(100vw - 2rem);
+  height: 590px;
+  max-height: calc(100vh - 2rem);
+
+  .c__modal__scroller {
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    .c__modal__content {
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+  }
+}

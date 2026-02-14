@@ -3,7 +3,9 @@ Tests for items API endpoint in drive's core app: retrieve
 """
 
 import random
+from urllib.parse import quote
 
+from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 
 import pytest
@@ -213,8 +215,8 @@ def test_api_items_children_list_anonymous_public_parent():
                 "user_role": None,
                 "type": models.ItemTypeChoices.FILE,
                 "upload_state": models.ItemUploadStateChoices.READY,
-                "url": f"http://localhost:8083/media/item/{child2.id!s}/logo.png",
-                "url_preview": f"http://localhost:8083/media/preview/item/{child2.id!s}/logo.png",
+                "url": f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{quote(child2.file_key)}",
+                "url_preview": f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{quote(child2.file_key)}",
                 "mimetype": "image/png",
                 "main_workspace": False,
                 "filename": child2.filename,

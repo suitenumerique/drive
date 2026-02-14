@@ -415,3 +415,41 @@ def test_put_file_content_with_no_lock_header_and_body_size_0():
     )
     assert file["Body"].read() == b""
     assert response.headers.get("X-WOPI-ItemVersion") == file["VersionId"]
+
+
+def test_put_file_content_allows_lockless_body_when_creating_and_transitions_ready():
+    """
+    When the item is a 0-byte placeholder in CREATING state, the first PutFile may
+    be sent without a lock header (create-new flow).
+    """
+    folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        filename="new.docx",
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        update_upload_state=models.ItemUploadStateChoices.CREATING,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.EDITOR,
+        size=0,
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(
+        item=item, user=user, role=models.RoleChoices.EDITOR
+    )
+    service = AccessUserItemService()
+    access_token, _ = service.insert_new_access(item, user)
+
+    client = APIClient()
+    response = client.post(
+        f"/api/v1.0/wopi/files/{item.id}/contents/",
+        data=b"new content",
+        content_type="application/octet-stream",
+        HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        headers={"X-WOPI-Override": "PUT"},
+    )
+    assert response.status_code == 200
+
+    item.refresh_from_db()
+    assert item.upload_state == models.ItemUploadStateChoices.READY
+    assert item.size == len(b"new content")

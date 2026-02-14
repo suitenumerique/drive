@@ -454,6 +454,42 @@
               "submit": "Create"
             }
           },
+          "createFile": {
+            "menu": "Create a file",
+            "modal": {
+              "title": "Create a new file",
+              "submit": "Create",
+              "filename_label": "File name",
+              "kind_label": "Type",
+              "extension_label": "Format / extension",
+              "search_placeholder": "Search...",
+              "recommended": "Recommended (ODF)",
+              "others": "Other formats"
+            },
+            "kinds": {
+              "text": "Text document",
+              "sheet": "Spreadsheet",
+              "slide": "Presentation"
+            },
+            "extensions": {
+              "odt": "OpenDocument Text",
+              "ods": "OpenDocument Spreadsheet",
+              "odp": "OpenDocument Presentation",
+              "docx": "Word (OOXML)",
+              "xlsx": "Excel (OOXML)",
+              "pptx": "PowerPoint (OOXML)",
+              "doc": "Word 97-2003",
+              "xls": "Excel 97-2003",
+              "ppt": "PowerPoint 97-2003",
+              "rtf": "Rich Text Format",
+              "txt": "Plain text",
+              "md": "Markdown",
+              "csv": "CSV",
+              "tsv": "TSV",
+              "sh": "Shell script",
+              "ps1": "PowerShell"
+            }
+          },
           "createOdf": {
             "actions": {
               "text": "New text document",
@@ -1049,6 +1085,42 @@
               "placeholder": "Entrez le nom du dossier",
               "cancel": "Annuler",
               "submit": "Créer"
+            }
+          },
+          "createFile": {
+            "menu": "Créer un fichier",
+            "modal": {
+              "title": "Créer un nouveau fichier",
+              "submit": "Créer",
+              "filename_label": "Nom du fichier",
+              "kind_label": "Type de document",
+              "extension_label": "Format / extension",
+              "search_placeholder": "Rechercher...",
+              "recommended": "Formats recommandés (ODF)",
+              "others": "Autres formats"
+            },
+            "kinds": {
+              "text": "Document texte",
+              "sheet": "Tableur",
+              "slide": "Présentation"
+            },
+            "extensions": {
+              "odt": "OpenDocument Texte",
+              "ods": "OpenDocument Tableur",
+              "odp": "OpenDocument Présentation",
+              "docx": "Word (OOXML)",
+              "xlsx": "Excel (OOXML)",
+              "pptx": "PowerPoint (OOXML)",
+              "doc": "Word 97-2003",
+              "xls": "Excel 97-2003",
+              "ppt": "PowerPoint 97-2003",
+              "rtf": "Rich Text Format",
+              "txt": "Texte brut",
+              "md": "Markdown",
+              "csv": "CSV",
+              "tsv": "TSV",
+              "sh": "Script shell",
+              "ps1": "PowerShell"
             }
           },
           "createOdf": {
@@ -1648,6 +1720,42 @@
               "placeholder": "Voer mapnaam in",
               "cancel": "Annuleren",
               "submit": "Bewerken"
+            }
+          },
+          "createFile": {
+            "menu": "Bestand maken",
+            "modal": {
+              "title": "Nieuw bestand maken",
+              "submit": "Maken",
+              "filename_label": "Bestandsnaam",
+              "kind_label": "Type",
+              "extension_label": "Formaat / extensie",
+              "search_placeholder": "Zoeken...",
+              "recommended": "Aanbevolen (ODF)",
+              "others": "Andere formaten"
+            },
+            "kinds": {
+              "text": "Tekstdocument",
+              "sheet": "Werkblad",
+              "slide": "Presentatie"
+            },
+            "extensions": {
+              "odt": "OpenDocument Tekst",
+              "ods": "OpenDocument Werkblad",
+              "odp": "OpenDocument Presentatie",
+              "docx": "Word (OOXML)",
+              "xlsx": "Excel (OOXML)",
+              "pptx": "PowerPoint (OOXML)",
+              "doc": "Word 97-2003",
+              "xls": "Excel 97-2003",
+              "ppt": "PowerPoint 97-2003",
+              "rtf": "Rich Text Format",
+              "txt": "Platte tekst",
+              "md": "Markdown",
+              "csv": "CSV",
+              "tsv": "TSV",
+              "sh": "Shell script",
+              "ps1": "PowerShell"
             }
           },
           "createOdf": {

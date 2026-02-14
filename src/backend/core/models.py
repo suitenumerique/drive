@@ -68,6 +68,7 @@ class ItemUploadStateChoices(models.TextChoices):
     """Defines the possible states of an item."""
 
     PENDING = "pending", _("Pending")
+    CREATING = "creating", _("Creating")
     EXPIRED = "expired", _("Expired")
     ANALYZING = "analyzing", _("Analyzing")
     SUSPICIOUS = "suspicious", _("Suspicious")

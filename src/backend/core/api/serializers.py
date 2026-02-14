@@ -1,5 +1,7 @@
 """Client serializers for the drive core app."""
 
+# pylint: disable=too-many-lines
+
 import json
 import logging
 from datetime import timedelta
@@ -696,8 +698,14 @@ class CreateOdfDocumentSerializer(serializers.Serializer):
     """
 
     parent_id = serializers.UUIDField(required=False, allow_null=True)
-    kind = serializers.ChoiceField(choices=["odt", "ods", "odp"])
-    filename = serializers.CharField(max_length=255)
+    # Legacy payload (still accepted):
+    kind = serializers.ChoiceField(choices=["odt", "ods", "odp"], required=False)
+    filename = serializers.CharField(max_length=255, required=False)
+    # New payload:
+    filename_stem = serializers.CharField(max_length=255, required=False)
+    extension = serializers.ChoiceField(
+        choices=["odt", "ods", "odp"], required=False, allow_null=False
+    )
 
     def validate_filename(self, value: str) -> str:
         """Ensure the provided filename is safe and non-empty."""
@@ -711,32 +719,136 @@ class CreateOdfDocumentSerializer(serializers.Serializer):
         return candidate
 
     def validate(self, attrs):
-        kind = str(attrs.get("kind") or "").strip().lower()
-        filename = attrs.get("filename") or ""
-        _root, ext = splitext(filename)
-        ext = ext.lstrip(".").lower() if ext else ""
+        kind = str(attrs.get("kind") or "").strip().lower() if attrs.get("kind") else ""
 
-        if ext != kind:
+        if attrs.get("filename"):
+            filename = attrs.get("filename") or ""
+        else:
+            stem = str(attrs.get("filename_stem") or "").strip()
+            ext = str(attrs.get("extension") or "").strip().lower()
+            if not stem:
+                raise serializers.ValidationError(
+                    {"filename_stem": _("This field is required.")},
+                    code="item_create_file_filename_stem_required",
+                )
+            if not ext:
+                raise serializers.ValidationError(
+                    {"extension": _("This field is required.")},
+                    code="item_create_file_extension_required",
+                )
+            if stem.lower().endswith(f".{ext}"):
+                stem = stem[: -(len(ext) + 1)]
+                stem = stem.strip()
+            filename = f"{stem}.{ext}"
+
+        filename = self.validate_filename(filename)
+        _root, parsed_ext = splitext(filename)
+        parsed_ext = parsed_ext.lstrip(".").lower() if parsed_ext else ""
+
+        if kind and parsed_ext != kind:
             raise serializers.ValidationError(
                 {"filename": _("Filename extension does not match document type.")},
                 code="item_create_file_extension_mismatch",
             )
 
         if settings.RESTRICT_UPLOAD_FILE_TYPE:
-            if f".{ext}" not in settings.FILE_EXTENSIONS_ALLOWED:
+            if f".{parsed_ext}" not in settings.FILE_EXTENSIONS_ALLOWED:
                 raise serializers.ValidationError(
                     {"filename": _("This file extension is not allowed.")},
                     code="item_create_file_extension_not_allowed",
                 )
 
         try:
-            build_minimal_odf_template_bytes(kind)
+            build_minimal_odf_template_bytes(parsed_ext)
         except ValueError:
             raise serializers.ValidationError(
                 {"kind": _("Unsupported document type.")},
                 code="item_create_file_unsupported_kind",
             ) from None
 
+        attrs["kind"] = parsed_ext
+        attrs["filename"] = filename
+        return attrs
+
+
+class CreateNewFileSerializer(serializers.Serializer):
+    """
+    Create a new file with a user-defined name + selected extension.
+
+    The backend is the source of truth for extension and collision handling.
+    """
+
+    parent_id = serializers.UUIDField(required=False, allow_null=True)
+    filename_stem = serializers.CharField(max_length=255)
+    extension = serializers.CharField(max_length=20)
+    kind = serializers.ChoiceField(
+        choices=["text", "sheet", "slide"],
+        required=False,
+        allow_null=True,
+    )
+
+    def validate_filename_stem(self, value: str) -> str:
+        """Validate the user-provided filename stem (no extension)."""
+        candidate = str(value or "").strip()
+        candidate = candidate.rsplit("/", maxsplit=1)[-1].rsplit("\\", maxsplit=1)[-1]
+        candidate = candidate.strip()
+        if not candidate or candidate in {".", ".."} or "\x00" in candidate:
+            raise serializers.ValidationError(
+                _("Invalid filename."), code="item_create_file_invalid_filename"
+            )
+        if "/" in candidate or "\\" in candidate:
+            raise serializers.ValidationError(
+                _("Invalid filename."), code="item_create_file_invalid_filename"
+            )
+        return candidate
+
+    def validate_extension(self, value: str) -> str:
+        """Validate the user-selected extension."""
+        ext = str(value or "").strip().lower().lstrip(".")
+        if not ext:
+            raise serializers.ValidationError(
+                _("Invalid file extension."),
+                code="item_create_file_invalid_extension",
+            )
+        if any(ch for ch in ext if not ch.isalnum()):
+            raise serializers.ValidationError(
+                _("Invalid file extension."),
+                code="item_create_file_invalid_extension",
+            )
+        return ext
+
+    def validate(self, attrs):
+        """Compute `final_filename` and enforce backend validation rules."""
+        stem = str(attrs.get("filename_stem") or "").strip()
+        ext = str(attrs.get("extension") or "").strip().lower().lstrip(".")
+
+        if stem.lower().endswith(f".{ext}"):
+            stem = stem[: -(len(ext) + 1)]
+            stem = stem.strip()
+
+        filename = f"{stem}.{ext}"
+        filename = filename.rsplit("/", maxsplit=1)[-1].rsplit("\\", maxsplit=1)[-1]
+        filename = filename.strip()
+        if not filename or filename in {".", ".."} or "\x00" in filename:
+            raise serializers.ValidationError(
+                {"filename_stem": _("Invalid filename.")},
+                code="item_create_file_invalid_filename",
+            )
+        if len(filename) > 255:
+            raise serializers.ValidationError(
+                {"filename_stem": _("Filename is too long.")},
+                code="item_create_file_filename_too_long",
+            )
+
+        if settings.RESTRICT_UPLOAD_FILE_TYPE:
+            if f".{ext}" not in settings.FILE_EXTENSIONS_ALLOWED:
+                raise serializers.ValidationError(
+                    {"extension": _("This file extension is not allowed.")},
+                    code="item_create_file_extension_not_allowed",
+                )
+
+        attrs["final_filename"] = filename
+        attrs["extension"] = ext
         return attrs
 
 

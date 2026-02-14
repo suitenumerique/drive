@@ -14,6 +14,8 @@ WOPI_CONFIGURATION_CACHE_KEY = "wopi_configuration"
 WOPI_DEFAULT_CONFIGURATION = {
     "mimetypes": {},
     "extensions": {},
+    "mimetypes_editnew": {},
+    "extensions_editnew": {},
 }
 
 
@@ -76,7 +78,8 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
             continue
 
         for action in app.findall("action"):
-            if action.get("name") != "edit":
+            action_name = action.get("name")
+            if action_name not in {"edit", "editnew"}:
                 continue
 
             # configure using mimetype
@@ -86,7 +89,12 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
                 if mimetype in settings.WOPI_EXCLUDED_MIMETYPES:
                     continue
 
-                wopi_configuration["mimetypes"][mimetype] = action.get("urlsrc")
+                target = (
+                    wopi_configuration["mimetypes_editnew"]
+                    if action_name == "editnew"
+                    else wopi_configuration["mimetypes"]
+                )
+                target[mimetype] = action.get("urlsrc")
 
             else:
                 extension = action.get("ext")
@@ -94,7 +102,12 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
                 if extension in settings.WOPI_EXCLUDED_EXTENSIONS:
                     continue
 
-                wopi_configuration["extensions"][extension] = action.get("urlsrc")
+                target = (
+                    wopi_configuration["extensions_editnew"]
+                    if action_name == "editnew"
+                    else wopi_configuration["extensions"]
+                )
+                target[extension] = action.get("urlsrc")
 
     cache.set(
         WOPI_CONFIGURATION_CACHE_KEY,

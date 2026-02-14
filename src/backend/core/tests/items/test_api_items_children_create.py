@@ -289,7 +289,11 @@ def test_api_items_children_create_related_success(role, depth):
     policy_parsed = urlparse(policy)
 
     assert policy_parsed.scheme == "http"
-    assert policy_parsed.netloc == "localhost:9000"
+    if django_settings.AWS_S3_DOMAIN_REPLACE:
+        assert (
+            policy_parsed.netloc
+            == urlparse(django_settings.AWS_S3_DOMAIN_REPLACE).netloc
+        )
     assert policy_parsed.path == f"/drive-media-storage/item/{child.id!s}/file.txt"
 
     query_params = parse_qs(policy_parsed.query)

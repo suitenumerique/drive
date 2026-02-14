@@ -5,7 +5,9 @@ Tests for items API endpoint in drive's core app: list
 import random
 from datetime import timedelta
 from unittest import mock
+from urllib.parse import quote
 
+from django.conf import settings
 from django.utils import timezone
 
 import pytest
@@ -161,8 +163,8 @@ def test_api_items_list_format():
             "user_role": access2.role,
             "type": models.ItemTypeChoices.FILE,
             "upload_state": item2.upload_state,
-            "url": f"http://localhost:8083/media/item/{item2.id!s}/logo.png",
-            "url_preview": f"http://localhost:8083/media/preview/item/{item2.id!s}/logo.png",
+            "url": f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{quote(item2.file_key)}",
+            "url_preview": f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{quote(item2.file_key)}",
             "mimetype": item2.mimetype,
             "main_workspace": False,
             "filename": item2.filename,
