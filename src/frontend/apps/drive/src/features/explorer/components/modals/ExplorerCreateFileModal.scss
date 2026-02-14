@@ -4,6 +4,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  height: 100%;
+  min-height: 0;
 
   &__field {
     display: flex;
@@ -62,6 +64,8 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
+    flex: 1;
+    min-height: 0;
   }
 
   &__column {
@@ -69,6 +73,7 @@
     flex-direction: column;
     gap: 6px;
     min-width: 0;
+    min-height: 0;
   }
 
   &__list {
@@ -78,7 +83,8 @@
   }
 
   &__list--scroll {
-    max-height: 260px;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding-right: 2px;
   }
@@ -156,3 +162,24 @@
   }
 }
 
+// Make the modal steady (fixed size + controlled scroll).
+.c__modal:has(.explorer__create-file__modal) {
+  width: 600px;
+  max-width: calc(100vw - 2rem);
+  height: 590px;
+  max-height: calc(100vh - 2rem);
+
+  .c__modal__scroller {
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    .c__modal__content {
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+  }
+}

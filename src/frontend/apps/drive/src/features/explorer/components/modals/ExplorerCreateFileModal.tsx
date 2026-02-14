@@ -55,14 +55,6 @@ const EXTENSIONS_BY_KIND: Record<CreateKind, ExtensionOption[]> = {
   ],
 };
 
-const getDefaultStemForKind = (kind: CreateKind, t: (key: string) => string) => {
-  const legacyKey =
-    kind === "text" ? "odt" : kind === "sheet" ? "ods" : "odp";
-  const filename = t(`explorer.actions.createOdf.defaults.${legacyKey}`);
-  const suffix = `.${legacyKey}`;
-  return filename.endsWith(suffix) ? filename.slice(0, -suffix.length) : filename;
-};
-
 export const ExplorerCreateFileModal = ({
   canCreateChildren = true,
   ...props
@@ -87,7 +79,7 @@ export const ExplorerCreateFileModal = ({
     }
     setKind("text");
     setExtension(DEFAULT_EXTENSION_BY_KIND.text);
-    setFilenameStem(getDefaultStemForKind("text", t));
+    setFilenameStem("");
     setExtensionSearch("");
   }, [props.isOpen, t]);
 
