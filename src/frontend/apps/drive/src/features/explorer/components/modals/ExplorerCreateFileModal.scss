@@ -38,7 +38,8 @@
     outline: none;
 
     &:focus {
-      box-shadow: 0 0 0 2px
+      // Use an inset ring to avoid being clipped by modal overflow constraints.
+      box-shadow: inset 0 0 0 2px
         var(--c--contextuals--border--semantic--brand--primary);
       border-color: var(--c--contextuals--border--semantic--brand--primary);
     }
@@ -95,6 +96,8 @@
     gap: 8px;
     width: 100%;
     height: 40px;
+    min-height: 40px;
+    flex: 0 0 40px;
     border: none;
     background: transparent;
     border-radius: 4px;
