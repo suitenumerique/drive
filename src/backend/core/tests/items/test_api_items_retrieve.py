@@ -6,8 +6,10 @@ Tests for items API endpoint in drive's core app: retrieve
 import random
 from datetime import timedelta
 from unittest import mock
+from urllib.parse import quote
 
 from django.contrib.auth.models import AnonymousUser
+from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 
@@ -1197,8 +1199,8 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "user_role": models.RoleChoices.OWNER,
         "type": models.ItemTypeChoices.FILE,
         "upload_state": upload_state,
-        "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
-        "url_preview": f"http://localhost:8083/media/preview/item/{item.id!s}/logo.png",
+        "url": f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{quote(item.file_key)}",
+        "url_preview": f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{quote(item.file_key)}",
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,
@@ -1269,7 +1271,7 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         "user_role": models.RoleChoices.OWNER,
         "type": models.ItemTypeChoices.FILE,
         "upload_state": upload_state,
-        "url": f"http://localhost:8083/media/item/{item.id!s}/document.odt",
+        "url": f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{quote(item.file_key)}",
         "url_preview": None,
         "mimetype": "application/vnd.oasis.opendocument.text",
         "main_workspace": False,
@@ -1331,11 +1333,8 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "user_role": models.RoleChoices.OWNER,
         "type": models.ItemTypeChoices.FILE,
         "upload_state": models.ItemUploadStateChoices.READY,
-        "url": f"http://localhost:8083/media/item/{item.id!s}/logo%20with%20spaces.png",
-        "url_preview": (
-            f"http://localhost:8083/media/preview/item/{item.id!s}/"
-            "logo%20with%20spaces.png"
-        ),
+        "url": f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{quote(item.file_key)}",
+        "url_preview": f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{quote(item.file_key)}",
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,
@@ -1477,8 +1476,8 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "user_role": access.role,
         "type": models.ItemTypeChoices.FILE,
         "upload_state": models.ItemUploadStateChoices.ANALYZING,
-        "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
-        "url_preview": f"http://localhost:8083/media/preview/item/{item.id!s}/logo.png",
+        "url": f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{quote(item.file_key)}",
+        "url_preview": f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{quote(item.file_key)}",
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,

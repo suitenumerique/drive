@@ -53,7 +53,38 @@ def test_configure_wopi_clients(settings):
         "extensions": {
             "odt": "http://localhost:9980/browser/0968141f2c/cool.html?",
         },
+        "mimetypes_editnew": {},
+        "extensions_editnew": {},
     }
+
+
+@responses.activate
+def test_configure_wopi_clients_collects_editnew(settings):
+    """Discovery editnew actions should be recorded for create-new flows."""
+    settings.WOPI_CLIENTS = ["vendorA"]
+    settings.WOPI_CLIENTS_CONFIGURATION = {
+        "vendorA": {"discovery_url": "https://vendorA.com/hosting/discovery"}
+    }
+
+    responses.add(
+        responses.GET,
+        "https://vendorA.com/hosting/discovery",
+        body="""
+<wopi-discovery>
+    <net-zone name="external-http">
+        <app name="word">
+            <action default="true" ext="docx" name="edit" urlsrc="https://vendorA.com/edit?"/>
+            <action default="true" ext="docx" name="editnew" urlsrc="https://vendorA.com/editnew?"/>
+        </app>
+    </net-zone>
+</wopi-discovery>
+""",
+    )
+
+    configure_wopi_clients()
+    config = cache.get(WOPI_CONFIGURATION_CACHE_KEY)
+    assert config["extensions"]["docx"] == "https://vendorA.com/edit?"
+    assert config["extensions_editnew"]["docx"] == "https://vendorA.com/editnew?"
 
 
 def test_configure_wopi_clients_no_clients_configured(settings):

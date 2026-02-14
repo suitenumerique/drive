@@ -37,8 +37,8 @@ def test_api_items_new_odf_creates_valid_odt_in_folder():
         "/api/v1.0/items/new-odf/",
         {
             "parent_id": str(parent.id),
-            "kind": "odt",
-            "filename": "New text document.odt",
+            "filename_stem": "New text document",
+            "extension": "odt",
         },
         format="json",
     )
@@ -52,6 +52,43 @@ def test_api_items_new_odf_creates_valid_odt_in_folder():
     assert item.filename == "New text document.odt"
     assert item.upload_state == models.ItemUploadStateChoices.READY
     assert item.size and item.size > 0
+    assert default_storage.exists(item.file_key)
+
+
+def test_api_items_new_odf_applies_collision_to_filename_and_title():
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, link_reach="restricted"
+    )
+    factories.UserItemAccessFactory(user=user, item=parent, role="owner")
+
+    existing = factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+        title="New text document.odt",
+        filename="New text document.odt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    default_storage.save(existing.file_key, BytesIO(b"content"))
+
+    response = client.post(
+        "/api/v1.0/items/new-odf/",
+        {
+            "parent_id": str(parent.id),
+            "filename_stem": "New text document",
+            "extension": "odt",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    payload = response.json()
+    item = models.Item.objects.get(id=payload["id"])
+    assert item.title == "New text document_01.odt"
+    assert item.filename == "New text document_01.odt"
     assert default_storage.exists(item.file_key)
 
     raw = default_storage.open(item.file_key, "rb").read()

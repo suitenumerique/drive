@@ -43,9 +43,13 @@ def is_item_wopi_supported(item, user):
     return bool(get_wopi_client_config(item, user))
 
 
-def get_wopi_client_config(item, user):
-    """make
-    Get the WOPI client configuration for an item.
+def get_wopi_client_config(item, user, *, action: str = "edit"):
+    """
+    Get the WOPI client configuration (launch URL template) for an item.
+
+    Supported actions:
+    - "edit" (default)
+    - "editnew" (for create-new flows on 0-byte placeholders)
     """
     if not getattr(settings, "WOPI_CLIENTS", []):
         return None
@@ -70,12 +74,18 @@ def get_wopi_client_config(item, user):
     if not wopi_configuration:
         return None
 
+    extensions_key = "extensions" if action != "editnew" else "extensions_editnew"
+    mimetypes_key = "mimetypes" if action != "editnew" else "mimetypes_editnew"
+
     result = None
     # Extension must always be checked first.
-    if item.extension in wopi_configuration["extensions"]:
-        result = wopi_configuration["extensions"][item.extension]
-    elif item.mimetype in wopi_configuration["mimetypes"]:
-        result = wopi_configuration["mimetypes"][item.mimetype]
+    extensions_map = wopi_configuration.get(extensions_key, {})
+    mimetypes_map = wopi_configuration.get(mimetypes_key, {})
+
+    if item.extension in extensions_map:
+        result = extensions_map[item.extension]
+    elif item.mimetype in mimetypes_map:
+        result = mimetypes_map[item.mimetype]
 
     return result
 
@@ -84,6 +94,7 @@ def get_wopi_client_config_for_filename(
     *,
     filename: str,
     mimetype: str | None = None,
+    action: str = "edit",
 ):
     """
     Return the WOPI client configuration for a mount-backed file.
@@ -103,11 +114,14 @@ def get_wopi_client_config_for_filename(
     _, ext = splitext(str(filename or ""))
     ext_key = ext.lstrip(".") if ext else None
 
+    extensions_key = "extensions" if action != "editnew" else "extensions_editnew"
+    mimetypes_key = "mimetypes" if action != "editnew" else "mimetypes_editnew"
+
     result = None
-    if ext_key and ext_key in wopi_configuration.get("extensions", {}):
-        result = wopi_configuration["extensions"][ext_key]
-    elif mimetype and mimetype in wopi_configuration.get("mimetypes", {}):
-        result = wopi_configuration["mimetypes"][mimetype]
+    if ext_key and ext_key in wopi_configuration.get(extensions_key, {}):
+        result = wopi_configuration[extensions_key][ext_key]
+    elif mimetype and mimetype in wopi_configuration.get(mimetypes_key, {}):
+        result = wopi_configuration[mimetypes_key][mimetype]
 
     return result
 

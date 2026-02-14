@@ -221,6 +221,40 @@ def test_api_items_wopi_anonymous_item_file_mimetype_not_supported():
     }
 
 
+def test_api_items_wopi_uses_editnew_for_creating_ooxml_placeholders(settings):
+    """WOPI init should use editnew when the item is a 0-byte CREATING OOXML file."""
+    settings.WOPI_SRC_BASE_URL = "http://app-dev:8000"
+
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        creator=user,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        type=models.ItemTypeChoices.FILE,
+        filename="Rapport.docx",
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        update_upload_state=models.ItemUploadStateChoices.CREATING,
+    )
+    item.size = 0
+    item.save(update_fields=["size", "updated_at"])
+    factories.UserItemAccessFactory(user=user, item=item, role="owner")
+
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            "mimetypes": {},
+            "extensions": {"docx": "https://vendorA.com/edit"},
+            "mimetypes_editnew": {},
+            "extensions_editnew": {"docx": "https://vendorA.com/editnew"},
+        },
+    )
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get(f"/api/v1.0/items/{item.id!s}/wopi/")
+    assert response.status_code == 200
+    assert response.json()["launch_url"].startswith("https://vendorA.com/editnew?")
+
+
 def test_api_items_wopi_anonymous_user_item_not_ready():
     """Anymous user can not access item file that is not ready."""
     item = factories.ItemFactory(

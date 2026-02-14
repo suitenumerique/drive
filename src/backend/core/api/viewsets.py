@@ -26,6 +26,7 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse, StreamingHttpResponse
 from django.middleware.csrf import get_token
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
 from django.utils.text import slugify
@@ -656,6 +657,64 @@ class ItemViewSet(
                 rename_file.delay(instance.id, title)
         serializer.save()
 
+    def _resolve_parent_folder_or_none_for_create(
+        self,
+        *,
+        user,
+        parent_id,
+    ):
+        if not parent_id:
+            return None
+
+        try:
+            parent = (
+                models.Item.objects.filter(
+                    hard_deleted_at__isnull=True,
+                    ancestors_deleted_at__isnull=True,
+                )
+                .readable_per_se(user)
+                .get(id=parent_id)
+            )
+        except models.Item.DoesNotExist as exc:
+            raise drf.exceptions.NotFound from exc
+
+        if parent.type != models.ItemTypeChoices.FOLDER:
+            raise drf.exceptions.ValidationError(
+                {
+                    "parent_id": drf.exceptions.ErrorDetail(
+                        "Only folders can have children.",
+                        code="item_create_child_type_folder_only",
+                    )
+                }
+            )
+
+        if not parent.get_abilities(user).get("children_create"):
+            raise drf.exceptions.PermissionDenied(
+                detail="You do not have permission to create items in this folder."
+            )
+
+        return parent
+
+    @staticmethod
+    def _new_file_payload_for_extension(extension: str):
+        odf_extensions = {"odt", "ods", "odp"}
+        ooxml_mimetypes = {
+            "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        }
+
+        if extension in odf_extensions:
+            mimetype, payload = build_minimal_odf_template_bytes(extension)
+            return mimetype, payload, models.ItemUploadStateChoices.READY
+
+        if extension in ooxml_mimetypes:
+            mimetype = ooxml_mimetypes[extension]
+            payload = b""
+            return mimetype, payload, models.ItemUploadStateChoices.CREATING
+
+        return "application/octet-stream", b"", models.ItemUploadStateChoices.READY
+
     @drf.decorators.action(
         detail=False,
         methods=["post"],
@@ -688,34 +747,9 @@ class ItemViewSet(
                 )
             )
 
-        parent = None
-        if parent_id:
-            try:
-                parent = (
-                    models.Item.objects.filter(
-                        hard_deleted_at__isnull=True,
-                        ancestors_deleted_at__isnull=True,
-                    )
-                    .readable_per_se(user)
-                    .get(id=parent_id)
-                )
-            except models.Item.DoesNotExist as exc:
-                raise drf.exceptions.NotFound from exc
-
-            if parent.type != models.ItemTypeChoices.FOLDER:
-                raise drf.exceptions.ValidationError(
-                    {
-                        "parent_id": drf.exceptions.ErrorDetail(
-                            "Only folders can have children.",
-                            code="item_create_child_type_folder_only",
-                        )
-                    }
-                )
-
-            if not parent.get_abilities(user).get("children_create"):
-                raise drf.exceptions.PermissionDenied(
-                    detail="You do not have permission to create items in this folder."
-                )
+        parent = self._resolve_parent_folder_or_none_for_create(
+            user=user, parent_id=parent_id
+        )
 
         mimetype, payload = build_minimal_odf_template_bytes(kind)
 
@@ -745,6 +779,10 @@ class ItemViewSet(
                         role=models.RoleChoices.OWNER,
                     )
 
+                if item.filename != item.title:
+                    item.filename = item.title
+                    item.save(update_fields=["filename", "updated_at"])
+
                 default_storage.save(item.file_key, BytesIO(payload))
                 item.upload_state = models.ItemUploadStateChoices.READY
                 item.size = len(payload)
@@ -755,6 +793,102 @@ class ItemViewSet(
                 if "item" in locals():
                     default_storage.delete(locals()["item"].file_key)
             raise APIException("Could not create document.") from exc
+
+        data = serializers.ItemSerializer(
+            item, context=self.get_serializer_context()
+        ).data
+        return drf.response.Response(data, status=status.HTTP_201_CREATED)
+
+    @drf.decorators.action(
+        detail=False,
+        methods=["post"],
+        url_path="new-file",
+        permission_classes=[IsAuthenticated],
+    )
+    def new_file(self, request, *args, **kwargs):
+        """
+        Create a new file from a (stem + extension) user choice.
+
+        - ODF (.odt/.ods/.odp): create a minimal valid template and set READY.
+        - OOXML (.docx/.xlsx/.pptx): create a 0-byte placeholder in CREATING state.
+        - Other: create an empty file and set READY.
+        """
+        serializer = serializers.CreateNewFileSerializer(
+            data=request.data, context=self.get_serializer_context()
+        )
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        parent_id = serializer.validated_data.get("parent_id")
+        final_filename = serializer.validated_data["final_filename"]
+        extension = serializer.validated_data["extension"]
+
+        entitlements_backend = get_entitlements_backend()
+        can_upload = entitlements_backend.can_upload(user)
+        if not can_upload["result"]:
+            raise drf.exceptions.PermissionDenied(
+                detail=can_upload.get(
+                    "message", "You do not have permission to upload files."
+                )
+            )
+
+        parent = self._resolve_parent_folder_or_none_for_create(
+            user=user, parent_id=parent_id
+        )
+
+        mimetype, payload, upload_state = self._new_file_payload_for_extension(
+            extension
+        )
+
+        try:
+            with transaction.atomic():
+                if parent is not None:
+                    item = models.Item.objects.create_child(
+                        creator=user,
+                        parent=parent,
+                        type=models.ItemTypeChoices.FILE,
+                        title=final_filename,
+                        filename=final_filename,
+                        mimetype=mimetype,
+                    )
+                else:
+                    item = models.Item.objects.create_child(
+                        creator=user,
+                        link_reach=LinkReachChoices.RESTRICTED,
+                        type=models.ItemTypeChoices.FILE,
+                        title=final_filename,
+                        filename=final_filename,
+                        mimetype=mimetype,
+                    )
+                    models.ItemAccess.objects.create(
+                        item=item,
+                        user=user,
+                        role=models.RoleChoices.OWNER,
+                    )
+
+                # If collisions occurred in this folder, create_child may have
+                # adjusted title; keep filename as source of truth for WOPI.
+                if item.filename != item.title:
+                    item.filename = item.title
+                    item.save(update_fields=["filename", "updated_at"])
+
+                default_storage.save(item.file_key, BytesIO(payload))
+                item.upload_state = upload_state
+                item.size = len(payload)
+                if upload_state == models.ItemUploadStateChoices.CREATING:
+                    item.upload_started_at = timezone.now()
+                item.save(
+                    update_fields=[
+                        "upload_state",
+                        "size",
+                        "upload_started_at",
+                    ]
+                )
+        except Exception as exc:
+            with contextlib.suppress(Exception):
+                if "item" in locals():
+                    default_storage.delete(locals()["item"].file_key)
+            raise APIException("Could not create file.") from exc
 
         data = serializers.ItemSerializer(
             item, context=self.get_serializer_context()
@@ -1835,7 +1969,17 @@ class ItemViewSet(
                 }
             )
 
-        if not (wopi_client := get_wopi_client_config(item, request.user)):
+        wopi_action = "edit"
+        if (
+            item.upload_state == models.ItemUploadStateChoices.CREATING
+            and (item.size or 0) == 0
+        ):
+            editnew_url = get_wopi_client_config(item, request.user, action="editnew")
+            if editnew_url:
+                wopi_action = "editnew"
+
+        wopi_client = get_wopi_client_config(item, request.user, action=wopi_action)
+        if not wopi_client:
             raise drf.exceptions.ValidationError(
                 {
                     "detail": drf.exceptions.ErrorDetail(

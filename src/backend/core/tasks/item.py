@@ -4,12 +4,16 @@ Tasks related to items.
 
 import hashlib
 import logging
+from datetime import timedelta
 from os.path import splitext
 from urllib.parse import quote
 
+from django.conf import settings
 from django.core.files.storage import default_storage
+from django.utils import timezone
 
 from botocore.exceptions import ClientError
+from celery.schedules import crontab
 
 from core.models import Item, ItemTypeChoices, ItemUploadStateChoices
 from core.utils.no_leak import safe_str_hash
@@ -17,6 +21,69 @@ from core.utils.no_leak import safe_str_hash
 from drive.celery_app import app
 
 logger = logging.getLogger(__name__)
+
+_CREATING_CLEANUP_MAX_ITEMS_PER_RUN = 200
+
+
+@app.on_after_finalize.connect
+def _setup_periodic_tasks(sender, **kwargs):
+    """
+    Periodic cleanup of stale "creating" OOXML placeholders (0-byte).
+
+    The schedule is intentionally conservative to avoid load spikes.
+    """
+    sender.add_periodic_task(
+        crontab(minute="*/5"),
+        cleanup_stale_creating_items.s(),
+        name="cleanup_stale_creating_items",
+        serializer="json",
+    )
+
+
+@app.task
+def cleanup_stale_creating_items():
+    """
+    Remove 0-byte items stuck in CREATING state past a TTL.
+
+    Best-effort: items are soft+hard deleted then processed asynchronously to
+    delete the object and the DB row.
+    """
+    ttl_seconds = int(getattr(settings, "ITEM_OOXML_CREATING_TTL_SECONDS", 900))
+    ttl_seconds = max(ttl_seconds, 60)
+    cutoff = timezone.now() - timedelta(seconds=ttl_seconds)
+
+    stale = (
+        Item.objects.filter(
+            type=ItemTypeChoices.FILE,
+            upload_state=ItemUploadStateChoices.CREATING,
+            size=0,
+            upload_started_at__isnull=False,
+            upload_started_at__lt=cutoff,
+            deleted_at__isnull=True,
+            ancestors_deleted_at__isnull=True,
+            hard_deleted_at__isnull=True,
+        )
+        .order_by("upload_started_at")
+        .only("id", "filename", "upload_started_at", "deleted_at", "hard_deleted_at")
+    )[:_CREATING_CLEANUP_MAX_ITEMS_PER_RUN]
+
+    for item in stale:
+        try:
+            logger.info(
+                "cleanup_stale_creating_items: hard-deleting stale creating item "
+                "(item_id=%s file_key_hash=%s)",
+                item.id,
+                safe_str_hash(item.file_key) if item.filename else None,
+            )
+            item.soft_delete()
+            item.hard_delete()
+            process_item_deletion.delay(item.id)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logger.exception(
+                "cleanup_stale_creating_items: failed to delete stale creating item "
+                "(item_id=%s)",
+                item.id,
+            )
 
 
 @app.task

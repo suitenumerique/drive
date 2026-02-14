@@ -17,7 +17,7 @@ from rest_framework.response import Response
 from sentry_sdk import capture_exception
 
 from core.api.utils import get_item_file_head_object
-from core.models import Item
+from core.models import Item, ItemUploadStateChoices
 from core.mounts.providers.base import MountProviderError
 from core.mounts.registry import get_mount_provider
 from core.services.mount_capabilities import normalize_mount_capabilities
@@ -164,16 +164,17 @@ class WopiViewSet(viewsets.ViewSet):
 
         lock_value = request.META.get(HTTP_X_WOPI_LOCK)
 
+        body_size = int(request.META.get("CONTENT_LENGTH") or 0)
+
         if lock_value:
             lock_service = LockService(item)
             current_lock_value = lock_service.get_lock(default="")
             if current_lock_value != lock_value:
                 return Response(status=409, headers={X_WOPI_LOCK: current_lock_value})
-        else:
-            # Check if the body is 0 bytes
-            body_size = int(request.META.get("CONTENT_LENGTH") or 0)
-            if body_size > 0:
-                return Response(status=409, headers={X_WOPI_LOCK: ""})
+        # Accept lock-less PutFile when creating a new OOXML file:
+        # ONLYOFFICE will initialize a 0-byte placeholder via PutFile.
+        elif item.upload_state != ItemUploadStateChoices.CREATING and body_size > 0:
+            return Response(status=409, headers={X_WOPI_LOCK: ""})
 
         try:
             file = ContentFile(request.body)
@@ -183,7 +184,11 @@ class WopiViewSet(viewsets.ViewSet):
         s3_client = default_storage.connection.meta.client
         default_storage.save(item.file_key, file)
         item.size = file.size
-        item.save(update_fields=["size", "updated_at"])
+        update_fields = ["size", "updated_at"]
+        if item.upload_state == ItemUploadStateChoices.CREATING:
+            item.upload_state = ItemUploadStateChoices.READY
+            update_fields.append("upload_state")
+        item.save(update_fields=update_fields)
 
         head_response = s3_client.head_object(
             Bucket=default_storage.bucket_name, Key=item.file_key
