@@ -17,6 +17,8 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 @dataclass(frozen=True, slots=True)
 class OoxmlTemplateSpec:
+    """OOXML template spec used to build minimal valid documents."""
+
     extension: str
     mimetype: str
     files: dict[str, str]
@@ -24,7 +26,8 @@ class OoxmlTemplateSpec:
 
 _DOCPROPS_CORE_XML = (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-    '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
+    "<cp:coreProperties "
+    'xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" '
     'xmlns:dc="http://purl.org/dc/elements/1.1/" '
     'xmlns:dcterms="http://purl.org/dc/terms/" '
     'xmlns:dcmitype="http://purl.org/dc/dcmitype/" '
@@ -35,14 +38,17 @@ _DOCPROPS_CORE_XML = (
     "  <cp:keywords/>\n"
     "  <dc:description/>\n"
     "  <cp:lastModifiedBy>Drive</cp:lastModifiedBy>\n"
-    '  <dcterms:created xsi:type="dcterms:W3CDTF">2000-01-01T00:00:00Z</dcterms:created>\n'
-    '  <dcterms:modified xsi:type="dcterms:W3CDTF">2000-01-01T00:00:00Z</dcterms:modified>\n'
+    "  <dcterms:created "
+    'xsi:type="dcterms:W3CDTF">2000-01-01T00:00:00Z</dcterms:created>\n'
+    "  <dcterms:modified "
+    'xsi:type="dcterms:W3CDTF">2000-01-01T00:00:00Z</dcterms:modified>\n'
     "</cp:coreProperties>\n"
 )
 
 _DOCPROPS_APP_XML = (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-    '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" '
+    "<Properties "
+    'xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" '
     'xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">\n'
     "  <Application>Drive</Application>\n"
     "</Properties>\n"
@@ -65,56 +71,69 @@ _OOXML_TEMPLATES: dict[str, OoxmlTemplateSpec] = {
             "[Content_Types].xml": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
                 '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">\n'
-                '  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>\n'
+                '  <Default Extension="rels" ContentType="'
+                'application/vnd.openxmlformats-package.relationships+xml"/>\n'
                 '  <Default Extension="xml" ContentType="application/xml"/>\n'
                 '  <Override PartName="/word/document.xml" '
-                'ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-officedocument.'
+                'wordprocessingml.document.main+xml"/>\n'
                 '  <Override PartName="/word/styles.xml" '
-                'ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-officedocument.'
+                'wordprocessingml.styles+xml"/>\n'
                 '  <Override PartName="/docProps/core.xml" '
-                'ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-package.'
+                'core-properties+xml"/>\n'
                 '  <Override PartName="/docProps/app.xml" '
-                'ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-officedocument.'
+                'extended-properties+xml"/>\n'
                 "</Types>\n"
             ),
             "_rels/.rels": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
+                "<Relationships "
+                'xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
                 '  <Relationship Id="rId1" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/officeDocument" '
                 'Target="word/document.xml"/>\n'
                 '  <Relationship Id="rId2" '
-                'Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" '
+                'Type="http://schemas.openxmlformats.org/package/2006/'
+                'relationships/metadata/core-properties" '
                 'Target="docProps/core.xml"/>\n'
                 '  <Relationship Id="rId3" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/extended-properties" '
                 'Target="docProps/app.xml"/>\n'
                 "</Relationships>\n"
             ),
             "word/document.xml": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-                '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">\n'
+                "<w:document "
+                'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">\n'
                 "  <w:body>\n"
                 "    <w:p/>\n"
                 "    <w:sectPr>\n"
                 '      <w:pgSz w:w="11906" w:h="16838"/>\n'
-                '      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" '
-                'w:header="720" w:footer="720" w:gutter="0"/>\n'
+                '      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" '
+                'w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>\n'
                 "    </w:sectPr>\n"
                 "  </w:body>\n"
                 "</w:document>\n"
             ),
             "word/_rels/document.xml.rels": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
+                "<Relationships "
+                'xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
                 '  <Relationship Id="rId1" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/styles" '
                 'Target="styles.xml"/>\n'
                 "</Relationships>\n"
             ),
             "word/styles.xml": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-                '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">\n'
+                "<w:styles "
+                'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">\n'
                 '  <w:style w:type="paragraph" w:default="1" w:styleId="Normal">\n'
                 '    <w:name w:val="Normal"/>\n'
                 "    <w:qFormat/>\n"
@@ -132,37 +151,48 @@ _OOXML_TEMPLATES: dict[str, OoxmlTemplateSpec] = {
             "[Content_Types].xml": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
                 '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">\n'
-                '  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>\n'
+                '  <Default Extension="rels" ContentType="'
+                'application/vnd.openxmlformats-package.relationships+xml"/>\n'
                 '  <Default Extension="xml" ContentType="application/xml"/>\n'
                 '  <Override PartName="/xl/workbook.xml" '
-                'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-officedocument.'
+                'spreadsheetml.sheet.main+xml"/>\n'
                 '  <Override PartName="/xl/worksheets/sheet1.xml" '
-                'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-officedocument.'
+                'spreadsheetml.worksheet+xml"/>\n'
                 '  <Override PartName="/xl/styles.xml" '
-                'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-officedocument.'
+                'spreadsheetml.styles+xml"/>\n'
                 '  <Override PartName="/docProps/core.xml" '
-                'ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-package.'
+                'core-properties+xml"/>\n'
                 '  <Override PartName="/docProps/app.xml" '
-                'ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-officedocument.'
+                'extended-properties+xml"/>\n'
                 "</Types>\n"
             ),
             "_rels/.rels": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
+                "<Relationships "
+                'xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
                 '  <Relationship Id="rId1" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/officeDocument" '
                 'Target="xl/workbook.xml"/>\n'
                 '  <Relationship Id="rId2" '
-                'Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" '
+                'Type="http://schemas.openxmlformats.org/package/2006/'
+                'relationships/metadata/core-properties" '
                 'Target="docProps/core.xml"/>\n'
                 '  <Relationship Id="rId3" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/extended-properties" '
                 'Target="docProps/app.xml"/>\n'
                 "</Relationships>\n"
             ),
             "xl/workbook.xml": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-                '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+                "<workbook "
+                'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
                 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">\n'
                 "  <sheets>\n"
                 '    <sheet name="Sheet1" sheetId="1" r:id="rId1"/>\n'
@@ -171,12 +201,15 @@ _OOXML_TEMPLATES: dict[str, OoxmlTemplateSpec] = {
             ),
             "xl/_rels/workbook.xml.rels": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
+                "<Relationships "
+                'xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
                 '  <Relationship Id="rId1" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/worksheet" '
                 'Target="worksheets/sheet1.xml"/>\n'
                 '  <Relationship Id="rId2" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/styles" '
                 'Target="styles.xml"/>\n'
                 "</Relationships>\n"
             ),
@@ -197,11 +230,16 @@ _OOXML_TEMPLATES: dict[str, OoxmlTemplateSpec] = {
                 '      <family val="2"/>\n'
                 "    </font>\n"
                 "  </fonts>\n"
-                '  <fills count="1"><fill><patternFill patternType="none"/></fill></fills>\n'
-                '  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>\n'
-                '  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>\n'
-                '  <cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>\n'
-                '  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>\n'
+                '  <fills count="1"><fill><patternFill patternType="none"/>'
+                "</fill></fills>\n"
+                '  <borders count="1"><border><left/><right/><top/><bottom/>'
+                "<diagonal/></border></borders>\n"
+                '  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" '
+                'borderId="0"/></cellStyleXfs>\n'
+                '  <cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" '
+                'borderId="0" xfId="0"/></cellXfs>\n'
+                '  <cellStyles count="1"><cellStyle name="Normal" xfId="0" '
+                'builtinId="0"/></cellStyles>\n'
                 "</styleSheet>\n"
             ),
             "docProps/core.xml": _DOCPROPS_CORE_XML,
@@ -215,35 +253,47 @@ _OOXML_TEMPLATES: dict[str, OoxmlTemplateSpec] = {
             "[Content_Types].xml": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
                 '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">\n'
-                '  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>\n'
+                '  <Default Extension="rels" ContentType="'
+                'application/vnd.openxmlformats-package.relationships+xml"/>\n'
                 '  <Default Extension="xml" ContentType="application/xml"/>\n'
                 '  <Override PartName="/ppt/presentation.xml" '
-                'ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-officedocument.'
+                'presentationml.presentation.main+xml"/>\n'
                 '  <Override PartName="/ppt/slides/slide1.xml" '
-                'ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-officedocument.'
+                'presentationml.slide+xml"/>\n'
                 '  <Override PartName="/ppt/slideMasters/slideMaster1.xml" '
-                'ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-officedocument.'
+                'presentationml.slideMaster+xml"/>\n'
                 '  <Override PartName="/ppt/slideLayouts/slideLayout1.xml" '
-                'ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-officedocument.'
+                'presentationml.slideLayout+xml"/>\n'
                 '  <Override PartName="/ppt/theme/theme1.xml" '
-                'ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-officedocument.'
+                'theme+xml"/>\n'
                 '  <Override PartName="/docProps/core.xml" '
-                'ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-package.'
+                'core-properties+xml"/>\n'
                 '  <Override PartName="/docProps/app.xml" '
-                'ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>\n'
+                'ContentType="application/vnd.openxmlformats-officedocument.'
+                'extended-properties+xml"/>\n'
                 "</Types>\n"
             ),
             "_rels/.rels": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
+                "<Relationships "
+                'xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
                 '  <Relationship Id="rId1" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/officeDocument" '
                 'Target="ppt/presentation.xml"/>\n'
                 '  <Relationship Id="rId2" '
-                'Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" '
+                'Type="http://schemas.openxmlformats.org/package/2006/'
+                'relationships/metadata/core-properties" '
                 'Target="docProps/core.xml"/>\n'
                 '  <Relationship Id="rId3" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/extended-properties" '
                 'Target="docProps/app.xml"/>\n'
                 "</Relationships>\n"
             ),
@@ -264,12 +314,15 @@ _OOXML_TEMPLATES: dict[str, OoxmlTemplateSpec] = {
             ),
             "ppt/_rels/presentation.xml.rels": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
+                "<Relationships "
+                'xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
                 '  <Relationship Id="rId1" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/slideMaster" '
                 'Target="slideMasters/slideMaster1.xml"/>\n'
                 '  <Relationship Id="rId2" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/slide" '
                 'Target="slides/slide1.xml"/>\n'
                 "</Relationships>\n"
             ),
@@ -303,12 +356,15 @@ _OOXML_TEMPLATES: dict[str, OoxmlTemplateSpec] = {
             ),
             "ppt/slideMasters/_rels/slideMaster1.xml.rels": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
+                "<Relationships "
+                'xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
                 '  <Relationship Id="rId1" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/slideLayout" '
                 'Target="../slideLayouts/slideLayout1.xml"/>\n'
                 '  <Relationship Id="rId2" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/theme" '
                 'Target="../theme/theme1.xml"/>\n'
                 "</Relationships>\n"
             ),
@@ -340,9 +396,11 @@ _OOXML_TEMPLATES: dict[str, OoxmlTemplateSpec] = {
             ),
             "ppt/slideLayouts/_rels/slideLayout1.xml.rels": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
+                "<Relationships "
+                'xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
                 '  <Relationship Id="rId1" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/slideMaster" '
                 'Target="../slideMasters/slideMaster1.xml"/>\n'
                 "</Relationships>\n"
             ),
@@ -373,9 +431,11 @@ _OOXML_TEMPLATES: dict[str, OoxmlTemplateSpec] = {
             ),
             "ppt/slides/_rels/slide1.xml.rels": (
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
-                '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
+                "<Relationships "
+                'xmlns="http://schemas.openxmlformats.org/package/2006/relationships">\n'
                 '  <Relationship Id="rId1" '
-                'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" '
+                'Type="http://schemas.openxmlformats.org/officeDocument/2006/'
+                'relationships/slideLayout" '
                 'Target="../slideLayouts/slideLayout1.xml"/>\n'
                 "</Relationships>\n"
             ),
