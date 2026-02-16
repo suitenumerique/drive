@@ -18,11 +18,34 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import undoIcon from "@/assets/icons/undo_blue.svg";
 import cancelIcon from "@/assets/icons/cancel_blue.svg";
+import trashIcon from "@/assets/icons/trash.svg";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { useState } from "react";
 import { HardDeleteConfirmationModal } from "@/features/explorer/components/modals/HardDeleteConfirmationModal";
 import { messageModalTrashNavigate } from "@/features/explorer/components/trash/utils";
+
+const TrashEmptyPlaceholder = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="c__datagrid__empty-placeholder fs-h3 clr-greyscale-900 fw-bold">
+      <img
+        src={trashIcon.src}
+        alt=""
+        className="explorer__grid__empty__image"
+        style={{ width: 64, height: 64 }}
+      />
+      <div className="explorer__grid__empty">
+        <div className="explorer__grid__empty__caption">
+          {t("explorer.trash.empty.caption")}
+        </div>
+        <div className="explorer__grid__empty__cta">
+          {t("explorer.trash.empty.cta")}
+        </div>
+      </div>
+    </div>
+  );
+};
 export default function TrashPage() {
   const { t } = useTranslation();
   const [filters, setFilters] = useState<ItemFilters>({});
@@ -61,6 +84,7 @@ export default function TrashPage() {
       onNavigate={() => {
         messageModalTrashNavigate(modals);
       }}
+      emptyPlaceholder={<TrashEmptyPlaceholder />}
     />
   );
 }
