@@ -8,7 +8,7 @@ import {
   IconSize,
   useDropdownMenu,
 } from "@gouvfr-lasuite/ui-kit";
-import { WorkspaceIcon } from "@/features/explorer/components/icons/ItemIcon";
+import { FolderIcon } from "@/features/explorer/components/icons/ItemIcon";
 import createFolderSvg from "@/assets/icons/add_folder.svg";
 import { EmbeddedExplorerGridBreadcrumbs } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridBreadcrumbs";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
@@ -16,13 +16,14 @@ import { ImportDropdown } from "../item-actions/ImportDropdown";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/router";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   DefaultRoute,
   getDefaultRouteId,
   isDefaultRoute,
   ORDERED_DEFAULT_ROUTES,
 } from "@/utils/defaultRoutes";
+import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 
 export const AppExplorerBreadcrumbs = () => {
   const { item, onNavigate } = useGlobalExplorer();
@@ -97,10 +98,11 @@ export const ExplorerBreadcrumbsMobile = () => {
   const { t } = useTranslation();
   const { item, onNavigate } = useGlobalExplorer();
   const { data: breadcrumb } = useBreadcrumbQuery(item?.id);
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
 
   const defaultRouteId = getDefaultRouteId(router.pathname);
   const defaultRouteData = ORDERED_DEFAULT_ROUTES.find(
-    (route) => route.id === defaultRouteId
+    (route) => route.id === defaultRouteId,
   );
 
   const items = useMemo(() => {
@@ -143,10 +145,7 @@ export const ExplorerBreadcrumbsMobile = () => {
     <div className="explorer__content__breadcrumbs--mobile">
       {isRoot ? (
         <div className="explorer__content__breadcrumbs--mobile__workspace">
-          <WorkspaceIcon
-            isMainWorkspace={workspace.main_workspace}
-            iconSize={IconSize.X_SMALL}
-          />
+          <FolderIcon iconSize={IconSize.X_SMALL} />
           <span>{workspaceTitle}</span>
         </div>
       ) : (
@@ -176,10 +175,7 @@ export const ExplorerBreadcrumbsMobile = () => {
           </div>
           <div className="explorer__content__breadcrumbs--mobile__container__info">
             <div className="explorer__content__breadcrumbs--mobile__container__info__title">
-              <WorkspaceIcon
-                isMainWorkspace={workspace.main_workspace}
-                iconSize={IconSize.X_SMALL}
-              />
+              <FolderIcon iconSize={IconSize.X_SMALL} />
               <span>{workspaceTitle}</span>
             </div>
             <div className="explorer__content__breadcrumbs--mobile__container__info__folder">
@@ -187,6 +183,21 @@ export const ExplorerBreadcrumbsMobile = () => {
             </div>
           </div>
         </div>
+      )}
+      {item && (
+        <ItemActionDropdown
+          item={item}
+          isOpen={isActionMenuOpen}
+          setIsOpen={setIsActionMenuOpen}
+          allowCreate={!!item.abilities?.children_create}
+          trigger={
+            <Button
+              variant="tertiary"
+              icon={<span className="material-icons">more_vert</span>}
+              onClick={() => setIsActionMenuOpen(true)}
+            />
+          }
+        />
       )}
     </div>
   );

@@ -8,9 +8,15 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(frontend) add create folder and import file actions
+- 🐛(frontend) add action menu to mobile breadcrumbs
+
 ### Changed
 
 - ⚡️(CI) optimize Docker Hub workflow
+- ♻️(frontend) replace WorkspaceIcon with FolderIcon in breadcrumbs
 
 ### Removed
 

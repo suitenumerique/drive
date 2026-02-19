@@ -9,8 +9,11 @@ import {
 import settingsSvg from "@/assets/icons/settings.svg";
 import starredSvg from "@/assets/icons/starred.svg";
 import unstarredSvg from "@/assets/icons/starred-slash.svg";
+import uploadFileSvg from "@/assets/icons/upload_file.svg";
 import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 import { ExplorerRenameItemModal } from "../components/modals/ExplorerRenameItemModal";
+import { ExplorerCreateFolderModal } from "../components/modals/ExplorerCreateFolderModal";
+import { NewFolderIcon } from "@/features/ui/components/icon/NewFolderIcon";
 import { ItemShareModal } from "../components/modals/share/ItemShareModal";
 import { useDeleteItem } from "./useDeleteItem";
 import { ExplorerMoveFolder } from "../components/modals/move/ExplorerMoveFolderModal";
@@ -30,7 +33,7 @@ type UseItemActionMenuItemsOptions = {
 type UseItemActionMenuItemsReturn = {
   getMenuItems: (
     item: Item,
-    options?: { minimal?: boolean; itemId?: string },
+    options?: { minimal?: boolean; itemId?: string; allowCreate?: boolean },
   ) => MenuItem[];
   modals: React.ReactNode;
   isModalOpen: boolean;
@@ -52,11 +55,12 @@ export const useItemActionMenuItems = ({
   const shareItemModal = useModal();
   const renameModal = useModal();
   const moveModal = useModal();
+  const createFolderModal = useModal();
 
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
 
   const isModalOpen =
-    renameModal.isOpen || shareItemModal.isOpen || moveModal.isOpen;
+    renameModal.isOpen || shareItemModal.isOpen || moveModal.isOpen || createFolderModal.isOpen;
 
   useEffect(() => {
     onModalOpenChange?.(isModalOpen);
@@ -93,13 +97,35 @@ export const useItemActionMenuItems = ({
 
   const getMenuItems = (
     item: Item,
-    options?: { minimal?: boolean; itemId?: string },
+    options?: { minimal?: boolean; itemId?: string; allowCreate?: boolean },
   ): MenuItem[] => {
     const minimal = options?.minimal ?? false;
+    const allowCreate = options?.allowCreate ?? false;
     const effectiveItemId = options?.itemId ?? item.originalId ?? item.id;
     const effectiveItem = { ...item, id: effectiveItemId };
+    const showAddChildren = allowCreate;
 
     return [
+      ...(showAddChildren
+        ? [
+            {
+              icon: <NewFolderIcon />,
+              label: t("explorer.actions.createFolder.modal.title"),
+              callback: () => {
+                setCurrentItem(effectiveItem);
+                createFolderModal.open();
+              },
+            },
+            {
+              icon: <img src={uploadFileSvg.src} alt="" />,
+              label: t("explorer.tree.import.files"),
+              callback: () => {
+                document.getElementById("import-files")?.click();
+              },
+            },
+            { type: "separator" as const },
+          ]
+        : []),
       {
         icon: <span className="material-icons">info</span>,
         label: t("explorer.item.actions.view_info"),
@@ -195,6 +221,12 @@ export const useItemActionMenuItems = ({
           itemsToMove={[currentItem]}
           key={currentItem.id}
           initialFolderId={getParentIdFromPath(currentItem.path)}
+        />
+      )}
+      {currentItem && createFolderModal.isOpen && (
+        <ExplorerCreateFolderModal
+          {...createFolderModal}
+          parentId={currentItem.id}
         />
       )}
     </>

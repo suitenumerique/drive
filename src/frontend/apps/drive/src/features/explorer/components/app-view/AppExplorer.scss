@@ -136,6 +136,7 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 
         background: var(--c--contextuals--background--surface--secondary);
         align-items: center;
+        justify-content: space-between;
         height: 64px;
 
         @media (max-width: $tablet) {

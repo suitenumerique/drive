@@ -10,6 +10,7 @@ export type ItemActionDropdownProps = {
   trigger: React.ReactNode;
   onModalOpenChange?: (isModalOpen: boolean) => void;
   minimal?: boolean;
+  allowCreate?: boolean;
 };
 
 export const ItemActionDropdown = ({
@@ -20,11 +21,12 @@ export const ItemActionDropdown = ({
   trigger,
   onModalOpenChange,
   minimal = false,
+  allowCreate = false,
 }: ItemActionDropdownProps) => {
   const { getMenuItems, modals } = useItemActionMenuItems({
     onModalOpenChange,
   });
-  const menuItems = getMenuItems(item, { minimal, itemId });
+  const menuItems = getMenuItems(item, { minimal, itemId, allowCreate });
 
   return (
     <>
