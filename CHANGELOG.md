@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- ♻️(backend) set item read only in the mirror item admin detail
+
 ## [v0.13.0] - 2026-02-18
 
 ### Added

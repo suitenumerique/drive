@@ -233,6 +233,7 @@ class MirrorItemTaskAdmin(admin.ModelAdmin):
     )
     readonly_fields = (
         "id",
+        "item",
         "created_at",
         "updated_at",
     )
