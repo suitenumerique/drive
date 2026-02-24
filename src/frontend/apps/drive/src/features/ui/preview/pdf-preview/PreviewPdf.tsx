@@ -1,19 +1,23 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
-import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { Button, useModals } from '@openfun/cunningham-react';
-import { Icon } from '@gouvfr-lasuite/ui-kit';
-import { useTranslation } from 'react-i18next';
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
-import { TransformComponent, TransformWrapper, useControls } from 'react-zoom-pan-pinch';
+import { useCallback, useEffect, useState } from "react";
+import { Document, Page, pdfjs } from "react-pdf";
+import type { PDFDocumentProxy } from "pdfjs-dist";
+import { Button, useModals } from "@gouvfr-lasuite/cunningham-react";
+import { Icon } from "@gouvfr-lasuite/ui-kit";
+import { useTranslation } from "react-i18next";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
+import {
+  TransformComponent,
+  TransformWrapper,
+  useControls,
+} from "react-zoom-pan-pinch";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 const options = {
-  cMapUrl: '/cmaps/',
-  standardFontDataUrl: '/standard_fonts/',
-  wasmUrl: '/wasm/',
+  cMapUrl: "/cmaps/",
+  standardFontDataUrl: "/standard_fonts/",
+  wasmUrl: "/wasm/",
   isEvalSupported: false,
 };
 
@@ -22,10 +26,9 @@ const ZOOM_STEP = 0.25;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2;
 
-
 function debounce<T extends (...args: any[]) => any>(
   func: T,
-  timeout = 300
+  timeout = 300,
 ): ((...args: Parameters<T>) => void) & { cancel: () => void } {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const debouncedFunc = (...args: Parameters<T>) => {
@@ -68,9 +71,9 @@ export function PreviewPdf({ src }: { src: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [numPages, setNumPages] = useState<number>(1);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  
+
   const [zoom, setZoom] = useState<number>(1);
-  const [pageInputValue, setPageInputValue] = useState<string>('1');
+  const [pageInputValue, setPageInputValue] = useState<string>("1");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const modals = useModals();
@@ -82,9 +85,8 @@ export function PreviewPdf({ src }: { src: string }) {
       return size.width;
     }
     return BASE_WIDTH;
-  }
+  };
 
-  
   const [width, setWidth] = useState(getWidth());
   useEffect(() => {
     setWidth(getWidth());
@@ -96,19 +98,19 @@ export function PreviewPdf({ src }: { src: string }) {
       setError(null);
 
       try {
-        const response = await fetch(src, { credentials: 'include' });
+        const response = await fetch(src, { credentials: "include" });
 
         if (!response.ok) {
           throw new Error(`Failed to fetch PDF: ${response.status}`);
         }
 
         const blob = await response.blob();
-        const filename = src.split('/').pop() || 'document.pdf';
-        const pdfFile = new File([blob], filename, { type: 'application/pdf' });
+        const filename = src.split("/").pop() || "document.pdf";
+        const pdfFile = new File([blob], filename, { type: "application/pdf" });
 
         setFile(pdfFile);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load PDF');
+        setError(err instanceof Error ? err.message : "Failed to load PDF");
       } finally {
         setIsLoading(false);
       }
@@ -117,10 +119,12 @@ export function PreviewPdf({ src }: { src: string }) {
     fetchPdf();
   }, [src]);
 
-  function onDocumentLoadSuccess({ numPages: nextNumPages }: PDFDocumentProxy): void {
+  function onDocumentLoadSuccess({
+    numPages: nextNumPages,
+  }: PDFDocumentProxy): void {
     setNumPages(nextNumPages);
     setCurrentPage(1);
-    setPageInputValue('1');
+    setPageInputValue("1");
   }
 
   const goToPreviousPage = useCallback(() => {
@@ -155,7 +159,7 @@ export function PreviewPdf({ src }: { src: string }) {
   };
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handlePageInputSubmit();
     }
   };
@@ -172,29 +176,34 @@ export function PreviewPdf({ src }: { src: string }) {
   //   setZoom(1);
   // }, []);
 
-  const handlePdfClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    const anchor = target.closest('a');
+  const handlePdfClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest("a");
 
-    if (anchor && anchor.href) {
-      e.preventDefault();
-      e.stopPropagation();
+      if (anchor && anchor.href) {
+        e.preventDefault();
+        e.stopPropagation();
 
-      modals.confirmationModal({
-        title: t('file_preview.external_link.title'),
-        children: (<div>
-          <p>{t('file_preview.external_link.description')}</p>
-          <pre className="pdf-preview__external-link">{anchor.href}</pre>
-          <p>{t('file_preview.external_link.confirm_question')}</p>
-        </div>),
-        onDecide: (decision) => {
-          if (decision === 'yes') {
-            window.open(anchor.href, '_blank', 'noopener,noreferrer');
-          }
-        },
-      });
-    }
-  }, [modals, t]);
+        modals.confirmationModal({
+          title: t("file_preview.external_link.title"),
+          children: (
+            <div>
+              <p>{t("file_preview.external_link.description")}</p>
+              <pre className="pdf-preview__external-link">{anchor.href}</pre>
+              <p>{t("file_preview.external_link.confirm_question")}</p>
+            </div>
+          ),
+          onDecide: (decision) => {
+            if (decision === "yes") {
+              window.open(anchor.href, "_blank", "noopener,noreferrer");
+            }
+          },
+        });
+      }
+    },
+    [modals, t],
+  );
 
   if (isLoading) {
     return (
@@ -220,24 +229,25 @@ export function PreviewPdf({ src }: { src: string }) {
   }
 
   return (
-    <TransformWrapper wheel={{ disabled: true }}>
+    // <TransformWrapper
+    //   disabled={true}
+    //   wheel={{ disabled: true }}
+    //   pinch={{ disabled: true }}
+    //   panning={{ disabled: true }}
+    // >
       <div className="pdf-preview">
         <div className="pdf-preview__container">
-          
-            <TransformComponent>
-              <div
-                className="pdf-preview__page-wrapper"
-                onClick={handlePdfClick}
+          {/* <TransformComponent> */}
+            <div className="pdf-preview__page-wrapper" onClick={handlePdfClick}>
+              <Document
+                file={file}
+                onLoadSuccess={onDocumentLoadSuccess}
+                options={options}
               >
-                <Document file={file} onLoadSuccess={onDocumentLoadSuccess} options={options}>
-                  <Page
-                    pageNumber={currentPage}
-                    width={width}
-                  />
-                </Document>
-              </div>
-            </TransformComponent>
-          
+                <Page pageNumber={currentPage} width={width} />
+              </Document>
+            </div>
+          {/* </TransformComponent> */}
         </div>
         <div className="pdf-preview__controls">
           <div className="pdf-preview__page-nav">
@@ -273,43 +283,45 @@ export function PreviewPdf({ src }: { src: string }) {
             </Button>
           </div>
           <div className="controls-vertical-separator" />
-          <Controls />
+          {/* <Controls /> */}
         </div>
       </div>
-    </TransformWrapper>
+    // </TransformWrapper>
   );
 }
 
 const Controls = () => {
   const { zoomIn, zoomOut, resetTransform, ...rest } = useControls();
   console.log(rest);
-  return <div className="zoom-control">
-    <Button
-      variant="tertiary"
-      color="neutral"
-      onClick={() => zoomOut()}
-      // disabled={zoom <= MIN_ZOOM}
-      aria-label="Zoom out"
-    >
-      <Icon name="zoom_out" />
-    </Button>
-    <div
-      className="zoom-control__value"
-      role="button"
-      onClick={() => resetTransform()}
-      tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && resetTransform()}
-    >
-      Reset
+  return (
+    <div className="zoom-control">
+      <Button
+        variant="tertiary"
+        color="neutral"
+        onClick={() => zoomOut()}
+        // disabled={zoom <= MIN_ZOOM}
+        aria-label="Zoom out"
+      >
+        <Icon name="zoom_out" />
+      </Button>
+      <div
+        className="zoom-control__value"
+        role="button"
+        onClick={() => resetTransform()}
+        tabIndex={0}
+        onKeyDown={(e) => e.key === "Enter" && resetTransform()}
+      >
+        Reset
+      </div>
+      <Button
+        variant="tertiary"
+        color="neutral"
+        onClick={() => zoomIn()}
+        // disabled={zoom >= MAX_ZOOM}
+        aria-label="Zoom in"
+      >
+        <Icon name="zoom_in" />
+      </Button>
     </div>
-    <Button
-      variant="tertiary"
-      color="neutral"
-      onClick={() => zoomIn()}
-      // disabled={zoom >= MAX_ZOOM}
-      aria-label="Zoom in"
-    >
-      <Icon name="zoom_in" />
-    </Button>
-  </div>
-}
+  );
+};
