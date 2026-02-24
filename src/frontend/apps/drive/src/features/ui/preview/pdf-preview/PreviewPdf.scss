@@ -6,6 +6,58 @@
   overflow: hidden;
   position: relative;
 
+  &__body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  &__sidebar {
+    width: 150px;
+    min-width: 150px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-right: 1px solid
+      var(--c--contextuals--border--surface--primary);
+    background: var(--c--contextuals--background--surface--primary);
+  }
+
+  &__thumbnail {
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    padding: 4px;
+    background: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: border-color 0.15s ease;
+
+    &:hover {
+      border-color: var(
+        --c--contextuals--content--semantic--neutral--secondary
+      );
+    }
+
+    &--active {
+      border-color: var(
+        --c--contextuals--content--semantic--brand--primary
+      );
+    }
+  }
+
+  &__thumbnail-number {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--c--contextuals--content--semantic--neutral--secondary);
+    text-align: center;
+  }
+
   &__container {
     flex: 1;
     overflow: auto;
@@ -17,9 +69,10 @@
   }
 
   &__page-wrapper {
-    transform-origin: top center;
-    transition: transform 0.2s ease-out;
-    will-change: transform;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
   }
 
   &__controls {
@@ -141,6 +194,10 @@
 
 @media (max-width: 768px) {
   .pdf-preview {
+    &__sidebar {
+      display: none;
+    }
+
     &__controls {
       padding: 8px;
       gap: 8px;
@@ -165,10 +222,6 @@
 @media (prefers-reduced-motion: reduce) {
   .pdf-preview__spinner {
     animation: none;
-  }
-
-  .pdf-preview__page-wrapper {
-    transition: none;
   }
 }
 

@@ -1,16 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Document, Page, Thumbnail, pdfjs } from "react-pdf";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { Button, useModals } from "@gouvfr-lasuite/cunningham-react";
 import { Icon } from "@gouvfr-lasuite/ui-kit";
 import { useTranslation } from "react-i18next";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
-import {
-  TransformComponent,
-  TransformWrapper,
-  useControls,
-} from "react-zoom-pan-pinch";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -22,9 +17,6 @@ const options = {
 };
 
 const BASE_WIDTH = 800;
-const ZOOM_STEP = 0.25;
-const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 2;
 
 function debounce<T extends (...args: any[]) => any>(
   func: T,
@@ -72,10 +64,15 @@ export function PreviewPdf({ src }: { src: string }) {
   const [numPages, setNumPages] = useState<number>(1);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
-  const [zoom, setZoom] = useState<number>(1);
   const [pageInputValue, setPageInputValue] = useState<string>("1");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isScrollingToPage = useRef(false);
+  const visiblePages = useRef(new Set<number>());
+  const [, setRenderTick] = useState(0);
   const modals = useModals();
   const { t } = useTranslation();
   const size = useDebouncedResize();
@@ -91,6 +88,8 @@ export function PreviewPdf({ src }: { src: string }) {
   useEffect(() => {
     setWidth(getWidth());
   }, [size.width]);
+
+  const pageHeight = width * 1.414;
 
   useEffect(() => {
     const fetchPdf = async () => {
@@ -127,21 +126,119 @@ export function PreviewPdf({ src }: { src: string }) {
     setPageInputValue("1");
   }
 
+  const scrollToPage = useCallback((page: number) => {
+    const container = containerRef.current;
+    if (!container) return;
+    const el = container.querySelector(`[data-page-number="${page}"]`);
+    if (!el) return;
+    isScrollingToPage.current = true;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => {
+      isScrollingToPage.current = false;
+    }, 600);
+  }, []);
+
   const goToPreviousPage = useCallback(() => {
     setCurrentPage((prev) => {
       const newPage = Math.max(1, prev - 1);
       setPageInputValue(String(newPage));
+      scrollToPage(newPage);
       return newPage;
     });
-  }, []);
+  }, [scrollToPage]);
 
   const goToNextPage = useCallback(() => {
     setCurrentPage((prev) => {
       const newPage = Math.min(numPages, prev + 1);
       setPageInputValue(String(newPage));
+      scrollToPage(newPage);
       return newPage;
     });
-  }, [numPages]);
+  }, [numPages, scrollToPage]);
+
+  const goToPage = useCallback(
+    (page: number) => {
+      const clamped = Math.max(1, Math.min(numPages, page));
+      setCurrentPage(clamped);
+      setPageInputValue(String(clamped));
+      scrollToPage(clamped);
+    },
+    [numPages, scrollToPage],
+  );
+
+  // Virtualization observer: track which pages are near the viewport
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || numPages <= 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let changed = false;
+        for (const entry of entries) {
+          const pageNum = Number(
+            (entry.target as HTMLElement).dataset.pageNumber,
+          );
+          if (entry.isIntersecting) {
+            if (!visiblePages.current.has(pageNum)) {
+              visiblePages.current.add(pageNum);
+              changed = true;
+            }
+          } else {
+            if (visiblePages.current.has(pageNum)) {
+              visiblePages.current.delete(pageNum);
+              changed = true;
+            }
+          }
+        }
+        if (changed) {
+          setRenderTick((t) => t + 1);
+        }
+      },
+      { root: container, rootMargin: "100%" },
+    );
+
+    const wrappers = container.querySelectorAll("[data-page-number]");
+    wrappers.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [numPages, width]);
+
+  // Current page tracking observer
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || numPages <= 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isScrollingToPage.current) return;
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const pageNum = Number(
+              (entry.target as HTMLElement).dataset.pageNumber,
+            );
+            setCurrentPage(pageNum);
+            setPageInputValue(String(pageNum));
+          }
+        }
+      },
+      { root: container, threshold: 0.5 },
+    );
+
+    const wrappers = container.querySelectorAll("[data-page-number]");
+    wrappers.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [numPages, width]);
+
+  useEffect(() => {
+    if (!isSidebarOpen || !sidebarRef.current) return;
+    const active = sidebarRef.current.querySelector(
+      ".pdf-preview__thumbnail--active",
+    );
+    if (active) {
+      active.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [currentPage, isSidebarOpen]);
 
   const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPageInputValue(e.target.value);
@@ -153,9 +250,7 @@ export function PreviewPdf({ src }: { src: string }) {
       setPageInputValue(String(currentPage));
       return;
     }
-    const clamped = Math.max(1, Math.min(numPages, parsed));
-    setCurrentPage(clamped);
-    setPageInputValue(String(clamped));
+    goToPage(parsed);
   };
 
   const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -163,18 +258,6 @@ export function PreviewPdf({ src }: { src: string }) {
       handlePageInputSubmit();
     }
   };
-
-  // const zoomIn = useCallback(() => {
-  //   setZoom((prev) => Math.min(MAX_ZOOM, prev + ZOOM_STEP));
-  // }, []);
-
-  // const zoomOut = useCallback(() => {
-  //   setZoom((prev) => Math.max(MIN_ZOOM, prev - ZOOM_STEP));
-  // }, []);
-
-  // const resetZoom = useCallback(() => {
-  //   setZoom(1);
-  // }, []);
 
   const handlePdfClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -229,99 +312,97 @@ export function PreviewPdf({ src }: { src: string }) {
   }
 
   return (
-    // <TransformWrapper
-    //   disabled={true}
-    //   wheel={{ disabled: true }}
-    //   pinch={{ disabled: true }}
-    //   panning={{ disabled: true }}
-    // >
-      <div className="pdf-preview">
-        <div className="pdf-preview__container">
-          {/* <TransformComponent> */}
-            <div className="pdf-preview__page-wrapper" onClick={handlePdfClick}>
-              <Document
-                file={file}
-                onLoadSuccess={onDocumentLoadSuccess}
-                options={options}
-              >
-                <Page pageNumber={currentPage} width={width} />
-              </Document>
-            </div>
-          {/* </TransformComponent> */}
-        </div>
-        <div className="pdf-preview__controls">
-          <div className="pdf-preview__page-nav">
-            <Button
-              variant="tertiary"
-              color="neutral"
-              onClick={goToPreviousPage}
-              disabled={currentPage <= 1}
-              aria-label="Previous page"
-            >
-              <Icon name="chevron_left" />
-            </Button>
-            <div className="pdf-preview__page-indicator">
-              <input
-                type="text"
-                className="pdf-preview__page-input"
-                value={pageInputValue}
-                onChange={handlePageInputChange}
-                onBlur={handlePageInputSubmit}
-                onKeyDown={handlePageInputKeyDown}
-                aria-label="Current page"
-              />
-              <span className="pdf-preview__page-total">/ {numPages}</span>
-            </div>
-            <Button
-              variant="tertiary"
-              color="neutral"
-              onClick={goToNextPage}
-              disabled={currentPage >= numPages}
-              aria-label="Next page"
-            >
-              <Icon name="chevron_right" />
-            </Button>
+    <div className="pdf-preview">
+      <div className="pdf-preview__body">
+        {isSidebarOpen && (
+          <div className="pdf-preview__sidebar" ref={sidebarRef}>
+            <Document file={file} options={options}>
+              {Array.from({ length: numPages }, (_, i) => {
+                const page = i + 1;
+                return (
+                  <button
+                    key={page}
+                    className={`pdf-preview__thumbnail${currentPage === page ? " pdf-preview__thumbnail--active" : ""}`}
+                    onClick={() => goToPage(page)}
+                    aria-label={`Go to page ${page}`}
+                  >
+                    <Thumbnail pageNumber={page} height={150} />
+                    <span className="pdf-preview__thumbnail-number">
+                      {page}
+                    </span>
+                  </button>
+                );
+              })}
+            </Document>
           </div>
-          <div className="controls-vertical-separator" />
-          {/* <Controls /> */}
+        )}
+        <div className="pdf-preview__container" ref={containerRef}>
+          <div className="pdf-preview__page-wrapper" onClick={handlePdfClick}>
+            <Document
+              file={file}
+              onLoadSuccess={onDocumentLoadSuccess}
+              options={options}
+            >
+              {Array.from({ length: numPages }, (_, i) => {
+                const page = i + 1;
+                const isVisible = visiblePages.current.has(page);
+                return (
+                  <div
+                    key={page}
+                    data-page-number={page}
+                    style={{ minHeight: pageHeight, width }}
+                  >
+                    {isVisible && <Page pageNumber={page} width={width} />}
+                  </div>
+                );
+              })}
+            </Document>
+          </div>
         </div>
       </div>
-    // </TransformWrapper>
-  );
-}
-
-const Controls = () => {
-  const { zoomIn, zoomOut, resetTransform, ...rest } = useControls();
-  console.log(rest);
-  return (
-    <div className="zoom-control">
-      <Button
-        variant="tertiary"
-        color="neutral"
-        onClick={() => zoomOut()}
-        // disabled={zoom <= MIN_ZOOM}
-        aria-label="Zoom out"
-      >
-        <Icon name="zoom_out" />
-      </Button>
-      <div
-        className="zoom-control__value"
-        role="button"
-        onClick={() => resetTransform()}
-        tabIndex={0}
-        onKeyDown={(e) => e.key === "Enter" && resetTransform()}
-      >
-        Reset
+      <div className="pdf-preview__controls">
+        <Button
+          variant="tertiary"
+          color="neutral"
+          onClick={() => setIsSidebarOpen((prev) => !prev)}
+          aria-label="Toggle sidebar"
+        >
+          <Icon name="view_sidebar" />
+        </Button>
+        <div className="controls-vertical-separator" />
+        <div className="pdf-preview__page-nav">
+          <Button
+            variant="tertiary"
+            color="neutral"
+            onClick={goToPreviousPage}
+            disabled={currentPage <= 1}
+            aria-label="Previous page"
+          >
+            <Icon name="chevron_left" />
+          </Button>
+          <div className="pdf-preview__page-indicator">
+            <input
+              type="text"
+              className="pdf-preview__page-input"
+              value={pageInputValue}
+              onChange={handlePageInputChange}
+              onBlur={handlePageInputSubmit}
+              onKeyDown={handlePageInputKeyDown}
+              aria-label="Current page"
+            />
+            <span className="pdf-preview__page-total">/ {numPages}</span>
+          </div>
+          <Button
+            variant="tertiary"
+            color="neutral"
+            onClick={goToNextPage}
+            disabled={currentPage >= numPages}
+            aria-label="Next page"
+          >
+            <Icon name="chevron_right" />
+          </Button>
+        </div>
       </div>
-      <Button
-        variant="tertiary"
-        color="neutral"
-        onClick={() => zoomIn()}
-        // disabled={zoom >= MAX_ZOOM}
-        aria-label="Zoom in"
-      >
-        <Icon name="zoom_in" />
-      </Button>
     </div>
   );
-};
+}
