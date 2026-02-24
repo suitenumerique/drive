@@ -72,6 +72,7 @@ export function PreviewPdf({ src }: { src: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isScrollingToPage = useRef(false);
   const visiblePages = useRef(new Set<number>());
+  const visibleThumbnails = useRef(new Set<number>());
   const [, setRenderTick] = useState(0);
   const modals = useModals();
   const { t } = useTranslation();
@@ -230,6 +231,43 @@ export function PreviewPdf({ src }: { src: string }) {
     return () => observer.disconnect();
   }, [numPages, width]);
 
+  // Thumbnail virtualization observer
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar || !isSidebarOpen || numPages <= 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let changed = false;
+        for (const entry of entries) {
+          const pageNum = Number(
+            (entry.target as HTMLElement).dataset.thumbPage,
+          );
+          if (entry.isIntersecting) {
+            if (!visibleThumbnails.current.has(pageNum)) {
+              visibleThumbnails.current.add(pageNum);
+              changed = true;
+            }
+          } else {
+            if (visibleThumbnails.current.has(pageNum)) {
+              visibleThumbnails.current.delete(pageNum);
+              changed = true;
+            }
+          }
+        }
+        if (changed) {
+          setRenderTick((t) => t + 1);
+        }
+      },
+      { root: sidebar, rootMargin: "200%" },
+    );
+
+    const thumbs = sidebar.querySelectorAll("[data-thumb-page]");
+    thumbs.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [numPages, isSidebarOpen]);
+
   useEffect(() => {
     if (!isSidebarOpen || !sidebarRef.current) return;
     const active = sidebarRef.current.querySelector(
@@ -322,11 +360,15 @@ export function PreviewPdf({ src }: { src: string }) {
                 return (
                   <button
                     key={page}
+                    data-thumb-page={page}
+                    style={{ minHeight: 178 }}
                     className={`pdf-preview__thumbnail${currentPage === page ? " pdf-preview__thumbnail--active" : ""}`}
                     onClick={() => goToPage(page)}
                     aria-label={`Go to page ${page}`}
                   >
-                    <Thumbnail pageNumber={page} height={150} />
+                    {visibleThumbnails.current.has(page) && (
+                      <Thumbnail pageNumber={page} height={150} />
+                    )}
                     <span className="pdf-preview__thumbnail-number">
                       {page}
                     </span>
