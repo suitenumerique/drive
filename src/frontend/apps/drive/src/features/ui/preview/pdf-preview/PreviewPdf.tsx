@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Document, Page, Thumbnail, pdfjs } from "react-pdf";
-import type { PDFDocumentProxy } from "pdfjs-dist";
-import { Button, useModals } from "@gouvfr-lasuite/cunningham-react";
-import { Icon } from "@gouvfr-lasuite/ui-kit";
+import { Document, Page, pdfjs } from "react-pdf";
+import { useModals } from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+
+import { useDebouncedResize } from "./useDebouncedResize";
+import { usePdfNavigation } from "./usePdfNavigation";
+import { PdfThumbnailSidebar } from "./PdfThumbnailSidebar";
+import { PdfControls } from "./PdfControls";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -17,66 +20,37 @@ const options = {
 };
 
 const BASE_WIDTH = 800;
-
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  timeout = 300,
-): ((...args: Parameters<T>) => void) & { cancel: () => void } {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const debouncedFunc = (...args: Parameters<T>) => {
-    if (timer !== undefined) {
-      clearTimeout(timer);
-    }
-    timer = setTimeout(() => {
-      func(...args);
-    }, timeout);
-  };
-  debouncedFunc.cancel = () => {
-    if (timer !== undefined) {
-      clearTimeout(timer);
-    }
-  };
-  return debouncedFunc;
-}
-
-const useDebouncedResize = () => {
-  const [size, setSize] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
-
-  useEffect(() => {
-    const handleResize = debounce(() => {
-      setSize({ width: window.innerWidth, height: window.innerHeight });
-    }, 100);
-    window.addEventListener("resize", handleResize);
-    return () => {
-      handleResize.cancel();
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
-  return size;
-};
+const PRELOAD_PAGES = 4;
 
 export function PreviewPdf({ src }: { src: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [numPages, setNumPages] = useState<number>(1);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-
-  const [pageInputValue, setPageInputValue] = useState<string>("1");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isScrollingToPage = useRef(false);
   const visiblePages = useRef(new Set<number>());
   const visibleThumbnails = useRef(new Set<number>());
   const [, setRenderTick] = useState(0);
   const modals = useModals();
   const { t } = useTranslation();
   const size = useDebouncedResize();
+
+  const {
+    currentPage,
+    setCurrentPage,
+    pageInputValue,
+    setPageInputValue,
+    isScrollingToPage,
+    goToPreviousPage,
+    goToNextPage,
+    goToPage,
+    onDocumentLoadSuccess: onNavLoadSuccess,
+    handlePageInputChange,
+    handlePageInputSubmit,
+    handlePageInputKeyDown,
+  } = usePdfNavigation({ numPages, containerRef });
 
   const getWidth = () => {
     if (size.width < BASE_WIDTH) {
@@ -119,53 +93,10 @@ export function PreviewPdf({ src }: { src: string }) {
     fetchPdf();
   }, [src]);
 
-  function onDocumentLoadSuccess({
-    numPages: nextNumPages,
-  }: PDFDocumentProxy): void {
+  function onDocumentLoadSuccess(pdf: Parameters<typeof onNavLoadSuccess>[0]) {
+    const nextNumPages = onNavLoadSuccess(pdf);
     setNumPages(nextNumPages);
-    setCurrentPage(1);
-    setPageInputValue("1");
   }
-
-  const scrollToPage = useCallback((page: number) => {
-    const container = containerRef.current;
-    if (!container) return;
-    const el = container.querySelector(`[data-page-number="${page}"]`);
-    if (!el) return;
-    isScrollingToPage.current = true;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-    setTimeout(() => {
-      isScrollingToPage.current = false;
-    }, 600);
-  }, []);
-
-  const goToPreviousPage = useCallback(() => {
-    setCurrentPage((prev) => {
-      const newPage = Math.max(1, prev - 1);
-      setPageInputValue(String(newPage));
-      scrollToPage(newPage);
-      return newPage;
-    });
-  }, [scrollToPage]);
-
-  const goToNextPage = useCallback(() => {
-    setCurrentPage((prev) => {
-      const newPage = Math.min(numPages, prev + 1);
-      setPageInputValue(String(newPage));
-      scrollToPage(newPage);
-      return newPage;
-    });
-  }, [numPages, scrollToPage]);
-
-  const goToPage = useCallback(
-    (page: number) => {
-      const clamped = Math.max(1, Math.min(numPages, page));
-      setCurrentPage(clamped);
-      setPageInputValue(String(clamped));
-      scrollToPage(clamped);
-    },
-    [numPages, scrollToPage],
-  );
 
   // Virtualization observer: track which pages are near the viewport
   useEffect(() => {
@@ -195,14 +126,14 @@ export function PreviewPdf({ src }: { src: string }) {
           setRenderTick((t) => t + 1);
         }
       },
-      { root: container, rootMargin: "100%" },
+      { root: container, rootMargin: `${PRELOAD_PAGES * pageHeight}px` },
     );
 
     const wrappers = container.querySelectorAll("[data-page-number]");
     wrappers.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
-  }, [numPages, width]);
+  }, [numPages, width, pageHeight]);
 
   // Current page tracking observer
   useEffect(() => {
@@ -229,7 +160,7 @@ export function PreviewPdf({ src }: { src: string }) {
     wrappers.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
-  }, [numPages, width]);
+  }, [numPages, width, isScrollingToPage, setCurrentPage, setPageInputValue]);
 
   // Thumbnail virtualization observer
   useEffect(() => {
@@ -277,25 +208,6 @@ export function PreviewPdf({ src }: { src: string }) {
       active.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
   }, [currentPage, isSidebarOpen]);
-
-  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPageInputValue(e.target.value);
-  };
-
-  const handlePageInputSubmit = () => {
-    const parsed = parseInt(pageInputValue, 10);
-    if (isNaN(parsed)) {
-      setPageInputValue(String(currentPage));
-      return;
-    }
-    goToPage(parsed);
-  };
-
-  const handlePageInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handlePageInputSubmit();
-    }
-  };
 
   const handlePdfClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -353,30 +265,14 @@ export function PreviewPdf({ src }: { src: string }) {
     <div className="pdf-preview">
       <div className="pdf-preview__body">
         {isSidebarOpen && (
-          <div className="pdf-preview__sidebar" ref={sidebarRef}>
-            <Document file={file} options={options}>
-              {Array.from({ length: numPages }, (_, i) => {
-                const page = i + 1;
-                return (
-                  <button
-                    key={page}
-                    data-thumb-page={page}
-                    style={{ minHeight: 178 }}
-                    className={`pdf-preview__thumbnail${currentPage === page ? " pdf-preview__thumbnail--active" : ""}`}
-                    onClick={() => goToPage(page)}
-                    aria-label={`Go to page ${page}`}
-                  >
-                    {visibleThumbnails.current.has(page) && (
-                      <Thumbnail pageNumber={page} height={150} />
-                    )}
-                    <span className="pdf-preview__thumbnail-number">
-                      {page}
-                    </span>
-                  </button>
-                );
-              })}
-            </Document>
-          </div>
+          <PdfThumbnailSidebar
+            file={file}
+            numPages={numPages}
+            currentPage={currentPage}
+            visibleThumbnails={visibleThumbnails.current}
+            goToPage={goToPage}
+            sidebarRef={sidebarRef}
+          />
         )}
         <div className="pdf-preview__container" ref={containerRef}>
           <div className="pdf-preview__page-wrapper" onClick={handlePdfClick}>
@@ -402,49 +298,18 @@ export function PreviewPdf({ src }: { src: string }) {
           </div>
         </div>
       </div>
-      <div className="pdf-preview__controls">
-        <Button
-          variant="tertiary"
-          color="neutral"
-          onClick={() => setIsSidebarOpen((prev) => !prev)}
-          aria-label="Toggle sidebar"
-        >
-          <Icon name="view_sidebar" />
-        </Button>
-        <div className="controls-vertical-separator" />
-        <div className="pdf-preview__page-nav">
-          <Button
-            variant="tertiary"
-            color="neutral"
-            onClick={goToPreviousPage}
-            disabled={currentPage <= 1}
-            aria-label="Previous page"
-          >
-            <Icon name="chevron_left" />
-          </Button>
-          <div className="pdf-preview__page-indicator">
-            <input
-              type="text"
-              className="pdf-preview__page-input"
-              value={pageInputValue}
-              onChange={handlePageInputChange}
-              onBlur={handlePageInputSubmit}
-              onKeyDown={handlePageInputKeyDown}
-              aria-label="Current page"
-            />
-            <span className="pdf-preview__page-total">/ {numPages}</span>
-          </div>
-          <Button
-            variant="tertiary"
-            color="neutral"
-            onClick={goToNextPage}
-            disabled={currentPage >= numPages}
-            aria-label="Next page"
-          >
-            <Icon name="chevron_right" />
-          </Button>
-        </div>
-      </div>
+      <PdfControls
+        currentPage={currentPage}
+        numPages={numPages}
+        pageInputValue={pageInputValue}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+        onGoToPreviousPage={goToPreviousPage}
+        onGoToNextPage={goToNextPage}
+        onPageInputChange={handlePageInputChange}
+        onPageInputSubmit={handlePageInputSubmit}
+        onPageInputKeyDown={handlePageInputKeyDown}
+      />
     </div>
   );
 }
