@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Document, Thumbnail } from "react-pdf";
 
 const options = {
@@ -11,19 +12,67 @@ interface PdfThumbnailSidebarProps {
   file: File;
   numPages: number;
   currentPage: number;
-  visibleThumbnails: Set<number>;
   goToPage: (page: number) => void;
-  sidebarRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function PdfThumbnailSidebar({
   file,
   numPages,
   currentPage,
-  visibleThumbnails,
   goToPage,
-  sidebarRef,
 }: PdfThumbnailSidebarProps) {
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const visibleThumbnails = useRef(new Set<number>());
+  const [, setRenderTick] = useState(0);
+
+  // Thumbnail virtualization observer
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar || numPages <= 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let changed = false;
+        for (const entry of entries) {
+          const pageNum = Number(
+            (entry.target as HTMLElement).dataset.thumbPage,
+          );
+          if (entry.isIntersecting) {
+            if (!visibleThumbnails.current.has(pageNum)) {
+              visibleThumbnails.current.add(pageNum);
+              changed = true;
+            }
+          } else {
+            if (visibleThumbnails.current.has(pageNum)) {
+              visibleThumbnails.current.delete(pageNum);
+              changed = true;
+            }
+          }
+        }
+        if (changed) {
+          setRenderTick((t) => t + 1);
+        }
+      },
+      { root: sidebar, rootMargin: "200%" },
+    );
+
+    const thumbs = sidebar.querySelectorAll("[data-thumb-page]");
+    thumbs.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [numPages]);
+
+  // Auto-scroll active thumbnail into view
+  useEffect(() => {
+    if (!sidebarRef.current) return;
+    const active = sidebarRef.current.querySelector(
+      ".pdf-preview__thumbnail--active",
+    );
+    if (active) {
+      active.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [currentPage]);
+
   return (
     <div className="pdf-preview__sidebar" ref={sidebarRef}>
       <Document file={file} options={options}>
@@ -38,7 +87,7 @@ export function PdfThumbnailSidebar({
               onClick={() => goToPage(page)}
               aria-label={`Go to page ${page}`}
             >
-              {visibleThumbnails.has(page) && (
+              {visibleThumbnails.current.has(page) && (
                 <Thumbnail pageNumber={page} height={150} />
               )}
               <span className="pdf-preview__thumbnail-number">{page}</span>

@@ -1,13 +1,15 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 
 interface UsePdfNavigationParams {
   numPages: number;
+  width: number;
   containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export const usePdfNavigation = ({
   numPages,
+  width,
   containerRef,
 }: UsePdfNavigationParams) => {
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -85,17 +87,41 @@ export const usePdfNavigation = ({
     }
   };
 
+  // Current page tracking observer: updates currentPage on scroll
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || numPages <= 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isScrollingToPage.current) return;
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const pageNum = Number(
+              (entry.target as HTMLElement).dataset.pageNumber,
+            );
+            setCurrentPage(pageNum);
+            setPageInputValue(String(pageNum));
+          }
+        }
+      },
+      { root: container, threshold: 0.5 },
+    );
+
+    const wrappers = container.querySelectorAll("[data-page-number]");
+    wrappers.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [numPages, width, containerRef]);
+
   return {
     currentPage,
-    setCurrentPage,
-    pageInputValue,
-    setPageInputValue,
-    isScrollingToPage,
     scrollToPage,
     goToPreviousPage,
     goToNextPage,
     goToPage,
     onDocumentLoadSuccess,
+    pageInputValue,
     handlePageInputChange,
     handlePageInputSubmit,
     handlePageInputKeyDown,
