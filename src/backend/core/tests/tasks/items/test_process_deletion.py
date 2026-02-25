@@ -138,15 +138,11 @@ def test_process_item_deletion_item_subfolder_in_cascade():
 
     default_storage.save(child_file.file_key, BytesIO(b"my prose"))
     default_storage.save(child2_file.file_key, BytesIO(b"my prose"))
-    parent.refresh_from_db()
-    assert parent.numchild == 2
 
     child.soft_delete()
     child.hard_delete()
 
     assert models.Item.objects.all().count() == 5
-    parent.refresh_from_db()
-    assert parent.numchild == 1
 
     process_item_deletion(child.id)
 

@@ -552,9 +552,6 @@ def test_api_items_create_item_children_race_condition():
         assert response1.status_code == 201
         assert response2.status_code == 201
 
-        item.refresh_from_db()
-        assert item.numchild == 2
-
 
 @pytest.mark.parametrize("message", [None, "Hello World"])
 @mock.patch("core.api.viewsets.get_entitlements_backend")

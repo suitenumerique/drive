@@ -176,6 +176,12 @@ class ItemAdmin(admin.ModelAdmin):
     show_facets = admin.ShowFacets.ALWAYS
     actions = ("trigger_file_analysis",)
 
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        queryset = queryset.annotate_with_numchild()
+
+        return queryset
+
     def trigger_file_analysis(self, request, queryset):
         """Reanalyse the file of the items."""
 

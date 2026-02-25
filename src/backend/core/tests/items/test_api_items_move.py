@@ -675,10 +675,6 @@ def test_api_items_move_to_root():
         title="folder child",
     )
 
-    folder.refresh_from_db()
-    assert folder.numchild_folder == 1
-    assert folder.numchild == 1
-
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/move/",
         data={},
@@ -689,10 +685,6 @@ def test_api_items_move_to_root():
     # Verify that the item has moved
     item.refresh_from_db()
     assert item.parent() is None
-
-    folder.refresh_from_db()
-    assert folder.numchild == 0
-    assert folder.numchild_folder == 0
 
     # Verify that the item is available in the root
     response = client.get("/api/v1.0/items/")
@@ -730,10 +722,6 @@ def test_api_items_move_to_root_force_link_reach():
         link_reach=None,
     )
 
-    folder.refresh_from_db()
-    assert folder.numchild_folder == 1
-    assert folder.numchild == 1
-
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/move/",
         data={},
@@ -744,10 +732,6 @@ def test_api_items_move_to_root_force_link_reach():
     # Verify that the item has moved
     item.refresh_from_db()
     assert item.parent() is None
-
-    folder.refresh_from_db()
-    assert folder.numchild == 0
-    assert folder.numchild_folder == 0
 
     # Verify that the item is available in the root
     response = client.get("/api/v1.0/items/")

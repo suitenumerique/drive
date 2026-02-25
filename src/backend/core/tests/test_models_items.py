@@ -937,56 +937,65 @@ def test_models_items_unique_title_in_current_path_soft_deleted():
     )
 
 
-def test_models_items_numchild():
+def test_models_items_numchild_annotation():
     """The numchild property should return the number of children."""
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
-    assert parent.numchild == 0
+
+    item = models.Item.objects.annotate_with_numchild().get(pk=parent.id)
+    assert item.numchild == 0
 
     factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
-    parent.refresh_from_db()
-    assert parent.numchild == 1
+    item = models.Item.objects.annotate_with_numchild().get(pk=parent.id)
+    assert item.numchild == 1
 
     factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FILE)
-    parent.refresh_from_db()
-    assert parent.numchild == 2
+    item = models.Item.objects.annotate_with_numchild().get(pk=parent.id)
+    assert item.numchild == 2
 
     to_delete = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
-    parent.refresh_from_db()
-    assert parent.numchild == 3
+    item = models.Item.objects.annotate_with_numchild().get(pk=parent.id)
+    assert item.numchild == 3
 
     to_delete.soft_delete()
-    parent.refresh_from_db()
-    assert parent.numchild == 2
+    item = models.Item.objects.annotate_with_numchild().get(pk=parent.id)
+    assert item.numchild == 2
 
     to_delete.restore()
-    parent.refresh_from_db()
-    assert parent.numchild == 3
+    item = models.Item.objects.annotate_with_numchild().get(pk=parent.id)
+    assert item.numchild == 3
 
 
-def test_models_items_numchild_folder():
+def test_models_items_numchild_folder_annotation():
     """The numchild_folder property should return the number of folder children."""
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
-    assert parent.numchild_folder == 0
+
+    item = models.Item.objects.annotate_with_numchild().get(pk=parent.id)
+    assert item.numchild_folder == 0
 
     factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
-    parent.refresh_from_db()
-    assert parent.numchild_folder == 1
+
+    item = models.Item.objects.annotate_with_numchild().get(pk=parent.id)
+    assert item.numchild_folder == 1
 
     factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FILE)
-    parent.refresh_from_db()
-    assert parent.numchild_folder == 1
+
+    item = models.Item.objects.annotate_with_numchild().get(pk=parent.id)
+    assert item.numchild_folder == 1
 
     to_delete = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
-    parent.refresh_from_db()
-    assert parent.numchild_folder == 2
+
+    item = models.Item.objects.annotate_with_numchild().get(pk=parent.id)
+    assert item.numchild_folder == 2
 
     to_delete.soft_delete()
-    parent.refresh_from_db()
-    assert parent.numchild_folder == 1
+
+    item = models.Item.objects.annotate_with_numchild().get(pk=parent.id)
+    assert item.numchild_folder == 1
 
     to_delete.restore()
-    parent.refresh_from_db()
-    assert parent.numchild_folder == 2
+
+    item = models.Item.objects.annotate_with_numchild().get(pk=parent.id)
+    assert item.numchild_folder == 2
 
 
 def test_models_items_restore():
