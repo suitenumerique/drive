@@ -11,20 +11,38 @@
     flex: 1;
     overflow: hidden;
     min-height: 0;
+    position: relative;
   }
 
   &__sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 5;
     width: 150px;
-    min-width: 150px;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+
     padding: 12px 0;
-    border-right: 1px solid
-      var(--c--contextuals--border--surface--primary);
+    border-right: 1px solid var(--c--contextuals--border--surface--primary);
     background: var(--c--contextuals--background--surface--primary);
+    transform: translateX(0);
+    transition: transform 0.3s ease-in-out;
+
+    .react-pdf__Document {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    &--closed {
+      transform: translateX(-100%);
+    }
   }
 
   &__thumbnail {
@@ -38,6 +56,12 @@
     align-items: center;
     transition: border-color 0.15s ease;
 
+    .react-pdf__Thumbnail {
+      box-shadow: 0 0.5px 5px 0 rgba(0, 0, 0, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
     &:hover {
       border-color: var(
         --c--contextuals--content--semantic--neutral--secondary
@@ -45,15 +69,22 @@
     }
 
     &--active {
-      border-color: var(
-        --c--contextuals--content--semantic--brand--primary
-      );
+      border: 2px solid var(--c--contextuals--border--semantic--brand--primary);
     }
   }
 
+  &__thumbnail-skeleton {
+    width: 106px;
+    height: 150px;
+    border-radius: 4px;
+    background: var(--c--contextuals--border--surface--primary);
+    animation: pdf-skeleton-pulse 1.5s ease-in-out infinite;
+  }
+
   &__thumbnail-number {
-    margin-top: 4px;
+    margin-top: 8px;
     font-size: 12px;
+    font-weight: 700;
     color: var(--c--contextuals--content--semantic--neutral--secondary);
     text-align: center;
   }
@@ -69,10 +100,18 @@
   }
 
   &__page-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
+    .react-pdf__Document {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+
+      .react-pdf__Page__canvas {
+        border-radius: 4px;
+        overflow: hidden;
+        box-shadow: 0 3.649px 14.597px 0 rgba(0, 0, 0, 0.1);
+      }
+    }
   }
 
   &__controls {
@@ -86,10 +125,10 @@
     gap: var(--c--globals--spacings--xs);
     border-radius: var(--c--globals--spacings--3xs);
     padding: var(--c--globals--spacings--3xs);
+    border-radius: var(--xs, 8px);
     border: 1px solid var(--c--contextuals--border--surface--primary);
     background: var(--c--contextuals--background--surface--primary);
-    box-shadow: 0px 2px 8px 0px rgba(0, 0, 0, 0.08);
-    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.05);
   }
 
   &__page-nav {
@@ -105,12 +144,14 @@
     font-size: 14px;
     font-weight: 600;
     color: var(--c--contextuals--content--semantic--neutral--secondary);
+    padding-right: 4px;
   }
 
   &__page-input {
-    width: 32px;
+    height: 26px;
     text-align: center;
-    border: 1px solid var(--c--contextuals--border--surface--primary);
+    border: 1px solid var(--c--contextuals--border--semantic--neutral--tertiary);
+    background: var(--c--contextuals--background--surface--tertiary);
     border-radius: 4px;
     padding: 4px;
     font-size: 14px;
@@ -126,6 +167,9 @@
 
   &__page-total {
     white-space: nowrap;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--c--contextuals--content--semantic--neutral--secondary);
   }
 
   &__loading {
@@ -145,7 +189,8 @@
     width: 32px;
     height: 32px;
     border: 3px solid var(--c--contextuals--border--surface--primary);
-    border-top: 3px solid var(--c--contextuals--content--semantic--brand--primary);
+    border-top: 3px solid
+      var(--c--contextuals--content--semantic--brand--primary);
     border-radius: 50%;
     animation: pdf-spin 1s linear infinite;
   }
@@ -163,7 +208,9 @@
 .controls-vertical-separator {
   width: 1px;
   height: 24px;
-  background-color: var(--c--contextuals--border--surface--primary);
+  border-radius: 1px;
+  overflow: hidden;
+  background: var(--c--contextuals--border--surface--primary);
 }
 
 .zoom-control {
@@ -180,6 +227,16 @@
     color: var(--c--contextuals--content--semantic--neutral--secondary);
     cursor: pointer;
     padding: 4px 0;
+  }
+}
+
+@keyframes pdf-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
   }
 }
 
@@ -204,7 +261,6 @@
     }
 
     &__page-input {
-      width: 28px;
       font-size: 13px;
     }
 
@@ -222,6 +278,14 @@
 @media (prefers-reduced-motion: reduce) {
   .pdf-preview__spinner {
     animation: none;
+  }
+
+  .pdf-preview__thumbnail-skeleton {
+    animation: none;
+  }
+
+  .pdf-preview__sidebar {
+    transition: none;
   }
 }
 

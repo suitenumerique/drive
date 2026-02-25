@@ -108,14 +108,13 @@ export function PreviewPdf({ src }: { src: string }) {
   return (
     <div className="pdf-preview">
       <div className="pdf-preview__body">
-        {isSidebarOpen && (
-          <PdfThumbnailSidebar
-            file={file}
-            numPages={numPages}
-            currentPage={currentPage}
-            goToPage={goToPage}
-          />
-        )}
+        <PdfThumbnailSidebar
+          file={file}
+          numPages={numPages}
+          currentPage={currentPage}
+          goToPage={goToPage}
+          isOpen={isSidebarOpen}
+        />
         <PdfPageViewer
           file={file}
           numPages={numPages}

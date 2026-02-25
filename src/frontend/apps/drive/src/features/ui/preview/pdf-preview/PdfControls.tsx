@@ -1,5 +1,6 @@
 import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { Icon } from "@gouvfr-lasuite/ui-kit";
+import { LeftSidebarIcon } from "../../components/icon/LeftSidebarIcon";
 
 interface PdfControlsProps {
   currentPage: number;
@@ -33,20 +34,11 @@ export function PdfControls({
         color="neutral"
         onClick={onToggleSidebar}
         aria-label="Toggle sidebar"
-      >
-        <Icon name="view_sidebar" />
-      </Button>
+        size="small"
+        icon={<LeftSidebarIcon />}
+      />
       <div className="controls-vertical-separator" />
       <div className="pdf-preview__page-nav">
-        <Button
-          variant="tertiary"
-          color="neutral"
-          onClick={onGoToPreviousPage}
-          disabled={currentPage <= 1}
-          aria-label="Previous page"
-        >
-          <Icon name="chevron_left" />
-        </Button>
         <div className="pdf-preview__page-indicator">
           <input
             type="text"
@@ -56,18 +48,10 @@ export function PdfControls({
             onBlur={onPageInputSubmit}
             onKeyDown={onPageInputKeyDown}
             aria-label="Current page"
+            size={pageInputValue.length || 1}
           />
           <span className="pdf-preview__page-total">/ {numPages}</span>
         </div>
-        <Button
-          variant="tertiary"
-          color="neutral"
-          onClick={onGoToNextPage}
-          disabled={currentPage >= numPages}
-          aria-label="Next page"
-        >
-          <Icon name="chevron_right" />
-        </Button>
       </div>
     </div>
   );

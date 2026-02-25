@@ -13,6 +13,7 @@ interface PdfThumbnailSidebarProps {
   numPages: number;
   currentPage: number;
   goToPage: (page: number) => void;
+  isOpen: boolean;
 }
 
 export function PdfThumbnailSidebar({
@@ -20,15 +21,17 @@ export function PdfThumbnailSidebar({
   numPages,
   currentPage,
   goToPage,
+  isOpen,
 }: PdfThumbnailSidebarProps) {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const visibleThumbnails = useRef(new Set<number>());
   const [, setRenderTick] = useState(0);
+  const [docReady, setDocReady] = useState(false);
 
   // Thumbnail virtualization observer
   useEffect(() => {
     const sidebar = sidebarRef.current;
-    if (!sidebar || numPages <= 0) return;
+    if (!sidebar || numPages <= 0 || !docReady) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -60,7 +63,7 @@ export function PdfThumbnailSidebar({
     thumbs.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
-  }, [numPages]);
+  }, [numPages, docReady]);
 
   // Auto-scroll active thumbnail into view
   useEffect(() => {
@@ -74,8 +77,11 @@ export function PdfThumbnailSidebar({
   }, [currentPage]);
 
   return (
-    <div className="pdf-preview__sidebar" ref={sidebarRef}>
-      <Document file={file} options={options}>
+    <div
+      className={`pdf-preview__sidebar${!isOpen ? " pdf-preview__sidebar--closed" : ""}`}
+      ref={sidebarRef}
+    >
+      <Document file={file} options={options} onLoadSuccess={() => setDocReady(true)}>
         {Array.from({ length: numPages }, (_, i) => {
           const page = i + 1;
           return (
@@ -87,8 +93,10 @@ export function PdfThumbnailSidebar({
               onClick={() => goToPage(page)}
               aria-label={`Go to page ${page}`}
             >
-              {visibleThumbnails.current.has(page) && (
+              {visibleThumbnails.current.has(page) ? (
                 <Thumbnail pageNumber={page} height={150} />
+              ) : (
+                <div className="pdf-preview__thumbnail-skeleton" />
               )}
               <span className="pdf-preview__thumbnail-number">{page}</span>
             </button>
