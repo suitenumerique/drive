@@ -5,93 +5,86 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - 'main'
+      - "main"
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
     branches:
-      - 'main'
+      - "main"
 
 env:
   DOCKER_USER: 1001:127
+  SHOULD_PUSH: ${{ github.event_name != 'pull_request' }}
 
 jobs:
   build-and-push-backend:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v6
-      -
-        name: Set up QEMU
+      - name: Set up QEMU
+        if: env.SHOULD_PUSH == 'true'
         uses: docker/setup-qemu-action@v3
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
+        if: env.SHOULD_PUSH == 'true'
         uses: docker/setup-buildx-action@v3
-      -
-        name: Docker meta
+      - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: lasuite/drive-backend
-      -
-        name: Login to DockerHub
-        if: github.event_name != 'pull_request'
+      - name: Login to DockerHub
+        if: env.SHOULD_PUSH == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-      -
-        name: Run trivy scan
+      - name: Run trivy scan
         uses: numerique-gouv/action-trivy-cache@main
         with:
-          docker-build-args: '--target backend-production -f Dockerfile'
-          docker-image-name: 'docker.io/lasuite/drive-backend:${{ github.sha }}'
-      -
-        name: Build and push
+          docker-build-args: "--target backend-production -f Dockerfile"
+          docker-image-name: "docker.io/lasuite/drive-backend:${{ github.sha }}"
+      - name: Build and push
+        if: env.SHOULD_PUSH == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
           target: backend-production
           platforms: linux/amd64,linux/arm64
           build-args: DOCKER_USER=${{ env.DOCKER_USER }}
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
   build-and-push-frontend:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v6
-      -
-        name: Set up QEMU
+      - name: Set up QEMU
+        if: env.SHOULD_PUSH == 'true'
         uses: docker/setup-qemu-action@v3
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
+        if: env.SHOULD_PUSH == 'true'
         uses: docker/setup-buildx-action@v3
-      -
-        name: Docker meta
+      - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: lasuite/drive-frontend
-      -
-        name: Login to DockerHub
-        if: github.event_name != 'pull_request'
+      - name: Login to DockerHub
+        if: env.SHOULD_PUSH == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-      -
-        name: Run trivy scan
+      - name: Run trivy scan
         uses: numerique-gouv/action-trivy-cache@main
         with:
-          docker-build-args: '-f src/frontend/Dockerfile --target frontend-production'
-          docker-image-name: 'docker.io/lasuite/drive-frontend:${{ github.sha }}'
-      -
-        name: Build and push
+          docker-build-args: "-f src/frontend/Dockerfile --target frontend-production"
+          docker-image-name: "docker.io/lasuite/drive-frontend:${{ github.sha }}"
+      - name: Build and push
+        if: env.SHOULD_PUSH == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -99,7 +92,7 @@ jobs:
           target: frontend-production
           platforms: linux/amd64,linux/arm64
           build-args: DOCKER_USER=${{ env.DOCKER_USER }}
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 

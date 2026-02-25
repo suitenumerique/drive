@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- ⚡️(CI) optimize Docker Hub workflow
+
 ## [v0.14.0] - 2026-02-25
 
 ### Added
