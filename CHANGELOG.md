@@ -12,6 +12,10 @@ and this project adheres to
 
 - ⚡️(CI) optimize Docker Hub workflow
 
+### Removed
+
+- 🔥(backend) remove unused ServerToServerAuthentication backend
+
 ## [v0.14.0] - 2026-02-25
 
 ### Added

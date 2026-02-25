@@ -76,7 +76,6 @@ class Base(Configuration):
     # Security
     ALLOWED_HOSTS = values.ListValue([])
     SECRET_KEY = SecretFileValue(None)
-    SERVER_TO_SERVER_API_TOKENS = values.ListValue([])
 
     # Application definition
     ROOT_URLCONF = "drive.urls"
