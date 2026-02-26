@@ -313,8 +313,37 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         return []
 
 
-class ItemQuerySet(TreeQuerySet):
+class AnnotateUserRoleQuerySetMixin:
+    """Mixin to use in a QuerySet to add user_roles annotation."""
+
+    def annotate_user_roles(self, user):
+        """
+        Annotate queryset with the roles of the current user
+        on the item or its ancestors.
+        """
+        output_field = ArrayField(base_field=models.CharField())
+
+        if user.is_authenticated:
+            user_roles_subquery = ItemAccess.objects.filter(
+                models.Q(user=user) | models.Q(team__in=user.teams),
+                item__path__ancestors=models.OuterRef(self.path_property),
+            ).values_list("role", flat=True)
+
+            return self.annotate(
+                user_roles=models.Func(
+                    user_roles_subquery, function="ARRAY", output_field=output_field
+                )
+            )
+
+        return self.annotate(
+            user_roles=models.Value([], output_field=output_field),
+        )
+
+
+class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
     """Custom queryset for Item model with additional methods."""
+
+    path_property = "path"
 
     def readable_per_se(self, user):
         """
@@ -1141,31 +1170,10 @@ class ItemFavorite(BaseModel):
         return f"{self.user!s} favorite on item {self.item!s}"
 
 
-class ItemAccessQuerySet(models.QuerySet):
+class ItemAccessQuerySet(AnnotateUserRoleQuerySetMixin, models.QuerySet):
     """Custom queryset for ItemAccess model with additional methods."""
 
-    def annotate_user_roles(self, user):
-        """
-        Annotate ItemAccess queryset with the roles of the current user
-        on the item or its ancestors.
-        """
-        output_field = ArrayField(base_field=models.CharField())
-
-        if user.is_authenticated:
-            user_roles_subquery = ItemAccess.objects.filter(
-                models.Q(user=user) | models.Q(team__in=user.teams),
-                item__path__ancestors=models.OuterRef("item__path"),
-            ).values_list("role", flat=True)
-
-            return self.annotate(
-                user_roles=models.Func(
-                    user_roles_subquery, function="ARRAY", output_field=output_field
-                )
-            )
-
-        return self.annotate(
-            user_roles=models.Value([], output_field=output_field),
-        )
+    path_property = "item__path"
 
 
 class ItemAccessManager(models.Manager.from_queryset(ItemAccessQuerySet)):
@@ -1359,6 +1367,16 @@ class ItemAccess(BaseModel):
         }
 
 
+class ItemInvitationQuerySet(AnnotateUserRoleQuerySetMixin, models.QuerySet):
+    """Custom queryset for ItemInvitation model with additional methods."""
+
+    path_property = "item__path"
+
+
+class ItemInvitationManager(models.Manager.from_queryset(ItemInvitationQuerySet)):
+    """Manager for ItemAccess model."""
+
+
 class Invitation(BaseModel):
     """User invitation to an item."""
 
@@ -1378,6 +1396,8 @@ class Invitation(BaseModel):
         blank=True,
         null=True,
     )
+
+    objects = ItemInvitationManager()
 
     class Meta:
         db_table = "drive_invitation"
@@ -1420,29 +1440,29 @@ class Invitation(BaseModel):
         validity_duration = timedelta(seconds=settings.INVITATION_VALIDITY_DURATION)
         return timezone.now() > (self.created_at + validity_duration)
 
+    def get_role(self, user):
+        """Return the role a user has on an item related to this access.."""
+        if not user.is_authenticated:
+            return None
+
+        try:
+            roles = self.user_roles or []
+        except AttributeError:
+            roles = ItemAccess.objects.filter(
+                models.Q(user=user) | models.Q(team__in=user.teams),
+                item__path__ancestors=self.item.path,
+            ).values_list("role", flat=True)
+
+        return RoleChoices.max(*roles)
+
     def get_abilities(self, user):
         """Compute and return abilities for a given user."""
-        roles = []
-
-        if user.is_authenticated:
-            teams = user.teams
-            try:
-                roles = self.user_roles or []
-            except AttributeError:
-                try:
-                    roles = self.item.accesses.filter(
-                        models.Q(user=user) | models.Q(team__in=teams),
-                    ).values_list("role", flat=True)
-                except (self._meta.model.DoesNotExist, IndexError):
-                    roles = []
-
-        is_admin_or_owner = bool(
-            set(roles).intersection({RoleChoices.OWNER, RoleChoices.ADMIN})
-        )
+        user_role = self.get_role(user)
+        is_owner_or_admin = user_role in PRIVILEGED_ROLES
 
         return {
-            "destroy": is_admin_or_owner,
-            "update": is_admin_or_owner,
-            "partial_update": is_admin_or_owner,
-            "retrieve": is_admin_or_owner,
+            "destroy": is_owner_or_admin,
+            "update": is_owner_or_admin,
+            "partial_update": is_owner_or_admin,
+            "retrieve": is_owner_or_admin,
         }

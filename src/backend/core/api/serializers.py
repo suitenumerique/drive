@@ -7,7 +7,6 @@ from os.path import splitext
 from urllib.parse import quote
 
 from django.conf import settings
-from django.db.models import Q
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -839,26 +838,6 @@ class InvitationSerializer(serializers.ModelSerializer):
             attrs["issuer"] = user
 
         return attrs
-
-    def validate_role(self, role):
-        """Custom validation for the role field."""
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        item_id = self.context["resource_id"]
-
-        # If the role is OWNER, check if the user has OWNER access
-        if role == models.RoleChoices.OWNER:
-            if not models.ItemAccess.objects.filter(
-                Q(user=user) | Q(team__in=user.teams),
-                item=item_id,
-                role=models.RoleChoices.OWNER,
-            ).exists():
-                raise serializers.ValidationError(
-                    "Only owners of a item can invite other users as owners.",
-                    code="invitation_role_owner_limited_to_owners",
-                )
-
-        return role
 
 
 # Suppress the warning about not implementing `create` and `update` methods

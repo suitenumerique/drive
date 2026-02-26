@@ -1,13 +1,12 @@
 """Permission handlers for the drive core app."""
 
 from django.core import exceptions
-from django.db.models import Q
 from django.http import Http404
 
 from lasuite.drf.models.choices import PRIVILEGED_ROLES
 from rest_framework import permissions
 
-from core.models import ItemAccess, RoleChoices, get_trashbin_cutoff
+from core.models import RoleChoices, get_trashbin_cutoff
 
 ACTION_FOR_METHOD_TO_PERMISSION = {
     "versions_detail": {"DELETE": "versions_destroy", "GET": "versions_retrieve"},
@@ -65,47 +64,18 @@ class IsOwnedOrPublic(IsAuthenticated):
             return False
 
 
-class InvitationPermission(permissions.BasePermission):
-    """A permission class for invitations."""
+class CreateWithPriviliegedRolesMixin:
+    """
+    Implement a common has_permission method checking that
+    the user has privileged role on the item in order to
+    perform the create action.
+    This mixin must be used with the IsAuthenticated permission class
+    """
+
+    resources = None
 
     def has_permission(self, request, view):
-        user = request.user
-
-        # Ensure the user is authenticated
-        if not (bool(request.auth) or request.user.is_authenticated):
-            return False
-
-        # Apply permission checks only for creation (POST requests)
-        if view.action != "create":
-            return True
-
-        # Check if resource_id is passed in the context
-        try:
-            item_id = view.kwargs["resource_id"]
-        except KeyError as exc:
-            raise exceptions.ValidationError(
-                "You must set a item ID in kwargs to manage item invitations."
-            ) from exc
-
-        # Check if the user has access to manage invitations (Owner/Admin roles)
-        return ItemAccess.objects.filter(
-            Q(user=user) | Q(team__in=user.teams),
-            item=item_id,
-            role__in=[RoleChoices.OWNER, RoleChoices.ADMIN],
-        ).exists()
-
-    def has_object_permission(self, request, view, obj):
-        """Check permission for a given object."""
-        abilities = obj.get_abilities(request.user)
-        action = view.action
-        return abilities.get(action, False)
-
-
-class ItemAccessPermission(IsAuthenticated):
-    """Permission class for the ItemAccessViewSet."""
-
-    def has_permission(self, request, view):
-        """check create permission for accesses in documents tree."""
+        """Check the current user has privileged roles on the related item."""
         if super().has_permission(request, view) is False:
             return False
 
@@ -113,10 +83,27 @@ class ItemAccessPermission(IsAuthenticated):
             role = getattr(view, view.resource_field_name).get_role(request.user)
             if role not in PRIVILEGED_ROLES:
                 raise exceptions.PermissionDenied(
-                    "You are not allowed to manage accesses for this resource."
+                    f"You are not allowed to manage {self.resources} for this resource."
                 )
 
         return True
+
+
+class InvitationPermission(CreateWithPriviliegedRolesMixin, IsAuthenticated):
+    """A permission class for the InvitationViewset."""
+
+    resources = "invitations"
+
+    def has_object_permission(self, request, view, obj):
+        """Check permission for a given object."""
+        abilities = obj.get_abilities(request.user)
+        return abilities.get(view.action, False)
+
+
+class ItemAccessPermission(CreateWithPriviliegedRolesMixin, IsAuthenticated):
+    """Permission class for the ItemAccessViewSet."""
+
+    resources = "accesses"
 
     def has_object_permission(self, request, view, obj):
         """Check permission for a given object."""

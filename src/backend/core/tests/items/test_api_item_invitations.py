@@ -60,7 +60,7 @@ def test_api_item_invitations_list_authenticated_privileged(
 
     client = APIClient()
     client.force_login(user)
-    with django_assert_num_queries(3):
+    with django_assert_num_queries(4):
         response = client.get(
             f"/api/v1.0/items/{item.id!s}/invitations/",
         )
@@ -404,9 +404,9 @@ def test_api_item_invitations_create_privileged_members(  # noqa: PLR0913
         assert response.json() == {
             "errors": [
                 {
-                    "attr": "role",
+                    "attr": None,
                     "code": "invitation_role_owner_limited_to_owners",
-                    "detail": "Only owners of a item can invite other users as owners.",
+                    "detail": "Only owners of an item can invite other users as owners.",
                 },
             ],
             "type": "validation_error",
@@ -591,6 +591,36 @@ def test_api_item_invitations_create_cannot_invite_existing_users_case_insensiti
     }
 
 
+def test_api_items_invitations_on_item_without_explicit_access():
+    """Creating an invitation on an item without explicit access on it should work"""
+
+    user = factories.UserFactory()
+
+    root = factories.ItemFactory(
+        creator=user, users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER
+    )
+
+    child = factories.ItemFactory(
+        creator=user, parent=root, type=models.ItemTypeChoices.FOLDER
+    )
+
+    invitation_values = {
+        "email": "JOHN.DOE@EXAMPLE.COM",
+        "role": random.choice(models.RoleChoices.values),
+    }
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{child.id!s}/invitations/",
+        invitation_values,
+        format="json",
+    )
+
+    assert response.status_code == 201
+
+
 # Update
 
 
@@ -677,8 +707,8 @@ def test_api_item_invitations_update_authenticated_privileged_role(
             "errors": [
                 {
                     "code": "invitation_role_owner_limited_to_owners",
-                    "detail": "Only owners of a item can invite other users as owners.",
-                    "attr": "role",
+                    "detail": "Only owners of an item can invite other users as owners.",
+                    "attr": None,
                 }
             ],
         }

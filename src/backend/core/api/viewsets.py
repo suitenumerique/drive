@@ -9,7 +9,6 @@ from io import BytesIO
 from urllib.parse import quote, unquote, urlparse
 
 from django.conf import settings
-from django.contrib.postgres.aggregates import ArrayAgg
 from django.contrib.postgres.search import TrigramSimilarity
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -1950,6 +1949,17 @@ class InvitationViewset(
         models.Invitation.objects.all().select_related("item").order_by("-created_at")
     )
     serializer_class = serializers.InvitationSerializer
+    resource_field_name = "item"
+
+    @cached_property
+    def item(self) -> models.Item:
+        """Get related item from resource ID in url and annotate user roles."""
+        try:
+            return models.Item.objects.annotate_user_roles(self.request.user).get(
+                pk=self.kwargs["resource_id"]
+            )
+        except models.Item.DoesNotExist as excpt:
+            raise drf.exceptions.NotFound() from excpt
 
     def get_serializer_context(self):
         """Extra context provided to the serializer class."""
@@ -1962,42 +1972,31 @@ class InvitationViewset(
         queryset = super().get_queryset()
         queryset = queryset.filter(item=self.kwargs["resource_id"])
 
+        user = self.request.user
+
+        queryset = queryset.annotate_user_roles(user)
+
         if self.action == "list":
-            user = self.request.user
-            teams = user.teams
+            if self.item.get_role(user) not in PRIVILEGED_ROLES:
+                return queryset.none()
 
-            # Determine which role the logged-in user has in the item
-            user_roles_query = (
-                models.ItemAccess.objects.filter(
-                    db.Q(user=user) | db.Q(team__in=teams),
-                    item=self.kwargs["resource_id"],
-                )
-                .values("item")
-                .annotate(roles_array=ArrayAgg("role"))
-                .values("roles_array")
-            )
-
-            queryset = (
-                # The logged-in user should be administrator or owner to see its accesses
-                queryset.filter(
-                    db.Q(
-                        item__accesses__user=user,
-                        item__accesses__role__in=PRIVILEGED_ROLES,
-                    )
-                    | db.Q(
-                        item__accesses__team__in=teams,
-                        item__accesses__role__in=PRIVILEGED_ROLES,
-                    ),
-                )
-                # Abilities are computed based on logged-in user's role and
-                # the user role on each item access
-                .annotate(user_roles=db.Subquery(user_roles_query))
-                .distinct()
-            )
         return queryset
 
+    def _validate_provided_role(self, validated_role):
+        """Ensure that the validated_role can be used."""
+
+        if (
+            validated_role == models.RoleChoices.OWNER
+            and self.item.get_role(self.request.user) != models.RoleChoices.OWNER
+        ):
+            raise drf.serializers.ValidationError(
+                "Only owners of an item can invite other users as owners.",
+                code="invitation_role_owner_limited_to_owners",
+            )
+
     def perform_create(self, serializer):
-        """Save invitation to a item then send an email to the invited user."""
+        """Save invitation to an item then send an email to the invited user."""
+        self._validate_provided_role(serializer.validated_data.get("role"))
         invitation = serializer.save()
 
         invitation.item.send_invitation_email(
@@ -2019,8 +2018,11 @@ class InvitationViewset(
 
     def perform_update(self, serializer):
         """Update the invitation and capture the event."""
+        self._validate_provided_role(serializer.validated_data.get("role"))
+
         old_role = serializer.instance.role
         super().perform_update(serializer)
+
         if serializer.instance.role != old_role:
             posthog_capture(
                 "item_invitation_updated",
@@ -2039,6 +2041,7 @@ class InvitationViewset(
         item = instance.item
         role = instance.role
         super().perform_destroy(instance)
+
         posthog_capture(
             "item_invitation_deleted",
             self.request.user,

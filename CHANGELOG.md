@@ -16,6 +16,10 @@ and this project adheres to
 
 - 🔥(backend) remove unused ServerToServerAuthentication backend
 
+### Fixed
+
+- 🐛(backend) allow inviting external person on item with no direct access
+
 ## [v0.14.0] - 2026-02-25
 
 ### Added
