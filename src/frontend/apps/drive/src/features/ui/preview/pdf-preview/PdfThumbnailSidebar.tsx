@@ -81,7 +81,12 @@ export function PdfThumbnailSidebar({
       className={`pdf-preview__sidebar${!isOpen ? " pdf-preview__sidebar--closed" : ""}`}
       ref={sidebarRef}
     >
-      <Document file={file} options={options} onLoadSuccess={() => setDocReady(true)}>
+      <Document
+        file={file}
+        options={options}
+        onLoadSuccess={() => setDocReady(true)}
+        loading={<div className="pdf-preview__thumbnail-skeleton" />}
+      >
         {Array.from({ length: numPages }, (_, i) => {
           const page = i + 1;
           return (

@@ -87,7 +87,7 @@ export function PreviewPdf({ src }: { src: string }) {
       <div className="pdf-preview">
         <div className="pdf-preview__loading">
           <div className="pdf-preview__spinner"></div>
-          <span>Loading PDF...</span>
+          <span>Loading PDF... :)</span>
         </div>
       </div>
     );

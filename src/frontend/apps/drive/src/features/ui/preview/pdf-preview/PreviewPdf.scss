@@ -73,6 +73,13 @@
     }
   }
 
+  &__page-skeleton {
+    border-radius: 4px;
+    background: var(--c--contextuals--border--surface--primary);
+    box-shadow: 0 3.649px 14.597px 0 rgba(0, 0, 0, 0.1);
+    animation: pdf-skeleton-pulse 1.5s ease-in-out infinite;
+  }
+
   &__thumbnail-skeleton {
     width: 106px;
     height: 150px;
@@ -277,6 +284,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pdf-preview__spinner {
+    animation: none;
+  }
+
+  .pdf-preview__page-skeleton {
     animation: none;
   }
 

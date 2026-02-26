@@ -32,11 +32,19 @@ export function PdfPageViewer({
 }: PdfPageViewerProps) {
   const visiblePages = useRef(new Set<number>());
   const [, setRenderTick] = useState(0);
+  const [docReady, setDocReady] = useState(false);
+
+  const pageSkeleton = (
+    <div
+      className="pdf-preview__page-skeleton"
+      style={{ height: pageHeight, width }}
+    />
+  );
 
   // Virtualization observer: track which pages are near the viewport
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || numPages <= 0) return;
+    if (!container || numPages <= 0 || !docReady) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -68,14 +76,17 @@ export function PdfPageViewer({
     wrappers.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
-  }, [numPages, width, pageHeight, containerRef]);
+  }, [numPages, width, pageHeight, containerRef, docReady]);
 
   return (
     <div className="pdf-preview__container" ref={containerRef}>
       <div className="pdf-preview__page-wrapper" onClick={onClick}>
         <Document
           file={file}
-          onLoadSuccess={onDocumentLoadSuccess}
+          onLoadSuccess={(pdf) => {
+            setDocReady(true);
+            onDocumentLoadSuccess(pdf);
+          }}
           options={options}
         >
           {Array.from({ length: numPages }, (_, i) => {
@@ -87,7 +98,11 @@ export function PdfPageViewer({
                 data-page-number={page}
                 style={{ minHeight: pageHeight, width }}
               >
-                {isVisible && <Page pageNumber={page} width={width} />}
+                {isVisible ? (
+                  <Page pageNumber={page} width={width} loading={pageSkeleton} />
+                ) : (
+                  pageSkeleton
+                )}
               </div>
             );
           })}
