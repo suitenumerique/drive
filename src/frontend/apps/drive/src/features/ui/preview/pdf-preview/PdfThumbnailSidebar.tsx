@@ -9,7 +9,7 @@ const options = {
 };
 
 interface PdfThumbnailSidebarProps {
-  file: File;
+  file?: File | null;
   numPages: number;
   currentPage: number;
   goToPage: (page: number) => void;
@@ -76,6 +76,17 @@ export function PdfThumbnailSidebar({
     }
   }, [currentPage]);
 
+  if (!file) {
+    return (
+      <div
+        className={`pdf-preview__sidebar${!isOpen ? " pdf-preview__sidebar--closed" : ""}`}
+        ref={sidebarRef}
+      >
+        <div className="pdf-preview__thumbnail-skeleton" />
+      </div>
+    );
+  }
+
   return (
     <div
       className={`pdf-preview__sidebar${!isOpen ? " pdf-preview__sidebar--closed" : ""}`}
@@ -99,7 +110,11 @@ export function PdfThumbnailSidebar({
               aria-label={`Go to page ${page}`}
             >
               {visibleThumbnails.current.has(page) ? (
-                <Thumbnail pageNumber={page} height={150} />
+                <Thumbnail
+                  pageNumber={page}
+                  height={150}
+                  loading={<div className="pdf-preview__thumbnail-skeleton" />}
+                />
               ) : (
                 <div className="pdf-preview__thumbnail-skeleton" />
               )}

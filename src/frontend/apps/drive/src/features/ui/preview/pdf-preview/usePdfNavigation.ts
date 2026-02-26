@@ -15,6 +15,7 @@ export const usePdfNavigation = ({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageInputValue, setPageInputValue] = useState<string>("1");
   const isScrollingToPage = useRef(false);
+  const scrollEndCleanup = useRef<(() => void) | null>(null);
 
   const scrollToPage = useCallback(
     (page: number) => {
@@ -22,14 +23,28 @@ export const usePdfNavigation = ({
       if (!container) return;
       const el = container.querySelector(`[data-page-number="${page}"]`);
       if (!el) return;
+
+      // Clean up previous scrollend listener if any
+      scrollEndCleanup.current?.();
+
       isScrollingToPage.current = true;
       el.scrollIntoView({ behavior: "smooth", block: "start" });
-      setTimeout(() => {
+
+      const onScrollEnd = () => {
         isScrollingToPage.current = false;
-      }, 600);
+        scrollEndCleanup.current = null;
+      };
+      container.addEventListener("scrollend", onScrollEnd, { once: true });
+      scrollEndCleanup.current = () =>
+        container.removeEventListener("scrollend", onScrollEnd);
     },
     [containerRef],
   );
+
+  // Cleanup scrollend listener on unmount
+  useEffect(() => {
+    return () => scrollEndCleanup.current?.();
+  }, []);
 
   const goToPreviousPage = useCallback(() => {
     setCurrentPage((prev) => {
@@ -94,7 +109,11 @@ export const usePdfNavigation = ({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (isScrollingToPage.current) return;
+        if (isScrollingToPage.current) {
+          console.log("NOOOOO INTERSECT", isScrollingToPage.current);
+          return;
+        }
+        console.log("INTERSECT", isScrollingToPage.current);
         for (const entry of entries) {
           if (entry.isIntersecting) {
             const pageNum = Number(

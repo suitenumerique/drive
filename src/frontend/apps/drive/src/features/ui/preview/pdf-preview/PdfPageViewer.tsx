@@ -12,7 +12,7 @@ const options = {
 const PRELOAD_PAGES = 4;
 
 interface PdfPageViewerProps {
-  file: File;
+  file?: File | null;
   numPages: number;
   width: number;
   pageHeight: number;
@@ -78,6 +78,19 @@ export function PdfPageViewer({
     return () => observer.disconnect();
   }, [numPages, width, pageHeight, containerRef, docReady]);
 
+  if (!file) {
+    return (
+      <div className="pdf-preview__container" ref={containerRef}>
+        <div className="pdf-preview__page-wrapper">
+          <div
+            className="pdf-preview__page-skeleton"
+            style={{ height: pageHeight, width }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pdf-preview__container" ref={containerRef}>
       <div className="pdf-preview__page-wrapper" onClick={onClick}>
@@ -88,6 +101,7 @@ export function PdfPageViewer({
             onDocumentLoadSuccess(pdf);
           }}
           options={options}
+          loading={pageSkeleton}
         >
           {Array.from({ length: numPages }, (_, i) => {
             const page = i + 1;
@@ -96,10 +110,22 @@ export function PdfPageViewer({
               <div
                 key={page}
                 data-page-number={page}
+                // This is necessary to ensure the page is the correct height.
+                // Setting width and height to <Page> is not enough, because during its initialization,
+                // The height is not guaranteed to be correct. I see that for a few frames <Page> renders with a small
+                // height, probably because it's still loading. But it makes the IntersectionObserver detect up to 5fth page
+                // to be visible: when it happens uppon loading the current page in the input field is set to 5. But the
+                // displayed page is still 1.
+                // So by setting the height here, we ensure that the page is the correct height from the beginning.
                 style={{ minHeight: pageHeight, width }}
               >
                 {isVisible ? (
-                  <Page pageNumber={page} width={width} loading={pageSkeleton} />
+                  <Page
+                    pageNumber={page}
+                    width={width}
+                    height={pageHeight}
+                    loading={pageSkeleton}
+                  />
                 ) : (
                   pageSkeleton
                 )}

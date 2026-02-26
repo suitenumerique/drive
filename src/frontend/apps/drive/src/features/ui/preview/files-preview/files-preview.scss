@@ -1,6 +1,7 @@
 .c__modal__backdrop:has(.file-preview-container) {
-  background-color: var(--c--contextuals--background--surface--secondary);
-
+  // background-color: var(--c--contextuals--background--surface--secondary);
+  background: var(--c--contextuals--background--semantic--contextual--primary);
+  backdrop-filter: blur(8px);
   .c__modal {
     background: none;
   }

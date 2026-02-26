@@ -36,6 +36,18 @@ export function PreviewPdf({ src }: { src: string }) {
     setWidth(getWidth());
   }, [size.width]);
 
+  const [zoom, setZoom] = useState(1);
+
+  const zoomIn = () => {
+    setZoom((prev) => prev + 0.25);
+  };
+  const zoomOut = () => {
+    setZoom((prev) => prev - 0.25);
+  };
+  const zoomReset = () => {
+    setZoom(1);
+  };
+
   const {
     currentPage,
     goToPreviousPage,
@@ -82,27 +94,12 @@ export function PreviewPdf({ src }: { src: string }) {
     setNumPages(nextNumPages);
   }
 
-  if (isLoading) {
-    return (
-      <div className="pdf-preview">
-        <div className="pdf-preview__loading">
-          <div className="pdf-preview__spinner"></div>
-          <span>Loading PDF... :)</span>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="pdf-preview">
         <div className="pdf-preview__error">Error: {error}</div>
       </div>
     );
-  }
-
-  if (!file) {
-    return null;
   }
 
   return (
@@ -136,6 +133,9 @@ export function PreviewPdf({ src }: { src: string }) {
         onPageInputChange={handlePageInputChange}
         onPageInputSubmit={handlePageInputSubmit}
         onPageInputKeyDown={handlePageInputKeyDown}
+        onZoomIn={zoomIn}
+        onZoomReset={zoomReset}
+        onZoomOut={zoomOut}
       />
     </div>
   );

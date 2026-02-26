@@ -1,6 +1,9 @@
 import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { Icon } from "@gouvfr-lasuite/ui-kit";
 import { LeftSidebarIcon } from "../../components/icon/LeftSidebarIcon";
+import { ZoomOut } from "../../components/icon/ZoomOut";
+import { ZoomReset } from "../../components/icon/ZoomReset";
+import { ZoomIn } from "../../components/icon/ZoomIn";
 
 interface PdfControlsProps {
   currentPage: number;
@@ -13,19 +16,22 @@ interface PdfControlsProps {
   onPageInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPageInputSubmit: () => void;
   onPageInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onZoomIn: () => void;
+  onZoomReset: () => void;
+  onZoomOut: () => void;
 }
 
 export function PdfControls({
   currentPage,
   numPages,
   pageInputValue,
-  isSidebarOpen,
   onToggleSidebar,
-  onGoToPreviousPage,
-  onGoToNextPage,
   onPageInputChange,
   onPageInputSubmit,
   onPageInputKeyDown,
+  onZoomIn,
+  onZoomReset,
+  onZoomOut,
 }: PdfControlsProps) {
   return (
     <div className="pdf-preview__controls">
@@ -52,6 +58,30 @@ export function PdfControls({
           />
           <span className="pdf-preview__page-total">/ {numPages}</span>
         </div>
+      </div>
+      <div className="controls-vertical-separator" />
+      <div className="pdf-preview__zoom-controls">
+        <Button
+          variant="tertiary"
+          color="neutral"
+          onClick={onZoomIn}
+          icon={<ZoomOut />}
+          size="small"
+        />
+        <Button
+          variant="tertiary"
+          color="neutral"
+          onClick={onZoomReset}
+          icon={<ZoomReset />}
+          size="small"
+        />
+        <Button
+          variant="tertiary"
+          color="neutral"
+          onClick={onZoomOut}
+          icon={<ZoomIn />}
+          size="small"
+        />
       </div>
     </div>
   );
