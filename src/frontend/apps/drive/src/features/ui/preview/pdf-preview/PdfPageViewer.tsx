@@ -16,6 +16,7 @@ interface PdfPageViewerProps {
   numPages: number;
   width: number;
   pageHeight: number;
+  zoom: number;
   containerRef: React.RefObject<HTMLDivElement | null>;
   onDocumentLoadSuccess: (pdf: PDFDocumentProxy) => void;
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
@@ -26,6 +27,7 @@ export function PdfPageViewer({
   numPages,
   width,
   pageHeight,
+  zoom,
   containerRef,
   onDocumentLoadSuccess,
   onClick,
@@ -37,7 +39,7 @@ export function PdfPageViewer({
   const pageSkeleton = (
     <div
       className="pdf-preview__page-skeleton"
-      style={{ height: pageHeight, width }}
+      style={{ height: pageHeight * zoom, width: width * zoom }}
     />
   );
 
@@ -69,14 +71,14 @@ export function PdfPageViewer({
           setRenderTick((t) => t + 1);
         }
       },
-      { root: container, rootMargin: `${PRELOAD_PAGES * pageHeight}px` },
+      { root: container, rootMargin: `${PRELOAD_PAGES * pageHeight * zoom}px` },
     );
 
     const wrappers = container.querySelectorAll("[data-page-number]");
     wrappers.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
-  }, [numPages, width, pageHeight, containerRef, docReady]);
+  }, [numPages, width, pageHeight, zoom, containerRef, docReady]);
 
   if (!file) {
     return (
@@ -84,7 +86,7 @@ export function PdfPageViewer({
         <div className="pdf-preview__page-wrapper">
           <div
             className="pdf-preview__page-skeleton"
-            style={{ height: pageHeight, width }}
+            style={{ height: pageHeight * zoom, width: width * zoom }}
           />
         </div>
       </div>
@@ -117,13 +119,13 @@ export function PdfPageViewer({
                 // to be visible: when it happens uppon loading the current page in the input field is set to 5. But the
                 // displayed page is still 1.
                 // So by setting the height here, we ensure that the page is the correct height from the beginning.
-                style={{ minHeight: pageHeight, width }}
+                style={{ minHeight: pageHeight * zoom, width: width * zoom }}
               >
                 {isVisible ? (
                   <Page
                     pageNumber={page}
                     width={width}
-                    height={pageHeight}
+                    scale={zoom}
                     loading={pageSkeleton}
                   />
                 ) : (

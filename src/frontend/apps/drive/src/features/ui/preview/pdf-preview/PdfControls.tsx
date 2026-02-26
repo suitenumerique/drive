@@ -1,15 +1,15 @@
 import { Button } from "@gouvfr-lasuite/cunningham-react";
-import { Icon } from "@gouvfr-lasuite/ui-kit";
 import { LeftSidebarIcon } from "../../components/icon/LeftSidebarIcon";
 import { ZoomOut } from "../../components/icon/ZoomOut";
-import { ZoomReset } from "../../components/icon/ZoomReset";
 import { ZoomIn } from "../../components/icon/ZoomIn";
+import { ZoomReset } from "../../components/icon/ZoomReset";
 
 interface PdfControlsProps {
   currentPage: number;
   numPages: number;
   pageInputValue: string;
   isSidebarOpen: boolean;
+  zoom: number;
   onToggleSidebar: () => void;
   onGoToPreviousPage: () => void;
   onGoToNextPage: () => void;
@@ -25,6 +25,7 @@ export function PdfControls({
   currentPage,
   numPages,
   pageInputValue,
+  zoom,
   onToggleSidebar,
   onPageInputChange,
   onPageInputSubmit,
@@ -64,7 +65,7 @@ export function PdfControls({
         <Button
           variant="tertiary"
           color="neutral"
-          onClick={onZoomIn}
+          onClick={onZoomOut}
           icon={<ZoomOut />}
           size="small"
         />
@@ -78,7 +79,7 @@ export function PdfControls({
         <Button
           variant="tertiary"
           color="neutral"
-          onClick={onZoomOut}
+          onClick={onZoomIn}
           icon={<ZoomIn />}
           size="small"
         />

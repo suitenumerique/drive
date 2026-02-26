@@ -39,10 +39,10 @@ export function PreviewPdf({ src }: { src: string }) {
   const [zoom, setZoom] = useState(1);
 
   const zoomIn = () => {
-    setZoom((prev) => prev + 0.25);
+    setZoom((prev) => Math.min(3, prev + 0.25));
   };
   const zoomOut = () => {
-    setZoom((prev) => prev - 0.25);
+    setZoom((prev) => Math.max(0.5, prev - 0.25));
   };
   const zoomReset = () => {
     setZoom(1);
@@ -58,7 +58,7 @@ export function PreviewPdf({ src }: { src: string }) {
     handlePageInputChange,
     handlePageInputSubmit,
     handlePageInputKeyDown,
-  } = usePdfNavigation({ numPages, width, containerRef });
+  } = usePdfNavigation({ numPages, width: width * zoom, containerRef });
 
   const pageHeight = width * 1.414;
 
@@ -117,6 +117,7 @@ export function PreviewPdf({ src }: { src: string }) {
           numPages={numPages}
           width={width}
           pageHeight={pageHeight}
+          zoom={zoom}
           containerRef={containerRef}
           onDocumentLoadSuccess={onDocumentLoadSuccess}
           onClick={handlePdfClick}
@@ -127,6 +128,7 @@ export function PreviewPdf({ src }: { src: string }) {
         numPages={numPages}
         pageInputValue={pageInputValue}
         isSidebarOpen={isSidebarOpen}
+        zoom={zoom}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
         onGoToPreviousPage={goToPreviousPage}
         onGoToNextPage={goToNextPage}
