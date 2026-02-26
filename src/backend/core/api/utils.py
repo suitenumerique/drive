@@ -2,9 +2,13 @@
 
 import logging
 import mimetypes
+import re
+import unicodedata
 from datetime import datetime
+from os.path import splitext
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 
 import boto3
@@ -220,3 +224,28 @@ def detect_mimetype(file_buffer: bytes, filename: str | None = None) -> str:
 
     # Default to content-based detection (most reliable)
     return mimetype_from_content or "application/octet-stream"
+
+
+def sanitize_filename(filename):
+    """
+    Sanitize a filename to be compliant to use on filesystem.
+
+    """
+    name, extension = splitext(filename)
+    #  Convert to ASCII. Taken from the django slugify helper.
+    # Remove unwanted characters like emoji.
+    name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii")
+
+    # Remove leading and trailing spaces; convert other spaces to
+    # underscores; and remove anything that is not an alphanumeric, dash,
+    # underscore, or dot.
+    # Taken from get_valid_filename django helper.
+    name = name.strip().replace(" ", "_")
+    name = re.sub(r"(?u)[^-\w.]", "", name)
+    # strip control characters (0x00–0x1f, 0x7f)
+    name = re.sub(r"[\x00-\x1f\x7f]", "", name)
+
+    if not name:
+        raise ValidationError("filename is empty once sanitized and it is not allowed")
+
+    return name + extension.strip()

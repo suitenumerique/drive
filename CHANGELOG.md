@@ -26,6 +26,7 @@ and this project adheres to
 
 - 🐛(backend) allow inviting external person on item with no direct access
 - 🐛(backend) stop storing numchild in database use annotation instead
+- 🐛(backend) sanitize filename to be compatible with filesystems
 
 ## [v0.14.0] - 2026-02-25
 

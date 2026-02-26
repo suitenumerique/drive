@@ -53,6 +53,27 @@ def test_rename_file_origin_extension_is_kept():
     assert not default_storage.exists(f"{item.key_base}/old_title.txt")
 
 
+def test_rename_filename_invalid_filename():
+    """filename should be sanitize in order to be used with a filesystem."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        title="new_title",
+        type=models.ItemTypeChoices.FILE,
+        filename="old_title.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+
+    rename_file(item.id, "><img src=x onerror=alert()>␊")
+    item.refresh_from_db()
+    assert item.filename == "img_srcx_onerroralert.txt"
+    assert default_storage.exists(item.file_key)
+    assert not default_storage.exists(f"{item.key_base}/old_title.txt")
+
+
 def test_rename_file_filename_has_not_changed():
     """The filename has not changed, no need to move it on storage."""
     user = factories.UserFactory()

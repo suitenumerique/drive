@@ -15,6 +15,7 @@ from freezegun import freeze_time
 from rest_framework.test import APIClient
 
 from core import factories
+from core.api.utils import sanitize_filename
 from core.models import Item, ItemTypeChoices, LinkReachChoices, LinkRoleChoices
 
 pytestmark = pytest.mark.django_db
@@ -596,3 +597,105 @@ def test_api_items_children_create_entitlements_backend_returns_falsy(
             }
         ],
     }
+
+
+@mock.patch(
+    "core.api.serializers.utils.sanitize_filename", side_effect=sanitize_filename
+)
+def test_api_items_children_create_related_success_sanitize_filename(
+    mock_sanitize_filename,
+):
+    """
+    Authenticated users with a specific write access on an item should be
+    able to create a nested item.
+    When the filename is not well formated, it should be sanitizes in order to be used with a
+    filesystem.
+    """
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        link_reach="restricted", type=ItemTypeChoices.FOLDER, users=[(user, "owner")]
+    )
+
+    now = timezone.now()
+    with freeze_time(now):
+        response = client.post(
+            f"/api/v1.0/items/{item.id!s}/children/",
+            {
+                "type": ItemTypeChoices.FILE,
+                "filename": "><img src=x onerror=alert()>␊.txt",
+            },
+        )
+
+    assert response.status_code == 201
+    child = Item.objects.get(id=response.json()["id"])
+    assert child.title == "><img src=x onerror=alert()>␊.txt"
+    assert child.filename == "img_srcx_onerroralert.txt"
+    assert child.computed_link_reach == "restricted"
+    assert child.link_reach is None
+    assert not child.accesses.filter(role="owner", user=user).exists()
+
+    mock_sanitize_filename.assert_called_once_with("><img src=x onerror=alert()>␊.txt")
+
+    assert response.json().get("policy") is not None
+
+    policy = response.json()["policy"]
+
+    policy_parsed = urlparse(policy)
+
+    assert policy_parsed.scheme == "http"
+    assert policy_parsed.netloc == "localhost:9000"
+    assert (
+        policy_parsed.path
+        == f"/drive-media-storage/item/{child.id!s}/img_srcx_onerroralert.txt"
+    )
+
+    query_params = parse_qs(policy_parsed.query)
+
+    assert query_params.pop("X-Amz-Algorithm") == ["AWS4-HMAC-SHA256"]
+    assert query_params.pop("X-Amz-Credential") == [
+        f"drive/{now.strftime('%Y%m%d')}/eu-east-1/s3/aws4_request"
+    ]
+    assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
+    assert query_params.pop("X-Amz-Expires") == ["60"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-Signature") is not None
+
+    assert len(query_params) == 0
+
+
+@mock.patch(
+    "core.api.serializers.utils.sanitize_filename", side_effect=sanitize_filename
+)
+def test_api_items_children_create_related_invalid_filename(
+    mock_sanitize_filename,
+):
+    """
+    Authenticated users with a specific write access on an item should be
+    able to create a nested item.
+    When the filename is invalid, the request should be rejected.
+    """
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        link_reach="restricted", type=ItemTypeChoices.FOLDER, users=[(user, "owner")]
+    )
+
+    now = timezone.now()
+    with freeze_time(now):
+        response = client.post(
+            f"/api/v1.0/items/{item.id!s}/children/",
+            {
+                "type": ItemTypeChoices.FILE,
+                "filename": "!@#$%^&*().txt",
+            },
+        )
+
+    assert response.status_code == 400
+    mock_sanitize_filename.assert_called_once_with("!@#$%^&*().txt")

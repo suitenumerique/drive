@@ -616,11 +616,12 @@ class ItemViewSet(
     def perform_update(self, serializer):
         """Override to check if a file is renamed in order to rename file on storage."""
         instance = serializer.instance
+        old_title = instance.title
+        serializer.save()
         if instance.type == models.ItemTypeChoices.FILE:
             title = serializer.validated_data.get("title")
-            if title and instance.title != title:
+            if title and old_title != title:
                 rename_file.delay(instance.id, title)
-        serializer.save()
 
     @drf.decorators.action(detail=True, methods=["delete"], url_path="hard-delete")
     def hard_delete(self, request, *args, **kwargs):

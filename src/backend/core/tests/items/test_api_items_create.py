@@ -378,3 +378,57 @@ def test_api_items_create_item_race_condition():
 
         assert response1.status_code == 201
         assert response2.status_code == 201
+
+
+def test_api_items_create_file_authenticated_success_invalid_filename():
+    """
+    Authenticated users should be able to create a file item and must provide a filename.
+    When the filename is invalid it should be sanitize in order to be used with a filesystem.
+    """
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    now = timezone.now()
+    with freeze_time(now):
+        response = client.post(
+            "/api/v1.0/items/",
+            {
+                "type": ItemTypeChoices.FILE,
+                "filename": "><img src=x onerror=alert()>␊.txt",
+            },
+            format="json",
+        )
+    assert response.status_code == 201
+    item = Item.objects.get()
+    assert item.title == "><img src=x onerror=alert()>␊.txt"
+    assert item.link_reach == "restricted"
+    assert item.accesses.filter(role="owner", user=user).exists()
+    assert item.type == ItemTypeChoices.FILE
+    assert item.filename == "img_srcx_onerroralert.txt"
+
+    assert response.json().get("policy") is not None
+
+    policy = response.json()["policy"]
+    policy_parsed = urlparse(policy)
+
+    assert policy_parsed.scheme == "http"
+    assert policy_parsed.netloc == "localhost:9000"
+    assert (
+        policy_parsed.path
+        == f"/drive-media-storage/item/{item.id!s}/img_srcx_onerroralert.txt"
+    )
+
+    query_params = parse_qs(policy_parsed.query)
+
+    assert query_params.pop("X-Amz-Algorithm") == ["AWS4-HMAC-SHA256"]
+    assert query_params.pop("X-Amz-Credential") == [
+        f"drive/{now.strftime('%Y%m%d')}/eu-east-1/s3/aws4_request"
+    ]
+    assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
+    assert query_params.pop("X-Amz-Expires") == ["60"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-Signature") is not None
+
+    assert len(query_params) == 0

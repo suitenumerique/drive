@@ -624,6 +624,38 @@ def test_api_items_update_file_rename():
     rename_file_mock.assert_called_once_with(item.id, "new_title")
 
 
+def test_api_items_update_file_rename_invalid_filename():
+    """
+    Test the rename of a file.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        title="old_title",
+        type=models.ItemTypeChoices.FILE,
+        filename="old_title.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+
+    assert item.filename == "old_title.txt"
+    assert default_storage.exists(item.file_key)
+
+    with mock.patch.object(rename_file, "delay") as rename_file_mock:
+        response = client.patch(
+            f"/api/v1.0/items/{item.id!s}/",
+            {"title": "!@#$%^&*()"},
+            format="json",
+        )
+    rename_file_mock.assert_not_called()
+    assert response.status_code == 400
+
+
 def test_api_items_update_no_title_should_not_rename_file():
     """
     Test the update of a file without title should not rename the file.

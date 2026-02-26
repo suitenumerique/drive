@@ -8,6 +8,7 @@ from os.path import splitext
 
 from django.core.files.storage import default_storage
 
+from core.api.utils import sanitize_filename
 from core.models import Item, ItemTypeChoices, ItemUploadStateChoices
 
 from drive.celery_app import app
@@ -69,7 +70,7 @@ def rename_file(item_id, new_title):
 
     _, extension = splitext(item.filename)
 
-    new_filename = f"{new_title}{extension}"
+    new_filename = sanitize_filename(f"{new_title}{extension}")
     from_file_key = item.file_key
 
     if item.filename == new_filename:
