@@ -232,10 +232,6 @@
 
 @media (max-width: 768px) {
   .pdf-preview {
-    &__sidebar {
-      display: none;
-    }
-
     &__controls {
       padding: 8px;
       gap: 8px;

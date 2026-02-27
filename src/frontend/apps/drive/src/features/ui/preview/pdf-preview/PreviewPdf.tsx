@@ -13,20 +13,21 @@ import { useRedirectDisclaimer } from "./useRedirectDisclaimer";
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 const BASE_WIDTH = 800;
+const PAGE_MARGIN = 32;
 
 export function PreviewPdf({ src }: { src: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [numPages, setNumPages] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { handlePdfClick } = useRedirectDisclaimer();
   const size = useDebouncedResize();
 
   const getWidth = () => {
-    if (size.width < BASE_WIDTH) {
-      return size.width;
+    if (BASE_WIDTH + PAGE_MARGIN > size.width) {
+      return size.width - PAGE_MARGIN;
     }
     return BASE_WIDTH;
   };
