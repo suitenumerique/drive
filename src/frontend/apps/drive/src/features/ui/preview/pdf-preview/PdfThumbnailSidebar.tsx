@@ -99,7 +99,13 @@ export function PdfThumbnailSidebarContent({
         // and navigate the main viewer instead.
         onItemClick={({ pageNumber }) => goToPage(pageNumber)}
       >
-        <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
+        <div
+          style={{
+            width: "116px", // Needed to be able to center the layout of the thumbnails.
+            height: virtualizer.getTotalSize(),
+            position: "relative",
+          }}
+        >
           {virtualizer.getVirtualItems().map((virtualItem) => {
             const page = virtualItem.index + 1;
             return (
@@ -110,7 +116,6 @@ export function PdfThumbnailSidebarContent({
                   position: "absolute",
                   top: virtualItem.start,
                   height: THUMBNAIL_HEIGHT,
-                  width: "100%",
                 }}
                 className={`pdf-preview__thumbnail${currentPage === page ? " pdf-preview__thumbnail--active" : ""}`}
                 onClick={() => goToPage(page)}
@@ -118,7 +123,7 @@ export function PdfThumbnailSidebarContent({
               >
                 <Thumbnail
                   pageNumber={page}
-                  height={150}
+                  width={105}
                   loading={<div className="pdf-preview__thumbnail-skeleton" />}
                 />
                 <span className="pdf-preview__thumbnail-number">{page}</span>

@@ -54,6 +54,7 @@
     flex-direction: column;
     align-items: center;
     transition: border-color 0.15s ease;
+    box-sizing: border-box;
 
     .react-pdf__Thumbnail {
       box-shadow: 0 0.5px 5px 0 rgba(0, 0, 0, 0.1);
