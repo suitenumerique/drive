@@ -2,7 +2,7 @@
 # drive package
 #
 [build-system]
-requires = ["uv_build>=0.9.26,<0.10.0"]
+requires = ["uv_build>=0.10.4,<0.11.0"]
 build-backend = "uv_build"
 
 [project]
@@ -24,9 +24,9 @@ keywords = ["Django", "Contacts", "Templates", "RBAC"]
 license = "MIT"
 requires-python = "~=3.13.0"
 dependencies = [
-    "boto3==1.42.19",
+    "boto3==1.42.54",
     "Brotli==1.2.0",
-    "dj-database-url==3.0.1",
+    "dj-database-url==3.1.2",
     "celery[redis]==5.6.2",
     "defusedxml==0.7.1",
     "django<6.0.0",
@@ -34,7 +34,7 @@ dependencies = [
     "django-cors-headers==4.9.0",
     "django-countries==8.2.0",
     "django-filter==25.2",
-    "django-lasuite[all]==0.0.23",
+    "django-lasuite[all]==0.0.24",
     "django-ltree==0.6.0",
     "django-parler==2.3",
     "django-redis==6.0.0",
@@ -42,23 +42,23 @@ dependencies = [
     "django-timezone-field>=5.1",
     "djangorestframework==3.16.1",
     "djangorestframework-api-key==3.1.0",
-    "dockerflow==2024.4.2",
+    "dockerflow==2026.1.26",
     "drf_spectacular==0.29.0",
     "drf-standardized-errors==0.15.0",
     "easy_thumbnails==2.10.1",
     "factory_boy==3.3.3",
-    "gunicorn==23.0.0",
-    "jsonschema==4.25.1",
-    "markdown==3.10",
+    "gunicorn==25.1.0",
+    "jsonschema==4.26.0",
+    "markdown==3.10.2",
     "mozilla-django-oidc<5.0.0",
     "nested-multipart-parser==1.6.0",
-    "posthog==7.4.2",
-    "psycopg[binary]==3.3.2",
-    "PyJWT==2.10.1",
+    "posthog==7.9.3",
+    "psycopg[binary]==3.3.3",
+    "PyJWT==2.11.0",
     "python-magic==0.4.27",
     "redis<6.0.0",
     "requests==2.32.5",
-    "sentry-sdk==2.48.0",
+    "sentry-sdk==2.53.0",
     "url-normalize==2.2.1",
     "whitenoise==6.11.0",
 ]
@@ -71,23 +71,23 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "django-debug-toolbar==6.1.0",
+    "django-debug-toolbar==6.2.0",
     "django-extensions==4.1",
-    "drf-spectacular-sidecar==2025.12.1",
+    "drf-spectacular-sidecar==2026.1.1",
     "freezegun==1.5.5",
     "ipdb==0.13.13",
-    "ipython==9.8.0",
-    "pyfakefs==6.0.0",
+    "ipython==9.10.0",
+    "pyfakefs==6.1.2",
     "pylint-django==2.7.0",
-    "pylint==4.0.4",
+    "pylint==4.0.5",
     "pytest-cov==7.0.0",
-    "pytest-django==4.11.1",
+    "pytest-django==4.12.0",
     "pytest==9.0.2",
     "pytest-icdiff==0.9",
     "pytest-xdist==3.8.0",
-    "responses==0.25.8",
-    "ruff==0.14.10",
-    "types-requests==2.32.4.20250913",
+    "responses==0.26.0",
+    "ruff==0.15.2",
+    "types-requests==2.32.4.20260107",
 ]
 
 [tool.uv.build-backend]
