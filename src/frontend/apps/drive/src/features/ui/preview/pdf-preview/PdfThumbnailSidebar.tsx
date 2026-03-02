@@ -16,7 +16,39 @@ interface PdfThumbnailSidebarProps {
   isOpen: boolean;
 }
 
-export function PdfThumbnailSidebar({
+const TRANSITION_DELAY = 300;
+
+// Two-phase mount/unmount to allow CSS transitions to play out:
+// Opening: mount immediately (unmount=false), then defer isOpenProxy=true
+//   so the DOM is present before the "open" class triggers the transition.
+// Closing: remove the "open" class first (isOpenProxy=false), wait for the
+//   transition to finish (TRANSITION_DELAY), then unmount the component.
+// When closed the component is not mounted, which is better for performance
+// as this component is quite heavy and is not needed when closed.
+export function PdfThumbnailSidebar(props: PdfThumbnailSidebarProps) {
+  const [unmount, setUnmount] = useState(true);
+  const [isOpenProxy, setIsOpenProxy] = useState(props.isOpen);
+
+  useEffect(() => {
+    if (props.isOpen) {
+      setUnmount(false);
+      setTimeout(() => setIsOpenProxy(true), 100);
+    } else {
+      setIsOpenProxy(false);
+      // The 1.1 is to allow for the transition to finish.
+      // It is a safety margin to avoid the component being unmounted too early.
+      setTimeout(() => setUnmount(true), TRANSITION_DELAY * 1.1);
+    }
+  }, [props.isOpen]);
+
+  if (unmount) {
+    return null;
+  }
+
+  return <PdfThumbnailSidebarContent {...props} isOpen={isOpenProxy} />;
+}
+
+export function PdfThumbnailSidebarContent({
   file,
   numPages,
   currentPage,
