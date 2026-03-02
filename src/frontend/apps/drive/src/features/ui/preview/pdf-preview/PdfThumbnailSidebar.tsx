@@ -59,6 +59,7 @@ export function PdfThumbnailSidebarContent({
   isOpen,
 }: PdfThumbnailSidebarProps) {
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const [isDocLoaded, setIsDocLoaded] = useState(false);
 
   const virtualizer = useVirtualizer({
     count: numPages,
@@ -70,8 +71,9 @@ export function PdfThumbnailSidebarContent({
 
   // Auto-scroll active thumbnail into view
   useEffect(() => {
+    if (!isDocLoaded) return;
     virtualizer.scrollToIndex(currentPage - 1, { align: "center" });
-  }, [currentPage, virtualizer]);
+  }, [isDocLoaded, currentPage, virtualizer]);
 
   if (!file) {
     return (
@@ -93,11 +95,12 @@ export function PdfThumbnailSidebarContent({
         file={file}
         options={options}
         loading={<div className="pdf-preview__thumbnail-skeleton" />}
+        onLoadSuccess={() => setIsDocLoaded(true)}
         // Thumbnails may contain clickable internal links (e.g., table of contents).
         // Without onItemClick, react-pdf cannot resolve those links since only
         // thumbnails are rendered here, not full pages. We intercept the click
         // and navigate the main viewer instead.
-        onItemClick={({ pageNumber }) => goToPage(pageNumber)}
+        // onItemClick={({ pageNumber }) => goToPage(pageNumber)}
       >
         <div
           style={{
