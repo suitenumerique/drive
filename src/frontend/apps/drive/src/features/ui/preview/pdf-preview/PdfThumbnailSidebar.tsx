@@ -97,6 +97,11 @@ export function PdfThumbnailSidebar({
         options={options}
         onLoadSuccess={() => setDocReady(true)}
         loading={<div className="pdf-preview__thumbnail-skeleton" />}
+        // Thumbnails may contain clickable internal links (e.g., table of contents).
+        // Without onItemClick, react-pdf cannot resolve those links since only
+        // thumbnails are rendered here, not full pages. We intercept the click
+        // and navigate the main viewer instead.
+        onItemClick={({ pageNumber }) => goToPage(pageNumber)}
       >
         {Array.from({ length: numPages }, (_, i) => {
           const page = i + 1;
