@@ -12,6 +12,7 @@ and this project adheres to
 
 - ✨(frontend) add create folder and import file actions
 - 🐛(frontend) add action menu to mobile breadcrumbs
+- 🐛(frontend) app stabilization
 
 ### Changed
 
