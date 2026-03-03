@@ -135,12 +135,14 @@ def test_api_items_children_ordering_combining_type_and_title():
         users=[user],
         type=models.ItemTypeChoices.FILE,
         title="Abcd",
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     item2 = factories.ItemFactory(
         parent=root,
         users=[user],
         type=models.ItemTypeChoices.FILE,
         title="Zyxc",
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     item3 = factories.ItemFactory(
         parent=root,

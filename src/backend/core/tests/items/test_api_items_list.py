@@ -76,6 +76,7 @@ def test_api_items_list_format():
         link_reach="public",
         link_traces=[user],
         title="item 3",
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     response = client.get("/api/v1.0/items/")
@@ -116,8 +117,8 @@ def test_api_items_list_format():
             "user_role": None,
             "type": models.ItemTypeChoices.FILE,
             "upload_state": item3.upload_state,
-            "url": None,
-            "url_permalink": None,
+            "url": f"http://localhost:8083/media/item/{item3.id!s}/{item3.filename}",
+            "url_permalink": f"http://testserver/api/v1.0/items/{item3.id!s}/download/",
             "url_preview": None,
             "mimetype": item3.mimetype,
             "main_workspace": False,
@@ -357,13 +358,18 @@ def test_api_items_list_authenticated_link_reach_restricted(
     client.force_login(user)
 
     item = factories.ItemFactory(
-        link_traces=[user], link_reach="restricted", type=models.ItemTypeChoices.FILE
+        link_traces=[user],
+        link_reach="restricted",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     models.LinkTrace.objects.create(item=item, user=factories.UserFactory())
 
     # Link traces for other items or other users should not interfere
     other_item = factories.ItemFactory(
-        link_reach="public", type=models.ItemTypeChoices.FILE
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     models.LinkTrace.objects.create(item=other_item, user=user)
     folder_item = factories.ItemFactory(
@@ -408,6 +414,7 @@ def test_api_items_list_authenticated_link_reach_public_or_authenticated(
         link_reach=random.choice(["public", "authenticated"]),
         link_traces=[user],
         parent=item1,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     hidden_item = factories.ItemFactory(
@@ -419,6 +426,7 @@ def test_api_items_list_authenticated_link_reach_public_or_authenticated(
         link_reach=random.choice(["public", "authenticated"]),
         parent=hidden_item,
         type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     expected_ids = {
@@ -529,7 +537,10 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
         2, users=[user], type=models.ItemTypeChoices.FOLDER
     )
     factories.ItemFactory.create_batch(
-        2, users=[user], type=models.ItemTypeChoices.FILE
+        2,
+        users=[user],
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     url = "/api/v1.0/items/"
@@ -593,6 +604,7 @@ def test_api_items_list_with_link_traces_related_to_restricted_items():
         type=models.ItemTypeChoices.FILE,
         creator=user,
         users=[(user, models.RoleChoices.OWNER)],
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     client = APIClient()
@@ -603,3 +615,29 @@ def test_api_items_list_with_link_traces_related_to_restricted_items():
     results = response.json()["results"]
     assert len(results) == 1
     assert results[0]["id"] == str(user_item.id)
+
+
+def test_api_items_list_excludes_pending_items():
+    """Items with upload_state=PENDING should be excluded from the list endpoint."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    # Should be visible
+    ready_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        users=[(user, models.RoleChoices.OWNER)],
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    # Should not be visible
+    factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    response = client.get("/api/v1.0/items/")
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 1
+    assert results[0]["id"] == str(ready_item.id)

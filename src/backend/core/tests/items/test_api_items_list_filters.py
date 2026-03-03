@@ -324,7 +324,12 @@ def test_api_items_list_filter_title(query, nb_results):
             if random.choice([True, False])
             else None
         )
-        factories.ItemFactory(title=title, users=[user], parent=parent)
+        factories.ItemFactory(
+            title=title,
+            users=[user],
+            parent=parent,
+            update_upload_state=models.ItemUploadStateChoices.READY,
+        )
 
     # Perform the search query
     response = client.get(f"/api/v1.0/items/?title={query:s}")
@@ -359,7 +364,10 @@ def test_api_items_list_filter_type():
 
     # create 2 files
     files = factories.UserItemAccessFactory.create_batch(
-        2, user=user, item__type=models.ItemTypeChoices.FILE
+        2,
+        user=user,
+        item__type=models.ItemTypeChoices.FILE,
+        item__update_upload_state=models.ItemUploadStateChoices.READY,
     )
     files_ids = {str(file.item.id) for file in files}
 

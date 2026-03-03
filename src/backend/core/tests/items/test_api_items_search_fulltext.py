@@ -41,7 +41,10 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
     folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
     folder_access = factories.UserItemAccessFactory(item=folder, user=user)
     _, item_b, item_c = factories.ItemFactory.create_batch(
-        3, parent=folder, type=models.ItemTypeChoices.FILE
+        3,
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     # Find response
@@ -93,8 +96,8 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
             "type": "file",
             "updated_at": item_b.updated_at.isoformat().replace("+00:00", "Z"),
             "upload_state": str(item_b.upload_state),
-            "url": None,
-            "url_permalink": None,
+            "url": f"http://localhost:8083/media/item/{item_b.id!s}/{item_b.filename}",
+            "url_permalink": f"http://testserver/api/v1.0/items/{item_b.id!s}/download/",
             "url_preview": None,
             "user_role": folder_access.role,
             "parents": [
@@ -170,8 +173,8 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
             "type": "file",
             "updated_at": item_c.updated_at.isoformat().replace("+00:00", "Z"),
             "upload_state": str(item_c.upload_state),
-            "url": None,
-            "url_permalink": None,
+            "url": f"http://localhost:8083/media/item/{item_c.id!s}/{item_c.filename}",
+            "url_permalink": f"http://testserver/api/v1.0/items/{item_c.id!s}/download/",
             "url_preview": None,
             "user_role": folder_access.role,
             "parents": [
@@ -293,6 +296,7 @@ def test_api_items_search_pagination(indexer_settings, pagination, status, expec
         mimetype="text/plain",
         type=models.ItemTypeChoices.FILE,
         parent=parent,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     items_by_uuid = {str(item.pk): item for item in items}
@@ -435,6 +439,7 @@ def test_api_items_search_pagination_endpoint_is_none(
         title="alpha",
         users=[user],
         parent=parent,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     response = client.get(
@@ -493,6 +498,7 @@ def test_api_items_search_feature_disabled(indexer_settings):
         title="alpha",
         users=[user],
         parent=parent,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     response = client.get(
