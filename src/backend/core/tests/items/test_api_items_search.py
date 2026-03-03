@@ -34,9 +34,17 @@ def test_api_items_search_authenticated_without_filters():
         title="Item 2", parent=top_parent, type=models.ItemTypeChoices.FOLDER
     )
     children = factories.ItemFactory(
-        title="Item 3", parent=parent, type=models.ItemTypeChoices.FILE
+        title="Item 3",
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
-    factories.ItemFactory(title="Item hidden")
+    factories.ItemFactory(
+        title="Item hidden",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
     deleted_file = factories.ItemFactory(
         title="Deleted file", type=models.ItemTypeChoices.FILE, parent=top_parent
     )
@@ -282,9 +290,9 @@ def test_api_items_search_authenticated_without_filters():
             "title": "Item 3",
             "type": "file",
             "updated_at": children.updated_at.isoformat().replace("+00:00", "Z"),
-            "upload_state": "pending",
-            "url": None,
-            "url_permalink": None,
+            "upload_state": "ready",
+            "url": f"http://localhost:8083/media/item/{children.id!s}/{children.filename}",
+            "url_permalink": f"http://testserver/api/v1.0/items/{children.id!s}/download/",
             "url_preview": None,
             "user_role": top_parent_access.role,
         },
@@ -343,7 +351,10 @@ def test_api_items_search_authenticated_not_existing_filter():
         title="Item 2", parent=top_parent, type=models.ItemTypeChoices.FOLDER
     )
     factories.ItemFactory(
-        title="Item 3", parent=parent, type=models.ItemTypeChoices.FILE
+        title="Item 3",
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     factories.ItemFactory(title="Item hidden")
 
@@ -390,8 +401,16 @@ def test_api_items_search_authenticated_with_title_filter(query, nb_results):
             if random.choice([True, False])
             else top_parent
         )
-        factories.ItemFactory(title=title, parent=parent)
-        factories.ItemFactory(title=title, parent=non_accessible_top_parent)
+        factories.ItemFactory(
+            title=title,
+            parent=parent,
+            update_upload_state=models.ItemUploadStateChoices.READY,
+        )
+        factories.ItemFactory(
+            title=title,
+            parent=non_accessible_top_parent,
+            update_upload_state=models.ItemUploadStateChoices.READY,
+        )
 
     response = client.get(f"/api/v1.0/items/search/?title={query:s}")
     assert response.status_code == 200
@@ -407,7 +426,10 @@ def test_api_items_search_authenticated_with_title_filter_on_top_level_file():
     client.force_login(user)
 
     factories.ItemFactory(
-        title="Item 1", users=[user], type=models.ItemTypeChoices.FILE
+        title="Item 1",
+        users=[user],
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     response = client.get("/api/v1.0/items/search/?title=Item")
@@ -431,7 +453,10 @@ def test_api_items_search_authenticated_by_type():
         title="Item 1", users=[user], type=models.ItemTypeChoices.FOLDER
     )
     factories.ItemFactory.create_batch(
-        3, parent=top_parent, type=models.ItemTypeChoices.FILE
+        3,
+        parent=top_parent,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     factories.ItemFactory.create_batch(
         3, parent=top_parent, type=models.ItemTypeChoices.FOLDER
@@ -440,11 +465,17 @@ def test_api_items_search_authenticated_by_type():
         title="Item 2", users=[user], type=models.ItemTypeChoices.FOLDER
     )
     factories.ItemFactory.create_batch(
-        3, parent=other_top_parent, type=models.ItemTypeChoices.FILE
+        3,
+        parent=other_top_parent,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     deleted_file = factories.ItemFactory(
-        title="Deleted file", type=models.ItemTypeChoices.FILE, parent=top_parent
+        title="Deleted file",
+        type=models.ItemTypeChoices.FILE,
+        parent=top_parent,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     deleted_file.soft_delete()
 
@@ -469,7 +500,10 @@ def test_api_items_search_authenticated_filter_scopes():
         title="Item 1", users=[user], type=models.ItemTypeChoices.FOLDER
     )
     factories.ItemFactory.create_batch(
-        3, parent=top_parent, type=models.ItemTypeChoices.FILE
+        3,
+        parent=top_parent,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     factories.ItemFactory.create_batch(
         3, parent=top_parent, type=models.ItemTypeChoices.FOLDER
@@ -478,11 +512,17 @@ def test_api_items_search_authenticated_filter_scopes():
         title="Item 2", users=[user], type=models.ItemTypeChoices.FOLDER
     )
     factories.ItemFactory.create_batch(
-        3, parent=other_top_parent, type=models.ItemTypeChoices.FILE
+        3,
+        parent=other_top_parent,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     deleted_file = factories.ItemFactory(
-        title="Deleted file", type=models.ItemTypeChoices.FILE, parent=top_parent
+        title="Deleted file",
+        type=models.ItemTypeChoices.FILE,
+        parent=top_parent,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     deleted_file.soft_delete()
 
@@ -519,7 +559,10 @@ def test_api_items_search_authenticated_by_workspace():
         title="Item 1", users=[user], type=models.ItemTypeChoices.FOLDER
     )
     factories.ItemFactory.create_batch(
-        3, parent=parent, type=models.ItemTypeChoices.FILE
+        3,
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     factories.ItemFactory.create_batch(
         3, parent=parent, type=models.ItemTypeChoices.FOLDER
@@ -528,7 +571,10 @@ def test_api_items_search_authenticated_by_workspace():
         title="Item 2", users=[user], type=models.ItemTypeChoices.FOLDER
     )
     factories.ItemFactory.create_batch(
-        3, parent=other_top_parent, type=models.ItemTypeChoices.FILE
+        3,
+        parent=other_top_parent,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     response = client.get(f"/api/v1.0/items/search/?workspace={parent.id}")
@@ -566,12 +612,16 @@ def test_api_items_search_authenticated_combined_filters():
     for title in titles:
         parent = random.choice(parents)
         children = factories.ItemFactory(
-            title=title, parent=parent, type=models.ItemTypeChoices.FILE
+            title=title,
+            parent=parent,
+            type=models.ItemTypeChoices.FILE,
+            update_upload_state=models.ItemUploadStateChoices.READY,
         )
         factories.ItemFactory(
             title=title,
             parent=other_top_parent,
             type=models.ItemTypeChoices.FILE,
+            update_upload_state=models.ItemUploadStateChoices.READY,
         )
         parent_childrens[parent.id].append(children)
 
@@ -612,7 +662,10 @@ def test_api_items_search_authenticated_filter_with_unaccessibile_workspace():
         title="Item 1", type=models.ItemTypeChoices.FOLDER
     )
     factories.ItemFactory.create_batch(
-        3, parent=unaccessible_workspace, type=models.ItemTypeChoices.FILE
+        3,
+        parent=unaccessible_workspace,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     response = client.get(
@@ -637,7 +690,10 @@ def test_api_items_search_authenticated_filter_with_workspace_children():
         title="Item 2", parent=parent, type=models.ItemTypeChoices.FOLDER
     )
     factories.ItemFactory.create_batch(
-        3, parent=children, type=models.ItemTypeChoices.FILE
+        3,
+        parent=children,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     response = client.get(f"/api/v1.0/items/search/?workspace={parent.id}&type=file")
@@ -719,6 +775,7 @@ def test_api_items_search_deleted_folder_and_children_in_recycle_bin():
         title="folder A child",
         parent=parent,
         type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     parent.soft_delete()
@@ -730,3 +787,35 @@ def test_api_items_search_deleted_folder_and_children_in_recycle_bin():
     titles = [item["title"] for item in response.data["results"]]
     assert "folder A" in titles
     assert "folder A child" in titles
+
+
+def test_api_items_search_excludes_pending_items():
+    """Items with upload_state=PENDING should be excluded from search results."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    # Should be visible
+    ready_file = factories.ItemFactory(
+        title="searchable file",
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    # Should not be visible
+    factories.ItemFactory(
+        title="searchable pending",
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+    )
+
+    response = client.get("/api/v1.0/items/search/?title=searchable")
+
+    assert response.status_code == 200
+    result_ids = [r["id"] for r in response.json()["results"]]
+    assert str(ready_file.id) in result_ids
+    assert len(result_ids) == 1

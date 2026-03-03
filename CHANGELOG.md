@@ -11,6 +11,8 @@ and this project adheres to
 ### Changed
 
 - ⚡️(CI) optimize Docker Hub workflow
+- ✨(backend) exclude pending items from listing views
+- ✨(frontend) scale upload progress to 90% before completion
 
 ### Removed
 

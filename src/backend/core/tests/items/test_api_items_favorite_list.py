@@ -53,7 +53,10 @@ def test_api_item_favorite_list_authenticated_with_favorite():
     factories.ItemFactory(favorited_by=[user])
 
     item = factories.UserItemAccessFactory(
-        user=user, role=models.RoleChoices.READER, item__favorited_by=[user]
+        user=user,
+        role=models.RoleChoices.READER,
+        item__favorited_by=[user],
+        item__update_upload_state=models.ItemUploadStateChoices.READY,
     ).item
 
     response = client.get("/api/v1.0/items/favorite_list/")
@@ -84,8 +87,12 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "type": item.type,
                 "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
                 "upload_state": item.upload_state,
-                "url": None,
-                "url_permalink": None,
+                "url": f"http://localhost:8083/media/item/{item.id!s}/{item.filename}"
+                if item.type == models.ItemTypeChoices.FILE
+                else None,
+                "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/"
+                if item.type == models.ItemTypeChoices.FILE
+                else None,
                 "url_preview": None,
                 "mimetype": None,
                 "user_role": "reader",
@@ -193,13 +200,18 @@ def test_api_item_favorite_list_filtering(django_assert_num_queries):
     client.force_login(user)
 
     parent_item = factories.ItemFactory(
-        type=models.ItemTypeChoices.FOLDER, users=[(user, models.RoleChoices.EDITOR)]
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, models.RoleChoices.EDITOR)],
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     child_item = factories.ItemFactory(
         parent=parent_item, type=models.ItemTypeChoices.FOLDER, favorited_by=[user]
     )
     file_item = factories.ItemFactory(
-        parent=parent_item, type=models.ItemTypeChoices.FILE, favorited_by=[user]
+        parent=parent_item,
+        type=models.ItemTypeChoices.FILE,
+        favorited_by=[user],
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     with django_assert_num_queries(6):

@@ -378,6 +378,10 @@ class ItemViewSet(
 
         return queryset.exclude(upload_state=models.ItemUploadStateChoices.SUSPICIOUS)
 
+    def _exclude_pending_items(self, queryset):
+        """Exclude items with PENDING upload_state from listing views."""
+        return queryset.exclude(upload_state=models.ItemUploadStateChoices.PENDING)
+
     def get_queryset(self):
         """Get queryset performing all annotation and filtering on the item tree structure."""
         user = self.request.user
@@ -393,6 +397,7 @@ class ItemViewSet(
         if not user.is_authenticated:
             return queryset.none()
 
+        queryset = self._exclude_pending_items(queryset)
         queryset = queryset.filter(ancestors_deleted_at__isnull=True)
 
         # Filter items to which the current user has access...
@@ -455,6 +460,7 @@ class ItemViewSet(
         queryset = self._filter_suspicious_items(queryset, user)
         queryset = queryset.filter(path_list)
         queryset = queryset.filter(ancestors_deleted_at__isnull=True)
+        queryset = self._exclude_pending_items(queryset)
 
         return queryset
 
@@ -1045,6 +1051,7 @@ class ItemViewSet(
             item.children().select_related("creator").filter(deleted_at__isnull=True)
         )
         queryset = self._filter_suspicious_items(queryset, request.user)
+        queryset = self._exclude_pending_items(queryset)
         queryset = self.filter_queryset(queryset)
         filterset = ItemFilter(request.GET, queryset=queryset)
         if not filterset.is_valid():
@@ -1303,6 +1310,7 @@ class ItemViewSet(
 
         # Remove items with upload_state SUSPICIOUS for non-creators
         queryset = self._filter_suspicious_items(queryset, user)
+        queryset = self._exclude_pending_items(queryset)
 
         queryset = queryset.annotate_is_favorite(user)
 

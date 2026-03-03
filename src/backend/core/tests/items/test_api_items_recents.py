@@ -65,12 +65,14 @@ def test_api_item_recents_authenticated_with_recent_items():
         parent=child_item,
         type=models.ItemTypeChoices.FILE,
         title="child child file",
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     child_item_file = factories.ItemFactory(
         creator=user,
         parent=child_item,
         type=models.ItemTypeChoices.FILE,
         title="child file",
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     parent2_item = factories.ItemFactory(
@@ -83,6 +85,7 @@ def test_api_item_recents_authenticated_with_recent_items():
         parent=parent2_item,
         type=models.ItemTypeChoices.FILE,
         title="child 2 file",
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     # Make this item the most recent item.
@@ -245,3 +248,34 @@ def test_api_items_recents_filtering(django_assert_num_queries):
     assert content["results"][2]["id"] == str(other_items[1].id)
     assert content["results"][3]["id"] == str(items[2].id)
     assert content["results"][4]["id"] == str(items[1].id)
+
+
+def test_api_item_recents_excludes_pending_items():
+    """Items with upload_state=PENDING should be excluded from recents."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    factories.UserItemAccessFactory(item=parent, user=user, role="editor")
+
+    # Should be visible
+    ready_file = factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    # Should not be visible
+    pending_file = factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+    )
+
+    response = client.get("/api/v1.0/items/recents/")
+
+    assert response.status_code == 200
+    result_ids = [r["id"] for r in response.json()["results"]]
+    assert str(ready_file.id) in result_ids
+    assert str(pending_file.id) not in result_ids
