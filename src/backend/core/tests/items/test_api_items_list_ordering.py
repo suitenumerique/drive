@@ -77,6 +77,133 @@ def test_api_items_list_ordering_default():
         assert operator.ge(results[i]["updated_at"], results[i + 1]["updated_at"])
 
 
+def test_api_items_list_ordering_size():
+    """Validate the ordering of items by size."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item_small = factories.ItemFactory(
+        users=[user],
+        title="small_file",
+        type=models.ItemTypeChoices.FILE,
+        size=100,
+    )
+    item_large = factories.ItemFactory(
+        users=[user],
+        title="large_file",
+        type=models.ItemTypeChoices.FILE,
+        size=999999,
+    )
+    item_no_size = factories.ItemFactory(
+        users=[user],
+        title="folder_no_size",
+        type=models.ItemTypeChoices.FOLDER,
+        size=None,
+    )
+
+    # Ascending: small, large, then nulls last (PostgreSQL default)
+    response = client.get("/api/v1.0/items/?ordering=size")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 3
+    assert results[0]["id"] == str(item_small.id)
+    assert results[1]["id"] == str(item_large.id)
+    assert results[2]["id"] == str(item_no_size.id)
+
+    # Descending: nulls first (PostgreSQL default), then large, then small
+    response = client.get("/api/v1.0/items/?ordering=-size")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 3
+    assert results[0]["id"] == str(item_no_size.id)
+    assert results[1]["id"] == str(item_large.id)
+    assert results[2]["id"] == str(item_small.id)
+
+
+def test_api_items_list_ordering_creator():
+    """Validate the ordering of items by creator full name."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    creator_a = factories.UserFactory(full_name="Alice")
+    creator_z = factories.UserFactory(full_name="Zara")
+
+    item_a = factories.ItemFactory(
+        users=[user],
+        title="item_by_alice",
+        type=models.ItemTypeChoices.FOLDER,
+        creator=creator_a,
+    )
+    item_z = factories.ItemFactory(
+        users=[user],
+        title="item_by_zara",
+        type=models.ItemTypeChoices.FOLDER,
+        creator=creator_z,
+    )
+
+    # Ascending: Alice before Zara
+    response = client.get("/api/v1.0/items/?ordering=creator__full_name")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 2
+    assert results[0]["id"] == str(item_a.id)
+    assert results[1]["id"] == str(item_z.id)
+
+    # Descending: Zara before Alice
+    response = client.get("/api/v1.0/items/?ordering=-creator__full_name")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 2
+    assert results[0]["id"] == str(item_z.id)
+    assert results[1]["id"] == str(item_a.id)
+
+
+def test_api_items_list_ordering_mime_category():
+    """Validate that ordering by mime_category groups items by display category."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item_pdf = factories.ItemFactory(
+        users=[user],
+        title="doc.pdf",
+        type=models.ItemTypeChoices.FILE,
+        mimetype="application/pdf",
+    )
+    item_image = factories.ItemFactory(
+        users=[user],
+        title="photo.png",
+        type=models.ItemTypeChoices.FILE,
+        mimetype="image/png",
+    )
+    item_other = factories.ItemFactory(
+        users=[user],
+        title="notes.md",
+        type=models.ItemTypeChoices.FILE,
+        mimetype="text/markdown",
+    )
+
+    # Ascending: image < other < pdf (alphabetical)
+    response = client.get("/api/v1.0/items/?ordering=mime_category")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 3
+
+    result_ids = [r["id"] for r in results]
+    assert result_ids.index(str(item_image.id)) < result_ids.index(str(item_other.id))
+    assert result_ids.index(str(item_other.id)) < result_ids.index(str(item_pdf.id))
+
+    # Descending: pdf > other > image
+    response = client.get("/api/v1.0/items/?ordering=-mime_category")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    result_ids = [r["id"] for r in results]
+    assert result_ids.index(str(item_pdf.id)) < result_ids.index(str(item_other.id))
+    assert result_ids.index(str(item_other.id)) < result_ids.index(str(item_image.id))
+
+
 def test_api_items_list_ordering_by_fields():
     """It should be possible to order by several fields"""
     user = factories.UserFactory()
