@@ -5,10 +5,7 @@ import {
   useGlobalExplorer,
   generateTreeId,
 } from "../components/GlobalExplorerContext";
-import {
-  useAddItemToPaginatedList,
-  useRemoveItemsFromPaginatedList,
-} from "./useOptimisticPagination";
+import { useRemoveItemsFromPaginatedList } from "./useOptimisticPagination";
 import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
 import {
   useRefreshQueryCacheAfterMutation,
@@ -122,17 +119,14 @@ export const useMutationRenameItem = () => {
 
 export const useMutationCreateFolder = () => {
   const driver = getDriver();
-  const addItemToTopOfPaginatedList = useAddItemToPaginatedList();
+  const refresh = useRefreshQueryCacheAfterMutation();
 
   return useMutation({
     mutationFn: (...payload: Parameters<typeof driver.createFolder>) => {
       return driver.createFolder(...payload);
     },
-    onSuccess: (data, variables) => {
-      const queryKey = variables.parentId
-        ? ["items", variables.parentId, "children"]
-        : ["items", "infinite", JSON.stringify({ is_creator_me: true })];
-      addItemToTopOfPaginatedList(queryKey, data);
+    onSuccess: (_, variables) => {
+      refresh(variables.parentId);
     },
   });
 };
@@ -258,10 +252,7 @@ export const useMutationDeleteFavoriteItem = () => {
         true,
       );
       treeContext?.treeData.deleteNode(rootFavoriteTreeId);
-      removeItems(
-        ["items", "infinite", JSON.stringify({ is_favorite: true })],
-        [itemId],
-      );
+      removeItems(["items", "infinite"], [itemId]);
       refreshItemCache(itemId, { is_favorite: false });
       refreshFavoriteCache(itemId, false);
     },
