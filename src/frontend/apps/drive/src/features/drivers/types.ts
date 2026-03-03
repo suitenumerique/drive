@@ -1,4 +1,5 @@
 import { FooterProps, TreeViewDataType } from "@gouvfr-lasuite/ui-kit";
+import { ColumnPreferences } from "../explorer/types/columns";
 
 export enum ItemType {
   FILE = "file",
@@ -166,6 +167,7 @@ export type User = {
   short_name: string;
   language: string;
   last_release_note_seen?: string | null;
+  column_preferences?: ColumnPreferences | null;
 };
 
 export type LocalizedThemeCustomization<T> = {
