@@ -207,6 +207,20 @@
         "grid": {
           "name": "Name",
           "last_update": "Last Update",
+          "columns": {
+            "last_modified": "Last modified",
+            "created": "Created",
+            "created_by": "Created by",
+            "file_type": "File type",
+            "file_size": "File size",
+            "folder": "Folder",
+            "default_suffix": "(default)"
+          },
+          "sort": {
+            "ascending": "Sort ascending",
+            "descending": "Sort descending",
+            "reset": "Reset sorting"
+          },
           "empty": {
             "default": "No folder found in the selected folder",
             "caption": {
@@ -728,6 +742,20 @@
         "grid": {
           "name": "Nom",
           "last_update": "Dernière modification",
+          "columns": {
+            "last_modified": "Dernière modification",
+            "created": "Création",
+            "created_by": "Créé par",
+            "file_type": "Type de fichier",
+            "file_size": "Taille",
+            "folder": "Dossier",
+            "default_suffix": "(par défaut)"
+          },
+          "sort": {
+            "ascending": "Tri croissant",
+            "descending": "Tri décroissant",
+            "reset": "Réinitialiser le tri"
+          },
           "empty": {
             "default": "Aucun dossier trouvé dans le dossier sélectionné",
             "caption": {
@@ -1259,6 +1287,20 @@
         "grid": {
           "name": "Naam",
           "last_update": "Laatste update",
+          "columns": {
+            "last_modified": "Laatst gewijzigd",
+            "created": "Aangemaakt",
+            "created_by": "Aangemaakt door",
+            "file_type": "Bestandstype",
+            "file_size": "Bestandsgrootte",
+            "folder": "Map",
+            "default_suffix": "(standaard)"
+          },
+          "sort": {
+            "ascending": "Oplopend sorteren",
+            "descending": "Aflopend sorteren",
+            "reset": "Sortering resetten"
+          },
           "empty": {
             "default": "Geen map gevonden in de geselecteerde map",
             "caption": {
