@@ -2,13 +2,9 @@ import { Item } from "@/features/drivers/types";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import clsx from "clsx";
-import { Loader, useCunningham } from "@gouvfr-lasuite/cunningham-react";
 import gridEmpty from "@/assets/grid_empty.png";
 import starEmpty from "@/assets/star_tab_empty.svg";
-import {
-  AppExplorerProps,
-  useAppExplorer,
-} from "@/features/explorer/components/app-view/AppExplorer";
+import { useAppExplorer } from "@/features/explorer/components/app-view/AppExplorer";
 import { EmbeddedExplorerGrid } from "../embedded-explorer/EmbeddedExplorerGrid";
 import {
   addToast,
@@ -19,6 +15,7 @@ import { useRouter } from "next/router";
 import { DefaultRoute, getDefaultRouteId } from "@/utils/defaultRoutes";
 import { useMemo } from "react";
 import { canCreateChildren } from "@/features/items/utils";
+import { Spinner } from "@gouvfr-lasuite/ui-kit";
 
 /**
  * Wrapper around EmbeddedExplorerGrid to display a list of items in a table.
@@ -29,9 +26,10 @@ import { canCreateChildren } from "@/features/items/utils";
  * TODO: Refactor using EmbeddedExplorer
  *
  */
-export const AppExplorerGrid = (props: AppExplorerProps) => {
+export const AppExplorerGrid = () => {
   const { t } = useTranslation();
-  const { t: tc } = useCunningham();
+  const appExplorer = useAppExplorer();
+
   const router = useRouter();
 
   const {
@@ -45,22 +43,22 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
     setPreviewItems,
   } = useGlobalExplorer();
 
-  const { disableItemDragAndDrop } = useAppExplorer();
-  const effectiveOnNavigate = props.onNavigate ?? onNavigate;
+  const effectiveOnNavigate = appExplorer.onNavigate ?? onNavigate;
 
   const handleFileClick = (item: Item) => {
     if (item.url) {
       // We need to ensure the preview items list is updated when clicking on a file from the grid. Because this list
       // can be updated when clicking on a file from the search modal which sets the preview items to a list of one item.
-      setPreviewItems(props.childrenItems ?? []);
+      setPreviewItems(appExplorer.childrenItems ?? []);
       setPreviewItem(item);
     } else {
       addToast(<ToasterItem>{t("explorer.grid.no_url")}</ToasterItem>);
     }
   };
 
-  const isLoading = props.isLoading || props.childrenItems === undefined;
-  const isEmpty = props.childrenItems?.length === 0;
+  const isLoading =
+    appExplorer.isLoading || appExplorer.childrenItems === undefined;
+  const isEmpty = appExplorer.childrenItems?.length === 0;
 
   const canAddChildren = item
     ? canCreateChildren(item, router.pathname)
@@ -88,9 +86,6 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
   }, [defaultRouteId]);
 
   const getContent = () => {
-    if (isLoading) {
-      return <Loader aria-label={tc("components.datagrid.loader_aria")} />;
-    }
     if (isEmpty) {
       return (
         <div className="c__datagrid__empty-placeholder fs-h3 clr-greyscale-900 fw-bold">
@@ -105,7 +100,9 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
           />
           <div className="explorer__grid__empty">
             <div className="explorer__grid__empty__caption">
-              {t(`explorer.grid.empty.caption${emptyCaptionTranslationSuffix}`)}
+              {t(
+                `explorer.grid.empty.caption${emptyCaptionTranslationSuffix}`,
+              )}
             </div>
             <div className="explorer__grid__empty__cta">
               {t(`explorer.grid.empty.cta${emptyCTATranslationSuffix}`)}
@@ -115,30 +112,43 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
       );
     }
 
+    if (!appExplorer.childrenItems) {
+      return null;
+    }
+
     const gridContent = (
       <EmbeddedExplorerGrid
-        items={props.childrenItems}
+        items={appExplorer.childrenItems}
         parentItem={item}
-        gridActionsCell={props.gridActionsCell}
+        gridActionsCell={appExplorer.gridActionsCell}
         onNavigate={effectiveOnNavigate}
         setRightPanelForcedItem={setRightPanelForcedItem}
-        disableItemDragAndDrop={disableItemDragAndDrop}
+        disableItemDragAndDrop={appExplorer.disableItemDragAndDrop}
         selectedItems={selectedItems}
         setSelectedItems={setSelectedItems}
         enableMetaKeySelection={true}
         displayMode={displayMode}
-        canSelect={props.canSelect}
+        canSelect={appExplorer.canSelect}
         onFileClick={handleFileClick}
+        sortState={appExplorer.sortState}
+        onSort={appExplorer.onSort}
+        prefs={appExplorer.prefs}
+        onChangeColumn={appExplorer.onChangeColumn}
+        column1Config={appExplorer.column1Config}
+        column2Config={appExplorer.column2Config}
       />
     );
 
     // If infinite scroll props are provided, wrap with InfiniteScroll
-    if (props.hasNextPage !== undefined && props.fetchNextPage) {
+    if (
+      appExplorer.hasNextPage !== undefined &&
+      appExplorer.fetchNextPage
+    ) {
       return (
         <InfiniteScroll
-          hasNextPage={props.hasNextPage}
-          isFetchingNextPage={props.isFetchingNextPage || false}
-          fetchNextPage={props.fetchNextPage}
+          hasNextPage={appExplorer.hasNextPage}
+          isFetchingNextPage={appExplorer.isFetchingNextPage || false}
+          fetchNextPage={appExplorer.fetchNextPage}
         >
           {gridContent}
         </InfiniteScroll>
@@ -156,6 +166,11 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
       })}
     >
       {getContent()}
+      {isLoading && (
+        <div className="explorer__grid__loading-overlay">
+          <Spinner size="xl" />
+        </div>
+      )}
     </div>
   );
 };

@@ -25,16 +25,23 @@ import { HardDeleteConfirmationModal } from "@/features/explorer/components/moda
 import { messageModalTrashNavigate } from "@/features/explorer/components/trash/utils";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { useDefaultRoute } from "@/hooks/useDefaultRoute";
+
 export default function TrashPage() {
   const { t } = useTranslation();
   const [filters, setFilters] = useState<ItemFilters>({});
-  const { data: trashItems } = useQuery({
+
+  const {
+    data: trashItems,
+    isLoading,
+    isPlaceholderData,
+  } = useQuery({
     queryKey: [
       "items",
       "trash",
       ...(Object.keys(filters).length ? [JSON.stringify(filters)] : []),
     ],
     queryFn: () => getDriver().getTrashItems(filters),
+    placeholderData: (previousData) => previousData,
   });
 
   const modals = useModals();
@@ -43,6 +50,8 @@ export default function TrashPage() {
 
   return (
     <AppExplorer
+      viewConfigKey={DefaultRoute.TRASH}
+      onComputedFiltersChange={setFilters}
       childrenItems={trashItems}
       gridActionsCell={ExplorerGridTrashActionsCell}
       disableItemDragAndDrop={true}
@@ -60,11 +69,10 @@ export default function TrashPage() {
         </div>
       }
       selectionBarActions={<TrashPageSelectionBarActions />}
-      filters={filters}
-      onFiltersChange={setFilters}
       onNavigate={() => {
         messageModalTrashNavigate(modals);
       }}
+      isLoading={isLoading || isPlaceholderData}
     />
   );
 }

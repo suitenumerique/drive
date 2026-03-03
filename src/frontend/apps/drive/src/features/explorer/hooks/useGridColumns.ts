@@ -45,8 +45,8 @@ export function useGridColumns(
     [],
   );
 
-  const col1Config = COLUMN_REGISTRY[prefs.column1];
-  const col2Config = COLUMN_REGISTRY[prefs.column2];
+  const column1Config = COLUMN_REGISTRY[prefs.column1];
+  const column2Config = COLUMN_REGISTRY[prefs.column2];
 
   const ordering = useMemo(
     () => computeOrdering(viewConfig, sortState),
@@ -54,8 +54,8 @@ export function useGridColumns(
   );
 
   return {
-    col1Config,
-    col2Config,
+    column1Config,
+    column2Config,
     sortState,
     cycleSortForColumn,
     setColumn,

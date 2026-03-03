@@ -4,13 +4,20 @@ import { getGlobalExplorerLayout } from "@/features/layouts/components/explorer/
 import { useInfiniteChildren } from "@/features/explorer/hooks/useInfiniteChildren";
 import { useRouter } from "next/router";
 import { useState, useMemo } from "react";
+
 export default function ItemPage() {
   const router = useRouter();
   const itemId = router.query.id as string;
   const [filters, setFilters] = useState<ItemFilters>({});
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteChildren(itemId, filters);
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isPlaceholderData,
+  } = useInfiniteChildren(itemId, filters);
 
   // Flatten all pages into a single array of items
   const itemChildren = useMemo(() => {
@@ -19,13 +26,14 @@ export default function ItemPage() {
 
   return (
     <AppExplorer
+      viewConfigKey="folder"
+      navigationId={itemId}
+      onComputedFiltersChange={setFilters}
       childrenItems={itemChildren}
-      filters={filters}
-      onFiltersChange={setFilters}
       hasNextPage={hasNextPage}
       isFetchingNextPage={isFetchingNextPage}
       fetchNextPage={fetchNextPage}
-      isLoading={isLoading}
+      isLoading={isLoading || isPlaceholderData}
     />
   );
 }

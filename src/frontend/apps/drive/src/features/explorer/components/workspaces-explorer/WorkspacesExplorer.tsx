@@ -2,6 +2,8 @@ import { ItemFilters } from "@/features/drivers/Driver";
 import { AppExplorer } from "@/features/explorer/components/app-view/AppExplorer";
 import { useState, useMemo } from "react";
 import { useInfiniteItems } from "@/features/explorer/hooks/useInfiniteItems";
+import { DefaultRoute } from "@/utils/defaultRoutes";
+import { getFromRoute } from "@/features/explorer/utils/utils";
 
 export type WorkspacesExplorerProps = {
   readonly defaultFilters: ItemFilters;
@@ -13,8 +15,17 @@ export default function WorkspacesExplorer({
 }: WorkspacesExplorerProps) {
   const [filters, setFilters] = useState<ItemFilters>(defaultFilters);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteItems(filters);
+  const viewConfigKey =
+    (getFromRoute() as DefaultRoute | null) ?? DefaultRoute.MY_FILES;
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isPlaceholderData,
+  } = useInfiniteItems(filters);
 
   // Flatten all pages into a single array of items
   const itemChildren = useMemo(() => {
@@ -23,14 +34,16 @@ export default function WorkspacesExplorer({
 
   return (
     <AppExplorer
+      key={viewConfigKey}
+      viewConfigKey={viewConfigKey}
+      defaultBaseFilters={defaultFilters}
+      onComputedFiltersChange={setFilters}
       childrenItems={itemChildren}
-      filters={filters}
-      onFiltersChange={setFilters}
       hasNextPage={hasNextPage}
       showFilters={showFilters}
       isFetchingNextPage={isFetchingNextPage}
       fetchNextPage={fetchNextPage}
-      isLoading={isLoading}
+      isLoading={isLoading || isPlaceholderData}
     />
   );
 }

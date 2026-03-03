@@ -3,7 +3,7 @@ import { SelectionArea, SelectionEvent } from "@viselect/react";
 import clsx from "clsx";
 import { Item } from "@/features/drivers/types";
 import { useEffect, useRef } from "react";
-import { AppExplorerProps } from "./AppExplorer";
+import { useAppExplorer } from "./AppExplorer";
 import {
   ContextMenu,
   HorizontalSeparator,
@@ -26,7 +26,8 @@ export type FileUploadMeta = { file: File; progress: number };
  * - Selection bar
  * - Filters
  */
-export const AppExplorerInner = (props: AppExplorerProps) => {
+export const AppExplorerInner = () => {
+  const appExplorer = useAppExplorer();
   const {
     setSelectedItems,
     itemId,
@@ -35,7 +36,7 @@ export const AppExplorerInner = (props: AppExplorerProps) => {
     selectedItems,
     dropZone,
   } = useGlobalExplorer();
-  const showFilters = props.showFilters ?? true;
+  const showFilters = appExplorer.showFilters ?? true;
   const ref = useRef<Item[]>([]);
   ref.current = selectedItems;
   const onSelectionStart = ({ event, selection }: SelectionEvent) => {
@@ -47,7 +48,9 @@ export const AppExplorerInner = (props: AppExplorerProps) => {
   };
 
   const getChildItem = (id: string): Item => {
-    const child = props.childrenItems?.find((childItem) => childItem.id === id);
+    const child = appExplorer.childrenItems?.find(
+      (childItem) => childItem.id === id,
+    );
     if (!child) {
       throw new Error("Cannot find child with id " + id);
     }
@@ -175,10 +178,14 @@ export const AppExplorerInner = (props: AppExplorerProps) => {
             )}
 
             <div className="explorer__content">
-              {props.gridHeader ? props.gridHeader : <AppExplorerBreadcrumbs />}
+              {appExplorer.gridHeader ? (
+                appExplorer.gridHeader
+              ) : (
+                <AppExplorerBreadcrumbs />
+              )}
 
               <div className="explorer__grid__container">
-                <AppExplorerGrid {...props} />
+                <AppExplorerGrid />
               </div>
             </div>
           </div>
@@ -187,7 +194,7 @@ export const AppExplorerInner = (props: AppExplorerProps) => {
     );
   };
 
-  if (isTablet || props.disableAreaSelection) {
+  if (isTablet || appExplorer.disableAreaSelection) {
     return (
       <>
         {renderContent()}

@@ -1,4 +1,5 @@
 import { Item } from "../drivers/types";
+import { ColumnPreferences } from "../explorer/types/columns";
 
 /**
  * Represents user retrieved from the API.
@@ -13,4 +14,5 @@ export interface User {
   language: string | null;
   main_workspace: Item;
   last_release_note_seen?: string | null;
+  column_preferences?: ColumnPreferences | null;
 }
