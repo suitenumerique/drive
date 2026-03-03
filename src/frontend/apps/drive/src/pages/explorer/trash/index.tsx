@@ -20,21 +20,40 @@ import undoIcon from "@/assets/icons/undo_blue.svg";
 import cancelIcon from "@/assets/icons/cancel_blue.svg";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import { ItemFilters } from "@/features/drivers/Driver";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { HardDeleteConfirmationModal } from "@/features/explorer/components/modals/HardDeleteConfirmationModal";
 import { messageModalTrashNavigate } from "@/features/explorer/components/trash/utils";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { useDefaultRoute } from "@/hooks/useDefaultRoute";
+import { useGridColumns } from "@/features/explorer/hooks/useGridColumns";
+import { computeFilters } from "@/features/explorer/utils/ordering";
 export default function TrashPage() {
   const { t } = useTranslation();
   const [filters, setFilters] = useState<ItemFilters>({});
-  const { data: trashItems } = useQuery({
+
+  const {
+    col1Config,
+    col2Config,
+    sortState,
+    cycleSortForColumn,
+    setColumn,
+    prefs,
+    viewConfig,
+  } = useGridColumns(DefaultRoute.TRASH);
+
+  const finalFilters = useMemo(
+    () => computeFilters(viewConfig, filters, sortState),
+    [viewConfig, filters, sortState],
+  );
+
+  const { data: trashItems, isLoading, isPlaceholderData } = useQuery({
     queryKey: [
       "items",
       "trash",
-      ...(Object.keys(filters).length ? [JSON.stringify(filters)] : []),
+      ...(Object.keys(finalFilters).length ? [JSON.stringify(finalFilters)] : []),
     ],
-    queryFn: () => getDriver().getTrashItems(filters),
+    queryFn: () => getDriver().getTrashItems(finalFilters),
+    placeholderData: (previousData) => previousData,
   });
 
   const modals = useModals();
@@ -65,6 +84,13 @@ export default function TrashPage() {
       onNavigate={() => {
         messageModalTrashNavigate(modals);
       }}
+      sortState={sortState}
+      onSort={cycleSortForColumn}
+      prefs={prefs}
+      onChangeColumn={setColumn}
+      col1Config={col1Config}
+      col2Config={col2Config}
+      isLoading={isLoading || isPlaceholderData}
     />
   );
 }

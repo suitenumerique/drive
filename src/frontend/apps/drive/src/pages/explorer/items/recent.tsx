@@ -6,13 +6,37 @@ import { AppExplorer } from "@/features/explorer/components/app-view/AppExplorer
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { useDefaultRoute } from "@/hooks/useDefaultRoute";
 import { ItemType } from "@/features/drivers/types";
+import { useGridColumns } from "@/features/explorer/hooks/useGridColumns";
+import { computeFilters } from "@/features/explorer/utils/ordering";
+
 export default function RecentPage() {
   const [filters, setFilters] = useState<ItemFilters>({
     type: ItemType.FILE,
   });
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteRecentItems(filters);
+  const {
+    col1Config,
+    col2Config,
+    sortState,
+    cycleSortForColumn,
+    setColumn,
+    prefs,
+    viewConfig,
+  } = useGridColumns(DefaultRoute.RECENT);
+
+  const finalFilters = useMemo(
+    () => computeFilters(viewConfig, filters, sortState),
+    [viewConfig, filters, sortState],
+  );
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isPlaceholderData,
+  } = useInfiniteRecentItems(finalFilters);
 
   // Flatten all pages into a single array of items
   const itemChildren = useMemo(() => {
@@ -30,7 +54,13 @@ export default function RecentPage() {
       showFilters={true}
       isFetchingNextPage={isFetchingNextPage}
       fetchNextPage={fetchNextPage}
-      isLoading={isLoading}
+      isLoading={isLoading || isPlaceholderData}
+      sortState={sortState}
+      onSort={cycleSortForColumn}
+      prefs={prefs}
+      onChangeColumn={setColumn}
+      col1Config={col1Config}
+      col2Config={col2Config}
     />
   );
 }

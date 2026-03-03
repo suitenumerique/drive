@@ -40,7 +40,6 @@ export class StandardDriver extends Driver {
     const params = {
       page: 1,
       page_size: 100,
-      ordering: "-type,-created_at",
       ...(filters ? filters : {}),
     };
     const response = await fetchAPI(`items/`, {
@@ -126,7 +125,6 @@ export class StandardDriver extends Driver {
     const params = {
       page: 1,
       page_size: filters?.page_size || 200,
-      ordering: "-type,-created_at",
       ...(filters ? filters : {}),
     };
 

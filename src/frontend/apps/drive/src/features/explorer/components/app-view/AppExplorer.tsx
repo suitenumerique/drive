@@ -4,6 +4,12 @@ import { ItemFilters } from "@/features/drivers/Driver";
 import { EmbeddedExplorerGridActionsCellProps } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridActionsCell";
 import { NavigationEvent } from "@/features/explorer/components/GlobalExplorerContext";
 import { AppExplorerInner } from "./AppExplorerInner";
+import {
+  ColumnConfig,
+  ColumnPreferences,
+  ColumnType,
+  SortState,
+} from "../../types/columns";
 
 export interface AppExplorerProps {
   childrenItems?: Item[];
@@ -26,6 +32,13 @@ export interface AppExplorerProps {
   isLoading?: boolean;
   isMinimalLayout?: boolean;
   showFilters?: boolean;
+  // Custom columns
+  sortState?: SortState;
+  onSort?: (columnId: "title" | ColumnType) => void;
+  prefs?: ColumnPreferences;
+  onChangeColumn?: (slot: "column1" | "column2", type: ColumnType) => void;
+  col1Config?: ColumnConfig;
+  col2Config?: ColumnConfig;
 }
 
 export type AppExplorerType = AppExplorerProps;
