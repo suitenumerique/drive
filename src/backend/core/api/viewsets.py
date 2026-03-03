@@ -313,7 +313,7 @@ class ItemViewSet(
     5. **Media Auth**: Authorize access to item media.
         Example: GET /items/media-auth/
 
-    ### Ordering: created_at, updated_at, is_favorite, title
+    ### Ordering: created_at, creator__full_name, size, title, type, updated_at
 
         Example:
         - Ascending: GET /api/v1.0/items/?ordering=created_at
@@ -341,7 +341,15 @@ class ItemViewSet(
 
     metadata_class = ItemMetadata
     ordering = ["-updated_at"]
-    ordering_fields = ["created_at", "updated_at", "title", "type"]
+    ordering_fields = [
+        "created_at",
+        "creator__full_name",
+        "mime_category",
+        "size",
+        "title",
+        "type",
+        "updated_at",
+    ]
     pagination_class = Pagination
     permission_classes = [
         permissions.ItemPermission,
@@ -670,6 +678,9 @@ class ItemViewSet(
             queryset, filter_data["is_favorite"]
         )
 
+        # Annotate mime_category for ordering by file type category
+        queryset = queryset.annotate_mime_category()
+
         # Apply ordering only now that everyting is filtered and annotated
         queryset = filters.OrderingFilter().filter_queryset(
             self.request, queryset, self
@@ -844,6 +855,14 @@ class ItemViewSet(
 
         queryset = queryset.filter(id__in=favorite_items_ids)
 
+        # Annotate mime_category for ordering by file type category
+        queryset = queryset.annotate_mime_category()
+
+        # Apply ordering only now that everything is filtered and annotated
+        queryset = filters.OrderingFilter().filter_queryset(
+            self.request, queryset, self
+        )
+
         return self.get_response_for_queryset(
             queryset, with_ancestors_link_definition=True
         )
@@ -889,6 +908,14 @@ class ItemViewSet(
         if not filterset.is_valid():
             raise drf.exceptions.ValidationError(filterset.errors)
         queryset = filterset.qs
+
+        # Annotate mime_category for ordering by file type category
+        queryset = queryset.annotate_mime_category()
+
+        # Apply ordering only now that everything is filtered and annotated
+        queryset = filters.OrderingFilter().filter_queryset(
+            self.request, queryset, self
+        )
 
         # Only annotate with user roles for the filtered set if needed by serializer
         queryset = queryset.annotate_user_roles(user)
@@ -1052,6 +1079,9 @@ class ItemViewSet(
             raise drf.exceptions.ValidationError(filterset.errors)
         queryset = filterset.qs
 
+        # Annotate mime_category for ordering by file type category
+        queryset = queryset.annotate_mime_category()
+
         # Apply ordering only now that everything is filtered and annotated
         queryset = filters.OrderingFilter().filter_queryset(
             self.request, queryset, self
@@ -1189,7 +1219,13 @@ class ItemViewSet(
         queryset = queryset.annotate_is_favorite(user)
         queryset = queryset.annotate_user_roles(user)
 
-        queryset = queryset.order_by("-updated_at")
+        # Annotate mime_category for ordering by file type category
+        queryset = queryset.annotate_mime_category()
+
+        # Apply ordering only now that everything is filtered and annotated
+        queryset = filters.OrderingFilter().filter_queryset(
+            self.request, queryset, self
+        )
 
         return self.get_response_for_queryset(
             queryset, with_ancestors_link_definition=True

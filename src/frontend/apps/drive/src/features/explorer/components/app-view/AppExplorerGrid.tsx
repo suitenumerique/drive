@@ -2,7 +2,6 @@ import { Item } from "@/features/drivers/types";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import clsx from "clsx";
-import { Loader, useCunningham } from "@gouvfr-lasuite/cunningham-react";
 import gridEmpty from "@/assets/grid_empty.png";
 import starEmpty from "@/assets/star_tab_empty.svg";
 import {
@@ -19,6 +18,7 @@ import { useRouter } from "next/router";
 import { DefaultRoute, getDefaultRouteId } from "@/utils/defaultRoutes";
 import { useMemo } from "react";
 import { canCreateChildren } from "@/features/items/utils";
+import { Spinner } from "@gouvfr-lasuite/ui-kit";
 
 /**
  * Wrapper around EmbeddedExplorerGrid to display a list of items in a table.
@@ -31,7 +31,7 @@ import { canCreateChildren } from "@/features/items/utils";
  */
 export const AppExplorerGrid = (props: AppExplorerProps) => {
   const { t } = useTranslation();
-  const { t: tc } = useCunningham();
+
   const router = useRouter();
 
   const {
@@ -88,9 +88,6 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
   }, [defaultRouteId]);
 
   const getContent = () => {
-    if (isLoading) {
-      return <Loader aria-label={tc("components.datagrid.loader_aria")} />;
-    }
     if (isEmpty) {
       return (
         <div className="c__datagrid__empty-placeholder fs-h3 clr-greyscale-900 fw-bold">
@@ -115,6 +112,10 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
       );
     }
 
+    if (!props.childrenItems) {
+      return null;
+    }
+
     const gridContent = (
       <EmbeddedExplorerGrid
         items={props.childrenItems}
@@ -129,6 +130,12 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
         displayMode={displayMode}
         canSelect={props.canSelect}
         onFileClick={handleFileClick}
+        sortState={props.sortState}
+        onSort={props.onSort}
+        prefs={props.prefs}
+        onChangeColumn={props.onChangeColumn}
+        col1Config={props.col1Config}
+        col2Config={props.col2Config}
       />
     );
 
@@ -156,6 +163,11 @@ export const AppExplorerGrid = (props: AppExplorerProps) => {
       })}
     >
       {getContent()}
+      {isLoading && (
+        <div className="explorer__grid__loading-overlay">
+          <Spinner size="xl" />
+        </div>
+      )}
     </div>
   );
 };

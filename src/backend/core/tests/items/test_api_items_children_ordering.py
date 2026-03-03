@@ -123,6 +123,176 @@ def test_api_items_children_ordering_title():
     assert results[1]["id"] == str(item.id)
 
 
+def test_api_items_children_ordering_size():
+    """Validate the ordering of children items by size."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(users=[user], type=models.ItemTypeChoices.FOLDER)
+    item_small = factories.ItemFactory(
+        parent=root,
+        users=[user],
+        title="small_file",
+        type=models.ItemTypeChoices.FILE,
+        size=100,
+    )
+    item_large = factories.ItemFactory(
+        parent=root,
+        users=[user],
+        title="large_file",
+        type=models.ItemTypeChoices.FILE,
+        size=999999,
+    )
+    item_no_size = factories.ItemFactory(
+        parent=root,
+        users=[user],
+        title="folder_no_size",
+        type=models.ItemTypeChoices.FOLDER,
+        size=None,
+    )
+
+    # Ascending: small, large, then nulls last (PostgreSQL default)
+    response = client.get(f"/api/v1.0/items/{root.id}/children/?ordering=size")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 3
+    assert results[0]["id"] == str(item_small.id)
+    assert results[1]["id"] == str(item_large.id)
+    assert results[2]["id"] == str(item_no_size.id)
+
+    # Descending: nulls first (PostgreSQL default), then large, then small
+    response = client.get(f"/api/v1.0/items/{root.id}/children/?ordering=-size")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 3
+    assert results[0]["id"] == str(item_no_size.id)
+    assert results[1]["id"] == str(item_large.id)
+    assert results[2]["id"] == str(item_small.id)
+
+
+def test_api_items_children_ordering_creator():
+    """Validate the ordering of children items by creator full name."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    creator_a = factories.UserFactory(full_name="Alice")
+    creator_z = factories.UserFactory(full_name="Zara")
+
+    root = factories.ItemFactory(users=[user], type=models.ItemTypeChoices.FOLDER)
+    item_a = factories.ItemFactory(
+        parent=root,
+        users=[user],
+        title="item_by_alice",
+        type=models.ItemTypeChoices.FOLDER,
+        creator=creator_a,
+    )
+    item_z = factories.ItemFactory(
+        parent=root,
+        users=[user],
+        title="item_by_zara",
+        type=models.ItemTypeChoices.FOLDER,
+        creator=creator_z,
+    )
+
+    # Ascending: Alice before Zara
+    response = client.get(
+        f"/api/v1.0/items/{root.id}/children/?ordering=creator__full_name"
+    )
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 2
+    assert results[0]["id"] == str(item_a.id)
+    assert results[1]["id"] == str(item_z.id)
+
+    # Descending: Zara before Alice
+    response = client.get(
+        f"/api/v1.0/items/{root.id}/children/?ordering=-creator__full_name"
+    )
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 2
+    assert results[0]["id"] == str(item_z.id)
+    assert results[1]["id"] == str(item_a.id)
+
+
+def test_api_items_children_ordering_mime_category():
+    """Validate that ordering by mime_category groups items by display category."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(users=[user], type=models.ItemTypeChoices.FOLDER)
+
+    item_pdf = factories.ItemFactory(
+        parent=root,
+        users=[user],
+        title="doc.pdf",
+        type=models.ItemTypeChoices.FILE,
+        mimetype="application/pdf",
+    )
+    item_image = factories.ItemFactory(
+        parent=root,
+        users=[user],
+        title="photo.png",
+        type=models.ItemTypeChoices.FILE,
+        mimetype="image/png",
+    )
+    item_svg = factories.ItemFactory(
+        parent=root,
+        users=[user],
+        title="logo.svg",
+        type=models.ItemTypeChoices.FILE,
+        mimetype="image/svg+xml",
+    )
+    item_other = factories.ItemFactory(
+        parent=root,
+        users=[user],
+        title="notes.md",
+        type=models.ItemTypeChoices.FILE,
+        mimetype="text/markdown",
+    )
+    item_folder = factories.ItemFactory(
+        parent=root,
+        users=[user],
+        title="My Folder",
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
+    # Ascending: categories alphabetically → folder, image, other, pdf
+    response = client.get(f"/api/v1.0/items/{root.id}/children/?ordering=mime_category")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 5
+
+    result_ids = [r["id"] for r in results]
+
+    # folder < image < other < pdf (alphabetical)
+    assert result_ids.index(str(item_folder.id)) < result_ids.index(str(item_image.id))
+    assert result_ids.index(str(item_image.id)) < result_ids.index(str(item_other.id))
+    assert result_ids.index(str(item_other.id)) < result_ids.index(str(item_pdf.id))
+
+    # Both images should be next to each other
+    image_positions = [
+        result_ids.index(str(item_image.id)),
+        result_ids.index(str(item_svg.id)),
+    ]
+    assert abs(image_positions[0] - image_positions[1]) == 1
+
+    # Descending: pdf, other, image, folder
+    response = client.get(
+        f"/api/v1.0/items/{root.id}/children/?ordering=-mime_category"
+    )
+    assert response.status_code == 200
+    results = response.json()["results"]
+    result_ids = [r["id"] for r in results]
+
+    assert result_ids.index(str(item_pdf.id)) < result_ids.index(str(item_other.id))
+    assert result_ids.index(str(item_other.id)) < result_ids.index(str(item_image.id))
+    assert result_ids.index(str(item_image.id)) < result_ids.index(str(item_folder.id))
+
+
 def test_api_items_children_ordering_combining_type_and_title():
     """Validate the ordering of items by type and title."""
     user = factories.UserFactory()

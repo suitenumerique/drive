@@ -342,6 +342,67 @@ class ItemQuerySet(TreeQuerySet):
             **kwargs,
         )
 
+    def annotate_mime_category(self):
+        """
+        Annotate item queryset with a mime_category field that groups
+        mimetypes into display categories (pdf, image, doc, etc.).
+        This allows ordering by visual category rather than raw mimetype.
+        """
+        return self.annotate(
+            mime_category=models.Case(
+                models.When(type="folder", then=models.Value("folder")),
+                models.When(mimetype="application/pdf", then=models.Value("pdf")),
+                models.When(
+                    mimetype__in=[
+                        "application/vnd.openxmlformats-officedocument"
+                        ".wordprocessingml.document",
+                        "application/vnd.oasis.opendocument.text",
+                    ],
+                    then=models.Value("doc"),
+                ),
+                models.When(
+                    mimetype__in=[
+                        "application/vnd.openxmlformats-officedocument"
+                        ".spreadsheetml.sheet",
+                        "application/vnd.oasis.opendocument.spreadsheet",
+                        "text/csv",
+                    ],
+                    then=models.Value("calc"),
+                ),
+                models.When(
+                    mimetype__in=[
+                        "application/vnd.openxmlformats-officedocument"
+                        ".presentationml.presentation",
+                        "application/vnd.oasis.opendocument.presentation",
+                    ],
+                    then=models.Value("powerpoint"),
+                ),
+                models.When(mimetype__startswith="image/", then=models.Value("image")),
+                models.When(mimetype__startswith="audio/", then=models.Value("audio")),
+                models.When(mimetype__startswith="video/", then=models.Value("video")),
+                models.When(
+                    mimetype__in=[
+                        "application/zip",
+                        "application/x-7z-compressed",
+                        "application/x-rar-compressed",
+                        "application/x-tar",
+                        "application/x-rar",
+                        "application/octet-stream",
+                    ],
+                    then=models.Value("archive"),
+                ),
+                models.When(
+                    mimetype__in=[
+                        "application/x-sqlite3",
+                        "application/vnd.sqlite3",
+                    ],
+                    then=models.Value("sqlite"),
+                ),
+                default=models.Value("other"),
+                output_field=models.CharField(),
+            )
+        )
+
     def annotate_is_favorite(self, user):
         """
         Annotate item queryset with the favorite status for the current user.

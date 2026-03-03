@@ -15,6 +15,7 @@ import { useSyncUserLanguage } from "../../hooks/useSyncUserLanguage";
 import { Item } from "@/features/drivers/types";
 import { ReleaseNoteAuto } from "@/features/ui/components/release-note";
 import { setManualNavigationItemId } from "@/features/explorer/utils/utils";
+import { ColumnPreferencesProvider } from "@/features/explorer/hooks/useColumnPreferences";
 
 export const getGlobalExplorerLayout = (page: React.ReactElement) => {
   return <GlobalExplorerLayout>{page}</GlobalExplorerLayout>;
@@ -27,8 +28,10 @@ export const GlobalExplorerLayout = ({
 }) => {
   return (
     <GlobalLayout>
-      <ReleaseNoteAuto />
-      <ExplorerLayout>{children}</ExplorerLayout>
+      <ColumnPreferencesProvider>
+        <ReleaseNoteAuto />
+        <ExplorerLayout>{children}</ExplorerLayout>
+      </ColumnPreferencesProvider>
     </GlobalLayout>
   );
 };

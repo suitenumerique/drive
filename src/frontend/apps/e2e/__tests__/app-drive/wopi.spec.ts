@@ -2,6 +2,7 @@ import path from "path";
 import test, { expect } from "@playwright/test";
 import { clearDb, login } from "./utils-common";
 import { clickToMyFiles } from "./utils-navigate";
+import { getRowItem } from "./utils-embedded-grid";
 import { uploadFile } from "./utils/upload-utils";
 import { grantClipboardPermissions } from "./utils/various-utils";
 
@@ -19,12 +20,10 @@ test("Copy and paste works in wopi editor", async ({ page, context, browserName 
 
   // Wait for the file to be uploaded and visible in the list
   await expect(page.getByText("Drop your files here")).not.toBeVisible();
-  await expect(page.getByRole("cell", { name: "empty_doc.docx" })).toBeVisible({
-    timeout: 10000,
-  });
 
-  // Click on the HEIC file to open the preview
-  await page.getByRole("cell", { name: "empty_doc.docx" }).dblclick();
+  // Click on the file to open the preview
+  const row = await getRowItem(page, "empty_doc");
+  await row.dblclick();
 
   // Check that the file preview is visible
   const filePreview = page.getByTestId("file-preview");
