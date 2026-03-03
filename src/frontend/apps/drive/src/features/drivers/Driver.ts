@@ -28,17 +28,6 @@ export enum ItemFiltersScope {
   NOT_DELETED = "not_deleted",
 }
 
-export enum ItemFiltersOrdering {
-  CREATED_AT_ASC = "created_at",
-  CREATED_AT_DESC = "-created_at",
-  UPDATED_AT_ASC = "updated_at",
-  UPDATED_AT_DESC = "-updated_at",
-  TITLE_ASC = "title",
-  TITLE_DESC = "-title",
-  TYPE_ASC = "type",
-  TYPE_DESC = "-type",
-}
-
 export type ItemFilters = {
   type?: ItemType;
   title?: string;
