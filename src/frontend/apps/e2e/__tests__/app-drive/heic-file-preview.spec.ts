@@ -2,6 +2,7 @@ import test, { expect } from "@playwright/test";
 import { clearDb, login } from "./utils-common";
 import path from "path";
 import { clickToMyFiles } from "./utils-navigate";
+import { getRowItem } from "./utils-embedded-grid";
 import { uploadFile } from "./utils/upload-utils";
 
 test("Display HEIC not supported message when opening a HEIC file", async ({
@@ -21,14 +22,10 @@ test("Display HEIC not supported message when opening a HEIC file", async ({
 
   // Wait for the file to be uploaded and visible in the list
   await expect(page.getByText("Drop your files here")).not.toBeVisible();
-  await expect(page.getByRole("cell", { name: "test-image.heic" })).toBeVisible(
-    {
-      timeout: 10000,
-    },
-  );
 
   // Click on the HEIC file to open the preview
-  await page.getByRole("cell", { name: "test-image.heic" }).dblclick();
+  const row = await getRowItem(page, "test-image");
+  await row.dblclick();
 
   // Check that the file preview is visible
   const filePreview = page.getByTestId("file-preview");

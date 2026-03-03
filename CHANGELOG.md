@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(global) add custom columns feature with configurable grid columns
+- ✨(backend) add mime_category annotation and new ordering fields
+
 ### Changed
 
 - ⚡️(CI) optimize Docker Hub workflow
