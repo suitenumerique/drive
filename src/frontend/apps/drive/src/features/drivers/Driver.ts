@@ -37,6 +37,10 @@ export enum ItemFiltersOrdering {
   TITLE_DESC = "-title",
   TYPE_ASC = "type",
   TYPE_DESC = "-type",
+  SIZE_ASC = "size",
+  SIZE_DESC = "-size",
+  CREATOR_ASC = "creator__full_name",
+  CREATOR_DESC = "-creator__full_name",
 }
 
 export type ItemFilters = {
