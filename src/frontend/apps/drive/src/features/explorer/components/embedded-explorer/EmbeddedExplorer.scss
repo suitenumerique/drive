@@ -2,6 +2,7 @@
 @use "@/styles/cunningham-tokens-sass" as *;
 
 $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
+$xl: map.get($themes, "default", "globals", "breakpoints", "xl");
 
 /**
  * Mixin to apply border and background to a row of a datagrid.
@@ -237,9 +238,20 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
   }
 
   &.c__datagrid--loading {
-    min-height: 400px;
-    align-items: center;
+    position: relative;
+  }
+
+  &__loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
     justify-content: center;
+    padding-top: 100px;
+    z-index: 1;
   }
 
   .c__datagrid__empty-placeholder {
@@ -346,6 +358,76 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
     }
   }
 
+  // Header components
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    &__label {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--c--contextuals--content--semantic--neutral--tertiary);
+    }
+
+    &__column-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      font-size: inherit;
+      font-weight: inherit;
+      font-family: inherit;
+      color: inherit;
+
+      &:hover {
+        background-color: var(
+          --c--components--datagrid--body--background-color-hover
+        );
+      }
+    }
+
+    &__sort-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px;
+      border-radius: 4px;
+      color: var(--c--contextuals--content--semantic--neutral--tertiary);
+
+      &:hover {
+        background-color: var(
+          --c--components--datagrid--body--background-color-hover
+        );
+      }
+
+      &--active {
+        color: var(--c--contextuals--content--semantic--brand--primary);
+      }
+    }
+  }
+
+  // Hide info-col-2 before tablet (at xl breakpoint)
+  &__th--info-col-2 {
+    @media (max-width: $xl) {
+      display: none;
+    }
+  }
+
+  table tbody td:nth-child(4) {
+    @media (max-width: $xl) {
+      display: none;
+    }
+  }
+
   @media (max-width: $tablet) {
     table {
       tr td:first-child,
@@ -370,12 +452,15 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
           display: table-cell;
         }
 
+        // Hide title, info-col-1, info-col-2 columns on mobile
         th:nth-child(2),
-        th:nth-child(3) {
+        th:nth-child(3),
+        th:nth-child(4) {
           display: none;
         }
 
-        th:nth-child(4) {
+        // Actions column
+        th:nth-child(5) {
           display: table-cell;
           width: 40px;
         }
@@ -386,12 +471,15 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
           display: table-cell;
         }
 
+        // Hide title, info-col-1, info-col-2
         td:nth-child(2),
-        td:nth-child(3) {
+        td:nth-child(3),
+        td:nth-child(4) {
           display: none;
         }
 
-        td:nth-child(4) {
+        // Actions column
+        td:nth-child(5) {
           height: 48px;
         }
       }
