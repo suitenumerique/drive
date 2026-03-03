@@ -11,6 +11,7 @@ const config: Config = {
     // Handle static assets FIRST (before path aliases)
     "\\.(css|less|scss|sass|svg|png|jpg|jpeg|gif)$":
       "<rootDir>/__mocks__/fileMock.js",
+    "^pretty-bytes$": "<rootDir>/__mocks__/pretty-bytes.js",
     // Then handle path aliases
     ...pathsToModuleNameMapper(tsconfig.compilerOptions.paths || {}, {
       prefix: "<rootDir>/",
@@ -21,7 +22,7 @@ const config: Config = {
       "ts-jest",
       {
         tsconfig: {
-          jsx: "react",
+          jsx: "react-jsx",
           moduleResolution: "node",
         },
       },

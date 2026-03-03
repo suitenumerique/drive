@@ -1,5 +1,5 @@
 declare module "*.svg" {
-  const content: string;
+  const content: { src: string; height: number; width: number };
   export default content;
 }
 

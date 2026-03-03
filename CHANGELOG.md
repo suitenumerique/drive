@@ -13,6 +13,7 @@ and this project adheres to
 - ✨(frontend) add PDF viewer with thumbnail sidebar, zoom and page navigation
 - ✨(frontend) integrate PDF viewer into file preview modal
 - 📝(doc) add local network setup documentation
+- ✨(global) add custom columns feature with configurable grid columns
 
 ### Changed
 
