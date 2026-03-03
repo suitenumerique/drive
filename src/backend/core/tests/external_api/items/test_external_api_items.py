@@ -604,7 +604,9 @@ def test_api_items_trashbin_resource_server_allowed(
     # Create a soft-deleted item owned by the user
     now = timezone.now() - timedelta(days=15)
     item = factories.ItemFactory(
-        link_reach=models.LinkReachChoices.RESTRICTED, deleted_at=now
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        deleted_at=now,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     factories.UserItemAccessFactory(
         item=item, user=user_specific_sub, role=models.RoleChoices.OWNER

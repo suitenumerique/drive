@@ -46,6 +46,7 @@ def test_api_items_trashbin_format(settings):
         users=factories.UserFactory.create_batch(2),
         favorited_by=[user, *other_users],
         link_traces=other_users,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     factories.UserItemAccessFactory(item=item, user=user, role="owner")
 
@@ -86,11 +87,15 @@ def test_api_items_trashbin_format(settings):
         "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
         "user_role": "owner",
         "type": item.type,
-        "upload_state": models.ItemUploadStateChoices.PENDING
+        "upload_state": models.ItemUploadStateChoices.READY
         if item.type == models.ItemTypeChoices.FILE
         else None,
-        "url": None,
-        "url_permalink": None,
+        "url": f"http://localhost:8083/media/item/{item.id!s}/{item.filename}"
+        if item.type == models.ItemTypeChoices.FILE
+        else None,
+        "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/"
+        if item.type == models.ItemTypeChoices.FILE
+        else None,
         "url_preview": None,
         "mimetype": None,
         "main_workspace": False,
@@ -132,7 +137,10 @@ def test_api_items_trashbin_authenticated_direct(django_assert_num_queries):
     # Nested items should also get listed
     parent = factories.ItemFactory(parent=item1, type=models.ItemTypeChoices.FOLDER)
     item3 = factories.ItemFactory(
-        parent=parent, deleted_at=now, type=models.ItemTypeChoices.FILE
+        parent=parent,
+        deleted_at=now,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     models.ItemAccess.objects.create(item=parent, user=user, role="owner")
 
@@ -171,7 +179,11 @@ def test_api_items_trashbin_list_filter_type():
     )
     factories.UserItemAccessFactory(item=item_folder, user=user, role="owner")
 
-    item_file = factories.ItemFactory(type=models.ItemTypeChoices.FILE, deleted_at=now)
+    item_file = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        deleted_at=now,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
     factories.UserItemAccessFactory(item=item_file, user=user, role="owner")
 
     # No filtering, make sure the two items are present.
@@ -221,13 +233,19 @@ def test_api_items_trashbin_authenticated_via_team(
     mock_user_teams.return_value = ["team1", "team2", "unknown"]
 
     deleted_item_team1 = factories.ItemFactory(
-        teams=[("team1", "owner")], deleted_at=now, type=models.ItemTypeChoices.FILE
+        teams=[("team1", "owner")],
+        deleted_at=now,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     factories.ItemFactory(teams=[("team1", "owner")])
     factories.ItemFactory(teams=[("team1", "administrator")], deleted_at=now)
     factories.ItemFactory(teams=[("team1", "administrator")])
     deleted_item_team2 = factories.ItemFactory(
-        teams=[("team2", "owner")], deleted_at=now, type=models.ItemTypeChoices.FILE
+        teams=[("team2", "owner")],
+        deleted_at=now,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
     factories.ItemFactory(teams=[("team2", "owner")])
     factories.ItemFactory(teams=[("team2", "administrator")], deleted_at=now)
@@ -260,7 +278,11 @@ def test_api_items_trashbin_pagination(
 
     item_ids = [
         str(item.id)
-        for item in factories.ItemFactory.create_batch(3, deleted_at=timezone.now())
+        for item in factories.ItemFactory.create_batch(
+            3,
+            deleted_at=timezone.now(),
+            update_upload_state=models.ItemUploadStateChoices.READY,
+        )
     ]
     for item_id in item_ids:
         models.ItemAccess.objects.create(item_id=item_id, user=user, role="owner")
@@ -305,7 +327,9 @@ def test_api_items_trashbin_distinct():
 
     other_user = factories.UserFactory()
     item = factories.ItemFactory(
-        users=[(user, "owner"), other_user], deleted_at=timezone.now()
+        users=[(user, "owner"), other_user],
+        deleted_at=timezone.now(),
+        update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
     response = client.get(
