@@ -17,6 +17,8 @@ and this project adheres to
 
 - ⚡️(CI) optimize Docker Hub workflow
 - ♻️(frontend) replace WorkspaceIcon with FolderIcon in breadcrumbs
+- ✨(backend) exclude pending items from listing views
+- ✨(frontend) scale upload progress to 90% before completion
 
 ### Removed
 
