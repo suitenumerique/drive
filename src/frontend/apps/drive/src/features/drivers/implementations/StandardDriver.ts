@@ -372,13 +372,13 @@ export class StandardDriver extends Driver {
       throw new Error("No policy found");
     }
 
-    // We don't want to call the progress handler with 100% when the upload is done.
+    // We want the upload progress ( that goes from 0 to 100) to be proxied to the progress handler ( that goes from 0 to 95)
+    // So the progression indicator still shows leave a 5% gap before the upload-ended is called.
     // We want to wait until the upload-ended endpoint is called.
     const progressHandlerProxy = (progress: number) => {
-      if (progress === 100) {
-        return;
-      }
-      progressHandler?.(progress);
+      const proxyScale = 90;
+      const proxiedProgress = (progress * proxyScale) / 100;
+      progressHandler?.(proxiedProgress);
     };
 
     await uploadFile(item.policy, file, (progress) => {
