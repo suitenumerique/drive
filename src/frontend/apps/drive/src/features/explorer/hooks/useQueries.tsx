@@ -70,5 +70,6 @@ export const useItem = (
       UseQueryOptions<Item, APIError>,
       "queryKey" | "queryFn"
     >),
+    placeholderData: (previousData) => previousData,
   });
 };

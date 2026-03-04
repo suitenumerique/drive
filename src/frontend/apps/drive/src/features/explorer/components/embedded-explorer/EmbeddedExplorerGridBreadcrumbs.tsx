@@ -148,7 +148,7 @@ const BaseBreadcrumbs = ({
     let defaultRouteData_ = ORDERED_DEFAULT_ROUTES.find(
       (r) => r.id === DefaultRoute.SHARED_WITH_ME,
     )!;
-    if (item.creator.id === user?.id) {
+    if (item.creator?.id === user?.id) {
       defaultRouteData_ = ORDERED_DEFAULT_ROUTES.find(
         (r) => r.id === DefaultRoute.MY_FILES,
       )!;

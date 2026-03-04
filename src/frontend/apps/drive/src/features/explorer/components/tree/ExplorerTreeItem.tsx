@@ -87,10 +87,9 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
             </div>
 
             {item?.nodeType === TreeViewNodeTypeEnum.NODE && (
-              <ExplorerTreeItemActions item={item as Item}  />
+              <ExplorerTreeItemActions item={item as Item} />
             )}
           </div>
-          
         </TreeViewItem>
       </DroppableNodeTree>
     </>

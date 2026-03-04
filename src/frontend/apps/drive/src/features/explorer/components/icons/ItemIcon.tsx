@@ -102,7 +102,7 @@ export const FolderIcon = ({ iconSize = IconSize.MEDIUM }: FolderIconProps) => {
 export const getItemIcon = (
   item: Item,
   type: "normal" | "mini",
-  isTree: boolean
+  isTree: boolean,
 ) => {
   if (item.type === ItemType.FOLDER) {
     return isTree ? folderIconTree : folderIcon;
@@ -113,7 +113,7 @@ export const getItemIcon = (
 
 export const getIconByMimeType = (
   mimeType: string,
-  type: "normal" | "mini"
+  type: "normal" | "mini",
 ) => {
   const category = getMimeCategory(mimeType);
   return ICONS[type][category];
@@ -135,7 +135,7 @@ export const FileIcon = ({
 }) => {
   const category = getMimeCategory(
     file.mimetype,
-    getExtensionFromName(file.title)
+    getExtensionFromName(file.title),
   );
   const icon = ICONS[type][category];
 
