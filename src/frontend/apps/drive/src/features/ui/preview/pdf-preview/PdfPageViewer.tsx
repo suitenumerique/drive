@@ -53,6 +53,7 @@ export const PdfPageViewer = forwardRef<
   ref,
 ) {
   const listRef = useRef<List>(null);
+  const prevZoomRef = useRef(zoom);
   const [scrollTop, setScrollTop] = useState(0);
   const [listHeight, setListHeight] = useState(0);
 
@@ -83,9 +84,23 @@ export const PdfPageViewer = forwardRef<
     [rowHeightForIndex],
   );
 
-  // Recompute row heights when zoom changes
+  // Recompute row heights when zoom changes and preserve scroll position
   useEffect(() => {
     listRef.current?.recomputeRowHeights();
+
+    if (prevZoomRef.current !== zoom && listRef.current) {
+      const ratio = zoom / prevZoomRef.current;
+      const newScrollTop = Math.round(scrollTop * ratio);
+
+      clearTimeout(programmaticTimerRef.current);
+      programmaticPageRef.current = currentPage;
+      programmaticTimerRef.current = setTimeout(() => {
+        programmaticPageRef.current = null;
+      }, 150);
+
+      listRef.current.scrollToPosition(newScrollTop);
+      prevZoomRef.current = zoom;
+    }
   }, [zoom, pageHeight, numPages]);
 
   const currentPage = useMemo(() => {
