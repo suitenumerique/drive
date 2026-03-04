@@ -2,13 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Document, Thumbnail } from "react-pdf";
 import { AutoSizer, List } from "react-virtualized";
 import type { ListRowRenderer } from "react-virtualized";
-
-const options = {
-  cMapUrl: "/cmaps/",
-  standardFontDataUrl: "/standard_fonts/",
-  wasmUrl: "/wasm/",
-  isEvalSupported: false,
-};
+import { pdfOptions } from "./pdfOptions";
 
 interface PdfThumbnailSidebarProps {
   file?: File | null;
@@ -69,10 +63,19 @@ export function PdfThumbnailSidebarContent({
     listRef.current.scrollToRow(currentPage - 1);
   }, [isDocLoaded, currentPage]);
 
+  const thumbnailSkeleton = <div className="pdf-preview__thumbnail-skeleton" />;
+
   const rowRenderer: ListRowRenderer = ({ index, key, style }) => {
     const page = index + 1;
     return (
-      <div key={key} style={{ ...style, paddingBottom: index < numPages - 1 ? THUMBNAIL_GAP : 0, boxSizing: "border-box" }}>
+      <div
+        key={key}
+        style={{
+          ...style,
+          paddingBottom: index < numPages - 1 ? THUMBNAIL_GAP : 0,
+          boxSizing: "border-box",
+        }}
+      >
         <button
           data-thumb-page={page}
           className={`pdf-preview__thumbnail${currentPage === page ? " pdf-preview__thumbnail--active" : ""}`}
@@ -82,7 +85,7 @@ export function PdfThumbnailSidebarContent({
           <Thumbnail
             pageNumber={page}
             width={105}
-            loading={<div className="pdf-preview__thumbnail-skeleton" />}
+            loading={thumbnailSkeleton}
           />
           <span className="pdf-preview__thumbnail-number">{page}</span>
         </button>
@@ -90,42 +93,40 @@ export function PdfThumbnailSidebarContent({
     );
   };
 
-  if (!file) {
-    return (
-      <div
-        className={`pdf-preview__sidebar${!isOpen ? " pdf-preview__sidebar--closed" : ""}`}
-      >
-        <div className="pdf-preview__thumbnail-skeleton" />
-      </div>
-    );
-  }
+  const loadingContainerSkeleton = (
+    <div className="pdf-preview__sidebar-skeleton">{thumbnailSkeleton}</div>
+  );
 
   return (
     <div
       className={`pdf-preview__sidebar${!isOpen ? " pdf-preview__sidebar--closed" : ""}`}
     >
-      <Document
-        file={file}
-        options={options}
-        loading={<div className="pdf-preview__thumbnail-skeleton" />}
-        onLoadSuccess={() => setIsDocLoaded(true)}
-      >
-        <AutoSizer>
-          {({ height, width }) => (
-            <List
-              ref={listRef}
-              height={height}
-              width={width}
-              rowCount={numPages}
-              rowHeight={ROW_HEIGHT}
-              overscanRowCount={5}
-              rowRenderer={rowRenderer}
-              scrollToAlignment="center"
-              style={{ outline: "none" }}
-            />
-          )}
-        </AutoSizer>
-      </Document>
+      {file ? (
+        <Document
+          file={file}
+          options={pdfOptions}
+          loading={loadingContainerSkeleton}
+          onLoadSuccess={() => setIsDocLoaded(true)}
+        >
+          <AutoSizer>
+            {({ height, width }) => (
+              <List
+                ref={listRef}
+                height={height}
+                width={width}
+                rowCount={numPages}
+                rowHeight={ROW_HEIGHT}
+                overscanRowCount={5}
+                rowRenderer={rowRenderer}
+                scrollToAlignment="center"
+                style={{ outline: "none" }}
+              />
+            )}
+          </AutoSizer>
+        </Document>
+      ) : (
+        loadingContainerSkeleton
+      )}
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import {
-  forwardRef,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -11,15 +10,12 @@ import { Document, Page } from "react-pdf";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { AutoSizer, List } from "react-virtualized";
 import type { ListRowRenderer, Index } from "react-virtualized";
-
-const options = {
-  cMapUrl: "/cmaps/",
-  standardFontDataUrl: "/standard_fonts/",
-  wasmUrl: "/wasm/",
-  isEvalSupported: false,
-};
+import { useDebouncedResize } from "./useDebouncedResize";
+import { pdfOptions } from "./pdfOptions";
 
 const PAGE_GAP = 16;
+const BASE_WIDTH = 800;
+const PAGE_MARGIN = 32;
 
 export interface PdfPageViewerHandle {
   scrollToPage: (page: number) => void;
@@ -28,46 +24,42 @@ export interface PdfPageViewerHandle {
 interface PdfPageViewerProps {
   file?: File | null;
   numPages: number;
-  width: number;
-  pageHeight: number;
   zoom: number;
   onDocumentLoadSuccess: (pdf: PDFDocumentProxy) => void;
   onCurrentPageChange: (page: number) => void;
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
-export const PdfPageViewer = forwardRef<
-  PdfPageViewerHandle,
-  PdfPageViewerProps
->(function PdfPageViewer(
-  {
-    file,
-    numPages,
-    width,
-    pageHeight,
-    zoom,
-    onDocumentLoadSuccess,
-    onCurrentPageChange,
-    onClick,
-  },
+
+export function PdfPageViewer({
+  file,
+  numPages,
+  zoom,
+  onDocumentLoadSuccess,
+  onCurrentPageChange,
+  onClick,
   ref,
-) {
+}: PdfPageViewerProps & { ref?: React.Ref<PdfPageViewerHandle> }) {
   const listRef = useRef<List>(null);
   const prevZoomRef = useRef(zoom);
   const [scrollTop, setScrollTop] = useState(0);
-  const [listHeight, setListHeight] = useState(0);
+  const listHeightRef = useRef(0);
 
-  // When scrollToPage is called, the virtualizer scrolls to the target page
-  // but currentPage (computed from viewport center) may briefly land on an
-  // adjacent page, triggering a parent re-render that shifts scroll again,
-  // causing an infinite loop. These refs lock the reported page to the
-  // scroll target for 150ms while the virtualizer settles.
-  const programmaticPageRef = useRef<number | null>(null);
-  const programmaticTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const size = useDebouncedResize();
 
+  const getWidth = () => {
+    if (BASE_WIDTH + PAGE_MARGIN > size.width) {
+      return size.width - PAGE_MARGIN;
+    }
+    return BASE_WIDTH;
+  };
+
+  const [width, setWidth] = useState(getWidth());
   useEffect(() => {
-    return () => clearTimeout(programmaticTimerRef.current);
-  }, []);
+    setWidth(getWidth());
+  }, [size.width]);
+
+  const pageHeight = width * 1.414;
 
   const rowHeightForIndex = useCallback(
     (index: number) => {
@@ -84,7 +76,10 @@ export const PdfPageViewer = forwardRef<
     [rowHeightForIndex],
   );
 
-  // Recompute row heights when zoom changes and preserve scroll position
+  // When zoom, pageHeight or numPages change, row heights must be recalculated
+  // because react-virtualized caches them internally.
+  // On zoom change we also scale scrollTop proportionally so the user stays
+  // on the same part of the document (e.g. 2x zoom → 2x scroll offset).
   useEffect(() => {
     listRef.current?.recomputeRowHeights();
 
@@ -92,21 +87,17 @@ export const PdfPageViewer = forwardRef<
       const ratio = zoom / prevZoomRef.current;
       const newScrollTop = Math.round(scrollTop * ratio);
 
-      clearTimeout(programmaticTimerRef.current);
-      programmaticPageRef.current = currentPage;
-      programmaticTimerRef.current = setTimeout(() => {
-        programmaticPageRef.current = null;
-      }, 150);
-
       listRef.current.scrollToPosition(newScrollTop);
       prevZoomRef.current = zoom;
     }
   }, [zoom, pageHeight, numPages]);
 
+  // Find which page contains the vertical center of the viewport by walking
+  // cumulative row heights until we pass the midpoint.
   const currentPage = useMemo(() => {
     if (numPages === 0) return 1;
 
-    const viewportCenter = scrollTop + listHeight / 2;
+    const viewportCenter = scrollTop + listHeightRef.current / 2;
 
     let offset = 0;
     for (let i = 0; i < numPages; i++) {
@@ -118,21 +109,15 @@ export const PdfPageViewer = forwardRef<
     }
 
     return numPages;
-  }, [scrollTop, listHeight, numPages, rowHeightForIndex]);
+  }, [scrollTop, numPages, rowHeightForIndex]);
 
   useEffect(() => {
-    onCurrentPageChange(programmaticPageRef.current ?? currentPage);
+    onCurrentPageChange(currentPage);
   }, [currentPage]);
 
   const scrollToPage = useCallback(
     (page: number) => {
       if (!listRef.current) return;
-
-      clearTimeout(programmaticTimerRef.current);
-      programmaticPageRef.current = page;
-      programmaticTimerRef.current = setTimeout(() => {
-        programmaticPageRef.current = null;
-      }, 150);
 
       // Compute offset for the target page
       let offset = 0;
@@ -147,7 +132,14 @@ export const PdfPageViewer = forwardRef<
   useImperativeHandle(ref, () => ({ scrollToPage }), [scrollToPage]);
 
   const handleScroll = useCallback(
-    ({ scrollTop: st }: { scrollTop: number }) => {
+    ({
+      scrollTop: st,
+      clientHeight,
+    }: {
+      scrollTop: number;
+      clientHeight: number;
+    }) => {
+      listHeightRef.current = clientHeight;
       setScrollTop(st);
     },
     [],
@@ -161,7 +153,6 @@ export const PdfPageViewer = forwardRef<
         display: "flex",
         justifyContent: "center",
         paddingTop: PAGE_GAP * zoom,
-        boxSizing: "border-box",
       }}
     >
       <Page
@@ -195,32 +186,40 @@ export const PdfPageViewer = forwardRef<
       <Document
         file={file}
         onLoadSuccess={onDocumentLoadSuccess}
-        options={options}
+        options={pdfOptions}
         loading={loadingContainerSkeleton}
       >
         <AutoSizer>
           {({ height, width: autoWidth }) => {
-            // Track viewport height for currentPage calculation
-            if (height !== listHeight) {
-              // Use setTimeout to avoid setState during render
-              setTimeout(() => setListHeight(height), 0);
-            }
+            // When zoomed in the page content may exceed the viewport width.
+            // The wrapper div is clamped to the viewport (autoWidth) and scrolls
+            // horizontally, while the List itself is sized to the full content
+            // width so pages render uncropped.
+            const listWidth = Math.max(autoWidth, width * zoom);
             return (
-              <List
-                ref={listRef}
-                height={height}
-                width={autoWidth}
-                rowCount={numPages}
-                rowHeight={rowHeight}
-                overscanRowCount={3}
-                onScroll={handleScroll}
-                rowRenderer={rowRenderer}
-                style={{ outline: "none" }}
-              />
+              <div
+                style={{
+                  width: autoWidth,
+                  height,
+                }}
+                className="pdf-preview__horizontal-scroll"
+              >
+                <List
+                  ref={listRef}
+                  height={height}
+                  width={listWidth}
+                  rowCount={numPages}
+                  rowHeight={rowHeight}
+                  overscanRowCount={3}
+                  onScroll={handleScroll}
+                  rowRenderer={rowRenderer}
+                  style={{ outline: "none" }}
+                />
+              </div>
             );
           }}
         </AutoSizer>
       </Document>
     </div>
   );
-});
+}

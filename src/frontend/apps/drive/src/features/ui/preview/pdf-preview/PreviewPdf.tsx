@@ -4,7 +4,6 @@ import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import "react-virtualized/styles.css";
 
-import { useDebouncedResize } from "./useDebouncedResize";
 import { usePdfNavigation } from "./usePdfNavigation";
 import { PdfThumbnailSidebar } from "./PdfThumbnailSidebar";
 import { PdfControls } from "./PdfControls";
@@ -14,9 +13,6 @@ import { useRedirectDisclaimer } from "./useRedirectDisclaimer";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-const BASE_WIDTH = 800;
-const PAGE_MARGIN = 32;
-
 export function PreviewPdf({ src }: { src: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [numPages, setNumPages] = useState<number>(1);
@@ -25,19 +21,6 @@ export function PreviewPdf({ src }: { src: string }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const viewerRef = useRef<PdfPageViewerHandle>(null);
   const { handlePdfClick } = useRedirectDisclaimer();
-  const size = useDebouncedResize();
-
-  const getWidth = () => {
-    if (BASE_WIDTH + PAGE_MARGIN > size.width) {
-      return size.width - PAGE_MARGIN;
-    }
-    return BASE_WIDTH;
-  };
-
-  const [width, setWidth] = useState(getWidth());
-  useEffect(() => {
-    setWidth(getWidth());
-  }, [size.width]);
 
   const [zoom, setZoom] = useState(1);
 
@@ -51,15 +34,11 @@ export function PreviewPdf({ src }: { src: string }) {
     setZoom(1);
   };
 
-  const pageHeight = width * 1.414;
-
   const scrollToPage = (page: number) => {
     viewerRef.current?.scrollToPage(page);
   };
 
   const {
-    goToPreviousPage,
-    goToNextPage,
     goToPage,
     onDocumentLoadSuccess: onNavLoadSuccess,
     pageInputValue,
@@ -125,8 +104,6 @@ export function PreviewPdf({ src }: { src: string }) {
           ref={viewerRef}
           file={file}
           numPages={numPages}
-          width={width}
-          pageHeight={pageHeight}
           zoom={zoom}
           onDocumentLoadSuccess={onDocumentLoadSuccess}
           onCurrentPageChange={setCurrentPage}
@@ -134,14 +111,10 @@ export function PreviewPdf({ src }: { src: string }) {
         />
       </div>
       <PdfControls
-        currentPage={currentPage}
         numPages={numPages}
         pageInputValue={pageInputValue}
         isSidebarOpen={isSidebarOpen}
-        zoom={zoom}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
-        onGoToPreviousPage={goToPreviousPage}
-        onGoToNextPage={goToNextPage}
         onPageInputChange={handlePageInputChange}
         onPageInputSubmit={handlePageInputSubmit}
         onPageInputKeyDown={handlePageInputKeyDown}

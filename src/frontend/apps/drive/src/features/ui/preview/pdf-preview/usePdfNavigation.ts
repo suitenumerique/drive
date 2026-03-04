@@ -14,24 +14,9 @@ export const usePdfNavigation = ({
 }: UsePdfNavigationParams) => {
   const [pageInputValue, setPageInputValue] = useState<string>("1");
 
-  const goToPreviousPage = useCallback(() => {
-    const newPage = Math.max(1, currentPage - 1);
-    console.log("goToPreviousPage", currentPage);
-    setPageInputValue(String(newPage));
-    scrollToPage(newPage);
-  }, [currentPage, scrollToPage]);
-
-  const goToNextPage = useCallback(() => {
-    const newPage = Math.min(numPages, currentPage + 1);
-    console.log("goToNextPage", currentPage);
-    setPageInputValue(String(newPage));
-    scrollToPage(newPage);
-  }, [numPages, currentPage, scrollToPage]);
-
   const goToPage = useCallback(
     (page: number) => {
       const clamped = Math.max(1, Math.min(numPages, page));
-      console.log("goToPage", clamped);
       setPageInputValue(String(clamped));
       scrollToPage(clamped);
     },
@@ -66,8 +51,6 @@ export const usePdfNavigation = ({
   };
 
   return {
-    goToPreviousPage,
-    goToNextPage,
     goToPage,
     onDocumentLoadSuccess,
     pageInputValue,

@@ -190,7 +190,12 @@ export const FilePreview = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={() => onClose?.()} size={ModalSize.FULL}>
+    <Modal
+      isOpen={isOpen}
+      onClose={() => onClose?.()}
+      size={ModalSize.FULL}
+      hideCloseButton={true}
+    >
       <div data-testid="file-preview">
         <div
           className={`file-preview-container ${

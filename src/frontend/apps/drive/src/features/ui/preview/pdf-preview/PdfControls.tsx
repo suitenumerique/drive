@@ -5,14 +5,10 @@ import { ZoomIn } from "../../components/icon/ZoomIn";
 import { ZoomReset } from "../../components/icon/ZoomReset";
 
 interface PdfControlsProps {
-  currentPage: number;
   numPages: number;
   pageInputValue: string;
   isSidebarOpen: boolean;
-  zoom: number;
   onToggleSidebar: () => void;
-  onGoToPreviousPage: () => void;
-  onGoToNextPage: () => void;
   onPageInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPageInputSubmit: () => void;
   onPageInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
@@ -22,10 +18,8 @@ interface PdfControlsProps {
 }
 
 export function PdfControls({
-  currentPage,
   numPages,
   pageInputValue,
-  zoom,
   onToggleSidebar,
   onPageInputChange,
   onPageInputSubmit,

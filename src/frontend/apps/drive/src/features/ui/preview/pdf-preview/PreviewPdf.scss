@@ -79,6 +79,11 @@
     animation: pdf-skeleton-pulse 1.5s ease-in-out infinite;
   }
 
+  &__sidebar-skeleton {
+    display: flex;
+    justify-content: center;
+  }
+
   &__thumbnail-skeleton {
     width: 106px;
     height: 150px;
@@ -109,6 +114,11 @@
     .react-pdf__Document {
       height: 100%;
     }
+  }
+
+  &__horizontal-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   &__page-wrapper {
