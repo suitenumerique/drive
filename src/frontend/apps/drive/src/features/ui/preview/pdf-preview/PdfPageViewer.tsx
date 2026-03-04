@@ -47,16 +47,10 @@ export function PdfPageViewer({
 
   const size = useDebouncedResize();
 
-  const getWidth = () => {
-    if (BASE_WIDTH + PAGE_MARGIN > size.width) {
-      return size.width - PAGE_MARGIN;
-    }
-    return BASE_WIDTH;
-  };
-
-  const [width, setWidth] = useState(getWidth());
-  useEffect(() => {
-    setWidth(getWidth());
+  const width = useMemo(() => {
+    return BASE_WIDTH + PAGE_MARGIN > size.width
+      ? size.width - PAGE_MARGIN
+      : BASE_WIDTH;
   }, [size.width]);
 
   const pageHeight = width * 1.414;

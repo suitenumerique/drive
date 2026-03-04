@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -11,7 +11,7 @@ import { PdfPageViewer } from "./PdfPageViewer";
 import type { PdfPageViewerHandle } from "./PdfPageViewer";
 import { useRedirectDisclaimer } from "./useRedirectDisclaimer";
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.mjs";
 
 export function PreviewPdf({ src }: { src: string }) {
   const [file, setFile] = useState<File | null>(null);
@@ -24,19 +24,22 @@ export function PreviewPdf({ src }: { src: string }) {
 
   const [zoom, setZoom] = useState(1);
 
-  const zoomIn = () => {
+  const zoomIn = useCallback(() => {
     setZoom((prev) => Math.min(3, prev + 0.25));
-  };
-  const zoomOut = () => {
+  }, []);
+  const zoomOut = useCallback(() => {
     setZoom((prev) => Math.max(0.5, prev - 0.25));
-  };
-  const zoomReset = () => {
+  }, []);
+  const zoomReset = useCallback(() => {
     setZoom(1);
-  };
+  }, []);
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen((prev) => !prev);
+  }, []);
 
-  const scrollToPage = (page: number) => {
+  const scrollToPage = useCallback((page: number) => {
     viewerRef.current?.scrollToPage(page);
-  };
+  }, []);
 
   const {
     goToPage,
@@ -54,11 +57,16 @@ export function PreviewPdf({ src }: { src: string }) {
   }, [currentPage, setPageInputValue]);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchPdf = async () => {
       setError(null);
 
       try {
-        const response = await fetch(src, { credentials: "include" });
+        const response = await fetch(src, {
+          credentials: "include",
+          signal: controller.signal,
+        });
 
         if (!response.ok) {
           throw new Error(`Failed to fetch PDF: ${response.status}`);
@@ -70,17 +78,22 @@ export function PreviewPdf({ src }: { src: string }) {
 
         setFile(pdfFile);
       } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         setError(err instanceof Error ? err.message : "Failed to load PDF");
       }
     };
 
     fetchPdf();
+    return () => controller.abort();
   }, [src]);
 
-  function onDocumentLoadSuccess(pdf: Parameters<typeof onNavLoadSuccess>[0]) {
-    const nextNumPages = onNavLoadSuccess(pdf);
-    setNumPages(nextNumPages);
-  }
+  const onDocumentLoadSuccess = useCallback(
+    (pdf: Parameters<typeof onNavLoadSuccess>[0]) => {
+      const nextNumPages = onNavLoadSuccess(pdf);
+      setNumPages(nextNumPages);
+    },
+    [onNavLoadSuccess],
+  );
 
   if (error) {
     return (
@@ -114,7 +127,7 @@ export function PreviewPdf({ src }: { src: string }) {
         numPages={numPages}
         pageInputValue={pageInputValue}
         isSidebarOpen={isSidebarOpen}
-        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+        onToggleSidebar={toggleSidebar}
         onPageInputChange={handlePageInputChange}
         onPageInputSubmit={handlePageInputSubmit}
         onPageInputKeyDown={handlePageInputKeyDown}

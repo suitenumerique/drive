@@ -29,15 +29,17 @@ export function PdfThumbnailSidebar(props: PdfThumbnailSidebarProps) {
   const [isOpenProxy, setIsOpenProxy] = useState(props.isOpen);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
     if (props.isOpen) {
       setUnmount(false);
-      setTimeout(() => setIsOpenProxy(true), 100);
+      timer = setTimeout(() => setIsOpenProxy(true), 100);
     } else {
       setIsOpenProxy(false);
       // The 1.1 is to allow for the transition to finish.
       // It is a safety margin to avoid the component being unmounted too early.
-      setTimeout(() => setUnmount(true), TRANSITION_DELAY * 1.1);
+      timer = setTimeout(() => setUnmount(true), TRANSITION_DELAY * 1.1);
     }
+    return () => clearTimeout(timer);
   }, [props.isOpen]);
 
   if (unmount) {
