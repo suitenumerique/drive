@@ -1,11 +1,21 @@
-import { IconProps as BaseIconProps, IconSize, iconSizeMap } from "@gouvfr-lasuite/ui-kit";
+import {
+  IconProps as BaseIconProps,
+  IconSize,
+  iconSizeMap,
+} from "@gouvfr-lasuite/ui-kit";
 
 export type IconProps = Partial<BaseIconProps>;
 
-export const IconSvg = (
-  props: React.SVGProps<SVGSVGElement> & IconProps,
-) => {
-  const size = iconSizeMap[props.size as IconSize] || 24;
+export const IconSvg = (props: React.SVGProps<SVGSVGElement> & IconProps) => {
+  let size: number;
+  if (typeof props.size === "number") {
+    size = props.size;
+  } else if (props.size && iconSizeMap[props.size as IconSize]) {
+    size = iconSizeMap[props.size as IconSize];
+  } else {
+    size = 24;
+  }
+
   return (
     <svg
       width={size}

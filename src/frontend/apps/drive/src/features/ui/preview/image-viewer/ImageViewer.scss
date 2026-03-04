@@ -163,6 +163,19 @@
   box-shadow: 0px 2px 8px 0px rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(10px);
 
+  button {
+    border: none;
+    background: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   &__value {
     text-align: center;
     min-width: 35px;
