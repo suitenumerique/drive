@@ -12,6 +12,7 @@ import { useMutationRenameItem } from "../../hooks/useMutations";
 import { useRef } from "react";
 import { removeFileExtension } from "../../utils/mimeTypes";
 import { useTreeUtils } from "../../hooks/useTreeUtils";
+import { useGlobalExplorer } from "../GlobalExplorerContext";
 
 type Inputs = {
   title: string;
@@ -23,6 +24,12 @@ export const ExplorerRenameItemModal = (
   },
 ) => {
   const treeUtils = useTreeUtils();
+  const {
+    rightPanelOpen,
+    selectedItems,
+    rightPanelForcedItem,
+    setRightPanelForcedItem,
+  } = useGlobalExplorer();
   const { t } = useTranslation();
   const form = useForm<Inputs>({
     defaultValues: {
@@ -39,10 +46,21 @@ export const ExplorerRenameItemModal = (
         id: props.item.id,
       },
       {
-        onSuccess: () => {
+        onSuccess: (_, updatedItem) => {
           treeUtils.updateNodeByOriginalId(props.item.id, {
             title: data.title,
           });
+
+          const selectedItem = rightPanelForcedItem ?? selectedItems[0];
+
+          if (rightPanelOpen && selectedItem?.id === props.item.id) {
+            const newRightPanelForcedItem = {
+              ...selectedItem,
+              ...updatedItem,
+            };
+
+            setRightPanelForcedItem(newRightPanelForcedItem);
+          }
         },
       },
     );

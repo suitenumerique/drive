@@ -4,17 +4,43 @@ import { clickOnRowItemActions, getRowItem } from "../utils-embedded-grid";
 import { clickToMyFiles } from "../utils-navigate";
 import { createFolderInCurrentFolder } from "../utils-item";
 
-test("Check that the right content is displayed correctly", async ({
-  page,
-}) => {
-  await clearDb();
-  await login(page, "drive@example.com");
-  await page.goto("/");
-  await clickToMyFiles(page);
-  await createFolderInCurrentFolder(page, "testFolder");
-  await getRowItem(page, "testFolder");
-  await clickOnRowItemActions(page, "testFolder", "Info");
-  const rightPanel = page.getByTestId("right-panel");
-  await expect(rightPanel).toBeVisible();
-  await expect(rightPanel.getByText("testFolder")).toBeVisible();
+test.describe("Right content info", () => {
+  test.beforeEach(async ({ page }) => {
+    await clearDb();
+    await login(page, "drive@example.com");
+    await page.goto("/");
+    await clickToMyFiles(page);
+  });
+
+  test("Check that the right content is displayed correctly", async ({
+    page,
+  }) => {
+    await createFolderInCurrentFolder(page, "testFolder");
+    await getRowItem(page, "testFolder");
+    await clickOnRowItemActions(page, "testFolder", "Info");
+    const rightPanel = page.getByTestId("right-panel");
+    await expect(rightPanel).toBeVisible();
+    await expect(rightPanel.getByText("testFolder")).toBeVisible();
+  });
+
+  test("Right panel updates item name after rename", async ({ page }) => {
+    await createFolderInCurrentFolder(page, "OriginalName");
+    await clickOnRowItemActions(page, "OriginalName", "Info");
+
+    const rightPanel = page.getByTestId("right-panel");
+    await expect(rightPanel).toBeVisible();
+    await expect(rightPanel.getByText("OriginalName")).toBeVisible();
+
+    const row = await getRowItem(page, "OriginalName");
+    await row.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Rename" }).click();
+
+    await page
+      .getByRole("textbox", { name: "New name" })
+      .fill("UpdatedName");
+    await page.getByRole("button", { name: "Rename" }).click();
+
+    await expect(rightPanel.getByText("UpdatedName")).toBeVisible();
+    await expect(rightPanel.getByText("OriginalName")).not.toBeVisible();
+  });
 });
