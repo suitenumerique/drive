@@ -17,6 +17,9 @@ export const RhfInput = (props: InputProps & { name: string }) => {
           <Input
             {...props}
             aria-invalid={!!fieldState.error}
+            variant="classic"
+            hideLabel
+            placeholder={props.label}
             state={fieldState.error ? "error" : "default"}
             text={fieldState.error?.message}
             onBlur={field.onBlur}
