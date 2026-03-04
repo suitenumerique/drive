@@ -74,7 +74,7 @@ export const EmbeddedExplorerGridNameCell = (
   return (
     <Draggable id={params.cell.id} item={item} disabled={disableDrag}>
       <div className="explorer__grid__item__name">
-        <ItemIcon key={item.id} item={item} />
+        <ItemIcon key={item.id} item={item} size={IconSize.LARGE} />
         {isOverflown ? (
           <Tooltip content={item.title}>{renderTitle()}</Tooltip>
         ) : (
