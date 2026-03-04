@@ -36,7 +36,7 @@ export const AppExplorerBreadcrumbs = () => {
 
   const showActions =
     (onDefaultRoute && defaultRouteId === DefaultRoute.MY_FILES) ||
-    (!onDefaultRoute && item?.abilities.children_create);
+    (!onDefaultRoute && item?.abilities?.children_create);
 
   if (!item && !onDefaultRoute) {
     return null;
