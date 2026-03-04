@@ -19,19 +19,19 @@ import posthog from "posthog-js";
 import dynamic from "next/dynamic";
 
 const PreviewPdf = dynamic(
-  () => import("../pdf-preview/PreviewPdf")
-    .then((mod) => {
-      console.log('PreviewPdf module loaded:', mod);
-      return mod.PreviewPdf;
-    })
-    .catch((err) => {
-      console.error('Error loading PreviewPdf:', err);
-      return () => <div>Error loading PDF viewer</div>;
-    }),
-  { 
+  () =>
+    import("../pdf-preview/PreviewPdf")
+      .then((mod) => {
+        console.log("PreviewPdf module loaded:", mod);
+        return mod.PreviewPdf;
+      })
+      .catch((err) => {
+        console.error("Error loading PreviewPdf:", err);
+        return () => <div>Error loading PDF viewer</div>;
+      }),
+  {
     ssr: false,
-    loading: () => <div>Loading PDF...</div>
-  }
+  },
 );
 export type FilePreviewType = {
   id: string;

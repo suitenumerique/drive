@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import "react-virtualized/styles.css";
 
 import { useDebouncedResize } from "./useDebouncedResize";
 import { usePdfNavigation } from "./usePdfNavigation";

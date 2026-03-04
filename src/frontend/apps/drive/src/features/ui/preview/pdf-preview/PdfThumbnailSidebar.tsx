@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Document, Thumbnail } from "react-pdf";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { AutoSizer, List } from "react-virtualized";
+import type { ListRowRenderer } from "react-virtualized";
 
 const options = {
   cMapUrl: "/cmaps/",
@@ -20,6 +21,7 @@ interface PdfThumbnailSidebarProps {
 const TRANSITION_DELAY = 300;
 const THUMBNAIL_HEIGHT = 178;
 const THUMBNAIL_GAP = 12;
+const ROW_HEIGHT = THUMBNAIL_HEIGHT + THUMBNAIL_GAP;
 
 // Two-phase mount/unmount to allow CSS transitions to play out:
 // Opening: mount immediately (unmount=false), then defer isOpenProxy=true
@@ -58,28 +60,40 @@ export function PdfThumbnailSidebarContent({
   goToPage,
   isOpen,
 }: PdfThumbnailSidebarProps) {
-  const sidebarRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<List>(null);
   const [isDocLoaded, setIsDocLoaded] = useState(false);
-
-  const virtualizer = useVirtualizer({
-    count: numPages,
-    getScrollElement: () => sidebarRef.current,
-    estimateSize: () => THUMBNAIL_HEIGHT,
-    gap: THUMBNAIL_GAP,
-    overscan: 5,
-  });
 
   // Auto-scroll active thumbnail into view
   useEffect(() => {
-    if (!isDocLoaded) return;
-    virtualizer.scrollToIndex(currentPage - 1, { align: "center" });
-  }, [isDocLoaded, currentPage, virtualizer]);
+    if (!isDocLoaded || !listRef.current) return;
+    listRef.current.scrollToRow(currentPage - 1);
+  }, [isDocLoaded, currentPage]);
+
+  const rowRenderer: ListRowRenderer = ({ index, key, style }) => {
+    const page = index + 1;
+    return (
+      <div key={key} style={{ ...style, paddingBottom: index < numPages - 1 ? THUMBNAIL_GAP : 0, boxSizing: "border-box" }}>
+        <button
+          data-thumb-page={page}
+          className={`pdf-preview__thumbnail${currentPage === page ? " pdf-preview__thumbnail--active" : ""}`}
+          onClick={() => goToPage(page)}
+          aria-label={`Go to page ${page}`}
+        >
+          <Thumbnail
+            pageNumber={page}
+            width={105}
+            loading={<div className="pdf-preview__thumbnail-skeleton" />}
+          />
+          <span className="pdf-preview__thumbnail-number">{page}</span>
+        </button>
+      </div>
+    );
+  };
 
   if (!file) {
     return (
       <div
         className={`pdf-preview__sidebar${!isOpen ? " pdf-preview__sidebar--closed" : ""}`}
-        ref={sidebarRef}
       >
         <div className="pdf-preview__thumbnail-skeleton" />
       </div>
@@ -89,51 +103,28 @@ export function PdfThumbnailSidebarContent({
   return (
     <div
       className={`pdf-preview__sidebar${!isOpen ? " pdf-preview__sidebar--closed" : ""}`}
-      ref={sidebarRef}
     >
       <Document
         file={file}
         options={options}
         loading={<div className="pdf-preview__thumbnail-skeleton" />}
         onLoadSuccess={() => setIsDocLoaded(true)}
-        // Thumbnails may contain clickable internal links (e.g., table of contents).
-        // Without onItemClick, react-pdf cannot resolve those links since only
-        // thumbnails are rendered here, not full pages. We intercept the click
-        // and navigate the main viewer instead.
-        // onItemClick={({ pageNumber }) => goToPage(pageNumber)}
       >
-        <div
-          style={{
-            width: "116px", // Needed to be able to center the layout of the thumbnails.
-            height: virtualizer.getTotalSize(),
-            position: "relative",
-          }}
-        >
-          {virtualizer.getVirtualItems().map((virtualItem) => {
-            const page = virtualItem.index + 1;
-            return (
-              <button
-                key={virtualItem.index}
-                data-thumb-page={page}
-                style={{
-                  position: "absolute",
-                  top: virtualItem.start,
-                  height: THUMBNAIL_HEIGHT,
-                }}
-                className={`pdf-preview__thumbnail${currentPage === page ? " pdf-preview__thumbnail--active" : ""}`}
-                onClick={() => goToPage(page)}
-                aria-label={`Go to page ${page}`}
-              >
-                <Thumbnail
-                  pageNumber={page}
-                  width={105}
-                  loading={<div className="pdf-preview__thumbnail-skeleton" />}
-                />
-                <span className="pdf-preview__thumbnail-number">{page}</span>
-              </button>
-            );
-          })}
-        </div>
+        <AutoSizer>
+          {({ height, width }) => (
+            <List
+              ref={listRef}
+              height={height}
+              width={width}
+              rowCount={numPages}
+              rowHeight={ROW_HEIGHT}
+              overscanRowCount={5}
+              rowRenderer={rowRenderer}
+              scrollToAlignment="center"
+              style={{ outline: "none" }}
+            />
+          )}
+        </AutoSizer>
       </Document>
     </div>
   );

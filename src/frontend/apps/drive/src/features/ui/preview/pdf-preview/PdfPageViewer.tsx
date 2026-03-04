@@ -5,10 +5,12 @@ import {
   useImperativeHandle,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { Document, Page } from "react-pdf";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { AutoSizer, List } from "react-virtualized";
+import type { ListRowRenderer, Index } from "react-virtualized";
 
 const options = {
   cMapUrl: "/cmaps/",
@@ -50,7 +52,9 @@ export const PdfPageViewer = forwardRef<
   },
   ref,
 ) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<List>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [listHeight, setListHeight] = useState(0);
 
   // When scrollToPage is called, the virtualizer scrolls to the target page
   // but currentPage (computed from viewport center) may briefly land on an
@@ -58,80 +62,101 @@ export const PdfPageViewer = forwardRef<
   // causing an infinite loop. These refs lock the reported page to the
   // scroll target for 150ms while the virtualizer settles.
   const programmaticPageRef = useRef<number | null>(null);
-  const programmaticTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const programmaticTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     return () => clearTimeout(programmaticTimerRef.current);
   }, []);
 
-  const virtualizer = useVirtualizer({
-    count: numPages,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => pageHeight * zoom,
-    gap: PAGE_GAP * zoom,
-    overscan: 3,
-    // Stolen from https://github.com/TanStack/virtual/issues/659#issuecomment-2915244925
-    // Thank you <3
-    measureElement: (element, _entry, instance) => {
-      const direction = instance.scrollDirection;
-      if (direction === "forward" || direction === null) {
-        // Allow remeasuring when scrolling down or direction is null
-        return element.getBoundingClientRect().height;
-      } else {
-        // When scrolling up, use cached measurement to prevent stuttering
-        const indexKey = Number(element.getAttribute("data-index"));
-        const cachedMeasurement = instance.measurementsCache[indexKey]?.size;
-        return cachedMeasurement || element.getBoundingClientRect().height;
-      }
+  const rowHeightForIndex = useCallback(
+    (index: number) => {
+      const h = pageHeight * zoom;
+      // No trailing gap on the last row
+      if (index === numPages - 1) return h;
+      return h + PAGE_GAP * zoom;
     },
-  });
+    [pageHeight, zoom, numPages],
+  );
+
+  const rowHeight = useCallback(
+    ({ index }: Index) => rowHeightForIndex(index),
+    [rowHeightForIndex],
+  );
+
+  // Recompute row heights when zoom changes
+  useEffect(() => {
+    listRef.current?.recomputeRowHeights();
+  }, [zoom, pageHeight, numPages]);
 
   const currentPage = useMemo(() => {
-    const items = virtualizer.getVirtualItems();
-    if (items.length === 0) return 1;
+    if (numPages === 0) return 1;
 
-    const scrollElement = containerRef.current;
-    if (!scrollElement) return 1;
+    const viewportCenter = scrollTop + listHeight / 2;
 
-    const scrollOffset = virtualizer.scrollOffset ?? 0;
-    const viewportCenter = scrollOffset + scrollElement.clientHeight / 2;
-    console.log("scrollOffset", scrollOffset, "viewportCenter", viewportCenter);
-
-    for (const item of items) {
-      const itemEnd = item.start + item.size;
-      if (item.start <= viewportCenter && viewportCenter < itemEnd) {
-        return item.index + 1;
+    let offset = 0;
+    for (let i = 0; i < numPages; i++) {
+      const h = rowHeightForIndex(i);
+      if (offset + h > viewportCenter) {
+        return i + 1;
       }
+      offset += h;
     }
 
-    return items[0].index + 1;
-  }, [virtualizer.getVirtualItems(), virtualizer.scrollOffset]);
-  console.log("currentPage", currentPage);
+    return numPages;
+  }, [scrollTop, listHeight, numPages, rowHeightForIndex]);
 
   useEffect(() => {
-    console.log(
-      "useEffect",
-      programmaticPageRef.current,
-      currentPage,
-      programmaticPageRef.current ?? currentPage,
-    );
     onCurrentPageChange(programmaticPageRef.current ?? currentPage);
   }, [currentPage]);
 
   const scrollToPage = useCallback(
     (page: number) => {
+      if (!listRef.current) return;
+
       clearTimeout(programmaticTimerRef.current);
       programmaticPageRef.current = page;
       programmaticTimerRef.current = setTimeout(() => {
         programmaticPageRef.current = null;
       }, 150);
-      console.log("scrollToPage", page);
-      virtualizer.scrollToIndex(page - 1, { align: "start" });
+
+      // Compute offset for the target page
+      let offset = 0;
+      for (let i = 0; i < page - 1; i++) {
+        offset += rowHeightForIndex(i);
+      }
+      listRef.current.scrollToPosition(offset);
     },
-    [virtualizer],
+    [rowHeightForIndex],
   );
 
   useImperativeHandle(ref, () => ({ scrollToPage }), [scrollToPage]);
+
+  const handleScroll = useCallback(
+    ({ scrollTop: st }: { scrollTop: number }) => {
+      setScrollTop(st);
+    },
+    [],
+  );
+
+  const rowRenderer: ListRowRenderer = ({ index, key, style }) => (
+    <div
+      key={key}
+      style={{
+        ...style,
+        display: "flex",
+        justifyContent: "center",
+        paddingTop: PAGE_GAP * zoom,
+        boxSizing: "border-box",
+      }}
+    >
+      <Page
+        pageNumber={index + 1}
+        width={width}
+        scale={zoom}
+        loading={pageSkeleton}
+      />
+    </div>
+  );
 
   const pageSkeleton = (
     <div
@@ -140,53 +165,47 @@ export const PdfPageViewer = forwardRef<
     />
   );
 
+  const loadingContainerSkeleton = (
+    <div className="pdf-preview__container-skeleton">{pageSkeleton}</div>
+  );
+
   if (!file) {
     return (
-      <div className="pdf-preview__container" ref={containerRef}>
-        <div className="pdf-preview__page-wrapper">{pageSkeleton}</div>
-      </div>
+      <div className="pdf-preview__container">{loadingContainerSkeleton}</div>
     );
   }
 
   return (
-    <div className="pdf-preview__container" ref={containerRef}>
-      <div className="pdf-preview__page-wrapper" onClick={onClick}>
-        <Document
-          file={file}
-          onLoadSuccess={onDocumentLoadSuccess}
-          options={options}
-          loading={pageSkeleton}
-        >
-          <div
-            style={{
-              width: width * zoom,
-              height: virtualizer.getTotalSize(),
-              position: "relative",
-            }}
-          >
-            {virtualizer.getVirtualItems().map((virtualItem) => (
-              <div
-                key={virtualItem.index}
-                data-index={virtualItem.index}
-                data-page-number={virtualItem.index + 1}
-                ref={virtualizer.measureElement}
-                style={{
-                  position: "absolute",
-                  top: virtualItem.start,
-                  width: width * zoom,
-                }}
-              >
-                <Page
-                  pageNumber={virtualItem.index + 1}
-                  width={width}
-                  scale={zoom}
-                  loading={pageSkeleton}
-                />
-              </div>
-            ))}
-          </div>
-        </Document>
-      </div>
+    <div className="pdf-preview__container" onClick={onClick}>
+      <Document
+        file={file}
+        onLoadSuccess={onDocumentLoadSuccess}
+        options={options}
+        loading={loadingContainerSkeleton}
+      >
+        <AutoSizer>
+          {({ height, width: autoWidth }) => {
+            // Track viewport height for currentPage calculation
+            if (height !== listHeight) {
+              // Use setTimeout to avoid setState during render
+              setTimeout(() => setListHeight(height), 0);
+            }
+            return (
+              <List
+                ref={listRef}
+                height={height}
+                width={autoWidth}
+                rowCount={numPages}
+                rowHeight={rowHeight}
+                overscanRowCount={3}
+                onScroll={handleScroll}
+                rowRenderer={rowRenderer}
+                style={{ outline: "none" }}
+              />
+            );
+          }}
+        </AutoSizer>
+      </Document>
     </div>
   );
 });

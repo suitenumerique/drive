@@ -21,11 +21,7 @@
     bottom: 0;
     z-index: 5;
     width: 150px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    overflow: hidden;
 
     padding: 12px 0;
     border-right: 1px solid var(--c--contextuals--border--surface--primary);
@@ -34,13 +30,16 @@
     transition: transform 0.3s;
 
     .react-pdf__Document {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      height: 100%;
     }
 
     &--closed {
       transform: translateX(-100%);
+    }
+
+    [role="gridcell"] {
+      display: flex;
+      justify-content: center;
     }
   }
 
@@ -98,12 +97,18 @@
 
   &__container {
     flex: 1;
-    overflow: auto;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 16px;
+    overflow: hidden;
     min-height: 400px;
+
+    &-skeleton {
+      display: flex;
+      justify-content: center;
+      padding-top: 16px;
+    }
+
+    .react-pdf__Document {
+      height: 100%;
+    }
   }
 
   &__page-wrapper {
@@ -111,13 +116,14 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-
-      .react-pdf__Page {
-        border-radius: 4px;
-        overflow: hidden;
-        box-shadow: 0 3.649px 14.597px 0 rgba(0, 0, 0, 0.1);
-      }
     }
+  }
+
+  &__container .react-pdf__Page,
+  &__page-wrapper .react-pdf__Page {
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 3.649px 14.597px 0 rgba(0, 0, 0, 0.1);
   }
 
   &__controls {
