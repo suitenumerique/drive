@@ -1,8 +1,10 @@
 "use client";
 
-import { Icon } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@gouvfr-lasuite/cunningham-react";
 import React, { useState, useRef, useCallback, useEffect } from "react";
+import { ResetZoomIcon } from "../../components/icon/ResetZoomIcon";
+import { ZoomMinusIcon } from "../../components/icon/ZoomMinusIcon";
+import { ZoomPlusIcon } from "../../components/icon/ZoomPlusIcon";
 
 interface ImageViewerProps {
   src: string;
@@ -64,7 +66,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
       const dy = touch1.clientY - touch2.clientY;
       return Math.sqrt(dx * dx + dy * dy);
     },
-    []
+    [],
   );
 
   // Preload image to get dimensions before displaying
@@ -166,7 +168,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         y: Math.max(minY, Math.min(maxY, newPosition.y)),
       };
     },
-    [zoom, imageDimensions]
+    [zoom, imageDimensions],
   );
 
   // Zoom in
@@ -202,7 +204,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         });
       }
     },
-    [isImageExceedingBounds, position]
+    [isImageExceedingBounds, position],
   );
 
   // Handle mouse move for dragging
@@ -218,7 +220,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         setPosition(constrainedPosition);
       }
     },
-    [isDragging, dragStart, isImageExceedingBounds, getConstrainedPosition]
+    [isDragging, dragStart, isImageExceedingBounds, getConstrainedPosition],
   );
 
   // Handle mouse up to stop dragging
@@ -236,7 +238,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         return newZoom;
       });
     },
-    [zoomStep, minZoom, maxZoom]
+    [zoomStep, minZoom, maxZoom],
   );
 
   // Handle touch start for mobile
@@ -261,7 +263,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         setInitialZoomOnTouch(zoom);
       }
     },
-    [isImageExceedingBounds, position, zoom, getTouchDistance]
+    [isImageExceedingBounds, position, zoom, getTouchDistance],
   );
 
   // Handle touch move for mobile
@@ -284,7 +286,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         const scale = currentDistance / touchDistance;
         const newZoom = Math.max(
           minZoom,
-          Math.min(maxZoom, initialZoomOnTouch * scale)
+          Math.min(maxZoom, initialZoomOnTouch * scale),
         );
         setZoom(newZoom);
       }
@@ -298,7 +300,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
       getTouchDistance,
       minZoom,
       maxZoom,
-    ]
+    ],
   );
 
   // Handle touch end for mobile
@@ -431,13 +433,13 @@ export const ZoomControl = ({
   return (
     <div className="zoom-control">
       <Button variant="tertiary" color="neutral" onClick={zoomOut}>
-        <Icon name="zoom_out" />
+        <ZoomMinusIcon />
       </Button>
-      <div className="zoom-control__value" role="button" onClick={resetView}>
-        {Math.round(zoom * 100)}%
-      </div>
+      <Button variant="tertiary" color="neutral" onClick={resetView}>
+        <ResetZoomIcon />
+      </Button>
       <Button variant="tertiary" color="neutral" onClick={zoomIn}>
-        <Icon name="zoom_in" />
+        <ZoomPlusIcon />
       </Button>
     </div>
   );
