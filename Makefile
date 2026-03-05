@@ -201,8 +201,13 @@ lint-ruff-format: ## format back-end python sources with ruff
 
 lint-ruff-check: ## lint back-end python sources with ruff
 	@echo 'lint:ruff-check started…'
-	@$(COMPOSE_RUN_APP_NO_DEPS) ruff check . --fix
+	@$(COMPOSE_RUN_APP_NO_DEPS) ruff check .
 .PHONY: lint-ruff-check
+
+lint-ruff-check-fix: ## fix back-end python sources with ruff
+	@echo 'lint:ruff-check started…'
+	@$(COMPOSE_RUN_APP_NO_DEPS) ruff check . --fix
+.PHONY: lint-ruff-check-fix
 
 lint-pylint: ## lint back-end python sources with pylint only on changed files from main
 	@echo 'lint:pylint started…'
