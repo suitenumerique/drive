@@ -1,7 +1,7 @@
 """Utils for WOPI"""
 
 import re
-from urllib.parse import quote_plus, urlencode, urlparse
+from urllib.parse import urlencode, urlparse
 
 from django.conf import settings
 from django.core.cache import cache
