@@ -170,7 +170,7 @@ def test_api_items_upload_root_resource_server_using_access_token(
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
 
     response = client.post(
-        f"/external_api/v1.0/items/",
+        "/external_api/v1.0/items/",
         {
             "type": models.ItemTypeChoices.FILE,
             "filename": "file.txt",

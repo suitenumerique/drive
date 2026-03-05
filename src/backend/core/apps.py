@@ -16,4 +16,4 @@ class CoreConfig(AppConfig):
         Import signals when the app is ready.
         """
         # pylint: disable=import-outside-toplevel, unused-import
-        from . import signals  # noqa: PLC0415
+        from . import signals  # noqa: PLC0415,F401
