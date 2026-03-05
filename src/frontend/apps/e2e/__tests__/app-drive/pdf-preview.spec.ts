@@ -7,6 +7,12 @@ import { clickToMyFiles } from "./utils-navigate";
 import { uploadFile } from "./utils/upload-utils";
 
 const PDF_FILE_PATH = path.join(__dirname, "/assets/pv_cm.pdf");
+const PDF_LINKS_FILE_PATH = path.join(__dirname, "/assets/pdf_with_links.pdf");
+const PDF_JS_FILE_PATH = path.join(__dirname, "/assets/pdf_with_js.pdf");
+const PDF_JS_LINK_FILE_PATH = path.join(
+  __dirname,
+  "/assets/pdf_with_js_link.pdf",
+);
 
 import type { Page, Locator } from "@playwright/test";
 
@@ -63,6 +69,34 @@ async function scrollPdfViewer(page: Page, deltaY: number) {
 
 function getPageInput(page: Page): Locator {
   return page.locator('input[aria-label="Current page"]');
+}
+
+function getExternalLink(page: Page): Locator {
+  return page
+    .locator(
+      ".annotationLayer section.linkAnnotation:not([data-internal-link]) a",
+    )
+    .first();
+}
+
+function getInternalLink(page: Page): Locator {
+  return page.locator("[data-internal-link] a").first();
+}
+
+function getDisclaimerModal(page: Page): Locator {
+  return page.getByRole("dialog", { name: "External link" });
+}
+
+async function clickExternalLinkAndWaitForModal(page: Page) {
+  await getExternalLink(page).click({ force: true });
+  const modal = getDisclaimerModal(page);
+  await expect(modal).toBeVisible({ timeout: 5000 });
+  return modal;
+}
+
+async function waitForPdfReadyAndDismissToast(page: Page) {
+  await waitForPdfReady(page);
+  await dismissToast(page);
 }
 
 test.describe("PDF Preview", () => {
@@ -235,8 +269,7 @@ test.describe("PDF Preview", () => {
     page,
   }) => {
     await openSidebar(page);
-    await waitForPdfReady(page);
-    await dismissToast(page);
+    await waitForPdfReadyAndDismissToast(page);
 
     await expectActiveThumbnail(page, 1);
 
@@ -251,8 +284,7 @@ test.describe("PDF Preview", () => {
   test("Navigates to a specific page via the page input", async ({ page }) => {
     const pageInput = getPageInput(page);
     await expect(pageInput).toBeVisible();
-    await waitForPdfReady(page);
-    await dismissToast(page);
+    await waitForPdfReadyAndDismissToast(page);
 
     await pageInput.fill("5");
     await pageInput.press("Enter");
@@ -263,8 +295,7 @@ test.describe("PDF Preview", () => {
   test("Clamps out-of-range page numbers to valid range", async ({ page }) => {
     const pageInput = getPageInput(page);
     await expect(pageInput).toBeVisible();
-    await waitForPdfReady(page);
-    await dismissToast(page);
+    await waitForPdfReadyAndDismissToast(page);
 
     await pageInput.fill("99");
     await pageInput.press("Enter");
@@ -286,8 +317,7 @@ test.describe("PDF Preview", () => {
   test("Updates page number when scrolling the document", async ({ page }) => {
     const pageInput = getPageInput(page);
     await expect(pageInput).toHaveValue("1");
-    await waitForPdfReady(page);
-    await dismissToast(page);
+    await waitForPdfReadyAndDismissToast(page);
 
     await scrollPdfViewer(page, 3000);
 
@@ -295,5 +325,189 @@ test.describe("PDF Preview", () => {
       const value = await pageInput.inputValue();
       expect(value).not.toBe("1");
     }).toPass({ timeout: 10000 });
+  });
+});
+
+test.describe("PDF Links", () => {
+  test.beforeEach(async ({ page }) => {
+    await clearDb();
+    await login(page, "drive@example.com");
+    await page.goto("/");
+    await clickToMyFiles(page);
+
+    await uploadFile(page, PDF_LINKS_FILE_PATH);
+    await expect(
+      page.getByRole("cell", { name: "pdf_with_links", exact: true }),
+    ).toBeVisible({ timeout: 10000 });
+
+    await page
+      .getByRole("cell", { name: "pdf_with_links", exact: true })
+      .dblclick();
+    await expect(page.locator(".pdf-preview")).toBeVisible({ timeout: 10000 });
+  });
+
+  test("Shows a disclaimer modal when clicking an external link", async ({
+    page,
+  }) => {
+    await waitForPdfReadyAndDismissToast(page);
+
+    const modal = await clickExternalLinkAndWaitForModal(page);
+
+    await expect(modal.locator(".c__modal__title")).toHaveText("External link");
+    await expect(modal.locator(".pdf-preview__external-link")).toContainText(
+      "example.com",
+    );
+    await expect(modal).toContainText("Do you want to continue?");
+  });
+
+  test("Opens external link in a new tab when confirming", async ({
+    page,
+    context,
+  }) => {
+    await waitForPdfReadyAndDismissToast(page);
+
+    const modal = await clickExternalLinkAndWaitForModal(page);
+
+    const [newPage] = await Promise.all([
+      context.waitForEvent("page"),
+      modal.getByRole("button", { name: "Yes" }).click(),
+    ]);
+
+    expect(newPage.url()).toContain("example.com");
+    await newPage.close();
+  });
+
+  test("Does not open a new tab when declining the disclaimer", async ({
+    page,
+  }) => {
+    await waitForPdfReadyAndDismissToast(page);
+
+    const modal = await clickExternalLinkAndWaitForModal(page);
+
+    await modal.getByRole("button", { name: "Cancel" }).click();
+
+    await expect(modal).not.toBeAttached({ timeout: 5000 });
+    await expect(page.locator(".pdf-preview")).toBeVisible();
+  });
+
+  test("Navigates to target page via an internal link without disclaimer", async ({
+    page,
+  }) => {
+    await waitForPdfReadyAndDismissToast(page);
+
+    await getInternalLink(page).click({ force: true });
+
+    await expect(getDisclaimerModal(page)).not.toBeAttached({ timeout: 2000 });
+    await expect(getPageInput(page)).toHaveValue("3", { timeout: 5000 });
+  });
+});
+
+test.describe("PDF Security", () => {
+  test.beforeEach(async ({ page }) => {
+    await clearDb();
+    await login(page, "drive@example.com");
+    await page.goto("/");
+    await clickToMyFiles(page);
+
+    await uploadFile(page, PDF_JS_FILE_PATH);
+    await expect(
+      page.getByRole("cell", { name: "pdf_with_js", exact: true }),
+    ).toBeVisible({ timeout: 10000 });
+
+    await page
+      .getByRole("cell", { name: "pdf_with_js", exact: true })
+      .dblclick();
+    await expect(page.locator(".pdf-preview")).toBeVisible({ timeout: 10000 });
+  });
+
+  test("Does not execute JavaScript embedded in a PDF OpenAction", async ({
+    page,
+  }) => {
+    let alertFired = false;
+    page.on("dialog", () => {
+      alertFired = true;
+    });
+
+    await waitForPdfReadyAndDismissToast(page);
+
+    // Give any rogue script time to fire (it would trigger on document open)
+    await page.waitForTimeout(1000);
+
+    // The embedded JS calls app.alert("HACKED") — must never produce a dialog
+    expect(alertFired).toBe(false);
+
+    // The viewer itself should still be functional
+    await expect(page.locator(".pdf-preview")).toBeVisible();
+  });
+});
+
+test.describe("PDF Security — javascript: URI link", () => {
+  test.beforeEach(async ({ page }) => {
+    await clearDb();
+    await login(page, "drive@example.com");
+    await page.goto("/");
+    await clickToMyFiles(page);
+
+    await uploadFile(page, PDF_JS_LINK_FILE_PATH);
+    await expect(
+      page.getByRole("cell", { name: "pdf_with_js_link", exact: true }),
+    ).toBeVisible({ timeout: 10000 });
+
+    await page
+      .getByRole("cell", { name: "pdf_with_js_link", exact: true })
+      .dblclick();
+    await expect(page.locator(".pdf-preview")).toBeVisible({ timeout: 10000 });
+  });
+
+  test("Blocks javascript: URI links and does not show disclaimer modal", async ({
+    page,
+  }) => {
+    let alertFired = false;
+    page.on("dialog", async (dialog) => {
+      alertFired = true;
+      await dialog.dismiss();
+    });
+
+    await waitForPdfReadyAndDismissToast(page);
+
+    // pdfjs should not render javascript: URIs as clickable annotations
+    const annotationLinks = page.locator(
+      ".annotationLayer section.linkAnnotation a",
+    );
+    await expect(annotationLinks).toHaveCount(0, { timeout: 5000 });
+
+    // No alert/dialog should have fired
+    expect(alertFired).toBe(false);
+
+    // Even if a javascript: link were injected into the DOM, our handler
+    // would block it. Simulate this by injecting a link and clicking it.
+    await page.evaluate(() => {
+      const annotLayer = document.querySelector(".annotationLayer");
+      if (!annotLayer) return;
+      const section = document.createElement("section");
+      section.className = "linkAnnotation";
+      const a = document.createElement("a");
+      a.href = "javascript:alert('xss')";
+      a.textContent = "injected";
+      a.style.cssText =
+        "position:absolute;top:0;left:0;width:50px;height:20px;";
+      section.appendChild(a);
+      annotLayer.appendChild(section);
+    });
+
+    const injectedLink = page
+      .locator(".annotationLayer section.linkAnnotation a")
+      .first();
+    await injectedLink.click({ force: true });
+
+    // The confirmation modal must NOT appear (unsafe protocol blocked)
+    await expect(getDisclaimerModal(page)).not.toBeAttached({ timeout: 2000 });
+
+    // Wait to ensure no alert fires even with rendering lag
+    await page.waitForTimeout(2000);
+    expect(alertFired).toBe(false);
+
+    // The viewer should still be functional
+    await expect(page.locator(".pdf-preview")).toBeVisible();
   });
 });

@@ -2,6 +2,8 @@ import { useCallback } from "react";
 import { useModals } from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
 
+const SAFE_PROTOCOLS = ["https:", "http:"];
+
 export const useRedirectDisclaimer = () => {
   const modals = useModals();
   const { t } = useTranslation();
@@ -14,6 +16,13 @@ export const useRedirectDisclaimer = () => {
 
         e.preventDefault();
         e.stopPropagation();
+
+        try {
+          const url = new URL(anchor.href);
+          if (!SAFE_PROTOCOLS.includes(url.protocol)) return;
+        } catch {
+          return;
+        }
 
         modals.confirmationModal({
           title: t("file_preview.external_link.title"),

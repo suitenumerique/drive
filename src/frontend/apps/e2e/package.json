@@ -14,5 +14,8 @@
   "devDependencies": {
     "@playwright/test": "1.58.2",
     "@types/node": "24.10.1"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
   }
 }

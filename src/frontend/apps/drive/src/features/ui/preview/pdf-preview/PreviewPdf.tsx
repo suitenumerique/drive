@@ -64,12 +64,9 @@ export function PreviewPdf({ src }: { src: string }) {
     goToPageRef.current = goToPage;
   }, [goToPage]);
 
-  const onItemClick = useCallback(
-    (args: { pageNumber: number }) => {
-      goToPageRef.current(args.pageNumber);
-    },
-    [],
-  );
+  const onItemClick = useCallback((args: { pageNumber: number }) => {
+    goToPageRef.current(args.pageNumber);
+  }, []);
 
   // Sync page input value when currentPage changes from scrolling
   useEffect(() => {
