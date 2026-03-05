@@ -28,6 +28,7 @@ interface PdfPageViewerProps {
   onDocumentLoadSuccess: (pdf: PDFDocumentProxy) => void;
   onCurrentPageChange: (page: number) => void;
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onItemClick: (args: { pageNumber: number }) => void;
 }
 
 
@@ -38,6 +39,7 @@ export function PdfPageViewer({
   onDocumentLoadSuccess,
   onCurrentPageChange,
   onClick,
+  onItemClick,
   ref,
 }: PdfPageViewerProps & { ref?: React.Ref<PdfPageViewerHandle> }) {
   const listRef = useRef<List>(null);
@@ -180,6 +182,7 @@ export function PdfPageViewer({
       <Document
         file={file}
         onLoadSuccess={onDocumentLoadSuccess}
+        onItemClick={onItemClick}
         options={pdfOptions}
         loading={loadingContainerSkeleton}
       >
