@@ -698,15 +698,13 @@
           "http://localhost:8071/*",
           "http://localhost:3200/*",
           "http://localhost:8088/*",
-          "http://localhost:3000/*",
-          "http://192.168.1.91:8071/*"
+          "http://localhost:3000/*"
         ],
         "webOrigins": [
           "http://localhost:3200",
           "http://localhost:8088",
           "http://localhost:8070",
-          "http://localhost:3000",
-          "http://192.168.1.91:3000"
+          "http://localhost:3000"
         ],
         "notBefore": 0,
         "bearerOnly": false,
