@@ -8,6 +8,9 @@ from os.path import splitext
 
 from django.core.files.storage import default_storage
 
+import boto3
+import botocore
+
 from core.api.utils import sanitize_filename
 from core.models import Item, ItemTypeChoices, ItemUploadStateChoices
 
@@ -126,3 +129,66 @@ def update_suspicious_item_file_hash(item_id):
 
     item.malware_detection_info.update({"file_hash": file_hash})
     item.save(update_fields=["malware_detection_info"])
+
+
+@app.task(bind=True, max_retries=10)
+def duplicate_file(self, item_to_duplicate_id, duplicated_item_id):
+    """Copy a file on the storage."""
+    try:
+        item_to_duplicate = Item.objects.get(id=item_to_duplicate_id)
+    except Item.DoesNotExist:
+        logger.exception(
+            "duplicating file: item_to_duplicate with id %s does not exist, aborting",
+            item_to_duplicate_id,
+        )
+        return
+
+    try:
+        duplicated_item = Item.objects.get(id=duplicated_item_id)
+    except Item.DoesNotExist:
+        logger.exception(
+            "duplicating file: duplicated_item with id %s does not exist, aborting",
+            duplicated_item_id,
+        )
+        return
+
+    if duplicated_item.upload_state != ItemUploadStateChoices.DUPLICATING:
+        logger.error(
+            "duplicating file: the duplidated file upload_state is not duplicating but %s, "
+            "aborting",
+            duplicated_item.upload_state,
+        )
+        return
+
+    s3_client = default_storage.connection.meta.client
+
+    try:
+        s3_client.copy_object(
+            Bucket=default_storage.bucket_name,
+            CopySource={
+                "Bucket": default_storage.bucket_name,
+                "Key": item_to_duplicate.file_key,
+            },
+            Key=duplicated_item.file_key,
+            MetadataDirective="COPY",
+        )
+    except (
+        boto3.exceptions.Boto3Error,
+        botocore.exceptions.BotoCoreError,
+        botocore.exceptions.ClientError,
+    ) as exc:
+        if self.request.retries >= self.max_retries:
+            # delete the duplicated item
+            logger.error(
+                "duplicating file: max retries exceeded, the duplicated item %s is deleted",
+                duplicated_item.id,
+            )
+            duplicated_item.soft_delete()
+            duplicated_item.delete()
+
+        logger.error("duplicating file: error while copying file. Error: %s", exc)
+
+        self.retry(exc=exc)
+
+    duplicated_item.upload_state = ItemUploadStateChoices.READY
+    duplicated_item.save(update_fields=["upload_state", "updated_at"])
