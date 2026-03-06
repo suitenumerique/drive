@@ -57,9 +57,7 @@ def test_models_invitations_role_required():
 
 def test_models_invitations_role_among_choices():
     """The "role" field should be a valid choice."""
-    with pytest.raises(
-        exceptions.ValidationError, match="Value 'boss' is not a valid choice"
-    ):
+    with pytest.raises(exceptions.ValidationError, match="Value 'boss' is not a valid choice"):
         factories.InvitationFactory(role="boss")
 
 
@@ -96,12 +94,8 @@ def test_models_invitationd_new_userd_convert_invitations_to_accesses():
     new_user = factories.UserFactory(email=invitation_to_item1.email)
 
     # The invitation regarding
-    assert models.ItemAccess.objects.filter(
-        item=invitation_to_item1.item, user=new_user
-    ).exists()
-    assert models.ItemAccess.objects.filter(
-        item=invitation_to_item2.item, user=new_user
-    ).exists()
+    assert models.ItemAccess.objects.filter(item=invitation_to_item1.item, user=new_user).exists()
+    assert models.ItemAccess.objects.filter(item=invitation_to_item2.item, user=new_user).exists()
     assert not models.Invitation.objects.filter(
         item=invitation_to_item1.item, email=invitation_to_item1.email
     ).exists()  # invitation "consumed"
@@ -127,9 +121,7 @@ def test_models_invitationd_new_user_filter_expired_invitations():
     new_user = factories.UserFactory(email=user_email)
 
     # valid invitation should have granted access to the related item
-    assert models.ItemAccess.objects.filter(
-        item=valid_invitation.item, user=new_user
-    ).exists()
+    assert models.ItemAccess.objects.filter(item=valid_invitation.item, user=new_user).exists()
     assert not models.Invitation.objects.filter(
         item=valid_invitation.item, email=user_email
     ).exists()
@@ -138,9 +130,7 @@ def test_models_invitationd_new_user_filter_expired_invitations():
     assert not models.ItemAccess.objects.filter(
         item=expired_invitation.item, user=new_user
     ).exists()
-    assert models.Invitation.objects.filter(
-        item=expired_invitation.item, email=user_email
-    ).exists()
+    assert models.Invitation.objects.filter(item=expired_invitation.item, email=user_email).exists()
 
 
 @pytest.mark.parametrize("num_invitations, num_queries", [(0, 3), (1, 7), (20, 7)])
@@ -192,9 +182,7 @@ def test_models_item_invitations_get_abilities_authenticated():
 
 @pytest.mark.parametrize("via", VIA)
 @pytest.mark.parametrize("role", ["administrator", "owner"])
-def test_models_item_invitations_get_abilities_privileged_member(
-    role, via, mock_user_teams
-):
+def test_models_item_invitations_get_abilities_privileged_member(role, via, mock_user_teams):
     """Check abilities for a item member with a privileged role."""
 
     user = factories.UserFactory()

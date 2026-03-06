@@ -303,10 +303,7 @@ def test_api_items_search_pagination(indexer_settings, pagination, status, expec
 
     # reverse sort by random score to simulate score ordering
     api_results = sorted(
-        [
-            {"_id": id, "score": (secrets.randbelow(1000) / 1000.0)}
-            for id in items_by_uuid.keys()
-        ],
+        [{"_id": id, "score": (secrets.randbelow(1000) / 1000.0)} for id in items_by_uuid.keys()],
         key=itemgetter("score"),
         reverse=True,
     )

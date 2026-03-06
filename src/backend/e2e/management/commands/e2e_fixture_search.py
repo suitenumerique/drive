@@ -90,9 +90,7 @@ class Command(BaseCommand):
                 update_upload_state=models.ItemUploadStateChoices.READY
                 if data["type"] == models.ItemTypeChoices.FILE
                 else None,
-                users=[(data["creator"], models.RoleChoices.OWNER)]
-                if depth == 0
-                else None,
+                users=[(data["creator"], models.RoleChoices.OWNER)] if depth == 0 else None,
             )
             if data.get("deleted"):
                 item.soft_delete()

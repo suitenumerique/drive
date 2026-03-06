@@ -129,11 +129,7 @@ class ItemFactory(factory.django.DjangoModelFactory):
     def upload_bytes(self, create, extracted, **kwargs):
         """Save content of the file into the storage"""
         if create and extracted:
-            content = (
-                extracted
-                if isinstance(extracted, bytes)
-                else str(extracted).encode("utf-8")
-            )
+            content = extracted if isinstance(extracted, bytes) else str(extracted).encode("utf-8")
 
             self.filename = kwargs.get("filename", "content.txt")
             self.size = len(content)

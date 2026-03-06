@@ -21,9 +21,7 @@ def test_api_items_list_ordering_title():
         title="Abcd",
         type=models.ItemTypeChoices.FOLDER,
     )
-    item2 = factories.ItemFactory(
-        users=[user], type=models.ItemTypeChoices.FOLDER, title="Zyxc"
-    )
+    item2 = factories.ItemFactory(users=[user], type=models.ItemTypeChoices.FOLDER, title="Zyxc")
 
     # ordering by title ascendant (item1 and then item2)
     response = client.get("/api/v1.0/items/?ordering=title")
@@ -62,9 +60,7 @@ def test_api_items_list_ordering_default():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory.create_batch(
-        4, users=[user], type=models.ItemTypeChoices.FOLDER
-    )
+    factories.ItemFactory.create_batch(4, users=[user], type=models.ItemTypeChoices.FOLDER)
 
     response = client.get("/api/v1.0/items/")
 
@@ -83,9 +79,7 @@ def test_api_items_list_ordering_by_fields():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory.create_batch(
-        4, users=[user], type=models.ItemTypeChoices.FOLDER
-    )
+    factories.ItemFactory.create_batch(4, users=[user], type=models.ItemTypeChoices.FOLDER)
 
     for parameter in [
         "created_at",

@@ -75,9 +75,7 @@ def test_api_item_accesses_create_authenticated_unrelated():
 
 @pytest.mark.parametrize("role", ["reader", "editor"])
 @pytest.mark.parametrize("via", VIA)
-def test_api_item_accesses_create_authenticated_reader_or_editor(
-    via, role, mock_user_teams
-):
+def test_api_item_accesses_create_authenticated_reader_or_editor(via, role, mock_user_teams):
     """Readers or editors of an item should not be allowed to create item accesses."""
     user = factories.UserFactory()
 
@@ -126,17 +124,13 @@ def test_api_item_accesses_create_authenticated_administrator(
     items = []
     for i in range(depth):
         parent = items[i - 1] if i > 0 else None
-        items.append(
-            factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
-        )
+        items.append(factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER))
 
     if via == USER:
         factories.UserItemAccessFactory(item=items[0], user=user, role="administrator")
     elif via == TEAM:
         mock_user_teams.return_value = ["lasuite", "unknown"]
-        factories.TeamItemAccessFactory(
-            item=items[0], team="lasuite", role="administrator"
-        )
+        factories.TeamItemAccessFactory(item=items[0], team="lasuite", role="administrator")
 
     other_user = factories.UserFactory()
     item = items[-1]
@@ -166,9 +160,7 @@ def test_api_item_accesses_create_authenticated_administrator(
     assert models.ItemAccess.objects.filter(user=other_user, item=item).count() == 0
 
     # It should be allowed to create a lower access
-    role = random.choice(
-        [role[0] for role in models.RoleChoices.choices if role[0] != "owner"]
-    )
+    role = random.choice([role[0] for role in models.RoleChoices.choices if role[0] != "owner"])
 
     assert len(mail.outbox) == 0
 
@@ -215,9 +207,7 @@ def test_api_item_accesses_create_authenticated_administrator(
 
 @pytest.mark.parametrize("depth", [1, 2, 3])
 @pytest.mark.parametrize("via", VIA)
-def test_api_item_accesses_create_authenticated_owner(
-    via, depth, mock_user_teams, settings
-):
+def test_api_item_accesses_create_authenticated_owner(via, depth, mock_user_teams, settings):
     """
     Owners of an item (direct or by heritage) should be able to create item accesses whatever
     the role.
@@ -231,9 +221,7 @@ def test_api_item_accesses_create_authenticated_owner(
     items = []
     for i in range(depth):
         parent = items[i - 1] if i > 0 else None
-        items.append(
-            factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
-        )
+        items.append(factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER))
 
     if via == USER:
         factories.UserItemAccessFactory(item=items[0], user=user, role="owner")

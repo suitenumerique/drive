@@ -174,9 +174,7 @@ def test_api_items_trashbin_list_filter_type():
     client = APIClient()
     client.force_login(user)
 
-    item_folder = factories.ItemFactory(
-        type=models.ItemTypeChoices.FOLDER, deleted_at=now
-    )
+    item_folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, deleted_at=now)
     factories.UserItemAccessFactory(item=item_folder, user=user, role="owner")
 
     item_file = factories.ItemFactory(
@@ -218,9 +216,7 @@ def test_api_items_trashbin_list_filter_type():
     assert results_ids == {str(item_file.id)}
 
 
-def test_api_items_trashbin_authenticated_via_team(
-    django_assert_num_queries, mock_user_teams
-):
+def test_api_items_trashbin_authenticated_via_team(django_assert_num_queries, mock_user_teams):
     """
     Authenticated users should be able to list trashbin items they own via a team.
     """

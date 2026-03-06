@@ -132,9 +132,7 @@ class ItemPermission(permissions.BasePermission):
         - for which the trashbin cutoff is past
         - for which the current user is not owner of the item or one of its ancestors
         """
-        if (
-            deleted_at := obj.ancestors_deleted_at
-        ) and deleted_at < get_trashbin_cutoff():
+        if (deleted_at := obj.ancestors_deleted_at) and deleted_at < get_trashbin_cutoff():
             raise Http404
 
         abilities = obj.get_abilities(request.user)

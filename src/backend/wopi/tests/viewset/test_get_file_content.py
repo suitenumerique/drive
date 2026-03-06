@@ -27,9 +27,7 @@ def test_get_file_content_connected_user_with_access():
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     default_storage.save(item.file_key, BytesIO(b"my prose"))
     head_response = default_storage.connection.meta.client.head_object(
@@ -66,9 +64,7 @@ def test_get_file_content_connected_user_not_linked_to_item():
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     other_item = factories.ItemFactory(
         parent=folder,
@@ -78,9 +74,7 @@ def test_get_file_content_connected_user_not_linked_to_item():
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
-    factories.UserItemAccessFactory(
-        item=other_item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=other_item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -110,9 +104,7 @@ def test_get_file_content_max_expected_size():
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     default_storage.save(item.file_key, BytesIO(b"my prose"))
 

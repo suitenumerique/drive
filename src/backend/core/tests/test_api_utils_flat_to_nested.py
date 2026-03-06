@@ -71,8 +71,7 @@ def test_flat_to_nested_with_ordered_list():
             {
                 "depth": 2,
                 "path": (
-                    "9bd75ab3-408e-443f-8d76-cd67550c38c2."
-                    "b3509308-b8f9-405e-936a-a320284917af"
+                    "9bd75ab3-408e-443f-8d76-cd67550c38c2.b3509308-b8f9-405e-936a-a320284917af"
                 ),
                 "title": "level1_1",
                 "created_at": "2021-01-01T12:00:00Z",
@@ -117,8 +116,7 @@ def test_flat_to_nested_with_ordered_list():
             {
                 "depth": 2,
                 "path": (
-                    "9bd75ab3-408e-443f-8d76-cd67550c38c2."
-                    "1cfed79d-d3e6-4ee6-a334-b4a7a045213f"
+                    "9bd75ab3-408e-443f-8d76-cd67550c38c2.1cfed79d-d3e6-4ee6-a334-b4a7a045213f"
                 ),
                 "title": "level1_2",
                 "created_at": "2021-01-02T00:00:00Z",
@@ -127,8 +125,7 @@ def test_flat_to_nested_with_ordered_list():
             {
                 "depth": 2,
                 "path": (
-                    "9bd75ab3-408e-443f-8d76-cd67550c38c2."
-                    "1276b22f-9fa7-423a-89d1-457abfedb083"
+                    "9bd75ab3-408e-443f-8d76-cd67550c38c2.1276b22f-9fa7-423a-89d1-457abfedb083"
                 ),
                 "title": "level1_3",
                 "created_at": "2021-01-03T00:00:00Z",
@@ -204,8 +201,7 @@ def test_utils_flat_to_nested_with_not_ordered_list():
             {
                 "depth": 2,
                 "path": (
-                    "9bd75ab3-408e-443f-8d76-cd67550c38c2."
-                    "b3509308-b8f9-405e-936a-a320284917af"
+                    "9bd75ab3-408e-443f-8d76-cd67550c38c2.b3509308-b8f9-405e-936a-a320284917af"
                 ),
                 "title": "level1_1",
                 "created_at": "2021-01-01T12:00:00Z",
@@ -250,8 +246,7 @@ def test_utils_flat_to_nested_with_not_ordered_list():
             {
                 "depth": 2,
                 "path": (
-                    "9bd75ab3-408e-443f-8d76-cd67550c38c2."
-                    "1cfed79d-d3e6-4ee6-a334-b4a7a045213f"
+                    "9bd75ab3-408e-443f-8d76-cd67550c38c2.1cfed79d-d3e6-4ee6-a334-b4a7a045213f"
                 ),
                 "title": "level1_2",
                 "created_at": "2021-01-02T00:00:00Z",
@@ -260,8 +255,7 @@ def test_utils_flat_to_nested_with_not_ordered_list():
             {
                 "depth": 2,
                 "path": (
-                    "9bd75ab3-408e-443f-8d76-cd67550c38c2."
-                    "1276b22f-9fa7-423a-89d1-457abfedb083"
+                    "9bd75ab3-408e-443f-8d76-cd67550c38c2.1276b22f-9fa7-423a-89d1-457abfedb083"
                 ),
                 "title": "level1_3",
                 "created_at": "2021-01-03T00:00:00Z",

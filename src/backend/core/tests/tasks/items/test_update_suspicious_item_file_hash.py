@@ -17,9 +17,7 @@ def test_update_suspicious_item_file_hash_item_does_not_exist(caplog):
     """Test the update_suspicious_item_file_hash task when the item does not exist"""
     with caplog.at_level("ERROR", logger="core.tasks.item"):
         update_suspicious_item_file_hash(1)
-        assert (
-            "updating suspicious item file hash: Item 1 does not exist" in caplog.text
-        )
+        assert "updating suspicious item file hash: Item 1 does not exist" in caplog.text
 
 
 def test_update_suspicious_item_file_hash_item_not_suspicious(caplog):
@@ -28,8 +26,7 @@ def test_update_suspicious_item_file_hash_item_not_suspicious(caplog):
     with caplog.at_level("ERROR", logger="core.tasks.item"):
         update_suspicious_item_file_hash(item.id)
         assert (
-            f"updating suspicious item file hash: Item {item.id} is not suspicious"
-            in caplog.text
+            f"updating suspicious item file hash: Item {item.id} is not suspicious" in caplog.text
         )
 
 

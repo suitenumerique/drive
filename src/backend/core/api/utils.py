@@ -27,9 +27,7 @@ def flat_to_nested(items):
     roots = []
 
     def sort_key(serialized_item):
-        return serialized_item["depth"], datetime.fromisoformat(
-            serialized_item["created_at"]
-        )
+        return serialized_item["depth"], datetime.fromisoformat(serialized_item["created_at"])
 
     # Sort the flat list by path to ensure parent nodes are processed first
     items.sort(key=sort_key)

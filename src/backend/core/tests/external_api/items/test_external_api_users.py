@@ -67,9 +67,7 @@ def test_api_users_list_connected_resource_server(
         }
     }
 )
-def test_api_users_me_connected_not_allowed(
-    user_token, resource_server_backend, user_specific_sub
-):
+def test_api_users_me_connected_not_allowed(user_token, resource_server_backend, user_specific_sub):
     """
     Connected users should not be allowed to retrieve their own user information if
     resource server is not enabled.

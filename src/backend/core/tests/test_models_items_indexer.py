@@ -388,9 +388,7 @@ def test_models_items_access_post_save_indexer():
 
     with transaction.atomic():
         item = factories.ItemFactory(users=users)
-        item_accesses = models.ItemAccess.objects.filter(item=item).order_by(
-            "user__sub"
-        )
+        item_accesses = models.ItemAccess.objects.filter(item=item).order_by("user__sub")
 
     reset_batch_indexer_throttle()
 
@@ -416,9 +414,7 @@ def test_models_items_access_post_save_indexer_no_throttle(indexer_settings):
 
     with transaction.atomic():
         item = factories.ItemFactory(users=users)
-        item_accesses = models.ItemAccess.objects.filter(item=item).order_by(
-            "user__sub"
-        )
+        item_accesses = models.ItemAccess.objects.filter(item=item).order_by("user__sub")
 
     reset_batch_indexer_throttle()
 

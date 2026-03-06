@@ -303,9 +303,7 @@ def test_api_items_children_from_template_title_already_existing():
     access = factories.UserItemAccessFactory(
         user=user, role="owner", item__type=ItemTypeChoices.FOLDER
     )
-    factories.ItemFactory(
-        parent=access.item, title="my document", type=ItemTypeChoices.FILE
-    )
+    factories.ItemFactory(parent=access.item, title="my document", type=ItemTypeChoices.FILE)
 
     response = client.post(
         f"/api/v1.0/items/{access.item.id!s}/children/",
@@ -328,9 +326,7 @@ def test_api_items_children_from_template_title_already_existing():
         ("odp", "application/vnd.oasis.opendocument.presentation"),
     ],
 )
-def test_api_items_children_from_template_correct_mimetype(
-    extension, expected_mimetype
-):
+def test_api_items_children_from_template_correct_mimetype(extension, expected_mimetype):
     """
     Items created from template should have the correct MIME type set.
     """

@@ -77,7 +77,5 @@ def test_api_e2e_user_auth_email_required():
     assert response.status_code == 400
     assert response.json() == {
         "type": "validation_error",
-        "errors": [
-            {"code": "required", "detail": "This field is required.", "attr": "email"}
-        ],
+        "errors": [{"code": "required", "detail": "This field is required.", "attr": "email"}],
     }

@@ -91,9 +91,7 @@ def trigger_batch_file_indexer(item):
                 countdown,
             )
 
-            batch_file_indexer_task.apply_async(
-                args=[item.updated_at], countdown=countdown
-            )
+            batch_file_indexer_task.apply_async(args=[item.updated_at], countdown=countdown)
         else:
             logger.info("Skip task for batch file %s indexation", item.pk)
     else:

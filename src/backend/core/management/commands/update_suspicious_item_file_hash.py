@@ -20,8 +20,6 @@ class Command(BaseCommand):
         ).iterator()
 
         for item in items:
-            self.stdout.write(
-                f"Triggering update suspicious item file hash for item {item.id}"
-            )
+            self.stdout.write(f"Triggering update suspicious item file hash for item {item.id}")
             update_suspicious_item_file_hash.delay(item.id)
         self.stdout.write("Update suspicious item file hash command completed")

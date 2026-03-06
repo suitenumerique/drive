@@ -32,9 +32,7 @@ def test_api_item_upload_ended_no_permissions(role):
     client.force_login(user)
 
     if role:
-        item = factories.ItemFactory(
-            users=[(user, role)], link_role=LinkRoleChoices.READER
-        )
+        item = factories.ItemFactory(users=[(user, role)], link_role=LinkRoleChoices.READER)
     else:
         item = factories.ItemFactory(link_role=LinkRoleChoices.READER)
 
@@ -270,10 +268,7 @@ def test_api_item_upload_ended_mimetype_not_allowed(settings, caplog):
         response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     assert response.status_code == 400
-    assert (
-        "upload_ended: mimetype not allowed text/plain for filename my_file.txt"
-        in caplog.text
-    )
+    assert "upload_ended: mimetype not allowed text/plain for filename my_file.txt" in caplog.text
 
     assert not models.Item.objects.filter(id=item.id).exists()
     assert not default_storage.exists(item.file_key)
@@ -341,9 +336,7 @@ def test_api_upload_ended_mismatch_mimetype_with_object_storage(caplog):
         },
     )
 
-    head_object = s3_client.head_object(
-        Bucket=default_storage.bucket_name, Key=item.file_key
-    )
+    head_object = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
 
     assert head_object["ContentType"] == "text/html"
     with caplog.at_level(logging.INFO, logger="core.api.viewsets"):
@@ -358,9 +351,7 @@ def test_api_upload_ended_mismatch_mimetype_with_object_storage(caplog):
 
     assert item.mimetype == "application/pdf"
 
-    head_object = s3_client.head_object(
-        Bucket=default_storage.bucket_name, Key=item.file_key
-    )
+    head_object = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
     assert head_object["ContentType"] == "application/pdf"
     assert head_object["Metadata"] == {"foo": "bar"}
 

@@ -22,9 +22,7 @@ def test_unlock_without_lock_header():
         update_upload_state=models.ItemUploadStateChoices.READY,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -50,9 +48,7 @@ def test_unlock_with_mismatching_lock():
         update_upload_state=models.ItemUploadStateChoices.READY,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -88,9 +84,7 @@ def test_unlock_with_matching_lock():
         update_upload_state=models.ItemUploadStateChoices.READY,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)

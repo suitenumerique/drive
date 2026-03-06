@@ -27,9 +27,7 @@ def test_put_file_content_connected_user_with_access():
         size=0,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -80,9 +78,7 @@ def test_put_file_content_connected_user_with_access_delete_item_during_edition(
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -134,9 +130,7 @@ def test_put_file_content_connected_user_with_access_delete_item_during_edition(
         Bucket=default_storage.bucket_name,
         Key=item.file_key,
     )
-    assert (
-        file["Body"].read() == b"new content"
-    )  # the content should not have been updated
+    assert file["Body"].read() == b"new content"  # the content should not have been updated
 
 
 def test_put_file_content_connected_user_with_access_access_removed_during_edition():
@@ -158,9 +152,7 @@ def test_put_file_content_connected_user_with_access_access_removed_during_editi
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    access = factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    access = factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -212,9 +204,7 @@ def test_put_file_content_connected_user_with_access_access_removed_during_editi
         Bucket=default_storage.bucket_name,
         Key=item.file_key,
     )
-    assert (
-        file["Body"].read() == b"new content"
-    )  # the content should not have been updated
+    assert file["Body"].read() == b"new content"  # the content should not have been updated
 
 
 def test_put_file_content_connected_user_not_linked_to_item():
@@ -233,9 +223,7 @@ def test_put_file_content_connected_user_not_linked_to_item():
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     other_item = factories.ItemFactory(
         parent=folder,
@@ -245,9 +233,7 @@ def test_put_file_content_connected_user_not_linked_to_item():
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
-    factories.UserItemAccessFactory(
-        item=other_item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=other_item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -279,9 +265,7 @@ def test_put_file_content_without_override_header():
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -310,9 +294,7 @@ def test_put_file_content_with_invalid_lock():
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -355,9 +337,7 @@ def test_put_file_content_with_no_lock_header_and_body_size_greater_than_0():
         size=100,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
 
@@ -391,9 +371,7 @@ def test_put_file_content_with_no_lock_header_and_body_size_0(data):
         size=0,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
 

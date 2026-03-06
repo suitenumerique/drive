@@ -77,9 +77,7 @@ class WopiViewSet(viewsets.ViewSet):
             "BaseFileName": item.filename,
             "OwnerId": str(item.creator.id),
             "IsAnonymousUser": request.user.is_anonymous,
-            "UserFriendlyName": request.user.full_name
-            if not request.user.is_anonymous
-            else None,
+            "UserFriendlyName": request.user.full_name if not request.user.is_anonymous else None,
             "Size": head_object["ContentLength"],
             "UserId": str(request.user.id),
             "Version": head_object.get("VersionId", ""),
@@ -183,12 +181,8 @@ class WopiViewSet(viewsets.ViewSet):
         item.size = file.size
         item.save(update_fields=["size", "updated_at"])
 
-        head_response = s3_client.head_object(
-            Bucket=default_storage.bucket_name, Key=item.file_key
-        )
-        return Response(
-            status=200, headers={X_WOPI_ITEMVERSION: head_response["VersionId"]}
-        )
+        head_response = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
+        return Response(status=200, headers={X_WOPI_ITEMVERSION: head_response["VersionId"]})
 
     def detail_post(self, request, pk=None):
         """
@@ -249,9 +243,7 @@ class WopiViewSet(viewsets.ViewSet):
         item = request.auth.item
         lock_service = LockService(item)
 
-        return Response(
-            status=200, headers={X_WOPI_LOCK: lock_service.get_lock(default="")}
-        )
+        return Response(status=200, headers={X_WOPI_LOCK: lock_service.get_lock(default="")})
 
     def _refresh_lock(self, request, pk=None):
         """
@@ -397,9 +389,7 @@ class WopiViewSet(viewsets.ViewSet):
         # pylint: disable=broad-exception-caught
         except Exception as e:  # noqa
             capture_exception(e)
-            logger.warning(
-                "Error deleting old file for item %s in the storage: %s", item.id, e
-            )
+            logger.warning("Error deleting old file for item %s in the storage: %s", item.id, e)
 
         if "application/json" in request.META.get("HTTP_ACCEPT", ""):
             return Response(

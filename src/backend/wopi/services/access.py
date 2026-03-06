@@ -52,9 +52,7 @@ class AccessUserItem:
         try:
             return cls(
                 item=Item.objects.get(id=UUID(data["item"])),
-                user=User.objects.get(id=UUID(data["user"]))
-                if data["user"]
-                else AnonymousUser(),
+                user=User.objects.get(id=UUID(data["user"])) if data["user"] else AnonymousUser(),
             )
         except (Item.DoesNotExist, User.DoesNotExist) as error:
             raise AccessUserItemNotFoundError("Resource not found") from error
@@ -80,9 +78,7 @@ class AccessUserItemService:
             raise AccessUserItemNotAllowed()
         token = self.generate_token()
         access_user_item = AccessUserItem(item=item, user=user)
-        token_eol = timezone.now() + timedelta(
-            seconds=settings.WOPI_ACCESS_TOKEN_TIMEOUT
-        )
+        token_eol = timezone.now() + timedelta(seconds=settings.WOPI_ACCESS_TOKEN_TIMEOUT)
         cache.set(
             token,
             access_user_item.to_dict(),

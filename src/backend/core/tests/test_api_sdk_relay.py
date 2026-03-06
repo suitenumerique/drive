@@ -13,9 +13,7 @@ pytestmark = pytest.mark.django_db
 def test_api_sdk_relay_get_event_anonymous():
     """Anonymous users should be allowed to get an event."""
     client = APIClient()
-    response = client.get(
-        "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/"
-    )
+    response = client.get("/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/")
     assert response.status_code == 200
     assert response.json() == {}
 
@@ -35,9 +33,7 @@ def test_api_sdk_relay_register_event():
     """Anonymous users should be allowed to register an event."""
     client = APIClient()
 
-    response = client.get(
-        "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/"
-    )
+    response = client.get("/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/")
     assert "Access-Control-Allow-Origin" not in response
     assert response.json() == {}
 
@@ -50,17 +46,13 @@ def test_api_sdk_relay_register_event():
     )
     assert response.status_code == 201
 
-    response = client.get(
-        "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/"
-    )
+    response = client.get("/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/")
     assert response.status_code == 200
     assert "Access-Control-Allow-Origin" not in response
     assert response.json() == {"type": "test"}
 
     # The event should be removed after it is retrieved
-    response = client.get(
-        "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/"
-    )
+    response = client.get("/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/")
     assert response.status_code == 200
     assert response.json() == {}
 
@@ -170,8 +162,6 @@ def test_api_sdk_relay_allowed_origins(settings):
     assert "Access-Control-Allow-Methods" not in response
 
     # Test request with no origin header
-    response = client.get(
-        "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/"
-    )
+    response = client.get("/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/")
     assert "Access-Control-Allow-Origin" not in response
     assert "Access-Control-Allow-Methods" not in response

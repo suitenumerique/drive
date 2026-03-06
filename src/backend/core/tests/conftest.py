@@ -38,9 +38,7 @@ def clear_cache():
 @pytest.fixture
 def mock_user_teams():
     """Mock for the "teams" property on the User model."""
-    with mock.patch(
-        "core.models.User.teams", new_callable=mock.PropertyMock
-    ) as mock_teams:
+    with mock.patch("core.models.User.teams", new_callable=mock.PropertyMock) as mock_teams:
         yield mock_teams
 
 
@@ -149,9 +147,7 @@ def indexer_settings_fixture(settings):
     settings.SEARCH_INDEXER_CLASS = "core.services.search_indexers.SearchIndexer"
     settings.SEARCH_INDEXER_SECRET = "ThisIsAKeyForTest"
     settings.SEARCH_INDEXER_URL = "http://localhost:8081/api/v1.0/documents/index/"
-    settings.SEARCH_INDEXER_QUERY_URL = (
-        "http://localhost:8081/api/v1.0/documents/search/"
-    )
+    settings.SEARCH_INDEXER_QUERY_URL = "http://localhost:8081/api/v1.0/documents/search/"
     settings.SEARCH_INDEXER_ALLOWED_MIMETYPES = ("text/",)
     settings.SEARCH_INDEXER_COUNTDOWN = 1
 

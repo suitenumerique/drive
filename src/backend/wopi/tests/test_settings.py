@@ -7,13 +7,9 @@ from drive.settings import Base
 
 def test_valid_wopi_configuration(monkeypatch):
     """Valid WOPI configuration should be correctly loaded."""
-    monkeypatch.setenv(
-        "WOPI_VENDORA_DISCOVERY_URL", "https://vendorA.com/hosting/discovery"
-    )
+    monkeypatch.setenv("WOPI_VENDORA_DISCOVERY_URL", "https://vendorA.com/hosting/discovery")
 
-    monkeypatch.setenv(
-        "WOPI_VENDORB_DISCOVERY_URL", "https://vendorB.com/hosting/discovery"
-    )
+    monkeypatch.setenv("WOPI_VENDORB_DISCOVERY_URL", "https://vendorB.com/hosting/discovery")
 
     class TestSettings(Base):
         """Fake test settings."""
