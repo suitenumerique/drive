@@ -59,6 +59,4 @@ class Command(BaseCommand):
         if batch:
             MirrorItemTask.objects.bulk_create(batch, batch_size=len(batch))
 
-        self.stdout.write(
-            self.style.SUCCESS(f"Prepared {total_items} mirroring items history.")
-        )
+        self.stdout.write(self.style.SUCCESS(f"Prepared {total_items} mirroring items history."))

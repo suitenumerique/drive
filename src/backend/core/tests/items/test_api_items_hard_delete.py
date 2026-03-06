@@ -19,11 +19,7 @@ def test_api_items_hard_delete_anonymous():
 
 @pytest.mark.parametrize(
     "role",
-    [
-        role
-        for role in models.RoleChoices.values
-        if role not in models.RoleChoices.OWNER
-    ],
+    [role for role in models.RoleChoices.values if role not in models.RoleChoices.OWNER],
 )
 def test_api_items_hard_delete_authenticated_not_owner(role):
     """

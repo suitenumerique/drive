@@ -50,9 +50,7 @@ def test_api_item_invitations_list_authenticated_privileged(
         factories.TeamItemAccessFactory(item=item, team="lasuite", role=role)
 
     invitation = factories.InvitationFactory(item=item, issuer=user)
-    other_invitations = factories.InvitationFactory.create_batch(
-        2, item=item, issuer=other_user
-    )
+    other_invitations = factories.InvitationFactory.create_batch(2, item=item, issuer=other_user)
 
     # invitations from other items should not be listed
     other_item = factories.ItemFactory()
@@ -157,9 +155,7 @@ def test_api_item_invitations_list_expired_invitations_still_listed():
         [
             {
                 "id": str(expired_invitation.id),
-                "created_at": expired_invitation.created_at.isoformat().replace(
-                    "+00:00", "Z"
-                ),
+                "created_at": expired_invitation.created_at.isoformat().replace("+00:00", "Z"),
                 "email": str(expired_invitation.email),
                 "item": str(item.id),
                 "role": expired_invitation.role,
@@ -600,9 +596,7 @@ def test_api_items_invitations_on_item_without_explicit_access():
         creator=user, users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER
     )
 
-    child = factories.ItemFactory(
-        creator=user, parent=root, type=models.ItemTypeChoices.FOLDER
-    )
+    child = factories.ItemFactory(creator=user, parent=root, type=models.ItemTypeChoices.FOLDER)
 
     invitation_values = {
         "email": "JOHN.DOE@EXAMPLE.COM",
@@ -719,9 +713,7 @@ def test_api_item_invitations_update_authenticated_privileged_role(
 
 @pytest.mark.parametrize("via", VIA)
 @pytest.mark.parametrize("role", ["reader", "editor"])
-def test_api_item_invitations_update_authenticated_unprivileged(
-    role, via, mock_user_teams
-):
+def test_api_item_invitations_update_authenticated_unprivileged(role, via, mock_user_teams):
     """
     Authenticated user should not be allowed to update invitations if they are
     simple reader or editor of the item.

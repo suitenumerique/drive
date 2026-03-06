@@ -50,9 +50,7 @@ def mirror_file(self, mirror_task_id):
         return
 
     try:
-        mirror_task = MirrorItemTask.objects.select_related("item").get(
-            id=mirror_task_id
-        )
+        mirror_task = MirrorItemTask.objects.select_related("item").get(id=mirror_task_id)
     except MirrorItemTask.DoesNotExist:
         logger.error("Mirror task %s does not exist", mirror_task_id)
         return

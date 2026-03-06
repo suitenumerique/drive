@@ -72,9 +72,9 @@ def get_batch_accesses_by_users_and_teams(items):
     grouped by users and teams, including all ancestor paths.
     """
     ancestor_map = get_ancestor_to_descendants_map(items)
-    access_qs = models.ItemAccess.objects.filter(
-        item__path__in=list(ancestor_map.keys())
-    ).values("item__path", "user__sub", "team")
+    access_qs = models.ItemAccess.objects.filter(item__path__in=list(ancestor_map.keys())).values(
+        "item__path", "user__sub", "team"
+    )
 
     access_by_document_path = defaultdict(lambda: {"users": set(), "teams": set()})
 
@@ -138,9 +138,7 @@ def is_allowed_mimetype(mimetype, patterns):
     """
     Returns true if the mimetype is not empty and matches any of the allowed patterns.
     """
-    return len(mimetype) > 0 and any(
-        match_mimetype_glob(mimetype, pattern) for pattern in patterns
-    )
+    return len(mimetype) > 0 and any(match_mimetype_glob(mimetype, pattern) for pattern in patterns)
 
 
 class BaseItemIndexer(ABC):
@@ -164,19 +162,13 @@ class BaseItemIndexer(ABC):
         self.allowed_mimetypes = settings.SEARCH_INDEXER_ALLOWED_MIMETYPES
 
         if not self.indexer_url:
-            raise ImproperlyConfigured(
-                "SEARCH_INDEXER_URL must be set in Django settings."
-            )
+            raise ImproperlyConfigured("SEARCH_INDEXER_URL must be set in Django settings.")
 
         if not self.indexer_secret:
-            raise ImproperlyConfigured(
-                "SEARCH_INDEXER_SECRET must be set in Django settings."
-            )
+            raise ImproperlyConfigured("SEARCH_INDEXER_SECRET must be set in Django settings.")
 
         if not self.search_url:
-            raise ImproperlyConfigured(
-                "SEARCH_INDEXER_QUERY_URL must be set in Django settings."
-            )
+            raise ImproperlyConfigured("SEARCH_INDEXER_QUERY_URL must be set in Django settings.")
 
         if not self.allowed_mimetypes:
             raise ImproperlyConfigured(

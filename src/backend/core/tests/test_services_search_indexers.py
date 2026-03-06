@@ -42,19 +42,11 @@ class FakeDocumentIndexer(BaseItemIndexer):
 def test_get_ancestor_to_descendants_map():
     """Test ancestor mapping of a multiple paths."""
     root = factories.ItemFactory(title="root", type=models.ItemTypeChoices.FOLDER)
-    a = factories.ItemFactory(
-        title="a", type=models.ItemTypeChoices.FOLDER, parent=root
-    )
+    a = factories.ItemFactory(title="a", type=models.ItemTypeChoices.FOLDER, parent=root)
     a_1 = factories.ItemFactory(title="a.1", type=models.ItemTypeChoices.FILE, parent=a)
-    a_a = factories.ItemFactory(
-        title="a.a", type=models.ItemTypeChoices.FOLDER, parent=a
-    )
-    a_a_1 = factories.ItemFactory(
-        title="a.a.1", type=models.ItemTypeChoices.FILE, parent=a_a
-    )
-    b = factories.ItemFactory(
-        title="b", type=models.ItemTypeChoices.FOLDER, parent=root
-    )
+    a_a = factories.ItemFactory(title="a.a", type=models.ItemTypeChoices.FOLDER, parent=a)
+    a_a_1 = factories.ItemFactory(title="a.a.1", type=models.ItemTypeChoices.FILE, parent=a_a)
+    b = factories.ItemFactory(title="b", type=models.ItemTypeChoices.FOLDER, parent=root)
     b_1 = factories.ItemFactory(title="b.1", type=models.ItemTypeChoices.FILE, parent=b)
 
     result = get_ancestor_to_descendants_map(
@@ -134,9 +126,7 @@ def test_services_search_indexer_is_configured(indexer_settings):
     assert not get_file_indexer()
 
     # Valid class
-    indexer_settings.SEARCH_INDEXER_CLASS = (
-        "core.services.search_indexers.SearchIndexer"
-    )
+    indexer_settings.SEARCH_INDEXER_CLASS = "core.services.search_indexers.SearchIndexer"
 
     get_file_indexer.cache_clear()
     assert get_file_indexer() is not None
@@ -181,9 +171,7 @@ def test_services_search_indexer_secret_is_none(indexer_settings):
     with pytest.raises(ImproperlyConfigured) as exc_info:
         SearchIndexer()
 
-    assert "SEARCH_INDEXER_SECRET must be set in Django settings." in str(
-        exc_info.value
-    )
+    assert "SEARCH_INDEXER_SECRET must be set in Django settings." in str(exc_info.value)
 
 
 def test_services_search_indexer_secret_is_empty(indexer_settings):
@@ -195,9 +183,7 @@ def test_services_search_indexer_secret_is_empty(indexer_settings):
     with pytest.raises(ImproperlyConfigured) as exc_info:
         SearchIndexer()
 
-    assert "SEARCH_INDEXER_SECRET must be set in Django settings." in str(
-        exc_info.value
-    )
+    assert "SEARCH_INDEXER_SECRET must be set in Django settings." in str(exc_info.value)
 
 
 def test_services_search_endpoint_is_none(indexer_settings):
@@ -209,9 +195,7 @@ def test_services_search_endpoint_is_none(indexer_settings):
     with pytest.raises(ImproperlyConfigured) as exc_info:
         SearchIndexer()
 
-    assert "SEARCH_INDEXER_QUERY_URL must be set in Django settings." in str(
-        exc_info.value
-    )
+    assert "SEARCH_INDEXER_QUERY_URL must be set in Django settings." in str(exc_info.value)
 
 
 def test_services_search_endpoint_is_empty(indexer_settings):
@@ -223,9 +207,7 @@ def test_services_search_endpoint_is_empty(indexer_settings):
     with pytest.raises(ImproperlyConfigured) as exc_info:
         SearchIndexer()
 
-    assert "SEARCH_INDEXER_QUERY_URL must be set in Django settings." in str(
-        exc_info.value
-    )
+    assert "SEARCH_INDEXER_QUERY_URL must be set in Django settings." in str(exc_info.value)
 
 
 @pytest.mark.parametrize(
@@ -237,9 +219,7 @@ def test_services_search_endpoint_is_empty(indexer_settings):
         (12, "SEARCH_INDEXER_ALLOWED_MIMETYPES Django setting must be a list."),
     ],
 )
-def test_services_search_allowed_mimetypes_is_invalid(
-    indexer_settings, mimetypes, expected
-):
+def test_services_search_allowed_mimetypes_is_invalid(indexer_settings, mimetypes, expected):
     """
     Indexer should raise RuntimeError if SEARCH_INDEXER_ALLOWED_MIMETYPES is either empty, None
     or not a list
@@ -261,10 +241,7 @@ def test_services_is_allowed_mimetype():
     assert is_allowed_mimetype("text/plain", ["text/html"]) is False
     assert is_allowed_mimetype("text/plain", ["text/"]) is True
     assert is_allowed_mimetype("application/pdf", ["text/", "application/pdf"]) is True
-    assert (
-        is_allowed_mimetype("application/pdf+bin", ["text/", "application/pdf"])
-        is False
-    )
+    assert is_allowed_mimetype("application/pdf+bin", ["text/", "application/pdf"]) is False
     assert is_allowed_mimetype("application/pdf+bin", ["text/", "application/"]) is True
 
 
@@ -507,9 +484,7 @@ def test_services_search_indexers_index_errors(indexer_settings):
 
 
 @patch.object(SearchIndexer, "push")
-def test_services_search_indexers_batches_pass_only_batch_accesses(
-    mock_push, indexer_settings
-):
+def test_services_search_indexers_batches_pass_only_batch_accesses(mock_push, indexer_settings):
     """
     Items indexing should be processed in batches,
     and only the access data relevant to each batch should be used.
@@ -648,9 +623,7 @@ def test_services_search_indexers_ignore_content_if_not_ready(mock_push):
 
 @patch.object(SearchIndexer, "push")
 @pytest.mark.usefixtures("indexer_settings")
-def test_services_search_indexers_ignore_content_if_too_big(
-    mock_push, indexer_settings
-):
+def test_services_search_indexers_ignore_content_if_too_big(mock_push, indexer_settings):
     """
     Should not fill the content data when the file is over the limit
     setting SEARCH_INDEXER_CONTENT_MAX_SIZE
@@ -889,9 +862,7 @@ def test_services_search_indexers_search_errors(indexer_settings):
     """
     factories.ItemFactory()
 
-    indexer_settings.SEARCH_INDEXER_QUERY_URL = (
-        "http://app-find/api/v1.0/documents/search/"
-    )
+    indexer_settings.SEARCH_INDEXER_QUERY_URL = "http://app-find/api/v1.0/documents/search/"
 
     responses.add(
         responses.POST,

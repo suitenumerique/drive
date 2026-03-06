@@ -132,9 +132,7 @@ class ItemAccessSerializer(serializers.ModelSerializer):
         """Return abilities of the logged-in user on the instance."""
         request = self.context.get("request")
         if request:
-            return instance.get_abilities(
-                request.user, is_explicit=self.get_is_explicit(instance)
-            )
+            return instance.get_abilities(request.user, is_explicit=self.get_is_explicit(instance))
         return {}
 
     def get_max_role(self, instance):
@@ -356,9 +354,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     def get_is_wopi_supported(self, item):
         """Return whether the item is supported by WOPI protocol."""
         request = self.context.get("request")
-        return wopi_utils.is_item_wopi_supported(
-            item, request.user if request else None
-        )
+        return wopi_utils.is_item_wopi_supported(item, request.user if request else None)
 
 
 class ListItemLightSerializer(ListItemSerializer):
@@ -511,13 +507,9 @@ class ItemSerializer(ListItemSerializer):
 
     def update(self, instance, validated_data):
         """Validate that the title is unique in the current path."""
-        if validated_data.get("title") and instance.title != validated_data.get(
-            "title"
-        ):
+        if validated_data.get("title") and instance.title != validated_data.get("title"):
             if instance.depth > 1:
-                validated_data["title"] = instance.manage_unique_title(
-                    validated_data.get("title")
-                )
+                validated_data["title"] = instance.manage_unique_title(validated_data.get("title"))
 
             if instance.type == models.ItemTypeChoices.FILE:
                 # Just check for validation, the real filename
@@ -651,8 +643,7 @@ class CreateItemSerializer(ItemSerializer):
                     _root, extension = splitext(attrs["filename"])
                     if extension.lower() not in settings.FILE_EXTENSIONS_ALLOWED:
                         logger.info(
-                            "create_item: file extension not allowed %s "
-                            "for filename %s",
+                            "create_item: file extension not allowed %s for filename %s",
                             extension,
                             attrs["filename"],
                         )
@@ -666,10 +657,7 @@ class CreateItemSerializer(ItemSerializer):
                 # Use the sanitize_filename utils
                 attrs["filename"] = utils.sanitize_filename(attrs["filename"])
 
-        if (
-            attrs["type"] == models.ItemTypeChoices.FOLDER
-            and attrs.get("title") is None
-        ):
+        if attrs["type"] == models.ItemTypeChoices.FOLDER and attrs.get("title") is None:
             raise serializers.ValidationError(
                 {"title": _("This field is required for folders.")},
                 code="item_create_folder_title_required",
@@ -723,9 +711,7 @@ class LinkItemSerializer(serializers.ModelSerializer):
     We expose it separately from item in order to simplify and secure access control.
     """
 
-    link_reach = serializers.ChoiceField(
-        choices=LinkReachChoices.choices, required=True
-    )
+    link_reach = serializers.ChoiceField(choices=LinkReachChoices.choices, required=True)
 
     class Meta:
         model = models.Item
@@ -740,9 +726,7 @@ class LinkItemSerializer(serializers.ModelSerializer):
         link_role = attrs.get("link_role")
 
         if not link_reach:
-            raise serializers.ValidationError(
-                {"link_reach": _("This field is required.")}
-            )
+            raise serializers.ValidationError({"link_reach": _("This field is required.")})
 
         # Get available options based on ancestors' link definition
         available_options = LinkReachChoices.get_select_options(
@@ -754,9 +738,7 @@ class LinkItemSerializer(serializers.ModelSerializer):
             msg = _(
                 "Link reach '%(link_reach)s' is not allowed based on parent item configuration."
             )
-            raise serializers.ValidationError(
-                {"link_reach": msg % {"link_reach": link_reach}}
-            )
+            raise serializers.ValidationError({"link_reach": msg % {"link_reach": link_reach}})
 
         # Validate link_role is compatible with link_reach
         allowed_roles = available_options[link_reach]

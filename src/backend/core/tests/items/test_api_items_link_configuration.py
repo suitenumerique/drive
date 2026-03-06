@@ -17,9 +17,7 @@ def test_api_items_link_configuration_update_anonymous(reach, role):
     item = factories.ItemFactory(link_reach=reach, link_role=role)
     old_item_values = serializers.LinkItemSerializer(instance=item).data
 
-    new_item_values = serializers.LinkItemSerializer(
-        instance=factories.ItemFactory()
-    ).data
+    new_item_values = serializers.LinkItemSerializer(instance=factories.ItemFactory()).data
     response = APIClient().put(
         f"/api/v1.0/items/{item.id!s}/link-configuration/",
         new_item_values,
@@ -57,9 +55,7 @@ def test_api_items_link_configuration_update_authenticated_unrelated(reach, role
     item = factories.ItemFactory(link_reach=reach, link_role=role)
     old_item_values = serializers.LinkItemSerializer(instance=item).data
 
-    new_item_values = serializers.LinkItemSerializer(
-        instance=factories.ItemFactory()
-    ).data
+    new_item_values = serializers.LinkItemSerializer(instance=factories.ItemFactory()).data
     response = client.put(
         f"/api/v1.0/items/{item.id!s}/link-configuration/",
         new_item_values,
@@ -106,9 +102,7 @@ def test_api_items_link_configuration_update_authenticated_related_forbidden(
 
     old_item_values = serializers.LinkItemSerializer(instance=item).data
 
-    new_item_values = serializers.LinkItemSerializer(
-        instance=factories.ItemFactory()
-    ).data
+    new_item_values = serializers.LinkItemSerializer(instance=factories.ItemFactory()).data
     response = client.put(
         f"/api/v1.0/items/{item.id!s}/link-configuration/",
         new_item_values,
@@ -351,9 +345,7 @@ def test_api_items_link_configuration_update_with_ancestor_constraints():
         type=models.ItemTypeChoices.FILE,
     )
 
-    factories.UserItemAccessFactory(
-        item=child_item, user=user, role=models.RoleChoices.OWNER
-    )
+    factories.UserItemAccessFactory(item=child_item, user=user, role=models.RoleChoices.OWNER)
 
     # Try to set child to PUBLIC when parent is RESTRICTED
     new_data = {
@@ -404,9 +396,7 @@ def test_api_items_link_configuration_update_invalid_role_for_reach_validation()
         type=models.ItemTypeChoices.FOLDER,
     )
 
-    factories.UserItemAccessFactory(
-        item=child_item, user=user, role=models.RoleChoices.OWNER
-    )
+    factories.UserItemAccessFactory(item=child_item, user=user, role=models.RoleChoices.OWNER)
 
     new_data = {
         "link_reach": models.LinkReachChoices.AUTHENTICATED,

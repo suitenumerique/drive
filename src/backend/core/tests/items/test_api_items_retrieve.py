@@ -71,9 +71,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
 
 def test_api_items_retrieve_anonymous_public_parent():
     """Anonymous users should be allowed to retrieve an item who has a public ancestor."""
-    grand_parent = factories.ItemFactory(
-        link_reach="public", type=models.ItemTypeChoices.FOLDER
-    )
+    grand_parent = factories.ItemFactory(link_reach="public", type=models.ItemTypeChoices.FOLDER)
     parent = factories.ItemFactory(
         parent=grand_parent,
         link_reach=random.choice(["authenticated", "restricted"]),
@@ -244,9 +242,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
     client = APIClient()
     client.force_login(user)
 
-    grand_parent = factories.ItemFactory(
-        link_reach=reach, type=models.ItemTypeChoices.FOLDER
-    )
+    grand_parent = factories.ItemFactory(link_reach=reach, type=models.ItemTypeChoices.FOLDER)
     parent = factories.ItemFactory(
         parent=grand_parent, link_reach="restricted", type=models.ItemTypeChoices.FOLDER
     )
@@ -307,9 +303,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_child(reach):
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(
-        link_reach="restricted", type=models.ItemTypeChoices.FOLDER
-    )
+    item = factories.ItemFactory(link_reach="restricted", type=models.ItemTypeChoices.FOLDER)
     factories.ItemFactory(link_reach=reach, parent=item)
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
@@ -551,9 +545,7 @@ def test_api_items_retrieve_authenticated_related_child():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(
-        link_reach="restricted", type=models.ItemTypeChoices.FOLDER
-    )
+    item = factories.ItemFactory(link_reach="restricted", type=models.ItemTypeChoices.FOLDER)
     child = factories.ItemFactory(parent=item)
 
     factories.UserItemAccessFactory(item=child, user=user)
@@ -591,9 +583,7 @@ def test_api_items_retrieve_authenticated_related_team_none(mock_user_teams):
 
     factories.TeamItemAccessFactory(item=item, team="readers", role="reader")
     factories.TeamItemAccessFactory(item=item, team="editors", role="editor")
-    factories.TeamItemAccessFactory(
-        item=item, team="administrators", role="administrator"
-    )
+    factories.TeamItemAccessFactory(item=item, team="administrators", role="administrator")
     factories.TeamItemAccessFactory(item=item, team="owners", role="owner")
     factories.TeamItemAccessFactory(item=item)
     factories.TeamItemAccessFactory()
@@ -621,9 +611,7 @@ def test_api_items_retrieve_authenticated_related_team_none(mock_user_teams):
         [["unknown", "editors"], "editor"],
     ],
 )
-def test_api_items_retrieve_authenticated_related_team_members(
-    teams, role, mock_user_teams
-):
+def test_api_items_retrieve_authenticated_related_team_members(teams, role, mock_user_teams):
     """
     Authenticated users should be allowed to retrieve an item to which they
     are related via a team whatever the role.
@@ -639,9 +627,7 @@ def test_api_items_retrieve_authenticated_related_team_members(
 
     factories.TeamItemAccessFactory(item=item, team="readers", role="reader")
     factories.TeamItemAccessFactory(item=item, team="editors", role="editor")
-    factories.TeamItemAccessFactory(
-        item=item, team="administrators", role="administrator"
-    )
+    factories.TeamItemAccessFactory(item=item, team="administrators", role="administrator")
     factories.TeamItemAccessFactory(item=item, team="owners", role="owner")
     factories.TeamItemAccessFactory(item=item)
     factories.TeamItemAccessFactory()
@@ -700,9 +686,7 @@ def test_api_items_retrieve_authenticated_related_team_members(
         [["unknown", "administrators"], "administrator"],
     ],
 )
-def test_api_items_retrieve_authenticated_related_team_administrators(
-    teams, role, mock_user_teams
-):
+def test_api_items_retrieve_authenticated_related_team_administrators(teams, role, mock_user_teams):
     """
     Authenticated users should be allowed to retrieve an item to which they
     are related via a team whatever the role.
@@ -718,9 +702,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(
 
     factories.TeamItemAccessFactory(item=item, team="readers", role="reader")
     factories.TeamItemAccessFactory(item=item, team="editors", role="editor")
-    factories.TeamItemAccessFactory(
-        item=item, team="administrators", role="administrator"
-    )
+    factories.TeamItemAccessFactory(item=item, team="administrators", role="administrator")
     factories.TeamItemAccessFactory(item=item, team="owners", role="owner")
     factories.TeamItemAccessFactory(item=item)
     factories.TeamItemAccessFactory()
@@ -795,9 +777,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_t
 
     factories.TeamItemAccessFactory(item=item, team="readers", role="reader")
     factories.TeamItemAccessFactory(item=item, team="editors", role="editor")
-    factories.TeamItemAccessFactory(
-        item=item, team="administrators", role="administrator"
-    )
+    factories.TeamItemAccessFactory(item=item, team="administrators", role="administrator")
     factories.TeamItemAccessFactory(item=item, team="owners", role="owner")
     factories.TeamItemAccessFactory(item=item)
     factories.TeamItemAccessFactory()
@@ -893,9 +873,7 @@ def test_api_items_retrieve_numqueries_with_link_trace(django_assert_num_queries
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(
-        users=[user], link_traces=[user], type=models.ItemTypeChoices.FILE
-    )
+    item = factories.ItemFactory(users=[user], link_traces=[user], type=models.ItemTypeChoices.FILE)
 
     with django_assert_num_queries(4):
         response = client.get(f"/api/v1.0/items/{item.id!s}/")
@@ -1345,8 +1323,7 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo%20with%20spaces.png",
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/",
         "url_preview": (
-            f"http://localhost:8083/media/preview/item/{item.id!s}/"
-            "logo%20with%20spaces.png"
+            f"http://localhost:8083/media/preview/item/{item.id!s}/logo%20with%20spaces.png"
         ),
         "mimetype": "image/png",
         "main_workspace": False,

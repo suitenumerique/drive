@@ -32,9 +32,7 @@ def test_check_file_info_connected_user_with_access():
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     default_storage.save(item.file_key, BytesIO(b"my prose"))
     head_response = default_storage.connection.meta.client.head_object(
@@ -94,9 +92,7 @@ def test_check_file_info_connected_user_reader_access():
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.READER
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.READER)
 
     default_storage.save(item.file_key, BytesIO(b"my prose"))
     head_response = default_storage.connection.meta.client.head_object(
@@ -156,9 +152,7 @@ def test_check_file_info_connected_user_reader_access_deleted_item():
         link_reach=models.LinkReachChoices.RESTRICTED,
         link_role=models.LinkRoleChoices.EDITOR,
     )
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.READER
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.READER)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -265,9 +259,7 @@ def test_check_file_info_supports_rename_override(settings, monkeypatch):
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     default_storage.connection.meta.client.put_object(
         Bucket=default_storage.bucket_name,

@@ -20,6 +20,4 @@ class OIDCAuthenticationCallbackView(LaSuiteOIDCAuthenticationCallbackView):
         try:
             return super().get(request)
         except UserCannotAccessApp:
-            return HttpResponseRedirect(
-                self.failure_url + "?auth_error=user_cannot_access_app"
-            )
+            return HttpResponseRedirect(self.failure_url + "?auth_error=user_cannot_access_app")

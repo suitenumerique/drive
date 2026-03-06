@@ -23,8 +23,7 @@ def test_process_item_deletion_not_hard_deleted(caplog):
     item.refresh_from_db()
     assert item.hard_deleted_at is None
     assert (
-        "To process an item deletion, it must be hard deleted first."
-        in caplog.records[0].message
+        "To process an item deletion, it must be hard deleted first." in caplog.records[0].message
     )
 
 
@@ -66,9 +65,7 @@ def test_process_item_deletion_item_folder_hard_deleted():
 def test_process_item_deletion_in_cascade():
     """Test the process deletion task when the item folder is hard deleted."""
     user = factories.UserFactory()
-    parent = factories.ItemFactory(
-        type=models.ItemTypeChoices.FOLDER, creator=user, users=[user]
-    )
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, creator=user, users=[user])
 
     child = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER, parent=parent, creator=user, users=[user]
@@ -110,9 +107,7 @@ def test_process_item_deletion_in_cascade():
 def test_process_item_deletion_item_subfolder_in_cascade():
     """Test the process deletion task when the item subfolder is hard deleted."""
     user = factories.UserFactory()
-    parent = factories.ItemFactory(
-        type=models.ItemTypeChoices.FOLDER, creator=user, users=[user]
-    )
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, creator=user, users=[user])
 
     child = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER, parent=parent, creator=user, users=[user]

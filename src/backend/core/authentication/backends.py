@@ -4,7 +4,6 @@ import logging
 
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
-from django.utils.translation import gettext_lazy as _
 
 from lasuite.oidc_login.backends import (
     OIDCAuthenticationBackend as LaSuiteOIDCAuthenticationBackend,
@@ -37,9 +36,7 @@ class OIDCAuthenticationBackend(LaSuiteOIDCAuthenticationBackend):
 
         # We need to add the claims that we want to store so that they are
         # available in the post_get_or_create_user method.
-        claims_to_store = {
-            claim: user_info.get(claim) for claim in settings.OIDC_STORE_CLAIMS
-        }
+        claims_to_store = {claim: user_info.get(claim) for claim in settings.OIDC_STORE_CLAIMS}
         return {
             "full_name": self.compute_full_name(user_info),
             "short_name": user_info.get(settings.OIDC_USERINFO_SHORTNAME_FIELD),
@@ -59,7 +56,5 @@ class OIDCAuthenticationBackend(LaSuiteOIDCAuthenticationBackend):
         entitlement_backend = get_entitlements_backend()
         result = entitlement_backend.can_access(user)
         if not result["result"]:
-            raise UserCannotAccessApp(
-                result.get("message", "User does not have access to the app")
-            )
+            raise UserCannotAccessApp(result.get("message", "User does not have access to the app"))
         return user

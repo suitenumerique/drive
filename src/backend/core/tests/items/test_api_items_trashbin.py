@@ -131,9 +131,7 @@ def test_api_items_trashbin_authenticated_direct(django_assert_num_queries):
 
     # Nested items should also get listed
     parent = factories.ItemFactory(parent=item1, type=models.ItemTypeChoices.FOLDER)
-    item3 = factories.ItemFactory(
-        parent=parent, deleted_at=now, type=models.ItemTypeChoices.FILE
-    )
+    item3 = factories.ItemFactory(parent=parent, deleted_at=now, type=models.ItemTypeChoices.FILE)
     models.ItemAccess.objects.create(item=parent, user=user, role="owner")
 
     # Permanently deleted items should not be listed
@@ -166,9 +164,7 @@ def test_api_items_trashbin_list_filter_type():
     client = APIClient()
     client.force_login(user)
 
-    item_folder = factories.ItemFactory(
-        type=models.ItemTypeChoices.FOLDER, deleted_at=now
-    )
+    item_folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, deleted_at=now)
     factories.UserItemAccessFactory(item=item_folder, user=user, role="owner")
 
     item_file = factories.ItemFactory(type=models.ItemTypeChoices.FILE, deleted_at=now)
@@ -206,9 +202,7 @@ def test_api_items_trashbin_list_filter_type():
     assert results_ids == {str(item_file.id)}
 
 
-def test_api_items_trashbin_authenticated_via_team(
-    django_assert_num_queries, mock_user_teams
-):
+def test_api_items_trashbin_authenticated_via_team(django_assert_num_queries, mock_user_teams):
     """
     Authenticated users should be able to list trashbin items they own via a team.
     """
@@ -259,8 +253,7 @@ def test_api_items_trashbin_pagination(
     client.force_login(user)
 
     item_ids = [
-        str(item.id)
-        for item in factories.ItemFactory.create_batch(3, deleted_at=timezone.now())
+        str(item.id) for item in factories.ItemFactory.create_batch(3, deleted_at=timezone.now())
     ]
     for item_id in item_ids:
         models.ItemAccess.objects.create(item_id=item_id, user=user, role="owner")
@@ -304,9 +297,7 @@ def test_api_items_trashbin_distinct():
     client.force_login(user)
 
     other_user = factories.UserFactory()
-    item = factories.ItemFactory(
-        users=[(user, "owner"), other_user], deleted_at=timezone.now()
-    )
+    item = factories.ItemFactory(users=[(user, "owner"), other_user], deleted_at=timezone.now())
 
     response = client.get(
         "/api/v1.0/items/trashbin/",

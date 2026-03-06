@@ -57,9 +57,7 @@ def test_process_pending_mirror_tasks_with_processing_tasks():
 
 def test_process_pending_mirror_tasks_no_slots_available():
     """Test command doesn't enqueue when no slots available."""
-    MirrorItemTaskFactory.create_batch(
-        10, status=MirrorItemTaskStatusChoices.PROCESSING
-    )
+    MirrorItemTaskFactory.create_batch(10, status=MirrorItemTaskStatusChoices.PROCESSING)
     MirrorItemTaskFactory.create_batch(5, status=MirrorItemTaskStatusChoices.PENDING)
 
     with mock.patch.object(mirror_file, "delay") as mock_delay:
@@ -82,9 +80,7 @@ def test_process_pending_mirror_tasks_exact_slots():
 def test_process_pending_mirror_tasks_with_pending_already_retried():
     """Test command when pending tasks already retried, they should be ignored."""
 
-    MirrorItemTaskFactory.create_batch(
-        3, status=MirrorItemTaskStatusChoices.PENDING, retries=2
-    )
+    MirrorItemTaskFactory.create_batch(3, status=MirrorItemTaskStatusChoices.PENDING, retries=2)
     pending_tasks = MirrorItemTaskFactory.create_batch(
         3, status=MirrorItemTaskStatusChoices.PENDING
     )

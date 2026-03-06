@@ -44,9 +44,7 @@ def test_prepare_mirroring_items_history():
     # Create a batch of MirrorItemTask from the items
     number_of_mirror_item_tasks = random.randint(10, 20)
     for item in islice(items, number_of_mirror_item_tasks):
-        MirrorItemTaskFactory(
-            item=item, status=random.choice(MirrorItemTaskStatusChoices.values)
-        )
+        MirrorItemTaskFactory(item=item, status=random.choice(MirrorItemTaskStatusChoices.values))
 
     # call the command
     call_command("prepare_mirroring_items_history")

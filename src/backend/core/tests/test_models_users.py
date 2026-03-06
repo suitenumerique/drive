@@ -54,12 +54,8 @@ def test_models_users_convert_valid_invitations():
     item = factories.ItemFactory()
     other_item = factories.ItemFactory()
     invitation_item = factories.InvitationFactory(email=email, item=item)
-    invitation_other_item = factories.InvitationFactory(
-        email="Test@example.coM", item=other_item
-    )
-    other_email_invitation = factories.InvitationFactory(
-        email="pre_test@example.com", item=item
-    )
+    invitation_other_item = factories.InvitationFactory(email="Test@example.coM", item=other_item)
+    other_email_invitation = factories.InvitationFactory(email="pre_test@example.com", item=item)
 
     assert item.accesses.count() == 0
     assert other_item.accesses.count() == 0

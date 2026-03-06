@@ -261,9 +261,7 @@ def test_api_entitlements_anct_missing_token_parameter():
     """Missing token parameter should raise an exception."""
     backend = ANCTEntitlementsBackend()
 
-    with pytest.raises(
-        ImproperlyConfigured, match="Invalid entitlements backend configuration"
-    ):
+    with pytest.raises(ImproperlyConfigured, match="Invalid entitlements backend configuration"):
         backend.get_parameters()
 
 
@@ -279,9 +277,7 @@ def test_api_entitlements_anct_missing_service_id_parameter():
     """Missing service_id parameter should raise an exception."""
     backend = ANCTEntitlementsBackend()
 
-    with pytest.raises(
-        ImproperlyConfigured, match="Invalid entitlements backend configuration"
-    ):
+    with pytest.raises(ImproperlyConfigured, match="Invalid entitlements backend configuration"):
         backend.get_parameters()
 
 
@@ -298,7 +294,5 @@ def test_api_entitlements_anct_invalid_cache_timeout_type():
     """Invalid cache_timeout type (string instead of int) should raise an exception."""
     backend = ANCTEntitlementsBackend()
 
-    with pytest.raises(
-        ImproperlyConfigured, match="Invalid entitlements backend configuration"
-    ):
+    with pytest.raises(ImproperlyConfigured, match="Invalid entitlements backend configuration"):
         backend.get_parameters()

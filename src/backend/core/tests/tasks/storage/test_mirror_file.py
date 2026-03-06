@@ -47,9 +47,7 @@ def test_mirror_no_file_s3_config_should_abort(settings, caplog):
         result = mirror_file("test.txt")
 
         assert result is None
-        assert (
-            "Mirroring S3 bucket is not configured, skipping mirroring" in caplog.text
-        )
+        assert "Mirroring S3 bucket is not configured, skipping mirroring" in caplog.text
 
 
 def test_mirror_file_existing_record_not_existing(caplog):
@@ -58,9 +56,7 @@ def test_mirror_file_existing_record_not_existing(caplog):
     mirror_item_task_id = uuid4()
 
     with (
-        mock.patch(
-            "core.tasks.storage.get_mirror_s3_client"
-        ) as mock_get_mirror_s3_client,
+        mock.patch("core.tasks.storage.get_mirror_s3_client") as mock_get_mirror_s3_client,
         caplog.at_level("ERROR", logger="core.tasks.storage"),
     ):
         mock_mirror_s3_client = mock.MagicMock()
@@ -73,24 +69,17 @@ def test_mirror_file_existing_record_not_existing(caplog):
 def test_mirror_file_existing_record_not_in_pending_status(caplog):
     """Test mirror file mirror_item_task not in pending status."""
 
-    mirror_item_task = MirrorItemTaskFactory(
-        status=MirrorItemTaskStatusChoices.PROCESSING
-    )
+    mirror_item_task = MirrorItemTaskFactory(status=MirrorItemTaskStatusChoices.PROCESSING)
 
     with (
-        mock.patch(
-            "core.tasks.storage.get_mirror_s3_client"
-        ) as mock_get_mirror_s3_client,
+        mock.patch("core.tasks.storage.get_mirror_s3_client") as mock_get_mirror_s3_client,
         caplog.at_level("INFO", logger="core.tasks.storage"),
     ):
         mock_mirror_s3_client = mock.MagicMock()
         mock_get_mirror_s3_client.return_value = mock_mirror_s3_client
         mirror_file(mirror_item_task.id)
 
-    assert (
-        f"Mirror task {mirror_item_task.id} is not pending, skipping mirroring"
-        in caplog.text
-    )
+    assert f"Mirror task {mirror_item_task.id} is not pending, skipping mirroring" in caplog.text
 
     mirror_item_task.refresh_from_db()
     assert mirror_item_task.status == MirrorItemTaskStatusChoices.PROCESSING
@@ -112,9 +101,7 @@ def test_mirror_file(settings, caplog):
     default_storage.save(item.file_key, BytesIO(file_content))
 
     with (
-        mock.patch(
-            "core.tasks.storage.get_mirror_s3_client"
-        ) as mock_get_mirror_s3_client,
+        mock.patch("core.tasks.storage.get_mirror_s3_client") as mock_get_mirror_s3_client,
         caplog.at_level("INFO", logger="core.tasks.storage"),
     ):
         mock_mirror_s3_client = mock.MagicMock()
@@ -131,17 +118,9 @@ def test_mirror_file(settings, caplog):
         )
         mirror_item_task.refresh_from_db()
         assert mirror_item_task.status == MirrorItemTaskStatusChoices.COMPLETED
-        assert (
-            mock_mirror_s3_client.put_object.call_args[1]["Body"].read() == file_content
-        )
-        assert (
-            f"Starting mirror of file {item.file_key} to bucket test_mirror"
-            in caplog.text
-        )
-        assert (
-            f"Successfully mirrored file {item.file_key} to bucket test_mirror"
-            in caplog.text
-        )
+        assert mock_mirror_s3_client.put_object.call_args[1]["Body"].read() == file_content
+        assert f"Starting mirror of file {item.file_key} to bucket test_mirror" in caplog.text
+        assert f"Successfully mirrored file {item.file_key} to bucket test_mirror" in caplog.text
 
 
 def test_mirror_files_retry(settings):
@@ -159,9 +138,7 @@ def test_mirror_files_retry(settings):
     assert mirror_item_task.retries == 0
 
     with (
-        mock.patch(
-            "core.tasks.storage.get_mirror_s3_client"
-        ) as mock_get_mirror_s3_client,
+        mock.patch("core.tasks.storage.get_mirror_s3_client") as mock_get_mirror_s3_client,
         pytest.raises(botocore.exceptions.ClientError),
     ):
         mock_mirror_s3_client = mock.MagicMock()
@@ -188,9 +165,7 @@ def test_mirror_file_max_retries_exceeded(settings):
     )
 
     with (
-        mock.patch(
-            "core.tasks.storage.get_mirror_s3_client"
-        ) as mock_get_mirror_s3_client,
+        mock.patch("core.tasks.storage.get_mirror_s3_client") as mock_get_mirror_s3_client,
     ):
         mock_mirror_s3_client = mock.MagicMock()
         mock_get_mirror_s3_client.return_value = mock_mirror_s3_client

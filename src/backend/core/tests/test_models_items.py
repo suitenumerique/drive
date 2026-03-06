@@ -134,10 +134,7 @@ def test_models_items_restore_cutoff_expired():
     field_error = error.error_dict["deleted_at"][0]
     assert "deleted_at" in error.error_dict
     assert field_error.code == "item_restore_hard_deleted"
-    assert (
-        field_error.message
-        == "This item was permanently deleted and cannot be restored."
-    )
+    assert field_error.message == "This item was permanently deleted and cannot be restored."
 
     deleted_item.refresh_from_db()
     assert deleted_item.deleted_at == now
@@ -159,10 +156,7 @@ def test_models_items_restore_hard_deleted_self():
     field_error = error.error_dict["deleted_at"][0]
     assert "deleted_at" in error.error_dict
     assert field_error.code == "item_restore_hard_deleted"
-    assert (
-        field_error.message
-        == "This item was permanently deleted and cannot be restored."
-    )
+    assert field_error.message == "This item was permanently deleted and cannot be restored."
 
     item.refresh_from_db()
     assert item.deleted_at is not None
@@ -186,10 +180,7 @@ def test_models_items_restore_hard_deleted_parent():
     field_error = error.error_dict["deleted_at"][0]
     assert "deleted_at" in error.error_dict
     assert field_error.code == "item_restore_hard_deleted"
-    assert (
-        field_error.message
-        == "This item was permanently deleted and cannot be restored."
-    )
+    assert field_error.message == "This item was permanently deleted and cannot be restored."
 
     item.refresh_from_db()
     assert item.deleted_at is not None
@@ -280,9 +271,7 @@ def test_models_items_get_abilities_forbidden(
         (True, "authenticated"),
     ],
 )
-def test_models_items_get_abilities_reader(
-    is_authenticated, reach, django_assert_num_queries
-):
+def test_models_items_get_abilities_reader(is_authenticated, reach, django_assert_num_queries):
     """
     Check abilities returned for a item giving reader role to link holders
     i.e anonymous users or authenticated users who have no specific role on the item.
@@ -332,9 +321,7 @@ def test_models_items_get_abilities_reader(
         (True, "authenticated"),
     ],
 )
-def test_models_items_get_abilities_editor(
-    is_authenticated, reach, django_assert_num_queries
-):
+def test_models_items_get_abilities_editor(is_authenticated, reach, django_assert_num_queries):
     """
     Check abilities returned for a item giving editor role to link holders
     i.e anonymous users or authenticated users who have no specific role on the item.
@@ -379,9 +366,7 @@ def test_models_items_get_abilities_editor(
 def test_models_items_not_root_get_abilities_owner(django_assert_num_queries):
     """Check abilities returned for the owner of an item."""
     user = factories.UserFactory()
-    item = factories.ItemFactory(
-        users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER
-    )
+    item = factories.ItemFactory(users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER)
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -485,13 +470,9 @@ def test_models_items_not_root_get_abilities_administrator(django_assert_num_que
 def test_models_items_not_root_get_abilities_editor_user(django_assert_num_queries):
     """Check abilities returned for the editor of a item."""
     user = factories.UserFactory()
-    parent = factories.ItemFactory(
-        users=[(user, "editor")], type=models.ItemTypeChoices.FOLDER
-    )
+    parent = factories.ItemFactory(users=[(user, "editor")], type=models.ItemTypeChoices.FOLDER)
     item = factories.ItemFactory(parent=parent)
-    link_select_options = LinkReachChoices.get_select_options(
-        **item.ancestors_link_definition
-    )
+    link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": True,
@@ -585,9 +566,7 @@ def test_models_items__email_invitation__success():
     assert len(mail.outbox) == 0
 
     sender = factories.UserFactory(full_name="Test Sender", email="sender@example.com")
-    item.send_invitation_email(
-        "guest@example.com", models.RoleChoices.EDITOR, sender, "en"
-    )
+    item.send_invitation_email("guest@example.com", models.RoleChoices.EDITOR, sender, "en")
 
     # pylint: disable-next=no-member
     assert len(mail.outbox) == 1
@@ -614,9 +593,7 @@ def test_models_items__email_invitation__success_fr():
     # pylint: disable-next=no-member
     assert len(mail.outbox) == 0
 
-    sender = factories.UserFactory(
-        full_name="Test Sender2", email="sender2@example.com"
-    )
+    sender = factories.UserFactory(full_name="Test Sender2", email="sender2@example.com")
     item.send_invitation_email(
         "guest2@example.com",
         models.RoleChoices.OWNER,
@@ -706,10 +683,7 @@ def test_models_items__email_invitation__skipped_when_email_host_missing(
 
     # Logger should be called to indicate skipping
     assert len(caplog.records) == 1
-    assert (
-        caplog.records[0].message
-        == "EMAIL_HOST host is not set, skipping email sending"
-    )
+    assert caplog.records[0].message == "EMAIL_HOST host is not set, skipping email sending"
 
 
 # item number of accesses
@@ -738,9 +712,7 @@ def test_models_items_nb_accesses_cache_is_set_and_retrieved(
     assert cache.get(key) == nb_accesses
 
     # The cache value should be invalidated when a item access is created
-    models.ItemAccess.objects.create(
-        item=item, user=factories.UserFactory(), role="reader"
-    )
+    models.ItemAccess.objects.create(item=item, user=factories.UserFactory(), role="reader")
     assert cache.get(key) is None  # Cache should be invalidated
     with django_assert_num_queries(1):
         new_nb_accesses = item.nb_accesses
@@ -776,9 +748,7 @@ def test_models_items_default_upload_state(item_type):
     """The default value for the upload_state field depends on the item type."""
     item = factories.ItemFactory(type=item_type)
     assert item.upload_state == (
-        models.ItemUploadStateChoices.PENDING
-        if item.type == models.ItemTypeChoices.FILE
-        else None
+        models.ItemUploadStateChoices.PENDING if item.type == models.ItemTypeChoices.FILE else None
     )
 
 
@@ -787,27 +757,19 @@ def test_models_items_creating_file_without_filename_should_fail():
     with pytest.raises(ValidationError) as exc_info:
         factories.ItemFactory(type=models.ItemTypeChoices.FILE, filename=None)
 
-    assert exc_info.value.message_dict == {
-        "filename": ["Filename is required for files."]
-    }
+    assert exc_info.value.message_dict == {"filename": ["Filename is required for files."]}
 
 
 @pytest.mark.parametrize(
     "item_type",
-    [
-        t[0]
-        for t in models.ItemTypeChoices.choices
-        if t[0] != models.ItemTypeChoices.FILE
-    ],
+    [t[0] for t in models.ItemTypeChoices.choices if t[0] != models.ItemTypeChoices.FILE],
 )
 def test_models_items_creating_non_file_with_filename_should_fail(item_type):
     """Creating a non-file item with a filename should raise an error."""
     with pytest.raises(ValidationError) as exc_info:
         factories.ItemFactory(type=item_type, filename="file.txt")
 
-    assert exc_info.value.message_dict == {
-        "filename": ["Filename is only allowed for files."]
-    }
+    assert exc_info.value.message_dict == {"filename": ["Filename is only allowed for files."]}
 
 
 def test_models_items_title_must_be_set():
@@ -826,24 +788,16 @@ def test_models_items_title_must_be_set():
 def test_models_items_unique_title_in_current_path():
     """Check title management in the current path."""
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, title="folder")
-    parent2 = factories.ItemFactory(
-        type=models.ItemTypeChoices.FOLDER, title="an other one"
-    )
+    parent2 = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, title="an other one")
 
     # An other root can have the same title
     factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, title="folder")
 
     # Create a child item with the same title should work
-    factories.ItemFactory(
-        parent=parent, title="folder", type=models.ItemTypeChoices.FOLDER
-    )
+    factories.ItemFactory(parent=parent, title="folder", type=models.ItemTypeChoices.FOLDER)
     # Create a child item with a title already existing in an other tree should work
-    factories.ItemFactory(
-        parent=parent, title="an other one", type=models.ItemTypeChoices.FOLDER
-    )
-    factories.ItemFactory(
-        parent=parent2, title="folder", type=models.ItemTypeChoices.FOLDER
-    )
+    factories.ItemFactory(parent=parent, title="an other one", type=models.ItemTypeChoices.FOLDER)
+    factories.ItemFactory(parent=parent2, title="folder", type=models.ItemTypeChoices.FOLDER)
 
     factories.ItemFactory(
         parent=parent,
@@ -899,21 +853,13 @@ def test_models_items_unique_title_in_current_path():
 def test_models_items_unique_title_in_current_path_soft_deleted():
     """Check title unicity in the current path even if the item is soft-deleted."""
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, title="folder")
-    parent2 = factories.ItemFactory(
-        type=models.ItemTypeChoices.FOLDER, title="an other one"
-    )
+    parent2 = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, title="an other one")
 
     # Create a child item with the same title should work
-    factories.ItemFactory(
-        parent=parent, title="folder", type=models.ItemTypeChoices.FOLDER
-    )
+    factories.ItemFactory(parent=parent, title="folder", type=models.ItemTypeChoices.FOLDER)
     # Create a child item with a title already existing in an other tree should work
-    factories.ItemFactory(
-        parent=parent, title="an other one", type=models.ItemTypeChoices.FOLDER
-    )
-    factories.ItemFactory(
-        parent=parent2, title="folder", type=models.ItemTypeChoices.FOLDER
-    )
+    factories.ItemFactory(parent=parent, title="an other one", type=models.ItemTypeChoices.FOLDER)
+    factories.ItemFactory(parent=parent2, title="folder", type=models.ItemTypeChoices.FOLDER)
 
     factories.ItemFactory(
         parent=parent,
@@ -923,18 +869,12 @@ def test_models_items_unique_title_in_current_path_soft_deleted():
     )
 
     # Create an item children of parent
-    child = factories.ItemFactory(
-        parent=parent, title="child1", type=models.ItemTypeChoices.FOLDER
-    )
-    factories.ItemFactory(
-        parent=child, title="grand child 1", type=models.ItemTypeChoices.FOLDER
-    )
+    child = factories.ItemFactory(parent=parent, title="child1", type=models.ItemTypeChoices.FOLDER)
+    factories.ItemFactory(parent=child, title="grand child 1", type=models.ItemTypeChoices.FOLDER)
     child.soft_delete()
 
     # Create a new item with the same title should work
-    factories.ItemFactory(
-        parent=parent, title="child1", type=models.ItemTypeChoices.FOLDER
-    )
+    factories.ItemFactory(parent=parent, title="child1", type=models.ItemTypeChoices.FOLDER)
 
 
 def test_models_items_numchild_annotation():
@@ -1015,9 +955,7 @@ def test_models_items_restore():
 def test_models_items_restore_complex():
     """The restore method should restore a soft-deleted item and its ancestors."""
     grand_parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
-    parent = factories.ItemFactory(
-        parent=grand_parent, type=models.ItemTypeChoices.FOLDER
-    )
+    parent = factories.ItemFactory(parent=grand_parent, type=models.ItemTypeChoices.FOLDER)
     item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
 
     child1, child2 = factories.ItemFactory.create_batch(2, parent=item)
@@ -1066,9 +1004,7 @@ def test_models_items_restore_complex():
 def test_models_items_restore_complex_bis():
     """The restore method should restore a soft-deleted item and its ancestors."""
     grand_parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
-    parent = factories.ItemFactory(
-        parent=grand_parent, type=models.ItemTypeChoices.FOLDER
-    )
+    parent = factories.ItemFactory(parent=grand_parent, type=models.ItemTypeChoices.FOLDER)
     item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
 
     child1 = factories.ItemFactory(parent=item)

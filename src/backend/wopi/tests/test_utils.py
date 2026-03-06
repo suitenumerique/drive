@@ -658,6 +658,5 @@ def test_compute_wopi_launch_url_placeholders(settings):
     settings.WOPI_SRC_BASE_URL = None
     settings.WOPI_DISABLE_CHAT = 1
     assert compute_wopi_launch_url(launch_url, get_file_info_path) == (
-        f"{expected_launch_url}?WOPISrc={quote_plus(get_file_info_path)}"
-        "&closebutton=false&dchat=1"
+        f"{expected_launch_url}?WOPISrc={quote_plus(get_file_info_path)}&closebutton=false&dchat=1"
     )

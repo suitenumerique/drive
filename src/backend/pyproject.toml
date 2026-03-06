@@ -107,7 +107,7 @@ exclude = [
     "__pycache__",
     "*/migrations/*",
 ]
-line-length = 88
+line-length = 100
 
 
 [tool.ruff.lint]
@@ -117,6 +117,7 @@ select = [
     "BLE", # flake8-blind-except
     "C4", # flake8-comprehensions
     "DJ", # flake8-django
+    "F",  # Pyflakes
     "I", # isort
     "PLC", # pylint-convention
     "PLE", # pylint-error

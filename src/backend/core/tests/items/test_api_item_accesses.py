@@ -110,9 +110,7 @@ def test_api_item_accesses_list_authenticated_related_non_privileged(
         link_reach="authenticated",
         type=models.ItemTypeChoices.FOLDER,
     )
-    parent = factories.ItemFactory(
-        parent=grand_parent, type=models.ItemTypeChoices.FOLDER
-    )
+    parent = factories.ItemFactory(parent=grand_parent, type=models.ItemTypeChoices.FOLDER)
     item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
     child = factories.ItemFactory(parent=item, type=models.ItemTypeChoices.FILE)
 
@@ -175,9 +173,7 @@ def test_api_item_accesses_list_authenticated_related_non_privileged(
                 else None,
                 "team": access.team,
                 "role": access.role,
-                "max_ancestors_role": None
-                if access.item_id == item.id
-                else access.role,
+                "max_ancestors_role": None if access.item_id == item.id else access.role,
                 "max_ancestors_role_item_id": None
                 if access.item_id == item.id
                 else str(access.item_id),
@@ -192,9 +188,7 @@ def test_api_item_accesses_list_authenticated_related_non_privileged(
 
 
 @pytest.mark.parametrize("via", VIA)
-@pytest.mark.parametrize(
-    "role", [role for role in RoleChoices if role in PRIVILEGED_ROLES]
-)
+@pytest.mark.parametrize("role", [role for role in RoleChoices if role in PRIVILEGED_ROLES])
 def test_api_item_accesses_list_authenticated_related_privileged(
     via, role, mock_user_teams, django_assert_num_queries
 ):
@@ -216,9 +210,7 @@ def test_api_item_accesses_list_authenticated_related_privileged(
         link_reach="authenticated",
         type=models.ItemTypeChoices.FOLDER,
     )
-    parent = factories.ItemFactory(
-        parent=grand_parent, type=models.ItemTypeChoices.FOLDER
-    )
+    parent = factories.ItemFactory(parent=grand_parent, type=models.ItemTypeChoices.FOLDER)
     item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
     child = factories.ItemFactory(parent=item, type=models.ItemTypeChoices.FILE)
 
@@ -283,9 +275,7 @@ def test_api_item_accesses_list_authenticated_related_privileged(
                 }
                 if access.user
                 else None,
-                "max_ancestors_role": None
-                if access.item_id == item.id
-                else access.role,
+                "max_ancestors_role": None if access.item_id == item.id else access.role,
                 "max_ancestors_role_item_id": None
                 if access.item_id == item.id
                 else str(access.item_id),
@@ -308,9 +298,7 @@ def test_api_item_accesses_retrieve_set_role_to_child():
     client.force_login(user)
 
     parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
-    parent_access = factories.UserItemAccessFactory(
-        item=parent, user=user, role="owner"
-    )
+    parent_access = factories.UserItemAccessFactory(item=parent, user=user, role="owner")
 
     item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
     item_access_other_user = factories.UserItemAccessFactory(
@@ -323,9 +311,7 @@ def test_api_item_accesses_retrieve_set_role_to_child():
     content = response.json()
     assert len(content) == 2
 
-    result_dict = {
-        result["id"]: result["abilities"]["set_role_to"] for result in content
-    }
+    result_dict = {result["id"]: result["abilities"]["set_role_to"] for result in content}
     assert result_dict[str(item_access_other_user.id)] == [
         "reader",
         "editor",
@@ -344,9 +330,7 @@ def test_api_item_accesses_retrieve_set_role_to_child():
     assert len(content) == 2
 
     # the new added access is not present in the result so the list should be the same
-    result_dict = {
-        result["id"]: result["abilities"]["set_role_to"] for result in content
-    }
+    result_dict = {result["id"]: result["abilities"]["set_role_to"] for result in content}
     assert result_dict[str(item_access_other_user.id)] == [
         "editor",
         "administrator",
@@ -394,9 +378,7 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
     grand_parent = factories.ItemFactory(
         link_reach="authenticated", type=models.ItemTypeChoices.FOLDER
     )
-    parent = factories.ItemFactory(
-        parent=grand_parent, type=models.ItemTypeChoices.FOLDER
-    )
+    parent = factories.ItemFactory(parent=grand_parent, type=models.ItemTypeChoices.FOLDER)
     item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
 
     # Create accesses for another user
@@ -421,9 +403,7 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
             else RoleChoices.max(roles[1], roles[2])
         )
 
-    result_dict = {
-        result["id"]: result["abilities"]["set_role_to"] for result in content
-    }
+    result_dict = {result["id"]: result["abilities"]["set_role_to"] for result in content}
     assert [result_dict[str(access.id)] for access in accesses] == results
 
 
@@ -474,9 +454,7 @@ def test_api_item_accesses_list_authenticated_related_same_user(roles, results):
         ],
     ],
 )
-def test_api_item_accesses_list_authenticated_related_same_team(
-    roles, results, mock_user_teams
-):
+def test_api_item_accesses_list_authenticated_related_same_team(roles, results, mock_user_teams):
     """
     The maximum role across ancestor items and set_role_to optionsfor
     a given team should be filled as expected.
@@ -489,9 +467,7 @@ def test_api_item_accesses_list_authenticated_related_same_team(
     grand_parent = factories.ItemFactory(
         link_reach="authenticated", type=models.ItemTypeChoices.FOLDER
     )
-    parent = factories.ItemFactory(
-        parent=grand_parent, type=models.ItemTypeChoices.FOLDER
-    )
+    parent = factories.ItemFactory(parent=grand_parent, type=models.ItemTypeChoices.FOLDER)
     item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
 
     mock_user_teams.return_value = ["lasuite", "unknown"]
@@ -516,9 +492,7 @@ def test_api_item_accesses_list_authenticated_related_same_team(
             else RoleChoices.max(roles[1], roles[2])
         )
 
-    result_dict = {
-        result["id"]: result["abilities"]["set_role_to"] for result in content
-    }
+    result_dict = {result["id"]: result["abilities"]["set_role_to"] for result in content}
     assert [result_dict[str(access.id)] for access in accesses] == results
 
 
@@ -597,9 +571,7 @@ def test_api_item_accesses_retrieve_authenticated_unrelated():
 
 @pytest.mark.parametrize("via", VIA)
 @pytest.mark.parametrize("user_role", PRIVILEGED_ROLES)
-def test_api_item_accesses_retrieve_authenticated_related(
-    via, user_role, mock_user_teams
-):
+def test_api_item_accesses_retrieve_authenticated_related(via, user_role, mock_user_teams):
     """
     A user with privileged role should be allowed to retrieve
     any item access.
@@ -705,9 +677,7 @@ def test_api_item_accesses_update_authenticated_unrelated():
 
 @pytest.mark.parametrize("role", ["reader", "editor"])
 @pytest.mark.parametrize("via", VIA)
-def test_api_item_accesses_update_authenticated_reader_or_editor(
-    via, role, mock_user_teams
-):
+def test_api_item_accesses_update_authenticated_reader_or_editor(via, role, mock_user_teams):
     """Readers or editors of an item should not be allowed to update its accesses."""
     user = factories.UserFactory()
 
@@ -983,9 +953,7 @@ def test_api_item_accesses_update_owner_self(
         access = factories.UserItemAccessFactory(item=item, user=user, role="owner")
     elif via == TEAM:
         mock_user_teams.return_value = ["lasuite", "unknown"]
-        access = factories.TeamItemAccessFactory(
-            item=item, team="lasuite", role="owner"
-        )
+        access = factories.TeamItemAccessFactory(item=item, team="lasuite", role="owner")
 
     old_values = serializers.ItemAccessSerializer(instance=access).data
     new_role = random.choice(["administrator", "editor", "reader"])
@@ -1037,12 +1005,8 @@ def test_api_item_accesses_update_authenticated_owner_explict_accesses():
 
     factories.UserItemAccessFactory(item=root, user=user, role="owner")
 
-    root_access = factories.UserItemAccessFactory(
-        item=root, user=other_user, role="editor"
-    )
-    item_access = factories.UserItemAccessFactory(
-        item=item, user=other_user, role="owner"
-    )
+    root_access = factories.UserItemAccessFactory(item=root, user=other_user, role="editor")
+    item_access = factories.UserItemAccessFactory(item=item, user=other_user, role="owner")
 
     # Changing role of item to lower than editor should fail
     response = client.put(
@@ -1093,9 +1057,7 @@ def test_api_item_accesses_update_authenticated_owner_syncronize_descendants_acc
 
     factories.UserItemAccessFactory(item=root, user=user, role="owner")
 
-    root_access = factories.UserItemAccessFactory(
-        item=root, user=other_user, role="reader"
-    )
+    root_access = factories.UserItemAccessFactory(item=root, user=other_user, role="reader")
     factories.UserItemAccessFactory(item=item, user=other_user, role="editor")
 
     assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 1
@@ -1135,9 +1097,7 @@ def test_api_item_accesses_update_authenticated_owner_syncronize_descendants_acc
 
     factories.UserItemAccessFactory(item=root, user=user, role="owner")
 
-    root_access = factories.UserItemAccessFactory(
-        item=root, user=other_user, role="reader"
-    )
+    root_access = factories.UserItemAccessFactory(item=root, user=other_user, role="reader")
     factories.UserItemAccessFactory(item=item, user=other_user, role="editor")
 
     assert models.ItemAccess.objects.filter(item=item, user=other_user).count() == 1
@@ -1177,9 +1137,7 @@ def test_api_item_accesses_update_authenticated_owner_syncronize_descendants_acc
 
     factories.UserItemAccessFactory(item=root, user=user, role="owner")
 
-    root_access = factories.UserItemAccessFactory(
-        item=root, user=other_user, role="reader"
-    )
+    root_access = factories.UserItemAccessFactory(item=root, user=other_user, role="reader")
     factories.UserItemAccessFactory(item=parent, user=other_user, role="administrator")
     factories.UserItemAccessFactory(item=item, user=other_user, role="owner")
 
@@ -1200,17 +1158,10 @@ def test_api_item_accesses_update_authenticated_owner_syncronize_descendants_acc
     assert root_access.role == "editor"
 
     # item_access should be kept
-    assert (
-        models.ItemAccess.objects.filter(
-            item=item, user=other_user, role="owner"
-        ).count()
-        == 1
-    )
+    assert models.ItemAccess.objects.filter(item=item, user=other_user, role="owner").count() == 1
     # parent_access should be kept
     assert (
-        models.ItemAccess.objects.filter(
-            item=parent, user=other_user, role="administrator"
-        ).count()
+        models.ItemAccess.objects.filter(item=parent, user=other_user, role="administrator").count()
         == 1
     )
 
@@ -1438,9 +1389,7 @@ def test_api_item_accesses_delete_owners_last_owner(via, mock_user_teams):
         access = factories.UserItemAccessFactory(item=item, user=user, role="owner")
     elif via == TEAM:
         mock_user_teams.return_value = ["lasuite", "unknown"]
-        access = factories.TeamItemAccessFactory(
-            item=item, team="lasuite", role="owner"
-        )
+        access = factories.TeamItemAccessFactory(item=item, team="lasuite", role="owner")
 
     assert models.ItemAccess.objects.count() == 1
     response = client.delete(
@@ -1518,9 +1467,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
     factories.UserItemAccessFactory(item=root, user=user, role="editor")
     # explicit access on item.
     item_access = factories.UserItemAccessFactory(item=item, user=user, role="owner")
-    other_admin_access = factories.UserItemAccessFactory(
-        item=root, role="administrator"
-    )
+    other_admin_access = factories.UserItemAccessFactory(item=root, role="administrator")
     other_owner_access = factories.UserItemAccessFactory(item=root, role="owner")
 
     assert item.get_role(user) == "owner"
@@ -1622,9 +1569,7 @@ def test_api_item_accesses_explicit(django_assert_num_queries):
     other_owner = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
-    owner_access = factories.UserItemAccessFactory(
-        item=root, user=other_owner, role="owner"
-    )
+    owner_access = factories.UserItemAccessFactory(item=root, user=other_owner, role="owner")
     factories.UserItemAccessFactory(item=parent, user=user, role="administrator")
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/accesses/")
@@ -1761,13 +1706,9 @@ def test_api_item_accesses_other_user_accesses():
     parent = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER, title="B", parent=grand_parent
     )
-    item = factories.ItemFactory(
-        type=models.ItemTypeChoices.FOLDER, title="C", parent=parent
-    )
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, title="C", parent=parent)
 
-    user_access = factories.UserItemAccessFactory(
-        item=grand_parent, user=user, role="owner"
-    )
+    user_access = factories.UserItemAccessFactory(item=grand_parent, user=user, role="owner")
     other_user_access = factories.UserItemAccessFactory(
         item=grand_parent, user=other_user, role="administrator"
     )
@@ -1951,16 +1892,12 @@ def test_api_item_accesses_inherited_from_root():
     user = factories.UserFactory()
     collaborator = factories.UserFactory()
 
-    root = factories.ItemFactory(
-        type=models.ItemTypeChoices.FOLDER, title="A", creator=user
-    )
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, title="A", creator=user)
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER, title="B", parent=root, creator=user
     )
 
-    user_root_access = factories.UserItemAccessFactory(
-        item=root, user=user, role="owner"
-    )
+    user_root_access = factories.UserItemAccessFactory(item=root, user=user, role="owner")
     collaborator_root_access = factories.UserItemAccessFactory(
         item=root, user=collaborator, role="administrator"
     )
@@ -2114,9 +2051,7 @@ def test_api_item_accesses_in_tree():
     )
 
     # user has inherited access on this item and collaborator will have an explicit one.
-    folder1 = factories.ItemFactory(
-        parent=root, creator=user, type=models.ItemTypeChoices.FOLDER
-    )
+    folder1 = factories.ItemFactory(parent=root, creator=user, type=models.ItemTypeChoices.FOLDER)
     collaborator_folder1_access = factories.UserItemAccessFactory(
         item=folder1, user=collaborator, role=models.RoleChoices.ADMIN
     )
