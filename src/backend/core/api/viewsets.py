@@ -50,7 +50,7 @@ from core.services.search_indexers import (
     get_file_indexer,
     get_visited_items_ids_of,
 )
-from core.tasks.item import process_item_deletion, rename_file
+from core.tasks.item import duplicate_file, process_item_deletion, rename_file
 from core.utils.analytics import posthog_capture
 from wopi.services import access as access_service
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
@@ -301,6 +301,9 @@ class ItemViewSet(
 
     5. **Media Auth**: Authorize access to item media.
         Example: GET /items/media-auth/
+
+    6. **Duplicate**: Duplicate an item of type file.
+        Example:
 
     ### Ordering: created_at, updated_at, is_favorite, title
 
@@ -1563,6 +1566,46 @@ class ItemViewSet(
                 "launch_url": launch_url,
             },
             status=drf.status.HTTP_200_OK,
+        )
+
+    @drf.decorators.action(
+        detail=True,
+        methods=["post"],
+        url_path="duplicate",
+    )
+    @transaction.atomic
+    def duplicate(self, request, *args, **kwargs):
+        """
+        Duplicate an item of type File. The item is duplicated in the folder where the original
+        item is.
+        The user who duplicates becomes the creator of the duplicate
+        """
+
+        item_to_duplicate = self.get_object()
+
+        parent = item_to_duplicate.parent() if item_to_duplicate.depth > 1 else None
+
+        duplicated_item = models.Item.objects.create_child(
+            creator=request.user,
+            link_reach=None if parent else LinkReachChoices.RESTRICTED,
+            parent=parent,
+            title=item_to_duplicate.title,  # Title uniqueness is managed in the create_child method
+            type=models.ItemTypeChoices.FILE,
+            size=item_to_duplicate.size,
+            upload_state=models.ItemUploadStateChoices.DUPLICATING,
+            mimetype=item_to_duplicate.mimetype,
+            filename=item_to_duplicate.filename,
+            description=item_to_duplicate.description,
+        )
+
+        # Then duplicate the file in async way
+        duplicate_file.delay(
+            item_to_duplicate=item_to_duplicate.id, duplicated_item=duplicated_item.id
+        )
+
+        serializer = self.get_serializer(duplicated_item)
+        return drf.response.Response(
+            serializer.data, status=drf.status.HTTP_201_CREATED
         )
 
 
