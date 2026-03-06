@@ -601,7 +601,11 @@ class Item(TreeModel, BaseModel):
                 }
             )
 
-        if self.created_at is None and self.type == ItemTypeChoices.FILE:
+        if (
+            self.created_at is None
+            and self.type == ItemTypeChoices.FILE
+            and self.upload_state != ItemUploadStateChoices.DUPLICATING
+        ):
             self.upload_state = ItemUploadStateChoices.PENDING
 
         if not self.path:
@@ -848,7 +852,7 @@ class Item(TreeModel, BaseModel):
         )
         can_destroy = can_hard_delete and not is_deleted
         can_duplicate = (
-            can_update
+            can_get
             and user.is_authenticated
             and self.type == ItemTypeChoices.FILE
             and self.upload_state == ItemUploadStateChoices.READY
