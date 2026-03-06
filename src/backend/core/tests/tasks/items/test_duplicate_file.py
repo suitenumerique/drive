@@ -22,9 +22,7 @@ def test_duplicate_file_item_to_duplicate_does_not_exist(caplog):
 
     with caplog.at_level("ERROR", logger="core.tasks.item"):
         item_to_duplicate_id = uuid.uuid4()
-        duplicate_file(
-            item_to_duplicate_id=item_to_duplicate_id, duplicated_item_id=uuid.uuid4()
-        )
+        duplicate_file(item_to_duplicate_id=item_to_duplicate_id, duplicated_item_id=uuid.uuid4())
 
     assert (
         f"duplicating file: item_to_duplicate with id {item_to_duplicate_id} does not exist, "
