@@ -50,6 +50,7 @@ def test_models_sub_item_abilities_downgraded():
         "children_create": True,
         "children_list": True,
         "destroy": True,
+        "duplicate": False,
         "hard_delete": True,
         "favorite": True,
         "invite_owner": False,
@@ -83,6 +84,7 @@ def test_models_sub_item_abilities_downgraded():
         "children_create": False,
         "children_list": True,
         "destroy": True,
+        "duplicate": False,
         "hard_delete": True,
         "favorite": True,
         "invite_owner": False,
@@ -105,10 +107,30 @@ def test_models_sub_item_abilities_downgraded():
     }
 
 
-def test_models_items_root_get_abilities_owner(django_assert_num_queries):
+@pytest.mark.parametrize(
+    "item_type,can_duplicate,upload_state",
+    [
+        (models.ItemTypeChoices.FOLDER, False, None),
+        (models.ItemTypeChoices.FILE, True, models.ItemUploadStateChoices.READY),
+        *(
+            (
+                models.ItemTypeChoices.FILE,
+                False,
+                state,
+            )
+            for state in models.ItemUploadStateChoices.values
+            if state != models.ItemUploadStateChoices.READY
+        ),
+    ],
+)
+def test_models_items_root_get_abilities_owner(
+    item_type, can_duplicate, upload_state, django_assert_num_queries
+):
     """Check abilities returned for the owner of an item."""
     user = factories.UserFactory()
-    item = factories.ItemFactory(users=[(user, "owner")])
+    item = factories.ItemFactory(
+        users=[(user, "owner")], type=item_type, update_upload_state=upload_state
+    )
     link_select_options = LinkReachChoices.get_select_options(
         **item.ancestors_link_definition
     )
@@ -119,6 +141,7 @@ def test_models_items_root_get_abilities_owner(django_assert_num_queries):
         "children_create": True,
         "children_list": True,
         "destroy": True,
+        "duplicate": can_duplicate,
         "hard_delete": True,
         "favorite": True,
         "invite_owner": True,
@@ -146,6 +169,7 @@ def test_models_items_root_get_abilities_owner(django_assert_num_queries):
         "children_create": False,
         "children_list": False,
         "destroy": False,
+        "duplicate": False,
         "hard_delete": True,
         "favorite": False,
         "invite_owner": False,
@@ -164,10 +188,32 @@ def test_models_items_root_get_abilities_owner(django_assert_num_queries):
     }
 
 
-def test_models_items_root_get_abilities_administrator(django_assert_num_queries):
+@pytest.mark.parametrize(
+    "item_type,can_duplicate,upload_state",
+    [
+        (models.ItemTypeChoices.FOLDER, False, None),
+        (models.ItemTypeChoices.FILE, True, models.ItemUploadStateChoices.READY),
+        *(
+            (
+                models.ItemTypeChoices.FILE,
+                False,
+                state,
+            )
+            for state in models.ItemUploadStateChoices.values
+            if state != models.ItemUploadStateChoices.READY
+        ),
+    ],
+)
+def test_models_items_root_get_abilities_administrator(
+    item_type, can_duplicate, upload_state, django_assert_num_queries
+):
     """Check abilities returned for the administrator of a item."""
     user = factories.UserFactory()
-    item = factories.ItemFactory(users=[(user, "administrator")])
+    item = factories.ItemFactory(
+        users=[(user, "administrator")],
+        type=item_type,
+        update_upload_state=upload_state,
+    )
     link_select_options = LinkReachChoices.get_select_options(
         **item.ancestors_link_definition
     )
@@ -178,6 +224,7 @@ def test_models_items_root_get_abilities_administrator(django_assert_num_queries
         "children_create": True,
         "children_list": True,
         "destroy": False,
+        "duplicate": can_duplicate,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
@@ -205,10 +252,30 @@ def test_models_items_root_get_abilities_administrator(django_assert_num_queries
     )
 
 
-def test_models_items_root_get_abilities_editor_user(django_assert_num_queries):
+@pytest.mark.parametrize(
+    "item_type,can_duplicate,upload_state",
+    [
+        (models.ItemTypeChoices.FOLDER, False, None),
+        (models.ItemTypeChoices.FILE, True, models.ItemUploadStateChoices.READY),
+        *(
+            (
+                models.ItemTypeChoices.FILE,
+                False,
+                state,
+            )
+            for state in models.ItemUploadStateChoices.values
+            if state != models.ItemUploadStateChoices.READY
+        ),
+    ],
+)
+def test_models_items_root_get_abilities_editor_user(
+    item_type, can_duplicate, upload_state, django_assert_num_queries
+):
     """Check abilities returned for the editor of a root item."""
     user = factories.UserFactory()
-    item = factories.ItemFactory(users=[(user, "editor")])
+    item = factories.ItemFactory(
+        users=[(user, "editor")], type=item_type, update_upload_state=upload_state
+    )
     link_select_options = LinkReachChoices.get_select_options(
         **item.ancestors_link_definition
     )
@@ -219,6 +286,7 @@ def test_models_items_root_get_abilities_editor_user(django_assert_num_queries):
         "children_create": True,
         "children_list": True,
         "destroy": False,
+        "duplicate": can_duplicate,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
@@ -246,10 +314,19 @@ def test_models_items_root_get_abilities_editor_user(django_assert_num_queries):
     )
 
 
-def test_models_items_root_get_abilities_reader_user(django_assert_num_queries):
+@pytest.mark.parametrize(
+    "item_type,can_duplicate",
+    [
+        (models.ItemTypeChoices.FOLDER, False),
+        (models.ItemTypeChoices.FILE, True),
+    ],
+)
+def test_models_items_root_get_abilities_reader_user(
+    item_type, can_duplicate, django_assert_num_queries
+):
     """Check abilities returned for the reader of a root item."""
     user = factories.UserFactory()
-    item = factories.ItemFactory(users=[(user, "reader")])
+    item = factories.ItemFactory(users=[(user, "reader")], type=item_type)
     access_from_link = item.link_reach != "restricted" and item.link_role == "editor"
     link_select_options = LinkReachChoices.get_select_options(
         **item.ancestors_link_definition
@@ -261,6 +338,7 @@ def test_models_items_root_get_abilities_reader_user(django_assert_num_queries):
         "children_create": access_from_link,
         "children_list": True,
         "destroy": False,
+        "duplicate": can_duplicate and access_from_link,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
