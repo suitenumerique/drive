@@ -190,7 +190,7 @@ index: ## index all files to remote search
 lint: ## lint back-end python sources
 lint: \
   lint-ruff-format \
-  lint-ruff-check \
+  lint-ruff-check-fix \
   lint-pylint
 .PHONY: lint
 
