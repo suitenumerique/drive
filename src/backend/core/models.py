@@ -69,6 +69,7 @@ class ItemUploadStateChoices(models.TextChoices):
     """Defines the possible states of an item."""
 
     PENDING = "pending", _("Pending")
+    DUPLICATING = "duplicating", ("Duplicating")
     ANALYZING = "analyzing", _("Analyzing")
     SUSPICIOUS = "suspicious", _("Suspicious")
     FILE_TOO_LARGE_TO_ANALYZE = (
