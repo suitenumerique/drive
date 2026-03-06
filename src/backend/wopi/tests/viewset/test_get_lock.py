@@ -22,9 +22,7 @@ def test_get_lock_on_an_unlocked_file():
         update_upload_state=models.ItemUploadStateChoices.READY,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -54,9 +52,7 @@ def test_get_lock_on_a_locked_file():
         update_upload_state=models.ItemUploadStateChoices.READY,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)

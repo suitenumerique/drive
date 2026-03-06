@@ -15,6 +15,6 @@ class CreatorStorageComputeBackend(StorageComputeBackend):
         """
         Compute the storage used by a user.
         """
-        return Item.objects.filter(creator=user).aggregate(
-            total_size=Sum("size", default=0)
-        )["total_size"]
+        return Item.objects.filter(creator=user).aggregate(total_size=Sum("size", default=0))[
+            "total_size"
+        ]

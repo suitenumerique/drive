@@ -65,9 +65,7 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
     # Find the net-zone element
     net_zone = root.find(".//net-zone")
     if net_zone is None:
-        raise RuntimeError(
-            f"net-zone element not found in discovery url for wopi client {client}"
-        )
+        raise RuntimeError(f"net-zone element not found in discovery url for wopi client {client}")
 
     # Iterate through all app elements
     for app in net_zone.findall(".//app"):

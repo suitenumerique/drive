@@ -112,9 +112,7 @@ def test_api_item_favorite_authenticated_post_forbidden():
         ["public", True],
     ],
 )
-def test_api_item_favorite_authenticated_post_already_favorited_allowed(
-    reach, has_role
-):
+def test_api_item_favorite_authenticated_post_already_favorited_allowed(reach, has_role):
     """POST should not create duplicate favorites if already marked."""
     user = factories.UserFactory()
     item = factories.ItemFactory(link_reach=reach, favorited_by=[user])
@@ -294,9 +292,7 @@ def test_api_item_favorite_authenticated_delete_not_favorited_forbidden():
         ["public", True],
     ],
 )
-def test_api_item_favorite_authenticated_post_unmark_then_mark_again_allowed(
-    reach, has_role
-):
+def test_api_item_favorite_authenticated_post_unmark_then_mark_again_allowed(reach, has_role):
     """A user should be able to mark, unmark, and mark a item again as favorite."""
     user = factories.UserFactory()
     item = factories.ItemFactory(link_reach=reach)
@@ -380,9 +376,7 @@ def test_api_item_favorite_suspicious_item_should_work_for_creator():
     assert response.json()["is_favorite"]
 
     # Verify in database
-    assert models.ItemFavorite.objects.filter(
-        item=suspicious_item, user=creator
-    ).exists()
+    assert models.ItemFavorite.objects.filter(item=suspicious_item, user=creator).exists()
 
     # Verify item format
     response = client.get(f"/api/v1.0/items/{suspicious_item.id!s}/")

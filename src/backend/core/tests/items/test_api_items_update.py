@@ -140,9 +140,7 @@ def test_api_items_update_authenticated_unrelated_forbidden(reach, role, via_par
         (True, "authenticated", "editor"),
     ],
 )
-def test_api_items_update_anonymous_or_authenticated_unrelated(
-    is_authenticated, reach, role
-):
+def test_api_items_update_anonymous_or_authenticated_unrelated(is_authenticated, reach, role):
     """
     Anonymous and authenticated users should be able to update an item to which
     they are not related if the link configuration allows it.
@@ -291,9 +289,7 @@ def test_api_items_update_authenticated_editor_administrator_or_owner(
         )
         access_item = grand_parent
     else:
-        item = factories.ItemFactory(
-            link_reach="restricted", type=models.ItemTypeChoices.FOLDER
-        )
+        item = factories.ItemFactory(link_reach="restricted", type=models.ItemTypeChoices.FOLDER)
         access_item = item
 
     if via == USER:

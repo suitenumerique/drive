@@ -23,9 +23,7 @@ class ANCTEntitlementsParametersSerializer(serializers.Serializer):
     url = serializers.CharField(required=True)
     token = serializers.CharField(required=True)
     service_id = serializers.CharField(required=True)
-    cache_timeout = serializers.IntegerField(
-        required=False, default=ENTITLEMENTS_CACHE_TIMEOUT
-    )
+    cache_timeout = serializers.IntegerField(required=False, default=ENTITLEMENTS_CACHE_TIMEOUT)
 
 
 class ANCTEntitlementsBackend(EntitlementsBackend):
@@ -50,9 +48,7 @@ class ANCTEntitlementsBackend(EntitlementsBackend):
             # Don't expose sensitive configuration details in the response
             # Raise a configuration exception that will result in a 500 error
             # The default serializer exception are serialized in the response.
-            raise ImproperlyConfigured(
-                "Invalid entitlements backend configuration"
-            ) from exc
+            raise ImproperlyConfigured("Invalid entitlements backend configuration") from exc
         self.parameters = serializer.validated_data
         return self.parameters
 

@@ -31,9 +31,7 @@ def test_rename_file_success():
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -71,9 +69,7 @@ def test_rename_file_success_accept_json():
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -111,9 +107,7 @@ def test_rename_file_no_filename():
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -152,9 +146,7 @@ def test_rename_file_duplicate_filename():
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -186,9 +178,7 @@ def test_rename_file_with_lock():
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
     default_storage.save(item.file_key, BytesIO(b"my prose"))
 
     service = AccessUserItemService()
@@ -228,9 +218,7 @@ def test_rename_file_with_invalid_lock():
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)
@@ -267,9 +255,7 @@ def test_rename_file_storage_error():
         link_role=models.LinkRoleChoices.EDITOR,
     )
     user = factories.UserFactory()
-    factories.UserItemAccessFactory(
-        item=item, user=user, role=models.RoleChoices.EDITOR
-    )
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
 
     service = AccessUserItemService()
     access_token, _ = service.insert_new_access(item, user)

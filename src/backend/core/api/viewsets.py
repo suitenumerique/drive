@@ -61,9 +61,7 @@ from .filters import ItemFilter, ListItemFilter, SearchItemFilter
 logger = logging.getLogger(__name__)
 
 ITEM_FOLDER = "item"
-UUID_REGEX = (
-    r"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
-)
+UUID_REGEX = r"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
 FILE_EXT_REGEX = '[^.\\/:*?&"<>|\r\n]+'
 MEDIA_STORAGE_URL_PATTERN = re.compile(
     f"{settings.MEDIA_URL:s}(?P<preview>preview/)?"
@@ -107,9 +105,7 @@ class NestedGenericViewSet(viewsets.GenericViewSet):
         # The last lookup field is removed to perform the nested lookup as it corresponds
         # to the object pk, it is used within get_object method.
         lookup_url_kwargs = (
-            self.lookup_url_kwargs[:-1]
-            if self.lookup_url_kwargs
-            else self.lookup_fields[:-1]
+            self.lookup_url_kwargs[:-1] if self.lookup_url_kwargs else self.lookup_fields[:-1]
         )
 
         filter_kwargs = {}
@@ -121,9 +117,7 @@ class NestedGenericViewSet(viewsets.GenericViewSet):
                     "set the `.lookup_fields` attribute on the view correctly."
                 )
 
-            filter_kwargs.update(
-                {self.lookup_fields[index]: self.kwargs[lookup_url_kwarg]}
-            )
+            filter_kwargs.update({self.lookup_fields[index]: self.kwargs[lookup_url_kwarg]})
 
         return queryset.filter(**filter_kwargs)
 
@@ -217,9 +211,7 @@ class UserViewSet(
         # For emails, match emails by Levenstein distance to prevent typing errors
         if "@" in query:
             return (
-                queryset.annotate(
-                    distance=RawSQL("levenshtein(email::text, %s::text)", (query,))
-                )
+                queryset.annotate(distance=RawSQL("levenshtein(email::text, %s::text)", (query,)))
                 .filter(distance__lte=3)
                 .order_by("distance", "email")[: settings.API_USERS_LIST_LIMIT]
             )
@@ -245,9 +237,7 @@ class UserViewSet(
         Return information on currently logged user
         """
         context = {"request": request}
-        return drf.response.Response(
-            self.get_serializer(request.user, context=context).data
-        )
+        return drf.response.Response(self.get_serializer(request.user, context=context).data)
 
 
 class ItemMetadata(drf.metadata.SimpleMetadata):
@@ -372,8 +362,7 @@ class ItemViewSet(
         # For unauthenticated users, exclude all suspicious items
         if user.is_authenticated:
             return queryset.exclude(
-                db.Q(upload_state=models.ItemUploadStateChoices.SUSPICIOUS)
-                & ~db.Q(creator=user)
+                db.Q(upload_state=models.ItemUploadStateChoices.SUSPICIOUS) & ~db.Q(creator=user)
             )
 
         return queryset.exclude(upload_state=models.ItemUploadStateChoices.SUSPICIOUS)
@@ -408,9 +397,7 @@ class ItemViewSet(
         traced_items = models.Item.objects.filter(
             db.Q(link_traces__user=user) & ~db.Q(id__in=access_items_ids)
         ).order_by("path")
-        ancestors_link_definition = self._compute_ancestors_link_definition(
-            traced_items
-        )
+        ancestors_link_definition = self._compute_ancestors_link_definition(traced_items)
         traced_items_ids = []
         for item in traced_items:
             links = ancestors_link_definition.get(str(item.path[:-1]), [])
@@ -419,9 +406,7 @@ class ItemViewSet(
                 traced_items_ids.append(item.id)
 
         # Among all these items remove them that are restricted
-        return queryset.filter(
-            db.Q(id__in=access_items_ids) | (db.Q(id__in=traced_items_ids))
-        )
+        return queryset.filter(db.Q(id__in=access_items_ids) | (db.Q(id__in=traced_items_ids)))
 
     def get_queryset_for_descendants(self):
         """
@@ -543,10 +528,7 @@ class ItemViewSet(
         # The `create` query generates 5 db queries which are much less efficient than an
         # `exists` query. The user will visit the item many times after the first visit
         # so that's what we should optimize for.
-        if (
-            user.is_authenticated
-            and not instance.link_traces.filter(user=user).exists()
-        ):
+        if user.is_authenticated and not instance.link_traces.filter(user=user).exists():
             models.LinkTrace.objects.create(item=instance, user=request.user)
 
         return drf.response.Response(serializer.data)
@@ -638,9 +620,7 @@ class ItemViewSet(
         # Not calling filter_queryset. We do our own cooking.
         queryset = self.get_queryset()
 
-        filterset = ListItemFilter(
-            self.request.GET, queryset=queryset, request=self.request
-        )
+        filterset = ListItemFilter(self.request.GET, queryset=queryset, request=self.request)
         if not filterset.is_valid():
             raise drf.exceptions.ValidationError(filterset.errors)
         filter_data = filterset.form.cleaned_data
@@ -667,15 +647,11 @@ class ItemViewSet(
 
         # Annotate favorite status and filter if applicable as late as possible
         queryset = queryset.annotate_is_favorite(user)
-        queryset = filterset.filters["is_favorite"].filter(
-            queryset, filter_data["is_favorite"]
-        )
+        queryset = filterset.filters["is_favorite"].filter(queryset, filter_data["is_favorite"])
         queryset = queryset.annotate_with_numchild()
 
         # Apply ordering only now that everyting is filtered and annotated
-        queryset = filters.OrderingFilter().filter_queryset(
-            self.request, queryset, self
-        )
+        queryset = filters.OrderingFilter().filter_queryset(self.request, queryset, self)
 
         return self.get_response_for_queryset(queryset)
 
@@ -704,16 +680,12 @@ class ItemViewSet(
         if not can_upload["result"]:
             self._complete_item_deletion(item)
             raise drf.exceptions.PermissionDenied(
-                detail=can_upload.get(
-                    "message", "You do not have permission to upload files."
-                )
+                detail=can_upload.get("message", "You do not have permission to upload files.")
             )
 
         s3_client = default_storage.connection.meta.client
 
-        head_response = s3_client.head_object(
-            Bucket=default_storage.bucket_name, Key=item.file_key
-        )
+        head_response = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
         file_size = head_response["ContentLength"]
 
         if file_size > settings.DATA_UPLOAD_MAX_MEMORY_SIZE:
@@ -736,18 +708,15 @@ class ItemViewSet(
             )
             file_head = range_response["Body"].read()
         else:
-            file_head = s3_client.get_object(
-                Bucket=default_storage.bucket_name, Key=item.file_key
-            )["Body"].read()
+            file_head = s3_client.get_object(Bucket=default_storage.bucket_name, Key=item.file_key)[
+                "Body"
+            ].read()
 
         # Use improved MIME type detection combining magic bytes and file extension
         logger.info("upload_ended: detecting mimetype for file: %s", item.file_key)
         mimetype = utils.detect_mimetype(file_head, filename=item.filename)
 
-        if (
-            settings.RESTRICT_UPLOAD_FILE_TYPE
-            and mimetype not in settings.FILE_MIMETYPE_ALLOWED
-        ):
+        if settings.RESTRICT_UPLOAD_FILE_TYPE and mimetype not in settings.FILE_MIMETYPE_ALLOWED:
             self._complete_item_deletion(item)
             logger.info(
                 "upload_ended: mimetype not allowed %s for filename %s",
@@ -827,14 +796,10 @@ class ItemViewSet(
         """Get list of favorite items for the current user."""
         user = request.user
         queryset = self.get_queryset_for_descendants()
-        queryset = queryset.annotate(
-            is_favorite=db.Value(True, output_field=db.BooleanField())
-        )
+        queryset = queryset.annotate(is_favorite=db.Value(True, output_field=db.BooleanField()))
         queryset = queryset.annotate_user_roles(user)
 
-        filterset = ItemFilter(
-            self.request.GET, queryset=queryset, request=self.request
-        )
+        filterset = ItemFilter(self.request.GET, queryset=queryset, request=self.request)
         if not filterset.is_valid():
             raise drf.exceptions.ValidationError(filterset.errors)
 
@@ -847,9 +812,7 @@ class ItemViewSet(
         queryset = queryset.filter(id__in=favorite_items_ids)
         queryset = queryset.annotate_with_numchild()
 
-        return self.get_response_for_queryset(
-            queryset, with_ancestors_link_definition=True
-        )
+        return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
     @drf.decorators.action(
         detail=False,
@@ -932,10 +895,7 @@ class ItemViewSet(
 
         message = None
         if target_item and not target_item.get_abilities(user).get("children_create"):
-            message = (
-                "You do not have permission to move items "
-                "as a child to this target item."
-            )
+            message = "You do not have permission to move items as a child to this target item."
 
         if message:
             posthog_capture("item_move_missing_permission", user, {}, item=item)
@@ -948,10 +908,7 @@ class ItemViewSet(
         # If the item is moved to the root and the user does not have an access on the item,
         # create an owner access for the user. Otherwise, the item will be invisible for the user.
         update_fields = []
-        if (
-            not target_item
-            and not models.ItemAccess.objects.filter(item=item, user=user).exists()
-        ):
+        if not target_item and not models.ItemAccess.objects.filter(item=item, user=user).exists():
             models.ItemAccess.objects.create(
                 item=item,
                 user=self.request.user,
@@ -1021,9 +978,7 @@ class ItemViewSet(
                 and not can_upload["result"]
             ):
                 raise drf.exceptions.PermissionDenied(
-                    detail=can_upload.get(
-                        "message", "You do not have permission to upload files."
-                    )
+                    detail=can_upload.get("message", "You do not have permission to upload files.")
                 )
 
             extension = serializer.validated_data.pop("extension", None)
@@ -1046,9 +1001,7 @@ class ItemViewSet(
             )
 
         # GET: List children
-        queryset = (
-            item.children().select_related("creator").filter(deleted_at__isnull=True)
-        )
+        queryset = item.children().select_related("creator").filter(deleted_at__isnull=True)
         queryset = self._filter_suspicious_items(queryset, request.user)
         queryset = self.filter_queryset(queryset)
         filterset = ItemFilter(request.GET, queryset=queryset)
@@ -1057,9 +1010,7 @@ class ItemViewSet(
         queryset = filterset.qs
 
         # Apply ordering only now that everything is filtered and annotated
-        queryset = filters.OrderingFilter().filter_queryset(
-            self.request, queryset, self
-        )
+        queryset = filters.OrderingFilter().filter_queryset(self.request, queryset, self)
 
         # Pre-compute number of accesses
         item_nb_accesses = item.nb_accesses
@@ -1092,9 +1043,7 @@ class ItemViewSet(
             raise drf.exceptions.NotFound from exc
 
         highest_ancestor = (
-            self.queryset.filter(
-                path__ancestors=item.path, ancestors_deleted_at__isnull=True
-            )
+            self.queryset.filter(path__ancestors=item.path, ancestors_deleted_at__isnull=True)
             .readable_per_se(request.user)
             .only("path")
             .order_by("path")
@@ -1183,9 +1132,7 @@ class ItemViewSet(
         user = self.request.user
         queryset = self.get_queryset_for_descendants()
 
-        filterset = ItemFilter(
-            self.request.GET, queryset=queryset, request=self.request
-        )
+        filterset = ItemFilter(self.request.GET, queryset=queryset, request=self.request)
         if not filterset.is_valid():
             raise drf.exceptions.ValidationError(filterset.errors)
 
@@ -1197,9 +1144,7 @@ class ItemViewSet(
 
         queryset = queryset.order_by("-updated_at")
 
-        return self.get_response_for_queryset(
-            queryset, with_ancestors_link_definition=True
-        )
+        return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
     @drf.decorators.action(detail=True, methods=["get"])
     def breadcrumb(self, request, *args, **kwargs):
@@ -1209,9 +1154,7 @@ class ItemViewSet(
         item = self.get_object()
 
         highest_ancestor = (
-            self.queryset.filter(
-                path__ancestors=item.path, ancestors_deleted_at__isnull=True
-            )
+            self.queryset.filter(path__ancestors=item.path, ancestors_deleted_at__isnull=True)
             .readable_per_se(request.user)
             .only("path")
             .order_by("path")
@@ -1293,9 +1236,7 @@ class ItemViewSet(
         indexer = get_file_indexer()
 
         queryset = queryset.select_related("creator")
-        filterset = SearchItemFilter(
-            request.GET, queryset=queryset, request=self.request
-        )
+        filterset = SearchItemFilter(request.GET, queryset=queryset, request=self.request)
 
         if not filterset.is_valid():
             raise drf.exceptions.ValidationError(filterset.errors)
@@ -1388,9 +1329,7 @@ class ItemViewSet(
 
         # Set parents for each item
         for item in items:
-            item.parents = [
-                parents[item_id] for item_id in item.path if item_id != str(item.id)
-            ]
+            item.parents = [parents[item_id] for item_id in item.path if item_id != str(item.id)]
 
         return items
 
@@ -1402,9 +1341,7 @@ class ItemViewSet(
         previous_link_reach = item.link_reach
 
         # Deserialize and validate the data
-        serializer = serializers.LinkItemSerializer(
-            item, data=request.data, partial=True
-        )
+        serializer = serializers.LinkItemSerializer(item, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
         serializer.save()
@@ -1444,9 +1381,7 @@ class ItemViewSet(
             # To avoid all of this we directly set item.is_favorite to True.
             item.is_favorite = True
             serializer = self.get_serializer(item)
-            return drf.response.Response(
-                serializer.data, status=drf.status.HTTP_201_CREATED
-            )
+            return drf.response.Response(serializer.data, status=drf.status.HTTP_201_CREATED)
 
         # Handle DELETE method to unmark as favorite
         deleted, _ = models.ItemFavorite.objects.filter(item=item, user=user).delete()
@@ -1532,14 +1467,10 @@ class ItemViewSet(
         user_abilities = item.get_abilities(request.user)
 
         if not user_abilities.get(self.action, False):
-            logger.debug(
-                "User '%s' lacks permission for item '%s'", request.user.id, pk
-            )
+            logger.debug("User '%s' lacks permission for item '%s'", request.user.id, pk)
             raise drf.exceptions.PermissionDenied()
 
-        logger.debug(
-            "Subrequest authorization successful. Extracted parameters: %s", url_params
-        )
+        logger.debug("Subrequest authorization successful. Extracted parameters: %s", url_params)
         return url_params, user_abilities, request.user.id, item
 
     @drf.decorators.action(detail=True, methods=["get"], url_path="download")
@@ -1559,9 +1490,7 @@ class ItemViewSet(
         if item.upload_state == models.ItemUploadStateChoices.PENDING:
             raise drf.exceptions.PermissionDenied()
 
-        redirect_url = (
-            f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{quote(item.file_key)}"
-        )
+        redirect_url = f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL}{quote(item.file_key)}"
         return drf.response.Response(
             status=status.HTTP_302_FOUND,
             headers={"Location": redirect_url},
@@ -1578,9 +1507,7 @@ class ItemViewSet(
         annotation. The request will then be proxied to the object storage backend who will
         respond with the file after checking the signature included in headers.
         """
-        url_params, _, _, item = self._authorize_subrequest(
-            request, MEDIA_STORAGE_URL_PATTERN
-        )
+        url_params, _, _, item = self._authorize_subrequest(request, MEDIA_STORAGE_URL_PATTERN)
         if item.type != models.ItemTypeChoices.FILE:
             logger.debug("Item '%s' is not a file", item.id)
             raise drf.exceptions.PermissionDenied()
@@ -1620,9 +1547,7 @@ class ItemViewSet(
             if request.user.is_authenticated and request.user.language
             else settings.LANGUAGE_CODE
         )
-        launch_url = compute_wopi_launch_url(
-            wopi_client["url"], get_file_info, language
-        )
+        launch_url = compute_wopi_launch_url(wopi_client["url"], get_file_info, language)
 
         return drf.response.Response(
             {
@@ -1722,9 +1647,7 @@ class ItemAccessViewSet(
         if role not in PRIVILEGED_ROLES:
             accesses_qs = accesses_qs.filter(role__in=PRIVILEGED_ROLES)
 
-        accesses_qs = accesses_qs.annotate_user_roles(user).order_by(
-            "item__path", "created_at"
-        )
+        accesses_qs = accesses_qs.annotate_user_roles(user).order_by("item__path", "created_at")
 
         # Track max role and keep only deepest access per target
         max_role_by_target = {}
@@ -1737,9 +1660,7 @@ class ItemAccessViewSet(
 
             # Set max_ancestors_role from previous accesses in hierarchy
             access.max_ancestors_role = previous_role
-            access.max_ancestors_role_item_id = (
-                previous["item_id"] if previous else None
-            )
+            access.max_ancestors_role_item_id = previous["item_id"] if previous else None
 
             max_role_by_target[target] = {
                 "role": models.RoleChoices.max(previous_role, access.role),
@@ -1788,8 +1709,7 @@ class ItemAccessViewSet(
             if (
                 self.item.is_root
                 and instance.role == models.RoleChoices.OWNER
-                and self.item.accesses.filter(role=models.RoleChoices.OWNER).count()
-                == 1
+                and self.item.accesses.filter(role=models.RoleChoices.OWNER).count() == 1
             ):
                 message = "Cannot change the role to a non-owner role for the last owner access."
                 raise drf.exceptions.PermissionDenied({"detail": message})
@@ -1844,17 +1764,17 @@ class ItemAccessViewSet(
             )
 
         # Look for the max ancestors role of the item for the current user.
-        ancestor_qs = (
-            self.item.ancestors() | models.Item.objects.filter(pk=self.item.pk)
-        ).filter(ancestors_deleted_at__isnull=True)
+        ancestor_qs = (self.item.ancestors() | models.Item.objects.filter(pk=self.item.pk)).filter(
+            ancestors_deleted_at__isnull=True
+        )
         ancestors_roles = models.ItemAccess.objects.filter(
             item__in=ancestor_qs, user=serializer.validated_data.get("user")
         ).values_list("role", flat=True)
         max_ancestors_role = models.RoleChoices.max(*ancestors_roles)
 
-        if models.RoleChoices.get_priority(
-            max_ancestors_role
-        ) >= models.RoleChoices.get_priority(role):
+        if models.RoleChoices.get_priority(max_ancestors_role) >= models.RoleChoices.get_priority(
+            role
+        ):
             raise drf.exceptions.ValidationError(
                 {
                     "role": (
@@ -1956,9 +1876,7 @@ class InvitationViewset(
     lookup_field = "id"
     pagination_class = Pagination
     permission_classes = [permissions.InvitationPermission]
-    queryset = (
-        models.Invitation.objects.all().select_related("item").order_by("-created_at")
-    )
+    queryset = models.Invitation.objects.all().select_related("item").order_by("-created_at")
     serializer_class = serializers.InvitationSerializer
     resource_field_name = "item"
 
@@ -2113,17 +2031,13 @@ class ConfigView(drf.views.APIView):
         if not settings.THEME_CUSTOMIZATION_FILE_PATH:
             return {}
 
-        cache_key = (
-            f"theme_customization_{slugify(settings.THEME_CUSTOMIZATION_FILE_PATH)}"
-        )
+        cache_key = f"theme_customization_{slugify(settings.THEME_CUSTOMIZATION_FILE_PATH)}"
         theme_customization = cache.get(cache_key, {})
         if theme_customization:
             return theme_customization
 
         try:
-            with open(
-                settings.THEME_CUSTOMIZATION_FILE_PATH, "r", encoding="utf-8"
-            ) as f:
+            with open(settings.THEME_CUSTOMIZATION_FILE_PATH, "r", encoding="utf-8") as f:
                 theme_customization = json.load(f)
         except FileNotFoundError:
             logger.error(

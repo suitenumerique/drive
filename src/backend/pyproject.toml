@@ -107,7 +107,7 @@ exclude = [
     "__pycache__",
     "*/migrations/*",
 ]
-line-length = 88
+line-length = 100
 
 
 [tool.ruff.lint]

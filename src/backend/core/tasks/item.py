@@ -112,14 +112,10 @@ def update_suspicious_item_file_hash(item_id):
     try:
         item = Item.objects.get(id=item_id)
     except Item.DoesNotExist:
-        logger.error(
-            "updating suspicious item file hash: Item %s does not exist", item_id
-        )
+        logger.error("updating suspicious item file hash: Item %s does not exist", item_id)
         return
     if item.upload_state != ItemUploadStateChoices.SUSPICIOUS:
-        logger.error(
-            "updating suspicious item file hash: Item %s is not suspicious", item_id
-        )
+        logger.error("updating suspicious item file hash: Item %s is not suspicious", item_id)
         return
     with default_storage.open(item.file_key, "rb") as file:
         file_hash = hashlib.file_digest(file, "sha256").hexdigest()

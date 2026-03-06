@@ -29,16 +29,11 @@ def get_wopi_client_config(item, user):
     if (
         item.type != models.ItemTypeChoices.FILE
         or item.upload_state == models.ItemUploadStateChoices.SUSPICIOUS
-        or (
-            item.creator != user
-            and item.upload_state != models.ItemUploadStateChoices.READY
-        )
+        or (item.creator != user and item.upload_state != models.ItemUploadStateChoices.READY)
     ):
         return None
 
-    wopi_configuration = cache.get(
-        WOPI_CONFIGURATION_CACHE_KEY, default=WOPI_DEFAULT_CONFIGURATION
-    )
+    wopi_configuration = cache.get(WOPI_CONFIGURATION_CACHE_KEY, default=WOPI_DEFAULT_CONFIGURATION)
 
     if not wopi_configuration:
         return None

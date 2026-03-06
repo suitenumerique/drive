@@ -123,14 +123,10 @@ def test_api_users_put_patch_resource_server_not_allowed(
 
     new_user_values = {
         k: v
-        for k, v in serializers.UserSerializer(
-            instance=factories.UserFactory()
-        ).data.items()
+        for k, v in serializers.UserSerializer(instance=factories.UserFactory()).data.items()
         if v is not None
     }
-    response = client.put(
-        f"/external_api/v1.0/users/{other_user.id!s}/", new_user_values
-    )
+    response = client.put(f"/external_api/v1.0/users/{other_user.id!s}/", new_user_values)
 
     assert response.status_code == 403
 

@@ -26,9 +26,7 @@ def test_api_items_search_authenticated_without_filters():
     client = APIClient()
     client.force_login(user)
 
-    top_parent = factories.ItemFactory(
-        title="Item 1", type=models.ItemTypeChoices.FOLDER
-    )
+    top_parent = factories.ItemFactory(title="Item 1", type=models.ItemTypeChoices.FOLDER)
     top_parent_access = factories.UserItemAccessFactory(item=top_parent, user=user)
     parent = factories.ItemFactory(
         title="Item 2", parent=top_parent, type=models.ItemTypeChoices.FOLDER
@@ -120,9 +118,7 @@ def test_api_items_search_authenticated_without_filters():
                     "ancestors_link_role": top_parent.ancestors_link_role,
                     "computed_link_reach": top_parent.computed_link_reach,
                     "computed_link_role": top_parent.computed_link_role,
-                    "created_at": top_parent.created_at.isoformat().replace(
-                        "+00:00", "Z"
-                    ),
+                    "created_at": top_parent.created_at.isoformat().replace("+00:00", "Z"),
                     "creator": {
                         "id": str(top_parent.creator.id),
                         "full_name": top_parent.creator.full_name,
@@ -147,9 +143,7 @@ def test_api_items_search_authenticated_without_filters():
                     "size": None,
                     "title": "Item 1",
                     "type": "folder",
-                    "updated_at": top_parent.updated_at.isoformat().replace(
-                        "+00:00", "Z"
-                    ),
+                    "updated_at": top_parent.updated_at.isoformat().replace("+00:00", "Z"),
                     "upload_state": None,
                     "url": None,
                     "url_permalink": None,
@@ -202,9 +196,7 @@ def test_api_items_search_authenticated_without_filters():
                     "ancestors_link_role": top_parent.ancestors_link_role,
                     "computed_link_reach": top_parent.computed_link_reach,
                     "computed_link_role": top_parent.computed_link_role,
-                    "created_at": top_parent.created_at.isoformat().replace(
-                        "+00:00", "Z"
-                    ),
+                    "created_at": top_parent.created_at.isoformat().replace("+00:00", "Z"),
                     "creator": {
                         "id": str(top_parent.creator.id),
                         "full_name": top_parent.creator.full_name,
@@ -229,9 +221,7 @@ def test_api_items_search_authenticated_without_filters():
                     "size": None,
                     "title": "Item 1",
                     "type": "folder",
-                    "updated_at": top_parent.updated_at.isoformat().replace(
-                        "+00:00", "Z"
-                    ),
+                    "updated_at": top_parent.updated_at.isoformat().replace("+00:00", "Z"),
                     "upload_state": None,
                     "url": None,
                     "url_permalink": None,
@@ -300,16 +290,12 @@ def test_api_items_search_authenticated_invalid_filter():
     client = APIClient()
     client.force_login(user)
 
-    top_parent = factories.ItemFactory(
-        title="Item 1", type=models.ItemTypeChoices.FOLDER
-    )
+    top_parent = factories.ItemFactory(title="Item 1", type=models.ItemTypeChoices.FOLDER)
     factories.UserItemAccessFactory(item=top_parent, user=user)
     parent = factories.ItemFactory(
         title="Item 2", parent=top_parent, type=models.ItemTypeChoices.FOLDER
     )
-    factories.ItemFactory(
-        title="Item 3", parent=parent, type=models.ItemTypeChoices.FILE
-    )
+    factories.ItemFactory(title="Item 3", parent=parent, type=models.ItemTypeChoices.FILE)
     factories.ItemFactory(title="Item hidden")
 
     response = client.get("/api/v1.0/items/search/?type=invalid")
@@ -335,16 +321,12 @@ def test_api_items_search_authenticated_not_existing_filter():
     client = APIClient()
     client.force_login(user)
 
-    top_parent = factories.ItemFactory(
-        title="Item 1", type=models.ItemTypeChoices.FOLDER
-    )
+    top_parent = factories.ItemFactory(title="Item 1", type=models.ItemTypeChoices.FOLDER)
     factories.UserItemAccessFactory(item=top_parent, user=user)
     parent = factories.ItemFactory(
         title="Item 2", parent=top_parent, type=models.ItemTypeChoices.FOLDER
     )
-    factories.ItemFactory(
-        title="Item 3", parent=parent, type=models.ItemTypeChoices.FILE
-    )
+    factories.ItemFactory(title="Item 3", parent=parent, type=models.ItemTypeChoices.FILE)
     factories.ItemFactory(title="Item hidden")
 
     response = client.get("/api/v1.0/items/search/?foo=bar")
@@ -406,9 +388,7 @@ def test_api_items_search_authenticated_with_title_filter_on_top_level_file():
     client = APIClient()
     client.force_login(user)
 
-    factories.ItemFactory(
-        title="Item 1", users=[user], type=models.ItemTypeChoices.FILE
-    )
+    factories.ItemFactory(title="Item 1", users=[user], type=models.ItemTypeChoices.FILE)
 
     response = client.get("/api/v1.0/items/search/?title=Item")
     assert response.status_code == 200
@@ -430,18 +410,12 @@ def test_api_items_search_authenticated_by_type():
     top_parent = factories.ItemFactory(
         title="Item 1", users=[user], type=models.ItemTypeChoices.FOLDER
     )
-    factories.ItemFactory.create_batch(
-        3, parent=top_parent, type=models.ItemTypeChoices.FILE
-    )
-    factories.ItemFactory.create_batch(
-        3, parent=top_parent, type=models.ItemTypeChoices.FOLDER
-    )
+    factories.ItemFactory.create_batch(3, parent=top_parent, type=models.ItemTypeChoices.FILE)
+    factories.ItemFactory.create_batch(3, parent=top_parent, type=models.ItemTypeChoices.FOLDER)
     other_top_parent = factories.ItemFactory(
         title="Item 2", users=[user], type=models.ItemTypeChoices.FOLDER
     )
-    factories.ItemFactory.create_batch(
-        3, parent=other_top_parent, type=models.ItemTypeChoices.FILE
-    )
+    factories.ItemFactory.create_batch(3, parent=other_top_parent, type=models.ItemTypeChoices.FILE)
 
     deleted_file = factories.ItemFactory(
         title="Deleted file", type=models.ItemTypeChoices.FILE, parent=top_parent
@@ -468,18 +442,12 @@ def test_api_items_search_authenticated_filter_scopes():
     top_parent = factories.ItemFactory(
         title="Item 1", users=[user], type=models.ItemTypeChoices.FOLDER
     )
-    factories.ItemFactory.create_batch(
-        3, parent=top_parent, type=models.ItemTypeChoices.FILE
-    )
-    factories.ItemFactory.create_batch(
-        3, parent=top_parent, type=models.ItemTypeChoices.FOLDER
-    )
+    factories.ItemFactory.create_batch(3, parent=top_parent, type=models.ItemTypeChoices.FILE)
+    factories.ItemFactory.create_batch(3, parent=top_parent, type=models.ItemTypeChoices.FOLDER)
     other_top_parent = factories.ItemFactory(
         title="Item 2", users=[user], type=models.ItemTypeChoices.FOLDER
     )
-    factories.ItemFactory.create_batch(
-        3, parent=other_top_parent, type=models.ItemTypeChoices.FILE
-    )
+    factories.ItemFactory.create_batch(3, parent=other_top_parent, type=models.ItemTypeChoices.FILE)
 
     deleted_file = factories.ItemFactory(
         title="Deleted file", type=models.ItemTypeChoices.FILE, parent=top_parent
@@ -515,21 +483,13 @@ def test_api_items_search_authenticated_by_workspace():
     client = APIClient()
     client.force_login(user)
 
-    parent = factories.ItemFactory(
-        title="Item 1", users=[user], type=models.ItemTypeChoices.FOLDER
-    )
-    factories.ItemFactory.create_batch(
-        3, parent=parent, type=models.ItemTypeChoices.FILE
-    )
-    factories.ItemFactory.create_batch(
-        3, parent=parent, type=models.ItemTypeChoices.FOLDER
-    )
+    parent = factories.ItemFactory(title="Item 1", users=[user], type=models.ItemTypeChoices.FOLDER)
+    factories.ItemFactory.create_batch(3, parent=parent, type=models.ItemTypeChoices.FILE)
+    factories.ItemFactory.create_batch(3, parent=parent, type=models.ItemTypeChoices.FOLDER)
     other_top_parent = factories.ItemFactory(
         title="Item 2", users=[user], type=models.ItemTypeChoices.FOLDER
     )
-    factories.ItemFactory.create_batch(
-        3, parent=other_top_parent, type=models.ItemTypeChoices.FILE
-    )
+    factories.ItemFactory.create_batch(3, parent=other_top_parent, type=models.ItemTypeChoices.FILE)
 
     response = client.get(f"/api/v1.0/items/search/?workspace={parent.id}")
     assert response.status_code == 200
@@ -575,21 +535,15 @@ def test_api_items_search_authenticated_combined_filters():
         )
         parent_childrens[parent.id].append(children)
 
-    response = client.get(
-        f"/api/v1.0/items/search/?type=file&workspace={parents[0].id}"
-    )
+    response = client.get(f"/api/v1.0/items/search/?type=file&workspace={parents[0].id}")
     assert response.status_code == 200
     assert response.data["count"] == len(parent_childrens[parents[0].id])
 
-    response = client.get(
-        f"/api/v1.0/items/search/?type=file&workspace={parents[1].id}"
-    )
+    response = client.get(f"/api/v1.0/items/search/?type=file&workspace={parents[1].id}")
     assert response.status_code == 200
     assert response.data["count"] == len(parent_childrens[parents[1].id])
 
-    response = client.get(
-        f"/api/v1.0/items/search/?type=file&workspace={parents[2].id}"
-    )
+    response = client.get(f"/api/v1.0/items/search/?type=file&workspace={parents[2].id}")
     assert response.status_code == 200
     assert response.data["count"] == len(parent_childrens[parents[2].id])
 
@@ -615,9 +569,7 @@ def test_api_items_search_authenticated_filter_with_unaccessibile_workspace():
         3, parent=unaccessible_workspace, type=models.ItemTypeChoices.FILE
     )
 
-    response = client.get(
-        f"/api/v1.0/items/search/?workspace={unaccessible_workspace.id}"
-    )
+    response = client.get(f"/api/v1.0/items/search/?workspace={unaccessible_workspace.id}")
     assert response.status_code == 200
     assert response.data["count"] == 0
 
@@ -630,15 +582,11 @@ def test_api_items_search_authenticated_filter_with_workspace_children():
     client = APIClient()
     client.force_login(user)
 
-    parent = factories.ItemFactory(
-        title="Item 1", users=[user], type=models.ItemTypeChoices.FOLDER
-    )
+    parent = factories.ItemFactory(title="Item 1", users=[user], type=models.ItemTypeChoices.FOLDER)
     children = factories.ItemFactory(
         title="Item 2", parent=parent, type=models.ItemTypeChoices.FOLDER
     )
-    factories.ItemFactory.create_batch(
-        3, parent=children, type=models.ItemTypeChoices.FILE
-    )
+    factories.ItemFactory.create_batch(3, parent=children, type=models.ItemTypeChoices.FILE)
 
     response = client.get(f"/api/v1.0/items/search/?workspace={parent.id}&type=file")
     assert response.status_code == 200

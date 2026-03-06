@@ -55,9 +55,7 @@ def test_api_entitlements_get_entitlements_entitlements_backend_returns_falsy():
         return_value={"result": False, "message": "You do not have access to the app"}
     )
 
-    with mock.patch(
-        "core.api.viewsets.get_entitlements_backend", return_value=real_backend
-    ):
+    with mock.patch("core.api.viewsets.get_entitlements_backend", return_value=real_backend):
         client = APIClient()
         user = factories.UserFactory()
         client.force_authenticate(user)

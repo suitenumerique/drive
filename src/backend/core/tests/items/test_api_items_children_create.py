@@ -157,9 +157,7 @@ def test_api_items_children_create_related_forbidden(depth):
 
     for i in range(depth):
         if i == 0:
-            item = factories.ItemFactory(
-                link_reach="restricted", type=ItemTypeChoices.FOLDER
-            )
+            item = factories.ItemFactory(link_reach="restricted", type=ItemTypeChoices.FOLDER)
             factories.UserItemAccessFactory(user=user, item=item, role="reader")
         else:
             item = factories.ItemFactory(
@@ -193,9 +191,7 @@ def test_api_items_children_create_related_success(role, depth):
 
     for i in range(depth):
         if i == 0:
-            item = factories.ItemFactory(
-                link_reach="restricted", type=ItemTypeChoices.FOLDER
-            )
+            item = factories.ItemFactory(link_reach="restricted", type=ItemTypeChoices.FOLDER)
             factories.UserItemAccessFactory(user=user, item=item, role=role)
         else:
             item = factories.ItemFactory(parent=item, type=ItemTypeChoices.FOLDER)
@@ -254,9 +250,7 @@ def test_api_items_children_create_related_success_override_s3_endpoint(settings
 
     for i in range(3):
         if i == 0:
-            item = factories.ItemFactory(
-                link_reach="restricted", type=ItemTypeChoices.FOLDER
-            )
+            item = factories.ItemFactory(link_reach="restricted", type=ItemTypeChoices.FOLDER)
             factories.UserItemAccessFactory(user=user, item=item, role="owner")
         else:
             item = factories.ItemFactory(parent=item, type=ItemTypeChoices.FOLDER)
@@ -471,9 +465,7 @@ def test_api_items_children_create_title_already_existing_at_the_same_level():
     access = factories.UserItemAccessFactory(
         user=user, role="editor", item__type=ItemTypeChoices.FOLDER
     )
-    factories.ItemFactory(
-        parent=access.item, title="my item", type=ItemTypeChoices.FOLDER
-    )
+    factories.ItemFactory(parent=access.item, title="my item", type=ItemTypeChoices.FOLDER)
 
     response = client.post(
         f"/api/v1.0/items/{access.item.id!s}/children/",
@@ -499,9 +491,7 @@ def test_api_items_children_create_item_soft_deleted_with_same_title_exists():
     access = factories.UserItemAccessFactory(
         user=user, role="editor", item__type=ItemTypeChoices.FOLDER
     )
-    item = factories.ItemFactory(
-        parent=access.item, title="my item", type=ItemTypeChoices.FOLDER
-    )
+    item = factories.ItemFactory(parent=access.item, title="my item", type=ItemTypeChoices.FOLDER)
     item.soft_delete()
 
     response = client.post(
@@ -599,9 +589,7 @@ def test_api_items_children_create_entitlements_backend_returns_falsy(
     }
 
 
-@mock.patch(
-    "core.api.serializers.utils.sanitize_filename", side_effect=sanitize_filename
-)
+@mock.patch("core.api.serializers.utils.sanitize_filename", side_effect=sanitize_filename)
 def test_api_items_children_create_related_success_sanitize_filename(
     mock_sanitize_filename,
 ):
@@ -648,10 +636,7 @@ def test_api_items_children_create_related_success_sanitize_filename(
 
     assert policy_parsed.scheme == "http"
     assert policy_parsed.netloc == "localhost:9000"
-    assert (
-        policy_parsed.path
-        == f"/drive-media-storage/item/{child.id!s}/img_srcx_onerroralert.txt"
-    )
+    assert policy_parsed.path == f"/drive-media-storage/item/{child.id!s}/img_srcx_onerroralert.txt"
 
     query_params = parse_qs(policy_parsed.query)
 
@@ -667,9 +652,7 @@ def test_api_items_children_create_related_success_sanitize_filename(
     assert len(query_params) == 0
 
 
-@mock.patch(
-    "core.api.serializers.utils.sanitize_filename", side_effect=sanitize_filename
-)
+@mock.patch("core.api.serializers.utils.sanitize_filename", side_effect=sanitize_filename)
 def test_api_items_children_create_related_invalid_filename(
     mock_sanitize_filename,
 ):

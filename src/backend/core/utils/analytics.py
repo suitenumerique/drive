@@ -18,6 +18,4 @@ def posthog_capture(event_name, user, properties, **kwargs):
             properties["item_size"] = item.size
             properties["item_mimetype"] = item.mimetype
             properties["item_type"] = item.type
-        posthog.capture(
-            event_name, distinct_id=user.email if user else None, properties=properties
-        )
+        posthog.capture(event_name, distinct_id=user.email if user else None, properties=properties)

@@ -87,9 +87,7 @@ class Command(BaseCommand):
                 type=data["type"],
                 creator=data["creator"],
                 parent=parent,
-                users=[(data["creator"], models.RoleChoices.OWNER)]
-                if depth == 0
-                else None,
+                users=[(data["creator"], models.RoleChoices.OWNER)] if depth == 0 else None,
             )
             if data.get("deleted"):
                 item.soft_delete()

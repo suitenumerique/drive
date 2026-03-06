@@ -135,9 +135,7 @@ def test_api_items_move_invalid_target_uuid():
 
 @pytest.mark.parametrize("target_parent_role", models.RoleChoices.values)
 @pytest.mark.parametrize("target_role", models.RoleChoices.values)
-def test_api_tems_move_file_authenticated_target_roles_mocked(
-    target_role, target_parent_role
-):
+def test_api_tems_move_file_authenticated_target_roles_mocked(target_role, target_parent_role):
     """
     Authenticated users with insufficient permissions on the target item (or its
     parent depending on the position chosen), should not be allowed to move items.
@@ -190,9 +188,7 @@ def test_api_tems_move_file_authenticated_target_roles_mocked(
         assert list(target.children()) == [item] + target_children
     else:
         assert response.status_code == 400
-        message = (
-            "You do not have permission to move items as a child to this target item."
-        )
+        message = "You do not have permission to move items as a child to this target item."
         assert response.json() == {
             "errors": [
                 {
@@ -207,9 +203,7 @@ def test_api_tems_move_file_authenticated_target_roles_mocked(
 
 @pytest.mark.parametrize("target_parent_role", models.RoleChoices.values)
 @pytest.mark.parametrize("target_role", models.RoleChoices.values)
-def test_api_items_move_authenticated_target_roles_mocked(
-    target_role, target_parent_role
-):
+def test_api_items_move_authenticated_target_roles_mocked(target_role, target_parent_role):
     """
     Authenticated users with insufficient permissions on the target item (or its
     parent depending on the position chosen), should not be allowed to move items.
@@ -233,9 +227,7 @@ def test_api_items_move_authenticated_target_roles_mocked(
     )
 
     # children
-    factories.ItemFactory.create_batch(
-        3, parent=item, type=models.ItemTypeChoices.FOLDER
-    )
+    factories.ItemFactory.create_batch(3, parent=item, type=models.ItemTypeChoices.FOLDER)
 
     target_parent = factories.ItemFactory(
         users=[(user, target_parent_role)],
@@ -268,16 +260,11 @@ def test_api_items_move_authenticated_target_roles_mocked(
         assert response.json() == {"message": "item moved successfully."}
 
         assert list(target.children()) == [item] + target_children
-        assert (
-            list(target.descendants())
-            == [item] + list(item.descendants()) + target_children
-        )
+        assert list(target.descendants()) == [item] + list(item.descendants()) + target_children
 
     else:
         assert response.status_code == 400
-        message = (
-            "You do not have permission to move items as a child to this target item."
-        )
+        message = "You do not have permission to move items as a child to this target item."
         assert response.json() == {
             "errors": [
                 {
@@ -357,13 +344,9 @@ def test_api_items_move_authenticated_target_not_folder_should_fail():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(
-        users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER
-    )
+    item = factories.ItemFactory(users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER)
     item_child = factories.ItemFactory(users=[(user, "owner")], parent=item)
-    target = factories.ItemFactory(
-        users=[(user, "owner")], type=models.ItemTypeChoices.FILE
-    )
+    target = factories.ItemFactory(users=[(user, "owner")], type=models.ItemTypeChoices.FILE)
 
     # trying to move the item to a not folder target
     response = client.post(
@@ -393,9 +376,7 @@ def test_api_items_move_authenticated_deleted_target_as_child():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(
-        users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER
-    )
+    item = factories.ItemFactory(users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER)
     item_child = factories.ItemFactory(users=[(user, "owner")], parent=item)
 
     target = factories.ItemFactory(
@@ -460,9 +441,7 @@ def test_api_items_move_authenticated_deleted_target_as_sibling():
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(
-        users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER
-    )
+    item = factories.ItemFactory(users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER)
     item_child = factories.ItemFactory(users=[(user, "owner")], parent=item)
 
     target_parent = factories.ItemFactory(

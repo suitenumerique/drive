@@ -18,9 +18,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         """Adds the command-line argument to the command"""
-        parser.add_argument(
-            "--set", action="store_true", help="Set the CORS configuration"
-        )
+        parser.add_argument("--set", action="store_true", help="Set the CORS configuration")
 
     def handle(self, *args, **options):
         """Handles the command"""
@@ -51,9 +49,7 @@ class Command(BaseCommand):
             s3_client.put_bucket_cors(
                 Bucket=default_storage.bucket_name, CORSConfiguration=cors_config
             )
-            self.stdout.write(
-                self.style.SUCCESS("CORS configuration successfully updated.")
-            )
+            self.stdout.write(self.style.SUCCESS("CORS configuration successfully updated."))
         else:
             # Get CORS rules
             try:
@@ -63,11 +59,7 @@ class Command(BaseCommand):
             except ClientError as e:
                 if e.response["Error"]["Code"] == "NoSuchCORSConfiguration":
                     self.stdout.write(
-                        self.style.WARNING(
-                            "No CORS configuration found for this bucket."
-                        )
+                        self.style.WARNING("No CORS configuration found for this bucket.")
                     )
                 else:
-                    self.stderr.write(
-                        self.style.ERROR(f"Error fetching CORS config: {e}")
-                    )
+                    self.stderr.write(self.style.ERROR(f"Error fetching CORS config: {e}"))

@@ -20,9 +20,7 @@ from core.factories import UserFactory
 pytestmark = pytest.mark.django_db
 
 
-def test_authentication_getter_existing_user_no_email(
-    django_assert_num_queries, monkeypatch
-):
+def test_authentication_getter_existing_user_no_email(django_assert_num_queries, monkeypatch):
     """
     If an existing user matches the user's info sub, the user should be returned.
     """
@@ -36,16 +34,12 @@ def test_authentication_getter_existing_user_no_email(
     monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
 
     with django_assert_num_queries(1):
-        user = klass.get_or_create_user(
-            access_token="test-token", id_token=None, payload=None
-        )
+        user = klass.get_or_create_user(access_token="test-token", id_token=None, payload=None)
 
     assert user == db_user
 
 
-def test_authentication_getter_existing_user_via_email(
-    django_assert_num_queries, monkeypatch
-):
+def test_authentication_getter_existing_user_via_email(django_assert_num_queries, monkeypatch):
     """
     If an existing user doesn't match the sub but matches the email,
     the user should be returned.
@@ -60,9 +54,7 @@ def test_authentication_getter_existing_user_via_email(
     monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
 
     with django_assert_num_queries(4):  # user by sub, user by mail, update sub
-        user = klass.get_or_create_user(
-            access_token="test-token", id_token=None, payload=None
-        )
+        user = klass.get_or_create_user(access_token="test-token", id_token=None, payload=None)
 
     assert user == db_user
 
@@ -84,9 +76,7 @@ def test_authentication_getter_existing_user_via_email_case_insensitive(
     monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
 
     with django_assert_num_queries(4):  # user by sub, user by mail, update sub
-        user = klass.get_or_create_user(
-            access_token="test-token", id_token=None, payload=None
-        )
+        user = klass.get_or_create_user(access_token="test-token", id_token=None, payload=None)
 
     assert user == db_user
 
@@ -107,9 +97,7 @@ def test_authentication_getter_email_none(monkeypatch):
 
     monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
 
-    user = klass.get_or_create_user(
-        access_token="test-token", id_token=None, payload=None
-    )
+    user = klass.get_or_create_user(access_token="test-token", id_token=None, payload=None)
 
     # Since the sub and email didn't match, it should create a new user
     assert models.User.objects.count() == 2
@@ -137,9 +125,7 @@ def test_authentication_getter_existing_user_no_fallback_to_email_allow_duplicat
 
     monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
 
-    user = klass.get_or_create_user(
-        access_token="test-token", id_token=None, payload=None
-    )
+    user = klass.get_or_create_user(access_token="test-token", id_token=None, payload=None)
 
     # Since the sub doesn't match, it should create a new user
     assert models.User.objects.count() == 2
@@ -213,9 +199,7 @@ def test_authentication_getter_existing_user_no_fallback_to_email_no_duplicate_c
     assert models.User.objects.count() == 1
 
 
-def test_authentication_getter_existing_user_with_email(
-    django_assert_num_queries, monkeypatch
-):
+def test_authentication_getter_existing_user_with_email(django_assert_num_queries, monkeypatch):
     """
     When the user's info contains an email and targets an existing user,
     """
@@ -258,9 +242,7 @@ def test_authentication_getter_existing_user_change_fields_sub(
     and the user was identified by its "sub".
     """
     klass = OIDCAuthenticationBackend()
-    user = UserFactory(
-        full_name="John Doe", short_name="John", email="john.doe@example.com"
-    )
+    user = UserFactory(full_name="John Doe", short_name="John", email="john.doe@example.com")
 
     def get_userinfo_mocked(*args):
         return {
@@ -300,9 +282,7 @@ def test_authentication_getter_existing_user_change_fields_email(
     and the user was identified by its "email" as fallback.
     """
     klass = OIDCAuthenticationBackend()
-    user = UserFactory(
-        full_name="John Doe", short_name="John", email="john.doe@example.com"
-    )
+    user = UserFactory(full_name="John Doe", short_name="John", email="john.doe@example.com")
 
     def get_userinfo_mocked(*args):
         return {
@@ -339,9 +319,7 @@ def test_authentication_getter_new_user_no_email(monkeypatch):
 
     monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
 
-    user = klass.get_or_create_user(
-        access_token="test-token", id_token=None, payload=None
-    )
+    user = klass.get_or_create_user(access_token="test-token", id_token=None, payload=None)
 
     assert user.sub == "123"
     assert user.email is None
@@ -366,9 +344,7 @@ def test_authentication_getter_new_user_with_email(monkeypatch):
 
     monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
 
-    user = klass.get_or_create_user(
-        access_token="test-token", id_token=None, payload=None
-    )
+    user = klass.get_or_create_user(access_token="test-token", id_token=None, payload=None)
 
     assert user.sub == "123"
     assert user.email == email
@@ -518,9 +494,7 @@ def test_authentication_getter_existing_disabled_user_via_email(
 
 
 @responses.activate
-def test_authentication_session_tokens(
-    django_assert_num_queries, monkeypatch, rf, settings
-):
+def test_authentication_session_tokens(django_assert_num_queries, monkeypatch, rf, settings):
     """
     Test that the session contains oidc_refresh_token and oidc_access_token after authentication.
     """
@@ -590,9 +564,7 @@ def test_authentication_store_claims_new_user(monkeypatch):
 
     monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
 
-    user = klass.get_or_create_user(
-        access_token="test-token", id_token=None, payload=None
-    )
+    user = klass.get_or_create_user(access_token="test-token", id_token=None, payload=None)
 
     assert user.sub == "123"
     assert user.email == email
@@ -609,9 +581,7 @@ def test_authentication_store_claims_existing_user(monkeypatch):
     Test that the claims are stored on the user when an existing user is authenticated.
     """
     klass = OIDCAuthenticationBackend()
-    user = UserFactory(
-        email="drive@example.com", sub="123", claims={"iss": "https://obsolete.com"}
-    )
+    user = UserFactory(email="drive@example.com", sub="123", claims={"iss": "https://obsolete.com"})
     email = "drive@example.com"
 
     def get_userinfo_mocked(*args):
@@ -625,9 +595,7 @@ def test_authentication_store_claims_existing_user(monkeypatch):
 
     monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
 
-    user = klass.get_or_create_user(
-        access_token="test-token", id_token=None, payload=None
-    )
+    user = klass.get_or_create_user(access_token="test-token", id_token=None, payload=None)
 
     user.refresh_from_db()
     assert user.sub == "123"
@@ -657,9 +625,7 @@ def test_authentication_get_or_create_user_raises_exception_when_entitlement_bac
     mock_entitlement_backend.can_access.return_value = {"result": False}
     mock_get_entitlements_backend.return_value = mock_entitlement_backend
 
-    with pytest.raises(
-        UserCannotAccessApp, match="User does not have access to the app"
-    ):
+    with pytest.raises(UserCannotAccessApp, match="User does not have access to the app"):
         klass.get_or_create_user(access_token="test-token", id_token=None, payload=None)
 
     # Verify the entitlement backend was called

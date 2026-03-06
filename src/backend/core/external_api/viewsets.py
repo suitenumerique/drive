@@ -59,9 +59,7 @@ class ResourceServerUserViewSet(ResourceServerRestrictionMixin, UserViewSet):
         return self._get_resource_server_actions("users")
 
 
-class ResourceServerItemAccessViewSet(
-    ResourceServerRestrictionMixin, ItemAccessViewSet
-):
+class ResourceServerItemAccessViewSet(ResourceServerRestrictionMixin, ItemAccessViewSet):
     """Resource Server Viewset for ItemAccess."""
 
     authentication_classes = [ResourceServerAuthentication]
@@ -74,9 +72,7 @@ class ResourceServerItemAccessViewSet(
         return self._get_resource_server_actions("item_access")
 
 
-class ResourceServerInvitationViewSet(
-    ResourceServerRestrictionMixin, InvitationViewset
-):
+class ResourceServerInvitationViewSet(ResourceServerRestrictionMixin, InvitationViewset):
     """Resource Server Viewset for Invitations."""
 
     authentication_classes = [ResourceServerAuthentication]

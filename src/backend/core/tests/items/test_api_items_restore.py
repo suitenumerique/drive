@@ -49,9 +49,7 @@ def test_api_items_restore_authenticated_no_permission(role):
     client.force_login(user)
 
     now = timezone.now() - timedelta(days=15)
-    item = factories.ItemFactory(
-        deleted_at=now, link_reach="public", link_role="editor"
-    )
+    item = factories.ItemFactory(deleted_at=now, link_reach="public", link_role="editor")
     if role:
         factories.UserItemAccessFactory(item=item, user=user, role=role)
 
@@ -132,9 +130,7 @@ def test_api_items_restore_authenticated_owner_ancestor_deleted():
     client.force_login(user)
 
     grand_parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
-    parent = factories.ItemFactory(
-        parent=grand_parent, type=models.ItemTypeChoices.FOLDER
-    )
+    parent = factories.ItemFactory(parent=grand_parent, type=models.ItemTypeChoices.FOLDER)
     item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
     factories.UserItemAccessFactory(item=item, user=user, role="owner")
     child1, child2 = factories.ItemFactory.create_batch(2, parent=item)

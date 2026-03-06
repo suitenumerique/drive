@@ -40,9 +40,7 @@ class WorkspacesChoices(TextChoices):
 class SearchItemFilter(ItemFilter):
     """Filter class dedicated to the Item viewset search method."""
 
-    workspace = django_filters.UUIDFilter(
-        method="filter_workspace", label=_("Workspace")
-    )
+    workspace = django_filters.UUIDFilter(method="filter_workspace", label=_("Workspace"))
 
     scope = django_filters.MultipleChoiceFilter(
         field_name="scopes",
@@ -101,9 +99,7 @@ class ListItemFilter(ItemFilter):
     is_creator_me = django_filters.BooleanFilter(
         method="filter_is_creator_me", label=_("Creator is me")
     )
-    is_favorite = django_filters.BooleanFilter(
-        method="filter_is_favorite", label=_("Favorite")
-    )
+    is_favorite = django_filters.BooleanFilter(method="filter_is_favorite", label=_("Favorite"))
 
     class Meta:
         model = models.Item

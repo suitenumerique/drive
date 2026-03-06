@@ -30,9 +30,7 @@ pytestmark = pytest.mark.django_db
     "get_token",
     return_value={"id_token": "mocked_id_token", "access_token": "mocked_access_token"},
 )
-@mock.patch.object(
-    MozillaOIDCAuthenticationBackend, "verify_token", return_value={"not": "needed"}
-)
+@mock.patch.object(MozillaOIDCAuthenticationBackend, "verify_token", return_value={"not": "needed"})
 @mock.patch.object(
     OIDCAuthenticationBackend,
     "get_userinfo",

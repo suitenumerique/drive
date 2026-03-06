@@ -236,9 +236,7 @@ def test_api_items_list_authenticated_direct(django_assert_num_queries):
     child1_with_access = factories.ItemFactory(parent=item1)
     factories.UserItemAccessFactory(user=user, item=child1_with_access)
 
-    middle_item = factories.ItemFactory(
-        parent=item2, type=models.ItemTypeChoices.FOLDER
-    )
+    middle_item = factories.ItemFactory(parent=item2, type=models.ItemTypeChoices.FOLDER)
     child2_with_access = factories.ItemFactory(parent=middle_item)
     factories.UserItemAccessFactory(user=user, item=child2_with_access)
 
@@ -254,9 +252,7 @@ def test_api_items_list_authenticated_direct(django_assert_num_queries):
     factories.UserItemAccessFactory(user=user, item=child4_with_access)
 
     # items that are soft deleted and children of a soft deleted item should not be listed
-    soft_deleted_item = factories.ItemFactory(
-        users=[user], type=models.ItemTypeChoices.FOLDER
-    )
+    soft_deleted_item = factories.ItemFactory(users=[user], type=models.ItemTypeChoices.FOLDER)
     child_of_soft_deleted_item = factories.ItemFactory(
         users=[user],
         parent=soft_deleted_item,
@@ -301,9 +297,7 @@ def test_api_items_list_authenticated_direct(django_assert_num_queries):
     assert expected_ids == results_ids
 
 
-def test_api_items_list_authenticated_via_team(
-    django_assert_num_queries, mock_user_teams
-):
+def test_api_items_list_authenticated_via_team(django_assert_num_queries, mock_user_teams):
     """
     Authenticated users should be able to list items they are a
     owner/administrator/member of via a team.
@@ -362,13 +356,9 @@ def test_api_items_list_authenticated_link_reach_restricted(
     models.LinkTrace.objects.create(item=item, user=factories.UserFactory())
 
     # Link traces for other items or other users should not interfere
-    other_item = factories.ItemFactory(
-        link_reach="public", type=models.ItemTypeChoices.FILE
-    )
+    other_item = factories.ItemFactory(link_reach="public", type=models.ItemTypeChoices.FILE)
     models.LinkTrace.objects.create(item=other_item, user=user)
-    folder_item = factories.ItemFactory(
-        link_reach="public", type=models.ItemTypeChoices.FOLDER
-    )
+    folder_item = factories.ItemFactory(link_reach="public", type=models.ItemTypeChoices.FOLDER)
     models.LinkTrace.objects.create(item=folder_item, user=user)
 
     with django_assert_num_queries(8):
@@ -499,9 +489,7 @@ def test_api_items_list_authenticated_distinct():
 
     other_user = factories.UserFactory()
 
-    item = factories.ItemFactory(
-        users=[user, other_user], type=models.ItemTypeChoices.FOLDER
-    )
+    item = factories.ItemFactory(users=[user, other_user], type=models.ItemTypeChoices.FOLDER)
 
     response = client.get(
         "/api/v1.0/items/",
@@ -525,12 +513,8 @@ def test_api_items_list_favorites_no_extra_queries(django_assert_num_queries):
     special_items = factories.ItemFactory.create_batch(
         3, users=[user], type=models.ItemTypeChoices.FOLDER
     )
-    factories.ItemFactory.create_batch(
-        2, users=[user], type=models.ItemTypeChoices.FOLDER
-    )
-    factories.ItemFactory.create_batch(
-        2, users=[user], type=models.ItemTypeChoices.FILE
-    )
+    factories.ItemFactory.create_batch(2, users=[user], type=models.ItemTypeChoices.FOLDER)
+    factories.ItemFactory.create_batch(2, users=[user], type=models.ItemTypeChoices.FILE)
 
     url = "/api/v1.0/items/"
     with django_assert_num_queries(12):
@@ -584,9 +568,7 @@ def test_api_items_list_with_link_traces_related_to_restricted_items():
         link_reach=None,  # force inheritance from root
         creator=user,
         type=models.ItemTypeChoices.FOLDER,
-        link_traces=[
-            user
-        ],  # User has created the child when root was public or authenticated
+        link_traces=[user],  # User has created the child when root was public or authenticated
     )
 
     user_item = factories.ItemFactory(

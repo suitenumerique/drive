@@ -20,9 +20,7 @@ class ResourceServerClientPermission(permissions.BasePermission):
         Check if the user is authenticated and the token introspection
         provides an authorized Service Provider.
         """
-        if not isinstance(
-            request.successful_authenticator, ResourceServerAuthentication
-        ):
+        if not isinstance(request.successful_authenticator, ResourceServerAuthentication):
             # Not a resource server request
             return False
 
@@ -36,6 +34,4 @@ class ResourceServerClientPermission(permissions.BasePermission):
             return False
 
         # When used as a resource server, the request has a token audience
-        return (
-            request.resource_server_token_audience in settings.OIDC_RS_ALLOWED_AUDIENCES
-        )
+        return request.resource_server_token_audience in settings.OIDC_RS_ALLOWED_AUDIENCES

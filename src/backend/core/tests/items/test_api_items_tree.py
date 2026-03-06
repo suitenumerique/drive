@@ -380,9 +380,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "computed_link_reach": level2_1.item.computed_link_reach,
                         "computed_link_role": level2_1.item.computed_link_role,
                         "children": [],
-                        "created_at": level2_1.item.created_at.isoformat().replace(
-                            "+00:00", "Z"
-                        ),
+                        "created_at": level2_1.item.created_at.isoformat().replace("+00:00", "Z"),
                         "creator": {
                             "id": str(level2_1.item.creator.id),
                             "full_name": level2_1.item.creator.full_name,
@@ -399,9 +397,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "path": f"{root.item.id!s}.{level1_1.item.id!s}.{level2_1.item.id!s}",
                         "title": "level2_1",
                         "type": level2_1.item.type,
-                        "updated_at": level2_1.item.updated_at.isoformat().replace(
-                            "+00:00", "Z"
-                        ),
+                        "updated_at": level2_1.item.updated_at.isoformat().replace("+00:00", "Z"),
                         "upload_state": None,
                         "url": None,
                         "url_permalink": None,
@@ -470,9 +466,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                                 "is_wopi_supported": False,
                             },
                         ],
-                        "created_at": level2_2.item.created_at.isoformat().replace(
-                            "+00:00", "Z"
-                        ),
+                        "created_at": level2_2.item.created_at.isoformat().replace("+00:00", "Z"),
                         "creator": {
                             "id": str(level2_2.item.creator.id),
                             "full_name": level2_2.item.creator.full_name,
@@ -489,9 +483,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "path": f"{root.item.id!s}.{level1_1.item.id!s}.{level2_2.item.id!s}",
                         "title": "level2_2",
                         "type": level2_2.item.type,
-                        "updated_at": level2_2.item.updated_at.isoformat().replace(
-                            "+00:00", "Z"
-                        ),
+                        "updated_at": level2_2.item.updated_at.isoformat().replace("+00:00", "Z"),
                         "upload_state": None,
                         "url": None,
                         "url_permalink": None,
@@ -507,9 +499,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "is_wopi_supported": False,
                     },
                 ],
-                "created_at": level1_1.item.created_at.isoformat().replace(
-                    "+00:00", "Z"
-                ),
+                "created_at": level1_1.item.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(level1_1.item.creator.id),
                     "full_name": level1_1.item.creator.full_name,
@@ -526,9 +516,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "path": f"{root.item.id!s}.{level1_1.item.id!s}",
                 "title": "level1_1",
                 "type": level1_1.item.type,
-                "updated_at": level1_1.item.updated_at.isoformat().replace(
-                    "+00:00", "Z"
-                ),
+                "updated_at": level1_1.item.updated_at.isoformat().replace("+00:00", "Z"),
                 "upload_state": None,
                 "url": None,
                 "url_permalink": None,
@@ -550,9 +538,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "computed_link_reach": level1_2.item.computed_link_reach,
                 "computed_link_role": level1_2.item.computed_link_role,
                 "children": [],
-                "created_at": level1_2.item.created_at.isoformat().replace(
-                    "+00:00", "Z"
-                ),
+                "created_at": level1_2.item.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(level1_2.item.creator.id),
                     "full_name": level1_2.item.creator.full_name,
@@ -569,9 +555,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "path": f"{root.item.id!s}.{level1_2.item.id!s}",
                 "title": "level1_2",
                 "type": level1_2.item.type,
-                "updated_at": level1_2.item.updated_at.isoformat().replace(
-                    "+00:00", "Z"
-                ),
+                "updated_at": level1_2.item.updated_at.isoformat().replace("+00:00", "Z"),
                 "upload_state": None,
                 "url": None,
                 "url_permalink": None,
@@ -593,9 +577,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "computed_link_reach": level1_3.item.computed_link_reach,
                 "computed_link_role": level1_3.item.computed_link_role,
                 "children": [],
-                "created_at": level1_3.item.created_at.isoformat().replace(
-                    "+00:00", "Z"
-                ),
+                "created_at": level1_3.item.created_at.isoformat().replace("+00:00", "Z"),
                 "creator": {
                     "id": str(level1_3.item.creator.id),
                     "full_name": level1_3.item.creator.full_name,
@@ -612,9 +594,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "path": f"{root.item.id!s}.{level1_3.item.id!s}",
                 "title": "level1_3",
                 "type": level1_3.item.type,
-                "updated_at": level1_3.item.updated_at.isoformat().replace(
-                    "+00:00", "Z"
-                ),
+                "updated_at": level1_3.item.updated_at.isoformat().replace("+00:00", "Z"),
                 "upload_state": None,
                 "url": None,
                 "url_permalink": None,

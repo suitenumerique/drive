@@ -151,9 +151,7 @@ def test_access_user_item_service_insert_user_and_item_with_anonymous_user(setti
 
     with patch.object(timezone, "now", return_value=datetime(2025, 3, 10, 12, 0, 0)):
         access_user_item_service = AccessUserItemService()
-        access_token, access_token_ttl = access_user_item_service.insert_new_access(
-            item, user
-        )
+        access_token, access_token_ttl = access_user_item_service.insert_new_access(item, user)
 
     assert access_token is not None
     assert access_token_ttl == 1741608060000
@@ -198,9 +196,7 @@ def test_access_user_item_service_retrieve_data():
     access = UserItemAccessFactory()
 
     access_user_item_service = AccessUserItemService()
-    access_token, _ = access_user_item_service.insert_new_access(
-        access.item, access.user
-    )
+    access_token, _ = access_user_item_service.insert_new_access(access.item, access.user)
 
     access_user_item = access_user_item_service.get_access_user_item(access_token)
 
@@ -208,9 +204,7 @@ def test_access_user_item_service_retrieve_data():
     assert access_user_item.user == access.user
 
     # create a new access token for the same user
-    new_access_token, _ = access_user_item_service.insert_new_access(
-        access.item, access.user
-    )
+    new_access_token, _ = access_user_item_service.insert_new_access(access.item, access.user)
 
     assert new_access_token != access_token
 
