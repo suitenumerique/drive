@@ -846,6 +846,12 @@ class Item(TreeModel, BaseModel):
             else (is_owner_or_admin or (user.is_authenticated and self.creator == user))
         )
         can_destroy = can_hard_delete and not is_deleted
+        can_duplicate = (
+            can_update
+            and user.is_authenticated
+            and self.type == ItemTypeChoices.FILE
+            and self.upload_state == ItemUploadStateChoices.READY
+        )
 
         return {
             "accesses_manage": is_owner_or_admin,
@@ -855,6 +861,7 @@ class Item(TreeModel, BaseModel):
             "children_create": can_create_children,
             "destroy": can_destroy,
             "download": can_get,
+            "duplicate": can_duplicate,
             "hard_delete": can_hard_delete,
             "favorite": can_get and user.is_authenticated,
             "link_configuration": is_owner_or_admin,
