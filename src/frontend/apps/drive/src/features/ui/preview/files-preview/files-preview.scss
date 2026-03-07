@@ -1,6 +1,7 @@
 .c__modal__backdrop:has(.file-preview-container) {
-  background-color: var(--c--contextuals--background--surface--secondary);
-
+  // background-color: var(--c--contextuals--background--surface--secondary);
+  background: var(--c--contextuals--background--semantic--contextual--primary);
+  backdrop-filter: blur(8px);
   .c__modal {
     background: none;
   }
@@ -22,10 +23,11 @@
 
 .file-preview-container {
   width: 100%;
-  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
+  // border: 5px green solid;
 }
 
 .file-preview-header {
@@ -97,6 +99,7 @@
   position: relative;
 
   display: flex;
+  // border: 5px blue solid;
 
   // Blur effect on content
   &::before {
@@ -116,6 +119,7 @@
   min-width: 0;
   transition: all 0.3s ease-in-out;
   width: 100%;
+  // border: 5px red solid;
 }
 
 .file-preview-sidebar {
@@ -257,7 +261,7 @@
   }
 
   .file-preview-content > * {
-    min-height: calc(100vh - 84px);
+    min-height: calc(100dvh - 84px);
   }
 
   .file-preview-nav {

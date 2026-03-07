@@ -82,7 +82,7 @@ services:
       - /app/.venv
     networks:
       - lasuite
-      - default      
+      - default
     depends_on:
       postgresql:
         condition: service_healthy
@@ -102,7 +102,28 @@ services:
 
   ds-proxy:
     image: demarchenumerique/ds-proxy:v2.0.0-alpha.2
-    command: ["proxy", "--address", "0.0.0.0:4444", "--password-file", "/etc/dsproxy/PASSWORD", "--salt", "12345678901234567890123456789012", "--keyring-file", "/etc/dsproxy/keyring.toml", "--upstream-url", "http://minio:9000", "--local-encryption-directory", "/var/tmp/local_encryption/", "--s3-access-key", "drive", "--s3-secret-key", "password", "--s3-region", "us-east-1"]
+    command:
+      [
+        "proxy",
+        "--address",
+        "0.0.0.0:4444",
+        "--password-file",
+        "/etc/dsproxy/PASSWORD",
+        "--salt",
+        "12345678901234567890123456789012",
+        "--keyring-file",
+        "/etc/dsproxy/keyring.toml",
+        "--upstream-url",
+        "http://minio:9000",
+        "--local-encryption-directory",
+        "/var/tmp/local_encryption/",
+        "--s3-access-key",
+        "drive",
+        "--s3-secret-key",
+        "password",
+        "--s3-region",
+        "us-east-1",
+      ]
     ports:
       - "4444:4444"
     environment:
