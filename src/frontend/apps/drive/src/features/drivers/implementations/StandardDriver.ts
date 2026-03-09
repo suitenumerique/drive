@@ -343,55 +343,74 @@ export class StandardDriver extends Driver {
     });
   }
 
-  async createFile(data: {
+  createFile(data: {
     parentId?: string;
     file: File;
     filename: string;
     progressHandler?: (progress: number) => void;
-  }): Promise<Item> {
-    const { parentId, file, progressHandler, ...rest } = data;
-    const url = parentId ? `items/${parentId}/children/` : `items/`;
-    const response = await fetchAPI(
-      url,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          type: ItemType.FILE,
-          ...rest,
-        }),
-      },
-      {
-        // When entitlements are falsy, the backend returns a 403 error.
-        // We don't want to redirect to the login page in this case, instead
-        // we want to show an error.
-        redirectOn40x: false,
-      },
-    );
-    const item = jsonToItem(await response.json());
-    if (!item.policy) {
-      throw new Error("No policy found");
-    }
+  }): { promise: Promise<Item>; abort: () => void } {
+    let abortUpload: (() => void) | undefined;
+    let aborted = false;
 
-    // We don't want to call the progress handler with 100% when the upload is done.
-    // We want to wait until the upload-ended endpoint is called.
-    const progressHandlerProxy = (progress: number) => {
-      if (progress === 100) {
-        return;
-      }
-      progressHandler?.(progress);
+    const abort = () => {
+      aborted = true;
+      abortUpload?.();
     };
 
-    await uploadFile(item.policy, file, (progress) => {
-      progressHandlerProxy(progress);
-    });
+    const promise = (async () => {
+      const { parentId, file, progressHandler, ...rest } = data;
+      const url = parentId ? `items/${parentId}/children/` : `items/`;
+      const response = await fetchAPI(
+        url,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            type: ItemType.FILE,
+            ...rest,
+          }),
+        },
+        {
+          redirectOn40x: false,
+        },
+      );
+      const item = jsonToItem(await response.json());
+      if (!item.policy) {
+        throw new Error("No policy found");
+      }
 
-    await fetchAPI(`items/${item.id}/upload-ended/`, {
-      method: "POST",
-    });
+      if (aborted) {
+        throw new DOMException("Upload cancelled", "AbortError");
+      }
 
-    progressHandler?.(100);
+      const progressHandlerProxy = (progress: number) => {
+        if (progress === 100) {
+          return;
+        }
+        progressHandler?.(progress);
+      };
 
-    return item;
+      const upload = uploadFile(item.policy, file, (progress) => {
+        progressHandlerProxy(progress);
+      });
+      abortUpload = upload.abort;
+
+      if (aborted) {
+        upload.abort();
+        throw new DOMException("Upload cancelled", "AbortError");
+      }
+
+      await upload.promise;
+
+      await fetchAPI(`items/${item.id}/upload-ended/`, {
+        method: "POST",
+      });
+
+      progressHandler?.(100);
+
+      return item;
+    })();
+
+    return { promise, abort };
   }
 
   async createFileFromTemplate(data: {
@@ -478,23 +497,27 @@ export const uploadFile = (
   url: string,
   file: File,
   progressHandler: (progress: number) => void,
-) =>
-  new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
+): { promise: Promise<unknown>; abort: () => void } => {
+  const xhr = new XMLHttpRequest();
+  const promise = new Promise((resolve, reject) => {
     xhr.open("PUT", url);
     xhr.setRequestHeader("X-amz-acl", "private");
     xhr.setRequestHeader("Content-Type", file.type);
 
     xhr.addEventListener("error", reject);
-    xhr.addEventListener("abort", reject);
+    xhr.addEventListener("abort", () =>
+      reject(new DOMException("Upload cancelled", "AbortError")),
+    );
 
     xhr.addEventListener("readystatechange", () => {
       if (xhr.readyState === 4) {
         if (xhr.status === 200) {
-          // Make sure to always set the progress to 100% when the upload is done.
-          // Because 'progress' event listener is not called when the file size is 0.
           progressHandler(100);
           return resolve(true);
+        }
+        if (xhr.status === 0) {
+          // Aborted - already handled by abort listener
+          return;
         }
         reject(new Error(`Failed to perform the upload on ${url}.`));
       }
@@ -510,3 +533,5 @@ export const uploadFile = (
 
     xhr.send(file);
   });
+  return { promise, abort: () => xhr.abort() };
+};

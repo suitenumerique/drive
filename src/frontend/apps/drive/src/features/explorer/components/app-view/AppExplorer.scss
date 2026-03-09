@@ -296,6 +296,9 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 
   &__item {
     padding: 8px !important;
+    width: 560px;
+    min-width: 400px;
+    max-width: 100%;
   }
 
   &__files {
@@ -324,16 +327,86 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
       height: 40px;
       align-items: center;
 
+      &--error {
+        .file-upload-toast__files__item__name span:first-of-type {
+          color: var(--c--contextuals--content--semantic--neutral--primary);
+        }
+      }
+
       &__size {
         font-size: 14px;
         font-weight: 400;
         color: var(--c--contextuals--content--semantic--neutral--tertiary);
       }
 
+      &__error-text {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--c--contextuals--content--semantic--error--primary);
+      }
+
+      &__error-icon {
+        color: var(--c--contextuals--content--semantic--error--primary);
+        display: flex;
+        align-items: center;
+      }
+
+      &__check {
+        font-size: 20px;
+        color: var(
+          --c--contextuals--content--semantic--success--primary,
+          #18753c
+        );
+      }
+
+      &__cancel-overlay {
+        position: absolute;
+        inset: 1px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background-color: var(
+          --c--contextuals--background--semantic--brand--secondary
+        );
+        opacity: 0.85;
+      }
+
+      &__cancel-icon {
+        font-size: 16px;
+        color: var(--c--contextuals--content--semantic--brand--primary);
+      }
+
       &__name {
         display: flex;
         align-items: center;
         gap: 8px;
+        overflow: hidden;
+        flex: 1;
+        min-width: 0;
+
+        > span:first-of-type {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+
+      &__progress {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        &--hoverable {
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          position: relative;
+        }
       }
     }
   }
@@ -349,6 +422,22 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    &__percentage {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--c--contextuals--content--semantic--neutral--tertiary);
+    }
+
+    &__error-indicator {
+      display: flex;
+      align-items: center;
+
+      .material-icons {
+        font-size: 18px;
+        color: var(--c--contextuals--content--semantic--error--primary);
+      }
     }
   }
 }

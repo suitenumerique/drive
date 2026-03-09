@@ -12,6 +12,9 @@ and this project adheres to
 
 - ✨(frontend) add create folder and import file actions
 - 🐛(frontend) add action menu to mobile breadcrumbs
+- ✨(frontend) enhance upload toast with progress, errors and cancel support
+- ✨(frontend) add ErrorIcon component and support numeric icon sizes
+- ✨(frontend) make file upload abortable in driver layer
 
 ### Changed
 

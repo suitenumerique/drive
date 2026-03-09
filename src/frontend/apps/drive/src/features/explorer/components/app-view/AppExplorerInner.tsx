@@ -19,7 +19,12 @@ import { ExplorerFilters } from "@/features/explorer/components/app-view/Explore
 import { AppExplorerGrid } from "@/features/explorer/components/app-view/AppExplorerGrid";
 import { useCreateMenuItems } from "../../hooks/useCreateMenuItems";
 
-export type FileUploadMeta = { file: File; progress: number };
+export type FileUploadMeta = {
+  file: File;
+  progress: number;
+  status: 'uploading' | 'done' | 'error' | 'cancelled';
+  error?: string;
+};
 
 /**
  * - Handles the area selection of items
