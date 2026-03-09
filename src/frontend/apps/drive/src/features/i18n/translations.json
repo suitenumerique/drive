@@ -411,7 +411,26 @@
               "description_one": "{{count}} file being transferred",
               "description_other": "{{count}} files being transferred",
               "description_done_one": "{{count}} file transferred",
-              "description_done_other": "{{count}} files transferred"
+              "description_done_other": "{{count}} files transferred",
+              "error": "An error occurred",
+              "error_count_one": "{{count}} file could not be uploaded",
+              "error_count_other": "{{count}} files could not be uploaded",
+              "error_reasons": {
+                "file_size_exceeded": "The file exceeds the maximum allowed size.",
+                "file_type_not_allowed": "This file type is not allowed.",
+                "item_create_file_extension_not_allowed": "This file extension is not allowed.",
+                "file_too_large": "The file exceeds the maximum allowed size.",
+                "unknown": "An unexpected error occurred."
+              },
+              "error_short": {
+                "file_too_large": "File too large"
+              }
+            },
+            "cancel_modal": {
+              "title": "Leave upload?",
+              "description": "Unfinished files will be lost.",
+              "keep": "Keep uploading",
+              "confirm": "Leave and cancel"
             }
           },
           "delete": {
@@ -927,7 +946,26 @@
               "description_one": "{{count}} fichier en cours de transfert",
               "description_other": "{{count}} fichiers en cours de transfert",
               "description_done_one": "{{count}} fichier transféré",
-              "description_done_other": "{{count}} fichiers transférés"
+              "description_done_other": "{{count}} fichiers transférés",
+              "error": "Une erreur est survenue",
+              "error_count_one": "{{count}} fichier n'a pas pu être transféré",
+              "error_count_other": "{{count}} fichiers n'ont pas pu être transférés",
+              "error_reasons": {
+                "file_size_exceeded": "Le fichier dépasse la taille maximale autorisée.",
+                "file_type_not_allowed": "Ce type de fichier n'est pas autorisé.",
+                "item_create_file_extension_not_allowed": "Cette extension de fichier n'est pas autorisée.",
+                "file_too_large": "Le fichier dépasse la taille maximale autorisée.",
+                "unknown": "Une erreur inattendue est survenue."
+              },
+              "error_short": {
+                "file_too_large": "Fichier trop volumineux"
+              }
+            },
+            "cancel_modal": {
+              "title": "Quitter le transfert ?",
+              "description": "Les fichiers non terminés seront perdus.",
+              "keep": "Continuer le transfert",
+              "confirm": "Quitter et annuler"
             }
           },
           "delete": {
@@ -1445,7 +1483,26 @@
               "description_one": "{{count}} bestand wordt verplaatst",
               "description_other": "{{count}} bestanden wordt verplaatst",
               "description_done_one": "{{count}} bestand verplaatst",
-              "description_done_other": "{{count}} bestanden verplaatst"
+              "description_done_other": "{{count}} bestanden verplaatst",
+              "error": "Er is een fout opgetreden",
+              "error_count_one": "{{count}} bestand kon niet worden geüpload",
+              "error_count_other": "{{count}} bestanden konden niet worden geüpload",
+              "error_reasons": {
+                "file_size_exceeded": "Het bestand overschrijdt de maximale toegestane grootte.",
+                "file_type_not_allowed": "Dit bestandstype is niet toegestaan.",
+                "item_create_file_extension_not_allowed": "Deze bestandsextensie is niet toegestaan.",
+                "file_too_large": "Het bestand overschrijdt de maximale toegestane grootte.",
+                "unknown": "Er is een onverwachte fout opgetreden."
+              },
+              "error_short": {
+                "file_too_large": "Bestand te groot"
+              }
+            },
+            "cancel_modal": {
+              "title": "Upload verlaten?",
+              "description": "Onvoltooide bestanden gaan verloren.",
+              "keep": "Doorgaan met uploaden",
+              "confirm": "Verlaten en annuleren"
             }
           },
           "delete": {
