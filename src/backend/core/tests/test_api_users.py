@@ -267,6 +267,7 @@ def test_api_users_retrieve_me_authenticated():
         "short_name": user.short_name,
         "language": user.language,
         "last_release_note_seen": None,
+        "column_preferences": None,
     }
 
 
@@ -287,6 +288,36 @@ def test_api_users_retrieve_me_authenticated_with_release_note():
         "short_name": user.short_name,
         "language": user.language,
         "last_release_note_seen": "0.11.1",
+        "column_preferences": None,
+    }
+
+
+def test_api_users_retrieve_me_authenticated_with_column_preferences():
+    """Authenticated users should be able to retrieve their own user via the "/users/me" path."""
+    user = factories.UserFactory(
+        column_preferences={
+            "column1": models.ColumnType.FILE_SIZE,
+            "column2": models.ColumnType.LAST_MODIFIED,
+        }
+    )
+
+    client = APIClient()
+    client.force_login(user)
+
+    factories.UserFactory.create_batch(2)
+    response = client.get(
+        "/api/v1.0/users/me/",
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "id": str(user.id),
+        "email": user.email,
+        "full_name": user.full_name,
+        "short_name": user.short_name,
+        "language": user.language,
+        "last_release_note_seen": None,
+        "column_preferences": {"column1": "file_size", "column2": "last_modified"},
     }
 
 
@@ -415,6 +446,9 @@ def test_api_users_create_authenticated():
     }
 
     assert models.User.objects.exclude(id=user.id).exists() is False
+
+
+# --- update ---
 
 
 def test_api_users_update_anonymous():
@@ -626,6 +660,113 @@ def test_api_users_patch_last_release_note_seen_valid(value):
     assert user.last_release_note_seen == value
 
 
+@pytest.mark.parametrize("column1", list(models.ColumnType))
+@pytest.mark.parametrize("column2", list(models.ColumnType))
+def test_api_users_patch_column_preferences_valid(column2, column1):
+    """Patching column_preferences using valid value should succeed."""
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    assert user.column_preferences is None
+
+    column_preferences = {
+        "column1": column1,
+        "column2": column2,
+    }
+
+    response = client.patch(
+        f"/api/v1.0/users/{user.id!s}/",
+        {
+            "column_preferences": column_preferences,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200
+    user.refresh_from_db()
+    assert user.column_preferences == models.ColumnPreferences(**column_preferences)
+
+
+@pytest.mark.parametrize("column_name", ["column1", "column2"])
+def test_api_users_patch_column_preferences_missing_column_should_fail(column_name):
+    """Patching column_preferences with a missing required column parameter should fails."""
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    assert user.column_preferences is None
+
+    column_preferences = {column_name: models.ColumnType.FILE_SIZE}
+
+    response = client.patch(
+        f"/api/v1.0/users/{user.id!s}/",
+        {
+            "column_preferences": column_preferences,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+
+
+def test_api_users_patch_column_preferences_extra_value_should_fail():
+    """Patching column_preferences adding extra value should fail."""
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    assert user.column_preferences is None
+
+    column_preferences = {
+        "column1": models.ColumnType.FILE_SIZE,
+        "column2": models.ColumnType.LAST_MODIFIED,
+        "not_allowed": "foo",
+    }
+
+    response = client.patch(
+        f"/api/v1.0/users/{user.id!s}/",
+        {
+            "column_preferences": column_preferences,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+
+
+def test_api_users_patch_column_preferences_invalid_value():
+    """Patching column_preferences with good key but invalid value should fail"""
+
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    assert user.column_preferences is None
+
+    column_preferences = {
+        "column1": "invalid",
+        "column2": "also_invalid",
+    }
+
+    response = client.patch(
+        f"/api/v1.0/users/{user.id!s}/",
+        {
+            "column_preferences": column_preferences,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+
+
 def test_api_users_patch_authenticated_other():
     """Authenticated users should not be allowed to patch other users."""
     user = factories.UserFactory()
@@ -651,6 +792,9 @@ def test_api_users_patch_authenticated_other():
     user_values = dict(serializers.UserSerializer(instance=user).data)
     for key, value in user_values.items():
         assert value == old_user_values[key]
+
+
+## --- Delete ---
 
 
 def test_api_users_delete_list_anonymous():
