@@ -61,6 +61,8 @@ dependencies = [
     "sentry-sdk==2.48.0",
     "url-normalize==2.2.1",
     "whitenoise==6.11.0",
+    "pydantic==2.12.5",
+    "django-pydantic-field==0.5.4",
 ]
 
 [project.urls]
