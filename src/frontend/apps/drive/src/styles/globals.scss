@@ -94,3 +94,18 @@ body {
 .c__modal__title {
   text-align: left;
 }
+
+.c__modal:has(.cancel-upload-modal__content) {
+  .c__modal__footer__right {
+    flex-wrap: wrap;
+
+    @media (max-width: $tablet) {
+      flex-direction: column;
+      width: 100%;
+
+      button {
+        width: 100%;
+      }
+    }
+  }
+}

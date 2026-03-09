@@ -1,13 +1,12 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
 import { Item } from "@/features/drivers/types";
 import { FileWithPath, useDropzone } from "react-dropzone";
-import { useMutationCreateFolder, useMutationCreateFile } from "./useMutations";
+import { useMutationCreateFolder } from "./useMutations";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRef } from "react";
 import { Id } from "react-toastify";
-import { FileUploadMeta } from "@/features/explorer/components/app-view/AppExplorerInner";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { FileUploadToast } from "../components/toasts/FileUploadToast";
@@ -16,7 +15,9 @@ import { getEntitlements } from "@/utils/entitlements";
 import { useCanCreateChildren } from "@/features/items/utils";
 import { getMyFilesQueryKey } from "@/utils/defaultRoutes";
 import { useConfig } from "@/features/config/ConfigProvider";
-import { formatSize } from "@/features/explorer/utils/utils";
+import { getDriver } from "@/features/config/Config";
+import { APIError } from "@/features/api/APIError";
+import { useRefreshQueryCacheAfterMutation } from "./useRefreshItems";
 
 type FileUpload = FileWithPath & {
   parentId?: string;
@@ -177,7 +178,21 @@ const useUpload = ({ item }: { item: Item }) => {
   };
 };
 
-enum UploadingStep {
+export enum FileUploadStatus {
+  UPLOADING = "uploading",
+  DONE = "done",
+  ERROR = "error",
+  CANCELLED = "cancelled",
+}
+
+export type FileUploadMeta = {
+  file: File;
+  progress: number;
+  status: FileUploadStatus;
+  error?: string;
+};
+
+export enum UploadingStep {
   NONE = "none",
   PREPARING = "preparing",
   CREATE_FOLDERS = "create_folders",
@@ -201,7 +216,8 @@ export const useUploadZone = ({ item }: { item: Item }) => {
   const { t } = useTranslation();
   const { config } = useConfig();
 
-  const createFile = useMutationCreateFile();
+  const driver = getDriver();
+  const refresh = useRefreshQueryCacheAfterMutation();
 
   const canCreateChildren = useCanCreateChildren(item);
 
@@ -212,7 +228,76 @@ export const useUploadZone = ({ item }: { item: Item }) => {
     filesMeta: {},
   });
 
+  // Abort functions keyed by file path
+  const abortFunctionsRef = useRef<Map<string, () => Promise<void>>>(new Map());
+  // Set of cancelled file paths to skip in the sequential loop
+  const cancelledRef = useRef<Set<string>>(new Set());
+  // Queue for files to upload (supports merging batches from concurrent drops)
+  const uploadQueueRef = useRef<FileUpload[]>([]);
+  // Whether the upload processing loop is currently running
+  const isProcessingRef = useRef(false);
+
   const { filesToUpload, handleHierarchy } = useUpload({ item: item! });
+
+  const showUploadToast = () => {
+    if (fileUploadsToastId.current) return;
+    fileUploadsToastId.current = addToast(
+      <FileUploadToast
+        uploadingState={uploadingState}
+        onCancelFile={onCancelFile}
+        onCancelAll={onCancelAll}
+      />,
+      {
+        autoClose: false,
+        onClose: () => {
+          fileUploadsToastId.current = null;
+        },
+      },
+    );
+  };
+
+  const onCancelFile = useCallback(async (fileName: string) => {
+    const abortFn = abortFunctionsRef.current.get(fileName);
+    if (abortFn) {
+      await abortFn();
+      abortFunctionsRef.current.delete(fileName);
+    }
+    cancelledRef.current.add(fileName);
+    setUploadingState((prev) => {
+      const meta = prev.filesMeta[fileName];
+      if (!meta || meta.status === FileUploadStatus.DONE) return prev;
+      return {
+        ...prev,
+        filesMeta: {
+          ...prev.filesMeta,
+          [fileName]: {
+            ...meta,
+            status: FileUploadStatus.CANCELLED,
+            progress: meta.progress,
+          },
+        },
+      };
+    });
+  }, []);
+
+  const onCancelAll = useCallback(async () => {
+    // Abort the currently uploading file
+    for (const [, abortFn] of abortFunctionsRef.current.entries()) {
+      await abortFn();
+    }
+    abortFunctionsRef.current.clear();
+    // Mark ALL uploading files as cancelled (including queued ones not yet in abortFunctionsRef)
+    setUploadingState((prev) => {
+      const newMeta = { ...prev.filesMeta };
+      for (const [name, meta] of Object.entries(newMeta)) {
+        if (meta.status === FileUploadStatus.UPLOADING) {
+          cancelledRef.current.add(name);
+          newMeta[name] = { ...meta, status: FileUploadStatus.CANCELLED };
+        }
+      }
+      return { ...prev, filesMeta: newMeta };
+    });
+  }, []);
 
   const validateDrop = () => {
     const canUpload = canCreateChildren;
@@ -291,18 +376,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         step: UploadingStep.PREPARING,
       }));
 
-      if (!fileUploadsToastId.current) {
-        fileUploadsToastId.current = addToast(
-          <FileUploadToast uploadingState={uploadingState} />,
-          {
-            autoClose: false,
-            onClose: () => {
-              // We need to set this to null in order to re-show the toast when the user drops another file later.
-              fileUploadsToastId.current = null;
-            },
-          },
-        );
-      }
+      showUploadToast();
 
       const entitlements = await getEntitlements();
       if (!entitlements.can_upload.result) {
@@ -327,114 +401,147 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         step: UploadingStep.CREATE_FOLDERS,
       }));
 
-      if (!fileUploadsToastId.current) {
-        fileUploadsToastId.current = addToast(
-          <FileUploadToast uploadingState={uploadingState} />,
-          {
-            autoClose: false,
-            onClose: () => {
-              // We need to set this to null in order to re-show the toast when the user drops another file later.
-              fileUploadsToastId.current = null;
-            },
-          },
-        );
-      }
+      showUploadToast();
       dismissDragToast();
 
       const upload = filesToUpload(acceptedFiles);
       await handleHierarchy(upload);
 
       // Filter out files that exceed the maximum upload size.
-      // maxSize is undefined when DATA_UPLOAD_MAX_MEMORY_SIZE is not configured,
-      // meaning no size limit is enforced. Note: a value of 0 would also disable
-      // the check (falsy), which is acceptable since 0 is not a valid file size limit.
       const maxSize = config.DATA_UPLOAD_MAX_MEMORY_SIZE;
-      const validFiles =
-        maxSize !== undefined && maxSize !== null
-          ? upload.files.filter((file) => file.size <= maxSize)
-          : upload.files;
-      const tooLargeFiles =
-        maxSize !== undefined && maxSize !== null
-          ? upload.files.filter((file) => file.size > maxSize)
-          : [];
-      if (maxSize !== undefined && maxSize !== null) {
-        for (const file of tooLargeFiles) {
-          addToast(
-            <ToasterItem type="error">
-              <span>
-                {t("explorer.actions.upload.file_too_large", {
-                  name: file.name,
-                  maxSize: formatSize(maxSize, t),
-                })}
-              </span>
-            </ToasterItem>,
-          );
+      const isMaxSize = maxSize !== undefined && maxSize !== null;
+      const validFiles = isMaxSize
+        ? upload.files.filter((file) => file.size <= maxSize)
+        : upload.files;
+      const tooLargeFiles = isMaxSize
+        ? upload.files.filter((file) => file.size > maxSize)
+        : [];
+
+      // Merge new files into the uploading state (instead of overwriting)
+      const newFilesMeta: Record<string, FileUploadMeta> = {};
+      for (const file of validFiles) {
+        newFilesMeta[pathNicefy(file.path!)] = {
+          file,
+          progress: 0,
+          status: FileUploadStatus.UPLOADING,
+        };
+      }
+      for (const file of tooLargeFiles) {
+        newFilesMeta[pathNicefy(file.path!)] = {
+          file,
+          progress: 0,
+          status: FileUploadStatus.ERROR,
+          error: "file_too_large",
+        };
+      }
+
+      // If no upload is in progress, reset state for a fresh batch
+      if (!isProcessingRef.current) {
+        cancelledRef.current.clear();
+        setUploadingState({
+          step: UploadingStep.UPLOAD_FILES,
+          filesMeta: newFilesMeta,
+        });
+      } else {
+        // Merge into existing batch
+        setUploadingState((prev) => ({
+          step: UploadingStep.UPLOAD_FILES,
+          filesMeta: { ...prev.filesMeta, ...newFilesMeta },
+        }));
+      }
+
+      // Add valid files to the upload queue
+      uploadQueueRef.current.push(...validFiles);
+
+      // If the processing loop is already running, it will pick up the new files from the queue
+      if (isProcessingRef.current) {
+        return;
+      }
+
+      // Start the processing loop
+      isProcessingRef.current = true;
+
+      // Process files from the queue until it's empty
+      while (uploadQueueRef.current.length > 0) {
+        const file = uploadQueueRef.current.shift()!;
+        const filePath = pathNicefy(file.path!);
+
+        // Skip if cancelled before we even started this file
+        if (cancelledRef.current.has(filePath)) {
+          continue;
+        }
+
+        const { promise, abort } = driver.createFile({
+          filename: file.name,
+          file,
+          parentId: file.parentId,
+          progressHandler: (progress) => {
+            setUploadingState((prev) => ({
+              ...prev,
+              filesMeta: {
+                ...prev.filesMeta,
+                [filePath]: {
+                  file,
+                  progress,
+                  status:
+                    progress >= 100
+                      ? FileUploadStatus.DONE
+                      : FileUploadStatus.UPLOADING,
+                },
+              },
+            }));
+          },
+        });
+
+        abortFunctionsRef.current.set(filePath, abort);
+
+        try {
+          await promise;
+          abortFunctionsRef.current.delete(filePath);
+          refresh(file.parentId);
+          setUploadingState((prev) => ({
+            ...prev,
+            filesMeta: {
+              ...prev.filesMeta,
+              [filePath]: {
+                file,
+                progress: 100,
+                status: FileUploadStatus.DONE,
+              },
+            },
+          }));
+        } catch (err) {
+          abortFunctionsRef.current.delete(filePath);
+          if (
+            cancelledRef.current.has(filePath) ||
+            (err instanceof DOMException && err.name === "AbortError")
+          ) {
+            // Already handled by onCancelFile/onCancelAll
+            continue;
+          }
+          let errorCode = "unknown";
+          if (err instanceof APIError && err.data?.errors?.[0]?.code) {
+            errorCode = err.data.errors[0].code;
+          }
+
+          // Keep file in state with error status
+          setUploadingState((prev) => ({
+            ...prev,
+            filesMeta: {
+              ...prev.filesMeta,
+              [filePath]: {
+                file,
+                progress: prev.filesMeta[filePath]?.progress ?? 0,
+                status: FileUploadStatus.ERROR,
+                error: errorCode,
+              },
+            },
+          }));
         }
       }
 
-      // Do not run "setUploadingState({});" because if a uploading is still in progress, it will be overwritten.
+      isProcessingRef.current = false;
 
-      // First, add all the files to the uploading state in order to display them in the toast.
-      const newUploadingState: UploadingState = {
-        step: UploadingStep.UPLOAD_FILES,
-        filesMeta: {},
-      };
-      for (const file of validFiles) {
-        newUploadingState.filesMeta[pathNicefy(file.path!)] = {
-          file,
-          progress: 0,
-        };
-      }
-      setUploadingState(newUploadingState);
-
-      // Then, upload all the files sequentially. We are not uploading them in parallel because the backend
-      // does not support it, it causes concurrency issues.
-      const promises = [];
-      for (const file of validFiles) {
-        // We do not using "createFile.mutateAsync" because it causes unhandled errors.
-        // Instead, we use a promise that we can await to run all the uploads sequentially.
-        // Using "createFile.mutate" makes the error handled by the mutation hook itself.
-        promises.push(
-          () =>
-            new Promise<void>((resolve) => {
-              createFile.mutate(
-                {
-                  filename: file.name,
-                  file,
-                  parentId: file.parentId,
-                  progressHandler: (progress) => {
-                    setUploadingState((prev) => {
-                      const newState = {
-                        ...prev,
-                        filesMeta: {
-                          ...prev.filesMeta,
-                          [pathNicefy(file.path!)]: { file, progress },
-                        },
-                      };
-                      return newState;
-                    });
-                  },
-                },
-                {
-                  onError: () => {
-                    setUploadingState((prev) => {
-                      // Remove the file from the uploading state on error
-                      const newState = { ...prev };
-                      delete newState.filesMeta[pathNicefy(file.path!)];
-                      return newState;
-                    });
-                  },
-                  onSettled: () => {
-                    resolve();
-                  },
-                },
-              );
-            }),
-        );
-      }
-      for (const promise of promises) {
-        await promise();
-      }
       setUploadingState((prev) => ({
         ...prev,
         step: UploadingStep.DONE,
@@ -444,18 +551,26 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
   useEffect(() => {
     if (fileUploadsToastId.current) {
-      // If the uploading state is "upload_files" and there are no files, we dismiss the toast.
-      // It can happen if the upload fails for unknown reasons.
+      const activeFiles = Object.values(uploadingState.filesMeta).filter(
+        (meta) => meta.status !== FileUploadStatus.CANCELLED,
+      );
+      // Dismiss toast if no active files remain during upload
       if (
         (uploadingState.step === UploadingStep.UPLOAD_FILES &&
-          Object.keys(uploadingState.filesMeta).length === 0) ||
+          activeFiles.length === 0) ||
         uploadingState.step === UploadingStep.NONE
       ) {
         toast.dismiss(fileUploadsToastId.current);
         fileUploadsToastId.current = null;
       } else {
         toast.update(fileUploadsToastId.current, {
-          render: <FileUploadToast uploadingState={uploadingState} />,
+          render: (
+            <FileUploadToast
+              uploadingState={uploadingState}
+              onCancelFile={onCancelFile}
+              onCancelAll={onCancelAll}
+            />
+          ),
         });
       }
     }

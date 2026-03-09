@@ -19,7 +19,6 @@ import { ExplorerFilters } from "@/features/explorer/components/app-view/Explore
 import { AppExplorerGrid } from "@/features/explorer/components/app-view/AppExplorerGrid";
 import { useCreateMenuItems } from "../../hooks/useCreateMenuItems";
 
-export type FileUploadMeta = { file: File; progress: number };
 
 /**
  * - Handles the area selection of items
@@ -198,6 +197,7 @@ export const AppExplorerInner = () => {
     return (
       <>
         {renderContent()}
+
         {createModals}
       </>
     );
