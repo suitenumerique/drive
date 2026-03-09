@@ -341,55 +341,83 @@ export class StandardDriver extends Driver {
     });
   }
 
-  async createFile(data: {
+  createFile(data: {
     parentId?: string;
     file: File;
     filename: string;
     progressHandler?: (progress: number) => void;
-  }): Promise<Item> {
-    const { parentId, file, progressHandler, ...rest } = data;
-    const url = parentId ? `items/${parentId}/children/` : `items/`;
-    const response = await fetchAPI(
-      url,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          type: ItemType.FILE,
-          ...rest,
-        }),
-      },
-      {
-        // When entitlements are falsy, the backend returns a 403 error.
-        // We don't want to redirect to the login page in this case, instead
-        // we want to show an error.
-        redirectOn40x: false,
-      },
-    );
-    const item = jsonToItem(await response.json());
-    if (!item.policy) {
-      throw new Error("No policy found");
-    }
+  }): { promise: Promise<Item>; abort: () => Promise<void> } {
+    let abortUpload: (() => void) | undefined;
+    let aborted = false;
+    const abortController = new AbortController();
 
-    // We want the upload progress ( that goes from 0 to 100) to be proxied to the progress handler ( that goes from 0 to 95)
-    // So the progression indicator still shows leave a 5% gap before the upload-ended is called.
-    // We want to wait until the upload-ended endpoint is called.
-    const progressHandlerProxy = (progress: number) => {
-      const proxyScale = 90;
-      const proxiedProgress = (progress * proxyScale) / 100;
-      progressHandler?.(proxiedProgress);
+    const abort = async () => {
+      aborted = true;
+      abortUpload?.();
+      abortController.abort();
     };
 
-    await uploadFile(item.policy, file, (progress) => {
-      progressHandlerProxy(progress);
-    });
+    const promise = (async () => {
+      const { parentId, file, progressHandler, ...rest } = data;
+      const url = parentId ? `items/${parentId}/children/` : `items/`;
+      const response = await fetchAPI(
+        url,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            type: ItemType.FILE,
+            ...rest,
+          }),
+        },
+        {
+          redirectOn40x: false,
+        },
+      );
+      const item = jsonToItem(await response.json());
+      if (!item.policy) {
+        throw new Error("No policy found");
+      }
 
-    await fetchAPI(`items/${item.id}/upload-ended/`, {
-      method: "POST",
-    });
+      if (aborted) {
+        throw new DOMException("Upload cancelled", "AbortError");
+      }
 
-    progressHandler?.(100);
+      // We want the upload progress ( that goes from 0 to 100) to be proxied to the progress handler ( that goes from 0 to 95)
+      // So the progression indicator still shows leave a 5% gap before the upload-ended is called.
+      // We want to wait until the upload-ended endpoint is called.
+      const progressHandlerProxy = (progress: number) => {
+        const proxyScale = 90;
+        const proxiedProgress = (progress * proxyScale) / 100;
+        progressHandler?.(proxiedProgress);
+      };
 
-    return item;
+      const upload = uploadFile(item.policy, file, (progress) => {
+        progressHandlerProxy(progress);
+      });
+      abortUpload = upload.abort;
+
+      if (aborted) {
+        upload.abort();
+        throw new DOMException("Upload cancelled", "AbortError");
+      }
+
+      await upload.promise;
+
+      if (aborted) {
+        throw new DOMException("Upload cancelled", "AbortError");
+      }
+
+      await fetchAPI(`items/${item.id}/upload-ended/`, {
+        method: "POST",
+        signal: abortController.signal,
+      });
+
+      progressHandler?.(100);
+
+      return item;
+    })();
+
+    return { promise, abort };
   }
 
   async createFileFromTemplate(data: {
@@ -475,23 +503,25 @@ const jsonToItem = (data: any): Item => {
 
 /**
  * Upload a file, using XHR so we can report on progress through a handler.
- * @param url The URL to POST the file to.
- * @param formData The multi-part request form data body to send (includes the file).
+ * @param url The URL to PUT the file to.
+ * @param file The file to upload.
  * @param progressHandler A handler that receives progress updates as a single integer `0 <= x <= 100`.
  */
 export const uploadFile = (
   url: string,
   file: File,
   progressHandler: (progress: number) => void,
-) =>
-  new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
+): { promise: Promise<unknown>; abort: () => void } => {
+  const xhr = new XMLHttpRequest();
+  const promise = new Promise((resolve, reject) => {
     xhr.open("PUT", url);
     xhr.setRequestHeader("X-amz-acl", "private");
     xhr.setRequestHeader("Content-Type", file.type);
 
     xhr.addEventListener("error", reject);
-    xhr.addEventListener("abort", reject);
+    xhr.addEventListener("abort", () =>
+      reject(new DOMException("Upload cancelled", "AbortError")),
+    );
 
     xhr.addEventListener("readystatechange", () => {
       if (xhr.readyState === 4) {
@@ -500,6 +530,10 @@ export const uploadFile = (
           // Because 'progress' event listener is not called when the file size is 0.
           progressHandler(100);
           return resolve(true);
+        }
+        if (xhr.status === 0) {
+          // Aborted - already handled by abort listener
+          return;
         }
         reject(new Error(`Failed to perform the upload on ${url}.`));
       }
@@ -515,3 +549,5 @@ export const uploadFile = (
 
     xhr.send(file);
   });
+  return { promise, abort: () => xhr.abort() };
+};

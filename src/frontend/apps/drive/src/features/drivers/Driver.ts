@@ -118,7 +118,9 @@ export abstract class Driver {
   abstract createFile(data: {
     parentId?: string;
     filename: string;
-  }): Promise<Item>;
+    file: File;
+    progressHandler?: (progress: number) => void;
+  }): { promise: Promise<Item>; abort: () => Promise<void> };
   abstract createFileFromTemplate(data: {
     parentId: string;
     extension: string;
