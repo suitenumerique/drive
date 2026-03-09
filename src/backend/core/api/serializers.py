@@ -1,5 +1,7 @@
 """Client serializers for the drive core app."""
 
+# pylint: disable=no-name-in-module
+
 import json
 import logging
 from datetime import timedelta
@@ -10,6 +12,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
+from django_pydantic_field.rest_framework import SchemaField
 from lasuite.drf.models.choices import LinkReachChoices, get_equivalent_link_definition
 from rest_framework import serializers
 
@@ -32,6 +35,12 @@ class UserSerializer(serializers.ModelSerializer):
         allow_blank=False,
     )
 
+    column_preferences = SchemaField(
+        models.ColumnPreferences,
+        required=False,
+        allow_null=True,
+    )
+
     class Meta:
         model = models.User
         fields = [
@@ -41,6 +50,7 @@ class UserSerializer(serializers.ModelSerializer):
             "short_name",
             "language",
             "last_release_note_seen",
+            "column_preferences",
         ]
         read_only_fields = ["id", "email", "full_name", "short_name"]
 

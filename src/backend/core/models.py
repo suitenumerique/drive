@@ -6,6 +6,7 @@ Declare and configure the models for the drive core application
 import smtplib
 import uuid
 from datetime import timedelta
+from enum import StrEnum
 from logging import getLogger
 from os.path import splitext
 
@@ -30,6 +31,7 @@ from django.utils.translation import gettext_lazy as _
 from django_ltree.functions import NLevel
 from django_ltree.managers import TreeManager, TreeQuerySet
 from django_ltree.models import TreeModel
+from django_pydantic_field import SchemaField
 from lasuite.drf.models.choices import (
     PRIVILEGED_ROLES,
     LinkReachChoices,
@@ -37,6 +39,7 @@ from lasuite.drf.models.choices import (
     RoleChoices,
     get_equivalent_link_definition,
 )
+from pydantic import BaseModel as PydanticBaseModel
 from timezone_field import TimeZoneField
 
 from core.utils.item_title import manage_unique_title as manage_unique_title_utils
@@ -164,6 +167,25 @@ class UserManager(auth_models.UserManager):
         return None
 
 
+class ColumnType(StrEnum):
+    """Type of column allowed."""
+
+    LAST_MODIFIED = "last_modified"
+    CREATED = "created"
+    CREATED_BY = "created_by"
+    FILE_TYPE = "file_type"
+    FILE_SIZE = "file_size"
+
+
+class ColumnPreferences(PydanticBaseModel):
+    """Pydantic model to validate the custom columns a user can have."""
+
+    column1: ColumnType
+    column2: ColumnType
+
+    model_config = {"extra": "forbid"}
+
+
 class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
     """User model to work with OIDC only authentication."""
 
@@ -191,6 +213,9 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
     short_name = models.CharField(_("short name"), max_length=100, null=True, blank=True)
 
     email = models.EmailField(_("identity email address"), blank=True, null=True)
+    column_preferences = SchemaField(
+        ColumnPreferences, blank=True, null=True, default=None
+    )
 
     # Unlike the "email" field which stores the email coming from the OIDC token, this field
     # stores the email used by staff users to login to the admin site
