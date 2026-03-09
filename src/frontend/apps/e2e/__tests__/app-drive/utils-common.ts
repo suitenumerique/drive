@@ -11,7 +11,7 @@ export const keyCloakSignIn = async (
   page: Page,
   username: string,
   password: string,
-  fromHome: boolean = true
+  fromHome: boolean = true,
 ) => {
   if (fromHome) {
     await page.getByRole("button", { name: "Sign in" }).first().click();
@@ -52,7 +52,7 @@ export const runTarget = async (target: string) => {
           return;
         }
         resolve(stdout);
-      }
+      },
     );
   });
 };
