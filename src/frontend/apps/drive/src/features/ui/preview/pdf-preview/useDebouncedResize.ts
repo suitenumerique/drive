@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-function debounce<T extends (...args: any[]) => any>(
+function debounce<T extends (...args: never[]) => unknown>(
   func: T,
   timeout = 300,
 ): ((...args: Parameters<T>) => void) & { cancel: () => void } {
