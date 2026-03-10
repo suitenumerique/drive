@@ -265,4 +265,4 @@ minio-dev-backend-minio-console   <none>   drive-minio-console.127.0.0.1.nip.io 
 
 ```
 
-You can use Drive at https://drive.127.0.0.1.nip.io. The provisionning user in keycloak is drive/drive.
+You can use Drive at https://drive.127.0.0.1.nip.io. The provisioning user in keycloak is drive/drive.

@@ -1,4 +1,4 @@
-"""Custom template tags for the core application of People."""
+"""Custom template tags for the core application of Drive."""
 
 import base64
 
