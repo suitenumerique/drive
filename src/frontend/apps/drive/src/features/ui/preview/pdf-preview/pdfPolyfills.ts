@@ -9,8 +9,13 @@
  * catches up.
  */
 
-if (typeof (URL as any).parse === "undefined") {
-  (URL as any).parse = function (url: string, base?: string) {
+if (
+  typeof (URL as unknown as { parse?: unknown }).parse === "undefined"
+) {
+  (URL as unknown as Record<string, unknown>).parse = function (
+    url: string,
+    base?: string,
+  ) {
     try {
       return new URL(url, base);
     } catch {
