@@ -254,6 +254,11 @@
   resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.28.4.tgz#a70226016fabe25c5783b2f22d3e1c9bc5ca3326"
   integrity sha512-Q/N6JNWvIvPnLDvjlE1OUBLPQHH6l3CltCEsHIujp45zQUSSh8K+gHnaEX45yAT1nyngnINhvWtzN+Nb9D8RAQ==
 
+"@babel/runtime@^7.7.2", "@babel/runtime@^7.8.7":
+  version "7.28.6"
+  resolved "https://registry.yarnpkg.com/@babel/runtime/-/runtime-7.28.6.tgz#d267a43cb1836dc4d182cce93ae75ba954ef6d2b"
+  integrity sha512-05WQkdpL9COIMz4LjTxGpPNCdlpyimKppYNoJ5Di5EUObifl8t4tuLuUBBZEpoLYOmfvIWrsp9fCl0HoPRVTdA==
+
 "@babel/template@^7.27.2", "@babel/template@^7.3.3":
   version "7.27.2"
   resolved "https://registry.yarnpkg.com/@babel/template/-/template-7.27.2.tgz#fa78ceed3c4e7b63ebf6cb39e5852fca45f6809d"
@@ -1349,6 +1354,78 @@
   resolved "https://registry.yarnpkg.com/@microsoft/tsdoc/-/tsdoc-0.16.0.tgz#2249090633e04063176863a050c8f0808d2b6d2b"
   integrity sha512-xgAyonlVVS+q7Vc7qLW0UrJU7rSFcETRWsqdXZtjzRU8dF+6CkozTK4V4y1LwOX7j8r/vHphjDeMeGI4tNGeGA==
 
+"@napi-rs/canvas-android-arm64@0.1.96":
+  version "0.1.96"
+  resolved "https://registry.yarnpkg.com/@napi-rs/canvas-android-arm64/-/canvas-android-arm64-0.1.96.tgz#91946e27e6c0241378b947100daab47a2ba14e38"
+  integrity sha512-ew1sPrN3dGdZ3L4FoohPfnjq0f9/Jk7o+wP7HkQZokcXgIUD6FIyICEWGhMYzv53j63wUcPvZeAwgewX58/egg==
+
+"@napi-rs/canvas-darwin-arm64@0.1.96":
+  version "0.1.96"
+  resolved "https://registry.yarnpkg.com/@napi-rs/canvas-darwin-arm64/-/canvas-darwin-arm64-0.1.96.tgz#6f57a30eb502c36c083d7ef576d75a821211e602"
+  integrity sha512-Q/wOXZ5PzTqpdmA5eUOcegCf4Go/zz3aZ5DlzSeDpOjFmfwMKh8EzLAoweQ+mJVagcHQyzoJhaTEnrO68TNyNg==
+
+"@napi-rs/canvas-darwin-x64@0.1.96":
+  version "0.1.96"
+  resolved "https://registry.yarnpkg.com/@napi-rs/canvas-darwin-x64/-/canvas-darwin-x64-0.1.96.tgz#99545fbc4ee08b53d6eba5a3eab3a7ae1100d446"
+  integrity sha512-UrXiQz28tQEvGM1qvyptewOAfmUrrd5+wvi6Rzjj2VprZI8iZ2KIvBD2lTTG1bVF95AbeDeG7PJA0D9sLKaOFA==
+
+"@napi-rs/canvas-linux-arm-gnueabihf@0.1.96":
+  version "0.1.96"
+  resolved "https://registry.yarnpkg.com/@napi-rs/canvas-linux-arm-gnueabihf/-/canvas-linux-arm-gnueabihf-0.1.96.tgz#c1a4794aa99f93c18ad162bba4a7c9803b45de99"
+  integrity sha512-I90ODxweD8aEP6XKU/NU+biso95MwCtQ2F46dUvhec1HesFi0tq/tAJkYic/1aBSiO/1kGKmSeD1B0duOHhEHQ==
+
+"@napi-rs/canvas-linux-arm64-gnu@0.1.96":
+  version "0.1.96"
+  resolved "https://registry.yarnpkg.com/@napi-rs/canvas-linux-arm64-gnu/-/canvas-linux-arm64-gnu-0.1.96.tgz#6dec0d0c9ec730720366fc6c126ef7d1f5f97797"
+  integrity sha512-Dx/0+RFV++w3PcRy+4xNXkghhXjA5d0Mw1bs95emn5Llinp1vihMaA6WJt3oYv2LAHc36+gnrhIBsPhUyI2SGw==
+
+"@napi-rs/canvas-linux-arm64-musl@0.1.96":
+  version "0.1.96"
+  resolved "https://registry.yarnpkg.com/@napi-rs/canvas-linux-arm64-musl/-/canvas-linux-arm64-musl-0.1.96.tgz#e084e239f74654292581c06749fd96b7aec2bb2e"
+  integrity sha512-UvOi7fii3IE2KDfEfhh8m+LpzSRvhGK7o1eho99M2M0HTik11k3GX+2qgVx9EtujN3/bhFFS1kSO3+vPMaJ0Mg==
+
+"@napi-rs/canvas-linux-riscv64-gnu@0.1.96":
+  version "0.1.96"
+  resolved "https://registry.yarnpkg.com/@napi-rs/canvas-linux-riscv64-gnu/-/canvas-linux-riscv64-gnu-0.1.96.tgz#3203e5add7ae062bc6c913e8f385c7f26275d52a"
+  integrity sha512-MBSukhGCQ5nRtf9NbFYWOU080yqkZU1PbuH4o1ROvB4CbPl12fchDR35tU83Wz8gWIM9JTn99lBn9DenPIv7Ig==
+
+"@napi-rs/canvas-linux-x64-gnu@0.1.96":
+  version "0.1.96"
+  resolved "https://registry.yarnpkg.com/@napi-rs/canvas-linux-x64-gnu/-/canvas-linux-x64-gnu-0.1.96.tgz#b79f2a377ea62183c8bd5dc99774bb282759f08f"
+  integrity sha512-I/ccu2SstyKiV3HIeVzyBIWfrJo8cN7+MSQZPnabewWV6hfJ2nY7Df2WqOHmobBRUw84uGR6zfQHsUEio/m5Vg==
+
+"@napi-rs/canvas-linux-x64-musl@0.1.96":
+  version "0.1.96"
+  resolved "https://registry.yarnpkg.com/@napi-rs/canvas-linux-x64-musl/-/canvas-linux-x64-musl-0.1.96.tgz#8c8e4d42aae1f5976e58c47fad286e214d9f3387"
+  integrity sha512-H3uov7qnTl73GDT4h52lAqpJPsl1tIUyNPWJyhQ6gHakohNqqRq3uf80+NEpzcytKGEOENP1wX3yGwZxhjiWEQ==
+
+"@napi-rs/canvas-win32-arm64-msvc@0.1.96":
+  version "0.1.96"
+  resolved "https://registry.yarnpkg.com/@napi-rs/canvas-win32-arm64-msvc/-/canvas-win32-arm64-msvc-0.1.96.tgz#1ab9adbd6bbae974059538a7c5a8b050776aaa31"
+  integrity sha512-ATp6Y+djOjYtkfV/VRH7CZ8I1MEtkUQBmKUbuWw5zWEHHqfL0cEcInE4Cxgx7zkNAhEdBbnH8HMVrqNp+/gwxA==
+
+"@napi-rs/canvas-win32-x64-msvc@0.1.96":
+  version "0.1.96"
+  resolved "https://registry.yarnpkg.com/@napi-rs/canvas-win32-x64-msvc/-/canvas-win32-x64-msvc-0.1.96.tgz#38e5e716e0a0fb01dcb112323be2b2c21ff157f7"
+  integrity sha512-UYGdTltVd+Z8mcIuoqGmAXXUvwH5CLf2M6mIB5B0/JmX5J041jETjqtSYl7gN+aj3k1by/SG6sS0hAwCqyK7zw==
+
+"@napi-rs/canvas@^0.1.71":
+  version "0.1.96"
+  resolved "https://registry.yarnpkg.com/@napi-rs/canvas/-/canvas-0.1.96.tgz#c249bd3825952937a086103235898a2953b09d84"
+  integrity sha512-6NNmNxvoJKeucVjxaaRUt3La2i5jShgiAbaY3G/72s1Vp3U06XPrAIxkAjBxpDcamEn/t+WJ4OOlGmvILo4/Ew==
+  optionalDependencies:
+    "@napi-rs/canvas-android-arm64" "0.1.96"
+    "@napi-rs/canvas-darwin-arm64" "0.1.96"
+    "@napi-rs/canvas-darwin-x64" "0.1.96"
+    "@napi-rs/canvas-linux-arm-gnueabihf" "0.1.96"
+    "@napi-rs/canvas-linux-arm64-gnu" "0.1.96"
+    "@napi-rs/canvas-linux-arm64-musl" "0.1.96"
+    "@napi-rs/canvas-linux-riscv64-gnu" "0.1.96"
+    "@napi-rs/canvas-linux-x64-gnu" "0.1.96"
+    "@napi-rs/canvas-linux-x64-musl" "0.1.96"
+    "@napi-rs/canvas-win32-arm64-msvc" "0.1.96"
+    "@napi-rs/canvas-win32-x64-msvc" "0.1.96"
+
 "@napi-rs/wasm-runtime@^0.2.11":
   version "0.2.12"
   resolved "https://registry.yarnpkg.com/@napi-rs/wasm-runtime/-/wasm-runtime-0.2.12.tgz#3e78a8b96e6c33a6c517e1894efbd5385a7cb6f2"
@@ -1524,6 +1601,20 @@
     "@parcel/watcher-win32-arm64" "2.5.1"
     "@parcel/watcher-win32-ia32" "2.5.1"
     "@parcel/watcher-win32-x64" "2.5.1"
+
+"@pdf-lib/standard-fonts@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@pdf-lib/standard-fonts/-/standard-fonts-1.0.0.tgz#8ba691c4421f71662ed07c9a0294b44528af2d7f"
+  integrity sha512-hU30BK9IUN/su0Mn9VdlVKsWBS6GyhVfqjwl1FjZN4TxP6cCw0jP2w7V3Hf5uX7M0AZJ16vey9yE0ny7Sa59ZA==
+  dependencies:
+    pako "^1.0.6"
+
+"@pdf-lib/upng@^1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@pdf-lib/upng/-/upng-1.0.1.tgz#7dc9c636271aca007a9df4deaf2dd7e7960280cb"
+  integrity sha512-dQK2FUMQtowVP00mtIksrlZhdFXQZPC+taih1q4CvPZ5vqdxR/LKBaFg0oAfzd1GlHZXXSPdQfzQnt+ViGvEIQ==
+  dependencies:
+    pako "^1.0.10"
 
 "@playwright/test@1.58.2":
   version "1.58.2"
@@ -3475,6 +3566,11 @@
   dependencies:
     undici-types "~6.20.0"
 
+"@types/prop-types@*":
+  version "15.7.15"
+  resolved "https://registry.yarnpkg.com/@types/prop-types/-/prop-types-15.7.15.tgz#e6e5a86d602beaca71ce5163fadf5f95d70931c7"
+  integrity sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==
+
 "@types/react-dom@19.2.3", "@types/react-dom@^19.1.2":
   version "19.2.3"
   resolved "https://registry.yarnpkg.com/@types/react-dom/-/react-dom-19.2.3.tgz#c1e305d15a52a3e508d54dca770d202cb63abf2c"
@@ -3485,6 +3581,14 @@
   resolved "https://registry.yarnpkg.com/@types/react-modal/-/react-modal-3.16.3.tgz#250f32c07f1de28e2bcf9c3e84b56adaa6897013"
   integrity sha512-xXuGavyEGaFQDgBv4UVm8/ZsG+qxeQ7f77yNrW3n+1J6XAstUy5rYHeIHPh1KzsGc6IkCIdu6lQ2xWzu1jBTLg==
   dependencies:
+    "@types/react" "*"
+
+"@types/react-virtualized@9.22.3":
+  version "9.22.3"
+  resolved "https://registry.yarnpkg.com/@types/react-virtualized/-/react-virtualized-9.22.3.tgz#5fd9b28229c5fcead489ed5f3de1cc81abcbc478"
+  integrity sha512-UKRWeBIrECaKhE4O//TSFhlgwntMwyiEIOA7WZoVkr52Jahv0dH6YIOorqc358N2V3oKFclsq5XxPmx2PiYB5A==
+  dependencies:
+    "@types/prop-types" "*"
     "@types/react" "*"
 
 "@types/react@*", "@types/react@^19.1.2":
@@ -4403,6 +4507,11 @@ clsx@2.1.1, clsx@^2.0.0, clsx@^2.1.1:
   resolved "https://registry.yarnpkg.com/clsx/-/clsx-2.1.1.tgz#eed397c9fd8bd882bfb18deab7102049a2f32999"
   integrity sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==
 
+clsx@^1.0.4:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/clsx/-/clsx-1.2.1.tgz#0ddc4a20a549b59c93a4116bb26f5294ca17dc12"
+  integrity sha512-EcR6r5a8bj6pu3ycsa/E/cKVGuTgZJZdsyUYHOksG/UHIiKfjxzRxYJpyVBwYaQeOvghal9fcc4PidlgzugAQg==
+
 cmdk@1.0.4:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/cmdk/-/cmdk-1.0.4.tgz#cbddef6f5ade2378f85c80a0b9ad9a8a712779b5"
@@ -4596,6 +4705,11 @@ define-properties@^1.1.3, define-properties@^1.2.1:
     has-property-descriptors "^1.0.0"
     object-keys "^1.1.1"
 
+dequal@^2.0.3:
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/dequal/-/dequal-2.0.3.tgz#2644214f1997d39ed0ee0ece72335490a7ac67be"
+  integrity sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==
+
 detect-libc@^1.0.3:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/detect-libc/-/detect-libc-1.0.3.tgz#fa137c4bd698edf55cd5cd02ac559f91a4c4ba9b"
@@ -4646,6 +4760,14 @@ doctrine@^2.1.0:
   integrity sha512-35mSku4ZXK0vfCuHEDAwt55dg2jNajHZ1odvF+8SSr82EsZY4QmXfuWso8oEd8zRhVObSN18aM0CjSdoBX7zIw==
   dependencies:
     esutils "^2.0.2"
+
+dom-helpers@^5.1.3:
+  version "5.2.1"
+  resolved "https://registry.yarnpkg.com/dom-helpers/-/dom-helpers-5.2.1.tgz#d9400536b2bf8225ad98fe052e029451ac40e902"
+  integrity sha512-nRCa7CK3VTrM2NmGkIy4cbK7IZlgBE/PYMn55rrXefr5xXDP0LdtfPnblFDoVdcAfslJ7or6iqAUnx0CCGIWQA==
+  dependencies:
+    "@babel/runtime" "^7.8.7"
+    csstype "^3.0.2"
 
 downshift@9.0.9:
   version "9.0.9"
@@ -6567,6 +6689,11 @@ magic-string@^0.30.17:
   dependencies:
     "@jridgewell/sourcemap-codec" "^1.5.5"
 
+make-cancellable-promise@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/make-cancellable-promise/-/make-cancellable-promise-2.0.0.tgz#d582b3ea435205e31653dead33a10bea0696c2fa"
+  integrity sha512-3SEQqTpV9oqVsIWqAcmDuaNeo7yBO3tqPtqGRcKkEo0lrzD3wqbKG9mkxO65KoOgXqj+zH2phJ2LiAsdzlogSw==
+
 make-dir@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/make-dir/-/make-dir-4.0.0.tgz#c3c2307a771277cd9638305f915c29ae741b614e"
@@ -6578,6 +6705,11 @@ make-error@^1.1.1, make-error@^1.3.6:
   version "1.3.6"
   resolved "https://registry.yarnpkg.com/make-error/-/make-error-1.3.6.tgz#2eb2e37ea9b67c4891f684a1394799af484cf7a2"
   integrity sha512-s8UhlNe7vPKomQhC1qFelMokr/Sc3AgNbso3n74mVPA5LTZwkB9NlXf4XPamLxJE8h0gh73rM94xvwRT2CVInw==
+
+make-event-props@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/make-event-props/-/make-event-props-2.0.0.tgz#41f7a6e96841296d6835aebe94be86c25602f923"
+  integrity sha512-G/hncXrl4Qt7mauJEXSg3AcdYzmpkIITTNl5I+rH9sog5Yw0kK6vseJjCaPfOXqOqQuPUP89Rkhfz5kPS8ijtw==
 
 makeerror@1.0.12:
   version "1.0.12"
@@ -6595,6 +6727,11 @@ math-intrinsics@^1.1.0:
   version "5.2.1"
   resolved "https://registry.yarnpkg.com/memoize-one/-/memoize-one-5.2.1.tgz#8337aa3c4335581839ec01c3d594090cebe8f00e"
   integrity sha512-zYiwtZUcYyXKo/np96AGZAckk+FWWsUdJ3cHGGmld7+AhvcWmQyGCYUh1hc4Q/pkOhb65dQR/pqCyK0cOaHz4Q==
+
+merge-refs@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/merge-refs/-/merge-refs-2.0.0.tgz#0f1a3e902fde05f30f59279ce73d5d82d2f84dfa"
+  integrity sha512-3+B21mYK2IqUWnd2EivABLT7ueDhb0b8/dGK8LoFQPrU61YITeCMn14F7y7qZafWNZhUEKb24cJdiT5Wxs3prg==
 
 merge-stream@^2.0.0:
   version "2.0.0"
@@ -6880,6 +7017,11 @@ p-try@^2.0.0:
   resolved "https://registry.yarnpkg.com/p-try/-/p-try-2.2.0.tgz#cb2868540e313d61de58fafbe35ce9004d5540e6"
   integrity sha512-R4nPAVTAU0B9D35/Gk3uJf/7XYbQcyohSKdvAxIRSNghFl4e71hVoGnBNQz9cWaXxO2I10KTC+3jMdvvoKw6dQ==
 
+pako@^1.0.10, pako@^1.0.11, pako@^1.0.6:
+  version "1.0.11"
+  resolved "https://registry.yarnpkg.com/pako/-/pako-1.0.11.tgz#6c9599d340d54dfd3946380252a35705a6b992bf"
+  integrity sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==
+
 parent-module@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/parent-module/-/parent-module-1.0.1.tgz#691d2709e78c79fae3a156622452d00762caaaa2"
@@ -6926,6 +7068,23 @@ pathe@^2.0.1, pathe@^2.0.3:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/pathe/-/pathe-2.0.3.tgz#3ecbec55421685b70a9da872b2cff3e1cbed1716"
   integrity sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==
+
+pdf-lib@1.17.1:
+  version "1.17.1"
+  resolved "https://registry.yarnpkg.com/pdf-lib/-/pdf-lib-1.17.1.tgz#9e7dd21261a0c1fb17992580885b39e7d08f451f"
+  integrity sha512-V/mpyJAoTsN4cnP31vc0wfNA1+p20evqqnap0KLoRUN0Yk/p3wN52DOEsL4oBFcLdb76hlpKPtzJIgo67j/XLw==
+  dependencies:
+    "@pdf-lib/standard-fonts" "^1.0.0"
+    "@pdf-lib/upng" "^1.0.1"
+    pako "^1.0.11"
+    tslib "^1.11.1"
+
+pdfjs-dist@5.3.93:
+  version "5.3.93"
+  resolved "https://registry.yarnpkg.com/pdfjs-dist/-/pdfjs-dist-5.3.93.tgz#d1ef9bd9dce1bfcc421c00a96df195d27b7bbf4f"
+  integrity sha512-w3fQKVL1oGn8FRyx5JUG5tnbblggDqyx2XzA5brsJ5hSuS+I0NdnJANhmeWKLjotdbPQucLBug5t0MeWr0AAdg==
+  optionalDependencies:
+    "@napi-rs/canvas" "^0.1.71"
 
 picocolors@^1.0.0, picocolors@^1.1.1:
   version "1.1.1"
@@ -7290,7 +7449,7 @@ react-is@^18.0.0:
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-18.3.1.tgz#e83557dc12eae63a99e003a46388b1dcbb44db7e"
   integrity sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==
 
-react-lifecycles-compat@^3.0.0:
+react-lifecycles-compat@^3.0.0, react-lifecycles-compat@^3.0.4:
   version "3.0.4"
   resolved "https://registry.yarnpkg.com/react-lifecycles-compat/-/react-lifecycles-compat-3.0.4.tgz#4f1a273afdfc8f3488a8c516bfda78f872352362"
   integrity sha512-fBASbA6LnOU9dOU2eW7aQ8xmYBSXUIWr+UmF9b1efZBazGNO+rcXT/icdKnYm2pTwcRylVUYwW7H1PHfLekVzA==
@@ -7304,6 +7463,20 @@ react-modal@3.16.3:
     prop-types "^15.7.2"
     react-lifecycles-compat "^3.0.0"
     warning "^4.0.3"
+
+react-pdf@10.1.0:
+  version "10.1.0"
+  resolved "https://registry.yarnpkg.com/react-pdf/-/react-pdf-10.1.0.tgz#a541b7ccb121154949f4dd46be252dcb8f170f16"
+  integrity sha512-iUI1YqWgwwZcsXjrehTp3Yi8nT/bvTaWULaRMMyJWvoqqSlopk4LQQ9GDqUnDtX3gzT2glrqrLbjIPl56a+Q3w==
+  dependencies:
+    clsx "^2.0.0"
+    dequal "^2.0.3"
+    make-cancellable-promise "^2.0.0"
+    make-event-props "^2.0.0"
+    merge-refs "^2.0.0"
+    pdfjs-dist "5.3.93"
+    tiny-invariant "^1.0.0"
+    warning "^4.0.0"
 
 react-refresh@^0.18.0:
   version "0.18.0"
@@ -7412,6 +7585,18 @@ react-toastify@11.0.5:
   integrity sha512-EpqHBGvnSTtHYhCPLxML05NLY2ZX0JURbAdNYa6BUkk+amz4wbKBQvoKQAB0ardvSarUBuY4Q4s1sluAzZwkmA==
   dependencies:
     clsx "^2.1.1"
+
+react-virtualized@9.22.5:
+  version "9.22.5"
+  resolved "https://registry.yarnpkg.com/react-virtualized/-/react-virtualized-9.22.5.tgz#bfb96fed519de378b50d8c0064b92994b3b91620"
+  integrity sha512-YqQMRzlVANBv1L/7r63OHa2b0ZsAaDp1UhVNEdUaXI8A5u6hTpA5NYtUueLH2rFuY/27mTGIBl7ZhqFKzw18YQ==
+  dependencies:
+    "@babel/runtime" "^7.7.2"
+    clsx "^1.0.4"
+    dom-helpers "^5.1.3"
+    loose-envify "^1.4.0"
+    prop-types "^15.7.2"
+    react-lifecycles-compat "^3.0.4"
 
 react-window@^1.8.11:
   version "1.8.11"
@@ -7955,6 +8140,11 @@ test-exclude@^6.0.0:
     glob "^7.1.4"
     minimatch "^3.0.4"
 
+tiny-invariant@^1.0.0:
+  version "1.3.3"
+  resolved "https://registry.yarnpkg.com/tiny-invariant/-/tiny-invariant-1.3.3.tgz#46680b7a873a0d5d10005995eb90a70d74d60127"
+  integrity sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg==
+
 tinyglobby@^0.2.13:
   version "0.2.15"
   resolved "https://registry.yarnpkg.com/tinyglobby/-/tinyglobby-0.2.15.tgz#e228dd1e638cea993d2fdb4fcd2d4602a79951c2"
@@ -8023,6 +8213,11 @@ tsconfig-paths@^3.15.0:
     json5 "^1.0.2"
     minimist "^1.2.6"
     strip-bom "^3.0.0"
+
+tslib@^1.11.1:
+  version "1.14.1"
+  resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.14.1.tgz#cf2d38bdc34a134bcaf1091c41f6619e2f672d00"
+  integrity sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==
 
 tslib@^2.0.0, tslib@^2.1.0, tslib@^2.4.0, tslib@^2.6.2, tslib@^2.7.0, tslib@^2.8.0:
   version "2.8.1"
@@ -8321,7 +8516,7 @@ walker@^1.0.8:
   dependencies:
     makeerror "1.0.12"
 
-warning@^4.0.3:
+warning@^4.0.0, warning@^4.0.3:
   version "4.0.3"
   resolved "https://registry.yarnpkg.com/warning/-/warning-4.0.3.tgz#16e9e077eb8a86d6af7d64aa1e05fd85b4678ca3"
   integrity sha512-rpJyN222KWIvHJ/F53XSZv0Zl/accqHR8et1kpaMTD/fLCRxtV8iX8czMzY7sVZupTI3zcUTg8eycS2kNF9l6w==

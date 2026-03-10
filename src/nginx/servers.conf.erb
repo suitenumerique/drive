@@ -122,6 +122,14 @@ server {
         internal;
     }
 
+    # Fix .mjs MIME type for Scalingo's Alpine-based nginx
+    # Alpine's default mime.types lacks .mjs, causing pdf.worker.mjs
+    # to be served as application/octet-stream which breaks ES modules
+    location ~* \.mjs$ {
+        types { application/javascript mjs; }
+        try_files $uri =404;
+    }
+
     # Frontend export
     location / {
         try_files $uri index.html $uri/ =404;

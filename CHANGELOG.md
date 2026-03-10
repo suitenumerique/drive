@@ -12,11 +12,16 @@ and this project adheres to
 
 - ✨(frontend) add create folder and import file actions
 - 🐛(frontend) add action menu to mobile breadcrumbs
+- ✨(frontend) add PDF viewer with thumbnail sidebar, zoom and page navigation
+- ✨(frontend) integrate PDF viewer into file preview modal
+- 📝(doc) add local network setup documentation
 
 ### Changed
 
 - ⚡️(CI) optimize Docker Hub workflow
 - ♻️(frontend) replace WorkspaceIcon with FolderIcon in breadcrumbs
+- 🔧(backend) allow extra CSRF origins via env variable
+- 🔧(nginx) serve .mjs files with correct MIME type
 
 ### Removed
 
@@ -27,6 +32,7 @@ and this project adheres to
 - 🐛(backend) allow inviting external person on item with no direct access
 - 🐛(backend) stop storing numchild in database use annotation instead
 - 🐛(backend) sanitize filename to be compatible with filesystems
+- 🐛(frontend) fix React SVG attributes in AddFolderButton
 
 ## [v0.14.0] - 2026-02-25
 
