@@ -67,8 +67,11 @@ async function scrollPdfViewer(page: Page, deltaY: number) {
   const grid = page.locator(
     ".pdf-preview__container .ReactVirtualized__Grid",
   );
-  await grid.hover();
-  await page.mouse.wheel(0, deltaY);
+  await grid.evaluate((el, dy) => {
+    el.scrollTop += dy;
+  }, deltaY);
+  // Let react-virtualized process the scroll event
+  await page.waitForTimeout(500);
 }
 
 function getPageInput(page: Page): Locator {
