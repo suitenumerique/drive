@@ -213,9 +213,7 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
     short_name = models.CharField(_("short name"), max_length=100, null=True, blank=True)
 
     email = models.EmailField(_("identity email address"), blank=True, null=True)
-    column_preferences = SchemaField(
-        ColumnPreferences, blank=True, null=True, default=None
-    )
+    column_preferences = SchemaField(ColumnPreferences, blank=True, null=True, default=None)
 
     # Unlike the "email" field which stores the email coming from the OIDC token, this field
     # stores the email used by staff users to login to the admin site

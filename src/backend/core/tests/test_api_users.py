@@ -684,8 +684,10 @@ def test_api_users_patch_column_preferences_valid(column2, column1):
     assert user.column_preferences == models.ColumnPreferences(**column_preferences)
 
 
-@pytest.mark.parametrize("column_name", ["column1", "column2"])
-def test_api_users_patch_column_preferences_missing_column_should_fail(column_name):
+@pytest.mark.parametrize(
+    "column_name,missing_column", [("column1", "column2"), ("column2", "column1")]
+)
+def test_api_users_patch_column_preferences_missing_column_should_fail(column_name, missing_column):
     """Patching column_preferences with a missing required column parameter should fails."""
 
     user = factories.UserFactory()
@@ -704,6 +706,17 @@ def test_api_users_patch_column_preferences_missing_column_should_fail(column_na
         },
         format="json",
     )
+
+    assert response.json() == {
+        "type": "validation_error",
+        "errors": [
+            {
+                "code": "invalid",
+                "detail": "Field required",
+                "attr": f"column_preferences.0.{missing_column}",
+            }
+        ],
+    }
 
     assert response.status_code == 400
 
@@ -732,6 +745,17 @@ def test_api_users_patch_column_preferences_extra_value_should_fail():
         format="json",
     )
 
+    assert response.json() == {
+        "type": "validation_error",
+        "errors": [
+            {
+                "code": "invalid",
+                "detail": "Extra inputs are not permitted",
+                "attr": "column_preferences.0.not_allowed",
+            },
+        ],
+    }
+
     assert response.status_code == 400
 
 
@@ -757,6 +781,24 @@ def test_api_users_patch_column_preferences_invalid_value():
         },
         format="json",
     )
+
+    assert response.json() == {
+        "type": "validation_error",
+        "errors": [
+            {
+                "code": "invalid",
+                "detail": "Input should be 'last_modified', 'created', 'created_by', "
+                "'file_type' or 'file_size'",
+                "attr": "column_preferences.0.column1",
+            },
+            {
+                "code": "invalid",
+                "detail": "Input should be 'last_modified', 'created', 'created_by', "
+                "'file_type' or 'file_size'",
+                "attr": "column_preferences.1.column2",
+            },
+        ],
+    }
 
     assert response.status_code == 400
 
