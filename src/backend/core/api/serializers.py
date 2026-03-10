@@ -13,12 +13,12 @@ from django.db.models import Q
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
-from django_pydantic_field.rest_framework import SchemaField
 from lasuite.drf.models.choices import LinkReachChoices, get_equivalent_link_definition
 from rest_framework import serializers
 
 from core import models
 from core.api import utils
+from core.api.fields import SchemaField
 from core.storage import get_storage_compute_backend
 from wopi import utils as wopi_utils
 
