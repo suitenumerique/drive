@@ -259,7 +259,13 @@ backend:
   #       - "-c"
   #       - python manage.py flush --no-input
   ## @param backend.cronjobs Cronjob name, schedule, command
-  cronjobs: []
+  cronjobs:
+    - name: clean-pending-items
+      schedule: "30 0 * * *"
+      command:
+        - "/bin/sh"
+        - "-c"
+        - python manage.py clean_pending_items
 
   ## @param backend.themeCustomization.enabled Enable theme customization
   ## @param backend.themeCustomization.file_content Content of the theme customization file. Must be a json object.
