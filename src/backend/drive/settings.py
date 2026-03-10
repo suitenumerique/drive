@@ -1593,7 +1593,11 @@ class Development(Base):
 
     ALLOWED_HOSTS = ["*"]
     CORS_ALLOW_ALL_ORIGINS = True
-    CSRF_TRUSTED_ORIGINS = ["http://localhost:8072", "http://localhost:3000"]
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:8072",
+        "http://localhost:3000",
+        *values.ListValue([], environ_name="CSRF_TRUSTED_ORIGINS"),
+    ]
     DEBUG = True
     LOAD_E2E_URLS = True
 
