@@ -8,14 +8,23 @@ and this project adheres to
 
 ## [Unreleased]
 
-### Fixed
+### Added
 
-- 🐛(backend) fix hard delete of files created by other users
-- 🐛(backend) handle race condition on concurrent LinkTrace creation
+- ✨(frontend) add PDF viewer with thumbnail sidebar, zoom and page navigation
+- ✨(frontend) integrate PDF viewer into file preview modal
+- 📝(doc) add local network setup documentation
 
 ### Changed
 
 - 🏷️(sdk) update Item interface by adding url_permalink
+- 🔧(backend) allow extra CSRF origins via env variable
+- 🔧(nginx) serve .mjs files with correct MIME type
+
+### Fixed
+
+- 🐛(backend) fix hard delete of files created by other users
+- 🐛(backend) handle race condition on concurrent LinkTrace creation
+- 🐛(frontend) fix React SVG attributes in AddFolderButton
 
 ## [v0.15.0] - 2026-03-16
 
