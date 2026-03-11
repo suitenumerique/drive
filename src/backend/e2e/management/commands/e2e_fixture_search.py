@@ -87,6 +87,9 @@ class Command(BaseCommand):
                 type=data["type"],
                 creator=data["creator"],
                 parent=parent,
+                update_upload_state=models.ItemUploadStateChoices.READY
+                if data["type"] == models.ItemTypeChoices.FILE
+                else None,
                 users=[(data["creator"], models.RoleChoices.OWNER)]
                 if depth == 0
                 else None,
