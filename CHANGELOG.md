@@ -13,6 +13,10 @@ and this project adheres to
 - 🐛(backend) fix hard delete of files created by other users
 - 🐛(backend) handle race condition on concurrent LinkTrace creation
 
+### Changed
+
+- 🏷️(sdk) update Item interface by adding url_permalink
+
 ## [v0.15.0] - 2026-03-16
 
 ### Added
