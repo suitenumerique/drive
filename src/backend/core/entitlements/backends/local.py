@@ -1,12 +1,10 @@
-"""
-Dummy Entitlements Backend.
-"""
+"""Local Entitlements Backend."""
 
-from core.entitlements.entitlements_backend import EntitlementsBackend
+from core.entitlements.backends.base import EntitlementsBackend
 
 
-class DummyEntitlementsBackend(EntitlementsBackend):
-    """Dummy entitlements backend for testing purposes."""
+class LocalEntitlementsBackend(EntitlementsBackend):
+    """Local entitlements backend for development and testing. Always grants access."""
 
     def can_access(self, user):
         """

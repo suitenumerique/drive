@@ -1501,7 +1501,7 @@ class Base(Configuration):
 
     # Entitlements
     ENTITLEMENTS_BACKEND = values.Value(
-        "core.entitlements.dummy_entitlements_backend.DummyEntitlementsBackend",
+        "core.entitlements.backends.local.LocalEntitlementsBackend",
         environ_name="ENTITLEMENTS_BACKEND",
         environ_prefix=None,
     )

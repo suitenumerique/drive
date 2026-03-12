@@ -28,22 +28,22 @@ The API endpoint automatically discovers and exposes all methods starting with `
 
 ## Available Backends
 
-### Dummy Backend
+### Local Backend
 
-The `DummyEntitlementsBackend` is the default backend used for development and testing. It always returns `True` for all entitlement checks.
+The `LocalEntitlementsBackend` is the default backend used for development and testing. It always returns `True` for all entitlement checks.
 
 **Configuration:**
 
 ```python
-ENTITLEMENTS_BACKEND = "core.entitlements.dummy_entitlements_backend.DummyEntitlementsBackend"
+ENTITLEMENTS_BACKEND = "core.entitlements.backends.local.LocalEntitlementsBackend"
 ENTITLEMENTS_BACKEND_PARAMETERS = {}
 ```
 
-### ANCT Backend
+### DeployCenter Backend
 
-The `ANCTEntitlementsBackend` is a good example of what you can achieve with entitlements. It integrates with an external ANCT entitlements service to check user permissions based on their SIRET (French business identifier) and other account information.
+The `DeployCenterEntitlementsBackend` integrates with an external DeployCenter entitlements service to check user permissions based on their account email and other OIDC claims.
 
-It fetches entitlements from an external API using a cache mecanism.
+It fetches entitlements from an external API using a cache mechanism.
 
 ## API Endpoint
 
@@ -101,7 +101,7 @@ To create a custom entitlements backend:
 1. **Create a new backend class** that inherits from `EntitlementsBackend`:
 
 ```python
-from core.entitlements.entitlements_backend import EntitlementsBackend
+from core.entitlements.backends.base import EntitlementsBackend
 
 class CustomEntitlementsBackend(EntitlementsBackend):
     """Custom entitlements backend."""
@@ -130,22 +130,24 @@ class CustomEntitlementsBackend(EntitlementsBackend):
 2. **Configure the backend** in your settings:
 
 ```python
-ENTITLEMENTS_BACKEND = "your_module.custom_entitlements_backend.CustomEntitlementsBackend"
+ENTITLEMENTS_BACKEND = "your_module.backends.custom.CustomEntitlementsBackend"
 ENTITLEMENTS_BACKEND_PARAMETERS = {
-    # Any parameters your backend needs
+    # Any parameters your backend needs - passed as kwargs to the constructor
 }
 ```
 
-3. **Access parameters** (if needed):
+3. **Accept parameters via constructor** (if needed):
 
 ```python
-from django.conf import settings
+from core.entitlements.backends.base import EntitlementsBackend
 
 class CustomEntitlementsBackend(EntitlementsBackend):
-    def __init__(self):
-        self.params = settings.ENTITLEMENTS_BACKEND_PARAMETERS
+    def __init__(self, api_url, api_key, timeout=10):
+        self.api_url = api_url
+        self.api_key = api_key
+        self.timeout = timeout
 
     def can_access(self, user):
-        # Use self.params to access configuration
+        # Use self.api_url, self.api_key, etc.
         return {"result": True}
 ```

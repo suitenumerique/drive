@@ -1,6 +1,4 @@
-"""
-Entitlements Backend.
-"""
+"""Entitlements Backend base class."""
 
 from abc import ABC, abstractmethod
 
