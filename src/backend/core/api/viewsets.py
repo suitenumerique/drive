@@ -44,6 +44,7 @@ from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
 from core.entitlements import get_entitlements_backend
+from core.storage import get_storage_compute_backend
 from core.services.mirror import mirror_item
 from core.services.sdk_relay import SDKRelayManager
 from core.services.search_indexers import (
@@ -2217,8 +2218,10 @@ class UsageMetricViewset(drf.mixins.ListModelMixin, viewsets.GenericViewSet):
 
     permission_classes = [HasAPIKey]
     queryset = models.User.objects.all().filter(is_active=True)
-    serializer_class = serializers.UsageMetricSerializer
+    serializer_class = serializers.UserUsageMetricSerializer
     pagination_class = Pagination
+
+    SUPPORTED_USER_FILTER_KEYS = {"sub", "email"}
 
     def get_queryset(self):
         """
@@ -2226,10 +2229,62 @@ class UsageMetricViewset(drf.mixins.ListModelMixin, viewsets.GenericViewSet):
         """
         queryset = self.queryset
 
-        if self.request.query_params.get("account_id"):
-            queryset = queryset.filter(sub=self.request.query_params.get("account_id"))
+        account_id_key = self.request.query_params.get("account_id_key")
+        account_id_value = self.request.query_params.get("account_id_value")
+
+        if account_id_key and account_id_value:
+            if account_id_key not in self.SUPPORTED_USER_FILTER_KEYS:
+                raise drf.exceptions.ValidationError(
+                    f"Unsupported account_id_key: {account_id_key}"
+                )
+            queryset = queryset.filter(**{account_id_key: account_id_value})
 
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        """Handle listing with account_type branching."""
+        account_type = request.query_params.get("account_type", "user")
+
+        if account_type == "organization":
+            return self._list_organization(request)
+
+        return super().list(request, *args, **kwargs)
+
+    def _list_organization(self, request):
+        """Aggregate storage metrics across users of an organization."""
+        account_id_key = request.query_params.get("account_id_key")
+        account_id_value = request.query_params.get("account_id_value")
+
+        if not account_id_key or not account_id_value:
+            raise drf.exceptions.ValidationError(
+                "account_id_key and account_id_value are required "
+                "for organization metrics."
+            )
+
+        users = models.User.objects.filter(
+            is_active=True,
+            **{f"claims__{account_id_key}": account_id_value},
+        )
+
+        storage_backend = get_storage_compute_backend()
+        total_storage = storage_backend.compute_storage_used(users)
+
+        serializer = serializers.OrganizationUsageMetricSerializer(
+            {
+                "account_id_key": account_id_key,
+                "account_id_value": account_id_value,
+                "total_storage": total_storage,
+            }
+        )
+
+        return drf.response.Response(
+            {
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [serializer.data],
+            }
+        )
 
 
 class EntitlementsViewset(viewsets.ViewSet):

@@ -134,7 +134,8 @@ def test_usage_metrics_list_filter_by_account_id(api_key):
     factories.ItemFactory(creator=user1, size=100)
 
     response = client.get(
-        f"/external_api/v1.0/metrics/usage/?account_id={user1.sub}",
+        "/external_api/v1.0/metrics/usage/"
+        f"?account_id_key=sub&account_id_value={user1.sub}",
         HTTP_AUTHORIZATION=f"Api-Key {api_key}",
     )
     assert response.status_code == 200
@@ -204,6 +205,87 @@ def test_usage_metrics_exposed_claims(api_key):
                 "metrics": {
                     "storage_used": 0,
                 },
+            },
+        ],
+    }
+
+
+@override_settings(METRICS_ENABLED=True)
+def test_usage_metrics_organization_type(api_key):
+    """
+    Organization metrics should aggregate storage across users
+    sharing the same claim value.
+    """
+    client = APIClient()
+    siret = "12345678901234"
+    user1 = factories.UserFactory(claims={"siret": siret})
+    user2 = factories.UserFactory(claims={"siret": siret})
+    factories.UserFactory(claims={"siret": "99999999999999"})
+
+    factories.ItemFactory(creator=user1, size=100)
+    factories.ItemFactory(creator=user2, size=250)
+
+    response = client.get(
+        "/external_api/v1.0/metrics/usage/"
+        f"?account_type=organization&account_id_key=siret"
+        f"&account_id_value={siret}",
+        HTTP_AUTHORIZATION=f"Api-Key {api_key}",
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "count": 1,
+        "next": None,
+        "previous": None,
+        "results": [
+            {
+                "account": {"type": "organization"},
+                "siret": siret,
+                "metrics": {"storage_used": 350},
+            },
+        ],
+    }
+
+
+@override_settings(METRICS_ENABLED=True)
+def test_usage_metrics_organization_type_missing_params(api_key):
+    """
+    Organization metrics should return 400 when account_id_key
+    or account_id_value is missing.
+    """
+    client = APIClient()
+
+    response = client.get(
+        "/external_api/v1.0/metrics/usage/?account_type=organization",
+        HTTP_AUTHORIZATION=f"Api-Key {api_key}",
+    )
+    assert response.status_code == 400
+
+
+@override_settings(METRICS_ENABLED=True)
+def test_usage_metrics_organization_type_no_matching_users(api_key):
+    """
+    Organization metrics should return storage_used=0 when no users
+    match the given claim.
+    """
+    client = APIClient()
+    factories.UserFactory(claims={"siret": "11111111111111"})
+
+    response = client.get(
+        "/external_api/v1.0/metrics/usage/"
+        "?account_type=organization&account_id_key=siret"
+        "&account_id_value=00000000000000",
+        HTTP_AUTHORIZATION=f"Api-Key {api_key}",
+    )
+    assert response.status_code == 200
+    assert response.json() == {
+        "count": 1,
+        "next": None,
+        "previous": None,
+        "results": [
+            {
+                "account": {"type": "organization"},
+                "siret": "00000000000000",
+                "metrics": {"storage_used": 0},
             },
         ],
     }
