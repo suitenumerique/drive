@@ -1,5 +1,6 @@
 # File extending extension mapping with mime types.
 # MIME type (lowercased)			Extensions
 # ============================================	==========
+application/vnd.mindjet.mindmanager			mmap
 application/vnd.ms-outlook			msg
 application/zed			zed
