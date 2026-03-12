@@ -1289,7 +1289,7 @@
         "tree": {
           "trash": "Prullenbak",
           "create": {
-            "label": "Nieuwe",
+            "label": "Nieuw",
             "folder": "Nieuwe map",
             "file": {
               "doc": "Nieuw tekstdocument",
