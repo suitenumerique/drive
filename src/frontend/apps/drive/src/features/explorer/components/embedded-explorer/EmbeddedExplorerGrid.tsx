@@ -1,4 +1,4 @@
-import { Item, ItemType } from "@/features/drivers/types";
+import { Item, ItemType, ItemUploadState } from "@/features/drivers/types";
 import {
   createContext,
   Dispatch,
@@ -218,10 +218,15 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                     className={clsx("selectable", {
                       selected: isSelected,
                       over: isOvered,
+                      "duplicating": row.original.upload_state === ItemUploadState.DUPLICATING,
                     })}
                     data-id={row.original.id}
                     tabIndex={0}
                     onClick={(e) => {
+                      if (row.original.upload_state === ItemUploadState.DUPLICATING) {
+                        return;
+                      }
+
                       const target = e.target as HTMLElement;
                       const closest = target.closest("tr");
                       // Because if we use modals or other components, even with a Portal, React triggers events on the original parent.
@@ -320,6 +325,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                     }}
                     onContextMenu={(e) => {
                       if (isSelected) return;
+                      if (row.original.upload_state === ItemUploadState.DUPLICATING) return;
                       e.preventDefault();
                       e.stopPropagation();
                       contextMenu.open({

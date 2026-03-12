@@ -1,5 +1,5 @@
 import { CellContext } from "@tanstack/react-table";
-import { Item } from "@/features/drivers/types";
+import { Item, ItemUploadState } from "@/features/drivers/types";
 import { useState } from "react";
 import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { Draggable } from "@/features/explorer/components/Draggable";
@@ -17,6 +17,10 @@ export const EmbeddedExplorerGridActionsCell = (
   const { t } = useTranslation();
   const disableDrag = useDisableDragGridItem(item);
   const [isOpen, setIsOpen] = useState(false);
+
+  if (item.upload_state === ItemUploadState.DUPLICATING) {
+    return null;
+  }
 
   // Disable drag when any modal is open because it conflicts with the keyboard navigation
 

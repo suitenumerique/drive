@@ -456,8 +456,10 @@
             "rename": "Rename",
             "favorite": "Star",
             "unfavorite": "Unstar",
+            "duplicate": "Duplicate",
             "delete": "Delete"
-          }
+          },
+          "duplicating": "duplication in progress"
         }
       },
       "time": {
@@ -976,8 +978,10 @@
             "rename": "Renommer",
             "favorite": "Favoris",
             "unfavorite": "Retirer des favoris",
+            "duplicate": "Dupliquer",
             "delete": "Supprimer"
-          }
+          },
+          "duplicating": "duplication en cours"
         }
       },
       "time": {
@@ -1490,8 +1494,10 @@
             "rename": "Hernoem",
             "favorite": "Favoriet",
             "unfavorite": "Verwijder uit favorieten",
+            "duplicate": "Dupliceer",
             "delete": "Verwijder"
-          }
+          },
+          "duplicating": "duplicatie bezig"
         }
       },
       "time": {

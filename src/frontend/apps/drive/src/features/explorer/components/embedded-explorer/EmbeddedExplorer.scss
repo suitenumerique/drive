@@ -199,6 +199,16 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+
+      &__duplicating-label {
+        color: var(--c--contextuals--content--semantic--neutral--tertiary);
+        font-style: italic;
+      }
+
+      &--duplicating {
+        opacity: 0.5;
+        pointer-events: none;
+      }
     }
 
     &__actions {
@@ -337,6 +347,11 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
           var(--c--contextuals--border--semantic--brand--primary),
           var(--c--contextuals--background--semantic--brand--tertiary)
         );
+      }
+
+      tr.duplicating {
+        opacity: 0.5;
+        pointer-events: none;
       }
 
       tr {

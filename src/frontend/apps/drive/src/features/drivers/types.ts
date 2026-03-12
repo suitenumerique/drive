@@ -18,6 +18,7 @@ export enum LinkRole {
 
 export enum ItemUploadState {
   PENDING = "pending",
+  DUPLICATING = "duplicating",
   ANALYZING = "analyzing",
   SUSPICIOUS = "suspicious",
   FILE_TOO_LARGE_TO_ANALYZE = "file_too_large_to_analyze",
@@ -84,6 +85,7 @@ export type Item = {
     move: boolean;
     link_select_options: Record<LinkReach, LinkRole[] | null>;
     partial_update: boolean;
+    duplicate: boolean;
     restore: boolean;
     retrieve: boolean;
     tree: boolean;
