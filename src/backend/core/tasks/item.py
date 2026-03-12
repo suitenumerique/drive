@@ -176,13 +176,19 @@ def duplicate_file(self, item_to_duplicate_id, duplicated_item_id):
         if self.request.retries >= self.max_retries:
             # delete the duplicated item
             logger.error(
-                "duplicating file: max retries exceeded, the duplicated item %s is deleted",
+                "duplicating file: %d max retries exceeded, the duplicated item %s is deleted",
+                self.max_retries,
                 duplicated_item.id,
             )
             duplicated_item.soft_delete()
             duplicated_item.delete()
 
-        logger.error("duplicating file: error while copying file. Error: %s", exc)
+        logger.error(
+            "duplicating file: error while copying file (retries %d on %d). Error: %s",
+            self.request.retries,
+            self.max_retries,
+            exc,
+        )
 
         self.retry(exc=exc)
 

@@ -128,8 +128,8 @@ def test_duplicate_file_retry(caplog):
         )
 
     assert (
-        "duplicating file: error while copying file. Error: An error occurred (NoSuchKey) when"
-        " calling the CopyObject operation: The specified key does not exist."
+        "duplicating file: error while copying file (retries 0 on 10). Error: An error occurred "
+        "(NoSuchKey) when calling the CopyObject operation: The specified key does not exist."
         in caplog.text
     )
 
@@ -162,6 +162,6 @@ def test_duplicate_file_max_retries_exceeded(caplog):
     assert not models.Item.objects.filter(id=duplicated_item.id).exists()
 
     assert (
-        f"duplicating file: max retries exceeded, the duplicated item {duplicated_item.id} is"
+        f"duplicating file: 0 max retries exceeded, the duplicated item {duplicated_item.id} is"
         " deleted" in caplog.text
     )
