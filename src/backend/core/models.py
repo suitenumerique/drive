@@ -601,7 +601,11 @@ class Item(TreeModel, BaseModel):
                 }
             )
 
-        if self.created_at is None and self.type == ItemTypeChoices.FILE:
+        if (
+            self.created_at is None
+            and self.type == ItemTypeChoices.FILE
+            and self.upload_state != ItemUploadStateChoices.DUPLICATING
+        ):
             self.upload_state = ItemUploadStateChoices.PENDING
 
         if not self.path:

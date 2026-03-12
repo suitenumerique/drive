@@ -260,6 +260,7 @@ def test_api_items_duplicate_in_folder_reader():
     assert duplicated_item.parent() is None
     assert duplicated_item.get_role(user) == models.RoleChoices.OWNER
     assert duplicated_item.creator == user
+    assert duplicated_item.upload_state == models.ItemUploadStateChoices.DUPLICATING
 
 
 def test_api_items_duplicate_at_root():
@@ -290,6 +291,7 @@ def test_api_items_duplicate_at_root():
     assert duplicated_item.link_reach == models.LinkReachChoices.RESTRICTED
     assert duplicated_item.get_role(user) == models.RoleChoices.OWNER
     assert duplicated_item.creator == user
+    assert duplicated_item.upload_state == models.ItemUploadStateChoices.DUPLICATING
 
 
 def test_api_items_duplicate_celery_task_called_with_correct_args():
@@ -342,6 +344,7 @@ def test_api_items_duplicate_creator_is_requester():
 
     duplicated_item = models.Item.objects.get(id=response.json()["id"])
     assert duplicated_item.creator == duplicator
+    assert duplicated_item.upload_state == models.ItemUploadStateChoices.DUPLICATING
 
 
 def test_api_items_duplicate_deleted_item():
