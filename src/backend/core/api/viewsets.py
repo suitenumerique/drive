@@ -1600,7 +1600,8 @@ class ItemViewSet(
 
         # Then duplicate the file in async way
         duplicate_file.delay(
-            item_to_duplicate=item_to_duplicate.id, duplicated_item=duplicated_item.id
+            item_to_duplicate_id=item_to_duplicate.id,
+            duplicated_item_id=duplicated_item.id,
         )
 
         serializer = self.get_serializer(duplicated_item)
