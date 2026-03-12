@@ -296,8 +296,8 @@ def test_api_items_duplicate_celery_task_called_with_correct_args():
 
     duplicated_item_id = response.json()["id"]
     mock_delay.assert_called_once_with(
-        item_to_duplicate=item.id,
-        duplicated_item=models.Item.objects.get(id=duplicated_item_id).id,
+        item_to_duplicate_id=item.id,
+        duplicated_item_id=models.Item.objects.get(id=duplicated_item_id).id,
     )
 
 
