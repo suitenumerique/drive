@@ -848,7 +848,7 @@ class Item(TreeModel, BaseModel):
         )
         can_destroy = can_hard_delete and not is_deleted
         can_duplicate = (
-            can_update
+            can_get
             and user.is_authenticated
             and self.type == ItemTypeChoices.FILE
             and self.upload_state == ItemUploadStateChoices.READY

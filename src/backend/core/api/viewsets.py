@@ -1582,11 +1582,17 @@ class ItemViewSet(
         """
 
         item_to_duplicate = self.get_object()
+        user = request.user
 
         parent = item_to_duplicate.parent() if item_to_duplicate.depth > 1 else None
 
+        if parent and parent.get_role(user) == models.RoleChoices.READER:
+            # If the user as reader role on the parent folder, then the duplicated
+            # item must be created at the user's root
+            parent = None
+
         duplicated_item = models.Item.objects.create_child(
-            creator=request.user,
+            creator=user,
             link_reach=None if parent else LinkReachChoices.RESTRICTED,
             parent=parent,
             title=item_to_duplicate.title,  # Title uniqueness is managed in the create_child method
@@ -1597,6 +1603,13 @@ class ItemViewSet(
             filename=item_to_duplicate.filename,
             description=item_to_duplicate.description,
         )
+
+        if duplicated_item.is_root:
+            models.ItemAccess.objects.create(
+                item=duplicated_item,
+                user=user,
+                role=models.RoleChoices.OWNER,
+            )
 
         # Then duplicate the file in async way
         duplicate_file.delay(

@@ -54,28 +54,7 @@ def test_api_items_duplicate_authenticated_no_access():
     assert response.status_code == 403
 
 
-@pytest.mark.parametrize("role", ["reader"])
-def test_api_items_duplicate_authenticated_insufficient_role(role):
-    """
-    Authenticated users with reader role should not be able to duplicate items.
-    The duplicate ability requires at least editor role.
-    """
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
-
-    item = factories.ItemFactory(
-        type=models.ItemTypeChoices.FILE,
-        update_upload_state=models.ItemUploadStateChoices.READY,
-        users=[(user, role)],
-    )
-
-    response = client.post(f"/api/v1.0/items/{item.id!s}/duplicate/")
-
-    assert response.status_code == 403
-
-
-@pytest.mark.parametrize("role", ["editor", "administrator", "owner"])
+@pytest.mark.parametrize("role", models.RoleChoices.values)
 def test_api_items_duplicate_authenticated_sufficient_role(role):
     """
     Authenticated users with editor, administrator or owner role should be able
@@ -247,6 +226,42 @@ def test_api_items_duplicate_in_folder():
     assert duplicated_item.parent() == parent_folder
 
 
+def test_api_items_duplicate_in_folder_reader():
+    """
+    Duplicating a file that lives inside a folder where the user has reader role
+    should place the duplicate item at the root's user.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent_folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, models.RoleChoices.READER)],
+    )
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        parent=parent_folder,
+    )
+
+    assert parent_folder.get_role(user) == models.RoleChoices.READER
+    assert item.get_role(user) == models.RoleChoices.READER
+
+    with mock.patch("core.tasks.item.duplicate_file.delay") as mock_delay:
+        response = client.post(f"/api/v1.0/items/{item.id!s}/duplicate/")
+
+    assert response.status_code == 201
+    mock_delay.assert_called_once()
+
+    duplicated_item = models.Item.objects.get(id=response.json()["id"])
+
+    # The duplicate should be in at root's user
+    assert duplicated_item.parent() is None
+    assert duplicated_item.get_role(user) == models.RoleChoices.OWNER
+    assert duplicated_item.creator == user
+
+
 def test_api_items_duplicate_at_root():
     """
     Duplicating a file at root level should place the duplicate at root level
@@ -273,6 +288,8 @@ def test_api_items_duplicate_at_root():
     # The duplicate should be at root level (no parent)
     assert duplicated_item.parent() is None
     assert duplicated_item.link_reach == models.LinkReachChoices.RESTRICTED
+    assert duplicated_item.get_role(user) == models.RoleChoices.OWNER
+    assert duplicated_item.creator == user
 
 
 def test_api_items_duplicate_celery_task_called_with_correct_args():
