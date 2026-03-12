@@ -1,0 +1,90 @@
+// Spinner matching the Pencil design:
+// - innerRadius 0.8 → ring width = 20% of gradient radius (10% of element)
+// - 160° arc with round caps
+// - Track at 20% opacity, arc at full opacity
+//
+// Ring geometry (relative to element):
+//   outer radius = 50%, inner = 40%, center = 45%, width = 10%
+// End cap position at 160° on ring center:
+//   cx = 50% + 45% * sin(160°) ≈ 65.4%
+//   cy = 50% - 45% * cos(160°) ≈ 92.3%
+//   → background-position ≈ 67.1% 97%
+
+$_ring-mask: radial-gradient(
+  farthest-side,
+  transparent calc(100% - 20%),
+  #000 0
+);
+
+.drive-spinner {
+  position: relative;
+
+  animation: drive-spinner-rotate 1s infinite linear;
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    mask: $_ring-mask;
+    -webkit-mask: $_ring-mask;
+  }
+
+  // Track (full ring at 20% opacity)
+  &::before {
+    background: var(--spinner-color);
+    opacity: 0.2;
+  }
+
+  // Arc (160°) with round caps
+  &::after {
+    background:
+      // Start cap (top center of ring)
+      radial-gradient(farthest-side, var(--spinner-color) 94%, transparent) 50%
+        0% / 10% 10% no-repeat,
+      // End cap (at 160° on ring center)
+      radial-gradient(farthest-side, var(--spinner-color) 94%, transparent)
+        67.1% 97% / 10% 10% no-repeat,
+      // Arc
+      conic-gradient(var(--spinner-color) 160deg, transparent 160deg);
+  }
+
+  // Variants
+  &--neutral {
+    --spinner-color: var(
+      --c--contextuals--content--semantic--neutral--secondary
+    );
+  }
+
+  &--brand {
+    --spinner-color: var(--c--contextuals--content--semantic--brand--secondary);
+  }
+
+  // Sizes
+  &--sm {
+    width: 16px;
+    height: 16px;
+  }
+
+  &--md {
+    width: 24px;
+    height: 24px;
+  }
+
+  &--lg {
+    width: 32px;
+    height: 32px;
+  }
+
+  &--xl {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@keyframes drive-spinner-rotate {
+  to {
+    transform: rotate(1turn);
+  }
+}

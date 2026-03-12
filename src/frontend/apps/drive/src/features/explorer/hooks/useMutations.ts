@@ -222,6 +222,30 @@ export const useMutationUpdateWorkspace = () => {
   });
 };
 
+export const useMutationDuplicateItem = () => {
+  const driver = getDriver();
+  const { item } = useGlobalExplorer();
+  const addItemToTopOfPaginatedList = useAddItemToPaginatedList();
+  const refresh = useRefreshQueryCacheAfterMutation();
+
+  return useMutation({
+    mutationFn: (itemId: string) => {
+      return driver.duplicateItem(itemId);
+    },
+    onSuccess: (data) => {
+      const parentId = item?.originalId ?? item?.id;
+      if (parentId) {
+        addItemToTopOfPaginatedList(
+          ["items", parentId, "children"],
+          data,
+        );
+      }
+      addItemToTopOfPaginatedList(["items", "infinite"], data);
+      refresh(parentId);
+    },
+  });
+};
+
 export const useMutationCreateFavoriteItem = () => {
   const driver = getDriver();
 

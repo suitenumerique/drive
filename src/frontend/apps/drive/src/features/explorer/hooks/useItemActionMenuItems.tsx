@@ -23,6 +23,7 @@ import { useEffect, useState } from "react";
 import {
   useMutationCreateFavoriteItem,
   useMutationDeleteFavoriteItem,
+  useMutationDuplicateItem,
 } from "./useMutations";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 
@@ -51,6 +52,7 @@ export const useItemActionMenuItems = ({
 
   const { mutateAsync: deleteFavoriteItem } = useMutationDeleteFavoriteItem();
   const { mutateAsync: createFavoriteItem } = useMutationCreateFavoriteItem();
+  const { mutate: duplicateItem } = useMutationDuplicateItem();
 
   const shareItemModal = useModal();
   const renameModal = useModal();
@@ -148,6 +150,14 @@ export const useItemActionMenuItems = ({
         isHidden: item.type === ItemType.FOLDER || minimal,
         callback: () => {
           handleDownloadItem(item);
+        },
+      },
+      {
+        icon: <span className="material-icons">content_copy</span>,
+        label: t("explorer.item.actions.duplicate"),
+        isHidden: !item.abilities?.duplicate || item.type === ItemType.FOLDER,
+        callback: () => {
+          duplicateItem(effectiveItemId);
         },
       },
 

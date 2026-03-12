@@ -421,6 +421,13 @@ export class StandardDriver extends Driver {
     return jsonToItem(await response.json());
   }
 
+  async duplicateItem(id: string): Promise<Item> {
+    const response = await fetchAPI(`items/${id}/duplicate/`, {
+      method: "POST",
+    });
+    return jsonToItem(await response.json());
+  }
+
   async deleteItems(ids: string[]): Promise<void> {
     for (const id of ids) {
       await fetchAPI(`items/${id}/`, {

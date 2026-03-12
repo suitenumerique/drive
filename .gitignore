@@ -80,6 +80,8 @@ db.sqlite3
 .vscode/
 *.iml
 .devcontainer
+.claude/
 
 # Various
 .turbo
+openspec/

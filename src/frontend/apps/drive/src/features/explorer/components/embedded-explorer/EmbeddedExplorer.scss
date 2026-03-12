@@ -199,6 +199,32 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+
+      &--duplicating-text {
+        color: var(--c--contextuals--content--semantic--neutral--tertiary);
+      }
+
+      &__duplicating-label {
+        color: var(--c--contextuals--content--semantic--neutral--tertiary);
+        font-style: italic;
+      }
+
+      &__spinner-container {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      &__title-wrapper {
+        display: flex;
+        overflow: hidden;
+      }
+
+      &--duplicating {
+        pointer-events: none;
+      }
     }
 
     &__actions {
@@ -337,6 +363,10 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
           var(--c--contextuals--border--semantic--brand--primary),
           var(--c--contextuals--background--semantic--brand--tertiary)
         );
+      }
+
+      tr.duplicating {
+        pointer-events: none;
       }
 
       tr {
