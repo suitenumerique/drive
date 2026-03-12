@@ -274,7 +274,7 @@ def test_models_items_get_abilities_forbidden(
 )
 def test_models_items_get_abilities_reader(is_authenticated, reach, django_assert_num_queries):
     """
-    Check abilities returned for a item giving reader role to link holders
+    Check abilities returned for an item giving reader role to link holders
     i.e anonymous users or authenticated users who have no specific role on the item.
     """
     item = factories.ItemFactory(link_reach=reach, link_role="reader")
@@ -369,7 +369,7 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913
     django_assert_num_queries,
 ):
     """
-    Check abilities returned for a item giving editor role to link holders
+    Check abilities returned for an item giving editor role to link holders
     i.e anonymous users or authenticated users who have no specific role on the item.
     """
     item = factories.ItemFactory(
@@ -517,7 +517,7 @@ def test_models_items_not_root_get_abilities_owner(
 def test_models_items_not_root_get_abilities_administrator(
     item_type, can_duplicate, upload_state, django_assert_num_queries
 ):
-    """Check abilities returned for the administrator of a item."""
+    """Check abilities returned for the administrator of an item."""
     user = factories.UserFactory()
     item = factories.ItemFactory(
         users=[(user, "administrator")],
@@ -630,7 +630,7 @@ def test_models_items_not_root_get_abilities_editor_user(
 
 
 def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queries):
-    """Check abilities returned for the reader of a item."""
+    """Check abilities returned for the reader of an item."""
     user = factories.UserFactory()
     parent = factories.ItemFactory(
         users=[(user, "reader")],
@@ -846,7 +846,7 @@ def test_models_items_nb_accesses_cache_is_set_and_retrieved(
 def test_models_items_nb_accesses_cache_is_invalidated_on_access_removal(
     django_assert_num_queries,
 ):
-    """Test that the cache is invalidated when a item access is deleted."""
+    """Test that the cache is invalidated when an item access is deleted."""
     item = factories.ItemFactory()
     key = f"item_{item.id!s}_nb_accesses"
     access = factories.UserItemAccessFactory(item=item)

@@ -205,7 +205,7 @@ def test_models_items_root_get_abilities_owner(
 def test_models_items_root_get_abilities_administrator(
     item_type, can_duplicate, upload_state, django_assert_num_queries
 ):
-    """Check abilities returned for the administrator of a item."""
+    """Check abilities returned for the administrator of an item."""
     user = factories.UserFactory()
     item = factories.ItemFactory(
         users=[(user, "administrator")],

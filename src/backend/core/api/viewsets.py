@@ -1618,9 +1618,7 @@ class ItemViewSet(
         )
 
         serializer = self.get_serializer(duplicated_item)
-        return drf.response.Response(
-            serializer.data, status=drf.status.HTTP_201_CREATED
-        )
+        return drf.response.Response(serializer.data, status=drf.status.HTTP_201_CREATED)
 
 
 class ItemAccessViewSet(
