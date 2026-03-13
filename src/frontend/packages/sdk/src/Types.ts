@@ -19,8 +19,10 @@ export interface SDKRelayEvent {
 
 export interface Item {
   id: string;
-  title: string;
-  url: string;
   size: number;
+  title: string;
   type: "file";
+  url_permalink: string;
+  url_preview: string;
+  url: string;
 }
