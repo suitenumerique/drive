@@ -96,6 +96,34 @@ def test_api_items_hard_delete_authenticated_owner_already_hard_deleted_should_f
     assert response.status_code == 404
 
 
+def test_api_items_hard_delete_by_folder_owner_for_other_users_file():
+    """
+    A folder owner should be able to hard delete a file created by another user
+    if that file is in their trashbin (i.e. deleted within their folder).
+    """
+    folder_owner = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(folder_owner, models.RoleChoices.OWNER), (other_user, models.RoleChoices.EDITOR)],
+    )
+    file = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        parent=folder,
+        creator=other_user,
+        users=[(other_user, models.RoleChoices.OWNER)],
+    )
+    file.soft_delete()
+
+    client = APIClient()
+    client.force_login(folder_owner)
+
+    response = client.delete(f"/api/v1.0/items/{file.id!s}/hard-delete/")
+    assert response.status_code == 204
+    assert not models.Item.objects.filter(id=file.id).exists()
+
+
 def test_api_items_hard_delete_suspicious_item_should_not_work_for_non_creator():
     """
     Non-creators should not be able to hard delete suspicious items.

@@ -679,6 +679,82 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
     )
 
 
+def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
+    django_assert_num_queries,
+):
+    """Check abilities for a folder owner on a child item created by another user."""
+    owner = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[
+            (owner, "owner"),
+            (other_user, "editor"),
+        ],
+    )
+    child = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        parent=folder,
+        creator=other_user,
+        users=[(other_user, "owner")],
+    )
+    link_select_options = LinkReachChoices.get_select_options(**child.ancestors_link_definition)
+    expected_abilities = {
+        "accesses_manage": True,
+        "accesses_view": True,
+        "breadcrumb": True,
+        "children_create": True,
+        "children_list": True,
+        "destroy": True,
+        "download": True,
+        "duplicate": False,
+        "hard_delete": True,
+        "favorite": True,
+        "invite_owner": True,
+        "link_configuration": True,
+        "link_select_options": link_select_options,
+        "media_auth": True,
+        "move": True,
+        "partial_update": True,
+        "restore": True,
+        "retrieve": True,
+        "tree": True,
+        "update": True,
+        "upload_ended": True,
+        "wopi": True,
+    }
+    with django_assert_num_queries(1):
+        assert child.get_abilities(owner) == expected_abilities
+
+    child.soft_delete()
+    child.refresh_from_db()
+    assert child.get_abilities(owner) == {
+        "accesses_manage": False,
+        "accesses_view": False,
+        "breadcrumb": False,
+        "children_create": False,
+        "children_list": False,
+        "destroy": False,
+        "download": False,
+        "duplicate": False,
+        "hard_delete": True,
+        "favorite": False,
+        "invite_owner": False,
+        "link_configuration": False,
+        "link_select_options": {},
+        "media_auth": False,
+        "move": False,
+        "partial_update": False,
+        "restore": True,
+        "retrieve": True,
+        "tree": False,
+        "update": False,
+        "upload_ended": False,
+        "wopi": False,
+    }
+
+
 def test_models_items__email_invitation__success():
     """
     The email invitation is sent successfully.

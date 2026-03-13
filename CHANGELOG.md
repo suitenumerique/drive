@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(backend) fix hard delete of files created by other users
+
 ## [v0.15.0] - 2026-03-16
 
 ### Added
