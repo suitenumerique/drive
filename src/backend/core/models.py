@@ -813,7 +813,7 @@ class Item(TreeModel, BaseModel):
         # Characteristics that are based only on specific access
         is_owner = role == RoleChoices.OWNER
         is_deleted = self.ancestors_deleted_at
-        is_owner_or_admin = (is_owner or role == RoleChoices.ADMIN) and not is_deleted
+        is_owner_or_admin = is_owner or role == RoleChoices.ADMIN
 
         # Compute access roles before adding link roles because we don't
         # want anonymous users to access versions (we wouldn't know from
@@ -838,7 +838,8 @@ class Item(TreeModel, BaseModel):
             role = RoleChoices.max(role, link_definition["link_role"])
         can_get = bool(role) and not is_deleted
         retrieve = can_get or is_owner
-        can_update = (is_owner_or_admin or role == RoleChoices.EDITOR) and not is_deleted
+        can_manage = is_owner_or_admin and not is_deleted
+        can_update = (can_manage or role == RoleChoices.EDITOR) and not is_deleted
         can_create_children = can_update and user.is_authenticated
         can_hard_delete = (
             is_owner
@@ -848,7 +849,7 @@ class Item(TreeModel, BaseModel):
         can_destroy = can_hard_delete and not is_deleted
 
         return {
-            "accesses_manage": is_owner_or_admin,
+            "accesses_manage": can_manage,
             "accesses_view": has_access_role,
             "breadcrumb": can_get,
             "children_list": can_get,
@@ -857,10 +858,10 @@ class Item(TreeModel, BaseModel):
             "download": can_get,
             "hard_delete": can_hard_delete,
             "favorite": can_get and user.is_authenticated,
-            "link_configuration": is_owner_or_admin,
+            "link_configuration": can_manage,
             "invite_owner": is_owner and not is_deleted,
             "link_select_options": link_select_options,
-            "move": is_owner_or_admin and not is_deleted,
+            "move": can_manage,
             "restore": is_owner,
             "retrieve": retrieve,
             "tree": can_get,
