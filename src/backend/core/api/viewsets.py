@@ -13,8 +13,8 @@ from django.contrib.postgres.search import TrigramSimilarity
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
+from django.db import IntegrityError, transaction
 from django.db import models as db
-from django.db import transaction
 from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
 from django.urls import reverse
@@ -537,7 +537,10 @@ class ItemViewSet(
         # `exists` query. The user will visit the item many times after the first visit
         # so that's what we should optimize for.
         if user.is_authenticated and not instance.link_traces.filter(user=user).exists():
-            models.LinkTrace.objects.create(item=instance, user=request.user)
+            try:
+                models.LinkTrace.objects.create(item=instance, user=request.user)
+            except IntegrityError:
+                pass  # Race condition: trace already created by concurrent request
 
         return drf.response.Response(serializer.data)
 

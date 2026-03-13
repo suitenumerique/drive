@@ -11,6 +11,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(backend) fix hard delete of files created by other users
+- 🐛(backend) handle race condition on concurrent LinkTrace creation
 
 ## [v0.15.0] - 2026-03-16
 
