@@ -21,7 +21,7 @@ from core import factories, models
 
 pytestmark = pytest.mark.django_db
 
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines,too-many-arguments,too-many-positional-arguments
 
 
 def test_models_items_str():
@@ -239,6 +239,7 @@ def test_models_items_get_abilities_forbidden(
         "children_create": False,
         "children_list": False,
         "destroy": False,
+        "duplicate": False,
         "hard_delete": False,
         "favorite": False,
         "invite_owner": False,
@@ -273,7 +274,7 @@ def test_models_items_get_abilities_forbidden(
 )
 def test_models_items_get_abilities_reader(is_authenticated, reach, django_assert_num_queries):
     """
-    Check abilities returned for a item giving reader role to link holders
+    Check abilities returned for an item giving reader role to link holders
     i.e anonymous users or authenticated users who have no specific role on the item.
     """
     item = factories.ItemFactory(link_reach=reach, link_role="reader")
@@ -285,6 +286,7 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         "children_create": False,
         "children_list": True,
         "destroy": False,
+        "duplicate": False,
         "hard_delete": False,
         "favorite": is_authenticated,
         "invite_owner": False,
@@ -314,19 +316,69 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
 
 
 @pytest.mark.parametrize(
-    "is_authenticated,reach",
+    "is_authenticated,reach,item_type,can_duplicate,upload_state",
     [
-        (True, "public"),
-        (False, "public"),
-        (True, "authenticated"),
+        (True, "public", models.ItemTypeChoices.FOLDER, False, None),
+        (
+            True,
+            "public",
+            models.ItemTypeChoices.FILE,
+            True,
+            models.ItemUploadStateChoices.READY,
+        ),
+        *(
+            (
+                True,
+                "public",
+                models.ItemTypeChoices.FILE,
+                False,
+                state,
+            )
+            for state in models.ItemUploadStateChoices.values
+            if state != models.ItemUploadStateChoices.READY
+        ),
+        (False, "public", models.ItemTypeChoices.FOLDER, False, None),
+        (False, "public", models.ItemTypeChoices.FILE, False, None),
+        (True, "authenticated", models.ItemTypeChoices.FOLDER, False, None),
+        (
+            True,
+            "authenticated",
+            models.ItemTypeChoices.FILE,
+            True,
+            models.ItemUploadStateChoices.READY,
+        ),
+        *(
+            (
+                True,
+                "authenticated",
+                models.ItemTypeChoices.FILE,
+                False,
+                state,
+            )
+            for state in models.ItemUploadStateChoices.values
+            if state != models.ItemUploadStateChoices.READY
+        ),
     ],
 )
-def test_models_items_get_abilities_editor(is_authenticated, reach, django_assert_num_queries):
+def test_models_items_get_abilities_editor(  # noqa: PLR0913
+    is_authenticated,
+    reach,
+    item_type,
+    can_duplicate,
+    upload_state,
+    django_assert_num_queries,
+):
     """
-    Check abilities returned for a item giving editor role to link holders
+    Check abilities returned for an item giving editor role to link holders
     i.e anonymous users or authenticated users who have no specific role on the item.
     """
-    item = factories.ItemFactory(link_reach=reach, link_role="editor")
+    item = factories.ItemFactory(
+        link_reach=reach,
+        link_role="editor",
+        type=item_type,
+        update_upload_state=upload_state,
+    )
+
     user = factories.UserFactory() if is_authenticated else AnonymousUser()
     expected_abilities = {
         "accesses_manage": False,
@@ -335,6 +387,7 @@ def test_models_items_get_abilities_editor(is_authenticated, reach, django_asser
         "breadcrumb": True,
         "children_list": True,
         "destroy": False,
+        "duplicate": can_duplicate,
         "hard_delete": False,
         "favorite": is_authenticated,
         "invite_owner": False,
@@ -363,10 +416,30 @@ def test_models_items_get_abilities_editor(is_authenticated, reach, django_asser
     )
 
 
-def test_models_items_not_root_get_abilities_owner(django_assert_num_queries):
+@pytest.mark.parametrize(
+    "item_type,can_duplicate,upload_state",
+    [
+        (models.ItemTypeChoices.FOLDER, False, None),
+        (models.ItemTypeChoices.FILE, True, models.ItemUploadStateChoices.READY),
+        *(
+            (
+                models.ItemTypeChoices.FILE,
+                False,
+                state,
+            )
+            for state in models.ItemUploadStateChoices.values
+            if state != models.ItemUploadStateChoices.READY
+        ),
+    ],
+)
+def test_models_items_not_root_get_abilities_owner(
+    item_type, can_duplicate, upload_state, django_assert_num_queries
+):
     """Check abilities returned for the owner of an item."""
     user = factories.UserFactory()
-    item = factories.ItemFactory(users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(
+        users=[(user, "owner")], type=item_type, update_upload_state=upload_state
+    )
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -374,6 +447,7 @@ def test_models_items_not_root_get_abilities_owner(django_assert_num_queries):
         "breadcrumb": True,
         "children_list": True,
         "destroy": True,
+        "duplicate": can_duplicate,
         "hard_delete": True,
         "favorite": True,
         "invite_owner": True,
@@ -405,6 +479,7 @@ def test_models_items_not_root_get_abilities_owner(django_assert_num_queries):
         "children_create": False,
         "children_list": False,
         "destroy": False,
+        "duplicate": False,
         "hard_delete": True,
         "favorite": False,
         "invite_owner": False,
@@ -423,11 +498,31 @@ def test_models_items_not_root_get_abilities_owner(django_assert_num_queries):
     }
 
 
-def test_models_items_not_root_get_abilities_administrator(django_assert_num_queries):
-    """Check abilities returned for the administrator of a item."""
+@pytest.mark.parametrize(
+    "item_type,can_duplicate,upload_state",
+    [
+        (models.ItemTypeChoices.FOLDER, False, None),
+        (models.ItemTypeChoices.FILE, True, models.ItemUploadStateChoices.READY),
+        *(
+            (
+                models.ItemTypeChoices.FILE,
+                False,
+                state,
+            )
+            for state in models.ItemUploadStateChoices.values
+            if state != models.ItemUploadStateChoices.READY
+        ),
+    ],
+)
+def test_models_items_not_root_get_abilities_administrator(
+    item_type, can_duplicate, upload_state, django_assert_num_queries
+):
+    """Check abilities returned for the administrator of an item."""
     user = factories.UserFactory()
     item = factories.ItemFactory(
-        users=[(user, "administrator")], type=models.ItemTypeChoices.FOLDER
+        users=[(user, "administrator")],
+        type=item_type,
+        update_upload_state=upload_state,
     )
     expected_abilities = {
         "accesses_manage": True,
@@ -436,6 +531,7 @@ def test_models_items_not_root_get_abilities_administrator(django_assert_num_que
         "breadcrumb": True,
         "children_list": True,
         "destroy": False,
+        "duplicate": can_duplicate,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
@@ -467,11 +563,36 @@ def test_models_items_not_root_get_abilities_administrator(django_assert_num_que
     )
 
 
-def test_models_items_not_root_get_abilities_editor_user(django_assert_num_queries):
-    """Check abilities returned for the editor of a item."""
+@pytest.mark.parametrize(
+    "item_type,can_duplicate,upload_state",
+    [
+        (models.ItemTypeChoices.FOLDER, False, None),
+        (models.ItemTypeChoices.FILE, True, models.ItemUploadStateChoices.READY),
+        *(
+            (
+                models.ItemTypeChoices.FILE,
+                False,
+                state,
+            )
+            for state in models.ItemUploadStateChoices.values
+            if state != models.ItemUploadStateChoices.READY
+        ),
+    ],
+)
+def test_models_items_not_root_get_abilities_editor_user(
+    item_type, can_duplicate, upload_state, django_assert_num_queries
+):
+    """Check abilities returned for the editor of an item."""
     user = factories.UserFactory()
-    parent = factories.ItemFactory(users=[(user, "editor")], type=models.ItemTypeChoices.FOLDER)
-    item = factories.ItemFactory(parent=parent)
+    parent = factories.ItemFactory(
+        users=[(user, "editor")],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    item = factories.ItemFactory(
+        parent=parent,
+        type=item_type,
+        update_upload_state=upload_state,
+    )
     link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
     expected_abilities = {
         "accesses_manage": False,
@@ -480,6 +601,7 @@ def test_models_items_not_root_get_abilities_editor_user(django_assert_num_queri
         "breadcrumb": True,
         "children_list": True,
         "destroy": False,
+        "duplicate": can_duplicate,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
@@ -508,7 +630,7 @@ def test_models_items_not_root_get_abilities_editor_user(django_assert_num_queri
 
 
 def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queries):
-    """Check abilities returned for the reader of a item."""
+    """Check abilities returned for the reader of an item."""
     user = factories.UserFactory()
     parent = factories.ItemFactory(
         users=[(user, "reader")],
@@ -525,6 +647,7 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "breadcrumb": True,
         "children_list": True,
         "destroy": False,
+        "duplicate": access_from_link,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
@@ -723,7 +846,7 @@ def test_models_items_nb_accesses_cache_is_set_and_retrieved(
 def test_models_items_nb_accesses_cache_is_invalidated_on_access_removal(
     django_assert_num_queries,
 ):
-    """Test that the cache is invalidated when a item access is deleted."""
+    """Test that the cache is invalidated when an item access is deleted."""
     item = factories.ItemFactory()
     key = f"item_{item.id!s}_nb_accesses"
     access = factories.UserItemAccessFactory(item=item)
