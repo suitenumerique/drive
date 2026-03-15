@@ -106,6 +106,16 @@ $ kubectl config set-context --current --namespace=drive
 
 Please remember that `*.127.0.0.1.nip.io` will always resolve to `127.0.0.1`, except in the k8s cluster where we configure CoreDNS to answer with the ingress-nginx service IP.
 
+## Populate the CA certificate bundle
+
+Before deploying Drive, you need to build and load the mkcert root CA into a Kubernetes ConfigMap. This is required so that the backend can trust the local certificates.
+
+```
+$ cat /etc/ssl/cert.pem "$(mkcert -CAROOT)/rootCA.pem" > /tmp/cacert.pem
+$ kubectl delete configmap certifi
+$ kubectl create configmap certifi --from-file=cacert.pem=/tmp/cacert.pem
+```
+
 ## Preparation
 
 ### What do you use to authenticate your users?

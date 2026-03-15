@@ -64,6 +64,8 @@ backend:
     AWS_S3_SIGNATURE_VERSION: s3v4
     STORAGES_STATICFILES_BACKEND: django.contrib.staticfiles.storage.StaticFilesStorage
     MEDIA_BASE_URL: https://drive.127.0.0.1.nip.io
+    REQUESTS_CA_BUNDLE: /etc/ssl/certs/local-ca.pem
+    SSL_CERT_FILE: /etc/ssl/certs/local-ca.pem
   migrate:
     command:
       - "/bin/sh"
@@ -83,7 +85,7 @@ backend:
   # Extra volume mounts to manage our local custom CA and avoid to set ssl_verify: false
   extraVolumeMounts:
     - name: certs
-      mountPath: /usr/local/lib/python3.12/site-packages/certifi/cacert.pem
+      mountPath: /etc/ssl/certs/local-ca.pem
       subPath: cacert.pem
 
   # Extra volumes to manage our local custom CA and avoid to set ssl_verify: false
