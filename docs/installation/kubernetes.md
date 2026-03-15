@@ -118,7 +118,7 @@ This provided chart is for development purposes only and is not ready to use in 
 You can install it on your cluster to deploy Keycloak, Minio, Postgresql and Redis.
 
 ```
-$ helm install --repo https://suitenumerique.github.io/helm-dev-backend -f docs/examples/helm/keycloak.values.yaml keycloak dev-backend
+$ helm install --repo https://github.com/suitenumerique/helm-dev-backend -f docs/examples/helm/keycloak.values.yaml keycloak dev-backend
 $ #wait until
 $ kubectl get pods
 NAME                                 READY   STATUS    RESTARTS   AGE
@@ -147,7 +147,7 @@ OIDC_USER_FIELDS_TO_FULLNAME: "given_name,usual_name"
 Drive needs a Redis server so we start by deploying one:
 
 ```
-$ helm install --repo https://suitenumerique.github.io/helm-dev-backend -f docs/examples/helm/redis.values.yaml redis dev-backend
+$ helm install --repo https://github.com/suitenumerique/helm-dev-backend -f docs/examples/helm/redis.values.yaml redis dev-backend
 $ kubectl get pods
 NAME                                       READY   STATUS    RESTARTS   AGE
 keycloak-dev-backend-keycloak-0            1/1     Running   0          3m34s
@@ -167,7 +167,7 @@ DJANGO_CELERY_BROKER_URL: redis://user:pass@dev-backend-redis:6379/1
 Drive uses a Postgresql database as backend, so if you have a provider, obtain the necessary information to use it. If you don't, you can install a postgresql testing environment as follow:
 
 ```
-$ helm install --repo https://suitenumerique.github.io/helm-dev-backend -f docs/examples/helm/postgresql.values.yaml postgresql dev-backend
+$ helm install --repo https://github.com/suitenumerique/helm-dev-backend -f docs/examples/helm/postgresql.values.yaml postgresql dev-backend
 $ kubectl get pods
 NAME                                       READY   STATUS    RESTARTS   AGE
 keycloak-dev-backend-keycloak-0            1/1     Running   0          5m12s
@@ -201,7 +201,7 @@ DB_PORT: 5432
 Drive uses an S3 bucket to store files, so if you have a provider, obtain the necessary information to use it. If you don't, you can install a local minio testing environment as follow:
 
 ```
-$ helm install --repo https://suitenumerique.github.io/helm-dev-backend -f docs/examples/helm/minio.values.yaml minio dev-backend
+$ helm install --repo https://github.com/suitenumerique/helm-dev-backend -f docs/examples/helm/minio.values.yaml minio dev-backend
 $ kubectl get pods
 NAME                                       READY   STATUS    RESTARTS   AGE
 keycloak-dev-backend-keycloak-0            1/1     Running   0          10m
@@ -228,7 +228,7 @@ MEDIA_BASE_URL: https://drive.127.0.0.1.nip.io
 Now you are ready to deploy Drive. To deploy Drive, you need to provide all previous information to the helm chart.
 
 ```
-$ helm repo add drive https://suitenumerique.github.io/drive/
+$ helm repo add drive https://github.com/suitenumerique/drive
 $ helm repo update
 $ helm install drive drive/drive -f docs/examples/helm/drive.values.yaml
 $ kubectl get pods
