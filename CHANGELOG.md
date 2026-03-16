@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.15.0] - 2026-03-16
+
 ### Added
 
 - 🌐(frontend) update Dutch translation for create label
@@ -22,15 +24,15 @@ and this project adheres to
 - ✨(backend) exclude pending items from listing views
 - ✨(frontend) scale upload progress to 90% before completion
 
-### Removed
-
-- 🔥(backend) remove unused ServerToServerAuthentication backend
-
 ### Fixed
 
 - 🐛(backend) allow inviting external person on item with no direct access
 - 🐛(backend) stop storing numchild in database use annotation instead
 - 🐛(backend) sanitize filename to be compatible with filesystems
+
+### Removed
+
+- 🔥(backend) remove unused ServerToServerAuthentication backend
 
 ## [v0.14.0] - 2026-02-25
 
@@ -347,7 +349,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.14.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.15.0...main
+[v0.15.0]: https://github.com/suitenumerique/drive/releases/v0.15.0
 [v0.14.0]: https://github.com/suitenumerique/drive/releases/v0.13.0
 [v0.13.0]: https://github.com/suitenumerique/drive/releases/v0.13.0
 [v0.12.0]: https://github.com/suitenumerique/drive/releases/v0.12.0
