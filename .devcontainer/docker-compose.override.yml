@@ -1,0 +1,12 @@
+services:
+  app-dev:
+    user: "default"
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+      target: ""
+      args:
+        BASE_IMAGE: drive:backend-development
+        DEV_UID: ${DOCKER_USER:-1000}
+    volumes:
+      - ..:/workspace:cached

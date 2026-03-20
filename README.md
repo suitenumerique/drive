@@ -121,6 +121,19 @@ To start all the services, except the frontend container, you can use the follow
 $ make run-backend
 ```
 
+### Dev Container (Zed / VS Code)
+
+You can develop inside a container using the [Dev Containers](https://containers.dev/) specification.
+This is supported by **Zed** and **VS Code** out of the box.
+
+1. Open the project in your IDE — it will detect `.devcontainer/devcontainer.json` and offer to reopen in a container.
+2. The first launch builds a custom image, starts all Compose services, runs migrations and compiles translations.
+3. The Django development server starts automatically on `http://localhost:8071`.
+
+> **Note:** If containers are already running from `make run`, the dev container will
+> automatically stop and replace the `app-dev` service. Other services (PostgreSQL,
+> Redis, Keycloak…) keep running.
+
 ### Django admin
 
 You can access the Django admin site at
