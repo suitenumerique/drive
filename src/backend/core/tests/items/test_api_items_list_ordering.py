@@ -114,3 +114,49 @@ def test_api_items_list_ordering_by_fields():
                 else results[i + 1][field]
             )
             assert compare(operator1, operator2)
+
+
+def test_api_items_list_ordering_by_size():
+    """Test ordering files by size"""
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, creator=user, users=[(user, "owner")]
+    )
+
+    file1 = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        size=100,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        creator=user,
+        users=[(user, "owner")],
+    )
+
+    file2 = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        size=200,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        creator=user,
+        users=[(user, "owner")],
+    )
+
+    response = client.get("/api/v1.0/items/?ordering=size")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 3
+
+    assert results[0]["id"] == str(file1.id)
+    assert results[1]["id"] == str(file2.id)
+    assert results[2]["id"] == str(folder.id)
+
+    response = client.get("/api/v1.0/items/?ordering=-size")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 3
+
+    assert results[0]["id"] == str(folder.id)
+    assert results[1]["id"] == str(file2.id)
+    assert results[2]["id"] == str(file1.id)

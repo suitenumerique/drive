@@ -333,7 +333,14 @@ class ItemViewSet(
 
     metadata_class = ItemMetadata
     ordering = ["-updated_at"]
-    ordering_fields = ["created_at", "updated_at", "title", "type"]
+    ordering_fields = [
+        "created_at",
+        "updated_at",
+        "size",
+        "title",
+        "type",
+        "updated_at",
+    ]
     pagination_class = Pagination
     permission_classes = [
         permissions.ItemPermission,
