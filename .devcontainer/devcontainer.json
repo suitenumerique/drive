@@ -1,0 +1,19 @@
+{
+  "name": "Drive - La Suite Numerique",
+  "dockerComposeFile": [
+    "../compose.yaml",
+    "docker-compose.override.yml"
+  ],
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "overrideCommand": true,
+  "shutdownAction": "none",
+  "containerUser": "default",
+  "updateRemoteUserUID": false,
+  "initializeCommand": {
+    "network": "docker network create lasuite-network || true",
+    "envfiles": "touch env.d/development/crowdin.local env.d/development/common.local env.d/development/postgresql.local env.d/development/kc_postgresql.local",
+    "dirs": "mkdir -p data/media data/static"
+  },
+  "forwardPorts": [3000, 8071, 8080, 8083, 9000, 9001, 9980, 9981]
+}

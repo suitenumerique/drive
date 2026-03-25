@@ -121,6 +121,18 @@ To start all the services, except the frontend container, you can use the follow
 $ make run-backend
 ```
 
+### Dev Container (Zed / VS Code)
+
+You can develop inside a container using the [Dev Containers](https://containers.dev/) specification.
+This is supported by **Zed** and **VS Code** out of the box.
+
+1. Start the project with `make run` (or `make bootstrap` on first use).
+2. Open the project in your IDE — it will detect `.devcontainer/devcontainer.json` and offer to reopen in a container.
+
+The dev container runs alongside `app-dev` as a dedicated IDE workspace with
+Python dependencies and LSP support. It shares the same source files via volume
+mounts, so your changes are immediately reflected in the running application.
+
 ### Django admin
 
 You can access the Django admin site at
