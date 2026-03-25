@@ -113,7 +113,7 @@ build-frontend: ## build the frontend container
 	@$(COMPOSE) build frontend-dev $(cache)
 .PHONY: build-frontend-development
 
-down: ## stop and remove containers, networks, images, and volumes
+down: stop-devcontainer ## stop and remove containers, networks, images, and volumes
 	@$(COMPOSE) down
 	rm -rf data/postgresql.*
 .PHONY: down
@@ -171,9 +171,17 @@ status: ## an alias for "docker compose ps"
 	@$(COMPOSE) ps
 .PHONY: status
 
-stop: ## stop the development server using Docker
+stop: stop-devcontainer ## stop the development server using Docker
 	@$(COMPOSE) stop
 .PHONY: stop
+
+COMPOSE_DEVCONTAINER = docker compose -f compose.yaml -f .devcontainer/docker-compose.override.yml
+
+stop-devcontainer: ## stop the devcontainer service if running
+	@if $(COMPOSE_DEVCONTAINER) ps devcontainer --status running -q 2>/dev/null | grep -q .; then \
+		$(COMPOSE_DEVCONTAINER) stop devcontainer; \
+	fi
+.PHONY: stop-devcontainer
 
 # -- Backend
 
