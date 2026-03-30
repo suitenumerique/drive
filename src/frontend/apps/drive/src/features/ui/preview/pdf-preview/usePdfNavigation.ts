@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 
 interface UsePdfNavigationParams {
@@ -50,6 +50,23 @@ export const usePdfNavigation = ({
     }
   };
 
+  // onItemClick handles internal PDF links (e.g. table of contents entries).
+  // It is called by react-pdf's Document via a viewer ref that is created once
+  // with useRef, so the callback is captured in a stale closure from the first
+  // render. We use a ref to always access the latest goToPage (which depends
+  // on numPages) so navigation targets the correct page.
+  //
+  // onClick (handlePdfClick) handles regular DOM clicks on the annotation layer
+  // — it intercepts external links to show a redirect disclaimer modal.
+  const goToPageRef = useRef(goToPage);
+  useEffect(() => {
+    goToPageRef.current = goToPage;
+  }, [goToPage]);
+
+  const onItemClick = useCallback((args: { pageNumber: number }) => {
+    goToPageRef.current(args.pageNumber);
+  }, []);
+
   return {
     goToPage,
     onDocumentLoadSuccess,
@@ -58,5 +75,6 @@ export const usePdfNavigation = ({
     handlePageInputChange,
     handlePageInputSubmit,
     handlePageInputKeyDown,
+    onItemClick,
   };
 };
