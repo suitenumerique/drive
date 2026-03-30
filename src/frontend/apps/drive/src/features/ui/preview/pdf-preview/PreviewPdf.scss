@@ -12,6 +12,44 @@
     overflow: hidden;
     min-height: 0;
     position: relative;
+
+    .react-pdf__Document,
+    .react-pdf__message {
+      // .react-pdf__message wraps the loading skeleton of <Document>
+      // See: https://github.com/wojtekmaj/react-pdf/blob/ff7f698a383bcba3e1af4bd8d72944762bb5e5c0/packages/react-pdf/src/Document.tsx#L630-L634
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+  }
+
+  &__container {
+    flex: 1;
+    overflow: hidden;
+    min-height: 400px;
+
+    &-skeleton {
+      display: flex;
+      justify-content: center;
+      flex: 1;
+      // So the skeleton aspect ratio could be respected.
+      align-items: flex-start;
+      padding: 16px 16px 0 16px;
+    }
+
+    .react-pdf__Document {
+      height: 100%;
+    }
+  }
+
+  &__page-skeleton {
+    border-radius: 4px;
+    background: var(--c--contextuals--background--surface--primary);
+    box-shadow: 0 3.649px 14.597px 0 rgba(0, 0, 0, 0.1);
+    animation: pdf-skeleton-pulse 1.5s ease-in-out infinite;
+    max-width: 800px;
+    width: 100%;
+    aspect-ratio: 1 / 1.414;
   }
 
   &__sidebar {
@@ -73,13 +111,6 @@
     }
   }
 
-  &__page-skeleton {
-    border-radius: 4px;
-    background: var(--c--contextuals--background--surface--primary);
-    box-shadow: 0 3.649px 14.597px 0 rgba(0, 0, 0, 0.1);
-    animation: pdf-skeleton-pulse 1.5s ease-in-out infinite;
-  }
-
   &__sidebar-skeleton {
     display: flex;
     justify-content: center;
@@ -99,22 +130,6 @@
     font-weight: 700;
     color: var(--c--contextuals--content--semantic--neutral--secondary);
     text-align: center;
-  }
-
-  &__container {
-    flex: 1;
-    overflow: hidden;
-    min-height: 400px;
-
-    &-skeleton {
-      display: flex;
-      justify-content: center;
-      padding-top: 16px;
-    }
-
-    .react-pdf__Document {
-      height: 100%;
-    }
   }
 
   &__horizontal-scroll {

@@ -1,7 +1,7 @@
 import "./pdfPolyfills";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { pdfjs } from "react-pdf";
+import { Document, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import "react-virtualized/styles.css";
@@ -14,7 +14,9 @@ import { PdfPageViewer } from "./PdfPageViewer";
 import type { PdfPageViewerHandle } from "./PdfPageViewer";
 import { useRedirectDisclaimer } from "./useRedirectDisclaimer";
 import { OutdatedBrowserPreview } from "./OutdatedBrowserPreview";
+import { pdfOptions } from "./pdfOptions";
 
+// Configure PDF.js worker source for PDF loading
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.mjs";
 
 export function PreviewPdf({ src }: { src: string }) {
@@ -134,27 +136,41 @@ export function PreviewPdf({ src }: { src: string }) {
     return <OutdatedBrowserPreview />;
   }
 
+  const loadingSkeleton = (
+    <div className="pdf-preview__container-skeleton">
+      <div className="pdf-preview__page-skeleton" />
+    </div>
+  );
+
   return (
     <div className="pdf-preview">
       <div className="pdf-preview__body">
-        <PdfThumbnailSidebar
-          file={file}
-          numPages={numPages}
-          currentPage={currentPage}
-          goToPage={goToPage}
-          isOpen={isSidebarOpen}
-        />
-        <PdfPageViewer
-          ref={viewerRef}
-          file={file}
-          numPages={numPages}
-          zoom={zoom}
-          onDocumentLoadSuccess={onDocumentLoadSuccess}
-          onCurrentPageChange={setCurrentPage}
-          onClick={handlePdfClick}
-          onItemClick={onItemClick}
-          onLoadError={handleDocumentError}
-        />
+        {file ? (
+          <Document
+            file={file}
+            onLoadSuccess={onDocumentLoadSuccess}
+            onItemClick={onItemClick}
+            options={pdfOptions}
+            loading={loadingSkeleton}
+            onLoadError={handleDocumentError}
+          >
+            <PdfThumbnailSidebar
+              numPages={numPages}
+              currentPage={currentPage}
+              goToPage={goToPage}
+              isOpen={isSidebarOpen}
+            />
+            <PdfPageViewer
+              ref={viewerRef}
+              numPages={numPages}
+              zoom={zoom}
+              onCurrentPageChange={setCurrentPage}
+              onClick={handlePdfClick}
+            />
+          </Document>
+        ) : (
+          loadingSkeleton
+        )}
       </div>
       <PdfControls
         numPages={numPages}

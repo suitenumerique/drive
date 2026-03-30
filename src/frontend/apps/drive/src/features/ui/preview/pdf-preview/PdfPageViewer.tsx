@@ -6,12 +6,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { Document, Page } from "react-pdf";
-import type { PDFDocumentProxy } from "pdfjs-dist";
+import { Page } from "react-pdf";
 import { AutoSizer, List } from "react-virtualized";
 import type { ListRowRenderer, Index } from "react-virtualized";
 import { useDebouncedResize } from "./useDebouncedResize";
-import { pdfOptions } from "./pdfOptions";
 
 const PAGE_GAP = 16;
 const BASE_WIDTH = 800;
@@ -22,25 +20,17 @@ export interface PdfPageViewerHandle {
 }
 
 interface PdfPageViewerProps {
-  file?: File | null;
   numPages: number;
   zoom: number;
-  onDocumentLoadSuccess: (pdf: PDFDocumentProxy) => void;
   onCurrentPageChange: (page: number) => void;
   onClick: (e: React.MouseEvent<HTMLDivElement>) => void;
-  onItemClick: (args: { pageNumber: number }) => void;
-  onLoadError?: (error: Error) => void;
 }
 
 export function PdfPageViewer({
-  file,
   numPages,
   zoom,
-  onDocumentLoadSuccess,
   onCurrentPageChange,
   onClick,
-  onItemClick,
-  onLoadError,
   ref,
 }: PdfPageViewerProps & { ref?: React.Ref<PdfPageViewerHandle> }) {
   const listRef = useRef<List>(null);
@@ -56,6 +46,7 @@ export function PdfPageViewer({
       : BASE_WIDTH;
   }, [size.width]);
 
+  // ISO 216 A4 portrait aspect ratio (height / width)
   const pageHeight = width * 1.414;
 
   const rowHeightForIndex = useCallback(
@@ -68,6 +59,7 @@ export function PdfPageViewer({
     [pageHeight, zoom, numPages],
   );
 
+  // Wrapper around rowHeightForIndex with appropriate signature for react-virtualized.
   const rowHeight = useCallback(
     ({ index }: Index) => rowHeightForIndex(index),
     [rowHeightForIndex],
@@ -168,57 +160,38 @@ export function PdfPageViewer({
     />
   );
 
-  const loadingContainerSkeleton = (
-    <div className="pdf-preview__container-skeleton">{pageSkeleton}</div>
-  );
-
-  if (!file) {
-    return (
-      <div className="pdf-preview__container">{loadingContainerSkeleton}</div>
-    );
-  }
-
   return (
     <div className="pdf-preview__container" onClick={onClick}>
-      <Document
-        file={file}
-        onLoadSuccess={onDocumentLoadSuccess}
-        onItemClick={onItemClick}
-        options={pdfOptions}
-        loading={loadingContainerSkeleton}
-        onLoadError={onLoadError}
-      >
-        <AutoSizer>
-          {({ height, width: autoWidth }) => {
-            // When zoomed in the page content may exceed the viewport width.
-            // The wrapper div is clamped to the viewport (autoWidth) and scrolls
-            // horizontally, while the List itself is sized to the full content
-            // width so pages render uncropped.
-            const listWidth = Math.max(autoWidth, width * zoom);
-            return (
-              <div
-                style={{
-                  width: autoWidth,
-                  height,
-                }}
-                className="pdf-preview__horizontal-scroll"
-              >
-                <List
-                  ref={listRef}
-                  height={height}
-                  width={listWidth}
-                  rowCount={numPages}
-                  rowHeight={rowHeight}
-                  overscanRowCount={3}
-                  onScroll={handleScroll}
-                  rowRenderer={rowRenderer}
-                  style={{ outline: "none" }}
-                />
-              </div>
-            );
-          }}
-        </AutoSizer>
-      </Document>
+      <AutoSizer>
+        {({ height, width: autoWidth }) => {
+          // When zoomed in the page content may exceed the viewport width.
+          // The wrapper div is clamped to the viewport (autoWidth) and scrolls
+          // horizontally, while the List itself is sized to the full content
+          // width so pages render uncropped.
+          const listWidth = Math.max(autoWidth, width * zoom);
+          return (
+            <div
+              style={{
+                width: autoWidth,
+                height,
+              }}
+              className="pdf-preview__horizontal-scroll"
+            >
+              <List
+                ref={listRef}
+                height={height}
+                width={listWidth}
+                rowCount={numPages}
+                rowHeight={rowHeight}
+                overscanRowCount={3}
+                onScroll={handleScroll}
+                rowRenderer={rowRenderer}
+                style={{ outline: "none" }}
+              />
+            </div>
+          );
+        }}
+      </AutoSizer>
     </div>
   );
 }

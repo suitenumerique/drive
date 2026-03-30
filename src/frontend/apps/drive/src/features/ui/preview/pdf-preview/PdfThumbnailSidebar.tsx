@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Document, Thumbnail } from "react-pdf";
+import { Thumbnail } from "react-pdf";
 import { AutoSizer, List } from "react-virtualized";
 import type { ListRowRenderer } from "react-virtualized";
-import { pdfOptions } from "./pdfOptions";
 
 interface PdfThumbnailSidebarProps {
-  file?: File | null;
   numPages: number;
   currentPage: number;
   goToPage: (page: number) => void;
@@ -50,20 +48,18 @@ export function PdfThumbnailSidebar(props: PdfThumbnailSidebarProps) {
 }
 
 export function PdfThumbnailSidebarContent({
-  file,
   numPages,
   currentPage,
   goToPage,
   isOpen,
 }: PdfThumbnailSidebarProps) {
   const listRef = useRef<List>(null);
-  const [isDocLoaded, setIsDocLoaded] = useState(false);
 
   // Auto-scroll active thumbnail into view
   useEffect(() => {
-    if (!isDocLoaded || !listRef.current) return;
+    if (!listRef.current) return;
     listRef.current.scrollToRow(currentPage - 1);
-  }, [isDocLoaded, currentPage]);
+  }, [currentPage]);
 
   const thumbnailSkeleton = <div className="pdf-preview__thumbnail-skeleton" />;
 
@@ -95,40 +91,25 @@ export function PdfThumbnailSidebarContent({
     );
   };
 
-  const loadingContainerSkeleton = (
-    <div className="pdf-preview__sidebar-skeleton">{thumbnailSkeleton}</div>
-  );
-
   return (
     <div
       className={`pdf-preview__sidebar${!isOpen ? " pdf-preview__sidebar--closed" : ""}`}
     >
-      {file ? (
-        <Document
-          file={file}
-          options={pdfOptions}
-          loading={loadingContainerSkeleton}
-          onLoadSuccess={() => setIsDocLoaded(true)}
-        >
-          <AutoSizer>
-            {({ height, width }) => (
-              <List
-                ref={listRef}
-                height={height}
-                width={width}
-                rowCount={numPages}
-                rowHeight={ROW_HEIGHT}
-                overscanRowCount={5}
-                rowRenderer={rowRenderer}
-                scrollToAlignment="center"
-                style={{ outline: "none" }}
-              />
-            )}
-          </AutoSizer>
-        </Document>
-      ) : (
-        loadingContainerSkeleton
-      )}
+      <AutoSizer>
+        {({ height, width }) => (
+          <List
+            ref={listRef}
+            height={height}
+            width={width}
+            rowCount={numPages}
+            rowHeight={ROW_HEIGHT}
+            overscanRowCount={5}
+            rowRenderer={rowRenderer}
+            scrollToAlignment="center"
+            style={{ outline: "none" }}
+          />
+        )}
+      </AutoSizer>
     </div>
   );
 }
