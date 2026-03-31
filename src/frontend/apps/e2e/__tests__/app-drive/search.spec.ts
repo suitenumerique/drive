@@ -19,13 +19,13 @@ test("Search somes items and shows them in the search modal", async ({
 
   // Expect no results before typing.
   let searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(0);
+  await expect(searchItems).toHaveCount(0);
 
   await input.fill("me");
 
   // Expect 3 results after typing "me".
   searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(3);
+  await expect(searchItems).toHaveCount(3);
 
   let searchItem = page.getByRole("option", { name: "Meetings Dev Team" });
   await expect(searchItem).toContainText("Dev Team");
@@ -43,7 +43,7 @@ test("Search somes items and shows them in the search modal", async ({
   await page.getByRole("combobox", { name: "Quick search input" }).fill("sale");
 
   searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(1);
+  await expect(searchItems).toHaveCount(1);
 
   searchItem = page.getByRole("option", {
     name: "Sales report",
@@ -97,7 +97,7 @@ test("Search folder from trash and cannot navigate to it", async ({ page }) => {
   await page.getByRole("button", { name: "Search" }).click();
 
   let searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(0);
+  await expect(searchItems).toHaveCount(0);
 
   const input = page.getByRole("combobox", { name: "Quick search input" });
   await expect(input).toBeVisible();
@@ -108,7 +108,7 @@ test("Search folder from trash and cannot navigate to it", async ({ page }) => {
   await page.getByRole("option", { name: "Recycle bin" }).click();
 
   searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(1);
+  await expect(searchItems).toHaveCount(1);
 
   const button = page.getByRole("option", { name: "I am deleted" });
   await button.click();
@@ -145,7 +145,7 @@ test("Search a deleted file and click on it", async ({ page }) => {
   await page.getByRole("option", { name: "Recycle bin" }).click();
 
   let searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(1);
+  await expect(searchItems).toHaveCount(1);
 
   const button = page.getByRole("option", { name: "Resume" });
   await button.click();

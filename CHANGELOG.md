@@ -17,6 +17,7 @@ and this project adheres to
 - 🔒️(frontend) prevent search engine indexing
 - ✨(backend) allow ordering items by creator full name
 - ✨(frontend) add item duplication with polling and visual feedback
+- ⚡(ci) shard e2e tests and cache playwright browsers
 
 ### Changed
 
