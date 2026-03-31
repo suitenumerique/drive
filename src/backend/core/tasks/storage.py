@@ -144,3 +144,37 @@ def rename_file_on_mirroring_bucket(item_id, from_file_key, to_file_key):
         Bucket=mirror_bucket,
         Key=from_file_key,
     )
+
+
+@app.task
+def duplicate_file_on_mirroring_bucket(duplicated_item_id, from_file_key, to_file_key):
+    """Duplicate a file on the mirror bucket by creating a copy of the original file."""
+
+    mirror_s3_client = get_mirror_s3_client()
+    if not mirror_s3_client:
+        logger.info(
+            "Mirroring S3 bucket is not configured, skipping renaming file on the mirroring bucket"
+        )
+        return
+    mirror_bucket = settings.AWS_S3_MIRRORING_STORAGE_BUCKET_NAME
+
+    try:
+        mirror_s3_client.head_object(Bucket=mirror_bucket, Key=from_file_key)
+    except botocore.exceptions.ClientError:
+        item = Item.objects.get(pk=duplicated_item_id)
+        mirror_task = MirrorItemTask.objects.create(
+            item=item, status=MirrorItemTaskStatusChoices.PENDING
+        )
+
+        mirror_file.delay(mirror_task.id)
+        return
+
+    mirror_s3_client.copy_object(
+        Bucket=mirror_bucket,
+        CopySource={
+            "Bucket": mirror_bucket,
+            "Key": from_file_key,
+        },
+        Key=to_file_key,
+        MetadataDirective="COPY",
+    )

@@ -22,12 +22,6 @@ pytestmark = pytest.mark.django_db
 # pylint: disable=no-value-for-parameter
 
 
-@pytest.fixture(autouse=True)
-def clear_get_mirror_s3_client_cache():
-    """Clear the cache for get_mirror_s3_client."""
-    get_mirror_s3_client.cache_clear()
-
-
 def test_get_mirror_s3_client_no_config_should_return_none(settings):
     """Test get_mirror_s3_client without config should return None."""
     settings.AWS_S3_MIRRORING_ACCESS_KEY_ID = None

@@ -2,6 +2,7 @@
 
 import uuid
 from io import BytesIO
+from unittest import mock
 
 from django.core.files.storage import default_storage
 
@@ -9,7 +10,7 @@ import botocore
 import pytest
 
 from core import factories, models
-from core.tasks.item import duplicate_file
+from core.tasks.item import duplicate_file, duplicate_file_on_mirroring_bucket
 
 pytestmark = pytest.mark.django_db
 
@@ -20,7 +21,12 @@ pytestmark = pytest.mark.django_db
 def test_duplicate_file_item_to_duplicate_does_not_exist(caplog):
     """Test when the item_to_duplicate does not exists, should abort the task."""
 
-    with caplog.at_level("ERROR", logger="core.tasks.item"):
+    with (
+        caplog.at_level("ERROR", logger="core.tasks.item"),
+        mock.patch.object(
+            duplicate_file_on_mirroring_bucket, "delay"
+        ) as mock_duplicate_file_on_mirroring_bucket,
+    ):
         item_to_duplicate_id = uuid.uuid4()
         duplicate_file(item_to_duplicate_id=item_to_duplicate_id, duplicated_item_id=uuid.uuid4())
 
@@ -29,13 +35,20 @@ def test_duplicate_file_item_to_duplicate_does_not_exist(caplog):
         "aborting" in caplog.text
     )
 
+    mock_duplicate_file_on_mirroring_bucket.assert_not_called()
+
 
 def test_duplicate_file_duplicated_item_does_not_exist(caplog):
     """Test when the duplicated_item does not exists, should abort the task."""
 
     item_to_duplicate = factories.ItemFactory(type=models.ItemTypeChoices.FILE)
 
-    with caplog.at_level("ERROR", logger="core.tasks.item"):
+    with (
+        caplog.at_level("ERROR", logger="core.tasks.item"),
+        mock.patch.object(
+            duplicate_file_on_mirroring_bucket, "delay"
+        ) as mock_duplicate_file_on_mirroring_bucket,
+    ):
         duplicated_item_id = uuid.uuid4()
         duplicate_file(
             item_to_duplicate_id=item_to_duplicate.id,
@@ -46,6 +59,7 @@ def test_duplicate_file_duplicated_item_does_not_exist(caplog):
         f"duplicating file: duplicated_item with id {duplicated_item_id} does not exist, aborting"
         in caplog.text
     )
+    mock_duplicate_file_on_mirroring_bucket.assert_not_called()
 
 
 def test_duplicate_file_duplicated_file_not_in_duplicating_state(caplog):
@@ -60,7 +74,12 @@ def test_duplicate_file_duplicated_file_not_in_duplicating_state(caplog):
         update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
-    with caplog.at_level("ERROR", logger="core.tasks.item"):
+    with (
+        caplog.at_level("ERROR", logger="core.tasks.item"),
+        mock.patch.object(
+            duplicate_file_on_mirroring_bucket, "delay"
+        ) as mock_duplicate_file_on_mirroring_bucket,
+    ):
         duplicate_file(
             item_to_duplicate_id=item_to_duplicate.id,
             duplicated_item_id=duplicated_item.id,
@@ -70,6 +89,7 @@ def test_duplicate_file_duplicated_file_not_in_duplicating_state(caplog):
         "duplicating file: the duplidated file upload_state is not duplicating but ready, "
         "aborting" in caplog.text
     )
+    mock_duplicate_file_on_mirroring_bucket.assert_not_called()
 
 
 def test_duplicate_file():
@@ -89,16 +109,21 @@ def test_duplicate_file():
     default_storage.save(item_to_duplicate.file_key, BytesIO(b"my prose"))
 
     assert not default_storage.exists(duplicated_item.file_key)
-
-    duplicate_file(
-        item_to_duplicate_id=item_to_duplicate.id,
-        duplicated_item_id=duplicated_item.id,
-    )
+    with mock.patch.object(
+        duplicate_file_on_mirroring_bucket, "delay"
+    ) as mock_duplicate_file_on_mirroring_bucket:
+        duplicate_file(
+            item_to_duplicate_id=item_to_duplicate.id,
+            duplicated_item_id=duplicated_item.id,
+        )
 
     duplicated_item.refresh_from_db()
 
     assert duplicated_item.upload_state == models.ItemUploadStateChoices.READY
     assert default_storage.exists(duplicated_item.file_key)
+    mock_duplicate_file_on_mirroring_bucket.assert_called_once_with(
+        duplicated_item.id, item_to_duplicate.file_key, duplicated_item.file_key
+    )
 
 
 def test_duplicate_file_retry(caplog):
@@ -119,6 +144,9 @@ def test_duplicate_file_retry(caplog):
     with (
         caplog.at_level("ERROR", logger="core.tasks.item"),
         pytest.raises(botocore.exceptions.ClientError),
+        mock.patch.object(
+            duplicate_file_on_mirroring_bucket, "delay"
+        ) as mock_duplicate_file_on_mirroring_bucket,
     ):
         duplicate_file(
             item_to_duplicate_id=item_to_duplicate.id,
@@ -130,6 +158,7 @@ def test_duplicate_file_retry(caplog):
         "(NoSuchKey) when calling the CopyObject operation: The specified key does not exist."
         in caplog.text
     )
+    mock_duplicate_file_on_mirroring_bucket.assert_not_called()
 
 
 def test_duplicate_file_max_retries_exceeded(caplog):
@@ -150,6 +179,9 @@ def test_duplicate_file_max_retries_exceeded(caplog):
     with (
         caplog.at_level("ERROR", logger="core.tasks.item"),
         pytest.raises(botocore.exceptions.ClientError),
+        mock.patch.object(
+            duplicate_file_on_mirroring_bucket, "delay"
+        ) as mock_duplicate_file_on_mirroring_bucket,
     ):
         duplicate_file.max_retries = 0
         duplicate_file(
@@ -163,3 +195,4 @@ def test_duplicate_file_max_retries_exceeded(caplog):
         f"duplicating file: 0 max retries exceeded, the duplicated item {duplicated_item.id} is"
         " deleted" in caplog.text
     )
+    mock_duplicate_file_on_mirroring_bucket.assert_not_called()

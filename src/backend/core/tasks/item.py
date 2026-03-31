@@ -13,7 +13,7 @@ import botocore
 
 from core.api.utils import sanitize_filename
 from core.models import Item, ItemTypeChoices, ItemUploadStateChoices
-from core.tasks.storage import rename_file_on_mirroring_bucket
+from core.tasks.storage import duplicate_file_on_mirroring_bucket, rename_file_on_mirroring_bucket
 
 from drive.celery_app import app
 
@@ -132,7 +132,7 @@ def update_suspicious_item_file_hash(item_id):
 
 @app.task(bind=True, max_retries=10)
 def duplicate_file(self, item_to_duplicate_id, duplicated_item_id):
-    """Copy a file on the storage."""
+    """Duplicate a file on the storage by creating a copy of the original file."""
     try:
         item_to_duplicate = Item.objects.get(id=item_to_duplicate_id)
     except Item.DoesNotExist:
@@ -197,3 +197,7 @@ def duplicate_file(self, item_to_duplicate_id, duplicated_item_id):
 
     duplicated_item.upload_state = ItemUploadStateChoices.READY
     duplicated_item.save(update_fields=["upload_state", "updated_at"])
+
+    duplicate_file_on_mirroring_bucket.delay(
+        duplicated_item.id, item_to_duplicate.file_key, duplicated_item.file_key
+    )

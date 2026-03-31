@@ -15,6 +15,7 @@ and this project adheres to
 - 📝(doc) add local network setup documentation
 - ✨(global) add custom columns feature with configurable grid columns
 - ✨(backend) mirror a file once renamed
+- ✨(backend) mirror a file when duplicated
 
 ### Changed
 
