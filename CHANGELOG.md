@@ -27,6 +27,7 @@ and this project adheres to
 - 🐛(backend) fix hard delete of files created by other users
 - 🐛(backend) handle race condition on concurrent LinkTrace creation
 - 🐛(frontend) fix React SVG attributes in AddFolderButton
+- 🐛(backend) handle storage errors in item deletion and clean orphan files
 
 ## [v0.15.0] - 2026-03-16
 

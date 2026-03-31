@@ -1,7 +1,10 @@
 """Tests for the clean_pending_items management command."""
 
 from datetime import timedelta
+from io import BytesIO
+from unittest.mock import patch
 
+from django.core.files.storage import default_storage
 from django.core.management import call_command
 from django.utils import timezone
 
@@ -80,3 +83,20 @@ def test_clean_pending_items_custom_hours():
     call_command("clean_pending_items", "--hours=8")
 
     assert not models.Item.objects.filter(pk=item.pk).exists()
+
+
+def test_clean_pending_items_calls_process_item_deletion():
+    """Stale pending items should be cleaned via process_item_deletion."""
+    old_date = timezone.now() - timedelta(hours=49)
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="pending.txt",
+        update_upload_state=models.ItemUploadStateChoices.PENDING,
+    )
+    models.Item.objects.filter(pk=item.pk).update(created_at=old_date)
+    default_storage.save(item.file_key, BytesIO(b"orphan data"))
+
+    with patch("core.management.commands.clean_pending_items.process_item_deletion") as mock_task:
+        mock_task.delay.side_effect = mock_task
+        call_command("clean_pending_items")
+        mock_task.delay.assert_called_once_with(item.id)
