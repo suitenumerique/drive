@@ -27,6 +27,7 @@ and this project adheres to
 - 🐛(backend) fix hard delete of files created by other users
 - 🐛(backend) handle race condition on concurrent LinkTrace creation
 - 🐛(frontend) fix React SVG attributes in AddFolderButton
+- 🔧(scalingo) compile translation files at deploy time
 
 ## [v0.15.0] - 2026-03-16
 
