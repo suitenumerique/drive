@@ -14,6 +14,7 @@ and this project adheres to
 - ✨(frontend) integrate PDF viewer into file preview modal
 - 📝(doc) add local network setup documentation
 - ✨(global) add custom columns feature with configurable grid columns
+- ✨(backend) mirror a file once renamed
 
 ### Changed
 

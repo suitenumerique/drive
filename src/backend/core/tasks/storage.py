@@ -10,7 +10,7 @@ import boto3
 import botocore
 
 from core.api.utils import get_item_file_head_object
-from core.models import MirrorItemTask, MirrorItemTaskStatusChoices
+from core.models import Item, MirrorItemTask, MirrorItemTaskStatusChoices
 
 from drive.celery_app import app
 
@@ -104,3 +104,43 @@ def mirror_file(self, mirror_task_id):
     logger.info("Successfully mirrored file %s to bucket %s", item_key, mirror_bucket)
     mirror_task.status = MirrorItemTaskStatusChoices.COMPLETED
     mirror_task.save(update_fields=["status", "updated_at"])
+
+
+@app.task
+def rename_file_on_mirroring_bucket(item_id, from_file_key, to_file_key):
+    """
+    Rename a file on the mirroring bucket. If the original file does not exist, mirror it.
+    Copy it otherwise
+    """
+    mirror_s3_client = get_mirror_s3_client()
+    if not mirror_s3_client:
+        logger.info(
+            "Mirroring S3 bucket is not configured, skipping renaming file on the mirroring bucket"
+        )
+        return
+    mirror_bucket = settings.AWS_S3_MIRRORING_STORAGE_BUCKET_NAME
+
+    try:
+        mirror_s3_client.head_object(Bucket=mirror_bucket, Key=from_file_key)
+    except botocore.exceptions.ClientError:
+        item = Item.objects.get(pk=item_id)
+        mirror_task = MirrorItemTask.objects.create(
+            item=item, status=MirrorItemTaskStatusChoices.PENDING
+        )
+
+        mirror_file.delay(mirror_task.id)
+        return
+
+    mirror_s3_client.copy_object(
+        Bucket=mirror_bucket,
+        CopySource={
+            "Bucket": mirror_bucket,
+            "Key": from_file_key,
+        },
+        Key=to_file_key,
+        MetadataDirective="COPY",
+    )
+    mirror_s3_client.delete_object(
+        Bucket=mirror_bucket,
+        Key=from_file_key,
+    )

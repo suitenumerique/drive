@@ -13,6 +13,7 @@ import botocore
 
 from core.api.utils import sanitize_filename
 from core.models import Item, ItemTypeChoices, ItemUploadStateChoices
+from core.tasks.storage import rename_file_on_mirroring_bucket
 
 from drive.celery_app import app
 
@@ -104,6 +105,8 @@ def rename_file(item_id, new_title):
         Bucket=default_storage.bucket_name,
         Key=from_file_key,
     )
+
+    rename_file_on_mirroring_bucket.delay(item.id, from_file_key, to_file_key)
 
 
 @app.task

@@ -1,13 +1,14 @@
 """Test the rename file task."""
 
 from io import BytesIO
+from unittest import mock
 
 from django.core.files.storage import default_storage
 
 import pytest
 
 from core import factories, models
-from core.tasks.item import rename_file
+from core.tasks.item import rename_file, rename_file_on_mirroring_bucket
 
 pytestmark = pytest.mark.django_db
 
@@ -26,11 +27,17 @@ def test_rename_file():
 
     default_storage.save(item.file_key, BytesIO(b"my prose"))
 
-    rename_file(item.id, "new_title")
+    with mock.patch.object(
+        rename_file_on_mirroring_bucket, "delay"
+    ) as mock_rename_file_on_mirroring_bucket:
+        rename_file(item.id, "new_title")
     item.refresh_from_db()
     assert item.filename == "new_title.txt"
     assert default_storage.exists(item.file_key)
     assert not default_storage.exists(f"{item.key_base}/old_title.txt")
+    mock_rename_file_on_mirroring_bucket.assert_called_once_with(
+        item.id, f"{item.key_base}/old_title.txt", item.file_key
+    )
 
 
 def test_rename_file_origin_extension_is_kept():
@@ -46,11 +53,17 @@ def test_rename_file_origin_extension_is_kept():
     )
     default_storage.save(item.file_key, BytesIO(b"my prose"))
 
-    rename_file(item.id, "new_title.pdf")
+    with mock.patch.object(
+        rename_file_on_mirroring_bucket, "delay"
+    ) as mock_rename_file_on_mirroring_bucket:
+        rename_file(item.id, "new_title.pdf")
     item.refresh_from_db()
     assert item.filename == "new_title.pdf.txt"
     assert default_storage.exists(item.file_key)
     assert not default_storage.exists(f"{item.key_base}/old_title.txt")
+    mock_rename_file_on_mirroring_bucket.assert_called_once_with(
+        item.id, f"{item.key_base}/old_title.txt", item.file_key
+    )
 
 
 def test_rename_filename_invalid_filename():
@@ -67,11 +80,17 @@ def test_rename_filename_invalid_filename():
 
     default_storage.save(item.file_key, BytesIO(b"my prose"))
 
-    rename_file(item.id, "><img src=x onerror=alert()>␊")
+    with mock.patch.object(
+        rename_file_on_mirroring_bucket, "delay"
+    ) as mock_rename_file_on_mirroring_bucket:
+        rename_file(item.id, "><img src=x onerror=alert()>␊")
     item.refresh_from_db()
     assert item.filename == "img_srcx_onerroralert.txt"
     assert default_storage.exists(item.file_key)
     assert not default_storage.exists(f"{item.key_base}/old_title.txt")
+    mock_rename_file_on_mirroring_bucket.assert_called_once_with(
+        item.id, f"{item.key_base}/old_title.txt", item.file_key
+    )
 
 
 def test_rename_file_filename_has_not_changed():
@@ -89,11 +108,15 @@ def test_rename_file_filename_has_not_changed():
     updated_at = item.updated_at
     file_key = item.file_key
 
-    rename_file(item.id, "new_title")
+    with mock.patch.object(
+        rename_file_on_mirroring_bucket, "delay"
+    ) as mock_rename_file_on_mirroring_bucket:
+        rename_file(item.id, "new_title")
     item.refresh_from_db()
     assert item.filename == "new_title.txt"
     assert item.updated_at == updated_at
     assert default_storage.exists(file_key)
+    mock_rename_file_on_mirroring_bucket.assert_not_called()
 
 
 def test_rename_file_item_not_ready(caplog):
@@ -107,11 +130,17 @@ def test_rename_file_item_not_ready(caplog):
         creator=user,
         users=[(user, models.RoleChoices.OWNER)],
     )
-    with caplog.at_level("ERROR", logger="core.tasks.item"):
+    with (
+        caplog.at_level("ERROR", logger="core.tasks.item"),
+        mock.patch.object(
+            rename_file_on_mirroring_bucket, "delay"
+        ) as mock_rename_file_on_mirroring_bucket,
+    ):
         rename_file(item.id, "new_title")
     item.refresh_from_db()
     assert item.filename == "old_title.txt"
     assert f"Item {item.id} is not ready for renaming" in caplog.text
+    mock_rename_file_on_mirroring_bucket.assert_not_called()
 
 
 def test_rename_file_new_title_is_empty(caplog):
@@ -126,11 +155,17 @@ def test_rename_file_new_title_is_empty(caplog):
         users=[(user, models.RoleChoices.OWNER)],
     )
 
-    with caplog.at_level("ERROR", logger="core.tasks.item"):
+    with (
+        caplog.at_level("ERROR", logger="core.tasks.item"),
+        mock.patch.object(
+            rename_file_on_mirroring_bucket, "delay"
+        ) as mock_rename_file_on_mirroring_bucket,
+    ):
         rename_file(item.id, "")
     item.refresh_from_db()
     assert item.filename == "old_title.txt"
     assert "New title is empty, skipping rename file" in caplog.text
+    mock_rename_file_on_mirroring_bucket.assert_not_called()
 
 
 def test_rename_file_new_title_is_none(caplog):
@@ -145,8 +180,14 @@ def test_rename_file_new_title_is_none(caplog):
         users=[(user, models.RoleChoices.OWNER)],
     )
 
-    with caplog.at_level("ERROR", logger="core.tasks.item"):
+    with (
+        caplog.at_level("ERROR", logger="core.tasks.item"),
+        mock.patch.object(
+            rename_file_on_mirroring_bucket, "delay"
+        ) as mock_rename_file_on_mirroring_bucket,
+    ):
         rename_file(item.id, None)
     item.refresh_from_db()
     assert item.filename == "old_title.txt"
     assert "New title is empty, skipping rename file" in caplog.text
+    mock_rename_file_on_mirroring_bucket.assert_not_called()
