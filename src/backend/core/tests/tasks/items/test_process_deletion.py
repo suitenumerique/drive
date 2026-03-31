@@ -2,9 +2,11 @@
 
 import logging
 from io import BytesIO
+from unittest.mock import patch
 
 from django.core.files.storage import default_storage
 
+import botocore.exceptions
 import pytest
 
 from core import factories, models
@@ -102,6 +104,53 @@ def test_process_item_deletion_in_cascade():
     assert models.Item.objects.all().count() == 0
     assert not default_storage.exists(child_file.file_key)
     assert not default_storage.exists(child2_file.file_key)
+
+
+def test_process_item_deletion_storage_client_error(caplog):
+    """The item should be deleted from DB even if S3 returns an HTTP error."""
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="foo.txt",
+    )
+    item.soft_delete()
+    item.hard_delete()
+
+    error_response = {"Error": {"Code": "AccessDenied", "Message": "Access Denied"}}
+    with (
+        patch.object(
+            default_storage,
+            "delete",
+            side_effect=botocore.exceptions.ClientError(error_response, "DeleteObject"),
+        ),
+        caplog.at_level(logging.ERROR),
+    ):
+        process_item_deletion(item.id)
+
+    assert not models.Item.objects.filter(id=item.id).exists()
+    assert "Access Denied" in caplog.text
+
+
+def test_process_item_deletion_storage_botocore_error(caplog):
+    """The item should be deleted from DB even if a botocore infra error occurs."""
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="foo.txt",
+    )
+    item.soft_delete()
+    item.hard_delete()
+
+    with (
+        patch.object(
+            default_storage,
+            "delete",
+            side_effect=botocore.exceptions.EndpointConnectionError(endpoint_url="https://s3"),
+        ),
+        caplog.at_level(logging.ERROR),
+    ):
+        process_item_deletion(item.id)
+
+    assert not models.Item.objects.filter(id=item.id).exists()
+    assert "https://s3" in caplog.text
 
 
 def test_process_item_deletion_item_subfolder_in_cascade():
