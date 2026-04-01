@@ -23,8 +23,13 @@ import { useEffect, useState } from "react";
 import {
   useMutationCreateFavoriteItem,
   useMutationDeleteFavoriteItem,
+  useMutationDuplicateItem,
 } from "./useMutations";
 import { DefaultRoute } from "@/utils/defaultRoutes";
+import {
+  addToast,
+  ToasterItem,
+} from "@/features/ui/components/toaster/Toaster";
 
 type UseItemActionMenuItemsOptions = {
   onModalOpenChange?: (isModalOpen: boolean) => void;
@@ -51,6 +56,7 @@ export const useItemActionMenuItems = ({
 
   const { mutateAsync: deleteFavoriteItem } = useMutationDeleteFavoriteItem();
   const { mutateAsync: createFavoriteItem } = useMutationCreateFavoriteItem();
+  const { mutateAsync: duplicateItem } = useMutationDuplicateItem();
 
   const shareItemModal = useModal();
   const renameModal = useModal();
@@ -148,6 +154,23 @@ export const useItemActionMenuItems = ({
         isHidden: item.type === ItemType.FOLDER || minimal,
         callback: () => {
           handleDownloadItem(item);
+        },
+      },
+      {
+        icon: <span className="material-icons">content_copy</span>,
+        label: t("explorer.item.actions.duplicate"),
+        isHidden: !item.abilities?.duplicate || item.type === ItemType.FOLDER,
+        callback: async () => {
+          try {
+            await duplicateItem(effectiveItemId);
+          } catch {
+            addToast(
+              <ToasterItem type="error">
+                <span className="material-icons">content_copy</span>
+                <span>{t("explorer.item.actions.duplicate_error")}</span>
+              </ToasterItem>,
+            );
+          }
         },
       },
 

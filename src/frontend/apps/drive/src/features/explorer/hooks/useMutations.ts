@@ -216,6 +216,23 @@ export const useMutationUpdateWorkspace = () => {
   });
 };
 
+export const useMutationDuplicateItem = () => {
+  const driver = getDriver();
+  const { item } = useGlobalExplorer();
+
+  const refresh = useRefreshQueryCacheAfterMutation();
+
+  return useMutation({
+    mutationFn: (itemId: string) => {
+      return driver.duplicateItem(itemId);
+    },
+    onSuccess: () => {
+      const parentId = item?.originalId ?? item?.id;
+      refresh(parentId);
+    },
+  });
+};
+
 export const useMutationCreateFavoriteItem = () => {
   const driver = getDriver();
 
