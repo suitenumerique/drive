@@ -30,6 +30,8 @@ export interface AppExplorerProps {
   selectionBarActions?: React.ReactNode;
   // Override the default onNavigate from ExplorerContext
   onNavigate?: (event: NavigationEvent) => void;
+  // Override the default onFileClick (e.g. to prevent preview in trash)
+  onFileClick?: (item: Item) => void;
   disableAreaSelection?: boolean;
   canSelect?: (item: Item) => boolean;
   // Infinite scroll props

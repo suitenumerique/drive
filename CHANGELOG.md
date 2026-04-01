@@ -32,6 +32,7 @@ and this project adheres to
 - 🐛(frontend) fix React SVG attributes in AddFolderButton
 - 🔧(scalingo) compile translation files at deploy time
 - 🐛(frontend) fix trash items not refreshing after hard delete
+- 🐛(frontend) show modal when clicking files in trash
 
 ## [v0.15.0] - 2026-03-16
 

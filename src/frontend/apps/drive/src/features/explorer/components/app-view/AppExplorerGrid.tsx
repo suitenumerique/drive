@@ -45,7 +45,7 @@ export const AppExplorerGrid = () => {
 
   const effectiveOnNavigate = appExplorer.onNavigate ?? onNavigate;
 
-  const handleFileClick = (item: Item) => {
+  const handleFileClick = appExplorer.onFileClick ?? ((item: Item) => {
     if (item.url) {
       // We need to ensure the preview items list is updated when clicking on a file from the grid. Because this list
       // can be updated when clicking on a file from the search modal which sets the preview items to a list of one item.
@@ -54,7 +54,7 @@ export const AppExplorerGrid = () => {
     } else {
       addToast(<ToasterItem>{t("explorer.grid.no_url")}</ToasterItem>);
     }
-  };
+  });
 
   const isLoading =
     appExplorer.isLoading || appExplorer.childrenItems === undefined;

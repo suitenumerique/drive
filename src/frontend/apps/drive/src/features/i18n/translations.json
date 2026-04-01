@@ -327,9 +327,13 @@
           "title": "Trash",
           "description": "Automatic deletion after 30 days",
           "navigate": {
-            "modal": {
+            "modal_folder": {
               "title": "This folder is in the trash",
               "description": "To display this folder, you need to restore it first."
+            },
+            "modal_file": {
+              "title": "This file is in the trash",
+              "description": "To display this file, you need to restore it first."
             }
           },
           "hard_delete": {
@@ -869,9 +873,13 @@
           "title": "Corbeille",
           "description": "Suppression automatique après 30 jours",
           "navigate": {
-            "modal": {
+            "modal_folder": {
               "title": "Ce dossier est dans la corbeille",
               "description": "Pour afficher ce dossier, vous devez d'abord le restaurer."
+            },
+            "modal_file": {
+              "title": "Ce fichier est dans la corbeille",
+              "description": "Pour afficher ce fichier, vous devez d'abord le restaurer."
             }
           },
           "hard_delete": {
@@ -1413,9 +1421,13 @@
           "title": "Prullenbak",
           "description": "Automatisch verwijderen na 30 dagen",
           "navigate": {
-            "modal": {
+            "modal_folder": {
               "title": "Deze map bevindt zich in de prullenbak",
               "description": "Om deze map weer te geven, moet u deze eerst herstellen."
+            },
+            "modal_file": {
+              "title": "Dit bestand bevindt zich in de prullenbak",
+              "description": "Om dit bestand weer te geven, moet u het eerst herstellen."
             }
           },
           "hard_delete": {
