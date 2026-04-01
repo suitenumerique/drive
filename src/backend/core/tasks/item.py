@@ -40,7 +40,10 @@ def process_item_deletion(item_id):
 
     if item.type == ItemTypeChoices.FILE:
         logger.info("Deleting file %s", item.file_key)
-        default_storage.delete(item.file_key)
+        try:
+            default_storage.delete(item.file_key)
+        except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError):
+            logger.exception("Failed to delete file %s from storage", item.file_key)
 
     if item.type == ItemTypeChoices.FOLDER:
         for child in item.children():
