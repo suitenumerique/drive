@@ -16,6 +16,7 @@ and this project adheres to
 - ✨(global) add custom columns feature with configurable grid columns
 - 🔒️(frontend) prevent search engine indexing
 - ✨(backend) allow ordering items by creator full name
+- ✨(frontend) add item duplication with polling and visual feedback
 
 ### Changed
 
