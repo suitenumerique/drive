@@ -69,8 +69,12 @@ export const useDeleteMutationCallbacks = (
     });
   };
 
-  const onSuccess = () => {
+  const onSuccess = (_data: unknown, deletedIds: string[]) => {
     for (const key of queryKeys) {
+      if (deletedIds?.some((id) => key.includes(id))) {
+        queryClient.removeQueries({ queryKey: key });
+        continue;
+      }
       queryClient.invalidateQueries({
         queryKey: key,
       });

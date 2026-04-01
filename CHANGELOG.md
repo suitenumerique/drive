@@ -30,6 +30,7 @@ and this project adheres to
 - 🐛(backend) handle race condition on concurrent LinkTrace creation
 - 🐛(frontend) fix React SVG attributes in AddFolderButton
 - 🔧(scalingo) compile translation files at deploy time
+- 🐛(frontend) fix trash items not refreshing after hard delete
 
 ## [v0.15.0] - 2026-03-16
 
