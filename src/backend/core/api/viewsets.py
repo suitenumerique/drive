@@ -340,6 +340,7 @@ class ItemViewSet(
         "title",
         "type",
         "updated_at",
+        "creator__full_name",
     ]
     pagination_class = Pagination
     permission_classes = [

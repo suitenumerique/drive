@@ -73,13 +73,18 @@ def test_api_items_list_ordering_default():
         assert operator.ge(results[i]["updated_at"], results[i + 1]["updated_at"])
 
 
-def test_api_items_list_ordering_by_fields():
+def test_api_items_list_ordering_by_fields(django_assert_num_queries):
     """It should be possible to order by several fields"""
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
 
     factories.ItemFactory.create_batch(4, users=[user], type=models.ItemTypeChoices.FOLDER)
+
+    # make a first fetch to put in cache some sql queries and have a constant number
+    # of queries later
+    with django_assert_num_queries(9):
+        client.get("/api/v1.0/items/")
 
     for parameter in [
         "created_at",
@@ -95,7 +100,8 @@ def test_api_items_list_ordering_by_fields():
         field = parameter.lstrip("-")
         querystring = f"?ordering={parameter}"
 
-        response = client.get(f"/api/v1.0/items/{querystring:s}")
+        with django_assert_num_queries(5):
+            response = client.get(f"/api/v1.0/items/{querystring:s}")
         assert response.status_code == 200
         results = response.json()["results"]
         assert len(results) == 4
@@ -160,3 +166,57 @@ def test_api_items_list_ordering_by_size():
     assert results[0]["id"] == str(folder.id)
     assert results[1]["id"] == str(file2.id)
     assert results[2]["id"] == str(file1.id)
+
+
+def test_api_items_list_ordering_by_creator_fullname(django_assert_num_queries):
+    """Test ordering items by creator full_name"""
+
+    user1 = factories.UserFactory(full_name="Camille Clement", short_name="camille")
+    user2 = factories.UserFactory(full_name="Eva Roussel", short_name="Eva")
+    user3 = factories.UserFactory(full_name="Olivia Pierre", short_name="Olivia")
+
+    item1 = factories.ItemFactory(
+        creator=user1,
+        users=[(user1, "owner"), (user2, "editor"), (user3, "editor")],
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    item2 = factories.ItemFactory(
+        creator=user2,
+        users=[(user2, "owner"), (user1, "editor"), (user3, "editor")],
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    item3 = factories.ItemFactory(
+        creator=user3,
+        users=[(user3, "owner"), (user1, "editor"), (user2, "editor")],
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    client = APIClient()
+    client.force_login(user1)
+
+    with django_assert_num_queries(8):
+        response = client.get("/api/v1.0/items/?ordering=creator__full_name")
+
+    assert response.status_code == 200
+
+    results = response.json()["results"]
+    assert len(results) == 3
+
+    assert results[0]["id"] == str(item1.id)
+    assert results[1]["id"] == str(item2.id)
+    assert results[2]["id"] == str(item3.id)
+
+    with django_assert_num_queries(5):
+        response = client.get("/api/v1.0/items/?ordering=-creator__full_name")
+
+    assert response.status_code == 200
+
+    results = response.json()["results"]
+    assert len(results) == 3
+
+    assert results[0]["id"] == str(item3.id)
+    assert results[1]["id"] == str(item2.id)
+    assert results[2]["id"] == str(item1.id)

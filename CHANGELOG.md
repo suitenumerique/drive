@@ -15,6 +15,7 @@ and this project adheres to
 - 📝(doc) add local network setup documentation
 - ✨(global) add custom columns feature with configurable grid columns
 - 🔒️(frontend) prevent search engine indexing
+- ✨(backend) allow ordering items by creator full name
 
 ### Changed
 
