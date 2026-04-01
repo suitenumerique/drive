@@ -831,6 +831,9 @@ class ItemViewSet(
         queryset = queryset.filter(id__in=favorite_items_ids)
         queryset = queryset.annotate_with_numchild()
 
+        # Apply ordering only now that everyting is filtered and annotated
+        queryset = filters.OrderingFilter().filter_queryset(self.request, queryset, self)
+
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
     @drf.decorators.action(
@@ -1148,7 +1151,7 @@ class ItemViewSet(
         permission_classes=[permissions.IsAuthenticated],
     )
     def recents(self, request, *args, **kwargs):
-        """Get list of favorite items for the current user."""
+        """Get list of recents items for the current user."""
         user = self.request.user
         queryset = self.get_queryset_for_descendants()
 
@@ -1162,7 +1165,8 @@ class ItemViewSet(
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
 
-        queryset = queryset.order_by("-updated_at")
+        # Apply ordering only now that everyting is filtered and annotated
+        queryset = filters.OrderingFilter().filter_queryset(self.request, queryset, self)
 
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 

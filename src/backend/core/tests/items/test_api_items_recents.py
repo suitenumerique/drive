@@ -279,3 +279,253 @@ def test_api_item_recents_excludes_pending_items():
     result_ids = [r["id"] for r in response.json()["results"]]
     assert str(ready_file.id) in result_ids
     assert str(pending_file.id) not in result_ids
+
+
+def test_api_item_recents_ordering_by_fields(django_assert_num_queries):
+    """Test ordering the recents endpoint by fields"""
+
+    user1 = factories.UserFactory(full_name="Camille Clement", short_name="camille")
+    user2 = factories.UserFactory(full_name="Eva Roussel", short_name="Eva")
+
+    parent_item = factories.ItemFactory(
+        creator=user1,
+        users=[(user1, "owner"), (user2, "editor")],
+        type=models.ItemTypeChoices.FOLDER,
+        title="aaaa",
+    )
+    child_item = factories.ItemFactory(
+        creator=user1,
+        parent=parent_item,
+        type=models.ItemTypeChoices.FOLDER,
+        title="bbbb",
+    )
+    child_item_child = factories.ItemFactory(
+        creator=user1,
+        parent=child_item,
+        type=models.ItemTypeChoices.FILE,
+        title="cccc",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        size=10,
+    )
+    child_item_file = factories.ItemFactory(
+        creator=user2,
+        parent=child_item,
+        type=models.ItemTypeChoices.FILE,
+        title="dddd",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        size=20,
+    )
+
+    parent2_item = factories.ItemFactory(
+        creator=user1,
+        users=[(user1, "owner"), (user2, "editor")],
+        type=models.ItemTypeChoices.FOLDER,
+        title="eeee",
+    )
+    child2_item_file = factories.ItemFactory(
+        creator=user2,
+        parent=parent2_item,
+        type=models.ItemTypeChoices.FILE,
+        title="ffff",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        size=30,
+    )
+
+    client = APIClient()
+    client.force_login(user1)
+
+    for parameter in [
+        "created_at",
+        "-created_at",
+        "title",
+        "-title",
+        "updated_at",
+        "-updated_at",
+    ]:
+        is_descending = parameter.startswith("-")
+        querystring = f"?ordering={parameter}"
+
+        with django_assert_num_queries(7):
+            response = client.get(f"/api/v1.0/items/recents/{querystring:s}")
+        assert response.status_code == 200
+        results = response.json()["results"]
+        assert len(results) == 6
+
+        if is_descending:
+            assert results[0]["id"] == str(child2_item_file.id)
+            assert results[1]["id"] == str(parent2_item.id)
+            assert results[2]["id"] == str(child_item_file.id)
+            assert results[3]["id"] == str(child_item_child.id)
+            assert results[4]["id"] == str(child_item.id)
+            assert results[5]["id"] == str(parent_item.id)
+        else:
+            assert results[0]["id"] == str(parent_item.id)
+            assert results[1]["id"] == str(child_item.id)
+            assert results[2]["id"] == str(child_item_child.id)
+            assert results[3]["id"] == str(child_item_file.id)
+            assert results[4]["id"] == str(parent2_item.id)
+            assert results[5]["id"] == str(child2_item_file.id)
+
+
+def test_api_item_recents_ordering_by_size(django_assert_num_queries):
+    """Test ordering the recents endpoint by size"""
+
+    user1 = factories.UserFactory(full_name="Camille Clement", short_name="camille")
+    user2 = factories.UserFactory(full_name="Eva Roussel", short_name="Eva")
+
+    parent_item = factories.ItemFactory(
+        creator=user1,
+        users=[(user1, "owner"), (user2, "editor")],
+        type=models.ItemTypeChoices.FOLDER,
+        title="aaaa",
+    )
+    child_item = factories.ItemFactory(
+        creator=user1,
+        parent=parent_item,
+        type=models.ItemTypeChoices.FOLDER,
+        title="bbbb",
+    )
+    child_item_child = factories.ItemFactory(
+        creator=user1,
+        parent=child_item,
+        type=models.ItemTypeChoices.FILE,
+        title="cccc",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        size=10,
+    )
+    child_item_file = factories.ItemFactory(
+        creator=user2,
+        parent=child_item,
+        type=models.ItemTypeChoices.FILE,
+        title="dddd",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        size=20,
+    )
+
+    parent2_item = factories.ItemFactory(
+        creator=user1,
+        users=[(user1, "owner"), (user2, "editor")],
+        type=models.ItemTypeChoices.FOLDER,
+        title="eeee",
+    )
+    child2_item_file = factories.ItemFactory(
+        creator=user2,
+        parent=parent2_item,
+        type=models.ItemTypeChoices.FILE,
+        title="ffff",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        size=30,
+    )
+
+    client = APIClient()
+    client.force_login(user1)
+
+    for parameter in [
+        "size",
+        "-size",
+    ]:
+        is_descending = parameter.startswith("-")
+        querystring = f"?ordering={parameter}"
+
+        with django_assert_num_queries(7):
+            response = client.get(f"/api/v1.0/items/recents/{querystring:s}")
+        assert response.status_code == 200
+        results = response.json()["results"]
+        assert len(results) == 6
+
+        if is_descending:
+            assert results[0]["id"] == str(parent_item.id)
+            assert results[1]["id"] == str(child_item.id)
+            assert results[2]["id"] == str(parent2_item.id)
+            assert results[3]["id"] == str(child2_item_file.id)
+            assert results[4]["id"] == str(child_item_file.id)
+            assert results[5]["id"] == str(child_item_child.id)
+        else:
+            assert results[0]["id"] == str(child_item_child.id)
+            assert results[1]["id"] == str(child_item_file.id)
+            assert results[2]["id"] == str(child2_item_file.id)
+            assert results[3]["id"] == str(parent_item.id)
+            assert results[4]["id"] == str(child_item.id)
+            assert results[5]["id"] == str(parent2_item.id)
+
+
+def test_api_item_recents_ordering_by_creator_full_name(django_assert_num_queries):
+    """Test ordering the recents list endpoint by creator full name"""
+
+    user1 = factories.UserFactory(full_name="Camille Clement", short_name="camille")
+    user2 = factories.UserFactory(full_name="Eva Roussel", short_name="Eva")
+
+    parent_item = factories.ItemFactory(
+        creator=user1,
+        users=[(user1, "owner"), (user2, "editor")],
+        type=models.ItemTypeChoices.FOLDER,
+        title="aaaa",
+    )
+    child_item = factories.ItemFactory(
+        creator=user1,
+        parent=parent_item,
+        type=models.ItemTypeChoices.FOLDER,
+        title="bbbb",
+    )
+    child_item_child = factories.ItemFactory(
+        creator=user1,
+        parent=child_item,
+        type=models.ItemTypeChoices.FILE,
+        title="cccc",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        size=10,
+    )
+    child_item_file = factories.ItemFactory(
+        creator=user2,
+        parent=child_item,
+        type=models.ItemTypeChoices.FILE,
+        title="dddd",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        size=20,
+    )
+
+    parent2_item = factories.ItemFactory(
+        creator=user1,
+        users=[(user1, "owner"), (user2, "editor")],
+        type=models.ItemTypeChoices.FOLDER,
+        title="eeee",
+    )
+    child2_item_file = factories.ItemFactory(
+        creator=user2,
+        parent=parent2_item,
+        type=models.ItemTypeChoices.FILE,
+        title="ffff",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        size=30,
+    )
+
+    client = APIClient()
+    client.force_login(user1)
+
+    for parameter in [
+        "creator__full_name",
+        "-creator__full_name",
+    ]:
+        is_descending = parameter.startswith("-")
+        querystring = f"?ordering={parameter}"
+
+        with django_assert_num_queries(7):
+            response = client.get(f"/api/v1.0/items/recents/{querystring:s}")
+        assert response.status_code == 200
+        results = response.json()["results"]
+        assert len(results) == 6
+
+        if is_descending:
+            assert results[0]["id"] == str(child_item_file.id)
+            assert results[1]["id"] == str(child2_item_file.id)
+            assert results[2]["id"] == str(parent_item.id)
+            assert results[3]["id"] == str(child_item.id)
+            assert results[4]["id"] == str(child_item_child.id)
+            assert results[5]["id"] == str(parent2_item.id)
+        else:
+            assert results[0]["id"] == str(parent_item.id)
+            assert results[1]["id"] == str(child_item.id)
+            assert results[2]["id"] == str(child_item_child.id)
+            assert results[3]["id"] == str(parent2_item.id)
+            assert results[4]["id"] == str(child_item_file.id)
+            assert results[5]["id"] == str(child2_item_file.id)

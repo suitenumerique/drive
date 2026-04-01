@@ -229,3 +229,61 @@ def test_api_item_favorite_list_filtering(django_assert_num_queries):
     content = response.json()
     assert content["count"] == 1
     assert content["results"][0]["id"] == str(file_item.id)
+
+
+def test_api_item_favorite_list_ordering_by_fields(django_assert_num_queries):
+    """Test ordering the favorite list endpoint by fields"""
+
+    user1 = factories.UserFactory(full_name="Camille Clement", short_name="camille")
+    user2 = factories.UserFactory(full_name="Eva Roussel", short_name="Eva")
+
+    item_favorited1 = factories.ItemFactory(
+        creator=user1,
+        users=[(user1, "owner")],
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        favorited_by=[user1],
+        title="abcd",
+        size=10,
+    )
+
+    item_favorited2 = factories.ItemFactory(
+        creator=user2,
+        users=[(user2, "owner"), (user1, "editor")],
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        favorited_by=[user1],
+        title="mnlo",
+        size=20,
+    )
+
+    client = APIClient()
+    client.force_login(user1)
+
+    for parameter in [
+        "created_at",
+        "-created_at",
+        "title",
+        "-title",
+        "updated_at",
+        "-updated_at",
+        "size",
+        "-size",
+        "creator__full_name",
+        "-creator__full_name",
+    ]:
+        is_descending = parameter.startswith("-")
+        querystring = f"?ordering={parameter}"
+
+        with django_assert_num_queries(6):
+            response = client.get(f"/api/v1.0/items/favorite_list/{querystring:s}")
+        assert response.status_code == 200
+        results = response.json()["results"]
+        assert len(results) == 2
+
+        if is_descending:
+            assert results[0]["id"] == str(item_favorited2.id)
+            assert results[1]["id"] == str(item_favorited1.id)
+        else:
+            assert results[0]["id"] == str(item_favorited1.id)
+            assert results[1]["id"] == str(item_favorited2.id)
