@@ -70,13 +70,11 @@ export const useDeleteMutationCallbacks = (
   };
 
   const onSuccess = () => {
-    if (queryKeys.length === 0) {
-      return;
+    for (const key of queryKeys) {
+      queryClient.invalidateQueries({
+        queryKey: key,
+      });
     }
-
-    queryClient.invalidateQueries({
-      queryKey: queryKeys,
-    });
   };
 
   return { onMutate, onError, onSuccess };
