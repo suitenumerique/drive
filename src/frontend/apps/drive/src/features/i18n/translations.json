@@ -479,8 +479,11 @@
             "rename": "Rename",
             "favorite": "Star",
             "unfavorite": "Unstar",
+            "duplicate": "Duplicate",
+            "duplicate_error": "An error occurred while duplicating the item.",
             "delete": "Delete"
-          }
+          },
+          "duplicating": "duplication in progress"
         }
       },
       "time": {
@@ -1022,8 +1025,11 @@
             "rename": "Renommer",
             "favorite": "Favoris",
             "unfavorite": "Retirer des favoris",
+            "duplicate": "Dupliquer",
+            "duplicate_error": "Une erreur est survenue lors de la duplication.",
             "delete": "Supprimer"
-          }
+          },
+          "duplicating": "duplication en cours"
         }
       },
       "time": {
@@ -1559,8 +1565,11 @@
             "rename": "Hernoem",
             "favorite": "Favoriet",
             "unfavorite": "Verwijder uit favorieten",
+            "duplicate": "Dupliceer",
+            "duplicate_error": "Er is een fout opgetreden bij het dupliceren.",
             "delete": "Verwijder"
-          }
+          },
+          "duplicating": "duplicatie bezig"
         }
       },
       "time": {
