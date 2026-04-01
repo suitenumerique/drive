@@ -1,5 +1,5 @@
 import { CellContext } from "@tanstack/react-table";
-import { Item, LinkReach } from "@/features/drivers/types";
+import { Item, ItemUploadState, LinkReach } from "@/features/drivers/types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Draggable } from "@/features/explorer/components/Draggable";
 import { Tooltip } from "@gouvfr-lasuite/cunningham-react";
@@ -7,7 +7,10 @@ import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { useDisableDragGridItem } from "@/features/explorer/components/embedded-explorer/hooks";
 import { removeFileExtension } from "../../utils/mimeTypes";
 import { Icon, IconSize } from "@gouvfr-lasuite/ui-kit";
+import { LoadingRing } from "@/features/ui/components/loading-ring/LoadingRing";
 import { useEmbeddedExplorerGirdContext } from "./EmbeddedExplorerGrid";
+import { useTranslation } from "react-i18next";
+import clsx from "clsx";
 export type EmbeddedExplorerGridNameCellProps = CellContext<Item, string> & {
   children?: React.ReactNode;
 };
@@ -16,11 +19,13 @@ export const EmbeddedExplorerGridNameCell = (
   params: EmbeddedExplorerGridNameCellProps,
 ) => {
   const item = params.row.original;
+  const { t } = useTranslation();
   const ref = useRef<HTMLSpanElement>(null);
   const [isOverflown, setIsOverflown] = useState(false);
   const { selectedItemsMap, disableItemDragAndDrop } =
     useEmbeddedExplorerGirdContext();
   const isSelected = !!selectedItemsMap[item.id];
+  const isDuplicating = item.upload_state === ItemUploadState.DUPLICATING;
 
   const disableDrag = useDisableDragGridItem(item);
 
@@ -31,12 +36,23 @@ export const EmbeddedExplorerGridNameCell = (
       <Draggable
         id={params.cell.id + "-title"}
         item={item}
-        style={{ display: "flex", overflow: "hidden" }}
-        disabled={disableItemDragAndDrop || isSelected} // If it's selected then we can drag on the entire cell
+        className="explorer__grid__item__name__title-wrapper"
+        disabled={isDuplicating || disableItemDragAndDrop || isSelected} // If it's selected then we can drag on the entire cell
       >
-        <div style={{ display: "flex", overflow: "hidden" }}>
-          <span className="explorer__grid__item__name__text" ref={ref}>
+        <div className="explorer__grid__item__name__title-wrapper">
+          <span
+            className={clsx("explorer__grid__item__name__text", {
+              "explorer__grid__item__name--duplicating-text": isDuplicating,
+            })}
+            ref={ref}
+          >
             {removeFileExtension(item.title)}
+            {isDuplicating && (
+              <span className="explorer__grid__item__name__duplicating-label">
+                {" "}
+                ({t("explorer.item.duplicating")})
+              </span>
+            )}
             {params.children}
           </span>
         </div>
@@ -72,9 +88,23 @@ export const EmbeddedExplorerGridNameCell = (
   }, [item.computed_link_reach, item.link_reach, item.nb_accesses]);
 
   return (
-    <Draggable id={params.cell.id} item={item} disabled={disableDrag}>
-      <div className="explorer__grid__item__name">
-        <ItemIcon key={item.id} item={item} size={IconSize.LARGE} />
+    <Draggable
+      id={params.cell.id}
+      item={item}
+      disabled={isDuplicating || disableDrag}
+    >
+      <div
+        className={clsx("explorer__grid__item__name", {
+          "explorer__grid__item__name--duplicating": isDuplicating,
+        })}
+      >
+        {isDuplicating ? (
+          <div className="explorer__grid__item__name__spinner-container">
+            <LoadingRing size="md" />
+          </div>
+        ) : (
+          <ItemIcon key={item.id} item={item} size={IconSize.LARGE} />
+        )}
         {isOverflown ? (
           <Tooltip content={item.title}>{renderTitle()}</Tooltip>
         ) : (

@@ -1,4 +1,4 @@
-import { Item, ItemType } from "@/features/drivers/types";
+import { Item, ItemType, ItemUploadState } from "@/features/drivers/types";
 import {
   createContext,
   Dispatch,
@@ -47,6 +47,7 @@ import {
 } from "../../types/columns";
 import { SortableColumnHeader } from "./headers/SortableColumnHeader";
 import { CustomizableColumnHeader } from "./headers/CustomizableColumnHeader";
+import { useDuplicatingItemsPoller } from "../../hooks/useDuplicatingItemsPoller";
 
 export type EmbeddedExplorerGridProps = {
   isCompact?: boolean;
@@ -124,6 +125,8 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
       onModalOpenChange: setIsActionModalOpen,
     });
   const contextMenu = useContextMenuContext();
+
+  useDuplicatingItemsPoller(props.items ?? EMPTY_ARRAY);
 
   const selectedItems = props.selectedItems ?? [];
   const selectedItemsMap = useMemo(() => {
@@ -290,7 +293,9 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                     </th>
                   </>
                 )}
-                {!props.isCompact && <th className="explorer__grid__th--actions"></th>}
+                {!props.isCompact && (
+                  <th className="explorer__grid__th--actions"></th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -300,13 +305,26 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                 return (
                   <tr
                     key={row.original.id}
-                    className={clsx("selectable", {
+                    className={clsx({
+                      selectable:
+                        row.original.upload_state !==
+                        ItemUploadState.DUPLICATING,
                       selected: isSelected,
                       over: isOvered,
+                      duplicating:
+                        row.original.upload_state ===
+                        ItemUploadState.DUPLICATING,
                     })}
                     data-id={row.original.id}
                     tabIndex={0}
                     onClick={(e) => {
+                      if (
+                        row.original.upload_state ===
+                        ItemUploadState.DUPLICATING
+                      ) {
+                        return;
+                      }
+
                       const target = e.target as HTMLElement;
                       const closest = target.closest("tr");
                       // Because if we use modals or other components, even with a Portal, React triggers events on the original parent.
@@ -404,9 +422,22 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                       }
                     }}
                     onContextMenu={(e) => {
-                      if (isSelected) return;
+                      if (props.displayMode === "sdk") {
+                        return;
+                      }
+
                       e.preventDefault();
                       e.stopPropagation();
+
+                      if (
+                        row.original.upload_state ===
+                        ItemUploadState.DUPLICATING
+                      ) {
+                        return;
+                      }
+
+                      props.setSelectedItems?.([row.original]);
+
                       contextMenu.open({
                         position: { x: e.clientX, y: e.clientY },
                         items: getItemActionMenuItems(row.original),

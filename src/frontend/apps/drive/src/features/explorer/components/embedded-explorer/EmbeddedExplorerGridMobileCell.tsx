@@ -1,22 +1,44 @@
 import { CellContext } from "@tanstack/react-table";
-import { Item } from "@/features/drivers/types";
+import { Item, ItemUploadState } from "@/features/drivers/types";
 import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { timeAgo } from "@/features/explorer/utils/utils";
 import { removeFileExtension } from "../../utils/mimeTypes";
+import { LoadingRing } from "@/features/ui/components/loading-ring/LoadingRing";
+import { useTranslation } from "react-i18next";
+import clsx from "clsx";
+
 type EmbeddedExplorerGridMobileCellProps = CellContext<Item, unknown>;
 
 export const EmbeddedExplorerGridMobileCell = (
-  params: EmbeddedExplorerGridMobileCellProps
+  params: EmbeddedExplorerGridMobileCellProps,
 ) => {
   const item = params.row.original;
+  const { t } = useTranslation();
+  const isDuplicating = item.upload_state === ItemUploadState.DUPLICATING;
 
   return (
     <div className="explorer__grid__item__mobile">
-      <ItemIcon key={item.id} item={item} />
+      {isDuplicating ? (
+        <div className="explorer__grid__item__name__spinner-container">
+          <LoadingRing size="md" />
+        </div>
+      ) : (
+        <ItemIcon key={item.id} item={item} />
+      )}
       <div className="explorer__grid__item__mobile__info">
         <div className="explorer__grid__item__mobile__info__title">
-          <span className="explorer__grid__item__name__text">
+          <span
+            className={clsx("explorer__grid__item__name__text", {
+              "explorer__grid__item__name--duplicating-text": isDuplicating,
+            })}
+          >
             {removeFileExtension(item.title)}
+            {isDuplicating && (
+              <span className="explorer__grid__item__name__duplicating-label">
+                {" "}
+                ({t("explorer.item.duplicating")})
+              </span>
+            )}
           </span>
         </div>
         <div className="explorer__grid__item__mobile__info__meta">
