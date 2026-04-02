@@ -281,7 +281,18 @@ def test_api_item_recents_excludes_pending_items():
     assert str(pending_file.id) not in result_ids
 
 
-def test_api_item_recents_ordering_by_fields(django_assert_num_queries):
+@pytest.mark.parametrize(
+    "ordering",
+    [
+        "created_at",
+        "-created_at",
+        "title",
+        "-title",
+        "updated_at",
+        "-updated_at",
+    ],
+)
+def test_api_item_recents_ordering_by_fields(ordering, django_assert_num_queries):
     """Test ordering the recents endpoint by fields"""
 
     user1 = factories.UserFactory(full_name="Camille Clement", short_name="camille")
@@ -334,40 +345,39 @@ def test_api_item_recents_ordering_by_fields(django_assert_num_queries):
     client = APIClient()
     client.force_login(user1)
 
-    for parameter in [
-        "created_at",
-        "-created_at",
-        "title",
-        "-title",
-        "updated_at",
-        "-updated_at",
-    ]:
-        is_descending = parameter.startswith("-")
-        querystring = f"?ordering={parameter}"
+    is_descending = ordering.startswith("-")
+    querystring = f"?ordering={ordering}"
 
-        with django_assert_num_queries(7):
-            response = client.get(f"/api/v1.0/items/recents/{querystring:s}")
-        assert response.status_code == 200
-        results = response.json()["results"]
-        assert len(results) == 6
+    with django_assert_num_queries(7):
+        response = client.get(f"/api/v1.0/items/recents/{querystring:s}")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 6
 
-        if is_descending:
-            assert results[0]["id"] == str(child2_item_file.id)
-            assert results[1]["id"] == str(parent2_item.id)
-            assert results[2]["id"] == str(child_item_file.id)
-            assert results[3]["id"] == str(child_item_child.id)
-            assert results[4]["id"] == str(child_item.id)
-            assert results[5]["id"] == str(parent_item.id)
-        else:
-            assert results[0]["id"] == str(parent_item.id)
-            assert results[1]["id"] == str(child_item.id)
-            assert results[2]["id"] == str(child_item_child.id)
-            assert results[3]["id"] == str(child_item_file.id)
-            assert results[4]["id"] == str(parent2_item.id)
-            assert results[5]["id"] == str(child2_item_file.id)
+    if is_descending:
+        assert results[0]["id"] == str(child2_item_file.id)
+        assert results[1]["id"] == str(parent2_item.id)
+        assert results[2]["id"] == str(child_item_file.id)
+        assert results[3]["id"] == str(child_item_child.id)
+        assert results[4]["id"] == str(child_item.id)
+        assert results[5]["id"] == str(parent_item.id)
+    else:
+        assert results[0]["id"] == str(parent_item.id)
+        assert results[1]["id"] == str(child_item.id)
+        assert results[2]["id"] == str(child_item_child.id)
+        assert results[3]["id"] == str(child_item_file.id)
+        assert results[4]["id"] == str(parent2_item.id)
+        assert results[5]["id"] == str(child2_item_file.id)
 
 
-def test_api_item_recents_ordering_by_size(django_assert_num_queries):
+@pytest.mark.parametrize(
+    "ordering",
+    [
+        "size",
+        "-size",
+    ],
+)
+def test_api_item_recents_ordering_by_size(ordering, django_assert_num_queries):
     """Test ordering the recents endpoint by size"""
 
     user1 = factories.UserFactory(full_name="Camille Clement", short_name="camille")
@@ -420,36 +430,39 @@ def test_api_item_recents_ordering_by_size(django_assert_num_queries):
     client = APIClient()
     client.force_login(user1)
 
-    for parameter in [
-        "size",
-        "-size",
-    ]:
-        is_descending = parameter.startswith("-")
-        querystring = f"?ordering={parameter}"
+    is_descending = ordering.startswith("-")
+    querystring = f"?ordering={ordering}"
 
-        with django_assert_num_queries(7):
-            response = client.get(f"/api/v1.0/items/recents/{querystring:s}")
-        assert response.status_code == 200
-        results = response.json()["results"]
-        assert len(results) == 6
+    with django_assert_num_queries(7):
+        response = client.get(f"/api/v1.0/items/recents/{querystring:s}")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 6
 
-        if is_descending:
-            assert results[0]["id"] == str(parent_item.id)
-            assert results[1]["id"] == str(child_item.id)
-            assert results[2]["id"] == str(parent2_item.id)
-            assert results[3]["id"] == str(child2_item_file.id)
-            assert results[4]["id"] == str(child_item_file.id)
-            assert results[5]["id"] == str(child_item_child.id)
-        else:
-            assert results[0]["id"] == str(child_item_child.id)
-            assert results[1]["id"] == str(child_item_file.id)
-            assert results[2]["id"] == str(child2_item_file.id)
-            assert results[3]["id"] == str(parent_item.id)
-            assert results[4]["id"] == str(child_item.id)
-            assert results[5]["id"] == str(parent2_item.id)
+    if is_descending:
+        assert results[0]["id"] == str(parent2_item.id)
+        assert results[1]["id"] == str(child_item.id)
+        assert results[2]["id"] == str(parent_item.id)
+        assert results[3]["id"] == str(child2_item_file.id)
+        assert results[4]["id"] == str(child_item_file.id)
+        assert results[5]["id"] == str(child_item_child.id)
+    else:
+        assert results[0]["id"] == str(child_item_child.id)
+        assert results[1]["id"] == str(child_item_file.id)
+        assert results[2]["id"] == str(child2_item_file.id)
+        assert results[3]["id"] == str(parent2_item.id)
+        assert results[4]["id"] == str(child_item.id)
+        assert results[5]["id"] == str(parent_item.id)
 
 
-def test_api_item_recents_ordering_by_creator_full_name(django_assert_num_queries):
+@pytest.mark.parametrize(
+    "ordering",
+    [
+        "creator__full_name",
+        "-creator__full_name",
+    ],
+)
+def test_api_item_recents_ordering_by_creator_full_name(ordering, django_assert_num_queries):
     """Test ordering the recents list endpoint by creator full name"""
 
     user1 = factories.UserFactory(full_name="Camille Clement", short_name="camille")
@@ -502,30 +515,27 @@ def test_api_item_recents_ordering_by_creator_full_name(django_assert_num_querie
     client = APIClient()
     client.force_login(user1)
 
-    for parameter in [
-        "creator__full_name",
-        "-creator__full_name",
-    ]:
-        is_descending = parameter.startswith("-")
-        querystring = f"?ordering={parameter}"
+    is_descending = ordering.startswith("-")
+    querystring = f"?ordering={ordering}"
 
-        with django_assert_num_queries(7):
-            response = client.get(f"/api/v1.0/items/recents/{querystring:s}")
-        assert response.status_code == 200
-        results = response.json()["results"]
-        assert len(results) == 6
+    with django_assert_num_queries(7):
+        response = client.get(f"/api/v1.0/items/recents/{querystring:s}")
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 6
 
-        if is_descending:
-            assert results[0]["id"] == str(child_item_file.id)
-            assert results[1]["id"] == str(child2_item_file.id)
-            assert results[2]["id"] == str(parent_item.id)
-            assert results[3]["id"] == str(child_item.id)
-            assert results[4]["id"] == str(child_item_child.id)
-            assert results[5]["id"] == str(parent2_item.id)
-        else:
-            assert results[0]["id"] == str(parent_item.id)
-            assert results[1]["id"] == str(child_item.id)
-            assert results[2]["id"] == str(child_item_child.id)
-            assert results[3]["id"] == str(parent2_item.id)
-            assert results[4]["id"] == str(child_item_file.id)
-            assert results[5]["id"] == str(child2_item_file.id)
+    if is_descending:
+        assert results[0]["id"] == str(child2_item_file.id)
+        assert results[1]["id"] == str(child_item_file.id)
+        assert results[2]["id"] == str(parent2_item.id)
+        assert results[3]["id"] == str(child_item_child.id)
+        assert results[4]["id"] == str(child_item.id)
+        assert results[5]["id"] == str(parent_item.id)
+
+    else:
+        assert results[0]["id"] == str(parent2_item.id)
+        assert results[1]["id"] == str(child_item_child.id)
+        assert results[2]["id"] == str(child_item.id)
+        assert results[3]["id"] == str(parent_item.id)
+        assert results[4]["id"] == str(child2_item_file.id)
+        assert results[5]["id"] == str(child_item_file.id)

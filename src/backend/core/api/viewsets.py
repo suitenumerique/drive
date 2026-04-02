@@ -36,8 +36,8 @@ from lasuite.drf.models.choices import (
 )
 from lasuite.malware_detection import malware_detection
 from lasuite.oidc_login.decorators import refresh_oidc_access_token
-from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
+from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.throttling import UserRateThrottle
 from rest_framework_api_key.permissions import HasAPIKey
@@ -56,7 +56,7 @@ from wopi.services import access as access_service
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
 
 from . import permissions, serializers, utils
-from .filters import ItemFilter, ListItemFilter, SearchItemFilter
+from .filters import ItemFilter, ItemOrdering, ListItemFilter, SearchItemFilter
 
 logger = logging.getLogger(__name__)
 
@@ -670,7 +670,7 @@ class ItemViewSet(
         queryset = queryset.annotate_with_numchild()
 
         # Apply ordering only now that everyting is filtered and annotated
-        queryset = filters.OrderingFilter().filter_queryset(self.request, queryset, self)
+        queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
         return self.get_response_for_queryset(queryset)
 
@@ -832,7 +832,7 @@ class ItemViewSet(
         queryset = queryset.annotate_with_numchild()
 
         # Apply ordering only now that everyting is filtered and annotated
-        queryset = filters.OrderingFilter().filter_queryset(self.request, queryset, self)
+        queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
@@ -1033,7 +1033,7 @@ class ItemViewSet(
         queryset = filterset.qs
 
         # Apply ordering only now that everything is filtered and annotated
-        queryset = filters.OrderingFilter().filter_queryset(self.request, queryset, self)
+        queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
         # Pre-compute number of accesses
         item_nb_accesses = item.nb_accesses
@@ -1166,7 +1166,7 @@ class ItemViewSet(
         queryset = queryset.annotate_with_numchild()
 
         # Apply ordering only now that everyting is filtered and annotated
-        queryset = filters.OrderingFilter().filter_queryset(self.request, queryset, self)
+        queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
