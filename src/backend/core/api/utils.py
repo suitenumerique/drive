@@ -225,6 +225,11 @@ def detect_mimetype(file_buffer: bytes, filename: str | None = None) -> str:
     return mimetype_from_content or "application/octet-stream"
 
 
+def format_template_filename(title, extension):
+    """Build a filename from a template title and extension, replacing '/' with '-'."""
+    return f"{title}.{extension}".replace("/", "-")
+
+
 def sanitize_filename(filename):
     """
     Sanitize a filename to be compliant to use on filesystem.
