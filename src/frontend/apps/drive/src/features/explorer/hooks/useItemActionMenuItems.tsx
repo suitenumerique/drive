@@ -186,7 +186,34 @@ export const useItemActionMenuItems = ({
         },
       },
       { type: "separator" },
-
+      ...(!item.is_encrypted && item.abilities?.encrypt
+        ? [
+            {
+              icon: <span className="material-icons">lock</span>,
+              label: t("explorer.item.actions.encrypt", "Encrypt"),
+              callback: () => {
+                setCurrentItem(effectiveItem);
+                // TODO: Open ModalEncryptItem when vault SDK is integrated
+              },
+            },
+          ]
+        : []),
+      ...(item.is_encrypted && item.abilities?.remove_encryption
+        ? [
+            {
+              icon: <span className="material-icons">lock_open</span>,
+              label: t(
+                "explorer.item.actions.remove_encryption",
+                "Remove encryption",
+              ),
+              callback: () => {
+                setCurrentItem(effectiveItem);
+                // TODO: Open ModalRemoveEncryption when vault SDK is integrated
+              },
+            },
+          ]
+        : []),
+      { type: "separator" },
       {
         icon: <span className="material-icons">info</span>,
         label: t("explorer.item.actions.view_info"),

@@ -101,6 +101,12 @@ class ItemAccessSerializer(serializers.ModelSerializer):
     max_role = serializers.SerializerMethodField(read_only=True)
     item = ItemLightSerializer(read_only=True)
     is_explicit = serializers.SerializerMethodField(read_only=True)
+    encrypted_item_symmetric_key_for_user = serializers.CharField(
+        required=False, allow_blank=True, write_only=True
+    )
+    encryption_public_key_fingerprint = serializers.CharField(
+        required=False, allow_blank=True, max_length=16
+    )
 
     class Meta:
         model = models.ItemAccess
@@ -117,6 +123,8 @@ class ItemAccessSerializer(serializers.ModelSerializer):
             "max_role",
             "item",
             "is_explicit",
+            "encrypted_item_symmetric_key_for_user",
+            "encryption_public_key_fingerprint",
         ]
         read_only_fields = [
             "id",
@@ -127,6 +135,22 @@ class ItemAccessSerializer(serializers.ModelSerializer):
             "item",
             "is_explicit",
         ]
+
+    def get_fields(self):
+        """Dynamically adjust encryption fields based on item encryption state."""
+        fields = super().get_fields()
+        resource_id = self.context.get("resource_id")
+        if resource_id:
+            try:
+                item = models.Item.objects.only("is_encrypted").get(pk=resource_id)
+                if item.is_encrypted:
+                    fields["encrypted_item_symmetric_key_for_user"].required = True
+                    fields["encrypted_item_symmetric_key_for_user"].allow_blank = False
+                else:
+                    fields.pop("encrypted_item_symmetric_key_for_user", None)
+            except models.Item.DoesNotExist:
+                pass
+        return fields
 
     def get_abilities(self, instance):
         """Return abilities of the logged-in user on the instance."""
@@ -217,6 +241,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -251,6 +276,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -371,6 +397,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -400,6 +427,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -435,6 +463,11 @@ class SearchItemSerializer(ListItemSerializer):
 class ItemSerializer(ListItemSerializer):
     """Serialize items with all fields for display in detail views."""
 
+    encrypted_item_symmetric_key_for_user = serializers.SerializerMethodField(
+        read_only=True
+    )
+    accesses_user_ids = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = models.Item
         fields = [
@@ -447,6 +480,7 @@ class ItemSerializer(ListItemSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -470,6 +504,8 @@ class ItemSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "encrypted_item_symmetric_key_for_user",
+            "accesses_user_ids",
         ]
         read_only_fields = [
             "id",
@@ -481,6 +517,7 @@ class ItemSerializer(ListItemSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
             "is_favorite",
             "nb_accesses",
             "link_role",
@@ -500,7 +537,39 @@ class ItemSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "encrypted_item_symmetric_key_for_user",
+            "accesses_user_ids",
         ]
+
+    def get_encrypted_item_symmetric_key_for_user(self, item):
+        """Return the encrypted symmetric key for the current user, if the item is encrypted."""
+        if not item.is_encrypted:
+            return None
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        access = (
+            models.ItemAccess.objects.filter(
+                item=item,
+                user=request.user,
+                encrypted_item_symmetric_key_for_user__isnull=False,
+            )
+            .values_list("encrypted_item_symmetric_key_for_user", flat=True)
+            .first()
+        )
+        return access
+
+    def get_accesses_user_ids(self, item):
+        """Return the list of user OIDC sub identifiers with access to this item."""
+        if not item.is_encrypted:
+            return None
+        return list(
+            models.ItemAccess.objects.filter(
+                item=item,
+                user__isnull=False,
+            )
+            .values_list("user__sub", flat=True)
+        )
 
     def create(self, validated_data):
         raise NotImplementedError("Create method can not be used.")
@@ -540,6 +609,10 @@ class CreateItemSerializer(ItemSerializer):
         write_only=True,
     )
 
+    encrypted_symmetric_key = serializers.CharField(
+        required=False, allow_blank=True, write_only=True
+    )
+
     class Meta:
         model = models.Item
         fields = [
@@ -552,6 +625,7 @@ class CreateItemSerializer(ItemSerializer):
             "created_at",
             "creator",
             "depth",
+            "is_encrypted",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -573,6 +647,7 @@ class CreateItemSerializer(ItemSerializer):
             "description",
             "hard_delete_at",
             "extension",
+            "encrypted_symmetric_key",
         ]
         read_only_fields = [
             "abilities",
@@ -841,6 +916,7 @@ class MoveItemSerializer(serializers.Serializer):
     """
 
     target_item_id = serializers.UUIDField(required=False)
+    encrypted_symmetric_key = serializers.CharField(required=False, allow_blank=True)
 
 
 class SDKRelayEventSerializer(serializers.Serializer):
@@ -864,3 +940,55 @@ class SDKRelayEventSerializer(serializers.Serializer):
             )
 
         return value
+
+
+# pylint: disable=abstract-method
+class EncryptItemSerializer(serializers.Serializer):
+    """Serializer for encrypting an item or subtree.
+
+    The frontend uploads encrypted file content to new S3 keys (with a new
+    random filename), then calls this endpoint. The backend atomically updates
+    filenames in the DB, which changes the S3 key (title stays the same).
+    If the transaction fails, old filenames/keys are still valid.
+    After commit, old S3 objects are cleaned up.
+    """
+
+    encryptedSymmetricKeyPerUser = serializers.DictField(
+        child=serializers.CharField(),
+        required=True,
+        help_text="Mapping of user OIDC sub to their encrypted copy of the item's symmetric key.",
+    )
+    encryptedKeysForDescendants = serializers.DictField(
+        child=serializers.CharField(),
+        required=False,
+        default=dict,
+        help_text=(
+            "Mapping of descendant item UUID to its symmetric key wrapped by its parent's key. "
+            "Empty for standalone file encryption."
+        ),
+    )
+    fileKeyMapping = serializers.DictField(
+        child=serializers.CharField(),
+        required=False,
+        default=dict,
+        help_text=(
+            "Mapping of file item UUID to the new filename (S3 key component) where "
+            "the encrypted content was uploaded. The backend atomically updates "
+            "the filename; old S3 objects are cleaned up after commit."
+        ),
+    )
+
+
+# pylint: disable=abstract-method
+class RemoveEncryptionSerializer(serializers.Serializer):
+    """Serializer for removing encryption from an item or subtree."""
+
+    fileKeyMapping = serializers.DictField(
+        child=serializers.CharField(),
+        required=False,
+        default=dict,
+        help_text=(
+            "Mapping of file item UUID to the new S3 key where the decrypted "
+            "content was uploaded."
+        ),
+    )

@@ -540,6 +540,23 @@ class Item(TreeModel, BaseModel):
         help_text=_("Malware detection info when the analysis status is unsafe."),
     )
 
+    # Encryption fields
+    is_encrypted = models.BooleanField(
+        default=False,
+        help_text=_(
+            "Whether this item is encrypted (standalone file or part of an encrypted subtree)."
+        ),
+    )
+    encrypted_symmetric_key = models.TextField(
+        null=True,
+        blank=True,
+        help_text=_(
+            "This item's symmetric key, wrapped (encrypted) by the parent folder's symmetric key. "
+            "NULL for encryption roots (standalone files or topmost encrypted folders, which use "
+            "per-user keys in ItemAccess instead) and for unencrypted items."
+        ),
+    )
+
     # Remove them in a future release. They must be kept while the columns are not removed
     _deprecated_numchild = models.PositiveIntegerField(default=0, db_column="numchild")
     _deprecated_numchild_folder = models.PositiveIntegerField(
@@ -868,12 +885,15 @@ class Item(TreeModel, BaseModel):
             "destroy": can_destroy,
             "download": can_get,
             "duplicate": can_duplicate,
+            "encrypt": can_manage and user.is_authenticated,
             "hard_delete": can_hard_delete,
             "favorite": can_get and user.is_authenticated,
+            "key_chain": can_get and user.is_authenticated,
             "link_configuration": can_manage,
             "invite_owner": is_owner and not is_deleted,
             "link_select_options": link_select_options,
             "move": can_manage,
+            "remove_encryption": can_manage and user.is_authenticated,
             "restore": is_owner,
             "retrieve": retrieve,
             "tree": can_get,
@@ -881,7 +901,7 @@ class Item(TreeModel, BaseModel):
             "partial_update": can_update,
             "update": can_update,
             "upload_ended": can_update and user.is_authenticated,
-            "wopi": can_get,
+            "wopi": can_get and not self.is_encrypted,
         }
 
     def send_email(self, subject, emails, context=None, language=None):
@@ -1192,6 +1212,26 @@ class ItemAccess(BaseModel):
     )
     team = models.CharField(max_length=100, blank=True)
     role = models.CharField(max_length=20, choices=RoleChoices.choices, default=RoleChoices.READER)
+
+    # Encryption fields
+    encrypted_item_symmetric_key_for_user = models.TextField(
+        null=True,
+        blank=True,
+        help_text=_(
+            "The accessed item's symmetric key, encrypted with this user's public key. "
+            "This is the user's entry point into the key chain."
+        ),
+    )
+    encryption_public_key_fingerprint = models.CharField(
+        max_length=16,
+        null=True,
+        blank=True,
+        help_text=_(
+            "Fingerprint of the user's public key at the time of sharing. "
+            "Used to detect key changes — if the user's current public key fingerprint "
+            "differs from this value, the access needs re-encryption."
+        ),
+    )
 
     objects = ItemAccessManager()
 

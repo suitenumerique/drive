@@ -168,12 +168,21 @@ export class StandardDriver extends Driver {
   }
 
   async createAccess(data: DTOCreateAccess): Promise<void> {
+    const body: Record<string, unknown> = {
+      user_id: data.userId,
+      role: data.role,
+    };
+    if (data.encrypted_item_symmetric_key_for_user) {
+      body.encrypted_item_symmetric_key_for_user =
+        data.encrypted_item_symmetric_key_for_user;
+    }
+    if (data.encryption_public_key_fingerprint) {
+      body.encryption_public_key_fingerprint =
+        data.encryption_public_key_fingerprint;
+    }
     await fetchAPI(`items/${data.itemId}/accesses/`, {
       method: "POST",
-      body: JSON.stringify({
-        user_id: data.userId,
-        role: data.role,
-      }),
+      body: JSON.stringify(body),
     });
   }
 
@@ -447,6 +456,41 @@ export class StandardDriver extends Driver {
     const response = await fetchAPI(`entitlements/`);
     const data = await response.json();
     return data;
+  }
+
+  // Encryption
+
+  async encryptItem(
+    itemId: string,
+    data: {
+      encryptedSymmetricKeyPerUser: Record<string, string>;
+      encryptedKeysForDescendants: Record<string, string>;
+    },
+  ): Promise<Item> {
+    const response = await fetchAPI(`items/${itemId}/encrypt/`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+    const json = await response.json();
+    return jsonToItem(json);
+  }
+
+  async removeEncryption(itemId: string): Promise<Item> {
+    const response = await fetchAPI(`items/${itemId}/remove-encryption/`, {
+      method: "PATCH",
+      body: JSON.stringify({}),
+    });
+    const json = await response.json();
+    return jsonToItem(json);
+  }
+
+  async getKeyChain(itemId: string): Promise<{
+    user_access_item_id: string;
+    encrypted_key_for_user: string;
+    chain: Array<{ item_id: string; encrypted_symmetric_key: string }>;
+  }> {
+    const response = await fetchAPI(`items/${itemId}/key-chain/`);
+    return response.json();
   }
 }
 

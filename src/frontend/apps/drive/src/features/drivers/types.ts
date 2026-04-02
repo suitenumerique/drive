@@ -54,6 +54,9 @@ export type Item = {
   description: string;
   is_wopi_supported?: boolean;
   created_at: Date;
+  is_encrypted?: boolean;
+  encrypted_item_symmetric_key_for_user?: string;
+  accesses_user_ids?: string[];
   is_favorite?: boolean;
   children?: Item[];
   parents?: Item[];
@@ -77,13 +80,16 @@ export type Item = {
     children_create: boolean;
     children_list: boolean;
     destroy: boolean;
+    encrypt: boolean;
     favorite: boolean;
     invite_owner: boolean;
+    key_chain: boolean;
     link_configuration: boolean;
     media_auth: boolean;
     move: boolean;
     link_select_options: Record<LinkReach, LinkRole[] | null>;
     partial_update: boolean;
+    remove_encryption: boolean;
     restore: boolean;
     retrieve: boolean;
     tree: boolean;

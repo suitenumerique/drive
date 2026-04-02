@@ -140,4 +140,19 @@ export abstract class Driver {
   abstract getWopiInfo(itemId: string): Promise<WopiInfo>;
 
   abstract getEntitlements(): Promise<Entitlements>;
+
+  // Encryption
+  abstract encryptItem(
+    itemId: string,
+    data: {
+      encryptedSymmetricKeyPerUser: Record<string, string>;
+      encryptedKeysForDescendants: Record<string, string>;
+    }
+  ): Promise<Item>;
+  abstract removeEncryption(itemId: string): Promise<Item>;
+  abstract getKeyChain(itemId: string): Promise<{
+    user_access_item_id: string;
+    encrypted_key_for_user: string;
+    chain: Array<{ item_id: string; encrypted_symmetric_key: string }>;
+  }>;
 }

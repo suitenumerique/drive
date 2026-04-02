@@ -97,6 +97,23 @@ export const ExplorerRightPanelContent = ({
           <div className="explorer__right-panel__item-type">
             <ItemIcon item={firstSelectedItem} size={IconSize.X_LARGE} />
           </div>
+          {firstSelectedItem.is_encrypted && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                color: "var(--c--theme--colors--success-600, #18753c)",
+                fontSize: "14px",
+                marginTop: "8px",
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: "18px" }}>
+                lock
+              </span>
+              {t("explorer.rightPanel.encrypted", "Encrypted")}
+            </div>
+          )}
           {showWarning && (
             <div className="explorer__right-panel__suspicious-warning">
               <div className="explorer__right-panel__suspicious-warning__text">

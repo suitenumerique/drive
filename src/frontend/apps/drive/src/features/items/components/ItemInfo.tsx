@@ -46,6 +46,26 @@ export const ItemInfo = ({ item }: ItemInfoProps) => {
         label={t("explorer.rightPanel.created_by")}
         rightContent={<UserRow fullName={item.creator.full_name} />}
       />
+      {item.is_encrypted && (
+        <InfoRow
+          label={t("explorer.rightPanel.security", "Security")}
+          rightContent={
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                color: "var(--c--theme--colors--success-600, #18753c)",
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: "16px" }}>
+                lock
+              </span>
+              {t("explorer.rightPanel.encrypted", "Encrypted")}
+            </span>
+          }
+        />
+      )}
     </div>
   );
 };

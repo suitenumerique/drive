@@ -197,7 +197,8 @@ export const itemToPreviewFile = (item: Item) => {
     url_preview: item.url_preview ?? "",
     url: item.url ?? "",
     isSuspicious: item.upload_state === ItemUploadState.SUSPICIOUS,
-    is_wopi_supported: item.is_wopi_supported,
+    is_wopi_supported: item.is_wopi_supported && !item.is_encrypted,
+    is_encrypted: item.is_encrypted,
     size: item.size,
   } as FilePreviewType;
 };

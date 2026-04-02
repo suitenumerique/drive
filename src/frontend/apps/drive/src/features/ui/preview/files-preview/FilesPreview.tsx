@@ -16,6 +16,7 @@ import { FileIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { useTranslation } from "react-i18next";
 import { SuspiciousPreview } from "../suspicious/SuspiciousPreview";
 import { WopiEditor } from "../wopi/WopiEditor";
+import { EncryptedFileViewer } from "../encrypted/EncryptedFileViewer";
 import posthog from "posthog-js";
 
 export type FilePreviewType = {
@@ -24,6 +25,7 @@ export type FilePreviewType = {
   title: string;
   mimetype: string;
   is_wopi_supported?: boolean;
+  is_encrypted?: boolean;
   url_preview: string;
   url: string;
 };
@@ -91,6 +93,14 @@ export const FilePreview = ({
 
     if (currentFile.isSuspicious) {
       return <SuspiciousPreview handleDownload={handleDownload} />;
+    }
+    if (currentFile.is_encrypted) {
+      return (
+        <EncryptedFileViewer
+          file={currentFile}
+          onDownload={handleDownload}
+        />
+      );
     }
     if (currentFile.is_wopi_supported) {
       return <WopiEditor item={currentFile} onFileRename={onFileRename} />;
