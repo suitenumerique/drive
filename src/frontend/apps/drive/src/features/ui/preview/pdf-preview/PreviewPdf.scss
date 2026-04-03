@@ -195,6 +195,22 @@
     font-weight: 600;
     color: var(--c--contextuals--content--semantic--neutral--secondary);
     padding-right: 4px;
+
+    .c__field {
+      width: auto;
+
+      .c__input__wrapper {
+        height: 26px;
+        padding: 4px;
+
+        input {
+          font-weight: 600;
+          text-align: center;
+          padding: 0;
+          color: var(--c--contextuals--content--semantic--neutral--tertiary);
+        }
+      }
+    }
   }
 
   &__page-input {
@@ -211,7 +227,9 @@
 
     &:focus {
       outline: none;
-      border-color: var(--c--contextuals--content--semantic--brand--primary);
+      border-color: var(--c--contextuals--border--semantic--brand--primary);
+      box-shadow: 0 0 0 var(--c--components--forms-input--border-width--focus)
+        var(--c--components--forms-input--border-color--focus);
     }
   }
 

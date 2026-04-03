@@ -1,4 +1,4 @@
-import { Button } from "@gouvfr-lasuite/cunningham-react";
+import { Button, Input } from "@gouvfr-lasuite/cunningham-react";
 import { LeftSidebarIcon } from "../../components/icon/LeftSidebarIcon";
 import { ZoomOut } from "../../components/icon/ZoomOut";
 import { ZoomIn } from "../../components/icon/ZoomIn";
@@ -41,9 +41,8 @@ export function PdfControls({
       <div className="controls-vertical-separator" />
       <div className="pdf-preview__page-nav">
         <div className="pdf-preview__page-indicator">
-          <input
-            type="text"
-            className="pdf-preview__page-input"
+          <Input
+            variant="classic"
             value={pageInputValue}
             onChange={onPageInputChange}
             onBlur={onPageInputSubmit}
