@@ -62,7 +62,7 @@ OIDC_RS_AUDIENCE_CLAIM="client_id"  # The claim used to identify the audience
 OIDC_RS_ALLOWED_AUDIENCES=""
 
 # Frontend
-FRONTEND_THEME=default
+FRONTEND_THEME=dsfr-light
 FRONTEND_MORE_LINK=https://docs.numerique.gouv.fr/docs/fa0aba15-e119-4185-b466-a4b37ad95950/
 FRONTEND_FEEDBACK_BUTTON_SHOW=True
 FRONTEND_FEEDBACK_BUTTON_IDLE=False

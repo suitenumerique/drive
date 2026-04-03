@@ -6,7 +6,7 @@ export const useCunninghamTheme = () => {
 
   return tokens.themes[
     theme as keyof typeof tokens.themes
-  ] as (typeof tokens.themes)["default"];
+  ] as (typeof tokens.themes)["dsfr-light"];
 };
 
 // Once the cunningham sass generated string is fixed, we can remove this function.

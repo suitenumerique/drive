@@ -30,7 +30,7 @@ export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
     if (config?.FRONTEND_THEME) {
       setTheme(config.FRONTEND_THEME);
     } else {
-      setTheme("default");
+      setTheme("dsfr-light");
     }
   }, [config?.FRONTEND_THEME, setTheme]);
 
@@ -49,9 +49,7 @@ export const ConfigProvider = ({ children }: { children: React.ReactNode }) => {
           <link rel="stylesheet" href={config.FRONTEND_CSS_URL} />
         </Head>
       )}
-      {config.FRONTEND_JS_URL && (
-        <Script src={config.FRONTEND_JS_URL} />
-      )}
+      {config.FRONTEND_JS_URL && <Script src={config.FRONTEND_JS_URL} />}
       {children}
     </ConfigContext.Provider>
   );
