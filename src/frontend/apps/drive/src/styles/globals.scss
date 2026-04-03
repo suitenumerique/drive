@@ -75,6 +75,11 @@ body {
 .c__left-panel {
   border-right: none;
 }
+// Keep toasts behind modals and file preview overlays (z-index: 1000)
+:root {
+  --toastify-z-index: 999;
+}
+
 .c__modal__backdrop {
   z-index: 1000;
 }
