@@ -213,26 +213,6 @@
     }
   }
 
-  &__page-input {
-    height: 26px;
-    text-align: center;
-    border: 1px solid var(--c--contextuals--border--semantic--neutral--tertiary);
-    background: var(--c--contextuals--background--surface--tertiary);
-    border-radius: 4px;
-    padding: 4px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--c--contextuals--content--semantic--neutral--secondary);
-    background: transparent;
-
-    &:focus {
-      outline: none;
-      border-color: var(--c--contextuals--border--semantic--brand--primary);
-      box-shadow: 0 0 0 var(--c--components--forms-input--border-width--focus)
-        var(--c--components--forms-input--border-color--focus);
-    }
-  }
-
   &__page-total {
     white-space: nowrap;
     font-size: 14px;
