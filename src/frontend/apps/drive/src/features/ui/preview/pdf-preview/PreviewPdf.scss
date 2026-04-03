@@ -83,9 +83,7 @@
 
   &__thumbnail {
     cursor: pointer;
-    border: 2px solid transparent;
-    border-radius: 4px;
-    padding: 4px;
+    border: none;
     background: none;
     display: flex;
     flex-direction: column;
@@ -98,16 +96,21 @@
       box-shadow: 0 0.5px 5px 0 rgba(0, 0, 0, 0.1);
       border-radius: 4px;
       overflow: hidden;
-    }
-
-    &:hover {
-      border-color: var(
-        --c--contextuals--content--semantic--neutral--secondary
-      );
+      border: 2px solid transparent;
     }
 
     &--active {
-      border: 2px solid var(--c--contextuals--border--semantic--brand--primary);
+      .react-pdf__Thumbnail {
+        border: 2px solid
+          var(--c--contextuals--border--semantic--brand--primary);
+      }
+
+      .pdf-preview__thumbnail-number {
+        background-color: var(
+          --c--contextuals--border--semantic--brand--primary
+        );
+        color: var(--c--contextuals--background--surface--primary);
+      }
     }
   }
 
@@ -125,11 +128,14 @@
   }
 
   &__thumbnail-number {
-    margin-top: 8px;
+    margin-top: 4px;
     font-size: 12px;
     font-weight: 700;
     color: var(--c--contextuals--content--semantic--neutral--secondary);
     text-align: center;
+    font-family: var(--c--globals--font--families--base);
+    padding: 4px 6px;
+    border-radius: 8px;
   }
 
   &__horizontal-scroll {
