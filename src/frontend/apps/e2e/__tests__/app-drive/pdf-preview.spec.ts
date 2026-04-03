@@ -272,6 +272,31 @@ test.describe("PDF Preview", () => {
     await expectActiveThumbnail(page, 3);
   });
 
+  test("Does not scroll the sidebar when clicking a thumbnail", async ({
+    page,
+  }) => {
+    await openSidebar(page);
+
+    const sidebarGrid = page.locator(
+      ".pdf-preview__sidebar .ReactVirtualized__Grid",
+    );
+
+    const scrollBefore = await sidebarGrid.evaluate((el) => el.scrollTop);
+
+    await page
+      .locator('button[aria-label="Go to page 3"]')
+      .dispatchEvent("click");
+
+    await expect(getPageInput(page)).toHaveValue("3", { timeout: 10000 });
+    await expectActiveThumbnail(page, 3);
+
+    // Give time for any unwanted scroll to happen
+    await page.waitForTimeout(500);
+
+    const scrollAfter = await sidebarGrid.evaluate((el) => el.scrollTop);
+    expect(scrollAfter).toBe(scrollBefore);
+  });
+
   test("Updates the active thumbnail when scrolling the document", async ({
     page,
   }) => {

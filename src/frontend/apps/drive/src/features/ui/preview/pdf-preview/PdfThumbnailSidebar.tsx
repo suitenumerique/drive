@@ -54,10 +54,17 @@ export function PdfThumbnailSidebarContent({
   isOpen,
 }: PdfThumbnailSidebarProps) {
   const listRef = useRef<List>(null);
+  // When true, the next currentPage change came from a thumbnail click
+  // and should not trigger an auto-scroll of the sidebar.
+  const isClickNavRef = useRef(false);
 
-  // Auto-scroll active thumbnail into view
+  // Auto-scroll active thumbnail into view (only for scroll-initiated changes)
   useEffect(() => {
     if (!listRef.current) return;
+    if (isClickNavRef.current) {
+      isClickNavRef.current = false;
+      return;
+    }
     listRef.current.scrollToRow(currentPage - 1);
   }, [currentPage]);
 
@@ -77,7 +84,10 @@ export function PdfThumbnailSidebarContent({
         <button
           data-thumb-page={page}
           className={`pdf-preview__thumbnail${currentPage === page ? " pdf-preview__thumbnail--active" : ""}`}
-          onClick={() => goToPage(page)}
+          onClick={() => {
+            isClickNavRef.current = true;
+            goToPage(page);
+          }}
           aria-label={`Go to page ${page}`}
         >
           <Thumbnail
