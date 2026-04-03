@@ -57,6 +57,11 @@ export function PdfThumbnailSidebarContent({
   // When true, the next currentPage change came from a thumbnail click
   // and should not trigger an auto-scroll of the sidebar.
   const isClickNavRef = useRef(false);
+  // Scroll to the current page on first render, then clear so the prop
+  // no longer forces scroll position on subsequent renders.
+  const [initialScrollIndex, setInitialScrollIndex] = useState<
+    number | undefined
+  >(currentPage - 1);
 
   // Auto-scroll active thumbnail into view (only for scroll-initiated changes)
   useEffect(() => {
@@ -115,7 +120,9 @@ export function PdfThumbnailSidebarContent({
             rowHeight={ROW_HEIGHT}
             overscanRowCount={5}
             rowRenderer={rowRenderer}
+            scrollToIndex={initialScrollIndex}
             scrollToAlignment="center"
+            onRowsRendered={() => setInitialScrollIndex(undefined)}
             style={{ outline: "none" }}
           />
         )}
