@@ -4,9 +4,12 @@ Tasks related to items.
 
 import hashlib
 import logging
+from datetime import timedelta
 from os.path import splitext
 
+from django.conf import settings
 from django.core.files.storage import default_storage
+from django.utils import timezone
 
 import boto3
 import botocore
@@ -20,33 +23,51 @@ logger = logging.getLogger(__name__)
 
 
 @app.task
-def process_item_deletion(item_id):
+def process_item_purge(item_id):
     """
-    Process the deletion of an item.
-    Definitely delete it in the database.
-    Delete the files from the storage.
-    trigger the deletion process of the children.
+    Process the purge of an item that was either:
+    - hard deleted
+    - soft deleted for longer than the trashbin grace period
+
+    This task can be retried without harm:
+    - delete file from storage first, then item from database
+    - delete children first, then parents
     """
-    logger.info("Processing item deletion for %s", item_id)
+    logger.info("Processing item purge for %s", item_id)
+
     try:
-        item = Item.objects.get(id=item_id)
+        root = Item.objects.get(id=item_id)
     except Item.DoesNotExist:
         logger.error("Item %s does not exist", item_id)
         return
 
-    if item.hard_deleted_at is None:
-        logger.error("To process an item deletion, it must be hard deleted first.")
+    # Compute cutoff only if relevant
+    now = timezone.now()
+
+    is_hard_deleted = root.hard_deleted_at is not None
+    is_soft_deleted_and_purgeable = root.deleted_at is not None and now >= (
+        root.deleted_at + timedelta(days=settings.TRASHBIN_CUTOFF_DAYS + settings.PURGE_GRACE_DAYS)
+    )
+
+    if not (is_hard_deleted or is_soft_deleted_and_purgeable):
+        if root.deleted_at is None:
+            reason = "item is not deleted"
+        else:
+            reason = f"soft-deleted but not past purge cutoff: {root.deleted_at.isoformat()}"
+
+        logger.info("Item %s is not eligible for purge: %s", item_id, reason)
         return
 
-    if item.type == ItemTypeChoices.FILE:
-        logger.info("Deleting file %s", item.file_key)
-        default_storage.delete(item.file_key)
+    # Get descendants, leaf first. Don't burst memory
+    for item in Item.objects.filter(path__descendants=root.path).order_by("-path").iterator():
+        if item.type == ItemTypeChoices.FILE and item.file_key:
+            try:
+                default_storage.delete(item.file_key)
+            except FileNotFoundError:
+                # File already absent from storage: ignore and continue
+                pass
 
-    if item.type == ItemTypeChoices.FOLDER:
-        for child in item.children():
-            process_item_deletion.delay(child.id)
-
-    item.delete()
+        item.delete()
 
 
 @app.task

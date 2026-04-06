@@ -990,6 +990,7 @@ class Base(Configuration):
     TRASHBIN_CUTOFF_DAYS = values.Value(
         30, environ_name="TRASHBIN_CUTOFF_DAYS", environ_prefix=None
     )
+    PURGE_GRACE_DAYS = values.Value(7, environ_name="PURGE_GRACE_DAYS", environ_prefix=None)
 
     # Mail
     EMAIL_BACKEND = values.Value("django.core.mail.backends.smtp.EmailBackend")
