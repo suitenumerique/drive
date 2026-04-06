@@ -266,6 +266,12 @@ backend:
         - "/bin/sh"
         - "-c"
         - python manage.py clean_pending_items
+    - name: purge-deleted-items
+      schedule: "45 0 * * *"
+      command:
+        - "/bin/sh"
+        - "-c"
+        - python manage.py purge_deleted_items
 
   ## @param backend.themeCustomization.enabled Enable theme customization
   ## @param backend.themeCustomization.file_content Content of the theme customization file. Must be a json object.
