@@ -210,7 +210,104 @@ test.describe("Custom columns", () => {
     expect(createdText).toMatch(/seconds? ago|minute/);
   });
 
-  // ── Group 6: Default marker in dropdown ───────────────────────
+  // ── Group 6: File extension display ────────────────────────────
+
+  test("File type column shows file extension for files", async ({ page }) => {
+    await importFile(page, PDF_FILE_PATH);
+    const fileRow = page.getByRole("row").filter({ hasText: "pv_cm" }).first();
+    await expect(fileRow).toBeVisible({ timeout: 15000 });
+
+    await createFolderInCurrentFolder(page, "TestFolder");
+
+    await changeColumnType(page, 2, "File type");
+    await expectColumnHeaderLabel(page, 2, "File type");
+
+    // File should show its extension
+    const fileTypeText = await getCellText(page, "pv_cm", 2);
+    expect(fileTypeText).toBe(".pdf");
+
+    // Folder should still show "Folder"
+    const folderTypeText = await getCellText(page, "TestFolder", 2);
+    expect(folderTypeText).toBe("Folder");
+  });
+
+  // ── Group 7: Sort disabled on Recent view ────────────────────
+
+  test("Sort buttons are hidden on Recent view", async ({ page }) => {
+    // Create a file so Recent view has content
+    await createFileFromTemplate(page, "TestDoc");
+
+    await clickToRecent(page);
+    const fileRow = page
+      .getByRole("row")
+      .filter({ hasText: "TestDoc" })
+      .first();
+    await expect(fileRow).toBeVisible({ timeout: 10000 });
+
+    // Name header should NOT have a sort button
+    const nameHeader = page.locator("th").nth(1);
+    await expect(
+      nameHeader.locator(".explorer__grid__header button[aria-label]"),
+    ).toHaveCount(0);
+
+    // Column 1 header should NOT have a sort button (only dropdown button)
+    const col1Header = getColumnHeader(page, 1);
+    await expect(
+      col1Header.locator(".explorer__grid__header button"),
+    ).toHaveCount(1); // only dropdown trigger, no sort button
+
+    // Verify sort buttons ARE present on My files (positive control)
+    await clickToMyFiles(page);
+    const myFilesRow = page
+      .getByRole("row")
+      .filter({ hasText: "TestDoc" })
+      .first();
+    await expect(myFilesRow).toBeVisible({ timeout: 10000 });
+
+    const nameHeaderMyFiles = page.locator("th").nth(1);
+    await expect(
+      nameHeaderMyFiles.locator(".explorer__grid__header button[aria-label]"),
+    ).toHaveCount(1);
+  });
+
+  // ── Group 8: Column duplicate prevention ─────────────────────
+
+  test("Cannot select the same column type in both slots", async ({
+    page,
+  }) => {
+    await createFolderInCurrentFolder(page, "TestFolder");
+
+    // Set column 1 to "File size"
+    await changeColumnType(page, 1, "File size");
+    await expectColumnHeaderLabel(page, 1, "File size");
+
+    // Open column 2 dropdown
+    const header2 = getColumnHeader(page, 2);
+    const dropdownButton2 = header2
+      .locator(".explorer__grid__header button")
+      .first();
+    await dropdownButton2.click();
+
+    // "File size" should be disabled in column 2 dropdown
+    const fileSizeOption = page.getByRole("menuitem", {
+      name: "File size",
+      exact: true,
+    });
+    await expect(fileSizeOption).toBeVisible();
+    await expect(fileSizeOption).toHaveAttribute("aria-disabled", "true");
+
+    // Another option (e.g., "Created") should NOT be disabled
+    const createdOption = page.getByRole("menuitem", {
+      name: "Created",
+      exact: true,
+    });
+    await expect(createdOption).toBeVisible();
+    await expect(createdOption).not.toHaveAttribute("aria-disabled", "true");
+
+    await page.keyboard.press("Escape");
+  });
+
+  // ── Group 9: Default marker in dropdown ───────────────────────
 
   test("Default column option is marked in dropdown", async ({ page }) => {
     await createFolderInCurrentFolder(page, "TestFolder");
