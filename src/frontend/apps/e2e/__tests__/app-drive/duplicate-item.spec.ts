@@ -85,11 +85,18 @@ test.describe("Duplicate item", () => {
     // The duplicated item should appear in the grid
     await expectRowItem(page, copyTitle);
 
-    // It should eventually reach ready state (no spinner, no duplicating label)
-    await expect(page.getByText("(duplication in progress)")).not.toBeVisible({
-      timeout: 15000,
-    });
-    await expect(page.locator("tr.duplicating")).not.toBeVisible();
+    // It should eventually reach ready state (no spinner, no duplicating label).
+    // Scope to the copy row to avoid races with unrelated re-renders, and
+    // give it enough time to cover several poll cycles (3s interval) on
+    // slower CI browsers.
+    const copyRow = page
+      .getByRole("row", { name: copyTitle })
+      .filter({ hasText: copyTitle })
+      .first();
+    await expect(copyRow).not.toHaveClass(/duplicating/, { timeout: 20000 });
+    await expect(
+      copyRow.getByText("(duplication in progress)"),
+    ).not.toBeVisible();
   });
 
   test("Duplicate option is available for files but not folders", async ({
