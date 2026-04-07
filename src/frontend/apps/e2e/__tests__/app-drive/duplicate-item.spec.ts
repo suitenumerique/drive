@@ -43,6 +43,29 @@ const setupDuplicateMocks = async (page: Page) => {
     },
   );
 
+  // Also intercept endpoints list to override the duplicated item's state
+  await page.route(
+    (url) =>
+      url.pathname.endsWith("/api/v1.0/items/") &&
+      !url.pathname.includes("/duplicate/"),
+    async (route) => {
+      if (route.request().method() !== "GET" || !duplicatedItemId) {
+        await route.continue();
+        return;
+      }
+      const response = await route.fetch();
+      const json = await response.json();
+      if (json.results) {
+        for (const item of json.results) {
+          if (item.id === duplicatedItemId) {
+            item.upload_state = forcedUploadState;
+          }
+        }
+      }
+      await route.fulfill({ response, json });
+    },
+  );
+
   return {
     releaseDuplicating: () => {
       forcedUploadState = "ready";
@@ -73,8 +96,7 @@ test.describe("Duplicate item", () => {
 
     const [response] = await Promise.all([
       page.waitForResponse(
-        (resp) =>
-          resp.url().includes("/duplicate/") && resp.status() === 201,
+        (resp) => resp.url().includes("/duplicate/") && resp.status() === 201,
       ),
       triggerDuplicate(page, "TestDoc"),
     ]);
