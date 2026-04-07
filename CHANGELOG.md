@@ -19,6 +19,7 @@ and this project adheres to
 - ✨(frontend) add item duplication with polling and visual feedback
 - ⚡(ci) shard e2e tests and cache playwright browsers
 - ⬆️(frontend) upgrade cunningham-react and ui-kit to 0.20.0
+- ✨(frontend) improve custom columns with sortable config and i18n
 
 ### Changed
 
