@@ -327,6 +327,12 @@ msgstr ""
 msgid "Item invitations"
 msgstr ""
 
+#: core/api/viewsets.py:1614
+#, python-brace-format
+msgid "copy of {title}"
+msgstr "copie de {title}"
+
+
 #: core/templates/mail/html/invitation.html:162
 #: core/templates/mail/text/invitation.txt:3
 msgid "Logo email"

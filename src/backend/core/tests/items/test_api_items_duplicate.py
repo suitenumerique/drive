@@ -86,7 +86,51 @@ def test_api_items_duplicate_authenticated_sufficient_role(role):
     assert response_data["id"] != str(item.id)
 
     # The duplicated item should have the same title, mimetype, filename, description
-    assert response_data["title"] == item.title
+    assert response_data["title"] == f"Copy of {item.title}"
+    assert response_data["mimetype"] == item.mimetype
+    assert response_data["filename"] == item.filename
+    assert response_data["description"] == item.description
+    assert response_data["type"] == models.ItemTypeChoices.FILE
+
+    # A new item should exist in the database
+    duplicated_item = models.Item.objects.get(id=response_data["id"])
+    assert duplicated_item.creator == user
+
+
+@pytest.mark.parametrize("role", models.RoleChoices.values)
+def test_api_items_duplicate_authenticated_sufficient_role_in_french(role):
+    """
+    Authenticated users with editor, administrator or owner role should be able
+    to duplicate a ready file item with a translated duplicata name.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    # set drive cookie language to fr-FR
+    client.cookies["drive_language"] = "fr-FR"
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        mimetype="text/plain",
+        filename="myfile.txt",
+        description="A description",
+        users=[(user, role)],
+    )
+
+    with mock.patch("core.tasks.item.duplicate_file.delay") as mock_delay:
+        response = client.post(f"/api/v1.0/items/{item.id!s}/duplicate/")
+
+    assert response.status_code == 201
+    response_data = response.json()
+
+    # The task should have been triggered
+    mock_delay.assert_called_once()
+
+    # The duplicated item should be a different object
+    assert response_data["id"] != str(item.id)
+
+    # The duplicated item should have the same title, mimetype, filename, description
+    assert response_data["title"] == f"Copie de {item.title}"
     assert response_data["mimetype"] == item.mimetype
     assert response_data["filename"] == item.filename
     assert response_data["description"] == item.description

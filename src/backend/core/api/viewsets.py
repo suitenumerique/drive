@@ -20,7 +20,7 @@ from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
-from django.utils.text import slugify
+from django.utils.text import capfirst, slugify
 from django.utils.translation import gettext_lazy as _
 
 import rest_framework as drf
@@ -1610,7 +1610,9 @@ class ItemViewSet(
             creator=user,
             link_reach=None if parent else LinkReachChoices.RESTRICTED,
             parent=parent,
-            title=item_to_duplicate.title,  # Title uniqueness is managed in the create_child method
+            title=capfirst(
+                _("copy of {title}").format(title=item_to_duplicate.title)
+            ),  # Title uniqueness is managed in the create_child method
             type=models.ItemTypeChoices.FILE,
             size=item_to_duplicate.size,
             upload_state=models.ItemUploadStateChoices.DUPLICATING,
