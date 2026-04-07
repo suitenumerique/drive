@@ -145,6 +145,7 @@ services:
       - env.d/development/common.${ENV_OVERRIDE:-local}
       - env.d/development/postgresql
       - env.d/development/postgresql.local
+      - env.d/development/postgresql.${ENV_OVERRIDE:-local}
     volumes:
       - ./src/backend:/app
       - ./data/static:/data/static
