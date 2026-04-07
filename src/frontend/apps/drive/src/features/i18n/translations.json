@@ -216,6 +216,14 @@
             "folder": "Folder",
             "default_suffix": "(default)"
           },
+          "size_units": {
+            "B": "B",
+            "KB": "KB",
+            "MB": "MB",
+            "GB": "GB",
+            "TB": "TB",
+            "PB": "PB"
+          },
           "sort": {
             "ascending": "Sort ascending",
             "descending": "Sort descending",
@@ -757,6 +765,14 @@
             "file_size": "Taille",
             "folder": "Dossier",
             "default_suffix": "(par défaut)"
+          },
+          "size_units": {
+            "B": "o",
+            "KB": "ko",
+            "MB": "Mo",
+            "GB": "Go",
+            "TB": "To",
+            "PB": "Po"
           },
           "sort": {
             "ascending": "Tri croissant",
@@ -1309,6 +1325,14 @@
             "file_size": "Bestandsgrootte",
             "folder": "Map",
             "default_suffix": "(standaard)"
+          },
+          "size_units": {
+            "B": "B",
+            "KB": "KB",
+            "MB": "MB",
+            "GB": "GB",
+            "TB": "TB",
+            "PB": "PB"
           },
           "sort": {
             "ascending": "Oplopend sorteren",

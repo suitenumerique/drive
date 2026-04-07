@@ -39,7 +39,7 @@ export const ItemInfo = ({ item }: ItemInfoProps) => {
       {item.size && (
         <InfoRow
           label={t("explorer.rightPanel.size")}
-          rightContent={formatSize(item.size)}
+          rightContent={formatSize(item.size, t)}
         />
       )}
       <InfoRow

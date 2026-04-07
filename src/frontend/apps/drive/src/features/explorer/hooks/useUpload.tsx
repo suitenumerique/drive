@@ -364,7 +364,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
               <span>
                 {t("explorer.actions.upload.file_too_large", {
                   name: file.name,
-                  maxSize: formatSize(maxSize),
+                  maxSize: formatSize(maxSize, t),
                 })}
               </span>
             </ToasterItem>,
