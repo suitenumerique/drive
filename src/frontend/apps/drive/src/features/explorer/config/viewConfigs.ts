@@ -5,6 +5,7 @@ export const VIEW_CONFIGS: Record<DefaultRoute | "folder", ViewConfig> = {
   [DefaultRoute.RECENT]: {
     defaultOrdering: "-updated_at",
     folderMode: "files_only",
+    sortable: false,
   },
   [DefaultRoute.MY_FILES]: {
     defaultOrdering: "-type,title",

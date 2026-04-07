@@ -136,6 +136,7 @@ export const AppExplorerGrid = () => {
         onChangeColumn={appExplorer.onChangeColumn}
         column1Config={appExplorer.column1Config}
         column2Config={appExplorer.column2Config}
+        viewSortable={appExplorer.viewConfig.sortable}
       />
     );
 

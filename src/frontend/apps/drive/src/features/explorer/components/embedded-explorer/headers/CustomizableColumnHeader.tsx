@@ -13,6 +13,8 @@ export type CustomizableColumnHeaderProps = {
   sortState: SortState;
   onSort: (columnId: ColumnType) => void;
   onChangeColumn: (type: ColumnType) => void;
+  otherColumnType?: ColumnType;
+  sortable?: boolean;
 };
 
 const ALL_COLUMN_TYPES = Object.values(ColumnType);
@@ -23,6 +25,8 @@ export const CustomizableColumnHeader = ({
   sortState,
   onSort,
   onChangeColumn,
+  otherColumnType,
+  sortable = true,
 }: CustomizableColumnHeaderProps) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -41,10 +45,14 @@ export const CustomizableColumnHeader = ({
           : t(config.labelKey);
 
         const Icon = config.icon;
+        const isDisabled = type === otherColumnType;
+        const isChecked = type === currentType;
         const result = {
           icon: <Icon />,
           label,
           value: type,
+          isDisabled,
+          isChecked,
           callback: () => {
             onChangeColumn(type);
           },
@@ -56,7 +64,7 @@ export const CustomizableColumnHeader = ({
 
         return [result];
       }),
-    [defaultType, t, onChangeColumn],
+    [defaultType, t, onChangeColumn, otherColumnType, currentType],
   );
 
   return (
@@ -76,7 +84,7 @@ export const CustomizableColumnHeader = ({
           {t(currentConfig.labelKey)}
         </Button>
       </DropdownMenu>
-      {currentConfig.sortable !== false && (
+      {sortable && currentConfig.sortable !== false && (
         <SortColumnButton
           columnId={currentType}
           sortState={sortState}

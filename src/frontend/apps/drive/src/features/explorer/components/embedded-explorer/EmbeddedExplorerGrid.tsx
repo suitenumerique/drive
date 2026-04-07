@@ -45,7 +45,7 @@ import {
   DEFAULT_COLUMN_PREFERENCES,
   SortState,
 } from "../../types/columns";
-import { SortableColumnHeader } from "./headers/SortableColumnHeader";
+import { ColumnHeader } from "./headers/ColumnHeader";
 import { CustomizableColumnHeader } from "./headers/CustomizableColumnHeader";
 import { useDuplicatingItemsPoller } from "../../hooks/useDuplicatingItemsPoller";
 
@@ -72,6 +72,7 @@ export type EmbeddedExplorerGridProps = {
   onChangeColumn?: (slot: "column1" | "column2", type: ColumnType) => void;
   column1Config?: ColumnConfig;
   column2Config?: ColumnConfig;
+  viewSortable?: boolean;
 };
 
 const EMPTY_ARRAY: Item[] = [];
@@ -254,11 +255,12 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                 {/* This one stands for the mobile column */}
                 <th></th>
                 <th className="explorer__grid__th--title">
-                  <SortableColumnHeader
+                  <ColumnHeader
                     label={t("explorer.grid.name")}
                     columnId="title"
                     sortState={props.sortState ?? null}
                     onSort={handleSortTitle}
+                    sortable={props.viewSortable !== false}
                   />
                 </th>
                 {!props.isCompact && (
@@ -272,6 +274,8 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                           sortState={props.sortState ?? null}
                           onSort={handleSortColumn}
                           onChangeColumn={handleChangeCol1}
+                          otherColumnType={props.prefs.column2}
+                          sortable={props.viewSortable !== false}
                         />
                       ) : (
                         <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable">
@@ -288,6 +292,8 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
                           sortState={props.sortState ?? null}
                           onSort={handleSortColumn}
                           onChangeColumn={handleChangeCol2}
+                          otherColumnType={props.prefs.column1}
+                          sortable={props.viewSortable !== false}
                         />
                       ) : null}
                     </th>

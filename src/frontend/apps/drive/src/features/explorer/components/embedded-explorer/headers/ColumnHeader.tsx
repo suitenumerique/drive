@@ -3,23 +3,27 @@ import { SortColumnButton } from "./SortColumnButton";
 
 type SortColumnId = NonNullable<SortState>["columnId"];
 
-export type SortableColumnHeaderProps = {
+export type ColumnHeaderProps = {
   label: string;
   columnId: SortColumnId;
   sortState: SortState;
   onSort: (columnId: SortColumnId) => void;
+  sortable?: boolean;
 };
 
-export const SortableColumnHeader = ({
+export const ColumnHeader = ({
   label,
   columnId,
   sortState,
   onSort,
-}: SortableColumnHeaderProps) => {
+  sortable = true,
+}: ColumnHeaderProps) => {
   return (
     <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable explorer__grid__header">
       <span className="explorer__grid__header__label">{label}</span>
-      <SortColumnButton columnId={columnId} sortState={sortState} onSort={onSort} />
+      {sortable && (
+        <SortColumnButton columnId={columnId} sortState={sortState} onSort={onSort} />
+      )}
     </div>
   );
 };

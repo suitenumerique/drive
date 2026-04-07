@@ -13,6 +13,7 @@ import {
 import { useGridColumns } from "../../hooks/useGridColumns";
 import { computeFilters } from "../../utils/ordering";
 import { DefaultRoute } from "@/utils/defaultRoutes";
+import { ViewConfig } from "../../types/viewConfig";
 
 export interface AppExplorerProps {
   // View configuration
@@ -52,6 +53,7 @@ export type AppExplorerContextType = AppExplorerProps & {
   column2Config?: ColumnConfig;
   filters: ItemFilters;
   onFiltersChange: (filters: ItemFilters) => void;
+  viewConfig: ViewConfig;
 };
 
 export const AppExplorerContext = createContext<
@@ -106,6 +108,7 @@ export const AppExplorer = (props: AppExplorerProps) => {
       column2Config,
       filters: baseFilters,
       onFiltersChange: setBaseFilters,
+      viewConfig,
     }),
     [
       props,
