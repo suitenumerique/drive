@@ -18,6 +18,7 @@ and this project adheres to
 - ✨(backend) allow ordering items by creator full name
 - ✨(frontend) add item duplication with polling and visual feedback
 - ⚡(ci) shard e2e tests and cache playwright browsers
+- ⬆️(frontend) upgrade cunningham-react and ui-kit to 0.20.0
 
 ### Changed
 
@@ -33,6 +34,7 @@ and this project adheres to
 - 🔧(scalingo) compile translation files at deploy time
 - 🐛(frontend) fix trash items not refreshing after hard delete
 - 🐛(frontend) show modal when clicking files in trash
+- 🐛(frontend) fix toasts appearing above modals
 
 ## [v0.15.0] - 2026-03-16
 
