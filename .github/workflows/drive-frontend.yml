@@ -8,6 +8,9 @@ on:
     branches:
       - "*"
 
+permissions:
+  contents: read
+
 jobs:
   install-front:
     uses: ./.github/workflows/front-dependencies-installation.yml
