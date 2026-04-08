@@ -62,9 +62,44 @@ jobs:
           cd src/frontend/apps/drive
           yarn test
 
+  build-frontend-e2e:
+    runs-on: ubuntu-latest
+    needs: install-front
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+
+      - name: Restore the frontend cache
+        uses: actions/cache@v4
+        with:
+          path: "src/frontend/**/node_modules"
+          key: front-node_modules-${{ hashFiles('src/frontend/**/yarn.lock') }}
+          fail-on-cache-miss: true
+
+      - name: Build frontend (static export, .env.development)
+        run: |
+          cd src/frontend/apps/drive
+          set -a
+          . ./.env.development
+          set +a
+          yarn build
+
+      - name: Upload frontend bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: drive-frontend-out
+          path: src/frontend/apps/drive/out
+          retention-days: 1
+          if-no-files-found: error
+
   test-e2e:
     runs-on: ubuntu-latest
-    needs: [install-front, build-mails]
+    needs: [install-front, build-mails, build-frontend-e2e]
     strategy:
       fail-fast: false
       matrix:
@@ -123,17 +158,30 @@ jobs:
           cd src/frontend/apps/e2e
           npx playwright install-deps ${{ matrix.browser }}
 
+      - name: Download frontend bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: drive-frontend-out
+          path: src/frontend/apps/drive/out
+
       - name: Start Docker services
         run: |
           make bootstrap-e2e
 
-      - name: Start frontend
+      - name: Serve frontend (stock nginx + prod vhost)
         run: |
-          cd src/frontend && yarn dev &
+          docker run -d --rm --name drive-static -p 3000:3000 \
+            -v "$PWD/src/frontend/apps/drive/out:/usr/share/nginx/html:ro" \
+            -v "$PWD/src/frontend/apps/drive/conf/default.conf:/etc/nginx/conf.d/default.conf:ro" \
+            nginx:1.25
 
       - name: Wait for Keycloak to be ready
         run: |
           timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:8083/)" != "302" ]]; do echo "Waiting for Keycloak..." && sleep 2; done' && echo "Keycloak is ready!"
+
+      - name: Wait for frontend to be ready
+        run: |
+          timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:3000/)" != "200" ]]; do echo "Waiting for frontend..." && sleep 1; done' && echo "Frontend is ready!"
 
       - name: Run e2e tests
         run: |
