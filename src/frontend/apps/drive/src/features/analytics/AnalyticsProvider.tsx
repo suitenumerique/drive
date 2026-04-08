@@ -18,8 +18,10 @@ export const AnalyticsProvider = ({
       options={{
         api_host: config?.POSTHOG_HOST,
         defaults: "2025-05-24",
-        opt_out_useragent_filter: process.env.NODE_ENV === "development",
-        request_batching: process.env.NODE_ENV !== "development",
+        opt_out_useragent_filter:
+          process.env.NEXT_PUBLIC_POSTHOG_TEST_MODE === "true",
+        request_batching:
+          process.env.NEXT_PUBLIC_POSTHOG_TEST_MODE !== "true",
       }}
     >
       {children}
