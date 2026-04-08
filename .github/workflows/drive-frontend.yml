@@ -98,17 +98,30 @@ jobs:
           path: "src/backend/core/templates/mail"
           key: mail-templates-${{ hashFiles('src/mail/mjml') }}
 
+      - name: Get Playwright version
+        id: playwright-version
+        run: |
+          VERSION=$(node -p "require('./src/frontend/apps/e2e/package.json').devDependencies['@playwright/test'] || require('./src/frontend/apps/e2e/package.json').dependencies['@playwright/test']")
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Cache Playwright browsers
         id: playwright-cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ matrix.browser }}-${{ hashFiles('src/frontend/**/yarn.lock') }}
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ steps.playwright-version.outputs.version }}
 
-      - name: Install Playwright Browsers
+      - name: Install Playwright Browsers (cache miss)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: |
           cd src/frontend/apps/e2e
-          npx playwright install --with-deps ${{matrix.browser}}
+          npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Install Playwright system deps (cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: |
+          cd src/frontend/apps/e2e
+          npx playwright install-deps ${{ matrix.browser }}
 
       - name: Start Docker services
         run: |
