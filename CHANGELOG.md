@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.16.0] - 2026-04-09
+
 ### Added
 
 - ✨(frontend) add PDF viewer with thumbnail sidebar, zoom and page navigation
@@ -379,7 +381,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.15.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.16.0...main
+[v0.16.0]: https://github.com/suitenumerique/drive/releases/v0.16.0
 [v0.15.0]: https://github.com/suitenumerique/drive/releases/v0.15.0
 [v0.14.0]: https://github.com/suitenumerique/drive/releases/v0.13.0
 [v0.13.0]: https://github.com/suitenumerique/drive/releases/v0.13.0
