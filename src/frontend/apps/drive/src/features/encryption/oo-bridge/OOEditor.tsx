@@ -14,23 +14,43 @@
  * 6. Auto-save: extract .bin → x2t → original format → encrypt → upload S3
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { Loader } from "@gouvfr-lasuite/cunningham-react";
-import { Item } from "@/features/drivers/types";
-import { getDriver } from "@/features/config/Config";
-import { convertToInternal, convertFromInternal } from "./x2tConverter";
-import { createMockServerCallbacks, sendToEditor } from "./mockServer";
-import { initLocalUser, getLocalUser, getUniqueOOId } from "./participants";
-import { resetPatchIndex } from "./changesPipeline";
-import { initCheckpointing, stopCheckpointing, forceSave } from "./checkpointing";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Loader } from '@gouvfr-lasuite/cunningham-react';
+import { Item } from '@/features/drivers/types';
+import { getDriver } from '@/features/config/Config';
+import { convertToInternal, convertFromInternal } from './x2tConverter';
+import { createMockServerCallbacks, sendToEditor } from './mockServer';
+import {
+  initLocalUser,
+  getLocalUser,
+  getUniqueOOId,
+  addRemoteUser,
+  removeRemoteUser,
+} from './participants';
+import { resetPatchIndex, handleIncomingChanges } from './changesPipeline';
+import { EncryptedRelay } from './encryptedRelay';
+import {
+  acquireCellLock,
+  releaseCellLock,
+  releaseAllUserLocks,
+  acquireSaveLock,
+  releaseSaveLock,
+  isSaveLocked,
+  resetAllLocks,
+} from './locks';
+import {
+  initCheckpointing,
+  stopCheckpointing,
+  forceSave,
+} from './checkpointing';
 import {
   EXTENSION_TO_DOC_TYPE,
   EXTENSION_TO_X2T_TYPE,
   type OOConfig,
   type OOChange,
-} from "./types";
-import { useAuth } from "@/features/auth/Auth";
+} from './types';
+import { useAuth } from '@/features/auth/Auth';
 
 // The OnlyOffice DocsAPI is loaded as a global from the static assets
 declare global {
@@ -38,7 +58,7 @@ declare global {
     DocsAPI?: {
       DocEditor: new (
         placeholder: string,
-        config: OOConfig,
+        config: OOConfig
       ) => OOEditorInstance;
     };
     __driveVaultClient?: any;
@@ -55,20 +75,24 @@ interface OOEditorProps {
   item: Item;
 }
 
-type EditorState = "loading" | "decrypting" | "converting" | "ready" | "error";
+type EditorState = 'loading' | 'decrypting' | 'converting' | 'ready' | 'error';
 
 export const OOEditor = ({ item }: OOEditorProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [state, setState] = useState<EditorState>("loading");
+  const [state, setState] = useState<EditorState>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [relayFailed, setRelayFailed] = useState(false);
   const editorRef = useRef<OOEditorInstance | null>(null);
+  const relayRef = useRef<EncryptedRelay | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scriptLoadedRef = useRef(false);
+  const saveLockHolder = useRef<string | null>(null);
 
-  const extension = item.title.split(".").pop()?.toLowerCase() || "docx";
-  const docType = EXTENSION_TO_DOC_TYPE[extension] || "word";
-  const x2tType = EXTENSION_TO_X2T_TYPE[extension] || "doc";
+  const extension = item.title.split('.').pop()?.toLowerCase() || 'docx';
+  const docType = EXTENSION_TO_DOC_TYPE[extension] || 'word';
+  const x2tType = EXTENSION_TO_X2T_TYPE[extension] || 'doc';
 
   /**
    * Load the OnlyOffice API script if not already loaded.
@@ -78,13 +102,13 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     if (scriptLoadedRef.current) return Promise.resolve();
 
     return new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = "/onlyoffice/v9/web-apps/apps/api/documents/api.js";
+      const script = document.createElement('script');
+      script.src = '/onlyoffice/v9/web-apps/apps/api/documents/api.js';
       script.onload = () => {
         scriptLoadedRef.current = true;
         resolve();
       };
-      script.onerror = () => reject(new Error("Failed to load OnlyOffice API"));
+      script.onerror = () => reject(new Error('Failed to load OnlyOffice API'));
       document.head.appendChild(script);
     });
   }, []);
@@ -96,7 +120,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     async (content: ArrayBuffer, _format: string): Promise<void> => {
       const vaultClient = window.__driveVaultClient;
       if (!vaultClient) {
-        throw new Error("Vault client not available");
+        throw new Error('Vault client not available');
       }
 
       const driver = getDriver();
@@ -111,7 +135,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         entryKeyBytes[i] = entryKeyBinary.charCodeAt(i);
       }
 
-      const encryptedKeyChain = keyChain.chain.map((entry) => {
+      const encryptedKeyChain = keyChain.chain.map(entry => {
         const binary = atob(entry.encrypted_symmetric_key);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) {
@@ -124,7 +148,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       const { encryptedData } = await vaultClient.encryptWithKey(
         content,
         entryKeyBytes.buffer,
-        encryptedKeyChain.length > 0 ? encryptedKeyChain : undefined,
+        encryptedKeyChain.length > 0 ? encryptedKeyChain : undefined
       );
 
       // Upload to S3 using the existing upload flow
@@ -132,20 +156,20 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       const newFilename = `${crypto.randomUUID()}.enc`;
       const createResponse = await fetch(
         `/api/v1.0/items/${item.id}/upload-ended/`,
-        { method: "POST", credentials: "include" },
+        { method: 'POST', credentials: 'include' }
       );
 
       // For now, use a simple PUT to the existing file key
       // The presigned URL from the item's policy
       if (item.url) {
         await fetch(item.url, {
-          method: "PUT",
+          method: 'PUT',
           body: new Uint8Array(encryptedData),
-          headers: { "X-amz-acl": "private" },
+          headers: { 'X-amz-acl': 'private' },
         });
       }
     },
-    [item.id, item.url],
+    [item.id, item.url]
   );
 
   /**
@@ -159,21 +183,21 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         if (!item.url || !user) return;
 
         // Step 1: Load OnlyOffice script
-        setState("loading");
+        setState('loading');
         await loadOOScript();
         if (cancelled) return;
 
         // Step 2: Download and decrypt the file
-        setState("decrypting");
+        setState('decrypting');
         const driver = getDriver();
         const keyChain = await driver.getKeyChain(item.id);
 
-        const response = await fetch(item.url, { credentials: "include" });
+        const response = await fetch(item.url, { credentials: 'include' });
         if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
         const encryptedBuffer = await response.arrayBuffer();
 
         const vaultClient = window.__driveVaultClient;
-        if (!vaultClient) throw new Error("Vault client not initialized");
+        if (!vaultClient) throw new Error('Vault client not initialized');
 
         // Decrypt
         const entryKeyBinary = atob(keyChain.encrypted_key_for_user);
@@ -182,7 +206,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           entryKeyBytes[i] = entryKeyBinary.charCodeAt(i);
         }
 
-        const encryptedKeyChain = keyChain.chain.map((entry) => {
+        const encryptedKeyChain = keyChain.chain.map(entry => {
           const binary = atob(entry.encrypted_symmetric_key);
           const bytes = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i++) {
@@ -194,18 +218,18 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         const { data: decryptedBuffer } = await vaultClient.decryptWithKey(
           encryptedBuffer,
           entryKeyBytes.buffer,
-          encryptedKeyChain.length > 0 ? encryptedKeyChain : undefined,
+          encryptedKeyChain.length > 0 ? encryptedKeyChain : undefined
         );
         if (cancelled) return;
 
         // Step 3: Convert to .bin format
-        setState("converting");
+        setState('converting');
         const { bin } = await convertToInternal(decryptedBuffer, item.title);
         if (cancelled) return;
 
         // Step 4: Create blob URL and load editor
         const blob = new Blob([bin], {
-          type: "application/octet-stream",
+          type: 'application/octet-stream',
         });
         const blobUrl = URL.createObjectURL(blob);
 
@@ -216,19 +240,19 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // Create the editor config
         const config: OOConfig = {
           document: {
-            fileType: "bin",
-            key: item.id + "_" + Date.now(),
+            fileType: 'bin',
+            key: item.id + '_' + Date.now(),
             title: item.title,
             url: blobUrl,
           },
           documentType: docType,
           editorConfig: {
-            mode: "edit",
+            mode: 'edit',
             user: {
               id: user.id,
               name: user.full_name || user.email,
             },
-            lang: user.language || "en",
+            lang: user.language || 'en',
             customization: {
               chat: false,
               compactToolbar: false,
@@ -240,51 +264,139 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               // Editor UI is ready
             },
             onDocumentReady: () => {
-              setState("ready");
+              setState('ready');
             },
-            onError: (event) => {
-              console.error("OnlyOffice error:", event.data);
+            onError: event => {
+              console.error('OnlyOffice error:', event.data);
               setError(String(event.data));
-              setState("error");
+              setState('error');
             },
           },
         };
 
         if (!window.DocsAPI) {
-          throw new Error("OnlyOffice API not loaded");
+          throw new Error('OnlyOffice API not loaded');
         }
+
+        // OnlyOffice's connectMockServer expects window.APP to exist
+        (window as any).APP = (window as any).APP || {};
 
         // Create the editor
         const editor = new window.DocsAPI.DocEditor(
-          "oo-editor-placeholder",
-          config,
+          'oo-editor-placeholder',
+          config
         );
         editorRef.current = editor;
+
+        // Set up the encrypted relay for collaboration
+        const relay = new EncryptedRelay({
+          roomId: item.id,
+          userId: user.sub,
+          userName: user.full_name || user.email,
+          vaultClient,
+          encryptedSymmetricKey: entryKeyBytes.buffer,
+          encryptedKeyChain:
+            encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
+          callbacks: {
+            onRemoteChanges: changes => {
+              // Apply remote changes to OnlyOffice
+              const msg = handleIncomingChanges(changes);
+              sendToEditor(msg);
+            },
+            onPeerJoin: (userId, userName) => {
+              addRemoteUser(userId, userName, userId);
+              // Update OnlyOffice participant list
+              sendToEditor({
+                type: 'authChanges',
+                changes: [],
+              } as any);
+            },
+            onPeerLeave: userId => {
+              removeRemoteUser(userId);
+              releaseAllUserLocks(userId);
+            },
+            onRoomState: peers => {
+              for (const peer of peers) {
+                if (peer.userId) {
+                  addRemoteUser(peer.userId, peer.userName, peer.userId);
+                }
+              }
+            },
+            onLockUpdate: (type, userId, lockData) => {
+              const lockId = JSON.stringify(lockData);
+              if (type === 'acquire') {
+                acquireCellLock(lockId, userId, lockData);
+              } else {
+                releaseCellLock(lockId, userId);
+              }
+              // Notify OnlyOffice about lock changes
+              sendToEditor({
+                type: 'getLock',
+                locks: [lockData],
+              } as any);
+            },
+            onCursorUpdate: (userId, cursor) => {
+              // Forward cursor to OnlyOffice
+              sendToEditor({
+                type: 'cursor',
+                cursor,
+                userId,
+              } as any);
+            },
+            onSaveLock: (userId, locked) => {
+              saveLockHolder.current = locked ? userId : null;
+            },
+            onConnectionChange: connected => {
+              setIsConnected(connected);
+              if (connected) setRelayFailed(false);
+            },
+            onReconnectFailed: () => {
+              setRelayFailed(true);
+            },
+          },
+        });
+        relayRef.current = relay;
+        relay.connect();
 
         // Connect our mock server (replaces Document Server)
         const callbacks = createMockServerCallbacks({
           onLocalChanges: (changes: OOChange[]) => {
-            // Phase 1: single user, no broadcast needed
-            // Phase 2: encrypt and send via WebSocket relay
+            // Encrypt and broadcast to all peers via relay
+            relay.sendChanges(changes);
+          },
+          onLockRequest: (type, lockData) => {
+            relay.sendLock(type, lockData);
+          },
+          onCursorUpdate: cursor => {
+            relay.sendCursor(cursor);
+          },
+          onSaveLockCheck: () => {
+            return saveLockHolder.current !== null;
           },
         });
         editor.connectMockServer(callbacks);
 
-        // Initialize auto-save
+        // Initialize auto-save with save lock broadcast
         initCheckpointing({
           editor,
           format: extension,
           type: x2tType,
+          userId: user.sub,
           onUpload: uploadEncrypted,
+          onSaveLock: locked => {
+            relay.sendSaveLock(locked);
+          },
         });
 
         // Clean up blob URL after editor loads
         URL.revokeObjectURL(blobUrl);
       } catch (err) {
         if (!cancelled) {
-          console.error("OOEditor init failed:", err);
-          setError(err instanceof Error ? err.message : "Failed to load editor");
-          setState("error");
+          console.error('OOEditor init failed:', err);
+          setError(
+            err instanceof Error ? err.message : 'Failed to load editor'
+          );
+          setState('error');
         }
       }
     };
@@ -296,6 +408,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       stopCheckpointing();
       // Force save on unmount
       forceSave().catch(console.error);
+      // Clean up locks and relay
+      resetAllLocks();
+      if (relayRef.current) {
+        relayRef.current.destroy();
+        relayRef.current = null;
+      }
       if (editorRef.current) {
         try {
           editorRef.current.destroyEditor();
@@ -306,27 +424,37 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     };
   }, [item.id]);
 
-  if (state === "error") {
+  if (state === 'error') {
     return (
       <div
         style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          gap: "16px",
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          gap: '16px',
         }}
       >
         <span
           className="material-icons"
-          style={{ fontSize: "48px", color: "var(--c--theme--colors--danger-600)" }}
+          style={{
+            fontSize: '48px',
+            color: 'var(--c--theme--colors--danger-600)',
+          }}
         >
           error
         </span>
-        <span>{t("explorer.encrypted.editor_error", "Failed to load editor")}</span>
+        <span>
+          {t('explorer.encrypted.editor_error', 'Failed to load editor')}
+        </span>
         {error && (
-          <span style={{ fontSize: "12px", color: "var(--c--theme--colors--greyscale-600)" }}>
+          <span
+            style={{
+              fontSize: '12px',
+              color: 'var(--c--theme--colors--greyscale-600)',
+            }}
+          >
             {error}
           </span>
         )}
@@ -334,33 +462,26 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     );
   }
 
-  if (state !== "ready") {
+  if (state !== 'ready') {
     return (
       <div
         style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          gap: "16px",
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          gap: '16px',
         }}
       >
         <Loader />
-        <span
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            color: "var(--c--theme--colors--success-600, #18753c)",
-          }}
-        >
-          <span className="material-icons" style={{ fontSize: "20px" }}>
-            lock
-          </span>
-          {state === "decrypting" && t("explorer.encrypted.decrypting", "Decrypting...")}
-          {state === "converting" && t("explorer.encrypted.converting", "Preparing editor...")}
-          {state === "loading" && t("explorer.encrypted.loading_editor", "Loading editor...")}
+        <span style={{ color: 'var(--c--theme--colors--greyscale-600, #666)' }}>
+          {state === 'decrypting' &&
+            t('explorer.encrypted.decrypting', 'Decrypting...')}
+          {state === 'converting' &&
+            t('explorer.encrypted.converting', 'Preparing editor...')}
+          {state === 'loading' &&
+            t('explorer.encrypted.loading_editor', 'Loading editor...')}
         </span>
       </div>
     );
@@ -369,9 +490,42 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   return (
     <div
       ref={containerRef}
-      style={{ width: "100%", height: "100%" }}
+      style={{ width: '100%', height: '100%', position: 'relative' }}
     >
-      <div id="oo-editor-placeholder" style={{ width: "100%", height: "100%" }} />
+      <div
+        id="oo-editor-placeholder"
+        style={{ width: '100%', height: '100%' }}
+      />
+      {/* Connection status indicator */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '4px 8px',
+          borderRadius: '4px',
+          fontSize: '12px',
+          background: isConnected
+            ? 'var(--c--theme--colors--success-100, #e8f5e9)'
+            : 'var(--c--theme--colors--danger-100, #fde8e8)',
+          color: isConnected
+            ? 'var(--c--theme--colors--success-600, #18753c)'
+            : 'var(--c--theme--colors--danger-600, #c00)',
+          zIndex: 10,
+        }}
+      >
+        <span className="material-icons" style={{ fontSize: '14px' }}>
+          {isConnected ? 'cloud_done' : 'cloud_off'}
+        </span>
+        {isConnected
+          ? t('explorer.encrypted.connected', 'Connected')
+          : relayFailed
+            ? t('explorer.encrypted.relay_failed', 'Collaboration unavailable')
+            : t('explorer.encrypted.disconnected', 'Connecting...')}
+      </div>
     </div>
   );
 };

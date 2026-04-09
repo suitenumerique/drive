@@ -5,19 +5,19 @@
  * OnlyOffice calls these functions instead of making WOPI/REST requests.
  */
 
-import type { MockServerCallbacks, OOChange, OOMessage } from "./types";
-import { getParticipants, getLocalUser, getUniqueOOId } from "./participants";
-import { handleOutgoingChanges, processOOEvent } from "./changesPipeline";
+import type { MockServerCallbacks, OOChange, OOMessage } from './types';
+import { getParticipants, getLocalUser, getUniqueOOId } from './participants';
+import { handleOutgoingChanges, processOOEvent } from './changesPipeline';
 
 export interface MockServerOptions {
   /** Called when local user makes changes that should be broadcast */
   onLocalChanges: (changes: OOChange[]) => void;
   /** Called when a lock is requested (spreadsheets) */
-  onLockRequest?: (locks: unknown) => void;
+  onLockRequest?: (type: 'acquire' | 'release', locks: unknown) => void;
   /** Called when cursor position changes */
   onCursorUpdate?: (cursor: unknown) => void;
-  /** Called when checkpoint should be triggered */
-  onCheckpointNeeded?: () => void;
+  /** Called when save lock is checked */
+  onSaveLockCheck?: () => boolean;
   /** Resolve an image name to a blob URL (for embedded images) */
   resolveImageURL?: (name: string) => Promise<string>;
 }
@@ -57,7 +57,7 @@ export function sendToEditor(msg: OOMessage): void {
  * - getInitialChanges: returns queued changes from history
  */
 export function createMockServerCallbacks(
-  options: MockServerOptions,
+  options: MockServerOptions
 ): MockServerCallbacks {
   return {
     /**
@@ -82,30 +82,31 @@ export function createMockServerCallbacks(
         const event = processOOEvent(msg);
 
         switch (event.action) {
-          case "broadcast_changes": {
+          case 'broadcast_changes': {
             const changes = handleOutgoingChanges(
               msg,
               uniqueOOId,
-              localUser.ooId,
+              localUser.ooId
             );
             if (changes) {
               options.onLocalChanges(changes);
             }
             break;
           }
-          case "lock_request":
-            options.onLockRequest?.(event.data);
+          case 'lock_request':
+            options.onLockRequest?.('acquire', event.data);
             break;
-          case "cursor_update":
+          case 'cursor_update':
             options.onCursorUpdate?.(event.data);
             break;
-          case "save_lock_check":
-            // Respond that save lock is not held (Phase 1: single user)
+          case 'save_lock_check': {
+            const isLocked = options.onSaveLockCheck?.() ?? false;
             sendToEditor({
-              type: "unSaveLock",
-              isSaveLock: false,
+              type: 'unSaveLock',
+              isSaveLock: isLocked,
             } as OOMessage);
             break;
+          }
         }
       };
     },
@@ -131,7 +132,7 @@ export function createMockServerCallbacks(
         return options.resolveImageURL(name);
       }
       // Fallback: return empty (image will show as broken)
-      return "";
+      return '';
     },
 
     /**

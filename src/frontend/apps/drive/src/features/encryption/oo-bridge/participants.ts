@@ -5,13 +5,34 @@
  * OnlyOffice expects via connectMockServer().getParticipants().
  */
 
-import type { OOParticipant, OOParticipantList } from "./types";
+import type { OOParticipant, OOParticipantList } from './types';
+
+/** Colors assigned to participants for cursors and selections */
+const PARTICIPANT_COLORS = [
+  '#4285f4',
+  '#ea4335',
+  '#fbbc04',
+  '#34a853',
+  '#ff6d01',
+  '#46bdc6',
+  '#7baaf7',
+  '#f07b72',
+  '#fcd04f',
+  '#71c287',
+  '#ff9e40',
+  '#78d9e0',
+  '#a0c3ff',
+  '#f4a8a0',
+  '#fde293',
+  '#a8dbb5',
+];
 
 export interface LocalUser {
-  id: string; // Drive user ID
+  id: string; // Drive user ID (sub)
   name: string; // Display name
   ooId: number; // OnlyOffice user ID (random)
   index: number; // Unique index in participant list
+  color: string; // Participant color
 }
 
 interface RemoteUser {
@@ -20,6 +41,7 @@ interface RemoteUser {
   ooId: number;
   index: number;
   connectionId: string;
+  color: string;
 }
 
 let localUser: LocalUser | null = null;
@@ -30,11 +52,13 @@ let nextIndex = 1;
  * Initialize the local user.
  */
 export function initLocalUser(userId: string, userName: string): LocalUser {
+  const idx = nextIndex++;
   localUser = {
     id: userId,
     name: userName,
     ooId: Math.floor(Math.random() * 1000000),
-    index: nextIndex++,
+    index: idx,
+    color: PARTICIPANT_COLORS[(idx - 1) % PARTICIPANT_COLORS.length],
   };
   return localUser;
 }
@@ -44,7 +68,7 @@ export function initLocalUser(userId: string, userName: string): LocalUser {
  */
 export function getLocalUser(): LocalUser {
   if (!localUser) {
-    throw new Error("Local user not initialized. Call initLocalUser() first.");
+    throw new Error('Local user not initialized. Call initLocalUser() first.');
   }
   return localUser;
 }
@@ -63,15 +87,17 @@ export function getUniqueOOId(): string {
 export function addRemoteUser(
   userId: string,
   userName: string,
-  connectionId: string,
+  connectionId: string
 ): void {
   if (remoteUsers.has(userId)) return;
+  const idx = nextIndex++;
   remoteUsers.set(userId, {
     id: userId,
     name: userName,
     ooId: Math.floor(Math.random() * 1000000),
-    index: nextIndex++,
+    index: idx,
     connectionId,
+    color: PARTICIPANT_COLORS[(idx - 1) % PARTICIPANT_COLORS.length],
   });
 }
 
@@ -119,11 +145,11 @@ export function getParticipants(): OOParticipantList {
 
   // Synthetic "History" participant (signals collaborative mode to OnlyOffice)
   list.push({
-    id: "0",
-    idOriginal: "0",
-    username: "History",
+    id: '0',
+    idOriginal: '0',
+    username: 'History',
     indexUser: 0,
-    connectionId: "0",
+    connectionId: '0',
     isCloseCoAuthoring: false,
     view: false,
   });

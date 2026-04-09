@@ -5,14 +5,13 @@ import {
   useEffect,
   useRef,
   useState,
-} from "react";
-import { useTranslation } from "react-i18next";
-import { useAuth } from "@/features/auth/Auth";
+} from 'react';
+import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/features/auth/Auth';
 
-const VAULT_URL =
-  process.env.NEXT_PUBLIC_VAULT_URL ?? "http://localhost:7201";
+const VAULT_URL = process.env.NEXT_PUBLIC_VAULT_URL ?? 'http://localhost:7201';
 const INTERFACE_URL =
-  process.env.NEXT_PUBLIC_INTERFACE_URL ?? "http://localhost:7202";
+  process.env.NEXT_PUBLIC_INTERFACE_URL ?? 'http://localhost:7202';
 
 export interface VaultClientContextValue {
   client: VaultClient | null;
@@ -42,22 +41,22 @@ function loadClientScript(): Promise<void> {
     }
 
     const existing = document.querySelector(
-      `script[src="${VAULT_URL}/client.js"]`,
+      `script[src="${VAULT_URL}/client.js"]`
     );
     if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () =>
-        reject(new Error("Failed to load encryption client SDK")),
+      existing.addEventListener('load', () => resolve());
+      existing.addEventListener('error', () =>
+        reject(new Error('Failed to load encryption client SDK'))
       );
       return;
     }
 
-    const script = document.createElement("script");
+    const script = document.createElement('script');
     script.src = `${VAULT_URL}/client.js`;
     script.async = true;
     script.onload = () => resolve();
     script.onerror = () =>
-      reject(new Error("Failed to load encryption client SDK"));
+      reject(new Error('Failed to load encryption client SDK'));
     document.head.appendChild(script);
   });
 }
@@ -98,7 +97,7 @@ export function VaultClientProvider({
         clientRef.current = client;
         window.__driveVaultClient = client;
 
-        client.on("onboarding:complete", () => {
+        client.on('onboarding:complete', () => {
           setHasKeys(true);
           client
             .getPublicKey()
@@ -106,7 +105,7 @@ export function VaultClientProvider({
             .catch(() => {});
         });
 
-        client.on("keys-changed", () => {
+        client.on('keys-changed', () => {
           client
             .hasKeys()
             .then(({ hasKeys: exists }) => {
@@ -121,7 +120,7 @@ export function VaultClientProvider({
             .catch(() => {});
         });
 
-        client.on("keys-destroyed", () => {
+        client.on('keys-destroyed', () => {
           setHasKeys(false);
           setPublicKey(null);
         });

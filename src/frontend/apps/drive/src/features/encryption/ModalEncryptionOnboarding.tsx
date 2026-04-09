@@ -1,6 +1,6 @@
-import { Modal, ModalSize } from "@gouvfr-lasuite/cunningham-react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useVaultClient } from "./VaultClientProvider";
+import { Modal, ModalSize } from '@gouvfr-lasuite/cunningham-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useVaultClient } from './VaultClientProvider';
 
 interface ModalEncryptionOnboardingProps {
   isOpen: boolean;
@@ -18,7 +18,12 @@ export const ModalEncryptionOnboarding = ({
   const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!isOpen || !vaultClient || !containerEl || onboardingOpenedRef.current) {
+    if (
+      !isOpen ||
+      !vaultClient ||
+      !containerEl ||
+      onboardingOpenedRef.current
+    ) {
       return;
     }
 
@@ -39,12 +44,12 @@ export const ModalEncryptionOnboarding = ({
       onClose();
     };
 
-    vaultClient.on("onboarding:complete", handleComplete);
-    vaultClient.on("interface:closed", handleClosed);
+    vaultClient.on('onboarding:complete', handleComplete);
+    vaultClient.on('interface:closed', handleClosed);
 
     return () => {
-      vaultClient.off("onboarding:complete", handleComplete);
-      vaultClient.off("interface:closed", handleClosed);
+      vaultClient.off('onboarding:complete', handleComplete);
+      vaultClient.off('interface:closed', handleClosed);
     };
   }, [vaultClient, refreshKeyState, onSuccess, onClose]);
 
@@ -67,10 +72,10 @@ export const ModalEncryptionOnboarding = ({
       onClose={handleClose}
       size={ModalSize.LARGE}
     >
-      <div style={{ minHeight: "400px" }}>
+      <div style={{ minHeight: '400px' }}>
         <div
           ref={setContainerEl}
-          style={{ width: "100%", minHeight: "400px" }}
+          style={{ width: '100%', minHeight: '400px' }}
         />
       </div>
     </Modal>

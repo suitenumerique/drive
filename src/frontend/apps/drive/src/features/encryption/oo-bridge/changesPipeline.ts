@@ -5,7 +5,7 @@
  * the network layer (ChainPad or direct broadcast).
  */
 
-import type { OOChange, OOMessage } from "./types";
+import type { OOChange, OOMessage } from './types';
 
 let patchIndex = 0;
 
@@ -31,10 +31,10 @@ export function getPatchIndex(): number {
 export function parseChange(
   change: unknown,
   uniqueOOId: string,
-  ooId: number,
+  ooId: number
 ): OOChange {
   return {
-    docid: "fresh",
+    docid: 'fresh',
     change: JSON.stringify(change),
     time: Date.now(),
     user: uniqueOOId,
@@ -48,9 +48,9 @@ export function parseChange(
 export function parseChanges(
   changes: unknown[],
   uniqueOOId: string,
-  ooId: number,
+  ooId: number
 ): OOChange[] {
-  return changes.map((c) => parseChange(c, uniqueOOId, ooId));
+  return changes.map(c => parseChange(c, uniqueOOId, ooId));
 }
 
 /**
@@ -63,9 +63,9 @@ export function parseChanges(
 export function handleOutgoingChanges(
   msg: OOMessage,
   uniqueOOId: string,
-  ooId: number,
+  ooId: number
 ): OOChange[] | null {
-  if (msg.type !== "saveChanges" || !msg.changes) {
+  if (msg.type !== 'saveChanges' || !msg.changes) {
     return null;
   }
 
@@ -81,12 +81,10 @@ export function handleOutgoingChanges(
  *
  * CryptPad's fromOOHandler routing — inner.js:1538-1640
  */
-export function handleIncomingChanges(
-  rawChanges: OOChange[],
-): OOMessage {
+export function handleIncomingChanges(rawChanges: OOChange[]): OOMessage {
   patchIndex += rawChanges.length;
   return {
-    type: "authChanges",
+    type: 'authChanges',
     changes: rawChanges,
   };
 }
@@ -98,22 +96,27 @@ export function handleIncomingChanges(
  * Returns an action descriptor for the caller to handle.
  */
 export function processOOEvent(msg: OOMessage): {
-  action: "broadcast_changes" | "lock_request" | "cursor_update" | "save_lock_check" | "noop";
+  action:
+    | 'broadcast_changes'
+    | 'lock_request'
+    | 'cursor_update'
+    | 'save_lock_check'
+    | 'noop';
   data?: unknown;
 } {
   switch (msg.type) {
-    case "saveChanges":
-      return { action: "broadcast_changes", data: msg.changes };
-    case "getLock":
-      return { action: "lock_request", data: msg.locks };
-    case "cursor":
-      return { action: "cursor_update", data: msg.cursor };
-    case "isSaveLock":
-      return { action: "save_lock_check" };
-    case "getMessages":
+    case 'saveChanges':
+      return { action: 'broadcast_changes', data: msg.changes };
+    case 'getLock':
+      return { action: 'lock_request', data: msg.locks };
+    case 'cursor':
+      return { action: 'cursor_update', data: msg.cursor };
+    case 'isSaveLock':
+      return { action: 'save_lock_check' };
+    case 'getMessages':
       // Chat messages — not implemented, return empty
-      return { action: "noop" };
+      return { action: 'noop' };
     default:
-      return { action: "noop" };
+      return { action: 'noop' };
   }
 }

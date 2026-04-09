@@ -257,6 +257,21 @@ services:
       # Enable debug
       - ./docker/onlyoffice/log4js/production.json:/etc/onlyoffice/documentserver/log4js/production.json
 
+  collaboration-relay:
+    build:
+      context: ./src/frontend/servers/collaboration
+      dockerfile: Dockerfile
+    ports:
+      - "4100:4100"
+    environment:
+      RELAY_PORT: "4100"
+      DRIVE_API_URL: "http://app-dev:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4100/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
 networks:
   default: {}
   lasuite:

@@ -10,36 +10,36 @@ declare global {
     getPublicKey(): Promise<{ publicKey: ArrayBuffer }>;
     encryptWithoutKey(
       data: ArrayBuffer,
-      userPublicKeys: Record<string, ArrayBuffer>,
+      userPublicKeys: Record<string, ArrayBuffer>
     ): Promise<{
       encryptedContent: ArrayBuffer;
       encryptedKeys: Record<string, ArrayBuffer>;
     }>;
     encryptWithKey(
       data: ArrayBuffer,
-      encryptedSymmetricKey: ArrayBuffer,
+      encryptedSymmetricKey: ArrayBuffer
     ): Promise<{ encryptedData: ArrayBuffer }>;
     decryptWithKey(
       encryptedData: ArrayBuffer,
       encryptedSymmetricKey: ArrayBuffer,
-      encryptedKeyChain?: ArrayBuffer[],
+      encryptedKeyChain?: ArrayBuffer[]
     ): Promise<{ data: ArrayBuffer }>;
     shareKeys(
       encryptedSymmetricKey: ArrayBuffer,
-      userPublicKeys: Record<string, ArrayBuffer>,
+      userPublicKeys: Record<string, ArrayBuffer>
     ): Promise<{ encryptedKeys: Record<string, ArrayBuffer> }>;
     fetchPublicKeys(
-      userIds: string[],
+      userIds: string[]
     ): Promise<{ publicKeys: Record<string, ArrayBuffer> }>;
     checkFingerprints(
       userFingerprints: Record<string, string>,
-      currentUserId?: string,
+      currentUserId?: string
     ): Promise<{
       results: Array<{
         userId: string;
         knownFingerprint: string | null;
         providedFingerprint: string;
-        status: "trusted" | "refused" | "unknown";
+        status: 'trusted' | 'refused' | 'unknown';
       }>;
     }>;
     acceptFingerprint(userId: string, fingerprint: string): Promise<void>;
@@ -49,7 +49,7 @@ declare global {
         string,
         {
           fingerprint: string;
-          status: "trusted" | "refused" | "unknown";
+          status: 'trusted' | 'refused' | 'unknown';
         }
       >;
     }>;

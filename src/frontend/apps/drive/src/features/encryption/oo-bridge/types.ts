@@ -34,14 +34,14 @@ export interface OOParticipantList {
 
 /** Events that OnlyOffice sends via onMessage/fromOOHandler */
 export type OOEventType =
-  | "saveChanges"
-  | "getLock"
-  | "cursor"
-  | "isSaveLock"
-  | "getMessages"
-  | "unSaveLock"
-  | "unLockDocument"
-  | "authChanges";
+  | 'saveChanges'
+  | 'getLock'
+  | 'cursor'
+  | 'isSaveLock'
+  | 'getMessages'
+  | 'unSaveLock'
+  | 'unLockDocument'
+  | 'authChanges';
 
 /** Message from OnlyOffice editor */
 export interface OOMessage {
@@ -69,9 +69,9 @@ export interface OOConfig {
     title: string;
     url: string; // Blob URL for the .bin content
   };
-  documentType: "word" | "cell" | "slide";
+  documentType: 'word' | 'cell' | 'slide';
   editorConfig: {
-    mode: "edit" | "view";
+    mode: 'edit' | 'view';
     user: {
       id: string;
       name: string;
@@ -105,10 +105,7 @@ export interface Checkpoint {
 /** Collaboration state shared between users */
 export interface CollaborationState {
   /** Active user IDs with their OO indices */
-  ids: Record<
-    string,
-    { ooid: number; index: number; netflux: string }
-  >;
+  ids: Record<string, { ooid: number; index: number; netflux: string }>;
   /** Active locks (cell/range locks for spreadsheets) */
   locks: Record<string, unknown>;
   /** Which user currently holds the save lock */
@@ -116,33 +113,34 @@ export interface CollaborationState {
 }
 
 /** Map from file extension to OnlyOffice document type */
-export const EXTENSION_TO_DOC_TYPE: Record<string, "word" | "cell" | "slide"> = {
-  docx: "word",
-  doc: "word",
-  odt: "word",
-  txt: "word",
-  html: "word",
-  xlsx: "cell",
-  xls: "cell",
-  ods: "cell",
-  csv: "cell",
-  pptx: "slide",
-  ppt: "slide",
-  odp: "slide",
-};
+export const EXTENSION_TO_DOC_TYPE: Record<string, 'word' | 'cell' | 'slide'> =
+  {
+    docx: 'word',
+    doc: 'word',
+    odt: 'word',
+    txt: 'word',
+    html: 'word',
+    xlsx: 'cell',
+    xls: 'cell',
+    ods: 'cell',
+    csv: 'cell',
+    pptx: 'slide',
+    ppt: 'slide',
+    odp: 'slide',
+  };
 
 /** Map from file extension to the intermediate format x2t needs */
 export const EXTENSION_TO_X2T_TYPE: Record<string, string> = {
-  docx: "doc",
-  doc: "doc",
-  odt: "doc",
-  txt: "doc",
-  html: "doc",
-  xlsx: "sheet",
-  xls: "sheet",
-  ods: "sheet",
-  csv: "sheet",
-  pptx: "presentation",
-  ppt: "presentation",
-  odp: "presentation",
+  docx: 'doc',
+  doc: 'doc',
+  odt: 'doc',
+  txt: 'doc',
+  html: 'doc',
+  xlsx: 'sheet',
+  xls: 'sheet',
+  ods: 'sheet',
+  csv: 'sheet',
+  pptx: 'presentation',
+  ppt: 'presentation',
+  odp: 'presentation',
 };

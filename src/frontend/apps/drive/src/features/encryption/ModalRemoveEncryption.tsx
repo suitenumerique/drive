@@ -1,15 +1,15 @@
-import { Button, Modal, ModalSize } from "@gouvfr-lasuite/cunningham-react";
-import { useCallback, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useQueryClient } from "@tanstack/react-query";
-import { Item } from "@/features/drivers/types";
-import { useVaultClient } from "./VaultClientProvider";
-import { getDriver } from "@/features/config/Config";
-import { fetchAPI } from "@/features/api/fetchApi";
+import { Button, Modal, ModalSize } from '@gouvfr-lasuite/cunningham-react';
+import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
+import { Item } from '@/features/drivers/types';
+import { useVaultClient } from './VaultClientProvider';
+import { getDriver } from '@/features/config/Config';
+import { fetchAPI } from '@/features/api/fetchApi';
 import {
   addToast,
   ToasterItem,
-} from "@/features/ui/components/toaster/Toaster";
+} from '@/features/ui/components/toaster/Toaster';
 
 interface ModalRemoveEncryptionProps {
   isOpen: boolean;
@@ -45,7 +45,7 @@ export const ModalRemoveEncryption = ({
         entryKeyBytes[i] = entryKeyBinary.charCodeAt(i);
       }
 
-      const encryptedKeyChain = keyChain.chain.map((entry) => {
+      const encryptedKeyChain = keyChain.chain.map(entry => {
         const binary = atob(entry.encrypted_symmetric_key);
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) {
@@ -55,7 +55,7 @@ export const ModalRemoveEncryption = ({
       });
 
       // 2. Download the encrypted file
-      const fileResponse = await fetch(item.url, { credentials: "include" });
+      const fileResponse = await fetch(item.url, { credentials: 'include' });
       if (!fileResponse.ok) {
         throw new Error(`Failed to download file: ${fileResponse.status}`);
       }
@@ -65,7 +65,7 @@ export const ModalRemoveEncryption = ({
       const { data: plaintextContent } = await vaultClient.decryptWithKey(
         encryptedContent,
         entryKeyBytes.buffer,
-        encryptedKeyChain.length > 0 ? encryptedKeyChain : undefined,
+        encryptedKeyChain.length > 0 ? encryptedKeyChain : undefined
       );
 
       // 4. Get presigned URL for the new plaintext filename
@@ -73,23 +73,25 @@ export const ModalRemoveEncryption = ({
       const uploadUrlResp = await fetchAPI(
         `items/${item.id}/encryption-upload-url/`,
         {
-          method: "POST",
+          method: 'POST',
           body: JSON.stringify({ filename: newFilename }),
-        },
+        }
       );
       if (!uploadUrlResp.ok) {
-        throw new Error("Failed to get upload URL");
+        throw new Error('Failed to get upload URL');
       }
       const { upload_url: uploadUrl } = await uploadUrlResp.json();
 
       // 5. Upload plaintext content to the new S3 key
       const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
+        method: 'PUT',
         body: new Uint8Array(plaintextContent),
-        headers: { "X-amz-acl": "private" },
+        headers: { 'X-amz-acl': 'private' },
       });
       if (!uploadResponse.ok) {
-        throw new Error(`Failed to upload decrypted file: ${uploadResponse.status}`);
+        throw new Error(
+          `Failed to upload decrypted file: ${uploadResponse.status}`
+        );
       }
 
       // 6. Call backend to atomically remove encryption + swap filename
@@ -98,17 +100,14 @@ export const ModalRemoveEncryption = ({
       });
 
       // Refresh the list
-      await queryClient.invalidateQueries({ queryKey: ["items"] });
+      await queryClient.invalidateQueries({ queryKey: ['items'] });
 
       addToast(
         <ToasterItem type="success">
           <span>
-            {t(
-              "encryption.remove_success",
-              "Encryption removed successfully.",
-            )}
+            {t('encryption.remove_success', 'Encryption removed successfully.')}
           </span>
-        </ToasterItem>,
+        </ToasterItem>
       );
 
       onClose();
@@ -117,12 +116,12 @@ export const ModalRemoveEncryption = ({
         <ToasterItem type="error">
           <span>
             {t(
-              "encryption.remove_error",
-              "Failed to remove encryption: {{message}}",
-              { message: (err as Error).message },
+              'encryption.remove_error',
+              'Failed to remove encryption: {{message}}',
+              { message: (err as Error).message }
             )}
           </span>
-        </ToasterItem>,
+        </ToasterItem>
       );
     } finally {
       setIsDecrypting(false);
@@ -135,14 +134,11 @@ export const ModalRemoveEncryption = ({
       onClose={onClose}
       closeOnClickOutside
       size={ModalSize.MEDIUM}
-      title={t(
-        "encryption.remove_modal.title",
-        "Remove encryption",
-      )}
+      title={t('encryption.remove_modal.title', 'Remove encryption')}
       actions={
         <>
           <Button color="secondary" onClick={onClose} disabled={isDecrypting}>
-            {t("common.cancel", "Cancel")}
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button
             color="danger"
@@ -151,18 +147,21 @@ export const ModalRemoveEncryption = ({
             aria-busy={isDecrypting}
           >
             {isDecrypting
-              ? t("encryption.remove_modal.decrypting", "Removing encryption...")
-              : t("encryption.remove_modal.confirm", "Remove encryption")}
+              ? t(
+                  'encryption.remove_modal.decrypting',
+                  'Removing encryption...'
+                )
+              : t('encryption.remove_modal.confirm', 'Remove encryption')}
           </Button>
         </>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <p>
           {t(
-            "encryption.remove_modal.description",
+            'encryption.remove_modal.description',
             'You are about to remove encryption from "{{title}}". The file content will be decrypted and stored in plain.',
-            { title: item.title },
+            { title: item.title }
           )}
         </p>
       </div>

@@ -6,8 +6,10 @@ import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
 import { useItem } from "@/features/explorer/hooks/useQueries";
+import { getGlobalExplorerLayout } from "@/features/layouts/components/explorer/ExplorerLayout";
+import type { NextPageWithLayout } from "@/pages/_app";
 
-export default function FilePage() {
+const FilePage: NextPageWithLayout = () => {
   const { t } = useTranslation();
   const router = useRouter();
   const itemId = router.query.id as string;
@@ -40,4 +42,8 @@ export default function FilePage() {
       <CustomFilesPreview currentItem={item} items={[item]} />
     </div>
   );
-}
+};
+
+FilePage.getLayout = getGlobalExplorerLayout;
+
+export default FilePage;

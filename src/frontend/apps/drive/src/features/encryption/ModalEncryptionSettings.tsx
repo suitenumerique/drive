@@ -1,6 +1,6 @@
-import { Modal, ModalSize } from "@gouvfr-lasuite/cunningham-react";
-import { useCallback, useEffect, useState } from "react";
-import { useVaultClient } from "./VaultClientProvider";
+import { Modal, ModalSize } from '@gouvfr-lasuite/cunningham-react';
+import { useCallback, useEffect, useState } from 'react';
+import { useVaultClient } from './VaultClientProvider';
 
 interface ModalEncryptionSettingsProps {
   isOpen: boolean;
@@ -37,12 +37,12 @@ export const ModalEncryptionSettings = ({
       refreshKeyState();
     };
 
-    vaultClient.on("interface:closed", handleClosed);
-    vaultClient.on("keys-destroyed", handleKeysDestroyed);
+    vaultClient.on('interface:closed', handleClosed);
+    vaultClient.on('keys-destroyed', handleKeysDestroyed);
 
     return () => {
-      vaultClient.off("interface:closed", handleClosed);
-      vaultClient.off("keys-destroyed", handleKeysDestroyed);
+      vaultClient.off('interface:closed', handleClosed);
+      vaultClient.off('keys-destroyed', handleKeysDestroyed);
     };
   }, [vaultClient, refreshKeyState, onClose]);
 
@@ -65,10 +65,10 @@ export const ModalEncryptionSettings = ({
       onClose={handleClose}
       size={ModalSize.LARGE}
     >
-      <div style={{ minHeight: "400px" }}>
+      <div style={{ minHeight: '400px' }}>
         <div
           ref={setContainerEl}
-          style={{ width: "100%", minHeight: "400px" }}
+          style={{ width: '100%', minHeight: '400px' }}
         />
       </div>
     </Modal>

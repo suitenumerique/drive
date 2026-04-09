@@ -1,14 +1,14 @@
-import { Button, Modal, ModalSize } from "@gouvfr-lasuite/cunningham-react";
-import { useCallback, useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useQueryClient } from "@tanstack/react-query";
-import { Item, LinkReach } from "@/features/drivers/types";
-import { useVaultClient } from "./VaultClientProvider";
-import { getDriver } from "@/features/config/Config";
+import { Button, Modal, ModalSize } from '@gouvfr-lasuite/cunningham-react';
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
+import { Item, LinkReach } from '@/features/drivers/types';
+import { useVaultClient } from './VaultClientProvider';
+import { getDriver } from '@/features/config/Config';
 import {
   addToast,
   ToasterItem,
-} from "@/features/ui/components/toaster/Toaster";
+} from '@/features/ui/components/toaster/Toaster';
 
 interface ModalEncryptItemProps {
   isOpen: boolean;
@@ -18,7 +18,7 @@ interface ModalEncryptItemProps {
 
 function toBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
-  let binary = "";
+  let binary = '';
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
@@ -46,9 +46,9 @@ export const ModalEncryptItem = ({
     if (!hasKeys) {
       errors.push(
         t(
-          "encryption.errors.no_keys",
-          "You need to enable encryption first (from the user menu).",
-        ),
+          'encryption.errors.no_keys',
+          'You need to enable encryption first (from the user menu).'
+        )
       );
     }
 
@@ -56,18 +56,18 @@ export const ModalEncryptItem = ({
     if (effectiveReach && effectiveReach !== LinkReach.RESTRICTED) {
       errors.push(
         t(
-          "encryption.errors.not_restricted",
-          "Item must have restricted access (no public or authenticated links).",
-        ),
+          'encryption.errors.not_restricted',
+          'Item must have restricted access (no public or authenticated links).'
+        )
       );
     }
 
     if (!item.accesses_user_ids || item.accesses_user_ids.length === 0) {
       errors.push(
         t(
-          "encryption.errors.no_accesses",
-          "No users with access found for this item.",
-        ),
+          'encryption.errors.no_accesses',
+          'No users with access found for this item.'
+        )
       );
     }
 
@@ -91,22 +91,22 @@ export const ModalEncryptItem = ({
     async function checkPublicKeys() {
       try {
         const { publicKeys } = await vaultClient!.fetchPublicKeys(
-          item.accesses_user_ids!,
+          item.accesses_user_ids!
         );
 
         if (cancelled) return;
 
         const missingUsers = item.accesses_user_ids!.filter(
-          (uid) => !publicKeys[uid],
+          uid => !publicKeys[uid]
         );
 
         if (missingUsers.length > 0) {
-          setValidationErrors((prev) => [
+          setValidationErrors(prev => [
             ...prev,
             t(
-              "encryption.errors.missing_keys",
+              'encryption.errors.missing_keys',
               "Some users don't have encryption enabled yet ({{count}} user(s)).",
-              { count: missingUsers.length },
+              { count: missingUsers.length }
             ),
           ]);
           setPublicKeysReady(false);
@@ -115,11 +115,11 @@ export const ModalEncryptItem = ({
         }
       } catch {
         if (!cancelled) {
-          setValidationErrors((prev) => [
+          setValidationErrors(prev => [
             ...prev,
             t(
-              "encryption.errors.fetch_keys_failed",
-              "Failed to fetch public keys.",
+              'encryption.errors.fetch_keys_failed',
+              'Failed to fetch public keys.'
             ),
           ]);
         }
@@ -141,11 +141,11 @@ export const ModalEncryptItem = ({
     try {
       // 1. Fetch public keys for all users with access
       const { publicKeys } = await vaultClient.fetchPublicKeys(
-        item.accesses_user_ids,
+        item.accesses_user_ids
       );
 
       // 2. Download the plaintext file from S3
-      const fileResponse = await fetch(item.url, { credentials: "include" });
+      const fileResponse = await fetch(item.url, { credentials: 'include' });
       if (!fileResponse.ok) {
         throw new Error(`Failed to download file: ${fileResponse.status}`);
       }
@@ -157,28 +157,28 @@ export const ModalEncryptItem = ({
 
       // 4. Get a presigned upload URL for the new filename
       const newFilename = `${crypto.randomUUID()}.enc`;
-      const { fetchAPI } = await import("@/features/api/fetchApi");
+      const { fetchAPI } = await import('@/features/api/fetchApi');
       const uploadUrlResp = await fetchAPI(
         `items/${item.id}/encryption-upload-url/`,
         {
-          method: "POST",
+          method: 'POST',
           body: JSON.stringify({ filename: newFilename }),
-        },
+        }
       );
       if (!uploadUrlResp.ok) {
-        throw new Error("Failed to get upload URL for encrypted file");
+        throw new Error('Failed to get upload URL for encrypted file');
       }
       const { upload_url: uploadUrl } = await uploadUrlResp.json();
 
       // 5. Upload encrypted content to the new S3 key
       const uploadResponse = await fetch(uploadUrl, {
-        method: "PUT",
+        method: 'PUT',
         body: new Uint8Array(encryptedContent),
-        headers: { "X-amz-acl": "private" },
+        headers: { 'X-amz-acl': 'private' },
       });
       if (!uploadResponse.ok) {
         throw new Error(
-          `Failed to upload encrypted file: ${uploadResponse.status}`,
+          `Failed to upload encrypted file: ${uploadResponse.status}`
         );
       }
 
@@ -197,17 +197,15 @@ export const ModalEncryptItem = ({
       });
 
       // Invalidate all item queries to refresh the list
-      await queryClient.invalidateQueries({ queryKey: ["items"] });
+      await queryClient.invalidateQueries({ queryKey: ['items'] });
       await queryClient.invalidateQueries({
-        queryKey: ["items", item.id],
+        queryKey: ['items', item.id],
       });
 
       addToast(
         <ToasterItem type="success">
-          <span>
-            {t("encryption.success", "Item encrypted successfully.")}
-          </span>
-        </ToasterItem>,
+          <span>{t('encryption.success', 'Item encrypted successfully.')}</span>
+        </ToasterItem>
       );
 
       onClose();
@@ -215,11 +213,11 @@ export const ModalEncryptItem = ({
       addToast(
         <ToasterItem type="error">
           <span>
-            {t("encryption.error", "Encryption failed: {{message}}", {
+            {t('encryption.error', 'Encryption failed: {{message}}', {
               message: (err as Error).message,
             })}
           </span>
-        </ToasterItem>,
+        </ToasterItem>
       );
     } finally {
       setIsEncrypting(false);
@@ -235,11 +233,11 @@ export const ModalEncryptItem = ({
       onClose={onClose}
       closeOnClickOutside
       size={ModalSize.MEDIUM}
-      title={t("encryption.modal.title", "Encrypt item")}
+      title={t('encryption.modal.title', 'Encrypt item')}
       actions={
         <>
           <Button color="secondary" onClick={onClose} disabled={isEncrypting}>
-            {t("common.cancel", "Cancel")}
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button
             onClick={handleEncrypt}
@@ -247,35 +245,35 @@ export const ModalEncryptItem = ({
             aria-busy={isEncrypting}
           >
             {isEncrypting
-              ? t("encryption.modal.encrypting", "Encrypting...")
-              : t("encryption.modal.confirm", "Encrypt")}
+              ? t('encryption.modal.encrypting', 'Encrypting...')
+              : t('encryption.modal.confirm', 'Encrypt')}
           </Button>
         </>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <p>
           {t(
-            "encryption.modal.description",
+            'encryption.modal.description',
             'You are about to encrypt "{{title}}". Once encrypted, the item can only be accessed by users with encryption keys.',
-            { title: item.title },
+            { title: item.title }
           )}
         </p>
 
         {validationErrors.length > 0 && (
           <div
             style={{
-              padding: "0.75rem",
-              backgroundColor: "var(--c--theme--colors--danger-100, #fde8e8)",
-              borderRadius: "4px",
+              padding: '0.75rem',
+              backgroundColor: 'var(--c--theme--colors--danger-100, #fde8e8)',
+              borderRadius: '4px',
             }}
           >
-            <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
+            <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
               {validationErrors.map((err, i) => (
                 <li
                   key={i}
                   style={{
-                    color: "var(--c--theme--colors--danger-text, #c00)",
+                    color: 'var(--c--theme--colors--danger-text, #c00)',
                   }}
                 >
                   {err}
@@ -288,12 +286,12 @@ export const ModalEncryptItem = ({
         {validationErrors.length === 0 && !publicKeysReady && (
           <p
             style={{
-              color: "var(--c--theme--colors--greyscale-600, #666)",
+              color: 'var(--c--theme--colors--greyscale-600, #666)',
             }}
           >
             {t(
-              "encryption.modal.checking_keys",
-              "Checking encryption keys for all users...",
+              'encryption.modal.checking_keys',
+              'Checking encryption keys for all users...'
             )}
           </p>
         )}
