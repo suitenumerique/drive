@@ -26,44 +26,75 @@ interface X2TModule {
   onRuntimeInitialized?: () => void;
 }
 
-let x2tModule: X2TModule | null = null;
-let x2tReady: Promise<X2TModule> | null = null;
+// Store on window to survive HMR module reloads
+const getWindow = (): any => (typeof window !== 'undefined' ? window : {});
+const getX2TModule = (): X2TModule | null => getWindow().__x2tModule ?? null;
+const setX2TModule = (m: X2TModule) => { getWindow().__x2tModule = m; };
+const getX2TReady = (): Promise<X2TModule> | null => getWindow().__x2tReady ?? null;
+const setX2TReady = (p: Promise<X2TModule>) => { getWindow().__x2tReady = p; };
 
 /**
  * Get or initialize the x2t WASM module.
  * The WASM is loaded from /onlyoffice/x2t/x2t.js (static asset).
  */
 function getX2T(): Promise<X2TModule> {
-  if (x2tReady) return x2tReady;
+  // If already resolved, return immediately
+  const cached = getX2TModule();
+  if (cached) return Promise.resolve(cached);
 
-  x2tReady = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    // Must be an absolute URL — x2t.js uses `new URL(script.src)` internally
-    // to locate the .wasm file relative to itself
-    script.src = new URL('/onlyoffice/x2t/x2t.js', window.location.origin).href;
+  // If already loading, return the existing promise
+  const pending = getX2TReady();
+  if (pending) return pending;
 
-    // Emscripten sets window.Module
+  // Check if Module was loaded by a previous render
+  const existing = (window as any).Module;
+  if (existing?.FS?.readdir) {
+    setX2TModule(existing as X2TModule);
+    return Promise.resolve(existing as X2TModule);
+  }
+
+  const promise = new Promise<X2TModule>((resolve, reject) => {
+    const x2tUrl = new URL('/onlyoffice/x2t/x2t.js', window.location.origin).href;
+
+    if (document.querySelector(`script[src="${x2tUrl}"]`)) {
+      const poll = setInterval(() => {
+        const mod = (window as any).Module;
+        if (mod?.FS?.readdir) {
+          clearInterval(poll);
+          try { mod.FS.mkdir('/working'); } catch {}
+          try { mod.FS.mkdir('/working/media'); } catch {}
+          try { mod.FS.mkdir('/working/fonts'); } catch {}
+          try { mod.FS.mkdir('/working/themes'); } catch {}
+          setX2TModule(mod);
+          resolve(mod);
+        }
+      }, 200);
+      setTimeout(() => { clearInterval(poll); reject(new Error('x2t timeout')); }, 30000);
+      return;
+    }
+
     (window as any).Module = {
-      // Tell Emscripten where to find the .wasm and other files
-      locateFile: (path: string) => {
-        return new URL(`/onlyoffice/x2t/${path}`, window.location.origin).href;
-      },
+      locateFile: (path: string) =>
+        new URL(`/onlyoffice/x2t/${path}`, window.location.origin).href,
       onRuntimeInitialized: () => {
         const mod = (window as any).Module as X2TModule;
-        mod.FS.mkdir('/working');
-        mod.FS.mkdir('/working/media');
-        mod.FS.mkdir('/working/fonts');
-        mod.FS.mkdir('/working/themes');
-        x2tModule = mod;
+        try { mod.FS.mkdir('/working'); } catch {}
+        try { mod.FS.mkdir('/working/media'); } catch {}
+        try { mod.FS.mkdir('/working/fonts'); } catch {}
+        try { mod.FS.mkdir('/working/themes'); } catch {}
+        setX2TModule(mod);
         resolve(mod);
       },
     };
 
+    const script = document.createElement('script');
+    script.src = x2tUrl;
     script.onerror = () => reject(new Error('Failed to load x2t WASM'));
     document.head.appendChild(script);
   });
 
-  return x2tReady;
+  setX2TReady(promise);
+  return promise;
 }
 
 /**

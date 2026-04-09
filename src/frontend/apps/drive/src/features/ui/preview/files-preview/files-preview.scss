@@ -8,6 +8,12 @@
   .c__modal__scroller {
     padding: 0;
   }
+
+  // Hide the default Cunningham modal close button —
+  // the preview has its own close button in the header
+  .c__modal__close {
+    display: none;
+  }
 }
 
 /**

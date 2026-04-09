@@ -54,7 +54,7 @@ export interface OOMessage {
 
 /** Callbacks passed to connectMockServer() */
 export interface MockServerCallbacks {
-  onMessage: (handler: (msg: OOMessage) => void) => void;
+  onMessage: (msg: OOMessage) => void;
   getParticipants: () => OOParticipantList;
   onAuth: () => void;
   getImageURL: (name: string) => Promise<string>;
@@ -112,22 +112,116 @@ export interface CollaborationState {
   saveLock: number | null;
 }
 
-/** Map from file extension to OnlyOffice document type */
-export const EXTENSION_TO_DOC_TYPE: Record<string, 'word' | 'cell' | 'slide'> =
+/** Map from file extension to OnlyOffice documentType (as used by CryptPad) */
+export const EXTENSION_TO_DOC_TYPE: Record<string, 'text' | 'spreadsheet' | 'presentation'> =
   {
-    docx: 'word',
-    doc: 'word',
-    odt: 'word',
-    txt: 'word',
-    html: 'word',
-    xlsx: 'cell',
-    xls: 'cell',
-    ods: 'cell',
-    csv: 'cell',
-    pptx: 'slide',
-    ppt: 'slide',
-    odp: 'slide',
+    docx: 'text',
+    doc: 'text',
+    odt: 'text',
+    txt: 'text',
+    html: 'text',
+    xlsx: 'spreadsheet',
+    xls: 'spreadsheet',
+    ods: 'spreadsheet',
+    csv: 'spreadsheet',
+    pptx: 'presentation',
+    ppt: 'presentation',
+    odp: 'presentation',
   };
+
+/** Map from file extension to the MS Office fileType OnlyOffice expects */
+export const EXTENSION_TO_OO_FILE_TYPE: Record<string, string> = {
+  docx: 'docx',
+  doc: 'docx',
+  odt: 'docx',
+  txt: 'docx',
+  html: 'docx',
+  xlsx: 'xlsx',
+  xls: 'xlsx',
+  ods: 'xlsx',
+  csv: 'xlsx',
+  pptx: 'pptx',
+  ppt: 'pptx',
+  odp: 'pptx',
+};
+
+// --- Mimetype-based mappings (preferred over extension-based) ---
+
+const OFFICE_MIMES = {
+  ODT: 'application/vnd.oasis.opendocument.text',
+  ODS: 'application/vnd.oasis.opendocument.spreadsheet',
+  ODP: 'application/vnd.oasis.opendocument.presentation',
+  DOCX: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  XLSX: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  PPTX: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  DOC: 'application/msword',
+  XLS: 'application/vnd.ms-excel',
+  PPT: 'application/vnd.ms-powerpoint',
+  TXT: 'text/plain',
+  CSV: 'text/csv',
+} as const;
+
+/** Map mimetype → OnlyOffice documentType (word/cell/slide as per api-orig.js) */
+export const MIME_TO_DOC_TYPE: Record<string, 'word' | 'cell' | 'slide'> = {
+  [OFFICE_MIMES.ODT]: 'word',
+  [OFFICE_MIMES.DOCX]: 'word',
+  [OFFICE_MIMES.DOC]: 'word',
+  [OFFICE_MIMES.TXT]: 'word',
+  [OFFICE_MIMES.ODS]: 'cell',
+  [OFFICE_MIMES.XLSX]: 'cell',
+  [OFFICE_MIMES.XLS]: 'cell',
+  [OFFICE_MIMES.CSV]: 'cell',
+  [OFFICE_MIMES.ODP]: 'slide',
+  [OFFICE_MIMES.PPTX]: 'slide',
+  [OFFICE_MIMES.PPT]: 'slide',
+};
+
+/** Map mimetype → OnlyOffice fileType (the MS format OnlyOffice uses internally) */
+export const MIME_TO_OO_FILE_TYPE: Record<string, string> = {
+  [OFFICE_MIMES.ODT]: 'docx',
+  [OFFICE_MIMES.DOCX]: 'docx',
+  [OFFICE_MIMES.DOC]: 'docx',
+  [OFFICE_MIMES.TXT]: 'docx',
+  [OFFICE_MIMES.ODS]: 'xlsx',
+  [OFFICE_MIMES.XLSX]: 'xlsx',
+  [OFFICE_MIMES.XLS]: 'xlsx',
+  [OFFICE_MIMES.CSV]: 'xlsx',
+  [OFFICE_MIMES.ODP]: 'pptx',
+  [OFFICE_MIMES.PPTX]: 'pptx',
+  [OFFICE_MIMES.PPT]: 'pptx',
+};
+
+/** Map mimetype → x2t document type for intermediate conversion */
+export const MIME_TO_X2T_TYPE: Record<string, string> = {
+  [OFFICE_MIMES.ODT]: 'doc',
+  [OFFICE_MIMES.DOCX]: 'doc',
+  [OFFICE_MIMES.DOC]: 'doc',
+  [OFFICE_MIMES.TXT]: 'doc',
+  [OFFICE_MIMES.ODS]: 'sheet',
+  [OFFICE_MIMES.XLSX]: 'sheet',
+  [OFFICE_MIMES.XLS]: 'sheet',
+  [OFFICE_MIMES.CSV]: 'sheet',
+  [OFFICE_MIMES.ODP]: 'presentation',
+  [OFFICE_MIMES.PPTX]: 'presentation',
+  [OFFICE_MIMES.PPT]: 'presentation',
+};
+
+/** Map mimetype → file extension (for x2t filename) */
+export const MIME_TO_EXTENSION: Record<string, string> = {
+  [OFFICE_MIMES.ODT]: 'odt',
+  [OFFICE_MIMES.DOCX]: 'docx',
+  [OFFICE_MIMES.DOC]: 'doc',
+  [OFFICE_MIMES.TXT]: 'txt',
+  [OFFICE_MIMES.ODS]: 'ods',
+  [OFFICE_MIMES.XLSX]: 'xlsx',
+  [OFFICE_MIMES.XLS]: 'xls',
+  [OFFICE_MIMES.CSV]: 'csv',
+  [OFFICE_MIMES.ODP]: 'odp',
+  [OFFICE_MIMES.PPTX]: 'pptx',
+  [OFFICE_MIMES.PPT]: 'ppt',
+};
+
+// --- Extension-based mappings (legacy, used by some components) ---
 
 /** Map from file extension to the intermediate format x2t needs */
 export const EXTENSION_TO_X2T_TYPE: Record<string, string> = {

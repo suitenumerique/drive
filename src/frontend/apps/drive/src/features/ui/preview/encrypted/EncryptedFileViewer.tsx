@@ -31,6 +31,25 @@ export const EncryptedFileViewer = ({
 }: EncryptedFileViewerProps) => {
   const { t } = useTranslation();
 
+  const category = getMimeCategory(file.mimetype);
+
+  // Office files: use OnlyOffice client-side editor (handles its own decryption)
+  const isOfficeFormat =
+    category === MimeCategory.DOC ||
+    category === MimeCategory.CALC ||
+    category === MimeCategory.POWERPOINT;
+
+  if (isOfficeFormat) {
+    const itemLike = {
+      ...file,
+      id: file.id,
+      title: file.title,
+      is_encrypted: true,
+    };
+    return <OOEditor item={itemLike as any} />;
+  }
+
+  // Non-office files: decrypt and display with native viewers
   // Pass item-like object to the hook
   const item = {
     id: file.id,
@@ -95,25 +114,6 @@ export const EncryptedFileViewer = ({
 
   if (!blobUrl) {
     return null;
-  }
-
-  const category = getMimeCategory(file.mimetype);
-
-  // Office files: use OnlyOffice client-side editor (no WOPI)
-  const isOfficeFormat =
-    category === MimeCategory.DOC ||
-    category === MimeCategory.CALC ||
-    category === MimeCategory.POWERPOINT;
-
-  if (isOfficeFormat) {
-    // OOEditor handles its own decryption + loading
-    const itemLike = {
-      ...file,
-      id: file.id,
-      title: file.title,
-      is_encrypted: true,
-    };
-    return <OOEditor item={itemLike as any} />;
   }
 
   switch (category) {

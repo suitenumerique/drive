@@ -151,7 +151,9 @@ export class EncryptedRelay {
 
     const url = `${RELAY_URL}?room=${this.roomId}`;
     this.ws = new WebSocket(url);
-    this.ws.binaryType = 'arraybuffer';
+    // Don't set binaryType to 'arraybuffer' — we need to distinguish
+    // text frames (JSON system messages) from binary frames (encrypted patches).
+    // Text frames arrive as string, binary frames as Blob.
 
     this.ws.onopen = () => {
       this.reconnectAttempts = 0;
@@ -205,20 +207,20 @@ export class EncryptedRelay {
     }
   }
 
-  /** Send a lock request to all peers */
-  sendLock(type: 'acquire' | 'release', lockData: unknown): void {
-    this.sendSystem({
+  /** Send a lock request to all peers (encrypted — lock data is sensitive) */
+  async sendLock(type: 'acquire' | 'release', lockData: unknown): Promise<void> {
+    await this.sendEncryptedSystem({
       type: type === 'acquire' ? 'lock:acquire' : 'lock:release',
       lockData,
     });
   }
 
-  /** Send cursor position to all peers */
-  sendCursor(cursor: unknown): void {
-    this.sendSystem({ type: 'cursor:update', cursor });
+  /** Send cursor position to all peers (encrypted — position is sensitive) */
+  async sendCursor(cursor: unknown): Promise<void> {
+    await this.sendEncryptedSystem({ type: 'cursor:update', cursor });
   }
 
-  /** Acquire or release the save lock */
+  /** Acquire or release the save lock (not encrypted — no sensitive content) */
   sendSaveLock(locked: boolean): void {
     this.sendSystem({
       type: locked ? 'save:lock' : 'save:unlock',
@@ -252,33 +254,59 @@ export class EncryptedRelay {
     }
   }
 
+  /** Encrypt a system message and send as binary frame */
+  private async sendEncryptedSystem(msg: object): Promise<void> {
+    const plaintext = new TextEncoder().encode(JSON.stringify(msg)).buffer;
+
+    try {
+      const { encryptedData } = await this.vaultClient.encryptWithKey(
+        plaintext,
+        this.encryptedSymmetricKey,
+        this.encryptedKeyChain.length > 0 ? this.encryptedKeyChain : undefined,
+      );
+
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(encryptedData);
+      }
+    } catch (err) {
+      console.error('[relay] Failed to encrypt system message:', err);
+    }
+  }
+
   private async handleMessage(data: unknown): Promise<void> {
-    // Text message = system event (not encrypted)
+    // Text frame = JSON system message (not encrypted)
     if (typeof data === 'string') {
       try {
         const msg = JSON.parse(data) as SystemMessage;
         this.handleSystemMessage(msg);
       } catch {
-        // Not JSON — ignore
+        // Not valid JSON
       }
       return;
     }
 
-    // Binary = encrypted OT patch
-    if (data instanceof ArrayBuffer) {
+    // Binary frame (Blob) = encrypted data (OT patch or system message)
+    if (data instanceof Blob) {
       try {
+        const buffer = await data.arrayBuffer();
         const { data: plaintext } = await this.vaultClient.decryptWithKey(
-          data,
+          buffer,
           this.encryptedSymmetricKey,
-          this.encryptedKeyChain.length > 0 ? this.encryptedKeyChain : undefined
+          this.encryptedKeyChain.length > 0 ? this.encryptedKeyChain : undefined,
         );
 
-        const decoder = new TextDecoder();
-        const json = decoder.decode(plaintext);
-        const changes: OOChange[] = JSON.parse(json);
-        this.callbacks.onRemoteChanges(changes);
+        const json = new TextDecoder().decode(plaintext);
+        const parsed = JSON.parse(json);
+
+        // Check if it's an encrypted system message (has a "type" field)
+        if (parsed.type && typeof parsed.type === 'string') {
+          this.handleSystemMessage(parsed as SystemMessage);
+        } else if (Array.isArray(parsed)) {
+          // Array of OOChange objects
+          this.callbacks.onRemoteChanges(parsed as OOChange[]);
+        }
       } catch (err) {
-        console.error('[relay] Failed to decrypt incoming changes:', err);
+        console.error('[relay] Failed to decrypt incoming data:', err);
       }
     }
   }

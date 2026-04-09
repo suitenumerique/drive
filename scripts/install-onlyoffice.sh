@@ -67,6 +67,11 @@ install_oo() {
     rm -rf "$FULL_DIR/web-apps/apps/spreadsheeteditor/main/resources/help"
     rm -rf "$FULL_DIR/web-apps/apps/common/main/resources/help/"
 
+    # Create stub files that OnlyOffice expects but aren't in the build
+    echo '{}' > "$FULL_DIR/plugins.json"
+    echo '[]' > "$FULL_DIR/themes.json"
+    echo '// Stub service worker for client-side mode' > "$FULL_DIR/document_editor_service_worker.js"
+
     echo "$OO_VERSION" > "$FULL_DIR/.version"
     echo "OnlyOffice v9 installed."
 }

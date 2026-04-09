@@ -212,7 +212,7 @@ function handleConnection(
       }
     }
 
-    // Binary = encrypted OT patch — relay + store
+    // Binary = encrypted OT patch — relay to all OTHER peers
     broadcastRaw(room, ws, data);
     room.history.push(data);
     if (room.history.length > MAX_HISTORY) {
@@ -245,9 +245,11 @@ function handleConnection(
     historyLength: room.history.length,
   });
 
-  // Send history to the new joiner
-  for (const historyMsg of room.history) {
-    sendRaw(ws, historyMsg);
+  // Send history to the new joiner (only if there are other peers who contributed)
+  if (peerList.length > 0) {
+    for (const historyMsg of room.history) {
+      sendRaw(ws, historyMsg);
+    }
   }
 }
 
@@ -258,10 +260,10 @@ type SystemMessageType =
   | 'save:lock'
   | 'save:unlock';
 
+// Only non-encrypted system messages are parsed by the relay.
+// cursor:update and lock:acquire/release are now encrypted (sent as binary)
+// and relayed opaquely without parsing.
 const RELAYED_TYPES = new Set<string>([
-  'lock:acquire',
-  'lock:release',
-  'cursor:update',
   'save:lock',
   'save:unlock',
 ]);

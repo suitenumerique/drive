@@ -1,0 +1,11 @@
+.ooEditorContainer {
+  width: 100%;
+  height: 100%;
+  position: relative;
+
+  :global(iframe[name="frameEditor"]) {
+    width: 100% !important;
+    height: 100% !important;
+    border: none;
+  }
+}

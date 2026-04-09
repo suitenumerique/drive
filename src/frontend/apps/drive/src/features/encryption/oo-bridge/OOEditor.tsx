@@ -20,7 +20,7 @@ import { Loader } from '@gouvfr-lasuite/cunningham-react';
 import { Item } from '@/features/drivers/types';
 import { getDriver } from '@/features/config/Config';
 import { convertToInternal, convertFromInternal } from './x2tConverter';
-import { createMockServerCallbacks, sendToEditor } from './mockServer';
+import { createMockServerCallbacks, sendToEditor, setEditorInstance } from './mockServer';
 import {
   initLocalUser,
   getLocalUser,
@@ -45,12 +45,15 @@ import {
   forceSave,
 } from './checkpointing';
 import {
-  EXTENSION_TO_DOC_TYPE,
-  EXTENSION_TO_X2T_TYPE,
+  MIME_TO_DOC_TYPE,
+  MIME_TO_OO_FILE_TYPE,
+  MIME_TO_X2T_TYPE,
+  MIME_TO_EXTENSION,
   type OOConfig,
   type OOChange,
 } from './types';
 import { useAuth } from '@/features/auth/Auth';
+import styles from './OOEditor.module.scss';
 
 // The OnlyOffice DocsAPI is loaded as a global from the static assets
 declare global {
@@ -75,7 +78,7 @@ interface OOEditorProps {
   item: Item;
 }
 
-type EditorState = 'loading' | 'decrypting' | 'converting' | 'ready' | 'error';
+type EditorState = 'loading' | 'decrypting' | 'converting' | 'mounting' | 'ready' | 'error';
 
 export const OOEditor = ({ item }: OOEditorProps) => {
   const { t } = useTranslation();
@@ -90,9 +93,13 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const scriptLoadedRef = useRef(false);
   const saveLockHolder = useRef<string | null>(null);
 
-  const extension = item.title.split('.').pop()?.toLowerCase() || 'docx';
-  const docType = EXTENSION_TO_DOC_TYPE[extension] || 'word';
-  const x2tType = EXTENSION_TO_X2T_TYPE[extension] || 'doc';
+  const mime = item.mimetype || '';
+  const docType = MIME_TO_DOC_TYPE[mime] || 'text';
+  const ooFileType = MIME_TO_OO_FILE_TYPE[mime] || 'docx';
+  const x2tType = MIME_TO_X2T_TYPE[mime] || 'doc';
+  // x2t needs a filename with the correct extension for conversion
+  const x2tExtension = MIME_TO_EXTENSION[mime] || 'docx';
+  const filename = `document.${x2tExtension}`;
 
   /**
    * Load the OnlyOffice API script if not already loaded.
@@ -224,7 +231,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
 
         // Step 3: Convert to .bin format
         setState('converting');
-        const { bin } = await convertToInternal(decryptedBuffer, item.title);
+        const { bin } = await convertToInternal(decryptedBuffer, filename);
         if (cancelled) return;
 
         // Step 4: Create blob URL and load editor
@@ -240,7 +247,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // Create the editor config
         const config: OOConfig = {
           document: {
-            fileType: 'bin',
+            fileType: ooFileType,
             key: item.id + '_' + Date.now(),
             title: item.title,
             url: blobUrl,
@@ -254,9 +261,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             },
             lang: user.language || 'en',
             customization: {
-              chat: false,
               compactToolbar: false,
               forcesave: false,
+            },
+            permissions: {
+              chat: false,
             },
           },
           events: {
@@ -287,6 +296,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           config
         );
         editorRef.current = editor;
+        setEditorInstance(editor);
 
         // Set up the encrypted relay for collaboration
         const relay = new EncryptedRelay({
@@ -379,7 +389,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // Initialize auto-save with save lock broadcast
         initCheckpointing({
           editor,
-          format: extension,
+          format: x2tExtension,
           type: x2tType,
           userId: user.sub,
           onUpload: uploadEncrypted,
@@ -388,8 +398,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           },
         });
 
-        // Clean up blob URL after editor loads
-        URL.revokeObjectURL(blobUrl);
+        // Don't revoke blob URL here — OnlyOffice fetches it asynchronously.
+        // It will be cleaned up when the component unmounts.
       } catch (err) {
         if (!cancelled) {
           console.error('OOEditor init failed:', err);
@@ -462,70 +472,64 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     );
   }
 
-  if (state !== 'ready') {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          gap: '16px',
-        }}
-      >
-        <Loader />
-        <span style={{ color: 'var(--c--theme--colors--greyscale-600, #666)' }}>
-          {state === 'decrypting' &&
-            t('explorer.encrypted.decrypting', 'Decrypting...')}
-          {state === 'converting' &&
-            t('explorer.encrypted.converting', 'Preparing editor...')}
-          {state === 'loading' &&
-            t('explorer.encrypted.loading_editor', 'Loading editor...')}
-        </span>
-      </div>
-    );
-  }
-
   return (
     <div
       ref={containerRef}
-      style={{ width: '100%', height: '100%', position: 'relative' }}
+      className={styles.ooEditorContainer}
     >
-      <div
-        id="oo-editor-placeholder"
-        style={{ width: '100%', height: '100%' }}
-      />
-      {/* Connection status indicator */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 8,
-          right: 8,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          padding: '4px 8px',
-          borderRadius: '4px',
-          fontSize: '12px',
-          background: isConnected
-            ? 'var(--c--theme--colors--success-100, #e8f5e9)'
-            : 'var(--c--theme--colors--danger-100, #fde8e8)',
-          color: isConnected
-            ? 'var(--c--theme--colors--success-600, #18753c)'
-            : 'var(--c--theme--colors--danger-600, #c00)',
-          zIndex: 10,
-        }}
-      >
-        <span className="material-icons" style={{ fontSize: '14px' }}>
-          {isConnected ? 'cloud_done' : 'cloud_off'}
-        </span>
-        {isConnected
-          ? t('explorer.encrypted.connected', 'Connected')
-          : relayFailed
-            ? t('explorer.encrypted.relay_failed', 'Collaboration unavailable')
-            : t('explorer.encrypted.disconnected', 'Connecting...')}
-      </div>
+      {/* OnlyOffice replaces this div with its own iframe[name="frameEditor"] */}
+      <div id="oo-editor-placeholder" />
+      {/* Loading overlay */}
+      {state !== 'ready' && state !== 'error' && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '16px',
+            background: 'white',
+            zIndex: 10,
+          }}
+        >
+          <Loader />
+          <span style={{ color: 'var(--c--theme--colors--greyscale-600, #666)' }}>
+            {state === 'decrypting' &&
+              t('explorer.encrypted.decrypting', 'Decrypting...')}
+            {state === 'converting' &&
+              t('explorer.encrypted.converting', 'Preparing editor...')}
+            {(state === 'loading' || state === 'mounting') &&
+              t('explorer.encrypted.loading_editor', 'Loading editor...')}
+          </span>
+        </div>
+      )}
+      {/* Connection status — only show when there's a problem */}
+      {relayFailed && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 8,
+            left: 8,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            fontSize: '12px',
+            background: 'var(--c--theme--colors--danger-100, #fde8e8)',
+            color: 'var(--c--theme--colors--danger-600, #c00)',
+            zIndex: 10,
+            pointerEvents: 'none',
+          }}
+        >
+          <span className="material-icons" style={{ fontSize: '14px' }}>
+            cloud_off
+          </span>
+          {t('explorer.encrypted.relay_failed', 'Collaboration unavailable')}
+        </div>
+      )}
     </div>
   );
 };

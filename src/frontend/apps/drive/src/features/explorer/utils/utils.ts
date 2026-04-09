@@ -193,6 +193,7 @@ export const itemToPreviewFile = (item: Item) => {
   return {
     id: item.id,
     title: item.title,
+    filename: item.filename,
     mimetype: item.mimetype ?? "",
     url_preview: item.url_preview ?? "",
     url: item.url ?? "",

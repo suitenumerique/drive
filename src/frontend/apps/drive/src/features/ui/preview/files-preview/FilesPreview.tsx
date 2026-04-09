@@ -23,6 +23,7 @@ export type FilePreviewType = {
   id: string;
   size: number;
   title: string;
+  filename?: string;
   mimetype: string;
   is_wopi_supported?: boolean;
   is_encrypted?: boolean;
