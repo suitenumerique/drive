@@ -161,7 +161,7 @@ const isDragEventWithItems = (
  *   to file-selector's `fromEvent`.
  */
 export const customGetFilesFromEvent = async (
-  evt: Event | unknown,
+  evt: unknown,
 ): Promise<(FileWithPath | EmptyFolderMarker | DataTransferItem)[]> => {
   if (!isDragEventWithItems(evt)) {
     return fromEvent(evt as Event);

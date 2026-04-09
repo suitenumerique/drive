@@ -243,7 +243,7 @@ describe("traverseEntry", () => {
     const result = await traverseEntry(dir);
     const paths = (result as Array<File & { path: string }>)
       .map((f) => f.path)
-      .sort();
+      .sort((a, b) => a.localeCompare(b));
     expect(paths).toEqual(["/dir/a.txt", "/dir/b.txt"]);
     expect(result.some((f) => isEmptyFolderMarker(f as File))).toBe(false);
   });
@@ -264,11 +264,11 @@ describe("traverseEntry", () => {
     const realPaths = (result as Array<File & { path: string }>)
       .filter((f) => !isEmptyFolderMarker(f))
       .map((f) => f.path)
-      .sort();
+      .sort((a, b) => a.localeCompare(b));
     const markerPaths = (result as Array<File & { path: string }>)
       .filter((f) => isEmptyFolderMarker(f))
       .map((f) => f.path)
-      .sort();
+      .sort((a, b) => a.localeCompare(b));
 
     expect(realPaths).toEqual(["/root/b/b.txt"]);
     expect(markerPaths).toEqual([
