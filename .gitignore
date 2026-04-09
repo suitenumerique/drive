@@ -81,5 +81,8 @@ db.sqlite3
 *.iml
 .devcontainer
 
+# OnlyOffice client-side assets (downloaded via scripts/install-onlyoffice.sh)
+src/frontend/apps/drive/public/onlyoffice/
+
 # Various
 .turbo

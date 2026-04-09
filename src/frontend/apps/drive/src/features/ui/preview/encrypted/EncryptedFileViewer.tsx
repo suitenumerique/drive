@@ -10,6 +10,7 @@ import { AudioPlayer } from "../audio-player/AudioPlayer";
 import { PreviewPdf } from "../pdf-preview/PreviewPdf";
 import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
 import { type FilePreviewType } from "../files-preview/FilesPreview";
+import { OOEditor } from "@/features/encryption/oo-bridge/OOEditor";
 import { Loader } from "@gouvfr-lasuite/cunningham-react";
 
 interface EncryptedFileViewerProps {
@@ -97,6 +98,23 @@ export const EncryptedFileViewer = ({
   }
 
   const category = getMimeCategory(file.mimetype);
+
+  // Office files: use OnlyOffice client-side editor (no WOPI)
+  const isOfficeFormat =
+    category === MimeCategory.DOC ||
+    category === MimeCategory.CALC ||
+    category === MimeCategory.POWERPOINT;
+
+  if (isOfficeFormat) {
+    // OOEditor handles its own decryption + loading
+    const itemLike = {
+      ...file,
+      id: file.id,
+      title: file.title,
+      is_encrypted: true,
+    };
+    return <OOEditor item={itemLike as any} />;
+  }
 
   switch (category) {
     case MimeCategory.IMAGE:

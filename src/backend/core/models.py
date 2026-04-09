@@ -886,6 +886,7 @@ class Item(TreeModel, BaseModel):
             "download": can_get,
             "duplicate": can_duplicate,
             "encrypt": can_manage and user.is_authenticated,
+            "encryption_upload_url": can_manage and user.is_authenticated,
             "hard_delete": can_hard_delete,
             "favorite": can_get and user.is_authenticated,
             "key_chain": can_get and user.is_authenticated,

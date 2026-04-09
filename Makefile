@@ -167,6 +167,10 @@ run:
 	@$(COMPOSE) up --force-recreate -d frontend-dev
 .PHONY: run
 
+install-onlyoffice: ## Download OnlyOffice client-side assets for encrypted file editing
+	@bash scripts/install-onlyoffice.sh
+.PHONY: install-onlyoffice
+
 status: ## an alias for "docker compose ps"
 	@$(COMPOSE) ps
 .PHONY: status

@@ -36,13 +36,14 @@ class UserSerializer(serializers.ModelSerializer):
         model = models.User
         fields = [
             "id",
+            "sub",
             "email",
             "full_name",
             "short_name",
             "language",
             "last_release_note_seen",
         ]
-        read_only_fields = ["id", "email", "full_name", "short_name"]
+        read_only_fields = ["id", "sub", "email", "full_name", "short_name"]
 
 
 class UserLightSerializer(UserSerializer):
@@ -219,6 +220,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     """Serialize items with limited fields for display in lists."""
 
     abilities = serializers.SerializerMethodField(read_only=True)
+    accesses_user_ids = serializers.SerializerMethodField(read_only=True)
     is_favorite = serializers.BooleanField(read_only=True)
     nb_accesses = serializers.IntegerField(read_only=True)
     user_role = serializers.SerializerMethodField()
@@ -229,11 +231,25 @@ class ListItemSerializer(serializers.ModelSerializer):
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
 
+    def get_accesses_user_ids(self, item):
+        """Return the list of user OIDC sub identifiers with access to this item."""
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        return list(
+            models.ItemAccess.objects.filter(
+                item=item,
+                user__isnull=False,
+            )
+            .values_list("user__sub", flat=True)
+        )
+
     class Meta:
         model = models.Item
         fields = [
             "id",
             "abilities",
+            "accesses_user_ids",
             "ancestors_link_reach",
             "ancestors_link_role",
             "computed_link_reach",
@@ -269,6 +285,7 @@ class ListItemSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "abilities",
+            "accesses_user_ids",
             "ancestors_link_reach",
             "ancestors_link_role",
             "computed_link_reach",
@@ -558,18 +575,6 @@ class ItemSerializer(ListItemSerializer):
             .first()
         )
         return access
-
-    def get_accesses_user_ids(self, item):
-        """Return the list of user OIDC sub identifiers with access to this item."""
-        if not item.is_encrypted:
-            return None
-        return list(
-            models.ItemAccess.objects.filter(
-                item=item,
-                user__isnull=False,
-            )
-            .values_list("user__sub", flat=True)
-        )
 
     def create(self, validated_data):
         raise NotImplementedError("Create method can not be used.")

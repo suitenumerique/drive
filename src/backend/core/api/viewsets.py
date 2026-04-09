@@ -1447,6 +1447,38 @@ class ItemViewSet(
 
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
+    @drf.decorators.action(
+        detail=True, methods=["post"], url_path="encryption-upload-url"
+    )
+    def encryption_upload_url(self, request, *args, **kwargs):
+        """Return a presigned S3 PUT URL for uploading encrypted file content.
+
+        The frontend calls this before encrypting to get a URL for the new
+        filename where encrypted content will be stored.
+        """
+        item = self.get_object()
+
+        if item.type != models.ItemTypeChoices.FILE:
+            return drf.response.Response(
+                {"detail": _("Only files can be encrypted.")},
+                status=drf.status.HTTP_400_BAD_REQUEST,
+            )
+
+        new_filename = request.data.get("filename")
+        if not new_filename:
+            return drf.response.Response(
+                {"detail": _("filename is required.")},
+                status=drf.status.HTTP_400_BAD_REQUEST,
+            )
+
+        key = f"{item.key_base}/{new_filename}"
+        upload_url = utils.generate_upload_policy_for_key(key)
+
+        return drf.response.Response(
+            {"upload_url": upload_url, "filename": new_filename},
+            status=drf.status.HTTP_200_OK,
+        )
+
     @drf.decorators.action(detail=True, methods=["patch"], url_path="encrypt")
     @transaction.atomic
     def encrypt(self, request, *args, **kwargs):

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Item } from "@/features/drivers/types";
-import { getDriver } from "@/features/config/useConfig";
+import { getDriver } from "@/features/config/Config";
 
 /**
  * Hook that fetches an encrypted file, decrypts it via the vault,

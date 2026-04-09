@@ -73,7 +73,7 @@ FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL=
 FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH=
 
 # WOPI
-WOPI_CLIENTS="collabora,onlyoffice"
+WOPI_CLIENTS="onlyoffice"
 WOPI_COLLABORA_DISCOVERY_URL="http://collabora:9980/hosting/discovery"
 WOPI_ONLYOFFICE_DISCOVERY_URL=http://onlyoffice/hosting/discovery
 WOPI_SRC_BASE_URL=http://app-dev:8000

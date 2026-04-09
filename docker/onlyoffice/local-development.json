@@ -2,15 +2,15 @@
     "wopi": {
         "enable": true,
         "host": "http://localhost:9981",
-        "pdfView": [],
+        "pdfView": ["pdf"],
 		"pdfEdit": [],
 		"forms": [],
-		"wordView": [],
-		"wordEdit": ["docx", "dotx", "docm"],
-		"cellView": [],
-		"cellEdit": ["xlsx", "xlsb", "xltx", "xlsm", "csv"],
-		"slideView": [],
-		"slideEdit": ["pptx", "potx", "pptm"],
+		"wordView": ["djvu", "epub", "fb2", "html", "mht", "mhtml", "stw", "sxw", "wps", "wpt", "xml"],
+		"wordEdit": ["docx", "dotx", "docm", "doc", "dot", "docm", "odt", "ott", "rtf", "txt"],
+		"cellView": ["et", "ett", "sxc"],
+		"cellEdit": ["xlsx", "xlsb", "xltx", "xlsm", "csv", "xls", "xlt", "ods", "ots", "fods"],
+		"slideView": ["dps", "dpt", "sxi"],
+		"slideEdit": ["pptx", "potx", "pptm", "ppt", "pot", "odp", "otp", "ppsx"],
 		"diagramView": [],
 		"diagramEdit": []
     }

@@ -147,9 +147,13 @@ export abstract class Driver {
     data: {
       encryptedSymmetricKeyPerUser: Record<string, string>;
       encryptedKeysForDescendants: Record<string, string>;
+      fileKeyMapping?: Record<string, string>;
     }
   ): Promise<Item>;
-  abstract removeEncryption(itemId: string): Promise<Item>;
+  abstract removeEncryption(
+    itemId: string,
+    data?: { fileKeyMapping?: Record<string, string> }
+  ): Promise<Item>;
   abstract getKeyChain(itemId: string): Promise<{
     user_access_item_id: string;
     encrypted_key_for_user: string;

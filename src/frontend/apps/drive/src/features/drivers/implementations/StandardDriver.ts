@@ -465,6 +465,7 @@ export class StandardDriver extends Driver {
     data: {
       encryptedSymmetricKeyPerUser: Record<string, string>;
       encryptedKeysForDescendants: Record<string, string>;
+      fileKeyMapping?: Record<string, string>;
     },
   ): Promise<Item> {
     const response = await fetchAPI(`items/${itemId}/encrypt/`, {
@@ -475,10 +476,13 @@ export class StandardDriver extends Driver {
     return jsonToItem(json);
   }
 
-  async removeEncryption(itemId: string): Promise<Item> {
+  async removeEncryption(
+    itemId: string,
+    data?: { fileKeyMapping?: Record<string, string> },
+  ): Promise<Item> {
     const response = await fetchAPI(`items/${itemId}/remove-encryption/`, {
       method: "PATCH",
-      body: JSON.stringify({}),
+      body: JSON.stringify(data ?? {}),
     });
     const json = await response.json();
     return jsonToItem(json);

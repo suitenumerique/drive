@@ -25,6 +25,8 @@ import {
   useMutationDeleteFavoriteItem,
 } from "./useMutations";
 import { DefaultRoute } from "@/utils/defaultRoutes";
+import { ModalEncryptItem } from "@/features/encryption/ModalEncryptItem";
+import { ModalRemoveEncryption } from "@/features/encryption/ModalRemoveEncryption";
 
 type UseItemActionMenuItemsOptions = {
   onModalOpenChange?: (isModalOpen: boolean) => void;
@@ -56,6 +58,8 @@ export const useItemActionMenuItems = ({
   const renameModal = useModal();
   const moveModal = useModal();
   const createFolderModal = useModal();
+  const encryptModal = useModal();
+  const removeEncryptionModal = useModal();
 
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
 
@@ -63,7 +67,9 @@ export const useItemActionMenuItems = ({
     renameModal.isOpen ||
     shareItemModal.isOpen ||
     moveModal.isOpen ||
-    createFolderModal.isOpen;
+    createFolderModal.isOpen ||
+    encryptModal.isOpen ||
+    removeEncryptionModal.isOpen;
 
   useEffect(() => {
     onModalOpenChange?.(isModalOpen);
@@ -193,7 +199,7 @@ export const useItemActionMenuItems = ({
               label: t("explorer.item.actions.encrypt", "Encrypt"),
               callback: () => {
                 setCurrentItem(effectiveItem);
-                // TODO: Open ModalEncryptItem when vault SDK is integrated
+                encryptModal.open();
               },
             },
           ]
@@ -208,7 +214,7 @@ export const useItemActionMenuItems = ({
               ),
               callback: () => {
                 setCurrentItem(effectiveItem);
-                // TODO: Open ModalRemoveEncryption when vault SDK is integrated
+                removeEncryptionModal.open();
               },
             },
           ]
@@ -264,6 +270,20 @@ export const useItemActionMenuItems = ({
         <ExplorerCreateFolderModal
           {...createFolderModal}
           parentId={currentItem.id}
+        />
+      )}
+      {currentItem && encryptModal.isOpen && (
+        <ModalEncryptItem
+          isOpen
+          onClose={encryptModal.close}
+          item={currentItem}
+        />
+      )}
+      {currentItem && removeEncryptionModal.isOpen && (
+        <ModalRemoveEncryption
+          isOpen
+          onClose={removeEncryptionModal.close}
+          item={currentItem}
         />
       )}
     </>

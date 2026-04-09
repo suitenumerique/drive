@@ -167,6 +167,7 @@ export enum Role {
 
 export type User = {
   id: string;
+  sub: string;
   email: string;
   full_name: string;
   short_name: string;
