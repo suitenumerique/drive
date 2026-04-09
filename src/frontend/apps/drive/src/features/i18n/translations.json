@@ -529,6 +529,27 @@
           "app_name": "Updates to Drive",
           "see_whats_new": "See what's new"
         },
+        "v0_16_0": {
+          "main_title": "What's new",
+          "steps": {
+            "0": {
+              "title": "Customizable columns",
+              "description": "Choose which information to display in your columns: last modified, creation date, author, file type, or size."
+            },
+            "1": {
+              "title": "Sort by column",
+              "description": "Sort your documents by creation date, size, type... Just click the sort button."
+            },
+            "2": {
+              "title": "Duplication",
+              "description": "Duplicate any document in one click."
+            },
+            "3": {
+              "title": "PDF viewer",
+              "description": "Open your PDFs right in Fichiers, with a new built-in viewer."
+            }
+          }
+        },
         "v0_13_0": {
           "main_title": "Advanced sharing",
           "steps": {
@@ -1089,6 +1110,27 @@
           "app_name": "Mise à jour de Fichiers",
           "see_whats_new": "Voir les nouveautés"
         },
+        "v0_16_0": {
+          "main_title": "Nouveautés",
+          "steps": {
+            "0": {
+              "title": "Colonnes personnalisables",
+              "description": "Choisissez les informations affichées dans vos colonnes : date de modification, date de création, auteur, type de fichier ou taille."
+            },
+            "1": {
+              "title": "Tri par colonne",
+              "description": "Triez vos documents par date de création, taille, type… Un clic sur le bouton de tri suffit."
+            },
+            "2": {
+              "title": "Duplication",
+              "description": "Dupliquez n'importe quel document en un clic."
+            },
+            "3": {
+              "title": "Lecteur PDF",
+              "description": "Ouvrez vos PDF directement dans Fichiers, grâce à un nouveau lecteur intégré."
+            }
+          }
+        },
         "v0_13_0": {
           "main_title": "Partages avancés",
           "steps": {
@@ -1638,6 +1680,27 @@
         "labels": {
           "app_name": "Wat is er nieuw",
           "see_whats_new": "Zie wat er nieuw is"
+        },
+        "v0_16_0": {
+          "main_title": "Wat is er nieuw",
+          "steps": {
+            "0": {
+              "title": "Aanpasbare kolommen",
+              "description": "Kies welke informatie in uw kolommen wordt weergegeven: laatst gewijzigd, aanmaakdatum, auteur, bestandstype of grootte."
+            },
+            "1": {
+              "title": "Sorteren op kolom",
+              "description": "Sorteer uw documenten op aanmaakdatum, grootte, type... Klik gewoon op de sorteerknop."
+            },
+            "2": {
+              "title": "Duplicatie",
+              "description": "Dupliceer elk document met één klik."
+            },
+            "3": {
+              "title": "PDF-lezer",
+              "description": "Open uw PDF's rechtstreeks in Fichiers, met een nieuwe ingebouwde lezer."
+            }
+          }
         },
         "v0_13_0": {
           "main_title": "Wat is er nieuw",

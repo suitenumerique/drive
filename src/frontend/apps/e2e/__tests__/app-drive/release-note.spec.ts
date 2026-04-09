@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { login } from "./utils-common";
 
-const CURRENT_VERSION = "0.13.0";
+const CURRENT_VERSION = "0.16.0";
 
 test.describe("Release Note", () => {
   test.beforeEach(async ({ page }) => {
