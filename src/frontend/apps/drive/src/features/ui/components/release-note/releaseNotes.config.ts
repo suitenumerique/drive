@@ -3,8 +3,8 @@ import { ReleaseNoteStep } from "@gouvfr-lasuite/ui-kit";
 import { ALL_VERSIONS } from "./versions";
 
 export interface ReleaseNoteStepConfig {
-  icon: ReleaseNoteStep["icon"];
-  activeIcon: ReleaseNoteStep["activeIcon"];
+  icon?: ReleaseNoteStep["icon"];
+  activeIcon?: ReleaseNoteStep["activeIcon"];
   titleKey: string;
   descriptionKey: string;
 }
