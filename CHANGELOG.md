@@ -28,6 +28,7 @@ and this project adheres to
 - ⚡(ci) shard e2e tests and cache playwright browsers
 - ⬆️(frontend) upgrade cunningham-react and ui-kit to 0.20.0
 - ✨(frontend) improve custom columns with sortable config and i18n
+- ✨(frontend) preserve empty folders when uploading via drag & drop
 
 ### Changed
 

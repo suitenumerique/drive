@@ -18,6 +18,11 @@ import { useConfig } from "@/features/config/ConfigProvider";
 import { getDriver } from "@/features/config/Config";
 import { APIError } from "@/features/api/APIError";
 import { useRefreshQueryCacheAfterMutation } from "./useRefreshItems";
+import { formatSize } from "@/features/explorer/utils/utils";
+import {
+  customGetFilesFromEvent,
+  isEmptyFolderMarker,
+} from "@/features/explorer/utils/dropTraversal";
 
 type FileUpload = FileWithPath & {
   parentId?: string;
@@ -111,6 +116,12 @@ const useUpload = ({ item }: { item: Item }) => {
 
     for (const file of files) {
       const folder = getFolderByPath(file.path!);
+      // Empty-folder markers exist solely to materialize the folder chain
+      // via getFolderByPath above. They must never end up in folder.files,
+      // otherwise the upload loop would try to send them to the backend.
+      if (isEmptyFolderMarker(file)) {
+        continue;
+      }
       folder.files.push(file);
     }
     return {
@@ -239,23 +250,6 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
   const { filesToUpload, handleHierarchy } = useUpload({ item: item! });
 
-  const showUploadToast = () => {
-    if (fileUploadsToastId.current) return;
-    fileUploadsToastId.current = addToast(
-      <FileUploadToast
-        uploadingState={uploadingState}
-        onCancelFile={onCancelFile}
-        onCancelAll={onCancelAll}
-      />,
-      {
-        autoClose: false,
-        onClose: () => {
-          fileUploadsToastId.current = null;
-        },
-      },
-    );
-  };
-
   const onCancelFile = useCallback(async (fileName: string) => {
     const abortFn = abortFunctionsRef.current.get(fileName);
     if (abortFn) {
@@ -322,6 +316,10 @@ export const useUploadZone = ({ item }: { item: Item }) => {
     noClick: true,
     useFsAccessApi: false,
     validator: validateDrop,
+    // Custom traversal that preserves empty folders on drag & drop.
+    // Input change events (folder/file buttons) are delegated to
+    // file-selector inside this helper.
+    getFilesFromEvent: customGetFilesFromEvent,
     // If we do not set this, the click on the "..." menu of each items does not work, also click + select on items
     // does not work too. It might seems related to onFocus and onBlur events.
     noKeyboard: true,
@@ -371,12 +369,38 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         return;
       }
 
+      // When the drop contains only empty-folder markers, there are no
+      // real files to upload. In that case we skip the FileUploadToast
+      // entirely and show a success toast once the folders have been created.
+      const hasOnlyEmptyFolders =
+        acceptedFiles.length > 0 &&
+        acceptedFiles.every((file) => isEmptyFolderMarker(file));
+
+      const showFileUploadToast = () => {
+        if (hasOnlyEmptyFolders || fileUploadsToastId.current) {
+          return;
+        }
+        fileUploadsToastId.current = addToast(
+          <FileUploadToast
+            uploadingState={uploadingState}
+            onCancelFile={onCancelFile}
+            onCancelAll={onCancelAll}
+          />,
+          {
+            autoClose: false,
+            onClose: () => {
+              fileUploadsToastId.current = null;
+            },
+          },
+        );
+      };
+
       setUploadingState((prev) => ({
         ...prev,
         step: UploadingStep.PREPARING,
       }));
 
-      showUploadToast();
+      showFileUploadToast();
 
       const entitlements = await getEntitlements();
       if (!entitlements.can_upload.result) {
@@ -401,23 +425,60 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         step: UploadingStep.CREATE_FOLDERS,
       }));
 
-      showUploadToast();
+      showFileUploadToast();
       dismissDragToast();
 
       const upload = filesToUpload(acceptedFiles);
       await handleHierarchy(upload);
 
+      if (hasOnlyEmptyFolders) {
+        setUploadingState((prev) => ({
+          ...prev,
+          step: UploadingStep.DONE,
+        }));
+        addToast(
+          <ToasterItem type="info">
+            <span>{t("explorer.actions.upload.folders_created")}</span>
+          </ToasterItem>,
+        );
+        return;
+      }
+
+      // Strip empty-folder markers before any size/upload processing:
+      // they are zero-byte sentinels whose only purpose was to make
+      // filesToUpload create the corresponding FolderUpload nodes.
+      const realFiles = upload.files.filter(
+        (file) => !isEmptyFolderMarker(file),
+      );
+
       // Filter out files that exceed the maximum upload size.
       const maxSize = config.DATA_UPLOAD_MAX_MEMORY_SIZE;
-      const isMaxSize = maxSize !== undefined && maxSize !== null;
-      const validFiles = isMaxSize
-        ? upload.files.filter((file) => file.size <= maxSize)
-        : upload.files;
-      const tooLargeFiles = isMaxSize
-        ? upload.files.filter((file) => file.size > maxSize)
-        : [];
+      const validFiles =
+        maxSize !== undefined && maxSize !== null
+          ? realFiles.filter((file) => file.size <= maxSize)
+          : realFiles;
+      const tooLargeFiles =
+        maxSize !== undefined && maxSize !== null
+          ? realFiles.filter((file) => file.size > maxSize)
+          : [];
+      if (maxSize !== undefined && maxSize !== null) {
+        for (const file of tooLargeFiles) {
+          addToast(
+            <ToasterItem type="error">
+              <span>
+                {t("explorer.actions.upload.file_too_large", {
+                  name: file.name,
+                  maxSize: formatSize(maxSize, t),
+                })}
+              </span>
+            </ToasterItem>,
+          );
+        }
+      }
 
-      // Merge new files into the uploading state (instead of overwriting)
+      // Do not run "setUploadingState({});" because if a uploading is still in progress, it will be overwritten.
+
+      // First, add all the files to the uploading state in order to display them in the toast.
       const newFilesMeta: Record<string, FileUploadMeta> = {};
       for (const file of validFiles) {
         newFilesMeta[pathNicefy(file.path!)] = {

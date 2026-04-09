@@ -438,6 +438,7 @@
             "toast": "Drop your files here to transfer them in {{title}}",
             "toast_no_rights": "You don't have the necessary rights to transfer files in {{title}}",
             "file_too_large": "The file \"{{name}}\" is too large. Maximum allowed size is {{maxSize}}.",
+            "folders_created": "All folders have been created successfully.",
             "steps": {
               "preparing": "Preparing the transfer...",
               "create_folders": "Creation of folders in progress..."
@@ -1032,6 +1033,7 @@
             "toast": "Déposez vos fichiers ici pour les transférer dans {{title}}",
             "toast_no_rights": "Vous n'avez pas les droits nécessaires pour transférer des fichiers dans {{title}}",
             "file_too_large": "Le fichier \"{{name}}\" est trop volumineux. La taille maximale autorisée est {{maxSize}}.",
+            "folders_created": "Tous les dossiers ont été créés avec succès.",
             "steps": {
               "preparing": "Préparation du transfert...",
               "create_folders": "Création des dossiers en cours..."
@@ -1628,6 +1630,7 @@
             "toast": "Zet uw bestanden hier neer om ze over te zetten in {{title}}",
             "toast_no_rights": "U beschikt niet over de benodigde rechten om bestanden over te dragen in {{title}}",
             "file_too_large": "Het bestand \"{{name}}\" is te groot. De maximale toegestane grootte is {{maxSize}}.",
+            "folders_created": "Alle mappen zijn succesvol aangemaakt.",
             "steps": {
               "preparing": "Voorbereiding van de overdracht...",
               "create_folders": "Creatie van mappen in progress..."
