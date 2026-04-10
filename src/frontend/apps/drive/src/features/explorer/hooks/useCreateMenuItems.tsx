@@ -16,6 +16,7 @@ import { useState } from "react";
 
 type UseCreateMenuItemsProps = {
   includeImport?: boolean;
+  includeCreate?: boolean;
 };
 
 type UseCreateMenuItemsReturn = {
@@ -33,6 +34,7 @@ const renderFileIcon = (item: Partial<Item>) => {
 
 export const useCreateMenuItems = ({
   includeImport = false,
+  includeCreate = true,
 }: UseCreateMenuItemsProps = {}): UseCreateMenuItemsReturn => {
   const { t } = useTranslation();
   const { item, itemId } = useGlobalExplorer();
@@ -81,41 +83,43 @@ export const useCreateMenuItems = ({
     );
   }
 
-  items.push(
-    {
-      icon: renderFileIcon({
-        type: ItemType.FILE,
-        filename: "doc.odt",
-        mimetype:
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      }),
-      label: t("explorer.tree.create.file.doc"),
-      isHidden,
-      callback: () => openCreateFileModal(ExplorerCreateFileType.DOC),
-    },
-    {
-      icon: renderFileIcon({
-        type: ItemType.FILE,
-        filename: "powerpoint.odp",
-        mimetype:
-          "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      }),
-      label: t("explorer.tree.create.file.powerpoint"),
-      isHidden,
-      callback: () => openCreateFileModal(ExplorerCreateFileType.POWERPOINT),
-    },
-    {
-      icon: renderFileIcon({
-        type: ItemType.FILE,
-        filename: "calc.ods",
-        mimetype:
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      }),
-      label: t("explorer.tree.create.file.calc"),
-      isHidden,
-      callback: () => openCreateFileModal(ExplorerCreateFileType.CALC),
-    },
-  );
+  if (includeCreate) {
+    items.push(
+      {
+        icon: renderFileIcon({
+          type: ItemType.FILE,
+          filename: "doc.odt",
+          mimetype:
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }),
+        label: t("explorer.tree.create.file.doc"),
+        isHidden,
+        callback: () => openCreateFileModal(ExplorerCreateFileType.DOC),
+      },
+      {
+        icon: renderFileIcon({
+          type: ItemType.FILE,
+          filename: "powerpoint.odp",
+          mimetype:
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        }),
+        label: t("explorer.tree.create.file.powerpoint"),
+        isHidden,
+        callback: () => openCreateFileModal(ExplorerCreateFileType.POWERPOINT),
+      },
+      {
+        icon: renderFileIcon({
+          type: ItemType.FILE,
+          filename: "calc.ods",
+          mimetype:
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }),
+        label: t("explorer.tree.create.file.calc"),
+        isHidden,
+        callback: () => openCreateFileModal(ExplorerCreateFileType.CALC),
+      },
+    );
+  }
 
   const modals = (
     <>

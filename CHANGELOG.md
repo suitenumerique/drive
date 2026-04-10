@@ -14,6 +14,10 @@ and this project adheres to
 - ✨(frontend) add ErrorIcon component and support numeric icon sizes
 - ✨(frontend) make file upload abortable in driver layer
 
+### Fixed
+
+- 🐛(frontend) add actions menu on mobile My Files page
+
 ## [v0.16.0] - 2026-04-09
 
 ### Added

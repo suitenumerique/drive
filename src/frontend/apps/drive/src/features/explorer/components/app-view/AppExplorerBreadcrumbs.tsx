@@ -4,6 +4,7 @@ import {
   useGlobalExplorer,
 } from "@/features/explorer/components/GlobalExplorerContext";
 import {
+  DropdownMenu,
   HorizontalSeparator,
   IconSize,
   useDropdownMenu,
@@ -24,6 +25,7 @@ import {
   ORDERED_DEFAULT_ROUTES,
 } from "@/utils/defaultRoutes";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
+import { useCreateMenuItems } from "../../hooks/useCreateMenuItems";
 
 export const AppExplorerBreadcrumbs = () => {
   const { item, onNavigate } = useGlobalExplorer();
@@ -99,6 +101,11 @@ export const ExplorerBreadcrumbsMobile = () => {
   const { item, onNavigate } = useGlobalExplorer();
   const { data: breadcrumb } = useBreadcrumbQuery(item?.id);
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
+  const { menuItems, modals: createModals } = useCreateMenuItems({
+    includeImport: true,
+    includeCreate: false,
+  });
 
   const defaultRouteId = getDefaultRouteId(router.pathname);
   const defaultRouteData = ORDERED_DEFAULT_ROUTES.find(
@@ -121,13 +128,29 @@ export const ExplorerBreadcrumbsMobile = () => {
 
   if (!item && defaultRouteData) {
     return (
-      <div className="explorer__content__breadcrumbs--mobile">
-        <div className="explorer__content__breadcrumbs--mobile__default-route">
-          <defaultRouteData.icon size={IconSize.MEDIUM} />
+      <>
+        <div className="explorer__content__breadcrumbs--mobile">
+          <div className="explorer__content__breadcrumbs--mobile__default-route">
+            <defaultRouteData.icon size={IconSize.MEDIUM} />
 
-          {t(defaultRouteData.label)}
+            {t(defaultRouteData.label)}
+          </div>
+          {defaultRouteId === DefaultRoute.MY_FILES && (
+            <DropdownMenu
+              options={menuItems}
+              isOpen={isCreateMenuOpen}
+              onOpenChange={setIsCreateMenuOpen}
+            >
+              <Button
+                variant="tertiary"
+                icon={<span className="material-icons">more_vert</span>}
+                onClick={() => setIsCreateMenuOpen(true)}
+              />
+            </DropdownMenu>
+          )}
         </div>
-      </div>
+        {defaultRouteId === DefaultRoute.MY_FILES && createModals}
+      </>
     );
   }
 
