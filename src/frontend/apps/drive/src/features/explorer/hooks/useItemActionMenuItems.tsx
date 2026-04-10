@@ -1,19 +1,27 @@
 import { Item, ItemType } from "@/features/drivers/types";
-import { useTreeContext, MenuItem } from "@gouvfr-lasuite/ui-kit";
+import {
+  useTreeContext,
+  MenuItem,
+  Shared,
+  Download,
+  Copy,
+  FolderPlus,
+  Upload,
+  Star,
+  Edit,
+  ArrowRight,
+  Info,
+  Trash,
+} from "@gouvfr-lasuite/ui-kit";
 import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { t } from "i18next";
 import {
   itemToTreeItem,
   useGlobalExplorer,
 } from "../components/GlobalExplorerContext";
-import settingsSvg from "@/assets/icons/settings.svg";
-import starredSvg from "@/assets/icons/starred.svg";
-import unstarredSvg from "@/assets/icons/starred-slash.svg";
-import uploadFileSvg from "@/assets/icons/upload_file.svg";
 import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 import { ExplorerRenameItemModal } from "../components/modals/ExplorerRenameItemModal";
 import { ExplorerCreateFolderModal } from "../components/modals/ExplorerCreateFolderModal";
-import { NewFolderIcon } from "@/features/ui/components/icon/NewFolderIcon";
 import { ItemShareModal } from "../components/modals/share/ItemShareModal";
 import { useDeleteItem } from "./useDeleteItem";
 import { ExplorerMoveFolder } from "../components/modals/move/ExplorerMoveFolderModal";
@@ -121,7 +129,7 @@ export const useItemActionMenuItems = ({
       ...(showAddChildren
         ? [
             {
-              icon: <NewFolderIcon />,
+              icon: <FolderPlus />,
               label: t("explorer.actions.createFolder.modal.title"),
               callback: () => {
                 setCurrentItem(effectiveItem);
@@ -129,7 +137,7 @@ export const useItemActionMenuItems = ({
               },
             },
             {
-              icon: <img src={uploadFileSvg.src} alt="" />,
+              icon: <Upload />,
               label: t("explorer.tree.import.files"),
               callback: () => {
                 document.getElementById("import-files")?.click();
@@ -140,7 +148,7 @@ export const useItemActionMenuItems = ({
         : []),
 
       {
-        icon: <span className="material-icons">group</span>,
+        icon: <Shared />,
         label: t("explorer.item.actions.share"),
         isHidden: !item.abilities?.accesses_view,
         callback: () => {
@@ -149,7 +157,7 @@ export const useItemActionMenuItems = ({
         },
       },
       {
-        icon: <span className="material-icons">download</span>,
+        icon: <Download />,
         label: t("explorer.item.actions.download"),
         isHidden: item.type === ItemType.FOLDER || minimal,
         callback: () => {
@@ -157,7 +165,7 @@ export const useItemActionMenuItems = ({
         },
       },
       {
-        icon: <span className="material-icons">content_copy</span>,
+        icon: <Copy />,
         label: t("explorer.item.actions.duplicate"),
         isHidden: !item.abilities?.duplicate || item.type === ItemType.FOLDER,
         callback: async () => {
@@ -175,12 +183,7 @@ export const useItemActionMenuItems = ({
       },
 
       {
-        icon: (
-          <img
-            src={item.is_favorite ? unstarredSvg.src : starredSvg.src}
-            alt=""
-          />
-        ),
+        icon: <Star />,
         label: item.is_favorite
           ? t("explorer.item.actions.unfavorite")
           : t("explorer.item.actions.favorite"),
@@ -191,7 +194,7 @@ export const useItemActionMenuItems = ({
       },
       { type: "separator" },
       {
-        icon: <img src={settingsSvg.src} alt="" />,
+        icon: <Edit />,
         label: t("explorer.item.actions.rename"),
         isHidden: !item.abilities?.update,
         callback: () => {
@@ -200,7 +203,7 @@ export const useItemActionMenuItems = ({
         },
       },
       {
-        icon: <span className="material-icons">arrow_forward</span>,
+        icon: <ArrowRight />,
         label: t("explorer.item.actions.move"),
         isHidden: !item.abilities?.move || minimal,
         callback: () => {
@@ -211,7 +214,7 @@ export const useItemActionMenuItems = ({
       { type: "separator" },
 
       {
-        icon: <span className="material-icons">info</span>,
+        icon: <Info />,
         label: t("explorer.item.actions.view_info"),
         isHidden: minimal,
         callback: () => {
@@ -221,7 +224,7 @@ export const useItemActionMenuItems = ({
       },
       { type: "separator" },
       {
-        icon: <span className="material-icons">delete</span>,
+        icon: <Trash />,
         label: t("explorer.item.actions.delete"),
         variant: "danger" as const,
         isHidden: !item.abilities?.destroy || item.main_workspace || minimal,
