@@ -16,6 +16,9 @@ import {
   mockSlowUpload,
   mockSlowUploadEnded,
 } from "./utils/upload-utils";
+import { createFolderInCurrentFolder, deleteCurrentFolder } from "./utils-item";
+import { navigateToFolder, clickToMyFiles } from "./utils-navigate";
+import { clickOnRowItemActions } from "./utils-embedded-grid";
 
 const PDF_FILE_PATH = path.join(__dirname, "/assets/pv_cm.pdf");
 const DOCX_FILE_PATH = path.join(__dirname, "/assets/empty_doc.docx");
@@ -425,5 +428,107 @@ test.describe("File upload toast", () => {
       page.getByRole("cell", { name: "empty_doc", exact: true }),
     ).toBeVisible({ timeout: 15000 });
     await expect(getFileRowCheckIcon(page, "empty_doc.docx")).toBeVisible();
+  });
+
+  test("Delete parent folder — cancels active uploads", async ({ page }) => {
+    const { resolve } = await mockSlowUpload(page);
+    await setupUploadTest(page);
+
+    // Create a folder and navigate into it
+    await createFolderInCurrentFolder(page, "TestFolder");
+    await navigateToFolder(page, "TestFolder", ["My files", "TestFolder"]);
+
+    // Start uploading a file (parentId = TestFolder.id)
+    await uploadFile(page, PDF_FILE_PATH);
+
+    // Toast should be visible with the file uploading
+    await expect(getUploadToast(page)).toBeVisible();
+    await expect(getFileRow(page, "pv_cm.pdf")).toBeVisible();
+
+    // Delete the current folder via breadcrumb — triggers cancelUploadsForDeletedItems
+    await deleteCurrentFolder(page);
+
+    // Upload should be cancelled — file row should disappear from toast
+    await expect(getFileRow(page, "pv_cm.pdf")).not.toBeVisible();
+
+    // Unblock the S3 mock
+    resolve();
+
+    // File should NOT appear in the grid (we're now back in My Files)
+    await expect(
+      page.getByRole("cell", { name: "pv_cm", exact: true }),
+    ).not.toBeVisible();
+  });
+
+  test("Delete folder only cancels uploads for that folder", async ({
+    page,
+  }) => {
+    const { resolve } = await mockSlowUpload(page);
+    await setupUploadTest(page);
+
+    // Create two folders
+    await createFolderInCurrentFolder(page, "FolderA");
+    await createFolderInCurrentFolder(page, "FolderB");
+
+    // Navigate into FolderA and start uploading (blocked by mock)
+    await navigateToFolder(page, "FolderA", ["My files", "FolderA"]);
+    await uploadFile(page, PDF_FILE_PATH);
+    await expect(getUploadToast(page)).toBeVisible();
+    await expect(getFileRow(page, "pv_cm.pdf")).toBeVisible();
+
+    // Navigate back to My Files, then into FolderB
+    await clickToMyFiles(page);
+    await navigateToFolder(page, "FolderB", ["My files", "FolderB"]);
+
+    // Start another upload (merged into queue)
+    await uploadFile(page, DOCX_FILE_PATH);
+    await expect(getFileRow(page, "empty_doc.docx")).toBeVisible();
+
+    // Navigate back to My Files
+    await clickToMyFiles(page);
+
+    // Delete FolderA via row action menu — should only cancel FolderA's upload
+    await clickOnRowItemActions(page, "FolderA", "Delete");
+
+    // pv_cm.pdf (FolderA) should be cancelled
+    await expect(getFileRow(page, "pv_cm.pdf")).not.toBeVisible();
+
+    // empty_doc.docx (FolderB) should still be in the toast
+    await expect(getFileRow(page, "empty_doc.docx")).toBeVisible();
+
+    // Unblock uploads — FolderB's file should complete
+    resolve();
+    await expect(getFileRowCheckIcon(page, "empty_doc.docx")).toBeVisible({
+      timeout: 15000,
+    });
+  });
+
+  test("Delete ancestor folder — cancels uploads in a nested drop target", async ({
+    page,
+  }) => {
+    const { resolve } = await mockSlowUpload(page);
+    await setupUploadTest(page);
+
+    // Create FolderA, go in, create FolderB inside, go in, start upload
+    await createFolderInCurrentFolder(page, "FolderA");
+    await navigateToFolder(page, "FolderA", ["My files", "FolderA"]);
+    await createFolderInCurrentFolder(page, "FolderB");
+    await navigateToFolder(page, "FolderB", ["My files", "FolderA", "FolderB"]);
+
+    await uploadFile(page, PDF_FILE_PATH);
+    await expect(getUploadToast(page)).toBeVisible();
+    await expect(getFileRow(page, "pv_cm.pdf")).toBeVisible();
+
+    // Go back up to My Files and delete FolderA (ancestor of the drop target)
+    await clickToMyFiles(page);
+    await clickOnRowItemActions(page, "FolderA", "Delete");
+
+    // Upload should be cancelled via ancestor resolution
+    await expect(getFileRow(page, "pv_cm.pdf")).not.toBeVisible();
+
+    resolve();
+    await expect(
+      page.getByRole("cell", { name: "pv_cm", exact: true }),
+    ).not.toBeVisible();
   });
 });
