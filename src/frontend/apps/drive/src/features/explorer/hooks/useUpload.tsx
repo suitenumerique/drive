@@ -18,6 +18,16 @@ import { useConfig } from "@/features/config/ConfigProvider";
 import { getDriver } from "@/features/config/Config";
 import { APIError } from "@/features/api/APIError";
 import { useRefreshQueryCacheAfterMutation } from "./useRefreshItems";
+import { isIdInItemTree } from "../utils/utils";
+
+type ActiveUpload = {
+  file: FileUpload;
+  // Materialized path of the drop target folder (e.g. "root.A.B").
+  // Used by cancelUploadsForDeletedItems to detect ancestor deletions.
+  parentPath: string;
+  // Populated once the upload actually starts. Undefined while still queued.
+  abort?: () => Promise<void>;
+};
 import { formatSize } from "@/features/explorer/utils/utils";
 import {
   customGetFilesFromEvent,
@@ -239,24 +249,24 @@ export const useUploadZone = ({ item }: { item: Item }) => {
     filesMeta: {},
   });
 
-  // Abort functions keyed by file path
-  const abortFunctionsRef = useRef<Map<string, () => Promise<void>>>(new Map());
-  // Set of cancelled file paths to skip in the sequential loop
-  const cancelledRef = useRef<Set<string>>(new Set());
-  // Queue for files to upload (supports merging batches from concurrent drops)
-  const uploadQueueRef = useRef<FileUpload[]>([]);
+  // Single source of truth for queued + in-flight uploads. Map preserves
+  // insertion order, giving us FIFO for free. An entry whose `abort` is
+  // undefined is still queued; once upload starts we populate `abort`.
+  // Removing an entry (delete/clear) is the cancellation signal.
+  const activeUploadsRef = useRef<Map<string, ActiveUpload>>(new Map());
   // Whether the upload processing loop is currently running
   const isProcessingRef = useRef(false);
 
   const { filesToUpload, handleHierarchy } = useUpload({ item: item! });
 
   const onCancelFile = useCallback(async (fileName: string) => {
-    const abortFn = abortFunctionsRef.current.get(fileName);
-    if (abortFn) {
-      await abortFn();
-      abortFunctionsRef.current.delete(fileName);
+    const upload = activeUploadsRef.current.get(fileName);
+    // Remove from the map first: this is the signal the processing loop
+    // uses in its catch block to distinguish user cancel from real errors.
+    activeUploadsRef.current.delete(fileName);
+    if (upload?.abort) {
+      await upload.abort();
     }
-    cancelledRef.current.add(fileName);
     setUploadingState((prev) => {
       const meta = prev.filesMeta[fileName];
       if (!meta || meta.status === FileUploadStatus.DONE) return prev;
@@ -275,17 +285,19 @@ export const useUploadZone = ({ item }: { item: Item }) => {
   }, []);
 
   const onCancelAll = useCallback(async () => {
-    // Abort the currently uploading file
-    for (const [, abortFn] of abortFunctionsRef.current.entries()) {
-      await abortFn();
+    // Snapshot entries before clearing so we can abort in-flight uploads.
+    const entries = Array.from(activeUploadsRef.current.entries());
+    activeUploadsRef.current.clear();
+    for (const [, upload] of entries) {
+      if (upload.abort) {
+        await upload.abort();
+      }
     }
-    abortFunctionsRef.current.clear();
-    // Mark ALL uploading files as cancelled (including queued ones not yet in abortFunctionsRef)
     setUploadingState((prev) => {
       const newMeta = { ...prev.filesMeta };
-      for (const [name, meta] of Object.entries(newMeta)) {
-        if (meta.status === FileUploadStatus.UPLOADING) {
-          cancelledRef.current.add(name);
+      for (const [name] of entries) {
+        const meta = newMeta[name];
+        if (meta && meta.status === FileUploadStatus.UPLOADING) {
           newMeta[name] = { ...meta, status: FileUploadStatus.CANCELLED };
         }
       }
@@ -496,25 +508,31 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         };
       }
 
-      // If no upload is in progress, reset state for a fresh batch
+      // Update UI state
       if (!isProcessingRef.current) {
-        cancelledRef.current.clear();
         setUploadingState({
           step: UploadingStep.UPLOAD_FILES,
           filesMeta: newFilesMeta,
         });
       } else {
-        // Merge into existing batch
         setUploadingState((prev) => ({
           step: UploadingStep.UPLOAD_FILES,
           filesMeta: { ...prev.filesMeta, ...newFilesMeta },
         }));
       }
 
-      // Add valid files to the upload queue
-      uploadQueueRef.current.push(...validFiles);
+      // Enqueue valid files in the single source of truth. The materialized
+      // path of the drop target is stored once per file so we can later
+      // resolve "was an ancestor of this upload deleted?" via isIdInItemTree.
+      const parentPath = item?.path ?? "";
+      for (const file of validFiles) {
+        activeUploadsRef.current.set(pathNicefy(file.path!), {
+          file,
+          parentPath,
+        });
+      }
 
-      // If the processing loop is already running, it will pick up the new files from the queue
+      // If the processing loop is already running, it will pick up the new files
       if (isProcessingRef.current) {
         return;
       }
@@ -522,15 +540,22 @@ export const useUploadZone = ({ item }: { item: Item }) => {
       // Start the processing loop
       isProcessingRef.current = true;
 
-      // Process files from the queue until it's empty
-      while (uploadQueueRef.current.length > 0) {
-        const file = uploadQueueRef.current.shift()!;
-        const filePath = pathNicefy(file.path!);
-
-        // Skip if cancelled before we even started this file
-        if (cancelledRef.current.has(filePath)) {
-          continue;
+      // Pick the next queued entry: the first one without an abort handle
+      // (abort === undefined means it hasn't started uploading yet).
+      // Map iteration follows insertion order → FIFO is preserved.
+      // The loop exits when no more queued entries remain.
+      while (true) {
+        let nextEntry: [string, ActiveUpload] | undefined;
+        for (const entry of activeUploadsRef.current) {
+          if (!entry[1].abort) {
+            nextEntry = entry;
+            break;
+          }
         }
+        if (!nextEntry) break;
+
+        const [filePath, upload] = nextEntry;
+        const file = upload.file;
 
         const { promise, abort } = driver.createFile({
           filename: file.name,
@@ -554,11 +579,17 @@ export const useUploadZone = ({ item }: { item: Item }) => {
           },
         });
 
-        abortFunctionsRef.current.set(filePath, abort);
+        // Mark this entry as "in flight" so the loop won't pick it again.
+        upload.abort = abort;
 
         try {
           await promise;
-          abortFunctionsRef.current.delete(filePath);
+          // If the upload was cancelled mid-flight, the entry was removed
+          // from the map: skip the success state update.
+          if (!activeUploadsRef.current.has(filePath)) {
+            continue;
+          }
+          activeUploadsRef.current.delete(filePath);
           refresh(file.parentId);
           setUploadingState((prev) => ({
             ...prev,
@@ -572,9 +603,12 @@ export const useUploadZone = ({ item }: { item: Item }) => {
             },
           }));
         } catch (err) {
-          abortFunctionsRef.current.delete(filePath);
+          // If the entry was already removed from the map, onCancelFile (or
+          // onCancelAll) ran while the upload was in flight → user cancel.
+          const wasCancelled = !activeUploadsRef.current.has(filePath);
+          activeUploadsRef.current.delete(filePath);
           if (
-            cancelledRef.current.has(filePath) ||
+            wasCancelled ||
             (err instanceof DOMException && err.name === "AbortError")
           ) {
             // Already handled by onCancelFile/onCancelAll
@@ -653,7 +687,33 @@ export const useUploadZone = ({ item }: { item: Item }) => {
     return () => window.removeEventListener("beforeunload", unloadCallback);
   }, [uploadingState.step]);
 
+  /**
+   * Cancel every active upload whose drop-target folder is — or is a
+   * descendant of — any of the deleted items. We use isIdInItemTree to
+   * check whether a deletedId appears anywhere in the materialized path,
+   * which covers both direct parent and ancestor deletions.
+   */
+  const cancelUploadsForDeletedItems = useCallback(
+    (deletedIds: string[]) => {
+      if (activeUploadsRef.current.size === 0 || deletedIds.length === 0) {
+        return;
+      }
+      // Collect matches first: onCancelFile mutates the map we're iterating.
+      const toCancel: string[] = [];
+      for (const [filePath, upload] of activeUploadsRef.current) {
+        if (
+          deletedIds.some((id) => isIdInItemTree(upload.parentPath, id))
+        ) {
+          toCancel.push(filePath);
+        }
+      }
+      toCancel.forEach((filePath) => void onCancelFile(filePath));
+    },
+    [onCancelFile],
+  );
+
   return {
     dropZone,
+    cancelUploadsForDeletedItems,
   };
 };

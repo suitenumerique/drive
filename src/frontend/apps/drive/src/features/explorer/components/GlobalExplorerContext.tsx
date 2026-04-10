@@ -58,6 +58,7 @@ export interface GlobalExplorerContextType {
   setPreviewItem: (item: Item | undefined) => void;
   setPreviewItems: (items: Item[]) => void;
   isMinimalLayout?: boolean;
+  cancelUploadsForDeletedItems: (deletedIds: string[]) => void;
   refreshMobileNodes: () => void;
   mobileNodesRefreshTrigger: number;
 }
@@ -191,7 +192,7 @@ export const GlobalExplorerProvider = ({
     }
   }, [rightPanelOpen]);
 
-  const { dropZone } = useUploadZone({ item: item! });
+  const { dropZone, cancelUploadsForDeletedItems } = useUploadZone({ item: item! });
 
   /**
    * Preview states.
@@ -216,6 +217,7 @@ export const GlobalExplorerProvider = ({
         item,
         onNavigate,
         dropZone,
+        cancelUploadsForDeletedItems,
         rightPanelForcedItem,
         setRightPanelForcedItem,
         rightPanelOpen,

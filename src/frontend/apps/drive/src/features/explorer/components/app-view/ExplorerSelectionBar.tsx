@@ -50,7 +50,7 @@ export const ExplorerSelectionBar = () => {
 
 export const ExplorerSelectionBarActions = () => {
   const { t } = useTranslation();
-  const { selectedItems, setSelectedItems, item } = useGlobalExplorer();
+  const { selectedItems, setSelectedItems, item, cancelUploadsForDeletedItems } = useGlobalExplorer();
   const moveModal = useModal();
 
   const deleteItems = useMutationDeleteItems();
@@ -73,8 +73,10 @@ export const ExplorerSelectionBarActions = () => {
           </span>
         </ToasterItem>
       );
+      const deletedIds = selectedItems.map((item) => item.id);
       setSelectedItems([]);
-      await deleteItems.mutateAsync(selectedItems.map((item) => item.id));
+      await deleteItems.mutateAsync(deletedIds);
+      cancelUploadsForDeletedItems(deletedIds);
     } else {
       addToast(
         <ToasterItem type="error">
