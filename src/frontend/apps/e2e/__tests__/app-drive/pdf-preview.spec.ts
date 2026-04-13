@@ -149,14 +149,14 @@ test.describe("PDF Preview", () => {
   });
 
   test("Shows the controls bar with all expected buttons", async ({ page }) => {
-    const controls = page.locator(".pdf-preview__controls");
+    const controls = page.locator(".file-preview__controls");
     await expect(controls).toBeVisible();
 
     await expect(
       controls.locator('button[aria-label="Toggle sidebar"]'),
     ).toBeVisible();
 
-    const zoomButtons = controls.locator(".pdf-preview__zoom-controls button");
+    const zoomButtons = controls.locator(".file-preview__controls__zoom button");
     await expect(zoomButtons).toHaveCount(3);
   });
 
@@ -171,7 +171,7 @@ test.describe("PDF Preview", () => {
     const initialWidth = initialBox!.width;
 
     const zoomIn = page.locator(
-      ".pdf-preview__zoom-controls button >> nth=2",
+      ".file-preview__controls__zoom button >> nth=2",
     );
     await zoomIn.dispatchEvent("click");
 
@@ -189,10 +189,10 @@ test.describe("PDF Preview", () => {
     const initialWidth = initialBox!.width;
 
     const zoomIn = page.locator(
-      ".pdf-preview__zoom-controls button >> nth=2",
+      ".file-preview__controls__zoom button >> nth=2",
     );
     const zoomOut = page.locator(
-      ".pdf-preview__zoom-controls button >> nth=0",
+      ".file-preview__controls__zoom button >> nth=0",
     );
 
     await zoomIn.dispatchEvent("click");
@@ -218,10 +218,10 @@ test.describe("PDF Preview", () => {
     const initialWidth = initialBox!.width;
 
     const zoomIn = page.locator(
-      ".pdf-preview__zoom-controls button >> nth=2",
+      ".file-preview__controls__zoom button >> nth=2",
     );
     const zoomReset = page.locator(
-      ".pdf-preview__zoom-controls button >> nth=1",
+      ".file-preview__controls__zoom button >> nth=1",
     );
 
     await zoomIn.dispatchEvent("click");
@@ -582,7 +582,7 @@ test.describe("PDF Outdated Browser", () => {
       "For security reasons, the PDF viewer requires a recent browser",
     );
 
-    await expect(page.locator(".pdf-preview__controls")).not.toBeAttached();
+    await expect(page.locator(".file-preview__controls")).not.toBeAttached();
   });
 });
 
