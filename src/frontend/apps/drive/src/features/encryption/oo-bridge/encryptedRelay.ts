@@ -18,7 +18,7 @@ const RELAY_URL = process.env.NEXT_PUBLIC_RELAY_URL ?? 'ws://localhost:4100';
 /** Server sends the initial room state when a client joins */
 type RoomStateMessage = {
   type: 'room:state';
-  peers: Array<{ userId: string; userName: string }>;
+  peers: Array<{ userId: string; userName: string; canEdit: boolean }>;
   historyLength: number;
 };
 
@@ -27,6 +27,7 @@ type PeerJoinMessage = {
   type: 'peer:join';
   userId: string;
   userName: string;
+  canEdit: boolean;
 };
 
 /** A peer left the room */
@@ -91,11 +92,11 @@ export interface RelayCallbacks {
   /** Called when a remote peer's changes arrive (decrypted) */
   onRemoteChanges: (changes: OOChange[]) => void;
   /** Called when a peer joins the room */
-  onPeerJoin: (userId: string, userName: string) => void;
+  onPeerJoin: (userId: string, userName: string, canEdit: boolean) => void;
   /** Called when a peer leaves the room */
   onPeerLeave: (userId: string) => void;
   /** Called when room state is received (initial peer list) */
-  onRoomState: (peers: Array<{ userId: string; userName: string }>) => void;
+  onRoomState: (peers: Array<{ userId: string; userName: string; canEdit: boolean }>) => void;
   /** Called when a lock is acquired/released by a peer */
   onLockUpdate: (
     type: 'acquire' | 'release',
@@ -285,10 +286,22 @@ export class EncryptedRelay {
       return;
     }
 
-    // Binary frame (Blob) = encrypted data (OT patch or system message)
+    // Binary frame (Blob or ArrayBuffer) = encrypted data (OT patch or system message)
+    let buffer: ArrayBuffer | null = null;
     if (data instanceof Blob) {
+      buffer = await data.arrayBuffer();
+    } else if (data instanceof ArrayBuffer) {
+      buffer = data;
+    }
+
+    if (buffer) {
+      // Skip tiny frames that can't be valid encrypted content
+      // (vault encryption adds at minimum a nonce + auth tag overhead)
+      if (buffer.byteLength < 32) {
+        return;
+      }
+
       try {
-        const buffer = await data.arrayBuffer();
         const { data: plaintext } = await this.vaultClient.decryptWithKey(
           buffer,
           this.encryptedSymmetricKey,
@@ -306,7 +319,7 @@ export class EncryptedRelay {
           this.callbacks.onRemoteChanges(parsed as OOChange[]);
         }
       } catch (err) {
-        console.error('[relay] Failed to decrypt incoming data:', err);
+        console.warn('[relay] Failed to decrypt incoming data:', err);
       }
     }
   }
@@ -320,7 +333,7 @@ export class EncryptedRelay {
         this.callbacks.onRoomState(msg.peers);
         break;
       case 'peer:join':
-        this.callbacks.onPeerJoin(msg.userId, msg.userName);
+        this.callbacks.onPeerJoin(msg.userId, msg.userName, msg.canEdit);
         break;
       case 'peer:leave':
         this.callbacks.onPeerLeave(msg.userId);

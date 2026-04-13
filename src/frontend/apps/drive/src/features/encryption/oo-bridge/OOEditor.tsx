@@ -92,7 +92,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const relayRef = useRef<EncryptedRelay | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scriptLoadedRef = useRef(false);
-  const saveLockHolder = useRef<string | null>(null);
+  // Connected peers with edit capability (not including self). Used for save leader election.
+  const editorPeersRef = useRef<Set<string>>(new Set());
+  const canEdit = !!item.abilities?.partial_update;
 
   const mime = item.mimetype || '';
   const docType = MIME_TO_DOC_TYPE[mime] || 'text';
@@ -162,6 +164,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       const urlResponse = await fetchAPI(
         `items/${item.id}/encryption-upload-url/`,
         { method: 'POST' },
+        { redirectOn40x: false },
       );
       const { upload_url: uploadUrl } = await urlResponse.json();
 
@@ -331,21 +334,28 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           onCursorUpdate: cursor => {
             relayRef.current?.sendCursor(cursor);
           },
-          onSaveLockCheck: () => {
-            return saveLockHolder.current !== null;
-          },
+          onSaveLockCheck: () => false,
         });
         editor.connectMockServer(callbacks);
 
-        // Initialize auto-save (works without relay)
-        initCheckpointing({
+        // Initialize auto-save — readers don't save
+        if (canEdit) initCheckpointing({
           editor,
           format: x2tExtension,
           type: x2tType,
           userId: user.sub!,
           onUpload: uploadEncrypted,
-          onSaveLock: locked => {
-            relayRef.current?.sendSaveLock(locked);
+          // Deterministic leader election: lowest userId among connected EDITORS saves.
+          // Every client computes this independently — no coordination needed.
+          // Readers never save. If alone (no editor peers), this editor is leader.
+          isSaveLeader: () => {
+            if (!canEdit) return false;
+            const peers = editorPeersRef.current;
+            if (peers.size === 0) return true;
+            for (const peerId of peers) {
+              if (peerId < user!.sub!) return false;
+            }
+            return true;
           },
         });
 
@@ -364,7 +374,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 const msg = handleIncomingChanges(changes);
                 sendToEditor(msg);
               },
-              onPeerJoin: (userId, userName) => {
+              onPeerJoin: (userId, userName, peerCanEdit) => {
+                if (peerCanEdit) editorPeersRef.current.add(userId);
                 addRemoteUser(userId, userName, userId);
                 sendToEditor({
                   type: 'authChanges',
@@ -372,12 +383,15 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 } as any);
               },
               onPeerLeave: userId => {
+                editorPeersRef.current.delete(userId);
                 removeRemoteUser(userId);
                 releaseAllUserLocks(userId);
               },
               onRoomState: peers => {
+                editorPeersRef.current.clear();
                 for (const peer of peers) {
                   if (peer.userId) {
+                    if (peer.canEdit) editorPeersRef.current.add(peer.userId);
                     addRemoteUser(peer.userId, peer.userName, peer.userId);
                   }
                 }
@@ -401,8 +415,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   userId,
                 } as any);
               },
-              onSaveLock: (userId, locked) => {
-                saveLockHolder.current = locked ? userId : null;
+              onSaveLock: () => {
+                // Save coordination handled by leader election, not lock messages
               },
               onConnectionChange: connected => {
                 setIsConnected(connected);

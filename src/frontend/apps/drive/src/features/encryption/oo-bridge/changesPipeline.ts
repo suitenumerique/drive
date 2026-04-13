@@ -86,10 +86,15 @@ export function handleOutgoingChanges(
  */
 export function handleIncomingChanges(rawChanges: OOChange[]): OOMessage {
   patchIndex += rawChanges.length;
+  // Live collaboration changes use 'saveChanges' (not 'authChanges' which is only for initial load).
+  // OO's _onSaveChanges handler expects changesIndex and locks fields.
   return {
-    type: 'authChanges',
+    type: 'saveChanges',
     changes: rawChanges,
-  };
+    changesIndex: patchIndex,
+    locks: [],
+    excelAdditionalInfo: null,
+  } as OOMessage;
 }
 
 /**

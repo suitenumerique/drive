@@ -72,11 +72,6 @@ install_oo() {
     echo '[]' > "$FULL_DIR/themes.json"
     echo '// Stub service worker for client-side mode' > "$FULL_DIR/document_editor_service_worker.js"
 
-    # CryptPad's build doesn't include the format icons spritesheet that OO's
-    # injectSvgIcons() tries to load — create an empty SVG to suppress the 404.
-    echo '<svg xmlns="http://www.w3.org/2000/svg"/>' > \
-        "$FULL_DIR/web-apps/apps/common/main/resources/img/doc-formats/formats@2.5x.svg"
-
     echo "$OO_VERSION" > "$FULL_DIR/.version"
     echo "OnlyOffice v9 installed."
 }
@@ -115,10 +110,20 @@ install_x2t() {
     echo "x2t WASM installed."
 }
 
+patch_stubs() {
+    # Stubs that may be missing from an earlier install (added after initial version)
+    local FORMATS_SVG="$OO_DIR/v9/web-apps/apps/common/main/resources/img/doc-formats/formats@2.5x.svg"
+    if [ -d "$OO_DIR/v9" ] && [ ! -f "$FORMATS_SVG" ]; then
+        echo '<svg xmlns="http://www.w3.org/2000/svg"/>' > "$FORMATS_SVG"
+        echo "Patched missing formats@2.5x.svg stub."
+    fi
+}
+
 main() {
     mkdir -p "$OO_DIR"
     install_oo
     install_x2t
+    patch_stubs
     echo "Done. OnlyOffice assets installed in $OO_DIR"
 }
 

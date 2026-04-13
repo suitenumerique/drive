@@ -45,8 +45,10 @@ let uploadCallback:
 /**
  * Initialize the checkpointing system.
  */
-/** Callback for broadcasting save lock to peers */
-let saveLockBroadcast: ((locked: boolean) => void) | null = null;
+
+
+/** Callback to check if this client is the save leader (first joiner saves) */
+let isSaveLeader: (() => boolean) | null = null;
 
 export function initCheckpointing(opts: {
   editor: any;
@@ -54,14 +56,16 @@ export function initCheckpointing(opts: {
   type: string;
   userId: string;
   onUpload: (content: ArrayBuffer, format: string) => Promise<void>;
-  onSaveLock?: (locked: boolean) => void;
+  /** Return true if this client should be responsible for saving.
+   *  When absent, all clients save (single-user mode). */
+  isSaveLeader?: () => boolean;
 }): void {
   editorInstance = opts.editor;
   originalFormat = opts.format;
   documentType = opts.type;
   currentUserId = opts.userId;
   uploadCallback = opts.onUpload;
-  saveLockBroadcast = opts.onSaveLock ?? null;
+  isSaveLeader = opts.isSaveLeader ?? null;
   lastCheckpointIndex = getPatchIndex();
   lastCheckpointTime = Date.now();
 
@@ -94,7 +98,8 @@ export async function checkAndSave(): Promise<void> {
     (changesSinceCheckpoint > 0 &&
       timeSinceCheckpoint >= CHECKPOINT_TIME_INTERVAL_MS);
 
-  if (shouldSave && !isSaving) {
+  const amLeader = isSaveLeader ? isSaveLeader() : true;
+  if (shouldSave && !isSaving && amLeader) {
     await saveCheckpoint();
   }
 }
@@ -124,7 +129,6 @@ async function saveCheckpoint(): Promise<void> {
   }
 
   isSaving = true;
-  saveLockBroadcast?.(true);
 
   try {
     // Extract current document as binary from OnlyOffice
@@ -181,6 +185,5 @@ async function saveCheckpoint(): Promise<void> {
   } finally {
     isSaving = false;
     releaseSaveLock(currentUserId);
-    saveLockBroadcast?.(false);
   }
 }

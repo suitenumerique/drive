@@ -229,6 +229,7 @@ function handleConnection(
     type: 'peer:join',
     userId: meta.userId,
     userName: meta.userName,
+    canEdit: meta.canEdit,
   });
 
   // Send room state to the new joiner
@@ -237,6 +238,7 @@ function handleConnection(
     .map(([, m]) => ({
       userId: m.userId,
       userName: m.userName,
+      canEdit: m.canEdit,
     }));
 
   sendJSON(ws, {
