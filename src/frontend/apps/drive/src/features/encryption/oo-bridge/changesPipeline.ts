@@ -30,15 +30,14 @@ export function getPatchIndex(): number {
  */
 export function parseChange(
   change: unknown,
-  uniqueOOId: string,
-  ooId: number
+  ooId: string
 ): OOChange {
   return {
     docid: 'fresh',
     change: JSON.stringify(change),
     time: Date.now(),
-    user: uniqueOOId,
-    useridoriginal: String(ooId),
+    user: ooId,
+    useridoriginal: ooId,
   };
 }
 
@@ -47,10 +46,9 @@ export function parseChange(
  */
 export function parseChanges(
   changes: unknown[],
-  uniqueOOId: string,
-  ooId: number
+  ooId: string
 ): OOChange[] {
-  return changes.map(c => parseChange(c, uniqueOOId, ooId));
+  return changes.map(c => parseChange(c, ooId));
 }
 
 /**
@@ -62,14 +60,19 @@ export function parseChanges(
  */
 export function handleOutgoingChanges(
   msg: OOMessage,
-  uniqueOOId: string,
-  ooId: number
+  ooId: string
 ): OOChange[] | null {
   if (msg.type !== 'saveChanges' || !msg.changes) {
     return null;
   }
 
-  const parsed = parseChanges(msg.changes, uniqueOOId, ooId);
+  // OnlyOffice sends changes as a JSON string, not an array
+  const rawChanges: unknown[] =
+    typeof msg.changes === 'string'
+      ? JSON.parse(msg.changes)
+      : msg.changes;
+
+  const parsed = parseChanges(rawChanges, ooId);
   patchIndex += parsed.length;
   return parsed;
 }

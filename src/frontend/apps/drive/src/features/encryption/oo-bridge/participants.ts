@@ -3,45 +3,26 @@
  *
  * Tracks connected users and provides the participant list that
  * OnlyOffice expects via connectMockServer().getParticipants().
+ *
+ * IMPORTANT: OnlyOffice uses multiple ID fields (id, idOriginal, indexUser,
+ * connectionId) and checks them in different places for lock ownership,
+ * cursor display, etc. ALL must be consistent.
  */
 
 import type { OOParticipant, OOParticipantList } from './types';
 
-/** Colors assigned to participants for cursors and selections */
-const PARTICIPANT_COLORS = [
-  '#4285f4',
-  '#ea4335',
-  '#fbbc04',
-  '#34a853',
-  '#ff6d01',
-  '#46bdc6',
-  '#7baaf7',
-  '#f07b72',
-  '#fcd04f',
-  '#71c287',
-  '#ff9e40',
-  '#78d9e0',
-  '#a0c3ff',
-  '#f4a8a0',
-  '#fde293',
-  '#a8dbb5',
-];
-
 export interface LocalUser {
-  id: string; // Drive user ID (sub)
+  driveId: string; // Drive user ID (sub)
   name: string; // Display name
-  ooId: number; // OnlyOffice user ID (random)
-  index: number; // Unique index in participant list
-  color: string; // Participant color
+  index: number; // Unique index in participant list (1-based)
+  ooId: string; // The single consistent ID used everywhere in OO
 }
 
 interface RemoteUser {
-  id: string;
+  driveId: string;
   name: string;
-  ooId: number;
   index: number;
-  connectionId: string;
-  color: string;
+  ooId: string;
 }
 
 let localUser: LocalUser | null = null;
@@ -50,15 +31,18 @@ let nextIndex = 1;
 
 /**
  * Initialize the local user.
+ * Uses user.sub (OIDC UUID) as the OO ID — globally unique, no collision risk.
  */
 export function initLocalUser(userId: string, userName: string): LocalUser {
   const idx = nextIndex++;
   localUser = {
-    id: userId,
+    driveId: userId,
     name: userName,
-    ooId: Math.floor(Math.random() * 1000000),
     index: idx,
-    color: PARTICIPANT_COLORS[(idx - 1) % PARTICIPANT_COLORS.length],
+    // userId is user.sub (UUID like "d4e5f6a7-b8c9-..."), unique per user.
+    // OO internally concatenates config.user.id + indexUser (no separator).
+    // Trailing underscore so the boundary is visible in logs: "uuid_1" not "uuid1".
+    ooId: userId + '_',
   };
   return localUser;
 }
@@ -74,11 +58,25 @@ export function getLocalUser(): LocalUser {
 }
 
 /**
- * Get the unique OO ID for the local user (combined ooId + index).
+ * Get the OO ID for the local user (used in editor config user.id).
  */
 export function getUniqueOOId(): string {
+  return getLocalUser().ooId;
+}
+
+/**
+ * Get the OO-internal userId that sdkjs constructs.
+ *
+ * OnlyOffice sdkjs computes: _userId = config.user.id + auth.indexUser
+ * This concatenated value is used for lock ownership and change attribution.
+ * Lock entries and change entries MUST use this value, not getUniqueOOId().
+ */
+export function getOOInternalUserId(): string {
   const user = getLocalUser();
-  return String(user.ooId) + String(user.index);
+  // Matches: this._userId = this._user.asc_getId() + this._indexUser
+  // where asc_getId() returns editorConfig.user.id (= user.ooId)
+  // and _indexUser comes from auth response indexUser (= user.index)
+  return user.ooId + String(user.index);
 }
 
 /**
@@ -87,17 +85,17 @@ export function getUniqueOOId(): string {
 export function addRemoteUser(
   userId: string,
   userName: string,
-  connectionId: string
+  _connectionId: string
 ): void {
+  // Skip if it's the local user (e.g. stale relay connection from previous page load)
+  if (localUser && userId === localUser.driveId) return;
   if (remoteUsers.has(userId)) return;
   const idx = nextIndex++;
   remoteUsers.set(userId, {
-    id: userId,
+    driveId: userId,
     name: userName,
-    ooId: Math.floor(Math.random() * 1000000),
     index: idx,
-    connectionId,
-    color: PARTICIPANT_COLORS[(idx - 1) % PARTICIPANT_COLORS.length],
+    ooId: userId + '_',
   });
 }
 
@@ -110,9 +108,6 @@ export function removeRemoteUser(userId: string): void {
 
 /**
  * Get the participant list in the format OnlyOffice expects.
- *
- * Includes all connected users plus a synthetic "History" participant
- * (CryptPad convention to signal collaborative editing mode).
  */
 export function getParticipants(): OOParticipantList {
   const user = getLocalUser();
@@ -120,11 +115,11 @@ export function getParticipants(): OOParticipantList {
   const list: OOParticipant[] = [
     // Local user
     {
-      id: String(user.ooId) + String(user.index),
-      idOriginal: String(user.ooId),
+      id: user.ooId,
+      idOriginal: user.ooId, // MUST match id — OO checks both
       username: user.name,
       indexUser: user.index,
-      connectionId: user.id,
+      connectionId: user.ooId,
       isCloseCoAuthoring: false,
       view: false,
     },
@@ -133,17 +128,18 @@ export function getParticipants(): OOParticipantList {
   // Remote users
   for (const remote of remoteUsers.values()) {
     list.push({
-      id: String(remote.ooId) + String(remote.index),
-      idOriginal: String(remote.ooId),
+      id: remote.ooId,
+      idOriginal: remote.ooId,
       username: remote.name,
       indexUser: remote.index,
-      connectionId: remote.connectionId,
+      connectionId: remote.ooId,
       isCloseCoAuthoring: false,
       view: false,
     });
   }
 
-  // Synthetic "History" participant (signals collaborative mode to OnlyOffice)
+  // History participant forces collaborative mode (OO uses getLock/saveChanges)
+  // Without it (single participant), OO uses a different non-collaborative save path
   list.push({
     id: '0',
     idOriginal: '0',
@@ -154,10 +150,11 @@ export function getParticipants(): OOParticipantList {
     view: false,
   });
 
-  return {
+  const result = {
     index: user.index,
     list,
   };
+  return result;
 }
 
 /**

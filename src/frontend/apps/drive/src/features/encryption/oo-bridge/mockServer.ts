@@ -6,10 +6,12 @@
  */
 
 import type { MockServerCallbacks, OOChange, OOMessage } from './types';
-import { getParticipants, getLocalUser, getUniqueOOId } from './participants';
+import { getParticipants, getLocalUser, getOOInternalUserId } from './participants';
 import { handleOutgoingChanges, getPatchIndex } from './changesPipeline';
 
 export interface MockServerOptions {
+  /** Document type: 'word', 'cell', or 'slide' */
+  docType: 'word' | 'cell' | 'slide';
   /** Called when local user makes changes that should be broadcast */
   onLocalChanges: (changes: OOChange[]) => void;
   /** Called when a lock is requested (spreadsheets) */
@@ -70,9 +72,10 @@ export function createMockServerCallbacks(
      * This is NOT a handler setter — it receives the actual message.
      */
     onMessage(msg: OOMessage) {
-      console.log('[mockServer]', msg.type, msg);
       const localUser = getLocalUser();
-      const uniqueOOId = getUniqueOOId();
+      // OO internally constructs _userId = config.user.id + indexUser
+      // Lock and change user fields MUST match this concatenated value
+      const ooInternalId = getOOInternalUserId();
 
       switch (msg.type) {
         case 'auth':
@@ -91,21 +94,26 @@ export function createMockServerCallbacks(
 
         case 'getLock': {
           // OnlyOffice requests a lock before editing — grant it immediately
-          // Response format must match what OnlyOffice expects:
-          // For docs: object { lockId: { time, user, block } }
-          // For sheets: array [ { time, user, block } ]
           const lockBlock = msg.block?.[0];
           const lockEntry = {
             time: Date.now(),
-            user: uniqueOOId,
+            user: ooInternalId,
             block: lockBlock,
           };
 
-          // Try array format (works for all document types)
-          sendToEditor({
+          let locks: unknown;
+          if (options.docType === 'cell') {
+            locks = [lockEntry];
+          } else {
+            // Word and Slide expect an object keyed by the block value itself
+            locks = lockBlock ? { [lockBlock]: lockEntry } : {};
+          }
+
+          const lockResponse = {
             type: 'getLock',
-            locks: [lockEntry],
-          } as OOMessage);
+            locks,
+          } as OOMessage;
+          sendToEditor(lockResponse);
 
           options.onLockRequest?.('acquire', msg.block);
           break;
@@ -113,7 +121,7 @@ export function createMockServerCallbacks(
 
         case 'saveChanges': {
           // OnlyOffice sends edited content — broadcast to peers
-          const changes = handleOutgoingChanges(msg, uniqueOOId, localUser.ooId);
+          const changes = handleOutgoingChanges(msg, ooInternalId);
           if (changes) {
             options.onLocalChanges(changes);
           }
@@ -158,12 +166,10 @@ export function createMockServerCallbacks(
           break;
 
         case 'getMessages':
-          // OO chat — not implemented, send empty response
           sendToEditor({ type: 'message' } as OOMessage);
           break;
 
         case 'forceSaveStart':
-          // Force save request — acknowledge
           sendToEditor({
             type: 'forceSave',
             success: true,

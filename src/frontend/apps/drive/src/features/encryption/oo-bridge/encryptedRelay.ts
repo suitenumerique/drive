@@ -123,7 +123,7 @@ export class EncryptedRelay {
   private callbacks: RelayCallbacks;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 10;
+  private maxReconnectAttempts = 3;
   private destroyed = false;
   private pendingOutgoing: ArrayBuffer[] = [];
 
@@ -346,8 +346,13 @@ export class EncryptedRelay {
   private scheduleReconnect(): void {
     if (this.destroyed) return;
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('[relay] Max reconnection attempts reached');
+      console.warn('[relay] Max reconnection attempts reached, retrying every 60s');
       this.callbacks.onReconnectFailed();
+      // Keep trying every 60s in the background — the server may come back
+      this.reconnectTimer = setTimeout(() => {
+        this.reconnectAttempts = 0;
+        this.connect();
+      }, 60_000);
       return;
     }
 

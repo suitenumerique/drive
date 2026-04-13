@@ -11,7 +11,7 @@ import { getPatchIndex } from './changesPipeline';
 import { acquireSaveLock, releaseSaveLock, isSaveLocked } from './locks';
 
 const CHECKPOINT_CHANGES_THRESHOLD = 50;
-const CHECKPOINT_TIME_INTERVAL_MS = 30_000; // 30 seconds
+const CHECKPOINT_TIME_INTERVAL_MS = 60_000; // 60 seconds
 
 /** Reference to the OnlyOffice editor instance */
 let editorInstance: any = null;
@@ -65,11 +65,11 @@ export function initCheckpointing(opts: {
   lastCheckpointIndex = getPatchIndex();
   lastCheckpointTime = Date.now();
 
-  // Start auto-save timer
-  if (autoSaveTimer) clearInterval(autoSaveTimer);
-  autoSaveTimer = setInterval(() => {
-    checkAndSave();
-  }, CHECKPOINT_TIME_INTERVAL_MS);
+  // Auto-save timer disabled for now — enable when editing flow is stable
+  // if (autoSaveTimer) clearInterval(autoSaveTimer);
+  // autoSaveTimer = setInterval(() => {
+  //   checkAndSave();
+  // }, CHECKPOINT_TIME_INTERVAL_MS);
 }
 
 /**
@@ -129,8 +129,18 @@ async function saveCheckpoint(): Promise<void> {
 
   try {
     // Extract current document as binary from OnlyOffice
-    // asc_nativeGetFile() returns the document in OnlyOffice's internal format
-    const binData: Uint8Array = editorInstance.asc_nativeGetFile();
+    // asc_nativeGetFile() is on the INNER editor object inside the OO iframe,
+    // not on the DocsAPI.DocEditor wrapper. Access it via the iframe's window.
+    const ooIframe = document.querySelector('iframe[name="frameEditor"]') as HTMLIFrameElement | null;
+    const innerWindow = ooIframe?.contentWindow as any;
+    const innerEditor = innerWindow?.editor || innerWindow?.editorCell;
+
+    if (!innerEditor?.asc_nativeGetFile) {
+      console.warn('Checkpoint: inner editor not available yet, skipping');
+      return;
+    }
+
+    const binData: Uint8Array = innerEditor.asc_nativeGetFile();
 
     if (!binData || binData.length === 0) {
       console.warn('Checkpoint: empty document, skipping save');

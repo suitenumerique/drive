@@ -70,6 +70,7 @@ declare global {
 
 interface OOEditorInstance {
   connectMockServer: (callbacks: any) => void;
+  sendMessageToOO: (msg: any) => void;
   asc_nativeGetFile: () => Uint8Array;
   destroyEditor: () => void;
 }
@@ -241,10 +242,14 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         const blobUrl = URL.createObjectURL(blob);
 
         // Initialize participant tracking
-        initLocalUser(user.id, user.full_name || user.email);
+        // Use user.sub (OIDC subject) — same ID the relay server uses
+        const localUser = initLocalUser(user.sub, user.full_name || user.email);
+        const uniqueOOId = getUniqueOOId();
         resetPatchIndex(0);
 
         // Create the editor config
+        // IMPORTANT: user.id must match the uniqueOOId used in lock responses,
+        // otherwise OnlyOffice treats our own locks as belonging to another user
         const config: OOConfig = {
           document: {
             fileType: ooFileType,
@@ -256,7 +261,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           editorConfig: {
             mode: 'edit',
             user: {
-              id: user.id,
+              id: uniqueOOId,
               name: user.full_name || user.email,
             },
             lang: user.language || 'en',
@@ -298,87 +303,19 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         editorRef.current = editor;
         setEditorInstance(editor);
 
-        // Set up the encrypted relay for collaboration
-        const relay = new EncryptedRelay({
-          roomId: item.id,
-          userId: user.sub,
-          userName: user.full_name || user.email,
-          vaultClient,
-          encryptedSymmetricKey: entryKeyBytes.buffer,
-          encryptedKeyChain:
-            encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
-          callbacks: {
-            onRemoteChanges: changes => {
-              // Apply remote changes to OnlyOffice
-              const msg = handleIncomingChanges(changes);
-              sendToEditor(msg);
-            },
-            onPeerJoin: (userId, userName) => {
-              addRemoteUser(userId, userName, userId);
-              // Update OnlyOffice participant list
-              sendToEditor({
-                type: 'authChanges',
-                changes: [],
-              } as any);
-            },
-            onPeerLeave: userId => {
-              removeRemoteUser(userId);
-              releaseAllUserLocks(userId);
-            },
-            onRoomState: peers => {
-              for (const peer of peers) {
-                if (peer.userId) {
-                  addRemoteUser(peer.userId, peer.userName, peer.userId);
-                }
-              }
-            },
-            onLockUpdate: (type, userId, lockData) => {
-              const lockId = JSON.stringify(lockData);
-              if (type === 'acquire') {
-                acquireCellLock(lockId, userId, lockData);
-              } else {
-                releaseCellLock(lockId, userId);
-              }
-              // Notify OnlyOffice about lock changes
-              sendToEditor({
-                type: 'getLock',
-                locks: [lockData],
-              } as any);
-            },
-            onCursorUpdate: (userId, cursor) => {
-              // Forward cursor to OnlyOffice
-              sendToEditor({
-                type: 'cursor',
-                cursor,
-                userId,
-              } as any);
-            },
-            onSaveLock: (userId, locked) => {
-              saveLockHolder.current = locked ? userId : null;
-            },
-            onConnectionChange: connected => {
-              setIsConnected(connected);
-              if (connected) setRelayFailed(false);
-            },
-            onReconnectFailed: () => {
-              setRelayFailed(true);
-            },
-          },
-        });
-        relayRef.current = relay;
-        relay.connect();
-
         // Connect our mock server (replaces Document Server)
+        // This must happen before relay setup — editor needs to work standalone
         const callbacks = createMockServerCallbacks({
+          docType,
           onLocalChanges: (changes: OOChange[]) => {
-            // Encrypt and broadcast to all peers via relay
-            relay.sendChanges(changes);
+            // Broadcast to peers if relay is connected
+            relayRef.current?.sendChanges(changes);
           },
           onLockRequest: (type, lockData) => {
-            relay.sendLock(type, lockData);
+            relayRef.current?.sendLock(type, lockData);
           },
           onCursorUpdate: cursor => {
-            relay.sendCursor(cursor);
+            relayRef.current?.sendCursor(cursor);
           },
           onSaveLockCheck: () => {
             return saveLockHolder.current !== null;
@@ -386,7 +323,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         });
         editor.connectMockServer(callbacks);
 
-        // Initialize auto-save with save lock broadcast
+        // Initialize auto-save (works without relay)
         initCheckpointing({
           editor,
           format: x2tExtension,
@@ -394,9 +331,79 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           userId: user.sub,
           onUpload: uploadEncrypted,
           onSaveLock: locked => {
-            relay.sendSaveLock(locked);
+            relayRef.current?.sendSaveLock(locked);
           },
         });
+
+        // Set up the encrypted relay for collaboration (optional — PoC works without it)
+        try {
+          const relay = new EncryptedRelay({
+            roomId: item.id,
+            userId: user.sub,
+            userName: user.full_name || user.email,
+            vaultClient,
+            encryptedSymmetricKey: entryKeyBytes.buffer,
+            encryptedKeyChain:
+              encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
+            callbacks: {
+              onRemoteChanges: changes => {
+                const msg = handleIncomingChanges(changes);
+                sendToEditor(msg);
+              },
+              onPeerJoin: (userId, userName) => {
+                addRemoteUser(userId, userName, userId);
+                sendToEditor({
+                  type: 'authChanges',
+                  changes: [],
+                } as any);
+              },
+              onPeerLeave: userId => {
+                removeRemoteUser(userId);
+                releaseAllUserLocks(userId);
+              },
+              onRoomState: peers => {
+                for (const peer of peers) {
+                  if (peer.userId) {
+                    addRemoteUser(peer.userId, peer.userName, peer.userId);
+                  }
+                }
+              },
+              onLockUpdate: (type, userId, lockData) => {
+                const lockId = JSON.stringify(lockData);
+                if (type === 'acquire') {
+                  acquireCellLock(lockId, userId, lockData);
+                } else {
+                  releaseCellLock(lockId, userId);
+                }
+                sendToEditor({
+                  type: 'getLock',
+                  locks: [lockData],
+                } as any);
+              },
+              onCursorUpdate: (userId, cursor) => {
+                sendToEditor({
+                  type: 'cursor',
+                  cursor,
+                  userId,
+                } as any);
+              },
+              onSaveLock: (userId, locked) => {
+                saveLockHolder.current = locked ? userId : null;
+              },
+              onConnectionChange: connected => {
+                setIsConnected(connected);
+                if (connected) setRelayFailed(false);
+              },
+              onReconnectFailed: () => {
+                setRelayFailed(true);
+              },
+            },
+          });
+          relayRef.current = relay;
+          relay.connect();
+        } catch (relayErr) {
+          console.warn('Relay setup failed (single-user mode):', relayErr);
+        }
 
         // Don't revoke blob URL here — OnlyOffice fetches it asynchronously.
         // It will be cleaned up when the component unmounts.

@@ -162,9 +162,10 @@ backend-exec-command: ## execute a command in the backend container
 .PHONY: backend-exec-command
 
 run: ## start the development server and frontend development
-run: 
+run:
 	@$(MAKE) run-backend
 	@$(COMPOSE) up --force-recreate -d frontend-dev
+	@$(COMPOSE) up --force-recreate -d collaboration-relay
 .PHONY: run
 
 install-onlyoffice: ## Download OnlyOffice client-side assets for encrypted file editing
