@@ -1,5 +1,5 @@
 import { Item, ItemType } from "@/features/drivers/types";
-import { FilePreview, FilePreviewType } from "../files-preview/FilesPreview";
+import { FilePreview, FilePreviewType } from "../FilesPreview";
 import { useTranslation } from "react-i18next";
 import { useMemo } from "react";
 import { itemToPreviewFile } from "@/features/explorer/utils/utils";

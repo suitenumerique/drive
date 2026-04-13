@@ -1,11 +1,11 @@
 import { useTranslation } from "react-i18next";
-import { FilePreviewType } from "../files-preview/FilesPreview";
 
 import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
 import { FileIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { downloadFile } from "@/features/items/utils";
 import { useCallback } from "react";
+import { FilePreviewType } from "../../FilesPreview";
 
 interface ErrorPreviewProps {
   file: FilePreviewType;

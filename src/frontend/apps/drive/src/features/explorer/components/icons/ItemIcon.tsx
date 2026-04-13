@@ -14,8 +14,8 @@ import {
   IconSize,
 } from "@gouvfr-lasuite/ui-kit";
 import { useMemo } from "react";
-import { FilePreviewType } from "@/features/ui/preview/files-preview/FilesPreview";
 import { getExtensionFromName } from "../../utils/utils";
+import { FilePreviewType } from "@/features/ui/preview/FilesPreview";
 
 type ItemIconProps = {
   item: Item;

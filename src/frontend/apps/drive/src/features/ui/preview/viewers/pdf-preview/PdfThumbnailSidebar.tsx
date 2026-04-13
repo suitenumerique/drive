@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Thumbnail } from "react-pdf";
 import { AutoSizer, List } from "react-virtualized";
 import type { ListRowRenderer } from "react-virtualized";
+import { OPEN_DELAY, ROW_HEIGHT, THUMBNAIL_GAP, TRANSITION_DELAY } from "./pdfConsts";
 
 interface PdfThumbnailSidebarProps {
   numPages: number;
@@ -9,11 +10,6 @@ interface PdfThumbnailSidebarProps {
   goToPage: (page: number) => void;
   isOpen: boolean;
 }
-
-const TRANSITION_DELAY = 300;
-const THUMBNAIL_HEIGHT = 178;
-const THUMBNAIL_GAP = 12;
-const ROW_HEIGHT = THUMBNAIL_HEIGHT + THUMBNAIL_GAP;
 
 // Two-phase mount/unmount to allow CSS transitions to play out:
 // Opening: mount immediately (unmount=false), then defer isOpenProxy=true
@@ -30,7 +26,7 @@ export function PdfThumbnailSidebar(props: PdfThumbnailSidebarProps) {
     let timer: ReturnType<typeof setTimeout>;
     if (props.isOpen) {
       setUnmount(false);
-      timer = setTimeout(() => setIsOpenProxy(true), 100);
+      timer = setTimeout(() => setIsOpenProxy(true), OPEN_DELAY);
     } else {
       setIsOpenProxy(false);
       // The 1.1 is to allow for the transition to finish.

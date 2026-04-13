@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { FilePreviewType } from "../files-preview/FilesPreview";
+import { FilePreviewType } from "../../FilesPreview";
 
 import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";

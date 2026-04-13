@@ -7,7 +7,7 @@ import {
   WorkspaceType,
 } from "@/features/drivers/types";
 import i18n from "@/features/i18n/initI18n";
-import { FilePreviewType } from "@/features/ui/preview/files-preview/FilesPreview";
+import { FilePreviewType } from "@/features/ui/preview/FilesPreview";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 
 /**
@@ -125,10 +125,7 @@ export const getExtensionFromName = (str: string) => {
 
 const SIZE_UNIT_KEYS = ["B", "KB", "MB", "GB", "TB", "PB"] as const;
 
-export const formatSize = (
-  size: number,
-  t?: (key: string) => string,
-) => {
+export const formatSize = (size: number, t?: (key: string) => string) => {
   let convertedSize = size;
   let unitIndex = 0;
 
@@ -138,9 +135,7 @@ export const formatSize = (
   }
 
   const unitKey = SIZE_UNIT_KEYS[unitIndex];
-  const unit = t
-    ? t(`explorer.grid.size_units.${unitKey}`)
-    : unitKey;
+  const unit = t ? t(`explorer.grid.size_units.${unitKey}`) : unitKey;
 
   return `${
     convertedSize < 10

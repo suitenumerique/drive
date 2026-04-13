@@ -20,7 +20,13 @@ import { pdfOptions } from "./pdfOptions";
 // Configure PDF.js worker source for PDF loading
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.mjs";
 
-export function PreviewPdf({ src }: { src: string }) {
+export function PdfPreview({
+  src,
+  onThumbailSidebarOpen,
+}: {
+  src: string;
+  onThumbailSidebarOpen?: (isOpen: boolean) => void;
+}) {
   const { t } = useTranslation();
   const [numPages, setNumPages] = useState<number>(1);
   const [documentError, setDocumentError] = useState<
@@ -43,7 +49,10 @@ export function PreviewPdf({ src }: { src: string }) {
     setZoom(1);
   }, []);
   const toggleSidebar = useCallback(() => {
-    setIsSidebarOpen((prev) => !prev);
+    setIsSidebarOpen((prev) => {
+      onThumbailSidebarOpen?.(!prev);
+      return !prev;
+    });
   }, []);
 
   const scrollToPage = useCallback((page: number) => {

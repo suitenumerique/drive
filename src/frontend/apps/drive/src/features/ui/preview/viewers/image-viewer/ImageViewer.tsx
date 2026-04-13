@@ -1,10 +1,5 @@
-"use client";
-
-import { Button } from "@gouvfr-lasuite/cunningham-react";
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import { ResetZoomIcon } from "../../components/icon/ResetZoomIcon";
-import { ZoomMinusIcon } from "../../components/icon/ZoomMinusIcon";
-import { ZoomPlusIcon } from "../../components/icon/ZoomPlusIcon";
+import { ZoomControls } from "../../components/ZoomControls/ZoomControls";
 
 interface ImageViewerProps {
   src: string;
@@ -405,41 +400,9 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
         )}
       </div>
 
-      <div className="image-viewer__controls">
-        <ZoomControl
-          zoomOut={zoomOut}
-          zoomIn={zoomIn}
-          zoom={zoom}
-          resetView={resetView}
-        />
+      <div className="file-preview__controls">
+        <ZoomControls zoomOut={zoomOut} zoomIn={zoomIn} resetView={resetView} />
       </div>
-    </div>
-  );
-};
-
-interface ZoomControlProps {
-  zoomOut: () => void;
-  zoomIn: () => void;
-  zoom: number;
-  resetView: () => void;
-}
-
-export const ZoomControl = ({
-  zoomOut,
-  zoomIn,
-  resetView,
-}: ZoomControlProps) => {
-  return (
-    <div className="zoom-control">
-      <Button variant="tertiary" color="neutral" onClick={zoomOut}>
-        <ZoomMinusIcon />
-      </Button>
-      <Button variant="tertiary" color="neutral" onClick={resetView}>
-        <ResetZoomIcon />
-      </Button>
-      <Button variant="tertiary" color="neutral" onClick={zoomIn}>
-        <ZoomPlusIcon />
-      </Button>
     </div>
   );
 };

@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDriver } from "@/features/config/Config";
-import { FilePreviewType } from "../files-preview/FilesPreview";
 import { ErrorPreview } from "../error/ErrorPreview";
+import { FilePreviewType } from "../../FilesPreview";
 
 interface WopiEditorProps {
   item: FilePreviewType;

@@ -1,4 +1,4 @@
-.c__modal__backdrop:has(.file-preview-container) {
+.c__modal__backdrop:has(.file-preview__container) {
   background: var(--c--contextuals--background--semantic--contextual--primary);
   backdrop-filter: blur(8px);
   .c__modal {
@@ -15,12 +15,12 @@
  * have a more opaque backdrop color.
  */
 .ReactModalPortal:has(.explorer__search__modal)
-  ~ .ReactModalPortal:has(.file-preview-container)
+  ~ .ReactModalPortal:has(.file-preview__container)
   .c__modal__backdrop {
   background-color: var(--c--contextuals--background--surface--secondary);
 }
 
-.file-preview-container {
+.file-preview__container {
   width: 100%;
   height: 100dvh;
   display: flex;
@@ -28,7 +28,7 @@
   position: relative;
 }
 
-.file-preview-header {
+.file-preview__header {
   height: 52px;
   border-bottom: 1px solid var(--c--contextuals--border--surface--primary);
   flex-shrink: 0;
@@ -44,7 +44,7 @@
     max-width: 100%;
     position: relative;
 
-    &-left {
+    &__left {
       display: flex;
       align-items: center;
       gap: var(--c--globals--spacings--3xs);
@@ -52,20 +52,7 @@
       min-width: 0; // Allow shrinking
     }
 
-    &-center {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      color: red;
-      z-index: 1;
-    }
-
-    &-right {
+    &__right {
       display: flex;
       align-items: center;
       gap: var(--c--globals--spacings--3xs);
@@ -76,7 +63,7 @@
   }
 }
 
-.file-preview-title {
+.file-preview__title {
   display: flex;
   align-items: center;
   gap: var(--c--globals--spacings--3xs);
@@ -90,7 +77,7 @@
   white-space: nowrap;
 }
 
-.file-preview-content {
+.file-preview__content {
   flex: 1;
   overflow: hidden;
   max-width: 100dvw;
@@ -111,7 +98,7 @@
   }
 }
 
-.file-preview-main {
+.file-preview__main {
   flex: 1;
   min-width: 0;
   transition: all 0.3s ease-in-out;
@@ -126,7 +113,7 @@
   height: calc(100vh - 52px);
 
   border-left: 1px solid var(--c--contextuals--border--surface--primary);
-  transition: transform 0.3s ease-in-out;
+  transition: transform 0.3s;
   z-index: 9998;
   overflow-y: auto;
   overflow-x: hidden;
@@ -138,8 +125,8 @@
   }
 }
 
-.file-preview-container.sidebar-open {
-  .file-preview-main {
+.file-preview__container--sidebar-open {
+  .file-preview__main {
     width: calc(100% - 300px);
     margin-right: 300px;
   }
@@ -175,7 +162,7 @@
 }
 
 // Styles for different viewer types
-.file-preview-viewer {
+.file-preview__viewer {
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -246,17 +233,58 @@
   }
 }
 
+//
+// -- Navigation buttons --
+//
+
+.file-preview__next-button,
+.file-preview__previous-button {
+  position: absolute;
+  top: calc(50% - 20px);
+  background-color: white;
+  transition: transform 0.3s;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xs, 8px);
+  border: 1px solid var(--c--contextuals--border--surface--primary);
+  background: var(--c--contextuals--background--surface--primary);
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+}
+
+.file-preview__next-button {
+  right: 16px;
+}
+
+.file-preview__previous-button {
+  left: 16px;
+}
+
+.file-preview__container--pdf-sidebar-open {
+  .file-preview__previous-button {
+    transform: translateX(150px);
+  }
+}
+
+.file-preview__container--sidebar-open {
+  .file-preview__next-button {
+    transform: translateX(-300px);
+  }
+}
+
 // Responsive design
 @media (max-width: 768px) {
-  .file-preview-header-content {
+  .file-preview__header__content {
     padding: 0 16px;
   }
 
-  .file-preview-title {
+  .file-preview__title {
     font-size: 16px;
   }
 
-  .file-preview-content > * {
+  .file-preview__content > * {
     min-height: calc(100dvh - 84px);
   }
 
@@ -278,10 +306,56 @@
     }
   }
 
-  .file-preview-container.sidebar-open {
-    .file-preview-main {
+  .file-preview__container--sidebar-open {
+    .file-preview__main {
       width: 100%;
       margin-right: 0;
+    }
+  }
+
+  .file-preview__next-button,
+  .file-preview__previous-button {
+    display: none;
+  }
+}
+
+.file-preview__controls {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--c--globals--spacings--3xs);
+  padding: var(--c--globals--spacings--3xs);
+  border-radius: var(--xs, 8px);
+  border: 1px solid var(--c--contextuals--border--surface--primary);
+  background: var(--c--contextuals--background--surface--primary);
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.05);
+
+  &__separator {
+    width: 1px;
+    height: 24px;
+    border-radius: 1px;
+    overflow: hidden;
+    background: var(--c--contextuals--border--surface--primary);
+  }
+
+  &__zoom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--c--globals--spacings--3xs);
+
+    &__value {
+      text-align: center;
+      min-width: 35px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--c--contextuals--content--semantic--neutral--secondary);
+      cursor: pointer;
+      padding: 4px 0;
     }
   }
 }

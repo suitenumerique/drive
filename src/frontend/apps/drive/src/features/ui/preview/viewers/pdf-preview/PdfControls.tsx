@@ -1,8 +1,6 @@
 import { Button, Input } from "@gouvfr-lasuite/cunningham-react";
-import { LeftSidebarIcon } from "../../components/icon/LeftSidebarIcon";
-import { ZoomOut } from "../../components/icon/ZoomOut";
-import { ZoomIn } from "../../components/icon/ZoomIn";
-import { ZoomReset } from "../../components/icon/ZoomReset";
+import { LeftSidebarIcon } from "../../../components/icon/LeftSidebarIcon";
+import { ZoomControls } from "../../components/ZoomControls/ZoomControls";
 
 interface PdfControlsProps {
   numPages: number;
@@ -29,7 +27,7 @@ export function PdfControls({
   onZoomOut,
 }: PdfControlsProps) {
   return (
-    <div className="pdf-preview__controls">
+    <div className="file-preview__controls">
       <Button
         variant="tertiary"
         color="neutral"
@@ -38,7 +36,7 @@ export function PdfControls({
         size="small"
         icon={<LeftSidebarIcon />}
       />
-      <div className="controls-vertical-separator" />
+      <div className="file-preview__controls__separator" />
       <div className="pdf-preview__page-nav">
         <div className="pdf-preview__page-indicator">
           <Input
@@ -53,30 +51,12 @@ export function PdfControls({
           <span className="pdf-preview__page-total">/ {numPages}</span>
         </div>
       </div>
-      <div className="controls-vertical-separator" />
-      <div className="pdf-preview__zoom-controls">
-        <Button
-          variant="tertiary"
-          color="neutral"
-          onClick={onZoomOut}
-          icon={<ZoomOut />}
-          size="small"
-        />
-        <Button
-          variant="tertiary"
-          color="neutral"
-          onClick={onZoomReset}
-          icon={<ZoomReset />}
-          size="small"
-        />
-        <Button
-          variant="tertiary"
-          color="neutral"
-          onClick={onZoomIn}
-          icon={<ZoomIn />}
-          size="small"
-        />
-      </div>
+      <div className="file-preview__controls__separator" />
+      <ZoomControls
+        zoomOut={onZoomOut}
+        zoomIn={onZoomIn}
+        resetView={onZoomReset}
+      />
     </div>
   );
 }

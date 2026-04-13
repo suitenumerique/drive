@@ -3,8 +3,8 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import clsx from "clsx";
 import { Icon } from "@gouvfr-lasuite/ui-kit";
-import { ProgressBar } from "../components/duration-bar/DurationBar";
-import { PreviewControls } from "../components/controls/PreviewControls";
+import { ProgressBar } from "../../components/duration-bar/DurationBar";
+import { PlayerPreviewControls } from "../../components/controls/PreviewControls";
 
 interface VideoPlayerProps {
   src: string;
@@ -269,16 +269,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {controls && !isFullscreen && (
         <div className="video-player__controls">
-          {/* Progress bar */}
-
           <ProgressBar
             duration={duration}
             currentTime={currentTime}
             handleSeek={handleSeek}
           />
-
-          {/* Control buttons */}
-          <PreviewControls
+          <PlayerPreviewControls
             togglePlay={togglePlay}
             isPlaying={isPlaying}
             rewind10Seconds={rewind10Seconds}

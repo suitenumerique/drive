@@ -2,8 +2,8 @@
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { clsx } from "clsx";
-import { ProgressBar } from "../components/duration-bar/DurationBar";
-import { PreviewControls } from "../components/controls/PreviewControls";
+import { ProgressBar } from "../../components/duration-bar/DurationBar";
+import { PlayerPreviewControls } from "../../components/controls/PreviewControls";
 
 interface AudioPlayerProps {
   src: string;
@@ -168,7 +168,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           handleSeek={handleSeek}
         />
 
-        <PreviewControls
+        <PlayerPreviewControls
           togglePlay={togglePlayPause}
           isPlaying={isPlaying}
           rewind10Seconds={handleRewind10Seconds}
