@@ -24,6 +24,7 @@ and this project adheres to
 - 🐛(front) set size and variant on trash navigate modal #666
 - 🐛(frontend) fix uploads continuing after parent folder deletion
 - 🐛(frontend) fix SDK picker link reach promotion
+- 🐛(backend) route share invitation link to file view for files
 
 ### Fixed
 

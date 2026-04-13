@@ -759,7 +759,7 @@ def test_models_items__email_invitation__success():
     """
     The email invitation is sent successfully.
     """
-    item = factories.ItemFactory()
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
 
     # pylint: disable-next=no-member
     assert len(mail.outbox) == 0
@@ -787,7 +787,7 @@ def test_models_items__email_invitation__success_fr():
     """
     The email invitation is sent successfully in french.
     """
-    item = factories.ItemFactory()
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
 
     # pylint: disable-next=no-member
     assert len(mail.outbox) == 0
@@ -814,6 +814,37 @@ def test_models_items__email_invitation__success_fr():
         f"sur le item suivant: {item.title}" in email_content
     )
     assert f"items/{item.id}/" in email_content
+
+
+def test_models_items__email_invitation__link_for_folder():
+    """
+    The invitation email link for a folder item points to the folder explorer route.
+    """
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    sender = factories.UserFactory()
+
+    item.send_invitation_email("guest-folder@example.com", models.RoleChoices.EDITOR, sender, "en")
+
+    # pylint: disable-next=no-member
+    email = mail.outbox[-1]
+    assert f"/explorer/items/{item.id}/" in email.body
+    assert f"/explorer/items/files/{item.id}/" not in email.body
+
+
+def test_models_items__email_invitation__link_for_file():
+    """
+    The invitation email link for a file item points to the dedicated file route,
+    so the recipient opens the file preview rather than an empty folder view.
+    """
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FILE, filename="doc.pdf")
+    sender = factories.UserFactory()
+
+    item.send_invitation_email("guest-file@example.com", models.RoleChoices.EDITOR, sender, "en")
+
+    # pylint: disable-next=no-member
+    email = mail.outbox[-1]
+    assert f"/explorer/items/files/{item.id}/" in email.body
+    assert f"/explorer/items/{item.id}/" not in email.body
 
 
 @mock.patch(
