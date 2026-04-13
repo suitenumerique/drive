@@ -1,12 +1,3 @@
-.suite-preview-controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.controls-vertical-separator {
-  height: 24px;
-  width: 1px;
-  background-color: var(--c--contextuals--border--surface--primary);
+.file-preview__controls--no-fullscreen-button {
+  padding-right: 8px !important;
 }

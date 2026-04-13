@@ -27,6 +27,19 @@ export const ProgressBar = ({
         value={currentTime}
         step={0.01}
         onChange={handleSeek}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+            e.preventDefault();
+            const offset = e.key === "ArrowRight" ? 10 : -10;
+            const newTime = Math.min(
+              Math.max(currentTime + offset, 0),
+              duration,
+            );
+            handleSeek({
+              target: { value: String(newTime) },
+            } as React.ChangeEvent<HTMLInputElement>);
+          }
+        }}
         className="suite-progress-bar__bar"
         style={
           {

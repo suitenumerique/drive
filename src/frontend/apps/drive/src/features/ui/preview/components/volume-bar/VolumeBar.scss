@@ -1,7 +1,7 @@
 .suite-volume-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 
   &__bar {
     width: 80px;
@@ -82,15 +82,5 @@
       transition: transform 0.2s ease;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     }
-  }
-
-  &__btn-mute {
-    background: transparent;
-    color: var(--c--contextuals--content--semantic--neutral--tertiary);
-    padding: 8px;
-    min-width: 40px;
-    height: 40px;
-    border-radius: 6px !important;
-    transition: all 0.2s ease !important;
   }
 }
