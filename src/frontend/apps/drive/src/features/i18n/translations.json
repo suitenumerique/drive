@@ -80,6 +80,10 @@
         "outdated_browser": {
           "title": "Your browser is not supported",
           "description": "For security reasons, the PDF viewer requires a recent browser. Please update your browser or use Firefox or Chrome."
+        },
+        "actions": {
+          "download": "Download",
+          "print": "Print"
         }
       },
       "common": {
@@ -671,6 +675,10 @@
         "outdated_browser": {
           "title": "Votre navigateur n'est pas pris en charge",
           "description": "Pour des raisons de sécurité, la visionneuse PDF nécessite un navigateur récent. Veuillez mettre à jour votre navigateur ou utiliser Firefox ou Chrome."
+        },
+        "actions": {
+          "download": "Télécharger",
+          "print": "Imprimer"
         }
       },
       "common": {
@@ -1272,6 +1280,10 @@
         "outdated_browser": {
           "title": "Uw browser wordt niet ondersteund",
           "description": "Om veiligheidsredenen vereist de PDF-viewer een recente browser. Werk uw browser bij of gebruik Firefox of Chrome."
+        },
+        "actions": {
+          "download": "Downloaden",
+          "print": "Afdrukken"
         }
       },
       "common": {
