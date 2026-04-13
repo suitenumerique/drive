@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { Loader } from '@gouvfr-lasuite/cunningham-react';
 import { Item } from '@/features/drivers/types';
 import { getDriver } from '@/features/config/Config';
+import { fetchAPI } from '@/features/api/fetchApi';
 import { convertToInternal, convertFromInternal } from './x2tConverter';
 import { createMockServerCallbacks, sendToEditor, setEditorInstance } from './mockServer';
 import {
@@ -64,7 +65,6 @@ declare global {
         config: OOConfig
       ) => OOEditorInstance;
     };
-    __driveVaultClient?: any;
   }
 }
 
@@ -131,12 +131,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         throw new Error('Vault client not available');
       }
 
-      const driver = getDriver();
-
       // Get key chain for encryption
+      const driver = getDriver();
       const keyChain = await driver.getKeyChain(item.id);
 
-      // Convert entry-point key from base64 to ArrayBuffer
       const entryKeyBinary = atob(keyChain.encrypted_key_for_user);
       const entryKeyBytes = new Uint8Array(entryKeyBinary.length);
       for (let i = 0; i < entryKeyBinary.length; i++) {
@@ -159,25 +157,37 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         encryptedKeyChain.length > 0 ? encryptedKeyChain : undefined
       );
 
-      // Upload to S3 using the existing upload flow
-      // Generate a new filename for the encrypted content
-      const newFilename = `${crypto.randomUUID()}.enc`;
-      const createResponse = await fetch(
-        `/api/v1.0/items/${item.id}/upload-ended/`,
-        { method: 'POST', credentials: 'include' }
+      // Get a presigned S3 upload URL for the existing file key
+      // S3 versioning keeps previous versions — no new filename needed
+      const urlResponse = await fetchAPI(
+        `items/${item.id}/encryption-upload-url/`,
+        { method: 'POST' },
       );
+      const { upload_url: uploadUrl } = await urlResponse.json();
 
-      // For now, use a simple PUT to the existing file key
-      // The presigned URL from the item's policy
-      if (item.url) {
-        await fetch(item.url, {
-          method: 'PUT',
-          body: new Uint8Array(encryptedData),
-          headers: { 'X-amz-acl': 'private' },
+      // Upload encrypted content to S3 via presigned URL (XHR like regular Drive uploads)
+      const encryptedBytes = new Uint8Array(encryptedData);
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', uploadUrl);
+        xhr.setRequestHeader('X-amz-acl', 'private');
+        xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+        xhr.addEventListener('error', () => reject(new Error('S3 upload network error')));
+        xhr.addEventListener('abort', () => reject(new Error('S3 upload aborted')));
+        xhr.addEventListener('readystatechange', () => {
+          if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+              resolve();
+            } else {
+              reject(new Error(`S3 upload failed: ${xhr.status} — ${xhr.responseText.slice(0, 200)}`));
+            }
+          }
         });
-      }
+        xhr.send(encryptedBytes);
+      });
+
     },
-    [item.id, item.url]
+    [item.id]
   );
 
   /**
@@ -200,7 +210,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         const driver = getDriver();
         const keyChain = await driver.getKeyChain(item.id);
 
-        const response = await fetch(item.url, { credentials: 'include' });
+        const itemUrl = item.url!;
+        const response = await fetch(itemUrl, {
+          credentials: 'include',
+          cache: 'no-store',
+        });
         if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
         const encryptedBuffer = await response.arrayBuffer();
 
@@ -243,7 +257,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
 
         // Initialize participant tracking
         // Use user.sub (OIDC subject) — same ID the relay server uses
-        const localUser = initLocalUser(user.sub, user.full_name || user.email);
+        const localUser = initLocalUser(user.sub!, user.full_name || user.email);
         const uniqueOOId = getUniqueOOId();
         resetPatchIndex(0);
 
@@ -328,7 +342,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           editor,
           format: x2tExtension,
           type: x2tType,
-          userId: user.sub,
+          userId: user.sub!,
           onUpload: uploadEncrypted,
           onSaveLock: locked => {
             relayRef.current?.sendSaveLock(locked);
@@ -339,7 +353,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         try {
           const relay = new EncryptedRelay({
             roomId: item.id,
-            userId: user.sub,
+            userId: user.sub!,
             userName: user.full_name || user.email,
             vaultClient,
             encryptedSymmetricKey: entryKeyBytes.buffer,
@@ -423,7 +437,6 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     return () => {
       cancelled = true;
       stopCheckpointing();
-      // Force save on unmount
       forceSave().catch(console.error);
       // Clean up locks and relay
       resetAllLocks();
@@ -487,7 +500,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       {/* OnlyOffice replaces this div with its own iframe[name="frameEditor"] */}
       <div id="oo-editor-placeholder" />
       {/* Loading overlay */}
-      {state !== 'ready' && state !== 'error' && (
+      {state !== 'ready' && (
         <div
           style={{
             position: 'absolute',

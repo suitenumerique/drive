@@ -131,6 +131,7 @@ function runConversion(
 ): Uint8Array | null {
   x2t.FS.writeFile('/working/' + inputName, inputData);
 
+  const outputPath = `/working/${inputName}.${outputFormat}`;
   const params = [
     '<?xml version="1.0" encoding="utf-8"?>',
     '<TaskQueueDataConvert',
@@ -138,8 +139,9 @@ function runConversion(
     '  xmlns:xsd="http://www.w3.org/2001/XMLSchema">',
     `  <m_sFileFrom>/working/${inputName}</m_sFileFrom>`,
     '  <m_sThemeDir>/working/themes</m_sThemeDir>',
-    `  <m_sFileTo>/working/${inputName}.${outputFormat}</m_sFileTo>`,
+    `  <m_sFileTo>${outputPath}</m_sFileTo>`,
     '  <m_bIsNoBase64>false</m_bIsNoBase64>',
+    '  <m_sFontDir>/working/fonts/</m_sFontDir>',
     '</TaskQueueDataConvert>',
   ].join('\n');
 
@@ -148,14 +150,13 @@ function runConversion(
   try {
     x2t.ccall('main1', 'number', ['string'], ['/working/params.xml']);
   } catch (e) {
-    console.error('x2t conversion failed:', e);
+    console.error('[x2t] conversion failed:', e);
     return null;
   }
 
   try {
-    return x2t.FS.readFile('/working/' + inputName + '.' + outputFormat);
+    return x2t.FS.readFile(outputPath);
   } catch {
-    console.error('Failed to read converted output');
     return null;
   }
 }
@@ -255,22 +256,9 @@ export async function convertFromInternal(
   let currentName = 'document.bin';
   let currentData = binData;
 
-  // First convert bin → intermediate MS format
   const intermediateFormat = intermediateFormats[docType];
-  if (intermediateFormat && intermediateFormat !== targetFormat) {
-    const intermediate = runConversion(
-      x2t,
-      currentName,
-      currentData,
-      intermediateFormat
-    );
-    if (intermediate) {
-      currentName = currentName + '.' + intermediateFormat;
-      currentData = intermediate;
-    }
-  }
 
-  // Then convert to final target if different
+  // If target IS the intermediate format (e.g. docx), single conversion
   if (intermediateFormat === targetFormat) {
     const result = runConversion(x2t, currentName, currentData, targetFormat);
     if (!result) {
@@ -279,9 +267,24 @@ export async function convertFromInternal(
     return result;
   }
 
+  // Two-step: bin → intermediate MS format → target ODF format
+  if (intermediateFormat) {
+    const intermediate = runConversion(
+      x2t,
+      currentName,
+      currentData,
+      intermediateFormat
+    );
+    if (!intermediate) {
+      throw new Error(`Failed to convert from internal to ${intermediateFormat} (step 1 of bin → ${targetFormat})`);
+    }
+    currentName = `document.${intermediateFormat}`;
+    currentData = intermediate;
+  }
+
   const result = runConversion(x2t, currentName, currentData, targetFormat);
   if (!result) {
-    throw new Error(`Failed to convert from internal to ${targetFormat}`);
+    throw new Error(`Failed to convert from ${currentName} to ${targetFormat} (step 2)`);
   }
   return result;
 }

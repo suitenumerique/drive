@@ -101,7 +101,7 @@ def generate_s3_authorization_headers(key):
     return request
 
 
-def generate_upload_policy_for_key(key):
+def generate_upload_policy_for_key(key, content_type=None):
     """Generate a presigned S3 PUT URL for a given key."""
     if settings.AWS_S3_DOMAIN_REPLACE:
         s3_client = boto3.client(
@@ -117,9 +117,13 @@ def generate_upload_policy_for_key(key):
     else:
         s3_client = default_storage.connection.meta.client
 
+    params = {"Bucket": default_storage.bucket_name, "Key": key, "ACL": "private"}
+    if content_type:
+        params["ContentType"] = content_type
+
     return s3_client.generate_presigned_url(
         ClientMethod="put_object",
-        Params={"Bucket": default_storage.bucket_name, "Key": key, "ACL": "private"},
+        Params=params,
         ExpiresIn=settings.AWS_S3_UPLOAD_POLICY_EXPIRATION,
     )
 

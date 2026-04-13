@@ -163,7 +163,7 @@ export function VaultClientProvider({
     async function setupAuth() {
       if (cancelled || !client) return;
 
-      client.setAuthContext({ suiteUserId: user!.sub });
+      client.setAuthContext({ suiteUserId: user!.sub! });
       setIsLoading(true);
 
       try {

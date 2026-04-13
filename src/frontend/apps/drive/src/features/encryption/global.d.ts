@@ -17,8 +17,9 @@ declare global {
     }>;
     encryptWithKey(
       data: ArrayBuffer,
-      encryptedSymmetricKey: ArrayBuffer
-    ): Promise<{ encryptedData: ArrayBuffer }>;
+      encryptedSymmetricKey: ArrayBuffer,
+      encryptedKeyChain?: ArrayBuffer[]
+    ): Promise<{ encryptedData: ArrayBuffer; wrappedKey: ArrayBuffer }>;
     decryptWithKey(
       encryptedData: ArrayBuffer,
       encryptedSymmetricKey: ArrayBuffer,
@@ -28,6 +29,8 @@ declare global {
       encryptedSymmetricKey: ArrayBuffer,
       userPublicKeys: Record<string, ArrayBuffer>
     ): Promise<{ encryptedKeys: Record<string, ArrayBuffer> }>;
+    computeKeyFingerprint(publicKey: ArrayBuffer): Promise<string>;
+    formatFingerprint(fingerprint: string): string;
     fetchPublicKeys(
       userIds: string[]
     ): Promise<{ publicKeys: Record<string, ArrayBuffer> }>;

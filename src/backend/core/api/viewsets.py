@@ -1453,8 +1453,11 @@ class ItemViewSet(
     def encryption_upload_url(self, request, *args, **kwargs):
         """Return a presigned S3 PUT URL for uploading encrypted file content.
 
-        The frontend calls this before encrypting to get a URL for the new
-        filename where encrypted content will be stored.
+        When `filename` is provided: generates a URL for a NEW S3 key
+        (used during initial encryption to avoid overwriting the plaintext file).
+
+        When `filename` is omitted: generates a URL for the EXISTING S3 key
+        (used for auto-save — S3 versioning keeps previous versions).
         """
         item = self.get_object()
 
@@ -1465,19 +1468,20 @@ class ItemViewSet(
             )
 
         new_filename = request.data.get("filename")
-        if not new_filename:
-            return drf.response.Response(
-                {"detail": _("filename is required.")},
-                status=drf.status.HTTP_400_BAD_REQUEST,
-            )
+        if new_filename:
+            key = f"{item.key_base}/{new_filename}"
+        else:
+            key = item.file_key
 
-        key = f"{item.key_base}/{new_filename}"
-        upload_url = utils.generate_upload_policy_for_key(key)
+        upload_url = utils.generate_upload_policy_for_key(
+            key, content_type="application/octet-stream"
+        )
 
         return drf.response.Response(
-            {"upload_url": upload_url, "filename": new_filename},
+            {"upload_url": upload_url, "filename": new_filename or item.filename},
             status=drf.status.HTTP_200_OK,
         )
+
 
     @drf.decorators.action(detail=True, methods=["patch"], url_path="encrypt")
     @transaction.atomic

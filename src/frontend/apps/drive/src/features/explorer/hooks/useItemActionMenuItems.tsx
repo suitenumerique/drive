@@ -25,8 +25,8 @@ import {
   useMutationDeleteFavoriteItem,
 } from "./useMutations";
 import { DefaultRoute } from "@/utils/defaultRoutes";
-import { ModalEncryptItem } from "@/features/encryption/ModalEncryptItem";
-import { ModalRemoveEncryption } from "@/features/encryption/ModalRemoveEncryption";
+import { ModalRecursiveEncrypt } from "@/features/encryption/ModalRecursiveEncrypt";
+import { ModalRecursiveRemoveEncryption } from "@/features/encryption/ModalRecursiveRemoveEncryption";
 
 type UseItemActionMenuItemsOptions = {
   onModalOpenChange?: (isModalOpen: boolean) => void;
@@ -273,14 +273,14 @@ export const useItemActionMenuItems = ({
         />
       )}
       {currentItem && encryptModal.isOpen && (
-        <ModalEncryptItem
+        <ModalRecursiveEncrypt
           isOpen
           onClose={encryptModal.close}
           item={currentItem}
         />
       )}
       {currentItem && removeEncryptionModal.isOpen && (
-        <ModalRemoveEncryption
+        <ModalRecursiveRemoveEncryption
           isOpen
           onClose={removeEncryptionModal.close}
           item={currentItem}

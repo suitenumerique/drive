@@ -94,7 +94,9 @@ export function createMockServerCallbacks(
 
         case 'getLock': {
           // OnlyOffice requests a lock before editing — grant it immediately
-          const lockBlock = msg.block?.[0];
+          const lockBlock = (msg.block as unknown[] | undefined)?.[0] as
+            | string
+            | undefined;
           const lockEntry = {
             time: Date.now(),
             user: ooInternalId,

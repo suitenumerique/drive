@@ -9,7 +9,10 @@ import { Item } from "../drivers/types";
  */
 export interface User {
   id: string;
+  sub?: string;
   email: string;
+  full_name?: string;
+  short_name?: string;
   language: string | null;
   main_workspace: Item;
   last_release_note_seen?: string | null;

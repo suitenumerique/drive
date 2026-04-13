@@ -34,6 +34,7 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/features/auth/Auth";
+import { getDriver } from "@/features/config/Config";
 import { removeFileExtension } from "@/features/explorer/utils/mimeTypes";
 import posthog from "posthog-js";
 
@@ -112,23 +113,96 @@ export const ItemShareModal = ({
     const inviteByEmail = users.filter((user) => user.email === user.id);
     const inviteByUsername = users.filter((user) => user.email !== user.id);
 
-    const promises = inviteByUsername.map((user) =>
-      createAccess({
+    // Fetch all public keys in a single request before processing users
+    let publicKeysMap: Record<string, ArrayBuffer> = {};
+    let encryptedSymmetricKey: ArrayBuffer | null = null;
+
+    if (item?.is_encrypted && inviteByUsername.length > 0) {
+      const vaultClient = window.__driveVaultClient;
+      if (!vaultClient) {
+        throw new Error("Vault client not available");
+      }
+
+      // Get the item's encrypted symmetric key via key chain
+      const driver = getDriver();
+      const keyChain = await driver.getKeyChain(itemId);
+      const entryKeyBinary = atob(keyChain.encrypted_key_for_user);
+      const entryKeyBytes = new Uint8Array(entryKeyBinary.length);
+      for (let i = 0; i < entryKeyBinary.length; i++) {
+        entryKeyBytes[i] = entryKeyBinary.charCodeAt(i);
+      }
+      encryptedSymmetricKey = entryKeyBytes.buffer;
+
+      // Fetch recipients' public keys using sub (OIDC subject = vault user ID)
+      const memberSubs = inviteByUsername
+        .filter((u) => u.sub)
+        .map((u) => u.sub);
+
+      if (memberSubs.length > 0) {
+        const { publicKeys } = await vaultClient.fetchPublicKeys(memberSubs);
+        publicKeysMap = publicKeys;
+      }
+    }
+
+    const promises = inviteByUsername.map(async (user) => {
+      // For encrypted items, re-wrap the symmetric key for the new member via vault
+      let memberEncryptedSymmetricKey: string | undefined;
+      let memberKeyFingerprint: string | undefined;
+
+      if (item?.is_encrypted && encryptedSymmetricKey) {
+        const vaultClient = window.__driveVaultClient!;
+        const userPublicKey = publicKeysMap[user.sub];
+
+        if (userPublicKey) {
+          const { encryptedKeys } = await vaultClient.shareKeys(
+            encryptedSymmetricKey,
+            { [user.sub]: userPublicKey },
+          );
+
+          const wrappedKey = encryptedKeys[user.sub];
+          if (wrappedKey) {
+            const bytes = new Uint8Array(wrappedKey);
+            let binary = "";
+            for (let i = 0; i < bytes.length; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            memberEncryptedSymmetricKey = btoa(binary);
+          }
+
+          // Store the recipient's public key fingerprint at share time
+          memberKeyFingerprint =
+            await vaultClient.computeKeyFingerprint(userPublicKey);
+        }
+      }
+
+      return createAccess({
         itemId: itemId,
         userId: user.id,
         role: role as Role,
-      }),
-    );
+        encrypted_item_symmetric_key_for_user: memberEncryptedSymmetricKey,
+        encryption_public_key_fingerprint: memberKeyFingerprint,
+      });
+    });
 
-    const promisesInvitation = inviteByEmail.map((user) =>
-      createInvitation({
+    const promisesInvitation = inviteByEmail.map((user) => {
+      // Block email invitations for encrypted items (same as Docs)
+      if (item?.is_encrypted) {
+        throw new Error(
+          t(
+            "share_modal.encrypted_invite_error",
+            "Only registered users with encryption enabled can be added to encrypted items.",
+          ),
+        );
+      }
+
+      return createInvitation({
         itemId: itemId,
         email: user.email,
         role: role as Role,
-      }),
-    );
+      });
+    });
 
-    await Promise.all([...promises, ...promisesInvitation]);
+    await Promise.allSettled([...promises, ...promisesInvitation]);
 
     queryClient.invalidateQueries({
       queryKey: ["itemAccesses", itemId],

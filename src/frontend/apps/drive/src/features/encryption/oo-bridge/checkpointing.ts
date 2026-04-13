@@ -11,7 +11,7 @@ import { getPatchIndex } from './changesPipeline';
 import { acquireSaveLock, releaseSaveLock, isSaveLocked } from './locks';
 
 const CHECKPOINT_CHANGES_THRESHOLD = 50;
-const CHECKPOINT_TIME_INTERVAL_MS = 60_000; // 60 seconds
+const CHECKPOINT_TIME_INTERVAL_MS = 15_000; // 15 seconds for testing
 
 /** Reference to the OnlyOffice editor instance */
 let editorInstance: any = null;
@@ -65,11 +65,10 @@ export function initCheckpointing(opts: {
   lastCheckpointIndex = getPatchIndex();
   lastCheckpointTime = Date.now();
 
-  // Auto-save timer disabled for now — enable when editing flow is stable
-  // if (autoSaveTimer) clearInterval(autoSaveTimer);
-  // autoSaveTimer = setInterval(() => {
-  //   checkAndSave();
-  // }, CHECKPOINT_TIME_INTERVAL_MS);
+  if (autoSaveTimer) clearInterval(autoSaveTimer);
+  autoSaveTimer = setInterval(() => {
+    checkAndSave();
+  }, CHECKPOINT_TIME_INTERVAL_MS);
 }
 
 /**
@@ -140,16 +139,34 @@ async function saveCheckpoint(): Promise<void> {
       return;
     }
 
-    const binData: Uint8Array = innerEditor.asc_nativeGetFile();
+    const rawBin = innerEditor.asc_nativeGetFile();
 
-    if (!binData || binData.length === 0) {
+    if (!rawBin) {
       console.warn('Checkpoint: empty document, skipping save');
       return;
     }
 
-    // Convert .bin → original format (e.g. docx, xlsx, pptx)
+    // asc_nativeGetFile() returns OO's native format as a string:
+    // "DOCY;v5;{size};{base64data}" (word), "XLSY;..." (sheet), "PPTY;..." (slide)
+    // x2t reads this format directly — pass the raw string, not decoded bytes.
+    // We encode it as UTF-8 bytes for the WASM filesystem.
+    let binBuffer: ArrayBuffer;
+    if (typeof rawBin === 'string') {
+      const encoder = new TextEncoder();
+      binBuffer = encoder.encode(rawBin).buffer;
+    } else if (rawBin instanceof ArrayBuffer) {
+      binBuffer = rawBin;
+    } else {
+      binBuffer = rawBin.buffer;
+    }
+
+    if (binBuffer.byteLength === 0) {
+      console.warn('Checkpoint: empty document, skipping save');
+      return;
+    }
+
     const converted = await convertFromInternal(
-      binData.buffer,
+      binBuffer,
       originalFormat,
       documentType
     );

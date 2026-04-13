@@ -41,7 +41,16 @@ export type OOEventType =
   | 'getMessages'
   | 'unSaveLock'
   | 'unLockDocument'
-  | 'authChanges';
+  | 'authChanges'
+  | 'auth'
+  | 'authChangesAck'
+  | 'clientLog'
+  | 'saveLock'
+  | 'savePartChanges'
+  | 'releaseLock'
+  | 'message'
+  | 'forceSaveStart'
+  | 'forceSave';
 
 /** Message from OnlyOffice editor */
 export interface OOMessage {

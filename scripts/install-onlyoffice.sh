@@ -72,6 +72,11 @@ install_oo() {
     echo '[]' > "$FULL_DIR/themes.json"
     echo '// Stub service worker for client-side mode' > "$FULL_DIR/document_editor_service_worker.js"
 
+    # CryptPad's build doesn't include the format icons spritesheet that OO's
+    # injectSvgIcons() tries to load — create an empty SVG to suppress the 404.
+    echo '<svg xmlns="http://www.w3.org/2000/svg"/>' > \
+        "$FULL_DIR/web-apps/apps/common/main/resources/img/doc-formats/formats@2.5x.svg"
+
     echo "$OO_VERSION" > "$FULL_DIR/.version"
     echo "OnlyOffice v9 installed."
 }

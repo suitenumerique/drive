@@ -58,7 +58,9 @@ export class StandardDriver extends Driver {
   }
 
   async getItemBreadcrumb(id: string): Promise<ItemBreadcrumb[]> {
-    const response = await fetchAPI(`items/${id}/breadcrumb/`);
+    const response = await fetchAPI(`items/${id}/breadcrumb/`, undefined, {
+      redirectOn40x: false,
+    });
     const data = await response.json();
     return data;
   }
@@ -130,9 +132,11 @@ export class StandardDriver extends Driver {
       ...(filters ? filters : {}),
     };
 
-    const response = await fetchAPI(`items/${id}/children/`, {
-      params,
-    });
+    const response = await fetchAPI(
+      `items/${id}/children/`,
+      { params },
+      { redirectOn40x: false },
+    );
     const data = await response.json();
 
     return {
@@ -146,7 +150,9 @@ export class StandardDriver extends Driver {
   }
 
   async getTree(id: string): Promise<Item> {
-    const response = await fetchAPI(`items/${id}/tree/`);
+    const response = await fetchAPI(`items/${id}/tree/`, undefined, {
+      redirectOn40x: false,
+    });
     const data = await response.json();
     return jsonToItem(data);
   }
