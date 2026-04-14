@@ -28,16 +28,20 @@ export const NotSupportedPreview = ({
       <div className="file-preview-unsupported__icon">
         <FileIcon file={file} size="xlarge" />
       </div>
-      <p className="file-preview-unsupported__title">
-        {title || t("file_preview.unsupported.title")}
-      </p>
+      <p className="file-preview-unsupported__title">{file.title}</p>
       <p className="file-preview-unsupported__description">
-        {t("file_preview.unsupported.description")}
+        {title || (
+          <>
+            <strong>{t("file_preview.unsupported.disclaimer")}</strong>{" "}
+            {t("file_preview.unsupported.description")}
+          </>
+        )}
       </p>
 
       {onDownload && (
         <Button
-          variant="tertiary"
+          variant="secondary"
+          color="neutral"
           className="file-preview-unsupported__download-button"
           icon={
             <Icon name="file_download" type={IconType.OUTLINED} size={16} />

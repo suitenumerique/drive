@@ -85,7 +85,9 @@ test("Search file and click on it", async ({ page }) => {
 
   const filePreview = page.getByTestId("file-preview");
   await expect(filePreview).toBeVisible();
-  await expect(filePreview.getByText("Budget report")).toBeVisible();
+  await expect(
+    filePreview.getByRole("heading", { name: "Budget report" }),
+  ).toBeVisible();
 });
 
 test("Search folder from trash and cannot navigate to it", async ({ page }) => {
@@ -152,5 +154,7 @@ test("Search a deleted file and click on it", async ({ page }) => {
 
   const filePreview = page.getByTestId("file-preview");
   await expect(filePreview).toBeVisible();
-  await expect(filePreview.getByText("Resume")).toBeVisible();
+  await expect(
+    filePreview.getByRole("heading", { name: "Resume" }),
+  ).toBeVisible();
 });

@@ -67,7 +67,7 @@
           "error": "An error occurred while loading the document."
         },
         "unsupported": {
-          "title": "File type not supported for preview",
+          "disclaimer": "Unsupported format.",
           "description": "To view the file, download it to your device.",
           "download": "Download file",
           "heic_title": "HEIC files are not yet supported for preview."
@@ -662,7 +662,7 @@
           "error": "Une erreur est survenue lors du chargement du document."
         },
         "unsupported": {
-          "title": "Type de fichier non supporté pour la prévisualisation",
+          "disclaimer": "Format non supporté.",
           "description": "Pour visualiser le fichier, téléchargez-le sur votre appareil.",
           "download": "Télécharger le fichier",
           "heic_title": "Les fichiers HEIC ne sont pas encore supportés pour la prévisualisation."
@@ -1267,7 +1267,7 @@
           "error": "Er is een fout opgetreden tijdens het laden van het document."
         },
         "unsupported": {
-          "title": "Bestandstype niet ondersteund voor voorbeeld",
+          "disclaimer": "Format niet ondersteund.",
           "description": "Om het bestand te bekijken, downloadt u het naar uw apparaat.",
           "download": "Bestand downloaden",
           "heic_title": "HEIC bestanden worden nog niet ondersteund voor voorbeeld."
