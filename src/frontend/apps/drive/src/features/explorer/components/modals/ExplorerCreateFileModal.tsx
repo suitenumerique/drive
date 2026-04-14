@@ -9,7 +9,7 @@ import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationCreateFileFromTemplate } from "../../hooks/useMutations";
 import { useRouter } from "next/router";
-import { useGlobalExplorer } from "../GlobalExplorerContext";
+import { useSetSelectedItems } from "../../stores/selectionStore";
 
 type Inputs = {
   filename: string;
@@ -43,7 +43,7 @@ export const ExplorerCreateFileModal = (
   const form = useForm<Inputs>();
   const createFileFromTemplate = useMutationCreateFileFromTemplate();
   const router = useRouter();
-  const { setSelectedItems } = useGlobalExplorer();
+  const setSelectedItems = useSetSelectedItems();
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     const extension = getExtension(props.type);

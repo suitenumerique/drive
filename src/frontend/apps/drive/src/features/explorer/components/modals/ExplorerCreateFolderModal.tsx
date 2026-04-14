@@ -9,7 +9,7 @@ import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationCreateFolder } from "../../hooks/useMutations";
 import { useRouter } from "next/router";
-import { useGlobalExplorer } from "../GlobalExplorerContext";
+import { useSetSelectedItems } from "../../stores/selectionStore";
 
 type Inputs = {
   title: string;
@@ -27,7 +27,7 @@ export const ExplorerCreateFolderModal = ({
   const form = useForm<Inputs>();
   const createFolder = useMutationCreateFolder();
   const router = useRouter();
-  const { setSelectedItems } = useGlobalExplorer();
+  const setSelectedItems = useSetSelectedItems();
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     form.reset();
