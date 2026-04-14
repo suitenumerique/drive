@@ -2,20 +2,23 @@ import path from "path";
 
 import test, { expect } from "@playwright/test";
 
-import { clearDb, login } from "./utils-common";
-import { clickToMyFiles } from "./utils-navigate";
-import { uploadFile } from "./utils/upload-utils";
+import { clearDb, login } from "../utils-common";
+import { clickToMyFiles } from "../utils-navigate";
+import { uploadFile } from "../utils/upload-utils";
 
-const PDF_FILE_PATH = path.join(__dirname, "/assets/pv_cm.pdf");
-const PDF_LINKS_FILE_PATH = path.join(__dirname, "/assets/pdf_with_links.pdf");
-const PDF_JS_FILE_PATH = path.join(__dirname, "/assets/pdf_with_js.pdf");
+const PDF_FILE_PATH = path.join(__dirname, "../assets/pv_cm.pdf");
+const PDF_LINKS_FILE_PATH = path.join(
+  __dirname,
+  "../assets/pdf_with_links.pdf",
+);
+const PDF_JS_FILE_PATH = path.join(__dirname, "../assets/pdf_with_js.pdf");
 const PDF_JS_LINK_FILE_PATH = path.join(
   __dirname,
-  "/assets/pdf_with_js_link.pdf",
+  "../assets/pdf_with_js_link.pdf",
 );
 const PDF_CORRUPTED_FILE_PATH = path.join(
   __dirname,
-  "/assets/pdf_corrupted.pdf",
+  "../assets/pdf_corrupted.pdf",
 );
 
 import type { Page, Locator } from "@playwright/test";
@@ -253,6 +256,31 @@ test.describe("PDF Preview", () => {
     await expect(page.locator(".pdf-preview__sidebar")).not.toBeAttached({
       timeout: 5000,
     });
+  });
+
+  test("Applies pdf-sidebar-open class on the container when the thumbnail sidebar is opened", async ({
+    page,
+  }) => {
+    const container = page.locator(".file-preview__container");
+
+    await expect(container).not.toHaveClass(
+      /file-preview__container--pdf-sidebar-open/,
+    );
+
+    await openSidebar(page);
+
+    await expect(container).toHaveClass(
+      /file-preview__container--pdf-sidebar-open/,
+      { timeout: 5000 },
+    );
+
+    const toggle = page.locator('button[aria-label="Toggle sidebar"]');
+    await toggle.dispatchEvent("click");
+
+    await expect(container).not.toHaveClass(
+      /file-preview__container--pdf-sidebar-open/,
+      { timeout: 5000 },
+    );
   });
 
   test("Marks the current page thumbnail as active", async ({ page }) => {
