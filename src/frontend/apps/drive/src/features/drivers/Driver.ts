@@ -119,6 +119,7 @@ export abstract class Driver {
   abstract updateUser(payload: Partial<User> & { id: string }): Promise<User>;
   // Tree
   abstract getTree(id: string): Promise<Item>;
+  abstract getDescendants(id: string): Promise<Item[]>;
   abstract createFolder(data: { title: string }): Promise<Item>;
   abstract createWorkspace(data: {
     title: string;

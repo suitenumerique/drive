@@ -137,7 +137,7 @@ export const ModalRecursiveEncrypt = ({ isOpen, onClose, item }: Props) => {
           </div>
         )}
 
-        {job.rows.length > 0 && (
+        {job.rows.length > 0 && job.rows.length <= 50 && (
           <div
             style={{
               maxHeight: '320px',
@@ -152,6 +152,28 @@ export const ModalRecursiveEncrypt = ({ isOpen, onClose, item }: Props) => {
               <JobFileRow row={r} key={r.id} />
             ))}
           </div>
+        )}
+        {job.rows.length > 50 && (
+          <p
+            style={{
+              margin: 0,
+              fontSize: '0.85rem',
+              color: 'var(--c--theme--colors--greyscale-600, #6b7280)',
+            }}
+          >
+            {t(
+              'encryption.encrypt_modal.large_set',
+              '{{count}} files in this folder. Per-file progress is hidden for large jobs — see the summary above.',
+              { count: job.rows.length },
+            )}
+            {job.failedCount > 0 &&
+              ' ' +
+                t(
+                  'encryption.encrypt_modal.large_set_failures',
+                  '{{count}} failed.',
+                  { count: job.failedCount },
+                )}
+          </p>
         )}
       </div>
     </Modal>

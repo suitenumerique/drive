@@ -28,6 +28,7 @@ import {
   getUniqueOOId,
   addRemoteUser,
   removeRemoteUser,
+  buildConnectStateMessage,
 } from './participants';
 import { resetPatchIndex, handleIncomingChanges } from './changesPipeline';
 import { EncryptedRelay } from './encryptedRelay';
@@ -44,6 +45,7 @@ import {
   initCheckpointing,
   stopCheckpointing,
   forceSave,
+  hasUnsavedChanges,
 } from './checkpointing';
 import {
   MIME_TO_DOC_TYPE,
@@ -199,6 +201,17 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   useEffect(() => {
     let cancelled = false;
 
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges()) {
+        e.preventDefault();
+      }
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && hasUnsavedChanges()) {
+        forceSave().catch(() => {});
+      }
+    };
+
     const init = async () => {
       try {
         if (!item.url || !user) return;
@@ -284,7 +297,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             lang: user.language || 'en',
             customization: {
               compactToolbar: false,
-              forcesave: false,
+              forcesave: true,
+              autosave: true,
             },
             permissions: {
               chat: false,
@@ -338,6 +352,38 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         });
         editor.connectMockServer(callbacks);
 
+        // Debug helper — call window.__ooDebugType('hello') from the
+        // browser console to inject text via OO's inner editor API.
+        // If this works but remote changes don't render, the bug is in
+        // our incoming-changes routing, not in OO itself.
+        (window as any).__ooDebugType = (text: string) => {
+          try {
+            const inner =
+              (window as any).Asc?.editor ||
+              (window as any).editor ||
+              (window as any).asc_docs_api;
+            if (!inner) {
+              console.warn('[debug] no inner editor on window');
+              return;
+            }
+            if (typeof inner.asc_paste === 'function') {
+              inner.asc_paste(text);
+              return;
+            }
+            const iframe = document.querySelector(
+              'iframe[name="frameEditor"]',
+            ) as HTMLIFrameElement | null;
+            const innerWin = iframe?.contentWindow as any;
+            if (innerWin?.Asc?.editor?.asc_paste) {
+              innerWin.Asc.editor.asc_paste(text);
+              return;
+            }
+            console.warn('[debug] could not find a way to inject text');
+          } catch (e) {
+            console.error('[debug] inject failed', e);
+          }
+        };
+
         // Initialize auto-save — readers don't save
         if (canEdit) initCheckpointing({
           editor,
@@ -359,6 +405,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           },
         });
 
+        // Listen for tab close/refresh to save or warn
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
         // Set up the encrypted relay for collaboration (optional — PoC works without it)
         try {
           const relay = new EncryptedRelay({
@@ -371,21 +421,49 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
             callbacks: {
               onRemoteChanges: changes => {
+                const localOOId = getLocalUser().ooId;
+                const decoded = changes.map(c => {
+                  let op: unknown = c.change;
+                  try {
+                    op = JSON.parse(c.change);
+                  } catch {
+                    /* keep raw */
+                  }
+                  return {
+                    user: c.user,
+                    useridoriginal: c.useridoriginal,
+                    fromSelf:
+                      c.user === localOOId ||
+                      c.useridoriginal === localOOId,
+                    op,
+                  };
+                });
+                console.log(
+                  '[OOEditor] remote changes (decoded):',
+                  decoded.length,
+                  decoded,
+                );
                 const msg = handleIncomingChanges(changes);
+                console.log(
+                  '[OOEditor] → OO:',
+                  msg.type,
+                  'changesIndex:',
+                  (msg as any).changesIndex,
+                  'count:',
+                  (msg as any).changes?.length,
+                );
                 sendToEditor(msg);
               },
               onPeerJoin: (userId, userName, peerCanEdit) => {
                 if (peerCanEdit) editorPeersRef.current.add(userId);
                 addRemoteUser(userId, userName, userId);
-                sendToEditor({
-                  type: 'authChanges',
-                  changes: [],
-                } as any);
+                sendToEditor(buildConnectStateMessage() as any);
               },
               onPeerLeave: userId => {
                 editorPeersRef.current.delete(userId);
                 removeRemoteUser(userId);
                 releaseAllUserLocks(userId);
+                sendToEditor(buildConnectStateMessage() as any);
               },
               onRoomState: peers => {
                 editorPeersRef.current.clear();
@@ -395,6 +473,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     addRemoteUser(peer.userId, peer.userName, peer.userId);
                   }
                 }
+                sendToEditor(buildConnectStateMessage() as any);
               },
               onLockUpdate: (type, userId, lockData) => {
                 const lockId = JSON.stringify(lockData);
@@ -450,6 +529,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
 
     return () => {
       cancelled = true;
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       stopCheckpointing();
       forceSave().catch(console.error);
       // Clean up locks and relay
@@ -469,6 +550,21 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   }, [item.id]);
 
   if (state === 'error') {
+    const isNoKeysError =
+      !!error && /no key pair|hasKeys|key pair found/i.test(error);
+    const headline = isNoKeysError
+      ? t(
+          'explorer.encrypted.no_keys_headline',
+          'Encryption keys required',
+        )
+      : t('explorer.encrypted.editor_error', 'Failed to load editor');
+    const body = isNoKeysError
+      ? t(
+          'explorer.encrypted.no_keys_body',
+          'You don\'t have an encryption key pair set up for your account yet. Generate or restore your encryption keys from your profile menu, then reopen this document.',
+        )
+      : error;
+
     return (
       <div
         style={{
@@ -477,30 +573,43 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           alignItems: 'center',
           justifyContent: 'center',
           height: '100%',
-          gap: '16px',
+          gap: '20px',
+          padding: '32px',
+          textAlign: 'center',
+          maxWidth: '560px',
+          margin: '0 auto',
         }}
       >
         <span
           className="material-icons"
           style={{
-            fontSize: '48px',
+            fontSize: '56px',
             color: 'var(--c--theme--colors--danger-600)',
           }}
         >
-          error
+          {isNoKeysError ? 'lock' : 'error'}
         </span>
-        <span>
-          {t('explorer.encrypted.editor_error', 'Failed to load editor')}
-        </span>
-        {error && (
-          <span
+        <h2
+          style={{
+            margin: 0,
+            fontSize: '20px',
+            fontWeight: 600,
+            color: 'var(--c--theme--colors--greyscale-900, #111)',
+          }}
+        >
+          {headline}
+        </h2>
+        {body && (
+          <p
             style={{
-              fontSize: '12px',
-              color: 'var(--c--theme--colors--greyscale-600)',
+              margin: 0,
+              fontSize: '15px',
+              lineHeight: 1.5,
+              color: 'var(--c--theme--colors--greyscale-700, #444)',
             }}
           >
-            {error}
-          </span>
+            {body}
+          </p>
         )}
       </div>
     );

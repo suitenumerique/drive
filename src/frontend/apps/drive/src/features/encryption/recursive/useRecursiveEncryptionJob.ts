@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { Item, ItemType, LinkReach } from '@/features/drivers/types';
 import { getDriver } from '@/features/config/Config';
+import { APIError } from '@/features/api/APIError';
 import { useAuth } from '@/features/auth/Auth';
 import { useVaultClient } from '../VaultClientProvider';
-import { flattenSubtree, filesOnly } from './flattenSubtree';
+import { fetchSubtree, filesOnly } from './flattenSubtree';
 import { fromBase64, stagedFilename, toBase64 } from './binary';
 import { getEncryptionUploadUrl, putToS3 } from './presignedUpload';
 import {
@@ -166,7 +167,7 @@ export function useRecursiveEncryptionJob({
 
   // Discovery + validation when the modal opens.
   useEffect(() => {
-    if (!isOpen || !vaultClient || !user?.id) return;
+    if (!isOpen || !vaultClient || !user?.sub) return;
 
     let cancelled = false;
     const run = async () => {
@@ -174,19 +175,15 @@ export function useRecursiveEncryptionJob({
         dispatch({ type: 'SET_PHASE', phase: 'discovering' });
 
         const driver = getDriver();
-        const rootItem =
-          item.type === ItemType.FOLDER ? await driver.getTree(item.id) : item;
+        const flat =
+          item.type === ItemType.FOLDER
+            ? await fetchSubtree(driver, item)
+            : [{ item, parentId: null, depth: 0, pathCrumb: '' }];
         if (cancelled) return;
-
-        const flat = flattenSubtree(rootItem);
         flatRef.current = flat;
 
-        const fileNodes = filesOnly(flat);
-        // When the root itself is a FILE, include it as a row.
         const sourceNodes =
-          item.type === ItemType.FILE
-            ? [{ item, parentId: null, depth: 0, pathCrumb: '' }]
-            : fileNodes;
+          item.type === ItemType.FILE ? flat : filesOnly(flat);
 
         const rows: FileJobRow[] = sourceNodes.map((n) => {
           const shouldSkip =
@@ -292,10 +289,10 @@ export function useRecursiveEncryptionJob({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, vaultClient, user?.id, item, mode, t]);
+  }, [isOpen, vaultClient, user?.sub, item, mode, t]);
 
   const confirm = useCallback(async () => {
-    if (!vaultClient || !user?.id) return;
+    if (!vaultClient || !user?.sub) return;
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -310,7 +307,7 @@ export function useRecursiveEncryptionJob({
       if (mode === 'encrypt') {
         await encryptPipeline({
           vaultClient,
-          currentUserId: user.id,
+          currentUserId: user.sub!,
           rootItem: item,
           flat: flatRef.current,
           processableIds: processableIdsRef.current,
@@ -374,10 +371,20 @@ export function useRecursiveEncryptionJob({
       ) {
         return;
       }
-      dispatch({ type: 'SET_TOP_ERROR', error: (err as Error).message });
+      let message = (err as Error).message;
+      if (err instanceof APIError && err.data?.code === 'subtree_mutated') {
+        const missing = (err.data.missing as string[] | undefined) ?? [];
+        const extra = (err.data.extra as string[] | undefined) ?? [];
+        message = t(
+          'encryption.errors.subtree_mutated',
+          'The folder contents changed during the operation ({{added}} added, {{removed}} removed). Close this dialog and try again.',
+          { added: missing.length, removed: extra.length },
+        );
+      }
+      dispatch({ type: 'SET_TOP_ERROR', error: message });
       dispatch({ type: 'SET_PHASE', phase: 'failed' });
     }
-  }, [mode, vaultClient, user?.id, item, queryClient, onSuccess]);
+  }, [mode, vaultClient, user?.sub, item, queryClient, onSuccess, t]);
 
   const retry = useCallback(() => {
     dispatch({ type: 'RESET_FAILED_TO_PENDING' });

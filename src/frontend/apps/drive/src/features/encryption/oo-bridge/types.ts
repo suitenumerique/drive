@@ -2,8 +2,7 @@
  * Types for the OnlyOffice client-side bridge.
  *
  * These interfaces mirror the connectMockServer() API that OnlyOffice exposes
- * when loaded without a Document Server. CryptPad's inner.js documents this
- * interface implicitly through its implementation.
+ * when loaded without a Document Server.
  */
 
 /** A single OnlyOffice change/patch */
@@ -50,7 +49,8 @@ export type OOEventType =
   | 'releaseLock'
   | 'message'
   | 'forceSaveStart'
-  | 'forceSave';
+  | 'forceSave'
+  | 'connectState';
 
 /** Message from OnlyOffice editor */
 export interface OOMessage {
@@ -87,9 +87,16 @@ export interface OOConfig {
     };
     lang: string;
     customization?: {
-      chat: boolean;
       compactToolbar: boolean;
       forcesave: boolean;
+      autosave?: boolean;
+    };
+    permissions?: {
+      chat?: boolean;
+      comment?: boolean;
+      download?: boolean;
+      edit?: boolean;
+      print?: boolean;
     };
   };
   events: {
@@ -122,21 +129,23 @@ export interface CollaborationState {
 }
 
 /** Map from file extension to OnlyOffice documentType (as used by CryptPad) */
-export const EXTENSION_TO_DOC_TYPE: Record<string, 'text' | 'spreadsheet' | 'presentation'> =
-  {
-    docx: 'text',
-    doc: 'text',
-    odt: 'text',
-    txt: 'text',
-    html: 'text',
-    xlsx: 'spreadsheet',
-    xls: 'spreadsheet',
-    ods: 'spreadsheet',
-    csv: 'spreadsheet',
-    pptx: 'presentation',
-    ppt: 'presentation',
-    odp: 'presentation',
-  };
+export const EXTENSION_TO_DOC_TYPE: Record<
+  string,
+  'text' | 'spreadsheet' | 'presentation'
+> = {
+  docx: 'text',
+  doc: 'text',
+  odt: 'text',
+  txt: 'text',
+  html: 'text',
+  xlsx: 'spreadsheet',
+  xls: 'spreadsheet',
+  ods: 'spreadsheet',
+  csv: 'spreadsheet',
+  pptx: 'presentation',
+  ppt: 'presentation',
+  odp: 'presentation',
+};
 
 /** Map from file extension to the MS Office fileType OnlyOffice expects */
 export const EXTENSION_TO_OO_FILE_TYPE: Record<string, string> = {

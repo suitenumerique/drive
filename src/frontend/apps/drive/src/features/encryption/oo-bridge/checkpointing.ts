@@ -105,6 +105,13 @@ export async function checkAndSave(): Promise<void> {
 }
 
 /**
+ * Check if there are changes that haven't been saved yet.
+ */
+export function hasUnsavedChanges(): boolean {
+  return getPatchIndex() > lastCheckpointIndex;
+}
+
+/**
  * Force a save (e.g. when user closes the editor).
  */
 export async function forceSave(): Promise<void> {

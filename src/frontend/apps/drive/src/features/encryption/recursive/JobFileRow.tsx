@@ -7,7 +7,17 @@ export const JobFileRow = ({ row }: { row: FileJobRowType }) => {
   const stateIcon = (() => {
     switch (row.state) {
       case 'pending':
-        return <span className="material-icons" style={{ opacity: 0.3 }}>radio_button_unchecked</span>;
+        return (
+          <span
+            className="material-icons"
+            style={{
+              opacity: 0.5,
+              color: 'var(--c--theme--colors--greyscale-500, #6b7280)',
+            }}
+          >
+            schedule
+          </span>
+        );
       case 'running':
         return (
           <span

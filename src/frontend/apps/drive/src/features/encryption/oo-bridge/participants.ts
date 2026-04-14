@@ -158,6 +158,25 @@ export function getParticipants(): OOParticipantList {
 }
 
 /**
+ * Build the message OnlyOffice expects to refresh its participants list
+ * mid-session. OO calls getParticipants() once at init, so we have to push
+ * fresh state via this `connectState` message whenever a peer joins/leaves.
+ */
+export function buildConnectStateMessage(): {
+  type: 'connectState';
+  participantsTimestamp: number;
+  participants: OOParticipant[];
+  waitAuth: boolean;
+} {
+  return {
+    type: 'connectState',
+    participantsTimestamp: Date.now(),
+    participants: getParticipants().list,
+    waitAuth: false,
+  };
+}
+
+/**
  * Reset all participant state (used on disconnect/reconnect).
  */
 export function resetParticipants(): void {

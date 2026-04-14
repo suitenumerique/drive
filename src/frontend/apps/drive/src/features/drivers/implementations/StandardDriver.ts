@@ -157,6 +157,14 @@ export class StandardDriver extends Driver {
     return jsonToItem(data);
   }
 
+  async getDescendants(id: string): Promise<Item[]> {
+    const response = await fetchAPI(`items/${id}/descendants/`, undefined, {
+      redirectOn40x: false,
+    });
+    const data = await response.json();
+    return jsonToItems(data);
+  }
+
   async moveItem(id: string, parentId?: string): Promise<void> {
     const payload = {
       ...(parentId ? { target_item_id: parentId } : {}),

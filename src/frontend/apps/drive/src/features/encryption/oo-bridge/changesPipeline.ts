@@ -86,12 +86,15 @@ export function handleOutgoingChanges(
  */
 export function handleIncomingChanges(rawChanges: OOChange[]): OOMessage {
   patchIndex += rawChanges.length;
-  // Live collaboration changes use 'saveChanges' (not 'authChanges' which is only for initial load).
-  // OO's _onSaveChanges handler expects changesIndex and locks fields.
+  // _onSaveChanges in sdk-all.js buffers into _saveChangesChunks and only
+  // flushes when endSaveChanges is truthy. Without it, remote edits never
+  // reach _updateChanges and the document silently stops updating.
   return {
     type: 'saveChanges',
     changes: rawChanges,
     changesIndex: patchIndex,
+    syncChangesIndex: patchIndex,
+    endSaveChanges: true,
     locks: [],
     excelAdditionalInfo: null,
   } as OOMessage;

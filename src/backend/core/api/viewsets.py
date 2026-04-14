@@ -1111,6 +1111,41 @@ class ItemViewSet(
         )
 
     @drf.decorators.action(detail=True, methods=["get"])
+    def descendants(self, request, pk=None):
+        """
+        Return a flat list of every descendant of this item (files + folders),
+        including the item itself. Used by recursive operations (encryption,
+        bulk actions) so the frontend can enumerate a subtree in one query.
+        """
+        try:
+            item = self.queryset.get(pk=pk)
+        except models.Item.DoesNotExist as exc:
+            raise drf.exceptions.NotFound from exc
+
+        # Manual access check: the user must have read access to the root
+        # item. Inheritance handles descendants — if you can read a folder,
+        # you can read its contents.
+        abilities = item.get_abilities(request.user)
+        if not abilities.get("retrieve", False):
+            raise drf.exceptions.PermissionDenied()
+
+        if item.type != models.ItemTypeChoices.FOLDER:
+            return drf.response.Response(
+                self.get_serializer([item], many=True).data,
+                status=drf.status.HTTP_200_OK,
+            )
+
+        subtree_qs = (
+            self.queryset.filter(
+                path__descendants=item.path,
+                ancestors_deleted_at__isnull=True,
+            )
+            .order_by("path")
+        )
+        serializer = self.get_serializer(subtree_qs, many=True)
+        return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
+
+    @drf.decorators.action(detail=True, methods=["get"])
     def tree(self, request, pk=None):
         """
         List ancestors tree above the item
@@ -1549,19 +1584,31 @@ class ItemViewSet(
                 status=drf.status.HTTP_400_BAD_REQUEST,
             )
 
-        # Validate: all descendants must have a key provided (for folder encryption)
-        if descendant_ids:
-            descendant_str_ids = {str(pk) for pk in descendant_ids}
-            provided_descendant_ids = set(encrypted_keys_for_descendants.keys())
-            if descendant_str_ids != provided_descendant_ids:
-                return drf.response.Response(
-                    {
-                        "detail": _(
-                            "Encrypted keys must be provided for all descendant items."
-                        )
-                    },
-                    status=drf.status.HTTP_400_BAD_REQUEST,
-                )
+        # Validate: keys must be provided for exactly the set of descendant FILES.
+        # This doubles as an integrity check: if the subtree mutated between
+        # frontend discovery and this commit (e.g. another user uploaded a file),
+        # the provided id set won't match the live one and we abort the whole
+        # operation. The frontend should re-discover and prompt the user to retry.
+        live_descendant_file_ids = {
+            str(pk)
+            for pk in item.descendants()
+            .filter(type=models.ItemTypeChoices.FILE)
+            .values_list("pk", flat=True)
+        }
+        provided_descendant_ids = set(encrypted_keys_for_descendants.keys())
+        if live_descendant_file_ids != provided_descendant_ids:
+            return drf.response.Response(
+                {
+                    "detail": _(
+                        "Folder contents changed during the operation. "
+                        "Please retry."
+                    ),
+                    "code": "subtree_mutated",
+                    "missing": sorted(live_descendant_file_ids - provided_descendant_ids),
+                    "extra": sorted(provided_descendant_ids - live_descendant_file_ids),
+                },
+                status=drf.status.HTTP_409_CONFLICT,
+            )
 
         file_key_mapping = serializer.validated_data["fileKeyMapping"]
 
@@ -1658,6 +1705,32 @@ class ItemViewSet(
         serializer = serializers.RemoveEncryptionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         file_key_mapping = serializer.validated_data["fileKeyMapping"]
+
+        # Integrity check: keys must be provided for exactly the live set of
+        # descendant FILES (plus the root if it's a file). If the subtree was
+        # mutated between frontend discovery and commit, abort.
+        live_file_ids = {
+            str(pk)
+            for pk in item.descendants()
+            .filter(type=models.ItemTypeChoices.FILE)
+            .values_list("pk", flat=True)
+        }
+        if item.type == models.ItemTypeChoices.FILE:
+            live_file_ids.add(str(item.pk))
+        provided_ids = set(file_key_mapping.keys())
+        if live_file_ids != provided_ids:
+            return drf.response.Response(
+                {
+                    "detail": _(
+                        "Folder contents changed during the operation. "
+                        "Please retry."
+                    ),
+                    "code": "subtree_mutated",
+                    "missing": sorted(live_file_ids - provided_ids),
+                    "extra": sorted(provided_ids - live_file_ids),
+                },
+                status=drf.status.HTTP_409_CONFLICT,
+            )
 
         # Collect old S3 keys for cleanup after commit
         old_s3_keys = []
