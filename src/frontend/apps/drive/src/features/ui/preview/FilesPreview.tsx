@@ -214,7 +214,7 @@ export const FilePreview = ({
       }, OPEN_DELAY);
     } else {
       setClassNames((prev) => {
-        return prev.filter((className) => className !== className);
+        return prev.filter((className_) => className_ !== className);
       });
     }
 
