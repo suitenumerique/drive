@@ -13,6 +13,7 @@ and this project adheres to
 - ✨(frontend) enhance upload toast with progress, errors and cancel support
 - ✨(frontend) add ErrorIcon component and support numeric icon sizes
 - ✨(frontend) make file upload abortable in driver layer
+- ✨(frontend) files preview v2
 
 ### Fixed
 
