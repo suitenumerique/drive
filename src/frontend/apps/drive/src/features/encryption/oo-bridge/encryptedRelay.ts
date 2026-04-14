@@ -1,15 +1,10 @@
 /**
  * Encrypted WebSocket relay client for OnlyOffice collaboration.
  *
- * Sits between the OOEditor bridge and the relay server. Encrypts all
- * outgoing OT patches via the vault before sending, and decrypts all
- * incoming patches before passing to OnlyOffice.
- *
- * System messages (JSON text) are NOT encrypted — they contain
- * metadata like peer joins/leaves, locks, and cursor positions.
+ * Forwards every cross-peer message as an encrypted, opaque envelope. The
+ * server never sees plaintext content. System messages from the relay server
+ * itself (room state, peer join/leave) come over text frames unencrypted.
  */
-
-import type { OOChange } from './types';
 
 const RELAY_URL = process.env.NEXT_PUBLIC_RELAY_URL ?? 'ws://localhost:4100';
 
@@ -90,6 +85,13 @@ type MetaBroadcastMessage = {
   messages: unknown[];
 };
 
+/** A complete OO `saveChanges` envelope captured verbatim from the sender */
+type SaveChangesBroadcastMessage = {
+  type: 'oo:saveChanges';
+  userId: string;
+  message: Record<string, unknown>;
+};
+
 /** All possible system messages */
 type SystemMessage =
   | AuthenticatedMessage
@@ -102,11 +104,12 @@ type SystemMessage =
   | SaveLockMessage
   | SaveUnlockMessage
   | MessageBroadcastMessage
-  | MetaBroadcastMessage;
+  | MetaBroadcastMessage
+  | SaveChangesBroadcastMessage;
 
 export interface RelayCallbacks {
-  /** Called when a remote peer's changes arrive (decrypted) */
-  onRemoteChanges: (changes: OOChange[]) => void;
+  /** Called when a remote peer's saveChanges envelope arrives (full message) */
+  onSaveChanges: (userId: string, message: Record<string, unknown>) => void;
   /** Called when a peer joins the room */
   onPeerJoin: (userId: string, userName: string, canEdit: boolean) => void;
   /** Called when a peer leaves the room */
@@ -204,28 +207,13 @@ export class EncryptedRelay {
     };
   }
 
-  /** Send encrypted OT patches to all peers */
-  async sendChanges(changes: OOChange[]): Promise<void> {
-    const data = JSON.stringify(changes);
-    const encoder = new TextEncoder();
-    const plaintext = encoder.encode(data).buffer;
-
-    try {
-      const { encryptedData } = await this.vaultClient.encryptWithKey(
-        plaintext,
-        this.encryptedSymmetricKey,
-        this.encryptedKeyChain.length > 0 ? this.encryptedKeyChain : undefined
-      );
-
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        this.ws.send(encryptedData);
-      } else {
-        // Queue for when we reconnect
-        this.pendingOutgoing.push(encryptedData);
-      }
-    } catch (err) {
-      console.error('[relay] Failed to encrypt changes:', err);
-    }
+  /** Broadcast a full OO `saveChanges` envelope to all peers (encrypted) */
+  async sendSaveChanges(message: Record<string, unknown>): Promise<void> {
+    await this.sendEncryptedSystem({
+      type: 'oo:saveChanges',
+      userId: this.userId,
+      message,
+    });
   }
 
   /** Send a lock request to all peers (encrypted — lock data is sensitive) */
@@ -247,7 +235,6 @@ export class EncryptedRelay {
 
   /** Broadcast an OO `message` payload (chat or comment events) */
   async sendMessage(messages: unknown[]): Promise<void> {
-    console.log('[relay] SEND oo:message', messages);
     await this.sendEncryptedSystem({
       type: 'oo:message',
       userId: this.userId,
@@ -257,7 +244,6 @@ export class EncryptedRelay {
 
   /** Broadcast an OO `meta` payload (comment locks, etc.) */
   async sendMeta(messages: unknown[]): Promise<void> {
-    console.log('[relay] SEND oo:meta', messages);
     await this.sendEncryptedSystem({
       type: 'oo:meta',
       userId: this.userId,
@@ -355,19 +341,8 @@ export class EncryptedRelay {
         const json = new TextDecoder().decode(plaintext);
         const parsed = JSON.parse(json);
 
-        console.log(
-          '[relay] RECV decrypted',
-          'shape:',
-          Array.isArray(parsed) ? `array(${parsed.length})` : parsed?.type,
-          parsed,
-        );
-
-        // Check if it's an encrypted system message (has a "type" field)
         if (parsed.type && typeof parsed.type === 'string') {
           this.handleSystemMessage(parsed as SystemMessage);
-        } else if (Array.isArray(parsed)) {
-          // Array of OOChange objects
-          this.callbacks.onRemoteChanges(parsed as OOChange[]);
         }
       } catch (err) {
         console.warn('[relay] Failed to decrypt incoming data:', err);
@@ -376,7 +351,6 @@ export class EncryptedRelay {
   }
 
   private handleSystemMessage(msg: SystemMessage): void {
-    console.log('[relay] dispatch system msg:', msg.type);
     switch (msg.type) {
       case 'system:authenticated':
         // Auth confirmed — nothing to do, connection is already established
@@ -410,6 +384,9 @@ export class EncryptedRelay {
         break;
       case 'oo:meta':
         this.callbacks.onMetaBroadcast(msg.userId, msg.messages);
+        break;
+      case 'oo:saveChanges':
+        this.callbacks.onSaveChanges(msg.userId, msg.message);
         break;
     }
   }

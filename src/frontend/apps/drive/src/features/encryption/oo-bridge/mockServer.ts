@@ -1,97 +1,50 @@
-/**
- * Mock server callbacks for OnlyOffice's connectMockServer() API.
- *
- * These callbacks replace OnlyOffice's Document Server entirely.
- * OnlyOffice calls these functions instead of making WOPI/REST requests.
- */
-
 import type { MockServerCallbacks, OOChange, OOMessage } from './types';
-import { getParticipants, getLocalUser, getOOInternalUserId } from './participants';
-import { handleOutgoingChanges, getPatchIndex } from './changesPipeline';
+import { getParticipants, getOOInternalUserId } from './participants';
+import { wrapOutgoingSaveChanges, getPatchIndex } from './changesPipeline';
 
 export interface MockServerOptions {
-  /** Document type: 'word', 'cell', or 'slide' */
   docType: 'word' | 'cell' | 'slide';
-  /** Called when local user makes changes that should be broadcast */
-  onLocalChanges: (changes: OOChange[]) => void;
-  /** Called when a lock is requested (spreadsheets) */
+  /** Forward an opaque OO `saveChanges` message to peers (full envelope). */
+  onSaveChangesBroadcast: (message: Record<string, unknown>) => void;
   onLockRequest?: (type: 'acquire' | 'release', locks: unknown) => void;
-  /** Called when cursor position changes */
   onCursorUpdate?: (cursor: unknown) => void;
-  /** Called when save lock is checked */
   onSaveLockCheck?: () => boolean;
-  /** Called when local OO emits a `message` payload (chat / comment events) */
   onMessageBroadcast?: (messages: unknown[]) => void;
-  /** Called when local OO emits a `meta` payload (comment locks etc.) */
   onMetaBroadcast?: (messages: unknown[]) => void;
-  /** Resolve an image name to a blob URL (for embedded images) */
   resolveImageURL?: (name: string) => Promise<string>;
 }
 
-/** Queue of changes from remote users to be applied on init */
 let initialChangesQueue: OOChange[] = [];
-
-/** Reference to the OnlyOffice editor instance for sending messages TO the editor */
 let editorInstance: any = null;
 
-/**
- * Set the editor instance (called after DocEditor is created).
- */
 export function setEditorInstance(editor: any): void {
   editorInstance = editor;
 }
 
-/**
- * Set the initial changes queue (populated from network history before editor loads).
- */
 export function setInitialChanges(changes: OOChange[]): void {
   initialChangesQueue = changes;
 }
 
-/**
- * Send a message TO OnlyOffice via the editor's sendMessageToOO method.
- */
 export function sendToEditor(msg: OOMessage): void {
   if (editorInstance) {
     editorInstance.sendMessageToOO(msg);
   }
 }
 
-/**
- * Create the connectMockServer() callbacks.
- *
- * Returns the 5 callbacks that OnlyOffice expects:
- * - onMessage: receives a handler for sending messages TO OnlyOffice
- * - getParticipants: returns the current user list
- * - onAuth: called when the editor is ready
- * - getImageURL: resolves image names to blob URLs
- * - getInitialChanges: returns queued changes from history
- */
 export function createMockServerCallbacks(
-  options: MockServerOptions
+  options: MockServerOptions,
 ): MockServerCallbacks {
   return {
-    /**
-     * Called by OnlyOffice for each message FROM the editor (changes, locks, etc.).
-     * This is NOT a handler setter — it receives the actual message.
-     */
     onMessage(msg: OOMessage) {
-      const localUser = getLocalUser();
-      // OO internally constructs _userId = config.user.id + indexUser
-      // Lock and change user fields MUST match this concatenated value
       const ooInternalId = getOOInternalUserId();
-
-      console.log('[mockServer] OO →', msg.type, msg);
 
       switch (msg.type) {
         case 'auth':
         case 'authChangesAck':
         case 'clientLog':
-          // Handled by OnlyOffice API wrapper or informational — no response needed
           break;
 
         case 'isSaveLock':
-          // OnlyOffice asks if someone else is saving — always say no
           sendToEditor({
             type: 'saveLock',
             saveLock: options.onSaveLockCheck?.() ?? false,
@@ -99,7 +52,6 @@ export function createMockServerCallbacks(
           break;
 
         case 'getLock': {
-          // OnlyOffice requests a lock before editing — grant it immediately
           const lockBlock = (msg.block as unknown[] | undefined)?.[0] as
             | string
             | undefined;
@@ -113,27 +65,21 @@ export function createMockServerCallbacks(
           if (options.docType === 'cell') {
             locks = [lockEntry];
           } else {
-            // Word and Slide expect an object keyed by the block value itself
+            // Word / Slide expect an object keyed by the block value itself
             locks = lockBlock ? { [lockBlock]: lockEntry } : {};
           }
 
-          const lockResponse = {
-            type: 'getLock',
-            locks,
-          } as OOMessage;
-          sendToEditor(lockResponse);
-
+          sendToEditor({ type: 'getLock', locks } as OOMessage);
           options.onLockRequest?.('acquire', msg.block);
           break;
         }
 
         case 'saveChanges': {
-          const changes = handleOutgoingChanges(msg, ooInternalId);
-          if (changes) {
-            options.onLocalChanges(changes);
+          const wrapped = wrapOutgoingSaveChanges(msg, ooInternalId);
+          if (wrapped) {
+            options.onSaveChangesBroadcast(wrapped);
           }
 
-          // Acknowledge so OnlyOffice unblocks editing
           if (msg.endSaveChanges !== false) {
             sendToEditor({
               type: 'unSaveLock',
@@ -151,7 +97,6 @@ export function createMockServerCallbacks(
         }
 
         case 'unLockDocument': {
-          // OnlyOffice releases locks after saving
           if (msg.releaseLocks) {
             sendToEditor({
               type: 'releaseLock',
@@ -178,12 +123,6 @@ export function createMockServerCallbacks(
             : (msg as any).message !== undefined
               ? [(msg as any).message]
               : [];
-          console.log(
-            '[mockServer] outbound MESSAGE — payload count:',
-            payload.length,
-            'raw msg:',
-            msg,
-          );
           if (payload.length > 0) {
             options.onMessageBroadcast?.(payload);
           }
@@ -191,13 +130,8 @@ export function createMockServerCallbacks(
         }
 
         case 'meta': {
-          const payload = ((msg as any).messages as unknown[] | undefined) ?? [];
-          console.log(
-            '[mockServer] outbound META — payload count:',
-            payload.length,
-            'raw msg:',
-            msg,
-          );
+          const payload =
+            ((msg as any).messages as unknown[] | undefined) ?? [];
           if (payload.length > 0) {
             options.onMetaBroadcast?.(payload);
           }
@@ -216,43 +150,23 @@ export function createMockServerCallbacks(
           break;
 
         default:
-          console.warn(
-            '[mockServer] UNHANDLED outbound type:',
-            msg.type,
-            msg,
-          );
           break;
       }
     },
 
-    /**
-     * Return the current participant list.
-     */
     getParticipants,
 
-    /**
-     * Called when the editor is ready for collaboration.
-     */
     onAuth() {
-      // Editor is ready — nothing special needed for Phase 1
+      // editor ready
     },
 
-    /**
-     * Resolve an image name to a displayable URL.
-     * For encrypted files, images are decrypted and served as blob URLs.
-     */
     async getImageURL(name: string): Promise<string> {
       if (options.resolveImageURL) {
         return options.resolveImageURL(name);
       }
-      // Fallback: return empty (image will show as broken)
       return '';
     },
 
-    /**
-     * Return queued changes from remote users.
-     * These are applied when the editor first loads.
-     */
     getInitialChanges(): OOChange[] {
       const changes = [...initialChangesQueue];
       initialChangesQueue = [];

@@ -1,37 +1,16 @@
-/**
- * Change processing pipeline for OnlyOffice patches.
- *
- * Handles the bridge between OnlyOffice's internal change format and
- * the network layer (ChainPad or direct broadcast).
- */
-
 import type { OOChange, OOMessage } from './types';
 
 let patchIndex = 0;
 
-/**
- * Reset the patch index (called when loading a checkpoint).
- */
 export function resetPatchIndex(index: number = 0): void {
   patchIndex = index;
 }
 
-/**
- * Get the current patch index.
- */
 export function getPatchIndex(): number {
   return patchIndex;
 }
 
-/**
- * Normalize an OnlyOffice change into the standard format.
- *
- * CryptPad's parseChanges() — inner.js:1340-1355
- */
-export function parseChange(
-  change: unknown,
-  ooId: string
-): OOChange {
+function parseChange(change: unknown, ooId: string): OOChange {
   return {
     docid: 'fresh',
     change: JSON.stringify(change),
@@ -42,98 +21,29 @@ export function parseChange(
 }
 
 /**
- * Parse an array of raw OnlyOffice changes.
+ * Take an outgoing OO `saveChanges` message and return a message-shaped object
+ * we can ship over the relay verbatim. Each element of `changes` is wrapped
+ * with author metadata; every other field on the OO message is preserved
+ * unchanged so the receiver gets the same context the sender's OO produced.
  */
-export function parseChanges(
-  changes: unknown[],
-  ooId: string
-): OOChange[] {
-  return changes.map(c => parseChange(c, ooId));
-}
-
-/**
- * Handle changes coming FROM OnlyOffice (user made edits).
- *
- * Returns the parsed changes ready to be encrypted and broadcast.
- *
- * CryptPad's handleChanges() — inner.js:1357-1443
- */
-export function handleOutgoingChanges(
+export function wrapOutgoingSaveChanges(
   msg: OOMessage,
-  ooId: string
-): OOChange[] | null {
-  if (msg.type !== 'saveChanges' || !msg.changes) {
-    return null;
-  }
+  ooId: string,
+): Record<string, unknown> | null {
+  if (msg.type !== 'saveChanges' || !msg.changes) return null;
 
-  // OnlyOffice sends changes as a JSON string, not an array
   const rawChanges: unknown[] =
     typeof msg.changes === 'string'
-      ? JSON.parse(msg.changes)
-      : msg.changes;
+      ? JSON.parse(msg.changes as unknown as string)
+      : (msg.changes as unknown[]);
 
-  const parsed = parseChanges(rawChanges, ooId);
-  patchIndex += parsed.length;
-  return parsed;
-}
+  const wrappedChanges = rawChanges.map(c => parseChange(c, ooId));
+  patchIndex += wrappedChanges.length;
 
-/**
- * Handle changes coming FROM the network (other users' edits).
- *
- * Returns the changes in the format OnlyOffice expects to receive.
- *
- * CryptPad's fromOOHandler routing — inner.js:1538-1640
- */
-export function handleIncomingChanges(rawChanges: OOChange[]): OOMessage {
-  patchIndex += rawChanges.length;
-  // Mirror the sender's outgoing saveChanges as closely as possible.
-  // _onSaveChanges in sdk-all.js requires endSaveChanges to flush from the
-  // chunks buffer; isCoAuthoring/releaseLocks/excelAdditionalInfo influence
-  // the post-apply lock+recalc path, so we set the same values the sender did.
   return {
-    type: 'saveChanges',
-    changes: rawChanges,
+    ...(msg as unknown as Record<string, unknown>),
+    changes: wrappedChanges,
     changesIndex: patchIndex,
     syncChangesIndex: patchIndex,
-    startSaveChanges: true,
-    endSaveChanges: true,
-    isCoAuthoring: true,
-    locks: [],
-    excelAdditionalInfo: null,
-    unlock: false,
-    releaseLocks: true,
-    deleteIndex: null,
-  } as OOMessage;
-}
-
-/**
- * Process an event from OnlyOffice (via the fromOOHandler callback).
- *
- * Routes different event types to appropriate handlers.
- * Returns an action descriptor for the caller to handle.
- */
-export function processOOEvent(msg: OOMessage): {
-  action:
-    | 'broadcast_changes'
-    | 'lock_request'
-    | 'cursor_update'
-    | 'save_lock_check'
-    | 'noop';
-  data?: unknown;
-} {
-  switch (msg.type) {
-    case 'saveChanges':
-      return { action: 'broadcast_changes', data: msg.changes };
-    case 'getLock':
-      return { action: 'lock_request', data: msg.locks };
-    case 'cursor':
-      return { action: 'cursor_update', data: msg.cursor };
-    case 'isSaveLock':
-      return { action: 'save_lock_check' };
-    case 'getMessages':
-      // Chat messages — not implemented, return empty
-      return { action: 'noop' };
-    default:
-      return { action: 'noop' };
-  }
+  };
 }

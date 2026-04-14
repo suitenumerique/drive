@@ -123,12 +123,22 @@ function sanitize(input: string): string {
 /**
  * Run x2t conversion on the WASM module.
  */
+// Emscripten's FS.readFile returns Uint8Array<ArrayBufferLike> (the backing
+// buffer might be a SharedArrayBuffer on some builds). Copy into a fresh
+// ArrayBuffer so the rest of the pipeline can use strict ArrayBuffer types
+// (Blob, the upload callback, etc.).
+function toStrictUint8Array(src: Uint8Array): Uint8Array<ArrayBuffer> {
+  const out = new Uint8Array(new ArrayBuffer(src.byteLength));
+  out.set(src);
+  return out as Uint8Array<ArrayBuffer>;
+}
+
 function runConversion(
   x2t: X2TModule,
   inputName: string,
   inputData: Uint8Array,
   outputFormat: string
-): Uint8Array | null {
+): Uint8Array<ArrayBuffer> | null {
   x2t.FS.writeFile('/working/' + inputName, inputData);
 
   const outputPath = `/working/${inputName}.${outputFormat}`;
@@ -155,7 +165,7 @@ function runConversion(
   }
 
   try {
-    return x2t.FS.readFile(outputPath);
+    return toStrictUint8Array(x2t.FS.readFile(outputPath));
   } catch {
     return null;
   }
@@ -172,7 +182,7 @@ export async function convertToInternal(
   data: ArrayBuffer,
   filename: string
 ): Promise<{
-  bin: Uint8Array;
+  bin: Uint8Array<ArrayBuffer>;
   images: Array<{ name: string; data: Uint8Array }>;
 }> {
   const x2t = await getX2T();
@@ -240,7 +250,7 @@ export async function convertFromInternal(
   bin: ArrayBuffer,
   targetFormat: string,
   type?: string
-): Promise<Uint8Array> {
+): Promise<Uint8Array<ArrayBuffer>> {
   const x2t = await getX2T();
   const binData = new Uint8Array(bin);
 

@@ -30,7 +30,7 @@ import {
   buildConnectStateMessage,
   getRemoteOOInternalId,
 } from './participants';
-import { resetPatchIndex, handleIncomingChanges } from './changesPipeline';
+import { resetPatchIndex } from './changesPipeline';
 import { EncryptedRelay } from './encryptedRelay';
 import {
   acquireCellLock,
@@ -83,12 +83,10 @@ interface OOEditorProps {
 
 type EditorState = 'loading' | 'decrypting' | 'converting' | 'mounting' | 'ready' | 'error';
 
-// Whitelist of message types we accept from the network and forward into OO.
-// A malicious peer in a shared room can craft any payload they want over the
-// relay; if we forwarded blindly, they could emit `documentOpen`, `rpc`,
-// `executeCommand`, `pluginEvent`, `forceSave`, etc. and reach internal OO
-// surfaces that aren't meant to be peer-driven. We accept only the message
-// types we ourselves send for collaboration.
+// Only these OO message types are allowed in from peers. Anything else (rpc,
+// executeCommand, documentOpen, pluginEvent, forceSave, …) would be a way for
+// a malicious peer to reach internal OO surfaces that aren't meant to be
+// peer-driven, so the bridge drops them.
 const INBOUND_ALLOWLIST: ReadonlySet<string> = new Set([
   'saveChanges',
   'cursor',
@@ -108,7 +106,6 @@ function sendToEditorGuarded(msg: { type?: string } & Record<string, unknown>) {
     );
     return;
   }
-  console.log('[OOEditor] → OO', msg.type, msg);
   sendToEditor(msg as any);
 }
 
@@ -125,10 +122,6 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const scriptLoadedRef = useRef(false);
   // Connected peers with edit capability (not including self). Used for save leader election.
   const editorPeersRef = useRef<Set<string>>(new Set());
-  // Cached reference to the OO inner editor (lives inside frameEditor iframe).
-  // Used to read the local cursor on each keystroke since OO doesn't auto-send
-  // it during text insertion.
-  const innerEditorRef = useRef<any>(null);
   const canEdit = !!item.abilities?.partial_update;
 
   const mime = item.mimetype || '';
@@ -334,6 +327,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               autosave: true,
               macros: false,
               plugins: false,
+              help: false,
             } as any,
             permissions: {
               edit: true,
@@ -354,16 +348,6 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             },
             onDocumentReady: () => {
               setState('ready');
-              try {
-                const iframe = document.querySelector(
-                  'iframe[name="frameEditor"]',
-                ) as HTMLIFrameElement | null;
-                const innerWin = iframe?.contentWindow as any;
-                innerEditorRef.current =
-                  innerWin?.Asc?.editor || innerWin?.editor || null;
-              } catch {
-                /* inner editor not reachable — cursor sync will no-op */
-              }
             },
             onError: event => {
               console.error('OnlyOffice error:', event.data);
@@ -377,14 +361,45 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           throw new Error('OnlyOffice API not loaded');
         }
 
-        // OnlyOffice's connectMockServer expects window.APP to exist
+        // OnlyOffice's connectMockServer expects window.APP to exist.
+        // We also install a `getUserColor(userId)` hook that OO's
+        // _getUserColorById checks before its internal cache. Without this,
+        // cursor and participant-list calls hit different cache keys (cursor
+        // passes null for userName, panel passes the username) and the same
+        // user ends up with two different colors. Returning a deterministic
+        // color per id keeps both call sites in sync.
         (window as any).APP = (window as any).APP || {};
+        (window as any).APP.getUserColor = (userId: string) => {
+          if (!userId) return null;
+          // 16 colors evenly distributed on the HSL wheel — same id → same color.
+          let hash = 0;
+          for (let i = 0; i < userId.length; i++) {
+            hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
+          }
+          const palette = [
+            { r: 0xea, g: 0x44, b: 0x35 }, // red
+            { r: 0xfb, g: 0x8c, b: 0x00 }, // orange
+            { r: 0xfd, g: 0xd8, b: 0x35 }, // yellow
+            { r: 0x7c, g: 0xb3, b: 0x42 }, // light green
+            { r: 0x2e, g: 0x7d, b: 0x32 }, // green
+            { r: 0x00, g: 0xac, b: 0xc1 }, // cyan
+            { r: 0x16, g: 0x68, b: 0xdd }, // blue
+            { r: 0x3f, g: 0x51, b: 0xb5 }, // indigo
+            { r: 0x7e, g: 0x57, b: 0xc2 }, // violet
+            { r: 0xab, g: 0x47, b: 0xbc }, // purple
+            { r: 0xec, g: 0x40, b: 0x7a }, // pink
+            { r: 0x8d, g: 0x6e, b: 0x63 }, // brown
+            { r: 0x55, g: 0x6c, b: 0x78 }, // slate
+            { r: 0x00, g: 0x69, b: 0x7c }, // teal
+            { r: 0xc6, g: 0x28, b: 0x28 }, // dark red
+            { r: 0x37, g: 0x47, b: 0x4f }, // gunmetal
+          ];
+          const c = palette[hash % palette.length];
+          return { r: c.r, g: c.g, b: c.b, a: 255 };
+        };
 
-        // Defense-in-depth: the moment OO inserts its iframe into the DOM,
-        // pin a sandbox attribute on it. We have to allow scripts + same-origin
-        // (OO needs both) but block top navigation, popups, form submissions,
-        // and pointer/keyboard escapes — so a malicious peer can't trigger
-        // navigations or open external windows via crafted change records.
+        // Pin a sandbox attribute on OO's iframe the moment it's inserted,
+        // so a malicious peer can't reach out via crafted change records.
         const placeholder = document.getElementById('oo-editor-placeholder');
         const sandboxObserver = placeholder
           ? new MutationObserver(() => {
@@ -424,20 +439,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // This must happen before relay setup — editor needs to work standalone
         const callbacks = createMockServerCallbacks({
           docType,
-          onLocalChanges: (changes: OOChange[]) => {
-            relayRef.current?.sendChanges(changes);
-            // OO doesn't fire its cursor-send path on text insertion (only on
-            // mouse/arrow moves), so we read the cursor ourselves from the
-            // inner editor and push it through the relay.
-            try {
-              const cursorBin =
-                innerEditorRef.current?.WordControl?.m_oLogicDocument?.History?.Get_DocumentPositionBinary?.();
-              if (cursorBin) {
-                relayRef.current?.sendCursor(cursorBin);
-              }
-            } catch {
-              /* swallow — cursor sync is best-effort */
-            }
+          onSaveChangesBroadcast: message => {
+            relayRef.current?.sendSaveChanges(message);
           },
           onLockRequest: (type, lockData) => {
             relayRef.current?.sendLock(type, lockData);
@@ -491,18 +494,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             encryptedKeyChain:
               encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
             callbacks: {
-              onRemoteChanges: changes => {
-                sendToEditorGuarded(handleIncomingChanges(changes));
-                // Apply_Changes() on the receiver is not driven by saveChanges
-                // alone — it gets called from save-flow and lock-release paths.
-                // Without a follow-up unSaveLock, queued remote changes stay
-                // in m_aChanges and only flush on the next local activity
-                // (visible for text edits, but breaks comments where the user
-                // doesn't keep typing). Push an unSaveLock to force the flush.
-                sendToEditorGuarded({
-                  type: 'releaseLock',
-                  locks: [],
-                } as any);
+              onSaveChanges: (_userId, message) => {
+                sendToEditorGuarded(message as any);
               },
               onPeerJoin: (userId, userName, peerCanEdit) => {
                 if (peerCanEdit) editorPeersRef.current.add(userId);
@@ -554,31 +547,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   ],
                 } as any);
               },
-              onMessageBroadcast: (userId, messages) => {
-                console.log(
-                  '[OOEditor] RECV oo:message from',
-                  userId,
-                  'count:',
-                  messages.length,
-                  messages,
-                );
-                sendToEditorGuarded({
-                  type: 'message',
-                  messages,
-                } as any);
+              onMessageBroadcast: (_userId, messages) => {
+                sendToEditorGuarded({ type: 'message', messages } as any);
               },
-              onMetaBroadcast: (userId, messages) => {
-                console.log(
-                  '[OOEditor] RECV oo:meta from',
-                  userId,
-                  'count:',
-                  messages.length,
-                  messages,
-                );
-                sendToEditorGuarded({
-                  type: 'meta',
-                  messages,
-                } as any);
+              onMetaBroadcast: (_userId, messages) => {
+                sendToEditorGuarded({ type: 'meta', messages } as any);
               },
               onSaveLock: () => {
                 // Save coordination handled by leader election, not lock messages
