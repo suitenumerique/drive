@@ -136,7 +136,7 @@ export const TrashPageSelectionBarActions = () => {
         <HardDeleteConfirmationModal
           {...hardDeleteConfirmationModal}
           onDecide={handleHardDelete}
-          multiple={selectedItems.length > 1}
+          count={selectedItems.length}
         />
       )}
     </>

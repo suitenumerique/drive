@@ -9,10 +9,10 @@ import { useTranslation } from "react-i18next";
 
 export const HardDeleteConfirmationModal = ({
   onDecide,
-  multiple = false,
+  count = 1,
   ...props
 }: DecisionModalProps & {
-  multiple?: boolean;
+  count?: number;
 }) => {
   const { t } = useTranslation();
   return (
@@ -45,7 +45,7 @@ export const HardDeleteConfirmationModal = ({
     >
       <div className="c__modal__content__text">
         {t("explorer.trash.hard_delete.content", {
-          count: multiple ? 2 : 1,
+          count,
         })}
       </div>
     </Modal>

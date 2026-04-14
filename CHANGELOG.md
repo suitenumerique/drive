@@ -17,6 +17,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(frontend) add actions menu on mobile My Files page
+- 🐛(frontend) show actual selection count in hard delete modal
 
 ## [v0.16.0] - 2026-04-09
 
