@@ -92,6 +92,14 @@ dev = [
     "types-requests==2.32.4.20260107",
 ]
 
+[tool.uv]
+constraint-dependencies = [
+    # Pin pillow above the version vulnerable to CVE-2026-40192
+    # (FITS GZIP decompression bomb). Pulled transitively via
+    # easy_thumbnails, which has no upper bound on pillow.
+    "pillow>=12.2.0",
+]
+
 [tool.uv.build-backend]
 module-root = ""
 source-exclude = [
