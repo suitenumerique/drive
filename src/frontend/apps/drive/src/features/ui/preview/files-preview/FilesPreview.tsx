@@ -29,6 +29,13 @@ export type FilePreviewType = {
   is_encrypted?: boolean;
   url_preview: string;
   url: string;
+  abilities?: {
+    partial_update?: boolean;
+    update?: boolean;
+    destroy?: boolean;
+    encrypt?: boolean;
+    remove_encryption?: boolean;
+  };
 };
 
 type FilePreviewData = FilePreviewType & {

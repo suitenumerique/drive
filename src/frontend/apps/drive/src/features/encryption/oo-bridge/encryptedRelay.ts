@@ -90,6 +90,8 @@ type SaveChangesBroadcastMessage = {
   type: 'oo:saveChanges';
   userId: string;
   message: Record<string, unknown>;
+  /** Optional inline media (image name → data URL) referenced by the change. */
+  media?: Record<string, string>;
 };
 
 /** All possible system messages */
@@ -109,7 +111,11 @@ type SystemMessage =
 
 export interface RelayCallbacks {
   /** Called when a remote peer's saveChanges envelope arrives (full message) */
-  onSaveChanges: (userId: string, message: Record<string, unknown>) => void;
+  onSaveChanges: (
+    userId: string,
+    message: Record<string, unknown>,
+    media?: Record<string, string>,
+  ) => void;
   /** Called when a peer joins the room */
   onPeerJoin: (userId: string, userName: string, canEdit: boolean) => void;
   /** Called when a peer leaves the room */
@@ -207,12 +213,29 @@ export class EncryptedRelay {
     };
   }
 
+  /**
+   * Newly-inserted images (name → data URL) waiting to be shipped with the
+   * next saveChanges. Drained when the change goes out so that peers receive
+   * the bytes in the same envelope as the change that references them.
+   */
+  private pendingMedia: Record<string, string> = {};
+
+  /** Stash an image to broadcast with the next saveChanges envelope. */
+  queuePendingMedia(name: string, dataUrl: string): void {
+    this.pendingMedia[name] = dataUrl;
+  }
+
   /** Broadcast a full OO `saveChanges` envelope to all peers (encrypted) */
   async sendSaveChanges(message: Record<string, unknown>): Promise<void> {
+    const media = Object.keys(this.pendingMedia).length
+      ? this.pendingMedia
+      : undefined;
+    this.pendingMedia = {};
     await this.sendEncryptedSystem({
       type: 'oo:saveChanges',
       userId: this.userId,
       message,
+      media,
     });
   }
 
@@ -386,7 +409,7 @@ export class EncryptedRelay {
         this.callbacks.onMetaBroadcast(msg.userId, msg.messages);
         break;
       case 'oo:saveChanges':
-        this.callbacks.onSaveChanges(msg.userId, msg.message);
+        this.callbacks.onSaveChanges(msg.userId, msg.message, msg.media);
         break;
     }
   }

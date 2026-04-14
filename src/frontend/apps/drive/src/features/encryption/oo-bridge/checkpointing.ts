@@ -73,6 +73,14 @@ export function initCheckpointing(opts: {
   autoSaveTimer = setInterval(() => {
     checkAndSave();
   }, CHECKPOINT_TIME_INTERVAL_MS);
+  console.log(
+    '[checkpoint] initialised — interval:',
+    CHECKPOINT_TIME_INTERVAL_MS,
+    'ms format:',
+    originalFormat,
+    'type:',
+    documentType,
+  );
 }
 
 /**
@@ -99,6 +107,19 @@ export async function checkAndSave(): Promise<void> {
       timeSinceCheckpoint >= CHECKPOINT_TIME_INTERVAL_MS);
 
   const amLeader = isSaveLeader ? isSaveLeader() : true;
+  console.log(
+    '[checkpoint] tick',
+    'changes:',
+    changesSinceCheckpoint,
+    'msSince:',
+    timeSinceCheckpoint,
+    'shouldSave:',
+    shouldSave,
+    'isSaving:',
+    isSaving,
+    'leader:',
+    amLeader,
+  );
   if (shouldSave && !isSaving && amLeader) {
     await saveCheckpoint();
   }
@@ -132,10 +153,12 @@ async function saveCheckpoint(): Promise<void> {
 
   // Try to acquire save lock (only one user can save at a time)
   if (!acquireSaveLock(currentUserId)) {
-    return; // Another user is saving
+    console.log('[checkpoint] skipped: another user holds the save lock');
+    return;
   }
 
   isSaving = true;
+  console.log('[checkpoint] starting save…');
 
   try {
     // Extract current document as binary from OnlyOffice
@@ -176,19 +199,67 @@ async function saveCheckpoint(): Promise<void> {
       return;
     }
 
+    // Gather every image registered in OO's document urls and write them
+    // into x2t's /working/media/ before conversion — without this, x2t can't
+    // find the bytes for inserted images and produces a broken/empty file.
+    const media = new Map<string, Uint8Array>();
+    try {
+      const urls =
+        innerWindow?.AscCommon?.g_oDocumentUrls?.getUrls?.() ?? {};
+      await Promise.all(
+        Object.entries(urls).map(async ([key, value]) => {
+          if (typeof value !== 'string') return;
+          try {
+            const resp = await fetch(value);
+            if (!resp.ok) return;
+            const bytes = new Uint8Array(await resp.arrayBuffer());
+            const name = key.startsWith('media/')
+              ? key.slice('media/'.length)
+              : key;
+            media.set(name, bytes);
+          } catch {
+            /* skip missing image */
+          }
+        }),
+      );
+    } catch {
+      /* g_oDocumentUrls unavailable */
+    }
+
     const converted = await convertFromInternal(
       binBuffer,
       originalFormat,
-      documentType
+      documentType,
+      media,
     );
 
-    // Upload (encryption happens in the callback)
+    const convertedBytes = converted.byteLength;
+    if (convertedBytes === 0) {
+      // SAFETY: never overwrite S3 with empty bytes — that destroys the doc.
+      console.warn(
+        '[checkpoint] conversion produced 0 bytes — refusing to upload (this would wipe the file)',
+      );
+      return;
+    }
+
+    // Upload (encryption happens in the callback). Note that the vault
+    // transfers the buffer into a worker, so `converted.buffer` is detached
+    // after this await — read the byte count from the local capture above.
     await uploadCallback(converted.buffer, originalFormat);
 
     lastCheckpointIndex = getPatchIndex();
     lastCheckpointTime = Date.now();
+    console.log(
+      '[checkpoint] save complete — uploaded',
+      convertedBytes,
+      'bytes as',
+      originalFormat,
+      '(images:',
+      media.size,
+      ')',
+    );
   } catch (error) {
-    console.error('Checkpoint save failed:', error);
+    console.error('[checkpoint] save failed:', error);
   } finally {
     isSaving = false;
     releaseSaveLock(currentUserId);

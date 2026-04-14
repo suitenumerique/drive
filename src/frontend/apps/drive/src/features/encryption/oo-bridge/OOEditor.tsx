@@ -127,6 +127,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const scriptLoadedRef = useRef(false);
   // Connected peers with edit capability (not including self). Used for save leader election.
   const editorPeersRef = useRef<Set<string>>(new Set());
+  // Reference to the inner OO iframe's window — used to register media in
+  // g_oDocumentUrls when inbound saveChanges envelopes carry inline images.
+  const innerWindowRef = useRef<any>(null);
   const canEdit = !!item.abilities?.partial_update;
 
   const mime = item.mimetype || '';
@@ -293,7 +296,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
 
         // Step 3: Convert to .bin format
         setState('converting');
-        const { bin } = await convertToInternal(decryptedBuffer, filename);
+        const { bin, images: extractedImages } = await convertToInternal(
+          decryptedBuffer,
+          filename,
+        );
         if (cancelled) return;
 
         // Step 4: Create blob URL and load editor
@@ -349,21 +355,222 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           },
           events: {
             onAppReady: () => {
-              // Editor UI is ready
-            },
-            onDocumentReady: () => {
-              setState('ready');
+              // Register the images extracted by convertToInternal in OO's
+              // g_oDocumentUrls registry BEFORE the document loads. OO walks
+              // the .bin during loading and resolves image references via
+              // g_oDocumentUrls.getImageUrl(name). Without these entries, OO
+              // falls back to fetching `<name>` from a relative URL → 404.
               try {
-                // Capture target format/title/downloadType from the download
-                // flow into a window-level context so our printPdf hook can
-                // branch on the right format and decide between print vs
-                // download. The printPdf signature doesn't include this info,
-                // so we hook one level up on the prototype.
                 const ooIframe = document.querySelector(
                   'iframe[name="frameEditor"]',
                 ) as HTMLIFrameElement | null;
                 const innerWindow = ooIframe?.contentWindow as any;
+                const docUrls = innerWindow?.AscCommon?.g_oDocumentUrls;
+                if (docUrls && extractedImages.length > 0) {
+                  for (const img of extractedImages) {
+                    try {
+                      // Use data URLs (not blob URLs) for portability:
+                      // OO's clipboard binary embeds the image src verbatim,
+                      // so a blob URL from this tab would fail to resolve
+                      // when the same image is copy/pasted into another tab
+                      // / user. Data URLs are self-contained and work
+                      // anywhere getFullImageSrc2 sees a `data:` prefix.
+                      const ext =
+                        (img.name.split('.').pop() || 'png').toLowerCase();
+                      const mime =
+                        ext === 'jpg' || ext === 'jpeg'
+                          ? 'image/jpeg'
+                          : ext === 'gif'
+                            ? 'image/gif'
+                            : ext === 'svg'
+                              ? 'image/svg+xml'
+                              : ext === 'webp'
+                                ? 'image/webp'
+                                : 'image/png';
+                      let binary = '';
+                      const chunkSize = 0x8000;
+                      for (
+                        let offset = 0;
+                        offset < img.data.byteLength;
+                        offset += chunkSize
+                      ) {
+                        binary += String.fromCharCode.apply(
+                          null,
+                          Array.from(
+                            img.data.subarray(
+                              offset,
+                              offset + chunkSize,
+                            ),
+                          ),
+                        );
+                      }
+                      const dataUrl = `data:${mime};base64,${btoa(binary)}`;
+                      docUrls.addImageUrl(img.name, dataUrl);
+                    } catch (e) {
+                      console.warn(
+                        '[OOEditor] failed to register image',
+                        img.name,
+                        e,
+                      );
+                    }
+                  }
+                  console.log(
+                    '[OOEditor] registered',
+                    extractedImages.length,
+                    'images in g_oDocumentUrls',
+                  );
+                }
+              } catch (e) {
+                console.warn('[OOEditor] image registration failed', e);
+              }
+            },
+            onDocumentReady: () => {
+              setState('ready');
+              try {
+                const ooIframe = document.querySelector(
+                  'iframe[name="frameEditor"]',
+                ) as HTMLIFrameElement | null;
+                const innerWindow = ooIframe?.contentWindow as any;
+                innerWindowRef.current = innerWindow;
+
+                // Pre-create OO's clipboard sanitization iframe with a
+                // permissive sandbox. OO's CommonIframe_PasteStart sets
+                // sandbox="allow-same-origin" (no allow-scripts), which
+                // Chrome warns about and which breaks Cmd+V image paste.
+                // By creating the element first under the same id, OO's
+                // `if(!ifr)` check finds ours and skips its own creation.
+                const cb = innerWindow?.AscCommon?.g_clipboardBase;
+                if (cb && !innerWindow.document.getElementById(cb.CommonIframeId)) {
+                  const pasteIfr = innerWindow.document.createElement('iframe');
+                  pasteIfr.name = cb.CommonIframeId;
+                  pasteIfr.id = cb.CommonIframeId;
+                  pasteIfr.style.position = 'absolute';
+                  pasteIfr.style.top = '-100px';
+                  pasteIfr.style.left = '0px';
+                  pasteIfr.style.width = '10000px';
+                  pasteIfr.style.height = '100px';
+                  pasteIfr.style.overflow = 'hidden';
+                  pasteIfr.style.zIndex = '-1000';
+                  pasteIfr.setAttribute(
+                    'sandbox',
+                    'allow-same-origin allow-scripts',
+                  );
+                  innerWindow.document.body.appendChild(pasteIfr);
+                  cb.CommonIframe = pasteIfr;
+                }
+
+                // Override AscCommon.sendImgUrls — OO calls this from the
+                // paste path to "upload" image URLs to the document server
+                // (POST /downloadas/?c=imgurls) and get back local media
+                // paths. Without a DS, that hangs the "Loading image" modal
+                // forever. Register each URL synchronously in g_oDocumentUrls
+                // and return immediately.
+                if (innerWindow?.AscCommon && !innerWindow.AscCommon.__driveImgUrlsPatched) {
+                  let imgCounter = 0;
+                  innerWindow.AscCommon.sendImgUrls = function (
+                    api: any,
+                    images: any[],
+                    callback: (data: Array<{ url: string; path: string }>) => void,
+                  ) {
+                    if (!api.isOpenedFrameEditor) {
+                      api.sync_StartAction?.(
+                        innerWindow.Asc?.c_oAscAsyncActionType?.BlockInteraction ?? 1,
+                        innerWindow.Asc?.c_oAscAsyncAction?.LoadImage ?? 0,
+                      );
+                    }
+                    const out: Array<{ url: string; path: string }> = [];
+                    const urls: Record<string, string> = {};
+                    for (const src of images) {
+                      if (typeof src !== 'string') {
+                        out.push({ url: 'error', path: 'error' });
+                        continue;
+                      }
+                      // Detect extension from the data URL mime, default png.
+                      const mimeMatch = /^data:image\/([a-z0-9+]+)/.exec(src);
+                      const ext = mimeMatch ? mimeMatch[1].replace('+xml', '') : 'png';
+                      imgCounter += 1;
+                      const name = `image_${Date.now()}_${imgCounter}.${ext}`;
+                      const path = 'media/' + name;
+                      urls[path] = src;
+                      out.push({ url: src, path });
+                      // Stash the bytes so they ride out with the next
+                      // saveChanges envelope to peers — otherwise remote
+                      // users see the synthetic image name but have no
+                      // bytes to render and 404 on the bare filename.
+                      relayRef.current?.queuePendingMedia(name, src);
+                    }
+                    innerWindow.AscCommon.g_oDocumentUrls.addUrls(urls);
+                    if (!api.isOpenedFrameEditor) {
+                      api.sync_EndAction?.(
+                        innerWindow.Asc?.c_oAscAsyncActionType?.BlockInteraction ?? 1,
+                        innerWindow.Asc?.c_oAscAsyncAction?.LoadImage ?? 0,
+                      );
+                    }
+                    callback(out);
+                  };
+                  innerWindow.AscCommon.__driveImgUrlsPatched = true;
+                }
+
                 const innerEditor = innerWindow?.editor || innerWindow?.editorCell;
+                // Defensive shields for OO-internal crashes we can't fix at
+                // the source. Each one wraps a hot-path method with a
+                // try/catch so a bad input doesn't unmount the editor —
+                // we log a warning and let the next iteration / event
+                // proceed. Idempotent via a per-method flag.
+                const shield = (
+                  proto: any,
+                  method: string,
+                  label: string,
+                ) => {
+                  if (!proto || typeof proto[method] !== 'function') return;
+                  const flag = `__driveShielded_${method}`;
+                  if (proto[flag]) return;
+                  const orig = proto[method];
+                  proto[method] = function (...args: unknown[]) {
+                    try {
+                      return orig.apply(this, args);
+                    } catch (e) {
+                      console.warn(
+                        `[OOEditor] swallowed ${label} error`,
+                        e,
+                      );
+                    }
+                  };
+                  proto[flag] = true;
+                };
+
+                // CDocument.Update_ForeignCursor — Run.GetDocumentPositionFromObject
+                // missing when remote cursor references a non-ParaRun.
+                shield(
+                  innerWindow?.CDocument?.prototype,
+                  'Update_ForeignCursor',
+                  'Update_ForeignCursor',
+                );
+
+                // CGraphicObjects.removeById — oDrawing.isHdrFtrChild missing.
+                // CGraphicObjects.updateCursorType — oShape.isForm missing.
+                const CGO =
+                  innerWindow?.AscFormat?.CGraphicObjects ||
+                  innerWindow?.AscCommonWord?.CGraphicObjects;
+                shield(CGO?.prototype, 'removeById', 'CGraphicObjects.removeById');
+                shield(
+                  CGO?.prototype,
+                  'updateCursorType',
+                  'CGraphicObjects.updateCursorType',
+                );
+
+                // CCollaborativeChanges.Apply_Data — individual change
+                // class methods (private_UpdateMarksOnSplit etc.) missing.
+                // Wrapping at Apply_Data lets the per-change loop in
+                // Apply_OtherChanges keep going past one bad change.
+                const CCC =
+                  innerWindow?.AscCommon?.CCollaborativeChanges;
+                shield(
+                  CCC?.prototype,
+                  'Apply_Data',
+                  'CCollaborativeChanges.Apply_Data',
+                );
+
                 if (innerEditor) {
                   let proto = Object.getPrototypeOf(innerEditor);
                   while (
@@ -552,9 +759,68 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                         rawLayout.byteOffset,
                         rawLayout.byteOffset + rawLayout.byteLength,
                       ) as ArrayBuffer);
+                // Gather every image registered in OO's document urls so
+                // the PDF writer can find them in /working/media/. Without
+                // this, Print Selection (and any path that goes through OO's
+                // selection renderer) silently drops images.
+                const media = new Map<string, Uint8Array>();
+                try {
+                  const urls =
+                    innerWindow?.AscCommon?.g_oDocumentUrls?.getUrls?.() ?? {};
+                  console.log(
+                    '[OOEditor] g_oDocumentUrls keys:',
+                    Object.keys(urls),
+                  );
+                  // Also peek at OO's image cache — that's where inserted
+                  // images actually live when they were passed as data URLs.
+                  const imgCache =
+                    innerWindow?.Asc?.editor?.ImageLoader?.map_image_index;
+                  if (imgCache) {
+                    console.log(
+                      '[OOEditor] image cache keys:',
+                      Object.keys(imgCache).map(k =>
+                        k.length > 80 ? k.slice(0, 80) + '…' : k,
+                      ),
+                    );
+                  }
+                  await Promise.all(
+                    Object.entries(urls).map(async ([key, value]) => {
+                      if (typeof value !== 'string') return;
+                      try {
+                        const resp = await fetch(value);
+                        if (!resp.ok) return;
+                        const bytes = new Uint8Array(await resp.arrayBuffer());
+                        // x2t expects images at /working/media/<name>. If the
+                        // key already starts with "media/" we strip it; if
+                        // not, we keep the key as the filename.
+                        const name = key.startsWith('media/')
+                          ? key.slice('media/'.length)
+                          : key;
+                        media.set(name, bytes);
+                      } catch (e) {
+                        console.warn(
+                          '[OOEditor] failed to fetch image',
+                          key,
+                          e,
+                        );
+                      }
+                    }),
+                  );
+                  console.log(
+                    '[OOEditor] media files written to /working/media/:',
+                    Array.from(media.keys()),
+                  );
+                } catch (e) {
+                  console.warn('[OOEditor] image gather failed', e);
+                }
+                console.log(
+                  '[OOEditor] PDF layout (dataContainer.data) size:',
+                  layoutBuffer.byteLength,
+                );
                 outBytes = await convertFromInternalToPdf(
                   binBuffer,
                   layoutBuffer,
+                  media,
                 );
               } else {
                 const docType =
@@ -703,6 +969,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         editor.connectMockServer(callbacks);
 
         // Initialize auto-save — readers don't save
+        console.log(
+          '[checkpoint] init gate — canEdit:',
+          canEdit,
+          'abilities:',
+          item.abilities,
+        );
         if (canEdit) initCheckpointing({
           editor,
           format: x2tExtension,
@@ -738,7 +1010,28 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             encryptedKeyChain:
               encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
             callbacks: {
-              onSaveChanges: (_userId, message) => {
+              onSaveChanges: (_userId, message, media) => {
+                // Register any inline media in g_oDocumentUrls BEFORE we
+                // hand the change to OO. The change carries image
+                // references by name; without the bytes registered first,
+                // OO falls back to fetching `<name>` from the editor app
+                // dir and 404s.
+                if (media) {
+                  try {
+                    const docUrls =
+                      innerWindowRef.current?.AscCommon?.g_oDocumentUrls;
+                    if (docUrls) {
+                      for (const [name, url] of Object.entries(media)) {
+                        docUrls.addImageUrl(name, url);
+                      }
+                    }
+                  } catch (e) {
+                    console.warn(
+                      '[OOEditor] failed to register inbound media',
+                      e,
+                    );
+                  }
+                }
                 sendToEditorGuarded(message as any);
               },
               onPeerJoin: (userId, userName, peerCanEdit) => {

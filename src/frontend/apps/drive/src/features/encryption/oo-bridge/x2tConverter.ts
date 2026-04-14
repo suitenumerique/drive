@@ -16,6 +16,7 @@ interface X2TModule {
     readFile(path: string, opts?: { encoding: string }): Uint8Array;
     readdir(path: string): string[];
     unlink(path: string): void;
+    rmdir?(path: string): void;
   };
   ccall(
     ident: string,
@@ -182,6 +183,40 @@ async function ensureFontsLoaded(x2t: X2TModule): Promise<void> {
   fontsLoaded = true;
 }
 
+// Cached state in /working that should NEVER be cleared between conversions:
+// fonts, the CMap database, the themes dir layout. Everything else is
+// per-document scratch (the input bin, intermediate files, extracted media)
+// and must be wiped before each run so we never leak across docs or grow
+// the WASM heap.
+const WORKING_KEEP = new Set(['.', '..', 'fonts', 'cmaps', 'themes']);
+function clearWorkingDir(x2t: X2TModule): void {
+  try {
+    for (const entry of x2t.FS.readdir('/working')) {
+      if (WORKING_KEEP.has(entry)) continue;
+      try {
+        x2t.FS.unlink('/working/' + entry);
+      } catch {
+        /* might be a dir we don't recurse into */
+      }
+    }
+  } catch {
+    /* /working not yet created */
+  }
+  // /working/media/ contents are scratch; wipe per run.
+  try {
+    for (const entry of x2t.FS.readdir('/working/media')) {
+      if (entry === '.' || entry === '..') continue;
+      try {
+        x2t.FS.unlink('/working/media/' + entry);
+      } catch {
+        /* skip */
+      }
+    }
+  } catch {
+    /* media dir not yet created */
+  }
+}
+
 // Emscripten's FS.readFile returns Uint8Array<ArrayBufferLike> (the backing
 // buffer might be a SharedArrayBuffer on some builds). Copy into a fresh
 // ArrayBuffer so the rest of the pipeline can use strict ArrayBuffer types
@@ -282,6 +317,7 @@ export async function convertToInternal(
   images: Array<{ name: string; data: Uint8Array }>;
 }> {
   const x2t = await getX2T();
+  clearWorkingDir(x2t);
   const safeName = sanitize(filename);
   const ext = getExtension(safeName);
   const inputData = new Uint8Array(data);
@@ -345,10 +381,27 @@ export async function convertToInternal(
 export async function convertFromInternal(
   bin: ArrayBuffer,
   targetFormat: string,
-  type?: string
+  type?: string,
+  media?: Map<string, Uint8Array>,
 ): Promise<Uint8Array<ArrayBuffer>> {
   const x2t = await getX2T();
+  clearWorkingDir(x2t);
   const binData = new Uint8Array(bin);
+
+  if (media && media.size > 0) {
+    try {
+      x2t.FS.mkdir('/working/media');
+    } catch {
+      /* exists */
+    }
+    for (const [name, bytes] of media) {
+      try {
+        x2t.FS.writeFile('/working/media/' + name, bytes);
+      } catch (e) {
+        console.warn('[x2t] failed to write media', name, e);
+      }
+    }
+  }
 
   // .bin → intermediate Microsoft format if target is ODF
   const docType = type || EXTENSION_TO_X2T_TYPE[targetFormat] || 'doc';
@@ -406,21 +459,37 @@ export async function convertFromInternal(
  *     produced by OO's `DrawingDocument.ToRendererPart()` and carrying the
  *     per-page layout the PDF writer then wraps into a real PDF file.
  *
- * With both files in place, a single bin → pdf conversion run produces a
- * fully-rendered PDF with the actual document content. Without `pdf.bin`
- * the writer either aborts (docx → pdf returns error 80) or emits an empty
- * skeleton PDF (~1.4 KB).
+ * For documents with embedded images, the PDF writer also reads each
+ * referenced image from `/working/media/<name>` — without those files the
+ * rendered PDF skips images entirely (most visible with Print Selection).
  */
 export async function convertFromInternalToPdf(
   bin: ArrayBuffer,
   pdfLayoutBin: ArrayBuffer,
+  media?: Map<string, Uint8Array>,
 ): Promise<Uint8Array<ArrayBuffer>> {
   const x2t = await getX2T();
+  clearWorkingDir(x2t);
   await ensureFontsLoaded(x2t);
 
   // Pre-computed layout helper — x2t's PDF writer looks for this at a
   // hardcoded path, regardless of what's in params.xml.
   x2t.FS.writeFile('/working/pdf.bin', new Uint8Array(pdfLayoutBin));
+
+  if (media) {
+    try {
+      x2t.FS.mkdir('/working/media');
+    } catch {
+      /* exists */
+    }
+    for (const [name, bytes] of media) {
+      try {
+        x2t.FS.writeFile('/working/media/' + name, bytes);
+      } catch (e) {
+        console.warn('[x2t] failed to write media file', name, e);
+      }
+    }
+  }
 
   const result = runConversion(
     x2t,
