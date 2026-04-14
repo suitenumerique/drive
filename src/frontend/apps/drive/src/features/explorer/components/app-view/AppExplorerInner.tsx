@@ -4,18 +4,14 @@ import clsx from "clsx";
 import { Item } from "@/features/drivers/types";
 import { useEffect, useRef } from "react";
 import { useAppExplorer } from "./AppExplorer";
-import {
-  ContextMenu,
-  HorizontalSeparator,
-  useResponsive,
-} from "@gouvfr-lasuite/ui-kit";
+import { ContextMenu, useResponsive } from "@gouvfr-lasuite/ui-kit";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
+import { useSetSelectedItems } from "@/features/explorer/stores/selectionStore";
+import { AppExplorerSelectionBarGate } from "./AppExplorerSelectionBarGate";
 import {
   AppExplorerBreadcrumbs,
   ExplorerBreadcrumbsMobile,
 } from "@/features/explorer/components/app-view/AppExplorerBreadcrumbs";
-import { ExplorerSelectionBar } from "@/features/explorer/components/app-view/ExplorerSelectionBar";
-import { ExplorerFilters } from "@/features/explorer/components/app-view/ExplorerFilters";
 import { AppExplorerGrid } from "@/features/explorer/components/app-view/AppExplorerGrid";
 import { useCreateMenuItems } from "../../hooks/useCreateMenuItems";
 
@@ -28,16 +24,13 @@ import { useCreateMenuItems } from "../../hooks/useCreateMenuItems";
 export const AppExplorerInner = () => {
   const appExplorer = useAppExplorer();
   const {
-    setSelectedItems,
     itemId,
     setRightPanelForcedItem,
     displayMode,
-    selectedItems,
     dropZone,
   } = useGlobalExplorer();
+  const setSelectedItems = useSetSelectedItems();
   const showFilters = appExplorer.showFilters ?? true;
-  const ref = useRef<Item[]>([]);
-  ref.current = selectedItems;
   const onSelectionStart = ({ event, selection }: SelectionEvent) => {
     if (!event?.ctrlKey && !event?.metaKey) {
       selection.clearSelection();
@@ -168,13 +161,7 @@ export const AppExplorerInner = () => {
           })}
         >
           <div className="explorer__container">
-            {selectedItems.length > 0 ? (
-              <ExplorerSelectionBar />
-            ) : showFilters ? (
-              <ExplorerFilters />
-            ) : (
-              <HorizontalSeparator withPadding={false} />
-            )}
+            <AppExplorerSelectionBarGate showFilters={showFilters} />
 
             <div className="explorer__content">
               {appExplorer.gridHeader ? (

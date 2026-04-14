@@ -1,11 +1,9 @@
 import {
-  SetStateAction,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
-import { Dispatch } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Item,
@@ -34,13 +32,14 @@ import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
 import { useAuth } from "@/features/auth/Auth";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { CustomFilesPreview } from "@/features/ui/preview/custom-files-preview/CustomFilesPreview";
+import {
+  SelectionStoreContext,
+  useCreateSelectionStore,
+} from "@/features/explorer/stores/selectionStore";
 
 export interface GlobalExplorerContextType {
   displayMode: "sdk" | "app";
-  selectedItems: Item[];
-  selectedItemsMap: Record<string, Item>;
   mainWorkspace: Item | undefined;
-  setSelectedItems: Dispatch<SetStateAction<Item[]>>;
   itemId: string;
   item: Item | undefined;
   firstLevelItems: Item[] | undefined;
@@ -119,16 +118,7 @@ export const GlobalExplorerProvider = ({
   const driver = getDriver();
   const { user } = useAuth();
 
-  const [selectedItems, setSelectedItems] = useState<Item[]>([]);
-
-  // Avoid inifinite rerendering
-  const selectedItemsMap = useMemo(() => {
-    const map: Record<string, Item> = {};
-    selectedItems.forEach((item) => {
-      map[item.id] = item;
-    });
-    return map;
-  }, [selectedItems]);
+  const selectionStore = useCreateSelectionStore();
 
   const [rightPanelForcedItem, setRightPanelForcedItem] = useState<Item>();
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
@@ -179,7 +169,7 @@ export const GlobalExplorerProvider = ({
   useEffect(() => {
     // If we open the right panel and we have a selection, we need to clear it.
     if (rightPanelForcedItem?.id === itemId) {
-      setSelectedItems([]);
+      selectionStore.clear();
     }
   }, [rightPanelForcedItem]);
 
@@ -188,7 +178,7 @@ export const GlobalExplorerProvider = ({
    */
   useEffect(() => {
     if (rightPanelOpen) {
-      setSelectedItems([]);
+      selectionStore.clear();
     }
   }, [rightPanelOpen]);
 
@@ -202,16 +192,14 @@ export const GlobalExplorerProvider = ({
 
 
   return (
+    <SelectionStoreContext.Provider value={selectionStore}>
     <GlobalExplorerContext.Provider
       value={{
         treeIsInitialized,
         setTreeIsInitialized,
         firstLevelItems,
         displayMode,
-        selectedItems,
-        selectedItemsMap,
         mainWorkspace,
-        setSelectedItems,
         itemId,
         initialId,
         item,
@@ -307,6 +295,7 @@ export const GlobalExplorerProvider = ({
         setPreviewItem={setPreviewItem}
       />
     </GlobalExplorerContext.Provider>
+    </SelectionStoreContext.Provider>
   );
 };
 

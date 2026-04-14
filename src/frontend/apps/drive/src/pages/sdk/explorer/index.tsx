@@ -14,6 +14,7 @@ import {
 import { PickerFooter } from "@/features/sdk/SdkPickerFooter";
 import { Tooltip } from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
+import { useSyncExternalStore } from "react";
 
 function canPickItem(item: Item) {
   if (item.type !== ItemType.FILE) {
@@ -45,12 +46,18 @@ export default function SdkExplorerPage() {
     },
   });
 
+  const selectedItems = useSyncExternalStore(
+    itemsExplorer.selectionStore.subscribe,
+    itemsExplorer.selectionStore.getSelectedItems,
+    itemsExplorer.selectionStore.getSelectedItems,
+  );
+
   return (
     <div className="sdk__explorer__page">
       <div className="sdk__explorer">
         <EmbeddedExplorer {...itemsExplorer} />
       </div>
-      <PickerFooter token={token} selectedItems={itemsExplorer.selectedItems} />
+      <PickerFooter token={token} selectedItems={selectedItems} />
     </div>
   );
 }

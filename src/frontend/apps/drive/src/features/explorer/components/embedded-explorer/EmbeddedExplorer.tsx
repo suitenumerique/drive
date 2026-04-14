@@ -4,6 +4,11 @@ import { useTranslation } from "react-i18next";
 import { EmbeddedExplorerGridBreadcrumbs } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridBreadcrumbs";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  SelectionStore,
+  SelectionStoreContext,
+  useCreateSelectionStore,
+} from "@/features/explorer/stores/selectionStore";
+import {
   NavigationEvent,
   getOriginalIdFromTreeId,
 } from "@/features/explorer/components/GlobalExplorerContext";
@@ -32,25 +37,20 @@ export type EmbeddedExplorerProps = {
   setCurrentItemId?: (itemId: string | null) => void;
   itemsFilters?: ItemFilters;
   showSearch?: boolean;
+  selectionStore?: SelectionStore;
 };
 
 export const useEmbeddedExplorer = (props: EmbeddedExplorerProps) => {
-  const [selectedItems, setSelectedItems] = useState<Item[]>([]);
+  const selectionStore = useCreateSelectionStore();
   const [currentItemId, setCurrentItemId] = useState<string | null>(
     props.initialFolderId ?? null,
   );
 
   return {
-    selectedItems,
-    setSelectedItems,
+    selectionStore,
     currentItemId,
     setCurrentItemId,
     ...props,
-    gridProps: {
-      ...props.gridProps,
-      selectedItems,
-      setSelectedItems,
-    },
   };
 };
 
@@ -72,6 +72,8 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const itemsRef = useRef<Item[]>([]);
+  const fallbackStore = useCreateSelectionStore();
+  const selectionStore = props.selectionStore ?? fallbackStore;
 
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [inputSearchValue, setInputSearchValue] = useState<string>("");
@@ -84,7 +86,7 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
     if (item.id.includes("::")) {
       item = { ...item, id: getOriginalIdFromTreeId(item.id) };
     }
-    props.gridProps?.setSelectedItems?.([]);
+    props.selectionStore?.clear();
     props.setCurrentItemId?.(item?.id ?? null);
     setInputSearchValue("");
     setSearchQuery("");
@@ -269,7 +271,7 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
   }, [searchQuery, searchItems, t]);
 
   return (
-    <>
+    <SelectionStoreContext.Provider value={selectionStore}>
       <div
         className={clsx("embedded-explorer", {
           "embedded-explorer--compact": props.isCompact,
@@ -311,6 +313,6 @@ export const EmbeddedExplorer = (props: EmbeddedExplorerProps) => {
           </div>
         </div>
       </div>
-    </>
+    </SelectionStoreContext.Provider>
   );
 };

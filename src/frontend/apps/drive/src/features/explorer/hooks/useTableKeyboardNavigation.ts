@@ -2,6 +2,7 @@ import { Item } from "@/features/drivers/types";
 import { Table } from "@tanstack/react-table";
 import { KeyboardEvent, useEffect, useState } from "react";
 import { useGlobalExplorer } from "../components/GlobalExplorerContext";
+import { useSelectionStore } from "../stores/selectionStore";
 
 export const useTableKeyboardNavigation = ({
   table,
@@ -12,8 +13,9 @@ export const useTableKeyboardNavigation = ({
   tableRef: React.RefObject<HTMLTableElement | null>;
   isDisabled?: boolean;
 }) => {
-  const { setSelectedItems, selectedItemsMap, selectedItems, itemId } =
-    useGlobalExplorer();
+  const { itemId } = useGlobalExplorer();
+  const selectionStore = useSelectionStore();
+  const setSelectedItems = selectionStore.setSelectedItems;
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
     null
   );
@@ -28,12 +30,18 @@ export const useTableKeyboardNavigation = ({
       return;
     }
 
-    if (tableRef.current) {
-      tableRef.current.focus({
-        preventScroll: true,
-      });
-    }
-  }, [selectedItems, isDisabled]);
+    const focusTable = () => {
+      if (tableRef.current) {
+        tableRef.current.focus({ preventScroll: true });
+      }
+    };
+
+    // Focus initially, then whenever the selection changes. Subscribing directly
+    // to the store (instead of via a hook) avoids re-rendering the caller on
+    // every selection mutation during a marquee drag.
+    focusTable();
+    return selectionStore.subscribe(focusTable);
+  }, [selectionStore, tableRef, isDisabled]);
 
   useEffect(() => {
     // When we change item during navigation, the first arrow trigger must select the first item. Reset the state.
@@ -70,13 +78,13 @@ export const useTableKeyboardNavigation = ({
 
   const arrowUp = (event: KeyboardEvent<HTMLTableElement>) => {
     // If no item is selected, select the first item
-    if (selectedItems.length === 0) {
+    if (selectionStore.getSelectedItems().length === 0) {
       firstPress();
     } else {
       // Find the current selected item index
       const rows = table.getRowModel().rows;
-      const currentSelectedIndex = rows.findIndex(
-        (row) => selectedItemsMap[row.original.id]
+      const currentSelectedIndex = rows.findIndex((row) =>
+        selectionStore.isSelected(row.original.id),
       );
 
       // If we found the current selected item and there's a previous row
@@ -104,7 +112,7 @@ export const useTableKeyboardNavigation = ({
 
   const arrowDown = (event: KeyboardEvent<HTMLTableElement>) => {
     // If no item is selected, select the first item
-    if (selectedItems.length === 0) {
+    if (selectionStore.getSelectedItems().length === 0) {
       firstPress();
     } else {
       // Find the current selected item index
@@ -114,15 +122,17 @@ export const useTableKeyboardNavigation = ({
       if (event.shiftKey) {
         // Get the last selected item index when using shift key
         const selectedIndices = rows
-          .map((row, index) => (selectedItemsMap[row.original.id] ? index : -1))
+          .map((row, index) =>
+            selectionStore.isSelected(row.original.id) ? index : -1,
+          )
           .filter((index) => index !== -1);
         currentSelectedIndex =
           selectedIndices.length > 0
             ? selectedIndices[selectedIndices.length - 1]
             : -1;
       } else {
-        currentSelectedIndex = rows.findIndex(
-          (row) => selectedItemsMap[row.original.id]
+        currentSelectedIndex = rows.findIndex((row) =>
+          selectionStore.isSelected(row.original.id),
         );
       }
 

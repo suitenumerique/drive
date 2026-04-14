@@ -1,5 +1,6 @@
 import { CellContext } from "@tanstack/react-table";
 import { Item, ItemUploadState } from "@/features/drivers/types";
+import { memo } from "react";
 import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { timeAgo } from "@/features/explorer/utils/utils";
 import { removeFileExtension } from "../../utils/mimeTypes";
@@ -9,7 +10,7 @@ import clsx from "clsx";
 
 type EmbeddedExplorerGridMobileCellProps = CellContext<Item, unknown>;
 
-export const EmbeddedExplorerGridMobileCell = (
+const EmbeddedExplorerGridMobileCellComponent = (
   params: EmbeddedExplorerGridMobileCellProps,
 ) => {
   const item = params.row.original;
@@ -48,3 +49,7 @@ export const EmbeddedExplorerGridMobileCell = (
     </div>
   );
 };
+
+export const EmbeddedExplorerGridMobileCell = memo(
+  EmbeddedExplorerGridMobileCellComponent,
+);

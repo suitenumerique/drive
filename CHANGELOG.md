@@ -27,6 +27,10 @@ and this project adheres to
 
 - 🐛(frontend) fix "+ New" menu in read-only folders and virtual tabs
 
+### Fixed
+
+- 🐛(frontend) range selection freezes when there are many items in the list
+
 ## [v0.16.0] - 2026-04-09
 
 ### Added

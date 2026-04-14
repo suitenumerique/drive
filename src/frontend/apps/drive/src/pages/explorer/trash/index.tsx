@@ -18,7 +18,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import undoIcon from "@/assets/icons/undo_blue.svg";
 import cancelIcon from "@/assets/icons/cancel_blue.svg";
-import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
+import {
+  useSelectedItems,
+  useSetSelectedItems,
+} from "@/features/explorer/stores/selectionStore";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { useState } from "react";
 import { HardDeleteConfirmationModal } from "@/features/explorer/components/modals/HardDeleteConfirmationModal";
@@ -83,7 +86,8 @@ export default function TrashPage() {
 TrashPage.getLayout = getGlobalExplorerLayout;
 
 export const TrashPageSelectionBarActions = () => {
-  const { selectedItems, setSelectedItems } = useGlobalExplorer();
+  const selectedItems = useSelectedItems();
+  const setSelectedItems = useSetSelectedItems();
   const restoreItem = useMutationRestoreItems();
   const hardDeleteConfirmationModal = useModal();
   const hardDeleteItem = useMutationHardDeleteItems();

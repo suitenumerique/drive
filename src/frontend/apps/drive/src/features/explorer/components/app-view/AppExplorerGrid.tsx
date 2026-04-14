@@ -34,8 +34,6 @@ export const AppExplorerGrid = () => {
   const router = useRouter();
 
   const {
-    setSelectedItems,
-    selectedItems,
     onNavigate,
     setRightPanelForcedItem,
     item,
@@ -129,8 +127,6 @@ export const AppExplorerGrid = () => {
         onNavigate={effectiveOnNavigate}
         setRightPanelForcedItem={setRightPanelForcedItem}
         disableItemDragAndDrop={appExplorer.disableItemDragAndDrop}
-        selectedItems={selectedItems}
-        setSelectedItems={setSelectedItems}
         enableMetaKeySelection={true}
         displayMode={displayMode}
         canSelect={appExplorer.canSelect}
