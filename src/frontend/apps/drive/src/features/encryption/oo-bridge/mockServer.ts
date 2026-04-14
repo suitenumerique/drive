@@ -20,6 +20,10 @@ export interface MockServerOptions {
   onCursorUpdate?: (cursor: unknown) => void;
   /** Called when save lock is checked */
   onSaveLockCheck?: () => boolean;
+  /** Called when local OO emits a `message` payload (chat / comment events) */
+  onMessageBroadcast?: (messages: unknown[]) => void;
+  /** Called when local OO emits a `meta` payload (comment locks etc.) */
+  onMetaBroadcast?: (messages: unknown[]) => void;
   /** Resolve an image name to a blob URL (for embedded images) */
   resolveImageURL?: (name: string) => Promise<string>;
 }
@@ -76,6 +80,8 @@ export function createMockServerCallbacks(
       // OO internally constructs _userId = config.user.id + indexUser
       // Lock and change user fields MUST match this concatenated value
       const ooInternalId = getOOInternalUserId();
+
+      console.log('[mockServer] OO →', msg.type, msg);
 
       switch (msg.type) {
         case 'auth':
@@ -166,6 +172,38 @@ export function createMockServerCallbacks(
           options.onCursorUpdate?.(msg.cursor);
           break;
 
+        case 'message': {
+          const payload = (msg as any).messages
+            ? ((msg as any).messages as unknown[])
+            : (msg as any).message !== undefined
+              ? [(msg as any).message]
+              : [];
+          console.log(
+            '[mockServer] outbound MESSAGE — payload count:',
+            payload.length,
+            'raw msg:',
+            msg,
+          );
+          if (payload.length > 0) {
+            options.onMessageBroadcast?.(payload);
+          }
+          break;
+        }
+
+        case 'meta': {
+          const payload = ((msg as any).messages as unknown[] | undefined) ?? [];
+          console.log(
+            '[mockServer] outbound META — payload count:',
+            payload.length,
+            'raw msg:',
+            msg,
+          );
+          if (payload.length > 0) {
+            options.onMetaBroadcast?.(payload);
+          }
+          break;
+        }
+
         case 'getMessages':
           sendToEditor({ type: 'message' } as OOMessage);
           break;
@@ -178,7 +216,11 @@ export function createMockServerCallbacks(
           break;
 
         default:
-          // Unknown message type — log for debugging
+          console.warn(
+            '[mockServer] UNHANDLED outbound type:',
+            msg.type,
+            msg,
+          );
           break;
       }
     },

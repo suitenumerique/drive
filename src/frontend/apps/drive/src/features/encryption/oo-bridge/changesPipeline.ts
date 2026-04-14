@@ -86,17 +86,23 @@ export function handleOutgoingChanges(
  */
 export function handleIncomingChanges(rawChanges: OOChange[]): OOMessage {
   patchIndex += rawChanges.length;
-  // _onSaveChanges in sdk-all.js buffers into _saveChangesChunks and only
-  // flushes when endSaveChanges is truthy. Without it, remote edits never
-  // reach _updateChanges and the document silently stops updating.
+  // Mirror the sender's outgoing saveChanges as closely as possible.
+  // _onSaveChanges in sdk-all.js requires endSaveChanges to flush from the
+  // chunks buffer; isCoAuthoring/releaseLocks/excelAdditionalInfo influence
+  // the post-apply lock+recalc path, so we set the same values the sender did.
   return {
     type: 'saveChanges',
     changes: rawChanges,
     changesIndex: patchIndex,
     syncChangesIndex: patchIndex,
+    startSaveChanges: true,
     endSaveChanges: true,
+    isCoAuthoring: true,
     locks: [],
     excelAdditionalInfo: null,
+    unlock: false,
+    releaseLocks: true,
+    deleteIndex: null,
   } as OOMessage;
 }
 

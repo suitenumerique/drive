@@ -83,6 +83,35 @@ interface OOEditorProps {
 
 type EditorState = 'loading' | 'decrypting' | 'converting' | 'mounting' | 'ready' | 'error';
 
+// Whitelist of message types we accept from the network and forward into OO.
+// A malicious peer in a shared room can craft any payload they want over the
+// relay; if we forwarded blindly, they could emit `documentOpen`, `rpc`,
+// `executeCommand`, `pluginEvent`, `forceSave`, etc. and reach internal OO
+// surfaces that aren't meant to be peer-driven. We accept only the message
+// types we ourselves send for collaboration.
+const INBOUND_ALLOWLIST: ReadonlySet<string> = new Set([
+  'saveChanges',
+  'cursor',
+  'message',
+  'meta',
+  'getLock',
+  'releaseLock',
+  'connectState',
+  'authChanges',
+]);
+
+function sendToEditorGuarded(msg: { type?: string } & Record<string, unknown>) {
+  if (!msg || typeof msg.type !== 'string' || !INBOUND_ALLOWLIST.has(msg.type)) {
+    console.warn(
+      '[OOEditor] dropping inbound message with disallowed type:',
+      msg?.type,
+    );
+    return;
+  }
+  console.log('[OOEditor] → OO', msg.type, msg);
+  sendToEditor(msg as any);
+}
+
 export const OOEditor = ({ item }: OOEditorProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -303,10 +332,21 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               compactToolbar: false,
               forcesave: true,
               autosave: true,
-            },
+              macros: false,
+              plugins: false,
+            } as any,
             permissions: {
+              edit: true,
+              comment: true,
+              review: true,
+              deleteCommentAuthorOnly: false,
+              editCommentAuthorOnly: false,
               chat: false,
-            },
+              macros: 'none',
+              protect: false,
+              modifyContentControl: false,
+              fillForms: false,
+            } as any,
           },
           events: {
             onAppReady: () => {
@@ -340,6 +380,38 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // OnlyOffice's connectMockServer expects window.APP to exist
         (window as any).APP = (window as any).APP || {};
 
+        // Defense-in-depth: the moment OO inserts its iframe into the DOM,
+        // pin a sandbox attribute on it. We have to allow scripts + same-origin
+        // (OO needs both) but block top navigation, popups, form submissions,
+        // and pointer/keyboard escapes — so a malicious peer can't trigger
+        // navigations or open external windows via crafted change records.
+        const placeholder = document.getElementById('oo-editor-placeholder');
+        const sandboxObserver = placeholder
+          ? new MutationObserver(() => {
+              const iframe = placeholder.querySelector('iframe');
+              if (iframe && !iframe.hasAttribute('sandbox')) {
+                iframe.setAttribute(
+                  'sandbox',
+                  [
+                    'allow-scripts',
+                    'allow-same-origin',
+                    'allow-downloads',
+                    'allow-forms',
+                    'allow-modals',
+                    'allow-popups',
+                    'allow-popups-to-escape-sandbox',
+                  ].join(' '),
+                );
+              }
+            })
+          : null;
+        sandboxObserver?.observe(placeholder!, {
+          childList: true,
+          subtree: true,
+        });
+        // Stop the observer once the iframe exists — no need to keep watching.
+        setTimeout(() => sandboxObserver?.disconnect(), 5000);
+
         // Create the editor
         const editor = new window.DocsAPI.DocEditor(
           'oo-editor-placeholder',
@@ -372,6 +444,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           },
           onCursorUpdate: cursor => {
             relayRef.current?.sendCursor(cursor);
+          },
+          onMessageBroadcast: messages => {
+            relayRef.current?.sendMessage(messages);
+          },
+          onMetaBroadcast: messages => {
+            relayRef.current?.sendMeta(messages);
           },
           onSaveLockCheck: () => false,
         });
@@ -414,7 +492,17 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
             callbacks: {
               onRemoteChanges: changes => {
-                sendToEditor(handleIncomingChanges(changes));
+                sendToEditorGuarded(handleIncomingChanges(changes));
+                // Apply_Changes() on the receiver is not driven by saveChanges
+                // alone — it gets called from save-flow and lock-release paths.
+                // Without a follow-up unSaveLock, queued remote changes stay
+                // in m_aChanges and only flush on the next local activity
+                // (visible for text edits, but breaks comments where the user
+                // doesn't keep typing). Push an unSaveLock to force the flush.
+                sendToEditorGuarded({
+                  type: 'releaseLock',
+                  locks: [],
+                } as any);
               },
               onPeerJoin: (userId, userName, peerCanEdit) => {
                 if (peerCanEdit) editorPeersRef.current.add(userId);
@@ -454,7 +542,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 if (!senderOOId) return;
                 const cursorString =
                   typeof cursor === 'string' ? cursor : JSON.stringify(cursor);
-                sendToEditor({
+                sendToEditorGuarded({
                   type: 'cursor',
                   messages: [
                     {
@@ -464,6 +552,32 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       time: Date.now(),
                     },
                   ],
+                } as any);
+              },
+              onMessageBroadcast: (userId, messages) => {
+                console.log(
+                  '[OOEditor] RECV oo:message from',
+                  userId,
+                  'count:',
+                  messages.length,
+                  messages,
+                );
+                sendToEditorGuarded({
+                  type: 'message',
+                  messages,
+                } as any);
+              },
+              onMetaBroadcast: (userId, messages) => {
+                console.log(
+                  '[OOEditor] RECV oo:meta from',
+                  userId,
+                  'count:',
+                  messages.length,
+                  messages,
+                );
+                sendToEditorGuarded({
+                  type: 'meta',
+                  messages,
                 } as any);
               },
               onSaveLock: () => {

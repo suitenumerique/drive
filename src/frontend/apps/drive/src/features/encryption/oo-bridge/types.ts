@@ -19,7 +19,11 @@ export interface OOParticipant {
   id: string;
   idOriginal: string;
   username: string;
-  indexUser: number;
+  // Empty string so OO computes _userId = config.user.id + '' = config.user.id.
+  // Without this, OO appends the index to the user id (sub_1) but comments
+  // embed config.user.id directly (sub) — the mismatch breaks comment author
+  // attribution at the receiver.
+  indexUser: string;
   connectionId: string;
   isCloseCoAuthoring: boolean;
   view: boolean;
@@ -27,7 +31,7 @@ export interface OOParticipant {
 
 /** Return type for getParticipants() */
 export interface OOParticipantList {
-  index: number;
+  index: string;
   list: OOParticipant[];
 }
 
@@ -50,7 +54,8 @@ export type OOEventType =
   | 'message'
   | 'forceSaveStart'
   | 'forceSave'
-  | 'connectState';
+  | 'connectState'
+  | 'meta';
 
 /** Message from OnlyOffice editor */
 export interface OOMessage {

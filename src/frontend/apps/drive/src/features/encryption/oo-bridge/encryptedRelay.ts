@@ -76,6 +76,20 @@ type AuthenticatedMessage = {
   userName: string;
 };
 
+/** A chat / comment-event message from a peer (OO `message` channel) */
+type MessageBroadcastMessage = {
+  type: 'oo:message';
+  userId: string;
+  messages: unknown[];
+};
+
+/** A document meta event from a peer (OO `meta` channel — comment locks etc.) */
+type MetaBroadcastMessage = {
+  type: 'oo:meta';
+  userId: string;
+  messages: unknown[];
+};
+
 /** All possible system messages */
 type SystemMessage =
   | AuthenticatedMessage
@@ -86,7 +100,9 @@ type SystemMessage =
   | LockReleaseMessage
   | CursorUpdateMessage
   | SaveLockMessage
-  | SaveUnlockMessage;
+  | SaveUnlockMessage
+  | MessageBroadcastMessage
+  | MetaBroadcastMessage;
 
 export interface RelayCallbacks {
   /** Called when a remote peer's changes arrive (decrypted) */
@@ -107,6 +123,10 @@ export interface RelayCallbacks {
   onCursorUpdate: (userId: string, cursor: unknown) => void;
   /** Called when save lock status changes */
   onSaveLock: (userId: string, locked: boolean) => void;
+  /** Called when a peer broadcasts an OO `message` payload (chat, comments) */
+  onMessageBroadcast: (userId: string, messages: unknown[]) => void;
+  /** Called when a peer broadcasts an OO `meta` payload (comment locks etc.) */
+  onMetaBroadcast: (userId: string, messages: unknown[]) => void;
   /** Called on connection status change */
   onConnectionChange: (connected: boolean) => void;
   /** Called when max reconnection attempts are exhausted */
@@ -225,6 +245,26 @@ export class EncryptedRelay {
     });
   }
 
+  /** Broadcast an OO `message` payload (chat or comment events) */
+  async sendMessage(messages: unknown[]): Promise<void> {
+    console.log('[relay] SEND oo:message', messages);
+    await this.sendEncryptedSystem({
+      type: 'oo:message',
+      userId: this.userId,
+      messages,
+    });
+  }
+
+  /** Broadcast an OO `meta` payload (comment locks, etc.) */
+  async sendMeta(messages: unknown[]): Promise<void> {
+    console.log('[relay] SEND oo:meta', messages);
+    await this.sendEncryptedSystem({
+      type: 'oo:meta',
+      userId: this.userId,
+      messages,
+    });
+  }
+
   /** Acquire or release the save lock (not encrypted — no sensitive content) */
   sendSaveLock(locked: boolean): void {
     this.sendSystem({
@@ -315,6 +355,13 @@ export class EncryptedRelay {
         const json = new TextDecoder().decode(plaintext);
         const parsed = JSON.parse(json);
 
+        console.log(
+          '[relay] RECV decrypted',
+          'shape:',
+          Array.isArray(parsed) ? `array(${parsed.length})` : parsed?.type,
+          parsed,
+        );
+
         // Check if it's an encrypted system message (has a "type" field)
         if (parsed.type && typeof parsed.type === 'string') {
           this.handleSystemMessage(parsed as SystemMessage);
@@ -329,6 +376,7 @@ export class EncryptedRelay {
   }
 
   private handleSystemMessage(msg: SystemMessage): void {
+    console.log('[relay] dispatch system msg:', msg.type);
     switch (msg.type) {
       case 'system:authenticated':
         // Auth confirmed — nothing to do, connection is already established
@@ -356,6 +404,12 @@ export class EncryptedRelay {
         break;
       case 'save:unlock':
         this.callbacks.onSaveLock(msg.userId, false);
+        break;
+      case 'oo:message':
+        this.callbacks.onMessageBroadcast(msg.userId, msg.messages);
+        break;
+      case 'oo:meta':
+        this.callbacks.onMetaBroadcast(msg.userId, msg.messages);
         break;
     }
   }
