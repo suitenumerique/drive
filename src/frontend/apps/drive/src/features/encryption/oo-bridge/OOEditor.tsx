@@ -20,7 +20,12 @@ import { Loader } from '@gouvfr-lasuite/cunningham-react';
 import { Item } from '@/features/drivers/types';
 import { getDriver } from '@/features/config/Config';
 import { fetchAPI } from '@/features/api/fetchApi';
-import { convertToInternal, convertFromInternal } from './x2tConverter';
+import {
+  convertToInternal,
+  convertFromInternal,
+  convertFromInternalToPdf,
+} from './x2tConverter';
+import { EXTENSION_TO_X2T_TYPE } from './types';
 import { createMockServerCallbacks, sendToEditor, setEditorInstance } from './mockServer';
 import {
   initLocalUser,
@@ -348,13 +353,58 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             },
             onDocumentReady: () => {
               setState('ready');
+              try {
+                // Capture target format/title/downloadType from the download
+                // flow into a window-level context so our printPdf hook can
+                // branch on the right format and decide between print vs
+                // download. The printPdf signature doesn't include this info,
+                // so we hook one level up on the prototype.
+                const ooIframe = document.querySelector(
+                  'iframe[name="frameEditor"]',
+                ) as HTMLIFrameElement | null;
+                const innerWindow = ooIframe?.contentWindow as any;
+                const innerEditor = innerWindow?.editor || innerWindow?.editorCell;
+                if (innerEditor) {
+                  let proto = Object.getPrototypeOf(innerEditor);
+                  while (
+                    proto &&
+                    !Object.prototype.hasOwnProperty.call(
+                      proto,
+                      '_downloadAsUsingServer',
+                    )
+                  ) {
+                    proto = Object.getPrototypeOf(proto);
+                  }
+                  if (proto && !proto.__driveDownloadPatched) {
+                    const original = proto._downloadAsUsingServer;
+                    proto._downloadAsUsingServer = function (
+                      _actionType: unknown,
+                      _options: unknown,
+                      oAdditionalData: any,
+                      _dataContainer: unknown,
+                      downloadType: unknown,
+                    ) {
+                      (window as any).__driveDownloadCtx = {
+                        title: oAdditionalData?.title,
+                        outputformat: oAdditionalData?.outputformat,
+                        downloadType,
+                      };
+                      // eslint-disable-next-line prefer-rest-params
+                      return original.apply(this, arguments as any);
+                    };
+                    proto.__driveDownloadPatched = true;
+                  }
+                }
+              } catch (e) {
+                console.warn('[OOEditor] failed to patch download flow', e);
+              }
             },
-            onError: event => {
+            onError: (event: { data: unknown }) => {
               console.error('OnlyOffice error:', event.data);
               setError(String(event.data));
               setState('error');
             },
-          },
+          } as any,
         };
 
         if (!window.DocsAPI) {
@@ -369,6 +419,229 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // user ends up with two different colors. Returning a deterministic
         // color per id keeps both call sites in sync.
         (window as any).APP = (window as any).APP || {};
+        // Image insertion: OO calls window.parent.APP.UploadImageFiles when
+        // the user drops/pastes an image. With a real DocumentServer it'd
+        // POST the bytes and return URLs from the server. For E2E we never
+        // touch the network — we encode each file as a data: URL and hand it
+        // back. OO embeds the data URL directly into the document model, so
+        // it travels inside the saveChanges envelope to peers (no side
+        // channel needed) and OO reads the bytes back at save time to
+        // serialize them into the .bin / .odt as real binary.
+        //
+        // Hard size cap: an image is base64-encoded into the change record
+        // and ships through the encrypted relay, which itself caps payload
+        // size. Reject up front with OO's own UplImageSize error (-9) so OO
+        // shows its native "image too large" toast.
+        const MAX_IMAGE_BYTES = 50 * 1024 * 1024;
+        const ASC_ERR_UPL_IMAGE_SIZE = -9;
+
+        // Convert image files into data: URLs ready to hand back to OO.
+        // Enforces the per-file size cap and rejects with the size-error
+        // sentinel so callers can return OO's own UplImageSize toast.
+        const filesToDataURLs = async (
+          files: FileList | File[],
+        ): Promise<string[]> => {
+          const arr = Array.from(files);
+          for (const f of arr) {
+            if (f.size > MAX_IMAGE_BYTES) {
+              throw ASC_ERR_UPL_IMAGE_SIZE;
+            }
+          }
+          return Promise.all(
+            arr.map(
+              file =>
+                new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onload = () => resolve(reader.result as string);
+                  reader.onerror = () =>
+                    reject(reader.error ?? new Error('FileReader failed'));
+                  reader.readAsDataURL(file);
+                }),
+            ),
+          );
+        };
+
+        // Drag-and-drop / paste path.
+        (window as any).APP.UploadImageFiles = (
+          files: FileList | File[],
+          _documentId: string,
+          _documentUserId: string,
+          _jwt: string,
+          callback: (err: number | null, urls: string[]) => void,
+        ) => {
+          filesToDataURLs(files)
+            .then(urls => callback(null, urls))
+            .catch(err => {
+              if (err !== ASC_ERR_UPL_IMAGE_SIZE) {
+                console.error('[OOEditor] UploadImageFiles failed', err);
+              }
+              callback(ASC_ERR_UPL_IMAGE_SIZE, []);
+            });
+        };
+
+        // Print / Print Selection / Save-as ANY format.
+        // OO routes ALL these through the same `printPdf` hook because our
+        // download type is None (no real Document Server). We branch on the
+        // target format captured by the _downloadAsUsingServer patch above:
+        //   - PDF   → dual-input bin → pdf via convertFromInternalToPdf
+        //   - other → asc_nativeGetFile + convertFromInternal(target ext)
+        // Then we trigger a download (or hand the URL to OO for print).
+        const MIME_BY_EXT: Record<string, string> = {
+          pdf: 'application/pdf',
+          docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          doc: 'application/msword',
+          odt: 'application/vnd.oasis.opendocument.text',
+          rtf: 'application/rtf',
+          txt: 'text/plain',
+          html: 'text/html',
+          xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          xls: 'application/vnd.ms-excel',
+          ods: 'application/vnd.oasis.opendocument.spreadsheet',
+          csv: 'text/csv',
+          pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          ppt: 'application/vnd.ms-powerpoint',
+          odp: 'application/vnd.oasis.opendocument.presentation',
+        };
+
+        (window as any).APP.printPdf = (
+          dataContainer: { data: Uint8Array | ArrayBuffer | null },
+          callback: (result: unknown) => void,
+        ) => {
+          (async () => {
+            try {
+              const ooIframe = document.querySelector(
+                'iframe[name="frameEditor"]',
+              ) as HTMLIFrameElement | null;
+              const innerWindow = ooIframe?.contentWindow as any;
+              const innerEditor =
+                innerWindow?.editor || innerWindow?.editorCell;
+              if (!innerEditor?.asc_nativeGetFile) {
+                throw new Error('inner editor not ready');
+              }
+              const rawBin = innerEditor.asc_nativeGetFile();
+              if (!rawBin) {
+                throw new Error('empty document');
+              }
+              let binBuffer: ArrayBuffer;
+              if (typeof rawBin === 'string') {
+                binBuffer = new TextEncoder().encode(rawBin)
+                  .buffer as ArrayBuffer;
+              } else if (rawBin instanceof ArrayBuffer) {
+                binBuffer = rawBin;
+              } else {
+                binBuffer = rawBin.buffer;
+              }
+
+              const ctx = (window as any).__driveDownloadCtx ?? {};
+              const title: string = ctx.title || `document.${x2tExtension}`;
+              const ext = (title.split('.').pop() || x2tExtension).toLowerCase();
+              const isPrint = ctx.downloadType === 'asc_onPrintUrl';
+
+              let outBytes: Uint8Array<ArrayBuffer>;
+              const mime = MIME_BY_EXT[ext] || 'application/octet-stream';
+
+              if (ext === 'pdf') {
+                const rawLayout = dataContainer?.data;
+                if (!rawLayout) {
+                  throw new Error('missing PDF layout bin (dataContainer.data)');
+                }
+                const layoutBuffer: ArrayBuffer =
+                  rawLayout instanceof ArrayBuffer
+                    ? rawLayout
+                    : (rawLayout.buffer.slice(
+                        rawLayout.byteOffset,
+                        rawLayout.byteOffset + rawLayout.byteLength,
+                      ) as ArrayBuffer);
+                outBytes = await convertFromInternalToPdf(
+                  binBuffer,
+                  layoutBuffer,
+                );
+              } else {
+                const docType =
+                  EXTENSION_TO_X2T_TYPE[ext] || x2tType || 'doc';
+                outBytes = await convertFromInternal(
+                  binBuffer,
+                  ext,
+                  docType,
+                );
+              }
+
+              const blob = new Blob([outBytes], { type: mime });
+              const url = URL.createObjectURL(blob);
+
+              if (isPrint) {
+                // Hidden iframe in the PARENT window opens the PDF and we
+                // call contentWindow.print() once it loads. This shows
+                // Chrome's top-level Print dialog. Doing it inside OO's
+                // sandboxed iframe crashes the nested PDF viewer.
+                const old = document.getElementById('drive-print-iframe');
+                if (old) old.remove();
+                const iframe = document.createElement('iframe');
+                iframe.id = 'drive-print-iframe';
+                iframe.style.position = 'fixed';
+                iframe.style.right = '0';
+                iframe.style.bottom = '0';
+                iframe.style.width = '0';
+                iframe.style.height = '0';
+                iframe.style.border = '0';
+                iframe.onload = () => {
+                  try {
+                    iframe.contentWindow?.focus();
+                    iframe.contentWindow?.print();
+                  } catch (e) {
+                    console.error('[OOEditor] print failed, opening tab', e);
+                    window.open(url, '_blank');
+                  }
+                };
+                iframe.src = url;
+                document.body.appendChild(iframe);
+              } else {
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = title;
+                a.rel = 'noopener';
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+              }
+
+              // Tell OO we're done. Passing null short-circuits its
+              // processSavedFile path so it doesn't try to fire its own
+              // download/print on top of ours.
+              callback(null);
+            } catch (err) {
+              console.error('[OOEditor] printPdf failed', err);
+              callback(null);
+            }
+          })();
+        };
+
+        // Modal "Insert image / Replace image / From file" path: opens a
+        // file picker and forwards the result through the same converter.
+        (window as any).APP.AddImage = (
+          successCb: (res: { url: string; name: string }) => void,
+          errorCb?: (err?: unknown) => void,
+        ) => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*';
+          input.style.display = 'none';
+          input.addEventListener('change', () => {
+            const file = input.files?.[0];
+            document.body.removeChild(input);
+            if (!file) {
+              errorCb?.();
+              return;
+            }
+            filesToDataURLs([file])
+              .then(([url]) => successCb({ url, name: file.name }))
+              .catch(err => errorCb?.(err));
+          });
+          document.body.appendChild(input);
+          input.click();
+        };
+
         (window as any).APP.getUserColor = (userId: string) => {
           if (!userId) return null;
           // 16 colors evenly distributed on the HSL wheel — same id → same color.
@@ -397,35 +670,6 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           const c = palette[hash % palette.length];
           return { r: c.r, g: c.g, b: c.b, a: 255 };
         };
-
-        // Pin a sandbox attribute on OO's iframe the moment it's inserted,
-        // so a malicious peer can't reach out via crafted change records.
-        const placeholder = document.getElementById('oo-editor-placeholder');
-        const sandboxObserver = placeholder
-          ? new MutationObserver(() => {
-              const iframe = placeholder.querySelector('iframe');
-              if (iframe && !iframe.hasAttribute('sandbox')) {
-                iframe.setAttribute(
-                  'sandbox',
-                  [
-                    'allow-scripts',
-                    'allow-same-origin',
-                    'allow-downloads',
-                    'allow-forms',
-                    'allow-modals',
-                    'allow-popups',
-                    'allow-popups-to-escape-sandbox',
-                  ].join(' '),
-                );
-              }
-            })
-          : null;
-        sandboxObserver?.observe(placeholder!, {
-          childList: true,
-          subtree: true,
-        });
-        // Stop the observer once the iframe exists — no need to keep watching.
-        setTimeout(() => sandboxObserver?.disconnect(), 5000);
 
         // Create the editor
         const editor = new window.DocsAPI.DocEditor(

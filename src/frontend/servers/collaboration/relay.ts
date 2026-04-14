@@ -15,6 +15,11 @@ const PORT = parseInt(process.env.RELAY_PORT || '4100', 10);
 const DRIVE_API_URL = process.env.DRIVE_API_URL || 'http://app-dev:8000';
 const MAX_HISTORY = 500;
 const PING_INTERVAL_MS = 30_000;
+// Upper bound on a single relayed message. The frontend caps raw image bytes
+// at 50 MB; allow ~75 MB on the wire to absorb base64 (+33%), the JSON change
+// envelope and the encryption header. A peer trying to push more is closed
+// by ws with code 1009 (Message Too Big).
+const MAX_PAYLOAD_BYTES = 75 * 1024 * 1024;
 
 // --- Auth ---
 
@@ -304,7 +309,10 @@ const httpServer = createServer((_req, res) => {
   res.end();
 });
 
-const wss = new WebSocketServer({ server: httpServer });
+const wss = new WebSocketServer({
+  server: httpServer,
+  maxPayload: MAX_PAYLOAD_BYTES,
+});
 
 wss.on('connection', async (ws, req) => {
   const url = new URL(req.url || '/', 'ws://localhost');

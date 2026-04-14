@@ -123,6 +123,65 @@ function sanitize(input: string): string {
 /**
  * Run x2t conversion on the WASM module.
  */
+// Basic Latin font set used by the x2t PDF writer. These are the same
+// metrically-compatible substitutes OnlyOffice ships for Arial / Calibri /
+// Times New Roman / Courier New, which is what virtually every Office doc
+// references. Loaded lazily on first PDF conversion since they're ~3 MB.
+const PDF_FONT_FILES = [
+  'Arimo-Regular.ttf',
+  'Arimo-Bold.ttf',
+  'Arimo-Italic.ttf',
+  'Arimo-BoldItalic.ttf',
+  'Carlito-Regular.ttf',
+  'Carlito-Bold.ttf',
+  'Carlito-Italic.ttf',
+  'Carlito-BoldItalic.ttf',
+  'Tinos-Regular.ttf',
+  'Tinos-Bold.ttf',
+  'Tinos-Italic.ttf',
+  'Tinos-BoldItalic.ttf',
+  'Cousine-Regular.ttf',
+  'Cousine-Bold.ttf',
+  'Cousine-Italic.ttf',
+  'Cousine-BoldItalic.ttf',
+];
+
+let fontsLoaded = false;
+async function ensureFontsLoaded(x2t: X2TModule): Promise<void> {
+  if (fontsLoaded) return;
+  const fontsBase = '/onlyoffice/v9/fonts/fonts/';
+  await Promise.all(
+    PDF_FONT_FILES.map(async name => {
+      try {
+        const resp = await fetch(fontsBase + name);
+        if (!resp.ok) return;
+        const buf = new Uint8Array(await resp.arrayBuffer());
+        x2t.FS.writeFile('/working/fonts/' + name, buf);
+      } catch {
+        /* font missing — skip */
+      }
+    }),
+  );
+  // Load the CMap database that x2t's PDF writer needs to encode glyphs.
+  try {
+    x2t.FS.mkdir('/working/cmaps');
+  } catch {
+    /* exists */
+  }
+  try {
+    const resp = await fetch(
+      '/onlyoffice/v9/sdkjs/pdf/src/engine/cmap.bin',
+    );
+    if (resp.ok) {
+      const buf = new Uint8Array(await resp.arrayBuffer());
+      x2t.FS.writeFile('/working/cmaps/cmap.bin', buf);
+    }
+  } catch {
+    /* cmap missing */
+  }
+  fontsLoaded = true;
+}
+
 // Emscripten's FS.readFile returns Uint8Array<ArrayBufferLike> (the backing
 // buffer might be a SharedArrayBuffer on some builds). Copy into a fresh
 // ArrayBuffer so the rest of the pipeline can use strict ArrayBuffer types
@@ -142,31 +201,68 @@ function runConversion(
   x2t.FS.writeFile('/working/' + inputName, inputData);
 
   const outputPath = `/working/${inputName}.${outputFormat}`;
+  // For PDF output, x2t's writer needs extra params the default conversion
+  // path doesn't: an explicit format code, the font directory, and the CMap
+  // database. Adding these only for the PDF step so other paths stay
+  // untouched.
+  const pdfExtras =
+    outputFormat === 'pdf'
+      ? [
+          '  <m_nFormatTo>513</m_nFormatTo>',
+          '  <m_sFontDir>/working/fonts/</m_sFontDir>',
+          '  <m_sCmapDir>/working/cmaps/</m_sCmapDir>',
+        ]
+      : [];
   const params = [
     '<?xml version="1.0" encoding="utf-8"?>',
     '<TaskQueueDataConvert',
     '  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"',
     '  xmlns:xsd="http://www.w3.org/2001/XMLSchema">',
     `  <m_sFileFrom>/working/${inputName}</m_sFileFrom>`,
-    '  <m_sThemeDir>/working/themes</m_sThemeDir>',
     `  <m_sFileTo>${outputPath}</m_sFileTo>`,
+    '  <m_sThemeDir>/working/themes</m_sThemeDir>',
     '  <m_bIsNoBase64>false</m_bIsNoBase64>',
-    '  <m_sFontDir>/working/fonts/</m_sFontDir>',
+    ...pdfExtras,
     '</TaskQueueDataConvert>',
   ].join('\n');
 
   x2t.FS.writeFile('/working/params.xml', params);
 
+  if (outputFormat === 'pdf') {
+    try {
+      const fontsList = x2t.FS.readdir('/working/fonts');
+      console.log(
+        '[x2t] /working/fonts contents before PDF conversion:',
+        fontsList,
+      );
+    } catch (e) {
+      console.warn('[x2t] could not list /working/fonts:', e);
+    }
+    console.log('[x2t] params.xml:\n' + params);
+  }
+
+  let rc: unknown = -1;
   try {
-    x2t.ccall('main1', 'number', ['string'], ['/working/params.xml']);
+    rc = x2t.ccall('main1', 'number', ['string'], ['/working/params.xml']);
   } catch (e) {
-    console.error('[x2t] conversion failed:', e);
+    console.error('[x2t] conversion threw:', e);
     return null;
+  }
+  if (outputFormat === 'pdf') {
+    console.log('[x2t] main1 return code for PDF:', rc);
   }
 
   try {
     return toStrictUint8Array(x2t.FS.readFile(outputPath));
-  } catch {
+  } catch (e) {
+    if (outputFormat === 'pdf') {
+      console.warn('[x2t] readFile failed for', outputPath, e);
+      try {
+        console.log('[x2t] /working contents:', x2t.FS.readdir('/working'));
+      } catch {
+        /* ignore */
+      }
+    }
     return null;
   }
 }
@@ -295,6 +391,45 @@ export async function convertFromInternal(
   const result = runConversion(x2t, currentName, currentData, targetFormat);
   if (!result) {
     throw new Error(`Failed to convert from ${currentName} to ${targetFormat} (step 2)`);
+  }
+  return result;
+}
+
+/**
+ * Convert to PDF using OO's dual-input mode.
+ *
+ * x2t's PDF writer doesn't take a single document binary and render it from
+ * scratch — it needs TWO files side by side in the WASM FS:
+ *   - the native .bin (canvas_word/cell/slide, from `asc_nativeGetFile()`),
+ *     which carries the document content and structure;
+ *   - a pre-computed PDF-layout binary at the hardcoded path `/working/pdf.bin`,
+ *     produced by OO's `DrawingDocument.ToRendererPart()` and carrying the
+ *     per-page layout the PDF writer then wraps into a real PDF file.
+ *
+ * With both files in place, a single bin → pdf conversion run produces a
+ * fully-rendered PDF with the actual document content. Without `pdf.bin`
+ * the writer either aborts (docx → pdf returns error 80) or emits an empty
+ * skeleton PDF (~1.4 KB).
+ */
+export async function convertFromInternalToPdf(
+  bin: ArrayBuffer,
+  pdfLayoutBin: ArrayBuffer,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const x2t = await getX2T();
+  await ensureFontsLoaded(x2t);
+
+  // Pre-computed layout helper — x2t's PDF writer looks for this at a
+  // hardcoded path, regardless of what's in params.xml.
+  x2t.FS.writeFile('/working/pdf.bin', new Uint8Array(pdfLayoutBin));
+
+  const result = runConversion(
+    x2t,
+    'document.bin',
+    new Uint8Array(bin),
+    'pdf',
+  );
+  if (!result) {
+    throw new Error('Failed to convert .bin to pdf');
   }
   return result;
 }
