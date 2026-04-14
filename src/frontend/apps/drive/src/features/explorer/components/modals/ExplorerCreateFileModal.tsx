@@ -8,6 +8,8 @@ import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationCreateFileFromTemplate } from "../../hooks/useMutations";
+import { useRouter } from "next/router";
+import { useGlobalExplorer } from "../GlobalExplorerContext";
 
 type Inputs = {
   filename: string;
@@ -33,12 +35,15 @@ const getExtension = (type: ExplorerCreateFileType) => {
 export const ExplorerCreateFileModal = (
   props: Pick<ModalProps, "isOpen" | "onClose"> & {
     parentId?: string;
+    redirectAfterCreate?: boolean;
     type: ExplorerCreateFileType;
   }
 ) => {
   const { t } = useTranslation();
   const form = useForm<Inputs>();
   const createFileFromTemplate = useMutationCreateFileFromTemplate();
+  const router = useRouter();
+  const { setSelectedItems } = useGlobalExplorer();
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     const extension = getExtension(props.type);
@@ -50,9 +55,13 @@ export const ExplorerCreateFileModal = (
         title: data.filename,
       },
       {
-        onSuccess: () => {
+        onSuccess: (createdItem) => {
           form.reset();
           props.onClose();
+          if (props.redirectAfterCreate && createdItem?.id) {
+            router.push(`/explorer/items/my-files`);
+            setSelectedItems([createdItem]);
+          }
         },
       }
     );

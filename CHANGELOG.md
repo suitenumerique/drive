@@ -23,6 +23,10 @@ and this project adheres to
 - 🐛(front) set size and variant on trash navigate modal #666
 - 🐛(frontend) fix uploads continuing after parent folder deletion
 
+### Fixed
+
+- 🐛(frontend) fix "+ New" menu in read-only folders and virtual tabs
+
 ## [v0.16.0] - 2026-04-09
 
 ### Added

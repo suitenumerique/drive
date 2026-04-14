@@ -13,6 +13,8 @@ import {
 import { ExplorerCreateFolderModal } from "../components/modals/ExplorerCreateFolderModal";
 import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { useState } from "react";
+import { useRouter } from "next/router";
+import { isMyFilesRoute } from "@/utils/defaultRoutes";
 
 type UseCreateMenuItemsProps = {
   includeImport?: boolean;
@@ -38,8 +40,13 @@ export const useCreateMenuItems = ({
 }: UseCreateMenuItemsProps = {}): UseCreateMenuItemsReturn => {
   const { t } = useTranslation();
   const { item, itemId } = useGlobalExplorer();
-  const canCreateChildren = item ? item?.abilities?.children_create : true;
-  const isHidden = !canCreateChildren;
+  const router = useRouter();
+  const isOnMyFiles = isMyFilesRoute(router.pathname);
+  const canCreateHere = item?.abilities?.children_create ?? false;
+  const effectiveParentId = canCreateHere ? itemId : undefined;
+  // On "My files", the item is created without a parent, which already puts
+  // it in the current view — no redirect needed.
+  const shouldRedirectToCreated = !canCreateHere && !isOnMyFiles;
 
   const createFolderModal = useModal();
   const [createFileModalType, setCreateFileModalType] =
@@ -55,7 +62,6 @@ export const useCreateMenuItems = ({
     {
       icon: <img src={createFolderSvg.src} alt="" />,
       label: t("explorer.tree.create.folder"),
-      isHidden,
       callback: createFolderModal.open,
     },
     { type: "separator" },
@@ -66,7 +72,6 @@ export const useCreateMenuItems = ({
       {
         icon: <img src={uploadFileSvg.src} alt="" />,
         label: t("explorer.tree.import.files"),
-        isHidden,
         callback: () => {
           document.getElementById("import-files")?.click();
         },
@@ -74,7 +79,6 @@ export const useCreateMenuItems = ({
       {
         icon: <img src={uploadFolderSvg.src} alt="" />,
         label: t("explorer.tree.import.folders"),
-        isHidden,
         callback: () => {
           document.getElementById("import-folders")?.click();
         },
@@ -93,7 +97,6 @@ export const useCreateMenuItems = ({
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         }),
         label: t("explorer.tree.create.file.doc"),
-        isHidden,
         callback: () => openCreateFileModal(ExplorerCreateFileType.DOC),
       },
       {
@@ -104,7 +107,6 @@ export const useCreateMenuItems = ({
             "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         }),
         label: t("explorer.tree.create.file.powerpoint"),
-        isHidden,
         callback: () => openCreateFileModal(ExplorerCreateFileType.POWERPOINT),
       },
       {
@@ -115,7 +117,6 @@ export const useCreateMenuItems = ({
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         }),
         label: t("explorer.tree.create.file.calc"),
-        isHidden,
         callback: () => openCreateFileModal(ExplorerCreateFileType.CALC),
       },
     );
@@ -123,10 +124,15 @@ export const useCreateMenuItems = ({
 
   const modals = (
     <>
-      <ExplorerCreateFolderModal {...createFolderModal} parentId={itemId} />
+      <ExplorerCreateFolderModal
+        {...createFolderModal}
+        parentId={effectiveParentId}
+        redirectAfterCreate={shouldRedirectToCreated}
+      />
       <ExplorerCreateFileModal
         {...createFileModal}
-        parentId={itemId}
+        parentId={effectiveParentId}
+        redirectAfterCreate={shouldRedirectToCreated}
         type={createFileModalType}
       />
     </>
