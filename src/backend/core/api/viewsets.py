@@ -1508,12 +1508,41 @@ class ItemViewSet(
         else:
             key = item.file_key
 
+        # epoch_ms is mandatory: the snapshot epoch anchors the relay history
+        # replay model. Missing or invalid values would break joiners that
+        # rely on x-amz-meta-epoch to decide which events to replay, so we
+        # refuse the upload rather than silently degrading.
+        epoch_ms = request.data.get("epoch_ms")
+        if epoch_ms is None:
+            return drf.response.Response(
+                {"detail": _("epoch_ms is required.")},
+                status=drf.status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            epoch_int = int(epoch_ms)
+        except (TypeError, ValueError):
+            return drf.response.Response(
+                {"detail": _("epoch_ms must be an integer.")},
+                status=drf.status.HTTP_400_BAD_REQUEST,
+            )
+        if epoch_int <= 0:
+            return drf.response.Response(
+                {"detail": _("epoch_ms must be a positive integer.")},
+                status=drf.status.HTTP_400_BAD_REQUEST,
+            )
+
         upload_url = utils.generate_upload_policy_for_key(
-            key, content_type="application/octet-stream"
+            key,
+            content_type="application/octet-stream",
+            metadata={"epoch": str(epoch_int)},
         )
 
         return drf.response.Response(
-            {"upload_url": upload_url, "filename": new_filename or item.filename},
+            {
+                "upload_url": upload_url,
+                "filename": new_filename or item.filename,
+                "required_headers": {"x-amz-meta-epoch": str(epoch_int)},
+            },
             status=drf.status.HTTP_200_OK,
         )
 

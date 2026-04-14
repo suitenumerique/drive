@@ -37,6 +37,7 @@ import {
 } from './participants';
 import { resetPatchIndex } from './changesPipeline';
 import { EncryptedRelay } from './encryptedRelay';
+import { withIncomingOTGate } from './incomingOtGate';
 import {
   acquireCellLock,
   releaseCellLock,
@@ -130,6 +131,34 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   // Reference to the inner OO iframe's window — used to register media in
   // g_oDocumentUrls when inbound saveChanges envelopes carry inline images.
   const innerWindowRef = useRef<any>(null);
+  /**
+   * Remote saveChanges envelopes that arrived before OO finished loading
+   * the base document. OO silently drops external saveChanges that land
+   * before `onDocumentReady`, so we hold them in order and drain once the
+   * editor is ready. Critical for the history-replay path on join: the
+   * relay dumps every pending change immediately after WS open, often
+   * before OO has mounted the document.
+   */
+  const pendingRemoteChangesRef = useRef<Array<() => void>>([]);
+  const documentReadyRef = useRef(false);
+
+  const drainPendingRemoteChanges = useCallback(() => {
+    const queue = pendingRemoteChangesRef.current;
+    if (queue.length === 0) return;
+    console.log(
+      '[OOEditor] draining',
+      queue.length,
+      'remote changes queued before document ready',
+    );
+    pendingRemoteChangesRef.current = [];
+    for (const fn of queue) {
+      try {
+        fn();
+      } catch (e) {
+        console.warn('[OOEditor] pending remote change drain error', e);
+      }
+    }
+  }, []);
   const canEdit = !!item.abilities?.partial_update;
 
   const mime = item.mimetype || '';
@@ -163,7 +192,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
    * Upload encrypted content to S3.
    */
   const uploadEncrypted = useCallback(
-    async (content: ArrayBuffer, _format: string): Promise<void> => {
+    async (
+      content: ArrayBuffer,
+      _format: string,
+      epochMs: number,
+    ): Promise<void> => {
       const vaultClient = window.__driveVaultClient;
       if (!vaultClient) {
         throw new Error('Vault client not available');
@@ -188,21 +221,34 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         return bytes.buffer;
       });
 
-      // Encrypt via vault
+      // Encrypt via vault. The vault worker takes ownership of every buffer
+      // passed through postMessage (transfer list), so hand it fresh copies
+      // of the key material — otherwise the canonical keys held by the
+      // relay / init closure get detached and subsequent encrypt/decrypt
+      // calls fail with "wrong secret key for the given ciphertext".
       const { encryptedData } = await vaultClient.encryptWithKey(
         content,
-        entryKeyBytes.buffer,
-        encryptedKeyChain.length > 0 ? encryptedKeyChain : undefined
+        entryKeyBytes.buffer.slice(0),
+        encryptedKeyChain.length > 0
+          ? encryptedKeyChain.map(k => k.slice(0))
+          : undefined
       );
 
       // Get a presigned S3 upload URL for the existing file key
       // S3 versioning keeps previous versions — no new filename needed
       const urlResponse = await fetchAPI(
         `items/${item.id}/encryption-upload-url/`,
-        { method: 'POST' },
+        {
+          method: 'POST',
+          body: JSON.stringify({ epoch_ms: epochMs }),
+          headers: { 'Content-Type': 'application/json' },
+        },
         { redirectOn40x: false },
       );
-      const { upload_url: uploadUrl } = await urlResponse.json();
+      const {
+        upload_url: uploadUrl,
+        required_headers: requiredHeaders = {},
+      } = await urlResponse.json();
 
       // Upload encrypted content to S3 via presigned URL (XHR like regular Drive uploads)
       const encryptedBytes = new Uint8Array(encryptedData);
@@ -211,6 +257,13 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         xhr.open('PUT', uploadUrl);
         xhr.setRequestHeader('X-amz-acl', 'private');
         xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+        // Every header that was bound into the presigned signature MUST
+        // be sent verbatim or S3 returns SignatureDoesNotMatch.
+        for (const [name, value] of Object.entries(
+          requiredHeaders as Record<string, string>,
+        )) {
+          xhr.setRequestHeader(name, value);
+        }
         xhr.addEventListener('error', () => reject(new Error('S3 upload network error')));
         xhr.addEventListener('abort', () => reject(new Error('S3 upload aborted')));
         xhr.addEventListener('readystatechange', () => {
@@ -225,6 +278,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         xhr.send(encryptedBytes);
       });
 
+      // Tell the relay this epoch is now durable in S3 — it will schedule
+      // a delayed purge of older history entries after the grace window.
+      relayRef.current?.sendSaveCommitted(epochMs);
     },
     [item.id]
   );
@@ -266,6 +322,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           cache: 'no-store',
         });
         if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+        // Read the snapshot epoch written at save time. Requires nginx to
+        // forward the upstream S3 `x-amz-meta-epoch` header to the browser.
+        // Missing (pre-epoch file) → 0 = "no snapshot anchor, replay all".
+        const rawEpoch = response.headers.get('x-amz-meta-epoch');
+        const snapshotEpochMs = rawEpoch ? Number(rawEpoch) : 0;
         const encryptedBuffer = await response.arrayBuffer();
 
         const vaultClient = window.__driveVaultClient;
@@ -287,10 +348,15 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           return bytes.buffer;
         });
 
+        // Clone the key material — the vault worker transfers its inputs,
+        // detaching the originals. We still need these buffers intact for
+        // the EncryptedRelay constructor below.
         const { data: decryptedBuffer } = await vaultClient.decryptWithKey(
           encryptedBuffer,
-          entryKeyBytes.buffer,
-          encryptedKeyChain.length > 0 ? encryptedKeyChain : undefined
+          entryKeyBytes.buffer.slice(0),
+          encryptedKeyChain.length > 0
+            ? encryptedKeyChain.map(k => k.slice(0))
+            : undefined
         );
         if (cancelled) return;
 
@@ -426,6 +492,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             },
             onDocumentReady: () => {
               setState('ready');
+              documentReadyRef.current = true;
+              // OO can now accept external saveChanges. Drain anything the
+              // relay replayed while the document was still loading.
+              drainPendingRemoteChanges();
               try {
                 const ooIframe = document.querySelector(
                   'iframe[name="frameEditor"]',
@@ -1009,30 +1079,45 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             encryptedSymmetricKey: entryKeyBytes.buffer,
             encryptedKeyChain:
               encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
+            sinceTimestampMs: Number.isFinite(snapshotEpochMs)
+              ? snapshotEpochMs
+              : 0,
             callbacks: {
               onSaveChanges: (_userId, message, media) => {
-                // Register any inline media in g_oDocumentUrls BEFORE we
-                // hand the change to OO. The change carries image
-                // references by name; without the bytes registered first,
-                // OO falls back to fetching `<name>` from the editor app
-                // dir and 404s.
-                if (media) {
-                  try {
-                    const docUrls =
-                      innerWindowRef.current?.AscCommon?.g_oDocumentUrls;
-                    if (docUrls) {
-                      for (const [name, url] of Object.entries(media)) {
-                        docUrls.addImageUrl(name, url);
+                const apply = () => {
+                  // Register any inline media in g_oDocumentUrls BEFORE we
+                  // hand the change to OO. The change carries image
+                  // references by name; without the bytes registered first,
+                  // OO falls back to fetching `<name>` from the editor app
+                  // dir and 404s.
+                  if (media) {
+                    try {
+                      const docUrls =
+                        innerWindowRef.current?.AscCommon?.g_oDocumentUrls;
+                      if (docUrls) {
+                        for (const [name, url] of Object.entries(media)) {
+                          docUrls.addImageUrl(name, url);
+                        }
                       }
+                    } catch (e) {
+                      console.warn(
+                        '[OOEditor] failed to register inbound media',
+                        e,
+                      );
                     }
-                  } catch (e) {
-                    console.warn(
-                      '[OOEditor] failed to register inbound media',
-                      e,
-                    );
                   }
+                  sendToEditorGuarded(message as any);
+                };
+                // Hold remote changes that arrive before the base document
+                // has finished loading — OO drops external saveChanges in
+                // that window. The drain runs inside onDocumentReady.
+                if (!documentReadyRef.current) {
+                  pendingRemoteChangesRef.current.push(() =>
+                    withIncomingOTGate(apply),
+                  );
+                  return;
                 }
-                sendToEditorGuarded(message as any);
+                withIncomingOTGate(apply);
               },
               onPeerJoin: (userId, userName, peerCanEdit) => {
                 if (peerCanEdit) editorPeersRef.current.add(userId);

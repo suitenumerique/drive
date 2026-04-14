@@ -261,6 +261,12 @@ services:
     build:
       context: ./src/frontend/servers/collaboration
       dockerfile: Dockerfile
+    # Bind-mount the relay source so edits on the host hot-reload through
+    # `tsx watch` without rebuilding the image. The host's node_modules
+    # (populated by `npm install` in the relay dir) is used directly.
+    volumes:
+      - ./src/frontend/servers/collaboration:/app
+    command: ["npx", "tsx", "watch", "relay.ts"]
     ports:
       - "4100:4100"
     environment:

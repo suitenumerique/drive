@@ -9,6 +9,7 @@
 import { convertFromInternal } from './x2tConverter';
 import { getPatchIndex } from './changesPipeline';
 import { acquireSaveLock, releaseSaveLock, isSaveLocked } from './locks';
+import { pauseIncomingOT, resumeIncomingOT } from './incomingOtGate';
 
 const CHECKPOINT_CHANGES_THRESHOLD = 50;
 const CHECKPOINT_TIME_INTERVAL_MS = 15_000; // 15 seconds for testing
@@ -39,7 +40,11 @@ let autoSaveTimer: ReturnType<typeof setInterval> | null = null;
 
 /** Callback for uploading encrypted content */
 let uploadCallback:
-  | ((content: ArrayBuffer, format: string) => Promise<void>)
+  | ((
+      content: ArrayBuffer,
+      format: string,
+      epochMs: number,
+    ) => Promise<void>)
   | null = null;
 
 /**
@@ -55,7 +60,11 @@ export function initCheckpointing(opts: {
   format: string;
   type: string;
   userId: string;
-  onUpload: (content: ArrayBuffer, format: string) => Promise<void>;
+  onUpload: (
+    content: ArrayBuffer,
+    format: string,
+    epochMs: number,
+  ) => Promise<void>;
   /** Return true if this client should be responsible for saving.
    *  When absent, all clients save (single-user mode). */
   isSaveLeader?: () => boolean;
@@ -173,7 +182,20 @@ async function saveCheckpoint(): Promise<void> {
       return;
     }
 
-    const rawBin = innerEditor.asc_nativeGetFile();
+    // Capture the snapshot epoch and extract the native binary under the
+    // incoming-OT gate so no remote change can be applied between the two
+    // operations. Any remote change that arrives during this window is
+    // queued and drained after we release — those events have a relay
+    // timestamp > epochMs and will be replayed on joiners as "post-snapshot".
+    let rawBin: unknown;
+    let epochMs: number;
+    pauseIncomingOT();
+    try {
+      epochMs = Date.now();
+      rawBin = innerEditor.asc_nativeGetFile();
+    } finally {
+      resumeIncomingOT();
+    }
 
     if (!rawBin) {
       console.warn('Checkpoint: empty document, skipping save');
@@ -191,7 +213,7 @@ async function saveCheckpoint(): Promise<void> {
     } else if (rawBin instanceof ArrayBuffer) {
       binBuffer = rawBin;
     } else {
-      binBuffer = rawBin.buffer;
+      binBuffer = (rawBin as { buffer: ArrayBuffer }).buffer;
     }
 
     if (binBuffer.byteLength === 0) {
@@ -245,7 +267,7 @@ async function saveCheckpoint(): Promise<void> {
     // Upload (encryption happens in the callback). Note that the vault
     // transfers the buffer into a worker, so `converted.buffer` is detached
     // after this await — read the byte count from the local capture above.
-    await uploadCallback(converted.buffer, originalFormat);
+    await uploadCallback(converted.buffer, originalFormat, epochMs);
 
     lastCheckpointIndex = getPatchIndex();
     lastCheckpointTime = Date.now();
@@ -256,6 +278,8 @@ async function saveCheckpoint(): Promise<void> {
       originalFormat,
       '(images:',
       media.size,
+      ', epochMs:',
+      epochMs,
       ')',
     );
   } catch (error) {

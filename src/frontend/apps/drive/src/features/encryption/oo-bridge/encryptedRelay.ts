@@ -156,6 +156,13 @@ export class EncryptedRelay {
   private maxReconnectAttempts = 3;
   private destroyed = false;
   private pendingOutgoing: ArrayBuffer[] = [];
+  /**
+   * Snapshot epoch (client UTC ms) baked into the S3 file this peer just
+   * loaded. The relay replays events strictly newer than this so we don't
+   * double-apply changes already in the snapshot. Updated after every
+   * successful local save.
+   */
+  private sinceTimestampMs: number;
 
   constructor(opts: {
     roomId: string;
@@ -165,6 +172,8 @@ export class EncryptedRelay {
     encryptedSymmetricKey: ArrayBuffer;
     encryptedKeyChain: ArrayBuffer[];
     callbacks: RelayCallbacks;
+    /** Snapshot epoch (ms) from S3 metadata; 0 means no snapshot. */
+    sinceTimestampMs?: number;
   }) {
     this.roomId = opts.roomId;
     this.userId = opts.userId;
@@ -173,13 +182,18 @@ export class EncryptedRelay {
     this.encryptedSymmetricKey = opts.encryptedSymmetricKey;
     this.encryptedKeyChain = opts.encryptedKeyChain;
     this.callbacks = opts.callbacks;
+    this.sinceTimestampMs = opts.sinceTimestampMs ?? 0;
   }
 
   /** Connect to the relay server */
   connect(): void {
     if (this.destroyed) return;
 
-    const url = `${RELAY_URL}?room=${this.roomId}`;
+    const params = new URLSearchParams({ room: this.roomId });
+    if (this.sinceTimestampMs > 0) {
+      params.set('since', String(this.sinceTimestampMs));
+    }
+    const url = `${RELAY_URL}?${params.toString()}`;
     this.ws = new WebSocket(url);
     // Don't set binaryType to 'arraybuffer' — we need to distinguish
     // text frames (JSON system messages) from binary frames (encrypted patches).
@@ -281,6 +295,18 @@ export class EncryptedRelay {
     });
   }
 
+  /**
+   * Notify the relay that a fresh S3 snapshot has been committed with the
+   * given epoch (client UTC ms). The relay schedules a delayed purge of
+   * every history entry whose timestamp is <= epochMs.
+   */
+  sendSaveCommitted(epochMs: number): void {
+    if (epochMs > this.sinceTimestampMs) {
+      this.sinceTimestampMs = epochMs;
+    }
+    this.sendSystem({ type: 'save:committed', epochMs });
+  }
+
   /** Disconnect and clean up */
   destroy(): void {
     this.destroyed = true;
@@ -302,6 +328,23 @@ export class EncryptedRelay {
 
   // --- Private ---
 
+  /**
+   * The vault worker takes ownership of every ArrayBuffer it receives via
+   * postMessage (transfer list), detaching the original. Our key material is
+   * long-lived and used across many encrypt/decrypt calls, so we hand the
+   * worker a FRESH copy each time — otherwise the first save() in the
+   * session detaches the key and every subsequent decrypt fails with
+   * "wrong secret key for the given ciphertext".
+   */
+  private cloneKey(): ArrayBuffer {
+    return this.encryptedSymmetricKey.slice(0);
+  }
+
+  private cloneKeyChain(): ArrayBuffer[] | undefined {
+    if (this.encryptedKeyChain.length === 0) return undefined;
+    return this.encryptedKeyChain.map(k => k.slice(0));
+  }
+
   private sendSystem(msg: object): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(msg));
@@ -310,16 +353,34 @@ export class EncryptedRelay {
 
   /** Encrypt a system message and send as binary frame */
   private async sendEncryptedSystem(msg: object): Promise<void> {
+    const type = (msg as { type?: string }).type ?? '?';
     const plaintext = new TextEncoder().encode(JSON.stringify(msg)).buffer;
+    const plaintextSize = plaintext.byteLength;
 
     try {
       const { encryptedData } = await this.vaultClient.encryptWithKey(
         plaintext,
-        this.encryptedSymmetricKey,
-        this.encryptedKeyChain.length > 0 ? this.encryptedKeyChain : undefined,
+        this.cloneKey(),
+        this.cloneKeyChain(),
       );
 
       if (this.ws?.readyState === WebSocket.OPEN) {
+        const head = new Uint8Array(
+          encryptedData.slice(0, Math.min(16, encryptedData.byteLength)),
+        );
+        const headHex = Array.from(head)
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+        console.log(
+          '[relay] send',
+          type,
+          'plaintext:',
+          plaintextSize,
+          'cipher:',
+          encryptedData.byteLength,
+          'head:',
+          headHex,
+        );
         this.ws.send(encryptedData);
       }
     } catch (err) {
@@ -354,11 +415,20 @@ export class EncryptedRelay {
         return;
       }
 
+      // Capture a fingerprint of the incoming frame BEFORE we hand the
+      // buffer to the vault worker (which transfers ownership, detaching
+      // the original). This lets us log size + leading bytes on failure.
+      const head = new Uint8Array(buffer.slice(0, Math.min(16, buffer.byteLength)));
+      const headHex = Array.from(head)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      const size = buffer.byteLength;
+
       try {
         const { data: plaintext } = await this.vaultClient.decryptWithKey(
           buffer,
-          this.encryptedSymmetricKey,
-          this.encryptedKeyChain.length > 0 ? this.encryptedKeyChain : undefined,
+          this.cloneKey(),
+          this.cloneKeyChain(),
         );
 
         const json = new TextDecoder().decode(plaintext);
@@ -368,7 +438,14 @@ export class EncryptedRelay {
           this.handleSystemMessage(parsed as SystemMessage);
         }
       } catch (err) {
-        console.warn('[relay] Failed to decrypt incoming data:', err);
+        console.warn(
+          '[relay] decrypt failed — size:',
+          size,
+          'head:',
+          headHex,
+          'err:',
+          err,
+        );
       }
     }
   }
