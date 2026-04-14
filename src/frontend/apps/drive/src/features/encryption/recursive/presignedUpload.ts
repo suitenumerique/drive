@@ -25,7 +25,10 @@ export async function putToS3(
   const resp = await fetch(uploadUrl, {
     method: 'PUT',
     body: new Uint8Array(body),
-    headers: { 'X-amz-acl': 'private' },
+    headers: {
+      'X-amz-acl': 'private',
+      'Content-Type': 'application/octet-stream',
+    },
     signal,
   });
   if (!resp.ok) {

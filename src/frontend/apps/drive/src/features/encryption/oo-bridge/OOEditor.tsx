@@ -24,11 +24,11 @@ import { convertToInternal, convertFromInternal } from './x2tConverter';
 import { createMockServerCallbacks, sendToEditor, setEditorInstance } from './mockServer';
 import {
   initLocalUser,
-  getLocalUser,
   getUniqueOOId,
   addRemoteUser,
   removeRemoteUser,
   buildConnectStateMessage,
+  getRemoteOOInternalId,
 } from './participants';
 import { resetPatchIndex, handleIncomingChanges } from './changesPipeline';
 import { EncryptedRelay } from './encryptedRelay';
@@ -96,6 +96,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const scriptLoadedRef = useRef(false);
   // Connected peers with edit capability (not including self). Used for save leader election.
   const editorPeersRef = useRef<Set<string>>(new Set());
+  // Cached reference to the OO inner editor (lives inside frameEditor iframe).
+  // Used to read the local cursor on each keystroke since OO doesn't auto-send
+  // it during text insertion.
+  const innerEditorRef = useRef<any>(null);
   const canEdit = !!item.abilities?.partial_update;
 
   const mime = item.mimetype || '';
@@ -310,6 +314,16 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             },
             onDocumentReady: () => {
               setState('ready');
+              try {
+                const iframe = document.querySelector(
+                  'iframe[name="frameEditor"]',
+                ) as HTMLIFrameElement | null;
+                const innerWin = iframe?.contentWindow as any;
+                innerEditorRef.current =
+                  innerWin?.Asc?.editor || innerWin?.editor || null;
+              } catch {
+                /* inner editor not reachable — cursor sync will no-op */
+              }
             },
             onError: event => {
               console.error('OnlyOffice error:', event.data);
@@ -339,8 +353,19 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         const callbacks = createMockServerCallbacks({
           docType,
           onLocalChanges: (changes: OOChange[]) => {
-            // Broadcast to peers if relay is connected
             relayRef.current?.sendChanges(changes);
+            // OO doesn't fire its cursor-send path on text insertion (only on
+            // mouse/arrow moves), so we read the cursor ourselves from the
+            // inner editor and push it through the relay.
+            try {
+              const cursorBin =
+                innerEditorRef.current?.WordControl?.m_oLogicDocument?.History?.Get_DocumentPositionBinary?.();
+              if (cursorBin) {
+                relayRef.current?.sendCursor(cursorBin);
+              }
+            } catch {
+              /* swallow — cursor sync is best-effort */
+            }
           },
           onLockRequest: (type, lockData) => {
             relayRef.current?.sendLock(type, lockData);
@@ -351,38 +376,6 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           onSaveLockCheck: () => false,
         });
         editor.connectMockServer(callbacks);
-
-        // Debug helper — call window.__ooDebugType('hello') from the
-        // browser console to inject text via OO's inner editor API.
-        // If this works but remote changes don't render, the bug is in
-        // our incoming-changes routing, not in OO itself.
-        (window as any).__ooDebugType = (text: string) => {
-          try {
-            const inner =
-              (window as any).Asc?.editor ||
-              (window as any).editor ||
-              (window as any).asc_docs_api;
-            if (!inner) {
-              console.warn('[debug] no inner editor on window');
-              return;
-            }
-            if (typeof inner.asc_paste === 'function') {
-              inner.asc_paste(text);
-              return;
-            }
-            const iframe = document.querySelector(
-              'iframe[name="frameEditor"]',
-            ) as HTMLIFrameElement | null;
-            const innerWin = iframe?.contentWindow as any;
-            if (innerWin?.Asc?.editor?.asc_paste) {
-              innerWin.Asc.editor.asc_paste(text);
-              return;
-            }
-            console.warn('[debug] could not find a way to inject text');
-          } catch (e) {
-            console.error('[debug] inject failed', e);
-          }
-        };
 
         // Initialize auto-save — readers don't save
         if (canEdit) initCheckpointing({
@@ -421,38 +414,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
             callbacks: {
               onRemoteChanges: changes => {
-                const localOOId = getLocalUser().ooId;
-                const decoded = changes.map(c => {
-                  let op: unknown = c.change;
-                  try {
-                    op = JSON.parse(c.change);
-                  } catch {
-                    /* keep raw */
-                  }
-                  return {
-                    user: c.user,
-                    useridoriginal: c.useridoriginal,
-                    fromSelf:
-                      c.user === localOOId ||
-                      c.useridoriginal === localOOId,
-                    op,
-                  };
-                });
-                console.log(
-                  '[OOEditor] remote changes (decoded):',
-                  decoded.length,
-                  decoded,
-                );
-                const msg = handleIncomingChanges(changes);
-                console.log(
-                  '[OOEditor] → OO:',
-                  msg.type,
-                  'changesIndex:',
-                  (msg as any).changesIndex,
-                  'count:',
-                  (msg as any).changes?.length,
-                );
-                sendToEditor(msg);
+                sendToEditor(handleIncomingChanges(changes));
               },
               onPeerJoin: (userId, userName, peerCanEdit) => {
                 if (peerCanEdit) editorPeersRef.current.add(userId);
@@ -488,10 +450,20 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 } as any);
               },
               onCursorUpdate: (userId, cursor) => {
+                const senderOOId = getRemoteOOInternalId(userId);
+                if (!senderOOId) return;
+                const cursorString =
+                  typeof cursor === 'string' ? cursor : JSON.stringify(cursor);
                 sendToEditor({
                   type: 'cursor',
-                  cursor,
-                  userId,
+                  messages: [
+                    {
+                      cursor: cursorString,
+                      user: senderOOId,
+                      useridoriginal: senderOOId,
+                      time: Date.now(),
+                    },
+                  ],
                 } as any);
               },
               onSaveLock: () => {

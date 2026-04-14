@@ -218,7 +218,11 @@ export class EncryptedRelay {
 
   /** Send cursor position to all peers (encrypted — position is sensitive) */
   async sendCursor(cursor: unknown): Promise<void> {
-    await this.sendEncryptedSystem({ type: 'cursor:update', cursor });
+    await this.sendEncryptedSystem({
+      type: 'cursor:update',
+      userId: this.userId,
+      cursor,
+    });
   }
 
   /** Acquire or release the save lock (not encrypted — no sensitive content) */

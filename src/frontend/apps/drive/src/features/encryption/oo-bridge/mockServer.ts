@@ -122,14 +122,6 @@ export function createMockServerCallbacks(
         }
 
         case 'saveChanges': {
-          console.log(
-            '[mockServer] saveChanges from OO',
-            'rawCount:',
-            (msg.changes as unknown[] | undefined)?.length,
-            'endSaveChanges:',
-            msg.endSaveChanges,
-          );
-          // OnlyOffice sends edited content — broadcast to peers
           const changes = handleOutgoingChanges(msg, ooInternalId);
           if (changes) {
             options.onLocalChanges(changes);

@@ -25,23 +25,24 @@ interface RemoteUser {
   ooId: string;
 }
 
+// Index must be the SAME across clients for the same user, otherwise OO's
+// participants map keys don't match the user field on incoming changes/cursors
+// and attribution breaks. We use a fixed value of 1 for every participant —
+// uniqueness is provided by the `sub` half of the id, not by the index.
+const SHARED_INDEX = 1;
+
 let localUser: LocalUser | null = null;
 const remoteUsers = new Map<string, RemoteUser>();
-let nextIndex = 1;
 
 /**
  * Initialize the local user.
  * Uses user.sub (OIDC UUID) as the OO ID — globally unique, no collision risk.
  */
 export function initLocalUser(userId: string, userName: string): LocalUser {
-  const idx = nextIndex++;
   localUser = {
     driveId: userId,
     name: userName,
-    index: idx,
-    // userId is user.sub (UUID like "d4e5f6a7-b8c9-..."), unique per user.
-    // OO internally concatenates config.user.id + indexUser (no separator).
-    // Trailing underscore so the boundary is visible in logs: "uuid_1" not "uuid1".
+    index: SHARED_INDEX,
     ooId: userId + '_',
   };
   return localUser;
@@ -90,11 +91,10 @@ export function addRemoteUser(
   // Skip if it's the local user (e.g. stale relay connection from previous page load)
   if (localUser && userId === localUser.driveId) return;
   if (remoteUsers.has(userId)) return;
-  const idx = nextIndex++;
   remoteUsers.set(userId, {
     driveId: userId,
     name: userName,
-    index: idx,
+    index: SHARED_INDEX,
     ooId: userId + '_',
   });
 }
@@ -112,27 +112,31 @@ export function removeRemoteUser(userId: string): void {
 export function getParticipants(): OOParticipantList {
   const user = getLocalUser();
 
+  // OO computes change.user as `<config.user.id><indexUser>` and looks the
+  // resulting string up in `_participants[id]`. So the participant `id` must
+  // be the full internal form `<ooId><index>`, not just `<ooId>`.
+  const localFullId = user.ooId + String(user.index);
+
   const list: OOParticipant[] = [
-    // Local user
     {
-      id: user.ooId,
-      idOriginal: user.ooId, // MUST match id — OO checks both
+      id: localFullId,
+      idOriginal: localFullId,
       username: user.name,
       indexUser: user.index,
-      connectionId: user.ooId,
+      connectionId: localFullId,
       isCloseCoAuthoring: false,
       view: false,
     },
   ];
 
-  // Remote users
   for (const remote of remoteUsers.values()) {
+    const remoteFullId = remote.ooId + String(remote.index);
     list.push({
-      id: remote.ooId,
-      idOriginal: remote.ooId,
+      id: remoteFullId,
+      idOriginal: remoteFullId,
       username: remote.name,
       indexUser: remote.index,
-      connectionId: remote.ooId,
+      connectionId: remoteFullId,
       isCloseCoAuthoring: false,
       view: false,
     });
@@ -155,6 +159,17 @@ export function getParticipants(): OOParticipantList {
     list,
   };
   return result;
+}
+
+/**
+ * Resolve a Drive user id (sub) to the OO internal id OO uses to attribute
+ * cursors and changes (`<sub>_<indexUser>`). Returns null if the user is
+ * not a known remote participant.
+ */
+export function getRemoteOOInternalId(driveUserId: string): string | null {
+  const remote = remoteUsers.get(driveUserId);
+  if (!remote) return null;
+  return remote.ooId + String(remote.index);
 }
 
 /**
@@ -182,5 +197,4 @@ export function buildConnectStateMessage(): {
 export function resetParticipants(): void {
   localUser = null;
   remoteUsers.clear();
-  nextIndex = 1;
 }
