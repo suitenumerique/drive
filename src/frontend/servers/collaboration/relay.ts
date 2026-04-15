@@ -109,6 +109,12 @@ interface Room {
    * must refetch from S3.
    */
   historyFloorMs: number;
+  /**
+   * Last time we broadcast a `peer:needs-save` request in this room.
+   * Used to rate-limit the broadcast so a crash-reload loop can't
+   * flood all peers with save requests.
+   */
+  lastNeedsSaveBroadcastMs: number;
 }
 
 interface PeerMeta {
@@ -130,6 +136,7 @@ function getOrCreateRoom(roomId: string): Room {
       history: [],
       purgeMutex: new Mutex(),
       historyFloorMs: 0,
+      lastNeedsSaveBroadcastMs: 0,
     };
     rooms.set(roomId, room);
   }
@@ -366,6 +373,22 @@ function handleSystemMessage(
     broadcastSystem(room, ws, {
       type: 'save:committed',
       epochMs,
+      userId: meta.userId,
+    });
+    return;
+  }
+  if (msg.type === 'peer:needs-save') {
+    // A peer is trying to recover from a local crash and wants the
+    // save-leader to persist so that reload picks up a fresh epoch.
+    // Rate-limit the broadcast: one request per room per 2s so a
+    // reload loop can't flood the room.
+    const now = Date.now();
+    if (now - room.lastNeedsSaveBroadcastMs < 2000) {
+      return;
+    }
+    room.lastNeedsSaveBroadcastMs = now;
+    broadcastSystem(room, ws, {
+      type: 'peer:needs-save',
       userId: meta.userId,
     });
     return;

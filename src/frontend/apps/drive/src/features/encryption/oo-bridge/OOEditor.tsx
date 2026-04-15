@@ -184,20 +184,6 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const replayBufferRef = useRef<Array<() => void>>([]);
 
   /**
-   * Pending verifications: one entry per inbound `saveChanges` we've
-   * forwarded to OO but haven't yet confirmed landed on the
-   * collaborative history. The `asc_onApplyChanges` listener drains
-   * this on each apply and compares expected vs observed delta.
-   */
-  const pendingApplyVerificationsRef = useRef<
-    Array<{
-      expected: number;
-      before: number;
-      message: Record<string, unknown>;
-    }>
-  >([]);
-
-  /**
    * Once this flips to true, every outbound event callback (saveChanges,
    * cursor, lock, message, meta) short-circuits before touching the
    * relay. It's flipped whenever we detect the OO editor has entered
@@ -224,27 +210,55 @@ export const OOEditor = ({ item }: OOEditorProps) => {
    * forget to cut off outbound traffic.
    */
   const enterCrashState = useCallback(() => {
+    if (!outgoingSilencedRef.current) {
+      console.warn(
+        '[OOEditor] entering crash state — outbound traffic silenced',
+      );
+    }
     outgoingSilencedRef.current = true;
     setState('oo-crashed');
   }, []);
 
   /**
-   * Read `CollaborativeEditing.CoHistory.GetChangeCount()` from inside
-   * the OO iframe. Returns `null` if the accessor isn't available yet
-   * (editor still mounting, or torn down).
+   * Crash-recovery reload: before bumping `reinitKey` (which re-runs
+   * the init effect and refetches the S3 snapshot), ask the room's
+   * save-leader to persist immediately. Then wait for the
+   * `save:committed` broadcast to arrive before bumping — that's the
+   * signal the S3 object has a fresh `x-amz-meta-epoch` we can pick
+   * up. A hard timeout falls through to a reinit against the old
+   * epoch if no one saves in time.
+   *
+   * While the wait is in progress the button shows a loader and is
+   * disabled so the user can't double-click.
    */
-  const readCollabChangeCount = useCallback((): number | null => {
+  const RECOVERY_SAVE_WAIT_MS = 10000;
+  const [recoveryWaiting, setRecoveryWaiting] = useState(false);
+  /** Fired by the onRemoteSaveCommitted callback if non-null. */
+  const recoveryResolveRef = useRef<(() => void) | null>(null);
+
+  const requestRecoveryReload = useCallback(() => {
+    if (recoveryWaiting) return;
+    setRecoveryWaiting(true);
     try {
-      const coHistory =
-        innerWindowRef.current?.AscCommon?.CollaborativeEditing?.CoHistory;
-      if (coHistory && typeof coHistory.GetChangeCount === 'function') {
-        return coHistory.GetChangeCount();
-      }
-    } catch {
-      /* ignore */
+      relayRef.current?.sendNeedsSave();
+    } catch (e) {
+      console.warn('[OOEditor] sendNeedsSave failed', e);
     }
-    return null;
-  }, []);
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      recoveryResolveRef.current = null;
+      setRecoveryWaiting(false);
+      setState('stale-resyncing');
+      setReinitKey(k => k + 1);
+    };
+    // Resolved by onRemoteSaveCommitted the moment a fresh save lands.
+    recoveryResolveRef.current = finish;
+    // Hard timeout: fall through even if no save arrives.
+    setTimeout(finish, RECOVERY_SAVE_WAIT_MS);
+  }, [recoveryWaiting]);
+
   /**
    * One-shot pre-delay timer that releases replay after OO settles.
    * While true, saveChanges are buffered; when it flips to false they
@@ -512,13 +526,17 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // stale state from the previous one (dead editor instance,
         // pre-delay already "expired", old iframe window, etc.) and
         // inbound events end up going nowhere.
+        console.warn(
+          '[OOEditor] init() session reset — clearing refs, unsilencing outbound',
+        );
         documentReadyRef.current = false;
         innerWindowRef.current = null;
         pendingRemoteChangesRef.current = [];
         replayBufferRef.current = [];
         replayPreDelayActiveRef.current = true;
-        pendingApplyVerificationsRef.current = [];
         outgoingSilencedRef.current = false;
+        recoveryResolveRef.current = null;
+        setRecoveryWaiting(false);
         setEditorInstance(null);
 
         // Step 1: Load OnlyOffice script
@@ -910,47 +928,18 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 // iframe-level `error` listener, and the user reloads
                 // to pick up the last saved state.
 
-                // Listen for OO confirming a remote-apply cycle. We
-                // drain the pending-verification queue here: read the
-                // CoHistory change counter once and reconcile the
-                // aggregate expected delta against the aggregate
-                // observed delta. OO fires this event synchronously
-                // at the end of its Apply_Changes pipeline, so by the
-                // time we get it, CoHistory.GetChangeCount() already
-                // reflects the successfully-applied subset.
-                if (
-                  innerEditor &&
-                  typeof innerEditor.asc_registerCallback === 'function' &&
-                  !innerEditor.__driveApplyVerifierInstalled
-                ) {
-                  innerEditor.__driveApplyVerifierInstalled = true;
-                  innerEditor.asc_registerCallback(
-                    'asc_onApplyChanges',
-                    () => {
-                      const queue = pendingApplyVerificationsRef.current;
-                      if (queue.length === 0) return;
-                      const after = readCollabChangeCount();
-                      if (after === null) {
-                        pendingApplyVerificationsRef.current = [];
-                        return;
-                      }
-                      const firstBefore = queue[0].before;
-                      let totalExpected = 0;
-                      for (const p of queue) totalExpected += p.expected;
-                      const totalActual = after - firstBefore;
-                      pendingApplyVerificationsRef.current = [];
-                      if (totalActual < totalExpected) {
-                        console.error(
-                          '[OOEditor] remote apply dropped changes — ' +
-                            `expected +${totalExpected}, got +${totalActual} ` +
-                            `(before=${firstBefore} after=${after})`,
-                          queue.map(p => p.message),
-                        );
-                        if (!cancelled) enterCrashState();
-                      }
-                    },
-                  );
-                }
+                // REMOVED: apply-drop verifier based on
+                // `CoHistory.GetChangeCount()`. The counter is
+                // incremented only on OUTGOING (own) change saves
+                // via `AddOwnChanges` / `private_AddOverallChange`;
+                // it is never touched for applied remote changes.
+                // Measuring remote applies against it produced false
+                // positives that silenced outbound traffic on
+                // healthy sessions and broke the reload flow. If a
+                // better signal appears later we can reinstate a
+                // verification here — for now we rely on uncaught
+                // errors inside the apply pipeline to flip the
+                // crash overlay via the iframe error listener.
 
                 // CCollaborativeChanges.Apply_Data is INTENTIONALLY not
                 // shielded. When a change fails to apply, the document
@@ -1423,38 +1412,16 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   }
                 }
 
-                // Forward the envelope to OO unchanged, but observe its
-                // `changesIndex` so our local `patchIndex` adopts the
-                // sender's counter. When we later emit our own outgoing
-                // `saveChanges`, `wrapOutgoingSaveChanges` will continue
-                // numbering from there — matching OO's internal state.
-                //
-                // For every envelope we also push a pending-verification
-                // entry recording the expected change count delta and
-                // the CoHistory.GetChangeCount() snapshot at send time.
-                // OO fires `asc_onApplyChanges` synchronously at the
-                // end of its Apply_Changes pipeline — our listener
-                // (installed when the inner editor is ready) drains
-                // the queue and compares actual vs expected. If OO
-                // silently dropped a batch, the counter won't advance
-                // enough and we flip to the crash overlay.
+                // Forward the envelope to OO unchanged, but observe
+                // its `changesIndex` so our local `patchIndex` adopts
+                // the sender's counter. When we later emit our own
+                // outgoing `saveChanges`, `wrapOutgoingSaveChanges`
+                // will continue numbering from there — matching OO's
+                // internal state.
                 const apply = () => {
                   observeIncomingSaveChanges(
                     message as Record<string, unknown>,
                   );
-                  const expectedDelta = Array.isArray(
-                    (message as { changes?: unknown[] }).changes,
-                  )
-                    ? (message as { changes: unknown[] }).changes.length
-                    : 0;
-                  const before = readCollabChangeCount();
-                  if (expectedDelta > 0 && before !== null) {
-                    pendingApplyVerificationsRef.current.push({
-                      expected: expectedDelta,
-                      before,
-                      message,
-                    });
-                  }
                   withIncomingOTGate(() =>
                     sendToEditorGuarded(message as any),
                   );
@@ -1602,6 +1569,40 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 );
                 markRemoteSaveCommitted();
                 relayRef.current?.observeRemoteSaveCommitted(epochMs);
+                // If the user clicked the crash-reload button and we
+                // were waiting for a fresh save to land before
+                // reinit, this is the signal — resolve the wait and
+                // proceed with the reload.
+                if (recoveryResolveRef.current) {
+                  recoveryResolveRef.current();
+                }
+              },
+              onPeerNeedsSave: peerUserId => {
+                // A crashed peer is asking the save-leader to persist
+                // so they can reload against a fresh snapshot epoch.
+                // Only the leader acts; everyone else ignores it.
+                // The leader's checkpointing layer has its own
+                // `isSaving` guard so calling `forceSave()` multiple
+                // times in quick succession is already safe.
+                if (!isSaveLeaderRef.current()) return;
+                if (outgoingSilencedRef.current) {
+                  // If we're ourselves in crash state we can't save
+                  // trustworthy content — let whoever else is around
+                  // handle it, or let the requester fall through to
+                  // the current epoch reload.
+                  return;
+                }
+                console.log(
+                  '[OOEditor] peer',
+                  peerUserId,
+                  'needs save — triggering forceSave as leader',
+                );
+                forceSave().catch(e => {
+                  console.warn(
+                    '[OOEditor] forceSave from peer request failed',
+                    e,
+                  );
+                });
               },
             },
           });
@@ -1976,23 +1977,48 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           </p>
           <button
             type="button"
-            onClick={() => {
-              setState('stale-resyncing');
-              setReinitKey(k => k + 1);
-            }}
+            onClick={requestRecoveryReload}
+            disabled={recoveryWaiting}
             style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
               padding: '8px 20px',
               fontSize: '14px',
               fontWeight: 600,
               color: 'white',
-              background: 'var(--c--theme--colors--primary-600, #0366d6)',
+              background: recoveryWaiting
+                ? 'var(--c--theme--colors--greyscale-500, #888)'
+                : 'var(--c--theme--colors--primary-600, #0366d6)',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer',
+              cursor: recoveryWaiting ? 'wait' : 'pointer',
             }}
           >
-            {t('explorer.encrypted.oo_crashed_reload', 'Reload editor')}
+            {recoveryWaiting && (
+              <span
+                aria-hidden
+                style={{
+                  display: 'inline-block',
+                  width: '14px',
+                  height: '14px',
+                  border: '2px solid rgba(255,255,255,0.45)',
+                  borderTopColor: 'white',
+                  borderRadius: '50%',
+                  animation: 'oo-crashed-spin 0.8s linear infinite',
+                }}
+              />
+            )}
+            {recoveryWaiting
+              ? t(
+                  'explorer.encrypted.oo_crashed_waiting',
+                  'Waiting for peers to save…',
+                )
+              : t('explorer.encrypted.oo_crashed_reload', 'Reload editor')}
           </button>
+          <style>
+            {'@keyframes oo-crashed-spin { to { transform: rotate(360deg); } }'}
+          </style>
         </div>
       )}
       {/* Connection status — only show when there's a problem */}

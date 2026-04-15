@@ -114,6 +114,16 @@ type SaveCommittedMessage = {
   userId: string;
 };
 
+/**
+ * A peer recovering from a local crash wants the save-leader to
+ * persist so it can reload against a fresh snapshot epoch. Rate-
+ * limited by the relay (one per room per 2s).
+ */
+type PeerNeedsSaveMessage = {
+  type: 'peer:needs-save';
+  userId: string;
+};
+
 /** All possible system messages */
 type SystemMessage =
   | AuthenticatedMessage
@@ -129,7 +139,8 @@ type SystemMessage =
   | MessageBroadcastMessage
   | MetaBroadcastMessage
   | SaveChangesBroadcastMessage
-  | SaveCommittedMessage;
+  | SaveCommittedMessage
+  | PeerNeedsSaveMessage;
 
 export interface RelayCallbacks {
   /** Called when a remote peer's saveChanges envelope arrives (full message) */
@@ -194,6 +205,12 @@ export interface RelayCallbacks {
    * beforeunload guard doesn't prompt on close.
    */
   onRemoteSaveCommitted?: (epochMs: number, userId: string) => void;
+  /**
+   * Called when a remote peer requests the save-leader to persist
+   * immediately (used by crash-reload recovery). Only the save-leader
+   * should actually save; others ignore it.
+   */
+  onPeerNeedsSave?: (userId: string) => void;
 }
 
 export class EncryptedRelay {
@@ -414,6 +431,17 @@ export class EncryptedRelay {
     if (epochMs > this.sinceTimestampMs) {
       this.sinceTimestampMs = epochMs;
     }
+  }
+
+  /**
+   * Ask the save-leader in the room to persist immediately. Used by
+   * the crash-recovery reload path so the reinit can pick up a fresh
+   * snapshot epoch. The relay rate-limits rebroadcasts (one per room
+   * per 2s), and the leader-side handler respects the existing
+   * `isSaving` guard, so callers don't need to debounce.
+   */
+  sendNeedsSave(): void {
+    this.sendSystem({ type: 'peer:needs-save' });
   }
 
   /** Disconnect and clean up */
@@ -643,6 +671,9 @@ export class EncryptedRelay {
         break;
       case 'save:committed':
         this.callbacks.onRemoteSaveCommitted?.(msg.epochMs, msg.userId);
+        break;
+      case 'peer:needs-save':
+        this.callbacks.onPeerNeedsSave?.(msg.userId);
         break;
     }
   }
