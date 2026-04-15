@@ -13,7 +13,12 @@ const RELAY_URL = process.env.NEXT_PUBLIC_RELAY_URL ?? 'ws://localhost:4100';
 /** Server sends the initial room state when a client joins */
 type RoomStateMessage = {
   type: 'room:state';
-  peers: Array<{ userId: string; userName: string; canEdit: boolean }>;
+  peers: Array<{
+    userId: string;
+    userName: string;
+    canEdit: boolean;
+    joinedAt: number;
+  }>;
   historyLength: number;
 };
 
@@ -23,6 +28,7 @@ type PeerJoinMessage = {
   userId: string;
   userName: string;
   canEdit: boolean;
+  joinedAt: number;
 };
 
 /** A peer left the room */
@@ -69,6 +75,8 @@ type AuthenticatedMessage = {
   type: 'system:authenticated';
   userId: string;
   userName: string;
+  /** Relay-assigned connection timestamp, used as leader-election tiebreaker. */
+  joinedAt: number;
 };
 
 /** Server signals the end of the history replay burst */
@@ -131,12 +139,22 @@ export interface RelayCallbacks {
     media?: Record<string, string>
   ) => void;
   /** Called when a peer joins the room */
-  onPeerJoin: (userId: string, userName: string, canEdit: boolean) => void;
+  onPeerJoin: (
+    userId: string,
+    userName: string,
+    canEdit: boolean,
+    joinedAt: number,
+  ) => void;
   /** Called when a peer leaves the room */
   onPeerLeave: (userId: string) => void;
   /** Called when room state is received (initial peer list) */
   onRoomState: (
-    peers: Array<{ userId: string; userName: string; canEdit: boolean }>
+    peers: Array<{
+      userId: string;
+      userName: string;
+      canEdit: boolean;
+      joinedAt: number;
+    }>,
   ) => void;
   /** Called when a lock is acquired/released by a peer */
   onLockUpdate: (
@@ -199,6 +217,13 @@ export class EncryptedRelay {
    * successful local save.
    */
   private sinceTimestampMs: number;
+  /**
+   * The `joinedAt` timestamp the relay assigned when it accepted our
+   * connection. Populated by the `system:authenticated` frame. Used by
+   * the caller as a leader-election tiebreaker when multiple peers
+   * share a userId.
+   */
+  public joinedAt: number | null = null;
   /**
    * Serializes message handling so async binary decrypts can't be overtaken
    * by synchronous text frames that arrived after them on the wire. Without
@@ -568,7 +593,11 @@ export class EncryptedRelay {
     }
     switch (msg.type) {
       case 'system:authenticated':
-        // Auth confirmed — nothing to do, connection is already established
+        // Auth confirmed; record our relay-assigned `joinedAt` so the
+        // editor can use it as a leader-election tiebreaker.
+        if (typeof msg.joinedAt === 'number') {
+          this.joinedAt = msg.joinedAt;
+        }
         break;
       case 'history:end':
         this.inHistoryPhase = false;
@@ -578,7 +607,12 @@ export class EncryptedRelay {
         this.callbacks.onRoomState(msg.peers);
         break;
       case 'peer:join':
-        this.callbacks.onPeerJoin(msg.userId, msg.userName, msg.canEdit);
+        this.callbacks.onPeerJoin(
+          msg.userId,
+          msg.userName,
+          msg.canEdit,
+          msg.joinedAt,
+        );
         break;
       case 'peer:leave':
         this.callbacks.onPeerLeave(msg.userId);

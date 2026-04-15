@@ -103,7 +103,8 @@ type EditorState =
   | 'mounting'
   | 'ready'
   | 'error'
-  | 'stale-resyncing';
+  | 'stale-resyncing'
+  | 'oo-crashed';
 
 // Only these OO message types are allowed in from peers. Anything else (rpc,
 // executeCommand, documentOpen, pluginEvent, forceSave, …) would be a way for
@@ -149,8 +150,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const relayRef = useRef<EncryptedRelay | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scriptLoadedRef = useRef(false);
-  // Connected peers with edit capability (not including self). Used for save leader election.
-  const editorPeersRef = useRef<Set<string>>(new Set());
+  // Connected peers with edit capability (not including self). Keyed
+  // by userId, value is the earliest `joinedAt` we've seen for that
+  // user — so leader election can tiebreak across multiple same-user
+  // tabs by comparing (userId, joinedAt) lexicographically.
+  const editorPeersRef = useRef<Map<string, number>>(new Map());
   // Reference to the inner OO iframe's window — used to register media in
   // g_oDocumentUrls when inbound saveChanges envelopes carry inline images.
   const innerWindowRef = useRef<any>(null);
@@ -170,89 +174,83 @@ export const OOEditor = ({ item }: OOEditorProps) => {
    * still wait this long before feeding it the first replayed event,
    * so its internal state machine has time to settle.
    */
-  const DRAIN_PRE_DELAY_MS = 1500;
-  /**
-   * Max time we wait for a missing `changesIndex` to arrive before we
-   * give up and force-apply whatever is next in the reorder buffer.
-   */
-  const REPLAY_GAP_TIMEOUT_MS = 5000;
+  const DRAIN_PRE_DELAY_MS = 0;
 
   /**
-   * Reorder buffer state for index-gated replay. We store the "start
-   * index" (`changesIndex - changes.length`) of every saveChanges we've
-   * seen but can't apply yet because its predecessor hasn't arrived.
-   * Keyed by start index. Non-saveChanges callbacks (cursor, lock,
-   * message, meta) don't go through this gate — they're applied as
-   * soon as the editor is ready.
+   * FIFO buffer of inbound `saveChanges` apply-closures collected while
+   * the post-ready pre-delay is still active. Flushed in arrival order
+   * when the pre-delay elapses.
    */
-  const replayExpectedStartIdxRef = useRef<number | null>(null);
-  type BufferedSaveChanges = { endIdx: number; apply: () => void };
-  const replayBufferRef = useRef<Map<number, BufferedSaveChanges>>(new Map());
-  const replayGapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-  /**
-   * One-shot pre-delay timer that releases replay after OO settles.
-   * While `replayPreDelayActive` is true, we buffer everything (even
-   * the first event) and flush on timer fire.
-   */
-  const replayPreDelayActiveRef = useRef(true);
+  const replayBufferRef = useRef<Array<() => void>>([]);
 
-  const clearReplayGapTimer = useCallback(() => {
-    if (replayGapTimerRef.current) {
-      clearTimeout(replayGapTimerRef.current);
-      replayGapTimerRef.current = null;
-    }
+  /**
+   * Pending verifications: one entry per inbound `saveChanges` we've
+   * forwarded to OO but haven't yet confirmed landed on the
+   * collaborative history. The `asc_onApplyChanges` listener drains
+   * this on each apply and compares expected vs observed delta.
+   */
+  const pendingApplyVerificationsRef = useRef<
+    Array<{
+      expected: number;
+      before: number;
+      message: Record<string, unknown>;
+    }>
+  >([]);
+
+  /**
+   * Once this flips to true, every outbound event callback (saveChanges,
+   * cursor, lock, message, meta) short-circuits before touching the
+   * relay. It's flipped whenever we detect the OO editor has entered
+   * an inconsistent state (crash overlay shown). The underlying OO
+   * instance may keep running its autosave loop and emitting edits
+   * built from its corrupted in-memory state — we must NOT let those
+   * leak to peers, or they'd crash everyone in the room.
+   */
+  const outgoingSilencedRef = useRef(false);
+
+  /**
+   * Deterministic leader election: lexicographically lowest
+   * (userId, joinedAt) among connected editors wins. Readers never
+   * lead. Every client computes this independently — no coordination.
+   * Exposed as a ref so both `initCheckpointing` and the beforeunload
+   * handler can call it.
+   */
+  const isSaveLeaderRef = useRef<() => boolean>(() => false);
+
+  /**
+   * Enter the crash-recovery state: silence all outbound events to
+   * the relay AND flip `state` to render the overlay. Use this
+   * instead of calling `setState('oo-crashed')` directly so we never
+   * forget to cut off outbound traffic.
+   */
+  const enterCrashState = useCallback(() => {
+    outgoingSilencedRef.current = true;
+    setState('oo-crashed');
   }, []);
 
-  const drainReplayBuffer = useCallback(() => {
-    if (replayPreDelayActiveRef.current) return;
-    // Apply as many buffered events as match the expected index,
-    // advancing the cursor to each applied event's endIdx.
-    while (replayExpectedStartIdxRef.current !== null) {
-      const expected = replayExpectedStartIdxRef.current;
-      const entry = replayBufferRef.current.get(expected);
-      if (!entry) break;
-      replayBufferRef.current.delete(expected);
-      clearReplayGapTimer();
-      try {
-        entry.apply();
-      } catch (e) {
-        console.warn('[replay] apply error', e);
+  /**
+   * Read `CollaborativeEditing.CoHistory.GetChangeCount()` from inside
+   * the OO iframe. Returns `null` if the accessor isn't available yet
+   * (editor still mounting, or torn down).
+   */
+  const readCollabChangeCount = useCallback((): number | null => {
+    try {
+      const coHistory =
+        innerWindowRef.current?.AscCommon?.CollaborativeEditing?.CoHistory;
+      if (coHistory && typeof coHistory.GetChangeCount === 'function') {
+        return coHistory.GetChangeCount();
       }
-      replayExpectedStartIdxRef.current = entry.endIdx;
+    } catch {
+      /* ignore */
     }
-    // Still buffered but no match — arm the gap timeout.
-    if (replayBufferRef.current.size > 0 && !replayGapTimerRef.current) {
-      replayGapTimerRef.current = setTimeout(() => {
-        const keys = Array.from(replayBufferRef.current.keys()).sort(
-          (a, b) => a - b,
-        );
-        if (keys.length === 0) {
-          replayGapTimerRef.current = null;
-          return;
-        }
-        const firstKey = keys[0];
-        const entry = replayBufferRef.current.get(firstKey)!;
-        replayBufferRef.current.delete(firstKey);
-        console.log(
-          `[replay] gap timeout — force-applying startIdx=${firstKey} ` +
-            `endIdx=${entry.endIdx} ` +
-            `(expected=${replayExpectedStartIdxRef.current})`,
-        );
-        replayGapTimerRef.current = null;
-        try {
-          entry.apply();
-        } catch (e) {
-          console.warn('[replay] forced apply error', e);
-        }
-        // Advance the cursor past the force-applied event so the next
-        // drain round can pick up the events that follow.
-        replayExpectedStartIdxRef.current = entry.endIdx;
-        drainReplayBuffer();
-      }, REPLAY_GAP_TIMEOUT_MS);
-    }
-  }, [clearReplayGapTimer]);
+    return null;
+  }, []);
+  /**
+   * One-shot pre-delay timer that releases replay after OO settles.
+   * While true, saveChanges are buffered; when it flips to false they
+   * flow straight through.
+   */
+  const replayPreDelayActiveRef = useRef(true);
 
   /**
    * Entry point for every inbound `saveChanges`. Classifies against
@@ -261,113 +259,59 @@ export const OOEditor = ({ item }: OOEditorProps) => {
    */
   const handleIncomingSaveChanges = useCallback(
     (message: Record<string, unknown>, applyFn: () => void) => {
-      const changes = (message as { changes?: unknown }).changes;
-      const count = Array.isArray(changes) ? changes.length : 0;
-      const endIdx = Number(message.changesIndex);
-
-      // Envelopes with no usable index — apply without gating (rare).
-      if (!Number.isFinite(endIdx) || count === 0) {
-        if (replayPreDelayActiveRef.current) {
-          // Still holding the pre-delay: synthesize a key so it flushes
-          // alongside the other buffered events.
-          const syntheticKey =
-            (replayExpectedStartIdxRef.current ?? 0) - 1;
-          replayBufferRef.current.set(syntheticKey, {
-            endIdx: syntheticKey + 1,
-            apply: applyFn,
-          });
-          return;
-        }
-        applyFn();
-        return;
-      }
-
-      const startIdx = endIdx - count;
-
-      // Pre-delay: buffer everything. Seed `expected` from the
-      // smallest startIdx we've seen so the flush starts in order.
+      // We apply every inbound `saveChanges` in receive order, full stop.
+      // - Ordering is already guaranteed by the relay (TCP + our handler
+      //   serialization in `encryptedRelay.ts`).
+      // - OO's own collaborative-edit engine handles any residual
+      //   sequence bookkeeping.
+      // - Trying to arbitrate ordering ourselves caused false "stale"
+      //   drops on sender-session resets and phantom gaps that never
+      //   close.
+      //
+      // During the pre-delay window we still hold events back (so OO
+      // has a moment to settle after onDocumentContentReady), then
+      // flush them in arrival order when the timer fires.
       if (replayPreDelayActiveRef.current) {
-        if (
-          replayExpectedStartIdxRef.current === null ||
-          startIdx < replayExpectedStartIdxRef.current
-        ) {
-          replayExpectedStartIdxRef.current = startIdx;
-        }
-        replayBufferRef.current.set(startIdx, { endIdx, apply: applyFn });
+        replayBufferRef.current.push(applyFn);
         return;
       }
-
-      // First event ever after flush — accept and advance to its endIdx.
-      if (replayExpectedStartIdxRef.current === null) {
-        try {
-          applyFn();
-        } catch (e) {
-          console.warn('[replay] first-event apply error', e);
-        }
-        replayExpectedStartIdxRef.current = endIdx;
-        drainReplayBuffer();
-        return;
+      try {
+        applyFn();
+      } catch (e) {
+        console.warn('[replay] apply error', e);
       }
-
-      // In-order: apply and advance.
-      if (startIdx === replayExpectedStartIdxRef.current) {
-        try {
-          applyFn();
-        } catch (e) {
-          console.warn('[replay] apply error', e);
-        }
-        replayExpectedStartIdxRef.current = endIdx;
-        drainReplayBuffer();
-        return;
-      }
-
-      // Stale or duplicate — sender's index went backwards. Drop it.
-      if (startIdx < replayExpectedStartIdxRef.current) {
-        console.warn(
-          `[replay] dropping stale/duplicate startIdx=${startIdx} ` +
-            `endIdx=${endIdx} expected=${replayExpectedStartIdxRef.current}`,
-        );
-        return;
-      }
-
-      // Ahead of the expected cursor — buffer until the gap is filled
-      // or the 5s gap timer forces a jump.
-      console.log(
-        `[replay] buffering out-of-order startIdx=${startIdx} ` +
-          `endIdx=${endIdx} expected=${replayExpectedStartIdxRef.current}`,
-      );
-      replayBufferRef.current.set(startIdx, { endIdx, apply: applyFn });
-      drainReplayBuffer();
     },
-    [drainReplayBuffer],
+    [],
   );
 
   /**
    * Called once OO reports documentContentReady. Waits the pre-delay
-   * then releases buffered events through the index-gated path.
+   * then flushes the FIFO buffer in arrival order.
    */
   const releaseReplayAfterPreDelay = useCallback(() => {
     console.log(
       `[replay] scheduling release after ${DRAIN_PRE_DELAY_MS} ms pre-delay ` +
-        `(buffered=${replayBufferRef.current.size})`,
+        `(buffered=${replayBufferRef.current.length})`,
     );
     setTimeout(() => {
-      console.log('[replay] pre-delay elapsed — flushing buffer');
+      console.log(
+        '[replay] pre-delay elapsed — flushing',
+        replayBufferRef.current.length,
+        'buffered events in arrival order',
+      );
       replayPreDelayActiveRef.current = false;
       setVerboseSends(true);
-      // If we gathered some events during pre-delay, the expected
-      // index is already seeded from the smallest startIdx we saw.
-      // Fast-forward it to match the smallest key in the buffer so
-      // the first drain round actually advances.
-      if (replayBufferRef.current.size > 0) {
-        const keys = Array.from(replayBufferRef.current.keys()).sort(
-          (a, b) => a - b,
-        );
-        replayExpectedStartIdxRef.current = keys[0];
+      const queue = replayBufferRef.current;
+      replayBufferRef.current = [];
+      for (const apply of queue) {
+        try {
+          apply();
+        } catch (e) {
+          console.warn('[replay] flush apply error', e);
+        }
       }
-      drainReplayBuffer();
     }, DRAIN_PRE_DELAY_MS);
-  }, [drainReplayBuffer]);
+  }, []);
   const canEdit = !!item.abilities?.partial_update;
 
   const mime = item.mimetype || '';
@@ -501,19 +445,81 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     let cancelled = false;
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges()) {
+      // Only the save leader is responsible for persisting state —
+      // non-leader peers have no obligation to save, so closing
+      // their tab loses nothing that wouldn't be re-requested from
+      // the relay next time someone opens the doc. Suppressing the
+      // browser confirm on non-leaders avoids the misleading
+      // "unsaved changes" prompt when it's not true for this tab.
+      if (isSaveLeaderRef.current() && hasUnsavedChanges()) {
         e.preventDefault();
       }
     };
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && hasUnsavedChanges()) {
+      if (
+        document.visibilityState === 'hidden' &&
+        isSaveLeaderRef.current() &&
+        hasUnsavedChanges()
+      ) {
         forceSave().catch(() => {});
       }
     };
 
+    // Global uncaught-error listener for OO crashes. The shield around
+    // `Apply_Data` catches most collaborative-edit errors, but some
+    // escape via the post-apply recalc path (e.g. `Refresh_RecalcData2
+    // is not a function`). When that happens, the editor becomes
+    // non-functional — we surface a recovery overlay so the user can
+    // hard-reload and pick up the latest saved state.
+    const isOOCrash = (src: string | undefined, msg: string): boolean => {
+      // Any uncaught error whose source is inside the OO sdkjs
+      // bundles is treated as a crash. Rationale: by the time a
+      // sdkjs function throws past its caller, OO's internal state
+      // is in an undefined condition. Whitelisting specific function
+      // names lets future unknown failure modes silently corrupt
+      // the editor. Known-benign cases (spell-check worker race,
+      // collab cursor on missing run, paragraph lock on replaced
+      // object) are caught and neutralised by explicit wrappers
+      // upstream, so they never reach this listener.
+      if (src && /\/sdkjs\/|sdk-all/.test(src)) return true;
+      // Fallback: also match stacks whose message mentions sdkjs
+      // symbols but whose `filename` was lost (cross-frame rethrow).
+      return /sdk-all|\bAsc(?:Common|Format|Word)\b|CDocument\.|CCollaborative/.test(
+        msg,
+      );
+    };
+    const handleOOError = (event: ErrorEvent) => {
+      if (cancelled) return;
+      const src = event.filename ?? '';
+      const msg = String(event.error?.stack ?? event.message ?? '');
+      if (!isOOCrash(src, msg)) return;
+      console.error('[OOEditor] uncaught OO crash — showing recovery', {
+        src,
+        msg,
+      });
+      enterCrashState();
+    };
+    window.addEventListener('error', handleOOError);
+
     const init = async () => {
       try {
         if (!item.url || !user) return;
+
+        // Reset per-session refs. React doesn't unmount the component
+        // on reinitKey bump — the effect just re-runs — so every ref
+        // created with `useRef` still holds whatever value it had at
+        // cleanup. Without this reset, the new session runs against
+        // stale state from the previous one (dead editor instance,
+        // pre-delay already "expired", old iframe window, etc.) and
+        // inbound events end up going nowhere.
+        documentReadyRef.current = false;
+        innerWindowRef.current = null;
+        pendingRemoteChangesRef.current = [];
+        replayBufferRef.current = [];
+        replayPreDelayActiveRef.current = true;
+        pendingApplyVerificationsRef.current = [];
+        outgoingSilencedRef.current = false;
+        setEditorInstance(null);
 
         // Step 1: Load OnlyOffice script
         setState('loading');
@@ -790,6 +796,30 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 const innerWindow = ooIframe?.contentWindow as any;
                 innerWindowRef.current = innerWindow;
 
+                // Install the OO-crash error listener INSIDE the iframe
+                // too — uncaught errors from sdk-all.js fire on the
+                // iframe's window, not the top-level one, so our outer
+                // listener never sees them.
+                if (innerWindow && !innerWindow.__driveCrashHooked) {
+                  innerWindow.__driveCrashHooked = true;
+                  innerWindow.addEventListener('error', (evt: ErrorEvent) => {
+                    handleOOError(evt);
+                  });
+                  innerWindow.addEventListener(
+                    'unhandledrejection',
+                    (evt: PromiseRejectionEvent) => {
+                      const msg = String(
+                        evt.reason?.stack ?? evt.reason ?? '',
+                      );
+                      handleOOError({
+                        filename: '',
+                        message: msg,
+                        error: evt.reason,
+                      } as ErrorEvent);
+                    },
+                  );
+                }
+
                 // Pre-create OO's clipboard sanitization iframe with a
                 // permissive sandbox. OO's CommonIframe_PasteStart sets
                 // sandbox="allow-same-origin" (no allow-scripts), which
@@ -869,64 +899,68 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 }
 
                 const innerEditor = innerWindow?.editor || innerWindow?.editorCell;
-                // Defensive shields for OO-internal crashes we can't fix at
-                // the source. Each one wraps a hot-path method with a
-                // try/catch so a bad input doesn't unmount the editor —
-                // we log a warning and let the next iteration / event
-                // proceed. Idempotent via a per-method flag.
-                const shield = (
-                  proto: any,
-                  method: string,
-                  label: string,
-                ) => {
-                  if (!proto || typeof proto[method] !== 'function') return;
-                  const flag = `__driveShielded_${method}`;
-                  if (proto[flag]) return;
-                  const orig = proto[method];
-                  proto[method] = function (...args: unknown[]) {
-                    try {
-                      return orig.apply(this, args);
-                    } catch (e) {
-                      console.warn(
-                        `[OOEditor] swallowed ${label} error`,
-                        e,
-                      );
-                    }
-                  };
-                  proto[flag] = true;
-                };
+                // NOTE: we no longer monkey-patch any sdkjs prototype
+                // method (Update_ForeignCursor, CGraphicObjects.*,
+                // SpellCheck_CallBack, private_LockByMe, etc.). Those
+                // wrappers were fragile — each one tied us to specific
+                // internal paths that break on OO upgrades and leave
+                // us silently catching errors we didn't anticipate.
+                // The uniform rule is now: any uncaught error from
+                // sdkjs triggers the `oo-crashed` overlay via the
+                // iframe-level `error` listener, and the user reloads
+                // to pick up the last saved state.
 
-                // CDocument.Update_ForeignCursor — Run.GetDocumentPositionFromObject
-                // missing when remote cursor references a non-ParaRun.
-                shield(
-                  innerWindow?.CDocument?.prototype,
-                  'Update_ForeignCursor',
-                  'Update_ForeignCursor',
-                );
+                // Listen for OO confirming a remote-apply cycle. We
+                // drain the pending-verification queue here: read the
+                // CoHistory change counter once and reconcile the
+                // aggregate expected delta against the aggregate
+                // observed delta. OO fires this event synchronously
+                // at the end of its Apply_Changes pipeline, so by the
+                // time we get it, CoHistory.GetChangeCount() already
+                // reflects the successfully-applied subset.
+                if (
+                  innerEditor &&
+                  typeof innerEditor.asc_registerCallback === 'function' &&
+                  !innerEditor.__driveApplyVerifierInstalled
+                ) {
+                  innerEditor.__driveApplyVerifierInstalled = true;
+                  innerEditor.asc_registerCallback(
+                    'asc_onApplyChanges',
+                    () => {
+                      const queue = pendingApplyVerificationsRef.current;
+                      if (queue.length === 0) return;
+                      const after = readCollabChangeCount();
+                      if (after === null) {
+                        pendingApplyVerificationsRef.current = [];
+                        return;
+                      }
+                      const firstBefore = queue[0].before;
+                      let totalExpected = 0;
+                      for (const p of queue) totalExpected += p.expected;
+                      const totalActual = after - firstBefore;
+                      pendingApplyVerificationsRef.current = [];
+                      if (totalActual < totalExpected) {
+                        console.error(
+                          '[OOEditor] remote apply dropped changes — ' +
+                            `expected +${totalExpected}, got +${totalActual} ` +
+                            `(before=${firstBefore} after=${after})`,
+                          queue.map(p => p.message),
+                        );
+                        if (!cancelled) enterCrashState();
+                      }
+                    },
+                  );
+                }
 
-                // CGraphicObjects.removeById — oDrawing.isHdrFtrChild missing.
-                // CGraphicObjects.updateCursorType — oShape.isForm missing.
-                const CGO =
-                  innerWindow?.AscFormat?.CGraphicObjects ||
-                  innerWindow?.AscCommonWord?.CGraphicObjects;
-                shield(CGO?.prototype, 'removeById', 'CGraphicObjects.removeById');
-                shield(
-                  CGO?.prototype,
-                  'updateCursorType',
-                  'CGraphicObjects.updateCursorType',
-                );
-
-                // CCollaborativeChanges.Apply_Data — individual change
-                // class methods (private_UpdateMarksOnSplit etc.) missing.
-                // Wrapping at Apply_Data lets the per-change loop in
-                // Apply_OtherChanges keep going past one bad change.
-                const CCC =
-                  innerWindow?.AscCommon?.CCollaborativeChanges;
-                shield(
-                  CCC?.prototype,
-                  'Apply_Data',
-                  'CCollaborativeChanges.Apply_Data',
-                );
+                // CCollaborativeChanges.Apply_Data is INTENTIONALLY not
+                // shielded. When a change fails to apply, the document
+                // state becomes inconsistent — silently swallowing it
+                // lets OO keep processing subsequent changes on top of
+                // a corrupt graph, which diverges peers invisibly. We
+                // let the error propagate so OO's batch loop bails,
+                // and our iframe-level `error` listener catches the
+                // uncaught exception and flips the editor to the
+                // `oo-crashed` state with the reload overlay.
 
                 if (innerEditor) {
                   let proto = Object.getPrototypeOf(innerEditor);
@@ -1320,8 +1354,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           historyPhaseComplete = true;
           console.log(
             '[OOEditor] preload phase complete —',
-            replayBufferRef.current.size,
-            'saveChanges in reorder buffer,',
+            replayBufferRef.current.length,
+            'saveChanges buffered,',
             pendingRemoteChangesRef.current.length,
             'ancillary events queued,',
             Object.keys(historyInitialMedia).length,
@@ -1394,10 +1428,33 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 // sender's counter. When we later emit our own outgoing
                 // `saveChanges`, `wrapOutgoingSaveChanges` will continue
                 // numbering from there — matching OO's internal state.
+                //
+                // For every envelope we also push a pending-verification
+                // entry recording the expected change count delta and
+                // the CoHistory.GetChangeCount() snapshot at send time.
+                // OO fires `asc_onApplyChanges` synchronously at the
+                // end of its Apply_Changes pipeline — our listener
+                // (installed when the inner editor is ready) drains
+                // the queue and compares actual vs expected. If OO
+                // silently dropped a batch, the counter won't advance
+                // enough and we flip to the crash overlay.
                 const apply = () => {
                   observeIncomingSaveChanges(
                     message as Record<string, unknown>,
                   );
+                  const expectedDelta = Array.isArray(
+                    (message as { changes?: unknown[] }).changes,
+                  )
+                    ? (message as { changes: unknown[] }).changes.length
+                    : 0;
+                  const before = readCollabChangeCount();
+                  if (expectedDelta > 0 && before !== null) {
+                    pendingApplyVerificationsRef.current.push({
+                      expected: expectedDelta,
+                      before,
+                      message,
+                    });
+                  }
                   withIncomingOTGate(() =>
                     sendToEditorGuarded(message as any),
                   );
@@ -1415,8 +1472,16 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               onHistoryEnd: () => {
                 endPreloadPhase();
               },
-              onPeerJoin: (userId, userName, peerCanEdit) => {
-                if (peerCanEdit) editorPeersRef.current.add(userId);
+              onPeerJoin: (userId, userName, peerCanEdit, joinedAt) => {
+                if (peerCanEdit) {
+                  const existing = editorPeersRef.current.get(userId);
+                  // Keep the earliest joinedAt for a userId — if a
+                  // second tab of the same user joins later, the
+                  // original one still wins the leader tiebreak.
+                  if (existing === undefined || joinedAt < existing) {
+                    editorPeersRef.current.set(userId, joinedAt);
+                  }
+                }
                 addRemoteUser(userId, userName, userId);
                 sendToEditor(buildConnectStateMessage() as any);
               },
@@ -1430,7 +1495,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 editorPeersRef.current.clear();
                 for (const peer of peers) {
                   if (peer.userId) {
-                    if (peer.canEdit) editorPeersRef.current.add(peer.userId);
+                    if (peer.canEdit) {
+                      const existing = editorPeersRef.current.get(peer.userId);
+                      if (existing === undefined || peer.joinedAt < existing) {
+                        editorPeersRef.current.set(peer.userId, peer.joinedAt);
+                      }
+                    }
                     addRemoteUser(peer.userId, peer.userName, peer.userId);
                   }
                 }
@@ -1572,7 +1642,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // architecture confirms the right path is `sendMessageToOO`.
         console.log(
           '[OOEditor:preload] ready to construct editor —',
-          replayBufferRef.current.size,
+          replayBufferRef.current.length,
           'saveChanges buffered,',
           pendingRemoteChangesRef.current.length,
           'ancillary events queued,',
@@ -1593,6 +1663,16 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         const callbacks = createMockServerCallbacks({
           docType,
           onSaveChangesBroadcast: message => {
+            // A crashed editor must not leak its corrupt state to
+            // peers — otherwise one broken tab takes down the whole
+            // room when its autosave loop emits garbage that crashes
+            // Apply_OtherChanges on every other client.
+            if (outgoingSilencedRef.current) {
+              console.warn(
+                '[OOEditor] outgoing saveChanges suppressed (crash state)',
+              );
+              return;
+            }
             // DIAGNOSTIC: dump every outbound saveChanges so we can
             // compare what user1 emits vs what user2 receives and tries
             // to apply in its history replay.
@@ -1639,15 +1719,19 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             relayRef.current?.sendSaveChanges(message);
           },
           onLockRequest: (type, lockData) => {
+            if (outgoingSilencedRef.current) return;
             relayRef.current?.sendLock(type, lockData);
           },
           onCursorUpdate: cursor => {
+            if (outgoingSilencedRef.current) return;
             relayRef.current?.sendCursor(cursor);
           },
           onMessageBroadcast: messages => {
+            if (outgoingSilencedRef.current) return;
             relayRef.current?.sendMessage(messages);
           },
           onMetaBroadcast: messages => {
+            if (outgoingSilencedRef.current) return;
             relayRef.current?.sendMeta(messages);
           },
           onSaveLockCheck: () => false,
@@ -1661,24 +1745,28 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           'abilities:',
           item.abilities,
         );
+        // Install the leader-election implementation into the ref so
+        // both initCheckpointing and the beforeunload handler use the
+        // same rule. The closure captures `canEdit` and `user` from
+        // scope but reads the live peer map / relay joinedAt each
+        // call, so it stays correct as peers join/leave.
+        isSaveLeaderRef.current = () => {
+          if (!canEdit) return false;
+          const myId = user!.sub!;
+          const myJoinedAt = relayRef.current?.joinedAt ?? 0;
+          for (const [peerId, peerJoinedAt] of editorPeersRef.current) {
+            if (peerId < myId) return false;
+            if (peerId === myId && peerJoinedAt < myJoinedAt) return false;
+          }
+          return true;
+        };
         if (canEdit) initCheckpointing({
           editor,
           format: x2tExtension,
           type: x2tType,
           userId: user.sub!,
           onUpload: uploadEncrypted,
-          // Deterministic leader election: lowest userId among connected EDITORS saves.
-          // Every client computes this independently — no coordination needed.
-          // Readers never save. If alone (no editor peers), this editor is leader.
-          isSaveLeader: () => {
-            if (!canEdit) return false;
-            const peers = editorPeersRef.current;
-            if (peers.size === 0) return true;
-            for (const peerId of peers) {
-              if (peerId < user!.sub!) return false;
-            }
-            return true;
-          },
+          isSaveLeader: () => isSaveLeaderRef.current(),
         });
 
         // Listen for tab close/refresh to save or warn
@@ -1704,6 +1792,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       cancelled = true;
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('error', handleOOError);
       stopCheckpointing();
       forceSave().catch(console.error);
       // Clean up locks and relay
@@ -1718,7 +1807,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         } catch {
           // Editor may already be destroyed
         }
+        editorRef.current = null;
       }
+      // Clear the mock-server's editor reference so any in-flight
+      // messages between here and the next init() don't land on the
+      // destroyed instance.
+      setEditorInstance(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.id, reinitKey]);
@@ -1797,7 +1891,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       {/* OnlyOffice replaces this div with its own iframe[name="frameEditor"] */}
       <div id="oo-editor-placeholder" />
       {/* Loading overlay */}
-      {state !== 'ready' && (
+      {state !== 'ready' && state !== 'oo-crashed' && (
         <div
           style={{
             position: 'absolute',
@@ -1830,6 +1924,75 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             {(state === 'loading' || state === 'mounting') &&
               t('explorer.encrypted.loading_editor', 'Loading editor...')}
           </span>
+        </div>
+      )}
+      {/* OO crash recovery overlay */}
+      {state === 'oo-crashed' && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '16px',
+            padding: '24px',
+            textAlign: 'center',
+            background: 'white',
+            zIndex: 20,
+          }}
+        >
+          <span
+            className="material-icons"
+            style={{
+              fontSize: '48px',
+              color: 'var(--c--theme--colors--danger-600, #c00)',
+            }}
+          >
+            sync_problem
+          </span>
+          <h2 style={{ margin: 0, fontSize: '18px' }}>
+            {t(
+              'explorer.encrypted.oo_crashed_title',
+              'Synchronization error',
+            )}
+          </h2>
+          <p
+            style={{
+              margin: 0,
+              maxWidth: '520px',
+              color: 'var(--c--theme--colors--greyscale-700, #444)',
+              lineHeight: 1.5,
+            }}
+          >
+            {t(
+              'explorer.encrypted.oo_crashed_body',
+              'An error occurred while synchronizing with other peers. ' +
+                'Because the document is end-to-end encrypted, we cannot ' +
+                'always reconcile changes perfectly. Please reload the ' +
+                'editor to fetch the latest saved state.',
+            )}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setState('stale-resyncing');
+              setReinitKey(k => k + 1);
+            }}
+            style={{
+              padding: '8px 20px',
+              fontSize: '14px',
+              fontWeight: 600,
+              color: 'white',
+              background: 'var(--c--theme--colors--primary-600, #0366d6)',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            {t('explorer.encrypted.oo_crashed_reload', 'Reload editor')}
+          </button>
         </div>
       )}
       {/* Connection status — only show when there's a problem */}

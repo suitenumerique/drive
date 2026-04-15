@@ -192,7 +192,8 @@ function handleConnection(
   ws: WebSocket,
   roomId: string,
   auth: AuthResult,
-  sinceTimestampMs: number
+  sinceTimestampMs: number,
+  joinedAt: number
 ): void {
   ws.binaryType = 'arraybuffer';
 
@@ -202,7 +203,7 @@ function handleConnection(
     userId: auth.userId,
     userName: auth.userName,
     canEdit: auth.canEdit,
-    joinedAt: Date.now(),
+    joinedAt,
     pongReceived: true,
     pingTimer: null,
   };
@@ -298,6 +299,7 @@ function handleConnection(
     userId: meta.userId,
     userName: meta.userName,
     canEdit: meta.canEdit,
+    joinedAt: meta.joinedAt,
   });
 
   // Send room state to the new joiner
@@ -307,6 +309,7 @@ function handleConnection(
       userId: m.userId,
       userName: m.userName,
       canEdit: m.canEdit,
+      joinedAt: m.joinedAt,
     }));
 
   // Filter history to events strictly newer than the snapshot epoch the
@@ -477,20 +480,27 @@ wss.on('connection', async (ws, req) => {
     return;
   }
 
+  // Compute joinedAt once so the authenticated frame and the PeerMeta
+  // share exactly the same value — clients use it as a tiebreaker for
+  // leader election when multiple peers share a userId (same human in
+  // two tabs).
+  const joinedAt = Date.now();
+
   // Confirm authentication to the client
   ws.send(
     JSON.stringify({
       type: 'system:authenticated',
       userId: auth.userId,
       userName: auth.userName,
+      joinedAt,
     })
   );
 
   console.log(
-    `[relay] ${auth.userName} (${auth.userId}) joined room ${roomId} (canEdit: ${auth.canEdit})`
+    `[relay] ${auth.userName} (${auth.userId}) joined room ${roomId} (canEdit: ${auth.canEdit}) joinedAt=${joinedAt}`
   );
 
-  handleConnection(ws, roomId, auth, sinceTimestampMs);
+  handleConnection(ws, roomId, auth, sinceTimestampMs, joinedAt);
 });
 
 httpServer.listen(PORT, () => {
