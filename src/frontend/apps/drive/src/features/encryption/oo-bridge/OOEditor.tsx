@@ -137,6 +137,17 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const { user } = useAuth();
   const [state, setState] = useState<EditorState>('loading');
   const [error, setError] = useState<string | null>(null);
+  // Save-error banner state. The OO editor keeps running in both
+  // cases — this only controls a banner overlay on top of it:
+  //  - `fatal`: x2t refused the document (e.g. OLE-embedded xlsx in
+  //    an odp slide). User must roll back or remove the offending
+  //    content; retrying won't help.
+  //  - `transient`: network / vault / extract hiccup. Clears on the
+  //    next successful save; exposes a "Retry now" button.
+  const [saveError, setSaveError] = useState<
+    { kind: 'fatal' | 'transient'; detail: string } | null
+  >(null);
+  const [saveRetrying, setSaveRetrying] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [relayFailed, setRelayFailed] = useState(false);
   /**
@@ -155,6 +166,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   // user — so leader election can tiebreak across multiple same-user
   // tabs by comparing (userId, joinedAt) lexicographically.
   const editorPeersRef = useRef<Map<string, number>>(new Map());
+  // Peers that have broadcast `peer:crashed` — they're still connected
+  // (so they can observe `save:committed` and reload) but must be
+  // excluded from leader election: a crashed editor can't run
+  // `forceSave`. Cleared when the peer disconnects or we rejoin.
+  const crashedPeersRef = useRef<Set<string>>(new Set());
   // Reference to the inner OO iframe's window — used to register media in
   // g_oDocumentUrls when inbound saveChanges envelopes carry inline images.
   const innerWindowRef = useRef<any>(null);
@@ -212,10 +228,27 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const enterCrashState = useCallback(() => {
     if (!outgoingSilencedRef.current) {
       console.warn(
-        '[OOEditor] entering crash state — outbound traffic silenced',
+        '[OOEditor] entering crash state — outbound traffic silenced, relay closed',
       );
     }
     outgoingSilencedRef.current = true;
+    // Broadcast `peer:crashed` so surviving peers drop us from their
+    // leader election — a crashed editor can't run `forceSave`, so if
+    // we happened to be the lexicographic leader the room would have
+    // nobody to handle a `peer:needs-save`. We stay connected on
+    // purpose: the websocket must remain open so we can observe the
+    // subsequent `save:committed` broadcast and resolve the recovery
+    // wait (spinner on the Reload button).
+    try {
+      relayRef.current?.sendCrashed();
+    } catch (e) {
+      console.warn('[OOEditor] sendCrashed failed', e);
+    }
+    // Note: we do NOT fire `peer:needs-save` here. The user may never
+    // click Reload (e.g. closes the tab instead), and a crash storm
+    // would otherwise spam the leader with forceSave requests. The
+    // save is requested only on explicit Reload click, with the
+    // wait-for-save:committed spinner.
     setState('oo-crashed');
   }, []);
 
@@ -231,18 +264,27 @@ export const OOEditor = ({ item }: OOEditorProps) => {
    * While the wait is in progress the button shows a loader and is
    * disabled so the user can't double-click.
    */
+  // Hard ceiling on the recovery wait — if no `save:committed` shows
+  // up within this window (leader gone, network wedged), fall through
+  // to a reinit against the older snapshot. `sendNeedsSave` was
+  // already fired at crash time, so by the time the user clicks this
+  // the save is often already done.
   const RECOVERY_SAVE_WAIT_MS = 10000;
   const [recoveryWaiting, setRecoveryWaiting] = useState(false);
-  /** Fired by the onRemoteSaveCommitted callback if non-null. */
+  /** Fired by onRemoteSaveCommitted the moment a fresh save lands. */
   const recoveryResolveRef = useRef<(() => void) | null>(null);
 
   const requestRecoveryReload = useCallback(() => {
     if (recoveryWaiting) return;
     setRecoveryWaiting(true);
+    // Re-send `peer:needs-save` at click time too — in case the one
+    // sent at crash time was rate-limited server-side (another peer
+    // crashed in the same 2s window) or the leader had been the
+    // crashed peer itself and has since been replaced.
     try {
       relayRef.current?.sendNeedsSave();
     } catch (e) {
-      console.warn('[OOEditor] sendNeedsSave failed', e);
+      console.warn('[OOEditor] sendNeedsSave from reload failed', e);
     }
     let settled = false;
     const finish = () => {
@@ -253,9 +295,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       setState('stale-resyncing');
       setReinitKey(k => k + 1);
     };
-    // Resolved by onRemoteSaveCommitted the moment a fresh save lands.
     recoveryResolveRef.current = finish;
-    // Hard timeout: fall through even if no save arrives.
     setTimeout(finish, RECOVERY_SAVE_WAIT_MS);
   }, [recoveryWaiting]);
 
@@ -535,6 +575,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         replayBufferRef.current = [];
         replayPreDelayActiveRef.current = true;
         outgoingSilencedRef.current = false;
+        crashedPeersRef.current.clear();
         recoveryResolveRef.current = null;
         setRecoveryWaiting(false);
         setEditorInstance(null);
@@ -631,9 +672,37 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               name: user.full_name || user.email,
             },
             lang: user.language || 'en',
+            // Force Fast co-editing mode and prevent the user from
+            // switching to Strict. Our whole relay pipeline assumes
+            // per-keystroke OT patches via `Continue_FastCollaborativeEditing`.
+            // Strict mode uses paragraph-level lock acquisition
+            // (`getLock`/`unLockDocument`/`releaseLock`) arbitrated
+            // by a real DocServer — shapes we can't reconstruct on
+            // the receiving peer, which crashes OO with the same
+            // `undefined.guid`/`undefined.type` family we've been
+            // chasing. `change: false` hides the toggle in Advanced
+            // Settings so a user can't flip it mid-session.
+            coEditing: {
+              mode: 'fast',
+              change: false,
+            },
             customization: {
               compactToolbar: false,
-              forcesave: true,
+              // In production we hide OO's own Save button — saving
+              // is entirely owned by our checkpointing layer, and
+              // users shouldn't need a manual save at all. In dev we
+              // expose it so Cmd+S works through OO's native route
+              // (our `onForceSaveRequest` handler picks it up without
+              // echoing any ack, so OO's crash-prone `_onForceSave`
+              // response path is never hit).
+              forcesave: process.env.NODE_ENV === 'development',
+              // `autosave: true` is REQUIRED: OO's internal
+              // `_autoSave` timer is what drives
+              // `Continue_FastCollaborativeEditing`, i.e. the OT
+              // flush that ships saveChanges to peers. Turning this
+              // off silently breaks live collaboration — the editor
+              // keeps typing locally but remote peers stop seeing
+              // updates. Do not disable.
               autosave: true,
               macros: false,
               plugins: false,
@@ -836,6 +905,61 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       } as ErrorEvent);
                     },
                   );
+                }
+
+                // Disable the Insert → Chart button when the on-disk
+                // format is `.odp`. x2t's ODP writer can't round-trip
+                // charts through our save pipeline (they're stored as
+                // DrawingML `CChartSpace` objects inside PPTY native
+                // state and ODF has no direct equivalent), so letting
+                // the user insert one produces an unrecoverable save
+                // failure. We mimic OO's own disabled-button look
+                // (dim + pointer-events:none) rather than hiding the
+                // button, so users see it's intentionally off, and we
+                // wipe the dropdown submenu so keyboard / arrow
+                // navigation can't reach the chart items either.
+                if (
+                  originalFormat === 'odp' &&
+                  !innerWindow.__driveChartDisabled
+                ) {
+                  innerWindow.__driveChartDisabled = true;
+                  const doc = innerWindow.document;
+                  const applyDisable = () => {
+                    const slot = doc.getElementById('slot-btn-insertchart');
+                    if (!slot) return false;
+                    slot.style.opacity = '0.4';
+                    slot.style.pointerEvents = 'none';
+                    slot.setAttribute(
+                      'title',
+                      'Charts are not supported in .odp files',
+                    );
+                    // Nuke the dropdown submenu so focus/arrow keys
+                    // can't land on a chart preset even if OO opens
+                    // the menu programmatically.
+                    const menu = doc.getElementById(
+                      'id-toolbar-menu-insertchart',
+                    );
+                    if (menu) menu.innerHTML = '';
+                    // Defensive: prevent keyboard activation of the
+                    // wrapping button itself.
+                    const btn = slot.querySelector('button');
+                    if (btn) {
+                      btn.setAttribute('tabindex', '-1');
+                      btn.setAttribute('aria-disabled', 'true');
+                    }
+                    return true;
+                  };
+                  if (!applyDisable()) {
+                    // Toolbar may not be mounted yet — retry a few
+                    // times, give up after ~5s.
+                    let attempts = 0;
+                    const timer = innerWindow.setInterval(() => {
+                      attempts++;
+                      if (applyDisable() || attempts > 50) {
+                        innerWindow.clearInterval(timer);
+                      }
+                    }, 100);
+                  }
                 }
 
                 // Pre-create OO's clipboard sanitization iframe with a
@@ -1454,12 +1578,14 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               },
               onPeerLeave: userId => {
                 editorPeersRef.current.delete(userId);
+                crashedPeersRef.current.delete(userId);
                 removeRemoteUser(userId);
                 releaseAllUserLocks(userId);
                 sendToEditor(buildConnectStateMessage() as any);
               },
               onRoomState: peers => {
                 editorPeersRef.current.clear();
+                crashedPeersRef.current.clear();
                 for (const peer of peers) {
                   if (peer.userId) {
                     if (peer.canEdit) {
@@ -1467,6 +1593,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       if (existing === undefined || peer.joinedAt < existing) {
                         editorPeersRef.current.set(peer.userId, peer.joinedAt);
                       }
+                    }
+                    // Relay persisted the `peer:crashed` flag so a
+                    // late joiner learns about it here rather than
+                    // needing to witness the original broadcast.
+                    if (peer.crashed) {
+                      crashedPeersRef.current.add(peer.userId);
                     }
                     addRemoteUser(peer.userId, peer.userName, peer.userId);
                   }
@@ -1604,6 +1736,19 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   );
                 });
               },
+              onPeerCrashed: peerUserId => {
+                // A remote peer's editor entered the crash overlay.
+                // Exclude it from our leader election so we don't
+                // wait on a save that can never come. The peer will
+                // reappear as a fresh connection (new joinedAt) if
+                // it clicks Reload and reconnects.
+                console.log(
+                  '[OOEditor] peer',
+                  peerUserId,
+                  'crashed — excluding from leader election',
+                );
+                crashedPeersRef.current.add(peerUserId);
+              },
             },
           });
           relayRef.current = relay;
@@ -1736,6 +1881,21 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             relayRef.current?.sendMeta(messages);
           },
           onSaveLockCheck: () => false,
+          onForceSaveRequest: () => {
+            // Cmd+S / OO-internal forceSave. In production this is a
+            // no-op — OO's Save UI is hidden (`forcesave: false`) so
+            // the only way to get here is the keyboard shortcut, and
+            // users shouldn't need it: our checkpointing layer auto-
+            // saves on a timer and on tab close. In development we
+            // still route it to `forceSave()` so we don't have to
+            // wait 30 s for the auto-tick while testing.
+            if (process.env.NODE_ENV !== 'development') return;
+            if (outgoingSilencedRef.current) return;
+            console.log('[OOEditor] dev Cmd+S → forceSave()');
+            forceSave().catch(e => {
+              console.warn('[OOEditor] forceSave from Cmd+S failed', e);
+            });
+          },
         });
         editor.connectMockServer(callbacks);
 
@@ -1753,9 +1913,16 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // call, so it stays correct as peers join/leave.
         isSaveLeaderRef.current = () => {
           if (!canEdit) return false;
+          // A crashed tab can't run `forceSave` — take ourselves out
+          // of contention so the next lexicographic candidate wins.
+          if (outgoingSilencedRef.current) return false;
           const myId = user!.sub!;
           const myJoinedAt = relayRef.current?.joinedAt ?? 0;
           for (const [peerId, peerJoinedAt] of editorPeersRef.current) {
+            // Peers whose editor crashed are still in the room (they
+            // need to observe `save:committed`) but must not be
+            // elected — skip them during the walk.
+            if (crashedPeersRef.current.has(peerId)) continue;
             if (peerId < myId) return false;
             if (peerId === myId && peerJoinedAt < myJoinedAt) return false;
           }
@@ -1768,6 +1935,13 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           userId: user.sub!,
           onUpload: uploadEncrypted,
           isSaveLeader: () => isSaveLeaderRef.current(),
+          onSaveResult: result => {
+            // `null` = the most recent save succeeded → clear any
+            // banner. Otherwise show the classified error.
+            console.log('[OOEditor] onSaveResult', result);
+            setSaveError(result);
+            if (!result) setSaveRetrying(false);
+          },
         });
 
         // Listen for tab close/refresh to save or warn
@@ -1889,6 +2063,110 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       ref={containerRef}
       className={styles.ooEditorContainer}
     >
+      {/* Save-error banner. Static block — lives above the editor
+          area and reduces the iframe height, so the OO toolbar and
+          content stay fully usable while the banner is up. */}
+      {saveError && state !== 'oo-crashed' && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '12px',
+            padding: '10px 16px',
+            background:
+              saveError.kind === 'fatal'
+                ? 'var(--c--theme--colors--danger-100, #fde8e8)'
+                : 'var(--c--theme--colors--warning-100, #fff4e5)',
+            borderBottom:
+              saveError.kind === 'fatal'
+                ? '1px solid var(--c--theme--colors--danger-400, #e66)'
+                : '1px solid var(--c--theme--colors--warning-400, #e0a84f)',
+            color:
+              saveError.kind === 'fatal'
+                ? 'var(--c--theme--colors--danger-800, #800)'
+                : 'var(--c--theme--colors--warning-800, #7a4d00)',
+            fontSize: '13px',
+            flexShrink: 0,
+          }}
+        >
+          <span
+            className="material-icons"
+            style={{ fontSize: '20px', flexShrink: 0 }}
+            aria-hidden
+          >
+            {saveError.kind === 'fatal' ? 'error' : 'sync_problem'}
+          </span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <strong style={{ display: 'block', marginBottom: 2 }}>
+              {saveError.kind === 'fatal'
+                ? t(
+                    'explorer.encrypted.save_error_fatal_title',
+                    'Saving failed — please contact support',
+                  )
+                : t(
+                    'explorer.encrypted.save_error_transient_title',
+                    'Sync error — save will be retried',
+                  )}
+            </strong>
+            <span
+              style={{
+                display: 'block',
+                fontSize: '12px',
+                opacity: 0.85,
+                lineHeight: 1.4,
+                wordBreak: 'break-word',
+              }}
+            >
+              {saveError.kind === 'fatal'
+                ? t(
+                    'explorer.encrypted.save_error_fatal_body',
+                    'The document contains content we cannot serialize to ' +
+                      'the on-disk format. Your recent edits are visible ' +
+                      'but unsaved. Please undo the last change or contact ' +
+                      'support. Details: ',
+                  )
+                : t(
+                    'explorer.encrypted.save_error_transient_body',
+                    'We could not upload the latest save. Details: ',
+                  )}
+              {saveError.detail}
+            </span>
+          </div>
+          {saveError.kind === 'transient' && (
+            <button
+              type="button"
+              disabled={saveRetrying}
+              onClick={async () => {
+                setSaveRetrying(true);
+                try {
+                  await forceSave();
+                } catch {
+                  /* onSaveResult will surface the updated state */
+                } finally {
+                  setSaveRetrying(false);
+                }
+              }}
+              style={{
+                flexShrink: 0,
+                padding: '6px 14px',
+                border: '1px solid currentColor',
+                borderRadius: '4px',
+                background: 'transparent',
+                color: 'inherit',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: saveRetrying ? 'wait' : 'pointer',
+              }}
+            >
+              {saveRetrying
+                ? t('explorer.encrypted.save_error_retrying', 'Retrying…')
+                : t('explorer.encrypted.save_error_retry', 'Retry now')}
+            </button>
+          )}
+        </div>
+      )}
+      <div className={styles.editorArea}>
       {/* OnlyOffice replaces this div with its own iframe[name="frameEditor"] */}
       <div id="oo-editor-placeholder" />
       {/* Loading overlay */}
@@ -2021,6 +2299,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           </style>
         </div>
       )}
+      </div>
       {/* Connection status — only show when there's a problem */}
       {relayFailed && (
         <div

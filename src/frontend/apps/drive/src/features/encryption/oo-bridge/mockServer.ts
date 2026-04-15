@@ -11,6 +11,15 @@ export interface MockServerOptions {
   onSaveLockCheck?: () => boolean;
   onMessageBroadcast?: (messages: unknown[]) => void;
   onMetaBroadcast?: (messages: unknown[]) => void;
+  /**
+   * Called when OO triggers its own `forceSave` (e.g. user hits
+   * Cmd+S, or OO's internal forceSave timer fires). We do NOT echo
+   * any acknowledgement back to OO because real OO servers reply
+   * with a payload shape `_onForceSave` reads `.type` on each
+   * entry of, and our simplified reply makes it crash. Instead we
+   * route to the host's own checkpointing `forceSave()`.
+   */
+  onForceSaveRequest?: () => void;
   resolveImageURL?: (name: string) => Promise<string>;
 }
 
@@ -107,7 +116,17 @@ export function createMockServerCallbacks(
           }
 
           sendToEditor({ type: 'getLock', locks } as OOMessage);
-          options.onLockRequest?.('acquire', msg.block);
+          // Broadcast lock acquisition to other peers ONLY for
+          // spreadsheets. Word / slide use the OT channel
+          // (`saveChanges`) for conflict handling, and OO's
+          // `_onGetLock` on slide expects a doc-type-specific
+          // shape we can't faithfully reconstruct on the receiver —
+          // forwarding raw `msg.block` crashes the peer's editor
+          // with `undefined.guid`. We never surfaced peer-lock
+          // state in the UI for word/slide anyway.
+          if (options.docType === 'cell') {
+            options.onLockRequest?.('acquire', msg.block);
+          }
           break;
         }
 
@@ -134,12 +153,19 @@ export function createMockServerCallbacks(
         }
 
         case 'unLockDocument': {
-          if (msg.releaseLocks) {
-            sendToEditor({
-              type: 'releaseLock',
-              locks: [msg.releaseLocks],
-            } as OOMessage);
-          }
+          // NOTE: we intentionally do NOT echo a `releaseLock` frame
+          // back to the sender. The real OO collab server only
+          // broadcasts `releaseLock` to OTHER peers — the sender has
+          // already dropped its own locks from client state before
+          // calling `unLockDocument`. Echoing to self makes
+          // `DocsCoApi._onReleaseLock` iterate `locks` looking up
+          // guids that no longer exist; on slide (presentation) the
+          // lock shape is an array of arrays and an inner element is
+          // `undefined`, which throws `Cannot read properties of
+          // undefined (reading 'guid')` and poisons the editor. The
+          // only useful reply here is `unSaveLock` when `isSave` is
+          // set — inter-peer lock visibility is already covered by
+          // the `lock:acquire`/`lock:release` channel.
           if (msg.isSave) {
             sendToEditor({
               type: 'unSaveLock',
@@ -179,11 +205,15 @@ export function createMockServerCallbacks(
           sendToEditor({ type: 'message' } as OOMessage);
           break;
 
+        case 'forceSave':
         case 'forceSaveStart':
-          sendToEditor({
-            type: 'forceSave',
-            success: true,
-          } as OOMessage);
+          // DO NOT echo anything to OO here. Real DocServer replies
+          // with a payload `_onForceSave` iterates reading `.type`
+          // on each element; any simplified reply crashes OO with
+          // `Cannot read properties of undefined (reading 'type')`.
+          // Route the user's intent to our own checkpointing layer
+          // instead — that's where the real save lives.
+          options.onForceSaveRequest?.();
           break;
 
         default:

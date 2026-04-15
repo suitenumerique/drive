@@ -1,7 +1,22 @@
 .ooEditorContainer {
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  // Keep position:relative so the `relayFailed` cloud_off badge
+  // (absolutely positioned bottom-left) still anchors to us rather
+  // than escaping up to the page.
   position: relative;
+
+  // The editor area sits below the (optional) save-error banner and
+  // fills the remaining height. Overlays (loading, crash) are
+  // absolutely positioned inside this wrapper, not the outer
+  // container, so the banner is never covered.
+  .editorArea {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+  }
 
   :global(iframe[name="frameEditor"]) {
     width: 100% !important;

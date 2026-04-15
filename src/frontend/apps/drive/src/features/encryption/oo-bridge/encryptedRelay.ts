@@ -18,6 +18,8 @@ type RoomStateMessage = {
     userName: string;
     canEdit: boolean;
     joinedAt: number;
+    /** True if this peer has broadcast `peer:crashed`. */
+    crashed?: boolean;
   }>;
   historyLength: number;
 };
@@ -29,6 +31,8 @@ type PeerJoinMessage = {
   userName: string;
   canEdit: boolean;
   joinedAt: number;
+  /** Fresh connections are always false; kept for schema symmetry. */
+  crashed?: boolean;
 };
 
 /** A peer left the room */
@@ -124,6 +128,18 @@ type PeerNeedsSaveMessage = {
   userId: string;
 };
 
+/**
+ * A peer's local OO editor has entered an unrecoverable state and is
+ * showing the crash overlay. The peer stays connected (so it can still
+ * observe `save:committed` for its recovery wait), but surviving peers
+ * must exclude it from leader election — a crashed editor can't run
+ * `forceSave`, so leaving it as leader deadlocks the room.
+ */
+type PeerCrashedMessage = {
+  type: 'peer:crashed';
+  userId: string;
+};
+
 /** All possible system messages */
 type SystemMessage =
   | AuthenticatedMessage
@@ -140,7 +156,8 @@ type SystemMessage =
   | MetaBroadcastMessage
   | SaveChangesBroadcastMessage
   | SaveCommittedMessage
-  | PeerNeedsSaveMessage;
+  | PeerNeedsSaveMessage
+  | PeerCrashedMessage;
 
 export interface RelayCallbacks {
   /** Called when a remote peer's saveChanges envelope arrives (full message) */
@@ -165,6 +182,7 @@ export interface RelayCallbacks {
       userName: string;
       canEdit: boolean;
       joinedAt: number;
+      crashed?: boolean;
     }>,
   ) => void;
   /** Called when a lock is acquired/released by a peer */
@@ -211,6 +229,12 @@ export interface RelayCallbacks {
    * should actually save; others ignore it.
    */
   onPeerNeedsSave?: (userId: string) => void;
+  /**
+   * Called when a remote peer broadcasts `peer:crashed`. The local
+   * editor must exclude that userId from leader election until it
+   * disconnects or reconnects fresh.
+   */
+  onPeerCrashed?: (userId: string) => void;
 }
 
 export class EncryptedRelay {
@@ -444,6 +468,10 @@ export class EncryptedRelay {
     this.sendSystem({ type: 'peer:needs-save' });
   }
 
+  sendCrashed(): void {
+    this.sendSystem({ type: 'peer:crashed' });
+  }
+
   /** Disconnect and clean up */
   destroy(): void {
     this.destroyed = true;
@@ -674,6 +702,9 @@ export class EncryptedRelay {
         break;
       case 'peer:needs-save':
         this.callbacks.onPeerNeedsSave?.(msg.userId);
+        break;
+      case 'peer:crashed':
+        this.callbacks.onPeerCrashed?.(msg.userId);
         break;
     }
   }

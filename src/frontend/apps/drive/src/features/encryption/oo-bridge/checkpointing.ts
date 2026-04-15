@@ -48,6 +48,22 @@ let uploadCallback:
   | null = null;
 
 /**
+ * Save-result notification. Called with `null` on success, or with a
+ * classified error on failure:
+ *  - `fatal`: x2t refused to serialize the document (e.g. an OLE
+ *    embed the writer can't handle). Retrying will keep failing
+ *    until the user removes the offending content — so the overlay
+ *    should tell them to contact support / roll back.
+ *  - `transient`: extract or upload step failed (innerEditor not
+ *    ready, S3 network error, vault encrypt failure). The next
+ *    auto-save tick will likely succeed; the overlay should invite
+ *    a manual retry and auto-clear on the next success.
+ */
+let saveResultCallback:
+  | ((result: { kind: 'fatal' | 'transient'; detail: string } | null) => void)
+  | null = null;
+
+/**
  * Initialize the checkpointing system.
  */
 
@@ -68,12 +84,17 @@ export function initCheckpointing(opts: {
   /** Return true if this client should be responsible for saving.
    *  When absent, all clients save (single-user mode). */
   isSaveLeader?: () => boolean;
+  /** Notified on every save attempt outcome (see `saveResultCallback`). */
+  onSaveResult?: (
+    result: { kind: 'fatal' | 'transient'; detail: string } | null,
+  ) => void;
 }): void {
   editorInstance = opts.editor;
   originalFormat = opts.format;
   documentType = opts.type;
   currentUserId = opts.userId;
   uploadCallback = opts.onUpload;
+  saveResultCallback = opts.onSaveResult ?? null;
   isSaveLeader = opts.isSaveLeader ?? null;
   lastCheckpointIndex = getPatchIndex();
   lastCheckpointTime = Date.now();
@@ -180,6 +201,14 @@ async function saveCheckpoint(): Promise<void> {
   isSaving = true;
   console.log('[checkpoint] starting save…');
 
+  // Separate error classes for the overlay:
+  //  - conversionFailure: x2t refused the document. The user has to
+  //    remove the offending content (OLE embed, broken chart, …).
+  //  - transientFailure: the extract or upload step hit a recoverable
+  //    error — the next save will probably succeed.
+  let conversionFailure: string | null = null;
+  let transientFailure: string | null = null;
+
   try {
     // Extract current document as binary from OnlyOffice
     // asc_nativeGetFile() is on the INNER editor object inside the OO iframe,
@@ -267,26 +296,48 @@ async function saveCheckpoint(): Promise<void> {
       /* g_oDocumentUrls unavailable */
     }
 
-    const converted = await convertFromInternal(
-      binBuffer,
-      originalFormat,
-      documentType,
-      media,
-    );
+    // Phase 1: x2t conversion. A throw here means the document
+    // contains content the writer can't serialize — retrying will
+    // keep failing, so classify as fatal.
+    let converted: Uint8Array;
+    try {
+      converted = await convertFromInternal(
+        binBuffer,
+        originalFormat,
+        documentType,
+        media,
+      );
+    } catch (error) {
+      conversionFailure =
+        error instanceof Error ? error.message : String(error);
+      console.error('[checkpoint] conversion failed:', error);
+      return;
+    }
 
     const convertedBytes = converted.byteLength;
     if (convertedBytes === 0) {
       // SAFETY: never overwrite S3 with empty bytes — that destroys the doc.
+      // Treat as fatal: x2t produced nothing, retrying won't help.
       console.warn(
         '[checkpoint] conversion produced 0 bytes — refusing to upload (this would wipe the file)',
       );
+      conversionFailure = 'x2t conversion produced 0 bytes';
       return;
     }
 
-    // Upload (encryption happens in the callback). Note that the vault
-    // transfers the buffer into a worker, so `converted.buffer` is detached
-    // after this await — read the byte count from the local capture above.
-    await uploadCallback(converted.buffer, originalFormat, epochMs);
+    // Phase 2: encrypt + upload. A throw here is almost always
+    // transient (S3 network error, presigned URL refresh, vault
+    // worker race). Note the vault worker transfers the buffer, so
+    // `converted.buffer` is detached after the await — read the
+    // byte count from the local capture above.
+    try {
+      await uploadCallback(converted.buffer, originalFormat, epochMs);
+    } catch (error) {
+      transientFailure =
+        error instanceof Error ? error.message : String(error);
+      console.error('[checkpoint] upload failed:', error);
+      return;
+    }
 
     lastCheckpointIndex = getPatchIndex();
     lastCheckpointTime = Date.now();
@@ -302,9 +353,22 @@ async function saveCheckpoint(): Promise<void> {
       ')',
     );
   } catch (error) {
+    // Anything thrown outside the inner try/catches (extract step,
+    // pause/resume gate, etc.) is classified transient — the next
+    // tick may find the editor in a better state.
+    transientFailure =
+      error instanceof Error ? error.message : String(error);
     console.error('[checkpoint] save failed:', error);
   } finally {
     isSaving = false;
     releaseSaveLock(currentUserId);
+    if (conversionFailure) {
+      saveResultCallback?.({ kind: 'fatal', detail: conversionFailure });
+    } else if (transientFailure) {
+      saveResultCallback?.({ kind: 'transient', detail: transientFailure });
+    } else {
+      // Clears any previously-shown error overlay.
+      saveResultCallback?.(null);
+    }
   }
 }

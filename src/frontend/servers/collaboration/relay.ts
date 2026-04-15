@@ -124,6 +124,13 @@ interface PeerMeta {
   joinedAt: number;
   pongReceived: boolean;
   pingTimer: ReturnType<typeof setInterval> | null;
+  /**
+   * True once this peer has broadcast `peer:crashed`. Persisted on
+   * the relay so a late joiner sees the crashed flag in its
+   * `room:state` snapshot and can exclude the peer from leader
+   * election without having to witness the original broadcast.
+   */
+  crashed: boolean;
 }
 
 const rooms = new Map<string, Room>();
@@ -213,6 +220,7 @@ function handleConnection(
     joinedAt,
     pongReceived: true,
     pingTimer: null,
+    crashed: false,
   };
 
   room.peers.set(ws, meta);
@@ -300,16 +308,21 @@ function handleConnection(
     removeFromRoom(roomId, ws);
   });
 
-  // Notify existing peers about the new joiner
+  // Notify existing peers about the new joiner (always crashed:false
+  // for a fresh connection — reconnecting a crashed tab counts as a
+  // new PeerMeta).
   broadcastSystem(room, ws, {
     type: 'peer:join',
     userId: meta.userId,
     userName: meta.userName,
     canEdit: meta.canEdit,
     joinedAt: meta.joinedAt,
+    crashed: meta.crashed,
   });
 
-  // Send room state to the new joiner
+  // Send room state to the new joiner, including per-peer crashed
+  // flags so a late arrival learns about already-crashed peers
+  // without needing to witness the original broadcast.
   const peerList = Array.from(room.peers.entries())
     .filter(([peer]) => peer !== ws)
     .map(([, m]) => ({
@@ -317,6 +330,7 @@ function handleConnection(
       userName: m.userName,
       canEdit: m.canEdit,
       joinedAt: m.joinedAt,
+      crashed: m.crashed,
     }));
 
   // Filter history to events strictly newer than the snapshot epoch the
@@ -373,6 +387,18 @@ function handleSystemMessage(
     broadcastSystem(room, ws, {
       type: 'save:committed',
       epochMs,
+      userId: meta.userId,
+    });
+    return;
+  }
+  if (msg.type === 'peer:crashed') {
+    // Persist on the connection so late joiners learn about it via
+    // their initial `room:state` snapshot — the broadcast below only
+    // reaches peers already in the room, so without this a peer who
+    // joins after the crash would happily elect the dead tab leader.
+    meta.crashed = true;
+    broadcastSystem(room, ws, {
+      type: 'peer:crashed',
       userId: meta.userId,
     });
     return;
