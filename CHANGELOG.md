@@ -31,6 +31,10 @@ and this project adheres to
 
 - 🐛(frontend) range selection freezes when there are many items in the list
 
+### Fixed
+
+- 🐛(backend) fix openapi schema for item access endpoints
+
 ## [v0.16.0] - 2026-04-09
 
 ### Added

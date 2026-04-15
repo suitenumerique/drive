@@ -29,6 +29,7 @@ from corsheaders.middleware import (
     ACCESS_CONTROL_ALLOW_METHODS,
     ACCESS_CONTROL_ALLOW_ORIGIN,
 )
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from lasuite.drf.models.choices import (
     PRIVILEGED_ROLES,
     LinkReachChoices,
@@ -1638,6 +1639,17 @@ class ItemViewSet(
         return drf.response.Response(serializer.data, status=drf.status.HTTP_201_CREATED)
 
 
+# Declare the schema statically because `get_serializer_class` depends on
+# `self.item`, which reads `self.kwargs["resource_id"]` — unavailable during
+# drf-spectacular introspection. Without this, spectacular fails to resolve
+# the serializer and drops the requestBody for POST/PUT/PATCH operations.
+@extend_schema(
+    request=serializers.ItemAccessSerializer,
+    responses=serializers.ItemAccessSerializer,
+)
+@extend_schema_view(
+    list=extend_schema(responses=serializers.ItemAccessSerializer(many=True)),
+)
 class ItemAccessViewSet(
     drf.mixins.CreateModelMixin,
     drf.mixins.DestroyModelMixin,
@@ -1669,6 +1681,9 @@ class ItemAccessViewSet(
     """
 
     lookup_field = "pk"
+    # Forcing to None makes sure the OpenApi schema does not infer that the
+    # list endpoint supports pagination.
+    pagination_class = None
     permission_classes = [permissions.ItemAccessPermission]
     queryset = models.ItemAccess.objects.select_related("user", "item").all()
     resource_field_name = "item"
