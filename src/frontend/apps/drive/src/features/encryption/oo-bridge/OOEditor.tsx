@@ -26,7 +26,12 @@ import {
   convertFromInternalToPdf,
 } from './x2tConverter';
 import { EXTENSION_TO_X2T_TYPE } from './types';
-import { createMockServerCallbacks, sendToEditor, setEditorInstance } from './mockServer';
+import {
+  createMockServerCallbacks,
+  sendToEditor,
+  setEditorInstance,
+  setVerboseSends,
+} from './mockServer';
 import {
   initLocalUser,
   getUniqueOOId,
@@ -35,7 +40,10 @@ import {
   buildConnectStateMessage,
   getRemoteOOInternalId,
 } from './participants';
-import { resetPatchIndex } from './changesPipeline';
+import {
+  resetPatchIndex,
+  observeIncomingSaveChanges,
+} from './changesPipeline';
 import { EncryptedRelay } from './encryptedRelay';
 import { withIncomingOTGate } from './incomingOtGate';
 import {
@@ -52,6 +60,7 @@ import {
   stopCheckpointing,
   forceSave,
   hasUnsavedChanges,
+  markRemoteSaveCommitted,
 } from './checkpointing';
 import {
   MIME_TO_DOC_TYPE,
@@ -59,7 +68,6 @@ import {
   MIME_TO_X2T_TYPE,
   MIME_TO_EXTENSION,
   type OOConfig,
-  type OOChange,
 } from './types';
 import { useAuth } from '@/features/auth/Auth';
 import styles from './OOEditor.module.scss';
@@ -87,7 +95,15 @@ interface OOEditorProps {
   item: Item;
 }
 
-type EditorState = 'loading' | 'decrypting' | 'converting' | 'mounting' | 'ready' | 'error';
+type EditorState =
+  | 'loading'
+  | 'decrypting'
+  | 'converting'
+  | 'syncing-history'
+  | 'mounting'
+  | 'ready'
+  | 'error'
+  | 'stale-resyncing';
 
 // Only these OO message types are allowed in from peers. Anything else (rpc,
 // executeCommand, documentOpen, pluginEvent, forceSave, …) would be a way for
@@ -122,6 +138,13 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [relayFailed, setRelayFailed] = useState(false);
+  /**
+   * Bumped when the relay tells us our history cursor is stale (close
+   * code 4001). Each bump re-runs the init effect, which refetches the
+   * S3 snapshot and builds a fresh editor. The old editor + relay are
+   * torn down in the cleanup branch of the previous run.
+   */
+  const [reinitKey, setReinitKey] = useState(0);
   const editorRef = useRef<OOEditorInstance | null>(null);
   const relayRef = useRef<EncryptedRelay | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -142,23 +165,209 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const pendingRemoteChangesRef = useRef<Array<() => void>>([]);
   const documentReadyRef = useRef(false);
 
-  const drainPendingRemoteChanges = useCallback(() => {
-    const queue = pendingRemoteChangesRef.current;
-    if (queue.length === 0) return;
-    console.log(
-      '[OOEditor] draining',
-      queue.length,
-      'remote changes queued before document ready',
-    );
-    pendingRemoteChangesRef.current = [];
-    for (const fn of queue) {
-      try {
-        fn();
-      } catch (e) {
-        console.warn('[OOEditor] pending remote change drain error', e);
-      }
+  /**
+   * Drain pre-delay: once OO reports the document content ready, we
+   * still wait this long before feeding it the first replayed event,
+   * so its internal state machine has time to settle.
+   */
+  const DRAIN_PRE_DELAY_MS = 1500;
+  /**
+   * Max time we wait for a missing `changesIndex` to arrive before we
+   * give up and force-apply whatever is next in the reorder buffer.
+   */
+  const REPLAY_GAP_TIMEOUT_MS = 5000;
+
+  /**
+   * Reorder buffer state for index-gated replay. We store the "start
+   * index" (`changesIndex - changes.length`) of every saveChanges we've
+   * seen but can't apply yet because its predecessor hasn't arrived.
+   * Keyed by start index. Non-saveChanges callbacks (cursor, lock,
+   * message, meta) don't go through this gate — they're applied as
+   * soon as the editor is ready.
+   */
+  const replayExpectedStartIdxRef = useRef<number | null>(null);
+  type BufferedSaveChanges = { endIdx: number; apply: () => void };
+  const replayBufferRef = useRef<Map<number, BufferedSaveChanges>>(new Map());
+  const replayGapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  /**
+   * One-shot pre-delay timer that releases replay after OO settles.
+   * While `replayPreDelayActive` is true, we buffer everything (even
+   * the first event) and flush on timer fire.
+   */
+  const replayPreDelayActiveRef = useRef(true);
+
+  const clearReplayGapTimer = useCallback(() => {
+    if (replayGapTimerRef.current) {
+      clearTimeout(replayGapTimerRef.current);
+      replayGapTimerRef.current = null;
     }
   }, []);
+
+  const drainReplayBuffer = useCallback(() => {
+    if (replayPreDelayActiveRef.current) return;
+    // Apply as many buffered events as match the expected index,
+    // advancing the cursor to each applied event's endIdx.
+    while (replayExpectedStartIdxRef.current !== null) {
+      const expected = replayExpectedStartIdxRef.current;
+      const entry = replayBufferRef.current.get(expected);
+      if (!entry) break;
+      replayBufferRef.current.delete(expected);
+      clearReplayGapTimer();
+      try {
+        entry.apply();
+      } catch (e) {
+        console.warn('[replay] apply error', e);
+      }
+      replayExpectedStartIdxRef.current = entry.endIdx;
+    }
+    // Still buffered but no match — arm the gap timeout.
+    if (replayBufferRef.current.size > 0 && !replayGapTimerRef.current) {
+      replayGapTimerRef.current = setTimeout(() => {
+        const keys = Array.from(replayBufferRef.current.keys()).sort(
+          (a, b) => a - b,
+        );
+        if (keys.length === 0) {
+          replayGapTimerRef.current = null;
+          return;
+        }
+        const firstKey = keys[0];
+        const entry = replayBufferRef.current.get(firstKey)!;
+        replayBufferRef.current.delete(firstKey);
+        console.log(
+          `[replay] gap timeout — force-applying startIdx=${firstKey} ` +
+            `endIdx=${entry.endIdx} ` +
+            `(expected=${replayExpectedStartIdxRef.current})`,
+        );
+        replayGapTimerRef.current = null;
+        try {
+          entry.apply();
+        } catch (e) {
+          console.warn('[replay] forced apply error', e);
+        }
+        // Advance the cursor past the force-applied event so the next
+        // drain round can pick up the events that follow.
+        replayExpectedStartIdxRef.current = entry.endIdx;
+        drainReplayBuffer();
+      }, REPLAY_GAP_TIMEOUT_MS);
+    }
+  }, [clearReplayGapTimer]);
+
+  /**
+   * Entry point for every inbound `saveChanges`. Classifies against
+   * the expected index and either applies in place, or buffers for
+   * later. Non-saveChanges events skip this entirely.
+   */
+  const handleIncomingSaveChanges = useCallback(
+    (message: Record<string, unknown>, applyFn: () => void) => {
+      const changes = (message as { changes?: unknown }).changes;
+      const count = Array.isArray(changes) ? changes.length : 0;
+      const endIdx = Number(message.changesIndex);
+
+      // Envelopes with no usable index — apply without gating (rare).
+      if (!Number.isFinite(endIdx) || count === 0) {
+        if (replayPreDelayActiveRef.current) {
+          // Still holding the pre-delay: synthesize a key so it flushes
+          // alongside the other buffered events.
+          const syntheticKey =
+            (replayExpectedStartIdxRef.current ?? 0) - 1;
+          replayBufferRef.current.set(syntheticKey, {
+            endIdx: syntheticKey + 1,
+            apply: applyFn,
+          });
+          return;
+        }
+        applyFn();
+        return;
+      }
+
+      const startIdx = endIdx - count;
+
+      // Pre-delay: buffer everything. Seed `expected` from the
+      // smallest startIdx we've seen so the flush starts in order.
+      if (replayPreDelayActiveRef.current) {
+        if (
+          replayExpectedStartIdxRef.current === null ||
+          startIdx < replayExpectedStartIdxRef.current
+        ) {
+          replayExpectedStartIdxRef.current = startIdx;
+        }
+        replayBufferRef.current.set(startIdx, { endIdx, apply: applyFn });
+        return;
+      }
+
+      // First event ever after flush — accept and advance to its endIdx.
+      if (replayExpectedStartIdxRef.current === null) {
+        try {
+          applyFn();
+        } catch (e) {
+          console.warn('[replay] first-event apply error', e);
+        }
+        replayExpectedStartIdxRef.current = endIdx;
+        drainReplayBuffer();
+        return;
+      }
+
+      // In-order: apply and advance.
+      if (startIdx === replayExpectedStartIdxRef.current) {
+        try {
+          applyFn();
+        } catch (e) {
+          console.warn('[replay] apply error', e);
+        }
+        replayExpectedStartIdxRef.current = endIdx;
+        drainReplayBuffer();
+        return;
+      }
+
+      // Stale or duplicate — sender's index went backwards. Drop it.
+      if (startIdx < replayExpectedStartIdxRef.current) {
+        console.warn(
+          `[replay] dropping stale/duplicate startIdx=${startIdx} ` +
+            `endIdx=${endIdx} expected=${replayExpectedStartIdxRef.current}`,
+        );
+        return;
+      }
+
+      // Ahead of the expected cursor — buffer until the gap is filled
+      // or the 5s gap timer forces a jump.
+      console.log(
+        `[replay] buffering out-of-order startIdx=${startIdx} ` +
+          `endIdx=${endIdx} expected=${replayExpectedStartIdxRef.current}`,
+      );
+      replayBufferRef.current.set(startIdx, { endIdx, apply: applyFn });
+      drainReplayBuffer();
+    },
+    [drainReplayBuffer],
+  );
+
+  /**
+   * Called once OO reports documentContentReady. Waits the pre-delay
+   * then releases buffered events through the index-gated path.
+   */
+  const releaseReplayAfterPreDelay = useCallback(() => {
+    console.log(
+      `[replay] scheduling release after ${DRAIN_PRE_DELAY_MS} ms pre-delay ` +
+        `(buffered=${replayBufferRef.current.size})`,
+    );
+    setTimeout(() => {
+      console.log('[replay] pre-delay elapsed — flushing buffer');
+      replayPreDelayActiveRef.current = false;
+      setVerboseSends(true);
+      // If we gathered some events during pre-delay, the expected
+      // index is already seeded from the smallest startIdx we saw.
+      // Fast-forward it to match the smallest key in the buffer so
+      // the first drain round actually advances.
+      if (replayBufferRef.current.size > 0) {
+        const keys = Array.from(replayBufferRef.current.keys()).sort(
+          (a, b) => a - b,
+        );
+        replayExpectedStartIdxRef.current = keys[0];
+      }
+      drainReplayBuffer();
+    }, DRAIN_PRE_DELAY_MS);
+  }, [drainReplayBuffer]);
   const canEdit = !!item.abilities?.partial_update;
 
   const mime = item.mimetype || '';
@@ -486,6 +695,26 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     'images in g_oDocumentUrls',
                   );
                 }
+
+                // Also register any media that arrived inline with the
+                // history replay (images pasted by peers before we joined).
+                // Without this, references in the replayed saveChanges
+                // would 404 on the next image load cycle.
+                if (docUrls) {
+                  for (const [name, url] of Object.entries(
+                    historyInitialMedia,
+                  )) {
+                    try {
+                      docUrls.addImageUrl(name, url);
+                    } catch (e) {
+                      console.warn(
+                        '[OOEditor] failed to register history media',
+                        name,
+                        e,
+                      );
+                    }
+                  }
+                }
               } catch (e) {
                 console.warn('[OOEditor] image registration failed', e);
               }
@@ -493,9 +722,67 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             onDocumentReady: () => {
               setState('ready');
               documentReadyRef.current = true;
-              // OO can now accept external saveChanges. Drain anything the
-              // relay replayed while the document was still loading.
-              drainPendingRemoteChanges();
+              // The live saveChanges drain must NOT run inside
+              // onDocumentReady — at that point OO has finished opening the
+              // document but hasn't yet armed its auto-save interval in
+              // `onDocumentContentReady`, and pushing external changes
+              // straight into Continue_FastCollaborativeEditing lands on a
+              // half-initialised object graph (observed as
+              // `Run.GetDocumentPositionFromObject is not a function` and
+              // friends).
+              //
+              // Hook the inner editor's onDocumentContentReady so the drain
+              // fires AFTER OO's content-ready pipeline has completed and
+              // the auto-save loop is live. If the hook can't be installed
+              // (or content-ready has already fired), fall back to a
+              // short setTimeout which usually pushes us past the race.
+              let drained = false;
+              const safeDrain = () => {
+                if (drained) return;
+                drained = true;
+                try {
+                  releaseReplayAfterPreDelay();
+                } catch (e) {
+                  console.warn('[OOEditor] deferred replay release failed', e);
+                }
+              };
+              try {
+                const ooIframe = document.querySelector(
+                  'iframe[name="frameEditor"]',
+                ) as HTMLIFrameElement | null;
+                const innerWindow = ooIframe?.contentWindow as any;
+                const innerEditor =
+                  innerWindow?.editor || innerWindow?.editorCell;
+                if (
+                  innerEditor &&
+                  typeof innerEditor.onDocumentContentReady === 'function' &&
+                  !innerEditor.__driveContentReadyHooked
+                ) {
+                  innerEditor.__driveContentReadyHooked = true;
+                  const orig = innerEditor.onDocumentContentReady.bind(
+                    innerEditor,
+                  );
+                  innerEditor.onDocumentContentReady = function (
+                    ...args: unknown[]
+                  ) {
+                    const result = orig(...args);
+                    safeDrain();
+                    return result;
+                  };
+                } else {
+                  // Hook unavailable — defer to the next macrotask. In
+                  // practice this fires after OO's internal
+                  // onDocumentContentReady because that path runs
+                  // synchronously inside the current call stack.
+                  setTimeout(safeDrain, 0);
+                }
+              } catch (e) {
+                console.warn('[OOEditor] content-ready hook failed', e);
+                setTimeout(safeDrain, 0);
+              }
+              // Last-resort safety net: no matter what, drain within 500ms
+              // so pending changes can't sit forever if our hook misses.
+              setTimeout(safeDrain, 500);
               try {
                 const ooIframe = document.querySelector(
                   'iframe[name="frameEditor"]',
@@ -1007,6 +1294,292 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           return { r: c.r, g: c.g, b: c.b, a: 255 };
         };
 
+        // ----------------------------------------------------------------
+        // Relay-first init: connect the encrypted relay BEFORE constructing
+        // OO. Any saveChanges envelopes replayed by the relay as part of
+        // the room history are unpacked into `historyInitialChanges` and
+        // fed to OO via `getInitialChanges()` during its open flow — OO's
+        // proper channel for pre-load collaborative changes. This avoids
+        // the race where history replayed through `sendMessageToOO` after
+        // onDocumentReady hits OO's auto-save interval with an object
+        // graph that isn't fully initialised yet.
+        //
+        // Live cursor/meta/message events that happen to arrive during
+        // the history window are ignored at the OO layer (editor isn't
+        // mounted yet — sendToEditor is a no-op) but their side effects
+        // on peer-tracking refs still apply.
+        // ----------------------------------------------------------------
+        const historyInitialMedia: Record<string, string> = {};
+        let historyPhaseComplete = false;
+        let resolveHistoryReady: () => void = () => {};
+        const historyReadyPromise = new Promise<void>(resolve => {
+          resolveHistoryReady = resolve;
+        });
+        const endPreloadPhase = () => {
+          if (historyPhaseComplete) return;
+          historyPhaseComplete = true;
+          console.log(
+            '[OOEditor] preload phase complete —',
+            replayBufferRef.current.size,
+            'saveChanges in reorder buffer,',
+            pendingRemoteChangesRef.current.length,
+            'ancillary events queued,',
+            Object.keys(historyInitialMedia).length,
+            'media items',
+          );
+          resolveHistoryReady();
+        };
+
+        try {
+          const relay = new EncryptedRelay({
+            roomId: item.id,
+            userId: user.sub!,
+            userName: user.full_name || user.email,
+            vaultClient,
+            encryptedSymmetricKey: entryKeyBytes.buffer,
+            encryptedKeyChain:
+              encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
+            sinceTimestampMs: Number.isFinite(snapshotEpochMs)
+              ? snapshotEpochMs
+              : 0,
+            callbacks: {
+              onSaveChanges: (_userId, message, media) => {
+                // Media is accumulated the same way in both phases so it
+                // ends up in g_oDocumentUrls before OO resolves references.
+                if (media) {
+                  if (!historyPhaseComplete) {
+                    Object.assign(historyInitialMedia, media);
+                  } else {
+                    try {
+                      const docUrls =
+                        innerWindowRef.current?.AscCommon?.g_oDocumentUrls;
+                      if (docUrls) {
+                        for (const [name, url] of Object.entries(media)) {
+                          docUrls.addImageUrl(name, url);
+                        }
+                      }
+                    } catch (e) {
+                      console.warn(
+                        '[OOEditor] failed to register inbound media',
+                        e,
+                      );
+                    }
+                  }
+                }
+
+                // Preload and live phases now take the SAME path: queue
+                // the change into pendingRemoteChangesRef if the editor
+                // isn't ready yet, otherwise apply immediately. This
+                // matches CryptPad's architecture — every inbound
+                // saveChanges flows through `sendMessageToOO`, never
+                // through OO's `getInitialChanges` channel (which
+                // silently drops replay bursts in our testing).
+                if (!historyPhaseComplete) {
+                  try {
+                    const changes = (message as { changes?: unknown })
+                      .changes;
+                    const n = Array.isArray(changes) ? changes.length : 0;
+                    console.log(
+                      `[HISTORY replay queued] changes=${n} ` +
+                        `(snapshotEpochMs=${snapshotEpochMs})`,
+                      message,
+                    );
+                  } catch {
+                    /* ignore logging failures */
+                  }
+                }
+
+                // Forward the envelope to OO unchanged, but observe its
+                // `changesIndex` so our local `patchIndex` adopts the
+                // sender's counter. When we later emit our own outgoing
+                // `saveChanges`, `wrapOutgoingSaveChanges` will continue
+                // numbering from there — matching OO's internal state.
+                const apply = () => {
+                  observeIncomingSaveChanges(
+                    message as Record<string, unknown>,
+                  );
+                  withIncomingOTGate(() =>
+                    sendToEditorGuarded(message as any),
+                  );
+                };
+                // All saveChanges flow through the index-gated reorder
+                // buffer. While the editor is still mounting / during
+                // the post-ready pre-delay, the buffer holds events
+                // until `releaseReplayAfterPreDelay` flushes them in
+                // strict changesIndex order.
+                handleIncomingSaveChanges(
+                  message as Record<string, unknown>,
+                  apply,
+                );
+              },
+              onHistoryEnd: () => {
+                endPreloadPhase();
+              },
+              onPeerJoin: (userId, userName, peerCanEdit) => {
+                if (peerCanEdit) editorPeersRef.current.add(userId);
+                addRemoteUser(userId, userName, userId);
+                sendToEditor(buildConnectStateMessage() as any);
+              },
+              onPeerLeave: userId => {
+                editorPeersRef.current.delete(userId);
+                removeRemoteUser(userId);
+                releaseAllUserLocks(userId);
+                sendToEditor(buildConnectStateMessage() as any);
+              },
+              onRoomState: peers => {
+                editorPeersRef.current.clear();
+                for (const peer of peers) {
+                  if (peer.userId) {
+                    if (peer.canEdit) editorPeersRef.current.add(peer.userId);
+                    addRemoteUser(peer.userId, peer.userName, peer.userId);
+                  }
+                }
+                sendToEditor(buildConnectStateMessage() as any);
+              },
+              onLockUpdate: (type, userId, lockData) => {
+                const lockId = JSON.stringify(lockData);
+                if (type === 'acquire') {
+                  acquireCellLock(lockId, userId, lockData);
+                } else {
+                  releaseCellLock(lockId, userId);
+                }
+                const apply = () =>
+                  sendToEditor({
+                    type: 'getLock',
+                    locks: [lockData],
+                  } as any);
+                if (!documentReadyRef.current) {
+                  pendingRemoteChangesRef.current.push(apply);
+                  return;
+                }
+                apply();
+              },
+              onCursorUpdate: (userId, cursor) => {
+                const senderOOId = getRemoteOOInternalId(userId);
+                if (!senderOOId) return;
+                const cursorString =
+                  typeof cursor === 'string' ? cursor : JSON.stringify(cursor);
+                const apply = () =>
+                  sendToEditorGuarded({
+                    type: 'cursor',
+                    messages: [
+                      {
+                        cursor: cursorString,
+                        user: senderOOId,
+                        useridoriginal: senderOOId,
+                        time: Date.now(),
+                      },
+                    ],
+                  } as any);
+                if (!documentReadyRef.current) {
+                  pendingRemoteChangesRef.current.push(apply);
+                  return;
+                }
+                apply();
+              },
+              onMessageBroadcast: (_userId, messages) => {
+                const apply = () =>
+                  sendToEditorGuarded({ type: 'message', messages } as any);
+                if (!documentReadyRef.current) {
+                  pendingRemoteChangesRef.current.push(apply);
+                  return;
+                }
+                apply();
+              },
+              onMetaBroadcast: (_userId, messages) => {
+                const apply = () =>
+                  sendToEditorGuarded({ type: 'meta', messages } as any);
+                if (!documentReadyRef.current) {
+                  pendingRemoteChangesRef.current.push(apply);
+                  return;
+                }
+                apply();
+              },
+              onSaveLock: () => {
+                // Save coordination handled by leader election, not lock messages
+              },
+              onConnectionChange: connected => {
+                setIsConnected(connected);
+                if (connected) setRelayFailed(false);
+              },
+              onReconnectFailed: () => {
+                setRelayFailed(true);
+                // Unblock OO construction if we were still waiting.
+                endPreloadPhase();
+              },
+              onStaleHistory: () => {
+                // Relay told us our cursor is older than its purge
+                // floor — we cannot catch up from memory. Tear the
+                // editor down and re-run init from scratch so we
+                // refetch the S3 snapshot and rebuild OO on top of it.
+                console.warn(
+                  '[OOEditor] stale history — triggering full reinit from S3',
+                );
+                setState('stale-resyncing');
+                setReinitKey(k => k + 1);
+              },
+              onRemoteSaveCommitted: (epochMs, userId) => {
+                // The leader just persisted a checkpoint that covers
+                // the shared state we're holding. Clear our local
+                // "unsaved" marker so beforeunload doesn't prompt on
+                // close. Also advance our relay cursor past the epoch
+                // to match what the relay itself will purge.
+                console.log(
+                  '[OOEditor] remote save committed by',
+                  userId,
+                  'epoch=',
+                  epochMs,
+                );
+                markRemoteSaveCommitted();
+                relayRef.current?.observeRemoteSaveCommitted(epochMs);
+              },
+            },
+          });
+          relayRef.current = relay;
+          setState('syncing-history');
+          relay.connect();
+        } catch (relayErr) {
+          console.warn('Relay setup failed (single-user mode):', relayErr);
+          endPreloadPhase();
+        }
+
+        // Wait for the preload phase to complete. Outer safety net in case
+        // the relay never fires any callback at all (e.g. connection stuck
+        // in CONNECTING). A large history burst with inline images can
+        // legitimately take a while to stream + decrypt, so this is
+        // intentionally generous — the overlay keeps the editor locked
+        // from user input while we wait.
+        await Promise.race([
+          historyReadyPromise,
+          new Promise<void>(resolve =>
+            setTimeout(() => {
+              if (!historyPhaseComplete) {
+                console.warn(
+                  '[OOEditor] preload outer timeout — proceeding',
+                );
+                endPreloadPhase();
+              }
+              resolve();
+            }, 120_000),
+          ),
+        ]);
+        if (cancelled) return;
+
+        // History replay is queued into `pendingRemoteChangesRef` above
+        // and will be drained (paced) once OO fires `onDocumentContentReady`.
+        // We do NOT use `setInitialChanges` / `getInitialChanges`: that
+        // channel silently drops replay bursts in our testing. CryptPad's
+        // architecture confirms the right path is `sendMessageToOO`.
+        console.log(
+          '[OOEditor:preload] ready to construct editor —',
+          replayBufferRef.current.size,
+          'saveChanges buffered,',
+          pendingRemoteChangesRef.current.length,
+          'ancillary events queued,',
+          Object.keys(historyInitialMedia).length,
+          'media items',
+        );
+
         // Create the editor
         const editor = new window.DocsAPI.DocEditor(
           'oo-editor-placeholder',
@@ -1020,6 +1593,49 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         const callbacks = createMockServerCallbacks({
           docType,
           onSaveChangesBroadcast: message => {
+            // DIAGNOSTIC: dump every outbound saveChanges so we can
+            // compare what user1 emits vs what user2 receives and tries
+            // to apply in its history replay.
+            try {
+              const changes = (message as { changes?: unknown }).changes;
+              const arr = Array.isArray(changes) ? changes : [];
+              console.log(
+                '[OOEditor:send] saveChanges',
+                {
+                  count: arr.length,
+                  changes: arr.map((c, i) => {
+                    const ooc = c as {
+                      user?: string;
+                      useridoriginal?: string;
+                      change?: string;
+                    };
+                    const raw = ooc.change ?? '';
+                    let parsed: unknown = raw;
+                    try {
+                      parsed = JSON.parse(raw);
+                    } catch {
+                      /* leave as string */
+                    }
+                    const preview =
+                      typeof raw === 'string' && raw.length > 500
+                        ? raw.slice(0, 500) + `…(+${raw.length - 500})`
+                        : raw;
+                    return {
+                      index: i,
+                      user: ooc.user,
+                      useridoriginal: ooc.useridoriginal,
+                      typeCode: Array.isArray(parsed)
+                        ? (parsed as unknown[])[0]
+                        : undefined,
+                      parsed,
+                      raw: preview,
+                    };
+                  }),
+                },
+              );
+            } catch {
+              /* ignore */
+            }
             relayRef.current?.sendSaveChanges(message);
           },
           onLockRequest: (type, lockData) => {
@@ -1069,130 +1685,6 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         window.addEventListener('beforeunload', handleBeforeUnload);
         document.addEventListener('visibilitychange', handleVisibilityChange);
 
-        // Set up the encrypted relay for collaboration (optional — PoC works without it)
-        try {
-          const relay = new EncryptedRelay({
-            roomId: item.id,
-            userId: user.sub!,
-            userName: user.full_name || user.email,
-            vaultClient,
-            encryptedSymmetricKey: entryKeyBytes.buffer,
-            encryptedKeyChain:
-              encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
-            sinceTimestampMs: Number.isFinite(snapshotEpochMs)
-              ? snapshotEpochMs
-              : 0,
-            callbacks: {
-              onSaveChanges: (_userId, message, media) => {
-                const apply = () => {
-                  // Register any inline media in g_oDocumentUrls BEFORE we
-                  // hand the change to OO. The change carries image
-                  // references by name; without the bytes registered first,
-                  // OO falls back to fetching `<name>` from the editor app
-                  // dir and 404s.
-                  if (media) {
-                    try {
-                      const docUrls =
-                        innerWindowRef.current?.AscCommon?.g_oDocumentUrls;
-                      if (docUrls) {
-                        for (const [name, url] of Object.entries(media)) {
-                          docUrls.addImageUrl(name, url);
-                        }
-                      }
-                    } catch (e) {
-                      console.warn(
-                        '[OOEditor] failed to register inbound media',
-                        e,
-                      );
-                    }
-                  }
-                  sendToEditorGuarded(message as any);
-                };
-                // Hold remote changes that arrive before the base document
-                // has finished loading — OO drops external saveChanges in
-                // that window. The drain runs inside onDocumentReady.
-                if (!documentReadyRef.current) {
-                  pendingRemoteChangesRef.current.push(() =>
-                    withIncomingOTGate(apply),
-                  );
-                  return;
-                }
-                withIncomingOTGate(apply);
-              },
-              onPeerJoin: (userId, userName, peerCanEdit) => {
-                if (peerCanEdit) editorPeersRef.current.add(userId);
-                addRemoteUser(userId, userName, userId);
-                sendToEditor(buildConnectStateMessage() as any);
-              },
-              onPeerLeave: userId => {
-                editorPeersRef.current.delete(userId);
-                removeRemoteUser(userId);
-                releaseAllUserLocks(userId);
-                sendToEditor(buildConnectStateMessage() as any);
-              },
-              onRoomState: peers => {
-                editorPeersRef.current.clear();
-                for (const peer of peers) {
-                  if (peer.userId) {
-                    if (peer.canEdit) editorPeersRef.current.add(peer.userId);
-                    addRemoteUser(peer.userId, peer.userName, peer.userId);
-                  }
-                }
-                sendToEditor(buildConnectStateMessage() as any);
-              },
-              onLockUpdate: (type, userId, lockData) => {
-                const lockId = JSON.stringify(lockData);
-                if (type === 'acquire') {
-                  acquireCellLock(lockId, userId, lockData);
-                } else {
-                  releaseCellLock(lockId, userId);
-                }
-                sendToEditor({
-                  type: 'getLock',
-                  locks: [lockData],
-                } as any);
-              },
-              onCursorUpdate: (userId, cursor) => {
-                const senderOOId = getRemoteOOInternalId(userId);
-                if (!senderOOId) return;
-                const cursorString =
-                  typeof cursor === 'string' ? cursor : JSON.stringify(cursor);
-                sendToEditorGuarded({
-                  type: 'cursor',
-                  messages: [
-                    {
-                      cursor: cursorString,
-                      user: senderOOId,
-                      useridoriginal: senderOOId,
-                      time: Date.now(),
-                    },
-                  ],
-                } as any);
-              },
-              onMessageBroadcast: (_userId, messages) => {
-                sendToEditorGuarded({ type: 'message', messages } as any);
-              },
-              onMetaBroadcast: (_userId, messages) => {
-                sendToEditorGuarded({ type: 'meta', messages } as any);
-              },
-              onSaveLock: () => {
-                // Save coordination handled by leader election, not lock messages
-              },
-              onConnectionChange: connected => {
-                setIsConnected(connected);
-                if (connected) setRelayFailed(false);
-              },
-              onReconnectFailed: () => {
-                setRelayFailed(true);
-              },
-            },
-          });
-          relayRef.current = relay;
-          relay.connect();
-        } catch (relayErr) {
-          console.warn('Relay setup failed (single-user mode):', relayErr);
-        }
-
         // Don't revoke blob URL here — OnlyOffice fetches it asynchronously.
         // It will be cleaned up when the component unmounts.
       } catch (err) {
@@ -1228,7 +1720,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         }
       }
     };
-  }, [item.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.id, reinitKey]);
 
   if (state === 'error') {
     const isNoKeysError =
@@ -1324,6 +1817,16 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               t('explorer.encrypted.decrypting', 'Decrypting...')}
             {state === 'converting' &&
               t('explorer.encrypted.converting', 'Preparing editor...')}
+            {state === 'syncing-history' &&
+              t(
+                'explorer.encrypted.syncing_history',
+                'Syncing collaborative state...',
+              )}
+            {state === 'stale-resyncing' &&
+              t(
+                'explorer.encrypted.stale_resyncing',
+                'Reconnecting after long disconnect — refetching document...',
+              )}
             {(state === 'loading' || state === 'mounting') &&
               t('explorer.encrypted.loading_editor', 'Loading editor...')}
           </span>

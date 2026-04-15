@@ -14,20 +14,57 @@ export interface MockServerOptions {
   resolveImageURL?: (name: string) => Promise<string>;
 }
 
-let initialChangesQueue: OOChange[] = [];
 let editorInstance: any = null;
+/**
+ * Diagnostic counter — when > 0, every `sendToEditor` call is logged
+ * with its type, payload summary, return value, and any exception.
+ * Toggled on during the preload drain so we can see whether OO is
+ * accepting or silently dropping replayed events.
+ */
+let verboseSends = 0;
 
 export function setEditorInstance(editor: any): void {
   editorInstance = editor;
 }
 
-export function setInitialChanges(changes: OOChange[]): void {
-  initialChangesQueue = changes;
+export function setVerboseSends(enabled: boolean): void {
+  verboseSends = enabled ? verboseSends + 1 : Math.max(0, verboseSends - 1);
 }
 
 export function sendToEditor(msg: OOMessage): void {
-  if (editorInstance) {
+  if (!editorInstance) {
+    if (verboseSends > 0) {
+      console.log('[sendToEditor] NO EDITOR — dropping', msg?.type);
+    }
+    return;
+  }
+  if (verboseSends === 0) {
     editorInstance.sendMessageToOO(msg);
+    return;
+  }
+  // Verbose path — wrap with logging and exception capture.
+  const type = (msg as { type?: string }).type;
+  const summary: Record<string, unknown> = { type };
+  const anyMsg = msg as Record<string, unknown>;
+  if (Array.isArray(anyMsg.changes)) {
+    summary.changesCount = (anyMsg.changes as unknown[]).length;
+    summary.changesIndex = anyMsg.changesIndex;
+    summary.syncChangesIndex = anyMsg.syncChangesIndex;
+    summary.startSaveChanges = anyMsg.startSaveChanges;
+    summary.endSaveChanges = anyMsg.endSaveChanges;
+    summary.isCoAuthoring = anyMsg.isCoAuthoring;
+  }
+  if (anyMsg.messages) {
+    summary.messagesCount = Array.isArray(anyMsg.messages)
+      ? (anyMsg.messages as unknown[]).length
+      : 1;
+  }
+  console.log('[sendToEditor → OO] in', summary);
+  try {
+    const result = editorInstance.sendMessageToOO(msg);
+    console.log('[sendToEditor ← OO] out', { type, result });
+  } catch (err) {
+    console.error('[sendToEditor ← OO] THREW', { type, err });
   }
 }
 
@@ -168,9 +205,10 @@ export function createMockServerCallbacks(
     },
 
     getInitialChanges(): OOChange[] {
-      const changes = [...initialChangesQueue];
-      initialChangesQueue = [];
-      return changes;
+      // Always empty: we route every inbound saveChanges through
+      // `sendMessageToOO` (live path), including history replay. OO's
+      // `handleChanges` / `_openDocumentEndCallback` path is not used.
+      return [];
     },
   };
 }

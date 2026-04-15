@@ -71,6 +71,11 @@ type AuthenticatedMessage = {
   userName: string;
 };
 
+/** Server signals the end of the history replay burst */
+type HistoryEndMessage = {
+  type: 'history:end';
+};
+
 /** A chat / comment-event message from a peer (OO `message` channel) */
 type MessageBroadcastMessage = {
   type: 'oo:message';
@@ -94,9 +99,17 @@ type SaveChangesBroadcastMessage = {
   media?: Record<string, string>;
 };
 
+/** The leader persisted a checkpoint to S3 at the given epoch. */
+type SaveCommittedMessage = {
+  type: 'save:committed';
+  epochMs: number;
+  userId: string;
+};
+
 /** All possible system messages */
 type SystemMessage =
   | AuthenticatedMessage
+  | HistoryEndMessage
   | RoomStateMessage
   | PeerJoinMessage
   | PeerLeaveMessage
@@ -107,21 +120,24 @@ type SystemMessage =
   | SaveUnlockMessage
   | MessageBroadcastMessage
   | MetaBroadcastMessage
-  | SaveChangesBroadcastMessage;
+  | SaveChangesBroadcastMessage
+  | SaveCommittedMessage;
 
 export interface RelayCallbacks {
   /** Called when a remote peer's saveChanges envelope arrives (full message) */
   onSaveChanges: (
     userId: string,
     message: Record<string, unknown>,
-    media?: Record<string, string>,
+    media?: Record<string, string>
   ) => void;
   /** Called when a peer joins the room */
   onPeerJoin: (userId: string, userName: string, canEdit: boolean) => void;
   /** Called when a peer leaves the room */
   onPeerLeave: (userId: string) => void;
   /** Called when room state is received (initial peer list) */
-  onRoomState: (peers: Array<{ userId: string; userName: string; canEdit: boolean }>) => void;
+  onRoomState: (
+    peers: Array<{ userId: string; userName: string; canEdit: boolean }>
+  ) => void;
   /** Called when a lock is acquired/released by a peer */
   onLockUpdate: (
     type: 'acquire' | 'release',
@@ -140,6 +156,26 @@ export interface RelayCallbacks {
   onConnectionChange: (connected: boolean) => void;
   /** Called when max reconnection attempts are exhausted */
   onReconnectFailed: () => void;
+  /**
+   * Called when the relay rejects our connection with close code 4001
+   * because our `sinceTimestampMs` cursor is older than the relay's
+   * purge floor. The editor must refetch the S3 snapshot and reinit —
+   * we cannot bring the in-memory OO state up to date from the relay
+   * alone.
+   */
+  onStaleHistory?: () => void;
+  /**
+   * Called once the relay has finished replaying the room history that
+   * predates our join. Fires exactly once per WS connection, after the
+   * last history frame and before any live broadcast.
+   */
+  onHistoryEnd?: () => void;
+  /**
+   * Called when a remote peer persists a checkpoint to S3. The local
+   * editor should clear its "unsaved changes" marker so the
+   * beforeunload guard doesn't prompt on close.
+   */
+  onRemoteSaveCommitted?: (epochMs: number, userId: string) => void;
 }
 
 export class EncryptedRelay {
@@ -163,6 +199,24 @@ export class EncryptedRelay {
    * successful local save.
    */
   private sinceTimestampMs: number;
+  /**
+   * Serializes message handling so async binary decrypts can't be overtaken
+   * by synchronous text frames that arrived after them on the wire. Without
+   * this, `history:end` (text, sync) resolves before the binary history
+   * frames that preceded it finish decrypting, and the preload gate closes
+   * before the replayed changes land in `historyInitialChanges`.
+   */
+  private processing: Promise<void> = Promise.resolve();
+  /**
+   * True until the relay sends `history:end`. While in this phase every
+   * incoming frame is a replay from the server's `room.history`, which
+   * may contain ephemeral events (cursors, locks) from peers that no
+   * longer exist and/or that reference internal OO object IDs from a
+   * different ID namespace than ours. Applying them crashes OO, so we
+   * drop ephemeral types during history replay and keep only the real
+   * document edits.
+   */
+  private inHistoryPhase = true;
 
   constructor(opts: {
     roomId: string;
@@ -188,12 +242,17 @@ export class EncryptedRelay {
   /** Connect to the relay server */
   connect(): void {
     if (this.destroyed) return;
+    // Every (re)connect starts with a history replay burst.
+    this.inHistoryPhase = true;
 
     const params = new URLSearchParams({ room: this.roomId });
     if (this.sinceTimestampMs > 0) {
       params.set('since', String(this.sinceTimestampMs));
     }
     const url = `${RELAY_URL}?${params.toString()}`;
+    console.warn(
+      `[relay] connecting since=${this.sinceTimestampMs} url=${url}`,
+    );
     this.ws = new WebSocket(url);
     // Don't set binaryType to 'arraybuffer' — we need to distinguish
     // text frames (JSON system messages) from binary frames (encrypted patches).
@@ -214,11 +273,21 @@ export class EncryptedRelay {
     };
 
     this.ws.onmessage = event => {
-      this.handleMessage(event.data);
+      const data = event.data;
+      this.processing = this.processing.then(() => this.handleMessage(data));
     };
 
-    this.ws.onclose = () => {
+    this.ws.onclose = event => {
       this.callbacks.onConnectionChange(false);
+      // 4001 = stale history. The relay cannot serve us the events we
+      // missed; the editor needs to fully reinit from S3. Do NOT
+      // reconnect — just surface the condition and stop.
+      if (event.code === 4001) {
+        console.warn('[relay] closed with stale-history (4001)');
+        this.destroyed = true;
+        this.callbacks.onStaleHistory?.();
+        return;
+      }
       this.scheduleReconnect();
     };
 
@@ -254,7 +323,10 @@ export class EncryptedRelay {
   }
 
   /** Send a lock request to all peers (encrypted — lock data is sensitive) */
-  async sendLock(type: 'acquire' | 'release', lockData: unknown): Promise<void> {
+  async sendLock(
+    type: 'acquire' | 'release',
+    lockData: unknown
+  ): Promise<void> {
     await this.sendEncryptedSystem({
       type: type === 'acquire' ? 'lock:acquire' : 'lock:release',
       lockData,
@@ -307,6 +379,18 @@ export class EncryptedRelay {
     this.sendSystem({ type: 'save:committed', epochMs });
   }
 
+  /**
+   * Advance the local replay cursor WITHOUT sending anything to the
+   * relay. Used when we observe a remote peer's `save:committed` — we
+   * want our reconnect `?since=` to reflect that epoch, but we must
+   * not re-broadcast or the relay would rebroadcast it back to us.
+   */
+  observeRemoteSaveCommitted(epochMs: number): void {
+    if (epochMs > this.sinceTimestampMs) {
+      this.sinceTimestampMs = epochMs;
+    }
+  }
+
   /** Disconnect and clean up */
   destroy(): void {
     this.destroyed = true;
@@ -347,7 +431,14 @@ export class EncryptedRelay {
 
   private sendSystem(msg: object): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(msg));
+      const payload = JSON.stringify(msg);
+      console.log(
+        '[relay] send TEXT',
+        (msg as { type?: string }).type ?? '?',
+        'size:',
+        payload.length
+      );
+      this.ws.send(payload);
     }
   }
 
@@ -361,12 +452,12 @@ export class EncryptedRelay {
       const { encryptedData } = await this.vaultClient.encryptWithKey(
         plaintext,
         this.cloneKey(),
-        this.cloneKeyChain(),
+        this.cloneKeyChain()
       );
 
       if (this.ws?.readyState === WebSocket.OPEN) {
         const head = new Uint8Array(
-          encryptedData.slice(0, Math.min(16, encryptedData.byteLength)),
+          encryptedData.slice(0, Math.min(16, encryptedData.byteLength))
         );
         const headHex = Array.from(head)
           .map(b => b.toString(16).padStart(2, '0'))
@@ -379,7 +470,7 @@ export class EncryptedRelay {
           'cipher:',
           encryptedData.byteLength,
           'head:',
-          headHex,
+          headHex
         );
         this.ws.send(encryptedData);
       }
@@ -409,26 +500,33 @@ export class EncryptedRelay {
     }
 
     if (buffer) {
-      // Skip tiny frames that can't be valid encrypted content
-      // (vault encryption adds at minimum a nonce + auth tag overhead)
-      if (buffer.byteLength < 32) {
+      // Every binary frame from the relay is prefixed with an 8-byte
+      // big-endian u64 timestampMs assigned server-side. Strip it before
+      // decryption and use it to advance our `sinceTimestampMs` cursor
+      // so reconnects skip anything we've already seen.
+      if (buffer.byteLength < 8 + 32) {
         return;
       }
+      const view = new DataView(buffer);
+      const timestampMs = Number(view.getBigUint64(0, false));
+      const ciphertext = buffer.slice(8);
 
       // Capture a fingerprint of the incoming frame BEFORE we hand the
       // buffer to the vault worker (which transfers ownership, detaching
       // the original). This lets us log size + leading bytes on failure.
-      const head = new Uint8Array(buffer.slice(0, Math.min(16, buffer.byteLength)));
+      const head = new Uint8Array(
+        ciphertext.slice(0, Math.min(16, ciphertext.byteLength))
+      );
       const headHex = Array.from(head)
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
-      const size = buffer.byteLength;
+      const size = ciphertext.byteLength;
 
       try {
         const { data: plaintext } = await this.vaultClient.decryptWithKey(
-          buffer,
+          ciphertext,
           this.cloneKey(),
-          this.cloneKeyChain(),
+          this.cloneKeyChain()
         );
 
         const json = new TextDecoder().decode(plaintext);
@@ -436,6 +534,11 @@ export class EncryptedRelay {
 
         if (parsed.type && typeof parsed.type === 'string') {
           this.handleSystemMessage(parsed as SystemMessage);
+          // Advance the cursor only after successful decrypt+dispatch so
+          // a bad frame doesn't skip us past good ones on reconnect.
+          if (timestampMs > this.sinceTimestampMs) {
+            this.sinceTimestampMs = timestampMs;
+          }
         }
       } catch (err) {
         console.warn(
@@ -444,16 +547,32 @@ export class EncryptedRelay {
           'head:',
           headHex,
           'err:',
-          err,
+          err
         );
       }
     }
   }
 
   private handleSystemMessage(msg: SystemMessage): void {
+    // Drop lock events during history replay. Locks are ephemeral live
+    // state — OO's OT engine uses them to serialize edits to shared
+    // paragraphs/ranges. Replayed `lock:acquire` events leave phantom
+    // locks in the joiner's OO that no live peer can release, which
+    // freezes editing on the affected region. Cursors and saveChanges
+    // are harmless and still flow through history replay.
+    if (
+      this.inHistoryPhase &&
+      (msg.type === 'lock:acquire' || msg.type === 'lock:release')
+    ) {
+      return;
+    }
     switch (msg.type) {
       case 'system:authenticated':
         // Auth confirmed — nothing to do, connection is already established
+        break;
+      case 'history:end':
+        this.inHistoryPhase = false;
+        this.callbacks.onHistoryEnd?.();
         break;
       case 'room:state':
         this.callbacks.onRoomState(msg.peers);
@@ -488,13 +607,18 @@ export class EncryptedRelay {
       case 'oo:saveChanges':
         this.callbacks.onSaveChanges(msg.userId, msg.message, msg.media);
         break;
+      case 'save:committed':
+        this.callbacks.onRemoteSaveCommitted?.(msg.epochMs, msg.userId);
+        break;
     }
   }
 
   private scheduleReconnect(): void {
     if (this.destroyed) return;
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.warn('[relay] Max reconnection attempts reached, retrying every 60s');
+      console.warn(
+        '[relay] Max reconnection attempts reached, retrying every 60s'
+      );
       this.callbacks.onReconnectFailed();
       // Keep trying every 60s in the background — the server may come back
       this.reconnectTimer = setTimeout(() => {

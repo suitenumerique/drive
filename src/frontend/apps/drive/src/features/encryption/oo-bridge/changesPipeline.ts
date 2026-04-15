@@ -47,3 +47,26 @@ export function wrapOutgoingSaveChanges(
     syncChangesIndex: patchIndex,
   };
 }
+
+/**
+ * Track an INCOMING saveChanges envelope against our local `patchIndex`
+ * WITHOUT mutating the envelope. Called right before we hand the
+ * message to OO so the receiver's local counter stays in sync with the
+ * absolute `changesIndex` OO will observe from the replay stream.
+ *
+ * This is the "seed from first event" strategy: instead of rewriting
+ * every incoming envelope's index to our local counter, we adopt the
+ * sender's counter as our own. For single-sender replay (the normal
+ * case), this preserves whatever internal cross-references OO may hold
+ * against absolute indices while still keeping outgoing changes from
+ * us sequenced after the stream we've observed.
+ */
+export function observeIncomingSaveChanges(
+  msg: Record<string, unknown>,
+): void {
+  if (msg.type !== 'saveChanges') return;
+  const incoming = Number(msg.changesIndex);
+  if (Number.isFinite(incoming) && incoming > patchIndex) {
+    patchIndex = incoming;
+  }
+}

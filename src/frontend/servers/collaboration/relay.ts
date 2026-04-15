@@ -102,6 +102,13 @@ interface Room {
   history: HistoryEntry[];
   /** Serializes delayed history purges against each other. */
   purgeMutex: Mutex;
+  /**
+   * Highest epoch (client UTC ms) we have ever purged history below. A
+   * joiner reconnecting with `?since=X` where `X < historyFloorMs` is
+   * asking for events we no longer remember, so we reject them and they
+   * must refetch from S3.
+   */
+  historyFloorMs: number;
 }
 
 interface PeerMeta {
@@ -118,7 +125,12 @@ const rooms = new Map<string, Room>();
 function getOrCreateRoom(roomId: string): Room {
   let room = rooms.get(roomId);
   if (!room) {
-    room = { peers: new Map(), history: [], purgeMutex: new Mutex() };
+    room = {
+      peers: new Map(),
+      history: [],
+      purgeMutex: new Mutex(),
+      historyFloorMs: 0,
+    };
     rooms.set(roomId, room);
   }
   return room;
@@ -263,8 +275,17 @@ function handleConnection(
       console.warn('[relay] dropped tiny binary frame size:', binary.byteLength);
       return;
     }
-    broadcastRaw(room, ws, binary);
-    room.history.push({ timestampMs: Date.now(), data: binary });
+    // Server-authoritative timestamp: prepend 8 bytes (big-endian u64 ms)
+    // to every frame so peers can advance their `sinceTimestampMs` cursor
+    // monotonically across reconnects. The prefixed buffer is both
+    // broadcast and stored in history so replay and live paths are
+    // identical on the wire.
+    const timestampMs = Date.now();
+    const stamped = Buffer.allocUnsafe(8 + binary.byteLength);
+    stamped.writeBigUInt64BE(BigInt(timestampMs), 0);
+    binary.copy(stamped, 8);
+    broadcastRaw(room, ws, stamped);
+    room.history.push({ timestampMs, data: stamped });
   });
 
   ws.on('close', () => {
@@ -294,6 +315,11 @@ function handleConnection(
   const replay = room.history.filter(
     e => e.timestampMs > sinceTimestampMs
   );
+  console.log(
+    `[relay] replay for ${auth.userId}: since=${sinceTimestampMs} ` +
+      `historySize=${room.history.length} replay=${replay.length} ` +
+      `floor=${room.historyFloorMs}`,
+  );
 
   sendJSON(ws, {
     type: 'room:state',
@@ -305,6 +331,11 @@ function handleConnection(
   for (const entry of replay) {
     sendRaw(ws, entry.data);
   }
+
+  // End-of-history marker: the client holds off constructing the OO editor
+  // until this fires so it can feed the replay to OO via `getInitialChanges`
+  // instead of racing the post-load `sendMessageToOO` path.
+  sendJSON(ws, { type: 'history:end' });
 }
 
 // Only non-encrypted system messages are parsed by the relay.
@@ -325,6 +356,15 @@ function handleSystemMessage(
     const epochMs = Number(msg.epochMs);
     if (!Number.isFinite(epochMs) || epochMs <= 0) return;
     scheduleHistoryPurge(room, epochMs);
+    // Rebroadcast to other peers so they can clear their local
+    // "unsaved changes" marker. The beforeunload guard on non-leader
+    // peers otherwise shows the confirm modal even though the leader
+    // already persisted the shared state.
+    broadcastSystem(room, ws, {
+      type: 'save:committed',
+      epochMs,
+      userId: meta.userId,
+    });
     return;
   }
   if (RELAYED_TYPES.has(msg.type)) {
@@ -345,9 +385,15 @@ function scheduleHistoryPurge(room: Room, epochMs: number): void {
       const before = room.history.length;
       room.history = room.history.filter(e => e.timestampMs > epochMs);
       const removed = before - room.history.length;
+      // Advance the floor only after the purge actually executes (not at
+      // schedule time) so the 10s grace window still lets a joiner with
+      // an older snapshot fetch the bridging events.
+      if (epochMs > room.historyFloorMs) {
+        room.historyFloorMs = epochMs;
+      }
       if (removed > 0) {
         console.log(
-          `[relay] purged ${removed} history entries <= epoch ${epochMs}`
+          `[relay] purged ${removed} history entries <= epoch ${epochMs}, floor=${room.historyFloorMs}`
         );
       }
     });
@@ -410,6 +456,24 @@ wss.on('connection', async (ws, req) => {
 
   if (!auth) {
     ws.close(1008, 'unauthorized');
+    return;
+  }
+
+  // Stale-history guard: if the joiner's cursor is older than our purge
+  // floor, we can no longer bring them up to date from memory. Tell them
+  // to refetch the S3 snapshot and retry. Only applies when the client
+  // actually has a snapshot (since > 0); a fresh cold-open with since=0
+  // is always welcome to replay whatever history remains.
+  const existingRoom = rooms.get(roomId);
+  if (
+    sinceTimestampMs > 0 &&
+    existingRoom &&
+    sinceTimestampMs < existingRoom.historyFloorMs
+  ) {
+    console.log(
+      `[relay] stale history for ${auth.userId}: since=${sinceTimestampMs} < floor=${existingRoom.historyFloorMs}`
+    );
+    ws.close(4001, 'stale history — refetch snapshot');
     return;
   }
 

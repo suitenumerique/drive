@@ -12,7 +12,7 @@ import { acquireSaveLock, releaseSaveLock, isSaveLocked } from './locks';
 import { pauseIncomingOT, resumeIncomingOT } from './incomingOtGate';
 
 const CHECKPOINT_CHANGES_THRESHOLD = 50;
-const CHECKPOINT_TIME_INTERVAL_MS = 15_000; // 15 seconds for testing
+const CHECKPOINT_TIME_INTERVAL_MS = 30_000; // 30 seconds for testing
 
 /** Reference to the OnlyOffice editor instance */
 let editorInstance: any = null;
@@ -142,6 +142,17 @@ export function hasUnsavedChanges(): boolean {
 }
 
 /**
+ * Called on non-leader peers when they observe a remote `save:committed`
+ * event. Marks the local `lastCheckpointIndex` as up-to-date so the
+ * beforeunload guard doesn't show the "unsaved changes" confirm on a
+ * peer that has no pending local work of its own.
+ */
+export function markRemoteSaveCommitted(): void {
+  lastCheckpointIndex = getPatchIndex();
+  lastCheckpointTime = Date.now();
+}
+
+/**
  * Force a save (e.g. when user closes the editor).
  */
 export async function forceSave(): Promise<void> {
@@ -228,16 +239,24 @@ async function saveCheckpoint(): Promise<void> {
     try {
       const urls =
         innerWindow?.AscCommon?.g_oDocumentUrls?.getUrls?.() ?? {};
+      // DIAGNOSTIC: dump the URL-registry keys so we can tell whether
+      // "images: N" reflects real user-added attachments or just OO's
+      // internal template/theme entries.
+      console.log('[checkpoint] g_oDocumentUrls keys:', Object.keys(urls));
       await Promise.all(
         Object.entries(urls).map(async ([key, value]) => {
           if (typeof value !== 'string') return;
+          // Only entries under the `media/` prefix are real attachments.
+          // OO also registers internal artefacts here (e.g. `Editor.bin`,
+          // the serialized sdkjs document state) which must NOT be fed
+          // to x2t as media — doing so either corrupts the output or
+          // bloats the exported file.
+          if (!key.startsWith('media/')) return;
           try {
             const resp = await fetch(value);
             if (!resp.ok) return;
             const bytes = new Uint8Array(await resp.arrayBuffer());
-            const name = key.startsWith('media/')
-              ? key.slice('media/'.length)
-              : key;
+            const name = key.slice('media/'.length);
             media.set(name, bytes);
           } catch {
             /* skip missing image */
