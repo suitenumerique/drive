@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { clsx } from "clsx";
-import { ProgressBar } from "../../components/duration-bar/DurationBar";
+import { DurationBar } from "../../components/duration-bar/DurationBar";
 import { PlayerPreviewControls } from "../../components/controls/PreviewControls";
 
 interface AudioPlayerProps {
@@ -162,7 +162,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           <div className="audio-player__title">{title}</div>
         </div>
 
-        <ProgressBar
+        <DurationBar
           duration={duration}
           currentTime={currentTime}
           handleSeek={handleSeek}

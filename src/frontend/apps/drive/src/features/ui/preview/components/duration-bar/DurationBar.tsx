@@ -10,7 +10,7 @@ type DurationBarProps = {
   handleSeek: (e: React.ChangeEvent<HTMLInputElement>) => void;
 };
 
-export const ProgressBar = ({
+export const DurationBar = ({
   duration,
   currentTime,
   handleSeek,
