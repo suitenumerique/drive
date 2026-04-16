@@ -227,6 +227,26 @@ function toStrictUint8Array(src: Uint8Array): Uint8Array<ArrayBuffer> {
   return out as Uint8Array<ArrayBuffer>;
 }
 
+/** Extract embedded media files from the x2t working directory. */
+function extractMediaFiles(
+  x2t: X2TModule
+): Array<{ name: string; data: Uint8Array }> {
+  const images: Array<{ name: string; data: Uint8Array }> = [];
+  try {
+    const files = x2t.FS.readdir('/working/media/');
+    for (const file of files) {
+      if (file === '.' || file === '..') continue;
+      const fileData = x2t.FS.readFile('/working/media/' + file, {
+        encoding: 'binary',
+      });
+      images.push({ name: file, data: fileData });
+    }
+  } catch {
+    // No media directory or empty
+  }
+  return images;
+}
+
 function runConversion(
   x2t: X2TModule,
   inputName: string,
@@ -322,7 +342,10 @@ export async function convertToInternal(
   const ext = getExtension(safeName);
   const inputData = new Uint8Array(data);
 
-  // Some formats need intermediate conversion (e.g. odt → docx → bin)
+  // OnlyOffice recommends converting to OOXML (docx/xlsx/pptx) before
+  // editing. Non-OOXML formats go through an intermediate conversion step:
+  //   odt → docx → bin, ods → xlsx → bin, odp → pptx → bin
+  // See: https://api.onlyoffice.com/docs/docs-api/get-started/how-it-works/converting-and-downloading-file/
   let currentName = safeName;
   let currentData = inputData;
 
@@ -352,22 +375,7 @@ export async function convertToInternal(
     throw new Error(`Failed to convert ${filename} to internal format`);
   }
 
-  // Extract embedded images
-  const images: Array<{ name: string; data: Uint8Array }> = [];
-  try {
-    const files = x2t.FS.readdir('/working/media/');
-    for (const file of files) {
-      if (file === '.' || file === '..') continue;
-      const fileData = x2t.FS.readFile('/working/media/' + file, {
-        encoding: 'binary',
-      });
-      images.push({ name: file, data: fileData });
-    }
-  } catch {
-    // No media directory or empty
-  }
-
-  return { bin, images };
+  return { bin, images: extractMediaFiles(x2t) };
 }
 
 /**
@@ -403,7 +411,6 @@ export async function convertFromInternal(
     }
   }
 
-  // .bin → intermediate Microsoft format if target is ODF
   const docType = type || EXTENSION_TO_X2T_TYPE[targetFormat] || 'doc';
 
   const intermediateFormats: Record<string, string> = {
@@ -412,38 +419,66 @@ export async function convertFromInternal(
     presentation: 'pptx',
   };
 
-  let currentName = 'document.bin';
-  let currentData = binData;
+  // Try a direct `bin → target` conversion first. If the target is an
+  // OOXML format (docx/xlsx/pptx) this is the only step needed. For ODF
+  // targets (odt/ods/odp), x2t may support direct output — when it
+  // succeeds we skip the two-step path. If the direct call returns
+  // null / zero bytes, fall back to the OO-recommended two-step:
+  //   bin → OOXML intermediate → target ODF format
+  // See: https://api.onlyoffice.com/docs/docs-api/get-started/how-it-works/converting-and-downloading-file/
+  const directResult = runConversion(x2t, 'document.bin', binData, targetFormat);
+  if (directResult && directResult.byteLength > 0) {
+    console.log(
+      '[x2t] direct bin →',
+      targetFormat,
+      'succeeded (bytes:',
+      directResult.byteLength,
+      ')',
+    );
+    return directResult;
+  }
+  console.warn(
+    '[x2t] direct bin →',
+    targetFormat,
+    'returned empty, falling back to two-step via',
+    intermediateFormats[docType],
+  );
 
   const intermediateFormat = intermediateFormats[docType];
 
-  // If target IS the intermediate format (e.g. docx), single conversion
+  // If target IS the intermediate format (e.g. docx) and the direct
+  // call above already failed, there's nothing more to try.
   if (intermediateFormat === targetFormat) {
-    const result = runConversion(x2t, currentName, currentData, targetFormat);
-    if (!result) {
-      throw new Error(`Failed to convert from internal to ${targetFormat}`);
-    }
-    return result;
+    throw new Error(`Failed to convert from internal to ${targetFormat}`);
   }
 
-  // Two-step: bin → intermediate MS format → target ODF format
-  if (intermediateFormat) {
-    const intermediate = runConversion(
-      x2t,
-      currentName,
-      currentData,
-      intermediateFormat
+  // Two-step fallback: bin → intermediate MS format → target ODF format
+  if (!intermediateFormat) {
+    throw new Error(
+      `Failed to convert from internal to ${targetFormat}: no intermediate format for docType ${docType}`,
     );
-    if (!intermediate) {
-      throw new Error(`Failed to convert from internal to ${intermediateFormat} (step 1 of bin → ${targetFormat})`);
-    }
-    currentName = `document.${intermediateFormat}`;
-    currentData = intermediate;
   }
-
-  const result = runConversion(x2t, currentName, currentData, targetFormat);
+  const intermediate = runConversion(
+    x2t,
+    'document.bin',
+    binData,
+    intermediateFormat,
+  );
+  if (!intermediate) {
+    throw new Error(
+      `Failed to convert from internal to ${intermediateFormat} (step 1 of bin → ${targetFormat})`,
+    );
+  }
+  const result = runConversion(
+    x2t,
+    `document.${intermediateFormat}`,
+    intermediate,
+    targetFormat,
+  );
   if (!result) {
-    throw new Error(`Failed to convert from ${currentName} to ${targetFormat} (step 2)`);
+    throw new Error(
+      `Failed to convert from document.${intermediateFormat} to ${targetFormat} (step 2)`,
+    );
   }
   return result;
 }

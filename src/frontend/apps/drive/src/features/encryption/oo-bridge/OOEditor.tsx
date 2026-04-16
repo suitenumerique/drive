@@ -40,10 +40,7 @@ import {
   buildConnectStateMessage,
   getRemoteOOInternalId,
 } from './participants';
-import {
-  resetPatchIndex,
-  observeIncomingSaveChanges,
-} from './changesPipeline';
+import { resetPatchIndex, observeIncomingSaveChanges } from './changesPipeline';
 import { EncryptedRelay } from './encryptedRelay';
 import { withIncomingOTGate } from './incomingOtGate';
 import {
@@ -70,6 +67,8 @@ import {
   type OOConfig,
 } from './types';
 import { useAuth } from '@/features/auth/Auth';
+import { downloadDecryptedFile } from '@/features/items/hooks/useDecryptedContent';
+import { ModalRecursiveRemoveEncryption } from '@/features/encryption/ModalRecursiveRemoveEncryption';
 import styles from './OOEditor.module.scss';
 
 // The OnlyOffice DocsAPI is loaded as a global from the static assets
@@ -122,10 +121,14 @@ const INBOUND_ALLOWLIST: ReadonlySet<string> = new Set([
 ]);
 
 function sendToEditorGuarded(msg: { type?: string } & Record<string, unknown>) {
-  if (!msg || typeof msg.type !== 'string' || !INBOUND_ALLOWLIST.has(msg.type)) {
+  if (
+    !msg ||
+    typeof msg.type !== 'string' ||
+    !INBOUND_ALLOWLIST.has(msg.type)
+  ) {
     console.warn(
       '[OOEditor] dropping inbound message with disallowed type:',
-      msg?.type,
+      msg?.type
     );
     return;
   }
@@ -137,6 +140,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const { user } = useAuth();
   const [state, setState] = useState<EditorState>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [showRemoveEncryption, setShowRemoveEncryption] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   // Save-error banner state. The OO editor keeps running in both
   // cases — this only controls a banner overlay on top of it:
   //  - `fatal`: x2t refused the document (e.g. OLE-embedded xlsx in
@@ -144,9 +149,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   //    content; retrying won't help.
   //  - `transient`: network / vault / extract hiccup. Clears on the
   //    next successful save; exposes a "Retry now" button.
-  const [saveError, setSaveError] = useState<
-    { kind: 'fatal' | 'transient'; detail: string } | null
-  >(null);
+  const [saveError, setSaveError] = useState<{
+    kind: 'fatal' | 'transient';
+    detail: string;
+  } | null>(null);
   const [saveRetrying, setSaveRetrying] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [relayFailed, setRelayFailed] = useState(false);
@@ -228,7 +234,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const enterCrashState = useCallback(() => {
     if (!outgoingSilencedRef.current) {
       console.warn(
-        '[OOEditor] entering crash state — outbound traffic silenced, relay closed',
+        '[OOEditor] entering crash state — outbound traffic silenced, relay closed'
       );
     }
     outgoingSilencedRef.current = true;
@@ -277,6 +283,31 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const requestRecoveryReload = useCallback(() => {
     if (recoveryWaiting) return;
     setRecoveryWaiting(true);
+
+    // If no other non-crashed editor is in the room, nobody will
+    // respond to `peer:needs-save` — skip the wait and reinit
+    // immediately against the current S3 snapshot.
+    // NOTE: the crashed user is still connected to the relay (WebSocket
+    // stays open so it can observe `save:committed`), so the relay room
+    // is not empty. However, the relay history is harmless here: on
+    // reinit the relay replays events since the snapshot epoch, and if
+    // we are alone any pending history is our own corrupted edits that
+    // will be discarded (the fresh snapshot from S3 is the source of
+    // truth). The relay does NOT wipe history on its own — it keeps it
+    // for late joiners — but reinit fetches a fresh snapshot and only
+    // applies events newer than its epoch, so stale history is ignored.
+    const myId = user?.sub;
+    const hasOtherSaver = [...editorPeersRef.current.keys()].some(
+      id => id !== myId && !crashedPeersRef.current.has(id)
+    );
+
+    if (!hasOtherSaver) {
+      setRecoveryWaiting(false);
+      setState('stale-resyncing');
+      setReinitKey(k => k + 1);
+      return;
+    }
+
     // Re-send `peer:needs-save` at click time too — in case the one
     // sent at crash time was rate-limited server-side (another peer
     // crashed in the same 2s window) or the leader had been the
@@ -297,7 +328,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     };
     recoveryResolveRef.current = finish;
     setTimeout(finish, RECOVERY_SAVE_WAIT_MS);
-  }, [recoveryWaiting]);
+  }, [recoveryWaiting, user?.sub]);
 
   /**
    * One-shot pre-delay timer that releases replay after OO settles.
@@ -335,7 +366,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         console.warn('[replay] apply error', e);
       }
     },
-    [],
+    []
   );
 
   /**
@@ -345,13 +376,13 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const releaseReplayAfterPreDelay = useCallback(() => {
     console.log(
       `[replay] scheduling release after ${DRAIN_PRE_DELAY_MS} ms pre-delay ` +
-        `(buffered=${replayBufferRef.current.length})`,
+        `(buffered=${replayBufferRef.current.length})`
     );
     setTimeout(() => {
       console.log(
         '[replay] pre-delay elapsed — flushing',
         replayBufferRef.current.length,
-        'buffered events in arrival order',
+        'buffered events in arrival order'
       );
       replayPreDelayActiveRef.current = false;
       setVerboseSends(true);
@@ -402,7 +433,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     async (
       content: ArrayBuffer,
       _format: string,
-      epochMs: number,
+      epochMs: number
     ): Promise<void> => {
       const vaultClient = window.__driveVaultClient;
       if (!vaultClient) {
@@ -450,12 +481,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           body: JSON.stringify({ epoch_ms: epochMs }),
           headers: { 'Content-Type': 'application/json' },
         },
-        { redirectOn40x: false },
+        { redirectOn40x: false }
       );
-      const {
-        upload_url: uploadUrl,
-        required_headers: requiredHeaders = {},
-      } = await urlResponse.json();
+      const { upload_url: uploadUrl, required_headers: requiredHeaders = {} } =
+        await urlResponse.json();
 
       // Upload encrypted content to S3 via presigned URL (XHR like regular Drive uploads)
       const encryptedBytes = new Uint8Array(encryptedData);
@@ -467,18 +496,26 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // Every header that was bound into the presigned signature MUST
         // be sent verbatim or S3 returns SignatureDoesNotMatch.
         for (const [name, value] of Object.entries(
-          requiredHeaders as Record<string, string>,
+          requiredHeaders as Record<string, string>
         )) {
           xhr.setRequestHeader(name, value);
         }
-        xhr.addEventListener('error', () => reject(new Error('S3 upload network error')));
-        xhr.addEventListener('abort', () => reject(new Error('S3 upload aborted')));
+        xhr.addEventListener('error', () =>
+          reject(new Error('S3 upload network error'))
+        );
+        xhr.addEventListener('abort', () =>
+          reject(new Error('S3 upload aborted'))
+        );
         xhr.addEventListener('readystatechange', () => {
           if (xhr.readyState === 4) {
             if (xhr.status === 200) {
               resolve();
             } else {
-              reject(new Error(`S3 upload failed: ${xhr.status} — ${xhr.responseText.slice(0, 200)}`));
+              reject(
+                new Error(
+                  `S3 upload failed: ${xhr.status} — ${xhr.responseText.slice(0, 200)}`
+                )
+              );
             }
           }
         });
@@ -539,7 +576,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       // Fallback: also match stacks whose message mentions sdkjs
       // symbols but whose `filename` was lost (cross-frame rethrow).
       return /sdk-all|\bAsc(?:Common|Format|Word)\b|CDocument\.|CCollaborative/.test(
-        msg,
+        msg
       );
     };
     const handleOOError = (event: ErrorEvent) => {
@@ -567,7 +604,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // pre-delay already "expired", old iframe window, etc.) and
         // inbound events end up going nowhere.
         console.warn(
-          '[OOEditor] init() session reset — clearing refs, unsilencing outbound',
+          '[OOEditor] init() session reset — clearing refs, unsilencing outbound'
         );
         documentReadyRef.current = false;
         innerWindowRef.current = null;
@@ -638,7 +675,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         setState('converting');
         const { bin, images: extractedImages } = await convertToInternal(
           decryptedBuffer,
-          filename,
+          filename
         );
         if (cancelled) return;
 
@@ -650,7 +687,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
 
         // Initialize participant tracking
         // Use user.sub (OIDC subject) — same ID the relay server uses
-        const localUser = initLocalUser(user.sub!, user.full_name || user.email);
+        const localUser = initLocalUser(
+          user.sub!,
+          user.full_name || user.email
+        );
         const uniqueOOId = getUniqueOOId();
         resetPatchIndex(0);
 
@@ -730,7 +770,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               // falls back to fetching `<name>` from a relative URL → 404.
               try {
                 const ooIframe = document.querySelector(
-                  'iframe[name="frameEditor"]',
+                  'iframe[name="frameEditor"]'
                 ) as HTMLIFrameElement | null;
                 const innerWindow = ooIframe?.contentWindow as any;
                 const docUrls = innerWindow?.AscCommon?.g_oDocumentUrls;
@@ -743,8 +783,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       // when the same image is copy/pasted into another tab
                       // / user. Data URLs are self-contained and work
                       // anywhere getFullImageSrc2 sees a `data:` prefix.
-                      const ext =
-                        (img.name.split('.').pop() || 'png').toLowerCase();
+                      const ext = (
+                        img.name.split('.').pop() || 'png'
+                      ).toLowerCase();
                       const mime =
                         ext === 'jpg' || ext === 'jpeg'
                           ? 'image/jpeg'
@@ -765,11 +806,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                         binary += String.fromCharCode.apply(
                           null,
                           Array.from(
-                            img.data.subarray(
-                              offset,
-                              offset + chunkSize,
-                            ),
-                          ),
+                            img.data.subarray(offset, offset + chunkSize)
+                          )
                         );
                       }
                       const dataUrl = `data:${mime};base64,${btoa(binary)}`;
@@ -778,14 +816,14 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       console.warn(
                         '[OOEditor] failed to register image',
                         img.name,
-                        e,
+                        e
                       );
                     }
                   }
                   console.log(
                     '[OOEditor] registered',
                     extractedImages.length,
-                    'images in g_oDocumentUrls',
+                    'images in g_oDocumentUrls'
                   );
                 }
 
@@ -795,7 +833,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 // would 404 on the next image load cycle.
                 if (docUrls) {
                   for (const [name, url] of Object.entries(
-                    historyInitialMedia,
+                    historyInitialMedia
                   )) {
                     try {
                       docUrls.addImageUrl(name, url);
@@ -803,7 +841,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       console.warn(
                         '[OOEditor] failed to register history media',
                         name,
-                        e,
+                        e
                       );
                     }
                   }
@@ -841,7 +879,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               };
               try {
                 const ooIframe = document.querySelector(
-                  'iframe[name="frameEditor"]',
+                  'iframe[name="frameEditor"]'
                 ) as HTMLIFrameElement | null;
                 const innerWindow = ooIframe?.contentWindow as any;
                 const innerEditor =
@@ -852,9 +890,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   !innerEditor.__driveContentReadyHooked
                 ) {
                   innerEditor.__driveContentReadyHooked = true;
-                  const orig = innerEditor.onDocumentContentReady.bind(
-                    innerEditor,
-                  );
+                  const orig =
+                    innerEditor.onDocumentContentReady.bind(innerEditor);
                   innerEditor.onDocumentContentReady = function (
                     ...args: unknown[]
                   ) {
@@ -878,7 +915,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               setTimeout(safeDrain, 500);
               try {
                 const ooIframe = document.querySelector(
-                  'iframe[name="frameEditor"]',
+                  'iframe[name="frameEditor"]'
                 ) as HTMLIFrameElement | null;
                 const innerWindow = ooIframe?.contentWindow as any;
                 innerWindowRef.current = innerWindow;
@@ -895,70 +932,99 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   innerWindow.addEventListener(
                     'unhandledrejection',
                     (evt: PromiseRejectionEvent) => {
-                      const msg = String(
-                        evt.reason?.stack ?? evt.reason ?? '',
-                      );
+                      const msg = String(evt.reason?.stack ?? evt.reason ?? '');
                       handleOOError({
                         filename: '',
                         message: msg,
                         error: evt.reason,
                       } as ErrorEvent);
-                    },
+                    }
                   );
                 }
 
-                // Disable the Insert → Chart button when the on-disk
-                // format is `.odp`. x2t's ODP writer can't round-trip
-                // charts through our save pipeline (they're stored as
-                // DrawingML `CChartSpace` objects inside PPTY native
-                // state and ODF has no direct equivalent), so letting
-                // the user insert one produces an unrecoverable save
-                // failure. We mimic OO's own disabled-button look
+                // Disable unsupported features in the encrypted editor.
+                // Our client-side x2t WASM can't handle Charts or
+                // SmartArt — these require the full Document Server
+                // (which only the non-encrypted WOPI path uses).
+                // Inserting one produces unrecoverable save failures.
+                // We mimic OO's own disabled-button look
                 // (dim + pointer-events:none) rather than hiding the
-                // button, so users see it's intentionally off, and we
-                // wipe the dropdown submenu so keyboard / arrow
-                // navigation can't reach the chart items either.
-                if (
-                  originalFormat === 'odp' &&
-                  !innerWindow.__driveChartDisabled
-                ) {
-                  innerWindow.__driveChartDisabled = true;
+                // button, so users see it's intentionally off.
+                if (!innerWindow.__driveUnsupportedDisabled) {
+                  innerWindow.__driveUnsupportedDisabled = true;
                   const doc = innerWindow.document;
-                  const applyDisable = () => {
-                    const slot = doc.getElementById('slot-btn-insertchart');
-                    if (!slot) return false;
-                    slot.style.opacity = '0.4';
-                    slot.style.pointerEvents = 'none';
+
+                  // Button IDs differ between editors:
+                  //   presentation: slot-btn-insertchart, slot-btn-inssmartart
+                  //   calc:         slot-btn-inschart,    slot-btn-inssmartart
+                  //   writer:       slot-btn-inschart,    slot-btn-inssmartart
+                  const unsupportedButtons = [
+                    { slotId: 'slot-btn-insertchart', menuId: 'id-toolbar-menu-insertchart', label: 'Charts' },
+                    { slotId: 'slot-btn-inschart', menuId: 'id-toolbar-menu-inschart', label: 'Charts' },
+                    { slotId: 'slot-btn-inssmartart', menuId: 'id-toolbar-menu-inssmartart', label: 'SmartArt' },
+                  ];
+
+                  const applyToElement = (
+                    slot: HTMLElement,
+                    menuId: string,
+                    label: string
+                  ) => {
+                    slot.style.setProperty('opacity', '0.4', 'important');
+                    slot.style.setProperty(
+                      'pointer-events',
+                      'none',
+                      'important'
+                    );
                     slot.setAttribute(
                       'title',
-                      'Charts are not supported in .odp files',
+                      `${label} is not available in encrypted documents`
                     );
-                    // Nuke the dropdown submenu so focus/arrow keys
-                    // can't land on a chart preset even if OO opens
-                    // the menu programmatically.
-                    const menu = doc.getElementById(
-                      'id-toolbar-menu-insertchart',
-                    );
-                    if (menu) menu.innerHTML = '';
-                    // Defensive: prevent keyboard activation of the
-                    // wrapping button itself.
                     const btn = slot.querySelector('button');
                     if (btn) {
                       btn.setAttribute('tabindex', '-1');
                       btn.setAttribute('aria-disabled', 'true');
+                      (btn as HTMLElement).style.setProperty(
+                        'cursor',
+                        'default',
+                        'important'
+                      );
                     }
-                    return true;
+                    const menu = doc.getElementById(menuId);
+                    if (menu) menu.innerHTML = '';
                   };
-                  if (!applyDisable()) {
-                    // Toolbar may not be mounted yet — retry a few
-                    // times, give up after ~5s.
-                    let attempts = 0;
-                    const timer = innerWindow.setInterval(() => {
-                      attempts++;
-                      if (applyDisable() || attempts > 50) {
-                        innerWindow.clearInterval(timer);
+
+                  const tryApplyAll = (trigger: string) => {
+                    for (const { slotId, menuId, label } of unsupportedButtons) {
+                      const slot = doc.getElementById(slotId);
+                      if (slot) {
+                        applyToElement(slot as HTMLElement, menuId, label);
+                        console.log(
+                          `[OOEditor] ${label} button disabled (${trigger})`
+                        );
                       }
-                    }, 100);
+                    }
+                  };
+
+                  // Immediate attempt for the case the Insert tab is
+                  // already mounted (HMR, tab re-entry).
+                  tryApplyAll('immediate');
+
+                  // MutationObserver: catch the buttons the moment OO
+                  // adds them to the DOM. We watch the entire body
+                  // because the ribbon root isn't stable by id.
+                  try {
+                    const observer = new innerWindow.MutationObserver(() => {
+                      tryApplyAll('mutation');
+                    });
+                    observer.observe(doc.body, {
+                      childList: true,
+                      subtree: true,
+                    });
+                    console.log(
+                      '[OOEditor] unsupported-features MutationObserver installed'
+                    );
+                  } catch (e) {
+                    console.warn('[OOEditor] unsupported-features observer failed', e);
                   }
                 }
 
@@ -969,7 +1035,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 // By creating the element first under the same id, OO's
                 // `if(!ifr)` check finds ours and skips its own creation.
                 const cb = innerWindow?.AscCommon?.g_clipboardBase;
-                if (cb && !innerWindow.document.getElementById(cb.CommonIframeId)) {
+                if (
+                  cb &&
+                  !innerWindow.document.getElementById(cb.CommonIframeId)
+                ) {
                   const pasteIfr = innerWindow.document.createElement('iframe');
                   pasteIfr.name = cb.CommonIframeId;
                   pasteIfr.id = cb.CommonIframeId;
@@ -982,7 +1051,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   pasteIfr.style.zIndex = '-1000';
                   pasteIfr.setAttribute(
                     'sandbox',
-                    'allow-same-origin allow-scripts',
+                    'allow-same-origin allow-scripts'
                   );
                   innerWindow.document.body.appendChild(pasteIfr);
                   cb.CommonIframe = pasteIfr;
@@ -994,17 +1063,23 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 // paths. Without a DS, that hangs the "Loading image" modal
                 // forever. Register each URL synchronously in g_oDocumentUrls
                 // and return immediately.
-                if (innerWindow?.AscCommon && !innerWindow.AscCommon.__driveImgUrlsPatched) {
+                if (
+                  innerWindow?.AscCommon &&
+                  !innerWindow.AscCommon.__driveImgUrlsPatched
+                ) {
                   let imgCounter = 0;
                   innerWindow.AscCommon.sendImgUrls = function (
                     api: any,
                     images: any[],
-                    callback: (data: Array<{ url: string; path: string }>) => void,
+                    callback: (
+                      data: Array<{ url: string; path: string }>
+                    ) => void
                   ) {
                     if (!api.isOpenedFrameEditor) {
                       api.sync_StartAction?.(
-                        innerWindow.Asc?.c_oAscAsyncActionType?.BlockInteraction ?? 1,
-                        innerWindow.Asc?.c_oAscAsyncAction?.LoadImage ?? 0,
+                        innerWindow.Asc?.c_oAscAsyncActionType
+                          ?.BlockInteraction ?? 1,
+                        innerWindow.Asc?.c_oAscAsyncAction?.LoadImage ?? 0
                       );
                     }
                     const out: Array<{ url: string; path: string }> = [];
@@ -1016,7 +1091,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       }
                       // Detect extension from the data URL mime, default png.
                       const mimeMatch = /^data:image\/([a-z0-9+]+)/.exec(src);
-                      const ext = mimeMatch ? mimeMatch[1].replace('+xml', '') : 'png';
+                      const ext = mimeMatch
+                        ? mimeMatch[1].replace('+xml', '')
+                        : 'png';
                       imgCounter += 1;
                       const name = `image_${Date.now()}_${imgCounter}.${ext}`;
                       const path = 'media/' + name;
@@ -1031,8 +1108,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     innerWindow.AscCommon.g_oDocumentUrls.addUrls(urls);
                     if (!api.isOpenedFrameEditor) {
                       api.sync_EndAction?.(
-                        innerWindow.Asc?.c_oAscAsyncActionType?.BlockInteraction ?? 1,
-                        innerWindow.Asc?.c_oAscAsyncAction?.LoadImage ?? 0,
+                        innerWindow.Asc?.c_oAscAsyncActionType
+                          ?.BlockInteraction ?? 1,
+                        innerWindow.Asc?.c_oAscAsyncAction?.LoadImage ?? 0
                       );
                     }
                     callback(out);
@@ -1040,7 +1118,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   innerWindow.AscCommon.__driveImgUrlsPatched = true;
                 }
 
-                const innerEditor = innerWindow?.editor || innerWindow?.editorCell;
+                const innerEditor =
+                  innerWindow?.editor || innerWindow?.editorCell;
                 // NOTE: we no longer monkey-patch any sdkjs prototype
                 // method (Update_ForeignCursor, CGraphicObjects.*,
                 // SpellCheck_CallBack, private_LockByMe, etc.). Those
@@ -1081,7 +1160,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     proto &&
                     !Object.prototype.hasOwnProperty.call(
                       proto,
-                      '_downloadAsUsingServer',
+                      '_downloadAsUsingServer'
                     )
                   ) {
                     proto = Object.getPrototypeOf(proto);
@@ -1093,7 +1172,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       _options: unknown,
                       oAdditionalData: any,
                       _dataContainer: unknown,
-                      downloadType: unknown,
+                      downloadType: unknown
                     ) {
                       (window as any).__driveDownloadCtx = {
                         title: oAdditionalData?.title,
@@ -1130,6 +1209,19 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // user ends up with two different colors. Returning a deterministic
         // color per id keeps both call sites in sync.
         (window as any).APP = (window as any).APP || {};
+        // Theme hooks: OO's ChangeTheme calls window.parent.APP.changeTheme
+        // when the LOCAL user picks a slide theme. The CryptPad-patched SDK
+        // also calls APP.remoteTheme() when applying a remote peer's theme
+        // change (cp_theme collaborative-change type). In both cases the
+        // actual theme data already propagates through the normal OT
+        // saveChanges pipeline (ChangeTheme creates a history point), so
+        // these callbacks are purely notification hooks — no-ops are safe.
+        (window as any).APP.changeTheme = (_indexTheme: number) => {
+          /* no-op — theme change propagates via OT saveChanges */
+        };
+        (window as any).APP.remoteTheme = () => {
+          /* no-op — remote theme applied by OO internally via ChangeTheme(id, null, true) */
+        };
         // Image insertion: OO calls window.parent.APP.UploadImageFiles when
         // the user drops/pastes an image. With a real DocumentServer it'd
         // POST the bytes and return URLs from the server. For E2E we never
@@ -1150,7 +1242,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // Enforces the per-file size cap and rejects with the size-error
         // sentinel so callers can return OO's own UplImageSize toast.
         const filesToDataURLs = async (
-          files: FileList | File[],
+          files: FileList | File[]
         ): Promise<string[]> => {
           const arr = Array.from(files);
           for (const f of arr) {
@@ -1167,8 +1259,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   reader.onerror = () =>
                     reject(reader.error ?? new Error('FileReader failed'));
                   reader.readAsDataURL(file);
-                }),
-            ),
+                })
+            )
           );
         };
 
@@ -1178,7 +1270,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           _documentId: string,
           _documentUserId: string,
           _jwt: string,
-          callback: (err: number | null, urls: string[]) => void,
+          callback: (err: number | null, urls: string[]) => void
         ) => {
           filesToDataURLs(files)
             .then(urls => callback(null, urls))
@@ -1216,12 +1308,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
 
         (window as any).APP.printPdf = (
           dataContainer: { data: Uint8Array | ArrayBuffer | null },
-          callback: (result: unknown) => void,
+          callback: (result: unknown) => void
         ) => {
           (async () => {
             try {
               const ooIframe = document.querySelector(
-                'iframe[name="frameEditor"]',
+                'iframe[name="frameEditor"]'
               ) as HTMLIFrameElement | null;
               const innerWindow = ooIframe?.contentWindow as any;
               const innerEditor =
@@ -1245,7 +1337,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
 
               const ctx = (window as any).__driveDownloadCtx ?? {};
               const title: string = ctx.title || `document.${x2tExtension}`;
-              const ext = (title.split('.').pop() || x2tExtension).toLowerCase();
+              const ext = (
+                title.split('.').pop() || x2tExtension
+              ).toLowerCase();
               const isPrint = ctx.downloadType === 'asc_onPrintUrl';
 
               let outBytes: Uint8Array<ArrayBuffer>;
@@ -1254,14 +1348,16 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               if (ext === 'pdf') {
                 const rawLayout = dataContainer?.data;
                 if (!rawLayout) {
-                  throw new Error('missing PDF layout bin (dataContainer.data)');
+                  throw new Error(
+                    'missing PDF layout bin (dataContainer.data)'
+                  );
                 }
                 const layoutBuffer: ArrayBuffer =
                   rawLayout instanceof ArrayBuffer
                     ? rawLayout
                     : (rawLayout.buffer.slice(
                         rawLayout.byteOffset,
-                        rawLayout.byteOffset + rawLayout.byteLength,
+                        rawLayout.byteOffset + rawLayout.byteLength
                       ) as ArrayBuffer);
                 // Gather every image registered in OO's document urls so
                 // the PDF writer can find them in /working/media/. Without
@@ -1273,7 +1369,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     innerWindow?.AscCommon?.g_oDocumentUrls?.getUrls?.() ?? {};
                   console.log(
                     '[OOEditor] g_oDocumentUrls keys:',
-                    Object.keys(urls),
+                    Object.keys(urls)
                   );
                   // Also peek at OO's image cache — that's where inserted
                   // images actually live when they were passed as data URLs.
@@ -1283,8 +1379,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     console.log(
                       '[OOEditor] image cache keys:',
                       Object.keys(imgCache).map(k =>
-                        k.length > 80 ? k.slice(0, 80) + '…' : k,
-                      ),
+                        k.length > 80 ? k.slice(0, 80) + '…' : k
+                      )
                     );
                   }
                   await Promise.all(
@@ -1305,35 +1401,30 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                         console.warn(
                           '[OOEditor] failed to fetch image',
                           key,
-                          e,
+                          e
                         );
                       }
-                    }),
+                    })
                   );
                   console.log(
                     '[OOEditor] media files written to /working/media/:',
-                    Array.from(media.keys()),
+                    Array.from(media.keys())
                   );
                 } catch (e) {
                   console.warn('[OOEditor] image gather failed', e);
                 }
                 console.log(
                   '[OOEditor] PDF layout (dataContainer.data) size:',
-                  layoutBuffer.byteLength,
+                  layoutBuffer.byteLength
                 );
                 outBytes = await convertFromInternalToPdf(
                   binBuffer,
                   layoutBuffer,
-                  media,
+                  media
                 );
               } else {
-                const docType =
-                  EXTENSION_TO_X2T_TYPE[ext] || x2tType || 'doc';
-                outBytes = await convertFromInternal(
-                  binBuffer,
-                  ext,
-                  docType,
-                );
+                const docType = EXTENSION_TO_X2T_TYPE[ext] || x2tType || 'doc';
+                outBytes = await convertFromInternal(binBuffer, ext, docType);
               }
 
               const blob = new Blob([outBytes], { type: mime });
@@ -1391,7 +1482,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // file picker and forwards the result through the same converter.
         (window as any).APP.AddImage = (
           successCb: (res: { url: string; name: string }) => void,
-          errorCb?: (err?: unknown) => void,
+          errorCb?: (err?: unknown) => void
         ) => {
           const input = document.createElement('input');
           input.type = 'file';
@@ -1472,7 +1563,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             pendingRemoteChangesRef.current.length,
             'ancillary events queued,',
             Object.keys(historyInitialMedia).length,
-            'media items',
+            'media items'
           );
           resolveHistoryReady();
         };
@@ -1508,7 +1599,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     } catch (e) {
                       console.warn(
                         '[OOEditor] failed to register inbound media',
-                        e,
+                        e
                       );
                     }
                   }
@@ -1523,13 +1614,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 // silently drops replay bursts in our testing).
                 if (!historyPhaseComplete) {
                   try {
-                    const changes = (message as { changes?: unknown })
-                      .changes;
+                    const changes = (message as { changes?: unknown }).changes;
                     const n = Array.isArray(changes) ? changes.length : 0;
                     console.log(
                       `[HISTORY replay queued] changes=${n} ` +
                         `(snapshotEpochMs=${snapshotEpochMs})`,
-                      message,
+                      message
                     );
                   } catch {
                     /* ignore logging failures */
@@ -1544,11 +1634,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 // internal state.
                 const apply = () => {
                   observeIncomingSaveChanges(
-                    message as Record<string, unknown>,
+                    message as Record<string, unknown>
                   );
-                  withIncomingOTGate(() =>
-                    sendToEditorGuarded(message as any),
-                  );
+                  withIncomingOTGate(() => sendToEditorGuarded(message as any));
                 };
                 // All saveChanges flow through the index-gated reorder
                 // buffer. While the editor is still mounting / during
@@ -1557,7 +1645,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 // strict changesIndex order.
                 handleIncomingSaveChanges(
                   message as Record<string, unknown>,
-                  apply,
+                  apply
                 );
               },
               onHistoryEnd: () => {
@@ -1612,10 +1700,30 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 } else {
                   releaseCellLock(lockId, userId);
                 }
+                // _onGetLock iterates `locks` with `for (key in ...)` and
+                // for cell/slide reads `lock.block.guid`. `lockData` is
+                // the full `msg.block` array from the sender — iterate
+                // each block element so the shape matches what OO expects.
+                const remoteOOId = getRemoteOOInternalId(userId);
+                const blockArray = Array.isArray(lockData)
+                  ? lockData
+                  : [lockData];
+                const locks: Record<string, unknown> = {};
+                for (const block of blockArray) {
+                  const entry = {
+                    block,
+                    user: remoteOOId || userId,
+                    time: Date.now(),
+                  };
+                  const guid = (block as any)?.guid;
+                  const key =
+                    guid || (typeof block === 'string' ? block : JSON.stringify(block));
+                  locks[key] = entry;
+                }
                 const apply = () =>
                   sendToEditor({
                     type: 'getLock',
-                    locks: [lockData],
+                    locks,
                   } as any);
                 if (!documentReadyRef.current) {
                   pendingRemoteChangesRef.current.push(apply);
@@ -1682,7 +1790,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 // editor down and re-run init from scratch so we
                 // refetch the S3 snapshot and rebuild OO on top of it.
                 console.warn(
-                  '[OOEditor] stale history — triggering full reinit from S3',
+                  '[OOEditor] stale history — triggering full reinit from S3'
                 );
                 setState('stale-resyncing');
                 setReinitKey(k => k + 1);
@@ -1697,7 +1805,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   '[OOEditor] remote save committed by',
                   userId,
                   'epoch=',
-                  epochMs,
+                  epochMs
                 );
                 markRemoteSaveCommitted();
                 relayRef.current?.observeRemoteSaveCommitted(epochMs);
@@ -1727,12 +1835,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 console.log(
                   '[OOEditor] peer',
                   peerUserId,
-                  'needs save — triggering forceSave as leader',
+                  'needs save — triggering forceSave as leader'
                 );
                 forceSave().catch(e => {
                   console.warn(
                     '[OOEditor] forceSave from peer request failed',
-                    e,
+                    e
                   );
                 });
               },
@@ -1745,7 +1853,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 console.log(
                   '[OOEditor] peer',
                   peerUserId,
-                  'crashed — excluding from leader election',
+                  'crashed — excluding from leader election'
                 );
                 crashedPeersRef.current.add(peerUserId);
               },
@@ -1770,13 +1878,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           new Promise<void>(resolve =>
             setTimeout(() => {
               if (!historyPhaseComplete) {
-                console.warn(
-                  '[OOEditor] preload outer timeout — proceeding',
-                );
+                console.warn('[OOEditor] preload outer timeout — proceeding');
                 endPreloadPhase();
               }
               resolve();
-            }, 120_000),
+            }, 120_000)
           ),
         ]);
         if (cancelled) return;
@@ -1793,7 +1899,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           pendingRemoteChangesRef.current.length,
           'ancillary events queued,',
           Object.keys(historyInitialMedia).length,
-          'media items',
+          'media items'
         );
 
         // Create the editor
@@ -1815,7 +1921,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             // Apply_OtherChanges on every other client.
             if (outgoingSilencedRef.current) {
               console.warn(
-                '[OOEditor] outgoing saveChanges suppressed (crash state)',
+                '[OOEditor] outgoing saveChanges suppressed (crash state)'
               );
               return;
             }
@@ -1825,40 +1931,37 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             try {
               const changes = (message as { changes?: unknown }).changes;
               const arr = Array.isArray(changes) ? changes : [];
-              console.log(
-                '[OOEditor:send] saveChanges',
-                {
-                  count: arr.length,
-                  changes: arr.map((c, i) => {
-                    const ooc = c as {
-                      user?: string;
-                      useridoriginal?: string;
-                      change?: string;
-                    };
-                    const raw = ooc.change ?? '';
-                    let parsed: unknown = raw;
-                    try {
-                      parsed = JSON.parse(raw);
-                    } catch {
-                      /* leave as string */
-                    }
-                    const preview =
-                      typeof raw === 'string' && raw.length > 500
-                        ? raw.slice(0, 500) + `…(+${raw.length - 500})`
-                        : raw;
-                    return {
-                      index: i,
-                      user: ooc.user,
-                      useridoriginal: ooc.useridoriginal,
-                      typeCode: Array.isArray(parsed)
-                        ? (parsed as unknown[])[0]
-                        : undefined,
-                      parsed,
-                      raw: preview,
-                    };
-                  }),
-                },
-              );
+              console.log('[OOEditor:send] saveChanges', {
+                count: arr.length,
+                changes: arr.map((c, i) => {
+                  const ooc = c as {
+                    user?: string;
+                    useridoriginal?: string;
+                    change?: string;
+                  };
+                  const raw = ooc.change ?? '';
+                  let parsed: unknown = raw;
+                  try {
+                    parsed = JSON.parse(raw);
+                  } catch {
+                    /* leave as string */
+                  }
+                  const preview =
+                    typeof raw === 'string' && raw.length > 500
+                      ? raw.slice(0, 500) + `…(+${raw.length - 500})`
+                      : raw;
+                  return {
+                    index: i,
+                    user: ooc.user,
+                    useridoriginal: ooc.useridoriginal,
+                    typeCode: Array.isArray(parsed)
+                      ? (parsed as unknown[])[0]
+                      : undefined,
+                    parsed,
+                    raw: preview,
+                  };
+                }),
+              });
             } catch {
               /* ignore */
             }
@@ -1904,7 +2007,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           '[checkpoint] init gate — canEdit:',
           canEdit,
           'abilities:',
-          item.abilities,
+          item.abilities
         );
         // Install the leader-election implementation into the ref so
         // both initCheckpointing and the beforeunload handler use the
@@ -1928,21 +2031,22 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           }
           return true;
         };
-        if (canEdit) initCheckpointing({
-          editor,
-          format: x2tExtension,
-          type: x2tType,
-          userId: user.sub!,
-          onUpload: uploadEncrypted,
-          isSaveLeader: () => isSaveLeaderRef.current(),
-          onSaveResult: result => {
-            // `null` = the most recent save succeeded → clear any
-            // banner. Otherwise show the classified error.
-            console.log('[OOEditor] onSaveResult', result);
-            setSaveError(result);
-            if (!result) setSaveRetrying(false);
-          },
-        });
+        if (canEdit)
+          initCheckpointing({
+            editor,
+            format: x2tExtension,
+            type: x2tType,
+            userId: user.sub!,
+            onUpload: uploadEncrypted,
+            isSaveLeader: () => isSaveLeaderRef.current(),
+            onSaveResult: result => {
+              // `null` = the most recent save succeeded → clear any
+              // banner. Otherwise show the classified error.
+              console.log('[OOEditor] onSaveResult', result);
+              setSaveError(result);
+              if (!result) setSaveRetrying(false);
+            },
+          });
 
         // Listen for tab close/refresh to save or warn
         window.addEventListener('beforeunload', handleBeforeUnload);
@@ -1995,18 +2099,22 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   if (state === 'error') {
     const isNoKeysError =
       !!error && /no key pair|hasKeys|key pair found/i.test(error);
+    const isConversionError =
+      !!error && /failed to convert|conversion/i.test(error);
+    const isOdfFormat = ['odt', 'ods', 'odp'].includes(x2tExtension);
+
     const headline = isNoKeysError
-      ? t(
-          'explorer.encrypted.no_keys_headline',
-          'Encryption keys required',
-        )
+      ? t('explorer.encrypted.no_keys_headline', 'Encryption keys required')
       : t('explorer.encrypted.editor_error', 'Failed to load editor');
     const body = isNoKeysError
       ? t(
           'explorer.encrypted.no_keys_body',
-          'You don\'t have an encryption key pair set up for your account yet. Generate or restore your encryption keys from your profile menu, then reopen this document.',
+          "You don't have an encryption key pair set up for your account yet. Generate or restore your encryption keys from your profile menu, then reopen this document."
         )
       : error;
+
+    const canEdit = !!item.abilities?.partial_update;
+    const canRemoveEncryption = !!item.abilities?.remove_encryption;
 
     return (
       <div
@@ -2019,7 +2127,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           gap: '20px',
           padding: '32px',
           textAlign: 'center',
-          maxWidth: '560px',
+          maxWidth: '620px',
           margin: '0 auto',
         }}
       >
@@ -2054,15 +2162,301 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             {body}
           </p>
         )}
+
+        {isConversionError && isOdfFormat && (
+          <>
+            <div
+              role="alert"
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                padding: '14px 18px',
+                background: 'var(--c--theme--colors--warning-100, #fff4e5)',
+                border:
+                  '1px solid var(--c--theme--colors--warning-400, #e0a84f)',
+                borderRadius: '8px',
+                textAlign: 'left',
+                lineHeight: 1.55,
+                fontSize: '14px',
+                color: 'var(--c--theme--colors--warning-800, #7a4d00)',
+              }}
+            >
+              <span
+                className="material-icons"
+                style={{
+                  fontSize: '22px',
+                  marginTop: '1px',
+                  flexShrink: 0,
+                }}
+              >
+                info
+              </span>
+              <div>
+                <strong style={{ display: 'block', marginBottom: '6px' }}>
+                  {t(
+                    'explorer.encrypted.conversion_hint_title',
+                    'Why does this happen?'
+                  )}
+                </strong>
+                {t(
+                  'explorer.encrypted.conversion_odf_body',
+                  'Encrypted documents are opened with a lightweight browser-based editor that does not support all features available in non-encrypted mode. SmartArt elements are known to prevent ODF files (.odt, .ods, .odp) from loading in this mode.'
+                )}
+                <br /><br />
+                {canEdit
+                  ? t(
+                      'explorer.encrypted.conversion_odf_actions',
+                      'You can download the file to remove any SmartArt elements, then re-upload it. Alternatively, you can remove encryption from this document so it opens with the full-featured editor. If the issue persists after removing SmartArt, please contact the technical team to investigate.'
+                    )
+                  : t(
+                      'explorer.encrypted.conversion_odf_no_edit',
+                      'Please contact the owner of this document or a user with editing rights so they can remove the SmartArt elements or remove encryption from the file. If the issue persists after removing SmartArt, please contact the technical team to investigate.'
+                    )}
+              </div>
+            </div>
+
+            {canEdit && (
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                }}
+              >
+                <button
+                  type="button"
+                  disabled={downloading}
+                  onClick={async () => {
+                    setDownloading(true);
+                    try {
+                      await downloadDecryptedFile(item);
+                    } catch (e) {
+                      console.error(
+                        '[OOEditor] download decrypted failed',
+                        e
+                      );
+                    } finally {
+                      setDownloading(false);
+                    }
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    border:
+                      '1px solid var(--c--theme--colors--greyscale-400, #ccc)',
+                    borderRadius: '6px',
+                    background: 'var(--c--theme--colors--greyscale-000, #fff)',
+                    color: 'var(--c--theme--colors--greyscale-800, #222)',
+                    cursor: downloading ? 'wait' : 'pointer',
+                    opacity: downloading ? 0.6 : 1,
+                  }}
+                >
+                  <span
+                    className="material-icons"
+                    style={{ fontSize: '18px' }}
+                  >
+                    download
+                  </span>
+                  {downloading
+                    ? t(
+                        'explorer.encrypted.downloading',
+                        'Downloading...'
+                      )
+                    : t(
+                        'explorer.encrypted.download_to_inspect',
+                        'Download file'
+                      )}
+                </button>
+
+                {canRemoveEncryption && (
+                  <button
+                    type="button"
+                    onClick={() => setShowRemoveEncryption(true)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 20px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      border: 'none',
+                      borderRadius: '6px',
+                      background:
+                        'var(--c--theme--colors--primary-600, #0056b3)',
+                      color: '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span
+                      className="material-icons"
+                      style={{ fontSize: '18px' }}
+                    >
+                      lock_open
+                    </span>
+                    {t(
+                      'explorer.encrypted.remove_encryption',
+                      'Remove encryption'
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {showRemoveEncryption && (
+              <ModalRecursiveRemoveEncryption
+                isOpen={showRemoveEncryption}
+                onClose={() => setShowRemoveEncryption(false)}
+                item={item}
+              />
+            )}
+          </>
+        )}
+
+        {isConversionError && !isOdfFormat && (
+          <>
+            <p
+              style={{
+                margin: 0,
+                fontSize: '14px',
+                lineHeight: 1.5,
+                color: 'var(--c--theme--colors--greyscale-600, #666)',
+              }}
+            >
+              {t(
+                'explorer.encrypted.conversion_unexpected',
+                'This error is unexpected for this file format. You can download the file to inspect it, or try removing encryption — the full-featured editor may be able to open it. If removing encryption works, please contact the technical team so they can investigate why the encrypted editor failed.'
+              )}
+            </p>
+
+            {canEdit && (
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                }}
+              >
+                <button
+                  type="button"
+                  disabled={downloading}
+                  onClick={async () => {
+                    setDownloading(true);
+                    try {
+                      await downloadDecryptedFile(item);
+                    } catch (e) {
+                      console.error(
+                        '[OOEditor] download decrypted failed',
+                        e
+                      );
+                    } finally {
+                      setDownloading(false);
+                    }
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 20px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    border:
+                      '1px solid var(--c--theme--colors--greyscale-400, #ccc)',
+                    borderRadius: '6px',
+                    background: 'var(--c--theme--colors--greyscale-000, #fff)',
+                    color: 'var(--c--theme--colors--greyscale-800, #222)',
+                    cursor: downloading ? 'wait' : 'pointer',
+                    opacity: downloading ? 0.6 : 1,
+                  }}
+                >
+                  <span
+                    className="material-icons"
+                    style={{ fontSize: '18px' }}
+                  >
+                    download
+                  </span>
+                  {downloading
+                    ? t(
+                        'explorer.encrypted.downloading',
+                        'Downloading...'
+                      )
+                    : t(
+                        'explorer.encrypted.download_to_inspect',
+                        'Download file'
+                      )}
+                </button>
+
+                {canRemoveEncryption && (
+                  <button
+                    type="button"
+                    onClick={() => setShowRemoveEncryption(true)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 20px',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      border: 'none',
+                      borderRadius: '6px',
+                      background:
+                        'var(--c--theme--colors--primary-600, #0056b3)',
+                      color: '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span
+                      className="material-icons"
+                      style={{ fontSize: '18px' }}
+                    >
+                      lock_open
+                    </span>
+                    {t(
+                      'explorer.encrypted.remove_encryption',
+                      'Remove encryption'
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {!canEdit && (
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '14px',
+                  lineHeight: 1.5,
+                  color: 'var(--c--theme--colors--greyscale-600, #666)',
+                }}
+              >
+                {t(
+                  'explorer.encrypted.conversion_unexpected_no_edit',
+                  'Please contact the owner of this document or a user with editing rights to investigate.'
+                )}
+              </p>
+            )}
+
+            {showRemoveEncryption && (
+              <ModalRecursiveRemoveEncryption
+                isOpen={showRemoveEncryption}
+                onClose={() => setShowRemoveEncryption(false)}
+                item={item}
+              />
+            )}
+          </>
+        )}
       </div>
     );
   }
 
   return (
-    <div
-      ref={containerRef}
-      className={styles.ooEditorContainer}
-    >
+    <div ref={containerRef} className={styles.ooEditorContainer}>
       {/* Save-error banner. Static block — lives above the editor
           area and reduces the iframe height, so the OO toolbar and
           content stay fully usable while the banner is up. */}
@@ -2102,11 +2496,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               {saveError.kind === 'fatal'
                 ? t(
                     'explorer.encrypted.save_error_fatal_title',
-                    'Saving failed — please contact support',
+                    'Saving failed — please contact support'
                   )
                 : t(
                     'explorer.encrypted.save_error_transient_title',
-                    'Sync error — save will be retried',
+                    'Sync error — save will be retried'
                   )}
             </strong>
             <span
@@ -2122,13 +2516,13 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 ? t(
                     'explorer.encrypted.save_error_fatal_body',
                     'The document contains content we cannot serialize to ' +
-                      'the on-disk format. Your recent edits are visible ' +
-                      'but unsaved. Please undo the last change or contact ' +
-                      'support. Details: ',
+                      'the on-disk format (often a chart). ' +
+                      'Your recent edits are visible but unsaved. Please ' +
+                      'undo the last change or contact support. Details: '
                   )
                 : t(
                     'explorer.encrypted.save_error_transient_body',
-                    'We could not upload the latest save. Details: ',
+                    'We could not upload the latest save. Details: '
                   )}
               {saveError.detail}
             </span>
@@ -2167,138 +2561,142 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         </div>
       )}
       <div className={styles.editorArea}>
-      {/* OnlyOffice replaces this div with its own iframe[name="frameEditor"] */}
-      <div id="oo-editor-placeholder" />
-      {/* Loading overlay */}
-      {state !== 'ready' && state !== 'oo-crashed' && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '16px',
-            background: 'white',
-            zIndex: 10,
-          }}
-        >
-          <Loader />
-          <span style={{ color: 'var(--c--theme--colors--greyscale-600, #666)' }}>
-            {state === 'decrypting' &&
-              t('explorer.encrypted.decrypting', 'Decrypting...')}
-            {state === 'converting' &&
-              t('explorer.encrypted.converting', 'Preparing editor...')}
-            {state === 'syncing-history' &&
-              t(
-                'explorer.encrypted.syncing_history',
-                'Syncing collaborative state...',
-              )}
-            {state === 'stale-resyncing' &&
-              t(
-                'explorer.encrypted.stale_resyncing',
-                'Reconnecting after long disconnect — refetching document...',
-              )}
-            {(state === 'loading' || state === 'mounting') &&
-              t('explorer.encrypted.loading_editor', 'Loading editor...')}
-          </span>
-        </div>
-      )}
-      {/* OO crash recovery overlay */}
-      {state === 'oo-crashed' && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '16px',
-            padding: '24px',
-            textAlign: 'center',
-            background: 'white',
-            zIndex: 20,
-          }}
-        >
-          <span
-            className="material-icons"
+        {/* OnlyOffice replaces this div with its own iframe[name="frameEditor"] */}
+        <div id="oo-editor-placeholder" />
+        {/* Loading overlay */}
+        {state !== 'ready' && state !== 'oo-crashed' && (
+          <div
             style={{
-              fontSize: '48px',
-              color: 'var(--c--theme--colors--danger-600, #c00)',
-            }}
-          >
-            sync_problem
-          </span>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>
-            {t(
-              'explorer.encrypted.oo_crashed_title',
-              'Synchronization error',
-            )}
-          </h2>
-          <p
-            style={{
-              margin: 0,
-              maxWidth: '520px',
-              color: 'var(--c--theme--colors--greyscale-700, #444)',
-              lineHeight: 1.5,
-            }}
-          >
-            {t(
-              'explorer.encrypted.oo_crashed_body',
-              'An error occurred while synchronizing with other peers. ' +
-                'Because the document is end-to-end encrypted, we cannot ' +
-                'always reconcile changes perfectly. Please reload the ' +
-                'editor to fetch the latest saved state.',
-            )}
-          </p>
-          <button
-            type="button"
-            onClick={requestRecoveryReload}
-            disabled={recoveryWaiting}
-            style={{
-              display: 'inline-flex',
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: '8px',
-              padding: '8px 20px',
-              fontSize: '14px',
-              fontWeight: 600,
-              color: 'white',
-              background: recoveryWaiting
-                ? 'var(--c--theme--colors--greyscale-500, #888)'
-                : 'var(--c--theme--colors--primary-600, #0366d6)',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: recoveryWaiting ? 'wait' : 'pointer',
+              justifyContent: 'center',
+              gap: '16px',
+              background: 'white',
+              zIndex: 10,
             }}
           >
-            {recoveryWaiting && (
-              <span
-                aria-hidden
-                style={{
-                  display: 'inline-block',
-                  width: '14px',
-                  height: '14px',
-                  border: '2px solid rgba(255,255,255,0.45)',
-                  borderTopColor: 'white',
-                  borderRadius: '50%',
-                  animation: 'oo-crashed-spin 0.8s linear infinite',
-                }}
-              />
-            )}
-            {recoveryWaiting
-              ? t(
-                  'explorer.encrypted.oo_crashed_waiting',
-                  'Waiting for peers to save…',
-                )
-              : t('explorer.encrypted.oo_crashed_reload', 'Reload editor')}
-          </button>
-          <style>
-            {'@keyframes oo-crashed-spin { to { transform: rotate(360deg); } }'}
-          </style>
-        </div>
-      )}
+            <Loader />
+            <span
+              style={{ color: 'var(--c--theme--colors--greyscale-600, #666)' }}
+            >
+              {state === 'decrypting' &&
+                t('explorer.encrypted.decrypting', 'Decrypting...')}
+              {state === 'converting' &&
+                t('explorer.encrypted.converting', 'Preparing editor...')}
+              {state === 'syncing-history' &&
+                t(
+                  'explorer.encrypted.syncing_history',
+                  'Syncing collaborative state...'
+                )}
+              {state === 'stale-resyncing' &&
+                t(
+                  'explorer.encrypted.stale_resyncing',
+                  'Reconnecting after long disconnect — refetching document...'
+                )}
+              {(state === 'loading' || state === 'mounting') &&
+                t('explorer.encrypted.loading_editor', 'Loading editor...')}
+            </span>
+          </div>
+        )}
+        {/* OO crash recovery overlay */}
+        {state === 'oo-crashed' && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '16px',
+              padding: '24px',
+              textAlign: 'center',
+              background: 'white',
+              zIndex: 20,
+            }}
+          >
+            <span
+              className="material-icons"
+              style={{
+                fontSize: '48px',
+                color: 'var(--c--theme--colors--danger-600, #c00)',
+              }}
+            >
+              sync_problem
+            </span>
+            <h2 style={{ margin: 0, fontSize: '18px' }}>
+              {t(
+                'explorer.encrypted.oo_crashed_title',
+                'Synchronization error'
+              )}
+            </h2>
+            <p
+              style={{
+                margin: 0,
+                maxWidth: '520px',
+                color: 'var(--c--theme--colors--greyscale-700, #444)',
+                lineHeight: 1.5,
+              }}
+            >
+              {t(
+                'explorer.encrypted.oo_crashed_body',
+                'An error occurred while synchronizing with other peers. ' +
+                  'Because the document is end-to-end encrypted, we cannot ' +
+                  'always reconcile changes perfectly. Please reload the ' +
+                  'editor to fetch the latest saved state.'
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={requestRecoveryReload}
+              disabled={recoveryWaiting}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 20px',
+                fontSize: '14px',
+                fontWeight: 600,
+                color: 'white',
+                background: recoveryWaiting
+                  ? 'var(--c--theme--colors--greyscale-500, #888)'
+                  : 'var(--c--theme--colors--primary-600, #0366d6)',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: recoveryWaiting ? 'wait' : 'pointer',
+              }}
+            >
+              {recoveryWaiting && (
+                <span
+                  aria-hidden
+                  style={{
+                    display: 'inline-block',
+                    width: '14px',
+                    height: '14px',
+                    border: '2px solid rgba(255,255,255,0.45)',
+                    borderTopColor: 'white',
+                    borderRadius: '50%',
+                    animation: 'oo-crashed-spin 0.8s linear infinite',
+                  }}
+                />
+              )}
+              {recoveryWaiting
+                ? t(
+                    'explorer.encrypted.oo_crashed_waiting',
+                    'Waiting for peers to save…'
+                  )
+                : t('explorer.encrypted.oo_crashed_reload', 'Reload editor')}
+            </button>
+            <style>
+              {
+                '@keyframes oo-crashed-spin { to { transform: rotate(360deg); } }'
+              }
+            </style>
+          </div>
+        )}
       </div>
       {/* Connection status — only show when there's a problem */}
       {relayFailed && (

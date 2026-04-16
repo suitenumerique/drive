@@ -11,6 +11,7 @@ import { PreviewPdf } from "../pdf-preview/PreviewPdf";
 import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
 import { type FilePreviewType } from "../files-preview/FilesPreview";
 import { OOEditor } from "@/features/encryption/oo-bridge/OOEditor";
+import { MIME_TO_DOC_TYPE } from "@/features/encryption/oo-bridge/types";
 import { Loader } from "@gouvfr-lasuite/cunningham-react";
 
 interface EncryptedFileViewerProps {
@@ -33,11 +34,10 @@ export const EncryptedFileViewer = ({
 
   const category = getMimeCategory(file.mimetype);
 
-  // Office files: use OnlyOffice client-side editor (handles its own decryption)
-  const isOfficeFormat =
-    category === MimeCategory.DOC ||
-    category === MimeCategory.CALC ||
-    category === MimeCategory.POWERPOINT;
+  // Office files: use OnlyOffice client-side editor (handles its own decryption).
+  // Use the OO bridge's own MIME_TO_DOC_TYPE as the source of truth — it covers
+  // formats like text/plain and text/csv that getMimeCategory classifies as OTHER.
+  const isOfficeFormat = file.mimetype in MIME_TO_DOC_TYPE;
 
   if (isOfficeFormat) {
     const itemLike = {

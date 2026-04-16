@@ -98,24 +98,38 @@ export function createMockServerCallbacks(
           break;
 
         case 'getLock': {
-          const lockBlock = (msg.block as unknown[] | undefined)?.[0] as
-            | string
-            | undefined;
-          const lockEntry = {
-            time: Date.now(),
-            user: ooInternalId,
-            block: lockBlock,
-          };
+          // OO sends `block` as an array of block descriptors. For
+          // Excel/Presentation/PDF each descriptor is an object with a
+          // `guid` property; for Word it's a plain string.
+          //
+          // `_onGetLock` in the SDK (DocsCoApi) iterates `data.locks`
+          // with `for (key in ...)` — so `locks` must be a plain object,
+          // NOT an array. For Excel/Presentation/PDF it reads
+          // `lock.block.guid`; for Word it uses the object key directly.
+          const blockArray = (msg.block as unknown[]) || [];
+          const locks: Record<string, unknown> = {};
 
-          let locks: unknown;
-          if (options.docType === 'cell') {
-            locks = [lockEntry];
-          } else {
-            // Word / Slide expect an object keyed by the block value itself
-            locks = lockBlock ? { [lockBlock]: lockEntry } : {};
+          for (const block of blockArray) {
+            const lockEntry = {
+              time: Date.now(),
+              user: ooInternalId,
+              block,
+            };
+            if (
+              options.docType === 'cell' ||
+              options.docType === 'slide'
+            ) {
+              // Key by guid — _onGetLock reads lock.block.guid
+              const guid = (block as any)?.guid;
+              if (guid) locks[guid] = lockEntry;
+            } else {
+              // Word: block is a string, key by the string itself
+              const key = typeof block === 'string' ? block : JSON.stringify(block);
+              locks[key] = lockEntry;
+            }
           }
 
-          sendToEditor({ type: 'getLock', locks } as OOMessage);
+          sendToEditor({ type: 'getLock', locks } as any);
           // Broadcast lock acquisition to other peers ONLY for
           // spreadsheets. Word / slide use the OT channel
           // (`saveChanges`) for conflict handling, and OO's

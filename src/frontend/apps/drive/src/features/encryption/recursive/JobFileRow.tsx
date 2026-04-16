@@ -30,6 +30,15 @@ export const JobFileRow = ({ row }: { row: FileJobRowType }) => {
             sync
           </span>
         );
+      case 'staged':
+        return (
+          <span
+            className="material-icons"
+            style={{ color: 'var(--c--theme--colors--primary-600, #1668dd)' }}
+          >
+            cloud_done
+          </span>
+        );
       case 'done':
         return (
           <span

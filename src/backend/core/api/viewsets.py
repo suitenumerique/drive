@@ -1554,8 +1554,11 @@ class ItemViewSet(
         """Encrypt an item (standalone file) or an item subtree (folder + all descendants)."""
         item = self.get_object()
 
-        # Validate: item must be RESTRICTED
-        if item.link_reach != LinkReachChoices.RESTRICTED:
+        # Validate: item must be RESTRICTED (using computed_link_reach
+        # which accounts for inheritance — a file inside a restricted
+        # folder is effectively restricted even if its own link_reach
+        # is NULL).
+        if item.computed_link_reach != LinkReachChoices.RESTRICTED:
             return drf.response.Response(
                 {"detail": _("Item must be restricted before it can be encrypted.")},
                 status=drf.status.HTTP_400_BAD_REQUEST,

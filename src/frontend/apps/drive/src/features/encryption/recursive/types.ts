@@ -3,6 +3,7 @@ import { Item } from '@/features/drivers/types';
 export type FileJobState =
   | 'pending'
   | 'running'
+  | 'staged'
   | 'done'
   | 'skipped'
   | 'failed';

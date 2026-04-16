@@ -41,6 +41,7 @@ type Action =
     }
   | { type: 'SET_TOP_ERROR'; error: string | null }
   | { type: 'SET_VALIDATION'; errors: string[] }
+  | { type: 'PROMOTE_STAGED_TO_DONE' }
   | { type: 'RESET_FAILED_TO_PENDING' }
   | { type: 'RESET' };
 
@@ -76,6 +77,12 @@ function reducer(state: State, action: Action): State {
       return { ...state, topError: action.error };
     case 'SET_VALIDATION':
       return { ...state, validationErrors: action.errors };
+    case 'PROMOTE_STAGED_TO_DONE': {
+      const next = state.rows.map((r) =>
+        r.state === 'staged' ? { ...r, state: 'done' as FileJobState } : r,
+      );
+      return { ...state, rows: next };
+    }
     case 'RESET_FAILED_TO_PENDING': {
       const next = state.rows.map((r) =>
         r.state === 'failed'
@@ -337,7 +344,7 @@ export function useRecursiveEncryptionJob({
         const encryptedKeysForDescendants: Record<string, string> = {};
         stagedResults.forEach((v, id) => {
           fileKeyMapping[id] = v.newFilename;
-          if ('wrappedKey' in v && v.wrappedKey.byteLength > 0) {
+          if ('wrappedKey' in v && v.wrappedKey && v.wrappedKey.byteLength > 0) {
             encryptedKeysForDescendants[id] = toBase64(v.wrappedKey);
           }
         });
@@ -360,6 +367,7 @@ export function useRecursiveEncryptionJob({
         await driver.removeEncryption(item.id, { fileKeyMapping });
       }
 
+      dispatch({ type: 'PROMOTE_STAGED_TO_DONE' });
       await queryClient.invalidateQueries({ queryKey: ['items'] });
 
       dispatch({ type: 'SET_PHASE', phase: 'success' });
@@ -396,7 +404,9 @@ export function useRecursiveEncryptionJob({
     abortRef.current?.abort();
   }, []);
 
-  const doneCount = state.rows.filter((r) => r.state === 'done').length;
+  const doneCount = state.rows.filter(
+    (r) => r.state === 'done' || r.state === 'staged',
+  ).length;
   const skippedCount = state.rows.filter((r) => r.state === 'skipped').length;
   const failedCount = state.rows.filter((r) => r.state === 'failed').length;
 
@@ -564,7 +574,7 @@ async function stageOneEncryption({
     await putToS3(uploadUrl, encryptedContent, signal);
 
     onFileStaged(targetId, { itemId: targetId, newFilename, wrappedKey });
-    dispatch({ type: 'UPDATE_ROW', id: targetId, state: 'done' });
+    dispatch({ type: 'UPDATE_ROW', id: targetId, state: 'staged' });
   } catch (err) {
     if ((err as Error).name === 'AbortError') throw err;
     dispatch({
@@ -634,7 +644,7 @@ async function decryptPipeline({
         await putToS3(uploadUrl, plaintext, signal);
 
         onFileStaged(id, { newFilename });
-        dispatch({ type: 'UPDATE_ROW', id, state: 'done' });
+        dispatch({ type: 'UPDATE_ROW', id, state: 'staged' });
       } catch (err) {
         if ((err as Error).name === 'AbortError') throw err;
         dispatch({

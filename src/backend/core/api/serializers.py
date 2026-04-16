@@ -232,16 +232,24 @@ class ListItemSerializer(serializers.ModelSerializer):
     is_wopi_supported = serializers.SerializerMethodField()
 
     def get_accesses_user_ids(self, item):
-        """Return the list of user OIDC sub identifiers with access to this item."""
+        """Return the list of user OIDC sub identifiers with access to this item.
+
+        Access in Drive is inherited: a file inside a folder inherits
+        permissions from its ancestors. We query the item itself AND all
+        its ancestors so that files without direct ItemAccess records
+        (the common case for files inside shared folders) still return
+        the users who can actually access them.
+        """
         request = self.context.get("request")
         if not request or not request.user.is_authenticated:
             return None
         return list(
             models.ItemAccess.objects.filter(
-                item=item,
+                item__path__ancestors=item.path,
                 user__isnull=False,
             )
             .values_list("user__sub", flat=True)
+            .distinct()
         )
 
     class Meta:
