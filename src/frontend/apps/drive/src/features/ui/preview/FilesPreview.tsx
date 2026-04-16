@@ -202,9 +202,10 @@ export const FilePreview = ({
   useEffect(() => {
     const className = "file-preview__container--pdf-sidebar-open";
     const isPdf = currentFile?.category === MimeCategory.PDF;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
     if (pdfThumbnailSidebarOpen && isPdf) {
       // The timeout is set so that the thumbnail sidebar and the button move in sync.
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         setClassNames((prev) => {
           if (prev.includes(className)) {
             return prev;
@@ -222,6 +223,12 @@ export const FilePreview = ({
     if (pdfThumbnailSidebarOpen && !isPdf) {
       setPdfThumbnailSidebarOpen(false);
     }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [pdfThumbnailSidebarOpen, currentFile]);
 
   useEffect(() => {
