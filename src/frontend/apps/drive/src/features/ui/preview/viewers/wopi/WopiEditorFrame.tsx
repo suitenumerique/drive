@@ -5,12 +5,12 @@ import { getDriver } from "@/features/config/Config";
 import { ErrorPreview } from "../error/ErrorPreview";
 import { FilePreviewType } from "../../FilesPreview";
 
-interface WopiEditorProps {
+interface WopiEditorFrameProps {
   item: FilePreviewType;
   onFileRename?: (file: FilePreviewType, newName: string) => void;
 }
 
-export const WopiEditor = ({ item, onFileRename }: WopiEditorProps) => {
+export const WopiEditorFrame = ({ item, onFileRename }: WopiEditorFrameProps) => {
   const { t } = useTranslation();
   const formRef = useRef<HTMLFormElement>(null);
   const queryClient = useQueryClient();
@@ -49,7 +49,6 @@ export const WopiEditor = ({ item, onFileRename }: WopiEditorProps) => {
         return;
       }
 
-      // Handle rename notifications from the WOPI editor
       if (data.MessageId === "File_Rename") {
         onFileRename?.(item, data.Values.NewName);
       }

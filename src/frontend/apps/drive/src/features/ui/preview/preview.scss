@@ -4,7 +4,7 @@
 @use "./components/controls/PreviewControls.scss";
 @use "./viewers/not-supported/NotSupportedPreview.scss";
 @use "./viewers/suspicious/SuspiciousPreview.scss";
-@use "./viewers/wopi/WopiEditor.scss";
+@use "./viewers/wopi/WopiEditorFrame.scss";
 @use "./viewers/error/ErrorPreview.scss";
 @use "./viewers/audio-player/AudioPlayer.scss";
 @use "./viewers/image-viewer/ImageViewer.scss";

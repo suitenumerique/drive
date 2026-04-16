@@ -20,7 +20,7 @@ import { AudioPlayer } from "./viewers/audio-player/AudioPlayer";
 import { ImageViewer } from "./viewers/image-viewer/ImageViewer";
 import { SuspiciousPreview } from "./viewers/suspicious/SuspiciousPreview";
 import { NotSupportedPreview } from "./viewers/not-supported/NotSupportedPreview";
-import { WopiEditor } from "./viewers/wopi/WopiEditor";
+import { WopiOpenInEditor } from "./viewers/wopi/WopiOpenInEditor";
 import { OPEN_DELAY } from "./viewers/pdf-preview/pdfConsts";
 import { FileIcon } from "@/features/explorer/components/icons/ItemIcon";
 
@@ -69,7 +69,6 @@ interface FilePreviewProps {
   onChangeFile?: (file?: FilePreviewType) => void;
   handleDownloadFile?: (file?: FilePreviewType) => void;
   hideCloseButton?: boolean;
-  onFileRename?: (file: FilePreviewType, newName: string) => void;
 }
 
 export const FilePreview = ({
@@ -84,7 +83,6 @@ export const FilePreview = ({
   onChangeFile,
   handleDownloadFile,
   hideCloseButton,
-  onFileRename,
 }: FilePreviewProps) => {
   const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(initialIndexFile);
@@ -134,7 +132,7 @@ export const FilePreview = ({
       return <SuspiciousPreview handleDownload={handleDownload} />;
     }
     if (currentFile.is_wopi_supported) {
-      return <WopiEditor item={currentFile} onFileRename={onFileRename} />;
+      return <WopiOpenInEditor file={currentFile} />;
     }
 
     switch (currentFile.category) {

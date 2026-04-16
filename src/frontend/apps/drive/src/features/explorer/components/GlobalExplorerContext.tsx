@@ -305,7 +305,6 @@ export const GlobalExplorerProvider = ({
         currentItem={previewItem}
         items={previewItems}
         setPreviewItem={setPreviewItem}
-        onItemsChange={setPreviewItems}
       />
     </GlobalExplorerContext.Provider>
   );
