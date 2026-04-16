@@ -64,7 +64,12 @@
         },
         "wopi": {
           "loading": "Loading document...",
-          "error": "An error occurred while loading the document."
+          "error": "An error occurred while loading the document.",
+          "open_in_editor": "Open in editor",
+          "open_in_editor_description": "This file can be edited with an online editor. It opens in a new tab."
+        },
+        "image": {
+          "loading": "Loading image..."
         },
         "unsupported": {
           "disclaimer": "Unsupported format.",
@@ -659,7 +664,12 @@
         },
         "wopi": {
           "loading": "Chargement du document...",
-          "error": "Une erreur est survenue lors du chargement du document."
+          "error": "Une erreur est survenue lors du chargement du document.",
+          "open_in_editor": "Ouvrir dans l'éditeur",
+          "open_in_editor_description": "Ce fichier peut être modifié avec un éditeur en ligne. Il s'ouvre dans un nouvel onglet."
+        },
+        "image": {
+          "loading": "Chargement de l'image..."
         },
         "unsupported": {
           "disclaimer": "Format non supporté.",
@@ -1264,7 +1274,12 @@
         },
         "wopi": {
           "loading": "Document laden...",
-          "error": "Er is een fout opgetreden tijdens het laden van het document."
+          "error": "Er is een fout opgetreden tijdens het laden van het document.",
+          "open_in_editor": "Openen in editor",
+          "open_in_editor_description": "Dit bestand kan worden bewerkt met een online editor. Het opent in een nieuw tabblad."
+        },
+        "image": {
+          "loading": "Afbeelding laden..."
         },
         "unsupported": {
           "disclaimer": "Format niet ondersteund.",
