@@ -23,6 +23,7 @@ import { NotSupportedPreview } from "./viewers/not-supported/NotSupportedPreview
 import { WopiOpenInEditor } from "./viewers/wopi/WopiOpenInEditor";
 import { OPEN_DELAY } from "./viewers/pdf-preview/pdfConsts";
 import { FileIcon } from "@/features/explorer/components/icons/ItemIcon";
+import { printImage } from "./utils/printImage";
 
 const PreviewPdf = dynamic<{
   src: string;
@@ -119,6 +120,12 @@ export const FilePreview = ({
 
   const handlePrint = () => {
     if (!currentFile) return;
+
+    if (currentFile.category === MimeCategory.IMAGE) {
+      printImage(currentFile.url_preview);
+      return;
+    }
+
     window.open(currentFile.url_preview, "_blank");
   };
 
