@@ -152,6 +152,8 @@ export const FilePreview = ({
             src={currentFile.url_preview}
             alt={currentFile.title}
             className="file-preview__viewer"
+            // This is made to avoid splash effect when switching between images having a huge size difference.
+            key={currentFile.id} 
           />
         );
       case MimeCategory.VIDEO:
