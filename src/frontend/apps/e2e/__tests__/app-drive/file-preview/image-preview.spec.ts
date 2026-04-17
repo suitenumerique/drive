@@ -51,6 +51,93 @@ test.describe("Image Preview", () => {
     await expect(page.getByRole("menuitem", { name: "Print" })).toBeVisible();
   });
 
+  test("Print action triggers the browser print dialog via a hidden iframe", async ({
+    page,
+    context,
+  }) => {
+    // Replace window.print on every iframe's contentWindow with a spy so the
+    // test never opens a real OS print dialog. We patch the prototype getter
+    // because the iframe is only created after the Print menu item is clicked,
+    // so we have no direct reference to it at stub time.
+    await page.evaluate(() => {
+      (window as unknown as { __printCalled: boolean }).__printCalled = false;
+      const descriptor = Object.getOwnPropertyDescriptor(
+        HTMLIFrameElement.prototype,
+        "contentWindow",
+      );
+      Object.defineProperty(HTMLIFrameElement.prototype, "contentWindow", {
+        configurable: true,
+        get() {
+          const win = descriptor?.get?.call(this) as Window | null;
+          // Patch each contentWindow exactly once — the getter is invoked
+          // multiple times (onload handler, afterprint listener, focus, ...).
+          if (win && !(win as unknown as { __patched?: boolean }).__patched) {
+            (win as unknown as { __patched: boolean }).__patched = true;
+            win.print = () => {
+              (
+                window as unknown as { __printCalled: boolean }
+              ).__printCalled = true;
+            };
+          }
+          return win;
+        },
+      });
+    });
+
+    const pagesBefore = context.pages().length;
+
+    // Capture the preview URL shown by the ImageViewer so we can later check
+    // the hidden print iframe loads the exact same file.
+    const previewSrc = await page
+      .locator(".image-viewer img.image-viewer__image")
+      .getAttribute("src");
+    expect(previewSrc).toBeTruthy();
+
+    const filePreview = page.getByTestId("file-preview");
+    const moreVertButton = filePreview.getByText("more_vert").locator("..");
+    await moreVertButton.click();
+    await page.getByRole("menuitem", { name: "Print" }).click();
+
+    // The print utility appends a hidden iframe to <body>. It is the only
+    // direct iframe child of body that we mark with aria-hidden.
+    const hiddenIframe = page.locator('body > iframe[aria-hidden="true"]');
+    await expect(hiddenIframe).toHaveCount(1, { timeout: 5000 });
+
+    // The iframe's <img> must point to the same preview URL as the viewer —
+    // i.e. we are about to print the file the user is currently looking at.
+    const iframeImg = hiddenIframe.contentFrame().locator("img");
+    await expect(iframeImg).toHaveAttribute("src", previewSrc!, {
+      timeout: 5000,
+    });
+
+    // The <img> inside the iframe must actually load — otherwise print()
+    // would fire on an empty document. naturalWidth is 0 until the browser
+    // successfully decodes the image, so polling until it is > 0 proves
+    // the image really loaded.
+    await expect
+      .poll(
+        () =>
+          iframeImg.evaluate((img: HTMLImageElement) => img.naturalWidth),
+        { timeout: 5000 },
+      )
+      .toBeGreaterThan(0);
+
+    // window.print on the iframe's contentWindow must have been called.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(
+            () =>
+              (window as unknown as { __printCalled: boolean }).__printCalled,
+          ),
+        { timeout: 5000 },
+      )
+      .toBe(true);
+
+    // No new tab should have been opened.
+    expect(context.pages().length).toBe(pagesBefore);
+  });
+
   test("Zoom keyboard shortcuts (+, -, 0) update the image transform", async ({
     page,
   }) => {
