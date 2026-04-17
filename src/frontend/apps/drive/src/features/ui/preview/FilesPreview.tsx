@@ -311,7 +311,7 @@ export const FilePreview = ({
                   />
                 )}
 
-                <div className="file-preview__title">
+                <div className="file-preview__title-wrapper">
                   <FileIcon file={currentFile} type="mini" size="small" />
                   <h1 className="file-preview__title">
                     {removeFileExtension(currentFile?.title || title)}

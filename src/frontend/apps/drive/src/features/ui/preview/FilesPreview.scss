@@ -63,13 +63,17 @@
   }
 }
 
-.file-preview__title {
+.file-preview__title-wrapper {
   display: flex;
   align-items: center;
   gap: var(--c--globals--spacings--3xs);
+  overflow: hidden;
+}
+
+.file-preview__title {
   font-size: 18px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--c--contextuals--content--semantic--neutral--primary);
   margin: 0;
 
   overflow: hidden;
