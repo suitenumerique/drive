@@ -17,6 +17,7 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
     align-items: center;
 
     &__inputs {
+      overflow-x: auto;
       display: flex;
       gap: 8px;
     }

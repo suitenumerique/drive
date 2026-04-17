@@ -18,6 +18,7 @@ and this project adheres to
 
 - 🐛(frontend) add actions menu on mobile My Files page
 - 🐛(frontend) show actual selection count in hard delete modal
+- 🐛(frontend) Responsive broken with long filters in search #659
 
 ## [v0.16.0] - 2026-04-09
 
