@@ -239,7 +239,7 @@ export const FilePreview = ({
     } else {
       setCurrentIndex(-1);
     }
-  }, [openedFileId]);
+  }, [openedFileId, data]);
 
   useEffect(() => {
     onChangeFile?.(currentFile);
