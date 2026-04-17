@@ -175,4 +175,49 @@ test.describe("Image Preview", () => {
       expect(s).toBeCloseTo(initialScale, 2);
     }).toPass({ timeout: 5000 });
   });
+
+  test("Clicking the blurry backdrop closes the preview", async ({ page }) => {
+    const container = page.locator(".image-viewer__container");
+    await expect(container).toBeVisible({ timeout: 5000 });
+
+    // Top-left corner of the container sits in the 20% margin flex-space
+    // around the centered image — i.e. the blurry backdrop.
+    await container.click({ position: { x: 5, y: 5 } });
+
+    await expect(page.getByTestId("file-preview")).toBeHidden({
+      timeout: 5000,
+    });
+  });
+
+  test("Clicking the image itself does not close the preview", async ({
+    page,
+  }) => {
+    const wrapper = page.locator(".image-viewer__image-wrapper");
+    await expect(wrapper).toBeVisible({ timeout: 5000 });
+
+    await wrapper.click();
+
+    // Preview must still be on screen — the click landed on a non-backdrop.
+    await expect(page.getByTestId("file-preview")).toBeVisible();
+  });
+
+  test("Dragging across the image viewer does not close the preview", async ({
+    page,
+  }) => {
+    const container = page.locator(".image-viewer__container");
+    await expect(container).toBeVisible({ timeout: 5000 });
+
+    const box = await container.boundingBox();
+    if (!box) throw new Error("image-viewer__container has no bounding box");
+
+    // Drive a pan-like gesture on the backdrop area. The ImageViewer's
+    // click-capture guard must swallow the resulting click so it never
+    // reaches the FilePreview backdrop handler.
+    await page.mouse.move(box.x + 5, box.y + 5);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 80, box.y + 80, { steps: 5 });
+    await page.mouse.up();
+
+    await expect(page.getByTestId("file-preview")).toBeVisible();
+  });
 });

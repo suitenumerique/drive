@@ -386,6 +386,39 @@ test.describe("PDF Preview", () => {
       expect(value).not.toBe("1");
     }).toPass({ timeout: 10000 });
   });
+
+  // Section 5 — Backdrop click to close
+
+  test("Clicking the blurry area beside a page closes the preview", async ({
+    page,
+  }) => {
+    await waitForPdfReadyAndDismissToast(page);
+
+    const pdfPage = page.locator(".react-pdf__Page").first();
+    const box = await pdfPage.boundingBox();
+    if (!box) throw new Error(".react-pdf__Page has no bounding box");
+
+    // Click 10 px left of the page, at its vertical midpoint — this falls
+    // in the row div's flex margin (the blurry area).
+    await page.mouse.click(
+      Math.max(1, box.x - 10),
+      box.y + box.height / 2,
+    );
+
+    await expect(page.getByTestId("file-preview")).toBeHidden({
+      timeout: 5000,
+    });
+  });
+
+  test("Clicking on a PDF page does not close the preview", async ({ page }) => {
+    await waitForPdfReadyAndDismissToast(page);
+
+    const pdfPage = page.locator(".react-pdf__Page").first();
+    // Click somewhere comfortably inside the page, away from its edges.
+    await pdfPage.click({ position: { x: 200, y: 50 } });
+
+    await expect(page.getByTestId("file-preview")).toBeVisible();
+  });
 });
 
 test.describe("PDF Links", () => {
