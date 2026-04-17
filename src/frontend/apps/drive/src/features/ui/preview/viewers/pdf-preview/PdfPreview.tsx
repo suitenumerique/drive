@@ -171,7 +171,6 @@ export function PdfPreview({
       <PdfControls
         numPages={numPages}
         pageInputValue={pageInputValue}
-        isSidebarOpen={isSidebarOpen}
         onToggleSidebar={toggleSidebar}
         onPageInputChange={handlePageInputChange}
         onPageInputSubmit={handlePageInputSubmit}

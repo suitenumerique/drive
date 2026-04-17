@@ -5,7 +5,6 @@ import { ZoomControls } from "../../components/ZoomControls/ZoomControls";
 interface PdfControlsProps {
   numPages: number;
   pageInputValue: string;
-  isSidebarOpen: boolean;
   onToggleSidebar: () => void;
   onPageInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPageInputSubmit: () => void;
