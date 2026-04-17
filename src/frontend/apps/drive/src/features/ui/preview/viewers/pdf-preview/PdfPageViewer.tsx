@@ -137,6 +137,7 @@ export function PdfPageViewer({
   const rowRenderer: ListRowRenderer = ({ index, key, style }) => (
     <div
       key={key}
+      data-preview-backdrop="true"
       style={{
         ...style,
         display: "flex",

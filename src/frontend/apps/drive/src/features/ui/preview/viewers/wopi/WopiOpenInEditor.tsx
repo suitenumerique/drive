@@ -13,7 +13,7 @@ export const WopiOpenInEditor = ({ file }: WopiOpenInEditorProps) => {
   const { t } = useTranslation();
 
   return (
-    <div className="file-preview-unsupported">
+    <div className="file-preview-unsupported" data-preview-backdrop="true">
       <div className="file-preview-unsupported__icon">
         <FileIcon file={file} size="xlarge" />
       </div>

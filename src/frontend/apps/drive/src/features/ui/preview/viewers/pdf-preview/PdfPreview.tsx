@@ -114,7 +114,7 @@ export function PdfPreview({
 
   if (error?.message || documentError === "generic") {
     return (
-      <div className="file-preview-unsupported">
+      <div className="file-preview-unsupported" data-preview-backdrop="true">
         <div className="file-preview-unsupported__icon">
           <Icon name="error" type={IconType.OUTLINED} size={48} />
         </div>
@@ -140,7 +140,7 @@ export function PdfPreview({
 
   return (
     <div className="pdf-preview">
-      <div className="pdf-preview__body">
+      <div className="pdf-preview__body" data-preview-backdrop="true">
         {file ? (
           <Document
             file={file}

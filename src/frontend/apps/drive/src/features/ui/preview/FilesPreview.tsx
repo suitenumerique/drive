@@ -129,6 +129,16 @@ export const FilePreview = ({
     window.open(currentFile.url_preview, "_blank");
   };
 
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!(e.target instanceof HTMLElement)) return;
+    if (
+      e.target === e.currentTarget ||
+      e.target.dataset.previewBackdrop === "true"
+    ) {
+      onClose?.();
+    }
+  };
+
   // Render the appropriate viewer based on file category
   const renderViewer = () => {
     if (!currentFile) {
@@ -165,7 +175,10 @@ export const FilePreview = ({
         );
       case MimeCategory.VIDEO:
         return (
-          <div className="video-preview-viewer-container">
+          <div
+            className="video-preview-viewer-container"
+            data-preview-backdrop="true"
+          >
             <div className="video-preview-viewer">
               <VideoPlayer
                 src={currentFile.url_preview}
@@ -177,7 +190,10 @@ export const FilePreview = ({
         );
       case MimeCategory.AUDIO:
         return (
-          <div className="video-preview-viewer-container">
+          <div
+            className="video-preview-viewer-container"
+            data-preview-backdrop="true"
+          >
             <div className="video-preview-viewer">
               <AudioPlayer
                 src={currentFile.url_preview}
@@ -302,6 +318,7 @@ export const FilePreview = ({
     >
       <div data-testid="file-preview">
         <div
+          onClick={handleBackdropClick}
           className={clsx(
             "file-preview__container",
             isSidebarOpen && "file-preview__container--sidebar-open",

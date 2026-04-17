@@ -24,7 +24,7 @@ export const NotSupportedPreview = ({
   }, [onDownload, file]);
 
   return (
-    <div className="file-preview-unsupported">
+    <div className="file-preview-unsupported" data-preview-backdrop="true">
       <div className="file-preview-unsupported__icon">
         <FileIcon file={file} size="xlarge" />
       </div>

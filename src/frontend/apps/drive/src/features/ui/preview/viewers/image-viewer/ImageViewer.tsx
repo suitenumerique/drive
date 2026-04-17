@@ -55,6 +55,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Calculate distance between two touch points
   const getTouchDistance = useCallback(
@@ -193,6 +194,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   // Handle mouse down for dragging
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      mouseDownPosRef.current = { x: e.clientX, y: e.clientY };
       if (isImageExceedingBounds()) {
         setIsDragging(true);
         setDragStart({
@@ -203,6 +205,20 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
     },
     [isImageExceedingBounds, position],
   );
+
+  // Swallow the click that follows a pan-drag so it never bubbles to the
+  // FilePreview backdrop handler. Without this, releasing a drag on the
+  // empty area of the container would close the preview.
+  const handleClickCapture = useCallback((e: React.MouseEvent) => {
+    const start = mouseDownPosRef.current;
+    mouseDownPosRef.current = null;
+    if (!start) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    if (dx * dx + dy * dy > 16) {
+      e.stopPropagation();
+    }
+  }, []);
 
   // Handle mouse move for dragging
   const handleMouseMove = useCallback(
@@ -359,11 +375,13 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
       <div
         ref={containerRef}
         className="image-viewer__container"
+        data-preview-backdrop="true"
         tabIndex={0}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onClickCapture={handleClickCapture}
         onWheel={handleWheel}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}

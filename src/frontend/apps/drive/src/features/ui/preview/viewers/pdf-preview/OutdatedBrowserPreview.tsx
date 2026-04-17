@@ -5,7 +5,7 @@ export const OutdatedBrowserPreview = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="file-preview-unsupported">
+    <div className="file-preview-unsupported" data-preview-backdrop="true">
       <div className="file-preview-unsupported__icon">
         <Icon name="security" type={IconType.OUTLINED} size={48} />
       </div>

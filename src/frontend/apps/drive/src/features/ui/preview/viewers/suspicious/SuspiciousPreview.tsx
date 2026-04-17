@@ -14,7 +14,7 @@ export const SuspiciousPreview = ({
   const { t } = useTranslation();
 
   return (
-    <div className="file-preview-suspicious">
+    <div className="file-preview-suspicious" data-preview-backdrop="true">
       <div className="file-preview-suspicious__icon">
         <img src={mimeSuspicious.src} alt="" className="item-icon xlarge" />
       </div>
