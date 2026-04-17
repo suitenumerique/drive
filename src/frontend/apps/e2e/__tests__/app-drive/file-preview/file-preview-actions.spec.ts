@@ -8,6 +8,7 @@ import { uploadFile } from "../utils/upload-utils";
 
 const PDF_FILE_PATH = path.join(__dirname, "../assets/pv_cm.pdf");
 const DOCX_FILE_PATH = path.join(__dirname, "../assets/empty_doc.docx");
+const AUDIO_FILE_PATH = path.join(__dirname, "../assets/test-audio.mp3");
 
 test.describe("File Preview Actions Menu", () => {
   test.beforeEach(async ({ page }) => {
@@ -31,9 +32,6 @@ test.describe("File Preview Actions Menu", () => {
     page,
   }) => {
     const filePreview = page.getByTestId("file-preview");
-    const moreButton = filePreview.locator(
-      ".file-preview__header__content__right button:has(.material-icons)",
-    );
 
     // Find the "..." button (more_vert icon)
     const moreVertButton = filePreview.getByText("more_vert").locator("..");
@@ -106,20 +104,20 @@ test.describe("File Preview Actions Menu - Non-printable file", () => {
     await page.goto("/");
     await clickToMyFiles(page);
 
-    await uploadFile(page, DOCX_FILE_PATH);
+    await uploadFile(page, AUDIO_FILE_PATH);
     await expect(
-      page.getByRole("cell", { name: "empty_doc", exact: true }),
+      page.getByRole("cell", { name: "test-audio", exact: true }),
     ).toBeVisible({ timeout: 10000 });
 
-    await page.getByRole("cell", { name: "empty_doc", exact: true }).dblclick();
+    await page
+      .getByRole("cell", { name: "test-audio", exact: true })
+      .dblclick();
     await expect(page.getByTestId("file-preview")).toBeVisible({
       timeout: 10000,
     });
 
     const filePreview = page.getByTestId("file-preview");
-    await expect(
-      filePreview.getByText("more_vert"),
-    ).not.toBeVisible();
+    await expect(filePreview.getByText("more_vert")).not.toBeVisible();
   });
 });
 
@@ -269,6 +267,12 @@ test.describe("File Preview Navigation", () => {
     const title = filePreview.locator("h1.file-preview__title");
 
     await expect(title).toHaveText("pv_cm");
+
+    // Wait for the PDF to finish rendering so the controls layout is stable
+    // before focusing the page input.
+    await expect(page.locator(".react-pdf__Page").first()).toBeVisible({
+      timeout: 10000,
+    });
 
     const pageInput = page.locator('input[aria-label="Current page"]');
     await expect(pageInput).toBeVisible({ timeout: 10000 });
