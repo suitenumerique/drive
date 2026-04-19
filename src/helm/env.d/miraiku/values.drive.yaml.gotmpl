@@ -1,0 +1,203 @@
+image:
+  repository: lasuite/drive-backend
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+frontend:
+  replicas: 2
+  image:
+    repository: lasuite/drive-frontend
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  envVars:
+    PORT: 8080
+    NEXT_PUBLIC_API_ORIGIN: https://mesfichiers.fake-domain.name
+
+backend:
+  replicas: 2
+  envVars:
+    DJANGO_CONFIGURATION: Production
+    DJANGO_SETTINGS_MODULE: drive.settings
+    DJANGO_ALLOWED_HOSTS: mesfichiers.fake-domain.name
+    DJANGO_CSRF_TRUSTED_ORIGINS: https://mesfichiers.fake-domain.name
+    DJANGO_SECRET_KEY:
+      secretKeyRef:
+        name: drive-app-secrets
+        key: DJANGO_SECRET_KEY
+    DJANGO_EMAIL_BRAND_NAME: "Miraiku"
+    LOGGING_LEVEL_LOGGERS_ROOT: INFO
+    LOGGING_LEVEL_LOGGERS_APP: INFO
+
+    OIDC_OP_JWKS_ENDPOINT: https://mysso.fake-domain.name/realms/openwebui/protocol/openid-connect/certs
+    OIDC_OP_AUTHORIZATION_ENDPOINT: https://mysso.fake-domain.name/realms/openwebui/protocol/openid-connect/auth
+    OIDC_OP_TOKEN_ENDPOINT: https://mysso.fake-domain.name/realms/openwebui/protocol/openid-connect/token
+    OIDC_OP_USER_ENDPOINT: https://mysso.fake-domain.name/realms/openwebui/protocol/openid-connect/userinfo
+    OIDC_OP_LOGOUT_ENDPOINT: https://mysso.fake-domain.name/realms/openwebui/protocol/openid-connect/logout
+    OIDC_RP_CLIENT_ID: drive
+    OIDC_RP_CLIENT_SECRET:
+      secretKeyRef:
+        name: drive-app-secrets
+        key: OIDC_RP_CLIENT_SECRET
+    OIDC_RP_SIGN_ALGO: RS256
+    OIDC_RP_SCOPES: "openid email profile"
+    OIDC_REDIRECT_ALLOWED_HOSTS: https://mesfichiers.fake-domain.name
+    LOGIN_REDIRECT_URL: https://mesfichiers.fake-domain.name
+    LOGIN_REDIRECT_URL_FAILURE: https://mesfichiers.fake-domain.name
+    LOGOUT_REDIRECT_URL: https://mesfichiers.fake-domain.name
+
+    DB_HOST: postgres.miraiku.svc.cluster.local
+    DB_PORT: 5432
+    DB_NAME:
+      secretKeyRef:
+        name: drive-db-secrets
+        key: DB_NAME
+    DB_USER:
+      secretKeyRef:
+        name: drive-db-secrets
+        key: DB_USER
+    DB_PASSWORD:
+      secretKeyRef:
+        name: drive-db-secrets
+        key: DB_PASSWORD
+
+    REDIS_URL: redis://search-valkey.miraiku.svc.cluster.local:6379/3
+    DJANGO_CELERY_BROKER_URL: redis://search-valkey.miraiku.svc.cluster.local:6379/4
+
+    AWS_S3_ENDPOINT_URL: https://s3.fr-par.scw.cloud
+    AWS_S3_REGION_NAME: fr-par
+    AWS_STORAGE_BUCKET_NAME: miraiku-drive-media
+    AWS_S3_SIGNATURE_VERSION: s3v4
+    AWS_S3_ACCESS_KEY_ID:
+      secretKeyRef:
+        name: drive-s3-secrets
+        key: AWS_S3_ACCESS_KEY_ID
+    AWS_S3_SECRET_ACCESS_KEY:
+      secretKeyRef:
+        name: drive-s3-secrets
+        key: AWS_S3_SECRET_ACCESS_KEY
+    MEDIA_BASE_URL: https://mesfichiers.fake-domain.name
+    STORAGES_STATICFILES_BACKEND: django.contrib.staticfiles.storage.StaticFilesStorage
+
+    DJANGO_CELERY_TASK_ROUTES: "{'core.tasks.storage.mirror_file': {'queue': 'mirror'}}"
+
+  migrate:
+    command:
+      - "python"
+      - "manage.py"
+      - "migrate"
+      - "--no-input"
+    restartPolicy: Never
+
+  configureWopi:
+    command: ["/bin/sh", "-c", "echo 'WOPI disabled for miraiku deployment'"]
+    restartPolicy: Never
+
+  createsuperuser:
+    command: ["/bin/sh", "-c", "echo 'superuser creation skipped; run manually if needed'"]
+    restartPolicy: Never
+
+  celeryWorkers:
+    - name: default
+      replicas: 1
+      command: []
+      args: ["celery", "-A", "drive.celery_app", "worker", "-l", "INFO", "-n", "drive@%h"]
+      resources: {}
+      probes:
+        liveness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 60
+          timeoutSeconds: 10
+          periodSeconds: 60
+          failureThreshold: 3
+        readiness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 20
+          timeoutSeconds: 10
+          periodSeconds: 30
+          failureThreshold: 3
+    - name: mirror
+      replicas: 1
+      command: []
+      args: ["celery", "-A", "drive.celery_app", "worker", "-l", "INFO", "-Q", "mirror", "-n", "drive@%h"]
+      resources: {}
+      probes:
+        liveness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 60
+          timeoutSeconds: 10
+          periodSeconds: 60
+          failureThreshold: 3
+        readiness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 20
+          timeoutSeconds: 10
+          periodSeconds: 30
+          failureThreshold: 3
+
+ingress:
+  enabled: true
+  className: nginx
+  host: mesfichiers.fake-domain.name
+  tls:
+    enabled: true
+    secretName: mesfichiers-tls
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: 150m
+
+ingressAdmin:
+  enabled: true
+  className: nginx
+  host: mesfichiers.fake-domain.name
+  tls:
+    enabled: true
+    secretName: mesfichiers-tls
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+
+ingressMedia:
+  enabled: true
+  className: nginx
+  host: mesfichiers.fake-domain.name
+  tls:
+    enabled: true
+    secretName: mesfichiers-tls
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/auth-url: https://mesfichiers.fake-domain.name/api/v1.0/items/media-auth/
+    nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
+    nginx.ingress.kubernetes.io/upstream-vhost: miraiku-drive-media.s3.fr-par.scw.cloud
+    nginx.ingress.kubernetes.io/rewrite-target: /miraiku-drive-media/$1
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header Content-Security-Policy "default-src 'none'" always;
+      add_header Content-Disposition "attachment";
+
+ingressMediaPreview:
+  enabled: true
+  className: nginx
+  host: mesfichiers.fake-domain.name
+  tls:
+    enabled: true
+    secretName: mesfichiers-tls
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/auth-url: https://mesfichiers.fake-domain.name/api/v1.0/items/media-auth/
+    nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
+    nginx.ingress.kubernetes.io/upstream-vhost: miraiku-drive-media.s3.fr-par.scw.cloud
+    nginx.ingress.kubernetes.io/rewrite-target: /miraiku-drive-media/$1
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header Content-Security-Policy "default-src 'none'" always;
+
+serviceMedia:
+  host: s3.fr-par.scw.cloud
+  port: 443
+
+posthog:
+  ingress:
+    enabled: false
+  ingressAssets:
+    enabled: false
