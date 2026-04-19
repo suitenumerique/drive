@@ -172,9 +172,7 @@ ingressMedia:
     nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
     nginx.ingress.kubernetes.io/upstream-vhost: miraiku-drive-media.s3.fr-par.scw.cloud
     nginx.ingress.kubernetes.io/rewrite-target: /miraiku-drive-media/$1
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      add_header Content-Security-Policy "default-src 'none'" always;
-      add_header Content-Disposition "attachment";
+    nginx.ingress.kubernetes.io/configuration-snippet: null
 
 ingressMediaPreview:
   enabled: true
@@ -189,8 +187,7 @@ ingressMediaPreview:
     nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
     nginx.ingress.kubernetes.io/upstream-vhost: miraiku-drive-media.s3.fr-par.scw.cloud
     nginx.ingress.kubernetes.io/rewrite-target: /miraiku-drive-media/$1
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      add_header Content-Security-Policy "default-src 'none'" always;
+    nginx.ingress.kubernetes.io/configuration-snippet: null
 
 serviceMedia:
   host: s3.fr-par.scw.cloud
