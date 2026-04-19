@@ -24,10 +24,24 @@ Runbook d'installation de La Suite Drive sur le cluster Scaleway `k8s-par-brave-
 | Release Helm | `drive` (2 backend + 2 frontend + 3 celery) | miraiku |
 | Ingress | drive, drive-admin, drive-media, drive-media-preview | miraiku |
 
-## Étape 1 — Bucket S3
+## Étape 1 — Bucket S3 + CORS
 
 ```sh
 scw object bucket create name=miraiku-drive-media region=fr-par
+
+# CORS obligatoire : l'upload passe en PUT direct navigateur → S3 via presigned URL
+AWS_ACCESS_KEY_ID="$SCW_ACCESS_KEY" AWS_SECRET_ACCESS_KEY="$SCW_SECRET_KEY" \
+  aws --endpoint-url=https://s3.fr-par.scw.cloud s3api put-bucket-cors \
+  --bucket miraiku-drive-media \
+  --cors-configuration file://src/helm/env.d/miraiku/s3-cors.json
+```
+
+Test CORS :
+```sh
+curl -sI -X OPTIONS "https://miraiku-drive-media.s3.fr-par.scw.cloud/x" \
+  -H "Origin: https://mesfichiers.fake-domain.name" \
+  -H "Access-Control-Request-Method: PUT"
+# → HTTP/2 200 + access-control-allow-origin: https://mesfichiers.fake-domain.name
 ```
 
 Les credentials S3 réutilisent `$SCW_ACCESS_KEY` / `$SCW_SECRET_KEY` du `.zshrc` (décision
@@ -164,6 +178,14 @@ print(s3.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME)['ResponseMetad
    `nginx.ingress.kubernetes.io/configuration-snippet` (snippet directives désactivées
    sur ce cluster). Override avec `... : null` dans les values pour que Helm les retire
    du merge avec les defaults du chart.
+2. **Upload → S3 direct depuis le navigateur** (presigned URL retourné par
+   `POST /api/v1.0/items/.../children/`). Il faut donc **CORS sur le bucket** autorisant
+   l'origine `https://mesfichiers.fake-domain.name` (fichier `s3-cors.json`).
+3. **proxy-body-size** défaut d'ingress-nginx = 1 MiB → coupe tout upload > 1 Mo même
+   pour l'API (création multipart / metadata). Relevé à 5g sur les 4 ingresses +
+   `proxy-read-timeout`/`proxy-send-timeout: 3600`.
+4. **`backend-protocol: HTTPS`** requis sur `drive-media`/`drive-media-preview` — le
+   service ExternalName pointe sur `s3.fr-par.scw.cloud:443` qui n'accepte pas HTTP.
 2. **Jobs `configureWopi` et `createsuperuser`** n'ont pas de flag `enabled` dans le
    chart — on les remplace par des no-ops (`/bin/sh -c echo ...`) pour qu'ils se
    terminent proprement sans déps externes.
