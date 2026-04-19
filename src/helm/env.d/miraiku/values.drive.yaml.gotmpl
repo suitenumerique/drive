@@ -45,6 +45,16 @@ backend:
     LOGIN_REDIRECT_URL_FAILURE: https://mesfichiers.fake-domain.name
     LOGOUT_REDIRECT_URL: https://mesfichiers.fake-domain.name
 
+    OIDC_RESOURCE_SERVER_ENABLED: "True"
+    OIDC_OP_INTROSPECTION_ENDPOINT: https://mysso.fake-domain.name/realms/openwebui/protocol/openid-connect/token/introspect
+    OIDC_RS_CLIENT_ID: drive
+    OIDC_RS_CLIENT_SECRET:
+      secretKeyRef:
+        name: drive-app-secrets
+        key: OIDC_RP_CLIENT_SECRET
+    OIDC_RS_ALLOWED_AUDIENCES: '["account","mycollections-drive"]'
+    OIDC_RS_SCOPES: '["openid"]'
+
     DB_HOST: postgres.miraiku.svc.cluster.local
     DB_PORT: 5432
     DB_NAME:
