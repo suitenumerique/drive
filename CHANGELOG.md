@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(backend) make invitation validity duration configurable via env var
 - ✨(frontend) enhance upload toast with progress, errors and cancel support
 - ✨(frontend) add ErrorIcon component and support numeric icon sizes
 - ✨(frontend) make file upload abortable in driver layer

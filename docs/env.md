@@ -67,6 +67,7 @@ This document lists all configurable environment variables for the Drive applica
 | `FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH` | Path for feedback messages widget | `None` |
 | `FRONTEND_RELEASE_NOTE_ENABLED` | Enable release notes modal on connexion | `True` |
 | `ITEM_FILE_MAX_SIZE` | Maximum file size for uploads in bytes | `5368709120` (5GB) |
+| `INVITATION_VALIDITY_DURATION` | Duration during which an invitation remains valid, in seconds | `604800` (7 days) |
 | `LANGUAGE_CODE` | Default language code | `en-us` |
 | `LOGIN_REDIRECT_URL` | URL to redirect after successful login | `None` |
 | `LOGIN_REDIRECT_URL_FAILURE` | URL to redirect after failed login | `None` |
