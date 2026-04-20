@@ -262,7 +262,7 @@ export const ExplorerMoveFolder = ({
       {createFolderModal.isOpen && (
         <ExplorerCreateFolderModal
           {...createFolderModal}
-          parentId={itemsExplorer.currentItemId ?? undefined}
+          parent={item}
         />
       )}
       {moveConfirmationModal.isOpen && (

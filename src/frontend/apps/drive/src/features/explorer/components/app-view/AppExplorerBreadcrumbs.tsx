@@ -88,7 +88,7 @@ export const AppExplorerBreadcrumbs = () => {
       <div className="explorer__content__separator">
         <HorizontalSeparator withPadding={false} />
       </div>
-      <ExplorerCreateFolderModal {...createFolderModal} parentId={item?.id} />
+      <ExplorerCreateFolderModal {...createFolderModal} parent={item} />
     </>
   );
 };

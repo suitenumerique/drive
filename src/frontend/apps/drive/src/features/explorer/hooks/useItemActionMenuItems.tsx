@@ -270,7 +270,7 @@ export const useItemActionMenuItems = ({
       {currentItem && createFolderModal.isOpen && (
         <ExplorerCreateFolderModal
           {...createFolderModal}
-          parentId={currentItem.id}
+          parent={currentItem}
         />
       )}
       {currentItem && encryptModal.isOpen && (

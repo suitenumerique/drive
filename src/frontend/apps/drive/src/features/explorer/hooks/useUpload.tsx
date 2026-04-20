@@ -19,7 +19,10 @@ import { useConfig } from "@/features/config/ConfigProvider";
 import { formatSize } from "@/features/explorer/utils/utils";
 
 type FileUpload = FileWithPath & {
-  parentId?: string;
+  // Full parent Item — the driver derives parentId from it and, when
+  // the parent is encrypted, mints a wrapped key + encrypts content
+  // client-side before upload.
+  parent?: Item;
 };
 
 type FolderUpload = {
@@ -119,7 +122,10 @@ const useUpload = ({ item }: { item: Item }) => {
     };
   };
 
-  // Create the folders and assign each file a parentId.
+  // Create the folders and assign each file its parent id + Item.
+  // The parent Item is needed when the ancestor chain is encrypted so
+  // the driver can mint wrapped keys for subfolders and wrap file
+  // content during upload.
   const createFoldersFromDrop = async (
     parentItem: Item | undefined,
     folderUploads: FolderUpload[],
@@ -133,7 +139,7 @@ const useUpload = ({ item }: { item: Item }) => {
             createFolder.mutate(
               {
                 title: folder.item.title!,
-                parentId: parentItem?.id,
+                parent: parentItem,
               },
               {
                 onSuccess: async (createdFolder) => {
@@ -148,7 +154,7 @@ const useUpload = ({ item }: { item: Item }) => {
                   }
 
                   folder.files.forEach((file) => {
-                    file.parentId = createdFolder.id;
+                    file.parent = createdFolder;
                   });
                   await createFoldersFromDrop(createdFolder, folder.children);
                   resolve();
@@ -163,10 +169,11 @@ const useUpload = ({ item }: { item: Item }) => {
     }
   };
 
-  // Assign each file a parentId and create the folders if it is a folder upload.
+  // Assign each file its parent Item; create intermediate folders if
+  // this is a folder-style upload.
   const handleHierarchy = async (upload: Upload) => {
     upload.folder.files.forEach((file) => {
-      file.parentId = item?.id;
+      file.parent = item;
     });
     await createFoldersFromDrop(item, upload.folder.children);
   };
@@ -401,7 +408,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
                 {
                   filename: file.name,
                   file,
-                  parentId: file.parentId,
+                  parent: file.parent,
                   progressHandler: (progress) => {
                     setUploadingState((prev) => {
                       const newState = {

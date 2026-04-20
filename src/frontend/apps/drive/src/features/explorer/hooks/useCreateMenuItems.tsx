@@ -119,7 +119,7 @@ export const useCreateMenuItems = ({
 
   const modals = (
     <>
-      <ExplorerCreateFolderModal {...createFolderModal} parentId={itemId} />
+      <ExplorerCreateFolderModal {...createFolderModal} parent={item} />
       <ExplorerCreateFileModal
         {...createFileModal}
         parentId={itemId}

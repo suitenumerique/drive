@@ -120,7 +120,13 @@ export abstract class Driver {
   // Tree
   abstract getTree(id: string): Promise<Item>;
   abstract getDescendants(id: string): Promise<Item[]>;
-  abstract createFolder(data: { title: string }): Promise<Item>;
+  abstract createFolder(data: {
+    title: string;
+    // Full parent Item. Omit for root / workspace-level creation.
+    // When `parent.is_encrypted`, the driver mints a folder key
+    // wrapped by the parent's chain.
+    parent?: Item;
+  }): Promise<Item>;
   abstract createWorkspace(data: {
     title: string;
     description: string;
@@ -128,7 +134,10 @@ export abstract class Driver {
   abstract updateWorkspace(item: Partial<Item>): Promise<Item>;
   abstract deleteWorkspace(id: string): Promise<void>;
   abstract createFile(data: {
-    parentId?: string;
+    // Full parent Item. Omit for root / workspace-level creation.
+    // When `parent.is_encrypted`, the driver encrypts the content
+    // client-side and sends the wrapped key.
+    parent?: Item;
     filename: string;
   }): Promise<Item>;
   abstract createFileFromTemplate(data: {

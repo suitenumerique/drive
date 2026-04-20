@@ -1,4 +1,5 @@
 import { fetchAPI } from "@/features/api/fetchApi";
+import { fromBase64, toBase64 } from "@/features/encryption/recursive/binary";
 import {
   Driver,
   Entitlements,
@@ -281,19 +282,67 @@ export class StandardDriver extends Driver {
 
   async createFolder(data: {
     title: string;
-    parentId?: string;
+    parent?: Item;
   }): Promise<Item> {
-    const { parentId, ...rest } = data;
-    const url = parentId ? `items/${parentId}/children/` : `items/`;
+    const { parent, ...rest } = data;
+    const url = parent ? `items/${parent.id}/children/` : `items/`;
+    const body: Record<string, unknown> = {
+      ...rest,
+      type: ItemType.FOLDER,
+    };
+
+    // If the parent is encrypted, the backend requires a wrapped
+    // symmetric key for the new folder. Mint K_folder via the vault,
+    // wrapped by the parent's key chain, and include it in the payload.
+    if (parent?.is_encrypted) {
+      body.encrypted_symmetric_key = await this.mintWrappedChildKey(parent);
+    }
+
     const response = await fetchAPI(url, {
       method: "POST",
-      body: JSON.stringify({
-        ...rest,
-        type: ItemType.FOLDER,
-      }),
+      body: JSON.stringify(body),
     });
     const item = await response.json();
     return jsonToItem(item);
+  }
+
+  // Mint a symmetric key for a new child of `parent` (folder or file),
+  // wrapped by the parent's effective key. Returns the base64-encoded
+  // wrapped key suitable for `encrypted_symmetric_key` on POST /children/.
+  // The second return (for files) is the encrypted content; folders
+  // encrypt an empty buffer they don't use.
+  private async encryptForParent(
+    parent: Item,
+    content: ArrayBuffer,
+  ): Promise<{ wrappedKey: string; encryptedContent: ArrayBuffer }> {
+    const vaultClient = window.__driveVaultClient;
+    if (!vaultClient) {
+      throw new Error(
+        "Vault client not initialized — cannot create an encrypted child.",
+      );
+    }
+    const keyChain = await this.getKeyChain(parent.id);
+    const entryKey = fromBase64(keyChain.encrypted_key_for_user);
+    const chain = keyChain.chain.map((e) =>
+      fromBase64(e.encrypted_symmetric_key),
+    );
+    const { encryptedData, wrappedKey } = await vaultClient.encryptWithKey(
+      content,
+      entryKey,
+      chain,
+    );
+    return {
+      wrappedKey: toBase64(wrappedKey),
+      encryptedContent: encryptedData,
+    };
+  }
+
+  private async mintWrappedChildKey(parent: Item): Promise<string> {
+    const { wrappedKey } = await this.encryptForParent(
+      parent,
+      new ArrayBuffer(0),
+    );
+    return wrappedKey;
   }
 
   async createWorkspace(data: {
@@ -367,22 +416,37 @@ export class StandardDriver extends Driver {
   }
 
   async createFile(data: {
-    parentId?: string;
+    parent?: Item;
     file: File;
     filename: string;
     progressHandler?: (progress: number) => void;
   }): Promise<Item> {
-    const { parentId, file, progressHandler, ...rest } = data;
-    const url = parentId ? `items/${parentId}/children/` : `items/`;
+    const { parent, file, progressHandler, ...rest } = data;
+    const url = parent ? `items/${parent.id}/children/` : `items/`;
+
+    const body: Record<string, unknown> = {
+      type: ItemType.FILE,
+      ...rest,
+    };
+
+    // If the parent is encrypted, mint K_file wrapped by the parent's
+    // key and encrypt the file content client-side. The upload to the
+    // policy URL then carries ciphertext; the backend /upload-ended/
+    // short-circuits mimetype / malware analysis for encrypted items.
+    let encryptedBody: ArrayBuffer | null = null;
+    if (parent?.is_encrypted) {
+      const plaintext = await file.arrayBuffer();
+      const { wrappedKey, encryptedContent } = await this.encryptForParent(
+        parent,
+        plaintext,
+      );
+      body.encrypted_symmetric_key = wrappedKey;
+      encryptedBody = encryptedContent;
+    }
+
     const response = await fetchAPI(
       url,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          type: ItemType.FILE,
-          ...rest,
-        }),
-      },
+      { method: "POST", body: JSON.stringify(body) },
       {
         // When entitlements are falsy, the backend returns a 403 error.
         // We don't want to redirect to the login page in this case, instead
@@ -404,9 +468,20 @@ export class StandardDriver extends Driver {
       progressHandler?.(proxiedProgress);
     };
 
-    await uploadFile(item.policy, file, (progress) => {
-      progressHandlerProxy(progress);
-    });
+    if (encryptedBody) {
+      // Upload ciphertext with progress. XHR lets us report progress which
+      // fetch() can't do for request bodies.
+      await uploadArrayBuffer(
+        item.policy,
+        encryptedBody,
+        "application/octet-stream",
+        (progress) => progressHandlerProxy(progress),
+      );
+    } else {
+      await uploadFile(item.policy, file, (progress) => {
+        progressHandlerProxy(progress);
+      });
+    }
 
     await fetchAPI(`items/${item.id}/upload-ended/`, {
       method: "POST",
@@ -571,4 +646,45 @@ export const uploadFile = (
     });
 
     xhr.send(file);
+  });
+
+/**
+ * Upload raw bytes to a presigned PUT URL with progress reporting. Used
+ * for encrypted content where the ciphertext is held as an ArrayBuffer
+ * rather than a File object.
+ */
+export const uploadArrayBuffer = (
+  url: string,
+  buffer: ArrayBuffer,
+  contentType: string,
+  progressHandler: (progress: number) => void,
+) =>
+  new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("X-amz-acl", "private");
+    xhr.setRequestHeader("Content-Type", contentType);
+
+    xhr.addEventListener("error", reject);
+    xhr.addEventListener("abort", reject);
+
+    xhr.addEventListener("readystatechange", () => {
+      if (xhr.readyState === 4) {
+        if (xhr.status === 200) {
+          progressHandler(100);
+          return resolve(true);
+        }
+        reject(new Error(`Failed to perform the upload on ${url}.`));
+      }
+    });
+
+    xhr.upload.addEventListener("progress", (progressEvent) => {
+      if (progressEvent.lengthComputable) {
+        progressHandler(
+          Math.floor((progressEvent.loaded / progressEvent.total) * 100),
+        );
+      }
+    });
+
+    xhr.send(buffer);
   });

@@ -31,7 +31,7 @@ export const useMutationCreateFile = () => {
       return driver.createFile(...payload);
     },
     onSuccess: (data, variables) => {
-      refresh(variables.parentId);
+      refresh(variables.parent?.id);
     },
     meta: {
       showErrorOn403: true,
@@ -129,8 +129,8 @@ export const useMutationCreateFolder = () => {
       return driver.createFolder(...payload);
     },
     onSuccess: (data, variables) => {
-      const queryKey = variables.parentId
-        ? ["items", variables.parentId, "children"]
+      const queryKey = variables.parent
+        ? ["items", variables.parent.id, "children"]
         : ["items", "infinite", JSON.stringify({ is_creator_me: true })];
       addItemToTopOfPaginatedList(queryKey, data);
     },

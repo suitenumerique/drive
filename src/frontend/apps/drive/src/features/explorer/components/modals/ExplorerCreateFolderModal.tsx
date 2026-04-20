@@ -7,6 +7,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
+import { Item } from "@/features/drivers/types";
 import { useMutationCreateFolder } from "../../hooks/useMutations";
 import { useRouter } from "next/router";
 
@@ -15,7 +16,9 @@ type Inputs = {
 };
 
 type ExplorerCreateFolderModalProps = Pick<ModalProps, "isOpen" | "onClose"> & {
-  parentId?: string;
+  // Full parent Item. Omit for root / workspace-level creation.
+  // When `parent.is_encrypted`, the driver mints a wrapped folder key.
+  parent?: Item;
 };
 
 export const ExplorerCreateFolderModal = ({
@@ -31,13 +34,13 @@ export const ExplorerCreateFolderModal = ({
     createFolder.mutate(
       {
         ...data,
-        parentId: props.parentId,
+        parent: props.parent,
       },
       {
         onSuccess: () => {
           form.reset();
           props.onClose();
-          if (!props.parentId) {
+          if (!props.parent) {
             router.push(`/explorer/items/my-files`);
           }
         },

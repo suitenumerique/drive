@@ -246,14 +246,87 @@ export const getMimeCategory = (
   return MimeCategory.OTHER;
 };
 
+/** Extension → MIME mapping used when the stored mimetype is unreliable
+ *  (encrypted items always report application/octet-stream on the server
+ *  because the backend can't inspect ciphertext). Keep it tight: only the
+ *  categories the UI actually routes on (viewers, icons, format labels).
+ */
+const EXTENSION_TO_MIME: Record<string, string> = {
+  // Docs
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  odt: "application/vnd.oasis.opendocument.text",
+  txt: "text/plain",
+  rtf: "application/rtf",
+  md: "text/markdown",
+  // Spreadsheets
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ods: "application/vnd.oasis.opendocument.spreadsheet",
+  csv: "text/csv",
+  // Presentations
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  odp: "application/vnd.oasis.opendocument.presentation",
+  // PDF
+  pdf: "application/pdf",
+  // Images
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+  bmp: "image/bmp",
+  svg: "image/svg+xml",
+  tiff: "image/tiff",
+  tif: "image/tiff",
+  // Audio
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  ogg: "audio/ogg",
+  flac: "audio/flac",
+  aac: "audio/aac",
+  m4a: "audio/mp4",
+  // Video
+  mp4: "video/mp4",
+  webm: "video/webm",
+  mov: "video/quicktime",
+  avi: "video/x-msvideo",
+  mkv: "video/x-matroska",
+  // Archive
+  zip: "application/zip",
+  "7z": "application/x-7z-compressed",
+  rar: "application/x-rar-compressed",
+  tar: "application/x-tar",
+};
+
+/**
+ * Derive the effective mimetype, substituting an extension-based guess
+ * when the backend-stored one is meaningless. Triggers when an item is
+ * encrypted AND the server stored application/octet-stream because it
+ * couldn't inspect the ciphertext (direct-upload-into-encrypted-folder
+ * case — recursively encrypted items keep their original mimetype).
+ * The client knows the real type from the filename's extension.
+ */
+export const getEffectiveMimetype = (item: Item): string | undefined => {
+  const stored = item.mimetype ?? undefined;
+  if (item.is_encrypted && stored === "application/octet-stream") {
+    const extension = getExtension(item);
+    const byExtension =
+      extension && EXTENSION_TO_MIME[extension.toLowerCase()];
+    if (byExtension) return byExtension;
+  }
+  return stored;
+};
+
 export const getItemMimeCategory = (item: Item): MimeCategory => {
-  const mimetype = item.mimetype;
-  const extension = getExtension(item);
   const uploadState = item.upload_state;
   if (uploadState === ItemUploadState.SUSPICIOUS) {
     return MimeCategory.SUSPICIOUS;
   }
 
+  const mimetype = getEffectiveMimetype(item);
+  const extension = getExtension(item);
   if (!mimetype) {
     return MimeCategory.OTHER;
   }
