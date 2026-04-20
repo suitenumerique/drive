@@ -4,6 +4,7 @@ from django.conf import settings
 from django.urls import include, path, re_path
 
 from lasuite.oidc_login.urls import urlpatterns as oidc_urls
+from lasuite.oidc_resource_server.urls import urlpatterns as oidc_resource_server_urls
 from rest_framework.routers import DefaultRouter
 
 from core.api import viewsets
@@ -111,6 +112,14 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
             include(external_api_urls),
         )
     )
+
+    if settings.OIDC_RS_PRIVATE_KEY_STR:
+        urlpatterns.append(
+            path(
+                f"api/{settings.API_VERSION}/",
+                include([*oidc_resource_server_urls]),
+            )
+        )
 
 if settings.METRICS_ENABLED:
     usage_metrics_router = DefaultRouter()
