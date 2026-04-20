@@ -10,7 +10,10 @@ interface WopiEditorFrameProps {
   onFileRename?: (file: FilePreviewType, newName: string) => void;
 }
 
-export const WopiEditorFrame = ({ item, onFileRename }: WopiEditorFrameProps) => {
+export const WopiEditorFrame = ({
+  item,
+  onFileRename,
+}: WopiEditorFrameProps) => {
   const { t } = useTranslation();
   const formRef = useRef<HTMLFormElement>(null);
   const queryClient = useQueryClient();
@@ -72,7 +75,7 @@ export const WopiEditorFrame = ({ item, onFileRename }: WopiEditorFrameProps) =>
         ref={formRef}
         name="office_form"
         target="office_frame"
-        action={wopiInfo.launch_url}
+        action={wopiInfo.launch_url!}
         method="post"
       >
         <input

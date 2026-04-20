@@ -29,6 +29,8 @@ export default function WopiPage() {
     };
   }, [item, t]);
 
+  // Show spinner page if the item is loading or if the error is a 401 or 403
+  // waiting for the automatic redirection to the 401/403 page.
   if (isLoading || (error && [401, 403].includes(error.code))) {
     return <SpinnerPage />;
   }

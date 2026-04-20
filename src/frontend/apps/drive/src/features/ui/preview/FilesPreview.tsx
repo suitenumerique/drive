@@ -170,7 +170,7 @@ export const FilePreview = ({
             alt={currentFile.title}
             className="file-preview__viewer"
             // This is made to avoid splash effect when switching between images having a huge size difference.
-            key={currentFile.id} 
+            key={currentFile.id}
           />
         );
       case MimeCategory.VIDEO:
@@ -248,9 +248,7 @@ export const FilePreview = ({
     }
 
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
+      clearTimeout(timeoutId);
     };
   }, [pdfThumbnailSidebarOpen, currentFile]);
 
