@@ -25,11 +25,13 @@ class Command(BaseCommand):
                         "title": "Budget report",
                         "type": models.ItemTypeChoices.FILE,
                         "creator": user,
+                        "filename": "budget-report.pdf",
                     },
                     {
                         "title": "Sales report",
                         "type": models.ItemTypeChoices.FILE,
                         "creator": user,
+                        "filename": "sales-report.pdf",
                     },
                     {
                         "title": "I am deleted",
@@ -42,6 +44,7 @@ class Command(BaseCommand):
                         "type": models.ItemTypeChoices.FILE,
                         "creator": user,
                         "deleted": True,
+                        "filename": "resume.pdf",
                     },
                 ],
             },
@@ -54,6 +57,7 @@ class Command(BaseCommand):
                         "title": "Backlog",
                         "type": models.ItemTypeChoices.FILE,
                         "creator": user,
+                        "filename": "backlog.pdf",
                     },
                     {
                         "title": "Meetings",
@@ -64,11 +68,13 @@ class Command(BaseCommand):
                                 "title": "Meeting notes 5th September",
                                 "type": models.ItemTypeChoices.FILE,
                                 "creator": user,
+                                "filename": "meeting-notes-5th-september.pdf",
                             },
                             {
                                 "title": "Meeting notes 15th September",
                                 "type": models.ItemTypeChoices.FILE,
                                 "creator": user,
+                                "filename": "meeting-notes-15th-september.pdf",
                             },
                         ],
                     },
@@ -87,6 +93,7 @@ class Command(BaseCommand):
                 type=data["type"],
                 creator=data["creator"],
                 parent=parent,
+                filename=data.get("filename"),
                 update_upload_state=models.ItemUploadStateChoices.READY
                 if data["type"] == models.ItemTypeChoices.FILE
                 else None,
