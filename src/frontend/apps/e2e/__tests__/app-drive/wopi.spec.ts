@@ -69,10 +69,10 @@ test("Navigating the previewer onto a WOPI file shows the Open in editor placeho
   // test-image.png, so ArrowLeft navigates from the image to the docx.
   await page.keyboard.press("ArrowLeft");
 
-  const unsupported = filePreview.locator(".file-preview-unsupported");
+  const unsupported = filePreview.locator(".preview-message");
   await expect(unsupported).toBeVisible();
   await expect(
-    unsupported.locator(".file-preview-unsupported__title"),
+    unsupported.locator(".preview-message__title"),
   ).toHaveText("empty_doc.docx");
 
   const openButton = unsupported.getByRole("button", {

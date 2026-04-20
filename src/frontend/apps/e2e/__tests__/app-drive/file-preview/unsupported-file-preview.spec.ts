@@ -34,20 +34,20 @@ test.describe("Unsupported File Preview", () => {
   test("Renders the NotSupportedPreview for an unknown binary file", async ({
     page,
   }) => {
-    const unsupported = page.locator(".file-preview-unsupported");
+    const unsupported = page.locator(".preview-message");
     await expect(unsupported).toBeVisible();
 
     await expect(
-      unsupported.locator(".file-preview-unsupported__title"),
+      unsupported.locator(".preview-message__title"),
     ).toHaveText("test-unsupported.bin");
   });
 
   test("Download button in the unsupported view triggers a download", async ({
     page,
   }) => {
-    const downloadButton = page.locator(
-      ".file-preview-unsupported__download-button",
-    );
+    const downloadButton = page
+      .locator(".preview-message__action")
+      .getByRole("button");
     await expect(downloadButton).toBeVisible();
 
     const downloadPromise = page.waitForEvent("download");

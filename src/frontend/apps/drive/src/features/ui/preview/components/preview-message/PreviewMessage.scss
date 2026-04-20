@@ -1,9 +1,10 @@
-.file-preview-unsupported {
+.preview-message {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--c--globals--spacings--xs);
+  height: 100%;
+  gap: 8px;
 
   &__title {
     color: var(--c--contextuals--content--semantic--neutral--primary);
@@ -12,6 +13,7 @@
     font-style: normal;
     font-weight: 700;
     line-height: 22px;
+    margin: 0;
   }
 
   &__description {
@@ -21,9 +23,14 @@
     font-style: normal;
     font-weight: 400;
     line-height: 16px;
+    margin: 0;
   }
 
-  &__download-button {
-    margin-top: var(--c--globals--spacings--md);
+  &__action {
+    margin-top: 16px;
+  }
+
+  &--error &__title {
+    color: var(--c--contextuals--content--semantic--error--primary);
   }
 }

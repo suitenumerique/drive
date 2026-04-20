@@ -2,10 +2,8 @@
 @use "./components/duration-bar/DurationBar.scss";
 @use "./components/volume-bar/VolumeBar.scss";
 @use "./components/controls/PreviewControls.scss";
-@use "./viewers/not-supported/NotSupportedPreview.scss";
-@use "./viewers/suspicious/SuspiciousPreview.scss";
+@use "./components/preview-message/PreviewMessage.scss";
 @use "./viewers/wopi/WopiEditorFrame.scss";
-@use "./viewers/error/ErrorPreview.scss";
 @use "./viewers/audio-player/AudioPlayer.scss";
 @use "./viewers/image-viewer/ImageViewer.scss";
 @use "./viewers/video-player/VideoPlayer.scss";

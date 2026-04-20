@@ -6,6 +6,7 @@ import { FileIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { downloadFile } from "@/features/items/utils";
 import { useCallback } from "react";
 import { FilePreviewType } from "../../FilesPreview";
+import { PreviewMessage } from "../../components/preview-message/PreviewMessage";
 
 interface ErrorPreviewProps {
   file: FilePreviewType;
@@ -19,25 +20,22 @@ export const ErrorPreview = ({ file }: ErrorPreviewProps) => {
   }, [file]);
 
   return (
-    <div className="file-preview-error">
-      <div className="file-preview-error__icon">
-        <FileIcon file={file} size="xlarge" />
-      </div>
-      <div className="file-preview-error__title">
-        {t("file_preview.error.title")}
-      </div>
-      <div className="file-preview-error__description">
-        {t("file_preview.error.description")}
-      </div>
-
-      <Button
-        variant="bordered"
-        className="file-preview-error__download-button"
-        icon={<Icon name="file_download" type={IconType.OUTLINED} size={16} />}
-        onClick={handleDownload}
-      >
-        {t("file_preview.unsupported.download")}
-      </Button>
-    </div>
+    <PreviewMessage
+      variant="error"
+      icon={<FileIcon file={file} size="xlarge" />}
+      title={t("file_preview.error.title")}
+      description={t("file_preview.error.description")}
+      action={
+        <Button
+          variant="bordered"
+          icon={
+            <Icon name="file_download" type={IconType.OUTLINED} size={16} />
+          }
+          onClick={handleDownload}
+        >
+          {t("file_preview.unsupported.download")}
+        </Button>
+      }
+    />
   );
 };

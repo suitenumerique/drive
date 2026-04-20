@@ -5,6 +5,7 @@ import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { Icon, IconType } from "@gouvfr-lasuite/ui-kit";
 import { FileIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { useCallback } from "react";
+import { PreviewMessage } from "../../components/preview-message/PreviewMessage";
 
 interface NotSupportedPreviewProps {
   file: FilePreviewType;
@@ -24,33 +25,31 @@ export const NotSupportedPreview = ({
   }, [onDownload, file]);
 
   return (
-    <div className="file-preview-unsupported" data-preview-backdrop="true">
-      <div className="file-preview-unsupported__icon">
-        <FileIcon file={file} size="xlarge" />
-      </div>
-      <p className="file-preview-unsupported__title">{file.title}</p>
-      <p className="file-preview-unsupported__description">
-        {title || (
+    <PreviewMessage
+      icon={<FileIcon file={file} size="xlarge" />}
+      title={file.title}
+      description={
+        title ?? (
           <>
             <strong>{t("file_preview.unsupported.disclaimer")}</strong>{" "}
             {t("file_preview.unsupported.description")}
           </>
-        )}
-      </p>
-
-      {onDownload && (
-        <Button
-          variant="secondary"
-          color="neutral"
-          className="file-preview-unsupported__download-button"
-          icon={
-            <Icon name="file_download" type={IconType.OUTLINED} size={16} />
-          }
-          onClick={handleDownload}
-        >
-          {t("file_preview.suspicious.download")}
-        </Button>
-      )}
-    </div>
+        )
+      }
+      action={
+        onDownload && (
+          <Button
+            variant="secondary"
+            color="neutral"
+            icon={
+              <Icon name="file_download" type={IconType.OUTLINED} size={16} />
+            }
+            onClick={handleDownload}
+          >
+            {t("file_preview.suspicious.download")}
+          </Button>
+        )
+      }
+    />
   );
 };
