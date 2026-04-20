@@ -464,13 +464,20 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       // of the key material — otherwise the canonical keys held by the
       // relay / init closure get detached and subsequent encrypt/decrypt
       // calls fail with "wrong secret key for the given ciphertext".
-      const { encryptedData } = await vaultClient.encryptWithKey(
-        content,
-        entryKeyBytes.buffer.slice(0),
-        encryptedKeyChain.length > 0
-          ? encryptedKeyChain.map(k => k.slice(0))
-          : undefined
-      );
+      // Auto-save path: re-encrypt with the existing key (no new key minted),
+      // so call the 2-arg flat overload when there's no chain, 3-arg
+      // hierarchical overload otherwise. We only need `encryptedData`, so
+      // the extra `wrappedKey` returned in the hierarchical case is ignored.
+      const { encryptedData } = encryptedKeyChain.length > 0
+        ? await vaultClient.encryptWithKey(
+            content,
+            entryKeyBytes.buffer.slice(0),
+            encryptedKeyChain.map(k => k.slice(0))
+          )
+        : await vaultClient.encryptWithKey(
+            content,
+            entryKeyBytes.buffer.slice(0)
+          );
 
       // Get a presigned S3 upload URL for the existing file key
       // S3 versioning keeps previous versions — no new filename needed

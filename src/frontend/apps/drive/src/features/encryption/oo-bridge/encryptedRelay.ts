@@ -530,11 +530,14 @@ export class EncryptedRelay {
     const plaintextSize = plaintext.byteLength;
 
     try {
-      const { encryptedData } = await this.vaultClient.encryptWithKey(
-        plaintext,
-        this.cloneKey(),
-        this.cloneKeyChain()
-      );
+      const chain = this.cloneKeyChain();
+      const { encryptedData } = chain
+        ? await this.vaultClient.encryptWithKey(
+            plaintext,
+            this.cloneKey(),
+            chain
+          )
+        : await this.vaultClient.encryptWithKey(plaintext, this.cloneKey());
 
       if (this.ws?.readyState === WebSocket.OPEN) {
         const head = new Uint8Array(

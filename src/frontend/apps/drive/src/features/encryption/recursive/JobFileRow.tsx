@@ -115,6 +115,7 @@ export const JobFileRow = ({ row }: { row: FileJobRowType }) => {
               overflow: 'hidden',
               textOverflow: 'ellipsis',
             }}
+            title={caption}
           >
             {caption}
           </div>

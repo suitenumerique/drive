@@ -3,10 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { Item, ItemType, LinkReach } from '@/features/drivers/types';
 import { getDriver } from '@/features/config/Config';
-import { APIError } from '@/features/api/APIError';
+import { APIError, errorToString } from '@/features/api/APIError';
 import { useAuth } from '@/features/auth/Auth';
 import { useVaultClient } from '../VaultClientProvider';
-import { fetchSubtree, filesOnly } from './flattenSubtree';
+import {
+  chainForNode,
+  fetchSubtree,
+  filesOnly,
+  foldersOnly,
+  innerEncryptionRoots,
+  isInsideInnerRoot,
+} from './flattenSubtree';
 import { fromBase64, stagedFilename, toBase64 } from './binary';
 import { getEncryptionUploadUrl, putToS3 } from './presignedUpload';
 import {
@@ -158,6 +165,10 @@ export function useRecursiveEncryptionJob({
   // Current user's wrapped copy of the root key — entry key for
   // encryptWithKey on descendants.
   const currentUserRootWrappedRef = useRef<ArrayBuffer | null>(null);
+  // Wrapped keys of non-root folders in the subtree, keyed by folder id.
+  // Populated during the encrypt folder phase; consumed when building each
+  // file's chain and merged into encryptedKeysForDescendants at commit.
+  const folderWrappedKeysRef = useRef<Map<string, ArrayBuffer>>(new Map());
 
   useEffect(() => {
     if (!isOpen) {
@@ -168,6 +179,7 @@ export function useRecursiveEncryptionJob({
       publicKeysRef.current = {};
       rootEncryptedKeysRef.current = {};
       currentUserRootWrappedRef.current = null;
+      folderWrappedKeysRef.current = new Map();
       dispatch({ type: 'RESET' });
     }
   }, [isOpen]);
@@ -189,12 +201,28 @@ export function useRecursiveEncryptionJob({
         if (cancelled) return;
         flatRef.current = flat;
 
-        const sourceNodes =
-          item.type === ItemType.FILE ? flat : filesOnly(flat);
+        // For a folder root, show every item in the subtree (the root
+        // itself + every descendant folder and file) so the user sees
+        // the full scope — including folders, which are also operated
+        // on in both modes (key-minted on encrypt, state-cleared on
+        // decrypt). For a file root, we only have one node anyway.
+        const sourceNodes = flat;
+
+        // For stacked encryption: items inside an inner encryption root
+        // stay untouched whether we're encrypting or decrypting the outer
+        // root. Skip them in the row list.
+        const innerRoots = innerEncryptionRoots(flat, item.id);
 
         const rows: FileJobRow[] = sourceNodes.map((n) => {
-          const shouldSkip =
+          const insideInner = isInsideInnerRoot(n, innerRoots);
+          // Uniform: skip if this is_encrypted-state already matches the
+          // target state (can't encrypt what's already encrypted, can't
+          // decrypt what's already plaintext). Applies to both files and
+          // folders — a plaintext folder has nothing to clear on decrypt,
+          // an already-encrypted folder has nothing to mint on encrypt.
+          const alreadyInTargetState =
             mode === 'encrypt' ? !!n.item.is_encrypted : !n.item.is_encrypted;
+          const shouldSkip = insideInner || alreadyInTargetState;
           return {
             id: n.item.id,
             title: n.item.title,
@@ -209,8 +237,17 @@ export function useRecursiveEncryptionJob({
         });
 
         dispatch({ type: 'SET_ROWS', rows });
+        // processableIds feeds the file worker pool, which fetches &
+        // uploads content per id. Folders don't have content — their
+        // key-minting runs in a separate sequential loop in
+        // encryptPipeline — so filter them out here.
+        const flatById = new Map(flat.map((n) => [n.item.id, n]));
         processableIdsRef.current = rows
-          .filter((r) => r.state === 'pending')
+          .filter(
+            (r) =>
+              r.state === 'pending' &&
+              flatById.get(r.id)?.item.type === ItemType.FILE,
+          )
           .map((r) => r.id);
 
         dispatch({ type: 'SET_PHASE', phase: 'validating' });
@@ -239,11 +276,20 @@ export function useRecursiveEncryptionJob({
             );
           }
 
-          if (processableIdsRef.current.length === 0) {
+          // Only error out when the whole operation is a no-op. For a
+          // folder root, encrypting it produces K_root + ItemAccess keys
+          // even with no processable descendants (e.g. every descendant
+          // file is already inside a stacked inner encryption root, which
+          // we leave untouched). For a file root, no processable ids means
+          // the file itself is already encrypted — genuine no-op.
+          if (
+            item.type === ItemType.FILE &&
+            processableIdsRef.current.length === 0
+          ) {
             errors.push(
               t(
-                'encryption.errors.nothing_to_encrypt',
-                'Nothing to encrypt — every file in the selection is already encrypted.',
+                'encryption.errors.nothing_to_encrypt_file',
+                'This file is already encrypted.',
               ),
             );
           }
@@ -266,11 +312,21 @@ export function useRecursiveEncryptionJob({
             }
           }
         } else {
-          if (processableIdsRef.current.length === 0) {
+          // For a folder root, decrypting is meaningful even with zero
+          // processable files — the root itself needs its ItemAccess
+          // keys cleared and its `is_encrypted` flag reset (e.g. when a
+          // nested inner root was previously decrypted so there are no
+          // encrypted descendants left under this root). For a file
+          // root, zero processable means the single file is already
+          // plaintext, which is a genuine no-op.
+          if (
+            item.type === ItemType.FILE &&
+            processableIdsRef.current.length === 0
+          ) {
             errors.push(
               t(
-                'encryption.errors.nothing_to_decrypt',
-                'Nothing to decrypt — every file in the selection is already plaintext.',
+                'encryption.errors.nothing_to_decrypt_file',
+                'This file is already plaintext.',
               ),
             );
           }
@@ -312,6 +368,8 @@ export function useRecursiveEncryptionJob({
 
     try {
       if (mode === 'encrypt') {
+        // Reset folder key map on each attempt (retry recomputes them).
+        folderWrappedKeysRef.current = new Map();
         await encryptPipeline({
           vaultClient,
           currentUserId: user.sub!,
@@ -321,6 +379,7 @@ export function useRecursiveEncryptionJob({
           publicKeys: publicKeysRef.current,
           rootEncryptedKeysRef,
           currentUserRootWrappedRef,
+          folderWrappedKeysRef,
           signal: controller.signal,
           dispatch,
           onFileStaged: (id, staged) => stagedResults.set(id, staged),
@@ -328,6 +387,7 @@ export function useRecursiveEncryptionJob({
       } else {
         await decryptPipeline({
           vaultClient,
+          rootItem: item,
           flat: flatRef.current,
           processableIds: processableIdsRef.current,
           signal: controller.signal,
@@ -342,6 +402,12 @@ export function useRecursiveEncryptionJob({
       if (mode === 'encrypt') {
         const fileKeyMapping: Record<string, string> = {};
         const encryptedKeysForDescendants: Record<string, string> = {};
+        // Folder wrappedKeys first (minted top-down in the pipeline),
+        // then file wrappedKeys. Backend stores both on Item.encrypted_symmetric_key
+        // so /key-chain/ can return the full chain at decrypt time.
+        folderWrappedKeysRef.current.forEach((wk, id) => {
+          encryptedKeysForDescendants[id] = toBase64(wk);
+        });
         stagedResults.forEach((v, id) => {
           fileKeyMapping[id] = v.newFilename;
           if ('wrappedKey' in v && v.wrappedKey && v.wrappedKey.byteLength > 0) {
@@ -379,15 +445,21 @@ export function useRecursiveEncryptionJob({
       ) {
         return;
       }
-      let message = (err as Error).message;
+      let message: string;
       if (err instanceof APIError && err.data?.code === 'subtree_mutated') {
         const missing = (err.data.missing as string[] | undefined) ?? [];
         const extra = (err.data.extra as string[] | undefined) ?? [];
         message = t(
           'encryption.errors.subtree_mutated',
-          'The folder contents changed during the operation ({{added}} added, {{removed}} removed). Close this dialog and try again.',
+          'The folder contents changed during the operation ({{added}} added, {{removed}} removed).',
           { added: missing.length, removed: extra.length },
         );
+      } else {
+        // APIError has no `.message` (it passes nothing to super), so
+        // reading err.message would yield an empty string and the banner
+        // would stay blank. errorToString extracts a readable detail from
+        // the response body or falls back to the i18n generic string.
+        message = errorToString(err);
       }
       dispatch({ type: 'SET_TOP_ERROR', error: message });
       dispatch({ type: 'SET_PHASE', phase: 'failed' });
@@ -410,10 +482,20 @@ export function useRecursiveEncryptionJob({
   const skippedCount = state.rows.filter((r) => r.state === 'skipped').length;
   const failedCount = state.rows.filter((r) => r.state === 'failed').length;
 
+  // For both folder encrypt and folder decrypt, the operation is
+  // meaningful even with zero processable descendants:
+  // - encrypt: establish the folder as a new encryption root (stacking
+  //   over inner sub-roots that keep their own keys).
+  // - decrypt: clear the root's ItemAccess keys and its is_encrypted
+  //   flag even when every descendant is already plaintext (e.g. after
+  //   an inner root was previously decrypted).
+  // Only a file root strictly needs processable content.
+  const needsProcessableDescendants = item.type === ItemType.FILE;
   const canConfirm =
     state.phase === 'ready' &&
     state.validationErrors.length === 0 &&
-    processableIdsRef.current.length > 0;
+    (!needsProcessableDescendants ||
+      processableIdsRef.current.length > 0);
 
   return {
     phase: state.phase,
@@ -444,6 +526,7 @@ type EncryptPipelineArgs = {
   publicKeys: Record<string, ArrayBuffer>;
   rootEncryptedKeysRef: React.MutableRefObject<Record<string, ArrayBuffer>>;
   currentUserRootWrappedRef: React.MutableRefObject<ArrayBuffer | null>;
+  folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
   signal: AbortSignal;
   dispatch: DispatchFn;
   onFileStaged: (id: string, staged: StagedEncryptFile) => void;
@@ -458,6 +541,7 @@ async function encryptPipeline({
   publicKeys,
   rootEncryptedKeysRef,
   currentUserRootWrappedRef,
+  folderWrappedKeysRef,
   signal,
   dispatch,
   onFileStaged,
@@ -466,6 +550,7 @@ async function encryptPipeline({
   // is a FOLDER. When the root is a FILE, the root IS the per-file case
   // and encryptWithoutKey is called with the actual file content below.
   if (rootItem.type === ItemType.FOLDER) {
+    dispatch({ type: 'UPDATE_ROW', id: rootItem.id, state: 'running' });
     const { encryptedKeys } = await vaultClient.encryptWithoutKey(
       new ArrayBuffer(0),
       publicKeys,
@@ -479,6 +564,37 @@ async function encryptPipeline({
       );
     }
     currentUserRootWrappedRef.current = currentUserWrapped;
+    dispatch({ type: 'UPDATE_ROW', id: rootItem.id, state: 'staged' });
+
+    // Mint a symmetric key for every nested folder in the effective
+    // scope, wrapped by its parent folder's key. Inner encryption roots
+    // (and everything under them) are excluded — stacked encryption
+    // leaves those subtrees with their existing keys. Processed top-down
+    // so each folder's chain only references already-minted ancestors.
+    // Serial because later entries depend on earlier ones.
+    const innerRoots = innerEncryptionRoots(flat, rootItem.id);
+    const nestedFolders = foldersOnly(flat)
+      .filter(
+        (n) =>
+          n.item.id !== rootItem.id && !isInsideInnerRoot(n, innerRoots),
+      )
+      .sort((a, b) => a.depth - b.depth);
+    for (const folder of nestedFolders) {
+      if (signal.aborted) throw abortError();
+      dispatch({ type: 'UPDATE_ROW', id: folder.item.id, state: 'running' });
+      const chain = chainForNode(
+        folder,
+        rootItem.id,
+        folderWrappedKeysRef.current,
+      );
+      const { wrappedKey } = await vaultClient.encryptWithKey(
+        new ArrayBuffer(0),
+        currentUserWrapped,
+        chain,
+      );
+      folderWrappedKeysRef.current.set(folder.item.id, wrappedKey);
+      dispatch({ type: 'UPDATE_ROW', id: folder.item.id, state: 'staged' });
+    }
   }
 
   const queue = [...processableIds];
@@ -495,6 +611,7 @@ async function encryptPipeline({
         publicKeys,
         rootEncryptedKeysRef,
         currentUserRootWrappedRef,
+        folderWrappedKeysRef,
         signal,
         dispatch,
         onFileStaged,
@@ -513,6 +630,7 @@ type StageOneEncryptArgs = {
   publicKeys: Record<string, ArrayBuffer>;
   rootEncryptedKeysRef: React.MutableRefObject<Record<string, ArrayBuffer>>;
   currentUserRootWrappedRef: React.MutableRefObject<ArrayBuffer | null>;
+  folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
   signal: AbortSignal;
   dispatch: DispatchFn;
   onFileStaged: (id: string, staged: StagedEncryptFile) => void;
@@ -526,6 +644,7 @@ async function stageOneEncryption({
   publicKeys,
   rootEncryptedKeysRef,
   currentUserRootWrappedRef,
+  folderWrappedKeysRef,
   signal,
   dispatch,
   onFileStaged,
@@ -559,8 +678,18 @@ async function stageOneEncryption({
     } else {
       const entryKey = currentUserRootWrappedRef.current;
       if (!entryKey) throw new Error('Missing root entry key');
+      // Chain is the wrapped keys of every intermediate folder between the
+      // root (exclusive) and this file's direct parent (inclusive). The
+      // vault resolves the chain to the direct parent's key, mints K_file,
+      // encrypts content with K_file, and wraps K_file with the direct
+      // parent's key.
+      const chain = chainForNode(
+        node,
+        rootItem.id,
+        folderWrappedKeysRef.current,
+      );
       const { encryptedData, wrappedKey: wk } =
-        await vaultClient.encryptWithKey(plaintext, entryKey);
+        await vaultClient.encryptWithKey(plaintext, entryKey, chain);
       encryptedContent = encryptedData;
       wrappedKey = wk;
     }
@@ -589,6 +718,7 @@ async function stageOneEncryption({
 
 type DecryptPipelineArgs = {
   vaultClient: VaultClient;
+  rootItem: Item;
   flat: FlatNode[];
   processableIds: string[];
   signal: AbortSignal;
@@ -598,12 +728,32 @@ type DecryptPipelineArgs = {
 
 async function decryptPipeline({
   vaultClient,
+  rootItem,
   flat,
   processableIds,
   signal,
   dispatch,
   onFileStaged,
 }: DecryptPipelineArgs): Promise<void> {
+  // Folders (and the root itself, if it's a folder) have no per-item
+  // decrypt work — their encryption state is cleared by the backend in
+  // a single commit — but they still need to visually progress from
+  // 'pending' to 'staged' → 'done' alongside the files. Mark them now.
+  // Skipped rows (inner roots and plaintext descendants) are NOT
+  // promoted because UPDATE_ROW would overwrite their 'skipped' state;
+  // we filter to the in-scope items.
+  const innerRoots = innerEncryptionRoots(flat, rootItem.id);
+  const processableIdsSet = new Set(processableIds);
+  for (const node of flat) {
+    if (processableIdsSet.has(node.item.id)) continue;
+    if (node.item.type !== ItemType.FOLDER) continue;
+    if (isInsideInnerRoot(node, innerRoots)) continue;
+    // Only promote in-scope folders that would have been 'pending'
+    // (encrypted, not inside an inner root).
+    if (!node.item.is_encrypted) continue;
+    dispatch({ type: 'UPDATE_ROW', id: node.item.id, state: 'staged' });
+  }
+
   const queue = [...processableIds];
   const worker = async (): Promise<void> => {
     while (queue.length > 0) {

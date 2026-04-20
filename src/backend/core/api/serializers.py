@@ -230,6 +230,32 @@ class ListItemSerializer(serializers.ModelSerializer):
     creator = UserLightSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
+    is_encryption_root = serializers.SerializerMethodField(read_only=True)
+    is_inside_encrypted_subtree = serializers.SerializerMethodField(read_only=True)
+
+    def get_is_encryption_root(self, item):
+        """True when this item is the root of its encrypted subtree.
+
+        Root items have their symmetric key wrapped per-user on ItemAccess
+        (so `encrypted_symmetric_key` on the Item itself is NULL).
+        Descendants of the root store their key wrapped by the parent
+        folder's key in `Item.encrypted_symmetric_key`. Both fields are
+        already loaded on the instance, so this is free.
+        """
+        return bool(item.is_encrypted and item.encrypted_symmetric_key is None)
+
+    def get_is_inside_encrypted_subtree(self, item):
+        """True when any ancestor of this item is encrypted.
+
+        Used to gate encrypt / remove-encryption actions on the client:
+        once an ancestor is encrypted, the subtree must be operated on
+        at the outermost encryption root — otherwise we'd end up with a
+        descendant in a state that conflicts with its ancestor's scope
+        (e.g. plaintext sub inside encrypted T4 with no way back).
+        Costs one query per serialized item; fine for the small lists
+        this serializer powers.
+        """
+        return item.ancestors().filter(is_encrypted=True).exists()
 
     def get_accesses_user_ids(self, item):
         """Return the list of user OIDC sub identifiers with access to this item.
@@ -266,6 +292,8 @@ class ListItemSerializer(serializers.ModelSerializer):
             "creator",
             "depth",
             "is_encrypted",
+            "is_encryption_root",
+            "is_inside_encrypted_subtree",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -302,6 +330,8 @@ class ListItemSerializer(serializers.ModelSerializer):
             "creator",
             "depth",
             "is_encrypted",
+            "is_encryption_root",
+            "is_inside_encrypted_subtree",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -506,6 +536,8 @@ class ItemSerializer(ListItemSerializer):
             "creator",
             "depth",
             "is_encrypted",
+            "is_encryption_root",
+            "is_inside_encrypted_subtree",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -543,6 +575,8 @@ class ItemSerializer(ListItemSerializer):
             "creator",
             "depth",
             "is_encrypted",
+            "is_encryption_root",
+            "is_inside_encrypted_subtree",
             "is_favorite",
             "nb_accesses",
             "link_role",

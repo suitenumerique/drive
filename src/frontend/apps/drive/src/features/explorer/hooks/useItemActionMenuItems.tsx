@@ -27,6 +27,7 @@ import {
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { ModalRecursiveEncrypt } from "@/features/encryption/ModalRecursiveEncrypt";
 import { ModalRecursiveRemoveEncryption } from "@/features/encryption/ModalRecursiveRemoveEncryption";
+import { ModalEncryptionNotRoot } from "@/features/encryption/ModalEncryptionNotRoot";
 
 type UseItemActionMenuItemsOptions = {
   onModalOpenChange?: (isModalOpen: boolean) => void;
@@ -279,13 +280,23 @@ export const useItemActionMenuItems = ({
           item={currentItem}
         />
       )}
-      {currentItem && removeEncryptionModal.isOpen && (
-        <ModalRecursiveRemoveEncryption
-          isOpen
-          onClose={removeEncryptionModal.close}
-          item={currentItem}
-        />
-      )}
+      {currentItem &&
+        removeEncryptionModal.isOpen &&
+        (currentItem.is_encrypted &&
+        (!currentItem.is_encryption_root ||
+          currentItem.is_inside_encrypted_subtree) ? (
+          <ModalEncryptionNotRoot
+            isOpen
+            onClose={removeEncryptionModal.close}
+            item={currentItem}
+          />
+        ) : (
+          <ModalRecursiveRemoveEncryption
+            isOpen
+            onClose={removeEncryptionModal.close}
+            item={currentItem}
+          />
+        ))}
     </>
   );
 

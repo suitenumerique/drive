@@ -58,7 +58,7 @@ export const JobSummary = ({
     case 'ready':
       headline = t(
         'encryption.summary.ready',
-        '{{total}} file(s) to process, {{skipped}} skipped',
+        '{{total}} item(s) to process, {{skipped}} skipped',
         { total, skipped },
       );
       break;
@@ -79,12 +79,12 @@ export const JobSummary = ({
         mode === 'encrypt'
           ? t(
               'encryption.summary.success_encrypt',
-              '{{n}} file(s) encrypted',
+              '{{n}} item(s) encrypted',
               { n: done },
             )
           : t(
               'encryption.summary.success_decrypt',
-              '{{n}} file(s) decrypted',
+              '{{n}} item(s) decrypted',
               { n: done },
             );
       pct = 100;
@@ -94,7 +94,7 @@ export const JobSummary = ({
         failed > 0
           ? t(
               'encryption.summary.failed',
-              'Failed — {{n}} file(s) in error, no changes applied',
+              'Failed — {{n}} item(s) in error, no changes applied',
               { n: failed },
             )
           : t('encryption.summary.failed_generic', 'Operation failed');

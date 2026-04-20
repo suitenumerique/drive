@@ -1597,11 +1597,18 @@ class ItemViewSet(
             "encryptedKeysForDescendants"
         ]
 
-        # Validate: all users with access must have a key provided
+        # Validate: all users with access (direct OR inherited via an
+        # ancestor's ItemAccess) must have a key provided. When encrypting
+        # a subfolder, users typically have no direct ItemAccess on it —
+        # they inherit from a parent folder. We need a wrapped key for all
+        # of them so no one loses access after encryption.
         user_subs_with_access = set(
             models.ItemAccess.objects.filter(
-                item=item, user__isnull=False
-            ).values_list("user__sub", flat=True)
+                item__path__ancestors=item.path,
+                user__isnull=False,
+            )
+            .values_list("user__sub", flat=True)
+            .distinct()
         )
         provided_user_subs = set(encrypted_key_per_user.keys())
         if user_subs_with_access != provided_user_subs:
@@ -1617,19 +1624,38 @@ class ItemViewSet(
                 status=drf.status.HTTP_400_BAD_REQUEST,
             )
 
-        # Validate: keys must be provided for exactly the set of descendant FILES.
-        # This doubles as an integrity check: if the subtree mutated between
-        # frontend discovery and this commit (e.g. another user uploaded a file),
-        # the provided id set won't match the live one and we abort the whole
-        # operation. The frontend should re-discover and prompt the user to retry.
-        live_descendant_file_ids = {
-            str(pk)
-            for pk in item.descendants()
-            .filter(type=models.ItemTypeChoices.FILE)
-            .values_list("pk", flat=True)
+        # Find any inner encrypted subtrees already rooted inside this item
+        # ("stacked encryption"). Those descendants — and everything under
+        # them — are out of scope: they keep their existing keys and their
+        # own per-user ItemAccess records. We only encrypt items in the
+        # effective scope (this item's descendants minus each inner root's
+        # subtree).
+        inner_roots = list(
+            item.descendants().filter(
+                is_encrypted=True,
+                encrypted_symmetric_key__isnull=True,
+            )
+        )
+        effective_descendants_qs = item.descendants()
+        for inner in inner_roots:
+            effective_descendants_qs = effective_descendants_qs.exclude(
+                path__descendants=inner.path,
+            )
+
+        # Validate: a wrapped key must be provided for every descendant in
+        # the effective scope (files AND nested folders). The hierarchical
+        # key model stores each descendant's key wrapped by its direct
+        # parent folder's key, so /key-chain/ can walk from the user's
+        # entry point down to any leaf. This also doubles as an integrity
+        # check: if the subtree mutated between frontend discovery and
+        # this commit (another user added a file, a folder, etc.), the
+        # provided id set won't match the live one and we abort the whole
+        # operation so the user can re-discover + retry.
+        live_descendant_ids = {
+            str(pk) for pk in effective_descendants_qs.values_list("pk", flat=True)
         }
         provided_descendant_ids = set(encrypted_keys_for_descendants.keys())
-        if live_descendant_file_ids != provided_descendant_ids:
+        if live_descendant_ids != provided_descendant_ids:
             return drf.response.Response(
                 {
                     "detail": _(
@@ -1637,8 +1663,8 @@ class ItemViewSet(
                         "Please retry."
                     ),
                     "code": "subtree_mutated",
-                    "missing": sorted(live_descendant_file_ids - provided_descendant_ids),
-                    "extra": sorted(provided_descendant_ids - live_descendant_file_ids),
+                    "missing": sorted(live_descendant_ids - provided_descendant_ids),
+                    "extra": sorted(provided_descendant_ids - live_descendant_ids),
                 },
                 status=drf.status.HTTP_409_CONFLICT,
             )
@@ -1660,8 +1686,9 @@ class ItemViewSet(
             update_fields.append("filename")
         item.save(update_fields=update_fields)
 
-        # Apply encryption: mark all descendants
-        for descendant in item.descendants().iterator():
+        # Apply encryption to descendants in the effective scope only —
+        # inner encrypted subtrees keep their existing state untouched.
+        for descendant in effective_descendants_qs.iterator():
             descendant.is_encrypted = True
             descendant.encrypted_symmetric_key = encrypted_keys_for_descendants.get(
                 str(descendant.pk)
@@ -1673,7 +1700,24 @@ class ItemViewSet(
                 desc_fields.append("filename")
             descendant.save(update_fields=desc_fields)
 
-        # Store per-user encrypted keys in ItemAccess
+        # Store per-user encrypted keys on ItemAccess records that live on
+        # THIS item. Keys *must* sit here — not on an ancestor's ItemAccess
+        # — because /key-chain/ looks for the user's entry point by walking
+        # from the target item upward until it finds an ItemAccess with
+        # encrypted_item_symmetric_key_for_user set, and that entry point
+        # is expected to be the encryption root (this item). Storing on an
+        # ancestor would make decrypt walk through `item`'s own non-root
+        # ancestors, which don't have a wrapped key.
+        #
+        # Drive itself computes inherited access on the fly via ancestor
+        # path queries — there is no concrete ItemAccess row on descendants
+        # of a shared ancestor. So when encrypting a subfolder, any user
+        # who has only inherited access on this item has no row on which
+        # to place their wrapped key. We create that row here, carrying
+        # over the role they currently hold via inheritance so permissions
+        # don't change — the new ItemAccess exists purely to hold the
+        # encrypted key material.
+        remaining_user_subs = set(encrypted_key_per_user.keys())
         for access in models.ItemAccess.objects.filter(
             item=item, user__isnull=False
         ).select_related("user"):
@@ -1684,6 +1728,29 @@ class ItemViewSet(
                 ]
                 access.save(
                     update_fields=["encrypted_item_symmetric_key_for_user"]
+                )
+                remaining_user_subs.discard(user_sub)
+
+        if remaining_user_subs:
+            users_by_sub = {
+                u.sub: u
+                for u in models.User.objects.filter(sub__in=remaining_user_subs)
+            }
+            for user_sub in remaining_user_subs:
+                user = users_by_sub.get(user_sub)
+                if user is None:
+                    continue
+                # Inherited role from an ancestor ItemAccess. Defaults to
+                # READER if none found (shouldn't happen — the access-set
+                # check above already enforced membership).
+                role = item.get_role(user) or models.RoleChoices.READER
+                models.ItemAccess.objects.create(
+                    item=item,
+                    user=user,
+                    role=role,
+                    encrypted_item_symmetric_key_for_user=encrypted_key_per_user[
+                        user_sub
+                    ],
                 )
 
         # After DB commit: clean up old S3 objects (best-effort)
@@ -1735,20 +1802,58 @@ class ItemViewSet(
                 status=drf.status.HTTP_400_BAD_REQUEST,
             )
 
+        # Stacked encryption: even if this item is its own encryption root,
+        # we refuse to remove it while any ancestor is also encrypted.
+        # Doing so would leave this subtree plaintext inside an outer
+        # encrypted scope, and the ancestor check on /encrypt/ would then
+        # prevent re-encrypting it — a dead-end state. The outer root has
+        # to be decrypted first.
+        if item.ancestors().filter(is_encrypted=True).exists():
+            return drf.response.Response(
+                {
+                    "detail": _(
+                        "This item is nested inside another encrypted subtree. "
+                        "Remove encryption from the outer folder first."
+                    )
+                },
+                status=drf.status.HTTP_400_BAD_REQUEST,
+            )
+
         serializer = serializers.RemoveEncryptionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         file_key_mapping = serializer.validated_data["fileKeyMapping"]
 
-        # Integrity check: keys must be provided for exactly the live set of
-        # descendant FILES (plus the root if it's a file). If the subtree was
-        # mutated between frontend discovery and commit, abort.
+        # Stacked encryption: exclude inner encryption roots and their
+        # subtrees from the removal scope. Those are independent encrypted
+        # trees with their own per-user keys and must stay intact.
+        inner_roots = list(
+            item.descendants().filter(
+                is_encrypted=True,
+                encrypted_symmetric_key__isnull=True,
+            )
+        )
+        effective_descendants_qs = item.descendants()
+        for inner in inner_roots:
+            effective_descendants_qs = effective_descendants_qs.exclude(
+                path__descendants=inner.path,
+            )
+
+        # Integrity check: keys must be provided for exactly the set of
+        # encrypted FILES in the effective scope (plus the root if it's
+        # a file and encrypted). Plaintext files don't need a mapping —
+        # there's no ciphertext to replace. This matters when the root
+        # still has is_encrypted=True but its effective descendants are
+        # already plaintext (e.g. after an inner encrypted sub-root was
+        # decrypted before this call — the root alone needs its flag
+        # and ItemAccess keys cleared).
         live_file_ids = {
             str(pk)
-            for pk in item.descendants()
-            .filter(type=models.ItemTypeChoices.FILE)
-            .values_list("pk", flat=True)
+            for pk in effective_descendants_qs.filter(
+                type=models.ItemTypeChoices.FILE,
+                is_encrypted=True,
+            ).values_list("pk", flat=True)
         }
-        if item.type == models.ItemTypeChoices.FILE:
+        if item.type == models.ItemTypeChoices.FILE and item.is_encrypted:
             live_file_ids.add(str(item.pk))
         provided_ids = set(file_key_mapping.keys())
         if live_file_ids != provided_ids:
@@ -1778,8 +1883,9 @@ class ItemViewSet(
         item.encrypted_symmetric_key = None
         item.save(update_fields=update_fields)
 
-        # Clear encryption on descendants, swap filenames
-        for descendant in item.descendants().iterator():
+        # Clear encryption on descendants in the effective scope only —
+        # inner encrypted subtrees keep their existing state.
+        for descendant in effective_descendants_qs.iterator():
             desc_fields = ["is_encrypted", "encrypted_symmetric_key"]
             descendant.is_encrypted = False
             descendant.encrypted_symmetric_key = None
@@ -1795,11 +1901,12 @@ class ItemViewSet(
             encryption_public_key_fingerprint=None,
         )
 
-        # Collect file items for post-commit malware scanning
+        # Collect file items in the effective scope for post-commit
+        # malware scanning (now that they're plaintext again).
         file_items_to_scan = []
         if item.type == models.ItemTypeChoices.FILE and item.filename:
             file_items_to_scan.append((item.file_key, item.pk))
-        for descendant in item.descendants().iterator():
+        for descendant in effective_descendants_qs.iterator():
             if descendant.type == models.ItemTypeChoices.FILE and descendant.filename:
                 file_items_to_scan.append((descendant.file_key, descendant.pk))
 
@@ -1844,20 +1951,27 @@ class ItemViewSet(
         user = request.user
 
         # Walk up ancestors to find the user's access point (the item where they have
-        # an ItemAccess with an encrypted key)
+        # an ItemAccess with an encrypted key). `ancestors` is ordered shallowest
+        # first (root of the tree) so we iterate deepest first to pick the
+        # NEAREST ancestor carrying a wrapped key. This matters with stacked
+        # encryption roots (e.g. T4 is an encrypted root and so is T4/sub):
+        # for a file inside T4/sub, sub is the correct entry point, not T4.
         ancestors = list(item.ancestors().order_by("path"))
-        candidate_items = ancestors + [item]
+        candidate_items_deepest_first = [item] + list(reversed(ancestors))
 
-        # Find the user's entry point: the item where they have an access with a key
-        user_access = (
-            models.ItemAccess.objects.filter(
-                item__in=candidate_items,
+        accesses_by_item_pk = {
+            access.item.pk: access
+            for access in models.ItemAccess.objects.filter(
+                item__in=candidate_items_deepest_first,
                 user=user,
                 encrypted_item_symmetric_key_for_user__isnull=False,
-            )
-            .select_related("item")
-            .first()
-        )
+            ).select_related("item")
+        }
+        user_access = None
+        for candidate in candidate_items_deepest_first:
+            if candidate.pk in accesses_by_item_pk:
+                user_access = accesses_by_item_pk[candidate.pk]
+                break
 
         if not user_access:
             return drf.response.Response(

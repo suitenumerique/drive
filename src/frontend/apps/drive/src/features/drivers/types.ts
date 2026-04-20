@@ -55,6 +55,8 @@ export type Item = {
   is_wopi_supported?: boolean;
   created_at: Date;
   is_encrypted?: boolean;
+  is_encryption_root?: boolean;
+  is_inside_encrypted_subtree?: boolean;
   encrypted_item_symmetric_key_for_user?: string;
   accesses_user_ids?: string[];
   is_favorite?: boolean;

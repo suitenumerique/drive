@@ -76,7 +76,7 @@ export const ModalRecursiveRemoveEncryption = ({
               {t('encryption.remove_modal.confirm', 'Remove encryption')}
             </Button>
           )}
-          {job.phase === 'failed' && job.failedCount > 0 && (
+          {job.phase === 'failed' && (
             <Button onClick={() => job.retry()}>
               {t('common.retry', 'Retry')}
             </Button>
@@ -96,7 +96,7 @@ export const ModalRecursiveRemoveEncryption = ({
           <p style={{ margin: 0 }}>
             {t(
               'encryption.remove_modal.description',
-              'The following files will be decrypted and stored in plain.',
+              'The following items will be decrypted and stored in plain.',
             )}
           </p>
         )}
@@ -172,7 +172,7 @@ export const ModalRecursiveRemoveEncryption = ({
           >
             {t(
               'encryption.remove_modal.large_set',
-              '{{count}} files in this folder. Per-file progress is hidden for large jobs — see the summary above.',
+              '{{count}} items in this folder. Per-item progress is hidden for large jobs — see the summary above.',
               { count: job.rows.length },
             )}
           </p>

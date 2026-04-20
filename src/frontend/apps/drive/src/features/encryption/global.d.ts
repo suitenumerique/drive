@@ -18,8 +18,12 @@ declare global {
     encryptWithKey(
       data: ArrayBuffer,
       encryptedSymmetricKey: ArrayBuffer,
-      encryptedKeyChain?: ArrayBuffer[]
+      encryptedKeyChain: ArrayBuffer[]
     ): Promise<{ encryptedData: ArrayBuffer; wrappedKey: ArrayBuffer }>;
+    encryptWithKey(
+      data: ArrayBuffer,
+      encryptedSymmetricKey: ArrayBuffer
+    ): Promise<{ encryptedData: ArrayBuffer }>;
     decryptWithKey(
       encryptedData: ArrayBuffer,
       encryptedSymmetricKey: ArrayBuffer,

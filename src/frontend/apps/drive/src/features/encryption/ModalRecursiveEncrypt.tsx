@@ -67,7 +67,7 @@ export const ModalRecursiveEncrypt = ({ isOpen, onClose, item }: Props) => {
               {t('encryption.encrypt_modal.confirm', 'Encrypt')}
             </Button>
           )}
-          {job.phase === 'failed' && job.failedCount > 0 && (
+          {job.phase === 'failed' && (
             <Button onClick={() => job.retry()}>
               {t('common.retry', 'Retry')}
             </Button>
@@ -87,7 +87,7 @@ export const ModalRecursiveEncrypt = ({ isOpen, onClose, item }: Props) => {
           <p style={{ margin: 0 }}>
             {t(
               'encryption.encrypt_modal.description_folder',
-              'The following files will be encrypted. Subfolders are processed recursively. Once encrypted, files can only be accessed by users with encryption keys.',
+              'The following items will be encrypted. Subfolders are processed recursively. Once encrypted, contents can only be accessed by users with encryption keys.',
             )}
           </p>
         )}
@@ -163,7 +163,7 @@ export const ModalRecursiveEncrypt = ({ isOpen, onClose, item }: Props) => {
           >
             {t(
               'encryption.encrypt_modal.large_set',
-              '{{count}} files in this folder. Per-file progress is hidden for large jobs — see the summary above.',
+              '{{count}} items in this folder. Per-item progress is hidden for large jobs — see the summary above.',
               { count: job.rows.length },
             )}
             {job.failedCount > 0 &&
