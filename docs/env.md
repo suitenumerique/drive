@@ -50,6 +50,7 @@ This document lists all configurable environment variables for the Drive applica
 | `EMAIL_HOST_USER` | SMTP username for email sending | `None` |
 | `EMAIL_LOGO_IMG` | Logo image URL for email templates | `None` |
 | `EMAIL_PORT` | SMTP port for email sending | `None` |
+| `EMAIL_URL_APP` | URL used in emails to link back to the app | `None` |
 | `EMAIL_USE_SSL` | Use SSL for SMTP connection | `False` |
 | `EMAIL_USE_TLS` | Use TLS for SMTP connection | `False` |
 | `FEATURES_ALPHA` | Enable alpha features | `False` |

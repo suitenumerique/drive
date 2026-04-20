@@ -15,6 +15,7 @@ and this project adheres to
 - ✨(frontend) add ErrorIcon component and support numeric icon sizes
 - ✨(frontend) make file upload abortable in driver layer
 - ✨(frontend) files preview v2
+- 🔧(project) add DJANGO_EMAIL_URL_APP environment variable
 
 ### Fixed
 
