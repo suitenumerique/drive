@@ -13,6 +13,10 @@ and this project adheres to
 - ✨(frontend) restrict and reopen folder access from the share modal
 - 🔊(backend) log rejected WOPI requests
 
+### Changed
+
+- ⬆️(ci) bump GitHub Actions to latest versions
+
 ### Fixed
 
 - 🐛(frontend) show the full item title in a tooltip when truncated

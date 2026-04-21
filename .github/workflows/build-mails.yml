@@ -11,15 +11,15 @@ jobs:
         working-directory: src/mail
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
 
       - name: Restore the mail templates
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         id: mail-templates
         with:
           path: "src/backend/core/templates/mail"
@@ -39,7 +39,7 @@ jobs:
 
       - name: Cache mail templates
         if: steps.mail-templates.outputs.cache-hit != 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: "src/backend/core/templates/mail"
           key: mail-templates-${{ hashFiles('src/mail/mjml/**', 'src/mail/yarn.lock', 'src/mail/bin/**') }}

@@ -25,14 +25,14 @@ jobs:
     needs: install-front
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22.x"
       - name: Restore the frontend cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: "src/frontend/**/node_modules"
           key: front-node_modules-${{ hashFiles('src/frontend/**/yarn.lock') }}
@@ -46,15 +46,15 @@ jobs:
     needs: install-front
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22.x"
 
       - name: Restore the frontend cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: "src/frontend/**/node_modules"
           key: front-node_modules-${{ hashFiles('src/frontend/**/yarn.lock') }}
@@ -70,15 +70,15 @@ jobs:
     needs: install-front
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22.x"
 
       - name: Restore the frontend cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: "src/frontend/**/node_modules"
           key: front-node_modules-${{ hashFiles('src/frontend/**/yarn.lock') }}
@@ -93,7 +93,7 @@ jobs:
         run: yarn build
 
       - name: Upload frontend bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: drive-frontend-out
           path: src/frontend/apps/drive/out
@@ -116,7 +116,7 @@ jobs:
           - "3/3"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # The browsers and their system libraries come from the official
       # Playwright image. Installing those libraries with apt depends on the
@@ -132,19 +132,19 @@ jobs:
           nohup docker pull --quiet "${IMAGE}" > /tmp/playwright-pull.log 2>&1 &
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22.x"
 
       - name: Restore the frontend cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: "src/frontend/**/node_modules"
           key: front-node_modules-${{ hashFiles('src/frontend/**/yarn.lock') }}
           fail-on-cache-miss: true
 
       - name: Restore the mail templates
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: "src/backend/core/templates/mail"
           key: mail-templates-${{ hashFiles('src/mail/mjml') }}
@@ -160,7 +160,7 @@ jobs:
           echo "sdk-consumer PID $!"
 
       - name: Download frontend bundle
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: drive-frontend-out
           path: src/frontend/apps/drive/out
@@ -198,7 +198,7 @@ jobs:
         if: failure()
         run: docker logs playwright-server
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: report-${{ matrix.browser }}-shard-${{ strategy.job-index }}
