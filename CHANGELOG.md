@@ -23,6 +23,7 @@ and this project adheres to
 - 🐛(frontend) Responsive broken with long filters in search #659
 - 🐛(front) set size and variant on trash navigate modal #666
 - 🐛(frontend) fix uploads continuing after parent folder deletion
+- 🐛(frontend) fix SDK picker link reach promotion
 
 ### Fixed
 

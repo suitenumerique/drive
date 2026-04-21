@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
-import { getDriver } from "../config/Config";
 import { useEffect, useRef, useState } from "react";
-import { Item, LinkReach, LinkRole } from "../drivers/types";
+import { Item, LinkReach } from "../drivers/types";
 import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { Spinner } from "@gouvfr-lasuite/ui-kit";
 import { ClientMessageType, SDKRelayManager } from "./SdkRelayManager";
+import { useMutationUpdateLinkConfiguration } from "../explorer/hooks/useMutations";
 
 export const PickerFooter = ({
   token,
@@ -15,20 +15,33 @@ export const PickerFooter = ({
 }) => {
   const { t } = useTranslation();
 
-  const driver = getDriver();
-
   const [waitForClosing, setWaitForClosing] = useState(false);
   const hasSentItemsSelected = useRef(false);
+
+  const updateLinkConfiguration = useMutationUpdateLinkConfiguration();
 
   const onChoose = async () => {
     const promises = selectedItems.map((item) => {
       if (item.link_reach === LinkReach.PUBLIC) {
         return Promise.resolve();
       }
-      return driver.updateItem({
-        id: item.id,
-        link_reach: LinkReach.PUBLIC,
-        link_role: LinkRole.READER,
+
+      return new Promise<void>((resolve, reject) => {
+        updateLinkConfiguration.mutate(
+          {
+            itemId: item.id,
+            link_reach: LinkReach.PUBLIC,
+            link_role: item.link_role,
+          },
+          {
+            onSuccess: () => {
+              resolve();
+            },
+            onError: (error) => {
+              reject(error);
+            },
+          },
+        );
       });
     });
 

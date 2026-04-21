@@ -544,6 +544,7 @@
       },
       "sdk": {
         "explorer": {
+          "cancel": "Cancel",
           "choose": "Choose",
           "picker_label_zero": "No files selected",
           "picker_label_one": "{{count}} file selected",
@@ -1755,6 +1756,7 @@
       "sdk": {
         "explorer": {
           "choose": "Kiezen",
+          "cancel": "Annuleren",
           "picker_label_zero": "Geen bestanden geselecteerd",
           "picker_label_one": "{{count}} bestand geselecteerd",
           "picker_label_other": "{{count}} bestanden geselecteerd",
