@@ -161,6 +161,17 @@ jobs:
           cd src/frontend/apps/e2e
           npx playwright install-deps ${{ matrix.browser }}
 
+      - name: Build the drive SDK
+        run: |
+          cd src/frontend/packages/sdk
+          yarn build
+
+      - name: Start sdk-consumer dev server
+        run: |
+          cd src/frontend/apps/sdk-consumer
+          nohup yarn dev > /tmp/sdk-consumer.log 2>&1 &
+          echo "sdk-consumer PID $!"
+
       - name: Download frontend bundle
         uses: actions/download-artifact@v4
         with:
