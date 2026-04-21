@@ -26,6 +26,7 @@ import {
   convertFromInternalToPdf,
 } from './x2tConverter';
 import { EXTENSION_TO_X2T_TYPE } from './types';
+import { getEffectiveMimetype } from '@/features/explorer/utils/mimeTypes';
 import {
   createMockServerCallbacks,
   sendToEditor,
@@ -399,7 +400,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   }, []);
   const canEdit = !!item.abilities?.partial_update;
 
-  const mime = item.mimetype || '';
+  // For encrypted items the server stores `application/octet-stream` (it
+  // can't sniff ciphertext). `getEffectiveMimetype` falls back to the
+  // filename extension so the MIME_TO_* lookups below don't all miss and
+  // mislabel an .odp/.ods as .docx — x2t would then refuse the ZIP with
+  // "content corresponds to presentations, but inconsistent extension".
+  const mime = getEffectiveMimetype(item) || '';
   const docType = MIME_TO_DOC_TYPE[mime] || 'text';
   const ooFileType = MIME_TO_OO_FILE_TYPE[mime] || 'docx';
   const x2tType = MIME_TO_X2T_TYPE[mime] || 'doc';

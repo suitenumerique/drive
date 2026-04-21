@@ -35,7 +35,7 @@ export const useCreateMenuItems = ({
   includeImport = false,
 }: UseCreateMenuItemsProps = {}): UseCreateMenuItemsReturn => {
   const { t } = useTranslation();
-  const { item, itemId } = useGlobalExplorer();
+  const { item } = useGlobalExplorer();
   const canCreateChildren = item ? item?.abilities?.children_create : true;
   const isHidden = !canCreateChildren;
 
@@ -122,7 +122,7 @@ export const useCreateMenuItems = ({
       <ExplorerCreateFolderModal {...createFolderModal} parent={item} />
       <ExplorerCreateFileModal
         {...createFileModal}
-        parentId={itemId}
+        parent={item}
         type={createFileModalType}
       />
     </>

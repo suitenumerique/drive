@@ -141,7 +141,7 @@ export abstract class Driver {
     filename: string;
   }): Promise<Item>;
   abstract createFileFromTemplate(data: {
-    parentId: string;
+    parentId?: string;
     extension: string;
     title: string;
   }): Promise<Item>;

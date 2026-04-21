@@ -18,7 +18,7 @@ import clsx from "clsx";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
 import { useItem } from "../../hooks/useQueries";
 import { useRouter } from "next/router";
-import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
+import { Button, Tooltip, useModal } from "@gouvfr-lasuite/cunningham-react";
 import { ItemShareModal } from "../modals/share/ItemShareModal";
 import {
   clearFromRoute,
@@ -285,6 +285,7 @@ export const BreadcrumbItemButton = ({
 };
 
 export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const shareModal = useModal();
   const icon = useMemo(() => {
@@ -325,6 +326,21 @@ export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
           />
         }
       />
+      {item.is_encrypted && (
+        <Tooltip
+          content={t("explorer.breadcrumbs.encrypted", "Encrypted folder")}
+        >
+          <span
+            className="material-icons"
+            style={{
+              fontSize: 18,
+              color: "var(--c--theme--colors--success-600, #18753c)",
+            }}
+          >
+            lock
+          </span>
+        </Tooltip>
+      )}
       {icon && (
         <>
           <Button

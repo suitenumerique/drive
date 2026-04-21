@@ -252,13 +252,16 @@ export const getMimeCategory = (
  *  categories the UI actually routes on (viewers, icons, format labels).
  */
 const EXTENSION_TO_MIME: Record<string, string> = {
-  // Docs
+  // Docs — prefer text/plain over text/markdown / application/rtf for
+  // formats that OnlyOffice can open as a "word" doc, so the encrypted
+  // viewer routes them through OOEditor rather than falling through to
+  // "not supported".
   doc: "application/msword",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   odt: "application/vnd.oasis.opendocument.text",
   txt: "text/plain",
-  rtf: "application/rtf",
-  md: "text/markdown",
+  rtf: "text/plain",
+  md: "text/plain",
   // Spreadsheets
   xls: "application/vnd.ms-excel",
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -307,6 +310,11 @@ const EXTENSION_TO_MIME: Record<string, string> = {
  * couldn't inspect the ciphertext (direct-upload-into-encrypted-folder
  * case — recursively encrypted items keep their original mimetype).
  * The client knows the real type from the filename's extension.
+ *
+ * Deliberately NOT extended to non-encrypted uploads: for those, the
+ * server's magic-byte detection is authoritative. Trusting the filename
+ * extension over content-based detection could let a user mislabel a
+ * file's type (security-relevant for any path that routes on mimetype).
  */
 export const getEffectiveMimetype = (item: Item): string | undefined => {
   const stored = item.mimetype ?? undefined;
