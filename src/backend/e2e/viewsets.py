@@ -1,10 +1,12 @@
 """Viewsets for the e2e app."""
 
+from django.conf import settings
 from django.contrib.auth import login
 
 import rest_framework as drf
 from rest_framework import response as drf_response
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 
 from core import models
@@ -23,6 +25,9 @@ class UserAuthViewSet(drf.viewsets.ViewSet):
         POST /api/v1.0/e2e/user-auth/
         Create a user with the given email if it doesn't exist and log them in
         """
+        if not (settings.DEBUG or getattr(settings, "TESTING", False)):
+            raise PermissionDenied()
+
         serializer = E2EAuthSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
