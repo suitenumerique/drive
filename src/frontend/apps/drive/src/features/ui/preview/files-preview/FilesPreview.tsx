@@ -28,6 +28,7 @@ export type FilePreviewType = {
   is_wopi_supported?: boolean;
   is_encrypted?: boolean;
   is_pending_encryption_for_user?: boolean;
+  encryption_public_key_fingerprint_for_user?: string | null;
   url_preview: string;
   url: string;
   abilities?: {

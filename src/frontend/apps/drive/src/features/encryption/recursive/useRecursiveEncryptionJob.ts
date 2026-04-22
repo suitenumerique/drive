@@ -458,8 +458,38 @@ export function useRecursiveEncryptionJob({
           encryptedSymmetricKeyPerUser[uid] = null;
         }
 
+        // Compute a fingerprint for each user whose public key we have
+        // and null for pending users (no public key → no fingerprint).
+        // Backend stores the map verbatim on the ItemAccess rows so
+        // clients can later tell which key each user's wrapped key was
+        // produced for — the "Fingerprint at the time it was shared
+        // with you" line in the key-mismatch panel reads directly from
+        // here. Mirrors the symmetric-key payload: every user on the
+        // access list appears in the map exactly once.
+        const encryptionPublicKeyFingerprintPerUser: Record<
+          string,
+          string | null
+        > = {};
+        for (const [uid, publicKey] of Object.entries(publicKeysRef.current)) {
+          try {
+            encryptionPublicKeyFingerprintPerUser[uid] =
+              await vaultClient.computeKeyFingerprint(publicKey);
+          } catch (err) {
+            console.warn(
+              '[encrypt] computeKeyFingerprint failed for',
+              uid,
+              err,
+            );
+            encryptionPublicKeyFingerprintPerUser[uid] = null;
+          }
+        }
+        for (const uid of pendingUserIdsRef.current) {
+          encryptionPublicKeyFingerprintPerUser[uid] = null;
+        }
+
         await driver.encryptItem(item.id, {
           encryptedSymmetricKeyPerUser,
+          encryptionPublicKeyFingerprintPerUser,
           encryptedKeysForDescendants,
           fileKeyMapping,
         });

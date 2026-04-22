@@ -13,6 +13,10 @@ import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
 import { type FilePreviewType } from "../files-preview/FilesPreview";
 import { OOEditor } from "@/features/encryption/oo-bridge/OOEditor";
 import { MIME_TO_DOC_TYPE } from "@/features/encryption/oo-bridge/types";
+import {
+  KeyMismatchPanel,
+  isWrongSecretKeyError,
+} from "@/features/encryption/KeyMismatchPanel";
 import { Loader } from "@gouvfr-lasuite/cunningham-react";
 
 interface EncryptedFileViewerProps {
@@ -147,6 +151,13 @@ export const EncryptedFileViewer = ({
   }
 
   if (error) {
+    if (isWrongSecretKeyError(error)) {
+      return (
+        <KeyMismatchPanel
+          shareTimeFingerprint={file.encryption_public_key_fingerprint_for_user}
+        />
+      );
+    }
     return (
       <div
         style={{

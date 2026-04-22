@@ -156,6 +156,7 @@ export abstract class Driver {
     itemId: string,
     data: {
       encryptedSymmetricKeyPerUser: Record<string, string | null>;
+      encryptionPublicKeyFingerprintPerUser: Record<string, string | null>;
       encryptedKeysForDescendants: Record<string, string>;
       fileKeyMapping?: Record<string, string>;
     }

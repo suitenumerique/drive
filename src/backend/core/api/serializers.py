@@ -253,6 +253,38 @@ class ListItemSerializer(serializers.ModelSerializer):
     is_pending_encryption_for_user = serializers.SerializerMethodField(
         read_only=True
     )
+    encryption_public_key_fingerprint_for_user = serializers.SerializerMethodField(
+        read_only=True
+    )
+
+    def get_encryption_public_key_fingerprint_for_user(self, item):
+        """Fingerprint of the user's public key AT THE TIME they were
+        granted access. Stored on the ItemAccess row that holds their
+        wrapped symmetric key.
+
+        Clients use this to tell the user which key the document was
+        encrypted for if decryption fails with "wrong secret key" —
+        the user can compare it to their current key's fingerprint and
+        understand that a collaborator needs to re-add them so the key
+        gets wrapped against their current public key.
+
+        Looks up the same ItemAccess row `is_pending_encryption_for_user`
+        does (any ancestor on the subtree's key chain).
+        """
+        if not item.is_encrypted:
+            return None
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        return (
+            models.ItemAccess.objects.filter(
+                item__path__ancestors=item.path,
+                user=request.user,
+                encrypted_item_symmetric_key_for_user__isnull=False,
+            )
+            .values_list("encryption_public_key_fingerprint", flat=True)
+            .first()
+        )
 
     def get_is_pending_encryption_for_user(self, item):
         """True when the current user has access to this encrypted item
@@ -337,6 +369,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "is_encryption_root",
             "is_inside_encrypted_subtree",
             "is_pending_encryption_for_user",
+            "encryption_public_key_fingerprint_for_user",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -376,6 +409,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "is_encryption_root",
             "is_inside_encrypted_subtree",
             "is_pending_encryption_for_user",
+            "encryption_public_key_fingerprint_for_user",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -610,6 +644,7 @@ class ItemSerializer(ListItemSerializer):
             "is_wopi_supported",
             "encrypted_item_symmetric_key_for_user",
             "is_pending_encryption_for_user",
+            "encryption_public_key_fingerprint_for_user",
             "accesses_user_ids",
         ]
         read_only_fields = [
@@ -646,6 +681,7 @@ class ItemSerializer(ListItemSerializer):
             "is_wopi_supported",
             "encrypted_item_symmetric_key_for_user",
             "is_pending_encryption_for_user",
+            "encryption_public_key_fingerprint_for_user",
             "accesses_user_ids",
         ]
 
@@ -1085,6 +1121,31 @@ class EncryptItemSerializer(serializers.Serializer):
             "or null to mark the user as pending their encryption "
             "onboarding. The caller's own sub must be a wrapped key, "
             "never null."
+        ),
+    )
+    encryptionPublicKeyFingerprintPerUser = serializers.DictField(
+        # Required: the client must send a fingerprint entry for every
+        # user it sent a wrapped-key entry for. Symmetric keys and
+        # fingerprints travel as matched pairs — keeping them coupled
+        # means an encrypted access row always has the "what key was
+        # this wrapped for" display hint stored alongside.
+        #
+        # Not security-sensitive in the crypto sense — the actual wrap
+        # is the wrapped key itself. The fingerprint is a display hint
+        # surfaced in the client's key-mismatch panel. Since it comes
+        # from the encrypting client, we trust it as we trust any
+        # other client-provided metadata; a malicious client could
+        # send wrong values, but the worst it achieves is confusing
+        # the very user whose client was sending the lie.
+        child=serializers.CharField(
+            allow_null=True, allow_blank=True, max_length=16
+        ),
+        required=True,
+        help_text=(
+            "Mapping of user OIDC sub → fingerprint of their public key "
+            "at encryption time. Must cover the same set of users as "
+            "`encryptedSymmetricKeyPerUser`; null is valid for pending "
+            "users (no public key to fingerprint yet)."
         ),
     )
     encryptedKeysForDescendants = serializers.DictField(

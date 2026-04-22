@@ -201,6 +201,8 @@ export const itemToPreviewFile = (item: Item) => {
     is_wopi_supported: item.is_wopi_supported && !item.is_encrypted,
     is_encrypted: item.is_encrypted,
     is_pending_encryption_for_user: item.is_pending_encryption_for_user,
+    encryption_public_key_fingerprint_for_user:
+      item.encryption_public_key_fingerprint_for_user,
     size: item.size,
     abilities: item.abilities,
   } as FilePreviewType;

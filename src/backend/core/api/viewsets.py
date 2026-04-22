@@ -1735,6 +1735,34 @@ class ItemViewSet(
         # over the role they currently hold via inheritance so permissions
         # don't change — the new ItemAccess exists purely to hold the
         # encrypted key material.
+        # Per-user fingerprint map — required, must cover the same set
+        # of user subs as the wrapped-key map. Stored alongside the
+        # wrapped key so clients can later tell which key the file was
+        # encrypted for (surfaced in the "key mismatch" panel when
+        # decrypt fails on a rotated key).
+        fingerprint_per_user = serializer.validated_data[
+            "encryptionPublicKeyFingerprintPerUser"
+        ]
+        fingerprint_subs = set(fingerprint_per_user.keys())
+        if fingerprint_subs != provided_user_subs:
+            fp_missing = provided_user_subs - fingerprint_subs
+            fp_extra = fingerprint_subs - provided_user_subs
+            errors = {}
+            if fp_missing:
+                errors["missing_users"] = list(fp_missing)
+            if fp_extra:
+                errors["extra_users"] = list(fp_extra)
+            return drf.response.Response(
+                {
+                    "detail": _(
+                        "Provided fingerprints do not match the users in "
+                        "encryptedSymmetricKeyPerUser."
+                    ),
+                    **errors,
+                },
+                status=drf.status.HTTP_400_BAD_REQUEST,
+            )
+
         remaining_user_subs = set(encrypted_key_per_user.keys())
         for access in models.ItemAccess.objects.filter(
             item=item, user__isnull=False
@@ -1744,9 +1772,13 @@ class ItemViewSet(
                 access.encrypted_item_symmetric_key_for_user = encrypted_key_per_user[
                     user_sub
                 ]
-                access.save(
-                    update_fields=["encrypted_item_symmetric_key_for_user"]
-                )
+                update_fields = ["encrypted_item_symmetric_key_for_user"]
+                if user_sub in fingerprint_per_user:
+                    access.encryption_public_key_fingerprint = (
+                        fingerprint_per_user[user_sub] or None
+                    )
+                    update_fields.append("encryption_public_key_fingerprint")
+                access.save(update_fields=update_fields)
                 remaining_user_subs.discard(user_sub)
 
         if remaining_user_subs:
@@ -1769,6 +1801,9 @@ class ItemViewSet(
                     encrypted_item_symmetric_key_for_user=encrypted_key_per_user[
                         user_sub
                     ],
+                    encryption_public_key_fingerprint=(
+                        fingerprint_per_user.get(user_sub) or None
+                    ),
                 )
 
         # After DB commit: clean up old S3 objects (best-effort)

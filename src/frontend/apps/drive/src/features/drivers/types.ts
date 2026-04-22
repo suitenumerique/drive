@@ -58,6 +58,7 @@ export type Item = {
   is_encryption_root?: boolean;
   is_inside_encrypted_subtree?: boolean;
   is_pending_encryption_for_user?: boolean;
+  encryption_public_key_fingerprint_for_user?: string | null;
   encrypted_item_symmetric_key_for_user?: string;
   accesses_user_ids?: string[];
   is_favorite?: boolean;

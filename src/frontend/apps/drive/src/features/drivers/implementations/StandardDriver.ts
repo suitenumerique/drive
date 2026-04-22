@@ -552,7 +552,8 @@ export class StandardDriver extends Driver {
   async encryptItem(
     itemId: string,
     data: {
-      encryptedSymmetricKeyPerUser: Record<string, string>;
+      encryptedSymmetricKeyPerUser: Record<string, string | null>;
+      encryptionPublicKeyFingerprintPerUser: Record<string, string | null>;
       encryptedKeysForDescendants: Record<string, string>;
       fileKeyMapping?: Record<string, string>;
     },

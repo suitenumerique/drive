@@ -27,6 +27,7 @@ import {
 } from './x2tConverter';
 import { EXTENSION_TO_X2T_TYPE } from './types';
 import { getEffectiveMimetype } from '@/features/explorer/utils/mimeTypes';
+import { KeyMismatchPanel } from '@/features/encryption/KeyMismatchPanel';
 import {
   createMockServerCallbacks,
   sendToEditor,
@@ -2311,6 +2312,25 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   }, [item.id, reinitKey]);
 
   if (state === 'error') {
+    // Users who were invited at a time when they had a DIFFERENT public
+    // key (e.g. they reset their vault and re-onboarded) — the wrapped
+    // symmetric key was encrypted against their old key, so vault
+    // decryption aborts with "wrong secret key for the given ciphertext".
+    // Surface the shared key-mismatch panel (also used by the non-office
+    // viewer) so the user sees a specific, actionable explanation and
+    // their current key's fingerprint, rather than the generic failure.
+    const isKeyMismatch =
+      !!error && /wrong secret key/i.test(error);
+    if (isKeyMismatch) {
+      return (
+        <KeyMismatchPanel
+          shareTimeFingerprint={
+            item.encryption_public_key_fingerprint_for_user
+          }
+        />
+      );
+    }
+
     const isNoKeysError =
       !!error && /no key pair|hasKeys|key pair found/i.test(error);
     const isConversionError =

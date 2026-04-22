@@ -545,6 +545,14 @@
             "inherited_edit": "Hérité. Pour réduire le rôle ou supprimer l'accès, modifiez",
             "parent_folder": "le dossier parent."
           }
+        },
+        "pending_encryption": {
+          "title": "Utilisateurs en attente d'accès au chiffrement ({{count}})",
+          "accept": "Accepter",
+          "accepting": "Acceptation…",
+          "suffix": "(en attente d'accès au chiffrement)",
+          "no_public_key": "Cet utilisateur n'a pas encore terminé sa configuration du chiffrement.",
+          "awaiting_their_onboarding": "En attente que cet utilisateur termine sa configuration du chiffrement. Vous pourrez l'accepter une fois cela fait."
         }
       },
       "file_download_modal": {
@@ -586,7 +594,60 @@
         }
       },
       "common": {
-        "cancel": "Annuler"
+        "cancel": "Annuler",
+        "close": "Fermer",
+        "retry": "Réessayer",
+        "got_it": "J'ai compris"
+      },
+      "encryption": {
+        "encrypt_modal": {
+          "title_folder": "Chiffrer le dossier « {{title}} »",
+          "title_file": "Chiffrer le fichier « {{title}} »",
+          "confirm": "Chiffrer",
+          "description_folder": "Les éléments suivants seront chiffrés. Les sous-dossiers sont traités récursivement. Une fois chiffrés, leur contenu n'est accessible qu'aux utilisateurs disposant d'une clé de chiffrement.",
+          "large_set": "{{count}} éléments dans ce dossier. La progression par élément n'est pas affichée pour les opérations volumineuses — voir le résumé ci-dessus.",
+          "large_set_failures": "{{count}} en échec.",
+          "pending_users_title": "{{count}} collaborateur(s) n'ont pas terminé la configuration du chiffrement",
+          "pending_users_body": "Si vous continuez, ils verront toujours ce dossier dans leurs listes mais ne pourront pas ouvrir son contenu tant qu'ils n'auront pas terminé leur configuration ET qu'un autre utilisateur ne les aura pas acceptés depuis la fenêtre de partage."
+        },
+        "errors": {
+          "self_missing_key": "Vous devez terminer votre configuration du chiffrement avant de chiffrer cet élément.",
+          "no_keys_at_all": "Aucun utilisateur ayant accès à cet élément n'a terminé sa configuration du chiffrement.",
+          "not_restricted": "L'élément doit avoir un accès restreint (pas de lien public ou authentifié).",
+          "no_accesses": "Aucun utilisateur n'a accès à l'élément racine.",
+          "nothing_to_encrypt_file": "Ce fichier est déjà chiffré.",
+          "nothing_to_decrypt_file": "Ce fichier est déjà en clair.",
+          "subtree_mutated": "Le contenu du dossier a changé pendant l'opération ({{added}} ajoutés, {{removed}} supprimés)."
+        },
+        "not_root_modal": {
+          "title": "Le chiffrement ne peut pas être retiré ici",
+          "body": "« {{title}} » se trouve à l'intérieur d'un dossier chiffré. Le chiffrement ne peut être retiré que depuis le dossier racine où il a été appliqué — ce qui déchiffrera également tous les fichiers qu'il contient.",
+          "root_path": "Dossier racine :"
+        },
+        "remove_modal": {
+          "title_folder": "Retirer le chiffrement du dossier « {{title}} »",
+          "title_file": "Retirer le chiffrement du fichier « {{title}} »",
+          "confirm": "Retirer le chiffrement",
+          "description": "Les éléments suivants seront déchiffrés et stockés en clair.",
+          "large_set": "{{count}} éléments dans ce dossier. La progression par élément n'est pas affichée pour les opérations volumineuses — voir le résumé ci-dessus."
+        },
+        "row": {
+          "already_encrypted": "Déjà chiffré",
+          "not_encrypted": "Non chiffré"
+        },
+        "summary": {
+          "discovering": "Découverte des fichiers…",
+          "validating": "Validation…",
+          "ready": "{{total}} élément(s) à traiter, {{skipped}} ignoré(s)",
+          "encrypting": "Chiffrement",
+          "decrypting": "Déchiffrement",
+          "committing": "Finalisation…",
+          "success_encrypt": "{{n}} élément(s) chiffré(s)",
+          "success_decrypt": "{{n}} élément(s) déchiffré(s)",
+          "skipped_short": "{{n}} ignoré(s)",
+          "failed": "Échec — {{n}} élément(s) en erreur, aucun changement appliqué",
+          "failed_generic": "Échec de l'opération"
+        }
       },
       "clipboard": {
         "success": "Copié dans le presse-papiers",
@@ -665,7 +726,49 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Espaces",
-          "all_folders": "Tous les dossiers"
+          "all_folders": "Tous les dossiers",
+          "encrypted": "Dossier chiffré"
+        },
+        "encrypted": {
+          "error": "Échec du déchiffrement du fichier",
+          "decrypting": "Déchiffrement…",
+          "converting": "Préparation de l'éditeur…",
+          "loading_editor": "Chargement de l'éditeur…",
+          "syncing_history": "Synchronisation de l'état collaboratif…",
+          "stale_resyncing": "Reconnexion après une déconnexion prolongée — récupération du document…",
+          "downloading": "Téléchargement…",
+          "download_to_inspect": "Télécharger le fichier",
+          "editor_error": "Échec du chargement de l'éditeur",
+          "remove_encryption": "Retirer le chiffrement",
+          "no_keys_headline": "Clés de chiffrement requises",
+          "no_keys_body": "Vous n'avez pas encore configuré votre paire de clés de chiffrement. Générez-les ou restaurez-les depuis le menu de votre profil, puis rouvrez ce document.",
+          "relay_failed": "Collaboration indisponible",
+          "conversion_hint_title": "Pourquoi cela se produit-il ?",
+          "conversion_odf_body": "Les documents chiffrés sont ouverts avec un éditeur léger basé sur le navigateur qui ne prend pas en charge toutes les fonctionnalités disponibles en mode non chiffré. Les éléments SmartArt sont connus pour empêcher les fichiers ODF (.odt, .ods, .odp) d'être chargés dans ce mode.",
+          "conversion_odf_actions": "Vous pouvez télécharger le fichier pour en supprimer les éléments SmartArt, puis le re-téléverser. Vous pouvez aussi retirer le chiffrement de ce document pour l'ouvrir avec l'éditeur complet. Si le problème persiste après avoir supprimé les SmartArt, contactez l'équipe technique pour enquête.",
+          "conversion_odf_no_edit": "Veuillez contacter le propriétaire du document ou un utilisateur disposant des droits d'édition pour qu'il supprime les éléments SmartArt ou retire le chiffrement du fichier. Si le problème persiste après suppression des SmartArt, contactez l'équipe technique pour enquête.",
+          "conversion_unexpected": "Cette erreur est inattendue pour ce format de fichier. Vous pouvez télécharger le fichier pour l'inspecter, ou essayer de retirer le chiffrement — l'éditeur complet pourra peut-être l'ouvrir. Si cela fonctionne, contactez l'équipe technique pour qu'elle enquête sur la raison de l'échec de l'éditeur chiffré.",
+          "conversion_unexpected_no_edit": "Veuillez contacter le propriétaire du document ou un utilisateur disposant des droits d'édition pour enquêter.",
+          "save_error_fatal_title": "Échec de l'enregistrement — veuillez contacter le support",
+          "save_error_fatal_body": "Le document contient du contenu que nous ne pouvons pas sérialiser dans le format de stockage (souvent un graphique). Vos modifications récentes sont visibles mais non enregistrées. Veuillez annuler la dernière modification ou contacter le support. Détails : ",
+          "save_error_transient_title": "Erreur de synchronisation — l'enregistrement sera réessayé",
+          "save_error_transient_body": "Le dernier enregistrement n'a pas pu être téléversé. Détails : ",
+          "save_error_retry": "Réessayer maintenant",
+          "save_error_retrying": "Nouvelle tentative…",
+          "oo_crashed_title": "Erreur de synchronisation",
+          "oo_crashed_body": "Une erreur est survenue lors de la synchronisation avec les autres participants. Comme le document est chiffré de bout en bout, nous ne pouvons pas toujours réconcilier parfaitement les modifications. Veuillez recharger l'éditeur pour récupérer le dernier état enregistré.",
+          "oo_crashed_waiting": "En attente de l'enregistrement par un autre participant…",
+          "oo_crashed_reload": "Recharger l'éditeur",
+          "key_mismatch": {
+            "title": "Ce fichier a été chiffré avec une autre clé",
+            "body": "Le fichier a été chiffré pour vous à un moment où vous utilisiez une autre clé de chiffrement — probablement avant une réinitialisation de vos clés ou un changement d'appareil sans restauration de sauvegarde. Votre clé actuelle ne peut plus le déchiffrer. Demandez à un propriétaire ou administrateur de ce fichier de vous retirer de la liste d'accès puis de vous ajouter à nouveau afin qu'il soit rechiffré avec votre clé actuelle.",
+            "share_time_fingerprint_label": "Empreinte au moment du partage avec vous :",
+            "fingerprint_label": "Empreinte de votre clé actuelle :"
+          },
+          "pending_self": {
+            "title": "Terminez votre configuration du chiffrement pour ouvrir ce fichier",
+            "body": "Ce fichier est chiffré et vous n'avez pas encore configuré vos clés. Commencez par terminer votre configuration du chiffrement depuis le menu de votre profil — ensuite, un collaborateur qui détient déjà la clé de déchiffrement devra vous accepter depuis la fenêtre de partage avant que vous puissiez ouvrir ce fichier."
+          }
         },
         "modal": {
           "move": {
