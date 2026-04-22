@@ -34,6 +34,7 @@ type State = {
   topError: string | null;
   validationErrors: string[];
   totalProcessable: number;
+  pendingUserCount: number;
 };
 
 type Action =
@@ -48,6 +49,7 @@ type Action =
     }
   | { type: 'SET_TOP_ERROR'; error: string | null }
   | { type: 'SET_VALIDATION'; errors: string[] }
+  | { type: 'SET_PENDING_USER_COUNT'; count: number }
   | { type: 'PROMOTE_STAGED_TO_DONE' }
   | { type: 'RESET_FAILED_TO_PENDING' }
   | { type: 'RESET' };
@@ -64,7 +66,7 @@ function reducer(state: State, action: Action): State {
         rowIndexById[r.id] = i;
       });
       const totalProcessable = action.rows.filter(
-        (r) => r.state !== 'skipped',
+        r => r.state !== 'skipped'
       ).length;
       return { ...state, rows: action.rows, rowIndexById, totalProcessable };
     }
@@ -84,17 +86,19 @@ function reducer(state: State, action: Action): State {
       return { ...state, topError: action.error };
     case 'SET_VALIDATION':
       return { ...state, validationErrors: action.errors };
+    case 'SET_PENDING_USER_COUNT':
+      return { ...state, pendingUserCount: action.count };
     case 'PROMOTE_STAGED_TO_DONE': {
-      const next = state.rows.map((r) =>
-        r.state === 'staged' ? { ...r, state: 'done' as FileJobState } : r,
+      const next = state.rows.map(r =>
+        r.state === 'staged' ? { ...r, state: 'done' as FileJobState } : r
       );
       return { ...state, rows: next };
     }
     case 'RESET_FAILED_TO_PENDING': {
-      const next = state.rows.map((r) =>
+      const next = state.rows.map(r =>
         r.state === 'failed'
           ? { ...r, state: 'pending' as FileJobState, error: undefined }
-          : r,
+          : r
       );
       return { ...state, rows: next };
     }
@@ -112,6 +116,7 @@ const INITIAL: State = {
   topError: null,
   validationErrors: [],
   totalProcessable: 0,
+  pendingUserCount: 0,
 };
 
 export type UseRecursiveEncryptionJobArgs = {
@@ -131,6 +136,7 @@ export type UseRecursiveEncryptionJob = {
   validationErrors: string[];
   topError: string | null;
   canConfirm: boolean;
+  pendingUserCount: number;
   confirm: () => void;
   retry: () => void;
   cancel: () => void;
@@ -160,6 +166,7 @@ export function useRecursiveEncryptionJob({
   const flatRef = useRef<FlatNode[]>([]);
   const processableIdsRef = useRef<string[]>([]);
   const publicKeysRef = useRef<Record<string, ArrayBuffer>>({});
+  const pendingUserIdsRef = useRef<string[]>([]);
   // For encrypt mode, the root's per-user wrapped key map (committed).
   const rootEncryptedKeysRef = useRef<Record<string, ArrayBuffer>>({});
   // Current user's wrapped copy of the root key — entry key for
@@ -177,6 +184,7 @@ export function useRecursiveEncryptionJob({
       flatRef.current = [];
       processableIdsRef.current = [];
       publicKeysRef.current = {};
+      pendingUserIdsRef.current = [];
       rootEncryptedKeysRef.current = {};
       currentUserRootWrappedRef.current = null;
       folderWrappedKeysRef.current = new Map();
@@ -213,7 +221,7 @@ export function useRecursiveEncryptionJob({
         // root. Skip them in the row list.
         const innerRoots = innerEncryptionRoots(flat, item.id);
 
-        const rows: FileJobRow[] = sourceNodes.map((n) => {
+        const rows: FileJobRow[] = sourceNodes.map(n => {
           const insideInner = isInsideInnerRoot(n, innerRoots);
           // Uniform: skip if this is_encrypted-state already matches the
           // target state (can't encrypt what's already encrypted, can't
@@ -241,14 +249,14 @@ export function useRecursiveEncryptionJob({
         // uploads content per id. Folders don't have content — their
         // key-minting runs in a separate sequential loop in
         // encryptPipeline — so filter them out here.
-        const flatById = new Map(flat.map((n) => [n.item.id, n]));
+        const flatById = new Map(flat.map(n => [n.item.id, n]));
         processableIdsRef.current = rows
           .filter(
-            (r) =>
+            r =>
               r.state === 'pending' &&
-              flatById.get(r.id)?.item.type === ItemType.FILE,
+              flatById.get(r.id)?.item.type === ItemType.FILE
           )
-          .map((r) => r.id);
+          .map(r => r.id);
 
         dispatch({ type: 'SET_PHASE', phase: 'validating' });
 
@@ -261,8 +269,8 @@ export function useRecursiveEncryptionJob({
             errors.push(
               t(
                 'encryption.errors.not_restricted',
-                'The item must have restricted access (no public or authenticated link).',
-              ),
+                'The item must have restricted access (no public or authenticated link).'
+              )
             );
           }
 
@@ -271,8 +279,8 @@ export function useRecursiveEncryptionJob({
             errors.push(
               t(
                 'encryption.errors.no_accesses',
-                'No users with access found on the root item.',
-              ),
+                'No users with access found on the root item.'
+              )
             );
           }
 
@@ -289,8 +297,8 @@ export function useRecursiveEncryptionJob({
             errors.push(
               t(
                 'encryption.errors.nothing_to_encrypt_file',
-                'This file is already encrypted.',
-              ),
+                'This file is already encrypted.'
+              )
             );
           }
 
@@ -298,17 +306,37 @@ export function useRecursiveEncryptionJob({
             const { publicKeys } = await vaultClient.fetchPublicKeys(userIds);
             if (cancelled) return;
 
-            const missing = userIds.filter((uid) => !publicKeys[uid]);
-            if (missing.length > 0) {
+            const missing = userIds.filter(uid => !publicKeys[uid]);
+            const callerMissing = user?.sub && missing.includes(user.sub);
+
+            // The caller must have their own key — they're the one about
+            // to encrypt, they need to be able to decrypt afterwards.
+            if (callerMissing) {
               errors.push(
                 t(
-                  'encryption.errors.missing_keys',
-                  "{{count}} user(s) don't have encryption enabled yet.",
-                  { count: missing.length },
-                ),
+                  'encryption.errors.self_missing_key',
+                  'You need to complete your encryption onboarding before encrypting this item.'
+                )
+              );
+            } else if (missing.length === userIds.length) {
+              // No one on the access list has a key — nobody could
+              // decrypt the result. Genuine blocker.
+              errors.push(
+                t(
+                  'encryption.errors.no_keys_at_all',
+                  'Nobody with access to this item has completed encryption onboarding.'
+                )
               );
             } else {
+              // Partial: some users are pending. They'll be written as
+              // pending on the backend and accepted later from the share
+              // dialog. Informational, not blocking.
               publicKeysRef.current = publicKeys;
+              pendingUserIdsRef.current = missing;
+              dispatch({
+                type: 'SET_PENDING_USER_COUNT',
+                count: missing.length,
+              });
             }
           }
         } else {
@@ -326,8 +354,8 @@ export function useRecursiveEncryptionJob({
             errors.push(
               t(
                 'encryption.errors.nothing_to_decrypt_file',
-                'This file is already plaintext.',
-              ),
+                'This file is already plaintext.'
+              )
             );
           }
         }
@@ -410,14 +438,24 @@ export function useRecursiveEncryptionJob({
         });
         stagedResults.forEach((v, id) => {
           fileKeyMapping[id] = v.newFilename;
-          if ('wrappedKey' in v && v.wrappedKey && v.wrappedKey.byteLength > 0) {
+          if (
+            'wrappedKey' in v &&
+            v.wrappedKey &&
+            v.wrappedKey.byteLength > 0
+          ) {
             encryptedKeysForDescendants[id] = toBase64(v.wrappedKey);
           }
         });
 
-        const encryptedSymmetricKeyPerUser: Record<string, string> = {};
+        // Contract with /encrypt/: every user on the access list must
+        // appear in the payload exactly once. Validated users get their
+        // base64 wrapped key; pending users get explicit null.
+        const encryptedSymmetricKeyPerUser: Record<string, string | null> = {};
         for (const [uid, buf] of Object.entries(rootEncryptedKeysRef.current)) {
           encryptedSymmetricKeyPerUser[uid] = toBase64(buf);
+        }
+        for (const uid of pendingUserIdsRef.current) {
+          encryptedSymmetricKeyPerUser[uid] = null;
         }
 
         await driver.encryptItem(item.id, {
@@ -439,10 +477,7 @@ export function useRecursiveEncryptionJob({
       dispatch({ type: 'SET_PHASE', phase: 'success' });
       onSuccess?.();
     } catch (err) {
-      if (
-        controller.signal.aborted &&
-        (err as Error).name === 'AbortError'
-      ) {
+      if (controller.signal.aborted && (err as Error).name === 'AbortError') {
         return;
       }
       let message: string;
@@ -452,7 +487,7 @@ export function useRecursiveEncryptionJob({
         message = t(
           'encryption.errors.subtree_mutated',
           'The folder contents changed during the operation ({{added}} added, {{removed}} removed).',
-          { added: missing.length, removed: extra.length },
+          { added: missing.length, removed: extra.length }
         );
       } else {
         // APIError has no `.message` (it passes nothing to super), so
@@ -477,10 +512,10 @@ export function useRecursiveEncryptionJob({
   }, []);
 
   const doneCount = state.rows.filter(
-    (r) => r.state === 'done' || r.state === 'staged',
+    r => r.state === 'done' || r.state === 'staged'
   ).length;
-  const skippedCount = state.rows.filter((r) => r.state === 'skipped').length;
-  const failedCount = state.rows.filter((r) => r.state === 'failed').length;
+  const skippedCount = state.rows.filter(r => r.state === 'skipped').length;
+  const failedCount = state.rows.filter(r => r.state === 'failed').length;
 
   // For both folder encrypt and folder decrypt, the operation is
   // meaningful even with zero processable descendants:
@@ -494,8 +529,7 @@ export function useRecursiveEncryptionJob({
   const canConfirm =
     state.phase === 'ready' &&
     state.validationErrors.length === 0 &&
-    (!needsProcessableDescendants ||
-      processableIdsRef.current.length > 0);
+    (!needsProcessableDescendants || processableIdsRef.current.length > 0);
 
   return {
     phase: state.phase,
@@ -507,6 +541,7 @@ export function useRecursiveEncryptionJob({
     validationErrors: state.validationErrors,
     topError: state.topError,
     canConfirm,
+    pendingUserCount: state.pendingUserCount,
     confirm,
     retry,
     cancel,
@@ -553,14 +588,14 @@ async function encryptPipeline({
     dispatch({ type: 'UPDATE_ROW', id: rootItem.id, state: 'running' });
     const { encryptedKeys } = await vaultClient.encryptWithoutKey(
       new ArrayBuffer(0),
-      publicKeys,
+      publicKeys
     );
     if (signal.aborted) throw abortError();
     rootEncryptedKeysRef.current = encryptedKeys;
     const currentUserWrapped = encryptedKeys[currentUserId];
     if (!currentUserWrapped) {
       throw new Error(
-        'Current user has no wrapped root key — encryption keys not set up.',
+        'Current user has no wrapped root key — encryption keys not set up.'
       );
     }
     currentUserRootWrappedRef.current = currentUserWrapped;
@@ -575,8 +610,7 @@ async function encryptPipeline({
     const innerRoots = innerEncryptionRoots(flat, rootItem.id);
     const nestedFolders = foldersOnly(flat)
       .filter(
-        (n) =>
-          n.item.id !== rootItem.id && !isInsideInnerRoot(n, innerRoots),
+        n => n.item.id !== rootItem.id && !isInsideInnerRoot(n, innerRoots)
       )
       .sort((a, b) => a.depth - b.depth);
     for (const folder of nestedFolders) {
@@ -585,12 +619,12 @@ async function encryptPipeline({
       const chain = chainForNode(
         folder,
         rootItem.id,
-        folderWrappedKeysRef.current,
+        folderWrappedKeysRef.current
       );
       const { wrappedKey } = await vaultClient.encryptWithKey(
         new ArrayBuffer(0),
         currentUserWrapped,
-        chain,
+        chain
       );
       folderWrappedKeysRef.current.set(folder.item.id, wrappedKey);
       dispatch({ type: 'UPDATE_ROW', id: folder.item.id, state: 'staged' });
@@ -649,7 +683,7 @@ async function stageOneEncryption({
   dispatch,
   onFileStaged,
 }: StageOneEncryptArgs): Promise<void> {
-  const node = flat.find((n) => n.item.id === targetId);
+  const node = flat.find(n => n.item.id === targetId);
   if (!node) throw new Error(`Row ${targetId} not found in tree`);
 
   dispatch({ type: 'UPDATE_ROW', id: targetId, state: 'running' });
@@ -686,7 +720,7 @@ async function stageOneEncryption({
       const chain = chainForNode(
         node,
         rootItem.id,
-        folderWrappedKeysRef.current,
+        folderWrappedKeysRef.current
       );
       const { encryptedData, wrappedKey: wk } =
         await vaultClient.encryptWithKey(plaintext, entryKey, chain);
@@ -698,7 +732,7 @@ async function stageOneEncryption({
     const uploadUrl = await getEncryptionUploadUrl(
       targetId,
       newFilename,
-      signal,
+      signal
     );
     await putToS3(uploadUrl, encryptedContent, signal);
 
@@ -761,7 +795,7 @@ async function decryptPipeline({
       const id = queue.shift();
       if (!id) return;
 
-      const node = flat.find((n) => n.item.id === id);
+      const node = flat.find(n => n.item.id === id);
       if (!node) continue;
 
       dispatch({ type: 'UPDATE_ROW', id, state: 'running' });
@@ -770,8 +804,8 @@ async function decryptPipeline({
         const driver = getDriver();
         const keyChain = await driver.getKeyChain(id);
         const entryKey = fromBase64(keyChain.encrypted_key_for_user);
-        const chain = keyChain.chain.map((e) =>
-          fromBase64(e.encrypted_symmetric_key),
+        const chain = keyChain.chain.map(e =>
+          fromBase64(e.encrypted_symmetric_key)
         );
 
         const resp = await fetch(node.item.url!, {
@@ -786,7 +820,7 @@ async function decryptPipeline({
         const { data: plaintext } = await vaultClient.decryptWithKey(
           ciphertext,
           entryKey,
-          chain.length > 0 ? chain : undefined,
+          chain.length > 0 ? chain : undefined
         );
 
         const newFilename = stagedFilename(node.item.title);

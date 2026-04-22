@@ -585,6 +585,23 @@ export class StandardDriver extends Driver {
     const response = await fetchAPI(`items/${itemId}/key-chain/`);
     return response.json();
   }
+
+  async acceptEncryptionAccess(
+    itemId: string,
+    accessId: string,
+    data: {
+      encrypted_item_symmetric_key_for_user: string;
+      encryption_public_key_fingerprint: string;
+    },
+  ): Promise<void> {
+    await fetchAPI(
+      `items/${itemId}/accesses/${accessId}/encryption-key/`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      },
+    );
+  }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

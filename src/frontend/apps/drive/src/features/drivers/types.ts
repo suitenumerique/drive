@@ -57,6 +57,7 @@ export type Item = {
   is_encrypted?: boolean;
   is_encryption_root?: boolean;
   is_inside_encrypted_subtree?: boolean;
+  is_pending_encryption_for_user?: boolean;
   encrypted_item_symmetric_key_for_user?: string;
   accesses_user_ids?: string[];
   is_favorite?: boolean;
@@ -124,6 +125,7 @@ export type Access = {
   team: string;
   user: User;
   is_explicit: boolean;
+  is_pending_encryption?: boolean;
   max_role: Role;
   max_ancestors_role: Role;
   max_ancestors_role_item_id: string;

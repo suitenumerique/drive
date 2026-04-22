@@ -1389,12 +1389,19 @@ class ItemAccess(BaseModel):
                 if RoleChoices.get_priority(candidate_role) > ancestors_role_priority
             ]
 
+        # "encryption_key" gates the PATCH /accesses/{id}/encryption-key/
+        # Accept endpoint. The viewset additionally enforces that the
+        # caller actually holds a wrapped key on the subtree (otherwise
+        # they have nothing to re-wrap), so at this layer the rule just
+        # mirrors "can manage accesses on this item" — i.e. the same
+        # privileged-role check used for update/partial_update.
         return {
             "destroy": can_delete,
             "update": bool(set_role_to) and is_owner_or_admin,
             "partial_update": bool(set_role_to) and is_owner_or_admin,
             "retrieve": (self.user and self.user.id == user.id) or is_owner_or_admin,
             "set_role_to": set_role_to,
+            "encryption_key": is_owner_or_admin,
         }
 
 

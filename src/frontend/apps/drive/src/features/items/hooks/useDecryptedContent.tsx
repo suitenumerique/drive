@@ -38,7 +38,11 @@ export const useDecryptedContent = (item?: Item) => {
     try {
       const driver = getDriver();
 
-      // 1. Get the key chain for this item
+      // Pending users (ItemAccess with no wrapped key) should never reach
+      // this hook: the calling viewer is responsible for detecting
+      // `is_pending_encryption_for_user` on the item and short-circuiting
+      // to a "waiting for acceptance" panel. A 403 here now means the
+      // user actually has no access — the global /403 redirect applies.
       const keyChain = await driver.getKeyChain(item.id);
 
       // 2. Fetch the encrypted file content

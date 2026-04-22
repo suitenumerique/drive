@@ -34,9 +34,13 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/features/auth/Auth";
-import { getDriver } from "@/features/config/Config";
 import { removeFileExtension } from "@/features/explorer/utils/mimeTypes";
 import posthog from "posthog-js";
+import { PendingEncryptionSection } from "@/features/encryption/sharing/PendingEncryptionSection";
+import {
+  fetchSubtreeEntryKey,
+  wrapSubtreeKeyForUser,
+} from "@/features/encryption/sharing/wrapKeyForUser";
 
 type WorkspaceShareModalProps = {
   isOpen: boolean;
@@ -113,66 +117,27 @@ export const ItemShareModal = ({
     const inviteByEmail = users.filter((user) => user.email === user.id);
     const inviteByUsername = users.filter((user) => user.email !== user.id);
 
-    // Fetch all public keys in a single request before processing users
-    let publicKeysMap: Record<string, ArrayBuffer> = {};
-    let encryptedSymmetricKey: ArrayBuffer | null = null;
-
+    // For encrypted items, fetch the subtree's entry key once and reuse
+    // it for every invitee. If an invitee has no public key yet the
+    // helper returns null — the access row is then created pending and
+    // can be "accepted" later from the same share dialog.
+    let entryKey: ArrayBuffer | null = null;
     if (item?.is_encrypted && inviteByUsername.length > 0) {
-      const vaultClient = window.__driveVaultClient;
-      if (!vaultClient) {
-        throw new Error("Vault client not available");
-      }
-
-      // Get the item's encrypted symmetric key via key chain
-      const driver = getDriver();
-      const keyChain = await driver.getKeyChain(itemId);
-      const entryKeyBinary = atob(keyChain.encrypted_key_for_user);
-      const entryKeyBytes = new Uint8Array(entryKeyBinary.length);
-      for (let i = 0; i < entryKeyBinary.length; i++) {
-        entryKeyBytes[i] = entryKeyBinary.charCodeAt(i);
-      }
-      encryptedSymmetricKey = entryKeyBytes.buffer;
-
-      // Fetch recipients' public keys using sub (OIDC subject = vault user ID)
-      const memberSubs = inviteByUsername
-        .filter((u) => u.sub)
-        .map((u) => u.sub);
-
-      if (memberSubs.length > 0) {
-        const { publicKeys } = await vaultClient.fetchPublicKeys(memberSubs);
-        publicKeysMap = publicKeys;
-      }
+      entryKey = await fetchSubtreeEntryKey(itemId);
     }
 
     const promises = inviteByUsername.map(async (user) => {
-      // For encrypted items, re-wrap the symmetric key for the new member via vault
       let memberEncryptedSymmetricKey: string | undefined;
       let memberKeyFingerprint: string | undefined;
 
-      if (item?.is_encrypted && encryptedSymmetricKey) {
-        const vaultClient = window.__driveVaultClient!;
-        const userPublicKey = publicKeysMap[user.sub];
-
-        if (userPublicKey) {
-          const { encryptedKeys } = await vaultClient.shareKeys(
-            encryptedSymmetricKey,
-            { [user.sub]: userPublicKey },
-          );
-
-          const wrappedKey = encryptedKeys[user.sub];
-          if (wrappedKey) {
-            const bytes = new Uint8Array(wrappedKey);
-            let binary = "";
-            for (let i = 0; i < bytes.length; i++) {
-              binary += String.fromCharCode(bytes[i]);
-            }
-            memberEncryptedSymmetricKey = btoa(binary);
-          }
-
-          // Store the recipient's public key fingerprint at share time
-          memberKeyFingerprint =
-            await vaultClient.computeKeyFingerprint(userPublicKey);
+      if (entryKey && user.sub) {
+        const wrapped = await wrapSubtreeKeyForUser(entryKey, user.sub);
+        if (wrapped) {
+          memberEncryptedSymmetricKey = wrapped.wrappedKeyBase64;
+          memberKeyFingerprint = wrapped.fingerprint;
         }
+        // wrapped === null → invitee has no public key yet; omit the
+        // key fields → backend creates the row pending.
       }
 
       return createAccess({
@@ -238,8 +203,26 @@ export const ItemShareModal = ({
     // return result;
     // Find parent_id_max_role for each access
     return result.map((access) => {
+      // Pending encryption onboarding → mutate the displayed name with a
+      // suffix so the ui-kit's row (which renders `user.full_name`
+      // verbatim) visibly marks the user. We don't have a supported
+      // extension slot in ShareModal for a proper badge; this is the
+      // least invasive way to surface the state at row level.
+      const displayUser = access.is_pending_encryption
+        ? {
+            ...access.user,
+            full_name:
+              `${access.user.full_name || access.user.email} ` +
+              t(
+                "share_modal.pending_encryption.suffix",
+                "(pending encryption access)",
+              ),
+          }
+        : access.user;
+
       const result = {
         ...access,
+        user: displayUser,
         can_delete: access.abilities.destroy,
       };
       if (!access.max_ancestors_role) {
@@ -256,7 +239,7 @@ export const ItemShareModal = ({
         parent_id_max_role: access.max_ancestors_role_item_id,
       };
     });
-  }, [data]);
+  }, [data, t]);
 
   const invitationsData: Invitation[] = useMemo(() => {
     if (!invitations) {
@@ -515,6 +498,12 @@ export const ItemShareModal = ({
       }}
       outsideSearchContent={
         <>
+          {item?.is_encrypted && (
+            <PendingEncryptionSection
+              itemId={itemId}
+              accesses={accessesData}
+            />
+          )}
           <ShareModalCopyLinkFooter
             onCopyLink={() => {
               if (item?.type === ItemType.FILE) {

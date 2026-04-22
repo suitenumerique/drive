@@ -33,6 +33,56 @@ export const EncryptedFileViewer = ({
 }: EncryptedFileViewerProps) => {
   const { t } = useTranslation();
 
+  // Pending-onboarding short-circuit: the user has access to this
+  // encrypted item but hasn't completed their vault setup yet. Render a
+  // dedicated panel directly — don't try to decrypt, don't call
+  // /key-chain/ (which would 403 and trigger the global /403 redirect).
+  if (file.is_pending_encryption_for_user) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          gap: "16px",
+          textAlign: "center",
+          maxWidth: "420px",
+          margin: "0 auto",
+        }}
+      >
+        <span
+          className="material-icons"
+          style={{
+            fontSize: "48px",
+            color: "var(--c--theme--colors--warning-600, #b15600)",
+          }}
+        >
+          hourglass_empty
+        </span>
+        <span style={{ fontWeight: 600 }}>
+          {t(
+            "explorer.encrypted.pending_self.title",
+            "Complete your encryption onboarding to open this file",
+          )}
+        </span>
+        <span
+          style={{
+            fontSize: "14px",
+            color:
+              "var(--c--contextuals--content--semantic--neutral--tertiary)",
+          }}
+        >
+          {t(
+            "explorer.encrypted.pending_self.body",
+            "This file is encrypted and you haven't set up your encryption keys yet. First, complete your encryption onboarding from your profile menu — then a collaborator who already holds the decryption key will need to accept you from the share dialog before you can open this file.",
+          )}
+        </span>
+      </div>
+    );
+  }
+
   // The server stores application/octet-stream for encrypted files (it
   // can't inspect ciphertext). Fall back to the extension-derived
   // mimetype so the right viewer / OO docType is picked.

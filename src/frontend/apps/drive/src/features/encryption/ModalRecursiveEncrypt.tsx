@@ -92,6 +92,48 @@ export const ModalRecursiveEncrypt = ({ isOpen, onClose, item }: Props) => {
           </p>
         )}
 
+        {job.pendingUserCount > 0 &&
+          (job.phase === 'ready' || job.phase === 'validating') && (
+            <div
+              style={{
+                padding: '0.75rem',
+                borderRadius: '4px',
+                background: 'var(--c--theme--colors--warning-050, #fffbf0)',
+                border:
+                  '1px solid var(--c--theme--colors--warning-400, #ffb860)',
+                display: 'flex',
+                gap: '0.6rem',
+                alignItems: 'flex-start',
+              }}
+            >
+              <span
+                className="material-icons"
+                style={{
+                  fontSize: 22,
+                  color: 'var(--c--theme--colors--warning-700, #8f4400)',
+                  lineHeight: 1,
+                }}
+              >
+                warning_amber
+              </span>
+              <div style={{ fontSize: '0.9rem', lineHeight: 1.4 }}>
+                <div style={{ fontWeight: 600, marginBottom: '0.2rem' }}>
+                  {t(
+                    'encryption.encrypt_modal.pending_users_title',
+                    '{{count}} collaborator(s) haven’t completed encryption onboarding',
+                    { count: job.pendingUserCount },
+                  )}
+                </div>
+                <div>
+                  {t(
+                    'encryption.encrypt_modal.pending_users_body',
+                    'If you proceed, they will still see this folder in their listings but will not be able to open its contents until they complete their onboarding AND another user accepts them from the share dialog.',
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
         <JobSummary
           phase={job.phase}
           total={job.totalProcessable}

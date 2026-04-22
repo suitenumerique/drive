@@ -1598,10 +1598,9 @@ class ItemViewSet(
         ]
 
         # Validate: all users with access (direct OR inherited via an
-        # ancestor's ItemAccess) must have a key provided. When encrypting
-        # a subfolder, users typically have no direct ItemAccess on it —
-        # they inherit from a parent folder. We need a wrapped key for all
-        # of them so no one loses access after encryption.
+        # ancestor's ItemAccess) must be present in the payload. Values
+        # may be a wrapped key (validated) or explicit null (pending —
+        # user hasn't completed their encryption onboarding yet).
         user_subs_with_access = set(
             models.ItemAccess.objects.filter(
                 item__path__ancestors=item.path,
@@ -1621,6 +1620,25 @@ class ItemViewSet(
                 errors["extra_users"] = list(extra)
             return drf.response.Response(
                 {"detail": _("Provided user keys do not match users with access."), **errors},
+                status=drf.status.HTTP_400_BAD_REQUEST,
+            )
+
+        # The caller is the one performing the encryption — they must hold
+        # the key. Explicit null for themselves is never legitimate.
+        caller_sub = request.user.sub
+        if (
+            caller_sub in encrypted_key_per_user
+            and encrypted_key_per_user[caller_sub] is None
+        ):
+            return drf.response.Response(
+                {
+                    "detail": _(
+                        "You cannot mark yourself as pending encryption "
+                        "onboarding — provide a wrapped key for your "
+                        "own user."
+                    ),
+                    "code": "caller_cannot_be_pending",
+                },
                 status=drf.status.HTTP_400_BAD_REQUEST,
             )
 
@@ -1974,6 +1992,11 @@ class ItemViewSet(
                 break
 
         if not user_access:
+            # This means the user genuinely has no access to the item
+            # (not pending — pending users are detected client-side via
+            # `is_pending_encryption_for_user` on the Item serializer, so
+            # the frontend skips this call entirely for them). 403 here
+            # is a real "forbidden" and the global /403 redirect applies.
             return drf.response.Response(
                 {"detail": _("No encryption key found for this user on this item chain.")},
                 status=drf.status.HTTP_403_FORBIDDEN,
@@ -2430,6 +2453,9 @@ class ItemAccessViewSet(
             # We don't want to have two consecutive explicit accesses with the same role.
             # We have to delete the current access, this item will have an inherited access
             # with the correct role.
+            self._raise_if_would_strand_pending_users(
+                instance, action="role_match_delete"
+            )
             instance.delete()
             return drf.response.Response(status=drf.status.HTTP_204_NO_CONTENT)
 
@@ -2495,7 +2521,16 @@ class ItemAccessViewSet(
                 }
             )
 
-        # Handle encryption: validate encrypted key field
+        # Handle encryption: validate encrypted key field.
+        #
+        # For encrypted items the key is optional: if the invitee has no
+        # public key yet (still pending their encryption onboarding) the
+        # caller legitimately has nothing to wrap. The access row is then
+        # created pending (key column NULL) and can be "accepted" later
+        # via PATCH /accesses/{id}/encryption-key/ once the invitee has
+        # onboarded. Whether the invitee actually has a public key is a
+        # client-side concern — the backend only enforces "key provided ⇒
+        # item must be encrypted".
         encrypted_key = serializer.validated_data.get(
             "encrypted_item_symmetric_key_for_user"
         )
@@ -2507,6 +2542,13 @@ class ItemAccessViewSet(
                     )
                 }
             )
+        # Normalise "" → None so the DB row uses NULL consistently and
+        # `is_pending_encryption` (which tests IS NULL) is reliable.
+        if (
+            "encrypted_item_symmetric_key_for_user" in serializer.validated_data
+            and not serializer.validated_data["encrypted_item_symmetric_key_for_user"]
+        ):
+            serializer.validated_data["encrypted_item_symmetric_key_for_user"] = None
 
         # Block team-based access for encrypted items
         if self.item.is_encrypted and serializer.validated_data.get("team"):
@@ -2540,6 +2582,13 @@ class ItemAccessViewSet(
 
     def perform_destroy(self, instance):
         """Delete the item access and capture the event."""
+        # Strand prevention: if this item is encrypted, removing the last
+        # user who holds a wrapped key while pending users remain would
+        # leave the subtree undecryptable by anyone (no one left to
+        # "accept" the pending rows). Block it.
+        self._raise_if_would_strand_pending_users(
+            instance, action="remove"
+        )
         access_id = instance.id
         item = instance.item
         role = instance.role
@@ -2553,6 +2602,141 @@ class ItemAccessViewSet(
             },
             item=item,
         )
+
+    @drf.decorators.action(
+        detail=True, methods=["patch"], url_path="encryption-key"
+    )
+    def encryption_key(self, request, *args, **kwargs):
+        """Accept a pending collaborator by re-wrapping the subtree's
+        symmetric key against their public key.
+
+        This is the "Accept" action: a validated collaborator — someone
+        who already holds a wrapped key on the subtree — re-wraps it for
+        a user who was added before completing their encryption
+        onboarding. The endpoint is strictly pending → validated; it
+        does not support reverting. To revoke a user, delete the access.
+        """
+        access = self.get_object()
+        item = access.item
+
+        if not item.is_encrypted:
+            return drf.response.Response(
+                {"detail": _("Item is not encrypted.")},
+                status=drf.status.HTTP_400_BAD_REQUEST,
+            )
+
+        if access.encrypted_item_symmetric_key_for_user:
+            return drf.response.Response(
+                {
+                    "detail": _(
+                        "This access is not pending encryption onboarding. "
+                        "Delete the access row instead if you want to revoke it."
+                    ),
+                    "code": "access_not_pending",
+                },
+                status=drf.status.HTTP_400_BAD_REQUEST,
+            )
+
+        # The caller must currently hold a wrapped key somewhere in the
+        # chain from the subtree's encryption root down to `item`. Without
+        # that, they cannot have legitimately wrapped the new key
+        # themselves — they have no plaintext to wrap from.
+        ancestors = list(item.ancestors().order_by("path"))
+        candidate_items_deepest_first = [item] + list(reversed(ancestors))
+        caller_has_key = models.ItemAccess.objects.filter(
+            item__in=candidate_items_deepest_first,
+            user=request.user,
+            encrypted_item_symmetric_key_for_user__isnull=False,
+        ).exists()
+        if not caller_has_key:
+            return drf.response.Response(
+                {
+                    "detail": _(
+                        "You do not currently hold a decryption key for this "
+                        "item, so you cannot accept another user on it."
+                    )
+                },
+                status=drf.status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = serializers.AcceptEncryptionAccessSerializer(
+            data=request.data
+        )
+        serializer.is_valid(raise_exception=True)
+
+        access.encrypted_item_symmetric_key_for_user = (
+            serializer.validated_data["encrypted_item_symmetric_key_for_user"]
+        )
+        access.encryption_public_key_fingerprint = (
+            serializer.validated_data["encryption_public_key_fingerprint"]
+        )
+        access.save(
+            update_fields=[
+                "encrypted_item_symmetric_key_for_user",
+                "encryption_public_key_fingerprint",
+            ]
+        )
+
+        posthog_capture(
+            "item_access_encryption_accepted",
+            request.user,
+            {"id": access.id},
+            item=item,
+        )
+
+        output = self.get_serializer(access)
+        return drf.response.Response(output.data)
+
+    def _raise_if_would_strand_pending_users(self, instance, action):
+        """Reject delete / implicit-delete if it would leave pending users
+        with nobody able to accept them.
+
+        The invariant we protect: on an encrypted subtree, if any access
+        row is pending (`encrypted_item_symmetric_key_for_user IS NULL`),
+        at least one other access row on that same item must still hold
+        a wrapped key — otherwise nobody is left with the plaintext key
+        to re-wrap for the pending users, and the subtree becomes
+        undecryptable by everyone.
+
+        `action` is an opaque label used for logging / testability.
+        """
+        item = instance.item
+        if not item.is_encrypted:
+            return
+        # Only the encryption root carries per-user wrapped keys; other
+        # items in the subtree have their key wrapped by the parent
+        # folder. If this access is on a non-root item it can't be the
+        # last wrapped-key holder.
+        if item.encrypted_symmetric_key is not None:
+            return
+        # Only meaningful if the access we're about to remove actually
+        # holds a wrapped key — removing a pending access never strands
+        # anyone further.
+        if not instance.encrypted_item_symmetric_key_for_user:
+            return
+
+        other_accesses = models.ItemAccess.objects.filter(item=item).exclude(
+            pk=instance.pk
+        )
+        remaining_validated = other_accesses.filter(
+            encrypted_item_symmetric_key_for_user__isnull=False,
+        ).exclude(encrypted_item_symmetric_key_for_user="").exists()
+        has_pending = other_accesses.filter(
+            encrypted_item_symmetric_key_for_user__isnull=True,
+        ).exists()
+
+        if has_pending and not remaining_validated:
+            raise drf.exceptions.ValidationError(
+                {
+                    "detail": _(
+                        "Removing this user would leave pending collaborators "
+                        "unable to decrypt the folder. Either wait for them "
+                        "to finish their encryption onboarding, or remove "
+                        "encryption from the folder first."
+                    ),
+                    "code": "would_strand_pending_users",
+                }
+            )
 
     def _syncronize_descendants_accesses(self, access):
         """

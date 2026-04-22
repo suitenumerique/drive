@@ -27,6 +27,7 @@ export type FilePreviewType = {
   mimetype: string;
   is_wopi_supported?: boolean;
   is_encrypted?: boolean;
+  is_pending_encryption_for_user?: boolean;
   url_preview: string;
   url: string;
   abilities?: {

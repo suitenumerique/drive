@@ -155,7 +155,7 @@ export abstract class Driver {
   abstract encryptItem(
     itemId: string,
     data: {
-      encryptedSymmetricKeyPerUser: Record<string, string>;
+      encryptedSymmetricKeyPerUser: Record<string, string | null>;
       encryptedKeysForDescendants: Record<string, string>;
       fileKeyMapping?: Record<string, string>;
     }
@@ -169,4 +169,12 @@ export abstract class Driver {
     encrypted_key_for_user: string;
     chain: Array<{ item_id: string; encrypted_symmetric_key: string }>;
   }>;
+  abstract acceptEncryptionAccess(
+    itemId: string,
+    accessId: string,
+    data: {
+      encrypted_item_symmetric_key_for_user: string;
+      encryption_public_key_fingerprint: string;
+    }
+  ): Promise<void>;
 }

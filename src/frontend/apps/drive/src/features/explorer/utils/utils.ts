@@ -200,6 +200,7 @@ export const itemToPreviewFile = (item: Item) => {
     isSuspicious: item.upload_state === ItemUploadState.SUSPICIOUS,
     is_wopi_supported: item.is_wopi_supported && !item.is_encrypted,
     is_encrypted: item.is_encrypted,
+    is_pending_encryption_for_user: item.is_pending_encryption_for_user,
     size: item.size,
     abilities: item.abilities,
   } as FilePreviewType;
