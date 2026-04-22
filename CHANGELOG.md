@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Removed
+
+- 🔥(backend) remove mirroring feature
+
 ## [v0.17.0] - 2026-04-23
 
 ### Added
@@ -32,6 +36,7 @@ and this project adheres to
 - 🐛(frontend) range selection freezes when there are many items in the list
 - 🐛(backend) fix openapi schema for item access endpoints
 - 🐛(backend) load jwks url when OIDC_RS_PRIVATE_KEY_STR is set
+
 
 ## [v0.16.0] - 2026-04-09
 
