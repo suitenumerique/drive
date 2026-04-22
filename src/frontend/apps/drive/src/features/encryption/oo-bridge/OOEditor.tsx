@@ -449,6 +449,64 @@ export const OOEditor = ({ item }: OOEditorProps) => {
    * Must be called after `onDocumentReady` — the editor controller
    * isn't attached to the iframe window before that.
    */
+  /**
+   * CSS patches that apply to EVERY user regardless of edit rights.
+   *
+   * The in-browser x2t WASM we bundle can't produce certain targets
+   * that the stock OnlyOffice "Download As" picker still advertises:
+   *   - `epub`, `fb2`, `rtf` — the WASM build lacks those writers
+   *     (`_ZN9CEpubFileC1Ev` etc. are missing, aborts the conversion).
+   *   - `jpg`, `png` — docs/sheets/slides → single image isn't a flow
+   *     x2t supports; it falls through to a `zip` target that also
+   *     fails step 2 of the two-step fallback.
+   * Hiding the tiles is better UX than letting a user click one and
+   * get an opaque "conversion failed" error. The selector targets the
+   * `format-ext` attribute OO itself sets on each format-item.
+   */
+  const applyGlobalBundleWorkarounds = useCallback(() => {
+    if (!editorRef.current?.injectCSS) return;
+    // Which "Download as" targets the bundled x2t WASM fails on
+    // varies by docType. What matters:
+    //   - epub/fb2/rtf: writers live in docbuilder (V8 + builder
+    //     scripts), not in the pure-C++ x2t core; only the document
+    //     editor's picker even offers them, so listing them for
+    //     word-type only is harmless and precise.
+    //   - jpg/png from DOCUMENT: doc → image isn't a real x2t flow;
+    //     falls through to `zip` step 2 which errors out.
+    //     jpg/png from PRESENTATION: reuses the same per-slide
+    //     raster pipeline that powers thumbnails — compiled in, works.
+    //     jpg/png from SPREADSHEET: untested here; hidden to be safe
+    //     until proven otherwise.
+    // Each tile renders the extension as a class on its SVG icon div
+    // (`.svg-format-<ext>`). The `format="<n>"` attribute on the
+    // button is a numeric type code that doesn't identify the ext
+    // textually, so we key off the SVG class.
+    let unsupported: string[];
+    if (docType === 'word') {
+      unsupported = ['epub', 'fb2', 'rtf', 'jpg', 'png'];
+    } else if (docType === 'slide') {
+      // Slides handle jpg/png via the thumbnail renderer
+      unsupported = [];
+    } else if (docType === 'cell') {
+      // xlsb is the "Excel Binary Workbook" format — the bundled x2t
+      // WASM doesn't include the writer
+      unsupported = ['xlsb'];
+    } else {
+      unsupported = [];
+    }
+    const hideRule = unsupported
+      .map(
+        ext =>
+          `.format-item:has(.svg-format-${ext}) { display: none !important; }`
+      )
+      .join('\n');
+    try {
+      editorRef.current.injectCSS(hideRule);
+    } catch (err) {
+      console.warn('[OOEditor] injectCSS for unsupported formats failed', err);
+    }
+  }, [docType]);
+
   const applyReadOnlyRestriction = useCallback(() => {
     if (canEdit) return;
 
@@ -494,7 +552,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           [
             '#toolbar { display: none !important; }',
             '#chat-options { display: none !important; }',
-          ].join('\n'),
+          ].join('\n')
         );
       } catch (err) {
         console.warn('[OOEditor] injectCSS failed', err);
@@ -988,6 +1046,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               // level while leaving the co-edit inbound-patch pipeline
               // fully active, so readers keep seeing every keystroke
               // stream in from editors.
+              applyGlobalBundleWorkarounds();
               applyReadOnlyRestriction();
               // The live saveChanges drain must NOT run inside
               // onDocumentReady — at that point OO has finished opening the
