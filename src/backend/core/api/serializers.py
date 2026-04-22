@@ -279,6 +279,7 @@ class ListItemSerializer(serializers.ModelSerializer):
         return (
             models.ItemAccess.objects.filter(
                 item__path__ancestors=item.path,
+                item__is_encrypted=True,
                 user=request.user,
                 encrypted_item_symmetric_key_for_user__isnull=False,
             )
@@ -288,13 +289,20 @@ class ListItemSerializer(serializers.ModelSerializer):
 
     def get_is_pending_encryption_for_user(self, item):
         """True when the current user has access to this encrypted item
-        via an ItemAccess row (on this item or any ancestor) that has no
-        wrapped symmetric key — i.e. they were added to the access list
-        but haven't completed their encryption onboarding yet.
+        via an ItemAccess row on an ENCRYPTED item in the chain (self
+        or any encrypted ancestor) that has no wrapped symmetric key —
+        i.e. they were added to the access list but haven't completed
+        their encryption onboarding yet.
+
+        The `item__is_encrypted=True` filter is critical: a user will
+        typically also have an ItemAccess on a plaintext workspace or
+        parent folder, and that access legitimately has NULL for
+        `encrypted_item_symmetric_key_for_user` (plaintext has no key
+        to wrap). Without this filter we'd mis-report such users as
+        "pending" on any encrypted descendant they created themselves.
 
         Costs one query per serialized item, consistent with
-        `get_is_inside_encrypted_subtree` above. Could later be folded
-        into an annotation if list size becomes a concern.
+        `get_is_inside_encrypted_subtree` above.
         """
         if not item.is_encrypted:
             return False
@@ -303,6 +311,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             return False
         return models.ItemAccess.objects.filter(
             item__path__ancestors=item.path,
+            item__is_encrypted=True,
             user=request.user,
             encrypted_item_symmetric_key_for_user__isnull=True,
         ).exists()

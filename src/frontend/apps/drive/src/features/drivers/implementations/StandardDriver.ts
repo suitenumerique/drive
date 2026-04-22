@@ -326,14 +326,14 @@ export class StandardDriver extends Driver {
     const chain = keyChain.chain.map((e) =>
       fromBase64(e.encrypted_symmetric_key),
     );
-    const { encryptedData, wrappedKey } = await vaultClient.encryptWithKey(
+    const { encryptedContent, wrappedKey } = await vaultClient.encryptNestedWithoutKey(
       content,
       entryKey,
       chain,
     );
     return {
       wrappedKey: toBase64(wrappedKey),
-      encryptedContent: encryptedData,
+      encryptedContent,
     };
   }
 

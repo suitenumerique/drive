@@ -8,6 +8,7 @@ declare global {
     setAuthContext(context: { suiteUserId: string }): void;
     hasKeys(): Promise<{ hasKeys: boolean }>;
     getPublicKey(): Promise<{ publicKey: ArrayBuffer }>;
+    // Root creation: mint a new key and wrap it under each user's pubkey.
     encryptWithoutKey(
       data: ArrayBuffer,
       userPublicKeys: Record<string, ArrayBuffer>
@@ -15,14 +16,18 @@ declare global {
       encryptedContent: ArrayBuffer;
       encryptedKeys: Record<string, ArrayBuffer>;
     }>;
+    // Nested creation: mint a new key and wrap it under the parent folder's
+    // key (resolved from entry + chain).
+    encryptNestedWithoutKey(
+      data: ArrayBuffer,
+      encryptedSymmetricKey: ArrayBuffer,
+      encryptedKeyChain?: ArrayBuffer[]
+    ): Promise<{ encryptedContent: ArrayBuffer; wrappedKey: ArrayBuffer }>;
+    // Encrypt with an existing key — purely symmetric. No mint, no wrap.
     encryptWithKey(
       data: ArrayBuffer,
       encryptedSymmetricKey: ArrayBuffer,
-      encryptedKeyChain: ArrayBuffer[]
-    ): Promise<{ encryptedData: ArrayBuffer; wrappedKey: ArrayBuffer }>;
-    encryptWithKey(
-      data: ArrayBuffer,
-      encryptedSymmetricKey: ArrayBuffer
+      encryptedKeyChain?: ArrayBuffer[]
     ): Promise<{ encryptedData: ArrayBuffer }>;
     decryptWithKey(
       encryptedData: ArrayBuffer,

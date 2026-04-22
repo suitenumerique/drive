@@ -169,8 +169,8 @@ export function useRecursiveEncryptionJob({
   const pendingUserIdsRef = useRef<string[]>([]);
   // For encrypt mode, the root's per-user wrapped key map (committed).
   const rootEncryptedKeysRef = useRef<Record<string, ArrayBuffer>>({});
-  // Current user's wrapped copy of the root key — entry key for
-  // encryptWithKey on descendants.
+  // Current user's wrapped copy of the root key — entry key passed to the
+  // vault when minting descendant keys via encryptWithoutKey.
   const currentUserRootWrappedRef = useRef<ArrayBuffer | null>(null);
   // Wrapped keys of non-root folders in the subtree, keyed by folder id.
   // Populated during the encrypt folder phase; consumed when building each
@@ -651,7 +651,7 @@ async function encryptPipeline({
         rootItem.id,
         folderWrappedKeysRef.current
       );
-      const { wrappedKey } = await vaultClient.encryptWithKey(
+      const { wrappedKey } = await vaultClient.encryptNestedWithoutKey(
         new ArrayBuffer(0),
         currentUserWrapped,
         chain
@@ -744,17 +744,19 @@ async function stageOneEncryption({
       if (!entryKey) throw new Error('Missing root entry key');
       // Chain is the wrapped keys of every intermediate folder between the
       // root (exclusive) and this file's direct parent (inclusive). The
-      // vault resolves the chain to the direct parent's key, mints K_file,
-      // encrypts content with K_file, and wraps K_file with the direct
-      // parent's key.
+      // vault resolves entry + chain to the direct parent's key, mints
+      // K_file, encrypts content with K_file, and wraps K_file under the
+      // parent's key. `encryptWithKey` is reserved for symmetric use of an
+      // existing key; minting a new nested resource goes through
+      // `encryptNestedWithoutKey`.
       const chain = chainForNode(
         node,
         rootItem.id,
         folderWrappedKeysRef.current
       );
-      const { encryptedData, wrappedKey: wk } =
-        await vaultClient.encryptWithKey(plaintext, entryKey, chain);
-      encryptedContent = encryptedData;
+      const { encryptedContent: ct, wrappedKey: wk } =
+        await vaultClient.encryptNestedWithoutKey(plaintext, entryKey, chain);
+      encryptedContent = ct;
       wrappedKey = wk;
     }
 

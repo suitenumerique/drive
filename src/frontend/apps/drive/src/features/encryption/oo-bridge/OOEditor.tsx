@@ -614,10 +614,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       // of the key material — otherwise the canonical keys held by the
       // relay / init closure get detached and subsequent encrypt/decrypt
       // calls fail with "wrong secret key for the given ciphertext".
-      // Auto-save path: re-encrypt with the existing key (no new key minted),
-      // so call the 2-arg flat overload when there's no chain, 3-arg
-      // hierarchical overload otherwise. We only need `encryptedData`, so
-      // the extra `wrappedKey` returned in the hierarchical case is ignored.
+      // Auto-save path: re-encrypt with the file's existing K_file. In the
+      // hierarchical case, entry + chain resolves down to K_file; in the
+      // flat case, entry itself is the K_file wrap.
       const { encryptedData } =
         encryptedKeyChain.length > 0
           ? await vaultClient.encryptWithKey(
