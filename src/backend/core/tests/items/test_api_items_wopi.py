@@ -9,6 +9,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
+from wopi.enums import WopiActions
 from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
 
 pytestmark = pytest.mark.django_db
@@ -40,11 +41,30 @@ def configure_wopi_settings(valid_mimetype, valid_wopi_launch_url):
         {
             "mimetypes": {
                 valid_mimetype: {
-                    "url": valid_wopi_launch_url,
-                    "client": "vendorA",
+                    WopiActions.EDIT: {
+                        "url": f"{valid_wopi_launch_url}/edit/",
+                        "client": "vendorA",
+                    },
                 },
             },
-            "extensions": {},
+            "extensions": {
+                "odt": {
+                    WopiActions.VIEW: {
+                        "url": f"{valid_wopi_launch_url}/view/",
+                        "client": "vendorA",
+                    },
+                    WopiActions.CONVERT: {
+                        "url": f"{valid_wopi_launch_url}/convert/",
+                        "client": "vendorA",
+                    },
+                },
+                "ods": {
+                    WopiActions.VIEW: {
+                        "url": f"{valid_wopi_launch_url}/view/",
+                        "client": "vendorA",
+                    },
+                },
+            },
         },
     )
 
@@ -84,7 +104,7 @@ def test_api_items_wopi_anonymous_user_item_public(
     assert data["access_token"] is not None
     assert data["access_token_ttl"] > timestamp_now
     assert data["launch_url"] == (
-        f"{valid_wopi_launch_url}?WOPISrc={wopi_src}&closebutton=false&lang=en-us"
+        f"{valid_wopi_launch_url}/edit/?WOPISrc={wopi_src}&closebutton=false&lang=en-us"
     )
 
 
@@ -115,7 +135,7 @@ def test_api_items_wopi_anonymous_user_not_item_file():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
+                "detail": "This item does not support WOPI integration.",
                 "code": "invalid",
                 "attr": "detail",
             }
@@ -142,7 +162,7 @@ def test_api_items_wopi_anonymous_item_file_mimetype_not_supported():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
+                "detail": "This item does not support WOPI integration.",
                 "code": "invalid",
                 "attr": "detail",
             }
@@ -166,7 +186,7 @@ def test_api_items_wopi_anonymous_user_item_not_ready():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
+                "detail": "This item does not support WOPI integration.",
                 "code": "invalid",
                 "attr": "detail",
             }
@@ -213,7 +233,7 @@ def test_api_items_wopi_authenticated_can_access_retricted_item(
     assert data["access_token"] is not None
     assert data["access_token_ttl"] > timestamp_now
     assert data["launch_url"] == (
-        f"{valid_wopi_launch_url}?WOPISrc={wopi_src}&closebutton=false&lang={user.language}"
+        f"{valid_wopi_launch_url}/edit/?WOPISrc={wopi_src}&closebutton=false&lang={user.language}"
     )
 
 
@@ -246,7 +266,7 @@ def test_api_items_wopi_authenticated_user_language_null(
     assert data["access_token"] is not None
     assert data["access_token_ttl"] > timestamp_now
     assert data["launch_url"] == (
-        f"{valid_wopi_launch_url}?WOPISrc={wopi_src}"
+        f"{valid_wopi_launch_url}/edit/?WOPISrc={wopi_src}"
         f"&closebutton=false&lang={settings.LANGUAGE_CODE}"
     )
 
@@ -268,7 +288,7 @@ def test_api_items_wopi_authenticated_user_item_not_file():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
+                "detail": "This item does not support WOPI integration.",
                 "code": "invalid",
                 "attr": "detail",
             }
@@ -298,7 +318,107 @@ def test_api_items_wopi_authenticated_user_item_mimetype_not_supported():
     assert response.json() == {
         "errors": [
             {
-                "detail": "This item does not suport WOPI integration.",
+                "detail": "This item does not support WOPI integration.",
+                "code": "invalid",
+                "attr": "detail",
+            }
+        ],
+        "type": "validation_error",
+    }
+
+
+def test_api_items_wopi_authenticated_user_item_extension_convert_action(
+    settings, timestamp_now, valid_wopi_launch_url
+):
+    """Authenticated user can access item with a supported extension for convert action."""
+    settings.WOPI_SRC_BASE_URL = "http://app-dev:8000"
+
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        type=models.ItemTypeChoices.FILE,
+        mimetype="image/png",
+        filename="file.odt",
+    )
+    item.upload_state = models.ItemUploadStateChoices.READY
+    item.save()
+    factories.UserItemAccessFactory(user=user, item=item, role="owner")
+    wopi_src = quote_plus(f"http://app-dev:8000/api/v1.0/wopi/files/{item.id!s}")
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get(f"/api/v1.0/items/{item.id!s}/wopi/")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["access_token"] is not None
+    assert data["access_token_ttl"] > timestamp_now
+    assert data["launch_url"] == (
+        f"{valid_wopi_launch_url}/convert/?WOPISrc={wopi_src}"
+        f"&closebutton=false&lang={user.language}"
+    )
+
+
+def test_api_items_wopi_authenticated_user_item_extension_view_action(
+    settings, timestamp_now, valid_wopi_launch_url
+):
+    """
+    Authenticated user can access item with a supported extension but without update permission.
+
+    In this case, we should fallback on the view action.
+    """
+    settings.WOPI_SRC_BASE_URL = "http://app-dev:8000"
+
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        type=models.ItemTypeChoices.FILE,
+        mimetype="image/png",
+        filename="file.odt",
+    )
+    item.upload_state = models.ItemUploadStateChoices.READY
+    item.save()
+    factories.UserItemAccessFactory(user=user, item=item, role="reader")
+    wopi_src = quote_plus(f"http://app-dev:8000/api/v1.0/wopi/files/{item.id!s}")
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get(f"/api/v1.0/items/{item.id!s}/wopi/")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["access_token"] is not None
+    assert data["access_token_ttl"] > timestamp_now
+    assert data["launch_url"] == (
+        f"{valid_wopi_launch_url}/view/?WOPISrc={wopi_src}&closebutton=false&lang={user.language}"
+    )
+
+
+def test_api_items_wopi_authenticated_user_items_extension_no_action():
+    """
+    Authenticated user who can access to an item and is WOPI-compatible but without any
+    action should have a 400 response.
+    """
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        type=models.ItemTypeChoices.FILE,
+        mimetype="image/png",
+        filename="file.ods",
+    )
+    item.upload_state = models.ItemUploadStateChoices.READY
+    item.save()
+    factories.UserItemAccessFactory(user=user, item=item, role="owner")
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get(f"/api/v1.0/items/{item.id!s}/wopi/")
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "detail": "This item has no compatible action.",
                 "code": "invalid",
                 "attr": "detail",
             }
