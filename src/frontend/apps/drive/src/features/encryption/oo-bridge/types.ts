@@ -92,6 +92,7 @@ export interface OOConfig {
     };
     lang: string;
     customization?: {
+      chat?: boolean;
       compactToolbar: boolean;
       forcesave: boolean;
       autosave?: boolean;
@@ -99,9 +100,14 @@ export interface OOConfig {
     permissions?: {
       chat?: boolean;
       comment?: boolean;
+      copy?: boolean;
       download?: boolean;
       edit?: boolean;
+      fillForms?: boolean;
+      modifyContentControl?: boolean;
+      modifyFilter?: boolean;
       print?: boolean;
+      review?: boolean;
     };
   };
   events: {
@@ -133,7 +139,7 @@ export interface CollaborationState {
   saveLock: number | null;
 }
 
-/** Map from file extension to OnlyOffice documentType (as used by CryptPad) */
+/** Map from file extension to OnlyOffice documentType */
 export const EXTENSION_TO_DOC_TYPE: Record<
   string,
   'text' | 'spreadsheet' | 'presentation'

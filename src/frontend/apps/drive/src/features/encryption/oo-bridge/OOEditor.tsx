@@ -89,6 +89,7 @@ interface OOEditorInstance {
   sendMessageToOO: (msg: any) => void;
   asc_nativeGetFile: () => Uint8Array;
   destroyEditor: () => void;
+  injectCSS?: (css: string) => void;
 }
 
 interface OOEditorProps {
@@ -433,6 +434,90 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   }, []);
 
   /**
+   * Put the OO editor into document-model-level read-only ("restricted")
+   * mode when the user can't edit. OnlyOffice exposes
+   * `asc_setRestriction(true)` on its editor controller, which gates
+   * LOCAL inputs at the model layer without touching the co-edit patch
+   * pipeline — inbound OT ops continue to stream in and render live,
+   * but the user's own keystrokes / clicks / menu actions no longer
+   * mutate the document.
+   *
+   * Reached via `window.frames[0].editor` for word / slide, or
+   * `.editorCell` for spreadsheet (xlsx/ods), matching the split OO's
+   * sdk-all does internally.
+   *
+   * Must be called after `onDocumentReady` — the editor controller
+   * isn't attached to the iframe window before that.
+   */
+  const applyReadOnlyRestriction = useCallback(() => {
+    if (canEdit) return;
+
+    const ooIframe = document.querySelector(
+      'iframe[name="frameEditor"]'
+    ) as HTMLIFrameElement | null;
+    const innerWindow = ooIframe?.contentWindow as
+      | {
+          editor?: { asc_setRestriction?: (v: boolean) => void };
+          editorCell?: { asc_setRestriction?: (v: boolean) => void };
+        }
+      | undefined;
+    if (!innerWindow) return;
+
+    const ooEditor =
+      docType === 'cell' ? innerWindow.editorCell : innerWindow.editor;
+    if (ooEditor && typeof ooEditor.asc_setRestriction === 'function') {
+      try {
+        ooEditor.asc_setRestriction(true);
+      } catch (err) {
+        console.warn('[OOEditor] asc_setRestriction(true) failed', err);
+      }
+    }
+
+    // Reader-specific UI patches injected into the OO iframe:
+    //  - Hide the ribbon. `permissions.*` doesn't collapse it on
+    //    sdk-all v9 — tabs stay rendered, just with buttons disabled —
+    //    so we hide `#toolbar` explicitly.
+    //  - Hide the chat compose area (`#chat-options` wraps both the
+    //    textarea and the Send button). The chat panel's message log
+    //    above stays visible and scrollable — readers still see every
+    //    message editors post live. They just don't have an input to
+    //    mash, which is cleaner than greying one out.
+    //  - Relay-side: outbound chat frames from non-canEdit sockets
+    //    are already dropped as binary, so this is pure UX polish on
+    //    top of existing server-side enforcement.
+    // The window-resize dispatch that follows is what prevents the
+    // freed bands from leaving empty rectangles — OO re-lays out on
+    // the event and reclaims the space.
+    if (editorRef.current?.injectCSS) {
+      try {
+        editorRef.current.injectCSS(
+          [
+            '#toolbar { display: none !important; }',
+            '#chat-options { display: none !important; }',
+          ].join('\n'),
+        );
+      } catch (err) {
+        console.warn('[OOEditor] injectCSS failed', err);
+      }
+    }
+    // Dispatch on both windows: the outer one (our app) and the OO
+    // iframe's contentWindow. OO's internal layout listener lives in
+    // the iframe; the outer trigger is cheap insurance for
+    // nested-frame variants where the listener attaches higher up.
+    try {
+      window.dispatchEvent(new Event('resize'));
+      const iframeWin = (
+        document.querySelector(
+          'iframe[name="frameEditor"]'
+        ) as HTMLIFrameElement | null
+      )?.contentWindow;
+      iframeWin?.dispatchEvent(new Event('resize'));
+    } catch {
+      /* non-fatal */
+    }
+  }, [canEdit, docType]);
+
+  /**
    * Upload encrypted content to S3.
    */
   const uploadEncrypted = useCallback(
@@ -474,16 +559,17 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       // so call the 2-arg flat overload when there's no chain, 3-arg
       // hierarchical overload otherwise. We only need `encryptedData`, so
       // the extra `wrappedKey` returned in the hierarchical case is ignored.
-      const { encryptedData } = encryptedKeyChain.length > 0
-        ? await vaultClient.encryptWithKey(
-            content,
-            entryKeyBytes.buffer.slice(0),
-            encryptedKeyChain.map(k => k.slice(0))
-          )
-        : await vaultClient.encryptWithKey(
-            content,
-            entryKeyBytes.buffer.slice(0)
-          );
+      const { encryptedData } =
+        encryptedKeyChain.length > 0
+          ? await vaultClient.encryptWithKey(
+              content,
+              entryKeyBytes.buffer.slice(0),
+              encryptedKeyChain.map(k => k.slice(0))
+            )
+          : await vaultClient.encryptWithKey(
+              content,
+              entryKeyBytes.buffer.slice(0)
+            );
 
       // Get a presigned S3 upload URL for the existing file key
       // S3 versioning keeps previous versions — no new filename needed
@@ -719,6 +805,18 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           },
           documentType: docType,
           editorConfig: {
+            // Always stay in 'edit' mode so the co-edit session machinery
+            // remains wired — inbound OT patches only stream in when the
+            // editor is part of a cooperating session. Switching to 'view'
+            // gives OO's standalone viewer, which doesn't apply live
+            // patches and breaks the "reader watches editor type" UX.
+            //
+            // What actually makes a reader read-only is the `permissions`
+            // block below: OO applies inbound patches from the co-edit
+            // channel regardless of those, but gates LOCAL input on them.
+            // Combined with the collab relay dropping any binary frame
+            // from a non-canEdit socket (relay.ts:269), readers are pure
+            // observers while still seeing every keystroke live.
             mode: 'edit',
             user: {
               id: uniqueOOId,
@@ -760,18 +858,34 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               macros: false,
               plugins: false,
               help: false,
+              // Hide OO's chat panel for read-only users so they don't
+              // see a writable input that goes nowhere. Editors keep
+              // it — chat messages ride the same relay channel as
+              // other OO `message` payloads (see `sendMessage` in
+              // encryptedRelay.ts), so they broadcast end-to-end
+              // encrypted between editor peers.
+              chat: true,
             } as any,
+            // Single source of truth for permissions — there used to be
+            // TWO `permissions` blocks on this object, the second one
+            // silently overriding the first. For readers, everything
+            // that could mutate the document (edit, comment, review,
+            // forms, content controls, filters) is off; `copy: false`
+            // additionally blocks selection-based exfiltration. None of
+            // these gate INBOUND OT, so live patches still stream in.
             permissions: {
-              edit: true,
-              comment: true,
-              review: true,
+              edit: canEdit,
+              comment: canEdit,
+              review: canEdit,
+              fillForms: canEdit,
+              modifyContentControl: canEdit,
+              modifyFilter: canEdit,
+              copy: canEdit,
+              chat: true,
               deleteCommentAuthorOnly: false,
               editCommentAuthorOnly: false,
-              chat: false,
               macros: 'none',
               protect: false,
-              modifyContentControl: false,
-              fillForms: false,
             } as any,
           },
           events: {
@@ -866,6 +980,15 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             onDocumentReady: () => {
               setState('ready');
               documentReadyRef.current = true;
+              // `permissions.edit: false` in the config doesn't actually
+              // block raw keystrokes on sdk-all v9 — a reader could
+              // focus the canvas and type. OO's own internal knob for
+              // this is `asc_setRestriction(true)` on the editor
+              // controller. It gates local inputs at the document-model
+              // level while leaving the co-edit inbound-patch pipeline
+              // fully active, so readers keep seeing every keystroke
+              // stream in from editors.
+              applyReadOnlyRestriction();
               // The live saveChanges drain must NOT run inside
               // onDocumentReady — at that point OO has finished opening the
               // document but hasn't yet armed its auto-save interval in
@@ -972,9 +1095,21 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   //   calc:         slot-btn-inschart,    slot-btn-inssmartart
                   //   writer:       slot-btn-inschart,    slot-btn-inssmartart
                   const unsupportedButtons = [
-                    { slotId: 'slot-btn-insertchart', menuId: 'id-toolbar-menu-insertchart', label: 'Charts' },
-                    { slotId: 'slot-btn-inschart', menuId: 'id-toolbar-menu-inschart', label: 'Charts' },
-                    { slotId: 'slot-btn-inssmartart', menuId: 'id-toolbar-menu-inssmartart', label: 'SmartArt' },
+                    {
+                      slotId: 'slot-btn-insertchart',
+                      menuId: 'id-toolbar-menu-insertchart',
+                      label: 'Charts',
+                    },
+                    {
+                      slotId: 'slot-btn-inschart',
+                      menuId: 'id-toolbar-menu-inschart',
+                      label: 'Charts',
+                    },
+                    {
+                      slotId: 'slot-btn-inssmartart',
+                      menuId: 'id-toolbar-menu-inssmartart',
+                      label: 'SmartArt',
+                    },
                   ];
 
                   const applyToElement = (
@@ -1007,7 +1142,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   };
 
                   const tryApplyAll = (trigger: string) => {
-                    for (const { slotId, menuId, label } of unsupportedButtons) {
+                    for (const {
+                      slotId,
+                      menuId,
+                      label,
+                    } of unsupportedButtons) {
                       const slot = doc.getElementById(slotId);
                       if (slot) {
                         applyToElement(slot as HTMLElement, menuId, label);
@@ -1037,7 +1176,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       '[OOEditor] unsupported-features MutationObserver installed'
                     );
                   } catch (e) {
-                    console.warn('[OOEditor] unsupported-features observer failed', e);
+                    console.warn(
+                      '[OOEditor] unsupported-features observer failed',
+                      e
+                    );
                   }
                 }
 
@@ -1223,9 +1365,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // color per id keeps both call sites in sync.
         (window as any).APP = (window as any).APP || {};
         // Theme hooks: OO's ChangeTheme calls window.parent.APP.changeTheme
-        // when the LOCAL user picks a slide theme. The CryptPad-patched SDK
-        // also calls APP.remoteTheme() when applying a remote peer's theme
-        // change (cp_theme collaborative-change type). In both cases the
+        // when the LOCAL user picks a slide theme. The patched SDK in this
+        // bundle also calls APP.remoteTheme() when applying a remote peer's
+        // theme change (cp_theme collaborative-change type). In both cases the
         // actual theme data already propagates through the normal OT
         // saveChanges pipeline (ChangeTheme creates a history point), so
         // these callbacks are purely notification hooks — no-ops are safe.
@@ -1620,10 +1762,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
 
                 // Preload and live phases now take the SAME path: queue
                 // the change into pendingRemoteChangesRef if the editor
-                // isn't ready yet, otherwise apply immediately. This
-                // matches CryptPad's architecture — every inbound
-                // saveChanges flows through `sendMessageToOO`, never
-                // through OO's `getInitialChanges` channel (which
+                // isn't ready yet, otherwise apply immediately. Every
+                // inbound saveChanges flows through `sendMessageToOO`,
+                // never through OO's `getInitialChanges` channel (which
                 // silently drops replay bursts in our testing).
                 if (!historyPhaseComplete) {
                   try {
@@ -1730,7 +1871,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   };
                   const guid = (block as any)?.guid;
                   const key =
-                    guid || (typeof block === 'string' ? block : JSON.stringify(block));
+                    guid ||
+                    (typeof block === 'string' ? block : JSON.stringify(block));
                   locks[key] = entry;
                 }
                 const apply = () =>
@@ -1903,8 +2045,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // History replay is queued into `pendingRemoteChangesRef` above
         // and will be drained (paced) once OO fires `onDocumentContentReady`.
         // We do NOT use `setInitialChanges` / `getInitialChanges`: that
-        // channel silently drops replay bursts in our testing. CryptPad's
-        // architecture confirms the right path is `sendMessageToOO`.
+        // channel silently drops replay bursts in our testing. The
+        // reliable path is `sendMessageToOO`.
         console.log(
           '[OOEditor:preload] ready to construct editor —',
           replayBufferRef.current.length,
@@ -2216,7 +2358,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   'explorer.encrypted.conversion_odf_body',
                   'Encrypted documents are opened with a lightweight browser-based editor that does not support all features available in non-encrypted mode. SmartArt elements are known to prevent ODF files (.odt, .ods, .odp) from loading in this mode.'
                 )}
-                <br /><br />
+                <br />
+                <br />
                 {canEdit
                   ? t(
                       'explorer.encrypted.conversion_odf_actions',
@@ -2246,10 +2389,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     try {
                       await downloadDecryptedFile(item);
                     } catch (e) {
-                      console.error(
-                        '[OOEditor] download decrypted failed',
-                        e
-                      );
+                      console.error('[OOEditor] download decrypted failed', e);
                     } finally {
                       setDownloading(false);
                     }
@@ -2270,17 +2410,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     opacity: downloading ? 0.6 : 1,
                   }}
                 >
-                  <span
-                    className="material-icons"
-                    style={{ fontSize: '18px' }}
-                  >
+                  <span className="material-icons" style={{ fontSize: '18px' }}>
                     download
                   </span>
                   {downloading
-                    ? t(
-                        'explorer.encrypted.downloading',
-                        'Downloading...'
-                      )
+                    ? t('explorer.encrypted.downloading', 'Downloading...')
                     : t(
                         'explorer.encrypted.download_to_inspect',
                         'Download file'
@@ -2364,10 +2498,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     try {
                       await downloadDecryptedFile(item);
                     } catch (e) {
-                      console.error(
-                        '[OOEditor] download decrypted failed',
-                        e
-                      );
+                      console.error('[OOEditor] download decrypted failed', e);
                     } finally {
                       setDownloading(false);
                     }
@@ -2388,17 +2519,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     opacity: downloading ? 0.6 : 1,
                   }}
                 >
-                  <span
-                    className="material-icons"
-                    style={{ fontSize: '18px' }}
-                  >
+                  <span className="material-icons" style={{ fontSize: '18px' }}>
                     download
                   </span>
                   {downloading
-                    ? t(
-                        'explorer.encrypted.downloading',
-                        'Downloading...'
-                      )
+                    ? t('explorer.encrypted.downloading', 'Downloading...')
                     : t(
                         'explorer.encrypted.download_to_inspect',
                         'Download file'
