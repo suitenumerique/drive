@@ -71,6 +71,7 @@ def test_api_items_wopi_anonymous_user_item_public(
         link_reach=models.LinkReachChoices.PUBLIC,
         type=models.ItemTypeChoices.FILE,
         mimetype=valid_mimetype,
+        filename="document.txt",
     )
     item.upload_state = models.ItemUploadStateChoices.READY
     item.save()
@@ -128,6 +129,7 @@ def test_api_items_wopi_anonymous_item_file_mimetype_not_supported():
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
         mimetype="image/png",
+        filename="image.png",
         link_reach=models.LinkReachChoices.PUBLIC,
     )
     item.upload_state = models.ItemUploadStateChoices.READY
@@ -195,6 +197,7 @@ def test_api_items_wopi_authenticated_can_access_retricted_item(
         link_reach=models.LinkReachChoices.RESTRICTED,
         type=models.ItemTypeChoices.FILE,
         mimetype=valid_mimetype,
+        filename="document.txt",
     )
     item.upload_state = models.ItemUploadStateChoices.READY
     item.save()
@@ -227,6 +230,7 @@ def test_api_items_wopi_authenticated_user_language_null(
         link_reach=models.LinkReachChoices.RESTRICTED,
         type=models.ItemTypeChoices.FILE,
         mimetype=valid_mimetype,
+        filename="document.txt",
     )
     item.upload_state = models.ItemUploadStateChoices.READY
     item.save()
@@ -280,6 +284,7 @@ def test_api_items_wopi_authenticated_user_item_mimetype_not_supported():
         link_reach=models.LinkReachChoices.RESTRICTED,
         type=models.ItemTypeChoices.FILE,
         mimetype="image/png",
+        filename="image.png",
     )
     item.upload_state = models.ItemUploadStateChoices.READY
     item.save()
