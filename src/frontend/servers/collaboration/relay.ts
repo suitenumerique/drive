@@ -115,6 +115,17 @@ interface Room {
    * flood all peers with save requests.
    */
   lastNeedsSaveBroadcastMs: number;
+  /**
+   * Last timestamp (ms) we stamped onto a binary frame in this room.
+   * We advance it with `max(Date.now(), lastStampedMs + 1)` so the stamp
+   * is STRICTLY monotonic even when several frames arrive in the same
+   * millisecond or the system clock jumps backwards. The stamp doubles
+   * as a total-order seq for clients that need to arbitrate concurrent
+   * submissions (e.g. lock requests). Wall-time drift caused by collision
+   * bump-ups is bounded by the instantaneous burst size and self-heals as
+   * soon as a clock tick passes without a new frame.
+   */
+  lastStampedMs: number;
 }
 
 interface PeerMeta {
@@ -144,6 +155,7 @@ function getOrCreateRoom(roomId: string): Room {
       purgeMutex: new Mutex(),
       historyFloorMs: 0,
       lastNeedsSaveBroadcastMs: 0,
+      lastStampedMs: 0,
     };
     rooms.set(roomId, room);
   }
@@ -292,16 +304,35 @@ function handleConnection(
       return;
     }
     // Server-authoritative timestamp: prepend 8 bytes (big-endian u64 ms)
-    // to every frame so peers can advance their `sinceTimestampMs` cursor
-    // monotonically across reconnects. The prefixed buffer is both
-    // broadcast and stored in history so replay and live paths are
-    // identical on the wire.
-    const timestampMs = Date.now();
+    // to every frame. Two uses:
+    //   1. Clients advance their `sinceTimestampMs` cursor from it so
+    //      history replay across reconnects is monotonic.
+    //   2. Clients also use it as a total-order seq for replicated
+    //      state arbitration (lock requests). That requires strict
+    //      monotonicity — two frames in the same ms would otherwise
+    //      tie with no defined winner. We bump by +1ms on collision,
+    //      which drifts slightly ahead of wall time under bursts but
+    //      self-heals as soon as an idle ms passes.
+    const now = Date.now();
+    const timestampMs =
+      now > room.lastStampedMs ? now : room.lastStampedMs + 1;
+    room.lastStampedMs = timestampMs;
     const stamped = Buffer.allocUnsafe(8 + binary.byteLength);
     stamped.writeBigUInt64BE(BigInt(timestampMs), 0);
     binary.copy(stamped, 8);
     broadcastRaw(room, ws, stamped);
     room.history.push({ timestampMs, data: stamped });
+
+    // Tell the sender the relay has assigned this timestamp and enqueued
+    // the broadcast to every peer. TCP FIFO on each peer's socket
+    // guarantees that every frame the sender has to know about with
+    // timestamp < this one was already written to the sender's socket
+    // before this ACK — so when the sender processes the ACK, its view
+    // of the log is causally complete up to `timestampMs`. This is the
+    // hook that lets lock-arbitration code apply its own request to the
+    // local state machine only once it's certain no earlier competing
+    // request exists.
+    sendJSON(ws, { type: 'frame:settled', timestampMs });
   });
 
   ws.on('close', () => {

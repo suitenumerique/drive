@@ -29,7 +29,9 @@ import { EXTENSION_TO_X2T_TYPE } from './types';
 import { getEffectiveMimetype } from '@/features/explorer/utils/mimeTypes';
 import { KeyMismatchPanel } from '@/features/encryption/KeyMismatchPanel';
 import {
+  consumePeerLocksShownToEditor,
   createMockServerCallbacks,
+  resetPeerLocksShownToEditor,
   sendToEditor,
   setEditorInstance,
   setVerboseSends,
@@ -44,6 +46,7 @@ import {
 } from './participants';
 import { resetPatchIndex, observeIncomingSaveChanges } from './changesPipeline';
 import { EncryptedRelay } from './encryptedRelay';
+import { WordLockArbitrator } from './wordLockArbitrator';
 import { withIncomingOTGate } from './incomingOtGate';
 import {
   acquireCellLock,
@@ -726,9 +729,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       // is in an undefined condition. Whitelisting specific function
       // names lets future unknown failure modes silently corrupt
       // the editor. Known-benign cases (spell-check worker race,
-      // collab cursor on missing run, paragraph lock on replaced
-      // object) are caught and neutralised by explicit wrappers
-      // upstream, so they never reach this listener.
+      // collab cursor on missing run) are suppressed at the iframe
+      // level (see `installIframeErrorShield` below) BEFORE they
+      // reach this parent-level listener, so they never show up.
       if (src && /\/sdkjs\/|sdk-all/.test(src)) return true;
       // Fallback: also match stacks whose message mentions sdkjs
       // symbols but whose `filename` was lost (cross-frame rethrow).
@@ -916,6 +919,18 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               macros: false,
               plugins: false,
               help: false,
+              // Disable the built-in spellcheck. OO's SpellCheck worker
+              // occasionally posts back a message without the expected
+              // `SpellCheckResponse` / `SuggestResponse` field, and
+              // `SpellCheck_CallBack` crashes trying to read it
+              // (`Cannot read properties of undefined (reading
+              // 'SuggestResponse')`). This is an upstream OO bug
+              // surfacing in `sdk-all-min.js`, not caused by our lock
+              // pipeline — the worker channel is entirely separate
+              // from the co-editing channel. Turning the feature off
+              // keeps the crash from being reachable. Users can still
+              // rely on the browser's native spellcheck.
+              spellcheck: false,
               // Hide OO's chat panel for read-only users so they don't
               // see a writable input that goes nowhere. Editors keep
               // it — chat messages ride the same relay channel as
@@ -1334,16 +1349,79 @@ export const OOEditor = ({ item }: OOEditorProps) => {
 
                 const innerEditor =
                   innerWindow?.editor || innerWindow?.editorCell;
-                // NOTE: we no longer monkey-patch any sdkjs prototype
-                // method (Update_ForeignCursor, CGraphicObjects.*,
-                // SpellCheck_CallBack, private_LockByMe, etc.). Those
-                // wrappers were fragile — each one tied us to specific
-                // internal paths that break on OO upgrades and leave
-                // us silently catching errors we didn't anticipate.
-                // The uniform rule is now: any uncaught error from
-                // sdkjs triggers the `oo-crashed` overlay via the
-                // iframe-level `error` listener, and the user reloads
-                // to pick up the last saved state.
+
+                // ==== iframe-level error shield for known-benign crashes ====
+                //
+                // OO has its own uncaught-error reaction: the sdkjs
+                // bundle pops up a "Critical error" dialog INSIDE the
+                // iframe, and once that fires the editor locks up even
+                // if the parent also dismisses the error. Our old
+                // parent-level `handleOOError` filter didn't help
+                // because OO had already shown the popup before the
+                // error bubbled up.
+                //
+                // Intercept at the iframe level instead: install a
+                // capture-phase `error` listener on the iframe's own
+                // window that calls `stopImmediatePropagation()` +
+                // `preventDefault()` for crashes we've decided are
+                // cosmetic, so OO's own onerror never runs and no
+                // popup is shown. The editor keeps working; we just
+                // lose the one event that threw.
+                //
+                // Scoped VERY narrowly on purpose — only ephemeral,
+                // non-doc-mutating code paths. Anything touching
+                // `Apply_Data` / `Continue_FastCollaborativeEditing`
+                // is left untouched: those leave OO's doc model in
+                // an inconsistent state and must surface the recovery
+                // overlay so the user reloads from a saved snapshot.
+                try {
+                  if (!innerWindow.__driveErrorShieldInstalled) {
+                    const shield = (event: ErrorEvent) => {
+                      const stack = String(
+                        event.error?.stack ?? event.message ?? '',
+                      );
+                      const benign =
+                        // Peer cursor pointing at a Run that was
+                        // removed/replaced by a later OT patch on
+                        // this side. The cursor position is stale;
+                        // next cursor update from that peer will
+                        // render correctly.
+                        /Update_ForeignCursor/.test(stack) ||
+                        /GetDocumentPositionFromObject/.test(stack) ||
+                        // Spell-check worker race — the worker posts
+                        // back a message without the expected
+                        // response field. We disable spell-check in
+                        // customization, but a late response can still
+                        // sneak in during init.
+                        /SpellCheck_CallBack/.test(stack) ||
+                        /SuggestResponse|SpellCheckResponse/.test(stack);
+                      if (benign) {
+                        console.warn(
+                          '[OOEditor] benign iframe error suppressed — editor kept alive',
+                          stack.split('\n')[0],
+                        );
+                        event.stopImmediatePropagation();
+                        event.preventDefault();
+                      }
+                    };
+                    innerWindow.addEventListener('error', shield, true);
+                    innerWindow.__driveErrorShieldInstalled = true;
+                  }
+                } catch (e) {
+                  console.warn(
+                    '[OOEditor] failed to install iframe error shield',
+                    e,
+                  );
+                }
+
+                // NOTE: apart from the benign-error shield above, we
+                // do NOT monkey-patch sdkjs prototype methods. Those
+                // wrappers (Update_ForeignCursor, CGraphicObjects.*,
+                // SpellCheck_CallBack, private_LockByMe, etc.) tied
+                // us to specific internal paths that break on OO
+                // upgrades and silently swallow errors we didn't
+                // anticipate. The shield is narrowly scoped on
+                // symbolic stack patterns instead.
 
                 // REMOVED: apply-drop verifier based on
                 // `CoHistory.GetChangeCount()`. The counter is
@@ -1782,6 +1860,13 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           resolveHistoryReady();
         };
 
+        // Forward declaration so the relay callbacks can close over the
+        // arbitrator, and so the mock server setup below can pass it in.
+        // Populated once the relay is constructed (inside the try block).
+        // Safe: the relay callbacks only fire on incoming network
+        // messages, by which point the assignment below has happened.
+        let wordLockArbitrator: WordLockArbitrator | null = null;
+
         try {
           const relay = new EncryptedRelay({
             roomId: item.id,
@@ -1880,8 +1965,37 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               onPeerLeave: userId => {
                 editorPeersRef.current.delete(userId);
                 crashedPeersRef.current.delete(userId);
+                // Capture the locks the peer held BEFORE `dropUser`
+                // wipes them, then filter to the subset we actually
+                // told OO about — pushing a `releaseLock` for a key
+                // OO never heard of looks up an undefined paragraph
+                // in the doc model and crashes (`Set_Type on undefined`).
+                const leavingKeys = wordLockArbitrator
+                  ? wordLockArbitrator
+                      .snapshot()
+                      .filter(e => e.userId === userId)
+                      .map(e => e.key)
+                  : [];
+                const clearableKeys =
+                  consumePeerLocksShownToEditor(leavingKeys);
+                const leavingOOId =
+                  getRemoteOOInternalId(userId) ?? userId;
                 removeRemoteUser(userId);
                 releaseAllUserLocks(userId);
+                wordLockArbitrator?.dropUser(userId);
+                if (
+                  documentReadyRef.current &&
+                  clearableKeys.length > 0
+                ) {
+                  sendToEditorGuarded({
+                    type: 'releaseLock',
+                    locks: clearableKeys.map(key => ({
+                      block: key,
+                      user: leavingOOId,
+                      time: Date.now(),
+                    })),
+                  });
+                }
                 sendToEditor(buildConnectStateMessage() as any);
               },
               onRoomState: peers => {
@@ -2070,10 +2184,97 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   'crashed — excluding from leader election'
                 );
                 crashedPeersRef.current.add(peerUserId);
+                // Also clear any paragraph locks the crashed peer was
+                // holding so we don't keep denying askLock forever for
+                // keys that will never be released — the peer is dead.
+                if (wordLockArbitrator) {
+                  const crashedKeys = wordLockArbitrator
+                    .snapshot()
+                    .filter(e => e.userId === peerUserId)
+                    .map(e => e.key);
+                  const clearableKeys =
+                    consumePeerLocksShownToEditor(crashedKeys);
+                  const crashedOOId =
+                    getRemoteOOInternalId(peerUserId) ?? peerUserId;
+                  wordLockArbitrator.dropUser(peerUserId);
+                  if (
+                    documentReadyRef.current &&
+                    clearableKeys.length > 0
+                  ) {
+                    sendToEditorGuarded({
+                      type: 'releaseLock',
+                      locks: clearableKeys.map(key => ({
+                        block: key,
+                        user: crashedOOId,
+                        time: Date.now(),
+                      })),
+                    });
+                  }
+                }
+              },
+              onWordLockRequest: (peerUserId, keys, timestampMs) => {
+                if (!wordLockArbitrator) return;
+                wordLockArbitrator.applyRemoteRequest(
+                  { type: 'oo:lockRequest', userId: peerUserId, keys },
+                  timestampMs,
+                );
+                // Deliberately NO push to local OO here. Before, we
+                // echoed a full snapshot to mirror CryptPad, but that
+                // referenced paragraphs OO didn't know about yet
+                // (peer created + locked a new para before the
+                // corresponding `saveChanges` applied) and crashed
+                // OO in `_onGetLock` → `Set_UserId on undefined`.
+                // Local OO only learns a key is peer-held when it
+                // itself `askLock`s and we reply — at which point the
+                // key is guaranteed to exist in the local doc model.
+              },
+              onWordLockRelease: (peerUserId, keys) => {
+                if (!wordLockArbitrator) return;
+                wordLockArbitrator.applyRemoteRelease({
+                  type: 'oo:lockRelease',
+                  userId: peerUserId,
+                  keys,
+                });
+                // Only push `releaseLock` for keys we've previously
+                // exposed to OO (via a `getLock` reply attributing
+                // them to this peer). For any other key, OO doesn't
+                // have a marker to clear, and referencing an unknown
+                // paragraph by id crashes `_onReleaseLock` the same
+                // way the `getLock` snapshot did.
+                const clearableKeys = consumePeerLocksShownToEditor(keys);
+                if (
+                  documentReadyRef.current &&
+                  clearableKeys.length > 0
+                ) {
+                  const peerOOId =
+                    getRemoteOOInternalId(peerUserId) ?? peerUserId;
+                  sendToEditorGuarded({
+                    type: 'releaseLock',
+                    locks: clearableKeys.map(key => ({
+                      block: key,
+                      user: peerOOId,
+                      time: Date.now(),
+                    })),
+                  });
+                }
               },
             },
           });
           relayRef.current = relay;
+
+          // Now that the relay exists we can wire the arbitrator: its
+          // transport is the relay's settlement-aware send helper. The
+          // forward declaration at the top of this block is populated
+          // here; the callbacks above see it through closure.
+          wordLockArbitrator = new WordLockArbitrator({
+            sendWithSettlement: msg => relay.sendEncryptedWithSettlement(msg),
+          });
+          // Fresh session → fresh tracking of which peer-owned locks
+          // OO has been told about. Anything from a previous editor
+          // lifecycle is irrelevant (and would point at a disposed
+          // OO instance's paragraph ids).
+          resetPeerLocksShownToEditor();
+
           setState('syncing-history');
           relay.connect();
         } catch (relayErr) {
@@ -2128,6 +2329,13 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // This must happen before relay setup — editor needs to work standalone
         const callbacks = createMockServerCallbacks({
           docType,
+          // Word-only: hand the arbitrator to the mockServer so getLock
+          // stops auto-granting and instead consults the replicated
+          // lock table. `userId` lets the arbitrator attribute claims.
+          // For cell/slide these stay undefined → mockServer falls back
+          // to its existing optimistic path.
+          wordLockArbitrator: wordLockArbitrator ?? undefined,
+          userId: user.sub!,
           onSaveChangesBroadcast: message => {
             // A crashed editor must not leak its corrupt state to
             // peers — otherwise one broken tab takes down the whole

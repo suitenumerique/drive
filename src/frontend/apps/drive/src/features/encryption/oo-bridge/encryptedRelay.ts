@@ -141,6 +141,31 @@ type PeerCrashedMessage = {
 };
 
 /** All possible system messages */
+/**
+ * Relay's ack that a binary frame we sent has been stamped and queued to
+ * every peer. `timestampMs` is the server-authoritative total-order id
+ * the relay assigned. Callers awaiting this learn their own position in
+ * the log and can safely apply their frame to replicated state.
+ */
+type FrameSettledMessage = {
+  type: 'frame:settled';
+  timestampMs: number;
+};
+
+/** Word lock-arbitration request broadcast by a peer (encrypted payload). */
+type WordLockRequestMessage = {
+  type: 'oo:lockRequest';
+  userId: string;
+  keys: string[];
+};
+
+/** Word lock-arbitration release broadcast by a peer (encrypted payload). */
+type WordLockReleaseMessage = {
+  type: 'oo:lockRelease';
+  userId: string;
+  keys: string[];
+};
+
 type SystemMessage =
   | AuthenticatedMessage
   | HistoryEndMessage
@@ -157,7 +182,10 @@ type SystemMessage =
   | SaveChangesBroadcastMessage
   | SaveCommittedMessage
   | PeerNeedsSaveMessage
-  | PeerCrashedMessage;
+  | PeerCrashedMessage
+  | FrameSettledMessage
+  | WordLockRequestMessage
+  | WordLockReleaseMessage;
 
 export interface RelayCallbacks {
   /** Called when a remote peer's saveChanges envelope arrives (full message) */
@@ -235,6 +263,25 @@ export interface RelayCallbacks {
    * disconnects or reconnects fresh.
    */
   onPeerCrashed?: (userId: string) => void;
+  /**
+   * Called when a remote peer's Word-lock request arrives. `timestampMs`
+   * is the relay-assigned total-order stamp; the arbitrator applies
+   * competing requests by earliest stamp. Only invoked for binary
+   * frames (which carry a timestamp) — never fires during history
+   * replay: the arbitrator rebuilds from scratch on reconnect so
+   * replaying stale locks would poison local state.
+   */
+  onWordLockRequest?: (
+    userId: string,
+    keys: string[],
+    timestampMs: number,
+  ) => void;
+  /**
+   * Called when a remote peer's Word-lock release arrives. No timestamp
+   * needed — releases are idempotent and only affect keys the releasing
+   * peer still holds.
+   */
+  onWordLockRelease?: (userId: string, keys: string[]) => void;
 }
 
 export class EncryptedRelay {
@@ -283,6 +330,21 @@ export class EncryptedRelay {
    * document edits.
    */
   private inHistoryPhase = true;
+
+  /**
+   * FIFO queue of pending-send resolvers. Each encrypted binary frame
+   * we submit to the relay adds one entry here, and every `frame:settled`
+   * system message from the relay resolves the head entry. Relies on two
+   * facts to stay in sync: (a) the relay processes our incoming binary
+   * frames in the order we submitted them (single socket, single event
+   * loop on the server), and (b) it emits settlements in that same order.
+   * If a send fails before submission (network error), we reject the
+   * resolver locally to avoid leaking entries.
+   */
+  private settlementQueue: Array<{
+    resolve: (timestampMs: number) => void;
+    reject: (err: unknown) => void;
+  }> = [];
 
   constructor(opts: {
     roomId: string;
@@ -345,6 +407,12 @@ export class EncryptedRelay {
 
     this.ws.onclose = event => {
       this.callbacks.onConnectionChange(false);
+      // Pending settlement promises become unresolvable once the socket
+      // is gone — the relay on the other side of a future reconnect
+      // won't know about frames we sent on this connection. Reject them
+      // now so callers (lock arbitrator, etc.) can decide to retry or
+      // fail fast.
+      this.drainSettlementQueue('connection closed');
       // 4001 = stale history. The relay cannot serve us the events we
       // missed; the editor needs to fully reinit from S3. Do NOT
       // reconnect — just surface the condition and stop.
@@ -523,8 +591,64 @@ export class EncryptedRelay {
     }
   }
 
-  /** Encrypt a system message and send as binary frame */
+  /**
+   * Like `sendEncryptedSystem` but returns a Promise that resolves once
+   * the relay has stamped, broadcast, and ACKed our frame. Callers use
+   * this to order concurrent replicated-state mutations (lock requests,
+   * lock releases). The resolved `timestampMs` is our frame's position
+   * in the total order the relay maintains for this room.
+   *
+   * By the time the promise resolves, TCP FIFO guarantees every earlier
+   * frame broadcast by the relay to us has already passed through
+   * `handleMessage` — so local replicated state is causally complete up
+   * to (but not including) our frame, and we can safely apply our own
+   * frame on top.
+   */
+  async sendEncryptedWithSettlement(msg: object): Promise<number> {
+    return new Promise<number>((resolve, reject) => {
+      // Register the resolver BEFORE dispatch so a settlement that
+      // arrives on the next microtask still finds its slot in the queue.
+      const pending = { resolve, reject };
+      this.settlementQueue.push(pending);
+      void this.sendEncryptedBinary(msg).then(delivered => {
+        if (!delivered) {
+          // Encryption threw, or the socket was closed before we could
+          // send. The relay will not emit a settlement for this frame;
+          // drop our slot to keep the FIFO aligned with future sends.
+          const idx = this.settlementQueue.indexOf(pending);
+          if (idx >= 0) this.settlementQueue.splice(idx, 1);
+          reject(new Error('Encrypted frame was not delivered to relay'));
+        }
+      });
+    });
+  }
+
+  /**
+   * Reject every pending settlement resolver. Called on socket close to
+   * unblock callers awaiting a settlement that will never come.
+   */
+  private drainSettlementQueue(reason: string): void {
+    if (this.settlementQueue.length === 0) return;
+    const err = new Error(`Settlement dropped: ${reason}`);
+    const pending = this.settlementQueue.splice(0);
+    for (const p of pending) {
+      p.reject(err);
+    }
+  }
+
+  /** Encrypt a system message and send as binary frame (fire-and-forget). */
   private async sendEncryptedSystem(msg: object): Promise<void> {
+    await this.sendEncryptedBinary(msg);
+  }
+
+  /**
+   * Encrypt `msg` and submit it as a binary frame to the relay. Returns
+   * `true` iff the frame was actually written to the socket — callers
+   * awaiting settlement can use this to decide whether to expect a
+   * `frame:settled` back. Errors are logged and swallowed to match the
+   * original fire-and-forget contract.
+   */
+  private async sendEncryptedBinary(msg: object): Promise<boolean> {
     const type = (msg as { type?: string }).type ?? '?';
     const plaintext = new TextEncoder().encode(JSON.stringify(msg)).buffer;
     const plaintextSize = plaintext.byteLength;
@@ -539,27 +663,30 @@ export class EncryptedRelay {
           )
         : await this.vaultClient.encryptWithKey(plaintext, this.cloneKey());
 
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        const head = new Uint8Array(
-          encryptedData.slice(0, Math.min(16, encryptedData.byteLength))
-        );
-        const headHex = Array.from(head)
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('');
-        console.log(
-          '[relay] send',
-          type,
-          'plaintext:',
-          plaintextSize,
-          'cipher:',
-          encryptedData.byteLength,
-          'head:',
-          headHex
-        );
-        this.ws.send(encryptedData);
+      if (this.ws?.readyState !== WebSocket.OPEN) {
+        return false;
       }
+      const head = new Uint8Array(
+        encryptedData.slice(0, Math.min(16, encryptedData.byteLength))
+      );
+      const headHex = Array.from(head)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      console.log(
+        '[relay] send',
+        type,
+        'plaintext:',
+        plaintextSize,
+        'cipher:',
+        encryptedData.byteLength,
+        'head:',
+        headHex
+      );
+      this.ws.send(encryptedData);
+      return true;
     } catch (err) {
       console.error('[relay] Failed to encrypt system message:', err);
+      return false;
     }
   }
 
@@ -617,7 +744,7 @@ export class EncryptedRelay {
         const parsed = JSON.parse(json);
 
         if (parsed.type && typeof parsed.type === 'string') {
-          this.handleSystemMessage(parsed as SystemMessage);
+          this.handleSystemMessage(parsed as SystemMessage, timestampMs);
           // Advance the cursor only after successful decrypt+dispatch so
           // a bad frame doesn't skip us past good ones on reconnect.
           if (timestampMs > this.sinceTimestampMs) {
@@ -637,20 +764,44 @@ export class EncryptedRelay {
     }
   }
 
-  private handleSystemMessage(msg: SystemMessage): void {
-    // Drop lock events during history replay. Locks are ephemeral live
-    // state — OO's OT engine uses them to serialize edits to shared
-    // paragraphs/ranges. Replayed `lock:acquire` events leave phantom
-    // locks in the joiner's OO that no live peer can release, which
-    // freezes editing on the affected region. Cursors and saveChanges
-    // are harmless and still flow through history replay.
+  private handleSystemMessage(
+    msg: SystemMessage,
+    timestampMs?: number,
+  ): void {
+    // Drop ephemeral/live-state events during history replay. These
+    // reference in-memory object ids (Run handles, block guids) that
+    // were valid at the moment the sender emitted them but may have
+    // been removed or replaced by later saveChanges in the history.
+    // Replaying them makes OO look up a no-longer-existing object and
+    // crash in handlers like `Update_ForeignCursor`
+    // (`Run.GetDocumentPositionFromObject is not a function`) or
+    // `onLocksAcquired` (`Set_UserId on undefined`). `saveChanges` is
+    // the only safe type: it carries its own OT anchoring and is what
+    // rebuilds the doc state we need anyway.
     if (
       this.inHistoryPhase &&
-      (msg.type === 'lock:acquire' || msg.type === 'lock:release')
+      (msg.type === 'lock:acquire' ||
+        msg.type === 'lock:release' ||
+        msg.type === 'oo:lockRequest' ||
+        msg.type === 'oo:lockRelease' ||
+        msg.type === 'cursor:update' ||
+        msg.type === 'save:lock' ||
+        msg.type === 'save:unlock')
     ) {
       return;
     }
     switch (msg.type) {
+      case 'frame:settled':
+        // Relay has stamped and enqueued the next pending send. TCP FIFO
+        // on our socket guarantees every frame with a smaller timestamp
+        // we need to know about has already been delivered to us above
+        // this message. Resolve the head of the queue so the caller can
+        // safely apply its frame to local replicated state.
+        if (typeof msg.timestampMs === 'number') {
+          const pending = this.settlementQueue.shift();
+          pending?.resolve(msg.timestampMs);
+        }
+        break;
       case 'system:authenticated':
         // Auth confirmed; record our relay-assigned `joinedAt` so the
         // editor can use it as a leader-election tiebreaker.
@@ -708,6 +859,22 @@ export class EncryptedRelay {
         break;
       case 'peer:crashed':
         this.callbacks.onPeerCrashed?.(msg.userId);
+        break;
+      case 'oo:lockRequest':
+        // Word lock-arbitration frame. Carries a timestamp because it
+        // arrived as a binary frame; skip if somehow received via a
+        // text frame (should never happen given the encrypted delivery
+        // path, but the type system allows it).
+        if (typeof timestampMs === 'number') {
+          this.callbacks.onWordLockRequest?.(
+            msg.userId,
+            msg.keys,
+            timestampMs,
+          );
+        }
+        break;
+      case 'oo:lockRelease':
+        this.callbacks.onWordLockRelease?.(msg.userId, msg.keys);
         break;
     }
   }
