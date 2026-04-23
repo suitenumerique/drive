@@ -4,6 +4,22 @@
       "entitlements": {
         "can_upload": {
           "cannot_upload": "You don't have the necessary rights to transfer files."
+        },
+        "disclaimers": {
+          "close": "OK",
+          "cannot_upload": {
+            "title": "Uploads are unavailable",
+            "no_organization": {
+              "description": "Your account isn't linked to an organization, so you can't upload files yet. Contact your administrator to get access."
+            },
+            "not_activated": {
+              "description": "File upload isn't activated for your organization yet. Contact your administrator to enable it."
+            },
+            "potential_operators": {
+              "description": "Here is the list of potential operators for you, register on their website to get access.",
+              "link": "Register"
+            }
+          }
         }
       },
       "401": {
@@ -605,6 +621,22 @@
       "entitlements": {
         "can_upload": {
           "cannot_upload": "Vous n'avez pas les droits nécessaires pour transférer des fichiers."
+        },
+        "disclaimers": {
+          "close": "OK",
+          "cannot_upload": {
+            "title": "Les téléversements ne sont pas disponibles",
+            "no_organization": {
+              "description": "Votre compte n'est pas rattaché à une organisation, vous ne pouvez pas encore téléverser de fichiers. Contactez votre administrateur pour obtenir un accès."
+            },
+            "not_activated": {
+              "description": "Le téléversement de fichiers n'est pas encore activé pour votre organisation. Contactez votre administrateur pour l'activer."
+            },
+            "potential_operators": {
+              "description": "Voici la liste des opérateurs potentiels pour vous, inscrivez-vous sur leur site pour obtenir un accès.",
+              "link": "Inscription"
+            }
+          }
         }
       },
       "401": {
@@ -1215,6 +1247,22 @@
       "entitlements": {
         "can_upload": {
           "cannot_upload": "U heeft niet de benodigde rechten om bestanden te uploaden."
+        },
+        "disclaimers": {
+          "close": "OK",
+          "cannot_upload": {
+            "title": "Uploaden is niet beschikbaar",
+            "no_organization": {
+              "description": "Uw account is niet gekoppeld aan een organisatie, dus u kunt nog geen bestanden uploaden. Neem contact op met uw beheerder voor toegang."
+            },
+            "not_activated": {
+              "description": "Het uploaden van bestanden is nog niet geactiveerd voor uw organisatie. Neem contact op met uw beheerder om dit in te schakelen."
+            },
+            "potential_operators": {
+              "description": "Hier is de lijst van potentiële operators voor u, registreer u op hun website voor toegang.",
+              "link": "Registreren"
+            }
+          }
         }
       },
       "401": {

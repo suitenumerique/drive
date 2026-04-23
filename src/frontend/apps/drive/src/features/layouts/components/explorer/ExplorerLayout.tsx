@@ -16,6 +16,7 @@ import { Item } from "@/features/drivers/types";
 import { ReleaseNoteAuto } from "@/features/ui/components/release-note";
 import { setManualNavigationItemId } from "@/features/explorer/utils/utils";
 import { ColumnPreferencesProvider } from "@/features/explorer/hooks/useColumnPreferences";
+import { EntitlementDisclaimers } from "@/features/entitlement-disclaimers/EntitlementDisclaimers";
 
 export const getGlobalExplorerLayout = (page: React.ReactElement) => {
   return <GlobalExplorerLayout>{page}</GlobalExplorerLayout>;
@@ -30,6 +31,7 @@ export const GlobalExplorerLayout = ({
     <GlobalLayout>
       <ColumnPreferencesProvider>
         <ReleaseNoteAuto />
+        <EntitlementDisclaimers />
         <ExplorerLayout>{children}</ExplorerLayout>
       </ColumnPreferencesProvider>
     </GlobalLayout>

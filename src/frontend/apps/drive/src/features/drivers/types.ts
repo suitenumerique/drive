@@ -199,7 +199,7 @@ export type ApiConfig = {
   FRONTEND_EXTERNAL_HOME_URL?: string;
   FRONTEND_RELEASE_NOTE_ENABLED?: boolean;
   FRONTEND_ENTITLEMENTS_DISCLAIMERS?: {
-    "not_activated"?: {
+    "cannot_upload"?: {
       enabled: boolean;
       showPotentialOperators: boolean;
     };
