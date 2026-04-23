@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- 🐛(backend) replace VersionId by Etag for WOPI
+
 ## [v0.18.0] - 2026-05-04
 
 ### Added

@@ -88,3 +88,17 @@ def compute_wopi_launch_url(launch_url, get_file_info_path, lang=None):
             query_params[match.group("name")] = placeholders[match.group("placeholder")]
 
     return parsed_launch_url._replace(query=urlencode(query_params)).geturl()
+
+
+def get_wopi_item_version(head_object):
+    """Build a stable WOPI item version token from storage metadata."""
+
+    if etag := head_object.get("ETag"):
+        return etag.strip('"')
+
+    if last_modified := head_object.get("LastModified"):
+        if hasattr(last_modified, "isoformat"):
+            return last_modified.isoformat()
+        return str(last_modified)
+
+    return str(head_object.get("ContentLength", "0"))

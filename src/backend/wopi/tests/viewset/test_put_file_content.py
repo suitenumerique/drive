@@ -58,7 +58,7 @@ def test_put_file_content_connected_user_with_access():
         Key=item.file_key,
     )
     assert file["Body"].read() == b"new content"
-    assert response.headers.get("X-WOPI-ItemVersion") == file["VersionId"]
+    assert response.headers.get("X-WOPI-ItemVersion") == file["ETag"].strip('"')
     item.refresh_from_db()
     assert item.size == 11  # the size should have been updated
     assert item.updated_at > updated_at
@@ -107,7 +107,7 @@ def test_put_file_content_connected_user_with_access_delete_item_during_edition(
         Key=item.file_key,
     )
     assert file["Body"].read() == b"new content"
-    assert response.headers.get("X-WOPI-ItemVersion") == file["VersionId"]
+    assert response.headers.get("X-WOPI-ItemVersion") == file["ETag"].strip('"')
 
     item.soft_delete()
 
@@ -181,7 +181,7 @@ def test_put_file_content_connected_user_with_access_access_removed_during_editi
         Key=item.file_key,
     )
     assert file["Body"].read() == b"new content"
-    assert response.headers.get("X-WOPI-ItemVersion") == file["VersionId"]
+    assert response.headers.get("X-WOPI-ItemVersion") == file["ETag"].strip('"')
 
     access.delete()
 
@@ -395,4 +395,4 @@ def test_put_file_content_with_no_lock_header_and_body_size_0(data):
         Key=item.file_key,
     )
     assert file["Body"].read() == data
-    assert response.headers.get("X-WOPI-ItemVersion") == file["VersionId"]
+    assert response.headers.get("X-WOPI-ItemVersion") == file["ETag"].strip('"')
