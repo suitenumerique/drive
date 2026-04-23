@@ -167,3 +167,68 @@ class ListItemFilter(ItemFilter):
             return queryset
 
         return queryset.filter(is_favorite=bool(value))
+
+
+class UsageMetricAccountTypeChoices(TextChoices):
+    """Choices for the usage metrics `account_type` query param."""
+
+    USER = "user", _("User")
+    ORGANIZATION = "organization", _("Organization")
+
+
+class UsageMetricAccountIdKeyChoices(TextChoices):
+    """Allowed keys for filtering users by account id in the usage metrics endpoint."""
+
+    SUB = "sub", _("Sub")
+    EMAIL = "email", _("Email")
+
+
+class BaseUsageMetricFilter(django_filters.FilterSet):
+    """Shared `account_id_key`/`account_id_value` handling for usage metrics filters.
+
+    Subclasses declare their own `account_id_key` filter (with the right validation
+    rules and `required` flag) and override `ACCOUNT_ID_LOOKUP` to point at the field
+    path used to filter the queryset.
+    """
+
+    ACCOUNT_ID_LOOKUP = "{key}"
+
+    account_id_value = django_filters.CharFilter(method="filter_noop")
+
+    # pylint: disable=unused-argument
+    def filter_account_id_key(self, queryset, name, value):
+        """Apply the account_id_key/account_id_value pair as a single filter."""
+        account_id_value = self.data.get("account_id_value")
+        if not account_id_value:
+            return queryset
+        lookup = self.ACCOUNT_ID_LOOKUP.format(key=value)
+        return queryset.filter(**{lookup: account_id_value})
+
+    # pylint: disable=unused-argument
+    def filter_noop(self, queryset, name, value):
+        """No-op: `account_id_value` is consumed by `filter_account_id`."""
+        return queryset
+
+
+class UsageMetricFilter(BaseUsageMetricFilter):
+    """Filter for the usage metrics endpoint (user listing)."""
+
+    account_id_key = django_filters.ChoiceFilter(
+        choices=UsageMetricAccountIdKeyChoices.choices,
+        method="filter_account_id_key",
+    )
+    account_email = django_filters.CharFilter(field_name="email")
+
+
+class OrganizationUsageMetricFilter(BaseUsageMetricFilter):
+    """Filter for the organization variant of the usage metrics endpoint.
+
+    Both `account_id_key` and `account_id_value` are required, the key is an
+    arbitrary OIDC claim name, and the lookup goes through the User's `claims`
+    JSON field.
+    """
+
+    ACCOUNT_ID_LOOKUP = "claims__{key}"
+
+    account_id_key = django_filters.CharFilter(method="filter_account_id_key", required=True)
+    account_id_value = django_filters.CharFilter(method="filter_noop", required=True)

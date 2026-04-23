@@ -50,13 +50,22 @@ from core.services.search_indexers import (
     get_file_indexer,
     get_visited_items_ids_of,
 )
+from core.storage import get_storage_compute_backend
 from core.tasks.item import duplicate_file, process_item_purge, rename_file
 from core.utils.analytics import posthog_capture
 from wopi.services import access as access_service
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
 
 from . import permissions, serializers, utils
-from .filters import ItemFilter, ItemOrdering, ListItemFilter, SearchItemFilter
+from .filters import (
+    ItemFilter,
+    ItemOrdering,
+    ListItemFilter,
+    OrganizationUsageMetricFilter,
+    SearchItemFilter,
+    UsageMetricAccountTypeChoices,
+    UsageMetricFilter,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -2216,19 +2225,54 @@ class UsageMetricViewset(drf.mixins.ListModelMixin, viewsets.GenericViewSet):
 
     permission_classes = [HasAPIKey]
     queryset = models.User.objects.all().filter(is_active=True)
-    serializer_class = serializers.UsageMetricSerializer
+    serializer_class = serializers.UserUsageMetricSerializer
     pagination_class = Pagination
 
     def get_queryset(self):
-        """
-        Return the queryset applying the filters from the query params.
-        """
-        queryset = self.queryset
+        """Return the queryset filtered through `UsageMetricFilter`."""
+        filterset = UsageMetricFilter(
+            self.request.GET, queryset=self.queryset, request=self.request
+        )
+        if not filterset.is_valid():
+            raise drf.exceptions.ValidationError(filterset.errors)
+        return filterset.filter_queryset(self.queryset)
 
-        if self.request.query_params.get("account_id"):
-            queryset = queryset.filter(sub=self.request.query_params.get("account_id"))
+    def list(self, request, *args, **kwargs):
+        """Handle listing with account_type branching."""
+        account_type = request.query_params.get("account_type", UsageMetricAccountTypeChoices.USER)
 
-        return queryset
+        if account_type == UsageMetricAccountTypeChoices.ORGANIZATION:
+            return self._list_organization(request)
+
+        return super().list(request, *args, **kwargs)
+
+    def _list_organization(self, request):
+        """Aggregate storage metrics across users of an organization."""
+        base_qs = models.User.objects.filter(is_active=True)
+        filterset = OrganizationUsageMetricFilter(request.GET, queryset=base_qs, request=request)
+        if not filterset.is_valid():
+            raise drf.exceptions.ValidationError(filterset.errors)
+        users = filterset.filter_queryset(base_qs)
+
+        storage_backend = get_storage_compute_backend()
+        total_storage = storage_backend.compute_storage_used(users)
+
+        serializer = serializers.OrganizationUsageMetricSerializer(
+            {
+                "account_id_key": filterset.form.cleaned_data["account_id_key"],
+                "account_id_value": filterset.form.cleaned_data["account_id_value"],
+                "total_storage": total_storage,
+            }
+        )
+
+        return drf.response.Response(
+            {
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [serializer.data],
+            }
+        )
 
 
 class EntitlementsViewset(viewsets.ViewSet):
@@ -2247,4 +2291,5 @@ class EntitlementsViewset(viewsets.ViewSet):
                 method = getattr(entitlements_backend, method_name)
                 if callable(method):
                     entitlements[method_name] = method(request.user)
+        entitlements["context"] = entitlements_backend.get_context(request.user)
         return drf.response.Response(entitlements)
