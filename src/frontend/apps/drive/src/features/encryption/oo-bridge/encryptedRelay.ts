@@ -21,7 +21,6 @@ type RoomStateMessage = {
     /** True if this peer has broadcast `peer:crashed`. */
     crashed?: boolean;
   }>;
-  historyLength: number;
 };
 
 /** A peer joined the room (broadcast by server after auth) */
@@ -111,10 +110,15 @@ type SaveChangesBroadcastMessage = {
   media?: Record<string, string>;
 };
 
-/** The leader persisted a checkpoint to S3 at the given epoch. */
+/**
+ * The leader persisted a fresh rendered archive to S3. Used purely as a
+ * signal for peers to clear their "unsaved changes" beforeunload guard
+ * — no epoch carried because ID alignment is handled peer-to-peer via
+ * `oo:state-response` / `oo:checkpoint-reload`, not via S3 replay
+ * anchoring.
+ */
 type SaveCommittedMessage = {
   type: 'save:committed';
-  epochMs: number;
   userId: string;
 };
 
@@ -166,6 +170,50 @@ type WordLockReleaseMessage = {
   keys: string[];
 };
 
+/**
+ * A joiner asks for the current live state. Broadcast unencrypted
+ * (pure text frame) so every peer can see the request. Only the leader
+ * actually answers with a matching `oo:state-response` (encrypted).
+ */
+type PeerStateRequestMessage = {
+  type: 'peer:state-request';
+  userId: string;
+};
+
+/**
+ * The leader's response to a `peer:state-request`. Carries the full
+ * live state: the leader's current baseBin (the native-bin string OO
+ * was loaded from, or from the last checkpoint) plus every saveChanges
+ * observed since. The joiner loads baseBin + replays chain → their
+ * OO ends up identical to the leader's, including every internal id.
+ */
+type PeerStateResponseMessage = {
+  type: 'oo:state-response';
+  /** Target joiner userId — other peers ignore when they see it. */
+  targetUserId: string;
+  /** From-userId (leader). */
+  userId: string;
+  /** Native-bin string, format `"DOCY;v5;{size};{base64data}"`. */
+  baseBin: string;
+  /** Ordered saveChanges messages (opaque OO envelopes) since baseBin. */
+  chain: Array<Record<string, unknown>>;
+};
+
+/**
+ * Leader-initiated full-room reload. Fires when the local chain grows
+ * past a size threshold — the leader snapshots fresh state via
+ * `asc_nativeGetFile()`, publishes it as the new baseBin, and every
+ * peer destroys + recreates its OO iframe with that bin. Resets chain
+ * on all sides to zero. This is the only moment that existing peers
+ * visibly "flash" — between checkpoints they stay put and keep their
+ * in-memory OO running.
+ */
+type CheckpointReloadMessage = {
+  type: 'oo:checkpoint-reload';
+  userId: string;
+  baseBin: string;
+};
+
 type SystemMessage =
   | AuthenticatedMessage
   | HistoryEndMessage
@@ -185,7 +233,10 @@ type SystemMessage =
   | PeerCrashedMessage
   | FrameSettledMessage
   | WordLockRequestMessage
-  | WordLockReleaseMessage;
+  | WordLockReleaseMessage
+  | PeerStateRequestMessage
+  | PeerStateResponseMessage
+  | CheckpointReloadMessage;
 
 export interface RelayCallbacks {
   /** Called when a remote peer's saveChanges envelope arrives (full message) */
@@ -232,25 +283,19 @@ export interface RelayCallbacks {
   /** Called when max reconnection attempts are exhausted */
   onReconnectFailed: () => void;
   /**
-   * Called when the relay rejects our connection with close code 4001
-   * because our `sinceTimestampMs` cursor is older than the relay's
-   * purge floor. The editor must refetch the S3 snapshot and reinit —
-   * we cannot bring the in-memory OO state up to date from the relay
-   * alone.
-   */
-  onStaleHistory?: () => void;
-  /**
-   * Called once the relay has finished replaying the room history that
-   * predates our join. Fires exactly once per WS connection, after the
-   * last history frame and before any live broadcast.
+   * Called once the relay has finished the initial connect sequence
+   * (auth + room state). Marks the moment we're ready to start
+   * participating in live traffic. Fires exactly once per WS
+   * connection.
    */
   onHistoryEnd?: () => void;
   /**
-   * Called when a remote peer persists a checkpoint to S3. The local
-   * editor should clear its "unsaved changes" marker so the
-   * beforeunload guard doesn't prompt on close.
+   * Called when a remote peer persists a fresh rendered archive to S3.
+   * Used purely to clear the local "unsaved changes" beforeunload
+   * marker — no epoch, no resync logic, ID alignment is handled on the
+   * separate `oo:checkpoint-reload` channel.
    */
-  onRemoteSaveCommitted?: (epochMs: number, userId: string) => void;
+  onRemoteSaveCommitted?: (userId: string) => void;
   /**
    * Called when a remote peer requests the save-leader to persist
    * immediately (used by crash-reload recovery). Only the save-leader
@@ -282,6 +327,29 @@ export interface RelayCallbacks {
    * peer still holds.
    */
   onWordLockRelease?: (userId: string, keys: string[]) => void;
+  /**
+   * Called when a joining peer broadcasts `peer:state-request`. On the
+   * receive side, the leader answers with its current (baseBin, chain)
+   * via `sendStateResponse(...)`. Non-leader peers ignore.
+   */
+  onPeerStateRequest?: (fromUserId: string) => void;
+  /**
+   * Called when a state-response arrives that targets us. `baseBin` is
+   * the leader's native-bin string; `chain` is the ordered saveChanges
+   * messages since that bin. Caller is expected to reinit OO with this
+   * state so its internal object ids match the leader's.
+   */
+  onPeerStateResponse?: (
+    fromUserId: string,
+    baseBin: string,
+    chain: Array<Record<string, unknown>>,
+  ) => void;
+  /**
+   * Called on every peer when the leader broadcasts a checkpoint. All
+   * peers (including the leader) destroy + recreate their OO iframe
+   * from the given baseBin and reset their local chain to empty.
+   */
+  onCheckpointReload?: (fromUserId: string, baseBin: string) => void;
 }
 
 export class EncryptedRelay {
@@ -299,12 +367,6 @@ export class EncryptedRelay {
   private destroyed = false;
   private pendingOutgoing: ArrayBuffer[] = [];
   /**
-   * Snapshot epoch (client UTC ms) baked into the S3 file this peer just
-   * loaded. The relay replays events strictly newer than this so we don't
-   * double-apply changes already in the snapshot. Updated after every
-   * successful local save.
-   */
-  private sinceTimestampMs: number;
   /**
    * The `joinedAt` timestamp the relay assigned when it accepted our
    * connection. Populated by the `system:authenticated` frame. Used by
@@ -313,21 +375,16 @@ export class EncryptedRelay {
    */
   public joinedAt: number | null = null;
   /**
-   * Serializes message handling so async binary decrypts can't be overtaken
-   * by synchronous text frames that arrived after them on the wire. Without
-   * this, `history:end` (text, sync) resolves before the binary history
-   * frames that preceded it finish decrypting, and the preload gate closes
-   * before the replayed changes land in `historyInitialChanges`.
+   * Serializes message handling so async binary decrypts can't be
+   * overtaken by synchronous text frames that arrived after them on
+   * the wire.
    */
   private processing: Promise<void> = Promise.resolve();
   /**
-   * True until the relay sends `history:end`. While in this phase every
-   * incoming frame is a replay from the server's `room.history`, which
-   * may contain ephemeral events (cursors, locks) from peers that no
-   * longer exist and/or that reference internal OO object IDs from a
-   * different ID namespace than ours. Applying them crashes OO, so we
-   * drop ephemeral types during history replay and keep only the real
-   * document edits.
+   * True until the relay sends `history:end` (no actual history is
+   * sent anymore, but the marker still fires once post-auth to
+   * signal "connect handshake complete"). Used to gate early binary
+   * frames that arrive before OO is ready for them.
    */
   private inHistoryPhase = true;
 
@@ -354,8 +411,6 @@ export class EncryptedRelay {
     encryptedSymmetricKey: ArrayBuffer;
     encryptedKeyChain: ArrayBuffer[];
     callbacks: RelayCallbacks;
-    /** Snapshot epoch (ms) from S3 metadata; 0 means no snapshot. */
-    sinceTimestampMs?: number;
   }) {
     this.roomId = opts.roomId;
     this.userId = opts.userId;
@@ -364,7 +419,6 @@ export class EncryptedRelay {
     this.encryptedSymmetricKey = opts.encryptedSymmetricKey;
     this.encryptedKeyChain = opts.encryptedKeyChain;
     this.callbacks = opts.callbacks;
-    this.sinceTimestampMs = opts.sinceTimestampMs ?? 0;
   }
 
   /** Connect to the relay server */
@@ -374,13 +428,8 @@ export class EncryptedRelay {
     this.inHistoryPhase = true;
 
     const params = new URLSearchParams({ room: this.roomId });
-    if (this.sinceTimestampMs > 0) {
-      params.set('since', String(this.sinceTimestampMs));
-    }
     const url = `${RELAY_URL}?${params.toString()}`;
-    console.warn(
-      `[relay] connecting since=${this.sinceTimestampMs} url=${url}`,
-    );
+    console.warn(`[relay] connecting url=${url}`);
     this.ws = new WebSocket(url);
     // Don't set binaryType to 'arraybuffer' — we need to distinguish
     // text frames (JSON system messages) from binary frames (encrypted patches).
@@ -413,15 +462,6 @@ export class EncryptedRelay {
       // now so callers (lock arbitrator, etc.) can decide to retry or
       // fail fast.
       this.drainSettlementQueue('connection closed');
-      // 4001 = stale history. The relay cannot serve us the events we
-      // missed; the editor needs to fully reinit from S3. Do NOT
-      // reconnect — just surface the condition and stop.
-      if (event.code === 4001) {
-        console.warn('[relay] closed with stale-history (4001)');
-        this.destroyed = true;
-        this.callbacks.onStaleHistory?.();
-        return;
-      }
       this.scheduleReconnect();
     };
 
@@ -502,27 +542,13 @@ export class EncryptedRelay {
   }
 
   /**
-   * Notify the relay that a fresh S3 snapshot has been committed with the
-   * given epoch (client UTC ms). The relay schedules a delayed purge of
-   * every history entry whose timestamp is <= epochMs.
+   * Notify the relay that a fresh rendered archive has been committed
+   * to S3. Broadcast to peers so they clear their local "unsaved
+   * changes" marker. No epoch carried — ID alignment is handled on
+   * the peer-to-peer state channel, not via S3 replay anchoring.
    */
-  sendSaveCommitted(epochMs: number): void {
-    if (epochMs > this.sinceTimestampMs) {
-      this.sinceTimestampMs = epochMs;
-    }
-    this.sendSystem({ type: 'save:committed', epochMs });
-  }
-
-  /**
-   * Advance the local replay cursor WITHOUT sending anything to the
-   * relay. Used when we observe a remote peer's `save:committed` — we
-   * want our reconnect `?since=` to reflect that epoch, but we must
-   * not re-broadcast or the relay would rebroadcast it back to us.
-   */
-  observeRemoteSaveCommitted(epochMs: number): void {
-    if (epochMs > this.sinceTimestampMs) {
-      this.sinceTimestampMs = epochMs;
-    }
+  sendSaveCommitted(): void {
+    this.sendSystem({ type: 'save:committed' });
   }
 
   /**
@@ -538,6 +564,52 @@ export class EncryptedRelay {
 
   sendCrashed(): void {
     this.sendSystem({ type: 'peer:crashed' });
+  }
+
+  /**
+   * Announce to the room that we need someone to ship us their live
+   * state. Plain text frame (not encrypted) — peers dispatch to the
+   * leader-side `onPeerStateRequest` on receive.
+   */
+  sendStateRequest(): void {
+    this.sendSystem({ type: 'peer:state-request', userId: this.userId });
+  }
+
+  /**
+   * Leader-only response to a `peer:state-request`. Carries the
+   * leader's current baseBin and the chain of saveChanges since.
+   * Encrypted binary frame so the payload never leaks to the relay.
+   * `targetUserId` is the joiner — other peers that see this frame
+   * will still decrypt it (no way to skip: binary frames go to
+   * everyone) but their `onPeerStateResponse` handler filters on the
+   * target.
+   */
+  async sendStateResponse(
+    targetUserId: string,
+    baseBin: string,
+    chain: Array<Record<string, unknown>>,
+  ): Promise<void> {
+    await this.sendEncryptedSystem({
+      type: 'oo:state-response',
+      targetUserId,
+      userId: this.userId,
+      baseBin,
+      chain,
+    });
+  }
+
+  /**
+   * Leader broadcasts a full-room reload with a new baseBin. Every
+   * peer (including the leader) destroys + recreates its OO iframe
+   * from this bin and resets its chain to empty. Triggered when the
+   * local chain grows past a size threshold.
+   */
+  async sendCheckpointReload(baseBin: string): Promise<void> {
+    await this.sendEncryptedSystem({
+      type: 'oo:checkpoint-reload',
+      userId: this.userId,
+      baseBin,
+    });
   }
 
   /** Disconnect and clean up */
@@ -745,11 +817,6 @@ export class EncryptedRelay {
 
         if (parsed.type && typeof parsed.type === 'string') {
           this.handleSystemMessage(parsed as SystemMessage, timestampMs);
-          // Advance the cursor only after successful decrypt+dispatch so
-          // a bad frame doesn't skip us past good ones on reconnect.
-          if (timestampMs > this.sinceTimestampMs) {
-            this.sinceTimestampMs = timestampMs;
-          }
         }
       } catch (err) {
         console.warn(
@@ -860,7 +927,7 @@ export class EncryptedRelay {
         this.callbacks.onSaveChanges(msg.userId, msg.message, msg.media);
         break;
       case 'save:committed':
-        this.callbacks.onRemoteSaveCommitted?.(msg.epochMs, msg.userId);
+        this.callbacks.onRemoteSaveCommitted?.(msg.userId);
         break;
       case 'peer:needs-save':
         this.callbacks.onPeerNeedsSave?.(msg.userId);
@@ -883,6 +950,24 @@ export class EncryptedRelay {
         break;
       case 'oo:lockRelease':
         this.callbacks.onWordLockRelease?.(msg.userId, msg.keys);
+        break;
+      case 'peer:state-request':
+        // Any peer can receive this; only the leader answers.
+        this.callbacks.onPeerStateRequest?.(msg.userId);
+        break;
+      case 'oo:state-response':
+        // Every peer decrypts (binary frames go to everyone), but the
+        // handler filters on `targetUserId` so only the joiner acts.
+        if (msg.targetUserId === this.userId) {
+          this.callbacks.onPeerStateResponse?.(
+            msg.userId,
+            msg.baseBin,
+            msg.chain,
+          );
+        }
+        break;
+      case 'oo:checkpoint-reload':
+        this.callbacks.onCheckpointReload?.(msg.userId, msg.baseBin);
         break;
     }
   }

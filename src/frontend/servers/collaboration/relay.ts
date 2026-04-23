@@ -10,18 +10,10 @@
 
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 import { createServer, IncomingMessage } from 'http';
-import { Mutex } from 'async-mutex';
 
 const PORT = parseInt(process.env.RELAY_PORT || '4100', 10);
 const DRIVE_API_URL = process.env.DRIVE_API_URL || 'http://app-dev:8000';
 const PING_INTERVAL_MS = 30_000;
-/**
- * Grace period between a `save:committed` message and the actual purge of
- * events whose timestamp is <= the committed epoch. The delay exists so a
- * joiner who just fetched an older snapshot (epoch N-2) still finds the
- * events that bring them up to epoch N-1 in the relay history.
- */
-const HISTORY_PURGE_DELAY_MS = 10_000;
 // Upper bound on a single relayed message. The frontend caps raw image bytes
 // at 50 MB; allow ~75 MB on the wire to absorb base64 (+33%), the JSON change
 // envelope and the encryption header. A peer trying to push more is closed
@@ -92,27 +84,12 @@ async function authenticateConnection(
 
 // --- Room management ---
 
-interface HistoryEntry {
-  timestampMs: number;
-  data: RawData;
-}
-
 interface Room {
   peers: Map<WebSocket, PeerMeta>;
-  history: HistoryEntry[];
-  /** Serializes delayed history purges against each other. */
-  purgeMutex: Mutex;
   /**
-   * Highest epoch (client UTC ms) we have ever purged history below. A
-   * joiner reconnecting with `?since=X` where `X < historyFloorMs` is
-   * asking for events we no longer remember, so we reject them and they
-   * must refetch from S3.
-   */
-  historyFloorMs: number;
-  /**
-   * Last time we broadcast a `peer:needs-save` request in this room.
-   * Used to rate-limit the broadcast so a crash-reload loop can't
-   * flood all peers with save requests.
+   * Last time we broadcast a rate-limited room-wide signal
+   * (`peer:state-request`, `peer:needs-save` legacy path). Prevents a
+   * rapid reconnect loop from flooding peers.
    */
   lastNeedsSaveBroadcastMs: number;
   /**
@@ -151,9 +128,6 @@ function getOrCreateRoom(roomId: string): Room {
   if (!room) {
     room = {
       peers: new Map(),
-      history: [],
-      purgeMutex: new Mutex(),
-      historyFloorMs: 0,
       lastNeedsSaveBroadcastMs: 0,
       lastStampedMs: 0,
     };
@@ -218,7 +192,6 @@ function handleConnection(
   ws: WebSocket,
   roomId: string,
   auth: AuthResult,
-  sinceTimestampMs: number,
   joinedAt: number
 ): void {
   ws.binaryType = 'arraybuffer';
@@ -303,16 +276,13 @@ function handleConnection(
       console.warn('[relay] dropped tiny binary frame size:', binary.byteLength);
       return;
     }
-    // Server-authoritative timestamp: prepend 8 bytes (big-endian u64 ms)
-    // to every frame. Two uses:
-    //   1. Clients advance their `sinceTimestampMs` cursor from it so
-    //      history replay across reconnects is monotonic.
-    //   2. Clients also use it as a total-order seq for replicated
-    //      state arbitration (lock requests). That requires strict
-    //      monotonicity — two frames in the same ms would otherwise
-    //      tie with no defined winner. We bump by +1ms on collision,
-    //      which drifts slightly ahead of wall time under bursts but
-    //      self-heals as soon as an idle ms passes.
+    // Server-authoritative timestamp: prepend 8 bytes (big-endian u64
+    // ms) to every frame. Serves as a total-order seq for replicated-
+    // state arbitration (Word lock requests). Strictly monotonic — two
+    // frames in the same ms are bumped to +1ms — so competing requests
+    // always have a unique winner. We no longer persist history on the
+    // relay: peer-to-peer state transfer (baseBin + chain shipped
+    // directly between editor tabs) handles joiner catch-up.
     const now = Date.now();
     const timestampMs =
       now > room.lastStampedMs ? now : room.lastStampedMs + 1;
@@ -321,17 +291,12 @@ function handleConnection(
     stamped.writeBigUInt64BE(BigInt(timestampMs), 0);
     binary.copy(stamped, 8);
     broadcastRaw(room, ws, stamped);
-    room.history.push({ timestampMs, data: stamped });
 
-    // Tell the sender the relay has assigned this timestamp and enqueued
-    // the broadcast to every peer. TCP FIFO on each peer's socket
-    // guarantees that every frame the sender has to know about with
-    // timestamp < this one was already written to the sender's socket
-    // before this ACK — so when the sender processes the ACK, its view
-    // of the log is causally complete up to `timestampMs`. This is the
-    // hook that lets lock-arbitration code apply its own request to the
-    // local state machine only once it's certain no earlier competing
-    // request exists.
+    // Tell the sender the relay has assigned this timestamp and
+    // enqueued the broadcast to every peer. TCP FIFO on each peer's
+    // socket guarantees ordering up to `timestampMs` — used by the
+    // lock arbitrator to apply its own request to local state only
+    // once it's certain no earlier competing request exists.
     sendJSON(ws, { type: 'frame:settled', timestampMs });
   });
 
@@ -364,32 +329,15 @@ function handleConnection(
       crashed: m.crashed,
     }));
 
-  // Filter history to events strictly newer than the snapshot epoch the
-  // joiner already has baked in (from S3 metadata). sinceTimestampMs = 0 means
-  // "no snapshot" — send everything we have.
-  const replay = room.history.filter(
-    e => e.timestampMs > sinceTimestampMs
-  );
-  console.log(
-    `[relay] replay for ${auth.userId}: since=${sinceTimestampMs} ` +
-      `historySize=${room.history.length} replay=${replay.length} ` +
-      `floor=${room.historyFloorMs}`,
-  );
-
+  // No server-side history replay anymore — the joiner asks a peer
+  // for live state via `peer:state-request` and receives an encrypted
+  // `oo:state-response` carrying baseBin + chain. We still emit a
+  // `history:end` marker so the client's preload state machine (which
+  // waits for it before constructing OO) advances.
   sendJSON(ws, {
     type: 'room:state',
     peers: peerList,
-    historyLength: replay.length,
-    sinceTimestampMs,
   });
-
-  for (const entry of replay) {
-    sendRaw(ws, entry.data);
-  }
-
-  // End-of-history marker: the client holds off constructing the OO editor
-  // until this fires so it can feed the replay to OO via `getInitialChanges`
-  // instead of racing the post-load `sendMessageToOO` path.
   sendJSON(ws, { type: 'history:end' });
 }
 
@@ -408,16 +356,12 @@ function handleSystemMessage(
   msg: { type: string; [key: string]: unknown }
 ): void {
   if (msg.type === 'save:committed') {
-    const epochMs = Number(msg.epochMs);
-    if (!Number.isFinite(epochMs) || epochMs <= 0) return;
-    scheduleHistoryPurge(room, epochMs);
-    // Rebroadcast to other peers so they can clear their local
-    // "unsaved changes" marker. The beforeunload guard on non-leader
-    // peers otherwise shows the confirm modal even though the leader
-    // already persisted the shared state.
+    // Rebroadcast purely as a "please clear your unsaved-changes
+    // marker" signal. The peer-to-peer state transfer model doesn't
+    // rely on epoch-anchored history replay anymore, so we no longer
+    // track epochs or schedule purges — the relay is pure transport.
     broadcastSystem(room, ws, {
       type: 'save:committed',
-      epochMs,
       userId: meta.userId,
     });
     return;
@@ -434,18 +378,20 @@ function handleSystemMessage(
     });
     return;
   }
-  if (msg.type === 'peer:needs-save') {
-    // A peer is trying to recover from a local crash and wants the
-    // save-leader to persist so that reload picks up a fresh epoch.
-    // Rate-limit the broadcast: one request per room per 2s so a
-    // reload loop can't flood the room.
+  if (msg.type === 'peer:state-request') {
+    // A joining peer asking for live state. Broadcast to every other
+    // peer; only the leader on the receive side will answer (with an
+    // encrypted `oo:state-response` binary frame carrying baseBin +
+    // chain). Rate-limited to absorb the case of two joiners landing
+    // within the same moment — the second one still gets the response
+    // because state-response is targeted at userId.
     const now = Date.now();
     if (now - room.lastNeedsSaveBroadcastMs < 2000) {
       return;
     }
     room.lastNeedsSaveBroadcastMs = now;
     broadcastSystem(room, ws, {
-      type: 'peer:needs-save',
+      type: 'peer:state-request',
       userId: meta.userId,
     });
     return;
@@ -455,32 +401,6 @@ function handleSystemMessage(
     broadcastSystem(room, ws, { ...msg, userId: meta.userId });
   }
   // Unknown types are silently dropped
-}
-
-/**
- * Delayed purge of history events older than the committed snapshot epoch.
- * The grace window lets joiners mid-fetch still pick up events that bridge
- * their older snapshot to the newly-committed one.
- */
-function scheduleHistoryPurge(room: Room, epochMs: number): void {
-  setTimeout(() => {
-    room.purgeMutex.runExclusive(() => {
-      const before = room.history.length;
-      room.history = room.history.filter(e => e.timestampMs > epochMs);
-      const removed = before - room.history.length;
-      // Advance the floor only after the purge actually executes (not at
-      // schedule time) so the 10s grace window still lets a joiner with
-      // an older snapshot fetch the bridging events.
-      if (epochMs > room.historyFloorMs) {
-        room.historyFloorMs = epochMs;
-      }
-      if (removed > 0) {
-        console.log(
-          `[relay] purged ${removed} history entries <= epoch ${epochMs}, floor=${room.historyFloorMs}`
-        );
-      }
-    });
-  }, HISTORY_PURGE_DELAY_MS);
 }
 
 // --- Server setup ---
@@ -512,16 +432,8 @@ const wss = new WebSocketServer({
 wss.on('connection', async (ws, req) => {
   const url = new URL(req.url || '/', 'ws://localhost');
   const roomId = url.searchParams.get('room');
-  const sinceRaw = url.searchParams.get('since');
-  const sinceTimestampMs = sinceRaw ? Number(sinceRaw) : 0;
-
   if (!roomId) {
     ws.close(1008, 'room parameter required');
-    return;
-  }
-
-  if (!Number.isFinite(sinceTimestampMs) || sinceTimestampMs < 0) {
-    ws.close(1008, 'invalid since parameter');
     return;
   }
 
@@ -539,24 +451,6 @@ wss.on('connection', async (ws, req) => {
 
   if (!auth) {
     ws.close(1008, 'unauthorized');
-    return;
-  }
-
-  // Stale-history guard: if the joiner's cursor is older than our purge
-  // floor, we can no longer bring them up to date from memory. Tell them
-  // to refetch the S3 snapshot and retry. Only applies when the client
-  // actually has a snapshot (since > 0); a fresh cold-open with since=0
-  // is always welcome to replay whatever history remains.
-  const existingRoom = rooms.get(roomId);
-  if (
-    sinceTimestampMs > 0 &&
-    existingRoom &&
-    sinceTimestampMs < existingRoom.historyFloorMs
-  ) {
-    console.log(
-      `[relay] stale history for ${auth.userId}: since=${sinceTimestampMs} < floor=${existingRoom.historyFloorMs}`
-    );
-    ws.close(4001, 'stale history — refetch snapshot');
     return;
   }
 
@@ -580,7 +474,7 @@ wss.on('connection', async (ws, req) => {
     `[relay] ${auth.userName} (${auth.userId}) joined room ${roomId} (canEdit: ${auth.canEdit}) joinedAt=${joinedAt}`
   );
 
-  handleConnection(ws, roomId, auth, sinceTimestampMs, joinedAt);
+  handleConnection(ws, roomId, auth, joinedAt);
 });
 
 httpServer.listen(PORT, () => {
