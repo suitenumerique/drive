@@ -53,15 +53,44 @@ export type UserFilters = {
   q?: string;
 };
 
-export type Entitlement = {
+// Reason is a string that describes the reason for the entitlement result.
+export type EntitlementReason = string;
+
+export type Entitlement<T extends EntitlementReason> = {
   result: boolean;
+  reason?: T;
   message?: string;
   [key: string]: unknown;
 };
 
+export enum EntitlementCanUploadReasons {
+  NO_ORGANIZATION = "no_organization",
+  NOT_ACTIVATED = "not_activated",
+}
+
+type EntitlementOperator = {
+  id: string;
+  name: string;
+  siret: string;
+  url: string | null;
+  config: object;
+  signupUrl: string;
+};
+
+type EntitlementOrganization = {
+  id: string;
+  type: string;
+  name: string;
+};
+
 export type Entitlements = {
-  can_access: Entitlement;
-  can_upload: Entitlement;
+  can_access: Entitlement<never>;
+  can_upload: Entitlement<EntitlementCanUploadReasons>;
+  context: {
+    organization?: EntitlementOrganization;
+    operator?: EntitlementOperator;
+    potentialOperators?: EntitlementOperator[];
+  };
 };
 
 export abstract class Driver {
@@ -76,17 +105,17 @@ export abstract class Driver {
   abstract moveItems(ids: string[], parentId?: string): Promise<void>;
   abstract getChildren(
     id: string,
-    filters?: ItemFilters
+    filters?: ItemFilters,
   ): Promise<PaginatedChildrenResult>;
 
   abstract searchItems(filters?: ItemFilters): Promise<Item[]>;
   // Accesses
 
   abstract getRecentItems(
-    filters?: ItemFilters
+    filters?: ItemFilters,
   ): Promise<PaginatedChildrenResult>;
   abstract getFavoriteItems(
-    filters?: ItemFilters
+    filters?: ItemFilters,
   ): Promise<PaginatedChildrenResult>;
   abstract createFavoriteItem(itemId: string): Promise<void>;
   abstract deleteFavoriteItem(itemId: string): Promise<void>;
@@ -94,7 +123,7 @@ export abstract class Driver {
   abstract createAccess(data: DTOCreateAccess): Promise<void>;
   abstract updateAccess(payload: DTOUpdateAccess): Promise<Access | void>;
   abstract updateLinkConfiguration(
-    payload: DTOUpdateLinkConfiguration
+    payload: DTOUpdateLinkConfiguration,
   ): Promise<void>;
   abstract deleteAccess(payload: DTODeleteAccess): Promise<void>;
   // Invitations

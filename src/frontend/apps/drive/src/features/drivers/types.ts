@@ -198,6 +198,12 @@ export type ApiConfig = {
   FRONTEND_SILENT_LOGIN_ENABLED?: boolean;
   FRONTEND_EXTERNAL_HOME_URL?: string;
   FRONTEND_RELEASE_NOTE_ENABLED?: boolean;
+  FRONTEND_ENTITLEMENTS_DISCLAIMERS?: {
+    "not_activated"?: {
+      enabled: boolean;
+      showPotentialOperators: boolean;
+    };
+  };
   FRONTEND_CSS_URL?: string;
   FRONTEND_JS_URL?: string;
   theme_customization?: ThemeCustomization;
