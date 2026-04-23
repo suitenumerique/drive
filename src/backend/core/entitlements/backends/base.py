@@ -1,6 +1,4 @@
-"""
-Entitlements Backend.
-"""
+"""Entitlements Backend base class."""
 
 from abc import ABC, abstractmethod
 
@@ -19,3 +17,7 @@ class EntitlementsBackend(ABC):
         """
         Check if a user can upload a file.
         """
+
+    def get_context(self, user):  # pylint: disable=unused-argument
+        """Get context for a user."""
+        return {}

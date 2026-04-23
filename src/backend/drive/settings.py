@@ -1436,7 +1436,7 @@ class Base(Configuration):
 
     # Entitlements
     ENTITLEMENTS_BACKEND = values.Value(
-        "core.entitlements.dummy_entitlements_backend.DummyEntitlementsBackend",
+        "core.entitlements.backends.static.StaticEntitlementsBackend",
         environ_name="ENTITLEMENTS_BACKEND",
         environ_prefix=None,
     )
@@ -1609,6 +1609,9 @@ class Test(Base):
     SEARCH_INDEXER_CLASS = None
     OIDC_STORE_ACCESS_TOKEN = False
     OIDC_STORE_REFRESH_TOKEN = False
+
+    ENTITLEMENTS_BACKEND = "core.entitlements.backends.static.StaticEntitlementsBackend"
+    ENTITLEMENTS_BACKEND_PARAMETERS = {}
 
     def __init__(self):
         # pylint: disable=invalid-name

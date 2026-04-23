@@ -44,6 +44,30 @@ def test_api_entitlements_get_entitlements_authenticated():
         "can_upload": {
             "result": True,
         },
+        "context": {},
+    }
+
+
+def test_api_entitlements_static_backend_reads_from_parameters(settings):
+    """StaticEntitlementsBackend should return values from ENTITLEMENTS_BACKEND_PARAMETERS."""
+    settings.ENTITLEMENTS_BACKEND_PARAMETERS = {
+        "entitlements": {
+            "can_access": {"result": False, "message": "Access denied for testing"},
+            "can_upload": {"result": False, "message": "Upload denied for testing"},
+        },
+    }
+    get_entitlements_backend.cache_clear()
+
+    client = APIClient()
+    user = factories.UserFactory()
+    client.force_authenticate(user)
+    response = client.get("/api/v1.0/entitlements/")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "can_access": {"result": False, "message": "Access denied for testing"},
+        "can_upload": {"result": False, "message": "Upload denied for testing"},
+        "context": {},
     }
 
 
@@ -69,4 +93,5 @@ def test_api_entitlements_get_entitlements_entitlements_backend_returns_falsy():
             "can_upload": {
                 "result": True,
             },
+            "context": {},
         }

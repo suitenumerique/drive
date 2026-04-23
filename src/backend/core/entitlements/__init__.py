@@ -1,17 +1,10 @@
-"""
-Entitlements backend utilities.
-"""
+"""Entitlements backend utilities."""
 
-import functools
-
-from django.conf import settings
-from django.utils.module_loading import import_string
+from core.entitlements.factory import get_entitlements_backend
 
 
-@functools.cache
-def get_entitlements_backend():
-    """
-    Get the entitlements backend.
-    """
-    backend = import_string(settings.ENTITLEMENTS_BACKEND)()
-    return backend
+class EntitlementsUnavailableError(Exception):
+    """Raised when the entitlements service is unavailable."""
+
+
+__all__ = ["get_entitlements_backend", "EntitlementsUnavailableError"]
