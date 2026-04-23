@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.17.0] - 2026-04-23
+
 ### Added
 
 - ✨(backend) make invitation validity duration configurable via env var
@@ -26,21 +28,9 @@ and this project adheres to
 - 🐛(frontend) fix uploads continuing after parent folder deletion
 - 🐛(frontend) fix SDK picker link reach promotion
 - 🐛(backend) route share invitation link to file view for files
-
-### Fixed
-
 - 🐛(frontend) fix "+ New" menu in read-only folders and virtual tabs
-
-### Fixed
-
 - 🐛(frontend) range selection freezes when there are many items in the list
-
-### Fixed
-
 - 🐛(backend) fix openapi schema for item access endpoints
-
-### Fixed
-
 - 🐛(backend) load jwks url when OIDC_RS_PRIVATE_KEY_STR is set
 
 ## [v0.16.0] - 2026-04-09
