@@ -769,15 +769,23 @@ export class EncryptedRelay {
     timestampMs?: number,
   ): void {
     // Drop ephemeral/live-state events during history replay. These
-    // reference in-memory object ids (Run handles, block guids) that
-    // were valid at the moment the sender emitted them but may have
-    // been removed or replaced by later saveChanges in the history.
-    // Replaying them makes OO look up a no-longer-existing object and
-    // crash in handlers like `Update_ForeignCursor`
-    // (`Run.GetDocumentPositionFromObject is not a function`) or
-    // `onLocksAcquired` (`Set_UserId on undefined`). `saveChanges` is
-    // the only safe type: it carries its own OT anchoring and is what
-    // rebuilds the doc state we need anyway.
+    // reference in-memory object ids (cell-lock guids, Run handles)
+    // that were valid at the moment the sender emitted them but may
+    // have been replaced by later saveChanges in the history or
+    // regenerated on the receiver's fresh load.
+    //
+    // `oo:lockRequest` / `oo:lockRelease` are ALSO dropped: keeping
+    // them would correctly rehydrate the arbitrator from history,
+    // BUT in practice peers never release (our saveChanges handler
+    // doesn't auto-release to avoid OT races, and `unLockDocument`
+    // only fires on explicit editor blur / save). A rehydrated
+    // arbitrator therefore leaves every paragraph the sender ever
+    // touched flagged as held forever — the joiner can't edit any
+    // of them until the holder fully leaves. Starting with an empty
+    // arbitrator after reload is the lesser evil: the joiner can
+    // type immediately, at the risk of a structural-edit collision
+    // if both sides race on the same block. Accepted as a tradeoff
+    // until we move to ID-preserving persistence (embedded .bin).
     if (
       this.inHistoryPhase &&
       (msg.type === 'lock:acquire' ||

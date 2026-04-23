@@ -10,6 +10,7 @@ import { convertFromInternal } from './x2tConverter';
 import { getPatchIndex } from './changesPipeline';
 import { acquireSaveLock, releaseSaveLock, isSaveLocked } from './locks';
 import { pauseIncomingOT, resumeIncomingOT } from './incomingOtGate';
+import { injectDriveBin } from './odtBundle';
 
 const CHECKPOINT_CHANGES_THRESHOLD = 50;
 const CHECKPOINT_TIME_INTERVAL_MS = 30_000; // 30 seconds for testing
@@ -325,13 +326,47 @@ async function saveCheckpoint(): Promise<void> {
       return;
     }
 
+    // Embed OO's native state as a sidecar inside the archive so the
+    // next Drive open can restore the exact same internal object ids.
+    // Without this, every reload regenerates ids from a pure counter
+    // and diverges from peers still running their original session
+    // (silent OT drop or `undefined.Set_*` crash in Apply_Data).
+    // External tools (LibreOffice, Word) ignore the `.drive/` entry.
+    // Media bytes are NOT stored here — `asc_nativeGetFile()` emits
+    // structure only, images stay in `Pictures/` as usual and are
+    // resolved at load via `g_oDocumentUrls`.
+    let bundled: Uint8Array;
+    try {
+      const binString =
+        typeof rawBin === 'string'
+          ? rawBin
+          : new TextDecoder().decode(binBuffer);
+      bundled = injectDriveBin(converted, binString);
+      console.log(
+        '[checkpoint] bundled sidecar .drive/editor.bin',
+        'binSize:', binString.length,
+        'odtSize:', convertedBytes,
+        'finalSize:', bundled.byteLength,
+      );
+    } catch (e) {
+      // Fall back to plain ODT upload if the ZIP rewrite fails — we
+      // must never abandon a save: the .odt without a sidecar is
+      // still a fully valid rendered document, only the id-preservation
+      // optimisation is lost.
+      console.warn(
+        '[checkpoint] sidecar injection failed — uploading plain ODT',
+        e,
+      );
+      bundled = converted;
+    }
+
     // Phase 2: encrypt + upload. A throw here is almost always
     // transient (S3 network error, presigned URL refresh, vault
     // worker race). Note the vault worker transfers the buffer, so
-    // `converted.buffer` is detached after the await — read the
+    // `bundled.buffer` is detached after the await — read the
     // byte count from the local capture above.
     try {
-      await uploadCallback(converted.buffer, originalFormat, epochMs);
+      await uploadCallback(bundled.buffer, originalFormat, epochMs);
     } catch (error) {
       transientFailure =
         error instanceof Error ? error.message : String(error);

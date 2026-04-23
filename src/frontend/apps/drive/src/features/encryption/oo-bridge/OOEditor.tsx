@@ -25,6 +25,7 @@ import {
   convertFromInternal,
   convertFromInternalToPdf,
 } from './x2tConverter';
+import { extractDriveBin, extractMedia } from './odtBundle';
 import { EXTENSION_TO_X2T_TYPE } from './types';
 import { getEffectiveMimetype } from '@/features/explorer/utils/mimeTypes';
 import { KeyMismatchPanel } from '@/features/encryption/KeyMismatchPanel';
@@ -109,6 +110,15 @@ type EditorState =
   | 'ready'
   | 'error'
   | 'stale-resyncing'
+  /**
+   * Another peer crashed and its reload is about to trigger a room-wide
+   * realignment (see `pendingRecoveryReinitRef`): we've observed the
+   * `peer:needs-save` and we're waiting for the matching `save:committed`
+   * so we can reinit from the same S3 bytes. Overlay shown during this
+   * window so the user doesn't type edits that would be discarded by
+   * the imminent reinit.
+   */
+  | 'peer-resyncing'
   | 'oo-crashed';
 
 // Only these OO message types are allowed in from peers. Anything else (rpc,
@@ -183,6 +193,23 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   // excluded from leader election: a crashed editor can't run
   // `forceSave`. Cleared when the peer disconnects or we rejoin.
   const crashedPeersRef = useRef<Set<string>>(new Set());
+  /**
+   * Set true when a `peer:needs-save` arrives from a peer recovering
+   * from a crash. The next `save:committed` broadcast we observe is
+   * then the save that the crashed peer asked for, and we must reinit
+   * ourselves from the fresh S3 bytes to keep our OO load-phase IDs
+   * aligned with the recovering peer's fresh load. Without this
+   * realignment, saveChanges we broadcast after the peer's reload
+   * reference internal ids they no longer recognise (and vice-versa)
+   * — the OT engine then silently drops those patches or crashes.
+   *
+   * Cleared after triggering reinit, or by a timeout if the save
+   * never lands (leader dead, network wedged, etc).
+   */
+  const pendingRecoveryReinitRef = useRef(false);
+  const pendingRecoveryReinitTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   // Reference to the inner OO iframe's window — used to register media in
   // g_oDocumentUrls when inbound saveChanges envelopes carry inline images.
   const innerWindowRef = useRef<any>(null);
@@ -374,6 +401,73 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     },
     []
   );
+
+  /**
+   * Dump the first few top-level content blocks (paragraphs / tables)
+   * with their OO-internal `Id` and a short text preview. Used to
+   * verify across peers / across reload whether the `.drive/editor.bin`
+   * sidecar actually preserves internal object ids. Same visible text
+   * with same `Id` across runs → ids preserved (sidecar works). Same
+   * text with different `Id` → native-bin round-trip renumbers and
+   * this approach is broken at the root.
+   *
+   * Exposed on `window.__driveLogIds()` for ad-hoc invocation from
+   * devtools — useful to re-check the state after any edit.
+   */
+  const logParagraphIds = useCallback((label: string) => {
+    try {
+      const ooIframe = document.querySelector(
+        'iframe[name="frameEditor"]',
+      ) as HTMLIFrameElement | null;
+      const innerWindow = ooIframe?.contentWindow as any;
+      const innerEditor = innerWindow?.editor || innerWindow?.editorCell;
+      // OO exposes a few aliases; walk them defensively.
+      const logicDoc =
+        innerEditor?.WordControl?.m_oLogicDocument ??
+        innerEditor?.wb?.oApi?.WordControl?.m_oLogicDocument ??
+        innerEditor?.getLogicDocument?.();
+      const content: unknown = logicDoc?.Content;
+      if (!Array.isArray(content)) {
+        console.log(
+          `[id-diag ${label}] document not accessible yet (content missing)`,
+        );
+        return;
+      }
+      const preview = content.slice(0, 5).map((el: any, i: number) => {
+        let text = '';
+        try {
+          if (typeof el.GetText === 'function') {
+            text = String(el.GetText()).slice(0, 60);
+          } else if (typeof el.Get_Text === 'function') {
+            text = String(el.Get_Text()).slice(0, 60);
+          }
+        } catch {
+          /* ignore */
+        }
+        return {
+          idx: i,
+          Id: el?.Id,
+          cls: el?.constructor?.name,
+          text,
+        };
+      });
+      console.log(
+        `[id-diag ${label}] total=${content.length} first5:`,
+        preview,
+      );
+    } catch (e) {
+      console.warn('[id-diag] failed', e);
+    }
+  }, []);
+
+  // Expose the diagnostic globally so it can be triggered from devtools
+  // at any moment — "type on one side, call `__driveLogIds()` on both"
+  // is a quick way to eyeball whether the IDs referenced in the live
+  // saveChanges resolve on both peers.
+  if (typeof window !== 'undefined') {
+    (window as any).__driveLogIds = (label?: string) =>
+      logParagraphIds(label ?? 'manual');
+  }
 
   /**
    * Called once OO reports documentContentReady. Waits the pre-delay
@@ -728,10 +822,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       // sdkjs function throws past its caller, OO's internal state
       // is in an undefined condition. Whitelisting specific function
       // names lets future unknown failure modes silently corrupt
-      // the editor. Known-benign cases (spell-check worker race,
-      // collab cursor on missing run) are suppressed at the iframe
-      // level (see `installIframeErrorShield` below) BEFORE they
-      // reach this parent-level listener, so they never show up.
+      // the editor.
       if (src && /\/sdkjs\/|sdk-all/.test(src)) return true;
       // Fallback: also match stacks whose message mentions sdkjs
       // symbols but whose `filename` was lost (cross-frame rethrow).
@@ -831,12 +922,34 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         );
         if (cancelled) return;
 
-        // Step 3: Convert to .bin format
+        // Step 3: Load OO's internal .bin — ideally from the sidecar
+        // we embedded at save time (preserves the exact object ids
+        // that remote peers still reference), otherwise x2t-convert
+        // the rendered .odt as a fallback (fresh ids — the id-
+        // divergence class of crashes can surface).
         setState('converting');
-        const { bin, images: extractedImages } = await convertToInternal(
-          decryptedBuffer,
-          filename
-        );
+        const decryptedU8 = new Uint8Array(decryptedBuffer);
+        const sidecarBin = extractDriveBin(decryptedU8);
+        let bin: Uint8Array;
+        let extractedImages: Array<{ name: string; data: Uint8Array }>;
+        if (sidecarBin) {
+          console.log(
+            '[OOEditor] loading from embedded .drive/editor.bin',
+            'size:', sidecarBin.length,
+          );
+          // `asc_nativeGetFile()` emits the native format as a UTF-8
+          // string; feed the same encoding back into OO (the blob URL
+          // is consumed verbatim as the doc source).
+          bin = new TextEncoder().encode(sidecarBin);
+          extractedImages = extractMedia(decryptedU8);
+        } else {
+          console.log(
+            '[OOEditor] no sidecar — falling back to x2t conversion',
+          );
+          const converted = await convertToInternal(decryptedBuffer, filename);
+          bin = converted.bin;
+          extractedImages = converted.images;
+        }
         if (cancelled) return;
 
         // Step 4: Create blob URL and load editor
@@ -919,18 +1032,15 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               macros: false,
               plugins: false,
               help: false,
-              // Disable the built-in spellcheck. OO's SpellCheck worker
-              // occasionally posts back a message without the expected
-              // `SpellCheckResponse` / `SuggestResponse` field, and
-              // `SpellCheck_CallBack` crashes trying to read it
-              // (`Cannot read properties of undefined (reading
-              // 'SuggestResponse')`). This is an upstream OO bug
-              // surfacing in `sdk-all-min.js`, not caused by our lock
-              // pipeline — the worker channel is entirely separate
-              // from the co-editing channel. Turning the feature off
-              // keeps the crash from being reachable. Users can still
-              // rely on the browser's native spellcheck.
-              spellcheck: false,
+              // NOTE: we intentionally do NOT set
+              // `customization.spellcheck` here — that path is
+              // deprecated in current OO (the sdk even emits a
+              // "Obsolete" console warning) and, more importantly,
+              // does not actually stop the SpellCheck worker from
+              // starting. The worker is disabled at runtime via
+              // `editor.asc_setSpellCheck(false)` right after the
+              // editor is ready (see the `innerEditor` setup block
+              // further down in this effect).
               // Hide OO's chat panel for read-only users so they don't
               // see a writable input that goes nowhere. Editors keep
               // it — chat messages ride the same relay channel as
@@ -1086,6 +1196,15 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 } catch (e) {
                   console.warn('[OOEditor] deferred replay release failed', e);
                 }
+                // DIAGNOSTIC: log the first few paragraphs' internal ids
+                // so we can verify across peers / across a reload whether
+                // the `.drive/editor.bin` sidecar actually preserves them.
+                // If paragraph with same visible text has same `Id` on
+                // u1 and u2 → IDs are preserved and the sidecar is doing
+                // its job. If different ids for same content → the
+                // native-bin round-trip renumbers objects and our
+                // approach needs rethinking.
+                logParagraphIds('post-load');
               };
               try {
                 const ooIframe = document.querySelector(
@@ -1148,7 +1267,83 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                         message: msg,
                         error: evt.reason,
                       } as ErrorEvent);
+                    },
+                  );
+                }
+
+                // Neutralise the SpellCheck worker at construction
+                // time. The deprecated `customization.spellcheck` is
+                // ignored by current OO and the runtime toggle
+                // `asc_setSpellCheck(false)` only skips consulting
+                // the worker — it doesn't prevent the worker from
+                // starting or from posting messages back through its
+                // MessagePort. The worker occasionally posts a reply
+                // that's missing the expected `SpellCheckResponse` /
+                // `SuggestResponse` field, and `SpellCheck_CallBack`
+                // then crashes reading `.SpellCheckResponse` on
+                // `undefined`.
+                //
+                // We intercept `new Worker(...)` inside the iframe:
+                // when the URL points at OO's spell check worker
+                // (`spell.js` / `spell_ie.js`, see `worker_src` in
+                // sdk-all-min), return a no-op stub that never fires
+                // `oncommand`/`onmessage`. For any other Worker we
+                // defer to the original constructor unchanged.
+                //
+                // Timing: this runs on the post-content-ready hook,
+                // which is early enough for most flows — OO lazily
+                // creates the SpellCheck worker on first need, not
+                // at script-load time, so we're ahead of its
+                // instantiation. If OO ever changes to eager
+                // creation this would need to move earlier.
+                try {
+                  if (
+                    innerWindow &&
+                    !innerWindow.__driveSpellWorkerNeutralised
+                  ) {
+                    innerWindow.__driveSpellWorkerNeutralised = true;
+                    const OrigWorker = innerWindow.Worker;
+                    if (OrigWorker) {
+                      const isSpellCheckUrl = (u: unknown) => {
+                        const s = String(u);
+                        return (
+                          /\bspell(?:_ie)?\.js\b/.test(s) ||
+                          /\/sdkjs\/.*spell/i.test(s)
+                        );
+                      };
+                      innerWindow.Worker = function PatchedWorker(
+                        this: unknown,
+                        url: string | URL,
+                        options?: WorkerOptions,
+                      ) {
+                        if (isSpellCheckUrl(url)) {
+                          console.log(
+                            '[OOEditor] spell-check worker neutralised:',
+                            String(url),
+                          );
+                          const noop = () => undefined;
+                          return {
+                            postMessage: noop,
+                            terminate: noop,
+                            addEventListener: noop,
+                            removeEventListener: noop,
+                            dispatchEvent: () => false,
+                            onmessage: null,
+                            onerror: null,
+                            onmessageerror: null,
+                          } as unknown as Worker;
+                        }
+                        return new OrigWorker(url, options);
+                      } as unknown as typeof Worker;
+                      // Preserve prototype chain so `instanceof Worker`
+                      // checks in OO internals don't flip.
+                      innerWindow.Worker.prototype = OrigWorker.prototype;
                     }
+                  }
+                } catch (e) {
+                  console.warn(
+                    '[OOEditor] failed to neutralise spell-check worker',
+                    e,
                   );
                 }
 
@@ -1215,6 +1410,15 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     if (menu) menu.innerHTML = '';
                   };
 
+                  // Track which buttons we've already logged as
+                  // disabled. The observer below fires on every DOM
+                  // mutation inside the editor (very frequent during
+                  // live editing), so without this guard we'd re-log
+                  // "Charts button disabled (mutation)" dozens of
+                  // times per second. The actual DOM work is cheap
+                  // and idempotent so we still re-apply on each tick —
+                  // only the log is gated.
+                  const loggedDisabled = new Set<string>();
                   const tryApplyAll = (trigger: string) => {
                     for (const {
                       slotId,
@@ -1224,9 +1428,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       const slot = doc.getElementById(slotId);
                       if (slot) {
                         applyToElement(slot as HTMLElement, menuId, label);
-                        console.log(
-                          `[OOEditor] ${label} button disabled (${trigger})`
-                        );
+                        if (!loggedDisabled.has(slotId)) {
+                          loggedDisabled.add(slotId);
+                          console.log(
+                            `[OOEditor] ${label} button disabled (${trigger})`
+                          );
+                        }
                       }
                     }
                   };
@@ -1350,78 +1557,30 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 const innerEditor =
                   innerWindow?.editor || innerWindow?.editorCell;
 
-                // ==== iframe-level error shield for known-benign crashes ====
-                //
-                // OO has its own uncaught-error reaction: the sdkjs
-                // bundle pops up a "Critical error" dialog INSIDE the
-                // iframe, and once that fires the editor locks up even
-                // if the parent also dismisses the error. Our old
-                // parent-level `handleOOError` filter didn't help
-                // because OO had already shown the popup before the
-                // error bubbled up.
-                //
-                // Intercept at the iframe level instead: install a
-                // capture-phase `error` listener on the iframe's own
-                // window that calls `stopImmediatePropagation()` +
-                // `preventDefault()` for crashes we've decided are
-                // cosmetic, so OO's own onerror never runs and no
-                // popup is shown. The editor keeps working; we just
-                // lose the one event that threw.
-                //
-                // Scoped VERY narrowly on purpose — only ephemeral,
-                // non-doc-mutating code paths. Anything touching
-                // `Apply_Data` / `Continue_FastCollaborativeEditing`
-                // is left untouched: those leave OO's doc model in
-                // an inconsistent state and must surface the recovery
-                // overlay so the user reloads from a saved snapshot.
+                // Disable OnlyOffice's spell-check via the RUNTIME API,
+                // not the deprecated `customization.spellcheck` config.
+                // The OO sdk emits a deprecation log when the config
+                // path is used and the engine itself ignores the value
+                // — the SpellCheck worker still starts, still posts
+                // back messages, and still crashes in
+                // `SpellCheck_CallBack` when a response is malformed
+                // (`Cannot read properties of undefined (reading
+                // 'SpellCheckResponse')`). `asc_setSpellCheck(false)`
+                // is the supported post-init toggle that actually
+                // stops the worker from being consulted.
                 try {
-                  if (!innerWindow.__driveErrorShieldInstalled) {
-                    const shield = (event: ErrorEvent) => {
-                      const stack = String(
-                        event.error?.stack ?? event.message ?? '',
-                      );
-                      const benign =
-                        // Peer cursor pointing at a Run that was
-                        // removed/replaced by a later OT patch on
-                        // this side. The cursor position is stale;
-                        // next cursor update from that peer will
-                        // render correctly.
-                        /Update_ForeignCursor/.test(stack) ||
-                        /GetDocumentPositionFromObject/.test(stack) ||
-                        // Spell-check worker race — the worker posts
-                        // back a message without the expected
-                        // response field. We disable spell-check in
-                        // customization, but a late response can still
-                        // sneak in during init.
-                        /SpellCheck_CallBack/.test(stack) ||
-                        /SuggestResponse|SpellCheckResponse/.test(stack);
-                      if (benign) {
-                        console.warn(
-                          '[OOEditor] benign iframe error suppressed — editor kept alive',
-                          stack.split('\n')[0],
-                        );
-                        event.stopImmediatePropagation();
-                        event.preventDefault();
-                      }
-                    };
-                    innerWindow.addEventListener('error', shield, true);
-                    innerWindow.__driveErrorShieldInstalled = true;
-                  }
+                  innerEditor?.asc_setSpellCheck?.(false);
                 } catch (e) {
-                  console.warn(
-                    '[OOEditor] failed to install iframe error shield',
-                    e,
-                  );
+                  console.warn('[OOEditor] asc_setSpellCheck(false) failed', e);
                 }
 
-                // NOTE: apart from the benign-error shield above, we
-                // do NOT monkey-patch sdkjs prototype methods. Those
-                // wrappers (Update_ForeignCursor, CGraphicObjects.*,
-                // SpellCheck_CallBack, private_LockByMe, etc.) tied
-                // us to specific internal paths that break on OO
-                // upgrades and silently swallow errors we didn't
-                // anticipate. The shield is narrowly scoped on
-                // symbolic stack patterns instead.
+
+                // NOTE: apart from `asc_setSpellCheck` above we do not
+                // monkey-patch sdkjs prototype methods. The known-
+                // benign crashes surface via the window-level `error`
+                // listener and trigger the recovery overlay; wrapping
+                // individual prototypes proved fragile across OO
+                // upgrades.
 
                 // REMOVED: apply-drop verifier based on
                 // `CoHistory.GetChangeCount()`. The counter is
@@ -2144,14 +2303,69 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 if (recoveryResolveRef.current) {
                   recoveryResolveRef.current();
                 }
+                // Recovery-aligned reinit: if a crashed peer
+                // requested this save (we observed a prior
+                // `peer:needs-save`), reload ourselves too so our OO
+                // load-phase IDs match the bytes the recovering peer
+                // is about to load from. Without this, the recovering
+                // peer comes back with fresh load IDs while we keep
+                // the old ones, and subsequent cross-peer OT patches
+                // reference ids nobody else recognises — the "u1
+                // reload, u2 keeps typing but never receives" pattern.
+                if (pendingRecoveryReinitRef.current) {
+                  pendingRecoveryReinitRef.current = false;
+                  if (pendingRecoveryReinitTimerRef.current) {
+                    clearTimeout(pendingRecoveryReinitTimerRef.current);
+                    pendingRecoveryReinitTimerRef.current = null;
+                  }
+                  console.log(
+                    '[OOEditor] aligning reinit with recovery save by',
+                    userId,
+                  );
+                  setState('stale-resyncing');
+                  setReinitKey(k => k + 1);
+                }
               },
               onPeerNeedsSave: peerUserId => {
+                // Every peer — leader or not — records that a recovery
+                // save is incoming. On the matching `save:committed`,
+                // non-leaders reinit via the handler above; the leader
+                // reinits after its own `forceSave()` resolves (below).
+                // This is what aligns OO's load-phase id counter
+                // across peers: all reload from the same .odt bytes
+                // at roughly the same time, so the deterministic
+                // `m_nIdCounterLoad` assigns identical ids everywhere.
+                pendingRecoveryReinitRef.current = true;
+                if (pendingRecoveryReinitTimerRef.current) {
+                  clearTimeout(pendingRecoveryReinitTimerRef.current);
+                }
+                // Auto-clear if no save lands — e.g. leader gone, or
+                // network wedged. Prevents a stale flag from hijacking
+                // a much later unrelated `save:committed`.
+                pendingRecoveryReinitTimerRef.current = setTimeout(() => {
+                  pendingRecoveryReinitRef.current = false;
+                  pendingRecoveryReinitTimerRef.current = null;
+                  // Timeout fired without save:committed — fall back to
+                  // clearing the overlay so the user isn't stuck.
+                  setState(current =>
+                    current === 'peer-resyncing' ? 'ready' : current,
+                  );
+                }, 30_000);
+                // Show the "another user is resyncing, hold on" overlay
+                // as soon as we learn a recovery save is coming. This
+                // blocks local input during the short window between
+                // now and the reinit — edits typed during this window
+                // would be lost by the imminent `setReinitKey` anyway.
+                // Don't override if we're already in a more specific
+                // transitional state (crashed, initial loading, etc).
+                setState(current =>
+                  current === 'ready' ? 'peer-resyncing' : current,
+                );
+
                 // A crashed peer is asking the save-leader to persist
                 // so they can reload against a fresh snapshot epoch.
-                // Only the leader acts; everyone else ignores it.
-                // The leader's checkpointing layer has its own
-                // `isSaving` guard so calling `forceSave()` multiple
-                // times in quick succession is already safe.
+                // Only the leader acts on the save itself; everyone
+                // else just waits for the broadcast.
                 if (!isSaveLeaderRef.current()) return;
                 if (outgoingSilencedRef.current) {
                   // If we're ourselves in crash state we can't save
@@ -2165,12 +2379,33 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   peerUserId,
                   'needs save — triggering forceSave as leader'
                 );
-                forceSave().catch(e => {
-                  console.warn(
-                    '[OOEditor] forceSave from peer request failed',
-                    e
-                  );
-                });
+                forceSave()
+                  .then(() => {
+                    // Leader doesn't receive its own `save:committed`
+                    // broadcast (relay excludes sender), so the
+                    // non-leader reinit branch above won't fire here.
+                    // Trigger our reinit right after the save resolves
+                    // so our load IDs re-align with the peers who
+                    // will reinit on the broadcast.
+                    if (pendingRecoveryReinitRef.current) {
+                      pendingRecoveryReinitRef.current = false;
+                      if (pendingRecoveryReinitTimerRef.current) {
+                        clearTimeout(pendingRecoveryReinitTimerRef.current);
+                        pendingRecoveryReinitTimerRef.current = null;
+                      }
+                      console.log(
+                        '[OOEditor] leader reinit post-recovery-save',
+                      );
+                      setState('stale-resyncing');
+                      setReinitKey(k => k + 1);
+                    }
+                  })
+                  .catch(e => {
+                    console.warn(
+                      '[OOEditor] forceSave from peer request failed',
+                      e
+                    );
+                  });
               },
               onPeerCrashed: peerUserId => {
                 // A remote peer's editor entered the crash overlay.
@@ -3019,6 +3254,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 t(
                   'explorer.encrypted.stale_resyncing',
                   'Reconnecting after long disconnect — refetching document...'
+                )}
+              {state === 'peer-resyncing' &&
+                t(
+                  'explorer.encrypted.peer_resyncing',
+                  'A co-editor is resyncing — holding on for a moment...'
                 )}
               {(state === 'loading' || state === 'mounting') &&
                 t('explorer.encrypted.loading_editor', 'Loading editor...')}
