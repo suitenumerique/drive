@@ -2110,6 +2110,7 @@ class ConfigView(drf.views.APIView):
             "FRONTEND_SILENT_LOGIN_ENABLED",
             "FRONTEND_EXTERNAL_HOME_URL",
             "FRONTEND_RELEASE_NOTE_ENABLED",
+            "FRONTEND_ENTITLEMENTS_DISCLAIMERS",
             "FRONTEND_CSS_URL",
             "FRONTEND_JS_URL",
             "MEDIA_BASE_URL",

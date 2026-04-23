@@ -40,6 +40,7 @@ pytestmark = pytest.mark.django_db
     SENTRY_DSN="https://sentry.test/123",
     THEME_CUSTOMIZATION_FILE_PATH="",
     FRONTEND_EXTERNAL_HOME_URL="https://test.com",
+    FRONTEND_ENTITLEMENTS_DISCLAIMERS={},
 )
 @pytest.mark.parametrize("is_authenticated", [False, True])
 def test_api_config(is_authenticated):
@@ -71,6 +72,7 @@ def test_api_config(is_authenticated):
         "FRONTEND_RELEASE_NOTE_ENABLED": True,
         "FRONTEND_CSS_URL": "http://testcss/",
         "FRONTEND_JS_URL": "http://testjs/",
+        "FRONTEND_ENTITLEMENTS_DISCLAIMERS": {},
         "LANGUAGES": [
             ["en-us", "English"],
             ["fr-fr", "French"],
