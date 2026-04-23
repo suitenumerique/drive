@@ -7,13 +7,13 @@ class StorageComputeBackend(ABC):
     """Abstract base class for storage compute backends."""
 
     @abstractmethod
-    def compute_storage_used(self, user):
+    def compute_storage_used(self, users):
         """
-        Compute the storage used by a user.
+        Compute the total storage used by a set of users.
 
         Args:
-            user: The user instance to compute storage for.
+            users: A QuerySet of user instances.
 
         Returns:
-            int: The storage used in bytes.
+            int: The total storage used in bytes.
         """
