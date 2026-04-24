@@ -10,16 +10,19 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import transaction
 from django.http import StreamingHttpResponse
+from django.urls import reverse
 
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from sentry_sdk import capture_exception
 
-from core.api.utils import get_item_file_head_object
+from core.api.utils import detect_mimetype, get_item_file_head_object
 from core.models import Item
+from core.utils import get_app_url
 from wopi.authentication import WopiAccessTokenAuthentication
 from wopi.permissions import AccessTokenPermission
+from wopi.services.access import AccessUserItemService
 from wopi.services.lock import LockService
 from wopi.utils import get_wopi_client_config, get_wopi_item_version
 
@@ -29,11 +32,17 @@ logger = logging.getLogger(__name__)
 HTTP_X_WOPI_LOCK = "HTTP_X_WOPI_LOCK"
 HTTP_X_WOPI_OLD_LOCK = "HTTP_X_WOPI_OLDLOCK"
 HTTP_X_WOPI_OVERRIDE = "HTTP_X_WOPI_OVERRIDE"
+HTTP_X_WOPI_SUGGESTEDTARGET = "HTTP_X_WOPI_SUGGESTEDTARGET"
+HTTP_X_WOPI_RELATIVETARGET = "HTTP_X_WOPI_RELATIVETARGET"
+HTTP_X_WOPI_FILECONVERSION = "HTTP_X_WOPI_FILECONVERSION"
 
 X_WOPI_INVALIDFILENAMERROR = "X-WOPI-InvalidFileNameError"
 X_WOPI_ITEMVERSION = "X-WOPI-ItemVersion"
 X_WOPI_LOCK = "X-WOPI-Lock"
 S3_VERSION_ID = "VersionId"
+
+# Number of leading bytes used to sniff the uploaded content's MIME type.
+MIME_SNIFF_BYTES = 2048
 
 
 class WopiViewSet(viewsets.ViewSet):
@@ -51,6 +60,7 @@ class WopiViewSet(viewsets.ViewSet):
         "REFRESH_LOCK": "_refresh_lock",
         "UNLOCK": "_unlock",
         "RENAME_FILE": "_rename_file",
+        "PUT_RELATIVE": "_put_relative_file",
     }
 
     def get_file_id(self):
@@ -86,7 +96,7 @@ class WopiViewSet(viewsets.ViewSet):
             "UserCanRename": abilities["update"],
             "UserCanPresent": False,
             "UserCanAttend": False,
-            "UserCanNotWriteRelative": True,
+            "UserCanNotWriteRelative": not abilities["update"],
             "ReadOnly": not abilities["update"],
             "SupportsRename": client_options.get("SupportsRename", True),
             "SupportsUpdate": True,
@@ -410,3 +420,106 @@ class WopiViewSet(viewsets.ViewSet):
             )
 
         return Response(status=200)
+
+    def _put_relative_file(self, request, pk=None):
+        """
+        Creates a new file on the host based on the current file.
+
+        This function is only used for file conversion for now.
+
+        https://learn.microsoft.com/en-us/microsoft-365/cloud-storage-partner-program/rest/files/putrelativefile
+        """
+        suggested_target = request.META.get(HTTP_X_WOPI_SUGGESTEDTARGET)
+        relative_target = request.META.get(HTTP_X_WOPI_RELATIVETARGET)
+        file_conversion = request.META.get(HTTP_X_WOPI_FILECONVERSION)
+
+        if not file_conversion:
+            return Response(
+                data={"error": {"details": "Only file conversion is supported."}}, status=400
+            )
+
+        if not suggested_target and not relative_target:
+            return Response(
+                data={
+                    "error": {
+                        "details": (
+                            f"One of {HTTP_X_WOPI_SUGGESTEDTARGET} or "
+                            f"{HTTP_X_WOPI_RELATIVETARGET} must be provided."
+                        )
+                    }
+                },
+                status=400,
+            )
+
+        if suggested_target and relative_target:
+            return Response(
+                data={
+                    "error": {
+                        "details": (
+                            f"{HTTP_X_WOPI_SUGGESTEDTARGET} and {HTTP_X_WOPI_RELATIVETARGET}"
+                            " are mutually exclusive."
+                        )
+                    }
+                },
+                status=400,
+            )
+
+        try:
+            file_content = ContentFile(request.body)
+        except RequestDataTooBig:
+            return Response(status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+
+        item = request.auth.item
+
+        # WOPI requires X-WOPI-SuggestedTarget and X-WOPI-RelativeTarget headers
+        # to be UTF-7 encoded. See the spec:
+        # https://learn.microsoft.com/en-us/microsoft-365/cloud-storage-partner-program/rest/files/putrelativefile
+        if suggested_target:
+            logger.debug("putRelativeFile in suggest_target mode")
+            target = suggested_target.encode("ascii").decode("utf-7")
+            if target.startswith("."):
+                base, _ = splitext(item.filename)
+                target_filename = f"{base}{target}"
+            else:
+                target_filename = target
+
+        else:
+            logger.debug("putRelativeFile in relative_target mode")
+            # Specific mode: host must use the exact name provided
+            target_filename = relative_target.encode("ascii").decode("utf-7")
+
+        item.title = target_filename
+        item.filename = target_filename
+        item.mimetype = detect_mimetype(
+            file_content.read(min(MIME_SNIFF_BYTES, file_content.size)),
+            filename=target_filename,
+        )
+        item.size = file_content.size
+
+        default_storage.save(item.file_key, file_content)
+
+        item.save()
+
+        access_service = AccessUserItemService()
+        new_access_token, _ = access_service.insert_new_access(item, request.user)
+        # WOPI spec: Url must point to the WOPISrc of the new file (the path
+        # the WOPI client uses for CheckFileInfo/GetFile), not the host's
+        # session bootstrap endpoint.
+        get_file_info_path = reverse(
+            "files-detail",
+            kwargs={"pk": item.id},
+            query={"access_token": new_access_token},
+        )
+        wopi_url = get_file_info_path
+        if settings.WOPI_SRC_BASE_URL:
+            wopi_url = f"{settings.WOPI_SRC_BASE_URL}{get_file_info_path}"
+
+        return Response(
+            data={
+                "Name": item.filename,
+                "Url": wopi_url,
+                "HostEditUrl": f"{get_app_url()}/wopi/{item.id}",
+            },
+            status=200,
+            content_type="application/json",
+        )

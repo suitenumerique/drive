@@ -60,7 +60,7 @@ def test_check_file_info_connected_user_with_access():
         "UserCanRename": True,
         "UserCanPresent": False,
         "UserCanAttend": False,
-        "UserCanNotWriteRelative": True,
+        "UserCanNotWriteRelative": False,
         "ReadOnly": False,
         "SupportsRename": True,
         "SupportsUpdate": True,

@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) manage wopi convert action
+
 ### Changed
 
 - 🐛(backend) replace VersionId by Etag for WOPI
