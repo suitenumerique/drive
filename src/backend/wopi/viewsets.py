@@ -21,7 +21,7 @@ from core.models import Item
 from wopi.authentication import WopiAccessTokenAuthentication
 from wopi.permissions import AccessTokenPermission
 from wopi.services.lock import LockService
-from wopi.utils import get_wopi_client_config
+from wopi.utils import get_wopi_client_config, get_wopi_item_version
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,7 @@ HTTP_X_WOPI_OVERRIDE = "HTTP_X_WOPI_OVERRIDE"
 X_WOPI_INVALIDFILENAMERROR = "X-WOPI-InvalidFileNameError"
 X_WOPI_ITEMVERSION = "X-WOPI-ItemVersion"
 X_WOPI_LOCK = "X-WOPI-Lock"
+S3_VERSION_ID = "VersionId"
 
 
 class WopiViewSet(viewsets.ViewSet):
@@ -80,7 +81,7 @@ class WopiViewSet(viewsets.ViewSet):
             "UserFriendlyName": request.user.full_name if not request.user.is_anonymous else None,
             "Size": head_object["ContentLength"],
             "UserId": str(request.user.id),
-            "Version": head_object.get("VersionId", ""),
+            "Version": get_wopi_item_version(head_object),
             "UserCanWrite": abilities["update"],
             "UserCanRename": abilities["update"],
             "UserCanPresent": False,
@@ -139,7 +140,7 @@ class WopiViewSet(viewsets.ViewSet):
             streaming_content=file["Body"].iter_chunks(),
             content_type=item.mimetype,
             headers={
-                "X-WOPI-ItemVersion": head_object.get("VersionId", ""),
+                "X-WOPI-ItemVersion": get_wopi_item_version(head_object),
                 "Content-Length": head_object["ContentLength"],
             },
             status=200,
@@ -182,7 +183,10 @@ class WopiViewSet(viewsets.ViewSet):
         item.save(update_fields=["size", "updated_at"])
 
         head_response = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
-        return Response(status=200, headers={X_WOPI_ITEMVERSION: head_response.get("VersionId", "")})
+        return Response(
+            status=200,
+            headers={X_WOPI_ITEMVERSION: get_wopi_item_version(head_response)},
+        )
 
     def detail_post(self, request, pk=None):
         """
@@ -385,9 +389,9 @@ class WopiViewSet(viewsets.ViewSet):
                 "Bucket": default_storage.bucket_name,
                 "Key": file_key,
             }
-            version_id = head_object.get("VersionId")
+            version_id = head_object.get(S3_VERSION_ID)
             if version_id:
-                delete_object_args["VersionId"] = version_id
+                delete_object_args[S3_VERSION_ID] = version_id
 
             s3_client.delete_object(**delete_object_args)
         # pylint: disable=broad-exception-caught
