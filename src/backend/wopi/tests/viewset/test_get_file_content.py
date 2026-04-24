@@ -44,7 +44,7 @@ def test_get_file_content_connected_user_with_access():
     )
     assert response.status_code == 200
     assert response.streaming_content
-    assert response.headers["X-WOPI-ItemVersion"] == head_response["VersionId"]
+    assert response.headers["X-WOPI-ItemVersion"] == head_response["ETag"].strip('"')
     assert response.headers["Content-Length"] == "8"
 
 
