@@ -145,6 +145,12 @@ class Base(Configuration):
 
     SITE_ID = 1
 
+    URL_APP = values.Value(
+        default=values.Value(default=None, environ_name="EMAIL_URL_APP"),
+        environ_name="URL_APP",
+        environ_prefix=None,
+    )
+
     STORAGES = {
         "default": {
             "BACKEND": values.Value(
@@ -963,7 +969,6 @@ class Base(Configuration):
     EMAIL_HOST_PASSWORD = SecretFileValue(None)
     EMAIL_LOGO_IMG = values.Value(None)
     EMAIL_PORT = values.PositiveIntegerValue(None)
-    EMAIL_URL_APP = values.Value(None)
     EMAIL_USE_TLS = values.BooleanValue(False)
     EMAIL_USE_SSL = values.BooleanValue(False)
     EMAIL_FROM = values.Value("from@example.com")
