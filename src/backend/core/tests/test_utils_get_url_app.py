@@ -1,6 +1,5 @@
 """module testing the utils function get_url_app"""
 
-
 import pytest
 
 from core.utils import get_url_app
