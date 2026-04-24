@@ -1,6 +1,17 @@
 {
   "wopi": {
     "enable": true,
-    "host": "http://localhost:9981"
+    "host": "http://localhost:9981",
+    "pdfView": [],
+    "pdfEdit": [],
+    "forms": [],
+    "wordView": [],
+    "wordEdit": ["docx", "dotx", "docm", "doc"],
+    "cellView": [],
+    "cellEdit": ["xlsx", "xlsb", "xltx", "xlsm", "csv", "xls"],
+    "slideView": [],
+    "slideEdit": ["pptx", "potx", "pptm", "ppt"],
+    "diagramView": [],
+    "diagramEdit": []
   }
 }
