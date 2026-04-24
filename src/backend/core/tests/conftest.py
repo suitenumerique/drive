@@ -30,9 +30,13 @@ def clear_cache():
     from core.storage import (  # pylint:disable=import-outside-toplevel # noqa: PLC0415
         get_storage_compute_backend,
     )
+    from core.utils import (  # pylint:disable=import-outside-toplevel # noqa: PLC0415
+        get_app_url,
+    )
 
     get_entitlements_backend.cache_clear()
     get_storage_compute_backend.cache_clear()
+    get_app_url.cache_clear()
 
 
 @pytest.fixture
