@@ -305,14 +305,14 @@ class SearchIndexer(BaseItemIndexer):
 
         # The deleted items are still accessible in Drive (not in Docs !)
         # See in V2 for handling hard deleted ones
-        is_active = True
+        is_active = item.deleted_at is None and item.ancestors_deleted_at is None
 
         # There is no endpoint in Find API for inactive items so we index it
         # again with an empty content.
         if is_active and self.can_serialize_content(item):
             content = self.to_text(item)
 
-        return {
+        payload = {
             "id": str(item.id),
             "title": item.title or "",
             "mimetype": item.mimetype or "",
@@ -325,10 +325,14 @@ class SearchIndexer(BaseItemIndexer):
             "updated_at": item.updated_at.isoformat(),
             "users": list(accesses.get(doc_path, {}).get("users", set())),
             "groups": list(accesses.get(doc_path, {}).get("teams", set())),
-            "reach": str(item.link_reach),
             "size": item.size or 0,
             "is_active": is_active,
         }
+
+        if item.link_reach:
+            payload["reach"] = str(item.link_reach)
+
+        return payload
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
     def search(self, text, token, visited=(), nb_results=None):
