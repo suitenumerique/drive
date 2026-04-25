@@ -85,11 +85,14 @@ This document lists all configurable environment variables for the Drive applica
 | `OIDC_RP_CLIENT_SECRET` | OIDC client secret | `None` |
 | `OIDC_RP_SCOPES` | OIDC scopes | `openid email` |
 | `OIDC_RP_SIGN_ALGO` | OIDC signing algorithm | `RS256` |
+| `OIDC_PKCE_CODE_CHALLENGE_METHOD` | OIDC PKCE challenge method | `S256` |
+| `OIDC_PKCE_CODE_VERIFIER_SIZE` | Length of the OIDC PKCE verifier code | `64` |
 | `OIDC_STORE_ACCESS_TOKEN` | Store OIDC access token | `False` |
 | `OIDC_STORE_ID_TOKEN` | Store OIDC ID token | `True` |
 | `OIDC_STORE_REFRESH_TOKEN` | Store OIDC refresh token | `False` |
 | `OIDC_STORE_REFRESH_TOKEN_KEY` | Key for storing OIDC refresh token | `None` |
 | `OIDC_USE_NONCE` | Use nonce for OIDC requests | `True` |
+| `OIDC_USE_PKCE` | Use PKCE when interacting with OIDC server | `False` |
 | `OIDC_USER_INFO` | List of OIDC user info claims | `[]` |
 | `OIDC_USERINFO_FULLNAME_FIELDS` | Fields to use for full name | `["first_name", "last_name"]` |
 | `OIDC_USERINFO_SHORTNAME_FIELD` | Field to use for short name | `first_name` |

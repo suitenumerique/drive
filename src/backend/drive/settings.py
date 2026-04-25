@@ -1119,6 +1119,17 @@ class Base(Configuration):
     OIDC_STORE_ID_TOKEN = values.BooleanValue(
         default=True, environ_name="OIDC_STORE_ID_TOKEN", environ_prefix=None
     )
+    OIDC_USE_PKCE = values.BooleanValue(
+        default=False, environ_name="OIDC_USE_PKCE", environ_prefix=None
+    )
+    OIDC_PKCE_CODE_CHALLENGE_METHOD = values.Value(
+        default="S256",
+        environ_name="OIDC_PKCE_CODE_CHALLENGE_METHOD",
+        environ_prefix=None,
+    )
+    OIDC_PKCE_CODE_VERIFIER_SIZE = values.IntegerValue(
+        default=64, environ_name="OIDC_PKCE_CODE_VERIFIER_SIZE", environ_prefix=None
+    )
     OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION = values.BooleanValue(
         default=True,
         environ_name="OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION",
