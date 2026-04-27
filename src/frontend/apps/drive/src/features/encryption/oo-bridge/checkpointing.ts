@@ -12,7 +12,14 @@ import { acquireSaveLock, releaseSaveLock, isSaveLocked } from './locks';
 import { pauseIncomingOT, resumeIncomingOT } from './incomingOtGate';
 
 const CHECKPOINT_CHANGES_THRESHOLD = 50;
-const CHECKPOINT_TIME_INTERVAL_MS = 30_000; // 30 seconds for testing
+// Auto-save tick. We don't need to be aggressive: every save path
+// that matters is now covered explicitly — the close-button guard,
+// `beforeunload`, `visibilitychange` (tab hidden) and the file-preview
+// arrow nav guard. The interval is just a safety net for the
+// pathological case where a leader's tab gets killed by the OS
+// without firing any of those events. 2 minutes is a fair trade
+// between data-loss window and S3 churn.
+const CHECKPOINT_TIME_INTERVAL_MS = 120_000;
 
 /** Reference to the OnlyOffice editor instance */
 let editorInstance: any = null;
@@ -40,11 +47,7 @@ let autoSaveTimer: ReturnType<typeof setInterval> | null = null;
 
 /** Callback for uploading encrypted content */
 let uploadCallback:
-  | ((
-      content: ArrayBuffer,
-      format: string,
-      epochMs: number,
-    ) => Promise<void>)
+  | ((content: ArrayBuffer, format: string) => Promise<void>)
   | null = null;
 
 /**
@@ -76,11 +79,7 @@ export function initCheckpointing(opts: {
   format: string;
   type: string;
   userId: string;
-  onUpload: (
-    content: ArrayBuffer,
-    format: string,
-    epochMs: number,
-  ) => Promise<void>;
+  onUpload: (content: ArrayBuffer, format: string) => Promise<void>;
   /** Return true if this client should be responsible for saving.
    *  When absent, all clients save (single-user mode). */
   isSaveLeader?: () => boolean;
@@ -218,20 +217,27 @@ async function saveCheckpoint(): Promise<void> {
     const innerEditor = innerWindow?.editor || innerWindow?.editorCell;
 
     if (!innerEditor?.asc_nativeGetFile) {
-      console.warn('Checkpoint: inner editor not available yet, skipping');
+      // Either the iframe is still mounting (auto-save tick fired
+      // before docReady) or it has already been torn down (component
+      // unmounting). In both cases the save did NOT happen — report
+      // it as a transient failure so callers don't believe a stale
+      // local state has been persisted to S3.
+      console.warn(
+        '[checkpoint] inner editor not available — save did not run',
+      );
+      transientFailure = 'inner editor not available';
       return;
     }
 
-    // Capture the snapshot epoch and extract the native binary under the
-    // incoming-OT gate so no remote change can be applied between the two
-    // operations. Any remote change that arrives during this window is
-    // queued and drained after we release — those events have a relay
-    // timestamp > epochMs and will be replayed on joiners as "post-snapshot".
+    // Extract the native binary under the incoming-OT gate so no
+    // remote change can be applied mid-snapshot — `asc_nativeGetFile`
+    // walks the live document model, and applying a remote change in
+    // the middle would yield bytes that don't correspond to any
+    // consistent state. Any change that lands during this window is
+    // queued and drained when we release.
     let rawBin: unknown;
-    let epochMs: number;
     pauseIncomingOT();
     try {
-      epochMs = Date.now();
       rawBin = innerEditor.asc_nativeGetFile();
     } finally {
       resumeIncomingOT();
@@ -340,7 +346,7 @@ async function saveCheckpoint(): Promise<void> {
     // `converted.buffer` is detached after the await — read the
     // byte count from the local capture above.
     try {
-      await uploadCallback(converted.buffer, originalFormat, epochMs);
+      await uploadCallback(converted.buffer, originalFormat);
     } catch (error) {
       transientFailure =
         error instanceof Error ? error.message : String(error);
@@ -357,8 +363,6 @@ async function saveCheckpoint(): Promise<void> {
       originalFormat,
       '(images:',
       media.size,
-      ', epochMs:',
-      epochMs,
       ')',
     );
   } catch (error) {

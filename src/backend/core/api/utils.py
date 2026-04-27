@@ -101,13 +101,8 @@ def generate_s3_authorization_headers(key):
     return request
 
 
-def generate_upload_policy_for_key(key, content_type=None, metadata=None):
-    """Generate a presigned S3 PUT URL for a given key.
-
-    When `metadata` is provided, each key is signed as an `x-amz-meta-*`
-    header. The client MUST send the corresponding headers verbatim on the
-    PUT request or S3 will reject the signature.
-    """
+def generate_upload_policy_for_key(key, content_type=None):
+    """Generate a presigned S3 PUT URL for a given key."""
     if settings.AWS_S3_DOMAIN_REPLACE:
         s3_client = boto3.client(
             "s3",
@@ -125,8 +120,6 @@ def generate_upload_policy_for_key(key, content_type=None, metadata=None):
     params = {"Bucket": default_storage.bucket_name, "Key": key, "ACL": "private"}
     if content_type:
         params["ContentType"] = content_type
-    if metadata:
-        params["Metadata"] = {str(k): str(v) for k, v in metadata.items()}
 
     return s3_client.generate_presigned_url(
         ClientMethod="put_object",

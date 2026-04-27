@@ -357,9 +357,8 @@ function handleSystemMessage(
 ): void {
   if (msg.type === 'save:committed') {
     // Rebroadcast purely as a "please clear your unsaved-changes
-    // marker" signal. The peer-to-peer state transfer model doesn't
-    // rely on epoch-anchored history replay anymore, so we no longer
-    // track epochs or schedule purges — the relay is pure transport.
+    // marker" signal. The relay is pure transport — no history,
+    // no anchoring; live state alignment is peer-to-peer.
     broadcastSystem(room, ws, {
       type: 'save:committed',
       userId: meta.userId,

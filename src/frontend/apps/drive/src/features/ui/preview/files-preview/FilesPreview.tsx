@@ -80,6 +80,39 @@ export const FilePreview = ({
   const [currentIndex, setCurrentIndex] = useState(initialIndexFile);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Some viewers (currently the encrypted office editor) need to
+  // flush in-flight unsaved work BEFORE we tear them down. They
+  // register a guard on `window.__driveOOEditorSaveGuard`. Awaiting
+  // it here, before `setCurrentIndex`, keeps the current viewer
+  // mounted long enough for it to drain. Without this, arrow nav
+  // moves `currentIndex` synchronously, the renderer immediately
+  // swaps the viewer, the unmount commits, and the editor's
+  // `forceSave` only runs from the cleanup — by which point the
+  // iframe is already gone and the bytes can't be read.
+  // Single helper used by every code path that's about to unmount
+  // or replace the current viewer (arrows + close button + modal
+  // dismiss). The guard hook is generic — any feature can register
+  // `__driveOOEditorSaveGuard` and this layer will await it without
+  // needing to know what it does.
+  const flushGuardThen = async (next: () => void) => {
+    const guard = (
+      window as unknown as {
+        __driveOOEditorSaveGuard?: () => Promise<void>;
+      }
+    ).__driveOOEditorSaveGuard;
+    if (guard) {
+      try {
+        await guard();
+      } catch (e) {
+        console.error("[FilePreview] save guard threw", e);
+      }
+    }
+    next();
+  };
+  const navWithFlush = (newIndex: number) =>
+    flushGuardThen(() => setCurrentIndex(newIndex));
+  const closeWithFlush = () => flushGuardThen(() => onClose?.());
+
   const data: FilePreviewData[] = useMemo(() => {
     return files?.map((file) => ({
       ...file,
@@ -195,7 +228,7 @@ export const FilePreview = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={() => onClose?.()} size={ModalSize.FULL}>
+    <Modal isOpen={isOpen} onClose={closeWithFlush} size={ModalSize.FULL}>
       <div data-testid="file-preview">
         <div
           className={`file-preview-container ${
@@ -209,7 +242,7 @@ export const FilePreview = ({
                   <Button
                     variant="tertiary"
                     size="small"
-                    onClick={onClose}
+                    onClick={closeWithFlush}
                     icon={<Icon name="close" />}
                   />
                 )}
@@ -226,8 +259,8 @@ export const FilePreview = ({
                   <FilePreviewNav
                     currentIndex={currentIndex}
                     totalFiles={data.length}
-                    onPrevious={() => setCurrentIndex(currentIndex - 1)}
-                    onNext={() => setCurrentIndex(currentIndex + 1)}
+                    onPrevious={() => navWithFlush(currentIndex - 1)}
+                    onNext={() => navWithFlush(currentIndex + 1)}
                   />
                 )}
               </div>

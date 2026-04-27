@@ -33,6 +33,11 @@ export const CustomFilesPreview = ({
       .map(itemToPreviewFile);
   }, [items]);
 
+  // The `FilePreview` modal's close button and arrow-nav handlers
+  // already await `window.__driveOOEditorSaveGuard` themselves
+  // (registered by OOEditor when it has unsaved leader changes), so
+  // by the time these callbacks fire, the previous editor has either
+  // already drained or had nothing to drain. We just swap state.
   const handleClosePreview = () => {
     setPreviewItem?.(undefined);
   };

@@ -112,10 +112,9 @@ type SaveChangesBroadcastMessage = {
 
 /**
  * The leader persisted a fresh rendered archive to S3. Used purely as a
- * signal for peers to clear their "unsaved changes" beforeunload guard
- * — no epoch carried because ID alignment is handled peer-to-peer via
- * `oo:state-response` / `oo:checkpoint-reload`, not via S3 replay
- * anchoring.
+ * signal for peers to clear their "unsaved changes" beforeunload guard.
+ * ID alignment is handled peer-to-peer via `oo:state-response` /
+ * `oo:checkpoint-reload`, not via S3.
  */
 type SaveCommittedMessage = {
   type: 'save:committed';
@@ -124,8 +123,8 @@ type SaveCommittedMessage = {
 
 /**
  * A peer recovering from a local crash wants the save-leader to
- * persist so it can reload against a fresh snapshot epoch. Rate-
- * limited by the relay (one per room per 2s).
+ * persist so it can cold-reload from a fresh S3 snapshot. Rate-limited
+ * by the relay (one per room per 2s).
  */
 type PeerNeedsSaveMessage = {
   type: 'peer:needs-save';
@@ -292,8 +291,8 @@ export interface RelayCallbacks {
   /**
    * Called when a remote peer persists a fresh rendered archive to S3.
    * Used purely to clear the local "unsaved changes" beforeunload
-   * marker — no epoch, no resync logic, ID alignment is handled on the
-   * separate `oo:checkpoint-reload` channel.
+   * marker. ID alignment is handled on the separate
+   * `oo:checkpoint-reload` channel.
    */
   onRemoteSaveCommitted?: (userId: string) => void;
   /**
@@ -544,8 +543,8 @@ export class EncryptedRelay {
   /**
    * Notify the relay that a fresh rendered archive has been committed
    * to S3. Broadcast to peers so they clear their local "unsaved
-   * changes" marker. No epoch carried — ID alignment is handled on
-   * the peer-to-peer state channel, not via S3 replay anchoring.
+   * changes" marker. ID alignment is handled on the peer-to-peer state
+   * channel, not via S3.
    */
   sendSaveCommitted(): void {
     this.sendSystem({ type: 'save:committed' });
@@ -553,10 +552,10 @@ export class EncryptedRelay {
 
   /**
    * Ask the save-leader in the room to persist immediately. Used by
-   * the crash-recovery reload path so the reinit can pick up a fresh
-   * snapshot epoch. The relay rate-limits rebroadcasts (one per room
-   * per 2s), and the leader-side handler respects the existing
-   * `isSaving` guard, so callers don't need to debounce.
+   * the crash-recovery reload path so the reinit can cold-load a fresh
+   * S3 snapshot. The relay rate-limits rebroadcasts (one per room per
+   * 2s), and the leader-side handler respects the existing `isSaving`
+   * guard, so callers don't need to debounce.
    */
   sendNeedsSave(): void {
     this.sendSystem({ type: 'peer:needs-save' });
@@ -784,9 +783,9 @@ export class EncryptedRelay {
 
     if (buffer) {
       // Every binary frame from the relay is prefixed with an 8-byte
-      // big-endian u64 timestampMs assigned server-side. Strip it before
-      // decryption and use it to advance our `sinceTimestampMs` cursor
-      // so reconnects skip anything we've already seen.
+      // big-endian u64 timestampMs assigned server-side. Strip it
+      // before decryption — the timestamp is the total-order seq used
+      // by the lock arbitrator to rank competing requests.
       if (buffer.byteLength < 8 + 32) {
         return;
       }

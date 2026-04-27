@@ -93,11 +93,15 @@ export const EncryptedFileViewer = ({
   const effectiveMimetype =
     getEffectiveMimetype(file as unknown as Parameters<typeof getEffectiveMimetype>[0]) ??
     file.mimetype;
-  const category = getMimeCategory(effectiveMimetype);
 
   // Office files: use OnlyOffice client-side editor (handles its own decryption).
   // Use the OO bridge's own MIME_TO_DOC_TYPE as the source of truth — it covers
   // formats like text/plain and text/csv that getMimeCategory classifies as OTHER.
+  // Dispatched to a child component so the office and non-office paths
+  // each have a stable hook order. Calling the OO branch as an early
+  // `return` here while the non-office branch calls
+  // `useDecryptedContent` would break the rules of hooks the moment a
+  // user navigates from an office file to an image (or vice versa).
   const isOfficeFormat = effectiveMimetype in MIME_TO_DOC_TYPE;
 
   if (isOfficeFormat) {
@@ -109,6 +113,29 @@ export const EncryptedFileViewer = ({
     };
     return <OOEditor item={itemLike as any} />;
   }
+
+  return (
+    <NonOfficeEncryptedViewer
+      file={file}
+      effectiveMimetype={effectiveMimetype}
+      onDownload={onDownload}
+    />
+  );
+};
+
+interface NonOfficeEncryptedViewerProps {
+  file: FilePreviewType;
+  effectiveMimetype: string;
+  onDownload?: () => void;
+}
+
+const NonOfficeEncryptedViewer = ({
+  file,
+  effectiveMimetype,
+  onDownload,
+}: NonOfficeEncryptedViewerProps) => {
+  const { t } = useTranslation();
+  const category = getMimeCategory(effectiveMimetype);
 
   // Non-office files: decrypt and display with native viewers
   // Pass item-like object to the hook

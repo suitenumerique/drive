@@ -195,6 +195,23 @@ export const OOEditor = ({ item }: OOEditorProps) => {
    * torn down in the cleanup branch of the previous run.
    */
   const [reinitKey, setReinitKey] = useState(0);
+  /**
+   * User-driven escape hatch out of the `PEER_STATE_UNAVAILABLE`
+   * error overlay: when set, init forces view mode and skips the
+   * relay entirely (no peer:join, no state-request, no saveChanges).
+   * The user gets a pure local read-only view of the S3 snapshot —
+   * safe even when another peer is editing because we emit nothing.
+   * Cleared on a manual reload (the user decided to retry the live
+   * session). Bumping `reinitKey` when this flips re-runs init.
+   */
+  const [viewOnlyOverride, setViewOnlyOverride] = useState(false);
+  /**
+   * True while a "flush before close" save is in flight. When set, the
+   * editor renders a full-screen overlay with a loader so the user
+   * sees that we're persisting their work before the document closes.
+   * Triggered by the close-button save guard (see useEffect below).
+   */
+  const [flushingOnClose, setFlushingOnClose] = useState(false);
   const editorRef = useRef<OOEditorInstance | null>(null);
   const relayRef = useRef<EncryptedRelay | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -253,18 +270,31 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   };
   const peerStateDumpRef = useRef<PeerStateDump | null>(null);
   /**
-   * Resolver for the "bin decision" promise: `'peer'` when we've
-   * received a live state-response (peer dump stashed in
-   * `peerStateDumpRef`), `'cold'` when `room:state` confirms we're
-   * alone or the 15s timeout fires. Init awaits this before creating
-   * OO so the editor boots from the right bytes — peer baseBin if
-   * available, x2t output otherwise. Without the await, init used to
-   * build OO from x2t ids and then never swap (even after a late
-   * state-response), producing the classic "u2 sees own numeric ids,
-   * u1 sees edit-phase ids, drift forever".
+   * Resolver for the "bin decision" promise. Four possible outcomes:
+   *   - `'peer'` — we received a live state-response (peer dump in
+   *     `peerStateDumpRef`); init swaps the editor's source bin and
+   *     replays the chain.
+   *   - `'cold'` — `room:state` confirmed we're alone, or the last
+   *     other editor left while we were waiting; init boots from our
+   *     x2t-converted bin.
+   *   - `'no-response'` — peers were present at `room:state`, we
+   *     broadcast `peer:state-request`, and 15s elapsed without an
+   *     `oo:state-response`. Booting from x2t here would corrupt the
+   *     session: the active editor has live edit-phase ids and we'd
+   *     start with mismatched cold-start ids, so every subsequent
+   *     saveChanges would drift the document. Init bails to the error
+   *     overlay instead, telling the user a peer is unresponsive.
+   *   - `'no-relay'` — the WebSocket relay failed to connect, or
+   *     `EncryptedRelay` construction threw (vault keys, etc). We
+   *     have no way to know whether other peers are editing right
+   *     now, so opening editable would risk corruption — same hard
+   *     bail as `'no-response'` with a dedicated message.
+   *
+   * Init awaits this before creating OO, so the editor only boots
+   * when we know which bytes to feed it.
    */
   const binDecisionResolveRef = useRef<
-    ((r: 'peer' | 'cold') => void) | null
+    ((r: 'peer' | 'cold' | 'no-response' | 'no-relay') => void) | null
   >(null);
   /**
    * True while we're expecting a peer state dump (we've broadcast a
@@ -361,9 +391,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
    * the init effect and refetches the S3 snapshot), ask the room's
    * save-leader to persist immediately. Then wait for the
    * `save:committed` broadcast to arrive before bumping — that's the
-   * signal the S3 object has a fresh `x-amz-meta-epoch` we can pick
-   * up. A hard timeout falls through to a reinit against the old
-   * epoch if no one saves in time.
+   * signal the S3 object now reflects the latest live state. A hard
+   * timeout falls through to a reinit against the older snapshot if
+   * no one saves in time.
    *
    * While the wait is in progress the button shows a loader and is
    * disabled so the user can't double-click.
@@ -384,16 +414,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
 
     // If no other non-crashed editor is in the room, nobody will
     // respond to `peer:needs-save` — skip the wait and reinit
-    // immediately against the current S3 snapshot.
-    // NOTE: the crashed user is still connected to the relay (WebSocket
-    // stays open so it can observe `save:committed`), so the relay room
-    // is not empty. However, the relay history is harmless here: on
-    // reinit the relay replays events since the snapshot epoch, and if
-    // we are alone any pending history is our own corrupted edits that
-    // will be discarded (the fresh snapshot from S3 is the source of
-    // truth). The relay does NOT wipe history on its own — it keeps it
-    // for late joiners — but reinit fetches a fresh snapshot and only
-    // applies events newer than its epoch, so stale history is ignored.
+    // immediately against the current S3 snapshot. The crashed user is
+    // still connected to the relay (WebSocket stays open so it can
+    // observe `save:committed`), so the room is not empty per se, but
+    // there's no surviving editor that could ship us live state.
     const myId = user?.sub;
     const hasOtherSaver = [...editorPeersRef.current.keys()].some(
       id => id !== myId && !crashedPeersRef.current.has(id)
@@ -575,7 +599,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       );
     }, DRAIN_PRE_DELAY_MS);
   }, []);
-  const canEdit = !!item.abilities?.partial_update;
+  // `viewOnlyOverride` flips us to local read-only without changing
+  // the underlying ability — same code path as a true reader, so the
+  // mode prop, relay gating and leader-election all become no-ops
+  // automatically.
+  const canEdit =
+    !!item.abilities?.partial_update && !viewOnlyOverride;
 
   // For encrypted items the server stores `application/octet-stream` (it
   // can't sniff ciphertext). `getEffectiveMimetype` falls back to the
@@ -758,7 +787,6 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     async (
       content: ArrayBuffer,
       _format: string,
-      epochMs: number
     ): Promise<void> => {
       const vaultClient = window.__driveVaultClient;
       if (!vaultClient) {
@@ -804,19 +832,18 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               entryKeyBytes.buffer.slice(0)
             );
 
-      // Get a presigned S3 upload URL for the existing file key
-      // S3 versioning keeps previous versions — no new filename needed
+      // Get a presigned S3 upload URL for the existing file key.
+      // S3 versioning keeps previous versions — no new filename needed.
       const urlResponse = await fetchAPI(
         `items/${item.id}/encryption-upload-url/`,
         {
           method: 'POST',
-          body: JSON.stringify({ epoch_ms: epochMs }),
+          body: JSON.stringify({}),
           headers: { 'Content-Type': 'application/json' },
         },
         { redirectOn40x: false }
       );
-      const { upload_url: uploadUrl, required_headers: requiredHeaders = {} } =
-        await urlResponse.json();
+      const { upload_url: uploadUrl } = await urlResponse.json();
 
       // Upload encrypted content to S3 via presigned URL (XHR like regular Drive uploads)
       const encryptedBytes = new Uint8Array(encryptedData);
@@ -825,13 +852,6 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         xhr.open('PUT', uploadUrl);
         xhr.setRequestHeader('X-amz-acl', 'private');
         xhr.setRequestHeader('Content-Type', 'application/octet-stream');
-        // Every header that was bound into the presigned signature MUST
-        // be sent verbatim or S3 returns SignatureDoesNotMatch.
-        for (const [name, value] of Object.entries(
-          requiredHeaders as Record<string, string>
-        )) {
-          xhr.setRequestHeader(name, value);
-        }
         xhr.addEventListener('error', () =>
           reject(new Error('S3 upload network error'))
         );
@@ -855,13 +875,61 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       });
 
       // Signal peers that we've flushed a fresh rendered archive to S3
-      // — they'll clear their local "unsaved" marker. No epoch logic:
-      // S3 is for cold-start recovery only, alignment between live peers
-      // is handled peer-to-peer.
+      // — they'll clear their local "unsaved" marker. S3 is for
+      // cold-start recovery only; alignment between live peers is
+      // handled peer-to-peer.
       relayRef.current?.sendSaveCommitted();
     },
     [item.id]
   );
+
+  /**
+   * Close-button save guard.
+   *
+   * The preview-modal close path runs synchronously: parent calls
+   * `setPreviewItem(undefined)`, React unmounts OOEditor, the iframe
+   * is removed before our cleanup runs — so any save attempt from
+   * cleanup is too late (the iframe is already gone).
+   *
+   * Solution: register a window-level async guard that the parent
+   * `await`s BEFORE unmounting. When triggered, we flip
+   * `flushingOnClose` so an overlay covers the editor with a loader,
+   * call `forceSave`, and return. The parent then unmounts.
+   *
+   * Tab close / refresh take a different path: `beforeunload` fires
+   * the native browser confirm, and on "Stay" we still have the iframe
+   * alive (handled by `handleVisibilityChange` and the auto-save tick).
+   * We can't render an overlay during a real unload — the page is
+   * already navigating — so the native confirm is the best we can do.
+   */
+  useEffect(() => {
+    const guard = async (): Promise<void> => {
+      if (!isSaveLeaderRef.current()) return;
+      if (!hasUnsavedChanges()) return;
+      // Iframe is still mounted at this point — the guard fires
+      // BEFORE React tears down the subtree, so `forceSave` can read
+      // the live document state.
+      setFlushingOnClose(true);
+      try {
+        await forceSave();
+      } catch (e) {
+        console.error('[OOEditor] flush-on-close save failed', e);
+      } finally {
+        setFlushingOnClose(false);
+      }
+    };
+    const w = window as unknown as {
+      __driveOOEditorSaveGuard?: () => Promise<void>;
+    };
+    w.__driveOOEditorSaveGuard = guard;
+    return () => {
+      // Only clear if it's still ours — a remount may have already
+      // overwritten the slot with a fresh instance's guard.
+      if (w.__driveOOEditorSaveGuard === guard) {
+        delete w.__driveOOEditorSaveGuard;
+      }
+    };
+  }, []);
 
   /**
    * Main initialization: decrypt → convert → load editor.
@@ -2135,25 +2203,66 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // the first frames come in — even before the main flow has
         // reached the corresponding `await`.
         const BIN_DECISION_TIMEOUT_MS = 15_000;
-        const binDecisionPromise = new Promise<'peer' | 'cold'>(
-          resolve => {
-            const wrapped = (r: 'peer' | 'cold') => {
-              if (binDecisionResolveRef.current) {
-                binDecisionResolveRef.current = null;
-                resolve(r);
-              }
-            };
-            binDecisionResolveRef.current = wrapped;
-            setTimeout(() => {
-              if (binDecisionResolveRef.current) {
-                console.warn(
-                  '[OOEditor] bin-decision timeout — falling back to cold-start x2t',
-                );
-                binDecisionResolveRef.current('cold');
-              }
-            }, BIN_DECISION_TIMEOUT_MS);
-          },
-        );
+        const binDecisionPromise = new Promise<
+          'peer' | 'cold' | 'no-response' | 'no-relay'
+        >(resolve => {
+          const wrapped = (
+            r: 'peer' | 'cold' | 'no-response' | 'no-relay',
+          ) => {
+            if (binDecisionResolveRef.current) {
+              binDecisionResolveRef.current = null;
+              resolve(r);
+            }
+          };
+          binDecisionResolveRef.current = wrapped;
+          // View-only override: we deliberately don't connect to the
+          // relay, so no callback will ever resolve this promise.
+          // Pre-resolve as `'cold'` so the convert step proceeds with
+          // the x2t bin we already produced. We're emitting nothing,
+          // so id alignment doesn't matter — the editor is purely
+          // local.
+          if (viewOnlyOverride) {
+            wrapped('cold');
+            return;
+          }
+          setTimeout(() => {
+            if (!binDecisionResolveRef.current) return;
+            // Final ghost-peer scrub before failing the user. The
+            // `onRoomState` filter already excludes same-userId
+            // peers and crashed peers, but in dev with React Strict
+            // Mode (or HMR), a stale tab from a previous mount cycle
+            // can still appear in `room:state` for a few hundred ms
+            // before the server processes its close. If at the 15s
+            // mark the live ref shows ZERO real other editors, the
+            // initial "peers present" reading was a transient ghost
+            // — fall back to `'cold'` instead of throwing the user
+            // into the error overlay.
+            const liveOthers = [...editorPeersRef.current.keys()].filter(
+              id =>
+                id !== user.sub && !crashedPeersRef.current.has(id),
+            );
+            console.warn(
+              '[OOEditor] bin-decision timeout — peers snapshot:',
+              {
+                me: user.sub,
+                peers: [...editorPeersRef.current.keys()],
+                crashed: [...crashedPeersRef.current],
+                liveOthers,
+              },
+            );
+            if (liveOthers.length === 0) {
+              console.warn(
+                '[OOEditor] timeout but no real other editor remains — resolving cold (ghost peer evicted)',
+              );
+              binDecisionResolveRef.current('cold');
+              return;
+            }
+            // Real other editor that just isn't responding. Don't
+            // silently cold-start — that would race the live editor's
+            // edit-phase ids and corrupt the document.
+            binDecisionResolveRef.current('no-response');
+          }, BIN_DECISION_TIMEOUT_MS);
+        });
         const endPreloadPhase = () => {
           if (historyPhaseComplete) return;
           historyPhaseComplete = true;
@@ -2176,7 +2285,18 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // messages, by which point the assignment below has happened.
         let wordLockArbitrator: WordLockArbitrator | null = null;
 
-        try {
+        // View-only override: bypass the relay entirely. No
+        // peer:join, no state-request, no saveChanges — the user
+        // wanted a safe local read-only view, so we don't even
+        // announce our presence to the room. `endPreloadPhase()`
+        // moves the state machine forward; `binDecisionPromise`
+        // already resolved 'cold' synchronously above.
+        if (viewOnlyOverride) {
+          console.log(
+            '[OOEditor] view-only override active — skipping relay setup',
+          );
+          endPreloadPhase();
+        } else try {
           const relay = new EncryptedRelay({
             roomId: item.id,
             userId: user.sub!,
@@ -2483,7 +2603,21 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               },
               onReconnectFailed: () => {
                 setRelayFailed(true);
-                // Unblock OO construction if we were still waiting.
+                // If init is still waiting on the bin-decision (the
+                // ref is non-null until either a peer ships state, the
+                // room is confirmed empty, or the 15s timeout fires),
+                // reaching this callback means we never got a reliable
+                // view of the room. Refuse to open editable — the
+                // overlay's "Open in read-only" button is the safe
+                // escape hatch.
+                if (binDecisionResolveRef.current) {
+                  binDecisionResolveRef.current('no-relay');
+                }
+                // Either way, unblock the preload await so the convert
+                // step proceeds (it will throw for `'no-relay'`, or
+                // continue normally if init already finished and this
+                // is a mid-session reconnect failure — that case is
+                // surfaced via the discreet `relayFailed` badge).
                 endPreloadPhase();
               },
               onRemoteSaveCommitted: userId => {
@@ -2683,11 +2817,21 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           // back to raw x2t. The closure captures `canEdit`/`user`
           // but reads the live peer map / relay joinedAt per call,
           // so it stays correct as peers join and leave.
+          //
+          // Election rule: EARLIEST `joinedAt` wins, with lex userId
+          // as the tiebreak when two peers joined in the same ms. The
+          // priority must be joinedAt first — if we ranked by lex
+          // userId, a freshly-joined peer with a lex-smaller userId
+          // would instantly steal the leader role from the existing
+          // peer, who would then refuse to answer the joiner's own
+          // `peer:state-request` (the joiner has no state to share).
+          // Earliest-joinedAt also reflects "longest-lived peer is
+          // most likely to have the freshest state", which matches
+          // who should be checkpointing and saving.
           isSaveLeaderRef.current = () => {
             if (!canEdit) return false;
             // A crashed tab can't run `forceSave` — take ourselves
-            // out of contention so the next lexicographic candidate
-            // wins.
+            // out of contention so the next candidate wins.
             if (outgoingSilencedRef.current) return false;
             const myId = user!.sub!;
             const myJoinedAt = relayRef.current?.joinedAt ?? 0;
@@ -2696,8 +2840,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               // (they need to observe `save:committed`) but must not
               // be elected — skip them during the walk.
               if (crashedPeersRef.current.has(peerId)) continue;
-              if (peerId < myId) return false;
-              if (peerId === myId && peerJoinedAt < myJoinedAt)
+              if (peerJoinedAt < myJoinedAt) return false;
+              if (peerJoinedAt === myJoinedAt && peerId < myId)
                 return false;
             }
             return true;
@@ -2706,12 +2850,14 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           setState('syncing-history');
           relay.connect();
         } catch (relayErr) {
-          console.warn('Relay setup failed (single-user mode):', relayErr);
+          console.warn('Relay setup failed:', relayErr);
           endPreloadPhase();
-          // Ensure we don't deadlock if relay setup throws — resolve
-          // the bin-decision as cold so init continues to editor
-          // creation with the x2t bin.
-          binDecisionResolveRef.current?.('cold');
+          // Same logic as `onReconnectFailed`: without a working
+          // relay we can't tell whether other peers are editing, so
+          // refuse to open editable. The user can pick "Open in
+          // read-only" from the overlay if they just want to view
+          // the document.
+          binDecisionResolveRef.current?.('no-relay');
         }
 
         // Wait for the preload phase to complete. Outer safety net in case
@@ -2738,13 +2884,35 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // the top of init, resolved by relay callbacks above). Either:
         //   - `'peer'` — `onPeerStateResponse` landed, peerStateDumpRef
         //     is set with live state we should boot from
-        //   - `'cold'` — `onRoomState` said we're alone, or no
-        //     response came within the 15s timeout; fall back to
-        //     the x2t bin we already prepared
-        const binDecision: 'peer' | 'cold' = peerStateDumpRef.current
-          ? 'peer'
-          : await binDecisionPromise;
+        //   - `'cold'` — `onRoomState` said we're alone (or the last
+        //     other editor left while we were waiting); boot from the
+        //     x2t bin we already prepared
+        //   - `'no-response'` — peers were present but none answered
+        //     within 15s; refuse to open the editor (cold-starting
+        //     against a live session would corrupt ids).
+        //   - `'no-relay'` — relay never connected; we can't see the
+        //     room at all so we don't know if anyone is editing.
+        //     Refuse to open editable for the same reason.
+        const binDecision: 'peer' | 'cold' | 'no-response' | 'no-relay' =
+          peerStateDumpRef.current ? 'peer' : await binDecisionPromise;
         if (cancelled) return;
+
+        if (binDecision === 'no-response') {
+          // Don't construct OO — we'd race the live editor with cold
+          // x2t ids and silently corrupt the document. Surface a
+          // dedicated error overlay so the user knows to retry.
+          throw new Error(
+            'PEER_STATE_UNAVAILABLE: another user is connected but did not respond with their live state.',
+          );
+        }
+        if (binDecision === 'no-relay') {
+          // Same risk as no-response: without a relay we can't tell
+          // whether someone else is editing. The overlay reuses the
+          // retry / read-only buttons.
+          throw new Error(
+            'RELAY_UNAVAILABLE: cannot reach the collaboration server.',
+          );
+        }
 
         // If a peer gave us live state, swap the editor's source bin
         // BEFORE construction so OO boots with their baseBin (and
@@ -3020,16 +3188,24 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('error', handleOOError);
       stopCheckpointing();
-      // Only the leader saves on teardown; non-leaders just release.
-      // Also skip if the editor iframe is gone — `forceSave` would
-      // warn "inner editor not available yet, skipping" anyway, and
-      // we've already lost access to the doc bytes at that point.
-      // `beforeunload` handler above is the ACTUAL chance to save
-      // during a clean tab close — this cleanup runs when React
-      // unmounts (navigation, route change, refresh) where the
-      // iframe may already be torn down by the browser.
-      if (isSaveLeaderRef.current() && editorRef.current) {
-        forceSave().catch(console.error);
+      // React unmounts the JSX subtree (including the iframe
+      // placeholder) BEFORE this cleanup runs, so by the time we
+      // get here `asc_nativeGetFile` has nothing to read. Calling
+      // `forceSave` would just log a misleading "starting save…"
+      // followed by "inner editor not available — save did not
+      // run". The real save paths are:
+      //   - `beforeunload` / `visibilitychange:hidden` (handlers
+      //     above) — fire while the iframe is still alive on
+      //     genuine tab close / refresh.
+      //   - the auto-save interval (every 30s) — safety net for
+      //     in-app navigation, where neither of the above fires.
+      // If the leader navigates away within 30s of typing, those
+      // changes are lost. A cleaner fix would hook Next.js
+      // `routeChangeStart` to flush before unmount; not done here.
+      if (isSaveLeaderRef.current() && hasUnsavedChanges()) {
+        console.warn(
+          '[OOEditor] cleanup with unsaved leader changes — last auto-save tick is the only persisted state',
+        );
       }
       // Clean up locks and relay
       resetAllLocks();
@@ -3077,17 +3253,44 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       !!error && /no key pair|hasKeys|key pair found/i.test(error);
     const isConversionError =
       !!error && /failed to convert|conversion/i.test(error);
+    const isPeerStateUnavailable =
+      !!error && /PEER_STATE_UNAVAILABLE/.test(error);
+    const isRelayUnavailable =
+      !!error && /RELAY_UNAVAILABLE/.test(error);
+    // `isUnsafeToOpen` is the union — both states share the same
+    // retry / read-only escape hatch in the overlay below.
+    const isUnsafeToOpen = isPeerStateUnavailable || isRelayUnavailable;
     const isOdfFormat = ['odt', 'ods', 'odp'].includes(x2tExtension);
 
     const headline = isNoKeysError
       ? t('explorer.encrypted.no_keys_headline', 'Encryption keys required')
-      : t('explorer.encrypted.editor_error', 'Failed to load editor');
+      : isRelayUnavailable
+        ? t(
+            'explorer.encrypted.relay_unavailable_headline',
+            'Could not reach the collaboration server',
+          )
+        : isPeerStateUnavailable
+          ? t(
+              'explorer.encrypted.peer_state_unavailable_headline',
+              'Could not synchronise with the active editor',
+            )
+          : t('explorer.encrypted.editor_error', 'Failed to load editor');
     const body = isNoKeysError
       ? t(
           'explorer.encrypted.no_keys_body',
           "You don't have an encryption key pair set up for your account yet. Generate or restore your encryption keys from your profile menu, then reopen this document."
         )
-      : error;
+      : isRelayUnavailable
+        ? t(
+            'explorer.encrypted.relay_unavailable_body',
+            "We couldn't connect to the collaboration server, so we can't tell whether someone else is currently editing this document. Opening it anyway could overwrite their changes. Please check your network and try again in a few moments, or contact support if the problem persists.",
+          )
+        : isPeerStateUnavailable
+          ? t(
+              'explorer.encrypted.peer_state_unavailable_body',
+              "Another user is already editing this document. We tried to fetch their live state to join the session safely, but they didn't respond. Opening the document anyway could corrupt it. Please try again in a few moments, or contact support if the problem persists.",
+            )
+          : error;
 
     const canEdit = !!item.abilities?.partial_update;
     const canRemoveEncryption = !!item.abilities?.remove_encryption;
@@ -3114,7 +3317,13 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             color: 'var(--c--theme--colors--danger-600)',
           }}
         >
-          {isNoKeysError ? 'lock' : 'error'}
+          {isNoKeysError
+            ? 'lock'
+            : isRelayUnavailable
+              ? 'cloud_off'
+              : isPeerStateUnavailable
+                ? 'sync_problem'
+                : 'error'}
         </span>
         <h2
           style={{
@@ -3137,6 +3346,95 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           >
             {body}
           </p>
+        )}
+
+        {isUnsafeToOpen && (
+          <div
+            style={{
+              display: 'flex',
+              gap: '12px',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                // Retry the live session: clear the override (we
+                // want a real relay handshake this time), wipe any
+                // stale peer dump bookkeeping, reset the state
+                // machine, and bump `reinitKey` so the useEffect
+                // tears down and re-runs init from scratch.
+                setViewOnlyOverride(false);
+                peerStateDumpRef.current = null;
+                awaitingPeerStateRef.current = false;
+                setError(null);
+                setState('loading');
+                setReinitKey(k => k + 1);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 20px',
+                fontSize: '14px',
+                fontWeight: 500,
+                border:
+                  '1px solid var(--c--theme--colors--primary-600, #1a56db)',
+                borderRadius: '6px',
+                background: 'var(--c--theme--colors--primary-600, #1a56db)',
+                color: 'var(--c--theme--colors--greyscale-000, #fff)',
+                cursor: 'pointer',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: '18px' }}>
+                refresh
+              </span>
+              {t(
+                'explorer.encrypted.peer_state_unavailable_retry',
+                'Try again',
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                // Open locally in view-only mode: don't even connect
+                // to the relay (we won't see live edits, but we also
+                // can't corrupt the active session). Clearing error +
+                // bumping `reinitKey` re-runs init with the override
+                // on; `canEdit` collapses to false, the relay-setup
+                // branch is skipped, and OO boots in `mode:'view'`.
+                setViewOnlyOverride(true);
+                peerStateDumpRef.current = null;
+                awaitingPeerStateRef.current = false;
+                setError(null);
+                setState('loading');
+                setReinitKey(k => k + 1);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 20px',
+                fontSize: '14px',
+                fontWeight: 500,
+                border:
+                  '1px solid var(--c--theme--colors--greyscale-400, #ccc)',
+                borderRadius: '6px',
+                background: 'var(--c--theme--colors--greyscale-000, #fff)',
+                color: 'var(--c--theme--colors--greyscale-800, #222)',
+                cursor: 'pointer',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: '18px' }}>
+                visibility
+              </span>
+              {t(
+                'explorer.encrypted.peer_state_unavailable_view_only',
+                'Open in read-only',
+              )}
+            </button>
+          </div>
         )}
 
         {isConversionError && isOdfFormat && (
@@ -3562,6 +3860,39 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 )}
               {(state === 'loading' || state === 'mounting') &&
                 t('explorer.encrypted.loading_editor', 'Loading editor...')}
+            </span>
+          </div>
+        )}
+        {/* Flush-on-close overlay: covers the editor while we run the
+            final save kicked off by the parent's close-button guard.
+            zIndex above the loading overlay so it wins if both are
+            true (shouldn't happen — the editor is always 'ready' by
+            the time the user can click close — but defend anyway). */}
+        {flushingOnClose && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '16px',
+              background: 'rgba(255, 255, 255, 0.95)',
+              zIndex: 20,
+            }}
+          >
+            <Loader />
+            <span
+              style={{
+                color: 'var(--c--theme--colors--greyscale-700, #444)',
+                fontSize: '15px',
+              }}
+            >
+              {t(
+                'explorer.encrypted.flushing_on_close',
+                'Saving your changes before closing…',
+              )}
             </span>
           </div>
         )}
