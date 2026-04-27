@@ -20,7 +20,12 @@ OO_DIR="$SCRIPT_DIR/../src/frontend/apps/drive/public/onlyoffice"
 OO_VERSION="v9.2.0.119+5"
 OO_SHA512="1f1184fb04cf72a7eb2a49a9740074b5419486c79e1fd713e1f8c09b8594a826050ae941fed6ac6a96807ba73cc751d7c807bd7e6b73de9e4f8e74cd5ed04cfa"
 
-# x2t WASM format converter (docx/xlsx/pptx <-> bin)
+# x2t WASM format converter (docx/xlsx/pptx <-> bin).
+# Both v8.3.0+0 and v9.3.0+0 surface a `RuntimeError: function signature
+# mismatch` on every ODP load (fixed wasm offsets
+# [3837/18276/4246/11411/38897]), so the regression is in the
+# upstream wasm builds — not a config issue on our side. Stay on
+# v7.3+1 until fixed
 X2T_VERSION="v7.3+1"
 X2T_SHA512="ab0c05b0e4c81071acea83f0c6a8e75f5870c360ec4abc4af09105dd9b52264af9711ec0b7020e87095193ac9b6e20305e446f2321a541f743626a598e5318c1"
 

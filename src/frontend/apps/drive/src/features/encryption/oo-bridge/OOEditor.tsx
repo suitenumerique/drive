@@ -1672,6 +1672,100 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     if (menu) menu.innerHTML = '';
                   };
 
+                  // Shape-gallery presets that don't survive the
+                  // x2t v7.3 round-trip through ODP. Tested manually
+                  // by inserting + saving + reopening each one; on
+                  // failure x2t throws or produces a `.odp` it can't
+                  // re-parse. Identified by the SVG icon ref in the
+                  // gallery `<use xlink:href="#svg-icon-...">` — that
+                  // string is the PPTX `prstGeom` name and is locale-
+                  // and version-stable, unlike `aria-label`.
+                  //
+                  // ODF's `enhanced-geometry` taxonomy is much
+                  // smaller than PPTX's `prstGeom`, so x2t has to
+                  // emit custom path data for these presets. Its
+                  // writer/reader pair don't agree on that custom
+                  // serialization — round-tripping breaks the file.
+                  // DocServer doesn't hit this because it stays in
+                  // the bin format internally and never round-trips.
+                  //
+                  // FIXME: this list is hard-coded against x2t v7.3+1
+                  // (CryptPad's production pin). A future x2t bump
+                  // may close some of these gaps — or close all of
+                  // them — at which point individual entries (or the
+                  // whole list) can be removed. v8.3.0+0 and
+                  // v9.3.0+0 currently regress to a `function
+                  // signature mismatch` on every ODP load, so
+                  // bumping isn't an option today.
+                  const unsupportedShapeIcons = new Set<string>([
+                    // Confirmed broken (manual test on x2t v7.3+1):
+                    'svg-icon-frame',
+                    'svg-icon-snip2DiagRect',
+                    'svg-icon-mathNotEqual',
+                    // Basic shapes:
+                    'svg-icon-trapezoid',
+                    'svg-icon-parallelogram',
+                    'svg-icon-plus',
+                    // "Figured arrows" group — every preset except
+                    // the four curved arrows and the circular arrow.
+                    'svg-icon-rightArrow',
+                    'svg-icon-leftArrow',
+                    'svg-icon-upArrow',
+                    'svg-icon-downArrow',
+                    'svg-icon-leftRightArrow',
+                    'svg-icon-upDownArrow',
+                    'svg-icon-quadArrow',
+                    'svg-icon-leftRightUpArrow',
+                    'svg-icon-bentArrow',
+                    'svg-icon-uturnArrow',
+                    'svg-icon-leftUpArrow',
+                    'svg-icon-bentUpArrow',
+                    'svg-icon-stripedRightArrow',
+                    'svg-icon-notchedRightArrow',
+                    'svg-icon-homePlate',
+                    'svg-icon-chevron',
+                    'svg-icon-rightArrowCallout',
+                    'svg-icon-downArrowCallout',
+                    'svg-icon-leftArrowCallout',
+                    'svg-icon-upArrowCallout',
+                    'svg-icon-leftRightArrowCallout',
+                    'svg-icon-quadArrowCallout',
+                  ]);
+
+                  const applyShapeBlocklist = (): number => {
+                    let hidden = 0;
+                    // Each gallery preset is a `<div class="item">`
+                    // containing a `<use xlink:href="#svg-icon-...">`.
+                    // We hide the item entirely (display:none) rather
+                    // than dim it like top-level toolbar buttons —
+                    // the gallery is a packed grid; an inert dimmed
+                    // tile would still take a slot and confuse the
+                    // user. Disappearing is cleaner.
+                    const items = doc.querySelectorAll(
+                      '.menu-insert-shape .item, .recent-items .item',
+                    );
+                    items.forEach((item: Element) => {
+                      const use = item.querySelector('use');
+                      const href =
+                        use?.getAttribute('xlink:href') ||
+                        use?.getAttribute('href') ||
+                        '';
+                      const iconName = href.replace(/^#/, '');
+                      if (
+                        iconName &&
+                        unsupportedShapeIcons.has(iconName)
+                      ) {
+                        (item as HTMLElement).style.setProperty(
+                          'display',
+                          'none',
+                          'important',
+                        );
+                        hidden++;
+                      }
+                    });
+                    return hidden;
+                  };
+
                   // Track which buttons we've already logged as
                   // disabled. The observer below fires on every DOM
                   // mutation inside the editor (very frequent during
@@ -1681,6 +1775,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   // and idempotent so we still re-apply on each tick —
                   // only the log is gated.
                   const loggedDisabled = new Set<string>();
+                  let loggedShapeBlocklist = false;
                   const tryApplyAll = (trigger: string) => {
                     for (const {
                       slotId,
@@ -1697,6 +1792,13 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                           );
                         }
                       }
+                    }
+                    const hiddenShapes = applyShapeBlocklist();
+                    if (hiddenShapes > 0 && !loggedShapeBlocklist) {
+                      loggedShapeBlocklist = true;
+                      console.log(
+                        `[OOEditor] hid ${hiddenShapes} shape gallery items unsupported by ODP round-trip (${trigger})`,
+                      );
                     }
                   };
 
@@ -3628,18 +3730,18 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 </strong>
                 {t(
                   'explorer.encrypted.conversion_odf_body',
-                  'Encrypted documents are opened with a lightweight browser-based editor that does not support all features available in non-encrypted mode. SmartArt elements are known to prevent ODF files (.odt, .ods, .odp) from loading in this mode.'
+                  'Encrypted documents are opened with a lightweight browser-based editor that does not support all features available in non-encrypted mode. SmartArt elements and some shapes (e.g. Frame, Snip diagonal corner rectangle, math operators, most figured arrows, trapezoid, parallelogram, plus) are known to prevent ODF files (.odt, .ods, .odp) from loading in this mode.'
                 )}
                 <br />
                 <br />
                 {canEdit
                   ? t(
                       'explorer.encrypted.conversion_odf_actions',
-                      'You can download the file to remove any SmartArt elements, then re-upload it. Alternatively, you can remove encryption from this document so it opens with the full-featured editor. If the issue persists after removing SmartArt, please contact the technical team to investigate.'
+                      'You can download the file to remove the SmartArt or unsupported shapes, then re-upload it. Alternatively, you can remove encryption from this document so it opens with the full-featured editor. If the issue persists after the cleanup, please contact the technical team to investigate.'
                     )
                   : t(
                       'explorer.encrypted.conversion_odf_no_edit',
-                      'Please contact the owner of this document or a user with editing rights so they can remove the SmartArt elements or remove encryption from the file. If the issue persists after removing SmartArt, please contact the technical team to investigate.'
+                      'Please contact the owner of this document or a user with editing rights so they can remove the SmartArt, unsupported shapes, or encryption from the file. If the issue persists after the cleanup, please contact the technical team to investigate.'
                     )}
               </div>
             </div>
