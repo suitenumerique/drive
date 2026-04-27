@@ -2,7 +2,7 @@
 # drive package
 #
 [build-system]
-requires = ["uv_build>=0.10.7,<0.11.0"]
+requires = ["uv_build>=0.11.7,<0.12.0"]
 build-backend = "uv_build"
 
 [project]
@@ -24,43 +24,43 @@ keywords = ["Django", "Contacts", "Templates", "RBAC"]
 license = "MIT"
 requires-python = "~=3.13.0"
 dependencies = [
-    "boto3==1.42.59",
+    "boto3==1.42.91",
     "Brotli==1.2.0",
     "dj-database-url==3.1.2",
-    "celery[redis]==5.6.2",
+    "celery[redis]==5.6.3",
     "defusedxml==0.7.1",
     "django==5.2.13",
     "django-configurations==2.5.1",
     "django-cors-headers==4.9.0",
     "django-countries==8.2.0",
     "django-filter==25.2",
-    "django-lasuite[all]==0.0.24",
+    "django-lasuite[all]==0.0.26",
     "django-ltree==0.6.0",
     "django-parler==2.3",
     "django-pydantic-field==0.5.4",
     "django-redis==6.0.0",
     "django-storages[s3]==1.14.6",
     "django-timezone-field>=5.1",
-    "djangorestframework==3.16.1",
+    "djangorestframework==3.17.1",
     "djangorestframework-api-key==3.1.0",
-    "dockerflow==2026.1.26",
+    "dockerflow==2026.3.4",
     "drf_spectacular==0.29.0",
     "drf-standardized-errors==0.15.0",
     "easy_thumbnails==2.10.1",
     "factory_boy==3.3.3",
-    "gunicorn==25.1.0",
+    "gunicorn==25.3.0",
     "jsonschema==4.26.0",
     "markdown==3.10.2",
     "mozilla-django-oidc<5.0.0",
     "nested-multipart-parser==1.6.0",
-    "posthog==7.9.4",
+    "posthog==7.12.0",
     "psycopg[binary]==3.3.3",
-    "pydantic==2.12.5",
-    "PyJWT==2.12.0",
+    "pydantic==2.13.2",
+    "PyJWT==2.12.1",
     "python-magic==0.4.27",
     "redis<6.0.0",
-    "requests==2.33.0",
-    "sentry-sdk==2.53.0",
+    "requests==2.33.1",
+    "sentry-sdk==2.58.0",
     "url-normalize==2.2.1",
     "whitenoise==6.12.0",
 ]
@@ -73,23 +73,23 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "django-debug-toolbar==6.2.0",
+    "django-debug-toolbar==6.3.0",
     "django-extensions==4.1",
-    "drf-spectacular-sidecar==2026.3.1",
+    "drf-spectacular-sidecar==2026.4.14",
     "freezegun==1.5.5",
     "ipdb==0.13.13",
-    "ipython==9.10.0",
-    "pyfakefs==6.1.3",
+    "ipython==9.12.0",
+    "pyfakefs==6.2.0",
     "pylint-django==2.7.0",
     "pylint==4.0.5",
-    "pytest-cov==7.0.0",
+    "pytest-cov==7.1.0",
     "pytest-django==4.12.0",
     "pytest==9.0.3",
     "pytest-icdiff==0.9",
     "pytest-xdist==3.8.0",
     "responses==0.26.0",
-    "ruff==0.15.4",
-    "types-requests==2.32.4.20260107",
+    "ruff==0.15.11",
+    "types-requests==2.33.0.20260408",
 ]
 
 [tool.uv]
