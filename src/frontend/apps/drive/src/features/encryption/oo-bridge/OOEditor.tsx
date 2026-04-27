@@ -508,7 +508,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const logParagraphIds = useCallback((label: string) => {
     try {
       const ooIframe = document.querySelector(
-        'iframe[name="frameEditor"]',
+        'iframe[name="frameEditor"]'
       ) as HTMLIFrameElement | null;
       const innerWindow = ooIframe?.contentWindow as any;
       const innerEditor = innerWindow?.editor || innerWindow?.editorCell;
@@ -520,7 +520,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       const content: unknown = logicDoc?.Content;
       if (!Array.isArray(content)) {
         console.log(
-          `[id-diag ${label}] document not accessible yet (content missing)`,
+          `[id-diag ${label}] document not accessible yet (content missing)`
         );
         return;
       }
@@ -544,7 +544,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       });
       console.log(
         `[id-diag ${label}] total=${content.length} first5:`,
-        preview,
+        preview
       );
     } catch (e) {
       console.warn('[id-diag] failed', e);
@@ -594,9 +594,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       // mid-replay flickering. Moving the transition here means the
       // user sees a clean final doc as soon as the overlay clears.
       setState(current =>
-        current === 'ready' || current === 'oo-crashed'
-          ? current
-          : 'ready',
+        current === 'ready' || current === 'oo-crashed' ? current : 'ready'
       );
     }, DRAIN_PRE_DELAY_MS);
   }, []);
@@ -604,8 +602,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   // the underlying ability — same code path as a true reader, so the
   // mode prop, relay gating and leader-election all become no-ops
   // automatically.
-  const canEdit =
-    !!item.abilities?.partial_update && !viewOnlyOverride;
+  const canEdit = !!item.abilities?.partial_update && !viewOnlyOverride;
 
   // For encrypted items the server stores `application/octet-stream` (it
   // can't sniff ciphertext). `getEffectiveMimetype` falls back to the
@@ -785,10 +782,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
    * Upload encrypted content to S3.
    */
   const uploadEncrypted = useCallback(
-    async (
-      content: ArrayBuffer,
-      _format: string,
-    ): Promise<void> => {
+    async (content: ArrayBuffer, _format: string): Promise<void> => {
       const vaultClient = window.__driveVaultClient;
       if (!vaultClient) {
         throw new Error('Vault client not available');
@@ -1315,6 +1309,122 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               // needs to flip here so code that gates on "OO model is
               // live" continues to work.
               documentReadyRef.current = true;
+              // Slide-only Cmd+V workaround.
+              //
+              // Origin of the problem
+              // ---------------------
+              // OO Presentation has TWO paste code paths and they
+              // diverge in our (non-DocServer) iframe setup:
+              //
+              //   • Right-click → Paste menu calls `editor.Paste()`
+              //     first. Paste() reads OO's internal JS clipboard
+              //     buffer — filled at Copy time with
+              //     `pptData;<size>;<base64>` (OO's serialised shape
+              //     format) — and dispatches
+              //     `asc_PasteData(4 /* internal */, pptData, …)`.
+              //     The receiver rebuilds the full shape from
+              //     pptData → ~110 saveChanges, shape appears.
+              //
+              //   • Cmd+V triggers a native browser `paste` event.
+              //     OO's keyboard handler reads the SYSTEM clipboard
+              //     (which only carries the HTML rendering — a flat
+              //     `<img data:image/png;base64,…>` of the copied
+              //     shape, not the pptData) and dispatches
+              //     `asc_PasteData(8 /* HTML */, body, iframe, …)`.
+              //     The receiver can only insert a degraded image,
+              //     so what the user sees is "nothing" — a 16-change
+              //     placeholder at coordinates we can't see, not the
+              //     original shape.
+              //
+              // In a real DocServer iframe, OO's keyboard handler is
+              // wired through a server-mediated paste pathway that
+              // sidesteps the format-8 fallback. We don't have that
+              // intermediate. We can't reproduce DocServer's
+              // pathway, but Paste() is available locally — so we
+              // intercept the format-8 call and reroute to it.
+              //
+              // Why patch `asc_PasteData` instead of the paste event
+              // ---------------------------------------------------
+              // Earlier attempts to intercept at the DOM level
+              // (keydown listener, paste-event listener) failed: OO
+              // attaches its own listeners during editor init (before
+              // `documentReady` fires), so by the time we install
+              // ours its handlers have already won the capture-phase
+              // race. Patching `asc_PasteData` on the editor's
+              // prototype lets us intercept at the JS-API boundary
+              // OO itself crosses, regardless of which DOM listener
+              // got the event.
+              //
+              // Why the deferred call inside the patch
+              // --------------------------------------
+              // Calling `Paste()` synchronously from inside the
+              // native paste-event call stack makes it bail (returns
+              // false before calling its inner format-4
+              // `asc_PasteData`). OO checks state — likely "is a
+              // paste in progress" or "is focus on the canvas" —
+              // that's wrong because the asc_pasteFrame helper
+              // iframe still holds focus. `setTimeout 0` lets the
+              // event stack unwind, focus / selection return to the
+              // canvas, and Paste() can then read the internal
+              // pptData buffer cleanly.
+              if (docType === 'slide') {
+                try {
+                  const ooIframe = document.querySelector(
+                    'iframe[name="frameEditor"]'
+                  ) as HTMLIFrameElement | null;
+                  const innerWindow = ooIframe?.contentWindow as any;
+                  const editor = innerWindow?.editor;
+                  // Resolve the prototype that holds `asc_PasteData`
+                  // (the trace showed it on `editor.proto`, not the
+                  // instance). We patch the prototype so the swap
+                  // applies regardless of when OO instantiates the
+                  // editor.
+                  const proto = editor && Object.getPrototypeOf(editor);
+                  if (proto && typeof proto.asc_PasteData === 'function') {
+                    const original = proto.asc_PasteData;
+                    if (!(original as any).__driveSlidePasteWrapped) {
+                      proto.asc_PasteData = function (
+                        this: any,
+                        ...args: any[]
+                      ) {
+                        // args[0] is the format kind: 4 = OO internal
+                        // pptData (right-click Paste, works), 8 =
+                        // browser HTML clipboard (Cmd+V, broken).
+                        const formatKind = args[0];
+                        if (
+                          formatKind === 8 &&
+                          typeof this.Paste === 'function'
+                        ) {
+                          const self = this;
+                          setTimeout(() => {
+                            try {
+                              self.Paste();
+                            } catch (e) {
+                              console.warn(
+                                '[OOEditor] slide deferred editor.Paste() threw',
+                                e
+                              );
+                            }
+                          }, 0);
+                          return false;
+                        }
+                        return original.apply(this, args);
+                      };
+                      (proto.asc_PasteData as any).__driveSlidePasteWrapped =
+                        true;
+                    }
+                  } else {
+                    console.warn(
+                      '[OOEditor] slide asc_PasteData not found on editor prototype — paste workaround skipped'
+                    );
+                  }
+                } catch (e) {
+                  console.warn(
+                    '[OOEditor] failed to install slide paste workaround',
+                    e
+                  );
+                }
+              }
               // `permissions.edit: false` in the config doesn't actually
               // block raw keystrokes on sdk-all v9 — a reader could
               // focus the canvas and type. OO's own internal knob for
@@ -1419,7 +1529,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                         message: msg,
                         error: evt.reason,
                       } as ErrorEvent);
-                    },
+                    }
                   );
                 }
 
@@ -1466,12 +1576,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       innerWindow.Worker = function PatchedWorker(
                         this: unknown,
                         url: string | URL,
-                        options?: WorkerOptions,
+                        options?: WorkerOptions
                       ) {
                         if (isSpellCheckUrl(url)) {
                           console.log(
                             '[OOEditor] spell-check worker neutralised:',
-                            String(url),
+                            String(url)
                           );
                           const noop = () => undefined;
                           return {
@@ -1495,7 +1605,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 } catch (e) {
                   console.warn(
                     '[OOEditor] failed to neutralise spell-check worker',
-                    e,
+                    e
                   );
                 }
 
@@ -1751,13 +1861,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     idCounter.Set_UserId(suffix);
                     console.log(
                       '[OOEditor] IdCounter prefix pinned to',
-                      suffix,
+                      suffix
                     );
                   }
                 } catch (e) {
                   console.warn('[OOEditor] Set_UserId override failed', e);
                 }
-
 
                 // NOTE: apart from `asc_setSpellCheck` above we do not
                 // monkey-patch sdkjs prototype methods. The known-
@@ -2207,9 +2316,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         const binDecisionPromise = new Promise<
           'peer' | 'cold' | 'no-response' | 'no-relay'
         >(resolve => {
-          const wrapped = (
-            r: 'peer' | 'cold' | 'no-response' | 'no-relay',
-          ) => {
+          const wrapped = (r: 'peer' | 'cold' | 'no-response' | 'no-relay') => {
             if (binDecisionResolveRef.current) {
               binDecisionResolveRef.current = null;
               resolve(r);
@@ -2239,21 +2346,17 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             // — fall back to `'cold'` instead of throwing the user
             // into the error overlay.
             const liveOthers = [...editorPeersRef.current.keys()].filter(
-              id =>
-                id !== user.sub && !crashedPeersRef.current.has(id),
+              id => id !== user.sub && !crashedPeersRef.current.has(id)
             );
-            console.warn(
-              '[OOEditor] bin-decision timeout — peers snapshot:',
-              {
-                me: user.sub,
-                peers: [...editorPeersRef.current.keys()],
-                crashed: [...crashedPeersRef.current],
-                liveOthers,
-              },
-            );
+            console.warn('[OOEditor] bin-decision timeout — peers snapshot:', {
+              me: user.sub,
+              peers: [...editorPeersRef.current.keys()],
+              crashed: [...crashedPeersRef.current],
+              liveOthers,
+            });
             if (liveOthers.length === 0) {
               console.warn(
-                '[OOEditor] timeout but no real other editor remains — resolving cold (ghost peer evicted)',
+                '[OOEditor] timeout but no real other editor remains — resolving cold (ghost peer evicted)'
               );
               binDecisionResolveRef.current('cold');
               return;
@@ -2294,636 +2397,632 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // already resolved 'cold' synchronously above.
         if (viewOnlyOverride) {
           console.log(
-            '[OOEditor] view-only override active — skipping relay setup',
+            '[OOEditor] view-only override active — skipping relay setup'
           );
           endPreloadPhase();
-        } else try {
-          const relay = new EncryptedRelay({
-            roomId: item.id,
-            userId: user.sub!,
-            userName: user.full_name || user.email,
-            vaultClient,
-            encryptedSymmetricKey: entryKeyBytes.buffer,
-            encryptedKeyChain:
-              encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
-            callbacks: {
-              onSaveChanges: (_userId, message, media) => {
-                // Media is accumulated the same way in both phases so it
-                // ends up in g_oDocumentUrls before OO resolves references.
-                if (media) {
-                  if (!historyPhaseComplete) {
-                    Object.assign(historyInitialMedia, media);
-                  } else {
-                    try {
-                      const docUrls =
-                        innerWindowRef.current?.AscCommon?.g_oDocumentUrls;
-                      if (docUrls) {
-                        for (const [name, url] of Object.entries(media)) {
-                          docUrls.addImageUrl(name, url);
+        } else
+          try {
+            const relay = new EncryptedRelay({
+              roomId: item.id,
+              userId: user.sub!,
+              userName: user.full_name || user.email,
+              vaultClient,
+              encryptedSymmetricKey: entryKeyBytes.buffer,
+              encryptedKeyChain:
+                encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
+              callbacks: {
+                onSaveChanges: (_userId, message, media) => {
+                  // Media is accumulated the same way in both phases so it
+                  // ends up in g_oDocumentUrls before OO resolves references.
+                  if (media) {
+                    if (!historyPhaseComplete) {
+                      Object.assign(historyInitialMedia, media);
+                    } else {
+                      try {
+                        const docUrls =
+                          innerWindowRef.current?.AscCommon?.g_oDocumentUrls;
+                        if (docUrls) {
+                          for (const [name, url] of Object.entries(media)) {
+                            docUrls.addImageUrl(name, url);
+                          }
                         }
+                      } catch (e) {
+                        console.warn(
+                          '[OOEditor] failed to register inbound media',
+                          e
+                        );
                       }
-                    } catch (e) {
-                      console.warn(
-                        '[OOEditor] failed to register inbound media',
-                        e
+                    }
+                  }
+
+                  // Preload and live phases now take the SAME path: queue
+                  // the change into pendingRemoteChangesRef if the editor
+                  // isn't ready yet, otherwise apply immediately. Every
+                  // inbound saveChanges flows through `sendMessageToOO`,
+                  // never through OO's `getInitialChanges` channel (which
+                  // silently drops replay bursts in our testing).
+                  if (!historyPhaseComplete) {
+                    try {
+                      const changes = (message as { changes?: unknown })
+                        .changes;
+                      const n = Array.isArray(changes) ? changes.length : 0;
+                      console.log(
+                        `[HISTORY replay queued] changes=${n}`,
+                        message
                       );
+                    } catch {
+                      /* ignore logging failures */
                     }
                   }
-                }
 
-                // Preload and live phases now take the SAME path: queue
-                // the change into pendingRemoteChangesRef if the editor
-                // isn't ready yet, otherwise apply immediately. Every
-                // inbound saveChanges flows through `sendMessageToOO`,
-                // never through OO's `getInitialChanges` channel (which
-                // silently drops replay bursts in our testing).
-                if (!historyPhaseComplete) {
-                  try {
-                    const changes = (message as { changes?: unknown }).changes;
-                    const n = Array.isArray(changes) ? changes.length : 0;
-                    console.log(
-                      `[HISTORY replay queued] changes=${n}`,
-                      message,
+                  // Forward the envelope to OO unchanged, but observe
+                  // its `changesIndex` so our local `patchIndex` adopts
+                  // the sender's counter. When we later emit our own
+                  // outgoing `saveChanges`, `wrapOutgoingSaveChanges`
+                  // will continue numbering from there — matching OO's
+                  // internal state.
+                  const apply = () => {
+                    observeIncomingSaveChanges(
+                      message as Record<string, unknown>
                     );
-                  } catch {
-                    /* ignore logging failures */
-                  }
-                }
-
-                // Forward the envelope to OO unchanged, but observe
-                // its `changesIndex` so our local `patchIndex` adopts
-                // the sender's counter. When we later emit our own
-                // outgoing `saveChanges`, `wrapOutgoingSaveChanges`
-                // will continue numbering from there — matching OO's
-                // internal state.
-                const apply = () => {
-                  observeIncomingSaveChanges(
-                    message as Record<string, unknown>
-                  );
-                  withIncomingOTGate(() => sendToEditorGuarded(message as any));
-                };
-                // Append to the local chain so we can replay it for
-                // any future joiner asking us for state. Incoming
-                // changes already carry sender ids baked in via
-                // `CChangesTableIdAdd`, so a joiner applying the same
-                // sequence on our baseBin ends up with identical
-                // object ids.
-                chainRef.current.push(
-                  message as Record<string, unknown>,
-                );
-                // All saveChanges flow through the index-gated reorder
-                // buffer. While the editor is still mounting / during
-                // the post-ready pre-delay, the buffer holds events
-                // until `releaseReplayAfterPreDelay` flushes them in
-                // strict changesIndex order.
-                handleIncomingSaveChanges(
-                  message as Record<string, unknown>,
-                  apply
-                );
-              },
-              onHistoryEnd: () => {
-                endPreloadPhase();
-              },
-              onPeerJoin: (userId, userName, peerCanEdit, joinedAt) => {
-                if (peerCanEdit) {
-                  const existing = editorPeersRef.current.get(userId);
-                  // Keep the earliest joinedAt for a userId — if a
-                  // second tab of the same user joins later, the
-                  // original one still wins the leader tiebreak.
-                  if (existing === undefined || joinedAt < existing) {
-                    editorPeersRef.current.set(userId, joinedAt);
-                  }
-                }
-                addRemoteUser(userId, userName, userId);
-                sendToEditor(buildConnectStateMessage() as any);
-              },
-              onPeerLeave: userId => {
-                editorPeersRef.current.delete(userId);
-                crashedPeersRef.current.delete(userId);
-                // If we were waiting for this peer to ship us state
-                // and they leave (e.g. the relay's ping/pong evicted
-                // a ghost connection), don't keep spinning on the
-                // 5s timeout — resolve cold now so the editor opens.
-                const stillOtherEditors = [
-                  ...editorPeersRef.current.keys(),
-                ].filter(
-                  id =>
-                    id !== user.sub && !crashedPeersRef.current.has(id),
-                );
-                if (
-                  stillOtherEditors.length === 0 &&
-                  awaitingPeerStateRef.current
-                ) {
-                  console.log(
-                    '[OOEditor] last other peer left while waiting — resolving cold',
-                  );
-                  awaitingPeerStateRef.current = false;
-                  binDecisionResolveRef.current?.('cold');
-                }
-                // Capture the locks the peer held BEFORE `dropUser`
-                // wipes them, then filter to the subset we actually
-                // told OO about — pushing a `releaseLock` for a key
-                // OO never heard of looks up an undefined paragraph
-                // in the doc model and crashes (`Set_Type on undefined`).
-                const leavingKeys = lockArbitrator
-                  ? lockArbitrator
-                      .snapshot()
-                      .filter(e => e.userId === userId)
-                      .map(e => e.key)
-                  : [];
-                const clearableKeys =
-                  consumePeerLocksShownToEditor(leavingKeys);
-                const leavingOOId =
-                  getRemoteOOInternalId(userId) ?? userId;
-                removeRemoteUser(userId);
-                releaseAllUserLocks(userId);
-                lockArbitrator?.dropUser(userId);
-                if (
-                  documentReadyRef.current &&
-                  clearableKeys.length > 0
-                ) {
-                  sendToEditorGuarded({
-                    type: 'releaseLock',
-                    locks: clearableKeys.map(key => ({
-                      block: key,
-                      user: leavingOOId,
-                      time: Date.now(),
-                    })),
-                  });
-                }
-                sendToEditor(buildConnectStateMessage() as any);
-              },
-              onRoomState: peers => {
-                editorPeersRef.current.clear();
-                crashedPeersRef.current.clear();
-                for (const peer of peers) {
-                  if (peer.userId) {
-                    if (peer.canEdit) {
-                      const existing = editorPeersRef.current.get(peer.userId);
-                      if (existing === undefined || peer.joinedAt < existing) {
-                        editorPeersRef.current.set(peer.userId, peer.joinedAt);
-                      }
-                    }
-                    // Relay persisted the `peer:crashed` flag so a
-                    // late joiner learns about it here rather than
-                    // needing to witness the original broadcast.
-                    if (peer.crashed) {
-                      crashedPeersRef.current.add(peer.userId);
-                    }
-                    addRemoteUser(peer.userId, peer.userName, peer.userId);
-                  }
-                }
-                sendToEditor(buildConnectStateMessage() as any);
-
-                // If other editable peers are already in the room, ask
-                // them to ship us their live state (baseBin + chain).
-                // Only the leader on the receive side answers. Their
-                // state-response lands in `peerStateDumpRef` and makes
-                // the convert step skip its x2t output — OR, if OO
-                // was already built, the response handler triggers a
-                // reinit so we swap in the peer bin.
-                const otherEditors = [...editorPeersRef.current.keys()].filter(
-                  id =>
-                    id !== user.sub && !crashedPeersRef.current.has(id),
-                );
-                if (
-                  otherEditors.length > 0 &&
-                  !outgoingSilencedRef.current &&
-                  user.sub
-                ) {
-                  console.log(
-                    '[OOEditor] joining with existing peers — requesting live state',
-                    otherEditors,
-                  );
-                  awaitingPeerStateRef.current = true;
-                  setState(current =>
-                    current === 'ready' ? 'peer-resyncing' : current,
-                  );
-                  try {
-                    relayRef.current?.sendStateRequest();
-                  } catch (e) {
-                    console.warn(
-                      '[OOEditor] sendStateRequest on join failed',
-                      e,
+                    withIncomingOTGate(() =>
+                      sendToEditorGuarded(message as any)
                     );
-                  }
-                } else {
-                  // Alone in the room — init doesn't need to wait for
-                  // a peer to ship us state. Unblock the bin-decision
-                  // promise so the editor boots from the cold-start
-                  // x2t bin immediately.
-                  binDecisionResolveRef.current?.('cold');
-                }
-              },
-              onLockUpdate: (type, userId, lockData) => {
-                const lockId = JSON.stringify(lockData);
-                if (type === 'acquire') {
-                  acquireCellLock(lockId, userId, lockData);
-                } else {
-                  releaseCellLock(lockId, userId);
-                }
-                // _onGetLock iterates `locks` with `for (key in ...)` and
-                // for cell/slide reads `lock.block.guid`. `lockData` is
-                // the full `msg.block` array from the sender — iterate
-                // each block element so the shape matches what OO expects.
-                const remoteOOId = getRemoteOOInternalId(userId);
-                const blockArray = Array.isArray(lockData)
-                  ? lockData
-                  : [lockData];
-                const locks: Record<string, unknown> = {};
-                for (const block of blockArray) {
-                  const entry = {
-                    block,
-                    user: remoteOOId || userId,
-                    time: Date.now(),
                   };
-                  const guid = (block as any)?.guid;
-                  const key =
-                    guid ||
-                    (typeof block === 'string' ? block : JSON.stringify(block));
-                  locks[key] = entry;
-                }
-                const apply = () =>
-                  sendToEditor({
-                    type: 'getLock',
-                    locks,
-                  } as any);
-                if (!documentReadyRef.current) {
-                  pendingRemoteChangesRef.current.push(apply);
-                  return;
-                }
-                apply();
-              },
-              onCursorUpdate: (userId, cursor) => {
-                const senderOOId = getRemoteOOInternalId(userId);
-                if (!senderOOId) return;
-                const cursorString =
-                  typeof cursor === 'string' ? cursor : JSON.stringify(cursor);
-                const apply = () =>
-                  sendToEditorGuarded({
-                    type: 'cursor',
-                    messages: [
-                      {
-                        cursor: cursorString,
-                        user: senderOOId,
-                        useridoriginal: senderOOId,
-                        time: Date.now(),
-                      },
-                    ],
-                  } as any);
-                if (!documentReadyRef.current) {
-                  pendingRemoteChangesRef.current.push(apply);
-                  return;
-                }
-                apply();
-              },
-              onMessageBroadcast: (_userId, messages) => {
-                const apply = () =>
-                  sendToEditorGuarded({ type: 'message', messages } as any);
-                if (!documentReadyRef.current) {
-                  pendingRemoteChangesRef.current.push(apply);
-                  return;
-                }
-                apply();
-              },
-              onMetaBroadcast: (_userId, messages) => {
-                const apply = () =>
-                  sendToEditorGuarded({ type: 'meta', messages } as any);
-                if (!documentReadyRef.current) {
-                  pendingRemoteChangesRef.current.push(apply);
-                  return;
-                }
-                apply();
-              },
-              onSaveLock: () => {
-                // Save coordination handled by leader election, not lock messages
-              },
-              onConnectionChange: connected => {
-                setIsConnected(connected);
-                if (connected) setRelayFailed(false);
-              },
-              onReconnectFailed: () => {
-                setRelayFailed(true);
-                // If init is still waiting on the bin-decision (the
-                // ref is non-null until either a peer ships state, the
-                // room is confirmed empty, or the 15s timeout fires),
-                // reaching this callback means we never got a reliable
-                // view of the room. Refuse to open editable — the
-                // overlay's "Open in read-only" button is the safe
-                // escape hatch.
-                if (binDecisionResolveRef.current) {
-                  binDecisionResolveRef.current('no-relay');
-                }
-                // Either way, unblock the preload await so the convert
-                // step proceeds (it will throw for `'no-relay'`, or
-                // continue normally if init already finished and this
-                // is a mid-session reconnect failure — that case is
-                // surfaced via the discreet `relayFailed` badge).
-                endPreloadPhase();
-              },
-              onRemoteSaveCommitted: userId => {
-                // A peer wrote a fresh rendered archive to S3. Just
-                // clear our local "unsaved" marker so beforeunload
-                // stops prompting; the live co-edit state stays on
-                // the peer-to-peer channel.
-                console.log('[OOEditor] remote save committed by', userId);
-                markRemoteSaveCommitted();
-                if (recoveryResolveRef.current) {
-                  recoveryResolveRef.current();
-                }
-              },
-              onPeerStateRequest: fromUserId => {
-                // Someone joined and asked for live state. Only the
-                // current leader answers, so we know no two peers
-                // broadcast duplicate responses. The joiner will load
-                // our baseBin + chain → end up with the exact same
-                // internal object ids as us.
-                if (!isSaveLeaderRef.current()) return;
-                if (outgoingSilencedRef.current) return;
-                const baseBin = baseBinRef.current;
-                if (!baseBin) {
-                  console.warn(
-                    '[OOEditor] state request received but our baseBin is not ready yet',
+                  // Append to the local chain so we can replay it for
+                  // any future joiner asking us for state. Incoming
+                  // changes already carry sender ids baked in via
+                  // `CChangesTableIdAdd`, so a joiner applying the same
+                  // sequence on our baseBin ends up with identical
+                  // object ids.
+                  chainRef.current.push(message as Record<string, unknown>);
+                  // All saveChanges flow through the index-gated reorder
+                  // buffer. While the editor is still mounting / during
+                  // the post-ready pre-delay, the buffer holds events
+                  // until `releaseReplayAfterPreDelay` flushes them in
+                  // strict changesIndex order.
+                  handleIncomingSaveChanges(
+                    message as Record<string, unknown>,
+                    apply
                   );
-                  return;
-                }
-                console.log(
-                  '[OOEditor] answering state request from',
-                  fromUserId,
-                  'baseBin size:',
-                  baseBin.length,
-                  'chain size:',
-                  chainRef.current.length,
-                );
-                void relayRef.current
-                  ?.sendStateResponse(
-                    fromUserId,
-                    baseBin,
-                    chainRef.current,
-                  )
-                  .catch(e => {
-                    console.warn(
-                      '[OOEditor] sendStateResponse failed',
-                      e,
-                    );
-                  });
-              },
-              onPeerStateResponse: (fromUserId, baseBin, chain) => {
-                console.log(
-                  '[OOEditor] received state dump from',
-                  fromUserId,
-                  'baseBin size:',
-                  baseBin.length,
-                  'chain size:',
-                  chain.length,
-                );
-                peerStateDumpRef.current = { baseBin, chain };
-                awaitingPeerStateRef.current = false;
-                // Resolve the init's bin-decision promise so the
-                // waiting convert step can swap the editor's bin to
-                // the peer dump before OO construction. If the
-                // editor was ALREADY built (response arrived after
-                // the 15s wait resolved 'cold'), trigger a reinit
-                // to swap in the live state.
-                if (binDecisionResolveRef.current) {
-                  binDecisionResolveRef.current('peer');
-                } else {
-                  setState('peer-resyncing');
-                  setReinitKey(k => k + 1);
-                }
-              },
-              onCheckpointReload: (fromUserId, baseBin) => {
-                // Leader-triggered full-room reload. Everyone stashes
-                // the new baseBin as their dump and tears down OO —
-                // we come back up with matching load-phase ids.
-                console.log(
-                  '[OOEditor] checkpoint reload from',
-                  fromUserId,
-                  'baseBin size:',
-                  baseBin.length,
-                );
-                peerStateDumpRef.current = { baseBin, chain: [] };
-                setState('peer-resyncing');
-                setReinitKey(k => k + 1);
-              },
-              onPeerCrashed: peerUserId => {
-                // A remote peer's editor entered the crash overlay.
-                // Exclude it from our leader election so we don't
-                // wait on a save that can never come. The peer will
-                // reappear as a fresh connection (new joinedAt) if
-                // it clicks Reload and reconnects.
-                console.log(
-                  '[OOEditor] peer',
-                  peerUserId,
-                  'crashed — excluding from leader election'
-                );
-                crashedPeersRef.current.add(peerUserId);
-                // Also clear any paragraph locks the crashed peer was
-                // holding so we don't keep denying askLock forever for
-                // keys that will never be released — the peer is dead.
-                if (lockArbitrator) {
-                  const crashedKeys = lockArbitrator
-                    .snapshot()
-                    .filter(e => e.userId === peerUserId)
-                    .map(e => e.key);
-                  const clearableKeys =
-                    consumePeerLocksShownToEditor(crashedKeys);
-                  const crashedOOId =
-                    getRemoteOOInternalId(peerUserId) ?? peerUserId;
-                  lockArbitrator.dropUser(peerUserId);
+                },
+                onHistoryEnd: () => {
+                  endPreloadPhase();
+                },
+                onPeerJoin: (userId, userName, peerCanEdit, joinedAt) => {
+                  if (peerCanEdit) {
+                    const existing = editorPeersRef.current.get(userId);
+                    // Keep the earliest joinedAt for a userId — if a
+                    // second tab of the same user joins later, the
+                    // original one still wins the leader tiebreak.
+                    if (existing === undefined || joinedAt < existing) {
+                      editorPeersRef.current.set(userId, joinedAt);
+                    }
+                  }
+                  addRemoteUser(userId, userName, userId);
+                  sendToEditor(buildConnectStateMessage() as any);
+                },
+                onPeerLeave: userId => {
+                  editorPeersRef.current.delete(userId);
+                  crashedPeersRef.current.delete(userId);
+                  // If we were waiting for this peer to ship us state
+                  // and they leave (e.g. the relay's ping/pong evicted
+                  // a ghost connection), don't keep spinning on the
+                  // 5s timeout — resolve cold now so the editor opens.
+                  const stillOtherEditors = [
+                    ...editorPeersRef.current.keys(),
+                  ].filter(
+                    id => id !== user.sub && !crashedPeersRef.current.has(id)
+                  );
                   if (
-                    documentReadyRef.current &&
-                    clearableKeys.length > 0
+                    stillOtherEditors.length === 0 &&
+                    awaitingPeerStateRef.current
                   ) {
+                    console.log(
+                      '[OOEditor] last other peer left while waiting — resolving cold'
+                    );
+                    awaitingPeerStateRef.current = false;
+                    binDecisionResolveRef.current?.('cold');
+                  }
+                  // Capture the locks the peer held BEFORE `dropUser`
+                  // wipes them, then filter to the subset we actually
+                  // told OO about — pushing a `releaseLock` for a key
+                  // OO never heard of looks up an undefined paragraph
+                  // in the doc model and crashes (`Set_Type on undefined`).
+                  const leavingKeys = lockArbitrator
+                    ? lockArbitrator
+                        .snapshot()
+                        .filter(e => e.userId === userId)
+                        .map(e => e.key)
+                    : [];
+                  const clearableKeys =
+                    consumePeerLocksShownToEditor(leavingKeys);
+                  const leavingOOId = getRemoteOOInternalId(userId) ?? userId;
+                  removeRemoteUser(userId);
+                  releaseAllUserLocks(userId);
+                  lockArbitrator?.dropUser(userId);
+                  if (documentReadyRef.current && clearableKeys.length > 0) {
                     sendToEditorGuarded({
                       type: 'releaseLock',
                       locks: clearableKeys.map(key => ({
                         block: key,
-                        user: crashedOOId,
+                        user: leavingOOId,
                         time: Date.now(),
                       })),
                     });
                   }
-                }
-              },
-              onArbitratedLockRequest: (
-                peerUserId,
-                keys,
-                timestampMs,
-                blocks,
-              ) => {
-                if (!lockArbitrator) return;
-                lockArbitrator.applyRemoteRequest(
-                  {
-                    type: 'oo:lockRequest',
+                  sendToEditor(buildConnectStateMessage() as any);
+                },
+                onRoomState: peers => {
+                  editorPeersRef.current.clear();
+                  crashedPeersRef.current.clear();
+                  for (const peer of peers) {
+                    if (peer.userId) {
+                      if (peer.canEdit) {
+                        const existing = editorPeersRef.current.get(
+                          peer.userId
+                        );
+                        if (
+                          existing === undefined ||
+                          peer.joinedAt < existing
+                        ) {
+                          editorPeersRef.current.set(
+                            peer.userId,
+                            peer.joinedAt
+                          );
+                        }
+                      }
+                      // Relay persisted the `peer:crashed` flag so a
+                      // late joiner learns about it here rather than
+                      // needing to witness the original broadcast.
+                      if (peer.crashed) {
+                        crashedPeersRef.current.add(peer.userId);
+                      }
+                      addRemoteUser(peer.userId, peer.userName, peer.userId);
+                    }
+                  }
+                  sendToEditor(buildConnectStateMessage() as any);
+
+                  // If other editable peers are already in the room, ask
+                  // them to ship us their live state (baseBin + chain).
+                  // Only the leader on the receive side answers. Their
+                  // state-response lands in `peerStateDumpRef` and makes
+                  // the convert step skip its x2t output — OR, if OO
+                  // was already built, the response handler triggers a
+                  // reinit so we swap in the peer bin.
+                  const otherEditors = [
+                    ...editorPeersRef.current.keys(),
+                  ].filter(
+                    id => id !== user.sub && !crashedPeersRef.current.has(id)
+                  );
+                  if (
+                    otherEditors.length > 0 &&
+                    !outgoingSilencedRef.current &&
+                    user.sub
+                  ) {
+                    console.log(
+                      '[OOEditor] joining with existing peers — requesting live state',
+                      otherEditors
+                    );
+                    awaitingPeerStateRef.current = true;
+                    setState(current =>
+                      current === 'ready' ? 'peer-resyncing' : current
+                    );
+                    try {
+                      relayRef.current?.sendStateRequest();
+                    } catch (e) {
+                      console.warn(
+                        '[OOEditor] sendStateRequest on join failed',
+                        e
+                      );
+                    }
+                  } else {
+                    // Alone in the room — init doesn't need to wait for
+                    // a peer to ship us state. Unblock the bin-decision
+                    // promise so the editor boots from the cold-start
+                    // x2t bin immediately.
+                    binDecisionResolveRef.current?.('cold');
+                  }
+                },
+                onLockUpdate: (type, userId, lockData) => {
+                  const lockId = JSON.stringify(lockData);
+                  if (type === 'acquire') {
+                    acquireCellLock(lockId, userId, lockData);
+                  } else {
+                    releaseCellLock(lockId, userId);
+                  }
+                  // _onGetLock iterates `locks` with `for (key in ...)` and
+                  // for cell/slide reads `lock.block.guid`. `lockData` is
+                  // the full `msg.block` array from the sender — iterate
+                  // each block element so the shape matches what OO expects.
+                  const remoteOOId = getRemoteOOInternalId(userId);
+                  const blockArray = Array.isArray(lockData)
+                    ? lockData
+                    : [lockData];
+                  const locks: Record<string, unknown> = {};
+                  for (const block of blockArray) {
+                    const entry = {
+                      block,
+                      user: remoteOOId || userId,
+                      time: Date.now(),
+                    };
+                    const guid = (block as any)?.guid;
+                    const key =
+                      guid ||
+                      (typeof block === 'string'
+                        ? block
+                        : JSON.stringify(block));
+                    locks[key] = entry;
+                  }
+                  const apply = () =>
+                    sendToEditor({
+                      type: 'getLock',
+                      locks,
+                    } as any);
+                  if (!documentReadyRef.current) {
+                    pendingRemoteChangesRef.current.push(apply);
+                    return;
+                  }
+                  apply();
+                },
+                onCursorUpdate: (userId, cursor) => {
+                  const senderOOId = getRemoteOOInternalId(userId);
+                  if (!senderOOId) return;
+                  const cursorString =
+                    typeof cursor === 'string'
+                      ? cursor
+                      : JSON.stringify(cursor);
+                  const apply = () =>
+                    sendToEditorGuarded({
+                      type: 'cursor',
+                      messages: [
+                        {
+                          cursor: cursorString,
+                          user: senderOOId,
+                          useridoriginal: senderOOId,
+                          time: Date.now(),
+                        },
+                      ],
+                    } as any);
+                  if (!documentReadyRef.current) {
+                    pendingRemoteChangesRef.current.push(apply);
+                    return;
+                  }
+                  apply();
+                },
+                onMessageBroadcast: (_userId, messages) => {
+                  const apply = () =>
+                    sendToEditorGuarded({ type: 'message', messages } as any);
+                  if (!documentReadyRef.current) {
+                    pendingRemoteChangesRef.current.push(apply);
+                    return;
+                  }
+                  apply();
+                },
+                onMetaBroadcast: (_userId, messages) => {
+                  const apply = () =>
+                    sendToEditorGuarded({ type: 'meta', messages } as any);
+                  if (!documentReadyRef.current) {
+                    pendingRemoteChangesRef.current.push(apply);
+                    return;
+                  }
+                  apply();
+                },
+                onSaveLock: () => {
+                  // Save coordination handled by leader election, not lock messages
+                },
+                onConnectionChange: connected => {
+                  setIsConnected(connected);
+                  if (connected) setRelayFailed(false);
+                },
+                onReconnectFailed: () => {
+                  setRelayFailed(true);
+                  // If init is still waiting on the bin-decision (the
+                  // ref is non-null until either a peer ships state, the
+                  // room is confirmed empty, or the 15s timeout fires),
+                  // reaching this callback means we never got a reliable
+                  // view of the room. Refuse to open editable — the
+                  // overlay's "Open in read-only" button is the safe
+                  // escape hatch.
+                  if (binDecisionResolveRef.current) {
+                    binDecisionResolveRef.current('no-relay');
+                  }
+                  // Either way, unblock the preload await so the convert
+                  // step proceeds (it will throw for `'no-relay'`, or
+                  // continue normally if init already finished and this
+                  // is a mid-session reconnect failure — that case is
+                  // surfaced via the discreet `relayFailed` badge).
+                  endPreloadPhase();
+                },
+                onRemoteSaveCommitted: userId => {
+                  // A peer wrote a fresh rendered archive to S3. Just
+                  // clear our local "unsaved" marker so beforeunload
+                  // stops prompting; the live co-edit state stays on
+                  // the peer-to-peer channel.
+                  console.log('[OOEditor] remote save committed by', userId);
+                  markRemoteSaveCommitted();
+                  if (recoveryResolveRef.current) {
+                    recoveryResolveRef.current();
+                  }
+                },
+                onPeerStateRequest: fromUserId => {
+                  // Someone joined and asked for live state. Only the
+                  // current leader answers, so we know no two peers
+                  // broadcast duplicate responses. The joiner will load
+                  // our baseBin + chain → end up with the exact same
+                  // internal object ids as us.
+                  if (!isSaveLeaderRef.current()) return;
+                  if (outgoingSilencedRef.current) return;
+                  const baseBin = baseBinRef.current;
+                  if (!baseBin) {
+                    console.warn(
+                      '[OOEditor] state request received but our baseBin is not ready yet'
+                    );
+                    return;
+                  }
+                  console.log(
+                    '[OOEditor] answering state request from',
+                    fromUserId,
+                    'baseBin size:',
+                    baseBin.length,
+                    'chain size:',
+                    chainRef.current.length
+                  );
+                  void relayRef.current
+                    ?.sendStateResponse(fromUserId, baseBin, chainRef.current)
+                    .catch(e => {
+                      console.warn('[OOEditor] sendStateResponse failed', e);
+                    });
+                },
+                onPeerStateResponse: (fromUserId, baseBin, chain) => {
+                  console.log(
+                    '[OOEditor] received state dump from',
+                    fromUserId,
+                    'baseBin size:',
+                    baseBin.length,
+                    'chain size:',
+                    chain.length
+                  );
+                  peerStateDumpRef.current = { baseBin, chain };
+                  awaitingPeerStateRef.current = false;
+                  // Resolve the init's bin-decision promise so the
+                  // waiting convert step can swap the editor's bin to
+                  // the peer dump before OO construction. If the
+                  // editor was ALREADY built (response arrived after
+                  // the 15s wait resolved 'cold'), trigger a reinit
+                  // to swap in the live state.
+                  if (binDecisionResolveRef.current) {
+                    binDecisionResolveRef.current('peer');
+                  } else {
+                    setState('peer-resyncing');
+                    setReinitKey(k => k + 1);
+                  }
+                },
+                onCheckpointReload: (fromUserId, baseBin) => {
+                  // Leader-triggered full-room reload. Everyone stashes
+                  // the new baseBin as their dump and tears down OO —
+                  // we come back up with matching load-phase ids.
+                  console.log(
+                    '[OOEditor] checkpoint reload from',
+                    fromUserId,
+                    'baseBin size:',
+                    baseBin.length
+                  );
+                  peerStateDumpRef.current = { baseBin, chain: [] };
+                  setState('peer-resyncing');
+                  setReinitKey(k => k + 1);
+                },
+                onPeerCrashed: peerUserId => {
+                  // A remote peer's editor entered the crash overlay.
+                  // Exclude it from our leader election so we don't
+                  // wait on a save that can never come. The peer will
+                  // reappear as a fresh connection (new joinedAt) if
+                  // it clicks Reload and reconnects.
+                  console.log(
+                    '[OOEditor] peer',
+                    peerUserId,
+                    'crashed — excluding from leader election'
+                  );
+                  crashedPeersRef.current.add(peerUserId);
+                  // Also clear any paragraph locks the crashed peer was
+                  // holding so we don't keep denying askLock forever for
+                  // keys that will never be released — the peer is dead.
+                  if (lockArbitrator) {
+                    const crashedKeys = lockArbitrator
+                      .snapshot()
+                      .filter(e => e.userId === peerUserId)
+                      .map(e => e.key);
+                    const clearableKeys =
+                      consumePeerLocksShownToEditor(crashedKeys);
+                    const crashedOOId =
+                      getRemoteOOInternalId(peerUserId) ?? peerUserId;
+                    lockArbitrator.dropUser(peerUserId);
+                    if (documentReadyRef.current && clearableKeys.length > 0) {
+                      sendToEditorGuarded({
+                        type: 'releaseLock',
+                        locks: clearableKeys.map(key => ({
+                          block: key,
+                          user: crashedOOId,
+                          time: Date.now(),
+                        })),
+                      });
+                    }
+                  }
+                },
+                onArbitratedLockRequest: (
+                  peerUserId,
+                  keys,
+                  timestampMs,
+                  blocks
+                ) => {
+                  if (!lockArbitrator) return;
+                  lockArbitrator.applyRemoteRequest(
+                    {
+                      type: 'oo:lockRequest',
+                      userId: peerUserId,
+                      keys,
+                      blocks,
+                    },
+                    timestampMs
+                  );
+                  // Eager push to OO for cell / slide so peers see the
+                  // resource turn red the instant a remote claim lands —
+                  // matches Calc / Presentation UX where you expect to
+                  // see a cell or shape outlined in another user's
+                  // colour as they click into it.
+                  //
+                  // CRITICAL: hand OO the verbatim block descriptor we
+                  // received from the sender, NOT a reconstructed
+                  // `{ guid }` shape. OO's `_onGetLock` and downstream
+                  // handlers (`_onUpdateCFLock`, etc) read fields like
+                  // `block.sheetId`, `block.rangeType`, `block.t`. A
+                  // minimal `{ guid }` reply crashed Calc with
+                  // `Cannot read properties of undefined (reading
+                  // 'indexOf')` inside `_onUpdateCFLock` when it tried
+                  // to walk `sheetId.indexOf(...)`. The wire now carries
+                  // the full descriptor in `blocks` parallel to `keys`.
+                  //
+                  // Word stays lazy on purpose: paragraph ids can be
+                  // freshly minted by a peer (Enter-split creating a
+                  // new paragraph that locks immediately), and pushing
+                  // before our `saveChanges` arrives crashes
+                  // `_onGetLock` with `Set_UserId on undefined`. Word
+                  // peers only see a paragraph as held when they
+                  // themselves `askLock` and we reply.
+                  if (
+                    (docType === 'cell' || docType === 'slide') &&
+                    documentReadyRef.current
+                  ) {
+                    const peerOOId =
+                      getRemoteOOInternalId(peerUserId) ?? peerUserId;
+                    const locks: Record<string, unknown> = {};
+                    for (let i = 0; i < keys.length; i++) {
+                      const key = keys[i];
+                      const block = blocks?.[i] ?? { guid: key };
+                      locks[key] = {
+                        time: timestampMs,
+                        user: peerOOId,
+                        block,
+                      };
+                      addPeerLockShownToEditor(key);
+                    }
+                    sendToEditorGuarded({
+                      type: 'getLock',
+                      locks,
+                    } as any);
+                  }
+                },
+                onArbitratedLockRelease: (peerUserId, keys) => {
+                  if (!lockArbitrator) return;
+                  // Capture the original block descriptors BEFORE we
+                  // apply the release — `applyRemoteRelease` deletes
+                  // the entries, and OO's `_onReleaseLock` reads the
+                  // same fields as `_onGetLock`, so we must hand back
+                  // the verbatim descriptor we received on claim.
+                  // Falls back to `{ guid: key }` for cell/slide if
+                  // the entry is somehow missing (shouldn't happen
+                  // during a normal release).
+                  const blockByKey = new Map<string, unknown>();
+                  for (const entry of lockArbitrator.snapshot()) {
+                    if (entry.userId === peerUserId && entry.block) {
+                      blockByKey.set(entry.key, entry.block);
+                    }
+                  }
+                  lockArbitrator.applyRemoteRelease({
+                    type: 'oo:lockRelease',
                     userId: peerUserId,
                     keys,
-                    blocks,
-                  },
-                  timestampMs,
-                );
-                // Eager push to OO for cell / slide so peers see the
-                // resource turn red the instant a remote claim lands —
-                // matches Calc / Presentation UX where you expect to
-                // see a cell or shape outlined in another user's
-                // colour as they click into it.
-                //
-                // CRITICAL: hand OO the verbatim block descriptor we
-                // received from the sender, NOT a reconstructed
-                // `{ guid }` shape. OO's `_onGetLock` and downstream
-                // handlers (`_onUpdateCFLock`, etc) read fields like
-                // `block.sheetId`, `block.rangeType`, `block.t`. A
-                // minimal `{ guid }` reply crashed Calc with
-                // `Cannot read properties of undefined (reading
-                // 'indexOf')` inside `_onUpdateCFLock` when it tried
-                // to walk `sheetId.indexOf(...)`. The wire now carries
-                // the full descriptor in `blocks` parallel to `keys`.
-                //
-                // Word stays lazy on purpose: paragraph ids can be
-                // freshly minted by a peer (Enter-split creating a
-                // new paragraph that locks immediately), and pushing
-                // before our `saveChanges` arrives crashes
-                // `_onGetLock` with `Set_UserId on undefined`. Word
-                // peers only see a paragraph as held when they
-                // themselves `askLock` and we reply.
-                if (
-                  (docType === 'cell' || docType === 'slide') &&
-                  documentReadyRef.current
-                ) {
-                  const peerOOId =
-                    getRemoteOOInternalId(peerUserId) ?? peerUserId;
-                  const locks: Record<string, unknown> = {};
-                  for (let i = 0; i < keys.length; i++) {
-                    const key = keys[i];
-                    const block = blocks?.[i] ?? { guid: key };
-                    locks[key] = {
-                      time: timestampMs,
-                      user: peerOOId,
-                      block,
-                    };
-                    addPeerLockShownToEditor(key);
-                  }
-                  sendToEditorGuarded({
-                    type: 'getLock',
-                    locks,
-                  } as any);
-                }
-              },
-              onArbitratedLockRelease: (peerUserId, keys) => {
-                if (!lockArbitrator) return;
-                // Capture the original block descriptors BEFORE we
-                // apply the release — `applyRemoteRelease` deletes
-                // the entries, and OO's `_onReleaseLock` reads the
-                // same fields as `_onGetLock`, so we must hand back
-                // the verbatim descriptor we received on claim.
-                // Falls back to `{ guid: key }` for cell/slide if
-                // the entry is somehow missing (shouldn't happen
-                // during a normal release).
-                const blockByKey = new Map<string, unknown>();
-                for (const entry of lockArbitrator.snapshot()) {
-                  if (entry.userId === peerUserId && entry.block) {
-                    blockByKey.set(entry.key, entry.block);
-                  }
-                }
-                lockArbitrator.applyRemoteRelease({
-                  type: 'oo:lockRelease',
-                  userId: peerUserId,
-                  keys,
-                });
-                // Only push `releaseLock` for keys we've previously
-                // exposed to OO (via a `getLock` reply attributing
-                // them to this peer). For any other key, OO doesn't
-                // have a marker to clear, and referencing an unknown
-                // resource crashes `_onReleaseLock` the same way the
-                // `getLock` snapshot did.
-                const clearableKeys = consumePeerLocksShownToEditor(keys);
-                if (
-                  documentReadyRef.current &&
-                  clearableKeys.length > 0
-                ) {
-                  const peerOOId =
-                    getRemoteOOInternalId(peerUserId) ?? peerUserId;
-                  sendToEditorGuarded({
-                    type: 'releaseLock',
-                    locks: clearableKeys.map(key => ({
-                      block:
-                        docType === 'cell' || docType === 'slide'
-                          ? blockByKey.get(key) ?? { guid: key }
-                          : key,
-                      user: peerOOId,
-                      time: Date.now(),
-                    })),
                   });
-                }
+                  // Only push `releaseLock` for keys we've previously
+                  // exposed to OO (via a `getLock` reply attributing
+                  // them to this peer). For any other key, OO doesn't
+                  // have a marker to clear, and referencing an unknown
+                  // resource crashes `_onReleaseLock` the same way the
+                  // `getLock` snapshot did.
+                  const clearableKeys = consumePeerLocksShownToEditor(keys);
+                  if (documentReadyRef.current && clearableKeys.length > 0) {
+                    const peerOOId =
+                      getRemoteOOInternalId(peerUserId) ?? peerUserId;
+                    sendToEditorGuarded({
+                      type: 'releaseLock',
+                      locks: clearableKeys.map(key => ({
+                        block:
+                          docType === 'cell' || docType === 'slide'
+                            ? (blockByKey.get(key) ?? { guid: key })
+                            : key,
+                        user: peerOOId,
+                        time: Date.now(),
+                      })),
+                    });
+                  }
+                },
               },
-            },
-          });
-          relayRef.current = relay;
+            });
+            relayRef.current = relay;
 
-          // Now that the relay exists we can wire the arbitrator: its
-          // transport is the relay's settlement-aware send helper. The
-          // forward declaration at the top of this block is populated
-          // here; the callbacks above see it through closure.
-          lockArbitrator = new LockArbitrator({
-            sendWithSettlement: msg => relay.sendEncryptedWithSettlement(msg),
-          });
-          // Fresh session → fresh tracking of which peer-owned locks
-          // OO has been told about. Anything from a previous editor
-          // lifecycle is irrelevant (and would point at a disposed
-          // OO instance's paragraph ids).
-          resetPeerLocksShownToEditor();
+            // Now that the relay exists we can wire the arbitrator: its
+            // transport is the relay's settlement-aware send helper. The
+            // forward declaration at the top of this block is populated
+            // here; the callbacks above see it through closure.
+            lockArbitrator = new LockArbitrator({
+              sendWithSettlement: msg => relay.sendEncryptedWithSettlement(msg),
+            });
+            // Fresh session → fresh tracking of which peer-owned locks
+            // OO has been told about. Anything from a previous editor
+            // lifecycle is irrelevant (and would point at a disposed
+            // OO instance's paragraph ids).
+            resetPeerLocksShownToEditor();
 
-          // Install the leader-election implementation into the ref
-          // BEFORE connecting the relay. Otherwise, incoming state-
-          // requests from a peer that joins during our own init
-          // window see the default `() => false` and we never
-          // answer — u1 joins u2, sends state-request, u2's callback
-          // thinks "I'm not leader", silently drops it, u1 falls
-          // back to raw x2t. The closure captures `canEdit`/`user`
-          // but reads the live peer map / relay joinedAt per call,
-          // so it stays correct as peers join and leave.
-          //
-          // Election rule: EARLIEST `joinedAt` wins, with lex userId
-          // as the tiebreak when two peers joined in the same ms. The
-          // priority must be joinedAt first — if we ranked by lex
-          // userId, a freshly-joined peer with a lex-smaller userId
-          // would instantly steal the leader role from the existing
-          // peer, who would then refuse to answer the joiner's own
-          // `peer:state-request` (the joiner has no state to share).
-          // Earliest-joinedAt also reflects "longest-lived peer is
-          // most likely to have the freshest state", which matches
-          // who should be checkpointing and saving.
-          isSaveLeaderRef.current = () => {
-            if (!canEdit) return false;
-            // A crashed tab can't run `forceSave` — take ourselves
-            // out of contention so the next candidate wins.
-            if (outgoingSilencedRef.current) return false;
-            const myId = user!.sub!;
-            const myJoinedAt = relayRef.current?.joinedAt ?? 0;
-            for (const [peerId, peerJoinedAt] of editorPeersRef.current) {
-              // Peers whose editor crashed are still in the room
-              // (they need to observe `save:committed`) but must not
-              // be elected — skip them during the walk.
-              if (crashedPeersRef.current.has(peerId)) continue;
-              if (peerJoinedAt < myJoinedAt) return false;
-              if (peerJoinedAt === myJoinedAt && peerId < myId)
-                return false;
-            }
-            return true;
-          };
+            // Install the leader-election implementation into the ref
+            // BEFORE connecting the relay. Otherwise, incoming state-
+            // requests from a peer that joins during our own init
+            // window see the default `() => false` and we never
+            // answer — u1 joins u2, sends state-request, u2's callback
+            // thinks "I'm not leader", silently drops it, u1 falls
+            // back to raw x2t. The closure captures `canEdit`/`user`
+            // but reads the live peer map / relay joinedAt per call,
+            // so it stays correct as peers join and leave.
+            //
+            // Election rule: EARLIEST `joinedAt` wins, with lex userId
+            // as the tiebreak when two peers joined in the same ms. The
+            // priority must be joinedAt first — if we ranked by lex
+            // userId, a freshly-joined peer with a lex-smaller userId
+            // would instantly steal the leader role from the existing
+            // peer, who would then refuse to answer the joiner's own
+            // `peer:state-request` (the joiner has no state to share).
+            // Earliest-joinedAt also reflects "longest-lived peer is
+            // most likely to have the freshest state", which matches
+            // who should be checkpointing and saving.
+            isSaveLeaderRef.current = () => {
+              if (!canEdit) return false;
+              // A crashed tab can't run `forceSave` — take ourselves
+              // out of contention so the next candidate wins.
+              if (outgoingSilencedRef.current) return false;
+              const myId = user!.sub!;
+              const myJoinedAt = relayRef.current?.joinedAt ?? 0;
+              for (const [peerId, peerJoinedAt] of editorPeersRef.current) {
+                // Peers whose editor crashed are still in the room
+                // (they need to observe `save:committed`) but must not
+                // be elected — skip them during the walk.
+                if (crashedPeersRef.current.has(peerId)) continue;
+                if (peerJoinedAt < myJoinedAt) return false;
+                if (peerJoinedAt === myJoinedAt && peerId < myId) return false;
+              }
+              return true;
+            };
 
-          setState('syncing-history');
-          relay.connect();
-        } catch (relayErr) {
-          console.warn('Relay setup failed:', relayErr);
-          endPreloadPhase();
-          // Same logic as `onReconnectFailed`: without a working
-          // relay we can't tell whether other peers are editing, so
-          // refuse to open editable. The user can pick "Open in
-          // read-only" from the overlay if they just want to view
-          // the document.
-          binDecisionResolveRef.current?.('no-relay');
-        }
+            setState('syncing-history');
+            relay.connect();
+          } catch (relayErr) {
+            console.warn('Relay setup failed:', relayErr);
+            endPreloadPhase();
+            // Same logic as `onReconnectFailed`: without a working
+            // relay we can't tell whether other peers are editing, so
+            // refuse to open editable. The user can pick "Open in
+            // read-only" from the overlay if they just want to view
+            // the document.
+            binDecisionResolveRef.current?.('no-relay');
+          }
 
         // Wait for the preload phase to complete. Outer safety net in case
         // the relay never fires any callback at all (e.g. connection stuck
@@ -2967,7 +3066,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           // x2t ids and silently corrupt the document. Surface a
           // dedicated error overlay so the user knows to retry.
           throw new Error(
-            'PEER_STATE_UNAVAILABLE: another user is connected but did not respond with their live state.',
+            'PEER_STATE_UNAVAILABLE: another user is connected but did not respond with their live state.'
           );
         }
         if (binDecision === 'no-relay') {
@@ -2975,7 +3074,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           // whether someone else is editing. The overlay reuses the
           // retry / read-only buttons.
           throw new Error(
-            'RELAY_UNAVAILABLE: cannot reach the collaboration server.',
+            'RELAY_UNAVAILABLE: cannot reach the collaboration server.'
           );
         }
 
@@ -2992,7 +3091,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             'baseBin size:',
             peerDump.baseBin.length,
             'chain size:',
-            peerDump.chain.length,
+            peerDump.chain.length
           );
           // Release the old x2t blob URL so it can be GC'd.
           try {
@@ -3010,16 +3109,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           chainRef.current = [...peerDump.chain];
           for (const chainMsg of peerDump.chain) {
             const apply = () => {
-              observeIncomingSaveChanges(
-                chainMsg as Record<string, unknown>,
-              );
-              withIncomingOTGate(() =>
-                sendToEditorGuarded(chainMsg as any),
-              );
+              observeIncomingSaveChanges(chainMsg as Record<string, unknown>);
+              withIncomingOTGate(() => sendToEditorGuarded(chainMsg as any));
             };
             handleIncomingSaveChanges(
               chainMsg as Record<string, unknown>,
-              apply,
+              apply
             );
           }
           peerStateDumpRef.current = null;
@@ -3133,7 +3228,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 if (serialized.length > CHECKPOINT_CHAIN_SIZE_BYTES) {
                   const innerWindow = (
                     document.querySelector(
-                      'iframe[name="frameEditor"]',
+                      'iframe[name="frameEditor"]'
                     ) as HTMLIFrameElement | null
                   )?.contentWindow as any;
                   const innerEditor =
@@ -3149,24 +3244,21 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     console.log(
                       '[OOEditor] chain size',
                       serialized.length,
-                      '> threshold — broadcasting checkpoint reload',
+                      '> threshold — broadcasting checkpoint reload'
                     );
                     void relayRef.current
                       ?.sendCheckpointReload(newBaseBin)
                       .catch(e => {
                         console.warn(
                           '[OOEditor] sendCheckpointReload failed',
-                          e,
+                          e
                         );
                       });
                   }
                 }
               }
             } catch (e) {
-              console.warn(
-                '[OOEditor] checkpoint-size check threw',
-                e,
-              );
+              console.warn('[OOEditor] checkpoint-size check threw', e);
             }
           },
           onLockRequest: (type, lockData) => {
@@ -3269,7 +3361,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       // `routeChangeStart` to flush before unmount; not done here.
       if (isSaveLeaderRef.current() && hasUnsavedChanges()) {
         console.warn(
-          '[OOEditor] cleanup with unsaved leader changes — last auto-save tick is the only persisted state',
+          '[OOEditor] cleanup with unsaved leader changes — last auto-save tick is the only persisted state'
         );
       }
       // Clean up locks and relay
@@ -3302,14 +3394,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     // Surface the shared key-mismatch panel (also used by the non-office
     // viewer) so the user sees a specific, actionable explanation and
     // their current key's fingerprint, rather than the generic failure.
-    const isKeyMismatch =
-      !!error && /wrong secret key/i.test(error);
+    const isKeyMismatch = !!error && /wrong secret key/i.test(error);
     if (isKeyMismatch) {
       return (
         <KeyMismatchPanel
-          shareTimeFingerprint={
-            item.encryption_public_key_fingerprint_for_user
-          }
+          shareTimeFingerprint={item.encryption_public_key_fingerprint_for_user}
         />
       );
     }
@@ -3320,8 +3409,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       !!error && /failed to convert|conversion/i.test(error);
     const isPeerStateUnavailable =
       !!error && /PEER_STATE_UNAVAILABLE/.test(error);
-    const isRelayUnavailable =
-      !!error && /RELAY_UNAVAILABLE/.test(error);
+    const isRelayUnavailable = !!error && /RELAY_UNAVAILABLE/.test(error);
     // `isUnsafeToOpen` is the union — both states share the same
     // retry / read-only escape hatch in the overlay below.
     const isUnsafeToOpen = isPeerStateUnavailable || isRelayUnavailable;
@@ -3332,12 +3420,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       : isRelayUnavailable
         ? t(
             'explorer.encrypted.relay_unavailable_headline',
-            'Could not reach the collaboration server',
+            'Could not reach the collaboration server'
           )
         : isPeerStateUnavailable
           ? t(
               'explorer.encrypted.peer_state_unavailable_headline',
-              'Could not synchronise with the active editor',
+              'Could not synchronise with the active editor'
             )
           : t('explorer.encrypted.editor_error', 'Failed to load editor');
     const body = isNoKeysError
@@ -3348,12 +3436,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       : isRelayUnavailable
         ? t(
             'explorer.encrypted.relay_unavailable_body',
-            "We couldn't connect to the collaboration server, so we can't tell whether someone else is currently editing this document. Opening it anyway could overwrite their changes. Please check your network and try again in a few moments, or contact support if the problem persists.",
+            "We couldn't connect to the collaboration server, so we can't tell whether someone else is currently editing this document. Opening it anyway could overwrite their changes. Please check your network and try again in a few moments, or contact support if the problem persists."
           )
         : isPeerStateUnavailable
           ? t(
               'explorer.encrypted.peer_state_unavailable_body',
-              "Another user is already editing this document. We tried to fetch their live state to join the session safely, but they didn't respond. Opening the document anyway could corrupt it. Please try again in a few moments, or contact support if the problem persists.",
+              "Another user is already editing this document. We tried to fetch their live state to join the session safely, but they didn't respond. Opening the document anyway could corrupt it. Please try again in a few moments, or contact support if the problem persists."
             )
           : error;
 
@@ -3457,7 +3545,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               </span>
               {t(
                 'explorer.encrypted.peer_state_unavailable_retry',
-                'Try again',
+                'Try again'
               )}
             </button>
             <button
@@ -3496,7 +3584,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               </span>
               {t(
                 'explorer.encrypted.peer_state_unavailable_view_only',
-                'Open in read-only',
+                'Open in read-only'
               )}
             </button>
           </div>
@@ -3956,7 +4044,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             >
               {t(
                 'explorer.encrypted.flushing_on_close',
-                'Saving your changes before closing…',
+                'Saving your changes before closing…'
               )}
             </span>
           </div>
