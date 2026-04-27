@@ -30,6 +30,7 @@ import { EXTENSION_TO_X2T_TYPE } from './types';
 import { getEffectiveMimetype } from '@/features/explorer/utils/mimeTypes';
 import { KeyMismatchPanel } from '@/features/encryption/KeyMismatchPanel';
 import {
+  addPeerLockShownToEditor,
   consumePeerLocksShownToEditor,
   createMockServerCallbacks,
   resetPeerLocksShownToEditor,
@@ -47,7 +48,7 @@ import {
 } from './participants';
 import { resetPatchIndex, observeIncomingSaveChanges } from './changesPipeline';
 import { EncryptedRelay } from './encryptedRelay';
-import { WordLockArbitrator } from './wordLockArbitrator';
+import { LockArbitrator } from './lockArbitrator';
 import { withIncomingOTGate } from './incomingOtGate';
 import {
   acquireCellLock,
@@ -2283,7 +2284,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // Populated once the relay is constructed (inside the try block).
         // Safe: the relay callbacks only fire on incoming network
         // messages, by which point the assignment below has happened.
-        let wordLockArbitrator: WordLockArbitrator | null = null;
+        let lockArbitrator: LockArbitrator | null = null;
 
         // View-only override: bypass the relay entirely. No
         // peer:join, no state-request, no saveChanges — the user
@@ -2424,8 +2425,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 // told OO about — pushing a `releaseLock` for a key
                 // OO never heard of looks up an undefined paragraph
                 // in the doc model and crashes (`Set_Type on undefined`).
-                const leavingKeys = wordLockArbitrator
-                  ? wordLockArbitrator
+                const leavingKeys = lockArbitrator
+                  ? lockArbitrator
                       .snapshot()
                       .filter(e => e.userId === userId)
                       .map(e => e.key)
@@ -2436,7 +2437,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   getRemoteOOInternalId(userId) ?? userId;
                 removeRemoteUser(userId);
                 releaseAllUserLocks(userId);
-                wordLockArbitrator?.dropUser(userId);
+                lockArbitrator?.dropUser(userId);
                 if (
                   documentReadyRef.current &&
                   clearableKeys.length > 0
@@ -2720,8 +2721,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 // Also clear any paragraph locks the crashed peer was
                 // holding so we don't keep denying askLock forever for
                 // keys that will never be released — the peer is dead.
-                if (wordLockArbitrator) {
-                  const crashedKeys = wordLockArbitrator
+                if (lockArbitrator) {
+                  const crashedKeys = lockArbitrator
                     .snapshot()
                     .filter(e => e.userId === peerUserId)
                     .map(e => e.key);
@@ -2729,7 +2730,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     consumePeerLocksShownToEditor(crashedKeys);
                   const crashedOOId =
                     getRemoteOOInternalId(peerUserId) ?? peerUserId;
-                  wordLockArbitrator.dropUser(peerUserId);
+                  lockArbitrator.dropUser(peerUserId);
                   if (
                     documentReadyRef.current &&
                     clearableKeys.length > 0
@@ -2745,25 +2746,86 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   }
                 }
               },
-              onWordLockRequest: (peerUserId, keys, timestampMs) => {
-                if (!wordLockArbitrator) return;
-                wordLockArbitrator.applyRemoteRequest(
-                  { type: 'oo:lockRequest', userId: peerUserId, keys },
+              onArbitratedLockRequest: (
+                peerUserId,
+                keys,
+                timestampMs,
+                blocks,
+              ) => {
+                if (!lockArbitrator) return;
+                lockArbitrator.applyRemoteRequest(
+                  {
+                    type: 'oo:lockRequest',
+                    userId: peerUserId,
+                    keys,
+                    blocks,
+                  },
                   timestampMs,
                 );
-                // Deliberately NO push to local OO here. Before, we
-                // echoed a full snapshot to mirror CryptPad, but that
-                // referenced paragraphs OO didn't know about yet
-                // (peer created + locked a new para before the
-                // corresponding `saveChanges` applied) and crashed
-                // OO in `_onGetLock` → `Set_UserId on undefined`.
-                // Local OO only learns a key is peer-held when it
-                // itself `askLock`s and we reply — at which point the
-                // key is guaranteed to exist in the local doc model.
+                // Eager push to OO for cell / slide so peers see the
+                // resource turn red the instant a remote claim lands —
+                // matches Calc / Presentation UX where you expect to
+                // see a cell or shape outlined in another user's
+                // colour as they click into it.
+                //
+                // CRITICAL: hand OO the verbatim block descriptor we
+                // received from the sender, NOT a reconstructed
+                // `{ guid }` shape. OO's `_onGetLock` and downstream
+                // handlers (`_onUpdateCFLock`, etc) read fields like
+                // `block.sheetId`, `block.rangeType`, `block.t`. A
+                // minimal `{ guid }` reply crashed Calc with
+                // `Cannot read properties of undefined (reading
+                // 'indexOf')` inside `_onUpdateCFLock` when it tried
+                // to walk `sheetId.indexOf(...)`. The wire now carries
+                // the full descriptor in `blocks` parallel to `keys`.
+                //
+                // Word stays lazy on purpose: paragraph ids can be
+                // freshly minted by a peer (Enter-split creating a
+                // new paragraph that locks immediately), and pushing
+                // before our `saveChanges` arrives crashes
+                // `_onGetLock` with `Set_UserId on undefined`. Word
+                // peers only see a paragraph as held when they
+                // themselves `askLock` and we reply.
+                if (
+                  (docType === 'cell' || docType === 'slide') &&
+                  documentReadyRef.current
+                ) {
+                  const peerOOId =
+                    getRemoteOOInternalId(peerUserId) ?? peerUserId;
+                  const locks: Record<string, unknown> = {};
+                  for (let i = 0; i < keys.length; i++) {
+                    const key = keys[i];
+                    const block = blocks?.[i] ?? { guid: key };
+                    locks[key] = {
+                      time: timestampMs,
+                      user: peerOOId,
+                      block,
+                    };
+                    addPeerLockShownToEditor(key);
+                  }
+                  sendToEditorGuarded({
+                    type: 'getLock',
+                    locks,
+                  } as any);
+                }
               },
-              onWordLockRelease: (peerUserId, keys) => {
-                if (!wordLockArbitrator) return;
-                wordLockArbitrator.applyRemoteRelease({
+              onArbitratedLockRelease: (peerUserId, keys) => {
+                if (!lockArbitrator) return;
+                // Capture the original block descriptors BEFORE we
+                // apply the release — `applyRemoteRelease` deletes
+                // the entries, and OO's `_onReleaseLock` reads the
+                // same fields as `_onGetLock`, so we must hand back
+                // the verbatim descriptor we received on claim.
+                // Falls back to `{ guid: key }` for cell/slide if
+                // the entry is somehow missing (shouldn't happen
+                // during a normal release).
+                const blockByKey = new Map<string, unknown>();
+                for (const entry of lockArbitrator.snapshot()) {
+                  if (entry.userId === peerUserId && entry.block) {
+                    blockByKey.set(entry.key, entry.block);
+                  }
+                }
+                lockArbitrator.applyRemoteRelease({
                   type: 'oo:lockRelease',
                   userId: peerUserId,
                   keys,
@@ -2772,8 +2834,8 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 // exposed to OO (via a `getLock` reply attributing
                 // them to this peer). For any other key, OO doesn't
                 // have a marker to clear, and referencing an unknown
-                // paragraph by id crashes `_onReleaseLock` the same
-                // way the `getLock` snapshot did.
+                // resource crashes `_onReleaseLock` the same way the
+                // `getLock` snapshot did.
                 const clearableKeys = consumePeerLocksShownToEditor(keys);
                 if (
                   documentReadyRef.current &&
@@ -2784,7 +2846,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   sendToEditorGuarded({
                     type: 'releaseLock',
                     locks: clearableKeys.map(key => ({
-                      block: key,
+                      block:
+                        docType === 'cell' || docType === 'slide'
+                          ? blockByKey.get(key) ?? { guid: key }
+                          : key,
                       user: peerOOId,
                       time: Date.now(),
                     })),
@@ -2799,7 +2864,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           // transport is the relay's settlement-aware send helper. The
           // forward declaration at the top of this block is populated
           // here; the callbacks above see it through closure.
-          wordLockArbitrator = new WordLockArbitrator({
+          lockArbitrator = new LockArbitrator({
             sendWithSettlement: msg => relay.sendEncryptedWithSettlement(msg),
           });
           // Fresh session → fresh tracking of which peer-owned locks
@@ -2998,7 +3063,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           // lock table. `userId` lets the arbitrator attribute claims.
           // For cell/slide these stay undefined → mockServer falls back
           // to its existing optimistic path.
-          wordLockArbitrator: wordLockArbitrator ?? undefined,
+          lockArbitrator: lockArbitrator ?? undefined,
           userId: user.sub!,
           onSaveChangesBroadcast: message => {
             // A crashed editor must not leak its corrupt state to

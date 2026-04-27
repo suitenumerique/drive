@@ -155,15 +155,23 @@ type FrameSettledMessage = {
   timestampMs: number;
 };
 
-/** Word lock-arbitration request broadcast by a peer (encrypted payload). */
-type WordLockRequestMessage = {
+/**
+ * Lock-arbitration request broadcast by a peer (encrypted payload).
+ * `keys` are opaque to the relay — Word uses paragraph ids, Calc /
+ * Slide use `block.guid`. `blocks` is a parallel array carrying the
+ * verbatim OO descriptor for each key, present for cell / slide so
+ * the receiver can hand the full shape to OO (Calc reads
+ * `block.sheetId.indexOf` etc — a bare `{ guid }` reply crashes).
+ */
+type ArbitratedLockRequestMessage = {
   type: 'oo:lockRequest';
   userId: string;
   keys: string[];
+  blocks?: unknown[];
 };
 
-/** Word lock-arbitration release broadcast by a peer (encrypted payload). */
-type WordLockReleaseMessage = {
+/** Lock-arbitration release broadcast by a peer (encrypted payload). */
+type ArbitratedLockReleaseMessage = {
   type: 'oo:lockRelease';
   userId: string;
   keys: string[];
@@ -231,8 +239,8 @@ type SystemMessage =
   | PeerNeedsSaveMessage
   | PeerCrashedMessage
   | FrameSettledMessage
-  | WordLockRequestMessage
-  | WordLockReleaseMessage
+  | ArbitratedLockRequestMessage
+  | ArbitratedLockReleaseMessage
   | PeerStateRequestMessage
   | PeerStateResponseMessage
   | CheckpointReloadMessage;
@@ -315,17 +323,26 @@ export interface RelayCallbacks {
    * replay: the arbitrator rebuilds from scratch on reconnect so
    * replaying stale locks would poison local state.
    */
-  onWordLockRequest?: (
+  onArbitratedLockRequest?: (
     userId: string,
     keys: string[],
     timestampMs: number,
+    /**
+     * Optional parallel array to `keys` carrying the original OO
+     * block descriptor. Senders include this for cell / slide so
+     * the receiver can hand the verbatim block to OO (Calc /
+     * PowerPoint editors crash on minimal `{ guid }` reconstructions
+     * when they read `block.sheetId.indexOf` etc). Undefined for
+     * Word — the key IS the block (paragraph id string).
+     */
+    blocks?: unknown[],
   ) => void;
   /**
-   * Called when a remote peer's Word-lock release arrives. No timestamp
+   * Called when a remote peer's lock release arrives. No timestamp
    * needed — releases are idempotent and only affect keys the releasing
    * peer still holds.
    */
-  onWordLockRelease?: (userId: string, keys: string[]) => void;
+  onArbitratedLockRelease?: (userId: string, keys: string[]) => void;
   /**
    * Called when a joining peer broadcasts `peer:state-request`. On the
    * receive side, the leader answers with its current (baseBin, chain)
@@ -935,20 +952,23 @@ export class EncryptedRelay {
         this.callbacks.onPeerCrashed?.(msg.userId);
         break;
       case 'oo:lockRequest':
-        // Word lock-arbitration frame. Carries a timestamp because it
-        // arrived as a binary frame; skip if somehow received via a
-        // text frame (should never happen given the encrypted delivery
-        // path, but the type system allows it).
+        // Lock-arbitration frame (Word paragraph id, Calc / Slide
+        // GUID — keys are opaque strings to the relay). Carries a
+        // timestamp because it arrived as a binary frame; skip if
+        // somehow received via a text frame (should never happen
+        // given the encrypted delivery path, but the type system
+        // allows it).
         if (typeof timestampMs === 'number') {
-          this.callbacks.onWordLockRequest?.(
+          this.callbacks.onArbitratedLockRequest?.(
             msg.userId,
             msg.keys,
             timestampMs,
+            (msg as { blocks?: unknown[] }).blocks,
           );
         }
         break;
       case 'oo:lockRelease':
-        this.callbacks.onWordLockRelease?.(msg.userId, msg.keys);
+        this.callbacks.onArbitratedLockRelease?.(msg.userId, msg.keys);
         break;
       case 'peer:state-request':
         // Any peer can receive this; only the leader answers.

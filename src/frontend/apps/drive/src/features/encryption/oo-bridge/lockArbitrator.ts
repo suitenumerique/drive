@@ -1,19 +1,24 @@
 /**
- * Replicated Word-document lock table, arbitrated via the relay's total
- * order (server-stamped monotonic `timestampMs` on every binary frame).
+ * Replicated lock table, arbitrated via the relay's total order
+ * (server-stamped monotonic `timestampMs` on every binary frame).
  *
  * Why this exists
  * ---------------
- * OnlyOffice's Word editor calls `askLock(paragraphId)` before any
- * structural mutation (splitting a paragraph via Enter, changing a
- * style, inserting a table…). In the upstream OO deployment, a central
- * Document Server answers that call and grants or denies based on its
- * in-memory lock table. In our E2E-encrypted setup there's no central
- * server, so every tab runs a fake Document Server locally that used
- * to auto-grant unconditionally — fine for single-user, broken for
- * concurrent editors: both tabs think they own the same paragraph,
- * produce divergent structural edits, and OO crashes the moment the
- * patches collide on a resource one side doesn't recognise.
+ * OnlyOffice editors call `askLock(<resource>)` before any structural
+ * mutation — paragraph split / style change in Word, cell range edit
+ * in Calc, slide / shape mutation in Presentation. In the upstream OO
+ * deployment, a central Document Server answers that call and grants
+ * or denies based on its in-memory lock table. In our E2E-encrypted
+ * setup there's no central server, so every tab runs a fake Document
+ * Server locally that used to auto-grant unconditionally — fine for
+ * single-user, broken for concurrent editors: both tabs think they
+ * own the same resource, produce divergent edits, and OO crashes the
+ * moment the patches collide on something one side doesn't recognise.
+ *
+ * The arbitrator is doc-type agnostic — `LockKey` is just a string.
+ * Word uses paragraph ids, Calc / Presentation use the GUID exposed
+ * on `block.guid`. The mockServer does the per-docType key extraction
+ * before calling `tryClaim`.
  *
  * How arbitration works
  * ---------------------
@@ -42,6 +47,18 @@ export type LockKey = string;
 interface LockEntry {
   userId: string;
   timestampMs: number;
+  /**
+   * Original OO block descriptor for this key, kept verbatim so the
+   * `getLock` reply we hand to the local OO carries every field OO's
+   * `_onGetLock` and friends might read. Word's keys are themselves
+   * the block (paragraph id strings) so this is left undefined and
+   * the consumer falls back to `key`. Cell / Slide blocks are
+   * objects with `guid`, `sheetId`, `rangeType`, `t`, etc — and OO
+   * walks several of those fields with `.indexOf` (the
+   * `_onUpdateCFLock` crash we saw came from `block.sheetId.indexOf`
+   * on a reconstructed `{ guid }` shape).
+   */
+  block?: unknown;
 }
 
 /**
@@ -57,6 +74,16 @@ export interface LockRequestMessage {
   type: 'oo:lockRequest';
   userId: string;
   keys: LockKey[];
+  /**
+   * Optional parallel array to `keys` carrying the original OO block
+   * descriptor. Senders include this for cell / slide so peers can
+   * eagerly push a `getLock` to their local OO with the full
+   * descriptor (Calc / PowerPoint editors read more than `guid` off
+   * the block — `_onUpdateCFLock` walks `sheetId`/`rangeType`/etc).
+   * Word omits it because the key IS the block (paragraph id
+   * string) and the lazy push path doesn't need it.
+   */
+  blocks?: unknown[];
 }
 
 export interface LockReleaseMessage {
@@ -76,7 +103,7 @@ export interface ClaimResult {
   denied: LockKey[];
 }
 
-export class WordLockArbitrator {
+export class LockArbitrator {
   private table = new Map<LockKey, LockEntry>();
 
   constructor(private readonly transport: ArbitratorTransport) {}
@@ -91,9 +118,14 @@ export class WordLockArbitrator {
    * it applies its own frame at settlement and sees us here first.
    */
   applyRemoteRequest(msg: LockRequestMessage, timestampMs: number): void {
-    for (const key of msg.keys) {
+    for (let i = 0; i < msg.keys.length; i++) {
+      const key = msg.keys[i];
       if (!this.table.has(key)) {
-        this.table.set(key, { userId: msg.userId, timestampMs });
+        this.table.set(key, {
+          userId: msg.userId,
+          timestampMs,
+          block: msg.blocks?.[i],
+        });
       }
     }
   }
@@ -118,7 +150,11 @@ export class WordLockArbitrator {
    * then applies the request locally under the same rule remote peers
    * use.
    */
-  async tryClaim(userId: string, keys: LockKey[]): Promise<ClaimResult> {
+  async tryClaim(
+    userId: string,
+    keys: LockKey[],
+    blocks?: unknown[],
+  ): Promise<ClaimResult> {
     if (keys.length === 0) {
       return { granted: [], denied: [] };
     }
@@ -127,12 +163,14 @@ export class WordLockArbitrator {
       type: 'oo:lockRequest',
       userId,
       keys,
+      ...(blocks ? { blocks } : {}),
     });
 
     const granted: LockKey[] = [];
     const denied: LockKey[] = [];
 
-    for (const key of keys) {
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
       const existing = this.table.get(key);
       if (existing && existing.userId !== userId) {
         // A peer claimed this key earlier in the log order. They win.
@@ -140,7 +178,7 @@ export class WordLockArbitrator {
         continue;
       }
       // Either unclaimed or already ours — either way we hold it now.
-      this.table.set(key, { userId, timestampMs });
+      this.table.set(key, { userId, timestampMs, block: blocks?.[i] });
       granted.push(key);
     }
 
@@ -177,7 +215,7 @@ export class WordLockArbitrator {
 
   /**
    * Drop every lock held by `userId`. Called when a peer leaves / crashes
-   * so their paragraphs become editable again. Local-only; the caller
+   * so their resources become editable again. Local-only; the caller
    * decides whether to broadcast a release on their behalf.
    */
   dropUser(userId: string): void {
@@ -206,12 +244,22 @@ export class WordLockArbitrator {
     this.table.clear();
   }
 
-  /** For diagnostics / tests. */
-  snapshot(): Array<{ key: LockKey; userId: string; timestampMs: number }> {
+  /**
+   * For diagnostics / tests, and used by the mockServer's `getLock`
+   * reply path to look up entries (including the original block
+   * descriptor) by key without exposing the table directly.
+   */
+  snapshot(): Array<{
+    key: LockKey;
+    userId: string;
+    timestampMs: number;
+    block?: unknown;
+  }> {
     return Array.from(this.table.entries()).map(([key, entry]) => ({
       key,
       userId: entry.userId,
       timestampMs: entry.timestampMs,
+      block: entry.block,
     }));
   }
 }
