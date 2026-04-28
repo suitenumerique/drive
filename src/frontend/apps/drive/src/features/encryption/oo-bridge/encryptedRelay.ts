@@ -257,7 +257,7 @@ export interface RelayCallbacks {
     userId: string,
     userName: string,
     canEdit: boolean,
-    joinedAt: number,
+    joinedAt: number
   ) => void;
   /** Called when a peer leaves the room */
   onPeerLeave: (userId: string) => void;
@@ -269,7 +269,7 @@ export interface RelayCallbacks {
       canEdit: boolean;
       joinedAt: number;
       crashed?: boolean;
-    }>,
+    }>
   ) => void;
   /** Called when a lock is acquired/released by a peer */
   onLockUpdate: (
@@ -335,7 +335,7 @@ export interface RelayCallbacks {
      * when they read `block.sheetId.indexOf` etc). Undefined for
      * Word — the key IS the block (paragraph id string).
      */
-    blocks?: unknown[],
+    blocks?: unknown[]
   ) => void;
   /**
    * Called when a remote peer's lock release arrives. No timestamp
@@ -358,7 +358,7 @@ export interface RelayCallbacks {
   onPeerStateResponse?: (
     fromUserId: string,
     baseBin: string,
-    chain: Array<Record<string, unknown>>,
+    chain: Array<Record<string, unknown>>
   ) => void;
   /**
    * Called on every peer when the leader broadcasts a checkpoint. All
@@ -603,7 +603,7 @@ export class EncryptedRelay {
   async sendStateResponse(
     targetUserId: string,
     baseBin: string,
-    chain: Array<Record<string, unknown>>,
+    chain: Array<Record<string, unknown>>
   ): Promise<void> {
     await this.sendEncryptedSystem({
       type: 'oo:state-response',
@@ -649,21 +649,13 @@ export class EncryptedRelay {
 
   // --- Private ---
 
-  /**
-   * The vault worker takes ownership of every ArrayBuffer it receives via
-   * postMessage (transfer list), detaching the original. Our key material is
-   * long-lived and used across many encrypt/decrypt calls, so we hand the
-   * worker a FRESH copy each time — otherwise the first save() in the
-   * session detaches the key and every subsequent decrypt fails with
-   * "wrong secret key for the given ciphertext".
-   */
   private cloneKey(): ArrayBuffer {
-    return this.encryptedSymmetricKey.slice(0);
+    return this.encryptedSymmetricKey;
   }
 
   private cloneKeyChain(): ArrayBuffer[] | undefined {
     if (this.encryptedKeyChain.length === 0) return undefined;
-    return this.encryptedKeyChain.map(k => k.slice(0));
+    return this.encryptedKeyChain;
   }
 
   private sendSystem(msg: object): void {
@@ -743,6 +735,8 @@ export class EncryptedRelay {
 
     try {
       const chain = this.cloneKeyChain();
+      // Relay frames are small JSON envelopes (locks, cursors, deltas) — not
+      // worth opting into `optimizeMemory`; keep the safe default.
       const { encryptedData } = chain
         ? await this.vaultClient.encryptWithKey(
             plaintext,
@@ -810,9 +804,8 @@ export class EncryptedRelay {
       const timestampMs = Number(view.getBigUint64(0, false));
       const ciphertext = buffer.slice(8);
 
-      // Capture a fingerprint of the incoming frame BEFORE we hand the
-      // buffer to the vault worker (which transfers ownership, detaching
-      // the original). This lets us log size + leading bytes on failure.
+      // Capture a fingerprint of the incoming frame so failures can log
+      // size + leading bytes even after the call.
       const head = new Uint8Array(
         ciphertext.slice(0, Math.min(16, ciphertext.byteLength))
       );
@@ -822,6 +815,7 @@ export class EncryptedRelay {
       const size = ciphertext.byteLength;
 
       try {
+        // Relay frames are small JSON envelopes — keep the safe default.
         const { data: plaintext } = await this.vaultClient.decryptWithKey(
           ciphertext,
           this.cloneKey(),
@@ -847,10 +841,7 @@ export class EncryptedRelay {
     }
   }
 
-  private handleSystemMessage(
-    msg: SystemMessage,
-    timestampMs?: number,
-  ): void {
+  private handleSystemMessage(msg: SystemMessage, timestampMs?: number): void {
     // Drop ephemeral/live-state events during history replay. These
     // reference in-memory object ids (cell-lock guids, Run handles)
     // that were valid at the moment the sender emitted them but may
@@ -912,7 +903,7 @@ export class EncryptedRelay {
           msg.userId,
           msg.userName,
           msg.canEdit,
-          msg.joinedAt,
+          msg.joinedAt
         );
         break;
       case 'peer:leave':
@@ -963,7 +954,7 @@ export class EncryptedRelay {
             msg.userId,
             msg.keys,
             timestampMs,
-            (msg as { blocks?: unknown[] }).blocks,
+            (msg as { blocks?: unknown[] }).blocks
           );
         }
         break;
@@ -981,7 +972,7 @@ export class EncryptedRelay {
           this.callbacks.onPeerStateResponse?.(
             msg.userId,
             msg.baseBin,
-            msg.chain,
+            msg.chain
           );
         }
         break;

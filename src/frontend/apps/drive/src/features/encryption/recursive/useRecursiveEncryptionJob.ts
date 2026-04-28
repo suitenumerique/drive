@@ -616,6 +616,10 @@ async function encryptPipeline({
   // and encryptWithoutKey is called with the actual file content below.
   if (rootItem.type === ItemType.FOLDER) {
     dispatch({ type: 'UPDATE_ROW', id: rootItem.id, state: 'running' });
+    // Vault SDK is safe-by-default: public-key buffers in
+    // `userPublicKeys` are structured-cloned by postMessage (never in
+    // the transferList), so the same map stays valid for the
+    // `computeKeyFingerprint` calls that follow at submit time.
     const { encryptedKeys } = await vaultClient.encryptWithoutKey(
       new ArrayBuffer(0),
       publicKeys
@@ -734,8 +738,13 @@ async function stageOneEncryption({
     let wrappedKey: ArrayBuffer;
 
     if (rootItem.type === ItemType.FILE && targetId === rootItem.id) {
+      // optimizeMemory: hot path — `plaintext` is the full file body
+      // (often several MB) and is discarded after this call. publicKeys
+      // is never in the transferList regardless of the flag.
       const { encryptedContent: ct, encryptedKeys } =
-        await vaultClient.encryptWithoutKey(plaintext, publicKeys);
+        await vaultClient.encryptWithoutKey(plaintext, publicKeys, {
+          optimizeMemory: true,
+        });
       encryptedContent = ct;
       rootEncryptedKeysRef.current = encryptedKeys;
       wrappedKey = new ArrayBuffer(0);
@@ -754,8 +763,11 @@ async function stageOneEncryption({
         rootItem.id,
         folderWrappedKeysRef.current
       );
+      // optimizeMemory: hot path — file body, discarded after this call.
       const { encryptedContent: ct, wrappedKey: wk } =
-        await vaultClient.encryptNestedWithoutKey(plaintext, entryKey, chain);
+        await vaultClient.encryptNestedWithoutKey(plaintext, entryKey, chain, {
+          optimizeMemory: true,
+        });
       encryptedContent = ct;
       wrappedKey = wk;
     }
@@ -849,10 +861,13 @@ async function decryptPipeline({
         }
         const ciphertext = await resp.arrayBuffer();
 
+        // optimizeMemory: hot path — file body, ciphertext discarded
+        // after this call and plaintext goes straight to S3.
         const { data: plaintext } = await vaultClient.decryptWithKey(
           ciphertext,
           entryKey,
-          chain.length > 0 ? chain : undefined
+          chain.length > 0 ? chain : undefined,
+          { optimizeMemory: true }
         );
 
         const newFilename = stagedFilename(node.item.title);

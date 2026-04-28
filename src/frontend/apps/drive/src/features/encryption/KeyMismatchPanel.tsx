@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
  * symmetric key gets wrapped against the user's CURRENT public key.
  */
 export const isWrongSecretKeyError = (
-  err: Error | null | undefined,
+  err: Error | null | undefined
 ): boolean => {
   if (!err) return false;
   const msg = err.message?.toLowerCase() ?? '';
@@ -42,7 +42,7 @@ export const KeyMismatchPanel = ({
 }: KeyMismatchPanelProps = {}) => {
   const { t } = useTranslation();
   const [currentFingerprint, setCurrentFingerprint] = useState<string | null>(
-    null,
+    null
   );
 
   useEffect(() => {
@@ -102,20 +102,19 @@ export const KeyMismatchPanel = ({
       <span style={{ fontWeight: 600 }}>
         {t(
           'explorer.encrypted.key_mismatch.title',
-          'This file was encrypted with a different key',
+          'This file was encrypted with a different key'
         )}
       </span>
       <span
         style={{
           fontSize: '14px',
-          color:
-            'var(--c--contextuals--content--semantic--neutral--tertiary)',
+          color: 'var(--c--contextuals--content--semantic--neutral--tertiary)',
           lineHeight: 1.5,
         }}
       >
         {t(
           'explorer.encrypted.key_mismatch.body',
-          'The file was encrypted for you at a time when you were using a different encryption key — possibly before you reset your keys or switched device without restoring a backup. Your current key can no longer decrypt it. Ask an owner or administrator of this file to remove you from the access list and add you back so it gets re-encrypted for your current key.',
+          'The file was encrypted for you at a time when you were using a different encryption key — possibly before you reset your keys or switched device without restoring a backup. Your current key can no longer decrypt it. Ask an owner or administrator of this file to remove you from the access list and add you back so it gets re-encrypted for your current key.'
         )}
       </span>
       {(formatShareTime || currentFingerprint) && (
@@ -133,13 +132,12 @@ export const KeyMismatchPanel = ({
             <div>
               {t(
                 'explorer.encrypted.key_mismatch.share_time_fingerprint_label',
-                'Fingerprint at the time it was shared with you:',
+                'Fingerprint at the time it was shared with you:'
               )}{' '}
               <code
                 style={{
                   fontFamily: 'monospace',
-                  background:
-                    'var(--c--theme--colors--greyscale-100, #f4f4f5)',
+                  background: 'var(--c--theme--colors--greyscale-100, #f4f4f5)',
                   padding: '2px 6px',
                   borderRadius: '3px',
                 }}
@@ -152,13 +150,12 @@ export const KeyMismatchPanel = ({
             <div>
               {t(
                 'explorer.encrypted.key_mismatch.fingerprint_label',
-                'Your current key fingerprint:',
+                'Your current key fingerprint:'
               )}{' '}
               <code
                 style={{
                   fontFamily: 'monospace',
-                  background:
-                    'var(--c--theme--colors--greyscale-100, #f4f4f5)',
+                  background: 'var(--c--theme--colors--greyscale-100, #f4f4f5)',
                   padding: '2px 6px',
                   borderRadius: '3px',
                 }}

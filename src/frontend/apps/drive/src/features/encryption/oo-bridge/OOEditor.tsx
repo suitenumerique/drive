@@ -807,24 +807,23 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         return bytes.buffer;
       });
 
-      // Encrypt via vault. The vault worker takes ownership of every buffer
-      // passed through postMessage (transfer list), so hand it fresh copies
-      // of the key material — otherwise the canonical keys held by the
-      // relay / init closure get detached and subsequent encrypt/decrypt
-      // calls fail with "wrong secret key for the given ciphertext".
-      // Auto-save path: re-encrypt with the file's existing K_file. In the
-      // hierarchical case, entry + chain resolves down to K_file; in the
-      // flat case, entry itself is the K_file wrap.
+      // optimizeMemory: hot path — document bins are routinely several MB
+      // and `content` is discarded after this call (we ship `encryptedData`
+      // to S3), so transfer is a clean win. Keys / chain are never in the
+      // transferList regardless of the flag.
       const { encryptedData } =
         encryptedKeyChain.length > 0
           ? await vaultClient.encryptWithKey(
               content,
-              entryKeyBytes.buffer.slice(0),
-              encryptedKeyChain.map(k => k.slice(0))
+              entryKeyBytes.buffer,
+              encryptedKeyChain,
+              { optimizeMemory: true }
             )
           : await vaultClient.encryptWithKey(
               content,
-              entryKeyBytes.buffer.slice(0)
+              entryKeyBytes.buffer,
+              undefined,
+              { optimizeMemory: true }
             );
 
       // Get a presigned S3 upload URL for the existing file key.
@@ -1064,15 +1063,13 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           return bytes.buffer;
         });
 
-        // Clone the key material — the vault worker transfers its inputs,
-        // detaching the originals. We still need these buffers intact for
-        // the EncryptedRelay constructor below.
+        // optimizeMemory: hot path — decrypted document bins are routinely
+        // several MB and `encryptedBuffer` is not reused after this call.
         const { data: decryptedBuffer } = await vaultClient.decryptWithKey(
           encryptedBuffer,
-          entryKeyBytes.buffer.slice(0),
-          encryptedKeyChain.length > 0
-            ? encryptedKeyChain.map(k => k.slice(0))
-            : undefined
+          entryKeyBytes.buffer,
+          encryptedKeyChain.length > 0 ? encryptedKeyChain : undefined,
+          { optimizeMemory: true }
         );
         if (cancelled) return;
 
