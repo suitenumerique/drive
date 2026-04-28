@@ -130,41 +130,28 @@ export function inspectOutboundForRepublish(
 }
 
 /**
- * For every shape matched by `restoredGuids` in the active slide, call
- * `xfrm.setRot(currentRot)` once inside a `StartAction` /
- * `FinalizeAction` bracket. `CXfrm.prototype.setRot` unconditionally
- * pushes a `CChangesDrawingsDouble(this, historyitem_Xfrm_SetRot, oldVal, newVal)`
- * to History — this single same-value call is the test variant; if
- * receivers don't refresh, swap to a `setRot(curr+ε); setRot(curr)`
- * pair instead.
- */
-/**
  * Tracks the timestamp of the most recent `editor.Undo()` call so the
  * republish heuristic can distinguish a tombstone undo from a regular
- * forward delete (whose payload looks identical from the wire).
+ * forward delete (whose payload looks identical on the wire).
  *
  * Why a flag instead of querying OO state: in fast-collaborative mode
  * Ctrl+Z goes through `CCollaborativeHistory.UndoOwnPoint`, which
- * creates a NEW local history point with the inverse changes rather
- * than popping from undo and pushing to redo. As a result
- * `History.Can_Redo()` returns false even right after a Ctrl+Z, so
- * that signal is unusable. The API-level `editor.Undo` method is
- * still the single entry point for both Ctrl+Z and the toolbar undo,
- * regardless of collab mode.
+ * creates a new forward history point holding the inverse changes
+ * rather than popping/pushing the redo stack. `History.Can_Redo()`
+ * therefore returns false even right after Ctrl+Z. The API-level
+ * `editor.Undo` is the single entry point for both Ctrl+Z and the
+ * toolbar undo, in both fast-collab and regular modes.
  */
 let lastUndoAt = 0;
 const HOOK_FLAG = '__driveUndoFlagHookInstalled';
 
 /**
  * Patch every `Undo` method in OO's call chain so we stamp
- * `lastUndoAt` regardless of which entry point Ctrl+Z hit:
- *  - the editor API (`asc_docs_api.prototype.Undo` — `editor.Undo`)
- *  - the collaborative editing instance
- *    (`CCollaborativeEditingBase.prototype.Undo` —
- *    `AscCommon.CollaborativeEditing.Undo`)
+ * `lastUndoAt` regardless of which entry point fired:
+ *  - editor API (`asc_docs_api.prototype.Undo` — `editor.Undo`)
+ *  - collaborative editing instance (`CCollaborativeEditingBase`)
  *
- * Two independent prototypes are patched so the timestamp is set
- * either way. Idempotent via per-prototype flag.
+ * Idempotent via per-prototype flag.
  */
 function patchUndoOnPrototype(
   proto: Record<string, unknown> | null | undefined,
@@ -176,7 +163,6 @@ function patchUndoOnPrototype(
   if (typeof original !== 'function') return false;
   proto['Undo'] = function patched(this: unknown, ...args: unknown[]) {
     lastUndoAt = Date.now();
-    console.log('[republishOnUndo] Undo fired via', label);
     return (original as (...a: unknown[]) => unknown).apply(this, args);
   };
   (proto as { [k: string]: unknown })[HOOK_FLAG] = true;
@@ -384,21 +370,10 @@ export function dispatchRepublishNudge(restoredGuids: string[]): void {
     }
   }
 
-  console.log(
-    '[OOEditor:auto-republish] target probe',
-    JSON.stringify(
-      {
-        restoredGuidsRequested: restoredGuids.length,
-        refreshes: refreshes.length,
-        perGuid: probe,
-      },
-      null,
-      2
-    )
-  );
   if (refreshes.length === 0) {
     console.warn(
-      '[OOEditor:auto-republish] no refreshable objects resolved — aborting'
+      '[OOEditor:auto-republish] no refreshable objects resolved — aborting',
+      probe
     );
     return;
   }
