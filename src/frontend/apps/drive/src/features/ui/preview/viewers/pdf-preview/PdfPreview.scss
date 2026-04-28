@@ -42,6 +42,11 @@
     }
   }
 
+  &__page-container {
+    display: flex;
+    justify-content: center;
+  }
+
   &__page-skeleton {
     border-radius: 4px;
     background: var(--c--contextuals--background--surface--primary);
@@ -49,7 +54,18 @@
     animation: pdf-skeleton-pulse 1.5s ease-in-out infinite;
     max-width: 800px;
     width: 100%;
+    // Per-page callers override width/height inline once pdfjs dimensions
+    // are known. A4 portrait stays as the fallback for the pre-load skeleton
+    // (PdfPreview loadingSkeleton) where no page dimensions exist yet.
     aspect-ratio: 1 / 1.414;
+  }
+
+  &__page-skeleton--measured {
+    // Sites that set an explicit inline height drop the aspect-ratio
+    // constraint so mixed-size pages render at their true ratio.
+    aspect-ratio: auto;
+    width: auto;
+    max-width: none;
   }
 
   &__sidebar {
@@ -61,7 +77,6 @@
     width: 150px;
     overflow: hidden;
 
-    padding: 12px 0;
     border-right: 1px solid var(--c--contextuals--border--surface--primary);
     background: var(--c--contextuals--background--surface--primary);
     transform: translateX(0);
@@ -120,8 +135,8 @@
   }
 
   &__thumbnail-skeleton {
-    width: 106px;
-    height: 150px;
+    // Width/height are set inline by the consumer based on the actual page
+    // dimensions (falling back to A4 when dimensions are still being fetched).
     border-radius: 4px;
     background: var(--c--contextuals--border--surface--primary);
     animation: pdf-skeleton-pulse 1.5s ease-in-out infinite;
