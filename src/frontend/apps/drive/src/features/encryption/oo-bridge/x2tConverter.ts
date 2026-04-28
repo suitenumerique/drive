@@ -372,7 +372,10 @@ export async function convertToInternal(
 
   const bin = runConversion(x2t, currentName, currentData, 'bin');
   if (!bin) {
-    throw new Error(`Failed to convert ${filename} to internal format`);
+    throw Object.assign(
+      new Error(`Failed to convert ${filename} to internal format`),
+      { code: 'CONVERSION_FAILED' }
+    );
   }
 
   return { bin, images: extractMediaFiles(x2t) };

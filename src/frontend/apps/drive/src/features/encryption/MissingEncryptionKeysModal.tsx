@@ -2,17 +2,17 @@ import { Button, Modal, ModalSize } from '@gouvfr-lasuite/cunningham-react';
 import { useTranslation } from 'react-i18next';
 
 /**
- * Heuristic — matches the SDK's "No key pair found" family of errors
- * (encrypt, decrypt, export-public-key, etc.). Used by the global mutation
- * error handler to swap a generic toast for the dedicated modal, and by the
- * file viewer to render a dedicated panel instead of the bare error string.
+ * True when the SDK threw a `VaultError` carrying the `MISSING_KEYS`
+ * code — i.e. the user has no key pair stored locally on this device.
+ * Used by the global mutation error handler to swap a generic toast for
+ * the dedicated modal, and by the file viewer to render a dedicated
+ * panel.
  */
 export const isMissingKeysError = (
   err: Error | string | null | undefined
 ): boolean => {
-  if (!err) return false;
-  const msg = typeof err === 'string' ? err : (err.message ?? '');
-  return /no key pair/i.test(msg);
+  if (!err || typeof err === 'string') return false;
+  return (err as VaultError).code === 'MISSING_KEYS';
 };
 
 /** Custom event the global error handler dispatches. */

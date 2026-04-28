@@ -2,21 +2,21 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
- * A decryption failure with this message text almost always means the
- * file was encrypted against a PREVIOUS public key of the current user
+ * True when the SDK threw a `VaultError` carrying the
+ * `WRONG_SECRET_KEY` code. In drive this almost always means the file
+ * was encrypted against a PREVIOUS public key of the current user
  * (e.g. they reset their keys, or restored from a different device and
- * got new keys generated). The ciphertext can still be opened by anyone
- * who holds the old key; the user themselves cannot, no matter what
- * they do locally. The fix is social: an owner/admin of the document
- * has to remove them from the access list and re-add them so the
- * symmetric key gets wrapped against the user's CURRENT public key.
+ * got new keys generated): the wrapped symmetric key was sealed
+ * against their old pubkey, so the AEAD verification fails. The fix is
+ * social — an owner/admin of the document has to remove them from the
+ * access list and re-add them so the symmetric key gets wrapped
+ * against the user's CURRENT public key.
  */
 export const isWrongSecretKeyError = (
   err: Error | null | undefined
 ): boolean => {
   if (!err) return false;
-  const msg = err.message?.toLowerCase() ?? '';
-  return msg.includes('wrong secret key');
+  return (err as VaultError).code === 'WRONG_SECRET_KEY';
 };
 
 interface KeyMismatchPanelProps {

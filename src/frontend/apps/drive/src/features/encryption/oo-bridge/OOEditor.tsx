@@ -173,6 +173,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const { user } = useAuth();
   const [state, setState] = useState<EditorState>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [showRemoveEncryption, setShowRemoveEncryption] = useState(false);
   const [downloading, setDownloading] = useState(false);
   // Save-error banner state. The OO editor keeps running in both
@@ -1739,7 +1740,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     // tile would still take a slot and confuse the
                     // user. Disappearing is cleaner.
                     const items = doc.querySelectorAll(
-                      '.menu-insert-shape .item, .recent-items .item',
+                      '.menu-insert-shape .item, .recent-items .item'
                     );
                     items.forEach((item: Element) => {
                       const use = item.querySelector('use');
@@ -1748,14 +1749,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                         use?.getAttribute('href') ||
                         '';
                       const iconName = href.replace(/^#/, '');
-                      if (
-                        iconName &&
-                        unsupportedShapeIcons.has(iconName)
-                      ) {
+                      if (iconName && unsupportedShapeIcons.has(iconName)) {
                         (item as HTMLElement).style.setProperty(
                           'display',
                           'none',
-                          'important',
+                          'important'
                         );
                         hidden++;
                       }
@@ -1794,7 +1792,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     if (hiddenShapes > 0 && !loggedShapeBlocklist) {
                       loggedShapeBlocklist = true;
                       console.log(
-                        `[OOEditor] hid ${hiddenShapes} shape gallery items unsupported by ODP round-trip (${trigger})`,
+                        `[OOEditor] hid ${hiddenShapes} shape gallery items unsupported by ODP round-trip (${trigger})`
                       );
                     }
                   };
@@ -2035,6 +2033,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             onError: (event: { data: unknown }) => {
               console.error('OnlyOffice error:', event.data);
               setError(String(event.data));
+              setErrorCode(null);
               setState('error');
             },
           } as any,
@@ -3162,18 +3161,23 @@ export const OOEditor = ({ item }: OOEditorProps) => {
 
         if (binDecision === 'no-response') {
           // Don't construct OO — we'd race the live editor with cold
-          // x2t ids and silently corrupt the document. Surface a
-          // dedicated error overlay so the user knows to retry.
-          throw new Error(
-            'PEER_STATE_UNAVAILABLE: another user is connected but did not respond with their live state.'
+          // x2t ids and silently corrupt the document. Tag the error
+          // with a stable code so the overlay branches on `errorCode`
+          // rather than on the message text.
+          throw Object.assign(
+            new Error(
+              'Another user is connected but did not respond with their live state.'
+            ),
+            { code: 'PEER_STATE_UNAVAILABLE' }
           );
         }
         if (binDecision === 'no-relay') {
           // Same risk as no-response: without a relay we can't tell
           // whether someone else is editing. The overlay reuses the
           // retry / read-only buttons.
-          throw new Error(
-            'RELAY_UNAVAILABLE: cannot reach the collaboration server.'
+          throw Object.assign(
+            new Error('Cannot reach the collaboration server.'),
+            { code: 'RELAY_UNAVAILABLE' }
           );
         }
 
@@ -3431,6 +3435,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           setError(
             err instanceof Error ? err.message : 'Failed to load editor'
           );
+          // Pull the stable code if the throw stamped one (VaultError
+          // or OO sentinels via Object.assign). Anything unexpected
+          // lands as null — the overlay treats that as the generic
+          // "failed to load editor" branch.
+          const code = (err as { code?: unknown })?.code;
+          setErrorCode(typeof code === 'string' ? code : null);
           setState('error');
         }
       }
@@ -3489,11 +3499,11 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     // Users who were invited at a time when they had a DIFFERENT public
     // key (e.g. they reset their vault and re-onboarded) — the wrapped
     // symmetric key was encrypted against their old key, so vault
-    // decryption aborts with "wrong secret key for the given ciphertext".
-    // Surface the shared key-mismatch panel (also used by the non-office
-    // viewer) so the user sees a specific, actionable explanation and
-    // their current key's fingerprint, rather than the generic failure.
-    const isKeyMismatch = !!error && /wrong secret key/i.test(error);
+    // decryption aborts with WRONG_SECRET_KEY. Surface the shared
+    // key-mismatch panel (also used by the non-office viewer) so the
+    // user sees a specific, actionable explanation and their current
+    // key's fingerprint, rather than the generic failure.
+    const isKeyMismatch = errorCode === 'WRONG_SECRET_KEY';
     if (isKeyMismatch) {
       return (
         <KeyMismatchPanel
@@ -3502,13 +3512,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       );
     }
 
-    const isNoKeysError =
-      !!error && /no key pair|hasKeys|key pair found/i.test(error);
-    const isConversionError =
-      !!error && /failed to convert|conversion/i.test(error);
-    const isPeerStateUnavailable =
-      !!error && /PEER_STATE_UNAVAILABLE/.test(error);
-    const isRelayUnavailable = !!error && /RELAY_UNAVAILABLE/.test(error);
+    const isNoKeysError = errorCode === 'MISSING_KEYS';
+    const isConversionError = errorCode === 'CONVERSION_FAILED';
+    const isPeerStateUnavailable = errorCode === 'PEER_STATE_UNAVAILABLE';
+    const isRelayUnavailable = errorCode === 'RELAY_UNAVAILABLE';
     // `isUnsafeToOpen` is the union — both states share the same
     // retry / read-only escape hatch in the overlay below.
     const isUnsafeToOpen = isPeerStateUnavailable || isRelayUnavailable;
@@ -3621,6 +3628,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 peerStateDumpRef.current = null;
                 awaitingPeerStateRef.current = false;
                 setError(null);
+                setErrorCode(null);
                 setState('loading');
                 setReinitKey(k => k + 1);
               }}
@@ -3660,6 +3668,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 peerStateDumpRef.current = null;
                 awaitingPeerStateRef.current = false;
                 setError(null);
+                setErrorCode(null);
                 setState('loading');
                 setReinitKey(k => k + 1);
               }}
