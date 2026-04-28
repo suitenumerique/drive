@@ -48,6 +48,10 @@ import {
 } from './participants';
 import { resetPatchIndex, observeIncomingSaveChanges } from './changesPipeline';
 import { EncryptedRelay } from './encryptedRelay';
+import {
+  inspectOutboundForRepublish,
+  dispatchRepublishNudge,
+} from './republishOnUndo';
 import { LockArbitrator } from './lockArbitrator';
 import { withIncomingOTGate } from './incomingOtGate';
 import {
@@ -168,6 +172,7 @@ function sendToEditorGuarded(msg: { type?: string } & Record<string, unknown>) {
   sendToEditor(msg as any);
 }
 
+
 export const OOEditor = ({ item }: OOEditorProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -266,6 +271,14 @@ export const OOEditor = ({ item }: OOEditorProps) => {
    */
   const baseBinRef = useRef<string | null>(null);
   const chainRef = useRef<Array<Record<string, unknown>>>([]);
+  /**
+   * Gate that suppresses the auto-republish detector for a short window
+   * after we dispatch a synthetic arrow nudge. Without it, the transform
+   * envelopes our own nudge produces match the same heuristic (small,
+   * GUID-bearing) and trigger another nudge → infinite loop, with the
+   * shape drifting under repeated arrow-right consumption.
+   */
+  const autoRepublishGateRef = useRef(false);
   type PeerStateDump = {
     baseBin: string;
     chain: Array<Record<string, unknown>>;
@@ -2510,6 +2523,56 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
               callbacks: {
                 onSaveChanges: (_userId, message, media) => {
+                  // DIAGNOSTIC: dump every inbound saveChanges in the same
+                  // shape as the [OOEditor:send] log on the emitter side, so
+                  // we can diff "what user1 emitted" against "what user2
+                  // received". Use this when chasing the undo-redo
+                  // discrepancy: trigger Ctrl+Z on the sender, then compare
+                  // the [send] envelope on user1 with the [recv] envelope
+                  // on user2 — if they match, the drop is downstream of
+                  // this callback (apply path inside OO). If they differ
+                  // or the recv log is missing, the drop is on the
+                  // relay/encrypted-path side.
+                  try {
+                    const changes = (message as { changes?: unknown }).changes;
+                    const arr = Array.isArray(changes) ? changes : [];
+                    console.log('[OOEditor:recv] saveChanges', {
+                      fromUserId: _userId,
+                      historyPhaseComplete,
+                      count: arr.length,
+                      changes: arr.map((c, i) => {
+                        const ooc = c as {
+                          user?: string;
+                          useridoriginal?: string;
+                          change?: string;
+                        };
+                        const raw = ooc.change ?? '';
+                        let parsed: unknown = raw;
+                        try {
+                          parsed = JSON.parse(raw);
+                        } catch {
+                          /* leave as string */
+                        }
+                        const preview =
+                          typeof raw === 'string' && raw.length > 500
+                            ? raw.slice(0, 500) + `…(+${raw.length - 500})`
+                            : raw;
+                        return {
+                          index: i,
+                          user: ooc.user,
+                          useridoriginal: ooc.useridoriginal,
+                          typeCode: Array.isArray(parsed)
+                            ? (parsed as unknown[])[0]
+                            : undefined,
+                          parsed,
+                          raw: preview,
+                        };
+                      }),
+                    });
+                  } catch {
+                    /* ignore */
+                  }
+
                   // Media is accumulated the same way in both phases so it
                   // ends up in g_oDocumentUrls before OO resolves references.
                   if (media) {
@@ -2560,6 +2623,28 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   // will continue numbering from there — matching OO's
                   // internal state.
                   const apply = () => {
+                    // DIAGNOSTIC: fires when the gated reorder buffer
+                    // releases this envelope into OO. If [OOEditor:recv]
+                    // logs above show the envelope arriving but
+                    // [OOEditor:apply] never fires for the same payload,
+                    // it's stuck in `handleIncomingSaveChanges`'s
+                    // reorder buffer (changesIndex gap). If [apply]
+                    // fires but the canvas doesn't reflect the change,
+                    // the drop is INSIDE OO's apply path
+                    // (Apply_OtherChanges silently no-oping on unknown
+                    // target ids — the prime suspect for the undo-redo
+                    // discrepancy when user2 joined post-deletion).
+                    try {
+                      const changes = (message as { changes?: unknown })
+                        .changes;
+                      const n = Array.isArray(changes) ? changes.length : 0;
+                      console.log('[OOEditor:apply] saveChanges', {
+                        fromUserId: _userId,
+                        count: n,
+                      });
+                    } catch {
+                      /* ignore */
+                    }
                     observeIncomingSaveChanges(
                       message as Record<string, unknown>
                     );
@@ -3320,6 +3405,101 @@ export const OOEditor = ({ item }: OOEditorProps) => {
             // The broadcast went out over the relay for live peers;
             // this is the local copy for lazy catch-up.
             chainRef.current.push(message);
+
+            // EXPERIMENTAL: shape-restoration tombstone republish.
+            // OO's undo of a shape delete emits small deltas
+            // referencing the shape's GUID — peers that joined after
+            // the original delete have no local-history record for
+            // that GUID and silently no-op the apply, leaving the
+            // shape invisible. After detecting the tombstone pattern,
+            // schedule a synthesised arrow-right + arrow-left on the
+            // iframe (net 0 displacement) so OO emits a fresh
+            // `SpPr_SetXfrm` envelope carrying every selected shape's
+            // full transform, which receivers can render directly.
+            const inspection = inspectOutboundForRepublish(message);
+            // Always log so we can see WHY republish did/didn't fire.
+            console.log(
+              '[OOEditor:auto-republish] inspect',
+              {
+                changeCount: Array.isArray(
+                  (message as { changes?: unknown }).changes,
+                )
+                  ? (message as { changes?: unknown[] }).changes!.length
+                  : 0,
+                totalBytes: inspection.totalBytes,
+                sizes: inspection.sizes,
+                tombstoneGuids: inspection.guids,
+                hasFatShapeChange: inspection.hasFatShapeChange,
+                gated: autoRepublishGateRef.current,
+              }
+            );
+            if (autoRepublishGateRef.current) {
+              // We're in the post-nudge suppression window — every
+              // envelope coming through right now is OUR republish
+              // emitting transform deltas. Skip detection to avoid
+              // recursing into another nudge.
+              console.log(
+                '[OOEditor:auto-republish] gated — skipping (recent nudge in flight)'
+              );
+            } else if (inspection.totalBytes > 800) {
+              // A "real" operation (shape add, paste, big edit) carries
+              // far more total bytes than a tombstone undo, even when
+              // every individual change is small. Skip nudging to avoid
+              // re-emitting transforms for a brand-new shape.
+              console.log(
+                '[OOEditor:auto-republish] envelope too large for a tombstone — skipping',
+                inspection.totalBytes,
+                'bytes'
+              );
+            } else if (
+              inspection.guids.length > 0 &&
+              !inspection.hasFatShapeChange
+            ) {
+              // The republish only matters for peers that joined AFTER
+              // we did — they're the ones whose local OO history is
+              // missing the original delete records that the tombstone
+              // refers to. Peers connected before us replayed (or saw
+              // live) every change, so their apply works fine. If
+              // everyone in the room joined before us (or it's empty),
+              // skip the work entirely.
+              const ourJoinedAt = relayRef.current?.joinedAt ?? null;
+              const hasLaterPeer =
+                ourJoinedAt !== null &&
+                [...editorPeersRef.current.values()].some(
+                  peerJoinedAt => peerJoinedAt > ourJoinedAt
+                );
+              if (!hasLaterPeer) {
+                console.log(
+                  '[OOEditor:auto-republish] skipping — no peer joined after us, tombstone applies fine on every existing peer'
+                );
+              } else {
+                console.log(
+                  '[OOEditor:auto-republish] scheduling nudge for',
+                  inspection.guids.length,
+                  'shape(s):',
+                  inspection.guids
+                );
+                // Open the gate BEFORE scheduling the nudge so any
+                // envelopes OO emits before our timer fires (race) are
+                // also suppressed.
+                autoRepublishGateRef.current = true;
+                const guidsForNudge = inspection.guids;
+                setTimeout(() => {
+                  console.log(
+                    '[OOEditor:auto-republish] running ε-rotation republish for',
+                    guidsForNudge
+                  );
+                  dispatchRepublishNudge(guidsForNudge);
+                }, 50);
+                // Hold the gate long enough for OO's two transform
+                // envelopes (one per arrow) to reach the broadcast
+                // pipeline. 500 ms covers normal latency without
+                // suppressing user-driven actions for too long.
+                setTimeout(() => {
+                  autoRepublishGateRef.current = false;
+                }, 500);
+              }
+            }
             // Leader-side size monitoring: when the chain gets too
             // big, snapshot the current OO state and broadcast it as
             // the new baseBin. All peers (including us) destroy and
