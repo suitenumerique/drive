@@ -28,6 +28,10 @@ import {
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
 import { APIError, errorToString } from "@/features/api/APIError";
+import {
+  isMissingKeysError,
+  MISSING_KEYS_EVENT,
+} from "@/features/encryption/MissingEncryptionKeysModal";
 import Head from "next/head";
 import { useTranslation } from "react-i18next";
 import { AnalyticsProvider } from "@/features/analytics/AnalyticsProvider";
@@ -50,6 +54,15 @@ type AppPropsWithLayout = AppProps & {
 };
 const onError = (error: Error, query: unknown) => {
   if ((query as Query).meta?.noGlobalError) {
+    return;
+  }
+
+  // Encryption flows that hit a folder/file whose user has no key pair set
+  // up locally throw "No key pair found ...". Route those to the dedicated
+  // consent modal — the generic toast hides what the user actually has to
+  // do (set up encryption).
+  if (isMissingKeysError(error)) {
+    window.dispatchEvent(new CustomEvent(MISSING_KEYS_EVENT));
     return;
   }
 

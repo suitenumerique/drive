@@ -8,6 +8,11 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/Auth';
+import {
+  MISSING_KEYS_EVENT,
+  MissingEncryptionKeysModal,
+} from './MissingEncryptionKeysModal';
+import { ModalEncryptionOnboarding } from './ModalEncryptionOnboarding';
 
 const VAULT_URL = process.env.NEXT_PUBLIC_VAULT_URL ?? 'http://localhost:7201';
 const INTERFACE_URL =
@@ -21,6 +26,20 @@ export interface VaultClientContextValue {
   hasKeys: boolean | null;
   publicKey: ArrayBuffer | null;
   refreshKeyState: () => Promise<void>;
+  /**
+   * Open the "missing encryption keys" modal — the consent step that lets
+   * the user decline or jump into onboarding to generate / restore their
+   * key pair. Wired to a window-level event (`vault:missing-keys`) so any
+   * non-React caller (e.g. the global mutation error handler) can trigger
+   * it via `window.dispatchEvent(new CustomEvent('vault:missing-keys'))`.
+   */
+  promptMissingKeys: () => void;
+  /**
+   * Open the onboarding flow directly — used by callers that have already
+   * surfaced their own context to the user (e.g. the in-viewer panel) and
+   * want to skip the consent step.
+   */
+  openEncryptionOnboarding: () => void;
 }
 
 const VaultClientContext = createContext<VaultClientContextValue>({
@@ -31,6 +50,8 @@ const VaultClientContext = createContext<VaultClientContextValue>({
   hasKeys: null,
   publicKey: null,
   refreshKeyState: async () => {},
+  promptMissingKeys: () => {},
+  openEncryptionOnboarding: () => {},
 });
 
 function loadClientScript(): Promise<void> {
@@ -190,6 +211,31 @@ export function VaultClientProvider({
     };
   }, [clientInitialized, user?.sub]);
 
+  const [missingKeysModalOpen, setMissingKeysModalOpen] = useState(false);
+  const [onboardingFromPromptOpen, setOnboardingFromPromptOpen] =
+    useState(false);
+
+  const promptMissingKeys = useCallback(() => {
+    // Skip when onboarding is already in progress — surfacing the consent
+    // step on top of it would just be noise.
+    if (onboardingFromPromptOpen) return;
+    setMissingKeysModalOpen(true);
+  }, [onboardingFromPromptOpen]);
+
+  const openEncryptionOnboarding = useCallback(() => {
+    setMissingKeysModalOpen(false);
+    setOnboardingFromPromptOpen(true);
+  }, []);
+
+  // Bridge for non-React callers (mutation onError, deep helpers): listen for
+  // a global window event and open the consent modal. Idempotent — repeated
+  // dispatches while the modal is already open are no-ops.
+  useEffect(() => {
+    const handler = () => promptMissingKeys();
+    window.addEventListener(MISSING_KEYS_EVENT, handler);
+    return () => window.removeEventListener(MISSING_KEYS_EVENT, handler);
+  }, [promptMissingKeys]);
+
   const refreshKeyState = useCallback(async () => {
     const client = clientRef.current;
     if (!client) return;
@@ -219,9 +265,23 @@ export function VaultClientProvider({
         hasKeys,
         publicKey,
         refreshKeyState,
+        promptMissingKeys,
+        openEncryptionOnboarding,
       }}
     >
       {children}
+      <MissingEncryptionKeysModal
+        isOpen={missingKeysModalOpen}
+        onClose={() => setMissingKeysModalOpen(false)}
+        onSetUp={openEncryptionOnboarding}
+      />
+      {onboardingFromPromptOpen && (
+        <ModalEncryptionOnboarding
+          isOpen
+          onClose={() => setOnboardingFromPromptOpen(false)}
+          onSuccess={() => setOnboardingFromPromptOpen(false)}
+        />
+      )}
     </VaultClientContext.Provider>
   );
 }

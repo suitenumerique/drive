@@ -17,6 +17,7 @@ import { useCanCreateChildren } from "@/features/items/utils";
 import { getMyFilesQueryKey } from "@/utils/defaultRoutes";
 import { useConfig } from "@/features/config/ConfigProvider";
 import { formatSize } from "@/features/explorer/utils/utils";
+import { useVaultClient } from "@/features/encryption/VaultClientProvider";
 
 type FileUpload = FileWithPath & {
   // Full parent Item — the driver derives parentId from it and, when
@@ -207,6 +208,7 @@ const pathNicefy = (path: string) => {
 export const useUploadZone = ({ item }: { item: Item }) => {
   const { t } = useTranslation();
   const { config } = useConfig();
+  const { hasKeys, promptMissingKeys } = useVaultClient();
 
   const createFile = useMutationCreateFile();
 
@@ -290,6 +292,17 @@ export const useUploadZone = ({ item }: { item: Item }) => {
     onDrop: async (acceptedFiles) => {
       if (!canCreateChildren) {
         dismissDragToast();
+        return;
+      }
+
+      // Pre-check: dropping into an encrypted folder needs encryption
+      // keys on this device. Catch this BEFORE we mount the upload toast
+      // — otherwise the mutation rejects later, the toast empties out
+      // (mutation onError clears `filesMeta`), and we're left with a
+      // ghost toast on screen until the cleanup effect fires.
+      if (item?.is_encrypted && hasKeys === false) {
+        dismissDragToast();
+        promptMissingKeys();
         return;
       }
 

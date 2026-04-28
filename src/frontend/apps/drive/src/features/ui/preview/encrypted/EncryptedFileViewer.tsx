@@ -17,6 +17,11 @@ import {
   KeyMismatchPanel,
   isWrongSecretKeyError,
 } from "@/features/encryption/KeyMismatchPanel";
+import {
+  isMissingKeysError,
+  MissingEncryptionKeysPanel,
+} from "@/features/encryption/MissingEncryptionKeysModal";
+import { useVaultClient } from "@/features/encryption/VaultClientProvider";
 import { Loader } from "@gouvfr-lasuite/cunningham-react";
 
 interface EncryptedFileViewerProps {
@@ -135,6 +140,7 @@ const NonOfficeEncryptedViewer = ({
   onDownload,
 }: NonOfficeEncryptedViewerProps) => {
   const { t } = useTranslation();
+  const { openEncryptionOnboarding } = useVaultClient();
   const category = getMimeCategory(effectiveMimetype);
 
   // Non-office files: decrypt and display with native viewers
@@ -183,6 +189,11 @@ const NonOfficeEncryptedViewer = ({
         <KeyMismatchPanel
           shareTimeFingerprint={file.encryption_public_key_fingerprint_for_user}
         />
+      );
+    }
+    if (isMissingKeysError(error)) {
+      return (
+        <MissingEncryptionKeysPanel onSetUp={openEncryptionOnboarding} />
       );
     }
     return (

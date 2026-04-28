@@ -619,6 +619,13 @@
           "nothing_to_decrypt_file": "Ce fichier est déjà en clair.",
           "subtree_mutated": "Le contenu du dossier a changé pendant l'opération ({{added}} ajoutés, {{removed}} supprimés)."
         },
+        "missing_keys": {
+          "title": "Clés de chiffrement requises",
+          "body": "Le chiffrement de bout en bout doit être activé sur cet appareil pour continuer. Les clés de chiffrement sont stockées localement, par appareil — même si vous les avez configurées ailleurs, elles ne vous suivent pas automatiquement ici. Pour activer le chiffrement sur cet appareil, restaurez vos clés depuis une sauvegarde, ou générez une nouvelle paire si vous n'en avez jamais configurée.",
+          "viewer_body": "Ce fichier est chiffré de bout en bout. Le chiffrement doit être activé sur cet appareil pour l'ouvrir — les clés sont stockées localement, par appareil, et ne vous suivent pas automatiquement. Restaurez vos clés depuis une sauvegarde, ou générez une nouvelle paire si vous n'en avez jamais configurée.",
+          "set_up": "Activer le chiffrement",
+          "cancel": "Plus tard"
+        },
         "not_root_modal": {
           "title": "Le chiffrement ne peut pas être retiré ici",
           "body": "« {{title}} » se trouve à l'intérieur d'un dossier chiffré. Le chiffrement ne peut être retiré que depuis le dossier racine où il a été appliqué — ce qui déchiffrera également tous les fichiers qu'il contient.",
