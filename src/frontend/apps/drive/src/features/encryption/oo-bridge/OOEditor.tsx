@@ -51,6 +51,8 @@ import { EncryptedRelay } from './encryptedRelay';
 import {
   inspectOutboundForRepublish,
   dispatchRepublishNudge,
+  installUndoFlagHook,
+  undoFiredRecently,
 } from './republishOnUndo';
 import { LockArbitrator } from './lockArbitrator';
 import { withIncomingOTGate } from './incomingOtGate';
@@ -3349,6 +3351,20 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           lockArbitrator: lockArbitrator ?? undefined,
           userId: user.sub!,
           onSaveChangesBroadcast: message => {
+            // Install the Undo flag-hook eagerly on every saveChanges
+            // (idempotent). This guarantees the hook is in place
+            // before the user's first Ctrl+Z so we can detect it —
+            // tying install to the heuristic gate (as we did before)
+            // missed the very first undo because the hook hadn't
+            // been patched yet at that point.
+            try {
+              installUndoFlagHook();
+            } catch (e) {
+              console.warn(
+                '[OOEditor:auto-republish] Undo hook install failed',
+                e
+              );
+            }
             // A crashed editor must not leak its corrupt state to
             // peers — otherwise one broken tab takes down the whole
             // room when its autosave loop emits garbage that crashes
@@ -3468,9 +3484,19 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 [...editorPeersRef.current.values()].some(
                   peerJoinedAt => peerJoinedAt > ourJoinedAt
                 );
+              // Tombstone payload looks identical for a regular delete
+              // and an undo-of-delete. Differentiate via the
+              // lastUndoAt flag set by our patch on `editor.Undo` and
+              // `CCollaborativeEditing.Undo` — covers Ctrl+Z and the
+              // toolbar button in both fast-collab and regular modes.
+              const undoJustHappened = undoFiredRecently();
               if (!hasLaterPeer) {
                 console.log(
                   '[OOEditor:auto-republish] skipping — no peer joined after us, tombstone applies fine on every existing peer'
+                );
+              } else if (!undoJustHappened) {
+                console.log(
+                  '[OOEditor:auto-republish] skipping — Undo not fired recently, this looks like a forward action (delete), not an undo'
                 );
               } else {
                 console.log(

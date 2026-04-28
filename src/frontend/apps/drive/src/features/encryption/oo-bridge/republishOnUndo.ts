@@ -138,6 +138,89 @@ export function inspectOutboundForRepublish(
  * receivers don't refresh, swap to a `setRot(curr+ε); setRot(curr)`
  * pair instead.
  */
+/**
+ * Tracks the timestamp of the most recent `editor.Undo()` call so the
+ * republish heuristic can distinguish a tombstone undo from a regular
+ * forward delete (whose payload looks identical from the wire).
+ *
+ * Why a flag instead of querying OO state: in fast-collaborative mode
+ * Ctrl+Z goes through `CCollaborativeHistory.UndoOwnPoint`, which
+ * creates a NEW local history point with the inverse changes rather
+ * than popping from undo and pushing to redo. As a result
+ * `History.Can_Redo()` returns false even right after a Ctrl+Z, so
+ * that signal is unusable. The API-level `editor.Undo` method is
+ * still the single entry point for both Ctrl+Z and the toolbar undo,
+ * regardless of collab mode.
+ */
+let lastUndoAt = 0;
+const HOOK_FLAG = '__driveUndoFlagHookInstalled';
+
+/**
+ * Patch every `Undo` method in OO's call chain so we stamp
+ * `lastUndoAt` regardless of which entry point Ctrl+Z hit:
+ *  - the editor API (`asc_docs_api.prototype.Undo` — `editor.Undo`)
+ *  - the collaborative editing instance
+ *    (`CCollaborativeEditingBase.prototype.Undo` —
+ *    `AscCommon.CollaborativeEditing.Undo`)
+ *
+ * Two independent prototypes are patched so the timestamp is set
+ * either way. Idempotent via per-prototype flag.
+ */
+function patchUndoOnPrototype(
+  proto: Record<string, unknown> | null | undefined,
+  label: string,
+): boolean {
+  if (!proto) return false;
+  if ((proto as { [k: string]: unknown })[HOOK_FLAG]) return true;
+  const original = proto['Undo'];
+  if (typeof original !== 'function') return false;
+  proto['Undo'] = function patched(this: unknown, ...args: unknown[]) {
+    lastUndoAt = Date.now();
+    console.log('[republishOnUndo] Undo fired via', label);
+    return (original as (...a: unknown[]) => unknown).apply(this, args);
+  };
+  (proto as { [k: string]: unknown })[HOOK_FLAG] = true;
+  console.log('[republishOnUndo] Undo flag-hook installed on', label);
+  return true;
+}
+
+export function installUndoFlagHook(): void {
+  const ooIframe = document.querySelector(
+    'iframe[name="frameEditor"]'
+  ) as HTMLIFrameElement | null;
+  const innerWindow = ooIframe?.contentWindow as
+    | (Window & {
+        editor?: unknown;
+        editorCell?: unknown;
+        AscCommon?: { CollaborativeEditing?: unknown };
+      })
+    | undefined;
+  if (!innerWindow) return;
+  const innerEditor = innerWindow.editor || innerWindow.editorCell;
+  if (innerEditor && typeof innerEditor === 'object') {
+    patchUndoOnPrototype(
+      Object.getPrototypeOf(innerEditor) as Record<string, unknown>,
+      'asc_docs_api',
+    );
+  }
+  const collab = innerWindow.AscCommon?.CollaborativeEditing;
+  if (collab && typeof collab === 'object') {
+    patchUndoOnPrototype(
+      Object.getPrototypeOf(collab) as Record<string, unknown>,
+      'CCollaborativeEditingBase',
+    );
+  }
+}
+
+/**
+ * True if `editor.Undo()` was invoked within the last `windowMs`. Used
+ * to gate the republish so it never fires after a forward delete —
+ * only after an actual Ctrl+Z (or toolbar undo).
+ */
+export function undoFiredRecently(windowMs: number = 1000): boolean {
+  return Date.now() - lastUndoAt < windowMs;
+}
+
 export function dispatchRepublishNudge(restoredGuids: string[]): void {
   const ooIframe = document.querySelector(
     'iframe[name="frameEditor"]'
@@ -203,11 +286,7 @@ export function dispatchRepublishNudge(restoredGuids: string[]): void {
   // `AscCommon.g_oTableId` (a `CTableId` instance). Every collaborative
   // object — drawings, paragraphs, runs, etc. — is registered there at
   // construction time, with its `Id` set to the wire-format GUID we
-  // see in tombstone payloads (`<userId>_<ms>_<counter>`). Looking up
-  // through it works uniformly across Word (CDocument), Slide
-  // (CPresentation) and Calc — and avoids the per-editor walk that
-  // failed for Word (whose `cSld.spTree` doesn't exist) AND the
-  // refresh-everything fallback that reset CParaDrawing positions.
+  // see in tombstone payloads (`<userId>_<ms>_<counter>`).
   const tableId = innerWindow.AscCommon?.g_oTableId;
   const lookup = tableId?.Get_ById ?? tableId?.GetById;
   if (typeof lookup !== 'function') {
@@ -217,11 +296,51 @@ export function dispatchRepublishNudge(restoredGuids: string[]): void {
     return;
   }
 
-  // Resolve each tombstone GUID through the table. Skip entries that
-  // don't expose a setRot-able xfrm (the table contains all kinds of
-  // collaborative objects — paragraphs, runs, etc. — and only graphic
-  // shapes carry an `spPr.xfrm`).
-  const targets: Drawing[] = [];
+  // Refresh strategy:
+  //   - Slide / Calc shape (registered directly in g_oTableId, no
+  //     wrapper): refresh via `spPr.xfrm.setRot(curr)`. Position is
+  //     already on the same xfrm so the receiver renders correctly.
+  //   - Word ParaDrawing wrapper: refresh via the inner GraphicObj's
+  //     `setRot` AND re-broadcast the wrapper's position info
+  //     (`Set_PositionH`, `Set_PositionV`, `setSimplePos`). The inner
+  //     xfrm setRot alone landed the shape at top-left on receivers
+  //     because the wrapper's PositionH/V on user 2's side had been
+  //     reset to defaults; refreshing those too pushes the actual
+  //     anchor values over the wire.
+  type ParaDrawingLike = {
+    PositionH?: {
+      RelativeFrom?: number;
+      Align?: boolean;
+      Value?: number;
+      Percent?: boolean;
+    };
+    PositionV?: {
+      RelativeFrom?: number;
+      Align?: boolean;
+      Value?: number;
+      Percent?: boolean;
+    };
+    SimplePos?: { Use?: boolean; X?: number; Y?: number };
+    Set_PositionH?: (
+      relativeFrom: number,
+      align: boolean,
+      value: number,
+      percent: boolean
+    ) => void;
+    Set_PositionV?: (
+      relativeFrom: number,
+      align: boolean,
+      value: number,
+      percent: boolean
+    ) => void;
+    setSimplePos?: (use: boolean, x: number, y: number) => void;
+  };
+  type Refresh = {
+    xfrm: { rot?: number; setRot?: (v: number) => void };
+    /** Word-only — present when the resolved object is a ParaDrawing wrapper. */
+    paraDrawing?: ParaDrawingLike;
+  };
+  const refreshes: Refresh[] = [];
   const probe: Array<Record<string, unknown>> = [];
   for (const guid of restoredGuids) {
     let resolved: unknown;
@@ -240,24 +359,29 @@ export function dispatchRepublishNudge(restoredGuids: string[]): void {
       probe.push({ guid, resolved: 'null' });
       continue;
     }
-    const obj = resolved as Drawing;
+    const obj = resolved as Drawing & ParaDrawingLike;
     const ctorName =
       (obj as { constructor?: { name?: string } }).constructor?.name;
-    const ownKeys = Object.keys(obj as object).slice(0, 12);
-    const wrapped = (obj.GraphicObj as Drawing | undefined) ?? null;
-    const wrappedCtor = wrapped
-      ? (wrapped as { constructor?: { name?: string } }).constructor?.name
-      : null;
-    const graphic = wrapped ?? obj;
-    const hasSetRot = typeof graphic.spPr?.xfrm?.setRot === 'function';
-    probe.push({
-      guid,
-      ctorName,
-      ownKeys,
-      wrappedCtor,
-      hasSetRotOnGraphicObj: hasSetRot,
-    });
-    if (hasSetRot) targets.push(graphic);
+    const xfrm = obj.spPr?.xfrm ?? obj.GraphicObj?.spPr?.xfrm;
+    if (xfrm && typeof xfrm.setRot === 'function') {
+      // ParaDrawing-shape detected when the wrapper-level position
+      // setters exist on the resolved object.
+      const isParaDrawing =
+        typeof obj.Set_PositionH === 'function' &&
+        typeof obj.Set_PositionV === 'function' &&
+        typeof obj.setSimplePos === 'function';
+      probe.push({
+        guid,
+        ctorName,
+        refresh: isParaDrawing ? 'xfrm.setRot+position' : 'xfrm.setRot',
+      });
+      refreshes.push({
+        xfrm,
+        paraDrawing: isParaDrawing ? obj : undefined,
+      });
+    } else {
+      probe.push({ guid, ctorName, refresh: 'none' });
+    }
   }
 
   console.log(
@@ -265,16 +389,16 @@ export function dispatchRepublishNudge(restoredGuids: string[]): void {
     JSON.stringify(
       {
         restoredGuidsRequested: restoredGuids.length,
-        matchedViaTableId: targets.length,
+        refreshes: refreshes.length,
         perGuid: probe,
       },
       null,
       2
     )
   );
-  if (targets.length === 0) {
+  if (refreshes.length === 0) {
     console.warn(
-      '[OOEditor:auto-republish] no shape-shaped objects resolved through g_oTableId — aborting'
+      '[OOEditor:auto-republish] no refreshable objects resolved — aborting'
     );
     return;
   }
@@ -282,30 +406,77 @@ export function dispatchRepublishNudge(restoredGuids: string[]): void {
   let mutationCount = 0;
   try {
     logicDoc.StartAction(0);
-    for (const t of targets) {
-      const graphic = t.GraphicObj ?? t;
-      const xfrm = graphic.spPr?.xfrm;
-      if (xfrm && typeof xfrm.setRot === 'function') {
-        const currentRot = typeof xfrm.rot === 'number' ? xfrm.rot : 0;
-        try {
-          xfrm.setRot(currentRot);
-          mutationCount += 1;
-        } catch (e) {
-          console.warn(
-            '[OOEditor:auto-republish] setRot threw on drawing',
-            graphic.GetId?.(),
-            e
-          );
+    const ROT_EPSILON = 1e-7;
+    const POS_EPSILON = 1; // 1 EMU ≈ 1/914400 inch — invisible
+    for (const r of refreshes) {
+      try {
+        // setRot ε-pair on the inner xfrm (always — slides need this,
+        // Word also needs the inner refresh).
+        const cur = typeof r.xfrm.rot === 'number' ? r.xfrm.rot : 0;
+        r.xfrm.setRot!(cur + ROT_EPSILON);
+        r.xfrm.setRot!(cur);
+        mutationCount += 2;
+
+        // Word-only: also re-broadcast wrapper position. Same ε-pair
+        // pattern so the broadcast pipeline doesn't filter empty
+        // changes.
+        const pd = r.paraDrawing;
+        if (pd) {
+          // PositionH
+          if (pd.PositionH && typeof pd.Set_PositionH === 'function') {
+            const ph = pd.PositionH;
+            const rf = ph.RelativeFrom ?? 0;
+            const al = ph.Align ?? false;
+            const v = typeof ph.Value === 'number' ? ph.Value : 0;
+            const pc = ph.Percent ?? false;
+            pd.Set_PositionH(rf, al, v + POS_EPSILON, pc);
+            pd.Set_PositionH(rf, al, v, pc);
+            mutationCount += 2;
+          }
+          // PositionV
+          if (pd.PositionV && typeof pd.Set_PositionV === 'function') {
+            const pv = pd.PositionV;
+            const rf = pv.RelativeFrom ?? 0;
+            const al = pv.Align ?? false;
+            const v = typeof pv.Value === 'number' ? pv.Value : 0;
+            const pc = pv.Percent ?? false;
+            pd.Set_PositionV(rf, al, v + POS_EPSILON, pc);
+            pd.Set_PositionV(rf, al, v, pc);
+            mutationCount += 2;
+          }
+          // SimplePos
+          if (pd.SimplePos && typeof pd.setSimplePos === 'function') {
+            const sp = pd.SimplePos;
+            const use = sp.Use ?? false;
+            const x = typeof sp.X === 'number' ? sp.X : 0;
+            const y = typeof sp.Y === 'number' ? sp.Y : 0;
+            pd.setSimplePos(use, x + POS_EPSILON, y + POS_EPSILON);
+            pd.setSimplePos(use, x, y);
+            mutationCount += 2;
+          }
         }
+      } catch (e) {
+        console.warn(
+          '[OOEditor:auto-republish] mutation threw',
+          e
+        );
       }
     }
     logicDoc.FinalizeAction(false, false);
+    // NOTE on history hygiene: ideally we'd `History.RemoveLastPoint()`
+    // here so our virtual ε-pair doesn't bloat the user's undo stack.
+    // Empirically that kills the broadcast even with a setTimeout
+    // delay — the wire flush isn't bounded by a fixed interval. For
+    // now we accept the extra history point; the upstream Can_Redo /
+    // Undo-fired gates already prevent the heuristic from firing on
+    // forward actions, so the only pollution is right after a real
+    // undo.
     console.log(
       '[OOEditor:auto-republish] performed',
       mutationCount,
-      'setRot mutations across',
-      targets.length,
-      'drawing(s)'
+      'mutations across',
+      refreshes.length,
+      'object(s)'
     );
   } catch (e) {
     console.warn(
