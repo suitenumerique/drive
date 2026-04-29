@@ -1,4 +1,5 @@
 import { Auth } from "@/features/auth/Auth";
+import { RecursiveEncryptProvider } from "@/features/encryption/RecursiveEncryptProvider";
 import { VaultClientProvider } from "@/features/encryption/VaultClientProvider";
 
 /**
@@ -7,7 +8,9 @@ import { VaultClientProvider } from "@/features/encryption/VaultClientProvider";
 export const GlobalLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <Auth>
-      <VaultClientProvider>{children}</VaultClientProvider>
+      <VaultClientProvider>
+        <RecursiveEncryptProvider>{children}</RecursiveEncryptProvider>
+      </VaultClientProvider>
     </Auth>
   );
 };

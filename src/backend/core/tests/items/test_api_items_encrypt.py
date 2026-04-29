@@ -342,6 +342,111 @@ def test_api_items_key_chain_direct_access():
     assert data["chain"] == []
 
 
+def test_api_items_key_chain_prefers_root_over_hybrid_wrap():
+    """
+    Chain user with a hybrid wrap (chain item that ALSO carries a
+    per-user wrap on its access row, e.g. a self-rooted file demoted
+    into the chain) must enter the tree at the encryption root, not
+    via the side-door wrap on the chain item itself. Otherwise chain
+    operations like move-rewrap end up with chain=[] and crash on the
+    frontend (`chain[-1]` undefined).
+    """
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    folder.is_encrypted = True  # encryption root (no chain wrap)
+    folder.save()
+    file_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        parent=folder,
+    )
+    file_item.is_encrypted = True
+    file_item.encrypted_symmetric_key = "file_chain_wrapped"  # chain wrap
+    file_item.save()
+
+    # User's wrap on the encryption root.
+    root_access = models.ItemAccess.objects.get(item=folder, user=user)
+    root_access.encrypted_item_symmetric_key_for_user = "root_key_for_user"
+    root_access.save()
+
+    # User ALSO has a per-user wrap on the file itself — the hybrid
+    # state produced by the demote flow (a self-rooted file moved
+    # INTO this chain keeps its per-user wrap so outsiders aren't
+    # revoked). The walker must prefer the root wrap over this one.
+    factories.UserItemAccessFactory(
+        item=file_item,
+        user=user,
+        role="owner",
+        encrypted_item_symmetric_key_for_user="hybrid_side_door_wrap",
+        encryption_public_key_fingerprint="fp",
+    )
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get(f"/api/v1.0/items/{file_item.id!s}/key-chain/")
+    assert response.status_code == 200
+
+    data = response.json()
+    # Entry resolves at the root, not the file (despite the file's
+    # access row having a non-null wrap).
+    assert data["user_access_item_id"] == str(folder.pk)
+    assert data["encrypted_key_for_user"] == "root_key_for_user"
+    # And the chain is non-empty so the frontend can rewrap.
+    assert len(data["chain"]) == 1
+    assert data["chain"][0]["item_id"] == str(file_item.pk)
+    assert data["chain"][0]["encrypted_symmetric_key"] == "file_chain_wrapped"
+
+
+def test_api_items_key_chain_falls_back_to_hybrid_for_outsiders():
+    """
+    Outsider user with NO access to the encryption root, only a
+    per-user wrap on a chain item (preserved by the demote flow), can
+    still resolve a key chain via the side-door wrap. The two-pass
+    walker falls back from "root entries only" to "any non-null wrap"
+    when no root entry is found.
+    """
+    owner = factories.UserFactory()
+    outsider = factories.UserFactory()
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(owner, models.RoleChoices.OWNER)],
+    )
+    folder.is_encrypted = True
+    folder.save()
+    file_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        parent=folder,
+    )
+    file_item.is_encrypted = True
+    file_item.encrypted_symmetric_key = "file_chain_wrapped"
+    file_item.save()
+
+    # Outsider has access to the FILE only (per-user wrap from when
+    # it was self-rooted; preserved through the demote into `folder`).
+    factories.UserItemAccessFactory(
+        item=file_item,
+        user=outsider,
+        role="reader",
+        encrypted_item_symmetric_key_for_user="outsider_wrap",
+        encryption_public_key_fingerprint="fp-outsider",
+    )
+
+    client = APIClient()
+    client.force_login(outsider)
+    response = client.get(f"/api/v1.0/items/{file_item.id!s}/key-chain/")
+    assert response.status_code == 200
+
+    data = response.json()
+    # No root entry available → fallback resolves at the file itself.
+    assert data["user_access_item_id"] == str(file_item.pk)
+    assert data["encrypted_key_for_user"] == "outsider_wrap"
+    assert data["chain"] == []
+
+
 # ============================================================================
 # Constraints: invitations blocked for encrypted items
 # ============================================================================

@@ -9,12 +9,20 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   item: Item;
+  /**
+   * Optional — fires when the recursive-decryption job completes
+   * successfully, BEFORE the auto-close timeout. Lets callers
+   * distinguish "decryption succeeded" from "user closed without
+   * completing" (the `onClose` path covers both).
+   */
+  onSuccess?: () => void;
 }
 
 export const ModalRecursiveRemoveEncryption = ({
   isOpen,
   onClose,
   item,
+  onSuccess,
 }: Props) => {
   const { t } = useTranslation();
   const job = useRecursiveEncryptionJob({
@@ -22,6 +30,7 @@ export const ModalRecursiveRemoveEncryption = ({
     item,
     isOpen,
     onSuccess: () => {
+      onSuccess?.();
       setTimeout(onClose, 1200);
     },
   });

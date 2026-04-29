@@ -288,20 +288,28 @@ class ListItemSerializer(serializers.ModelSerializer):
         )
 
     def get_is_pending_encryption_for_user(self, item):
-        """True when the current user has access to this encrypted item
-        via an ItemAccess row on an ENCRYPTED item in the chain (self
-        or any encrypted ancestor) that has no wrapped symmetric key —
-        i.e. they were added to the access list but haven't completed
-        their encryption onboarding yet.
+        """True when the user has access to this encrypted item but no
+        usable wrapped key anywhere in the chain — i.e. they were added
+        to the access list but haven't completed their encryption
+        onboarding yet, so a validated collaborator must "accept" them
+        before they can decrypt.
 
-        The `item__is_encrypted=True` filter is critical: a user will
-        typically also have an ItemAccess on a plaintext workspace or
+        Semantics: pending IFF the user has at least one encrypted-row
+        ItemAccess in the chain AND none of those rows carry a non-null
+        wrapped key. This mirrors how decryption actually works — the
+        client walks up the chain to the encryption root and uses the
+        first non-null wrap it finds. If any wrap exists in the chain,
+        the user is NOT pending, regardless of NULL siblings further
+        down (e.g. leftover NULLs from a self-rooted-then-demoted move).
+
+        The `item__is_encrypted=True` filter is critical: a user
+        typically also has an ItemAccess on a plaintext workspace or
         parent folder, and that access legitimately has NULL for
         `encrypted_item_symmetric_key_for_user` (plaintext has no key
         to wrap). Without this filter we'd mis-report such users as
         "pending" on any encrypted descendant they created themselves.
 
-        Costs one query per serialized item, consistent with
+        Costs two queries per serialized item, consistent with
         `get_is_inside_encrypted_subtree` above.
         """
         if not item.is_encrypted:
@@ -309,11 +317,15 @@ class ListItemSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if not request or not request.user.is_authenticated:
             return False
-        return models.ItemAccess.objects.filter(
+        chain_accesses = models.ItemAccess.objects.filter(
             item__path__ancestors=item.path,
             item__is_encrypted=True,
             user=request.user,
-            encrypted_item_symmetric_key_for_user__isnull=True,
+        )
+        if not chain_accesses.exists():
+            return False
+        return not chain_accesses.filter(
+            encrypted_item_symmetric_key_for_user__isnull=False,
         ).exists()
 
     def get_is_encryption_root(self, item):
@@ -1042,22 +1054,48 @@ class MoveItemSerializer(serializers.Serializer):
     """
     Serializer for validating input data to move an item within the tree structure.
 
-    Fields:
-        - target_item_id (UUIDField): The ID of the target parent item where the
-            item should be moved. This field is required and must be a valid UUID.
+    Encryption-aware. The driver picks one of four shapes depending on the
+    source/target encryption state. The viewset validates each shape and
+    applies it atomically with the position change.
 
-    Example:
-        Input payload for moving a item:
-        {
-            "target_item_id": "123e4567-e89b-12d3-a456-426614174000",
-        }
+    Plain → plain (no encryption involved):
+        {"target_item_id": "..."}
 
-    Notes:
-        - The `target_item_id` is optional. If not provided, the item will be moved to the root.
+    Encrypted → encrypted, SAME tree (chain rewrap of `K_item`):
+        {"target_item_id": "...", "encrypted_symmetric_key": "<base64>"}
+
+    Encrypted → plaintext (RE-ANCHOR — item becomes its own encryption root,
+    `K_item` re-wrapped per collaborator):
+        {"target_item_id": "..." | null,
+         "is_encryption_root": true,
+         "per_user_encrypted_keys": {"<sub>": "<base64>" | null, ...},
+         "encryption_public_key_fingerprints": {"<sub>": "<fp>" | null, ...}}
+        - The caller's own sub MUST map to a non-null wrapped key. Other
+          users may be `null` (access row stored as pending until they
+          finish encryption onboarding — symmetric to /encrypt/).
+
+    Self-rooted encrypted → encrypted (DEMOTE — item attaches under a
+    destination chain, per-user wraps cleared):
+        {"target_item_id": "...",
+         "is_encryption_root": false,
+         "encrypted_symmetric_key": "<base64>"}
     """
 
     target_item_id = serializers.UUIDField(required=False)
     encrypted_symmetric_key = serializers.CharField(required=False, allow_blank=True)
+    is_encryption_root = serializers.BooleanField(required=False)
+    per_user_encrypted_keys = serializers.DictField(
+        # Mapping of user OIDC sub → wrapped K_item (base64). Null means
+        # "user has access but no published pubkey yet" — backend stores
+        # the access row as pending; another collaborator can later flip
+        # it via PATCH /accesses/{id}/encryption-key/.
+        child=serializers.CharField(allow_null=True),
+        required=False,
+    )
+    encryption_public_key_fingerprints = serializers.DictField(
+        child=serializers.CharField(allow_null=True, allow_blank=True, max_length=16),
+        required=False,
+    )
 
 
 class SDKRelayEventSerializer(serializers.Serializer):

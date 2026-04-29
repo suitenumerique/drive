@@ -6,6 +6,7 @@ declare global {
     destroy(): void;
     setTheme(theme: string): void;
     setAuthContext(context: { suiteUserId: string }): void;
+    getAuthContext(): { suiteUserId: string } | null;
     hasKeys(): Promise<{ hasKeys: boolean }>;
     getPublicKey(): Promise<{ publicKey: ArrayBuffer }>;
     // Root creation: mint a new key and wrap it under each user's pubkey.
@@ -47,9 +48,36 @@ declare global {
       encryptedKeyChain?: ArrayBuffer[],
       options?: { optimizeMemory?: boolean }
     ): Promise<{ data: ArrayBuffer }>;
+    /**
+     * Re-wrap an encrypted resource's K_file from its OLD parent chain
+     * to a NEW one. Called when moving a file/folder between parents
+     * inside the same encrypted subtree — content stays untouched, only
+     * the wrapping of K_file follows the new position. `oldEncryptedKey`
+     * is the file's current wrapped K_file from its access row; the
+     * returned `newEncryptedKey` replaces it.
+     */
+    rewrapNestedKey(
+      encryptedSymmetricKey: ArrayBuffer,
+      oldEncryptedKey: ArrayBuffer,
+      oldEncryptedKeyChain?: ArrayBuffer[],
+      newEncryptedKeyChain?: ArrayBuffer[]
+    ): Promise<{ newEncryptedKey: ArrayBuffer }>;
+    /**
+     * Wrap a per-user-anchored K_item (the value stored in
+     * `encrypted_item_symmetric_key_for_user` on the caller's access
+     * row of a self-rooted encrypted resource) under a destination
+     * parent's chain. Used when moving a self-rooted file/folder
+     * INTO an encrypted subtree — symmetric reverse of `shareKeys`.
+     */
+    wrapNestedKey(
+      userEncryptedKey: ArrayBuffer,
+      newEntryEncryptedSymmetricKey: ArrayBuffer,
+      newEncryptedKeyChain?: ArrayBuffer[]
+    ): Promise<{ newEncryptedKey: ArrayBuffer }>;
     shareKeys(
       encryptedSymmetricKey: ArrayBuffer,
-      userPublicKeys: Record<string, ArrayBuffer>
+      userPublicKeys: Record<string, ArrayBuffer>,
+      encryptedKeyChain?: ArrayBuffer[]
     ): Promise<{ encryptedKeys: Record<string, ArrayBuffer> }>;
     computeKeyFingerprint(publicKey: ArrayBuffer): Promise<string>;
     formatFingerprint(fingerprint: string): string;

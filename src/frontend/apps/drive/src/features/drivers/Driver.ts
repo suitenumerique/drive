@@ -22,6 +22,33 @@ import {
   WorkspaceType,
 } from "./types";
 
+/**
+ * Thrown by `moveItem` when the move can't be completed in-place
+ * because it crosses an encryption boundary that needs the
+ * recursive-encryption flow:
+ *   - moving a plaintext item INTO an encrypted folder (must encrypt
+ *     each item under the new parent's chain), or
+ *   - moving an encrypted item OUT of its encryption root (or into a
+ *     different encryption root) — currently unsupported, would need
+ *     decrypt-then-re-encrypt for the destination.
+ *
+ * The React-side `useMoveItems` hook catches this and routes through
+ * `ModalRecursiveEncrypt` to handle the encryption work, then retries
+ * the move once the items are in the right state.
+ */
+export class MoveRequiresEncryption extends Error {
+  constructor(
+    public readonly itemId: string,
+    public readonly reason:
+      | 'plaintext-into-encrypted'
+      | 'encrypted-out-of-root'
+      | 'encrypted-cross-root',
+  ) {
+    super(`Move ${itemId} requires encryption flow: ${reason}`);
+    this.name = 'MoveRequiresEncryption';
+  }
+}
+
 export enum ItemFiltersScope {
   ALL = "all",
   DELETED = "deleted",
@@ -83,6 +110,25 @@ export abstract class Driver {
   abstract getItemBreadcrumb(id: string): Promise<ItemBreadcrumb[]>;
   abstract updateItem(item: Partial<Item>): Promise<Item>;
   abstract restoreItems(ids: string[]): Promise<void>;
+  /**
+   * Move a single item under a new parent (or to root when `parentId` is
+   * omitted).
+   *
+   * Encryption-aware: when the moved item is encrypted, its `K_item` is
+   * wrapped under its OLD parent's key. The driver decides what to do
+   * about that based on the source/destination encryption state:
+   *   - source encrypted + destination encrypted (same encryption root):
+   *     re-wrap K_item under the new parent's key (via the vault
+   *     `rewrapNestedKey` op) before persisting the move; the file's
+   *     content is left untouched.
+   *   - source plaintext + destination encrypted: throws
+   *     `MoveRequiresEncryption` so the caller can route through the
+   *     recursive-encryption flow.
+   *   - source encrypted, destination plaintext OR different encryption
+   *     root: throws `MoveRequiresEncryption` (we'd need a re-encrypt
+   *     pipeline that's out of scope here).
+   *   - everything else: plain move.
+   */
   abstract moveItem(id: string, parentId?: string): Promise<void>;
   abstract moveItems(ids: string[], parentId?: string): Promise<void>;
   abstract getChildren(

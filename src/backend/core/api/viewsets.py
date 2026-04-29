@@ -936,38 +936,290 @@ class ItemViewSet(
                 {"target_item_id": message}, code="item_move_missing_permission"
             )
 
-        # Handle encryption when moving between encrypted/unencrypted contexts
+        # Encryption-aware move. Four resolved shapes — see
+        # `MoveItemSerializer` for the payload schema. We validate first
+        # (so a malformed payload never moves the item) then apply the
+        # move, then apply the encryption state change atomically.
         encrypted_symmetric_key = validated_data.get("encrypted_symmetric_key")
+        is_encryption_root_flag = validated_data.get("is_encryption_root")
+        per_user_encrypted_keys = validated_data.get("per_user_encrypted_keys")
+        fingerprint_per_user = validated_data.get(
+            "encryption_public_key_fingerprints", {}
+        )
         target_is_encrypted = target_item.is_encrypted if target_item else False
+        # Source flags. `source_is_root` means the item currently holds
+        # its key per-user (no chain wrap of its own).
+        source_is_encrypted = bool(item.is_encrypted)
+        source_is_root = bool(
+            source_is_encrypted and item.encrypted_symmetric_key is None
+        )
+        source_in_chain = source_is_encrypted and not source_is_root
 
-        if target_is_encrypted and not encrypted_symmetric_key:
+        # Reject plaintext-into-encrypted: caller must encrypt first
+        # (the recursive-encryption modal does that ahead of retrying
+        # the move).
+        if not source_is_encrypted and target_is_encrypted:
             raise drf.exceptions.ValidationError(
                 {
-                    "encrypted_symmetric_key": _(
-                        "This field is required when moving into an encrypted folder."
+                    "detail": _(
+                        "Plaintext items cannot be moved into an encrypted "
+                        "folder. Encrypt the item first."
                     )
                 },
-                code="item_move_encrypted_key_required",
+                code="item_move_plaintext_into_encrypted",
             )
 
+        if is_encryption_root_flag is True:
+            # ----- RE-ANCHOR (case 3): chained source → plaintext or
+            # workspace root. Item flips to its own encryption root and
+            # `K_item` is re-wrapped per collaborator. -----
+            if not source_is_encrypted:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "is_encryption_root": _(
+                            "Cannot promote a plaintext item to an "
+                            "encryption root via /move/."
+                        )
+                    },
+                    code="item_move_promote_plain",
+                )
+            if target_is_encrypted:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "is_encryption_root": _(
+                            "Cannot re-anchor an item INTO an encrypted "
+                            "subtree — it would be inside another root."
+                        )
+                    },
+                    code="item_move_promote_into_encrypted",
+                )
+            if not per_user_encrypted_keys:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "per_user_encrypted_keys": _(
+                            "Required when promoting an item to encryption "
+                            "root."
+                        )
+                    },
+                    code="item_move_per_user_keys_required",
+                )
+            if encrypted_symmetric_key:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "encrypted_symmetric_key": _(
+                            "Cannot supply a chain wrap when promoting to "
+                            "encryption root."
+                        )
+                    },
+                    code="item_move_conflicting_wrap",
+                )
+
+            # The mover MUST hold a non-null wrap for themselves; otherwise
+            # they'd lock themselves out. Other collaborators can be null
+            # (pending — same semantics as /encrypt/).
+            caller_sub = user.sub
+            if (
+                caller_sub not in per_user_encrypted_keys
+                or per_user_encrypted_keys[caller_sub] is None
+            ):
+                raise drf.exceptions.ValidationError(
+                    {
+                        "per_user_encrypted_keys": _(
+                            "You must include a wrapped key for yourself "
+                            "when re-anchoring an item."
+                        )
+                    },
+                    code="item_move_caller_wrap_required",
+                )
+
+            # Per-user fingerprints must cover the same set as the wraps.
+            provided_user_subs = set(per_user_encrypted_keys.keys())
+            fingerprint_subs = set(fingerprint_per_user.keys())
+            if fingerprint_subs != provided_user_subs:
+                fp_missing = provided_user_subs - fingerprint_subs
+                fp_extra = fingerprint_subs - provided_user_subs
+                errors = {}
+                if fp_missing:
+                    errors["missing_users"] = sorted(fp_missing)
+                if fp_extra:
+                    errors["extra_users"] = sorted(fp_extra)
+                raise drf.exceptions.ValidationError(
+                    {
+                        "encryption_public_key_fingerprints": _(
+                            "Fingerprint set must match per-user key set."
+                        ),
+                        **errors,
+                    },
+                    code="item_move_fingerprints_mismatch",
+                )
+
+        elif is_encryption_root_flag is False:
+            # ----- DEMOTE (case 4): self-rooted source → encrypted
+            # subtree. Item attaches under the destination chain. -----
+            if not source_is_root:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "is_encryption_root": _(
+                            "Item is not currently an encryption root; "
+                            "cannot demote it."
+                        )
+                    },
+                    code="item_move_not_root",
+                )
+            if not target_is_encrypted:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "is_encryption_root": _(
+                            "Demoting from encryption root requires moving "
+                            "INTO an encrypted folder."
+                        )
+                    },
+                    code="item_move_demote_to_plain",
+                )
+            if not encrypted_symmetric_key:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "encrypted_symmetric_key": _(
+                            "Required when demoting from encryption root "
+                            "into a chain."
+                        )
+                    },
+                    code="item_move_chain_wrap_required",
+                )
+            if per_user_encrypted_keys is not None:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "per_user_encrypted_keys": _(
+                            "Cannot supply per-user wraps when demoting "
+                            "into a chain."
+                        )
+                    },
+                    code="item_move_conflicting_wrap",
+                )
+
+        else:
+            # ----- No flag toggle. Either plain → plain (no encryption
+            # fields) or chained → chained same-tree rewrap (chain wrap
+            # required). Self-rooted → plaintext is also allowed and
+            # leaves the encryption state untouched (item stays a root).
+            if source_in_chain and target_is_encrypted and not encrypted_symmetric_key:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "encrypted_symmetric_key": _(
+                            "Required when moving between encrypted folders."
+                        )
+                    },
+                    code="item_move_encrypted_key_required",
+                )
+            if source_in_chain and not target_is_encrypted:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "is_encryption_root": _(
+                            "Moving an encrypted item out of its tree must "
+                            "set is_encryption_root=true and supply "
+                            "per_user_encrypted_keys."
+                        )
+                    },
+                    code="item_move_re_anchor_required",
+                )
+            if source_is_root and target_is_encrypted:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "is_encryption_root": _(
+                            "Moving a self-rooted encrypted item INTO a "
+                            "chain must set is_encryption_root=false and "
+                            "supply encrypted_symmetric_key."
+                        )
+                    },
+                    code="item_move_demote_required",
+                )
+
+        # ----- Apply the position change first; encryption state writes
+        # depend on the target tree state being settled. -----
         item.move(target_item)
 
-        # Update encryption state after move
-        if target_is_encrypted and not item.is_encrypted:
-            # Moving into encrypted folder: item must become encrypted
+        # ----- Apply encryption state -----
+        update_fields = []
+
+        if is_encryption_root_flag is True:
+            # Re-anchor: clear chain wrap, set flag (already True), then
+            # write per-user wraps onto access rows on this item — same
+            # pattern as /encrypt/.
+            item.is_encrypted = True
+            item.encrypted_symmetric_key = None
+            update_fields += ["is_encrypted", "encrypted_symmetric_key"]
+
+            # Update existing access rows on this item.
+            remaining_user_subs = set(per_user_encrypted_keys.keys())
+            for access in models.ItemAccess.objects.filter(
+                item=item, user__isnull=False
+            ).select_related("user"):
+                user_sub = access.user.sub
+                if user_sub in per_user_encrypted_keys:
+                    access.encrypted_item_symmetric_key_for_user = (
+                        per_user_encrypted_keys[user_sub]
+                    )
+                    access.encryption_public_key_fingerprint = (
+                        fingerprint_per_user.get(user_sub) or None
+                    )
+                    access.save(
+                        update_fields=[
+                            "encrypted_item_symmetric_key_for_user",
+                            "encryption_public_key_fingerprint",
+                        ]
+                    )
+                    remaining_user_subs.discard(user_sub)
+
+            # Materialise inherited-only access rows on this item — they
+            # didn't exist as concrete rows before but need to now so
+            # there's somewhere to attach the wrapped key. Role is
+            # carried over from the inherited access (or READER if the
+            # caller forgot someone, defensively).
+            if remaining_user_subs:
+                users_by_sub = {
+                    u.sub: u
+                    for u in models.User.objects.filter(sub__in=remaining_user_subs)
+                }
+                for user_sub in remaining_user_subs:
+                    inherited_user = users_by_sub.get(user_sub)
+                    if inherited_user is None:
+                        continue
+                    role = item.get_role(inherited_user) or models.RoleChoices.READER
+                    models.ItemAccess.objects.create(
+                        item=item,
+                        user=inherited_user,
+                        role=role,
+                        encrypted_item_symmetric_key_for_user=per_user_encrypted_keys[
+                            user_sub
+                        ],
+                        encryption_public_key_fingerprint=(
+                            fingerprint_per_user.get(user_sub) or None
+                        ),
+                    )
+
+        elif is_encryption_root_flag is False:
+            # Demote: add chain wrap. Existing per-user wraps on this
+            # item's access rows are KEPT — the destination chain may
+            # not cover the same set of users that held explicit
+            # access on this self-rooted item, and clearing the
+            # per-user wraps would silently revoke those collaborators'
+            # ability to decrypt despite their ItemAccess role staying
+            # intact. The chain wrap is additive: chain users decrypt
+            # via the chain, original explicit users decrypt via their
+            # preserved per-user wrap (the encrypted-key resolver
+            # already prefers a non-null wrap on the item itself over
+            # walking the chain).
             item.is_encrypted = True
             item.encrypted_symmetric_key = encrypted_symmetric_key
-        elif target_is_encrypted and item.is_encrypted:
-            # Moving between encrypted folders: re-wrap key
+            update_fields += ["is_encrypted", "encrypted_symmetric_key"]
+
+        elif source_in_chain and target_is_encrypted:
+            # Same-tree chain rewrap.
             item.encrypted_symmetric_key = encrypted_symmetric_key
-        elif not target_is_encrypted and item.is_encrypted and item.encrypted_symmetric_key:
-            # Moving from encrypted subtree to unencrypted: item becomes its own root
-            # The frontend must handle re-wrapping the key for direct user access
-            item.encrypted_symmetric_key = None
+            update_fields.append("encrypted_symmetric_key")
 
         # If the item is moved to the root and the user does not have an access on the item,
         # create an owner access for the user. Otherwise, the item will be invisible for the user.
-        update_fields = ["is_encrypted", "encrypted_symmetric_key"]
         if not target_item and not models.ItemAccess.objects.filter(item=item, user=user).exists():
             models.ItemAccess.objects.create(
                 item=item,
@@ -1994,11 +2246,30 @@ class ItemViewSet(
                 encrypted_item_symmetric_key_for_user__isnull=False,
             ).select_related("item")
         }
+        # Two-pass walker: prefer entries on encryption-root items
+        # (the canonical chain entry points — `is_encrypted=True AND
+        # encrypted_symmetric_key IS NULL`). A hybrid item (chain
+        # descendant that ALSO carries a per-user wrap on its access
+        # row, e.g. a self-rooted file demoted into a chain) is a
+        # side-door for outsiders, NOT a chain entry. If a chain user
+        # also happens to have a hybrid wrap on a descendant, we
+        # still want them to enter at the root so chain operations
+        # (move-rewrap, recursive walks) work — otherwise the chain
+        # returned is empty and the frontend has nothing to walk.
+        # Fall back to ANY non-null wrap (deepest first) only when no
+        # root entry exists — that's the outsider case (B/C in the
+        # demote-preserves-outsider-wrap scenario).
         user_access = None
         for candidate in candidate_items_deepest_first:
-            if candidate.pk in accesses_by_item_pk:
-                user_access = accesses_by_item_pk[candidate.pk]
+            access = accesses_by_item_pk.get(candidate.pk)
+            if access and candidate.is_encrypted and candidate.encrypted_symmetric_key is None:
+                user_access = access
                 break
+        if user_access is None:
+            for candidate in candidate_items_deepest_first:
+                if candidate.pk in accesses_by_item_pk:
+                    user_access = accesses_by_item_pk[candidate.pk]
+                    break
 
         if not user_access:
             # This means the user genuinely has no access to the item
@@ -2035,10 +2306,29 @@ class ItemViewSet(
                 }
             )
 
+        # Encryption tree root: the deepest encryption root that
+        # contains this item — i.e. the nearest ancestor (or self) that
+        # is encrypted with no chain wrap (`encrypted_symmetric_key IS
+        # NULL`). Used by the frontend's cross-root check on moves:
+        # `user_access_item_id` is unreliable for hybrid items (a
+        # demoted self-rooted file keeps its per-user wrap on its OWN
+        # access row, so the deepest-first walker picks the item
+        # itself, not its tree root). `encryption_tree_root_item_id`
+        # is stable: it ignores hybrid wraps and points at the actual
+        # tree boundary.
+        encryption_tree_root_pk = None
+        for candidate in candidate_items_deepest_first:
+            if candidate.is_encrypted and candidate.encrypted_symmetric_key is None:
+                encryption_tree_root_pk = candidate.pk
+                break
+
         return drf.response.Response(
             {
                 "user_access_item_id": str(entry_point_item.pk),
                 "encrypted_key_for_user": user_access.encrypted_item_symmetric_key_for_user,
+                "encryption_tree_root_item_id": (
+                    str(encryption_tree_root_pk) if encryption_tree_root_pk else None
+                ),
                 "chain": chain,
             },
             status=drf.status.HTTP_200_OK,
