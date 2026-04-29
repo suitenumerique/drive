@@ -15,7 +15,6 @@ from django.contrib.auth import models as auth_models
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GistIndex
-from django.contrib.sites.models import Site
 from django.core import mail, validators
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -42,6 +41,7 @@ from lasuite.drf.models.choices import (
 from pydantic import BaseModel as PydanticBaseModel
 from timezone_field import TimeZoneField
 
+from core.utils import get_url_app
 from core.utils.item_title import manage_unique_title as manage_unique_title_utils
 
 logger = getLogger(__name__)
@@ -915,7 +915,7 @@ class Item(TreeModel, BaseModel):
             return
 
         context = context or {}
-        base_url = settings.EMAIL_URL_APP or Site.objects.get_current().domain
+        base_url = get_url_app()
         language = language or get_language()
         context.update(
             {

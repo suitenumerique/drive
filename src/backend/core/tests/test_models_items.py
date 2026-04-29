@@ -18,6 +18,7 @@ import pytest
 from lasuite.drf.models.choices import LinkReachChoices
 
 from core import factories, models
+from core.utils import get_url_app
 
 pytestmark = pytest.mark.django_db
 
@@ -848,17 +849,18 @@ def test_models_items__email_invitation__link_for_file():
 
 
 @pytest.mark.parametrize(
-    "email_url_app",
+    "url_app",
     [
-        "https://test-example.com",  # Test with EMAIL_URL_APP set
+        "https://test-example.com",  # Test with URL_APP set
         None,  # Test fallback to Site domain
     ],
 )
-def test_models_items__email_invitation__url_app_param(email_url_app, settings):
+def test_models_items_email_invitation__url_app_param(url_app, settings):
     """
     Email invitation uses EMAIL_URL_APP when set, or falls back to the Site domain.
     """
-    settings.EMAIL_URL_APP = email_url_app
+    get_url_app.cache_clear()
+    settings.URL_APP = url_app
 
     item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
     sender = factories.UserFactory()
@@ -869,7 +871,7 @@ def test_models_items__email_invitation__url_app_param(email_url_app, settings):
     email = mail.outbox[-1]
     email_content = " ".join(email.body.split())
 
-    if email_url_app:
+    if url_app:
         assert f"https://test-example.com/explorer/items/{item.id}/" in email_content
     else:
         # Default Site domain is example.com

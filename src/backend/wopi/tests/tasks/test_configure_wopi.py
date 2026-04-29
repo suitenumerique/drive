@@ -32,6 +32,7 @@ def test_configure_wopi_clients(settings):
         <app favIconUrl="http://localhost:9980/browser/0968141f2c/images/x-office-document.svg" name="writer">
             <action default="true" ext="sxw" name="view" urlsrc="http://localhost:9980/browser/0968141f2c/cool.html?"/>
             <action default="true" ext="odt" name="edit" urlsrc="http://localhost:9980/browser/0968141f2c/cool.html?"/>
+            <action default="true" ext="odt" name="view" urlsrc="http://localhost:9980/browser/0968141f2c/cool.html?"/>
         </app>
         <app name="application/vnd.oasis.opendocument.text">
             <action default="true" ext="" name="edit" urlsrc="http://localhost:9980/browser/0968141f2c/cool.html?"/>
@@ -49,14 +50,28 @@ def test_configure_wopi_clients(settings):
     assert cache.get(WOPI_CONFIGURATION_CACHE_KEY) == {
         "mimetypes": {
             "application/vnd.oasis.opendocument.text": {
-                "url": "http://localhost:9980/browser/0968141f2c/cool.html?",
-                "client": "vendorA",
+                "edit": {
+                    "url": "http://localhost:9980/browser/0968141f2c/cool.html?",
+                    "client": "vendorA",
+                },
             },
         },
         "extensions": {
             "odt": {
-                "url": "http://localhost:9980/browser/0968141f2c/cool.html?",
-                "client": "vendorA",
+                "edit": {
+                    "url": "http://localhost:9980/browser/0968141f2c/cool.html?",
+                    "client": "vendorA",
+                },
+                "view": {
+                    "url": "http://localhost:9980/browser/0968141f2c/cool.html?",
+                    "client": "vendorA",
+                },
+            },
+            "sxw": {
+                "view": {
+                    "url": "http://localhost:9980/browser/0968141f2c/cool.html?",
+                    "client": "vendorA",
+                }
             },
         },
     }

@@ -53,6 +53,7 @@ from core.services.search_indexers import (
 from core.storage import get_storage_compute_backend
 from core.tasks.item import duplicate_file, process_item_purge, rename_file
 from core.utils.analytics import posthog_capture
+from wopi.enums import WopiActions
 from wopi.services import access as access_service
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
 
@@ -1568,8 +1569,23 @@ class ItemViewSet(
 
         if not (wopi_client := get_wopi_client_config(item, request.user)):
             raise drf.exceptions.ValidationError(
-                {"detail": "This item does not suport WOPI integration."}
+                {"detail": "This item does not support WOPI integration."}
             )
+
+        action = None
+        abilities = item.get_abilities(request.user)
+        can_update = abilities["update"]
+
+        if wopi_client.get(WopiActions.EDIT):
+            action = wopi_client[WopiActions.EDIT]
+        elif can_update and wopi_client.get(WopiActions.CONVERT):
+            action = wopi_client[WopiActions.CONVERT]
+
+        if not can_update and wopi_client.get(WopiActions.VIEW):
+            action = wopi_client[WopiActions.VIEW]
+
+        if not action:
+            raise drf.exceptions.ValidationError({"detail": "This item has no action compatible."})
 
         service = access_service.AccessUserItemService()
         access_token, access_token_ttl = service.insert_new_access(item, request.user)
@@ -1580,7 +1596,7 @@ class ItemViewSet(
             if request.user.is_authenticated and request.user.language
             else settings.LANGUAGE_CODE
         )
-        launch_url = compute_wopi_launch_url(wopi_client["url"], get_file_info, language)
+        launch_url = compute_wopi_launch_url(action["url"], get_file_info, language)
 
         return drf.response.Response(
             {

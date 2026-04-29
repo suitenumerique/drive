@@ -74,9 +74,6 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
             continue
 
         for action in app.findall("action"):
-            if action.get("name") != "edit":
-                continue
-
             # configure using mimetype
             if action.get("ext") == "":
                 mimetype = app.get("name")
@@ -84,10 +81,17 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
                 if mimetype in settings.WOPI_EXCLUDED_MIMETYPES:
                     continue
 
-                wopi_configuration["mimetypes"][mimetype] = {
-                    "url": action.get("urlsrc"),
-                    "client": client,
-                }
+                mimetypes = wopi_configuration["mimetypes"].get(mimetype, {})
+                mimetypes.update(
+                    {
+                        action.get("name"): {
+                            "url": action.get("urlsrc"),
+                            "client": client,
+                        }
+                    }
+                )
+
+                wopi_configuration["mimetypes"][mimetype] = mimetypes
 
             else:
                 extension = action.get("ext")
@@ -95,10 +99,17 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
                 if extension in settings.WOPI_EXCLUDED_EXTENSIONS:
                     continue
 
-                wopi_configuration["extensions"][extension] = {
-                    "url": action.get("urlsrc"),
-                    "client": client,
-                }
+                extensions = wopi_configuration["extensions"].get(extension, {})
+                extensions.update(
+                    {
+                        action.get("name"): {
+                            "url": action.get("urlsrc"),
+                            "client": client,
+                        }
+                    }
+                )
+
+                wopi_configuration["extensions"][extension] = extensions
 
     cache.set(
         WOPI_CONFIGURATION_CACHE_KEY,
