@@ -8,6 +8,13 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) add organization metrics to usage API
+- ✨(backend) add entitlements context and can_upload reason
+- ✨(frontend) add entitlement disclaimer modal
+- ✨(frontend) render PDF previews at per-page dimensions
+
 ### Removed
 
 - 🔥(backend) remove mirroring feature
@@ -22,9 +29,6 @@ and this project adheres to
 - ✨(frontend) make file upload abortable in driver layer
 - ✨(frontend) files preview v2
 - 🔧(project) add DJANGO_EMAIL_URL_APP environment variable
-- ✨(backend) add organization metrics to usage API
-- ✨(backend) add entitlements context and can_upload reason
-- ✨(frontend) add entitlement disclaimer modal
 
 ### Fixed
 
