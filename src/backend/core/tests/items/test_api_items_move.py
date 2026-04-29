@@ -1287,6 +1287,239 @@ def test_api_items_move_plaintext_into_encrypted_rejected():
     assert response.json()["errors"][0]["code"] == "item_move_plaintext_into_encrypted"
 
 
+def test_api_items_move_encrypt_on_move_file():
+    """
+    Plaintext file → encrypted folder via encrypt-on-move: file becomes
+    chain-wrapped under the destination, NO ItemAccess rows materialised
+    for inherited-only collaborators (the whole point of the new shape).
+    """
+    user = factories.UserFactory()
+    other = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    # Source is a plaintext folder both `user` and `other` have access
+    # to. Putting `other` here would normally cause /encrypt/ to
+    # materialise a per-user wrap row for them — encrypt-on-move must
+    # not.
+    source_folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner"), (other, "reader")],
+    )
+    file_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        parent=source_folder,
+    )
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "encrypted_symmetric_key": "CHAIN-WRAP-FILE-UNDER-DEST",
+            "encrypted_keys_for_descendants": {},
+            "file_key_mapping": {},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200, response.json()
+    file_item.refresh_from_db()
+    assert file_item.is_encrypted is True
+    assert file_item.encrypted_symmetric_key == "CHAIN-WRAP-FILE-UNDER-DEST"
+    # No per-user ItemAccess wrap created for the inherited `other`
+    # collaborator. They had inherited access via the source folder;
+    # they no longer have any access to the file (it moved out of
+    # source's subtree). That's exactly the cleanup we wanted.
+    assert (
+        models.ItemAccess.objects.filter(
+            item=file_item,
+            encrypted_item_symmetric_key_for_user__isnull=False,
+        ).count()
+        == 0
+    )
+
+
+def test_api_items_move_encrypt_on_move_folder_with_descendants():
+    """Folder with nested files: every effective descendant gets its
+    chain wrap; the root carries the chain wrap under the destination.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    src_folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner")],
+    )
+    nested_folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, parent=src_folder,
+    )
+    file_a = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE, parent=src_folder,
+    )
+    file_b = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE, parent=nested_folder,
+    )
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{src_folder.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "encrypted_symmetric_key": "CHAIN-WRAP-SRC-UNDER-DEST",
+            "encrypted_keys_for_descendants": {
+                str(nested_folder.id): "wrap-nested-under-src",
+                str(file_a.id): "wrap-file-a-under-src",
+                str(file_b.id): "wrap-file-b-under-nested",
+            },
+            "file_key_mapping": {
+                str(file_a.id): "encrypted_a.bin",
+                str(file_b.id): "encrypted_b.bin",
+            },
+        },
+        format="json",
+    )
+
+    assert response.status_code == 200, response.json()
+    src_folder.refresh_from_db()
+    nested_folder.refresh_from_db()
+    file_a.refresh_from_db()
+    file_b.refresh_from_db()
+    assert src_folder.is_encrypted is True
+    assert src_folder.encrypted_symmetric_key == "CHAIN-WRAP-SRC-UNDER-DEST"
+    assert nested_folder.is_encrypted is True
+    assert nested_folder.encrypted_symmetric_key == "wrap-nested-under-src"
+    assert file_a.is_encrypted is True
+    assert file_a.encrypted_symmetric_key == "wrap-file-a-under-src"
+    assert file_a.filename == "encrypted_a.bin"
+    assert file_b.encrypted_symmetric_key == "wrap-file-b-under-nested"
+    assert file_b.filename == "encrypted_b.bin"
+
+
+def test_api_items_move_encrypt_on_move_subtree_mutation_rejected():
+    """If a descendant appears between frontend discovery and the
+    commit, the mismatched id set must abort with 409 — same contract
+    as /encrypt/.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    src_folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")],
+    )
+    file_a = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE, parent=src_folder,
+    )
+    # Live extra: the client didn't see this one when it built the
+    # payload.
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, parent=src_folder)
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{src_folder.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "encrypted_symmetric_key": "wrap",
+            "encrypted_keys_for_descendants": {str(file_a.id): "wrap-a"},
+            "file_key_mapping": {},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "subtree_mutated"
+
+
+def test_api_items_move_encrypt_on_move_requires_chain_wrap():
+    """`encrypted_symmetric_key` is mandatory for encrypt-on-move."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    file_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE, users=[(user, "owner")],
+    )
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "encrypted_keys_for_descendants": {},
+            "file_key_mapping": {},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_move_chain_wrap_required"
+
+
+def test_api_items_move_encrypt_on_move_rejects_encrypted_source():
+    """Encrypt-on-move payload with an already-encrypted source is a
+    contract violation — the rewrap/demote shapes apply instead.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = _encrypted_root(user)
+    file_item = _encrypted_child(root, item_type=models.ItemTypeChoices.FILE)
+    dest_root = _encrypted_root(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(dest_root.id),
+            "encrypted_symmetric_key": "wrap",
+            "encrypted_keys_for_descendants": {},
+            "file_key_mapping": {},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert (
+        response.json()["errors"][0]["code"]
+        == "item_move_encrypt_on_move_source_encrypted"
+    )
+
+
+def test_api_items_move_encrypt_on_move_rejects_plain_target():
+    """Encrypt-on-move with a plaintext destination is meaningless —
+    if the destination isn't encrypted there's no chain to attach to.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    file_item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE, users=[(user, "owner")],
+    )
+    plain_target = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")],
+    )
+
+    response = client.post(
+        f"/api/v1.0/items/{file_item.id!s}/move/",
+        data={
+            "target_item_id": str(plain_target.id),
+            "encrypted_symmetric_key": "wrap",
+            "encrypted_keys_for_descendants": {},
+            "file_key_mapping": {},
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert (
+        response.json()["errors"][0]["code"]
+        == "item_move_encrypt_on_move_plain_target"
+    )
+
+
 def test_api_items_move_chained_to_plain_without_re_anchor_rejected():
     """
     Chained-encrypted → plaintext WITHOUT the re-anchor flag is refused

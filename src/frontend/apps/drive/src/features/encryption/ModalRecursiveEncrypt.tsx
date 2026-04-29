@@ -16,22 +16,50 @@ interface Props {
    * completing" (the `onClose` path covers both).
    */
   onSuccess?: () => void;
+  /**
+   * When set, the modal switches to encrypt-on-move mode: the item is
+   * encrypted AND moved into the destination parent in one atomic
+   * commit. Skips per-user wrap materialisation (no inherited
+   * collaborator gets a wrap they didn't already have).
+   */
+  intoChainParentId?: string;
 }
 
-export const ModalRecursiveEncrypt = ({ isOpen, onClose, item, onSuccess }: Props) => {
+export const ModalRecursiveEncrypt = ({
+  isOpen,
+  onClose,
+  item,
+  onSuccess,
+  intoChainParentId,
+}: Props) => {
   const { t } = useTranslation();
+  const mode = intoChainParentId ? 'encrypt-into-chain' : 'encrypt';
   const job = useRecursiveEncryptionJob({
-    mode: 'encrypt',
+    mode,
     item,
     isOpen,
+    intoChainParentId,
     onSuccess: () => {
       onSuccess?.();
       setTimeout(onClose, 1200);
     },
   });
 
-  const title =
-    item.type === ItemType.FOLDER
+  // Title surfaces the destination intent in the encrypt-on-move case
+  // so the user knows the click will both encrypt and move.
+  const title = intoChainParentId
+    ? item.type === ItemType.FOLDER
+      ? t(
+          'encryption.encrypt_modal.title_folder_into_chain',
+          'Encrypt and move folder "{{title}}"',
+          { title: item.title },
+        )
+      : t(
+          'encryption.encrypt_modal.title_file_into_chain',
+          'Encrypt and move file "{{title}}"',
+          { title: item.title },
+        )
+    : item.type === ItemType.FOLDER
       ? t('encryption.encrypt_modal.title_folder', 'Encrypt folder "{{title}}"', {
           title: item.title,
         })
@@ -72,7 +100,12 @@ export const ModalRecursiveEncrypt = ({ isOpen, onClose, item, onSuccess }: Prop
               onClick={() => job.confirm()}
               disabled={!job.canConfirm}
             >
-              {t('encryption.encrypt_modal.confirm', 'Encrypt')}
+              {intoChainParentId
+                ? t(
+                    'encryption.encrypt_modal.confirm_into_chain',
+                    'Encrypt & move',
+                  )
+                : t('encryption.encrypt_modal.confirm', 'Encrypt')}
             </Button>
           )}
           {job.phase === 'failed' && (

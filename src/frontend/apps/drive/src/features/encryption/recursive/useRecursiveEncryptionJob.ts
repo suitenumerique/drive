@@ -25,7 +25,21 @@ import {
   StagedEncryptFile,
 } from './types';
 
-type Mode = 'encrypt' | 'decrypt';
+/**
+ * Job modes:
+ *  - 'encrypt'           : turn an item into a self-rooted encryption tree.
+ *                          Mints K_root, wraps per-user, materialises
+ *                          ItemAccess rows. Calls PATCH /encrypt/.
+ *  - 'decrypt'           : remove encryption from a self-rooted tree.
+ *                          Calls PATCH /remove-encryption/.
+ *  - 'encrypt-into-chain': encrypt AND move into an existing encrypted
+ *                          subtree atomically. K_root and descendant keys
+ *                          are wrapped under the destination's chain only
+ *                          — no per-user wraps anywhere. Calls POST /move/
+ *                          with the encrypt-on-move payload (same one-shot
+ *                          atomicity contract as /encrypt/).
+ */
+type Mode = 'encrypt' | 'decrypt' | 'encrypt-into-chain';
 
 type State = {
   phase: JobPhase;
@@ -124,6 +138,13 @@ export type UseRecursiveEncryptionJobArgs = {
   item: Item;
   isOpen: boolean;
   onSuccess?: () => void;
+  /**
+   * Required for `mode: 'encrypt-into-chain'`. The destination parent
+   * the item is moving into — the job fetches its key-chain during
+   * validation so K_root and descendant keys can be wrapped under the
+   * destination's chain instead of minted as a fresh root.
+   */
+  intoChainParentId?: string;
 };
 
 export type UseRecursiveEncryptionJob = {
@@ -154,6 +175,7 @@ export function useRecursiveEncryptionJob({
   item,
   isOpen,
   onSuccess,
+  intoChainParentId,
 }: UseRecursiveEncryptionJobArgs): UseRecursiveEncryptionJob {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -176,6 +198,18 @@ export function useRecursiveEncryptionJob({
   // Populated during the encrypt folder phase; consumed when building each
   // file's chain and merged into encryptedKeysForDescendants at commit.
   const folderWrappedKeysRef = useRef<Map<string, ArrayBuffer>>(new Map());
+  // For encrypt-into-chain mode: the destination's key-chain. The
+  // `parentEntryKey` is K_dest_root wrapped to user (entry into the
+  // destination's encryption tree); `parentChainToParent` walks from
+  // K_dest_root down to K_dest_parent, the immediate parent the item
+  // attaches under. Both are fed to the vault so it can mint K_root
+  // wrapped under K_dest_parent in one call.
+  const parentEntryKeyRef = useRef<ArrayBuffer | null>(null);
+  const parentChainToParentRef = useRef<ArrayBuffer[]>([]);
+  // Wrap of the moved-subtree's root under the destination chain — the
+  // top-level chain wrap shipped on `encrypted_symmetric_key` in the
+  // /move/ payload.
+  const intoChainRootWrapRef = useRef<ArrayBuffer | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -188,6 +222,9 @@ export function useRecursiveEncryptionJob({
       rootEncryptedKeysRef.current = {};
       currentUserRootWrappedRef.current = null;
       folderWrappedKeysRef.current = new Map();
+      parentEntryKeyRef.current = null;
+      parentChainToParentRef.current = [];
+      intoChainRootWrapRef.current = null;
       dispatch({ type: 'RESET' });
     }
   }, [isOpen]);
@@ -228,8 +265,11 @@ export function useRecursiveEncryptionJob({
           // decrypt what's already plaintext). Applies to both files and
           // folders — a plaintext folder has nothing to clear on decrypt,
           // an already-encrypted folder has nothing to mint on encrypt.
+          // 'encrypt-into-chain' shares the encrypt skip semantics — the
+          // source is plaintext on entry and the target state is
+          // encrypted.
           const alreadyInTargetState =
-            mode === 'encrypt' ? !!n.item.is_encrypted : !n.item.is_encrypted;
+            mode === 'decrypt' ? !n.item.is_encrypted : !!n.item.is_encrypted;
           const shouldSkip = insideInner || alreadyInTargetState;
           return {
             id: n.item.id,
@@ -237,9 +277,9 @@ export function useRecursiveEncryptionJob({
             path: n.pathCrumb,
             state: shouldSkip ? 'skipped' : 'pending',
             skipReason: shouldSkip
-              ? mode === 'encrypt'
-                ? 'already_encrypted'
-                : 'not_encrypted'
+              ? mode === 'decrypt'
+                ? 'not_encrypted'
+                : 'already_encrypted'
               : undefined,
           };
         });
@@ -339,6 +379,59 @@ export function useRecursiveEncryptionJob({
               });
             }
           }
+        } else if (mode === 'encrypt-into-chain') {
+          // Encrypt-on-move: the only chain entry we need is the
+          // destination's. No per-user pubkey collection — the moved
+          // subtree decrypts entirely through the destination's chain,
+          // so collaborators on the SOURCE side that happened to have
+          // inherited access don't need wraps materialised. The
+          // RESTRICTED check is also unnecessary: the destination
+          // subtree is by definition restricted (encrypted), and the
+          // moved item inherits that on the way in.
+          if (!intoChainParentId) {
+            errors.push(
+              t(
+                'encryption.errors.intochain_missing_parent',
+                'Destination parent missing for encrypt-on-move.'
+              )
+            );
+          } else {
+            try {
+              const driver = getDriver();
+              const keyChain = await driver.getKeyChain(intoChainParentId);
+              if (cancelled) return;
+              parentEntryKeyRef.current = fromBase64(
+                keyChain.encrypted_key_for_user
+              );
+              parentChainToParentRef.current = keyChain.chain.map(e =>
+                fromBase64(e.encrypted_symmetric_key)
+              );
+            } catch (err) {
+              errors.push(
+                t(
+                  'encryption.errors.intochain_keychain_failed',
+                  'Could not retrieve the destination key chain ({{err}}).',
+                  { err: (err as Error).message }
+                )
+              );
+            }
+          }
+
+          // Same no-op guard as encrypt mode: a plaintext file root
+          // must have content to encrypt; a folder root is meaningful
+          // even with zero processable descendants (root key minted
+          // alone is fine).
+          if (
+            item.type === ItemType.FILE &&
+            processableIdsRef.current.length === 0
+          ) {
+            errors.push(
+              t(
+                'encryption.errors.nothing_to_encrypt_file',
+                'This file is already encrypted.'
+              )
+            );
+          }
         } else {
           // For a folder root, decrypting is meaningful even with zero
           // processable files — the root itself needs its ItemAccess
@@ -380,7 +473,7 @@ export function useRecursiveEncryptionJob({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, vaultClient, user?.sub, item, mode, t]);
+  }, [isOpen, vaultClient, user?.sub, item, mode, intoChainParentId, t]);
 
   const confirm = useCallback(async () => {
     if (!vaultClient || !user?.sub) return;
@@ -407,6 +500,28 @@ export function useRecursiveEncryptionJob({
           publicKeys: publicKeysRef.current,
           rootEncryptedKeysRef,
           currentUserRootWrappedRef,
+          folderWrappedKeysRef,
+          signal: controller.signal,
+          dispatch,
+          onFileStaged: (id, staged) => stagedResults.set(id, staged),
+        });
+      } else if (mode === 'encrypt-into-chain') {
+        folderWrappedKeysRef.current = new Map();
+        intoChainRootWrapRef.current = null;
+        const parentEntryKey = parentEntryKeyRef.current;
+        if (!parentEntryKey) {
+          throw new Error(
+            'Destination key chain not loaded — encrypt-on-move cannot proceed.'
+          );
+        }
+        await encryptIntoChainPipeline({
+          vaultClient,
+          rootItem: item,
+          flat: flatRef.current,
+          processableIds: processableIdsRef.current,
+          parentEntryKey,
+          parentChainToParent: parentChainToParentRef.current,
+          intoChainRootWrapRef,
           folderWrappedKeysRef,
           signal: controller.signal,
           dispatch,
@@ -490,6 +605,41 @@ export function useRecursiveEncryptionJob({
         await driver.encryptItem(item.id, {
           encryptedSymmetricKeyPerUser,
           encryptionPublicKeyFingerprintPerUser,
+          encryptedKeysForDescendants,
+          fileKeyMapping,
+        });
+      } else if (mode === 'encrypt-into-chain') {
+        const fileKeyMapping: Record<string, string> = {};
+        const encryptedKeysForDescendants: Record<string, string> = {};
+        // Same merge as encrypt mode — folder wraps first, then file
+        // wraps. The root's chain wrap goes on the top-level field
+        // `encrypted_symmetric_key`, NOT in the descendants map.
+        folderWrappedKeysRef.current.forEach((wk, id) => {
+          if (id === item.id) return; // skip — that's the root wrap
+          encryptedKeysForDescendants[id] = toBase64(wk);
+        });
+        stagedResults.forEach((v, id) => {
+          fileKeyMapping[id] = v.newFilename;
+          if (
+            'wrappedKey' in v &&
+            v.wrappedKey &&
+            v.wrappedKey.byteLength > 0
+          ) {
+            encryptedKeysForDescendants[id] = toBase64(v.wrappedKey);
+          }
+        });
+        const rootChainWrap = intoChainRootWrapRef.current;
+        if (!rootChainWrap) {
+          throw new Error(
+            'Root chain wrap missing after pipeline — encrypt-on-move bug.'
+          );
+        }
+        if (!intoChainParentId) {
+          throw new Error('Destination parent missing for encrypt-on-move.');
+        }
+        await driver.moveItemEncryptOnMove(item.id, {
+          targetItemId: intoChainParentId,
+          encryptedSymmetricKey: toBase64(rootChainWrap),
           encryptedKeysForDescendants,
           fileKeyMapping,
         });
@@ -766,6 +916,239 @@ async function stageOneEncryption({
       // optimizeMemory: hot path — file body, discarded after this call.
       const { encryptedContent: ct, wrappedKey: wk } =
         await vaultClient.encryptNestedWithoutKey(plaintext, entryKey, chain, {
+          optimizeMemory: true,
+        });
+      encryptedContent = ct;
+      wrappedKey = wk;
+    }
+
+    const newFilename = stagedFilename(node.item.title);
+    const uploadUrl = await getEncryptionUploadUrl(
+      targetId,
+      newFilename,
+      signal
+    );
+    await putToS3(uploadUrl, encryptedContent, signal);
+
+    onFileStaged(targetId, { itemId: targetId, newFilename, wrappedKey });
+    dispatch({ type: 'UPDATE_ROW', id: targetId, state: 'staged' });
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') throw err;
+    dispatch({
+      type: 'UPDATE_ROW',
+      id: targetId,
+      state: 'failed',
+      error: (err as Error).message,
+    });
+    throw err;
+  }
+}
+
+type EncryptIntoChainPipelineArgs = {
+  vaultClient: VaultClient;
+  rootItem: Item;
+  flat: FlatNode[];
+  processableIds: string[];
+  parentEntryKey: ArrayBuffer;
+  parentChainToParent: ArrayBuffer[];
+  intoChainRootWrapRef: React.MutableRefObject<ArrayBuffer | null>;
+  folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
+  signal: AbortSignal;
+  dispatch: DispatchFn;
+  onFileStaged: (id: string, staged: StagedEncryptFile) => void;
+};
+
+/**
+ * Encrypt-on-move pipeline. Mirrors `encryptPipeline` (mint-then-stage)
+ * but every wrap targets the destination's chain instead of a per-user
+ * key map. The conceptual difference vs. encrypt mode:
+ *
+ *   - encrypt: K_root is wrapped per-user; descendant wraps stack on
+ *     K_root via `currentUserWrapped` as the SDK entry key.
+ *   - encrypt-into-chain: K_root is wrapped under K_dest_parent (chain
+ *     wrap); descendant wraps stack on K_root, but the SDK entry into
+ *     each call is `parentEntryKey` (K_dest_root wrapped to user) and
+ *     the chain prefix walks K_dest_root → K_dest_parent → K_root → ...
+ *
+ * The shared trick is that `folderWrappedKeysRef.current.get(rootItem.id)`
+ * holds K_root's chain wrap, so `chainForNode` naturally picks it up
+ * for descendants (it returns the chain from the root's direct child to
+ * the node's direct parent — and we always prepend the destination
+ * prefix on every call so K_root sits between).
+ */
+async function encryptIntoChainPipeline({
+  vaultClient,
+  rootItem,
+  flat,
+  processableIds,
+  parentEntryKey,
+  parentChainToParent,
+  intoChainRootWrapRef,
+  folderWrappedKeysRef,
+  signal,
+  dispatch,
+  onFileStaged,
+}: EncryptIntoChainPipelineArgs): Promise<void> {
+  // Mint K_root wrapped under K_dest_parent. For a folder root we mint
+  // ahead of any per-file work; for a file root we defer to the
+  // per-file stage where the file's plaintext goes through the same
+  // encryptNestedWithoutKey call.
+  if (rootItem.type === ItemType.FOLDER) {
+    dispatch({ type: 'UPDATE_ROW', id: rootItem.id, state: 'running' });
+    const { wrappedKey } = await vaultClient.encryptNestedWithoutKey(
+      new ArrayBuffer(0),
+      parentEntryKey,
+      parentChainToParent.length > 0 ? parentChainToParent : undefined
+    );
+    if (signal.aborted) throw abortError();
+    intoChainRootWrapRef.current = wrappedKey;
+    // Stash under the root's id so chainForNode picks it up for
+    // descendants below — chainForNode otherwise excludes the root,
+    // but here OUR root is just an intermediate folder relative to
+    // K_dest_root.
+    folderWrappedKeysRef.current.set(rootItem.id, wrappedKey);
+    dispatch({ type: 'UPDATE_ROW', id: rootItem.id, state: 'staged' });
+
+    // Mint nested folders top-down so each chain only references
+    // already-minted ancestors.
+    const innerRoots = innerEncryptionRoots(flat, rootItem.id);
+    const nestedFolders = foldersOnly(flat)
+      .filter(
+        n => n.item.id !== rootItem.id && !isInsideInnerRoot(n, innerRoots)
+      )
+      .sort((a, b) => a.depth - b.depth);
+    for (const folder of nestedFolders) {
+      if (signal.aborted) throw abortError();
+      dispatch({ type: 'UPDATE_ROW', id: folder.item.id, state: 'running' });
+      const subtreeChain = chainForNode(
+        folder,
+        rootItem.id,
+        folderWrappedKeysRef.current
+      );
+      // Full chain seen by the SDK: [destPrefix..., K_root_wrap,
+      // intermediates...]. K_root_wrap is the wrapped key we just
+      // stashed — chainForNode's exclusion of the root means we have
+      // to prepend it explicitly.
+      const fullChain = [
+        ...parentChainToParent,
+        folderWrappedKeysRef.current.get(rootItem.id)!,
+        ...subtreeChain,
+      ];
+      const { wrappedKey: folderWrap } =
+        await vaultClient.encryptNestedWithoutKey(
+          new ArrayBuffer(0),
+          parentEntryKey,
+          fullChain
+        );
+      folderWrappedKeysRef.current.set(folder.item.id, folderWrap);
+      dispatch({ type: 'UPDATE_ROW', id: folder.item.id, state: 'staged' });
+    }
+  }
+
+  const queue = [...processableIds];
+  const worker = async (): Promise<void> => {
+    while (queue.length > 0) {
+      if (signal.aborted) throw abortError();
+      const id = queue.shift();
+      if (!id) return;
+      await stageOneEncryptionIntoChain({
+        vaultClient,
+        rootItem,
+        flat,
+        targetId: id,
+        parentEntryKey,
+        parentChainToParent,
+        intoChainRootWrapRef,
+        folderWrappedKeysRef,
+        signal,
+        dispatch,
+        onFileStaged,
+      });
+    }
+  };
+  await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+}
+
+type StageOneEncryptIntoChainArgs = {
+  vaultClient: VaultClient;
+  rootItem: Item;
+  flat: FlatNode[];
+  targetId: string;
+  parentEntryKey: ArrayBuffer;
+  parentChainToParent: ArrayBuffer[];
+  intoChainRootWrapRef: React.MutableRefObject<ArrayBuffer | null>;
+  folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
+  signal: AbortSignal;
+  dispatch: DispatchFn;
+  onFileStaged: (id: string, staged: StagedEncryptFile) => void;
+};
+
+async function stageOneEncryptionIntoChain({
+  vaultClient,
+  rootItem,
+  flat,
+  targetId,
+  parentEntryKey,
+  parentChainToParent,
+  intoChainRootWrapRef,
+  folderWrappedKeysRef,
+  signal,
+  dispatch,
+  onFileStaged,
+}: StageOneEncryptIntoChainArgs): Promise<void> {
+  const node = flat.find(n => n.item.id === targetId);
+  if (!node) throw new Error(`Row ${targetId} not found in tree`);
+
+  dispatch({ type: 'UPDATE_ROW', id: targetId, state: 'running' });
+
+  try {
+    if (signal.aborted) throw abortError();
+
+    const resp = await fetch(node.item.url!, {
+      credentials: 'include',
+      signal,
+    });
+    if (!resp.ok) {
+      throw new Error(`Download failed: ${resp.status}`);
+    }
+    const plaintext = await resp.arrayBuffer();
+
+    let encryptedContent: ArrayBuffer;
+    let wrappedKey: ArrayBuffer;
+
+    if (rootItem.type === ItemType.FILE && targetId === rootItem.id) {
+      // File root: K_file gets minted directly under K_dest_parent.
+      // No subtree-root prefix in the chain — there are no
+      // intermediate folders for a single-file move.
+      const { encryptedContent: ct, wrappedKey: wk } =
+        await vaultClient.encryptNestedWithoutKey(
+          plaintext,
+          parentEntryKey,
+          parentChainToParent.length > 0 ? parentChainToParent : undefined,
+          { optimizeMemory: true }
+        );
+      encryptedContent = ct;
+      // Top-level chain wrap stored separately; descendants map stays
+      // empty (none for a file root). Mirrors how encrypt mode treats
+      // a file root's wrappedKey as 0-byte and pulls per-user wraps
+      // out of `rootEncryptedKeysRef` instead.
+      intoChainRootWrapRef.current = wk;
+      wrappedKey = new ArrayBuffer(0);
+    } else {
+      // Descendant file: chain through dest prefix, K_root, and any
+      // intermediate folder wraps already in folderWrappedKeysRef.
+      const subtreeChain = chainForNode(
+        node,
+        rootItem.id,
+        folderWrappedKeysRef.current
+      );
+      const rootWrap = folderWrappedKeysRef.current.get(rootItem.id);
+      if (!rootWrap) {
+        throw new Error('Subtree root wrap missing — folder ordering bug.');
+      }
+      const fullChain = [...parentChainToParent, rootWrap, ...subtreeChain];
+      const { encryptedContent: ct, wrappedKey: wk } =
+        await vaultClient.encryptNestedWithoutKey(plaintext, parentEntryKey, fullChain, {
           optimizeMemory: true,
         });
       encryptedContent = ct;

@@ -27,17 +27,26 @@ export const useMoveItems = () => {
 
   /**
    * Move a single item, intercepting the one encryption-boundary case
-   * the driver can't handle in-line: plaintext → encrypted folder. The
-   * driver throws `MoveRequiresEncryption('plaintext-into-encrypted')`,
-   * we open the recursive-encryption modal for the source first, then
-   * retry the move on success.
+   * the driver can't handle in-line: plaintext → encrypted folder.
+   * The driver throws `MoveRequiresEncryption('plaintext-into-encrypted')`;
+   * we route the request through the recursive-encryption modal in
+   * encrypt-on-move mode. That modal does encryption AND the move in a
+   * single atomic backend call (POST /move/ with the encrypt-on-move
+   * payload), so there is NO retry afterwards — `requestEncryption`
+   * resolving means both happened.
    *
-   * Other cross-boundary cases are now handled by the driver itself:
-   *   - encrypted → encrypted (same root): in-line rewrap of the
-   *     item's K under the new parent's chain.
-   *   - encrypted → plaintext (or workspace root): in-line re-anchor
-   *     as its own encryption root (per-user wraps via `shareKeys`),
-   *     no modal involved, no decryption.
+   * The encrypt-on-move route avoids the "encrypt-in-place then demote"
+   * sequence's main waste: that flow materialised ItemAccess rows for
+   * every inherited collaborator at the source location, then preserved
+   * those rows after demoting into the chain (so the chain user the
+   * file ended up under inherited a pile of stale per-user wraps from
+   * users that had nothing to do with the destination tree). The
+   * encrypt-on-move path produces a chain-rooted item with no per-user
+   * wraps anywhere — clean state on arrival.
+   *
+   * Other cross-boundary cases are still handled by the driver itself:
+   *   - encrypted → encrypted (same root): in-line rewrap.
+   *   - encrypted → plaintext / workspace root: in-line re-anchor.
    *   - cross-root remains an error the caller surfaces verbatim.
    */
   const moveOne = async (id: string, parentId?: string): Promise<void> => {
@@ -50,32 +59,24 @@ export const useMoveItems = () => {
       ) {
         throw e;
       }
+      // Encrypt-on-move requires a destination (the chain to attach
+      // under). Workspace-root has no chain, so a plaintext-into-root
+      // move shouldn't reach here anyway — defensively throw if it does.
+      if (!parentId) {
+        throw new Error(
+          'plaintext-into-encrypted reported without a destination — driver bug.',
+        );
+      }
       const item = await driver.getItem(id);
       try {
-        await requestEncryption(item);
+        await requestEncryption(item, { intoChainParentId: parentId });
       } catch (modalErr) {
         if (modalErr instanceof EncryptionRequestCancelled) {
           return; // User closed the modal — abort the move silently.
         }
         throw modalErr;
       }
-      // After encryption the item is self-rooted; the retry routes
-      // through case 4 (demote into chain) on the driver. If the retry
-      // throws, surface it loudly — silent failures here let the
-      // optimistic tree update (DnD already moved the node visually)
-      // diverge from server reality.
-      try {
-        await driver.moveItem(id, parentId);
-      } catch (retryErr) {
-        console.error(
-          '[useMoveItem] retry-after-encrypt failed for item',
-          id,
-          '→',
-          parentId,
-          retryErr,
-        );
-        throw retryErr;
-      }
+      // No retry: encrypt-on-move's commit IS the move.
     }
   };
 

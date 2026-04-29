@@ -211,6 +211,26 @@ export abstract class Driver {
     itemId: string,
     data?: { fileKeyMapping?: Record<string, string> }
   ): Promise<Item>;
+  /**
+   * Encrypt-on-move: ship a plaintext subtree into an encrypted destination
+   * in one atomic backend call. The frontend has already encrypted file
+   * contents under the destination's chain and uploaded to fresh S3 keys;
+   * this commit writes the chain wraps + filename swap + path change in a
+   * single transaction.
+   *
+   * Mirrors the /encrypt/ payload shape (encryptedKeysForDescendants +
+   * fileKeyMapping) but produces a chain-rooted item — no per-user wraps,
+   * no ItemAccess rows materialised, no inherited-collaborator bloat.
+   */
+  abstract moveItemEncryptOnMove(
+    itemId: string,
+    data: {
+      targetItemId: string;
+      encryptedSymmetricKey: string;
+      encryptedKeysForDescendants: Record<string, string>;
+      fileKeyMapping?: Record<string, string>;
+    }
+  ): Promise<void>;
   abstract getKeyChain(itemId: string): Promise<{
     user_access_item_id: string;
     encrypted_key_for_user: string;

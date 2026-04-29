@@ -42,6 +42,14 @@ interface PendingRequest {
   reject: (e: unknown) => void;
   /** Set to `true` when the modal's recursive job reports success. */
   succeeded: boolean;
+  /**
+   * When set, the encrypt request is an encrypt-on-move: the modal
+   * runs the recursive job in 'encrypt-into-chain' mode, which produces
+   * a chain-rooted item and commits move + encryption in a single
+   * /move/ call. Caller doesn't need to follow up with a separate
+   * `driver.moveItem` — the job handles it.
+   */
+  intoChainParentId?: string;
 }
 
 interface ContextValue {
@@ -49,8 +57,17 @@ interface ContextValue {
    * Open the recursive-encryption modal for `item` and resolve when
    * the encryption completes. Rejects with `EncryptionRequestCancelled`
    * if the user closes the modal before success.
+   *
+   * Optional `options.intoChainParentId` switches to encrypt-on-move
+   * mode: the modal performs both the encryption AND the move into the
+   * given parent atomically. The caller must NOT issue a separate
+   * `moveItem` afterwards; the resolve already reflects both having
+   * happened.
    */
-  requestEncryption: (item: Item) => Promise<void>;
+  requestEncryption: (
+    item: Item,
+    options?: { intoChainParentId?: string },
+  ) => Promise<void>;
   /**
    * Open the recursive-decryption modal for `item` and resolve when
    * the decryption completes. Same cancellation contract.
@@ -86,26 +103,31 @@ export function RecursiveEncryptProvider({ children }: { children: ReactNode }) 
     setActive(next);
   }, []);
 
-  const enqueue = useCallback((mode: Mode, item: Item) => {
-    return new Promise<void>((resolve, reject) => {
-      const req: PendingRequest = {
-        mode,
-        item,
-        resolve,
-        reject,
-        succeeded: false,
-      };
-      if (activeRef.current === null) {
-        activeRef.current = req;
-        setActive(req);
-      } else {
-        queueRef.current.push(req);
-      }
-    });
-  }, []);
+  const enqueue = useCallback(
+    (mode: Mode, item: Item, intoChainParentId?: string) => {
+      return new Promise<void>((resolve, reject) => {
+        const req: PendingRequest = {
+          mode,
+          item,
+          resolve,
+          reject,
+          succeeded: false,
+          intoChainParentId,
+        };
+        if (activeRef.current === null) {
+          activeRef.current = req;
+          setActive(req);
+        } else {
+          queueRef.current.push(req);
+        }
+      });
+    },
+    [],
+  );
 
   const requestEncryption = useCallback(
-    (item: Item) => enqueue('encrypt', item),
+    (item: Item, options?: { intoChainParentId?: string }) =>
+      enqueue('encrypt', item, options?.intoChainParentId),
     [enqueue],
   );
   const requestDecryption = useCallback(
@@ -139,6 +161,7 @@ export function RecursiveEncryptProvider({ children }: { children: ReactNode }) 
         <ModalRecursiveEncrypt
           isOpen
           item={active.item}
+          intoChainParentId={active.intoChainParentId}
           onSuccess={handleSuccess}
           onClose={handleClose}
         />

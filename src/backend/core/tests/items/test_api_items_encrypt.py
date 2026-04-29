@@ -21,7 +21,7 @@ def test_api_items_encrypt_anonymous():
     )
     response = APIClient().patch(
         f"/api/v1.0/items/{item.id!s}/encrypt/",
-        {"encryptedSymmetricKeyPerUser": {}, "encryptedKeysForDescendants": {}},
+        {"encrypted_symmetric_key_per_user": {}, "encrypted_keys_for_descendants": {}},
         format="json",
     )
     assert response.status_code == 401
@@ -39,7 +39,7 @@ def test_api_items_encrypt_authenticated_unrelated():
     client.force_login(user)
     response = client.patch(
         f"/api/v1.0/items/{item.id!s}/encrypt/",
-        {"encryptedSymmetricKeyPerUser": {}, "encryptedKeysForDescendants": {}},
+        {"encrypted_symmetric_key_per_user": {}, "encrypted_keys_for_descendants": {}},
         format="json",
     )
     assert response.status_code == 403 or response.status_code == 404
@@ -58,7 +58,7 @@ def test_api_items_encrypt_reader_forbidden():
     client.force_login(user)
     response = client.patch(
         f"/api/v1.0/items/{item.id!s}/encrypt/",
-        {"encryptedSymmetricKeyPerUser": {user.sub: "fake_key"}},
+        {"encrypted_symmetric_key_per_user": {user.sub: "fake_key"}},
         format="json",
     )
     assert response.status_code == 403
@@ -78,8 +78,9 @@ def test_api_items_encrypt_standalone_file():
     response = client.patch(
         f"/api/v1.0/items/{item.id!s}/encrypt/",
         {
-            "encryptedSymmetricKeyPerUser": {user.sub: "encrypted_key_for_user"},
-            "encryptedKeysForDescendants": {},
+            "encrypted_symmetric_key_per_user": {user.sub: "encrypted_key_for_user"},
+            "encryption_public_key_fingerprint_per_user": {user.sub: "fp"},
+            "encrypted_keys_for_descendants": {},
         },
         format="json",
     )
@@ -116,8 +117,9 @@ def test_api_items_encrypt_folder_with_children():
     response = client.patch(
         f"/api/v1.0/items/{folder.id!s}/encrypt/",
         {
-            "encryptedSymmetricKeyPerUser": {user.sub: "root_key_for_user"},
-            "encryptedKeysForDescendants": {
+            "encrypted_symmetric_key_per_user": {user.sub: "root_key_for_user"},
+            "encryption_public_key_fingerprint_per_user": {user.sub: "fp"},
+            "encrypted_keys_for_descendants": {
                 str(subfolder.pk): "subfolder_wrapped_key",
                 str(file_item.pk): "file_wrapped_key",
             },
@@ -151,7 +153,7 @@ def test_api_items_encrypt_not_restricted():
     client.force_login(user)
     response = client.patch(
         f"/api/v1.0/items/{item.id!s}/encrypt/",
-        {"encryptedSymmetricKeyPerUser": {user.sub: "key"}},
+        {"encrypted_symmetric_key_per_user": {user.sub: "key"}},
         format="json",
     )
     assert response.status_code == 400
@@ -173,7 +175,7 @@ def test_api_items_encrypt_already_encrypted():
     client.force_login(user)
     response = client.patch(
         f"/api/v1.0/items/{item.id!s}/encrypt/",
-        {"encryptedSymmetricKeyPerUser": {user.sub: "key"}},
+        {"encrypted_symmetric_key_per_user": {user.sub: "key"}},
         format="json",
     )
     assert response.status_code == 400
@@ -198,7 +200,10 @@ def test_api_items_encrypt_missing_user_keys():
     # Only provide key for user1, missing user2
     response = client.patch(
         f"/api/v1.0/items/{item.id!s}/encrypt/",
-        {"encryptedSymmetricKeyPerUser": {user1.sub: "key1"}},
+        {
+            "encrypted_symmetric_key_per_user": {user1.sub: "key1"},
+            "encryption_public_key_fingerprint_per_user": {user1.sub: "fp1"},
+        },
         format="json",
     )
     assert response.status_code == 400
@@ -229,7 +234,9 @@ def test_api_items_remove_encryption():
     client.force_login(user)
     response = client.patch(
         f"/api/v1.0/items/{item.id!s}/remove-encryption/",
-        {},
+        # File root needs an entry in `file_key_mapping` for itself
+        # (the new S3 key the frontend uploaded the plaintext to).
+        {"file_key_mapping": {str(item.pk): "new_plaintext.txt"}},
         format="json",
     )
     assert response.status_code == 200

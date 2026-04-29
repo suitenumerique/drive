@@ -1075,10 +1075,25 @@ class MoveItemSerializer(serializers.Serializer):
           finish encryption onboarding — symmetric to /encrypt/).
 
     Self-rooted encrypted → encrypted (DEMOTE — item attaches under a
-    destination chain, per-user wraps cleared):
+    destination chain, per-user wraps preserved as side-doors):
         {"target_item_id": "...",
          "is_encryption_root": false,
          "encrypted_symmetric_key": "<base64>"}
+
+    Plaintext → encrypted (ENCRYPT-ON-MOVE — item enters the chain
+    fully chain-wrapped, NO per-user wraps anywhere). Mirrors
+    /encrypt/'s descendant shape but produces a chain wrap on the
+    moved item instead of a per-user wrap:
+        {"target_item_id": "...",
+         "encrypted_symmetric_key": "<base64 chain wrap of K_item>",
+         "encrypted_keys_for_descendants": {"<uuid>": "<base64>", ...},
+         "file_key_mapping": {"<uuid>": "<new S3 filename>", ...}}
+        - The presence of `encrypted_keys_for_descendants` (even
+          empty for a single-file move) is what tells the backend
+          this is encrypt-on-move, not a chain rewrap. The
+          default-dict on the field is required so a missing key
+          from the client maps to "no descendants" rather than
+          tripping rewrap validation.
     """
 
     target_item_id = serializers.UUIDField(required=False)
@@ -1094,6 +1109,19 @@ class MoveItemSerializer(serializers.Serializer):
     )
     encryption_public_key_fingerprints = serializers.DictField(
         child=serializers.CharField(allow_null=True, allow_blank=True, max_length=16),
+        required=False,
+    )
+    # Encrypt-on-move payload (plaintext → encrypted). Snake_case here
+    # rather than copying /encrypt/'s camelCase outlier — the rest of
+    # MoveItemSerializer is snake_case and mixing within one payload
+    # would be jarring. /encrypt/'s naming is a legacy quirk (see its
+    # own serializer) we don't want to propagate.
+    encrypted_keys_for_descendants = serializers.DictField(
+        child=serializers.CharField(),
+        required=False,
+    )
+    file_key_mapping = serializers.DictField(
+        child=serializers.CharField(),
         required=False,
     )
 
@@ -1156,7 +1184,7 @@ class EncryptItemSerializer(serializers.Serializer):
     After commit, old S3 objects are cleaned up.
     """
 
-    encryptedSymmetricKeyPerUser = serializers.DictField(
+    encrypted_symmetric_key_per_user = serializers.DictField(
         # Value is either a base64 wrapped key (validated user) or
         # explicit null (user is on the access list but has no public key
         # yet — access row is created pending, to be "accepted" later by
@@ -1170,7 +1198,7 @@ class EncryptItemSerializer(serializers.Serializer):
             "never null."
         ),
     )
-    encryptionPublicKeyFingerprintPerUser = serializers.DictField(
+    encryption_public_key_fingerprint_per_user = serializers.DictField(
         # Required: the client must send a fingerprint entry for every
         # user it sent a wrapped-key entry for. Symmetric keys and
         # fingerprints travel as matched pairs — keeping them coupled
@@ -1191,11 +1219,11 @@ class EncryptItemSerializer(serializers.Serializer):
         help_text=(
             "Mapping of user OIDC sub → fingerprint of their public key "
             "at encryption time. Must cover the same set of users as "
-            "`encryptedSymmetricKeyPerUser`; null is valid for pending "
-            "users (no public key to fingerprint yet)."
+            "`encrypted_symmetric_key_per_user`; null is valid for "
+            "pending users (no public key to fingerprint yet)."
         ),
     )
-    encryptedKeysForDescendants = serializers.DictField(
+    encrypted_keys_for_descendants = serializers.DictField(
         child=serializers.CharField(),
         required=False,
         default=dict,
@@ -1204,7 +1232,7 @@ class EncryptItemSerializer(serializers.Serializer):
             "Empty for standalone file encryption."
         ),
     )
-    fileKeyMapping = serializers.DictField(
+    file_key_mapping = serializers.DictField(
         child=serializers.CharField(),
         required=False,
         default=dict,
@@ -1220,7 +1248,7 @@ class EncryptItemSerializer(serializers.Serializer):
 class RemoveEncryptionSerializer(serializers.Serializer):
     """Serializer for removing encryption from an item or subtree."""
 
-    fileKeyMapping = serializers.DictField(
+    file_key_mapping = serializers.DictField(
         child=serializers.CharField(),
         required=False,
         default=dict,

@@ -786,12 +786,40 @@ export class StandardDriver extends Driver {
       fileKeyMapping?: Record<string, string>;
     },
   ): Promise<Item> {
+    // Wire format is snake_case (consistent with the rest of the
+    // backend). Caller-side keeps camelCase to stay idiomatic in TS.
     const response = await fetchAPI(`items/${itemId}/encrypt/`, {
       method: "PATCH",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        encrypted_symmetric_key_per_user: data.encryptedSymmetricKeyPerUser,
+        encryption_public_key_fingerprint_per_user:
+          data.encryptionPublicKeyFingerprintPerUser,
+        encrypted_keys_for_descendants: data.encryptedKeysForDescendants,
+        file_key_mapping: data.fileKeyMapping ?? {},
+      }),
     });
     const json = await response.json();
     return jsonToItem(json);
+  }
+
+  async moveItemEncryptOnMove(
+    itemId: string,
+    data: {
+      targetItemId: string;
+      encryptedSymmetricKey: string;
+      encryptedKeysForDescendants: Record<string, string>;
+      fileKeyMapping?: Record<string, string>;
+    },
+  ): Promise<void> {
+    await fetchAPI(`items/${itemId}/move/`, {
+      method: "POST",
+      body: JSON.stringify({
+        target_item_id: data.targetItemId,
+        encrypted_symmetric_key: data.encryptedSymmetricKey,
+        encrypted_keys_for_descendants: data.encryptedKeysForDescendants,
+        file_key_mapping: data.fileKeyMapping ?? {},
+      }),
+    });
   }
 
   async removeEncryption(
@@ -800,7 +828,9 @@ export class StandardDriver extends Driver {
   ): Promise<Item> {
     const response = await fetchAPI(`items/${itemId}/remove-encryption/`, {
       method: "PATCH",
-      body: JSON.stringify(data ?? {}),
+      body: JSON.stringify({
+        file_key_mapping: data?.fileKeyMapping ?? {},
+      }),
     });
     const json = await response.json();
     return jsonToItem(json);

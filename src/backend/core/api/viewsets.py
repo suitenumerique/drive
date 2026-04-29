@@ -257,6 +257,113 @@ class ItemMetadata(drf.metadata.SimpleMetadata):
         return simple_metadata
 
 
+# =============================================================================
+# Subtree-encryption helpers
+#
+# Both `/encrypt/` (encrypt a subtree at its root) and `/move/` (move a
+# plaintext subtree INTO an encrypted chain) need to:
+#   1. Determine the effective scope, excluding inner encrypted subtrees.
+#   2. Write `is_encrypted=True` + a wrapped key + (optionally) a new
+#      filename onto the root and every descendant in scope.
+#   3. Schedule best-effort post-commit cleanup of the old S3 keys.
+#
+# The differences (per-user wraps + RESTRICTED check at /encrypt/, the
+# `item.move(target)` + chain wrap at /move/) stay in the views; these
+# helpers cover the strictly shared mechanics.
+# =============================================================================
+
+
+def compute_effective_descendants_for_encryption(item):
+    """Descendants of `item` minus everything inside inner encrypted roots.
+
+    Stacked encryption: a folder may already contain inner encrypted
+    subtrees. Those keep their existing keys and per-user ItemAccess
+    rows; we only operate on the "outer" subtree they don't cover.
+    """
+    inner_roots = list(
+        item.descendants().filter(
+            is_encrypted=True,
+            encrypted_symmetric_key__isnull=True,
+        )
+    )
+    qs = item.descendants()
+    for inner in inner_roots:
+        qs = qs.exclude(path__descendants=inner.path)
+    return qs
+
+
+def write_subtree_encryption(
+    *,
+    item,
+    root_chain_wrap,
+    encrypted_keys_for_descendants,
+    file_key_mapping,
+    effective_descendants,
+):
+    """Set `is_encrypted=True` + encryption fields on item + descendants.
+
+    `root_chain_wrap`:
+        - None: the item is itself the encryption root — its
+          `encrypted_symmetric_key` stays NULL. The caller is responsible
+          for writing per-user wraps onto access rows.
+        - str:  the item is being attached under a destination chain —
+          its `encrypted_symmetric_key` carries the chain wrap.
+
+    `encrypted_keys_for_descendants` and `file_key_mapping` are keyed by
+    str(uuid). Caller is responsible for validating that the descendant
+    set matches the live one (mutation 409) before calling this — by
+    the time we get here we trust the inputs.
+
+    Returns the list of old S3 keys (filenames) that the caller should
+    pass to `schedule_s3_cleanup` after the transaction commits.
+    """
+    old_s3_keys = []
+
+    item.is_encrypted = True
+    item.encrypted_symmetric_key = root_chain_wrap
+    update_fields = ["is_encrypted", "encrypted_symmetric_key"]
+    if str(item.pk) in file_key_mapping:
+        old_s3_keys.append(item.file_key)
+        item.filename = file_key_mapping[str(item.pk)]
+        update_fields.append("filename")
+    item.save(update_fields=update_fields)
+
+    for descendant in effective_descendants:
+        descendant.is_encrypted = True
+        descendant.encrypted_symmetric_key = encrypted_keys_for_descendants.get(
+            str(descendant.pk)
+        )
+        desc_fields = ["is_encrypted", "encrypted_symmetric_key"]
+        if str(descendant.pk) in file_key_mapping:
+            old_s3_keys.append(descendant.file_key)
+            descendant.filename = file_key_mapping[str(descendant.pk)]
+            desc_fields.append("filename")
+        descendant.save(update_fields=desc_fields)
+
+    return old_s3_keys
+
+
+def schedule_s3_cleanup(old_s3_keys):
+    """Best-effort post-commit deletion of S3 objects.
+
+    Failures are logged, never raised — by the time we get here the
+    DB transaction has committed and we can't undo it.
+    """
+    if not old_s3_keys:
+        return
+
+    def _cleanup():
+        s3_client = default_storage.connection.meta.client
+        bucket = default_storage.bucket_name
+        for old_key in old_s3_keys:
+            try:
+                s3_client.delete_object(Bucket=bucket, Key=old_key)
+            except ClientError:
+                logger.warning("Failed to delete old S3 key: %s", old_key)
+
+    transaction.on_commit(_cleanup)
+
+
 # pylint: disable=too-many-public-methods
 class ItemViewSet(
     SerializerPerActionMixin,
@@ -936,7 +1043,7 @@ class ItemViewSet(
                 {"target_item_id": message}, code="item_move_missing_permission"
             )
 
-        # Encryption-aware move. Four resolved shapes — see
+        # Encryption-aware move. Five resolved shapes — see
         # `MoveItemSerializer` for the payload schema. We validate first
         # (so a malformed payload never moves the item) then apply the
         # move, then apply the encryption state change atomically.
@@ -946,6 +1053,18 @@ class ItemViewSet(
         fingerprint_per_user = validated_data.get(
             "encryption_public_key_fingerprints", {}
         )
+        # Encrypt-on-move payload: the presence of either field is the
+        # signal we're looking at the plaintext-into-chain shape (an
+        # empty dict still counts — single-file moves have no
+        # descendants but still go through this path).
+        encrypt_on_move = (
+            "encrypted_keys_for_descendants" in validated_data
+            or "file_key_mapping" in validated_data
+        )
+        encrypted_keys_for_descendants = validated_data.get(
+            "encrypted_keys_for_descendants", {}
+        )
+        file_key_mapping = validated_data.get("file_key_mapping", {})
         target_is_encrypted = target_item.is_encrypted if target_item else False
         # Source flags. `source_is_root` means the item currently holds
         # its key per-user (no chain wrap of its own).
@@ -955,9 +1074,126 @@ class ItemViewSet(
         )
         source_in_chain = source_is_encrypted and not source_is_root
 
-        # Reject plaintext-into-encrypted: caller must encrypt first
-        # (the recursive-encryption modal does that ahead of retrying
-        # the move).
+        # Encrypt-on-move (plaintext → encrypted): plaintext source
+        # picks up the chain wrap inline, no /encrypt/ round trip, no
+        # per-user wraps materialised on inherited-only collaborators.
+        if encrypt_on_move:
+            if source_is_encrypted:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "detail": _(
+                            "Encrypt-on-move payload is only valid for "
+                            "plaintext source items."
+                        )
+                    },
+                    code="item_move_encrypt_on_move_source_encrypted",
+                )
+            if not target_is_encrypted:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "detail": _(
+                            "Encrypt-on-move requires moving INTO an "
+                            "encrypted folder."
+                        )
+                    },
+                    code="item_move_encrypt_on_move_plain_target",
+                )
+            if not encrypted_symmetric_key:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "encrypted_symmetric_key": _(
+                            "Required for encrypt-on-move (chain wrap of "
+                            "the item's symmetric key)."
+                        )
+                    },
+                    code="item_move_chain_wrap_required",
+                )
+            if is_encryption_root_flag is not None:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "is_encryption_root": _(
+                            "Not applicable to encrypt-on-move; the item "
+                            "enters as a chain descendant."
+                        )
+                    },
+                    code="item_move_conflicting_flag",
+                )
+            if per_user_encrypted_keys is not None:
+                raise drf.exceptions.ValidationError(
+                    {
+                        "per_user_encrypted_keys": _(
+                            "Encrypt-on-move uses chain wraps only — no "
+                            "per-user wraps."
+                        )
+                    },
+                    code="item_move_conflicting_wrap",
+                )
+            # No pending invitations on item or descendants (mirrors
+            # /encrypt/'s precondition).
+            descendant_ids_pre = list(item.descendants().values_list("pk", flat=True))
+            all_item_ids = [item.pk] + descendant_ids_pre
+            if models.Invitation.objects.filter(item_id__in=all_item_ids).exists():
+                raise drf.exceptions.ValidationError(
+                    {
+                        "detail": _(
+                            "All pending invitations must be resolved "
+                            "before encrypting on move."
+                        )
+                    },
+                    code="item_move_pending_invitations",
+                )
+            # Materialise the descendant set BEFORE the move. The path
+            # filter on `descendants()` captures `item.path` at filter-
+            # build time; once `item.move(target)` rewrites paths via
+            # raw SQL, re-evaluating the queryset returns nothing
+            # (filter still references the old path value).
+            effective_descendants = list(
+                compute_effective_descendants_for_encryption(item)
+            )
+            live_descendant_ids = {str(d.pk) for d in effective_descendants}
+            provided_descendant_ids = set(encrypted_keys_for_descendants.keys())
+            if live_descendant_ids != provided_descendant_ids:
+                return drf.response.Response(
+                    {
+                        "detail": _(
+                            "Folder contents changed during the operation. "
+                            "Please retry."
+                        ),
+                        "code": "subtree_mutated",
+                        "missing": sorted(
+                            live_descendant_ids - provided_descendant_ids
+                        ),
+                        "extra": sorted(
+                            provided_descendant_ids - live_descendant_ids
+                        ),
+                    },
+                    status=drf.status.HTTP_409_CONFLICT,
+                )
+            # Apply: move + write subtree encryption (chain-wrapped at
+            # the root). No per-user wraps anywhere in this subtree —
+            # decryption flows through the destination chain.
+            item.move(target_item)
+            old_s3_keys = write_subtree_encryption(
+                item=item,
+                root_chain_wrap=encrypted_symmetric_key,
+                encrypted_keys_for_descendants=encrypted_keys_for_descendants,
+                file_key_mapping=file_key_mapping,
+                effective_descendants=effective_descendants,
+            )
+            # Sync link reach with the new (encrypted) parent — same
+            # rule as plain moves: a child item's link_reach is None
+            # so it inherits the parent's RESTRICTED.
+            item.link_reach = None
+            item.save(update_fields=["link_reach"])
+            schedule_s3_cleanup(old_s3_keys)
+            posthog_capture("item_moved", user, {}, item=item)
+            return drf.response.Response(
+                {"message": "item moved successfully."}, status=status.HTTP_200_OK
+            )
+
+        # Reject plaintext-into-encrypted without the encrypt-on-move
+        # payload: the caller has to either encrypt first, or use the
+        # encrypt-on-move shape above.
         if not source_is_encrypted and target_is_encrypted:
             raise drf.exceptions.ValidationError(
                 {
@@ -1818,9 +2054,9 @@ class ItemViewSet(
         serializer = serializers.EncryptItemSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        encrypted_key_per_user = serializer.validated_data["encryptedSymmetricKeyPerUser"]
+        encrypted_key_per_user = serializer.validated_data["encrypted_symmetric_key_per_user"]
         encrypted_keys_for_descendants = serializer.validated_data[
-            "encryptedKeysForDescendants"
+            "encrypted_keys_for_descendants"
         ]
 
         # Validate: all users with access (direct OR inherited via an
@@ -1868,36 +2104,19 @@ class ItemViewSet(
                 status=drf.status.HTTP_400_BAD_REQUEST,
             )
 
-        # Find any inner encrypted subtrees already rooted inside this item
-        # ("stacked encryption"). Those descendants — and everything under
-        # them — are out of scope: they keep their existing keys and their
-        # own per-user ItemAccess records. We only encrypt items in the
-        # effective scope (this item's descendants minus each inner root's
-        # subtree).
-        inner_roots = list(
-            item.descendants().filter(
-                is_encrypted=True,
-                encrypted_symmetric_key__isnull=True,
-            )
+        # Effective scope = descendants minus inner encrypted subtrees.
+        # Materialise into a list so subsequent operations (post-move
+        # in the encrypt-on-move flow; here just defensive) don't
+        # re-query against a possibly-stale path predicate.
+        effective_descendants = list(
+            compute_effective_descendants_for_encryption(item)
         )
-        effective_descendants_qs = item.descendants()
-        for inner in inner_roots:
-            effective_descendants_qs = effective_descendants_qs.exclude(
-                path__descendants=inner.path,
-            )
 
-        # Validate: a wrapped key must be provided for every descendant in
-        # the effective scope (files AND nested folders). The hierarchical
-        # key model stores each descendant's key wrapped by its direct
-        # parent folder's key, so /key-chain/ can walk from the user's
-        # entry point down to any leaf. This also doubles as an integrity
-        # check: if the subtree mutated between frontend discovery and
-        # this commit (another user added a file, a folder, etc.), the
-        # provided id set won't match the live one and we abort the whole
-        # operation so the user can re-discover + retry.
-        live_descendant_ids = {
-            str(pk) for pk in effective_descendants_qs.values_list("pk", flat=True)
-        }
+        # Validate descendant set: every effective descendant must be
+        # covered by a wrapped key entry. Doubles as a mutation check —
+        # if the subtree changed between frontend discovery and this
+        # commit, the id sets won't match and we abort the whole op.
+        live_descendant_ids = {str(d.pk) for d in effective_descendants}
         provided_descendant_ids = set(encrypted_keys_for_descendants.keys())
         if live_descendant_ids != provided_descendant_ids:
             return drf.response.Response(
@@ -1913,36 +2132,18 @@ class ItemViewSet(
                 status=drf.status.HTTP_409_CONFLICT,
             )
 
-        file_key_mapping = serializer.validated_data["fileKeyMapping"]
+        file_key_mapping = serializer.validated_data["file_key_mapping"]
 
-        # Collect old S3 keys for cleanup after commit
-        old_s3_keys = []
-
-        # Apply encryption: mark item as encrypted (it's the encryption root)
-        item.is_encrypted = True
-        item.encrypted_symmetric_key = None  # root has per-user keys, not parent-wrapped
-        update_fields = ["is_encrypted", "encrypted_symmetric_key"]
-        # Swap filename to point to the new S3 key where encrypted content was uploaded
-        # title stays the same (visible name), only the S3 key changes
-        if str(item.pk) in file_key_mapping:
-            old_s3_keys.append(item.file_key)
-            item.filename = file_key_mapping[str(item.pk)]
-            update_fields.append("filename")
-        item.save(update_fields=update_fields)
-
-        # Apply encryption to descendants in the effective scope only —
-        # inner encrypted subtrees keep their existing state untouched.
-        for descendant in effective_descendants_qs.iterator():
-            descendant.is_encrypted = True
-            descendant.encrypted_symmetric_key = encrypted_keys_for_descendants.get(
-                str(descendant.pk)
-            )
-            desc_fields = ["is_encrypted", "encrypted_symmetric_key"]
-            if str(descendant.pk) in file_key_mapping:
-                old_s3_keys.append(descendant.file_key)
-                descendant.filename = file_key_mapping[str(descendant.pk)]
-                desc_fields.append("filename")
-            descendant.save(update_fields=desc_fields)
+        # Apply encryption to root + descendants. `root_chain_wrap=None`
+        # because /encrypt/ produces a self-rooted item (per-user wraps
+        # land below); chain mode is for /move/.
+        old_s3_keys = write_subtree_encryption(
+            item=item,
+            root_chain_wrap=None,
+            encrypted_keys_for_descendants=encrypted_keys_for_descendants,
+            file_key_mapping=file_key_mapping,
+            effective_descendants=effective_descendants,
+        )
 
         # Store per-user encrypted keys on ItemAccess records that live on
         # THIS item. Keys *must* sit here — not on an ancestor's ItemAccess
@@ -1967,7 +2168,7 @@ class ItemViewSet(
         # encrypted for (surfaced in the "key mismatch" panel when
         # decrypt fails on a rotated key).
         fingerprint_per_user = serializer.validated_data[
-            "encryptionPublicKeyFingerprintPerUser"
+            "encryption_public_key_fingerprint_per_user"
         ]
         fingerprint_subs = set(fingerprint_per_user.keys())
         if fingerprint_subs != provided_user_subs:
@@ -1982,7 +2183,7 @@ class ItemViewSet(
                 {
                     "detail": _(
                         "Provided fingerprints do not match the users in "
-                        "encryptedSymmetricKeyPerUser."
+                        "encrypted_symmetric_key_per_user."
                     ),
                     **errors,
                 },
@@ -2032,17 +2233,7 @@ class ItemViewSet(
                     ),
                 )
 
-        # After DB commit: clean up old S3 objects (best-effort)
-        def _cleanup_old_s3_keys():
-            s3_client = default_storage.connection.meta.client
-            bucket = default_storage.bucket_name
-            for old_key in old_s3_keys:
-                try:
-                    s3_client.delete_object(Bucket=bucket, Key=old_key)
-                except ClientError:
-                    logger.warning("Failed to delete old S3 key: %s", old_key)
-
-        transaction.on_commit(_cleanup_old_s3_keys)
+        schedule_s3_cleanup(old_s3_keys)
 
         return drf.response.Response(
             self.get_serializer(item).data,
@@ -2057,7 +2248,7 @@ class ItemViewSet(
         """Remove encryption from an item or subtree.
 
         The frontend uploads decrypted file content to new S3 keys, then calls
-        this endpoint with a fileKeyMapping. The backend atomically swaps
+        this endpoint with a file_key_mapping. The backend atomically swaps
         file_key_override and clears encryption fields. Old encrypted S3 objects
         are cleaned up after commit.
         """
@@ -2100,7 +2291,7 @@ class ItemViewSet(
 
         serializer = serializers.RemoveEncryptionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        file_key_mapping = serializer.validated_data["fileKeyMapping"]
+        file_key_mapping = serializer.validated_data["file_key_mapping"]
 
         # Stacked encryption: exclude inner encryption roots and their
         # subtrees from the removal scope. Those are independent encrypted
