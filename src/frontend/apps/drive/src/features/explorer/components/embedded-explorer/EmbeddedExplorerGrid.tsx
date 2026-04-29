@@ -9,11 +9,7 @@ import {
 } from "react";
 import { useSelectionStore } from "@/features/explorer/stores/selectionStore";
 import { useTranslation } from "react-i18next";
-import {
-  CellContext,
-  createColumnHelper,
-  Row,
-} from "@tanstack/react-table";
+import { CellContext, createColumnHelper, Row } from "@tanstack/react-table";
 import { useReactTable } from "@tanstack/react-table";
 import { getCoreRowModel } from "@tanstack/react-table";
 import { AppExplorerProps } from "@/features/explorer/components/app-view/AppExplorer";
@@ -47,6 +43,9 @@ import { ColumnHeader } from "./headers/ColumnHeader";
 import { CustomizableColumnHeader } from "./headers/CustomizableColumnHeader";
 import { useDuplicatingItemsPoller } from "../../hooks/useDuplicatingItemsPoller";
 import { EmbeddedExplorerGridRow } from "./EmbeddedExplorerGridRow";
+import posthog from "posthog-js";
+
+const POSTHOG_EVENT_COLUMN_TYPE_CHANGED = "column_type_changed";
 
 export type EmbeddedExplorerGridProps = {
   isCompact?: boolean;
@@ -200,13 +199,27 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   );
 
   const handleChangeCol1 = useCallback(
-    (type: ColumnType) => props.onChangeColumn?.("column1", type),
-    [props.onChangeColumn],
+    (type: ColumnType) => {
+      posthog.capture(POSTHOG_EVENT_COLUMN_TYPE_CHANGED, {
+        slot: "column1",
+        new_type: type,
+        previous_type: props.prefs?.column1,
+      });
+      props.onChangeColumn?.("column1", type);
+    },
+    [props.onChangeColumn, props.prefs?.column1],
   );
 
   const handleChangeCol2 = useCallback(
-    (type: ColumnType) => props.onChangeColumn?.("column2", type),
-    [props.onChangeColumn],
+    (type: ColumnType) => {
+      posthog.capture(POSTHOG_EVENT_COLUMN_TYPE_CHANGED, {
+        slot: "column2",
+        new_type: type,
+        previous_type: props.prefs?.column2,
+      });
+      props.onChangeColumn?.("column2", type);
+    },
+    [props.onChangeColumn, props.prefs?.column2],
   );
 
   const contextValue = useMemo<EmbeddedExplorerGridContextType>(
@@ -353,12 +366,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
         items: getItemActionMenuItems(row.original),
       });
     },
-    [
-      props.displayMode,
-      selectionStore,
-      contextMenu,
-      getItemActionMenuItems,
-    ],
+    [props.displayMode, selectionStore, contextMenu, getItemActionMenuItems],
   );
 
   const handleRowOver = useCallback(

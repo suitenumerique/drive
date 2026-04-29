@@ -16,6 +16,7 @@ import {
   getCellText,
   getColumnHeader,
 } from "./utils/custom-columns-utils";
+import { setupPosthogEventCapture } from "./utils/posthog-utils";
 
 const PDF_FILE_PATH = path.join(__dirname, "/assets/pv_cm.pdf");
 const DOCX_FILE_PATH = path.join(__dirname, "/assets/empty_doc.docx");
@@ -336,5 +337,28 @@ test.describe("Custom columns", () => {
     await expect(
       page.getByRole("menuitem", { name: "Created by (default)" }),
     ).toBeVisible();
+  });
+});
+
+test.describe("Custom columns analytics", () => {
+  test("Changing column type sends posthog event with slot", async ({
+    page,
+  }) => {
+    await clearDb();
+    const { expectEventSentWithProps } = await setupPosthogEventCapture(page);
+    await login(page, "drive@example.com");
+    await page.goto("/");
+    await clickToMyFiles(page);
+    await createFolderInCurrentFolder(page, "MyFolder");
+
+    await changeColumnType(page, 1, "File size");
+    await expectEventSentWithProps("column_type_changed", {
+      slot: "column1",
+    });
+
+    await changeColumnType(page, 2, "File type");
+    await expectEventSentWithProps("column_type_changed", {
+      slot: "column2",
+    });
   });
 });
