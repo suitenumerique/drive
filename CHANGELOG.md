@@ -14,6 +14,7 @@ and this project adheres to
 - ✨(backend) add entitlements context and can_upload reason
 - ✨(frontend) add entitlement disclaimer modal
 - ✨(frontend) render PDF previews at per-page dimensions
+- ✨(tracking) add posthog events on custom columns and item duplication
 
 ### Fixed
 

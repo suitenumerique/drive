@@ -1641,6 +1641,8 @@ class ItemViewSet(
             duplicated_item_id=duplicated_item.id,
         )
 
+        posthog_capture("item_duplicate", user, {}, item=duplicated_item)
+
         serializer = self.get_serializer(duplicated_item)
         return drf.response.Response(serializer.data, status=drf.status.HTTP_201_CREATED)
 
