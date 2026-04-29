@@ -2,6 +2,11 @@ import { expect, Page } from "@playwright/test";
 
 const FAKE_POSTHOG_HOST = "http://fake-ph.test";
 
+type CapturedEvent = {
+  event: string;
+  properties: Record<string, unknown>;
+};
+
 /**
  * Intercepts the config API to enable PostHog with a fake key and
  * captures all PostHog events sent by the page.
@@ -9,12 +14,14 @@ const FAKE_POSTHOG_HOST = "http://fake-ph.test";
  * Must be called **before** any page navigation (e.g. before `page.goto`).
  *
  * @returns An object with:
- *  - `events`: the live array of captured event names
- *  - `expectEventSent(name, timeout?)`: assertion helper that polls
- *     until the given event appears
+ *  - `events`: the live array of captured events with their properties
+ *  - `expectEventSent(name, timeout?)`: polls until the given event name appears
+ *  - `expectEventSentWithProps(name, props, timeout?)`: polls until at least
+ *     one captured event matches the name AND has every entry in `props`
+ *     as a strict equality match
  */
 export const setupPosthogEventCapture = async (page: Page) => {
-  const events: string[] = [];
+  const events: CapturedEvent[] = [];
 
   await page.route("**/api/v1.0/config/**", async (route) => {
     const response = await route.fetch();
@@ -28,7 +35,10 @@ export const setupPosthogEventCapture = async (page: Page) => {
     try {
       const postData = JSON.parse(route.request().postData() ?? "{}");
       if (postData.event) {
-        events.push(postData.event);
+        events.push({
+          event: postData.event,
+          properties: postData.properties ?? {},
+        });
       }
     } catch {
       // ignore non-JSON requests (e.g. /decide)
@@ -42,9 +52,29 @@ export const setupPosthogEventCapture = async (page: Page) => {
 
   const expectEventSent = async (eventName: string, timeout = 5000) => {
     await expect
-      .poll(() => events.includes(eventName), { timeout })
+      .poll(() => events.some((e) => e.event === eventName), { timeout })
       .toBe(true);
   };
 
-  return { events, expectEventSent };
+  const expectEventSentWithProps = async (
+    eventName: string,
+    expectedProps: Record<string, unknown>,
+    timeout = 5000,
+  ) => {
+    await expect
+      .poll(
+        () =>
+          events.some(
+            (e) =>
+              e.event === eventName &&
+              Object.entries(expectedProps).every(
+                ([k, v]) => e.properties[k] === v,
+              ),
+          ),
+        { timeout },
+      )
+      .toBe(true);
+  };
+
+  return { events, expectEventSent, expectEventSentWithProps };
 };
