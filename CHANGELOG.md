@@ -18,6 +18,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(backend) accept CDFV2 mimetype from newer libmagic
+- 🐛(backend) better transaction management on duplicate action
 
 ### Removed
 

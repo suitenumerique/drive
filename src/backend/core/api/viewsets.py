@@ -1596,7 +1596,6 @@ class ItemViewSet(
         methods=["post"],
         url_path="duplicate",
     )
-    @transaction.atomic
     def duplicate(self, request, *args, **kwargs):
         """
         Duplicate an item of type File. The item is duplicated in the folder where the original
@@ -1613,28 +1612,28 @@ class ItemViewSet(
             # If the user as reader role on the parent folder, then the duplicated
             # item must be created at the user's root
             parent = None
-
-        duplicated_item = models.Item.objects.create_child(
-            creator=user,
-            link_reach=None if parent else LinkReachChoices.RESTRICTED,
-            parent=parent,
-            title=capfirst(
-                _("copy of {title}").format(title=item_to_duplicate.title)
-            ),  # Title uniqueness is managed in the create_child method
-            type=models.ItemTypeChoices.FILE,
-            size=item_to_duplicate.size,
-            upload_state=models.ItemUploadStateChoices.DUPLICATING,
-            mimetype=item_to_duplicate.mimetype,
-            filename=item_to_duplicate.filename,
-            description=item_to_duplicate.description,
-        )
-
-        if duplicated_item.is_root:
-            models.ItemAccess.objects.create(
-                item=duplicated_item,
-                user=user,
-                role=models.RoleChoices.OWNER,
+        with transaction.atomic():
+            duplicated_item = models.Item.objects.create_child(
+                creator=user,
+                link_reach=None if parent else LinkReachChoices.RESTRICTED,
+                parent=parent,
+                title=capfirst(
+                    _("copy of {title}").format(title=item_to_duplicate.title)
+                ),  # Title uniqueness is managed in the create_child method
+                type=models.ItemTypeChoices.FILE,
+                size=item_to_duplicate.size,
+                upload_state=models.ItemUploadStateChoices.DUPLICATING,
+                mimetype=item_to_duplicate.mimetype,
+                filename=item_to_duplicate.filename,
+                description=item_to_duplicate.description,
             )
+
+            if duplicated_item.is_root:
+                models.ItemAccess.objects.create(
+                    item=duplicated_item,
+                    user=user,
+                    role=models.RoleChoices.OWNER,
+                )
 
         # Then duplicate the file in async way
         duplicate_file.delay(
