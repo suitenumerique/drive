@@ -15,8 +15,7 @@ import { Icon, IconSize } from "@gouvfr-lasuite/ui-kit";
 import { NavigationItem } from "../GlobalExplorerContext";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 import clsx from "clsx";
-import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
-import { useItem } from "../../hooks/useQueries";
+import { useItemWithBreadcrumb } from "../../hooks/useBreadcrumb";
 import { useRouter } from "next/router";
 import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
 import { ItemShareModal } from "../modals/share/ItemShareModal";
@@ -67,13 +66,12 @@ const BaseBreadcrumbs = ({
   const { user } = useAuth();
 
   const defaultRouteData = getDefaultRoute(router.pathname);
-  const { data: breadcrumb } = useBreadcrumbQuery(currentItemId);
-
-  const { data: fetchedItem } = useItem(currentItemId!, {
-    enabled: !!currentItemId && !itemFromProps,
-  });
-
-  const item = itemFromProps ?? fetchedItem;
+  const { data } = useItemWithBreadcrumb(currentItemId);
+  // Prefer itemFromProps when provided: it comes from the surrounding
+  // explorer context which may have applied an optimistic mutation (rename,
+  // share toggle…) that the cached query data hasn't reflected yet.
+  const item = itemFromProps ?? data?.item;
+  const breadcrumb = data?.breadcrumb;
 
   const handleGoBack = (item: Item | ItemBreadcrumb) => {
     onGoBack?.(item);
@@ -92,7 +90,9 @@ const BaseBreadcrumbs = ({
       >
         {defaultRouteData.icon({ size: IconSize.MEDIUM })}
 
-        {t(defaultRouteData.label)}
+        <span className="c__breadcrumbs__button__label">
+          {t(defaultRouteData.label)}
+        </span>
       </div>
     );
   };
@@ -180,32 +180,53 @@ const BaseBreadcrumbs = ({
   };
 
   const breadcrumbsItems = useMemo(() => {
+    const markLastActive = (entries: BreadcrumbItem[]): BreadcrumbItem[] => {
+      if (entries.length === 0) return entries;
+      const lastIdx = entries.length - 1;
+      return entries.map((entry, idx) =>
+        idx === lastIdx ? { ...entry, isActive: true } : entry,
+      );
+    };
+
     if (forcedBreadcrumbsItems) {
-      return forcedBreadcrumbsItems.map((item) => ({
-        content: (
-          <BreadcrumbItemButton
-            item={item}
-            onClick={() => handleGoBack(item)}
-          />
-        ),
-      }));
+      return markLastActive(
+        forcedBreadcrumbsItems.map((item) => ({
+          content: (
+            <BreadcrumbItemButton
+              item={item}
+              onClick={() => handleGoBack(item)}
+            />
+          ),
+          label: item.title,
+          onClick: () => handleGoBack(item),
+        })),
+      );
     }
     const breadcrumbsItems: BreadcrumbItem[] = [];
 
     if (defaultRouteData && !showAllFolderItem) {
       breadcrumbsItems.push({
         content: getDefaultRouteButton(defaultRouteData),
+        label: t(defaultRouteData.label),
+        onClick: () => router.push(defaultRouteData.route),
       });
     }
 
     const fromRouteButton = getFromRouteButton();
     if (fromRouteButton && !showAllFolderItem) {
+      const fromRouteData =
+        getFromRouteManualDefaultRouteData() ?? getGuessedDefaultRouteData();
       breadcrumbsItems.push({
         content: fromRouteButton,
+        label: fromRouteData ? t(fromRouteData.label) : "",
+        onClick: fromRouteData
+          ? () => router.push(fromRouteData.route)
+          : undefined,
       });
     }
 
     if (showAllFolderItem) {
+      const allFoldersLabel = t("explorer.breadcrumbs.all_folders");
       breadcrumbsItems.push({
         content: (
           <div
@@ -214,9 +235,13 @@ const BaseBreadcrumbs = ({
               goToSpaces?.();
             }}
           >
-            {t("explorer.breadcrumbs.all_folders")}
+            <span className="c__breadcrumbs__button__label">
+              {allFoldersLabel}
+            </span>
           </div>
         ),
+        label: allFoldersLabel,
+        onClick: () => goToSpaces?.(),
       });
     }
 
@@ -224,28 +249,27 @@ const BaseBreadcrumbs = ({
       ? (breadcrumb ?? []).slice(0, -1)
       : (breadcrumb ?? []);
 
-    const lastItem = item;
-
-    breadcrumbsData.forEach((item) => {
-      const isActive = item.id === lastItem?.id;
+    breadcrumbsData.forEach((crumb) => {
       breadcrumbsItems.push({
         content: (
           <BreadcrumbItemButton
-            item={item}
-            onClick={() => handleGoBack(item)}
-            isActive={isActive}
+            item={crumb}
+            onClick={() => handleGoBack(crumb)}
           />
         ),
+        label: crumb.title,
+        onClick: () => handleGoBack(crumb),
       });
     });
 
-    if (showMenuLastItem && lastItem) {
+    if (showMenuLastItem && item) {
       breadcrumbsItems.push({
-        content: <LastItemBreadcrumb item={lastItem} />,
+        content: <LastItemBreadcrumb item={item} />,
+        label: item.title,
       });
     }
 
-    return breadcrumbsItems;
+    return markLastActive(breadcrumbsItems);
   }, [
     showAllFolderItem,
     currentItemId,
@@ -278,7 +302,7 @@ export const BreadcrumbItemButton = ({
       data-testid="breadcrumb-button"
       onClick={onClick}
     >
-      {item.title}
+      <span className="c__breadcrumbs__button__label">{item.title}</span>
       {rightIcon}
     </button>
   );
