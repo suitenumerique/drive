@@ -40,10 +40,6 @@ export const AppExplorerBreadcrumbs = () => {
     (onDefaultRoute && defaultRouteId === DefaultRoute.MY_FILES) ||
     (!onDefaultRoute && item?.abilities?.children_create);
 
-  if (!item && !onDefaultRoute) {
-    return null;
-  }
-
   return (
     <>
       <div className="explorer__content__breadcrumbs">
