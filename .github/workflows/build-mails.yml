@@ -14,12 +14,12 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "18"
 
       - name: Restore the mail templates
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         id: mail-templates
         with:
           path: "src/backend/core/templates/mail"
@@ -39,7 +39,7 @@ jobs:
 
       - name: Cache mail templates
         if: steps.mail-templates.outputs.cache-hit != 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: "src/backend/core/templates/mail"
           key: mail-templates-${{ hashFiles('src/mail/mjml') }}
