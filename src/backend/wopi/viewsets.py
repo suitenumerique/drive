@@ -126,6 +126,11 @@ class WopiViewSet(viewsets.ViewSet):
         head_object = get_item_file_head_object(item)
         if max_expected_size:
             if int(head_object["ContentLength"]) > int(max_expected_size):
+                logger.info(
+                    "get_file_content: file size %s exceeds X-WOPI-MaxExpectedSize header value %s",
+                    int(head_object["ContentLength"]),
+                    int(max_expected_size),
+                )
                 return Response(status=412)
 
         s3_client = default_storage.connection.meta.client
