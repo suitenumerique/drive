@@ -24,6 +24,10 @@ and this project adheres to
 
 - 🔥(backend) remove mirroring feature
 
+### Fixed
+
+- 🐛(backend) fix indexing payload is_active and reach
+
 ## [v0.17.0] - 2026-04-23
 
 ### Added
