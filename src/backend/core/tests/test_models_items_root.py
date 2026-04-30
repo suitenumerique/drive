@@ -51,6 +51,7 @@ def test_models_sub_item_abilities_downgraded():
         "children_list": True,
         "destroy": True,
         "duplicate": False,
+        "export": False,
         "hard_delete": True,
         "favorite": True,
         "invite_owner": False,
@@ -85,6 +86,7 @@ def test_models_sub_item_abilities_downgraded():
         "children_list": True,
         "destroy": True,
         "duplicate": False,
+        "export": False,
         "hard_delete": True,
         "favorite": True,
         "invite_owner": False,
@@ -132,6 +134,7 @@ def test_models_items_root_get_abilities_owner(
         users=[(user, "owner")], type=item_type, update_upload_state=upload_state
     )
     link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -140,6 +143,7 @@ def test_models_items_root_get_abilities_owner(
         "children_list": True,
         "destroy": True,
         "duplicate": can_duplicate,
+        "export": can_export,
         "hard_delete": True,
         "favorite": True,
         "invite_owner": True,
@@ -168,6 +172,7 @@ def test_models_items_root_get_abilities_owner(
         "children_list": False,
         "destroy": False,
         "duplicate": False,
+        "export": False,
         "hard_delete": True,
         "favorite": False,
         "invite_owner": False,
@@ -213,6 +218,7 @@ def test_models_items_root_get_abilities_administrator(
         update_upload_state=upload_state,
     )
     link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -221,6 +227,7 @@ def test_models_items_root_get_abilities_administrator(
         "children_list": True,
         "destroy": False,
         "duplicate": can_duplicate,
+        "export": can_export,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
@@ -273,6 +280,7 @@ def test_models_items_root_get_abilities_editor_user(
         users=[(user, "editor")], type=item_type, update_upload_state=upload_state
     )
     link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": True,
@@ -281,6 +289,7 @@ def test_models_items_root_get_abilities_editor_user(
         "children_list": True,
         "destroy": False,
         "duplicate": can_duplicate,
+        "export": can_export,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
@@ -323,6 +332,7 @@ def test_models_items_root_get_abilities_reader_user(
     item = factories.ItemFactory(users=[(user, "reader")], type=item_type)
     access_from_link = item.link_reach != "restricted" and item.link_role == "editor"
     link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": True,
@@ -331,6 +341,7 @@ def test_models_items_root_get_abilities_reader_user(
         "children_list": True,
         "destroy": False,
         "duplicate": can_duplicate and access_from_link,
+        "export": can_export,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,

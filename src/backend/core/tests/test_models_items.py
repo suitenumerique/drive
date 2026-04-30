@@ -240,6 +240,7 @@ def test_models_items_get_abilities_forbidden(
         "children_list": False,
         "destroy": False,
         "duplicate": False,
+        "export": False,
         "hard_delete": False,
         "favorite": False,
         "invite_owner": False,
@@ -279,6 +280,7 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
     """
     item = factories.ItemFactory(link_reach=reach, link_role="reader")
     user = factories.UserFactory() if is_authenticated else AnonymousUser()
+    can_export = item.type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": False,
@@ -287,6 +289,7 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         "children_list": True,
         "destroy": False,
         "duplicate": False,
+        "export": can_export,
         "hard_delete": False,
         "favorite": is_authenticated,
         "invite_owner": False,
@@ -380,6 +383,7 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913
     )
 
     user = factories.UserFactory() if is_authenticated else AnonymousUser()
+    can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": False,
@@ -388,6 +392,7 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913
         "children_list": True,
         "destroy": False,
         "duplicate": can_duplicate,
+        "export": can_export,
         "hard_delete": False,
         "favorite": is_authenticated,
         "invite_owner": False,
@@ -440,6 +445,7 @@ def test_models_items_not_root_get_abilities_owner(
     item = factories.ItemFactory(
         users=[(user, "owner")], type=item_type, update_upload_state=upload_state
     )
+    can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -448,6 +454,7 @@ def test_models_items_not_root_get_abilities_owner(
         "children_list": True,
         "destroy": True,
         "duplicate": can_duplicate,
+        "export": can_export,
         "hard_delete": True,
         "favorite": True,
         "invite_owner": True,
@@ -480,6 +487,7 @@ def test_models_items_not_root_get_abilities_owner(
         "children_list": False,
         "destroy": False,
         "duplicate": False,
+        "export": False,
         "hard_delete": True,
         "favorite": False,
         "invite_owner": False,
@@ -524,6 +532,7 @@ def test_models_items_not_root_get_abilities_administrator(
         type=item_type,
         update_upload_state=upload_state,
     )
+    can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -532,6 +541,7 @@ def test_models_items_not_root_get_abilities_administrator(
         "children_list": True,
         "destroy": False,
         "duplicate": can_duplicate,
+        "export": can_export,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
@@ -594,6 +604,7 @@ def test_models_items_not_root_get_abilities_editor_user(
         update_upload_state=upload_state,
     )
     link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": True,
@@ -602,6 +613,7 @@ def test_models_items_not_root_get_abilities_editor_user(
         "children_list": True,
         "destroy": False,
         "duplicate": can_duplicate,
+        "export": can_export,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
@@ -640,6 +652,7 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
     )
     item = factories.ItemFactory(parent=parent)
     access_from_link = item.link_reach != "restricted" and item.link_role == "editor"
+    can_export = item.type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": True,
@@ -648,6 +661,7 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "children_list": True,
         "destroy": False,
         "duplicate": access_from_link,
+        "export": can_export,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
@@ -709,6 +723,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "destroy": True,
         "download": True,
         "duplicate": False,
+        "export": False,
         "hard_delete": True,
         "favorite": True,
         "invite_owner": True,
@@ -738,6 +753,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "destroy": False,
         "download": False,
         "duplicate": False,
+        "export": False,
         "hard_delete": True,
         "favorite": False,
         "invite_owner": False,
