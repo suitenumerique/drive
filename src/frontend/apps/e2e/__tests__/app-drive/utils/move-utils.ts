@@ -40,7 +40,9 @@ export const searchAndSelectItem = async (
   const moveFolderModal = await getMoveFolderModal(page);
   await moveFolderModal.getByPlaceholder("Search for a folder").click();
   await moveFolderModal.getByPlaceholder("Search for a folder").fill(itemName);
-  await expect(moveFolderModal.getByText("Search results")).toBeVisible();
+  await expect(
+    moveFolderModal.getByRole("button", { name: "Search results" })
+  ).toBeVisible();
   const folderToSelect = await getRowItem(moveFolderModal, itemName);
   await folderToSelect.dblclick();
 };

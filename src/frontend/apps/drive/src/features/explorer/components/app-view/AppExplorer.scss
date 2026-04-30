@@ -21,7 +21,8 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
     }
 
     .explorer__container {
-      width: 992px;
+      max-width: 992px;
+      width: 100%;
     }
 
     .explorer__content {
@@ -125,6 +126,7 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
         display: flex;
         align-items: center;
         gap: var(--c--globals--spacings--2xs);
+        flex-shrink: 0;
       }
 
       &--mobile {
