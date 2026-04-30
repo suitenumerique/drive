@@ -46,7 +46,12 @@ export const expectDefaultRoute = async (
   breadcrumbLabel: string,
   route: string,
 ) => {
-  const defaultRouteButton = page.getByTestId("default-route-button");
+  // Scope to the visible breadcrumbs container — the Breadcrumbs measurement
+  // layer is a hidden sibling that renders a duplicate of every test id it
+  // contains, so a page-level lookup would be ambiguous in strict mode.
+  const defaultRouteButton = page
+    .getByTestId("explorer-breadcrumbs")
+    .getByTestId("default-route-button");
   await expect(defaultRouteButton).toBeVisible();
   await expect(defaultRouteButton).toContainText(breadcrumbLabel);
   await page.waitForURL((url) => url.toString().includes(route));

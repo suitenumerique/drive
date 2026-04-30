@@ -1,14 +1,54 @@
 .c__breadcrumbs {
   display: flex;
   align-items: center;
-  overflow: auto;
+  flex-wrap: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
 
   &__separator {
     color: var(--c--contextuals--content--semantic--neutral--tertiary);
+    flex-shrink: 0;
   }
 
-  > * {
+  &__item {
+    display: flex;
+    align-items: center;
+    min-width: 0;
     flex-shrink: 0;
+  }
+
+  &__measure {
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    display: flex;
+    align-items: center;
+    visibility: hidden;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  &__ellipsis {
+    height: 32px;
+    padding: 4px 8px;
+    background-color: transparent;
+    border: none;
+    border-radius: 4px;
+    color: var(--c--contextuals--content--semantic--neutral--secondary);
+    font-size: 16px;
+    font-family: var(--c--globals--font--families--base);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+
+    &:hover {
+      background-color: var(
+        --c--contextuals--background--semantic--neutral--tertiary
+      );
+    }
   }
 }
 
@@ -27,6 +67,8 @@
   align-items: center;
   gap: 8px;
   text-decoration: none;
+  max-width: 320px;
+  min-width: 0;
 
   &:hover {
     background-color: var(
@@ -34,8 +76,19 @@
     );
   }
 
-  &.active {
+  // Active styling kicks in either when the button itself carries the class
+  // (legacy: BreadcrumbItemButton.isActive) or when its breadcrumb-cell
+  // wrapper does (new: BreadcrumbItem.isActive). Both selectors are needed.
+  &.active,
+  .c__breadcrumbs__item.active & {
     font-weight: 600;
     color: var(--c--contextuals--content--semantic--neutral--primary);
+  }
+
+  &__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
 }
