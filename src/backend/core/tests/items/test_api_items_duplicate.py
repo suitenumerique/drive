@@ -407,3 +407,39 @@ def test_api_items_duplicate_deleted_item():
     response = client.post(f"/api/v1.0/items/{item.id!s}/duplicate/")
 
     assert response.status_code == 403
+
+
+# Posthog events
+
+
+def test_api_items_duplicate_posthog_event(settings):
+    """Duplicating an item should send an 'item_duplicate' event."""
+    settings.POSTHOG_KEY = "fake-key"
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        mimetype="text/plain",
+        filename="myfile.txt",
+        users=[(user, "owner")],
+    )
+
+    with (
+        mock.patch("core.tasks.item.duplicate_file.delay"),
+        mock.patch("core.api.viewsets.posthog_capture") as mock_capture,
+    ):
+        response = client.post(f"/api/v1.0/items/{item.id!s}/duplicate/")
+
+    assert response.status_code == 201
+
+    mock_capture.assert_called_once()
+    args, kwargs = mock_capture.call_args
+    assert args[0] == "item_duplicate"
+    assert args[1] == user
+    assert args[2] == {}
+    duplicated_item = kwargs["item"]
+    assert duplicated_item.id != item.id
+    assert duplicated_item.creator == user
