@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.18.0] - 2026-05-04
+
 ### Added
 
 - ✨(backend) add organization metrics to usage API
@@ -424,7 +426,9 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.16.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.18.0...main
+[v0.18.0]: https://github.com/suitenumerique/drive/releases/v0.18.0
+[v0.17.0]: https://github.com/suitenumerique/drive/releases/v0.17.0
 [v0.16.0]: https://github.com/suitenumerique/drive/releases/v0.16.0
 [v0.15.0]: https://github.com/suitenumerique/drive/releases/v0.15.0
 [v0.14.0]: https://github.com/suitenumerique/drive/releases/v0.13.0
