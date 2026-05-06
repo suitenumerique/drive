@@ -18,6 +18,12 @@ and this project adheres to
 - ✨(frontend) render PDF previews at per-page dimensions
 - ✨(tracking) add posthog events on custom columns and item duplication
 
+### Changed
+
+- ♻️(frontend) delegate file icons to ui-kit FileIcon
+- ♻️(frontend) replace custom file preview with ui-kit FilePreview
+- ✅(frontend) replace per-format preview tests with smoke tests
+
 ### Fixed
 
 - 🐛(backend) accept CDFV2 mimetype from newer libmagic
