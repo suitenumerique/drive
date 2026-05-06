@@ -1,9 +1,8 @@
 import { useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
+import { useCunningham } from "@gouvfr-lasuite/cunningham-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDriver } from "@/features/config/Config";
-import { ErrorPreview } from "../error/ErrorPreview";
-import { FilePreviewType } from "../../FilesPreview";
+import { ErrorPreview, FilePreviewType } from "@gouvfr-lasuite/ui-kit";
 
 interface WopiEditorFrameProps {
   item: FilePreviewType;
@@ -14,7 +13,7 @@ export const WopiEditorFrame = ({
   item,
   onFileRename,
 }: WopiEditorFrameProps) => {
-  const { t } = useTranslation();
+  const { t } = useCunningham();
   const formRef = useRef<HTMLFormElement>(null);
   const queryClient = useQueryClient();
 
@@ -62,7 +61,7 @@ export const WopiEditorFrame = ({
   }, [item.id, queryClient]);
 
   if (isLoading) {
-    return <div>{t("file_preview.wopi.loading")}</div>;
+    return <div>{t("components.filePreview.wopi.loading")}</div>;
   }
 
   if (isError || !wopiInfo) {

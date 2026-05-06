@@ -68,45 +68,6 @@
         "download": "Download anyway",
         "cancel": "Cancel"
       },
-      "file_preview": {
-        "suspicious": {
-          "title": "Suspicious file",
-          "description": "This file looks suspicious. It is only visible to you.",
-          "download": "Download file"
-        },
-        "error": {
-          "title": "An error occurred while loading the document.",
-          "description": "You can contact the support for help."
-        },
-        "wopi": {
-          "loading": "Loading document...",
-          "error": "An error occurred while loading the document.",
-          "open_in_editor": "Open in editor",
-          "open_in_editor_description": "This file can be edited with an online editor. It opens in a new tab."
-        },
-        "image": {
-          "loading": "Loading image..."
-        },
-        "unsupported": {
-          "disclaimer": "Unsupported format.",
-          "description": "To view the file, download it to your device.",
-          "download": "Download file",
-          "heic_title": "HEIC files are not yet supported for preview."
-        },
-        "external_link": {
-          "title": "External link",
-          "description": "You are about to leave this page and be redirected to:",
-          "confirm_question": "Do you want to continue?"
-        },
-        "outdated_browser": {
-          "title": "Your browser is not supported",
-          "description": "For security reasons, the PDF viewer requires a recent browser. Please update your browser or use Firefox or Chrome."
-        },
-        "actions": {
-          "download": "Download",
-          "print": "Print"
-        }
-      },
       "common": {
         "cancel": "Cancel"
       },
@@ -685,45 +646,6 @@
         "download": "Télécharger quand même",
         "cancel": "Annuler"
       },
-      "file_preview": {
-        "suspicious": {
-          "title": "Fichier suspect",
-          "description": "Ce fichier semble suspect. Il n'est visible que pour vous.",
-          "download": "Télécharger le fichier"
-        },
-        "error": {
-          "title": "Une erreur est survenue lors du chargement du document.",
-          "description": "Vous pouvez contacter le support pour obtenir de l'aide."
-        },
-        "wopi": {
-          "loading": "Chargement du document...",
-          "error": "Une erreur est survenue lors du chargement du document.",
-          "open_in_editor": "Ouvrir dans l'éditeur",
-          "open_in_editor_description": "Ce fichier peut être modifié avec un éditeur en ligne. Il s'ouvre dans un nouvel onglet."
-        },
-        "image": {
-          "loading": "Chargement de l'image..."
-        },
-        "unsupported": {
-          "disclaimer": "Format non supporté.",
-          "description": "Pour visualiser le fichier, téléchargez-le sur votre appareil.",
-          "download": "Télécharger le fichier",
-          "heic_title": "Les fichiers HEIC ne sont pas encore supportés pour la prévisualisation."
-        },
-        "external_link": {
-          "title": "Lien externe",
-          "description": "Vous êtes sur le point de quitter cette page et d'être redirigé vers :",
-          "confirm_question": "Voulez-vous continuer ?"
-        },
-        "outdated_browser": {
-          "title": "Votre navigateur n'est pas pris en charge",
-          "description": "Pour des raisons de sécurité, la visionneuse PDF nécessite un navigateur récent. Veuillez mettre à jour votre navigateur ou utiliser Firefox ou Chrome."
-        },
-        "actions": {
-          "download": "Télécharger",
-          "print": "Imprimer"
-        }
-      },
       "common": {
         "cancel": "Annuler"
       },
@@ -877,7 +799,6 @@
               "default": "Cet onglet est vide",
               "folder": "Ce dossier est vide"
             },
-
             "caption_no_create": "Vous n'avez pas les droits pour ajouter des fichiers",
             "cta": {
               "default": "Importez ou créez des fichiers et dossiers ici.",
@@ -1310,45 +1231,6 @@
         "description": "Weet u zeker dat u dit bestand wilt downloaden?",
         "download": "Toch downloaden",
         "cancel": "Annuleren"
-      },
-      "file_preview": {
-        "suspicious": {
-          "title": "Verdacht bestand",
-          "description": "Dit bestand is verdacht. Het is alleen voor jou zichtbaar.",
-          "download": "Bestand downloaden"
-        },
-        "error": {
-          "title": "Er is een fout opgetreden tijdens het laden van het document.",
-          "description": "U kunt de support raadplegen voor hulp."
-        },
-        "wopi": {
-          "loading": "Document laden...",
-          "error": "Er is een fout opgetreden tijdens het laden van het document.",
-          "open_in_editor": "Openen in editor",
-          "open_in_editor_description": "Dit bestand kan worden bewerkt met een online editor. Het opent in een nieuw tabblad."
-        },
-        "image": {
-          "loading": "Afbeelding laden..."
-        },
-        "unsupported": {
-          "disclaimer": "Format niet ondersteund.",
-          "description": "Om het bestand te bekijken, downloadt u het naar uw apparaat.",
-          "download": "Bestand downloaden",
-          "heic_title": "HEIC bestanden worden nog niet ondersteund voor voorbeeld."
-        },
-        "external_link": {
-          "title": "Externe link",
-          "description": "U staat op het punt deze pagina te verlaten en te worden doorgestuurd naar:",
-          "confirm_question": "Wilt u doorgaan?"
-        },
-        "outdated_browser": {
-          "title": "Uw browser wordt niet ondersteund",
-          "description": "Om veiligheidsredenen vereist de PDF-viewer een recente browser. Werk uw browser bij of gebruik Firefox of Chrome."
-        },
-        "actions": {
-          "download": "Downloaden",
-          "print": "Afdrukken"
-        }
       },
       "common": {
         "cancel": "Annuleren"

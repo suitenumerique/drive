@@ -31,7 +31,8 @@ import { Key } from "react-aria-components";
 import { clearFromRoute, getItemTitle } from "@/features/explorer/utils/utils";
 import { messageModalTrashNavigate } from "../../trash/utils";
 import { useIsMinimalLayout } from "@/utils/useLayout";
-import { openWopiInNewTab } from "@/features/ui/preview/viewers/wopi/openWopi";
+import { openWopiInNewTab } from "@/features/wopi/openWopi";
+import { itemToPreviewFile } from "@/features/explorer/utils/utils";
 
 type ExplorerSearchModalProps = Pick<ModalProps, "isOpen" | "onClose"> & {
   defaultFilters?: ItemFilters;
@@ -101,7 +102,7 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
       }
     } else {
       if (item.is_wopi_supported) {
-        openWopiInNewTab(item.id);
+        openWopiInNewTab(itemToPreviewFile(item));
         props.onClose();
         return;
       }

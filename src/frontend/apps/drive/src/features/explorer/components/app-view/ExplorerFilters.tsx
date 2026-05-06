@@ -17,7 +17,7 @@ const ALL = "all";
 export const handleFilterChange = (
   filters: ItemFilters = {},
   name: string,
-  value: Key | null
+  value: Key | null,
 ) => {
   if (value === ALL) {
     const newFilters = { ...filters };
@@ -89,7 +89,7 @@ export const ExplorerFilterType = (props: {
       },
       getResetOption(t),
     ],
-    [t]
+    [t],
   );
 
   return (
@@ -161,7 +161,7 @@ export const ExplorerFilterScope = (props: {
       },
       getResetOption(t),
     ],
-    [t]
+    [t],
   );
 
   return (

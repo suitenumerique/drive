@@ -16,7 +16,8 @@ import { DefaultRoute, getDefaultRouteId } from "@/utils/defaultRoutes";
 import { useMemo } from "react";
 import { canCreateChildren } from "@/features/items/utils";
 import { Spinner } from "@gouvfr-lasuite/ui-kit";
-import { openWopiInNewTab } from "@/features/ui/preview/viewers/wopi/openWopi";
+import { openWopiInNewTab } from "@/features/wopi/openWopi";
+import { itemToPreviewFile } from "@/features/explorer/utils/utils";
 
 /**
  * Wrapper around EmbeddedExplorerGrid to display a list of items in a table.
@@ -44,20 +45,22 @@ export const AppExplorerGrid = () => {
 
   const effectiveOnNavigate = appExplorer.onNavigate ?? onNavigate;
 
-  const handleFileClick = appExplorer.onFileClick ?? ((item: Item) => {
-    if (item.is_wopi_supported) {
-      openWopiInNewTab(item.id);
-      return;
-    }
-    if (item.url) {
-      // We need to ensure the preview items list is updated when clicking on a file from the grid. Because this list
-      // can be updated when clicking on a file from the search modal which sets the preview items to a list of one item.
-      setPreviewItems(appExplorer.childrenItems ?? []);
-      setPreviewItem(item);
-    } else {
-      addToast(<ToasterItem>{t("explorer.grid.no_url")}</ToasterItem>);
-    }
-  });
+  const handleFileClick =
+    appExplorer.onFileClick ??
+    ((item: Item) => {
+      if (item.is_wopi_supported) {
+        openWopiInNewTab(itemToPreviewFile(item));
+        return;
+      }
+      if (item.url) {
+        // We need to ensure the preview items list is updated when clicking on a file from the grid. Because this list
+        // can be updated when clicking on a file from the search modal which sets the preview items to a list of one item.
+        setPreviewItems(appExplorer.childrenItems ?? []);
+        setPreviewItem(item);
+      } else {
+        addToast(<ToasterItem>{t("explorer.grid.no_url")}</ToasterItem>);
+      }
+    });
 
   const isLoading =
     appExplorer.isLoading || appExplorer.childrenItems === undefined;
@@ -103,9 +106,7 @@ export const AppExplorerGrid = () => {
           />
           <div className="explorer__grid__empty">
             <div className="explorer__grid__empty__caption">
-              {t(
-                `explorer.grid.empty.caption${emptyCaptionTranslationSuffix}`,
-              )}
+              {t(`explorer.grid.empty.caption${emptyCaptionTranslationSuffix}`)}
             </div>
             <div className="explorer__grid__empty__cta">
               {t(`explorer.grid.empty.cta${emptyCTATranslationSuffix}`)}
@@ -142,10 +143,7 @@ export const AppExplorerGrid = () => {
     );
 
     // If infinite scroll props are provided, wrap with InfiniteScroll
-    if (
-      appExplorer.hasNextPage !== undefined &&
-      appExplorer.fetchNextPage
-    ) {
+    if (appExplorer.hasNextPage !== undefined && appExplorer.fetchNextPage) {
       return (
         <InfiniteScroll
           hasNextPage={appExplorer.hasNextPage}

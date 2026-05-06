@@ -1,6 +1,6 @@
 import { GenericDisclaimer } from "@/features/ui/components/generic-disclaimer/GenericDisclaimer";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
-import { CustomFilesPreview } from "@/features/ui/preview/custom-files-preview/CustomFilesPreview";
+import { CustomFilesPreview } from "@/features/ui/preview/CustomFilesPreview";
 import { Icon } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { useRouter } from "next/router";

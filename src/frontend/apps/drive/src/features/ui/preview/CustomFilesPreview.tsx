@@ -1,12 +1,14 @@
 import { Item, ItemType } from "@/features/drivers/types";
-import { FilePreview, FilePreviewType } from "../FilesPreview";
+import { FilePreview, FilePreviewType } from "@gouvfr-lasuite/ui-kit";
 import { useTranslation } from "react-i18next";
 import { useMemo } from "react";
+import posthog from "posthog-js";
 import { itemToPreviewFile } from "@/features/explorer/utils/utils";
 import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 import { ItemInfo } from "@/features/items/components/ItemInfo";
 import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
 import { ItemShareModal } from "@/features/explorer/components/modals/share/ItemShareModal";
+import { openWopiInNewTab } from "@/features/wopi/openWopi";
 
 type CustomFilesPreviewProps = {
   currentItem?: Item;
@@ -19,8 +21,6 @@ export const CustomFilesPreview = ({
   items,
   setPreviewItem,
 }: CustomFilesPreviewProps) => {
-  const { t } = useTranslation();
-
   const { handleDownloadItem } = useDownloadItem();
 
   const files = useMemo(() => {
@@ -42,11 +42,18 @@ export const CustomFilesPreview = ({
     <FilePreview
       isOpen={!!currentItem}
       onClose={handleClosePreview}
-      title={t("file_preview.title")}
       files={files}
       onChangeFile={handleChangePreviewItem}
       handleDownloadFile={() => handleDownloadItem(currentItem)}
       openedFileId={currentItem?.id}
+      onFileOpen={(file) =>
+        posthog.capture("file_preview_opened", {
+          id: file.id,
+          size: file.size,
+          mimetype: file.mimetype,
+        })
+      }
+      onOpenInEditor={openWopiInNewTab}
       headerRightContent={
         <CustomFilesPreviewRightHeader currentItem={currentItem} />
       }
