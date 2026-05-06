@@ -6,17 +6,18 @@ import clsx from "clsx";
 import { CircularProgress } from "@/features/ui/components/circular-progress/CircularProgress";
 import prettyBytes from "pretty-bytes";
 import { ToastContentProps } from "react-toastify";
-import { getIconByMimeType } from "../icons/ItemIcon";
+import { ItemIcon } from "../icons/ItemIcon";
 import {
   UploadingState,
   UploadingStep,
   FileUploadMeta,
   FileUploadStatus,
 } from "@/features/explorer/hooks/useUpload";
-import { Spinner } from "@gouvfr-lasuite/ui-kit";
+import { IconSize, Spinner } from "@gouvfr-lasuite/ui-kit";
 import { CancelUploadConfirmationModal } from "@/features/explorer/components/modals/CancelUploadConfirmationModal";
 import { ErrorIcon } from "@/features/ui/components/icon/ErrorIcon";
 import { CheckIcon } from "@/features/ui/components/icon/CheckIcon";
+import { Item, ItemType } from "@/features/drivers/types";
 
 const FileErrorIcon = () => (
   <div className="file-upload-toast__files__item__error-icon">
@@ -34,7 +35,6 @@ export const FileRow = ({
   onCancelFile?: (name: string) => void;
 }) => {
   const { t } = useTranslation();
-  const icon = getIconByMimeType(meta.file.type, "normal");
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -45,7 +45,16 @@ export const FileRow = ({
       })}
     >
       <div className="file-upload-toast__files__item__name">
-        <img src={icon.src} alt={name} />
+        <ItemIcon
+          item={
+            {
+              type: ItemType.FILE,
+              mimetype: meta.file.type,
+              title: name,
+            } as unknown as Item
+          }
+          size={IconSize.LARGE}
+        />
         <span>{name}</span>
         {meta.status !== FileUploadStatus.ERROR && (
           <span className="file-upload-toast__files__item__size">

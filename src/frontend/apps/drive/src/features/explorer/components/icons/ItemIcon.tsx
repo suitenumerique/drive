@@ -1,150 +1,54 @@
-import { Item, ItemType } from "@/features/drivers/types";
+import { Item, ItemType, ItemUploadState } from "@/features/drivers/types";
 import folderIcon from "@/assets/folder/folder.svg";
-import folderIconTree from "@/assets/tree/folder.svg";
-import folderPersonalIcon from "@/assets/folder/folder-tiny-perso.svg";
+import { ICONS } from "../../utils/mimeTypes";
 import {
-  getItemMimeCategory,
-  getMimeCategory,
-  ICONS,
-} from "../../utils/mimeTypes";
-import {
-  getContainerSize,
-  getIconSize,
-  Icon,
+  FileIcon,
+  FileIconContent,
   IconSize,
+  MimeCategory,
 } from "@gouvfr-lasuite/ui-kit";
-import { useMemo } from "react";
-import { getExtensionFromName } from "../../utils/utils";
-import { FilePreviewType } from "@/features/ui/preview/FilesPreview";
+import { itemToPreviewFile } from "../../utils/utils";
 
 type ItemIconProps = {
   item: Item;
   size?: IconSize;
   type?: "mini" | "normal";
-  isTree?: boolean;
 };
 
-// Global icon component for all items
+// Global icon component for all items, same logic as the one in the ui-kit ( FileIcon )
+// but provide support for folders.
 export const ItemIcon = ({
   item,
   size = IconSize.MEDIUM,
   type = "normal",
-  isTree = false,
 }: ItemIconProps) => {
-  const mimeIcon = getItemIcon(item, type, isTree);
-  const imgSize = getIconSize(size);
-
-  return (
-    <img
-      src={mimeIcon.src}
-      alt=""
-      className={`item-icon ${size}`}
-      width={imgSize}
-      height={imgSize}
-      draggable="false"
-    />
-  );
-};
-
-export type WorkspaceIconProps = {
-  isMainWorkspace?: boolean;
-  iconSize?: IconSize;
-};
-
-// Workspace icon component
-export const WorkspaceIcon = ({
-  isMainWorkspace = false,
-  iconSize = IconSize.MEDIUM,
-}: WorkspaceIconProps) => {
-  const containerSize = useMemo(() => getContainerSize(iconSize), [iconSize]);
-
-  const style = {
-    width: containerSize,
-    height: containerSize,
-  };
-
-  if (isMainWorkspace) {
-    return (
-      <img
-        src={folderPersonalIcon.src}
-        alt=""
-        width={containerSize}
-        height={containerSize}
-      />
-    );
+  const extendedIcon = getItemExtendedIcon(item, type);
+  if (extendedIcon) {
+    return <FileIconContent icon={extendedIcon} size={size} />;
   }
-
-  return (
-    <div className="workspace-icon-container" style={style}>
-      <Icon name="groups" size={iconSize} color="white" />
-    </div>
-  );
-};
-
-type FolderIconProps = {
-  iconSize?: IconSize;
-};
-
-export const FolderIcon = ({ iconSize = IconSize.MEDIUM }: FolderIconProps) => {
-  const containerSize = useMemo(() => getContainerSize(iconSize), [iconSize]);
-
-  return (
-    <img
-      draggable="false"
-      src={folderIcon.src}
-      alt=""
-      width={containerSize}
-      height={containerSize}
-    />
-  );
-};
-
-export const getItemIcon = (
-  item: Item,
-  type: "normal" | "mini",
-  isTree: boolean,
-) => {
-  if (item.type === ItemType.FOLDER) {
-    return isTree ? folderIconTree : folderIcon;
-  }
-  const category = getItemMimeCategory(item);
-  return ICONS[type][category];
-};
-
-export const getIconByMimeType = (
-  mimeType: string,
-  type: "normal" | "mini",
-) => {
-  const category = getMimeCategory(mimeType);
-  return ICONS[type][category];
+  return <FileIcon file={itemToPreviewFile(item)} size={size} />;
 };
 
 /**
- * Used by the FilePreview component to display the file icon.
- * The FilePreview only uses FilePreviewType, not Item, so it needs a
- * dedicated component to display the file icon.
+ * The ui-kit already provides lots of icons for different mime types, but
+ * on drive we support additional icons for suspicious items and folders.
+ *
+ * This function returns the appropriate icon for those extended cases, if
+ * the item is not an extended case, it returns null. That way we can use the
+ * ui-kit icon as a fallback.
  */
-export const FileIcon = ({
-  file,
-  size = "medium",
-  type = "normal",
-}: {
-  file: FilePreviewType;
-  size?: "small" | "medium" | "large" | "xlarge";
-  type?: "mini" | "normal";
-}) => {
-  const category = getMimeCategory(
-    file.mimetype,
-    getExtensionFromName(file.title),
-  );
-  const icon = ICONS[type][category];
+export const getItemExtendedIcon = (
+  item: Item,
+  type: "normal" | "mini",
+): string | null => {
+  if (item.type === ItemType.FOLDER) {
+    return folderIcon.src;
+  }
 
-  return (
-    <img
-      src={icon.src}
-      alt=""
-      className={`item-icon ${size}`}
-      draggable="false"
-    />
-  );
+  const uploadState = item.upload_state;
+  if (uploadState === ItemUploadState.SUSPICIOUS) {
+    return ICONS[type][MimeCategory.SUSPICIOUS];
+  }
+
+  return null;
 };

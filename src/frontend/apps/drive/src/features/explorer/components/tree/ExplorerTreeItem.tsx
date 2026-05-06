@@ -19,10 +19,10 @@ import {
   useGlobalExplorer,
 } from "../GlobalExplorerContext";
 import { ExplorerTreeItemActions } from "./ExplorerTreeItemActions";
-import { ItemIcon } from "../icons/ItemIcon";
 import { useRouter } from "next/router";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { setFromRoute } from "../../utils/utils";
+import folderIconTree from "@/assets/tree/folder.svg";
 
 type ExplorerTreeItemProps = NodeRendererProps<TreeDataItem<TreeItem>>;
 
@@ -104,7 +104,11 @@ export const ExplorerTreeItemIcon = ({
 }) => {
   if (item.nodeType === TreeViewNodeTypeEnum.NODE) {
     return (
-      <ItemIcon item={item as Item} type="mini" isTree size={IconSize.SMALL} />
+      <img
+        className="c__file-icon icon--small"
+        src={folderIconTree.src}
+        alt=""
+      />
     );
   }
 

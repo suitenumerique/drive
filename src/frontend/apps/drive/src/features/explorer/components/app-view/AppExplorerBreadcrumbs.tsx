@@ -9,7 +9,7 @@ import {
   IconSize,
   useDropdownMenu,
 } from "@gouvfr-lasuite/ui-kit";
-import { FolderIcon } from "@/features/explorer/components/icons/ItemIcon";
+import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
 import createFolderSvg from "@/assets/icons/add_folder.svg";
 import { EmbeddedExplorerGridBreadcrumbs } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridBreadcrumbs";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
@@ -26,6 +26,7 @@ import {
 } from "@/utils/defaultRoutes";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 import { useCreateMenuItems } from "../../hooks/useCreateMenuItems";
+import { Item, ItemType } from "@/features/drivers/types";
 
 export const AppExplorerBreadcrumbs = () => {
   const { item, onNavigate } = useGlobalExplorer();
@@ -168,7 +169,14 @@ export const ExplorerBreadcrumbsMobile = () => {
     <div className="explorer__content__breadcrumbs--mobile">
       {isRoot ? (
         <div className="explorer__content__breadcrumbs--mobile__workspace">
-          <FolderIcon iconSize={IconSize.X_SMALL} />
+          <ItemIcon
+            item={
+              {
+                type: ItemType.FOLDER,
+              } as unknown as Item
+            }
+            size={IconSize.SMALL}
+          />
           <span>{workspaceTitle}</span>
         </div>
       ) : (
@@ -198,7 +206,14 @@ export const ExplorerBreadcrumbsMobile = () => {
           </div>
           <div className="explorer__content__breadcrumbs--mobile__container__info">
             <div className="explorer__content__breadcrumbs--mobile__container__info__title">
-              <FolderIcon iconSize={IconSize.X_SMALL} />
+              <ItemIcon
+                item={
+                  {
+                    type: ItemType.FOLDER,
+                  } as unknown as Item
+                }
+                size={IconSize.SMALL}
+              />
               <span>{workspaceTitle}</span>
             </div>
             <div className="explorer__content__breadcrumbs--mobile__container__info__folder">
