@@ -6,12 +6,15 @@ from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 
 import pytest
+from lasuite.drf.models.choices import RoleChoices
 
 from core import models
-from core.factories import ItemFactory, UserFactory
+from core.factories import ItemFactory, UserFactory, UserItemAccessFactory
+from wopi.enums import WopiActions
 from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
 from wopi.utils import (
     compute_wopi_launch_url,
+    get_wopi_actions,
     get_wopi_client_config,
     is_item_wopi_supported,
 )
@@ -55,6 +58,7 @@ def test_is_item_wopi_supported():
 
     item = ItemFactory(
         type=models.ItemTypeChoices.FILE,
+        link_reach=models.LinkReachChoices.RESTRICTED,
         update_upload_state=models.ItemUploadStateChoices.READY,
         filename="test.docx",
     )
@@ -278,6 +282,98 @@ def test_is_item_wopi_supported_not_ready_none_user(upload_state):
         filename="test.docx",
     )
     assert not is_item_wopi_supported(item, user)
+
+
+@pytest.mark.parametrize(
+    ("role", "expected_actions"),
+    [
+        (
+            RoleChoices.OWNER,
+            [WopiActions.EDIT, WopiActions.CONVERT, WopiActions.VIEW],
+        ),
+        (
+            RoleChoices.ADMIN,
+            [WopiActions.EDIT, WopiActions.CONVERT, WopiActions.VIEW],
+        ),
+        (
+            RoleChoices.EDITOR,
+            [WopiActions.EDIT, WopiActions.CONVERT, WopiActions.VIEW],
+        ),
+        (RoleChoices.READER, [WopiActions.VIEW]),
+    ],
+)
+def test_get_wopi_actions_filters_actions_by_user_role(role, expected_actions):
+    """Test the get_wopi_actions function filters actions by user role."""
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            "mimetypes": {},
+            "extensions": {
+                "docx": {
+                    WopiActions.EDIT: {"url": "https://vendorA.com/edit"},
+                    WopiActions.CONVERT: {"url": "https://vendorA.com/convert"},
+                    WopiActions.VIEW: {"url": "https://vendorA.com/view"},
+                },
+            },
+        },
+    )
+
+    user = UserFactory()
+    item = ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        filename="test.docx",
+    )
+    UserItemAccessFactory(item=item, user=user, role=role.value)
+
+    assert get_wopi_actions(item, user) == expected_actions
+
+
+def test_get_wopi_actions_empty_for_user_without_access():
+    """Test the get_wopi_actions function with a user without access."""
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            "mimetypes": {},
+            "extensions": {
+                "docx": {
+                    WopiActions.EDIT: {"url": "https://vendorA.com/edit"},
+                    WopiActions.CONVERT: {"url": "https://vendorA.com/convert"},
+                    WopiActions.VIEW: {"url": "https://vendorA.com/view"},
+                },
+            },
+        },
+    )
+    item = ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach="restricted",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        filename="test.docx",
+    )
+
+    assert get_wopi_actions(item, UserFactory()) == []
+
+
+def test_get_wopi_actions_no_user():
+    """Test the get_wopi_actions function with no user."""
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            "mimetypes": {},
+            "extensions": {
+                "docx": {
+                    WopiActions.VIEW: {"url": "https://vendorA.com/view"},
+                },
+            },
+        },
+    )
+    item = ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        filename="test.docx",
+    )
+
+    assert get_wopi_actions(item, None) == []
 
 
 def test_get_wopi_client_config():

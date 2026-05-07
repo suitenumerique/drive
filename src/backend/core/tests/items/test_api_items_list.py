@@ -14,6 +14,10 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.test import APIClient
 
 from core import factories, models
+from core.tests.items.conftest import (
+    WOPI_DOC_ODT_PNG_EXPECTED_ACTIONS,
+    make_doc_odt_png_files,
+)
 
 fake = Faker()
 pytestmark = pytest.mark.django_db
@@ -128,6 +132,7 @@ def test_api_items_list_format():
             "deleted_at": None,
             "hard_delete_at": None,
             "is_wopi_supported": False,
+            "wopi_actions": [],
         },
         {
             "id": str(item2.id),
@@ -166,6 +171,7 @@ def test_api_items_list_format():
             "deleted_at": None,
             "hard_delete_at": None,
             "is_wopi_supported": False,
+            "wopi_actions": [],
         },
         {
             "id": str(item.id),
@@ -204,6 +210,7 @@ def test_api_items_list_format():
             "deleted_at": None,
             "hard_delete_at": None,
             "is_wopi_supported": False,
+            "wopi_actions": [],
         },
     ]
 
@@ -627,3 +634,21 @@ def test_api_items_list_excludes_pending_items():
     results = response.json()["results"]
     assert len(results) == 1
     assert results[0]["id"] == str(ready_item.id)
+
+
+@pytest.mark.usefixtures("wopi_doc_odt_cache")
+def test_api_items_list_wopi_actions():
+    """The wopi_actions field should reflect the WOPI configuration for each item."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    make_doc_odt_png_files(user)
+
+    response = client.get("/api/v1.0/items/")
+
+    assert response.status_code == 200
+    actions_by_filename = {
+        item["filename"]: sorted(item["wopi_actions"]) for item in response.json()["results"]
+    }
+    assert actions_by_filename == WOPI_DOC_ODT_PNG_EXPECTED_ACTIONS
