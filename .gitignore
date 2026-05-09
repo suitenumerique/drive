@@ -43,6 +43,7 @@ env.bak/
 venv.bak/
 env.d/development/*.local
 env.d/terraform
+src/helm/env.d/miraiku/
 
 # Docker
 compose.override.yml
