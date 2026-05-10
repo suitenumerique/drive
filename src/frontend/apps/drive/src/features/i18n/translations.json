@@ -187,7 +187,8 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Spaces",
-          "all_folders": "All folders"
+          "all_folders": "All folders",
+          "show_hidden_folders": "Show hidden folders"
         },
         "modal": {
           "move": {
@@ -804,7 +805,8 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Espaces",
-          "all_folders": "Tous les dossiers"
+          "all_folders": "Tous les dossiers",
+          "show_hidden_folders": "Afficher les dossiers masqués"
         },
         "modal": {
           "move": {
@@ -1430,7 +1432,8 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Werkruimten",
-          "all_folders": "Alle mappen"
+          "all_folders": "Alle mappen",
+          "show_hidden_folders": "Toon verborgen mappen"
         },
         "modal": {
           "move": {
