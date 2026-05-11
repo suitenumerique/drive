@@ -1,9 +1,9 @@
 import { Item, ItemType, ItemUploadState } from "@/features/drivers/types";
 import folderIcon from "@/assets/folder/folder.svg";
-import { ICONS } from "../../utils/mimeTypes";
 import {
   FileIcon,
   FileIconContent,
+  ICONS,
   IconSize,
   MimeCategory,
 } from "@gouvfr-lasuite/ui-kit";

@@ -26,6 +26,7 @@ import { useUsers } from "@/features/users/hooks/useUserQueries";
 import { useClipboard } from "@/hooks/useCopyToClipboard";
 import {
   HorizontalSeparator,
+  removeFileExtension,
   ShareModal,
   ShareModalCopyLinkFooter,
 } from "@gouvfr-lasuite/ui-kit";
@@ -34,7 +35,6 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/features/auth/Auth";
-import { removeFileExtension } from "@/features/explorer/utils/mimeTypes";
 import posthog from "posthog-js";
 
 type WorkspaceShareModalProps = {

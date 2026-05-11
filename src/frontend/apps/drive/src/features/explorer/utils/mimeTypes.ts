@@ -1,16 +1,9 @@
 import { Item, ItemUploadState } from "@/features/drivers/types";
-import {
-  getMimeCategory,
-  ICONS,
-  MimeCategory,
-  removeFileExtension,
-} from "@gouvfr-lasuite/ui-kit";
+import { getMimeCategory, MimeCategory } from "@gouvfr-lasuite/ui-kit";
 import { getExtension } from "../utils/utils";
 
-export { getMimeCategory, ICONS, MimeCategory, removeFileExtension };
-
 /**
- * Wrapper around the ui-kit getMimeCategory function to add support for 
+ * Wrapper around the ui-kit getMimeCategory function to add support for
  * suspicious items.
  */
 export const getItemMimeCategory = (item: Item): MimeCategory => {

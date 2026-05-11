@@ -10,10 +10,10 @@ import { Item } from "@/features/drivers/types";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationRenameItem } from "../../hooks/useMutations";
 import { useRef } from "react";
-import { removeFileExtension } from "../../utils/mimeTypes";
 import { useTreeUtils } from "../../hooks/useTreeUtils";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import { useSelectionStore } from "../../stores/selectionStore";
+import { removeFileExtension } from "@gouvfr-lasuite/ui-kit";
 
 type Inputs = {
   title: string;
@@ -25,11 +25,8 @@ export const ExplorerRenameItemModal = (
   },
 ) => {
   const treeUtils = useTreeUtils();
-  const {
-    rightPanelOpen,
-    rightPanelForcedItem,
-    setRightPanelForcedItem,
-  } = useGlobalExplorer();
+  const { rightPanelOpen, rightPanelForcedItem, setRightPanelForcedItem } =
+    useGlobalExplorer();
   const selectionStore = useSelectionStore();
   const { t } = useTranslation();
   const form = useForm<Inputs>({

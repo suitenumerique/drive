@@ -3,10 +3,10 @@ import { Item, ItemUploadState } from "@/features/drivers/types";
 import { memo } from "react";
 import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { timeAgo } from "@/features/explorer/utils/utils";
-import { removeFileExtension } from "../../utils/mimeTypes";
 import { LoadingRing } from "@/features/ui/components/loading-ring/LoadingRing";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
+import { removeFileExtension } from "@gouvfr-lasuite/ui-kit";
 
 type EmbeddedExplorerGridMobileCellProps = CellContext<Item, unknown>;
 
