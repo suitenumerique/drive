@@ -7,6 +7,7 @@ import {
   openShareModal,
   selectLinkReach,
 } from "./utils/share-utils";
+import { grantClipboardPermissions } from "./utils/various-utils";
 
 test("Public folder — authenticated user does not see AnonymousCTA", async ({
   page,
@@ -80,7 +81,7 @@ test("Public folder — anonymous dropdown menu copies link and switches languag
   const folderUrl = page.url();
 
   const anonContext = await browser.newContext();
-  await anonContext.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await grantClipboardPermissions(browserName, anonContext);
   const anonPage = await anonContext.newPage();
   await anonPage.goto(folderUrl);
 
