@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(frontend) add CTA on public link for anonymous and authenticated users
+
 ## [v0.18.0] - 2026-05-04
 
 ### Added
