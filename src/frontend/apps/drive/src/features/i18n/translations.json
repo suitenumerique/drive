@@ -504,6 +504,17 @@
           "duplicating": "duplication in progress"
         }
       },
+      "anonymous_cta": {
+        "try_out": "Try it now",
+        "login": "Sign in"
+      },
+      "my_files_cta": {
+        "my_files": "My files"
+      },
+      "anonymous_dropdown_menu": {
+        "copy_link": "Copy link",
+        "languages": "Languages"
+      },
       "time": {
         "years_ago_one": "{{count}} year ago",
         "years_ago_other": "{{count}} years ago",
@@ -1089,6 +1100,17 @@
           "duplicating": "duplication en cours"
         }
       },
+      "anonymous_cta": {
+        "try_out": "Essayer maintenant",
+        "login": "Se connecter"
+      },
+      "my_files_cta": {
+        "my_files": "Mes fichiers"
+      },
+      "anonymous_dropdown_menu": {
+        "copy_link": "Copier le lien",
+        "languages": "Langue"
+      },
       "time": {
         "years_ago_one": "il y a {{count}} an",
         "years_ago_other": "il y a {{count}} ans",
@@ -1668,6 +1690,18 @@
           "duplicating": "duplicatie bezig"
         }
       },
+      "anonymous_cta": {
+        "try_out": "Probeer het uit",
+        "login": "Inloggen"
+      },
+      "my_files_cta": {
+        "my_files": "Mijn bestanden"
+      },
+      "anonymous_dropdown_menu": {
+        "copy_link": "Kopieer link",
+        "languages": "Talen"
+      },
+ 
       "time": {
         "years_ago_one": "{{count}} jaar geleden",
         "years_ago_other": "{{count}} jaren geleden",
