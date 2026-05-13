@@ -1,11 +1,15 @@
 import { GenericDisclaimer } from "@/features/ui/components/generic-disclaimer/GenericDisclaimer";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
-import { CustomFilesPreview } from "@/features/ui/preview/CustomFilesPreview";
+import {
+  CustomFilesPreview,
+  CustomFilesPreviewMode,
+} from "@/features/ui/preview/CustomFilesPreview";
 import { Icon } from "@gouvfr-lasuite/ui-kit";
 import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
 import { useItem } from "@/features/explorer/hooks/useQueries";
+import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
 
 export default function FilePage() {
   const { t } = useTranslation();
@@ -37,7 +41,15 @@ export default function FilePage() {
 
   return (
     <div>
-      <CustomFilesPreview currentItem={item} items={[item]} />
+      <CustomFilesPreview
+        currentItem={item}
+        items={[item]}
+        mode={CustomFilesPreviewMode.CONTEXTUAL}
+      />
     </div>
   );
 }
+
+FilePage.getLayout = function getLayout(page: React.ReactElement) {
+  return <GlobalLayout>{page}</GlobalLayout>;
+};
