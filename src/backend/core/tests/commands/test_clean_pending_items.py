@@ -1,7 +1,9 @@
 """Tests for the clean_pending_items management command."""
 
 from datetime import timedelta
+from io import BytesIO
 
+from django.core.files.storage import default_storage
 from django.core.management import call_command
 from django.utils import timezone
 
@@ -80,3 +82,20 @@ def test_clean_pending_items_custom_hours():
     call_command("clean_pending_items", "--hours=8")
 
     assert not models.Item.objects.filter(pk=item.pk).exists()
+
+
+def test_clean_pending_items_removes_orphan_file_from_storage():
+    """Stale pending items must also have their storage file removed."""
+    old_date = timezone.now() - timedelta(hours=49)
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="pending.txt",
+        update_upload_state=models.ItemUploadStateChoices.PENDING,
+    )
+    models.Item.objects.filter(pk=item.pk).update(created_at=old_date)
+    default_storage.save(item.file_key, BytesIO(b"orphan data"))
+
+    call_command("clean_pending_items")
+
+    assert not models.Item.objects.filter(pk=item.pk).exists()
+    assert not default_storage.exists(item.file_key)

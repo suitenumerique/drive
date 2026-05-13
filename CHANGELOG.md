@@ -28,6 +28,7 @@ and this project adheres to
 
 - 🐛(backend) accept CDFV2 mimetype from newer libmagic
 - 🐛(backend) better transaction management on duplicate action
+- 🐛(backend) clean storage files in clean_pending_items
 
 ### Removed
 
