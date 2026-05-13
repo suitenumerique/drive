@@ -55,6 +55,7 @@ export type Item = {
   updated_at: Date;
   description: string;
   is_wopi_supported?: boolean;
+  wopi_actions?: string[];
   created_at: Date;
   is_favorite?: boolean;
   children?: Item[];

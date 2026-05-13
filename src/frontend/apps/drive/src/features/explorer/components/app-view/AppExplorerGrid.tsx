@@ -13,11 +13,13 @@ import {
 import { InfiniteScroll } from "@/features/ui/components/infinite-scroll/InfiniteScroll";
 import { useRouter } from "next/router";
 import { DefaultRoute, getDefaultRouteId } from "@/utils/defaultRoutes";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { canCreateChildren } from "@/features/items/utils";
 import { Spinner } from "@gouvfr-lasuite/ui-kit";
 import { openWopiInNewTab } from "@/features/wopi/openWopi";
 import { itemToPreviewFile } from "@/features/explorer/utils/utils";
+import { useModal } from "@gouvfr-lasuite/cunningham-react";
+import { ConvertFileConfirmationModal } from "../modals/ConvertFileConfirmationModal";
 
 /**
  * Wrapper around EmbeddedExplorerGrid to display a list of items in a table.
@@ -44,12 +46,21 @@ export const AppExplorerGrid = () => {
   } = useGlobalExplorer();
 
   const effectiveOnNavigate = appExplorer.onNavigate ?? onNavigate;
+  const convertFileConfirmationModal = useModal();
+  const [convertFileItem, setConvertFileItem] = useState<Item | undefined>(
+    undefined,
+  );
 
   const handleFileClick =
     appExplorer.onFileClick ??
     ((item: Item) => {
       if (item.is_wopi_supported) {
-        openWopiInNewTab(itemToPreviewFile(item));
+        if (item.wopi_actions?.includes("convert")) {
+          setConvertFileItem(item);
+          convertFileConfirmationModal.open();
+        } else {
+          openWopiInNewTab(itemToPreviewFile(item));
+        }
         return;
       }
       if (item.url) {
@@ -170,6 +181,19 @@ export const AppExplorerGrid = () => {
         <div className="explorer__grid__loading-overlay">
           <Spinner size="xl" />
         </div>
+      )}
+      {convertFileConfirmationModal.isOpen && (
+        <ConvertFileConfirmationModal
+          {...convertFileConfirmationModal}
+          onDecide={(decision) => {
+            if (!decision) {
+              convertFileConfirmationModal.close();
+              return;
+            }
+            openWopiInNewTab(itemToPreviewFile(convertFileItem!));
+            convertFileConfirmationModal.close();
+          }}
+        />
       )}
     </div>
   );
