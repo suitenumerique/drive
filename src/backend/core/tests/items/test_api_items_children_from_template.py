@@ -352,3 +352,32 @@ def test_api_items_children_from_template_correct_mimetype(extension, expected_m
 
     child = Item.objects.get(id=response.json()["id"])
     assert child.mimetype == expected_mimetype
+
+
+def test_api_items_children_from_template_title_with_slash_is_sanitized():
+    """
+    Creating a file from template with a slash in the title should
+    produce a sanitized filename (no slash in the stored filename).
+    """
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    access = factories.UserItemAccessFactory(
+        user=user, role="owner", item__type=ItemTypeChoices.FOLDER
+    )
+
+    response = client.post(
+        f"/api/v1.0/items/{access.item.id!s}/children/",
+        {
+            "title": "30/03/30 - liste à faire",
+            "extension": "odt",
+            "type": "file",
+        },
+    )
+
+    assert response.status_code == 201
+
+    child = Item.objects.get(id=response.json()["id"])
+    assert child.filename == "30-03-30 - liste à faire.odt"

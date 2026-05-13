@@ -659,7 +659,9 @@ class CreateItemSerializer(ItemSerializer):
                     raise serializers.ValidationError(
                         {"title": _("This field is required.")},
                     )
-                attrs["filename"] = f"{attrs['title']}.{extension}"
+                attrs["filename"] = utils.format_template_filename(
+                    attrs["title"], extension
+                )
             else:
                 # Regular file upload
                 if attrs.get("filename") is None:
