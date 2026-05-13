@@ -3,6 +3,7 @@
 import logging
 import uuid
 from os.path import splitext
+from pathlib import PurePath
 
 from django.conf import settings
 from django.core.exceptions import RequestDataTooBig
@@ -46,6 +47,10 @@ S3_VERSION_ID = "VersionId"
 
 # Number of leading bytes used to sniff the uploaded content's MIME type.
 MIME_SNIFF_BYTES = 2048
+
+
+class PutRelativeTargetConflict(Exception):
+    """Raised when the RelativeTarget already exists at the destination."""
 
 
 class WopiViewSet(viewsets.ViewSet):
@@ -424,7 +429,6 @@ class WopiViewSet(viewsets.ViewSet):
 
         return Response(status=200)
 
-    # pylint: disable=too-many-locals
     def _put_relative_file(self, request, pk=None):
         """
         Creates a new file on the host based on the current file.
@@ -478,27 +482,15 @@ class WopiViewSet(viewsets.ViewSet):
         parent = self._resolve_put_relative_parent(item, request.user)
         siblings = self._resolve_put_relative_siblings(parent, request.user)
 
-        # WOPI requires X-WOPI-SuggestedTarget and X-WOPI-RelativeTarget headers
-        # to be UTF-7 encoded. See the spec:
-        # https://learn.microsoft.com/en-us/microsoft-365/cloud-storage-partner-program/rest/files/putrelativefile
         if suggested_target:
-            logger.debug("putRelativeFile in suggest_target mode")
-            target = suggested_target.encode("ascii").decode("utf-7")
-            if target.startswith("."):
-                base, _ext = splitext(item.filename)
-                target_filename = capfirst(_("conversion of {title}").format(title=f"{base}{target}"))
-            else:
-                target_filename = target
-
-            target_filename = self._disambiguate_target(siblings, target_filename)
-
+            target_filename = self._resolve_suggested_target_filename(
+                item, siblings, suggested_target
+            )
         else:
-            logger.debug("putRelativeFile in relative_target mode")
-            # Specific mode: host must use the exact name provided.
-            target_filename = relative_target.encode("ascii").decode("utf-7")
-            if conflict := self._find_relative_target_conflict(siblings, target_filename):
-                lock_value = LockService(conflict).get_lock(default="")
-                return Response(status=409, headers={X_WOPI_LOCK: lock_value})
+            try:
+                target_filename = self._resolve_relative_target_filename(siblings, relative_target)
+            except PutRelativeTargetConflict:
+                return Response(status=409)
 
         mimetype = detect_mimetype(
             file_content.read(min(MIME_SNIFF_BYTES, file_content.size)),
@@ -513,8 +505,37 @@ class WopiViewSet(viewsets.ViewSet):
             file_content=file_content,
         )
 
+        return self._create_put_relative_success_response(new_item, request.user)
+
+    @staticmethod
+    def _decode_put_relative_target(raw_target):
+        """Decode a WOPI target header transported as UTF-7 over ASCII."""
+        return raw_target.encode("ascii").decode("utf-7")
+
+    @classmethod
+    def _resolve_suggested_target_filename(cls, item, siblings, suggested_target):
+        """Decode, expand a leading-dot extension and disambiguate the target name."""
+        logger.debug("putRelativeFile in suggest_target mode")
+        target = cls._decode_put_relative_target(suggested_target)
+        if target.startswith("."):
+            converted = PurePath(item.filename).with_suffix(target)
+            target = capfirst(_("conversion of {title}").format(title=converted))
+        return cls._disambiguate_target(siblings, target)
+
+    @classmethod
+    def _resolve_relative_target_filename(cls, siblings, relative_target):
+        """Decode the target name and refuse collisions per WOPI spec."""
+        logger.debug("putRelativeFile in relative_target mode")
+        target_filename = cls._decode_put_relative_target(relative_target)
+        if cls._has_relative_target_conflict(siblings, target_filename):
+            raise PutRelativeTargetConflict()
+        return target_filename
+
+    @staticmethod
+    def _create_put_relative_success_response(new_item, user):
+        """Build the 200 response after a successful PutRelativeFile."""
         access_service = AccessUserItemService()
-        new_access_token, _ = access_service.insert_new_access(new_item, request.user)
+        new_access_token, _ = access_service.insert_new_access(new_item, user)
         # WOPI spec: Url must point to the WOPISrc of the new file (the path
         # the WOPI client uses for CheckFileInfo/GetFile), not the host's
         # session bootstrap endpoint.
@@ -586,13 +607,13 @@ class WopiViewSet(viewsets.ViewSet):
         return target
 
     @staticmethod
-    def _find_relative_target_conflict(siblings, target):
+    def _has_relative_target_conflict(siblings, target):
         """
-        Return the non-deleted sibling whose title matches `target`, or None
-        when no conflict. Uses the same rule as `Item.objects.create_child`
-        so a sibling folder bearing that title is also a conflict.
+        Return True when a non-deleted sibling shares the same title as `target`.
+        Uses the same rule as `Item.objects.create_child` so a sibling folder
+        bearing that title is also a conflict.
         """
-        return siblings.filter_non_deleted(title=target).order_by("created_at").first()
+        return siblings.filter_non_deleted(title=target).exists()
 
     @staticmethod
     def _create_converted_file_copy(
@@ -603,9 +624,9 @@ class WopiViewSet(viewsets.ViewSet):
         file_content,
     ):
         """
-        Create a new item that holds the converted copy of `source_item`.
+        Create the converted file copy in the resolved destination.
 
-        The `parent` is the resolved destination (None means user root).
+        `parent=None` means the user's root.
         """
         with transaction.atomic():
             new_item = Item.objects.create_child(

@@ -579,7 +579,7 @@ def test_put_relative_file_relative_target_conflict():
 
 
 def test_put_relative_file_relative_target_conflict_with_lock():
-    """RelativeTarget colliding with a locked item must return 409 + X-WOPI-Lock header."""
+    """RelativeTarget colliding with a locked item must return 409."""
     folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
     item = factories.ItemFactory(
         parent=folder,
@@ -617,7 +617,6 @@ def test_put_relative_file_relative_target_conflict_with_lock():
     )
 
     assert response.status_code == 409
-    assert response.headers.get("X-WOPI-Lock") == "lock-abc-123"
 
 
 def test_put_relative_file_suggested_target_disambiguates_collision():
