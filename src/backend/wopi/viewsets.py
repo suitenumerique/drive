@@ -144,7 +144,7 @@ class WopiViewSet(viewsets.ViewSet):
             streaming_content=file["Body"].iter_chunks(),
             content_type=item.mimetype,
             headers={
-                "X-WOPI-ItemVersion": head_object["VersionId"],
+                "X-WOPI-ItemVersion": head_object.get("VersionId", ""),
                 "Content-Length": head_object["ContentLength"],
             },
             status=200,
@@ -187,7 +187,7 @@ class WopiViewSet(viewsets.ViewSet):
         item.save(update_fields=["size", "updated_at"])
 
         head_response = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
-        return Response(status=200, headers={X_WOPI_ITEMVERSION: head_response["VersionId"]})
+        return Response(status=200, headers={X_WOPI_ITEMVERSION: head_response.get("VersionId", "")})
 
     def detail_post(self, request, pk=None):
         """
@@ -386,10 +386,13 @@ class WopiViewSet(viewsets.ViewSet):
             )
 
         try:
+            extra_args = {}
+            if "VersionId" in head_object:
+                extra_args["VersionId"] = head_object["VersionId"]
             s3_client.delete_object(
                 Bucket=default_storage.bucket_name,
                 Key=file_key,
-                VersionId=head_object["VersionId"],
+                **extra_args
             )
         # pylint: disable=broad-exception-caught
         except Exception as e:  # noqa
