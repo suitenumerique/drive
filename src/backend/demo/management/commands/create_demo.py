@@ -70,19 +70,31 @@ FILE_TYPE_ITEMS = (
 )
 
 
-def get_or_create_demo_user(email):
+def get_or_create_demo_user(user_data):
     """Get an existing demo user or create it when absent."""
+    email = user_data["email"]
     user, _created = models.User.objects.get_or_create(
         sub=email,
         defaults={
             "admin_email": email,
             "email": email,
+            "full_name": user_data["full_name"],
+            "short_name": user_data["short_name"],
             "password": "!",
             "is_superuser": False,
             "is_active": True,
             "is_staff": False,
         },
     )
+    update_fields = []
+    for field in ["full_name", "short_name"]:
+        if not getattr(user, field):
+            setattr(user, field, user_data[field])
+            update_fields.append(field)
+
+    if update_fields:
+        user.save(update_fields=update_fields)
+
     return user
 
 
@@ -130,16 +142,14 @@ class Timeit:
 
 def create_users():
     """Create random users"""
-    for user_id in range(defaults.NB_OBJECTS["users"]):
-        email = f"user.test{user_id:d}@example.com"
-        yield get_or_create_demo_user(email)
+    for user_data in defaults.USERS[: defaults.NB_OBJECTS["users"]]:
+        yield get_or_create_demo_user(user_data)
 
 
 def create_dev_users():
     """Create development users"""
     for dev_user in defaults.DEV_USERS:
-        email = dev_user["email"]
-        user = get_or_create_demo_user(email)
+        user = get_or_create_demo_user(dev_user)
 
         create_item(user)
         yield user
