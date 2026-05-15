@@ -88,6 +88,13 @@ def generate_s3_authorization_headers(key):
         ExpiresIn=0,
         Params={"Bucket": default_storage.bucket_name, "Key": key},
     )
+    # Strip the X-Amz-* query parameters that boto3.generate_presigned_url
+    # always appends. Without this strip, S3SigV4Auth.add_auth hashes them
+    # into the canonical_query_string of the signed canonical request, but
+    # nginx-ingress (auth-response-headers mechanism) does NOT propagate
+    # them on the upstream request to S3 → S3 computes a different canonical
+    # request → SignatureDoesNotMatch (403). Cf incident 2026-05-15.
+    url = url.split("?", 1)[0]
     request = botocore.awsrequest.AWSRequest(method="get", url=url)
 
     s3_client = default_storage.connection.meta.client
