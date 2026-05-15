@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) add recursive folder export as ZIP archive
+
 ## [v0.18.0] - 2026-05-04
 
 ### Added
