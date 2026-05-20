@@ -1539,10 +1539,12 @@ class ItemViewSet(
         descendants = export_descendants(folder)
         zip_stream = build_zip_stream(descendants)
 
-        response = StreamingHttpResponse(zip_stream, content_type="application/zip")
         encoded_name = quote(f"{folder.title}.zip", safe="")
-        response["Content-Disposition"] = f"attachment; filename*=UTF-8''{encoded_name}"
-        return response
+        return StreamingHttpResponse(
+            zip_stream,
+            content_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_name}"},
+        )
 
     @drf.decorators.action(detail=False, methods=["get"], url_path="media-auth")
     def media_auth(self, request, *args, **kwargs):

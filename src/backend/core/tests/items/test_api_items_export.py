@@ -187,8 +187,9 @@ def test_api_items_export_skips_soft_deleted_descendants():
 @pytest.mark.parametrize(
     "upload_state",
     [
-        models.ItemUploadStateChoices.PENDING,
-        models.ItemUploadStateChoices.DUPLICATING,
+        state
+        for state in models.ItemUploadStateChoices.values
+        if state != models.ItemUploadStateChoices.READY
     ],
 )
 def test_api_items_export_skips_non_uploaded_files(upload_state):
@@ -254,5 +255,4 @@ def test_api_items_export_filename_with_unicode():
 
     assert response.status_code == 200
     disposition = response["Content-Disposition"]
-    assert disposition.startswith("attachment;")
-    assert "filename*=UTF-8''" in disposition
+    assert disposition == "attachment; filename*=UTF-8''%C3%A9t%C3%A9%202026.zip"

@@ -6,7 +6,7 @@ from zipstream import ZipStream
 
 from core import models
 
-DEFAULT_STORAGE_READ_CHUNK_SIZE = 64 * 1024
+DEFAULT_STORAGE_READ_CHUNK_SIZE = 1024
 
 
 def iter_storage_chunks(file_key, chunk_size=DEFAULT_STORAGE_READ_CHUNK_SIZE):
