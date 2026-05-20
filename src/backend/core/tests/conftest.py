@@ -10,7 +10,10 @@ import responses
 from cryptography.fernet import Fernet
 
 from core import factories
+from core.entitlements import get_entitlements_backend
+from core.storage import get_storage_compute_backend
 from core.tests.utils.urls import reload_urls
+from core.utils import get_app_url
 
 USER = "user"
 TEAM = "team"
@@ -19,24 +22,22 @@ VIA = [USER, TEAM]
 
 @pytest.fixture(autouse=True)
 def clear_cache():
-    """Fixture to clear the cache after each test."""
+    """
+    Isolate Django and functools caches around each test.
+
+    Clearing before the test prevents cached values from leaking across modules.
+    """
+
+    def clear_all():
+        cache.clear()
+        # Clear functools.cache for functions decorated with @functools.cache
+        get_entitlements_backend.cache_clear()
+        get_storage_compute_backend.cache_clear()
+        get_app_url.cache_clear()
+
+    clear_all()
     yield
-    cache.clear()
-    # Clear functools.cache for functions decorated with @functools.cache
-
-    from core.entitlements import (  # pylint:disable=import-outside-toplevel # noqa: PLC0415
-        get_entitlements_backend,
-    )
-    from core.storage import (  # pylint:disable=import-outside-toplevel # noqa: PLC0415
-        get_storage_compute_backend,
-    )
-    from core.utils import (  # pylint:disable=import-outside-toplevel # noqa: PLC0415
-        get_app_url,
-    )
-
-    get_entitlements_backend.cache_clear()
-    get_storage_compute_backend.cache_clear()
-    get_app_url.cache_clear()
+    clear_all()
 
 
 @pytest.fixture
