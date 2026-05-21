@@ -20,7 +20,8 @@ DJANGO_EMAIL_BRAND_NAME="La Suite Numérique"
 DJANGO_EMAIL_HOST="mailcatcher"
 DJANGO_EMAIL_LOGO_IMG="http://localhost:3000/assets/logo-suite-numerique.png"
 DJANGO_EMAIL_PORT=1025
-DJANGO_EMAIL_URL_APP="http://localhost:3000"
+
+APP_URL="http://localhost:3000"
 
 # Media
 STORAGES_STATICFILES_BACKEND=django.contrib.staticfiles.storage.StaticFilesStorage
@@ -81,6 +82,9 @@ WOPI_SRC_BASE_URL=http://app-dev:8000
 # Disable rename for Collabora by default because it does not post messages when renaming a file.
 # So the frontend cannot reflect renaming operations.
 WOPI_COLLABORA_OPTIONS={"SupportsRename": False}
+# OnlyOffice cannot edit legacy binary formats reliably; force conversion to
+# their Office Open XML (OOXML) equivalent on these extensions/mimetypes.
+WOPI_ONLYOFFICE_OPTIONS={"ForceConvertExtensions": ["doc", "xls", "ppt"], "ForceConvertMimetypes": ["application/msword", "application/vnd.ms-excel", "application/vnd.ms-powerpoint"]}
 
 # Indexer
 # SEARCH_INDEXER_CLASS="core.services.search_indexers.SearchIndexer"

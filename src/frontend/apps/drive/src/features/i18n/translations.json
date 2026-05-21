@@ -502,6 +502,14 @@
             "delete": "Delete"
           },
           "duplicating": "duplication in progress"
+        },
+        "convert": {
+          "file": {
+            "title": "Convert to open this file",
+            "content": "Drive will create an editable copy. Your original file stays untouched.",
+            "cancel": "Cancel",
+            "confirm": "Convert"
+          }
         }
       },
       "time": {
@@ -1087,6 +1095,14 @@
             "delete": "Supprimer"
           },
           "duplicating": "duplication en cours"
+        },
+        "convert": {
+          "file": {
+            "title": "Convertir pour ouvrir ce fichier",
+            "content": "Fichiers va créer une copie éditable. Votre fichier original restera inchangé.",
+            "cancel": "Annuler",
+            "confirm": "Convertir"
+          }
         }
       },
       "time": {
@@ -1666,6 +1682,14 @@
             "delete": "Verwijder"
           },
           "duplicating": "duplicatie bezig"
+        }
+      },
+      "convert": {
+        "file": {
+          "title": "Converteren om dit bestand te openen",
+          "content": "Drive maakt een bewerkbare kopie. Je originele bestand blijft ongewijzigd.",
+          "cancel": "Annuleren",
+          "confirm": "Converteren"
         }
       },
       "time": {

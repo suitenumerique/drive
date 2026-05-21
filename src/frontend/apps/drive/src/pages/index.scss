@@ -92,6 +92,7 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 
 .c__modal__content__text {
   text-align: left;
+  color: var(--c--contextuals--content--semantic--neutral--secondary);
 }
 
 @media (max-width: $tablet) {

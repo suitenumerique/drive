@@ -10,6 +10,10 @@ import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
+from core.tests.items.conftest import (
+    WOPI_DOC_ODT_PNG_EXPECTED_ACTIONS,
+    make_doc_odt_png_files,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -75,6 +79,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -119,6 +124,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
         ],
     }
@@ -197,6 +203,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -235,6 +242,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
         ],
     }
@@ -333,6 +341,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -377,6 +386,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
         ],
     }
@@ -458,6 +468,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -502,6 +513,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
         ],
     }
@@ -608,6 +620,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -652,6 +665,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
         ],
     }
@@ -736,6 +750,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -780,6 +795,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
         ],
     }
@@ -921,6 +937,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -965,6 +982,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
         ],
     }
@@ -1043,6 +1061,7 @@ def test_api_items_children_list_filter_type():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
         ],
     }
@@ -1100,6 +1119,7 @@ def test_api_items_children_list_filter_type():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             },
         ],
     }
@@ -1401,6 +1421,7 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             }
         ],
     }
@@ -1449,6 +1470,7 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "wopi_actions": [],
             }
         ],
     }
@@ -1486,3 +1508,23 @@ def test_api_items_children_list_excludes_pending_items():
     assert response.status_code == 200
     results = response.json()
     assert results["count"] == 2
+
+
+@pytest.mark.usefixtures("wopi_doc_odt_cache")
+def test_api_items_children_list_wopi_actions():
+    """The wopi_actions field should reflect the WOPI configuration for each child."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    factories.UserItemAccessFactory(item=folder, user=user, role="owner")
+    make_doc_odt_png_files(user, parent=folder)
+
+    response = client.get(f"/api/v1.0/items/{folder.id!s}/children/")
+
+    assert response.status_code == 200
+    actions_by_filename = {
+        item["filename"]: sorted(item["wopi_actions"]) for item in response.json()["results"]
+    }
+    assert actions_by_filename == WOPI_DOC_ODT_PNG_EXPECTED_ACTIONS

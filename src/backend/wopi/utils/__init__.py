@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.cache import cache
 
 from core import models
+from wopi.enums import WopiActions
 from wopi.tasks.configure_wopi import (
     WOPI_CONFIGURATION_CACHE_KEY,
     WOPI_DEFAULT_CONFIGURATION,
@@ -20,6 +21,27 @@ def is_item_wopi_supported(item, user):
     Check if an item is supported by WOPI.
     """
     return bool(get_wopi_client_config(item, user))
+
+
+def get_wopi_actions(item, user):
+    """
+    Get the WOPI actions available for an item and user.
+    """
+    if not user:
+        return []
+
+    config = get_wopi_client_config(item, user)
+    abilities = item.get_abilities(user)
+    if not config or not abilities["wopi"]:
+        return []
+
+    actions = list(config)
+    if not abilities["update"]:
+        actions = [
+            action for action in actions if action not in (WopiActions.EDIT, WopiActions.CONVERT)
+        ]
+
+    return actions
 
 
 def get_wopi_client_config(item, user):

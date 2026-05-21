@@ -232,6 +232,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     creator = UserLightSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
+    wopi_actions = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Item
@@ -268,6 +269,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "wopi_actions",
         ]
         read_only_fields = [
             "id",
@@ -298,6 +300,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "wopi_actions",
         ]
 
     def to_representation(self, instance):
@@ -384,6 +387,11 @@ class ListItemSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         return wopi_utils.is_item_wopi_supported(item, request.user if request else None)
 
+    def get_wopi_actions(self, item):
+        """Return the WOPI actions available for the item."""
+        request = self.context.get("request")
+        return wopi_utils.get_wopi_actions(item, request.user if request else None)
+
 
 class ListItemLightSerializer(ListItemSerializer):
     """
@@ -421,6 +429,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "wopi_actions",
         ]
         read_only_fields = [
             "id",
@@ -446,6 +455,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "wopi_actions",
         ]
 
 
@@ -498,6 +508,7 @@ class ItemSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "wopi_actions",
         ]
         read_only_fields = [
             "id",
@@ -528,6 +539,7 @@ class ItemSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "wopi_actions",
         ]
 
     def create(self, validated_data):

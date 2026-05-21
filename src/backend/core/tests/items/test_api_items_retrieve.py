@@ -67,6 +67,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "wopi_actions": [],
     }
 
 
@@ -124,6 +125,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "wopi_actions": [],
     }
 
 
@@ -228,6 +230,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "wopi_actions": [],
     }
     assert models.LinkTrace.objects.filter(item=item, user=user).exists() is True
 
@@ -291,6 +294,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "wopi_actions": [],
     }
 
 
@@ -432,6 +436,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "wopi_actions": [],
     }
 
 
@@ -499,6 +504,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "wopi_actions": [],
     }
 
 
@@ -676,6 +682,7 @@ def test_api_items_retrieve_authenticated_related_team_members(teams, role, mock
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "wopi_actions": [],
     }
 
 
@@ -751,6 +758,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(teams, rol
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "wopi_actions": [],
     }
 
 
@@ -826,6 +834,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_t
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "wopi_actions": [],
     }
 
 
@@ -1223,6 +1232,7 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "wopi_actions": [],
     }
 
 
@@ -1296,6 +1306,7 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "wopi_actions": [],
     }
 
 
@@ -1361,6 +1372,7 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "wopi_actions": [],
     }
 
 
@@ -1483,6 +1495,7 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "depth": 1,
         "is_favorite": False,
         "is_wopi_supported": False,
+        "wopi_actions": [],
         "link_reach": "public",
         "link_role": item.link_role,
         "nb_accesses": 1,
@@ -1516,7 +1529,9 @@ def test_api_items_retrieve_wopi_supported():
         WOPI_CONFIGURATION_CACHE_KEY,
         {
             "mimetypes": {
-                "application/vnd.oasis.opendocument.text": "https://vendorA.com/launch_url",
+                "application/vnd.oasis.opendocument.text": {
+                    "edit": {"url": "https://vendorA.com/launch_url", "client": "vendorA"},
+                },
             },
             "extensions": {},
         },
@@ -1539,3 +1554,157 @@ def test_api_items_retrieve_wopi_supported():
 
     assert response.status_code == 200
     assert response.json()["is_wopi_supported"] is True
+
+
+def test_api_items_retrieve_wopi_actions():
+    """
+    The `wopi_actions` field should list the WOPI actions available for the
+    item, derived from the discovery configuration.
+    """
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            "mimetypes": {},
+            "extensions": {
+                "doc": {
+                    "edit": {"url": "https://collabora.example/edit", "client": "collabora"},
+                    "convert": {
+                        "url": "https://onlyoffice.example/convert",
+                        "client": "onlyoffice",
+                    },
+                },
+            },
+        },
+    )
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach="restricted",
+        filename="legacy.doc",
+        mimetype="application/msword",
+    )
+    item.upload_state = models.ItemUploadStateChoices.READY
+    item.save()
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert sorted(response.json()["wopi_actions"]) == ["convert", "edit"]
+
+
+def test_api_items_retrieve_wopi_actions_filters_edit_and_convert_for_readers():
+    """
+    A reader should not see actions requiring update permission (`edit`, `convert`)
+    in `wopi_actions`. Only `view` should remain when published.
+    """
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            "mimetypes": {},
+            "extensions": {
+                "doc": {
+                    "edit": {"url": "https://collabora.example/edit", "client": "collabora"},
+                    "convert": {
+                        "url": "https://onlyoffice.example/convert",
+                        "client": "onlyoffice",
+                    },
+                    "view": {"url": "https://onlyoffice.example/view", "client": "onlyoffice"},
+                },
+            },
+        },
+    )
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach="restricted",
+        filename="legacy.doc",
+        mimetype="application/msword",
+    )
+    item.upload_state = models.ItemUploadStateChoices.READY
+    item.save()
+    factories.UserItemAccessFactory(item=item, user=user, role="reader")
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["wopi_actions"] == ["view"]
+
+
+def test_api_items_retrieve_wopi_actions_empty_for_reader_without_view():
+    """
+    A reader receives an empty `wopi_actions` list when the item only publishes
+    actions requiring update permission.
+    """
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            "mimetypes": {},
+            "extensions": {
+                "doc": {
+                    "edit": {"url": "https://collabora.example/edit", "client": "collabora"},
+                    "convert": {
+                        "url": "https://onlyoffice.example/convert",
+                        "client": "onlyoffice",
+                    },
+                },
+            },
+        },
+    )
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach="restricted",
+        filename="legacy.doc",
+        mimetype="application/msword",
+    )
+    item.upload_state = models.ItemUploadStateChoices.READY
+    item.save()
+    factories.UserItemAccessFactory(item=item, user=user, role="reader")
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["wopi_actions"] == []
+
+
+def test_api_items_retrieve_wopi_actions_for_unsupported_item():
+    """
+    The `wopi_actions` field should be an empty list when the item is not
+    supported by any configured WOPI client.
+    """
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {"mimetypes": {}, "extensions": {}},
+    )
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach="restricted",
+        filename="image.png",
+        mimetype="image/png",
+    )
+    item.upload_state = models.ItemUploadStateChoices.READY
+    item.save()
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["wopi_actions"] == []

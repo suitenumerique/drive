@@ -55,10 +55,10 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
             f"wopi client {client} is invalid"
         )
 
-    wopi_configuration = cache.get(
-        WOPI_CONFIGURATION_CACHE_KEY,
-        default=WOPI_DEFAULT_CONFIGURATION,
-    )
+    wopi_configuration = cache.get(WOPI_CONFIGURATION_CACHE_KEY) or {
+        "mimetypes": {},
+        "extensions": {},
+    }
 
     root = fromstring(response.content)
 
@@ -67,6 +67,12 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
     if net_zone is None:
         raise RuntimeError(f"net-zone element not found in discovery url for wopi client {client}")
 
+    # Per-client policy: some clients (e.g. OnlyOffice) must force conversion of
+    # legacy formats, while others (e.g. Collabora) can edit them natively.
+    client_options = settings.WOPI_CLIENTS_CONFIGURATION[client].get("options", {})
+    force_convert_extensions = client_options.get("ForceConvertExtensions", [])
+    force_convert_mimetypes = client_options.get("ForceConvertMimetypes", [])
+
     # Iterate through all app elements
     for app in net_zone.findall(".//app"):
         app_name = app.get("name")
@@ -74,31 +80,31 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
             continue
 
         for action in app.findall("action"):
-            if action.get("name") != "edit":
+            action_name = action.get("name")
+
+            # An empty "ext" attribute means the action is keyed by mimetype,
+            # otherwise it is keyed by file extension. Both share the same
+            # exclusion, force-convert and registration logic.
+            if action.get("ext") == "":
+                store = wopi_configuration["mimetypes"]
+                key = app.get("name")
+                excluded = settings.WOPI_EXCLUDED_MIMETYPES
+                force_convert = force_convert_mimetypes
+            else:
+                store = wopi_configuration["extensions"]
+                key = action.get("ext")
+                excluded = settings.WOPI_EXCLUDED_EXTENSIONS
+                force_convert = force_convert_extensions
+
+            if key in excluded:
                 continue
 
-            # configure using mimetype
-            if action.get("ext") == "":
-                mimetype = app.get("name")
+            if action_name == "edit" and key in force_convert:
+                continue
 
-                if mimetype in settings.WOPI_EXCLUDED_MIMETYPES:
-                    continue
-
-                wopi_configuration["mimetypes"][mimetype] = {
-                    "url": action.get("urlsrc"),
-                    "client": client,
-                }
-
-            else:
-                extension = action.get("ext")
-
-                if extension in settings.WOPI_EXCLUDED_EXTENSIONS:
-                    continue
-
-                wopi_configuration["extensions"][extension] = {
-                    "url": action.get("urlsrc"),
-                    "client": client,
-                }
+            actions = store.get(key, {})
+            actions[action_name] = {"url": action.get("urlsrc"), "client": client}
+            store[key] = actions
 
     cache.set(
         WOPI_CONFIGURATION_CACHE_KEY,

@@ -3,6 +3,7 @@
 import logging
 import uuid
 from os.path import splitext
+from pathlib import PurePath
 
 from django.conf import settings
 from django.core.exceptions import RequestDataTooBig
@@ -10,16 +11,22 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import transaction
 from django.http import StreamingHttpResponse
+from django.urls import reverse
+from django.utils.text import capfirst
+from django.utils.translation import gettext_lazy as _
 
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from sentry_sdk import capture_exception
 
-from core.api.utils import get_item_file_head_object
+from core import models
+from core.api.utils import detect_mimetype, get_item_file_head_object
 from core.models import Item
+from core.utils import get_app_url
 from wopi.authentication import WopiAccessTokenAuthentication
 from wopi.permissions import AccessTokenPermission
+from wopi.services.access import AccessUserItemService
 from wopi.services.lock import LockService
 from wopi.utils import get_wopi_client_config, get_wopi_item_version
 
@@ -29,11 +36,21 @@ logger = logging.getLogger(__name__)
 HTTP_X_WOPI_LOCK = "HTTP_X_WOPI_LOCK"
 HTTP_X_WOPI_OLD_LOCK = "HTTP_X_WOPI_OLDLOCK"
 HTTP_X_WOPI_OVERRIDE = "HTTP_X_WOPI_OVERRIDE"
+HTTP_X_WOPI_SUGGESTEDTARGET = "HTTP_X_WOPI_SUGGESTEDTARGET"
+HTTP_X_WOPI_RELATIVETARGET = "HTTP_X_WOPI_RELATIVETARGET"
+HTTP_X_WOPI_FILECONVERSION = "HTTP_X_WOPI_FILECONVERSION"
 
 X_WOPI_INVALIDFILENAMERROR = "X-WOPI-InvalidFileNameError"
 X_WOPI_ITEMVERSION = "X-WOPI-ItemVersion"
 X_WOPI_LOCK = "X-WOPI-Lock"
 S3_VERSION_ID = "VersionId"
+
+# Number of leading bytes used to sniff the uploaded content's MIME type.
+MIME_SNIFF_BYTES = 2048
+
+
+class PutRelativeTargetConflict(Exception):
+    """Raised when the RelativeTarget already exists at the destination."""
 
 
 class WopiViewSet(viewsets.ViewSet):
@@ -51,6 +68,7 @@ class WopiViewSet(viewsets.ViewSet):
         "REFRESH_LOCK": "_refresh_lock",
         "UNLOCK": "_unlock",
         "RENAME_FILE": "_rename_file",
+        "PUT_RELATIVE": "_put_relative_file",
     }
 
     def get_file_id(self):
@@ -86,7 +104,7 @@ class WopiViewSet(viewsets.ViewSet):
             "UserCanRename": abilities["update"],
             "UserCanPresent": False,
             "UserCanAttend": False,
-            "UserCanNotWriteRelative": True,
+            "UserCanNotWriteRelative": not abilities["update"],
             "ReadOnly": not abilities["update"],
             "SupportsRename": client_options.get("SupportsRename", True),
             "SupportsUpdate": True,
@@ -410,3 +428,227 @@ class WopiViewSet(viewsets.ViewSet):
             )
 
         return Response(status=200)
+
+    def _put_relative_file(self, request, pk=None):
+        """
+        Creates a new file on the host based on the current file.
+
+        This function is only used for file conversion for now.
+
+        https://learn.microsoft.com/en-us/microsoft-365/cloud-storage-partner-program/rest/files/putrelativefile
+        """
+        suggested_target = request.META.get(HTTP_X_WOPI_SUGGESTEDTARGET)
+        relative_target = request.META.get(HTTP_X_WOPI_RELATIVETARGET)
+        file_conversion = request.META.get(HTTP_X_WOPI_FILECONVERSION)
+
+        if not file_conversion:
+            return Response(
+                data={"error": {"details": "Only file conversion is supported."}}, status=400
+            )
+
+        if not suggested_target and not relative_target:
+            return Response(
+                data={
+                    "error": {
+                        "details": (
+                            f"One of {HTTP_X_WOPI_SUGGESTEDTARGET} or "
+                            f"{HTTP_X_WOPI_RELATIVETARGET} must be provided."
+                        )
+                    }
+                },
+                status=400,
+            )
+
+        if suggested_target and relative_target:
+            return Response(
+                data={
+                    "error": {
+                        "details": (
+                            f"{HTTP_X_WOPI_SUGGESTEDTARGET} and {HTTP_X_WOPI_RELATIVETARGET}"
+                            " are mutually exclusive."
+                        )
+                    }
+                },
+                status=400,
+            )
+
+        try:
+            file_content = ContentFile(request.body)
+        except RequestDataTooBig:
+            return Response(status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+
+        item = request.auth.item
+
+        parent = self._resolve_put_relative_parent(item, request.user)
+        siblings = self._resolve_put_relative_siblings(parent, request.user)
+
+        if suggested_target:
+            target_filename = self._resolve_suggested_target_filename(
+                item, siblings, suggested_target
+            )
+        else:
+            try:
+                target_filename = self._resolve_relative_target_filename(siblings, relative_target)
+            except PutRelativeTargetConflict:
+                return Response(status=409)
+
+        mimetype = detect_mimetype(
+            file_content.read(min(MIME_SNIFF_BYTES, file_content.size)),
+            filename=target_filename,
+        )
+
+        new_item = self._create_converted_file_copy(
+            user=request.user,
+            parent=parent,
+            target_filename=target_filename,
+            mimetype=mimetype,
+            file_content=file_content,
+        )
+
+        return self._create_put_relative_success_response(new_item, request.user)
+
+    @staticmethod
+    def _decode_put_relative_target(raw_target):
+        """Decode a WOPI target header transported as UTF-7 over ASCII."""
+        return raw_target.encode("ascii").decode("utf-7")
+
+    @classmethod
+    def _resolve_suggested_target_filename(cls, item, siblings, suggested_target):
+        """Decode, expand a leading-dot extension and disambiguate the target name."""
+        logger.debug("putRelativeFile in suggest_target mode")
+        target = cls._decode_put_relative_target(suggested_target)
+        if target.startswith("."):
+            converted = PurePath(item.filename).with_suffix(target)
+            target = capfirst(_("conversion of {title}").format(title=converted))
+        return cls._disambiguate_target(siblings, target)
+
+    @classmethod
+    def _resolve_relative_target_filename(cls, siblings, relative_target):
+        """Decode the target name and refuse collisions per WOPI spec."""
+        logger.debug("putRelativeFile in relative_target mode")
+        target_filename = cls._decode_put_relative_target(relative_target)
+        if cls._has_relative_target_conflict(siblings, target_filename):
+            raise PutRelativeTargetConflict()
+        return target_filename
+
+    @staticmethod
+    def _create_put_relative_success_response(new_item, user):
+        """Build the 200 response after a successful PutRelativeFile."""
+        access_service = AccessUserItemService()
+        new_access_token, _ = access_service.insert_new_access(new_item, user)
+        # WOPI spec: Url must point to the WOPISrc of the new file (the path
+        # the WOPI client uses for CheckFileInfo/GetFile), not the host's
+        # session bootstrap endpoint.
+        get_file_info_path = reverse(
+            "files-detail",
+            kwargs={"pk": new_item.id},
+            query={"access_token": new_access_token},
+        )
+        wopi_url = get_file_info_path
+        if settings.WOPI_SRC_BASE_URL:
+            wopi_url = f"{settings.WOPI_SRC_BASE_URL}{get_file_info_path}"
+
+        return Response(
+            data={
+                "Name": new_item.filename,
+                "Url": wopi_url,
+                "HostEditUrl": f"{get_app_url()}/wopi/{new_item.id}",
+            },
+            status=200,
+            content_type="application/json",
+        )
+
+    @staticmethod
+    def _resolve_put_relative_parent(source_item, user):
+        """
+        Resolve the destination parent for a PutRelativeFile copy.
+
+        Returns the source parent when the user can write there, otherwise
+        None (falls back to the user's root with an OWNER access).
+        """
+        if source_item.depth <= 1:
+            return None
+
+        parent = source_item.parent()
+        if parent.get_role(user) in (None, models.RoleChoices.READER):
+            return None
+
+        return parent
+
+    @staticmethod
+    def _resolve_put_relative_siblings(parent, user):
+        """
+        Queryset of items that share the destination with the new file.
+
+        When the destination falls back to the user's root, we consider items at
+        depth=1 the user has a direct access to, so collisions on root files are
+        detected too.
+        """
+        if parent:
+            return Item.objects.children(parent.path)
+
+        return Item.objects.filter(path__depth=1, accesses__user=user).distinct()
+
+    @staticmethod
+    def _disambiguate_target(siblings, target):
+        """
+        Return `target` if no sibling shares the same non-deleted title,
+        otherwise append a `_NN` suffix. Matches the rule applied by
+        `Item.objects.create_child` so that the resulting title and filename
+        stay consistent.
+        """
+        base, ext = splitext(target)
+        suffix = 1
+
+        while siblings.filter_non_deleted(title=target).exists():
+            target = f"{base}_{suffix:02d}{ext}"
+            suffix += 1
+
+        return target
+
+    @staticmethod
+    def _has_relative_target_conflict(siblings, target):
+        """
+        Return True when a non-deleted sibling shares the same title as `target`.
+        Uses the same rule as `Item.objects.create_child` so a sibling folder
+        bearing that title is also a conflict.
+        """
+        return siblings.filter_non_deleted(title=target).exists()
+
+    @staticmethod
+    def _create_converted_file_copy(
+        user,
+        parent,
+        target_filename,
+        mimetype,
+        file_content,
+    ):
+        """
+        Create the converted file copy in the resolved destination.
+
+        `parent=None` means the user's root.
+        """
+        with transaction.atomic():
+            new_item = Item.objects.create_child(
+                creator=user,
+                link_reach=None if parent else models.LinkReachChoices.RESTRICTED,
+                parent=parent,
+                title=target_filename,
+                type=models.ItemTypeChoices.FILE,
+                filename=target_filename,
+                mimetype=mimetype,
+                size=file_content.size,
+                upload_state=models.ItemUploadStateChoices.DUPLICATING,
+            )
+            if new_item.is_root:
+                models.ItemAccess.objects.create(
+                    item=new_item,
+                    user=user,
+                    role=models.RoleChoices.OWNER,
+                )
+
+            default_storage.save(new_item.file_key, file_content)
+            new_item.upload_state = models.ItemUploadStateChoices.READY
+            new_item.save(update_fields=["upload_state", "updated_at"])
+
+        return new_item
