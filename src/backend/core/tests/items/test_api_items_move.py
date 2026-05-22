@@ -830,3 +830,100 @@ def test_api_items_move_missing_permission_posthog_event(settings):
         {},
         item=item,
     )
+
+
+def test_api_items_move_to_descendant_should_fail():
+    """
+    Moving an item to one of its own descendants should return a validation
+    error and leave the tree untouched.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    # Create a hierarchy: parent -> child -> grandchild
+    parent = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    child = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+        parent=parent,
+    )
+    grandchild = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+        parent=child,
+    )
+
+    expected_error = {
+        "errors": [
+            {
+                "attr": "target",
+                "code": "item_move_target_is_descendant",
+                "detail": "Cannot move an item to itself or one of its descendants",
+            },
+        ],
+        "type": "validation_error",
+    }
+
+    # Moving parent to its direct child
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/move/",
+        data={"target_item_id": str(child.id)},
+    )
+    assert response.status_code == 400
+    assert response.json() == expected_error
+
+    # Moving parent to its grandchild
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/move/",
+        data={"target_item_id": str(grandchild.id)},
+    )
+    assert response.status_code == 400
+    assert response.json() == expected_error
+
+    # Moving child to its own child
+    response = client.post(
+        f"/api/v1.0/items/{child.id!s}/move/",
+        data={"target_item_id": str(grandchild.id)},
+    )
+    assert response.status_code == 400
+    assert response.json() == expected_error
+
+    # The tree must be unchanged
+    parent.refresh_from_db()
+    child.refresh_from_db()
+    grandchild.refresh_from_db()
+    assert child.parent() == parent
+    assert grandchild.parent() == child
+
+
+def test_api_items_move_to_itself_should_fail():
+    """Moving an item to itself should return a validation error."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/move/",
+        data={"target_item_id": str(item.id)},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "target",
+                "code": "item_move_target_is_descendant",
+                "detail": "Cannot move an item to itself or one of its descendants",
+            },
+        ],
+        "type": "validation_error",
+    }

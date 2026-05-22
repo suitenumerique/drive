@@ -12,6 +12,10 @@ and this project adheres to
 
 - 🐛(backend) replace VersionId by Etag for WOPI
 
+### Fixed
+
+- 🐛(backend) prevent moving an item to itself or one of its descendants
+
 ## [v0.18.0] - 2026-05-04
 
 ### Added
