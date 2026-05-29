@@ -109,6 +109,12 @@ export class StandardDriver extends Driver {
     return data;
   }
 
+  async getContacts(): Promise<User[]> {
+    const response = await fetchAPI(`users/contacts/`);
+    const data = await response.json();
+    return data;
+  }
+
   async updateUser(payload: Partial<User> & { id: string }): Promise<User> {
     const response = await fetchAPI(`users/${payload.id}/`, {
       method: "PATCH",

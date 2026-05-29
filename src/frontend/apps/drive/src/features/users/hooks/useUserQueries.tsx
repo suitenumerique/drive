@@ -15,3 +15,13 @@ export const useUsers = (
     queryFn: () => driver.getUsers(filters),
   });
 };
+
+export const useContacts = (options?: HookUseQueryOptions<User[]>) => {
+  const driver = getDriver();
+
+  return useQuery({
+    ...options,
+    queryKey: ["contacts"],
+    queryFn: () => driver.getContacts(),
+  });
+};

@@ -1,5 +1,30 @@
+.explorer__filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .explorer__filters__item {
   display: flex;
   align-items: center;
   gap: 0.5em;
+}
+
+.explorer__filters__contact {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.explorer__filters__check {
+  color: var(--c--components--button--primary--background--color, #2976d8);
+  font-size: 20px;
+}
+
+// The ui-kit caps the SearchFilter list at 240px, which clips the last contact
+// even though the popover has room. Let the popover handle the overflow instead.
+.c__search-filter__popover .c__search-filter__list {
+  max-height: none;
 }

@@ -276,6 +276,12 @@
               "other": "Other"
             }
           },
+          "contact": {
+            "label": "Shared with",
+            "placeholder": "Search for a name",
+            "empty": "No contact found",
+            "reset": "Reset"
+          },
           "workspace": {
             "label": "Workspace"
           },
@@ -894,6 +900,12 @@
               "archive": "Archive",
               "other": "Autre"
             }
+          },
+          "contact": {
+            "label": "Partagé avec",
+            "placeholder": "Rechercher un nom",
+            "empty": "Aucun contact trouvé",
+            "reset": "Réinitialiser"
           },
           "workspace": {
             "label": "Espace"
