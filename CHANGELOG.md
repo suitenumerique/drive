@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(frontend) add file type, contact and modification date topbar filters
+
 ## [v0.19.0] - 2026-06-09
 
 ### Added

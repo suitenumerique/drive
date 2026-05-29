@@ -6,6 +6,7 @@ import {
   SearchFilter,
   SearchUserItem,
 } from "@gouvfr-lasuite/ui-kit";
+import { DateRangePicker } from "@gouvfr-lasuite/cunningham-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import folderIcon from "@/assets/folder/folder.svg";
@@ -16,6 +17,7 @@ import { ItemType, User } from "@/features/drivers/types";
 import { ItemFilters, ItemFiltersScope } from "@/features/drivers/Driver";
 import { useItems } from "../../hooks/useQueries";
 import { useContacts, useUsers } from "@/features/users/hooks/useUserQueries";
+import { DatePreset, DateRange, presetRange } from "../../utils/dateFilters";
 import { TFunction } from "i18next";
 import { ItemIcon } from "../icons/ItemIcon";
 import { getItemTitle } from "../../utils/utils";
@@ -58,6 +60,14 @@ export const ExplorerFilters = () => {
     onFiltersChange?.(handleFilterChange(filters, name, value));
   };
 
+  // The modification date filter drives two query params at once.
+  const onModifiedChange = (range: DateRange | null) => {
+    const newFilters = { ...filters };
+    delete newFilters.updated_at_after;
+    delete newFilters.updated_at_before;
+    onFiltersChange?.({ ...newFilters, ...(range ?? {}) });
+  };
+
   return (
     <div className="explorer__filters">
       <ExplorerFilterCategory
@@ -71,6 +81,7 @@ export const ExplorerFilters = () => {
           onChange={(value) => onChange("contact", value ?? ALL)}
         />
       )}
+      <ExplorerFilterModified onChange={onModifiedChange} />
     </div>
   );
 };
@@ -217,6 +228,94 @@ export const ExplorerFilterCategory = (props: {
       selectedKey={props.value ?? null} // undefined would trigger "uncontrolled components become controlled" warning.
       onSelectionChange={props.onChange}
     />
+  );
+};
+
+const MODIFIED_PRESETS: DatePreset[] = [
+  "today",
+  "last_7_days",
+  "last_30_days",
+  "this_year",
+];
+const MODIFIED_CUSTOM = "custom";
+
+export const ExplorerFilterModified = (props: {
+  onChange: (range: DateRange | null) => void;
+}) => {
+  const { t } = useTranslation();
+  const [preset, setPreset] = useState<Key | null>(null);
+  const [isCustom, setIsCustom] = useState(false);
+
+  const options: FilterOption[] = useMemo(
+    () => [
+      { ...getResetOption(t), showSeparator: true },
+      ...MODIFIED_PRESETS.map((value) => ({
+        label: t(`explorer.filters.modified.options.${value}`),
+        value,
+        render: () => (
+          <div className="explorer__filters__item">
+            {t(`explorer.filters.modified.options.${value}`)}
+          </div>
+        ),
+      })),
+      {
+        label: t("explorer.filters.modified.options.custom"),
+        value: MODIFIED_CUSTOM,
+        render: () => (
+          <div className="explorer__filters__item">
+            {t("explorer.filters.modified.options.custom")}
+          </div>
+        ),
+      },
+    ],
+    [t],
+  );
+
+  const onSelectionChange = (key: Key | null) => {
+    if (key === ALL) {
+      setPreset(null);
+      setIsCustom(false);
+      props.onChange(null);
+      return;
+    }
+    if (key === MODIFIED_CUSTOM) {
+      setPreset(key);
+      setIsCustom(true);
+      return;
+    }
+    setPreset(key);
+    setIsCustom(false);
+    props.onChange(presetRange(key as DatePreset));
+  };
+
+  return (
+    <>
+      <Filter
+        label={t("explorer.filters.modified.label")}
+        options={options}
+        selectedKey={preset}
+        onSelectionChange={onSelectionChange}
+      />
+      {isCustom && (
+        <DateRangePicker
+          compact
+          hideLabel
+          startLabel={t("explorer.filters.modified.start")}
+          endLabel={t("explorer.filters.modified.end")}
+          onChange={(range) =>
+            // The picker emits ISO datetimes; the backend wants date-only bounds.
+            props.onChange(
+              range
+                ? {
+                    updated_at_after: range[0].slice(0, 10),
+                    updated_at_before: range[1].slice(0, 10),
+                  }
+                : null,
+            )
+          }
+        />
+      )}
+    </>
   );
 };
 

@@ -2,6 +2,9 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+
+  // Match the custom date range picker height with the filter buttons (32px).
+  --c--components--forms-datepicker--height: 32px;
 }
 
 .explorer__filters__item {

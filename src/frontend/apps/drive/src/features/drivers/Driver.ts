@@ -41,6 +41,8 @@ export type ItemFilters = {
   is_favorite?: boolean;
   category?: string;
   contact?: string;
+  updated_at_after?: string;
+  updated_at_before?: string;
 };
 
 export type PaginatedChildrenResult = {

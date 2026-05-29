@@ -282,6 +282,18 @@
             "empty": "No contact found",
             "reset": "Reset"
           },
+          "modified": {
+            "label": "Modified",
+            "options": {
+              "today": "Today",
+              "last_7_days": "Last 7 days",
+              "last_30_days": "Last 30 days",
+              "this_year": "This year",
+              "custom": "Custom range"
+            },
+            "start": "Start",
+            "end": "End"
+          },
           "workspace": {
             "label": "Workspace"
           },
@@ -906,6 +918,18 @@
             "placeholder": "Rechercher un nom",
             "empty": "Aucun contact trouvé",
             "reset": "Réinitialiser"
+          },
+          "modified": {
+            "label": "Modifié",
+            "options": {
+              "today": "Aujourd'hui",
+              "last_7_days": "7 derniers jours",
+              "last_30_days": "30 derniers jours",
+              "this_year": "Cette année",
+              "custom": "Période personnalisée"
+            },
+            "start": "Début",
+            "end": "Fin"
           },
           "workspace": {
             "label": "Espace"
