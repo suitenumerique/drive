@@ -1,0 +1,135 @@
+"""Tests for the users contacts API endpoint."""
+
+import datetime
+
+import pytest
+from rest_framework.test import APIClient
+
+from core import factories, models
+
+pytestmark = pytest.mark.django_db
+
+
+def test_api_users_contacts_anonymous():
+    """Anonymous users should not be allowed to list their contacts."""
+    client = APIClient()
+    response = client.get("/api/v1.0/users/contacts/")
+    assert response.status_code == 401
+
+
+def test_api_users_contacts():
+    """
+    Contacts are users sharing items with the current user, most frequent first.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    alice = factories.UserFactory()
+    bob = factories.UserFactory()
+    charlie = factories.UserFactory()
+
+    # Items shared with the current user.
+    factories.ItemFactory.create_batch(2, users=[user, alice], creator=user)
+    factories.ItemFactory(users=[user, bob], creator=user)
+    # Items only bob has access to must not inflate his frequency.
+    factories.ItemFactory.create_batch(3, users=[bob])
+    # Charlie shares nothing with the current user.
+    factories.ItemFactory(users=[charlie])
+
+    response = client.get("/api/v1.0/users/contacts/")
+
+    assert response.status_code == 200
+    assert [contact["id"] for contact in response.json()] == [str(alice.id), str(bob.id)]
+
+
+def test_api_users_contacts_excludes_inactive():
+    """Inactive users should not appear in the contacts list."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    inactive = factories.UserFactory(is_active=False)
+    factories.ItemFactory(users=[user, inactive], creator=user)
+
+    response = client.get("/api/v1.0/users/contacts/")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_api_users_contacts_without_sharing():
+    """A user sharing no item with anybody should get an empty contacts list."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    factories.ItemFactory(users=[user], creator=user)
+
+    response = client.get("/api/v1.0/users/contacts/")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_api_users_contacts_excludes_deleted_items():
+    """
+    Contacts sharing only deleted items should not appear, as the contact filter
+    would return nothing for them.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    now = datetime.datetime.now(tz=datetime.UTC)
+    alice = factories.UserFactory()
+    ghost = factories.UserFactory()
+    spectre = factories.UserFactory()
+
+    # Alive item shared with alice.
+    factories.ItemFactory(users=[user, alice], creator=user)
+    # Hard deleted item shared with ghost.
+    hard_deleted = factories.ItemFactory(users=[user, ghost], creator=user)
+    models.Item.objects.filter(pk=hard_deleted.pk).update(hard_deleted_at=now)
+    # Trashed item shared with spectre.
+    factories.ItemFactory(users=[user, spectre], deleted_at=now, creator=user)
+
+    response = client.get("/api/v1.0/users/contacts/")
+
+    assert response.status_code == 200
+    assert [contact["id"] for contact in response.json()] == [str(alice.id)]
+
+
+def test_api_users_contacts_via_team(mock_user_teams):
+    """Contacts reached through a team-shared item should be listed too."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    mock_user_teams.return_value = ["team1"]
+
+    alice = factories.UserFactory()
+    # Item the current user reaches through "team1", with alice as a direct member.
+    item = factories.TeamItemAccessFactory(team="team1", item__creator=user).item
+    factories.UserItemAccessFactory(item=item, user=alice)
+
+    response = client.get("/api/v1.0/users/contacts/")
+
+    assert response.status_code == 200
+    assert [contact["id"] for contact in response.json()] == [str(alice.id)]
+
+
+def test_api_users_contacts_includes_item_creators():
+    """People who shared an item (its creator) should appear in the contacts list."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    bob = factories.UserFactory()
+    # Item created and shared by bob, visible to the user, but bob has no direct access.
+    factories.ItemFactory(users=[user], creator=bob)
+
+    response = client.get("/api/v1.0/users/contacts/")
+
+    assert response.status_code == 200
+    assert str(bob.id) in [contact["id"] for contact in response.json()]
