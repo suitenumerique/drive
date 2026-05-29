@@ -26,10 +26,15 @@ class ItemFilter(django_filters.FilterSet):
         method="filter_category", label=_("File type"), choices=enums.FILE_CATEGORY_CHOICES
     )
     contact = django_filters.UUIDFilter(method="filter_contact", label=_("Shared with"))
+    # Filter on the date part so a date-only bound covers the whole day
+    # (e.g. updated_at_before=2024-01-01 includes items modified later that day).
+    updated_at = django_filters.DateFromToRangeFilter(
+        field_name="updated_at__date", label=_("Modified")
+    )
 
     class Meta:
         model = models.Item
-        fields = ["title", "type", "category", "contact"]
+        fields = ["title", "type", "category", "contact", "updated_at"]
 
     @staticmethod
     def _extensions_q(extensions):

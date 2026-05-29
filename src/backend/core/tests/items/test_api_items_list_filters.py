@@ -2,6 +2,7 @@
 Tests for items API endpoint in drive's core app: list
 """
 
+import datetime
 import random
 from urllib.parse import urlencode
 
@@ -576,3 +577,58 @@ def test_api_items_list_filter_contact_as_creator():
     assert {result["id"] for result in results} == {str(created_by_contact.id)}
 
 
+# Filters: updated_at
+
+
+@pytest.mark.parametrize(
+    "params,expected",
+    [
+        ({"updated_at_after": "2023-01-01", "updated_at_before": "2024-01-01"}, {"mid"}),
+        ({"updated_at_after": "2024-01-01"}, {"new"}),
+        ({"updated_at_before": "2021-01-01"}, {"old"}),
+        (
+            {"updated_at_after": "2019-01-01", "updated_at_before": "2027-01-01"},
+            {"old", "mid", "new"},
+        ),
+        # A date-only upper bound covers the whole day: "mid" is modified at 12:30
+        # on the bound day and must still be included.
+        ({"updated_at_before": "2023-06-15"}, {"old", "mid"}),
+    ],
+)
+def test_api_items_list_filter_updated_at(params, expected):
+    """Filtering by a modification date range returns only items within the range."""
+    user, client = _login()
+
+    # Mix files and folders to confirm the date filter is type-agnostic.
+    _create_item(
+        user,
+        models.ItemTypeChoices.FILE,
+        updated_at=datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC),
+        title="old",
+    )
+    _create_item(
+        user,
+        updated_at=datetime.datetime(2023, 6, 15, 12, 30, tzinfo=datetime.UTC),
+        title="mid",
+    )
+    _create_item(
+        user,
+        models.ItemTypeChoices.FILE,
+        updated_at=datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC),
+        title="new",
+    )
+
+    response = client.get(f"/api/v1.0/items/?{urlencode(params):s}")
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert {result["title"] for result in results} == expected
+
+
+def test_api_items_list_filter_updated_at_invalid():
+    """The modification date filter only accepts dates, other values raise a 400 error."""
+    _, client = _login()
+
+    response = client.get("/api/v1.0/items/?updated_at_before=not-a-date")
+
+    assert response.status_code == 400
