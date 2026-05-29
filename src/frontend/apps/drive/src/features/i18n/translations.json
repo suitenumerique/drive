@@ -262,6 +262,20 @@
               "reset": "Reset"
             }
           },
+          "category": {
+            "label": "Type",
+            "options": {
+              "doc": "Text document",
+              "powerpoint": "Slides",
+              "calc": "Spreadsheet",
+              "pdf": "PDF",
+              "image": "Image",
+              "video": "Video",
+              "audio": "Audio",
+              "archive": "Archive",
+              "other": "Other"
+            }
+          },
           "workspace": {
             "label": "Workspace"
           },
@@ -865,6 +879,20 @@
               "file": "Fichier",
               "folder": "Dossier",
               "reset": "Réinitialiser"
+            }
+          },
+          "category": {
+            "label": "Type",
+            "options": {
+              "doc": "Document texte",
+              "powerpoint": "Présentation",
+              "calc": "Tableur",
+              "pdf": "PDF",
+              "image": "Image",
+              "video": "Vidéo",
+              "audio": "Audio",
+              "archive": "Archive",
+              "other": "Autre"
             }
           },
           "workspace": {

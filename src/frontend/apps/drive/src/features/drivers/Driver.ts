@@ -39,6 +39,7 @@ export type ItemFilters = {
   is_creator_me?: boolean;
   ordering?: string;
   is_favorite?: boolean;
+  category?: string;
 };
 
 export type PaginatedChildrenResult = {
