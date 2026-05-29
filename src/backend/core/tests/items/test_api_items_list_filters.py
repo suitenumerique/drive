@@ -412,3 +412,101 @@ def test_api_items_list_filter_unknown_type():
         ],
         "type": "validation_error",
     }
+
+
+# Filters: category
+
+
+def _login():
+    """Create a user and return it with an authenticated API client."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    return user, client
+
+
+def _create_item(user, item_type=models.ItemTypeChoices.FOLDER, updated_at=None, **kwargs):
+    """Create an item owned by the user, ready when a file, with an optional date."""
+    if item_type == models.ItemTypeChoices.FILE:
+        kwargs["update_upload_state"] = models.ItemUploadStateChoices.READY
+    item = factories.ItemFactory(users=[user], type=item_type, **kwargs)
+    if updated_at is not None:
+        # `auto_now` overrides the value on save, so set it through an update query.
+        models.Item.objects.filter(pk=item.pk).update(updated_at=updated_at)
+    return item
+
+
+def _create_files(user, *filenames):
+    """Create ready files owned by the given user with the given filenames."""
+    for filename in filenames:
+        _create_item(user, models.ItemTypeChoices.FILE, filename=filename)
+
+
+def assert_results(response, *filenames):
+    """Assert the response lists exactly the files with the given filenames."""
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert {result["filename"] for result in results} == set(filenames)
+
+
+@pytest.mark.parametrize(
+    "category,expected",
+    [
+        ("doc", {"notes.txt", "memo.docx"}),
+        ("powerpoint", {"deck.pptx"}),
+        ("calc", {"data.xlsx"}),
+        ("pdf", {"report.pdf"}),
+        ("image", {"photo.png", "scan.JPEG"}),
+        ("video", {"clip.mp4"}),
+        ("audio", {"song.mp3"}),
+        ("archive", {"backup.zip"}),
+        ("other", {"weird.xyz"}),
+    ],
+)
+def test_api_items_list_filter_category(category, expected):
+    """Filtering by a file type category returns only the files of that category."""
+    user, client = _login()
+
+    _create_files(
+        user,
+        "notes.txt",
+        "memo.docx",
+        "deck.pptx",
+        "data.xlsx",
+        "report.pdf",
+        "photo.png",
+        "scan.JPEG",
+        "clip.mp4",
+        "song.mp3",
+        "backup.zip",
+        "weird.xyz",
+    )
+
+    response = client.get(f"/api/v1.0/items/?category={category}")
+
+    assert_results(response, *expected)
+
+
+def test_api_items_list_filter_category_keeps_folders():
+    """Filtering by a file type category keeps folders visible for navigation."""
+    user, client = _login()
+
+    folder = _create_item(user, models.ItemTypeChoices.FOLDER)
+    pdf = _create_item(user, models.ItemTypeChoices.FILE, filename="report.pdf")
+    _create_item(user, models.ItemTypeChoices.FILE, filename="photo.png")
+
+    response = client.get("/api/v1.0/items/?category=pdf")
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert {result["id"] for result in results} == {str(folder.id), str(pdf.id)}
+
+
+def test_api_items_list_filter_category_invalid():
+    """Filtering by an invalid category should raise a 400 error."""
+    _, client = _login()
+
+    response = client.get("/api/v1.0/items/?category=unknown")
+
+    assert response.status_code == 400
+

@@ -1,26 +1,68 @@
 """API filters for drive' core application."""
 
+from itertools import chain
+
 from django.db.models import Q, TextChoices
 from django.utils.translation import gettext_lazy as _
 
 import django_filters
 from rest_framework.filters import OrderingFilter
 
-from core import models
+from core import enums, models
 
 
 class ItemFilter(django_filters.FilterSet):
     """
     Custom filter for filtering items.
+
+    These filters are shared by every explorer listing (list, children, recents
+    and favorites) so the topbar filters behave the same in all views.
     """
 
     title = django_filters.CharFilter(
         field_name="title", lookup_expr="unaccent__icontains", label=_("Title")
     )
+    category = django_filters.ChoiceFilter(
+        method="filter_category", label=_("File type"), choices=enums.FILE_CATEGORY_CHOICES
+    )
 
     class Meta:
         model = models.Item
-        fields = ["title", "type"]
+        fields = ["title", "type", "category"]
+
+    @staticmethod
+    def _extensions_q(extensions):
+        """Build a Q matching filenames ending with one of the given extensions."""
+        matched = Q()
+        for extension in extensions:
+            matched |= Q(filename__iendswith=extension)
+        return matched
+
+    # pylint: disable=unused-argument
+    def filter_category(self, queryset, name, value):
+        """
+        Filter files by file type category, based on their filename extension.
+
+        Folders are always kept so navigation is not broken when a category is
+        selected.
+
+        Example:
+            - /api/v1.0/items/?category=pdf
+                → Folders plus files whose filename ends with a pdf extension
+            - /api/v1.0/items/?category=other
+                → Folders plus files whose extension matches no known category
+        """
+        is_folder = Q(type=models.ItemTypeChoices.FOLDER)
+        is_file = Q(type=models.ItemTypeChoices.FILE)
+
+        if value == "other":
+            all_extensions = chain.from_iterable(enums.FILE_CATEGORY_EXTENSIONS.values())
+            matched = ~self._extensions_q(all_extensions)
+        else:
+            matched = self._extensions_q(enums.FILE_CATEGORY_EXTENSIONS[value])
+
+        return queryset.filter(is_folder | (is_file & matched))
+
 
 
 class ItemOrdering(OrderingFilter):

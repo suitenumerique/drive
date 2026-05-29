@@ -290,3 +290,32 @@ def test_api_item_favorite_list_ordering_by_fields(ordering, django_assert_num_q
     else:
         assert results[0]["id"] == str(item_favorited1.id)
         assert results[1]["id"] == str(item_favorited2.id)
+
+
+def test_api_items_favorite_list_filter_category():
+    """The favorite list can be filtered by file type category."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    image = factories.ItemFactory(
+        users=[user],
+        favorited_by=[user],
+        type=models.ItemTypeChoices.FILE,
+        filename="pic.png",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    pdf = factories.ItemFactory(
+        users=[user],
+        favorited_by=[user],
+        type=models.ItemTypeChoices.FILE,
+        filename="doc.pdf",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    response = client.get("/api/v1.0/items/favorite_list/?category=image")
+
+    assert response.status_code == 200
+    ids = {result["id"] for result in response.json()["results"]}
+    assert str(image.id) in ids
+    assert str(pdf.id) not in ids

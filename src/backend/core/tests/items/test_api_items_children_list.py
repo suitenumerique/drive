@@ -1486,3 +1486,30 @@ def test_api_items_children_list_excludes_pending_items():
     assert response.status_code == 200
     results = response.json()
     assert results["count"] == 2
+
+
+def test_api_items_children_list_filter_category():
+    """The children list can be filtered by file type category."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[user])
+    factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+        filename="doc.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    png = factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+        filename="pic.png",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/?category=image")
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert {result["id"] for result in results} == {str(png.id)}

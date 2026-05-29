@@ -539,3 +539,32 @@ def test_api_item_recents_ordering_by_creator_full_name(ordering, django_assert_
         assert results[3]["id"] == str(parent_item.id)
         assert results[4]["id"] == str(child2_item_file.id)
         assert results[5]["id"] == str(child_item_file.id)
+
+
+def test_api_item_recents_filter_category():
+    """Recent items can be filtered by file type category."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    image = factories.ItemFactory(
+        creator=user,
+        users=[user],
+        type=models.ItemTypeChoices.FILE,
+        filename="pic.png",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    pdf = factories.ItemFactory(
+        creator=user,
+        users=[user],
+        type=models.ItemTypeChoices.FILE,
+        filename="doc.pdf",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    response = client.get("/api/v1.0/items/recents/?category=image")
+
+    assert response.status_code == 200
+    ids = {result["id"] for result in response.json()["results"]}
+    assert str(image.id) in ids
+    assert str(pdf.id) not in ids
