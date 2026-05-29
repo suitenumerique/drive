@@ -1513,3 +1513,25 @@ def test_api_items_children_list_filter_category():
     assert response.status_code == 200
     results = response.json()["results"]
     assert {result["id"] for result in results} == {str(png.id)}
+
+
+def test_api_items_children_list_filter_contact_inherited():
+    """Filtering children by contact includes items shared through an ancestor."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    contact = factories.UserFactory()
+
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[user, contact])
+    child = factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+        filename="doc.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/?contact={contact.id!s}")
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert {result["id"] for result in results} == {str(child.id)}

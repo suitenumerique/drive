@@ -510,3 +510,69 @@ def test_api_items_list_filter_category_invalid():
 
     assert response.status_code == 400
 
+
+# Filters: contact
+
+
+def test_api_items_list_filter_contact():
+    """Filtering by contact should return items shared with that contact."""
+    user, client = _login()
+    contact = factories.UserFactory()
+
+    shared = factories.ItemFactory(users=[user, contact], type=models.ItemTypeChoices.FOLDER)
+    factories.ItemFactory(users=[user], type=models.ItemTypeChoices.FOLDER)
+
+    response = client.get(f"/api/v1.0/items/?contact={contact.id!s}")
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert {result["id"] for result in results} == {str(shared.id)}
+
+
+def test_api_items_list_filter_contact_no_duplicates():
+    """An item shared with several users should not be duplicated in the results."""
+    user, client = _login()
+    contact = factories.UserFactory()
+    other = factories.UserFactory()
+
+    factories.ItemFactory(users=[user, contact, other], type=models.ItemTypeChoices.FOLDER)
+
+    response = client.get(f"/api/v1.0/items/?contact={contact.id!s}")
+
+    assert response.status_code == 200
+    assert len(response.json()["results"]) == 1
+
+
+def test_api_items_list_filter_contact_respects_access_rights():
+    """Filtering by contact must not leak items the current user cannot access."""
+    _user, client = _login()
+    contact = factories.UserFactory()
+
+    # Item shared with the contact but not with the current user.
+    factories.ItemFactory(
+        users=[contact], link_reach="restricted", type=models.ItemTypeChoices.FOLDER
+    )
+
+    response = client.get(f"/api/v1.0/items/?contact={contact.id!s}")
+
+    assert response.status_code == 200
+    assert response.json()["results"] == []
+
+
+def test_api_items_list_filter_contact_as_creator():
+    """Filtering by contact includes items the contact created and shared (shared by)."""
+    user, client = _login()
+    contact = factories.UserFactory()
+
+    created_by_contact = factories.ItemFactory(
+        users=[user], creator=contact, type=models.ItemTypeChoices.FOLDER
+    )
+    factories.ItemFactory(users=[user], type=models.ItemTypeChoices.FOLDER)
+
+    response = client.get(f"/api/v1.0/items/?contact={contact.id!s}")
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert {result["id"] for result in results} == {str(created_by_contact.id)}
+
+

@@ -2,7 +2,7 @@
 
 from itertools import chain
 
-from django.db.models import Q, TextChoices
+from django.db.models import Exists, OuterRef, Q, TextChoices
 from django.utils.translation import gettext_lazy as _
 
 import django_filters
@@ -25,10 +25,11 @@ class ItemFilter(django_filters.FilterSet):
     category = django_filters.ChoiceFilter(
         method="filter_category", label=_("File type"), choices=enums.FILE_CATEGORY_CHOICES
     )
+    contact = django_filters.UUIDFilter(method="filter_contact", label=_("Shared with"))
 
     class Meta:
         model = models.Item
-        fields = ["title", "type", "category"]
+        fields = ["title", "type", "category", "contact"]
 
     @staticmethod
     def _extensions_q(extensions):
@@ -63,6 +64,24 @@ class ItemFilter(django_filters.FilterSet):
 
         return queryset.filter(is_folder | (is_file & matched))
 
+    # pylint: disable=unused-argument
+    def filter_contact(self, queryset, name, value):
+        """
+        Filter items in which the given contact is involved in sharing, in either
+        direction.
+
+        "Shared with" the contact: they hold an access on the item or one of its
+        ancestors. "Shared by" the contact: they created the item. Both directions
+        are matched.
+
+        Example:
+            - /api/v1.0/items/?contact=<user_id>
+                → Filters items shared with or by the given user
+        """
+        contact_access = models.ItemAccess.objects.filter(
+            user_id=value, item__path__ancestors=OuterRef("path")
+        )
+        return queryset.filter(Exists(contact_access) | Q(creator_id=value))
 
 
 class ItemOrdering(OrderingFilter):
