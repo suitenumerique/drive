@@ -8,6 +8,8 @@ import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationCreateFileFromTemplate } from "../../hooks/useMutations";
+import { openWopiInNewTab } from "@/features/wopi/openWopi";
+import { itemToPreviewFile } from "../../utils/utils";
 import { useRouter } from "next/router";
 import { useSetSelectedItems } from "../../stores/selectionStore";
 
@@ -58,9 +60,12 @@ export const ExplorerCreateFileModal = (
         onSuccess: (createdItem) => {
           form.reset();
           props.onClose();
-          if (props.redirectAfterCreate && createdItem?.id) {
+          if (props.redirectAfterCreate) {
             router.push(`/explorer/items/my-files`);
-            setSelectedItems([createdItem]);
+          }
+          setSelectedItems([createdItem]);
+          if (createdItem.is_wopi_supported) {
+            openWopiInNewTab(itemToPreviewFile(createdItem));
           }
         },
       }

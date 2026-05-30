@@ -601,6 +601,7 @@ class CreateItemSerializer(ItemSerializer):
             "description",
             "hard_delete_at",
             "extension",
+            "is_wopi_supported",
         ]
         read_only_fields = [
             "abilities",
@@ -625,6 +626,7 @@ class CreateItemSerializer(ItemSerializer):
             "main_workspace",
             "size",
             "hard_delete_at",
+            "is_wopi_supported",
         ]
 
     def get_fields(self):

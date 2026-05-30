@@ -40,10 +40,10 @@ export const ExplorerCreateFolderModal = ({
         onSuccess: (createdItem) => {
           form.reset();
           props.onClose();
-          if (props.redirectAfterCreate && createdItem?.id) {
+          if (props.redirectAfterCreate) {
             router.push(`/explorer/items/${createdItem.id}`);
-            setSelectedItems([createdItem]);
           }
+          setSelectedItems([createdItem]);
         },
       },
     );
