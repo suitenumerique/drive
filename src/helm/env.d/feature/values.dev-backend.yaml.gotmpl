@@ -1,0 +1,68 @@
+postgres:
+  enabled: true
+  name: postgres
+  #serviceNameOverride: postgres
+  image: postgres:16-alpine
+  username: dinum
+  password: pass
+  database: dinum
+  persistence: false
+  size: 1Gi
+redis:
+  enabled: true
+  name: redis
+  #serviceNameOverride: redis
+  image: redis:8.2-alpine
+  username: user
+  password: pass
+minio:
+  enabled: true
+  image: quay.io/minio/minio
+  name: minio
+  ingress:
+    enabled: true
+    hostname: {{ .Values.feature }}-drive-minio.{{ .Values.domain }}
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+    tls:
+      enabled: true
+      secretName: minio-tls
+  consoleIngress:
+    enabled: true
+    hostname: {{ .Values.feature }}-drive-minio-console.{{ .Values.domain }}
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
+    tls:
+      enabled: true
+      secretName: minio-console-tls
+  username: dinum
+  password: password
+  bucket: drive-media-storage
+  versioning: true
+  persistence: false
+  size: 1Gi
+keycloak:
+  enabled: true
+  image: quay.io/keycloak/keycloak:20.0.1
+  name: keycloak
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  #serviceNameOverride: keycloak
+  hostname: {{ .Values.feature }}-drive-keycloak.{{ .Values.domain }}
+  username: admin
+  password: pass
+  tls:
+    enabled: true
+    secretName: kc-tls
+  db:
+    username: dinum
+    password: pass
+    database: keycloak
+    persistence: false
+    size: 1Gi
+    image: postgres:16-alpine
+  realm:
+    name: drive
+    username: drive
+    password: drive
+    email: drive@example.com
