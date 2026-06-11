@@ -2,6 +2,12 @@ environments:
   dev:
     values:
       - version: 0.21.0
+  feature:
+    values:
+      - version: 0.21.0
+        feature: ci
+        domain: example.com
+        imageTag: demo
 ---
 repositories:
 - name: dev-backends
@@ -14,111 +20,7 @@ releases:
     chart: dev-backends/dev-backend
     version: 0.0.6
     values:
-      - postgres:
-          enabled: true
-          name: postgres
-          #serviceNameOverride: postgres
-          image: postgres:16-alpine
-          username: dinum
-          password: pass
-          database: dinum
-          size: 1Gi
-      - redis:
-          enabled: true
-          name: redis
-          #serviceNameOverride: redis
-          image: redis:8.2-alpine
-          username: user
-          password: pass
-      - minio:
-          enabled: true
-          image: minio/minio
-          name: minio
-          # serviceNameOverride: drive-minio
-          ingress:
-            enabled: true
-            hostname: drive-minio.127.0.0.1.nip.io
-            tls:
-              enabled: true
-              secretName: drive-tls
-          consoleIngress:
-            enabled: true
-            hostname: drive-minio-console.127.0.0.1.nip.io
-            tls:
-              enabled: true
-              secretName: drive-tls
-          api:
-            port: 80
-          username: dinum
-          password: password
-          bucket: drive-media-storage
-          versioning: true
-          size: 1Gi
-      - keycloak:
-          enabled: true
-          image: quay.io/keycloak/keycloak:20.0.1
-          name: keycloak
-          #serviceNameOverride: keycloak
-          hostname: drive-keycloak.127.0.0.1.nip.io
-          username: admin
-          password: pass
-          tls:
-            enabled: true
-            secretName: drive-tls
-          db:
-            username: dinum
-            password: pass
-            database: keycloak
-            size: 1Gi
-            image: postgres:16-alpine
-          realm:
-            name: drive
-            username: drive
-            password: drive
-            email: drive@example.com
-      - dsproxy:
-          enabled: false
-          aws_url: https://drive-minio.127.0.0.1.nip.io
-          image: demarchenumerique/ds-proxy:v2.0.0-alpha.2
-          command:
-            - /bin/sh
-            - "-c"
-            - |
-              /dsproxy/ds_proxy proxy --address=0.0.0.0:4444 --verify-ssl-certificate=false --password-file /etc/dsproxy/PASSWORD \
-              --salt "$SALT" --keyring-file /etc/dsproxy/keyring.toml --upstream-url ${AWS_URL} \
-              --local-encryption-directory /var/tmp/local_encryption/ --s3-access-key ${AWS_ACCESS_KEY} \
-              --s3-secret-key ${AWS_SECRET_KEY} --s3-region ${AWS_REGION}
-            # Extra volume mounts to manage our local custom CA and avoid to set ssl_verify: false
-          ingress:
-            enabled: true
-            hostname: drive-dsproxy.127.0.0.1.nip.io
-            tls:
-              enabled: true
-          localSecret:
-            enabled: true
-          envVars:
-            RUST_LOG: debug,ds_proxy::http::handlers::fetch=trace,ds_proxy::http::handlers::forward=trace,ds_proxy::config=trace
-            RUST_BACKTRACE: full
-            SALT:
-              secretKeyRef:
-                name: dev-backend-dsproxy
-                key: SALT
-            AWS_ACCESS_KEY:
-              secretKeyRef:
-                name: dev-backend-dsproxy
-                key: AWS_ACCESS_KEY
-            AWS_SECRET_KEY:
-              secretKeyRef:
-                name: dev-backend-dsproxy
-                key: AWS_SECRET_KEY
-            AWS_URL:
-              secretKeyRef:
-                name: dev-backend-dsproxy
-                key: AWS_URL
-            AWS_REGION:
-              secretKeyRef:
-                name: dev-backend-dsproxy
-                key: AWS_REGION
+      - env.d/{{ .Environment.Name }}/values.dev-backend.yaml.gotmpl
 
   - name: drive
     version: {{ .Values.version }}

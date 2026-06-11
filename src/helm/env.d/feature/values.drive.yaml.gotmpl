@@ -1,0 +1,224 @@
+djangoSecretKey: &djangoSecretKey "lkjsdlfkjsldkfjslkdfjslkdjfslkdjf"
+tag: &tag "{{ .Values.imageTag }}"
+djangoSuperUserEmail: admin@example.com
+djangoSuperUserPass: admin
+oidc:
+    clientId: drive
+    clientSecret: ThisIsAnExampleKeyForDevPurposeOnly
+
+image:
+  repository: lasuite/drive-backend
+  pullPolicy: Always
+  tag: *tag
+
+backend:
+  replicas: 1
+  envVars:
+    DJANGO_CSRF_TRUSTED_ORIGINS: https://{{ .Values.feature }}-drive.{{ .Values.domain }}
+    DJANGO_CONFIGURATION: Feature
+    DJANGO_ALLOWED_HOSTS: {{ .Values.feature }}-drive.{{ .Values.domain }}
+    DJANGO_SERVER_TO_SERVER_API_TOKENS: secret-api-key
+    DJANGO_SECRET_KEY: *djangoSecretKey
+    DJANGO_SETTINGS_MODULE: drive.settings
+    DJANGO_SUPERUSER_PASSWORD: admin
+    DJANGO_EMAIL_BRAND_NAME: "La Suite Numérique"
+    DJANGO_EMAIL_HOST: "mailcatcher"
+    DJANGO_EMAIL_LOGO_IMG: https://{{ .Values.feature }}-drive.{{ .Values.domain }}/assets/logo-suite-numerique.png
+    DJANGO_EMAIL_PORT: 1025
+    DJANGO_EMAIL_URL_APP: https://{{ .Values.feature }}-drive.{{ .Values.domain }}
+    DJANGO_EMAIL_USE_SSL: False
+    USER_RECONCILIATION_FORM_URL: https://{{ .Values.feature }}-drive.{{ .Values.domain }}
+    LOGGING_LEVEL_LOGGERS_ROOT: DEBUG
+    LOGGING_LEVEL_LOGGERS_APP: DEBUG
+    OIDC_OP_JWKS_ENDPOINT: https://{{ .Values.feature }}-drive-keycloak.{{ .Values.domain }}/realms/drive/protocol/openid-connect/certs
+    OIDC_OP_AUTHORIZATION_ENDPOINT: https://{{ .Values.feature }}-drive-keycloak.{{ .Values.domain }}/realms/drive/protocol/openid-connect/auth
+    OIDC_OP_TOKEN_ENDPOINT: https://{{ .Values.feature }}-drive-keycloak.{{ .Values.domain }}/realms/drive/protocol/openid-connect/token
+    OIDC_OP_USER_ENDPOINT: https://{{ .Values.feature }}-drive-keycloak.{{ .Values.domain }}/realms/drive/protocol/openid-connect/userinfo
+    OIDC_OP_LOGOUT_ENDPOINT: https://{{ .Values.feature }}-drive-keycloak.{{ .Values.domain }}/realms/drive/protocol/openid-connect/logout
+    OIDC_RP_CLIENT_ID: drive
+    OIDC_RP_CLIENT_SECRET: ThisIsAnExampleKeyForDevPurposeOnly
+    OIDC_RP_SIGN_ALGO: RS256
+    OIDC_RP_SCOPES: "openid email"
+    OIDC_USER_FIELD_TO_SHORTNAME: "given_name"
+    OIDC_USER_FIELDS_TO_FULLNAME: "given_name,usual_name"
+    LOGIN_REDIRECT_URL: https://{{ .Values.feature }}-drive.{{ .Values.domain }}
+    LOGIN_REDIRECT_URL_FAILURE: https://{{ .Values.feature }}-drive.{{ .Values.domain }}
+    LOGOUT_REDIRECT_URL: https://{{ .Values.feature }}-drive.{{ .Values.domain }}
+    DB_HOST: dev-backend-postgres
+    DB_NAME:
+      secretKeyRef:
+        name: dev-backend-postgres
+        key: database
+    DB_USER:
+      secretKeyRef:
+        name: dev-backend-postgres
+        key: username
+    DB_PASSWORD:
+      secretKeyRef:
+        name: dev-backend-postgres
+        key: password
+    DB_PORT: 5432
+    REDIS_URL: redis://user:pass@dev-backend-redis:6379/1
+    DJANGO_CELERY_BROKER_URL: redis://user:pass@dev-backend-redis:6379/1
+    AWS_S3_ENDPOINT_URL: http://dev-backend-minio.{{ .Namespace }}.svc.cluster.local:9000
+    AWS_S3_ACCESS_KEY_ID: dinum
+    AWS_S3_SECRET_ACCESS_KEY: password
+    AWS_S3_SIGNATURE_VERSION: s3v4
+    AWS_S3_REGION_NAME: eu-east-1
+    AWS_STORAGE_BUCKET_NAME: drive-media-storage
+    STORAGES_STATICFILES_BACKEND: django.contrib.staticfiles.storage.StaticFilesStorage
+    MEDIA_BASE_URL: https://{{ .Values.feature }}-drive.{{ .Values.domain }}
+    DJANGO_CELERY_TASK_ROUTES: "{'core.tasks.storage.mirror_file': {'queue': 'mirror'}, 'lasuite.malware_detection.tasks.*': {'queue': 'malware_detection'}}"
+    WOPI_CLIENTS: "onlyoffice"
+    WOPI_ONLYOFFICE_CONVERT_JWT_SECRET: ThisIsAnExampleKeyForDevPurposeOnly
+    WOPI_ONLYOFFICE_DISCOVERY_URL: https://onlyoffice-feature.{{ .Values.domain }}/hosting/discovery
+    WOPI_SRC_BASE_URL: https://{{ .Values.feature }}-drive.{{ .Values.domain }}
+    WOPI_ONLYOFFICE_OPTIONS: '{"ForceConvertExtensions": ["doc", "xls", "ppt"], "ConvertServiceUrl": "https://onlyoffice-feature.{{ .Values.domain }}/converter"}'
+    CACHES_DEFAULT_KEY_PREFIX: "{{ .Values.imageTag }}"
+  migrate:
+    command:
+      - "/bin/sh"
+      - "-c"
+      - |
+        while ! python manage.py check --database default > /dev/null 2>&1
+        do
+          echo "Database not ready"
+          sleep 2
+        done
+
+        echo "Database is ready"
+
+        python manage.py migrate --no-input
+    restartPolicy: Never
+
+  command:
+    - "gunicorn"
+    - "-c"
+    - "/usr/local/etc/gunicorn/drive.py"
+    - "drive.wsgi:application"
+
+  createsuperuser:
+    command:
+      - "/bin/sh"
+      - "-c"
+      - |
+        while ! python manage.py check --database default > /dev/null 2>&1
+        do
+          echo "Database not ready"
+          sleep 2
+        done
+
+        echo "Database is ready"
+        python manage.py createsuperuser --email admin@example.com --password admin
+    restartPolicy: Never
+
+  # Extra volume mounts to manage our local custom CA and avoid to set ssl_verify: false
+  extraVolumeMounts: {}
+
+  # Extra volumes to manage our local custom CA and avoid to set ssl_verify: false
+  extraVolumes: {}
+
+  celeryWorkers:
+    - name: default
+      replicas: 1
+      command: []
+      args: ["celery", "-A", "drive.celery_app", "worker", "-l", "INFO", "-n", "drive@%h"]
+      resources: {}
+      probes:
+        liveness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+        readiness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+    - name: mirror
+      replicas: 1
+      command: []
+      args: ["celery", "-A", "drive.celery_app", "worker", "-l", "INFO", "-Q", "mirror", "-n", "drive@%h"]
+      resources: {}
+      probes:
+        liveness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+        readiness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+    - name: malware-detection
+      replicas: 1
+      command: []
+      args: ["celery", "-A", "drive.celery_app", "worker", "-l", "INFO", "-Q", "malware_detection", "-n", "drive@%h"]
+      resources: {}
+      probes:
+        liveness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+        readiness:
+          exec:
+            command: ["/bin/sh", "-c", "celery -A drive.celery_app inspect ping -d drive@$HOSTNAME"]
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+
+frontend:
+  envVars:
+    PORT: 8080
+    NEXT_PUBLIC_API_ORIGIN: https://{{ .Values.feature }}-drive.{{ .Values.domain }}
+
+  replicas: 1
+
+  image:
+    repository: lasuite/drive-frontend
+    pullPolicy: Always
+    tag: *tag
+
+
+ingress:
+  enabled: true
+  host: {{ .Values.feature }}-drive.{{ .Values.domain }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 150m
+    cert-manager.io/cluster-issuer: letsencrypt
+
+ingressAdmin:
+  enabled: true
+  host: {{ .Values.feature }}-drive.{{ .Values.domain }}
+
+posthog:
+  ingress:
+    enabled: false
+
+  ingressAssets:
+    enabled: false
+
+ingressMedia:
+  enabled: true
+  host: {{ .Values.feature }}-drive.{{ .Values.domain }}
+
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: https://{{ .Values.feature }}-drive.{{ .Values.domain }}/api/v1.0/items/media-auth/
+    nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
+    nginx.ingress.kubernetes.io/upstream-vhost: dev-backend-minio.{{ .Namespace }}.svc.cluster.local:9000
+    nginx.ingress.kubernetes.io/rewrite-target: /drive-media-storage/$1
+
+ingressMediaPreview:
+  enabled: true
+  host: {{ .Values.feature }}-drive.{{ .Values.domain }}
+
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: https://{{ .Values.feature }}-drive.{{ .Values.domain }}/api/v1.0/items/media-auth/
+    nginx.ingress.kubernetes.io/auth-response-headers: "Authorization, X-Amz-Date, X-Amz-Content-SHA256"
+    nginx.ingress.kubernetes.io/upstream-vhost: dev-backend-minio.{{ .Namespace }}.svc.cluster.local:9000
+    nginx.ingress.kubernetes.io/rewrite-target: /drive-media-storage/$1
+
+serviceMedia:
+  host: dev-backend-minio.{{ .Namespace }}.svc.cluster.local
+  port: 9000
