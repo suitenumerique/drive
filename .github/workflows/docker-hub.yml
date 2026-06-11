@@ -9,12 +9,18 @@ on:
     tags:
       - "v*"
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
     branches:
       - "main"
 
 env:
   DOCKER_USER: 1001:127
-  SHOULD_PUSH: ${{ github.event_name != 'pull_request' }}
+  # Fork PRs get no secrets, so they cannot push a preview image
+  SHOULD_PUSH: ${{ github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'preview') && github.event.pull_request.head.repo.full_name == github.repository) }}
 
 jobs:
   build-and-push-backend:
@@ -101,7 +107,7 @@ jobs:
       - build-and-push-frontend
       - build-and-push-backend
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' || (contains(github.event.pull_request.labels.*.name, 'preview') && github.event.pull_request.head.repo.full_name == github.repository)
     steps:
       - uses: numerique-gouv/action-argocd-webhook-notification@main
         id: notify
