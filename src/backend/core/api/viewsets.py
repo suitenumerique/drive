@@ -192,6 +192,7 @@ class UserViewSet(
     queryset = models.User.objects.all().filter(is_active=True)
     serializer_class = serializers.UserSerializer
     get_me_serializer_class = serializers.UserMeSerializer
+    contacts_serializer_class = serializers.UserLightSerializer
     pagination_class = None
     throttle_classes = []
 

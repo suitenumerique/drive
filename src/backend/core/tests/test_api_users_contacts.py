@@ -10,6 +10,27 @@ from core import factories, models
 pytestmark = pytest.mark.django_db
 
 
+def _login():
+    """Create a user and return it with an authenticated API client."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    return user, client
+
+
+def assert_contacts(response, *users):
+    """Assert the response lists exactly the given users as contacts, in order."""
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "id": str(user.id),
+            "full_name": user.full_name,
+            "short_name": user.short_name,
+        }
+        for user in users
+    ]
+
+
 def test_api_users_contacts_anonymous():
     """Anonymous users should not be allowed to list their contacts."""
     client = APIClient()
@@ -21,9 +42,7 @@ def test_api_users_contacts():
     """
     Contacts are users sharing items with the current user, most frequent first.
     """
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
+    user, client = _login()
 
     alice = factories.UserFactory()
     bob = factories.UserFactory()
@@ -39,37 +58,30 @@ def test_api_users_contacts():
 
     response = client.get("/api/v1.0/users/contacts/")
 
-    assert response.status_code == 200
-    assert [contact["id"] for contact in response.json()] == [str(alice.id), str(bob.id)]
+    assert_contacts(response)
 
 
 def test_api_users_contacts_excludes_inactive():
     """Inactive users should not appear in the contacts list."""
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
+    user, client = _login()
 
     inactive = factories.UserFactory(is_active=False)
     factories.ItemFactory(users=[user, inactive], creator=user)
 
     response = client.get("/api/v1.0/users/contacts/")
 
-    assert response.status_code == 200
-    assert response.json() == []
+    assert_contacts(response)
 
 
 def test_api_users_contacts_without_sharing():
     """A user sharing no item with anybody should get an empty contacts list."""
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
+    user, client = _login()
 
     factories.ItemFactory(users=[user], creator=user)
 
     response = client.get("/api/v1.0/users/contacts/")
 
-    assert response.status_code == 200
-    assert response.json() == []
+    assert_contacts(response)
 
 
 def test_api_users_contacts_excludes_deleted_items():
@@ -77,9 +89,7 @@ def test_api_users_contacts_excludes_deleted_items():
     Contacts sharing only deleted items should not appear, as the contact filter
     would return nothing for them.
     """
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
+    user, client = _login()
 
     now = datetime.datetime.now(tz=datetime.UTC)
     alice = factories.UserFactory()
@@ -96,15 +106,12 @@ def test_api_users_contacts_excludes_deleted_items():
 
     response = client.get("/api/v1.0/users/contacts/")
 
-    assert response.status_code == 200
-    assert [contact["id"] for contact in response.json()] == [str(alice.id)]
+    assert_contacts(response, alice)
 
 
 def test_api_users_contacts_via_team(mock_user_teams):
     """Contacts reached through a team-shared item should be listed too."""
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
+    user, client = _login()
 
     mock_user_teams.return_value = ["team1"]
 
@@ -115,15 +122,12 @@ def test_api_users_contacts_via_team(mock_user_teams):
 
     response = client.get("/api/v1.0/users/contacts/")
 
-    assert response.status_code == 200
-    assert [contact["id"] for contact in response.json()] == [str(alice.id)]
+    assert_contacts(response, alice)
 
 
 def test_api_users_contacts_includes_item_creators():
     """People who shared an item (its creator) should appear in the contacts list."""
-    user = factories.UserFactory()
-    client = APIClient()
-    client.force_login(user)
+    user, client = _login()
 
     bob = factories.UserFactory()
     # Item created and shared by bob, visible to the user, but bob has no direct access.
@@ -131,5 +135,4 @@ def test_api_users_contacts_includes_item_creators():
 
     response = client.get("/api/v1.0/users/contacts/")
 
-    assert response.status_code == 200
-    assert str(bob.id) in [contact["id"] for contact in response.json()]
+    assert_contacts(response, bob)
