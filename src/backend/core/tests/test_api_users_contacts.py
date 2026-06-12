@@ -58,7 +58,7 @@ def test_api_users_contacts():
 
     response = client.get("/api/v1.0/users/contacts/")
 
-    assert_contacts(response)
+    assert_contacts(response, alice, bob)
 
 
 def test_api_users_contacts_excludes_inactive():
