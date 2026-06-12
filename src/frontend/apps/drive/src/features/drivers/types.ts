@@ -181,6 +181,8 @@ export type User = {
   column_preferences?: ColumnPreferences | null;
 };
 
+export type UserLight = Pick<User, "id" | "full_name" | "short_name">
+
 export type LocalizedThemeCustomization<T> = {
   default: T;
   [key: string]: T;

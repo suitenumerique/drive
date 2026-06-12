@@ -13,7 +13,7 @@ import folderIcon from "@/assets/folder/folder.svg";
 import mimeOther from "@/assets/files/icons/mime-other.svg";
 import { Key } from "react-aria-components";
 import { useAppExplorer } from "./AppExplorer";
-import { ItemType, User } from "@/features/drivers/types";
+import { ItemType, UserLight } from "@/features/drivers/types";
 import { ItemFilters, ItemFiltersScope } from "@/features/drivers/Driver";
 import { useItems } from "../../hooks/useQueries";
 import { useContacts, useUsers } from "@/features/users/hooks/useUserQueries";
@@ -88,7 +88,9 @@ export const ExplorerFilters = () => {
 
 const CONTACT_RESET = "__contact_reset__";
 
-type ContactItem = { id: string; label: string; user?: User };
+const contactLabel = (user: UserLight) =>  user.full_name || user.short_name || "";
+
+type ContactItem = { id: string; label: string; user?: UserLight };
 
 export const ExplorerFilterContact = (props: {
   value: string | null;
@@ -118,7 +120,7 @@ export const ExplorerFilterContact = (props: {
     }
     const query = search.toLowerCase();
     return list.filter((user) =>
-      (user.full_name || user.email).toLowerCase().includes(query),
+      contactLabel(user).toLowerCase().includes(query),
     );
   }, [isSearching, results, contacts, search]);
 
@@ -135,7 +137,7 @@ export const ExplorerFilterContact = (props: {
   const items: ContactItem[] = useMemo(() => {
     const userItems = users.map((user) => ({
       id: user.id,
-      label: user.full_name || user.email,
+      label: contactLabel(user),
       user,
     }));
     return [
@@ -152,9 +154,7 @@ export const ExplorerFilterContact = (props: {
     <SearchFilter<ContactItem>
       label={t("explorer.filters.contact.label")}
       activeLabel={
-        activeContact
-          ? activeContact.full_name || activeContact.email
-          : undefined
+        activeContact ? contactLabel(activeContact) : undefined
       }
       isActive={!!props.value}
       placeholder={t("explorer.filters.contact.placeholder")}
@@ -171,7 +171,7 @@ export const ExplorerFilterContact = (props: {
           </div>
         ) : (
           <div className="explorer__filters__contact">
-            <SearchUserItem user={item.user!} />
+            <SearchUserItem user={{ ...item.user!, email: "" }} />
             {item.id === props.value && (
               <span className="material-icons explorer__filters__check">check</span>
             )}

@@ -2,7 +2,7 @@ import { getDriver } from "@/features/config/Config";
 import { UserFilters } from "@/features/drivers/Driver";
 import { useQuery } from "@tanstack/react-query";
 import { HookUseQueryOptions } from "@/utils/useQueries";
-import { User } from "@/features/drivers/types";
+import { User, UserLight } from "@/features/drivers/types";
 export const useUsers = (
   filters?: UserFilters,
   options?: HookUseQueryOptions<User[]>
@@ -16,7 +16,7 @@ export const useUsers = (
   });
 };
 
-export const useContacts = (options?: HookUseQueryOptions<User[]>) => {
+export const useContacts = (options?: HookUseQueryOptions<UserLight[]>) => {
   const driver = getDriver();
 
   return useQuery({
