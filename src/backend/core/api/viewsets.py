@@ -931,24 +931,13 @@ class ItemViewSet(
         """
         user = request.user
 
-        # Build the EXISTS subquery to check if user has owner access
-        # to the item or any of its ancestors
-        owner_access_exists = models.ItemAccess.objects.filter(
-            db.Q(user=user) | db.Q(team__in=user.teams),
-            role=models.RoleChoices.OWNER,
-            item__path__ancestors=db.OuterRef("path"),
-        )
-
-        # Filter trashbin items to only those where user has owner access
-        # Before we were filtering on the user_roles annotation, but it was too slow
-        # Here the optimization is to filter on the owner_access_exists subquery
-        # which is much faster.
+        # Restrict to soft-deleted items the user owns (directly or through an
+        # ancestor access). Filtering on the owner access subquery is much faster
+        # than on the user_roles annotation.
         queryset = (
             self.queryset.select_related("creator")
-            .filter(
-                deleted_at__gte=models.get_trashbin_cutoff(),
-            )
-            .filter(db.Exists(owner_access_exists))
+            .filter(deleted_at__gte=models.get_trashbin_cutoff())
+            .owned_by(user)
         )
 
         # Apply filtering similar to children method

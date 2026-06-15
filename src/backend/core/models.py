@@ -804,6 +804,33 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
             **kwargs,
         )
 
+    def created_by(self, user):
+        """Filter items created by the given user."""
+        return self.filter(creator=user)
+
+    def not_created_by(self, user):
+        """Filter items created by someone other than the given user."""
+        return self.exclude(creator=user)
+
+    def favorited_by(self, user):
+        """Filter items the given user marked as favorite."""
+        favorite = ItemFavorite.objects.filter(item_id=models.OuterRef("pk"), user=user)
+        return self.filter(models.Exists(favorite))
+
+    def not_favorited_by(self, user):
+        """Filter items the given user did not mark as favorite."""
+        favorite = ItemFavorite.objects.filter(item_id=models.OuterRef("pk"), user=user)
+        return self.exclude(models.Exists(favorite))
+
+    def owned_by(self, user):
+        """Filter items the given user owns, directly or through an ancestor access."""
+        owner_access = ItemAccess.objects.filter(
+            models.Q(user=user) | models.Q(team__in=user.teams),
+            role=RoleChoices.OWNER,
+            item__path__ancestors=models.OuterRef("path"),
+        )
+        return self.filter(models.Exists(owner_access))
+
     def annotate_is_favorite(self, user):
         """
         Annotate item queryset with the favorite status for the current user.

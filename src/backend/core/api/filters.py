@@ -212,9 +212,9 @@ class ListItemFilter(ItemFilter):
             return queryset
 
         if value:
-            return queryset.filter(creator=user)
+            return queryset.created_by(user)
 
-        return queryset.exclude(creator=user)
+        return queryset.not_created_by(user)
 
     # pylint: disable=unused-argument
     def filter_is_favorite(self, queryset, name, value):
@@ -232,7 +232,10 @@ class ListItemFilter(ItemFilter):
         if not user.is_authenticated:
             return queryset
 
-        return queryset.filter(is_favorite=bool(value))
+        if value:
+            return queryset.favorited_by(user)
+
+        return queryset.not_favorited_by(user)
 
 
 class UsageMetricAccountTypeChoices(TextChoices):
