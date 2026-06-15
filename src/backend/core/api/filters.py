@@ -127,6 +127,15 @@ class WorkspacesChoices(TextChoices):
     SHARED = "shared", _("Shared")
 
 
+class LocationChoices(TextChoices):
+    """Choices for the search location filter."""
+
+    MY_FILES = "my_files", _("My files")
+    SHARED_WITH_ME = "shared_with_me", _("Shared with me")
+    STARRED = "starred", _("Starred")
+    TRASHBIN = "trashbin", _("Trashbin")
+
+
 class SearchItemFilter(ItemFilter):
     """Filter class dedicated to the Item viewset search method."""
 
@@ -138,6 +147,10 @@ class SearchItemFilter(ItemFilter):
         choices=ScopeChoices.choices,
         initial="not_deleted",
         method="filter_scope",
+    )
+
+    location = django_filters.ChoiceFilter(
+        method="filter_location", label=_("Location"), choices=LocationChoices.choices
     )
 
     class Meta:
@@ -152,8 +165,16 @@ class SearchItemFilter(ItemFilter):
             # get a mutable copy of the QueryDict
             data = data.copy()
 
+            # The trashbin location implies a deleted scope: drop any scope, passed
+            # or defaulted, so filter_location owns the deleted set.
+            if is_trashbin := data.get("location") == LocationChoices.TRASHBIN:
+                data.pop("scope", None)
+
             # pylint: disable=no-member
             for name, f in self.base_filters.items():
+                if name == "scope" and is_trashbin:
+                    continue
+
                 initial = f.extra.get("initial")
 
                 # filter param is either missing or empty, use initial as default
@@ -181,6 +202,29 @@ class SearchItemFilter(ItemFilter):
             to_filter |= Q(deleted_at__isnull=True, ancestors_deleted_at__isnull=True)
 
         return queryset.filter(to_filter)
+
+    # pylint: disable=unused-argument
+    def filter_location(self, queryset, name, value):
+        """Filter items based on their location."""
+        user = self.request.user
+        if not user.is_authenticated:
+            return queryset
+
+        if value == LocationChoices.MY_FILES:
+            return queryset.created_by(user)
+
+        if value == LocationChoices.SHARED_WITH_ME:
+            return queryset.not_created_by(user)
+
+        if value == LocationChoices.STARRED:
+            return queryset.favorited_by(user)
+
+        if value == LocationChoices.TRASHBIN:
+            return queryset.owned_by(user).filter(
+                ancestors_deleted_at__gte=models.get_trashbin_cutoff()
+            )
+
+        return queryset
 
 
 class ListItemFilter(ItemFilter):
