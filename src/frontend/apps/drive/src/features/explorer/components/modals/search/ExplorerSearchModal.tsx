@@ -25,7 +25,7 @@ import {
   ExplorerFilterWorkspace,
   ExplorerFilterScope,
   handleFilterChange,
-} from "../../app-view/ExplorerFilters";
+} from "@/features/explorer/components/filters";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { Key } from "react-aria-components";
 import { clearFromRoute, getItemTitle } from "@/features/explorer/utils/utils";

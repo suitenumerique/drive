@@ -47,3 +47,25 @@ export const presetRange = (preset: DatePreset, today: Date = new Date()): DateR
     updated_at_before: toISODate(today),
   };
 };
+
+/** Replace the modification date bounds of the filters with the given range. */
+export const applyDateRange = (
+  filters: ItemFilters,
+  range: DateRange | null,
+): ItemFilters => {
+  const next = { ...filters };
+  delete next.updated_at_after;
+  delete next.updated_at_before;
+  return { ...next, ...(range ?? {}) };
+};
+
+/** Extract the modification date range from the filters, or null when unset. */
+export const dateRangeFromFilters = (filters: ItemFilters): DateRange | null => {
+  if (!filters.updated_at_after && !filters.updated_at_before) {
+    return null;
+  }
+  return {
+    updated_at_after: filters.updated_at_after,
+    updated_at_before: filters.updated_at_before,
+  };
+};

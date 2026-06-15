@@ -1,7 +1,7 @@
 import { HorizontalSeparator } from "@gouvfr-lasuite/ui-kit";
 import { useHasSelection } from "@/features/explorer/stores/selectionStore";
 import { ExplorerSelectionBar } from "@/features/explorer/components/app-view/ExplorerSelectionBar";
-import { ExplorerFilters } from "@/features/explorer/components/app-view/ExplorerFilters";
+import { ExplorerFilters } from "@/features/explorer/components/filters";
 
 /**
  * Isolates the selection-driven subscription so that the flip
