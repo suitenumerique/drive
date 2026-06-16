@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) accept configurable media-auth forward headers
+
 ## [v0.21.0] - 2026-08-07
 
 ### Added

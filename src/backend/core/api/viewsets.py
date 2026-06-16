@@ -1626,18 +1626,19 @@ class ItemViewSet(
 
     def _authorize_subrequest(self, request, pattern):
         """
-        Shared method to authorize access based on the original URL of an Nginx subrequest
-        and user permissions. Returns a dictionary of URL parameters if authorized.
+        Shared method to authorize access based on the original URL of a reverse proxy
+        auth subrequest and user permissions. Returns a dictionary of URL parameters if
+        authorized.
 
-        The original url is passed by nginx in the "HTTP_X_ORIGINAL_URL" header.
-        See corresponding ingress configuration in Helm chart and read about the
-        nginx.ingress.kubernetes.io/auth-url annotation to understand how the Nginx ingress
-        is configured to do this.
+        The original url is passed by the proxy in one of the headers listed in the
+        MEDIA_AUTH_FORWARD_HEADERS setting, which are tried in order. See the corresponding
+        ingress configuration in the Helm chart to understand how the proxy is configured to
+        do this.
 
-        Based on the original url and the logged in user, we must decide if we authorize Nginx
-        to let this request go through (by returning a 200 code) or if we block it (by returning
-        a 403 error). Note that we return 403 errors without any further details for security
-        reasons.
+        Based on the original url and the logged in user, we must decide if we authorize the
+        proxy to let this request go through (by returning a 200 code) or if we block it (by
+        returning a 403 error). Note that we return 403 errors without any further details for
+        security reasons.
 
         Parameters:
         - pattern: The regex pattern to extract identifiers from the URL.
@@ -1647,10 +1648,19 @@ class ItemViewSet(
         Raises:
         - PermissionDenied if authorization fails.
         """
-        # Extract the original URL from the request header
-        original_url = request.META.get("HTTP_X_ORIGINAL_URL")
+        # Extract the original URL from the first configured header that is present.
+        original_url = None
+        for header in settings.MEDIA_AUTH_FORWARD_HEADERS:
+            meta_key = "HTTP_" + header.upper().replace("-", "_")
+            original_url = request.META.get(meta_key)
+            if original_url:
+                break
+
         if not original_url:
-            logger.debug("Missing HTTP_X_ORIGINAL_URL header in subrequest")
+            logger.debug(
+                "Missing media auth header (tried %s) in subrequest",
+                ", ".join(settings.MEDIA_AUTH_FORWARD_HEADERS),
+            )
             raise drf.exceptions.PermissionDenied()
 
         parsed_url = urlparse(original_url)
