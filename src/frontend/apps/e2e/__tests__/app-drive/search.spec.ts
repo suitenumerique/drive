@@ -105,9 +105,9 @@ test("Search folder from trash and cannot navigate to it", async ({ page }) => {
   await expect(input).toBeVisible();
   await input.fill("I am");
 
-  // Set the scope to trash.
+  // Set the location to the trash.
   await page.getByRole("button", { name: "Location" }).click();
-  await page.getByRole("option", { name: "Recycle bin" }).click();
+  await page.getByRole("option", { name: "Trash" }).click();
 
   searchItems = page.getByTestId("search-item");
   await expect(searchItems).toHaveCount(1);
@@ -142,9 +142,9 @@ test("Search a deleted file and click on it", async ({ page }) => {
   await expect(input).toBeVisible();
   await input.fill("resum");
 
-  // Set the scope to trash.
+  // Set the location to the trash.
   await page.getByRole("button", { name: "Location" }).click();
-  await page.getByRole("option", { name: "Recycle bin" }).click();
+  await page.getByRole("option", { name: "Trash" }).click();
 
   let searchItems = page.getByTestId("search-item");
   await expect(searchItems).toHaveCount(1);

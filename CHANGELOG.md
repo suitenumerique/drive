@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(frontend) add file type, contact and modification date topbar filters
+- ✨(frontend) add location, file type, contact and date filters to the search modal
 
 ## [v0.19.0] - 2026-06-09
 

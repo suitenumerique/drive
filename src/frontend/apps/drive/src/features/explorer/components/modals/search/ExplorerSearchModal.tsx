@@ -21,16 +21,23 @@ import {
   useGlobalExplorer,
 } from "../../GlobalExplorerContext";
 import {
-  ExplorerFilterType,
-  ExplorerFilterWorkspace,
-  ExplorerFilterScope,
+  ALL,
+  ExplorerFilterCategory,
+  ExplorerFilterContact,
+  ExplorerFilterLocation,
+  ExplorerFilterModified,
   handleFilterChange,
 } from "@/features/explorer/components/filters";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { Key } from "react-aria-components";
 import { clearFromRoute, getItemTitle } from "@/features/explorer/utils/utils";
 import { messageModalTrashNavigate } from "../../trash/utils";
-import { useIsMinimalLayout } from "@/utils/useLayout";
+import { useAuth } from "@/features/auth/Auth";
+import {
+  applyDateRange,
+  DateRange,
+  dateRangeFromFilters,
+} from "@/features/explorer/utils/dateFilters";
 import { openWopiInNewTab } from "@/features/wopi/openWopi";
 import { itemToPreviewFile } from "@/features/explorer/utils/utils";
 
@@ -40,8 +47,8 @@ type ExplorerSearchModalProps = Pick<ModalProps, "isOpen" | "onClose"> & {
 
 export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [inputValue, setInputValue] = useState<string>("");
-  const isMinimalLayout = useIsMinimalLayout();
   const [filters, setFilters] = useState<ItemFilters>(
     props.defaultFilters || {},
   );
@@ -84,6 +91,11 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
 
   const onFilterChange = (name: string, value: Key | null) => {
     setFilters(handleFilterChange(filters, name, value));
+  };
+
+  // The modification date filter drives two query params at once.
+  const onModifiedChange = (range: DateRange | null) => {
+    setFilters(applyDateRange(filters, range));
   };
 
   const modals = useModals();
@@ -149,18 +161,24 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
         >
           <div className="explorer__search__modal__filters">
             <div className="explorer__search__modal__filters__inputs">
-              <ExplorerFilterType
-                value={filters?.type ?? null}
-                onChange={(value) => onFilterChange("type", value)}
+              <ExplorerFilterLocation
+                value={filters?.location ?? null}
+                onChange={(value) => onFilterChange("location", value)}
               />
-              <ExplorerFilterWorkspace
-                value={filters?.workspace ?? null}
-                isDisabled={isMinimalLayout}
-                onChange={(value) => onFilterChange("workspace", value)}
+              <ExplorerFilterCategory
+                value={filters?.category ?? null}
+                onChange={(value) => onFilterChange("category", value)}
               />
-              <ExplorerFilterScope
-                value={filters?.scope ?? null}
-                onChange={(value) => onFilterChange("scope", value)}
+              {/* Contacts and user search both require authentication. */}
+              {user && (
+                <ExplorerFilterContact
+                  value={filters?.contact ?? null}
+                  onChange={(value) => onFilterChange("contact", value ?? ALL)}
+                />
+              )}
+              <ExplorerFilterModified
+                value={dateRangeFromFilters(filters)}
+                onChange={onModifiedChange}
               />
             </div>
 

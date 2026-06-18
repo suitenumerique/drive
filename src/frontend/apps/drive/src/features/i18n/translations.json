@@ -246,6 +246,15 @@
           }
         },
         "filters": {
+          "location": {
+            "label": "Location",
+            "options": {
+              "my_files": "My files",
+              "shared_with_me": "Shared with me",
+              "starred": "Starred",
+              "trashbin": "Trash"
+            }
+          },
           "scopes": {
             "label": "Location",
             "options": {
@@ -884,6 +893,15 @@
           }
         },
         "filters": {
+          "location": {
+            "label": "Emplacement",
+            "options": {
+              "my_files": "Mes fichiers",
+              "shared_with_me": "Partagés avec moi",
+              "starred": "Favoris",
+              "trashbin": "Corbeille"
+            }
+          },
           "scopes": {
             "label": "Emplacement",
             "options": {
