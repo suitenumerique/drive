@@ -39,11 +39,13 @@ export const runFixture = async (fixture: string) => {
 export const runTarget = async (target: string) => {
   await new Promise((resolve, reject) => {
     exec(
-      `cd ${ROOT_PATH} && make ${target}`,
+      `cd ${ROOT_PATH} && LC_ALL=C make ${target}`,
       (error: Error | null, stdout: string, stderr: string) => {
         if (error) {
-          // Ignore "No rule to make target" errors
-          if (error.message.includes("make: *** No rule to make target")) {
+          // Ignore "No rule to make target" errors (the pseudo-target hack of
+          // backend-exec-command; make may prefix it with "make[N]:"). LC_ALL=C
+          // keeps the message in English regardless of the machine locale.
+          if (error.message.includes("No rule to make target")) {
             resolve(stdout);
             return;
           }
