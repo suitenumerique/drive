@@ -158,3 +158,44 @@ test("Search a deleted file and click on it", async ({ page }) => {
     filePreview.getByRole("heading", { name: "Resume" }),
   ).toBeVisible();
 });
+
+test("Filter search results by location", async ({ page }) => {
+  await clearDb();
+  await runFixture("e2e_fixture_search");
+  await login(page, "drive@example.com");
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Search" }).click();
+
+  const input = page.getByRole("combobox", { name: "Quick search input" });
+  await input.fill("Quarterly");
+
+  // The keyword matches the three items, one per location.
+  await expect(page.getByTestId("search-item")).toHaveCount(3);
+
+  const setLocation = async (option: string) => {
+    await page.getByRole("button", { name: "Location" }).click();
+    await page.getByRole("option", { name: option }).click();
+  };
+
+  // My files keeps the two items created by the current user.
+  await setLocation("My files");
+  await expect(page.getByTestId("search-item")).toHaveCount(2);
+  await expect(
+    page.getByRole("option", { name: "Quarterly review shared" }),
+  ).toHaveCount(0);
+
+  // Shared with me keeps the item created by someone else.
+  await setLocation("Shared with me");
+  await expect(page.getByTestId("search-item")).toHaveCount(1);
+  await expect(
+    page.getByRole("option", { name: "Quarterly review shared" }),
+  ).toBeVisible();
+
+  // Starred keeps the favorite item only.
+  await setLocation("Starred");
+  await expect(page.getByTestId("search-item")).toHaveCount(1);
+  await expect(
+    page.getByRole("option", { name: "Quarterly review starred" }),
+  ).toBeVisible();
+});
