@@ -15,6 +15,7 @@ const MODIFIED_PRESETS: DatePreset[] = [
   "last_7_days",
   "last_30_days",
   "this_year",
+  "more_than_a_year",
 ];
 const MODIFIED_CUSTOM = "custom";
 

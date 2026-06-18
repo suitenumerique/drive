@@ -1,6 +1,11 @@
 import { ItemFilters } from "@/features/drivers/Driver";
 
-export type DatePreset = "today" | "last_7_days" | "last_30_days" | "this_year";
+export type DatePreset =
+  | "today"
+  | "last_7_days"
+  | "last_30_days"
+  | "this_year"
+  | "more_than_a_year";
 
 export type DateRange = Pick<
   ItemFilters,
@@ -27,6 +32,11 @@ const addDays = (date: Date, days: number): Date => {
  * bound. `today` is injectable for deterministic tests.
  */
 export const presetRange = (preset: DatePreset, today: Date = new Date()): DateRange => {
+  if (preset === "more_than_a_year") {
+    const before = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+    return { updated_at_before: toISODate(before) };
+  }
+
   let after: Date;
   switch (preset) {
     case "today":

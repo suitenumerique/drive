@@ -31,6 +31,12 @@ describe("presetRange", () => {
       updated_at_before: "2026-05-29",
     });
   });
+
+  it("caps at one year ago for the more than a year preset", () => {
+    expect(presetRange("more_than_a_year", today)).toEqual({
+      updated_at_before: "2025-05-29",
+    });
+  });
 });
 
 describe("toISODate", () => {
