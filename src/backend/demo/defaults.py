@@ -4,7 +4,7 @@ NB_OBJECTS = {"users": 4, "files": 50, "max_users_per_document": 4}
 
 USERS = [
     {
-        "email": "page.turner@library.book",
+        "email": "paige.turner@library.book",
         "full_name": "Paige Turner",
         "short_name": "Paige",
     },
