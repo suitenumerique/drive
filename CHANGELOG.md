@@ -60,6 +60,7 @@ and this project adheres to
 - 🐛(backend) exclude folders from file type search results
 - 🐛(frontend) keep uploaded items usable while malware analysis runs
 - 🐛(backend) stream export files from S3 without buffering
+- 🐛(backend) resolve the direct parent by exact path after a move
 
 ## [v0.19.0] - 2026-06-09
 
