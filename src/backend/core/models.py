@@ -1217,6 +1217,12 @@ class Item(TreeModel, BaseModel):
         """Return the root of the tree."""
         return self.ancestors().filter(path__depth=1).first()
 
+    def parent(self):
+        """Return the direct parent, looked up by its exact path."""
+        if len(self.path) > 1:
+            return self._meta.model.objects.filter(path=str(self.path[:-1])).first()
+        return None
+
     def invalidate_nb_accesses_cache(self):
         """
         Invalidate the cache for number of accesses, including on affected descendants.
