@@ -55,6 +55,18 @@ def test_models_items_path_for_children_contains_parent_path():
     assert str(child.path) == f"{parent.id!s}.{child.id!s}"
 
 
+def test_models_items_parent_resolves_by_path_after_move():
+    """The parent should stay the direct one after the subtree was moved."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    child = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    new_grandparent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+
+    parent.move(new_grandparent)
+    child.refresh_from_db()
+
+    assert child.parent() == parent
+
+
 def test_models_items_title_max_length():
     """The "title" field should be 100 characters maximum."""
     factories.ItemFactory(title="a" * 255)

@@ -16,6 +16,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(backend) prevent item deletion by a creator whose access was revoked
+- 🐛(backend) resolve the direct parent by exact path after a move
 
 ## [v0.21.2] - 2026-08-25
 
