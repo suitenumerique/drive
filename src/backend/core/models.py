@@ -45,7 +45,6 @@ from timezone_field import TimeZoneField
 from core.permissions import get_permissions_backend
 from core.storage.cache import invalidate_storage_used_cache
 from core.utils.item_title import manage_unique_title as manage_unique_title_utils
-from wopi.conversion.policy import target_extension_for
 
 logger = getLogger(__name__)
 
@@ -1318,93 +1317,8 @@ class Item(TreeModel, BaseModel):
         return self.computed_link_definition["link_role"]
 
     def get_abilities(self, user):
-        """
-        Compute and return abilities for a given user on the item.
-        """
-        # First get the role based on specific access
-        role = self.get_role(user)
-        # Characteristics that are based only on specific access
-        is_owner = role == RoleChoices.OWNER
-        is_deleted = self.ancestors_deleted_at
-        is_owner_or_admin = is_owner or role == RoleChoices.ADMIN
-
-        # Compute access roles before adding link roles because we don't
-        # want anonymous users to access versions (we wouldn't know from
-        # which date to allow them anyway)
-        # Anonymous users should also not see item accesses
-        has_access_role = bool(role) and not is_deleted
-        link_select_options = (
-            LinkReachChoices.get_select_options(**self.ancestors_link_definition)
-            if has_access_role
-            else {}
-        )
-
-        link_definition = self.computed_link_definition
-
-        link_reach = link_definition["link_reach"]
-        if link_reach == LinkReachChoices.PUBLIC or (
-            link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated
-        ):
-            # Set the user role to the highest role between the item role and the link role
-            # Needed for a user with an access lower than link_role
-            # Needed for a user without access to determine the role he has.
-            role = RoleChoices.max(role, link_definition["link_role"])
-        can_get = bool(role) and not is_deleted
-        retrieve = can_get or is_owner
-        can_manage = is_owner_or_admin and not is_deleted
-        can_update = (is_owner_or_admin or role == RoleChoices.EDITOR) and not is_deleted
-        can_create_children = can_update and user.is_authenticated
-        can_hard_delete = (
-            is_owner
-            if self.is_root
-            else (is_owner_or_admin or (user.is_authenticated and self.creator == user))
-        )
-        can_destroy = can_hard_delete and not is_deleted
-        can_duplicate = (
-            can_get
-            and user.is_authenticated
-            and self.type == ItemTypeChoices.FILE
-            and self.upload_state == ItemUploadStateChoices.READY
-        )
-        can_export = can_get and self.type == ItemTypeChoices.FOLDER
-        can_convert = (
-            can_update
-            and self.type == ItemTypeChoices.FILE
-            and self.upload_state
-            in (
-                ItemUploadStateChoices.READY,
-                ItemUploadStateChoices.ANALYZING,
-            )
-            and bool(target_extension_for(self.extension))
-            and bool(settings.WOPI_ONLYOFFICE_CONVERT_JWT_SECRET)
-        )
-
-        return {
-            "accesses_manage": can_manage,
-            "accesses_view": has_access_role,
-            "breadcrumb": can_get,
-            "children_list": can_get,
-            "children_create": can_create_children,
-            "destroy": can_destroy,
-            "download": can_get,
-            "duplicate": can_duplicate,
-            "export": can_export,
-            "hard_delete": can_hard_delete,
-            "favorite": can_get and user.is_authenticated,
-            "link_configuration": can_manage,
-            "invite_owner": is_owner and not is_deleted,
-            "link_select_options": link_select_options,
-            "move": can_manage,
-            "restore": is_owner,
-            "retrieve": retrieve,
-            "tree": can_get,
-            "media_auth": can_get,
-            "partial_update": can_update,
-            "update": can_update,
-            "upload_ended": can_update and user.is_authenticated,
-            "wopi": can_get,
-            "convert": can_convert,
-        }
+        """Compute and return abilities for a given user on the item."""
+        return get_permissions_backend().abilities(user, self)
 
     def send_email(self, subject, emails, context=None, language=None):
         """Generate and send email from a template."""

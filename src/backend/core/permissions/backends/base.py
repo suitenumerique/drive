@@ -25,6 +25,10 @@ class PermissionsBackend(ABC):
     def roles_at(self, user: models.User | AnonymousUser, path: str) -> QuerySet[str]:
         """Return the roles the user holds at the given path, direct or inherited."""
 
+    @abstractmethod
+    def abilities(self, user: models.User | AnonymousUser, item: models.Item) -> dict:
+        """Compute and return abilities for a given user on the item."""
+
     def roles_for(self, user: models.User | AnonymousUser, item: models.Item) -> QuerySet[str]:
         """Return the roles the user holds on the item, direct or inherited."""
         return self.roles_at(user, item.path)
