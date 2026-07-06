@@ -101,7 +101,12 @@ def test_models_items_soft_delete(depth):
 
     with pytest.raises(RuntimeError) as exc_info:
         items[-1].soft_delete()
-        assert str(exc_info) == "This item is already deleted or has deleted ancestors."
+
+    # The item deleted at random is either the last item itself or one of its ancestors
+    assert str(exc_info.value) in (
+        "This item is already deleted or has deleted ancestors.",
+        "Cannot delete this item because one or more ancestors are already deleted.",
+    )
 
     assert deleted_item.deleted_at is not None
     assert deleted_item.ancestors_deleted_at == deleted_item.deleted_at
