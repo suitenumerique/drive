@@ -51,6 +51,7 @@ and this project adheres to
 - ✨(frontend) add location, file type, contact and date search filters
 - ✨(backend) add a local entitlements backend with per-user storage limits
 - ✨(frontend) add storage gauge and settings modal
+- ♻️(backend) route permission decisions through a swappable backend
 
 ### Fixed
 
