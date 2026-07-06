@@ -29,6 +29,10 @@ class PermissionsBackend(ABC):
     def roles_for(self, user: models.User | AnonymousUser, item: models.Item) -> QuerySet[str]:
         """Return the roles the user holds on the item, direct or inherited."""
 
+    @abstractmethod
+    def abilities(self, user: models.User | AnonymousUser, item: models.Item) -> dict:
+        """Compute and return abilities for a given user on the item."""
+
     def role_at(self, user: models.User | AnonymousUser, path: str) -> str | None:
         """Return the highest role the user holds at the given path."""
         return RoleChoices.max(*self.roles_at(user, path))
