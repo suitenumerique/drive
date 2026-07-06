@@ -2,6 +2,8 @@
 
 # pylint: disable=no-name-in-module
 
+from __future__ import annotations
+
 import json
 import logging
 from datetime import timedelta
@@ -748,15 +750,8 @@ class LinkItemSerializer(serializers.ModelSerializer):
             "link_reach",
         ]
 
-    def validate(self, attrs):
-        """Validate that link_role and link_reach are compatible using get_select_options."""
-        link_reach = attrs.get("link_reach")
-        link_role = attrs.get("link_role")
-
-        if not link_reach:
-            raise serializers.ValidationError({"link_reach": _("This field is required.")})
-
-        # Get available options based on ancestors' link definition
+    def _validate_against_ancestors(self, link_reach: str, link_role: str) -> None:
+        """Validate the link definition against the options allowed by ancestors."""
         available_options = LinkReachChoices.get_select_options(
             **self.instance.ancestors_link_definition
         )
@@ -788,11 +783,21 @@ class LinkItemSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {
                     "link_role": (
-                        f"Link role '{link_role}' is not allowed for link reach '{link_reach}'. "
-                        f"Allowed roles: {allowed_roles_str}"
+                        f"Link role '{link_role}' is not allowed for link reach "
+                        f"'{link_reach}'. Allowed roles: {allowed_roles_str}"
                     )
                 }
             )
+
+    def validate(self, attrs: dict) -> dict:
+        """Validate that link_role and link_reach are compatible using get_select_options."""
+        link_reach = attrs.get("link_reach")
+        link_role = attrs.get("link_role")
+
+        if not link_reach:
+            raise serializers.ValidationError({"link_reach": _("This field is required.")})
+
+        self._validate_against_ancestors(link_reach, link_role)
 
         return attrs
 
