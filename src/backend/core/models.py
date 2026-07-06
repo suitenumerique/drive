@@ -42,6 +42,7 @@ from lasuite.drf.models.choices import (
 from pydantic import BaseModel as PydanticBaseModel
 from timezone_field import TimeZoneField
 
+from core.permissions import get_permissions_backend
 from core.storage.cache import invalidate_storage_used_cache
 from core.utils.item_title import manage_unique_title as manage_unique_title_utils
 from wopi.conversion.policy import target_extension_for
@@ -1197,9 +1198,7 @@ class Item(TreeModel, BaseModel):
             nb_accesses = cache.get(cache_key)
 
             if nb_accesses is None:
-                nb_accesses = ItemAccess.objects.filter(
-                    item__path__ancestors=self.path,
-                ).count()
+                nb_accesses = get_permissions_backend().effective_accesses(self).count()
                 cache.set(cache_key, nb_accesses)
 
             return nb_accesses
@@ -1239,10 +1238,7 @@ class Item(TreeModel, BaseModel):
         try:
             roles = self.user_roles or []
         except AttributeError:
-            roles = ItemAccess.objects.filter(
-                models.Q(user=user) | models.Q(team__in=user.teams),
-                item__path__ancestors=self.path,
-            ).values_list("role", flat=True)
+            roles = get_permissions_backend().roles_for(user, self)
 
         return RoleChoices.max(*roles)
 

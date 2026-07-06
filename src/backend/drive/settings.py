@@ -139,6 +139,19 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # Item permissions
+    PERMISSIONS_BACKEND = values.Value(
+        "core.permissions.backends.role.RolePermissionsBackend",
+        environ_name="PERMISSIONS_BACKEND",
+        environ_prefix=None,
+    )
+
+    PERMISSIONS_BACKEND_PARAMETERS = values.DictValue(
+        {},
+        environ_name="PERMISSIONS_BACKEND_PARAMETERS",
+        environ_prefix=None,
+    )
+
     # Static files (CSS, JavaScript, Images)
     STATIC_URL = "/static/"
     STATIC_ROOT = os.path.join(DATA_DIR, "static")
