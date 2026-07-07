@@ -365,9 +365,16 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
     def teams(self):
         """
         Get list of teams in which the user is, as a list of strings.
-        Must be cached if retrieved remotely.
+
+        Teams are read from the OIDC claim named by ``settings.OIDC_TEAMS_CLAIM``,
+        stored on ``self.claims`` at login time. When the setting is unset the
+        user belongs to no team (the previous default). Cached per instance;
+        must be cached if ever retrieved remotely.
         """
-        return []
+        claim = settings.OIDC_TEAMS_CLAIM
+        if not claim:
+            return []
+        return (self.claims or {}).get(claim) or []
 
 
 class UserReconciliation(BaseModel):

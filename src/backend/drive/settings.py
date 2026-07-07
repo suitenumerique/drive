@@ -1165,6 +1165,14 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # Name of the OIDC claim holding the user's team/group memberships. When set,
+    # that claim is stored (see get_extra_claims) and surfaced through
+    # ``User.teams`` for team-based access control. Empty (default) keeps
+    # ``User.teams`` empty, preserving the previous behaviour.
+    OIDC_TEAMS_CLAIM = values.Value(
+        None, environ_name="OIDC_TEAMS_CLAIM", environ_prefix=None
+    )
+
     # WARNING: Enabling this setting allows multiple user accounts to share the same email
     # address. This may cause security issues and is not recommended for production use when
     # email is activated as fallback for identification (see previous setting).
