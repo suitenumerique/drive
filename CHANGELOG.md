@@ -16,6 +16,7 @@ and this project adheres to
 
 ### Fixed
 
+- 🐛(frontend) refresh the Recent view after item mutations
 - 🐛(frontend) keep uploaded items usable while malware analysis runs
 - 🐛(backend) stream export files from S3 without buffering
 
