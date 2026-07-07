@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(frontend) refresh the Recent view after item mutations
+
 ## [v0.22.0] - 2026-09-09
 
 ### Added
