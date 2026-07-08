@@ -147,6 +147,13 @@ export const ItemShareModal = ({
     const accessesByUserId = new Map<string, Access>();
 
     data.forEach((access) => {
+      // Team-based accesses (access.team set, user null) grant a whole team, not a
+      // single user. This member list is keyed by user id and renders per-user
+      // rows, so skip them — otherwise `access.user.id` null-derefs and the whole
+      // modal crashes (a client-side exception).
+      if (access.team) {
+        return;
+      }
       const existing = accessesByUserId.get(access.user.id);
 
       if (!existing) {
