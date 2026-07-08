@@ -10,14 +10,17 @@ import { generateTreeId } from "../components/GlobalExplorerContext";
 
 export const useGetQueryKeyToRefresh = () => {
   return (parentId?: string) => {
-    const queryKeys = [["items", "infinite"]];
+    const queryKeys = [
+      ["items", "infinite"],
+      // The Recent view has its own key prefix (useInfiniteRecentItems), so
+      // invalidating ["items", "infinite"] does not prefix-match it. Without this,
+      // a mutation performed while viewing Recent (create, convert, delete,
+      // rename, upload…) doesn't refresh the list until a manual reload.
+      ["items", "recent", "infinite"],
+    ];
     if (parentId) {
       queryKeys.push(["items", parentId, "children"]);
     }
-    // let queryKey = parentId ? ["items", parentId, "children"] : [];
-    // if (queryKeyForRoute.length > 0) {
-    //   queryKey = queryKeyForRoute;
-    // }
     return queryKeys;
   };
 };
