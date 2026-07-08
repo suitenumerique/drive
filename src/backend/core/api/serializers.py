@@ -248,6 +248,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "link_upload_only",
             "nb_accesses",
             "numchild",
             "numchild_folder",
@@ -282,6 +283,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "link_upload_only",
             "nb_accesses",
             "path",
             "updated_at",
@@ -478,6 +480,7 @@ class ItemSerializer(ListItemSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "link_upload_only",
             "nb_accesses",
             "numchild",
             "numchild_folder",
@@ -583,6 +586,7 @@ class CreateItemSerializer(ItemSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "link_upload_only",
             "nb_accesses",
             "numchild",
             "numchild_folder",
@@ -614,6 +618,7 @@ class CreateItemSerializer(ItemSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "link_upload_only",
             "nb_accesses",
             "path",
             "updated_at",
@@ -746,6 +751,7 @@ class LinkItemSerializer(serializers.ModelSerializer):
         fields = [
             "link_role",
             "link_reach",
+            "link_upload_only",
         ]
 
     def validate(self, attrs):

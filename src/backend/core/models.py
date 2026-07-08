@@ -970,6 +970,11 @@ class Item(TreeModel, BaseModel):
     link_role = models.CharField(
         max_length=20, choices=LinkRoleChoices.choices, default=LinkRoleChoices.READER
     )
+    # When enabled on a link with PUBLIC/AUTHENTICATED reach, the link grants
+    # upload-only (write-only) access: recipients may add files but cannot list,
+    # download, or edit existing contents. Enables "file request" collection
+    # without exposing the folder. See issue #770.
+    link_upload_only = models.BooleanField(default=False)
     creator = models.ForeignKey(
         User,
         on_delete=models.RESTRICT,
@@ -1296,18 +1301,27 @@ class Item(TreeModel, BaseModel):
         link_definition = self.computed_link_definition
 
         link_reach = link_definition["link_reach"]
-        if link_reach == LinkReachChoices.PUBLIC or (
+        link_applies = link_reach == LinkReachChoices.PUBLIC or (
             link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated
-        ):
+        )
+        # An upload-only ("file request") link grants create-only access: it must
+        # NOT raise the user's role (which would grant read/list/download), it only
+        # permits uploads into the folder. See issue #770.
+        is_upload_only = link_applies and self.link_upload_only
+        if link_applies and not is_upload_only:
             # Set the user role to the highest role between the item role and the link role
             # Needed for a user with an access lower than link_role
             # Needed for a user without access to determine the role he has.
             role = RoleChoices.max(role, link_definition["link_role"])
         can_get = bool(role) and not is_deleted
-        retrieve = can_get or is_owner
+        # Upload-only recipients can see the target folder itself (to upload into
+        # it) but not its contents: children_list/download stay tied to can_get.
+        retrieve = can_get or is_owner or is_upload_only
         can_manage = is_owner_or_admin and not is_deleted
         can_update = (is_owner_or_admin or role == RoleChoices.EDITOR) and not is_deleted
-        can_create_children = can_update and user.is_authenticated
+        # Upload-only links intentionally allow anonymous creation, unlike the
+        # normal path which requires an authenticated editor.
+        can_create_children = (can_update and user.is_authenticated) or is_upload_only
         can_hard_delete = (
             is_owner
             if self.is_root

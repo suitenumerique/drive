@@ -1394,3 +1394,43 @@ def test_models_items_restore_complex_bis():
     assert item.ancestors_deleted_at == item.deleted_at
     assert child1.ancestors_deleted_at == item.deleted_at
     assert child2.ancestors_deleted_at == item.deleted_at
+
+
+def test_models_items_get_abilities_upload_only_link_anonymous():
+    """
+    An upload-only ("file request") public link lets an anonymous user create
+    children (upload) but not list, download, or edit existing contents. See #770.
+    """
+    item = factories.ItemFactory(
+        link_reach="public",
+        link_role="reader",
+        link_upload_only=True,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    abilities = item.get_abilities(AnonymousUser())
+
+    # Can contribute files...
+    assert abilities["children_create"] is True
+    # ...but cannot see or touch what is already there.
+    assert abilities["children_list"] is False
+    assert abilities["download"] is False
+    assert abilities["update"] is False
+    assert abilities["accesses_view"] is False
+    # Can still see the target folder itself, in order to upload into it.
+    assert abilities["retrieve"] is True
+
+
+def test_models_items_get_abilities_upload_only_ignored_when_restricted():
+    """
+    The upload-only flag only takes effect for a link that actually applies
+    (PUBLIC / AUTHENTICATED reach); a restricted link grants nothing anonymously.
+    """
+    item = factories.ItemFactory(
+        link_reach="restricted",
+        link_upload_only=True,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    abilities = item.get_abilities(AnonymousUser())
+
+    assert abilities["children_create"] is False
+    assert abilities["retrieve"] is False
