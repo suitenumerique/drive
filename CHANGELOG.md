@@ -16,6 +16,7 @@ and this project adheres to
 
 ### Fixed
 
+- 🐛(frontend) prevent the share modal from crashing on team-based accesses
 - 🐛(frontend) keep uploaded items usable while malware analysis runs
 - 🐛(backend) stream export files from S3 without buffering
 
