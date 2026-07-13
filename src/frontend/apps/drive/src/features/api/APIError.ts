@@ -13,6 +13,13 @@ export class APIError extends Error {
   }
 }
 
+export const errorToCode = (error: unknown): string | undefined => {
+  if (error instanceof APIError) {
+    return error.data?.errors?.[0]?.code;
+  }
+  return undefined;
+};
+
 export const errorToString = (error: unknown): string => {
   if (typeof error === "string") {
     return error;

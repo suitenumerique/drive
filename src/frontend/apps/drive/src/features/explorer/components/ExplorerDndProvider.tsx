@@ -116,20 +116,24 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
 
     setOveredItemIds({});
     const ids = currentSelected.map((item) => item.id);
-    await moveItems.mutateAsync(
-      {
-        ids: ids,
-        parentId: newParentId,
-        oldParentId: itemId,
-      },
-      {
-        onSuccess: () => {
-          addItemsMovedToast(ids.length);
-          // Reset the selected items after the move
-          setSelectedItems([]);
+    await moveItems
+      .mutateAsync(
+        {
+          ids: ids,
+          parentId: newParentId,
+          oldParentId: itemId,
         },
-      },
-    );
+        {
+          onSuccess: () => {
+            addItemsMovedToast(ids.length);
+            // Reset the selected items after the move
+            setSelectedItems([]);
+          },
+        },
+      )
+      .catch(() => {
+        // The error feedback is already handled by the mutation's onError.
+      });
   };
 
   const handleDragEnd = async ({ active, over }: DragEndEvent) => {

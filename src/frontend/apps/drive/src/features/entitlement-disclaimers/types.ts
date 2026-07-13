@@ -12,7 +12,7 @@ export type EntitlementDisclaimer<
   name: Name;
   show: (entitlements: Entitlements) => boolean;
   render: (
-    config: DisclaimersConfig[Name],
+    config: DisclaimersConfig[Name] | undefined,
     entitlements: Entitlements,
   ) => {
     title: string;

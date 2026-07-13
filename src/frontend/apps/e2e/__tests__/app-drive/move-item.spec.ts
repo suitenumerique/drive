@@ -28,6 +28,96 @@ test("Move an item to a new folder", async ({ page }) => {
   await expect(JohnRow).not.toBeVisible();
 });
 
+test("Show an error toast when the server rejects the move", async ({
+  page,
+}) => {
+  await clearDb();
+  await login(page, "drive@example.com");
+  await page.goto("/");
+  await clickToMyFiles(page);
+  await createFolderInCurrentFolder(page, "John");
+  await createFolderInCurrentFolder(page, "Doe");
+
+  // Reject the move server-side (e.g. quota gate on move-to-root).
+  await page.route("**/api/v1.0/items/*/move/", (route) =>
+    route.fulfill({
+      status: 403,
+      contentType: "application/json",
+      body: JSON.stringify({
+        type: "client_error",
+        errors: [
+          {
+            code: "permission_denied",
+            detail: "You cannot take ownership of more storage.",
+            attr: null,
+          },
+        ],
+      }),
+    }),
+  );
+
+  const JohnRow = await getRowItem(page, "John");
+  await clickOnRowItemActions(page, "John", "Move");
+  const moveFolderModal = await getMoveFolderModal(page);
+  const DoeRow = await getRowItem(moveFolderModal, "Doe");
+  await DoeRow.click();
+  await acceptMoveItem(page);
+
+  await expect(
+    page.getByText("An error occurred while moving the item."),
+  ).toBeVisible();
+
+  // The modal stays open on failure; close it and check the item stayed put.
+  await moveFolderModal.getByRole("button", { name: "Cancel" }).click();
+  await expect(JohnRow).toBeVisible();
+});
+
+test("Show the specific quota message when the move is rejected", async ({
+  page,
+}) => {
+  await clearDb();
+  await login(page, "drive@example.com");
+  await page.goto("/");
+  await clickToMyFiles(page);
+  await createFolderInCurrentFolder(page, "John");
+  await createFolderInCurrentFolder(page, "Doe");
+
+  // Reject the move with the quota gate's reason code.
+  await page.route("**/api/v1.0/items/*/move/", (route) =>
+    route.fulfill({
+      status: 403,
+      contentType: "application/json",
+      body: JSON.stringify({
+        type: "client_error",
+        errors: [
+          {
+            code: "user_quota_excedeed",
+            detail: "You cannot take ownership of more storage.",
+            attr: null,
+          },
+        ],
+      }),
+    }),
+  );
+
+  const JohnRow = await getRowItem(page, "John");
+  await clickOnRowItemActions(page, "John", "Move");
+  const moveFolderModal = await getMoveFolderModal(page);
+  const DoeRow = await getRowItem(moveFolderModal, "Doe");
+  await DoeRow.click();
+  await acceptMoveItem(page);
+
+  await expect(
+    page.getByText(
+      "You can no longer move documents to the root, your personal quota has been reached. Contact your administrator.",
+    ),
+  ).toBeVisible();
+
+  // The modal stays open on failure; close it and check the item stayed put.
+  await moveFolderModal.getByRole("button", { name: "Cancel" }).click();
+  await expect(JohnRow).toBeVisible();
+});
+
 test("Search and select to move an item", async ({ page }) => {
   await clearDb();
   await login(page, "drive@example.com");

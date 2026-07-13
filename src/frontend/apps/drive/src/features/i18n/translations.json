@@ -9,6 +9,15 @@
           "close": "OK",
           "cannot_upload": {
             "title": "Uploads are unavailable",
+            "user_quota_excedeed": {
+              "description": "You can no longer add documents, your personal quota has been reached. Contact your administrator."
+            },
+            "user_override_quota_excedeed": {
+              "description": "You can no longer add documents, your personal storage limit has been reached. Contact your administrator."
+            },
+            "organization_quota_excedeed": {
+              "description": "You can no longer add documents, your organization quota has been reached. Contact your administrator."
+            },
             "no_organization": {
               "description": "Your account isn't linked to an organization, so you can't upload files yet. Contact your administrator to get access."
             },
@@ -157,7 +166,14 @@
             "move_to_root": "Move to root",
             "aria_label": "Move folder modal",
             "description_one_item": "Choose the new location for <strong>{{name}}</strong>",
-            "description_multiple_items": "Choose the new location for the <strong>{{count}}</strong> selected elements"
+            "description_multiple_items": "Choose the new location for the <strong>{{count}}</strong> selected elements",
+            "errors": {
+              "user_quota_excedeed": "You can no longer move documents to the root, your personal quota has been reached. Contact your administrator.",
+              "user_override_quota_excedeed": "You can no longer move documents to the root, your personal storage limit has been reached. Contact your administrator.",
+              "organization_quota_excedeed": "You can no longer move documents to the root, your organization quota has been reached. Contact your administrator.",
+              "no_organization": "Your account isn't linked to an organization, so you can't move documents to the root yet. Contact your administrator to get access.",
+              "not_activated": "File upload isn't activated for your organization yet, so you can't move documents to the root. Contact your administrator to enable it."
+            }
           }
         },
         "drag_overlay": {
@@ -484,10 +500,20 @@
                 "file_type_not_allowed": "This file type is not allowed.",
                 "item_create_file_extension_not_allowed": "This file extension is not allowed.",
                 "file_too_large": "The file exceeds the maximum allowed size.",
+                "user_quota_excedeed": "You can no longer add documents, your personal quota has been reached. Contact your administrator.",
+                "user_override_quota_excedeed": "You can no longer add documents, your personal storage limit has been reached. Contact your administrator.",
+                "organization_quota_excedeed": "You can no longer add documents, your organization quota has been reached. Contact your administrator.",
+                "no_organization": "Your account isn't linked to an organization, so you can't upload files yet. Contact your administrator to get access.",
+                "not_activated": "File upload isn't activated for your organization yet. Contact your administrator to enable it.",
                 "unknown": "An unexpected error occurred."
               },
               "error_short": {
-                "file_too_large": "File too large"
+                "file_too_large": "File too large",
+                "user_quota_excedeed": "Quota exceeded",
+                "user_override_quota_excedeed": "Quota exceeded",
+                "organization_quota_excedeed": "Quota exceeded",
+                "no_organization": "Upload not allowed",
+                "not_activated": "Upload not allowed"
               }
             },
             "cancel_modal": {
@@ -510,7 +536,9 @@
           },
           "move": {
             "toast_one": "{{count}} item moved",
-            "toast_other": "{{count}} items moved"
+            "toast_other": "{{count}} items moved",
+            "toast_error_one": "An error occurred while moving the item.",
+            "toast_error_other": "An error occurred while moving the items."
           },
           "share": {
             "modal": {
@@ -656,6 +684,15 @@
           "close": "OK",
           "cannot_upload": {
             "title": "Les téléversements ne sont pas disponibles",
+            "user_quota_excedeed": {
+              "description": "Vous ne pouvez plus ajouter de documents, votre quota personnel est atteint. Contactez votre administrateur."
+            },
+            "user_override_quota_excedeed": {
+              "description": "Vous ne pouvez plus ajouter de documents, votre limite de stockage personnelle est atteinte. Contactez votre administrateur."
+            },
+            "organization_quota_excedeed": {
+              "description": "Vous ne pouvez plus ajouter de documents, votre quota d'organisation est atteint. Contactez votre administrateur."
+            },
             "no_organization": {
               "description": "Votre compte n'est pas rattaché à une organisation, vous ne pouvez pas encore téléverser de fichiers. Contactez votre administrateur pour obtenir un accès."
             },
@@ -804,7 +841,14 @@
             "move_to_root": "Déplacer vers la racine",
             "aria_label": "Modal de déplacement de dossier",
             "description_one_item": "Choisissez le nouvel emplacement pour <strong>{{name}}</strong>",
-            "description_multiple_items": "Choisissez le nouvel emplacement pour les <strong>{{count}}</strong> éléments sélectionnés"
+            "description_multiple_items": "Choisissez le nouvel emplacement pour les <strong>{{count}}</strong> éléments sélectionnés",
+            "errors": {
+              "user_quota_excedeed": "Vous ne pouvez plus déplacer de documents à la racine, votre quota personnel est atteint. Contactez votre administrateur.",
+              "user_override_quota_excedeed": "Vous ne pouvez plus déplacer de documents à la racine, votre limite de stockage personnelle est atteinte. Contactez votre administrateur.",
+              "organization_quota_excedeed": "Vous ne pouvez plus déplacer de documents à la racine, votre quota d'organisation est atteint. Contactez votre administrateur.",
+              "no_organization": "Votre compte n'est pas rattaché à une organisation, vous ne pouvez pas encore déplacer de documents à la racine. Contactez votre administrateur pour obtenir un accès.",
+              "not_activated": "Le téléversement de fichiers n'est pas encore activé pour votre organisation. Vous ne pouvez donc pas déplacer de documents à la racine. Contactez votre administrateur pour l'activer."
+            }
           }
         },
         "drag_overlay": {
@@ -1134,10 +1178,20 @@
                 "file_type_not_allowed": "Ce type de fichier n'est pas autorisé.",
                 "item_create_file_extension_not_allowed": "Cette extension de fichier n'est pas autorisée.",
                 "file_too_large": "Le fichier dépasse la taille maximale autorisée.",
+                "user_quota_excedeed": "Vous ne pouvez plus ajouter de documents, votre quota personnel est atteint. Contactez votre administrateur.",
+                "user_override_quota_excedeed": "Vous ne pouvez plus ajouter de documents, votre limite de stockage personnelle est atteinte. Contactez votre administrateur.",
+                "organization_quota_excedeed": "Vous ne pouvez plus ajouter de documents, votre quota d'organisation est atteint. Contactez votre administrateur.",
+                "no_organization": "Votre compte n'est pas rattaché à une organisation, vous ne pouvez pas encore téléverser de fichiers. Contactez votre administrateur pour obtenir un accès.",
+                "not_activated": "Le téléversement de fichiers n'est pas encore activé pour votre organisation. Contactez votre administrateur pour l'activer.",
                 "unknown": "Une erreur inattendue est survenue."
               },
               "error_short": {
-                "file_too_large": "Fichier trop volumineux"
+                "file_too_large": "Fichier trop volumineux",
+                "user_quota_excedeed": "Quota atteint",
+                "user_override_quota_excedeed": "Quota atteint",
+                "organization_quota_excedeed": "Quota atteint",
+                "no_organization": "Téléversement non autorisé",
+                "not_activated": "Téléversement non autorisé"
               }
             },
             "cancel_modal": {
@@ -1164,7 +1218,9 @@
           },
           "move": {
             "toast_one": "{{count}} élément déplacé",
-            "toast_other": "{{count}} éléments déplacés"
+            "toast_other": "{{count}} éléments déplacés",
+            "toast_error_one": "Une erreur est survenue lors du déplacement de l'élément.",
+            "toast_error_other": "Une erreur est survenue lors du déplacement des éléments."
           },
           "share": {
             "modal": {
@@ -1311,6 +1367,15 @@
           "close": "OK",
           "cannot_upload": {
             "title": "Uploaden is niet beschikbaar",
+            "user_quota_excedeed": {
+              "description": "U kunt geen documenten meer toevoegen, uw persoonlijke quotum is bereikt. Neem contact op met uw beheerder."
+            },
+            "user_override_quota_excedeed": {
+              "description": "U kunt geen documenten meer toevoegen, uw persoonlijke opslaglimiet is bereikt. Neem contact op met uw beheerder."
+            },
+            "organization_quota_excedeed": {
+              "description": "U kunt geen documenten meer toevoegen, het quotum van uw organisatie is bereikt. Neem contact op met uw beheerder."
+            },
             "no_organization": {
               "description": "Uw account is niet gekoppeld aan een organisatie, dus u kunt nog geen bestanden uploaden. Neem contact op met uw beheerder voor toegang."
             },
@@ -1459,7 +1524,14 @@
             "move_to_root": "Verplaats naar root",
             "aria_label": "Map verplaatsen modal",
             "description_one_item": "Kies de nieuwe locatie voor <strong>{{name}}</strong>",
-            "description_multiple_items": "Kies de nieuwe locatie voor de <strong>{{count}}</strong> geselecteerde elementen"
+            "description_multiple_items": "Kies de nieuwe locatie voor de <strong>{{count}}</strong> geselecteerde elementen",
+            "errors": {
+              "user_quota_excedeed": "U kunt geen documenten meer naar de root verplaatsen, uw persoonlijke quotum is bereikt. Neem contact op met uw beheerder.",
+              "user_override_quota_excedeed": "U kunt geen documenten meer naar de root verplaatsen, uw persoonlijke opslaglimiet is bereikt. Neem contact op met uw beheerder.",
+              "organization_quota_excedeed": "U kunt geen documenten meer naar de root verplaatsen, het quotum van uw organisatie is bereikt. Neem contact op met uw beheerder.",
+              "no_organization": "Uw account is niet gekoppeld aan een organisatie, dus u kunt nog geen documenten naar de root verplaatsen. Neem contact op met uw beheerder voor toegang.",
+              "not_activated": "Het uploaden van bestanden is nog niet geactiveerd voor uw organisatie, dus u kunt geen documenten naar de root verplaatsen. Neem contact op met uw beheerder om dit in te schakelen."
+            }
           }
         },
         "drag_overlay": {
@@ -1744,10 +1816,20 @@
                 "file_type_not_allowed": "Dit bestandstype is niet toegestaan.",
                 "item_create_file_extension_not_allowed": "Deze bestandsextensie is niet toegestaan.",
                 "file_too_large": "Het bestand overschrijdt de maximale toegestane grootte.",
+                "user_quota_excedeed": "U kunt geen documenten meer toevoegen, uw persoonlijke quotum is bereikt. Neem contact op met uw beheerder.",
+                "user_override_quota_excedeed": "U kunt geen documenten meer toevoegen, uw persoonlijke opslaglimiet is bereikt. Neem contact op met uw beheerder.",
+                "organization_quota_excedeed": "U kunt geen documenten meer toevoegen, het quotum van uw organisatie is bereikt. Neem contact op met uw beheerder.",
+                "no_organization": "Uw account is niet gekoppeld aan een organisatie, dus u kunt nog geen bestanden uploaden. Neem contact op met uw beheerder voor toegang.",
+                "not_activated": "Het uploaden van bestanden is nog niet geactiveerd voor uw organisatie. Neem contact op met uw beheerder om dit in te schakelen.",
                 "unknown": "Er is een onverwachte fout opgetreden."
               },
               "error_short": {
-                "file_too_large": "Bestand te groot"
+                "file_too_large": "Bestand te groot",
+                "user_quota_excedeed": "Quotum bereikt",
+                "user_override_quota_excedeed": "Quotum bereikt",
+                "organization_quota_excedeed": "Quotum bereikt",
+                "no_organization": "Uploaden niet toegestaan",
+                "not_activated": "Uploaden niet toegestaan"
               }
             },
             "cancel_modal": {
@@ -1770,7 +1852,9 @@
           },
           "move": {
             "toast_one": "{{count}} item verplaatst",
-            "toast_other": "{{count}} items verplaatst"
+            "toast_other": "{{count}} items verplaatst",
+            "toast_error_one": "Er is een fout opgetreden bij het verplaatsen van het item.",
+            "toast_error_other": "Er is een fout opgetreden bij het verplaatsen van de items."
           },
           "share": {
             "modal": {

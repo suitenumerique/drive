@@ -163,10 +163,18 @@ export class StandardDriver extends Driver {
     const payload = {
       ...(parentId ? { target_item_id: parentId } : {}),
     };
-    await fetchAPI(`items/${id}/move/`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    await fetchAPI(
+      `items/${id}/move/`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+      {
+        // A move can be rejected (e.g. quota gate): let the caller toast the
+        // error instead of redirecting the whole app to the 403 page.
+        redirectOn40x: false,
+      },
+    );
   }
 
   async getItemAccesses(itemId: string): Promise<Access[]> {
@@ -421,10 +429,16 @@ export class StandardDriver extends Driver {
         throw new DOMException("Upload cancelled", "AbortError");
       }
 
-      await fetchAPI(`items/${item.id}/upload-ended/`, {
-        method: "POST",
-        signal: abortController.signal,
-      });
+      await fetchAPI(
+        `items/${item.id}/upload-ended/`,
+        {
+          method: "POST",
+          signal: abortController.signal,
+        },
+        {
+          redirectOn40x: false,
+        },
+      );
 
       progressHandler?.(100);
 
@@ -462,9 +476,17 @@ export class StandardDriver extends Driver {
   }
 
   async duplicateItem(id: string): Promise<Item> {
-    const response = await fetchAPI(`items/${id}/duplicate/`, {
-      method: "POST",
-    });
+    const response = await fetchAPI(
+      `items/${id}/duplicate/`,
+      {
+        method: "POST",
+      },
+      {
+        // A duplication can be rejected (e.g. quota gate): let the global
+        // handler toast the error instead of redirecting to the 403 page.
+        redirectOn40x: false,
+      },
+    );
     return jsonToItem(await response.json());
   }
 

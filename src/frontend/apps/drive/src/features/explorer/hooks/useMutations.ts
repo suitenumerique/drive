@@ -231,6 +231,10 @@ export const useMutationDuplicateItem = () => {
       const parentId = item?.originalId ?? item?.id;
       refresh(parentId);
     },
+    meta: {
+      // The caller already toasts a localized message on failure.
+      noGlobalError: true,
+    },
   });
 };
 

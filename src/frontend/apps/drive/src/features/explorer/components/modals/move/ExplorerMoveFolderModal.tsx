@@ -131,7 +131,9 @@ export const ExplorerMoveFolder = ({
     newParentId: string | undefined,
     oldParentId: string,
   ) => {
-    moveItems.mutateAsync(
+    // mutate (not mutateAsync): a rejection is already handled by the
+    // mutation's onError, an unused rejected promise would be unhandled.
+    moveItems.mutate(
       {
         ids: ids,
         parentId: newParentId,

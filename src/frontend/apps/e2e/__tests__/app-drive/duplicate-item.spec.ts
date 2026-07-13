@@ -121,6 +121,41 @@ test.describe("Duplicate item", () => {
     ).not.toBeVisible();
   });
 
+  test("Shows the specific quota message when the duplication is rejected", async ({
+    page,
+  }) => {
+    await createFileFromTemplate(page, "TestDoc");
+
+    // Reject the duplication with the quota gate's reason code.
+    await page.route("**/api/v1.0/items/*/duplicate/", (route) =>
+      route.fulfill({
+        status: 403,
+        contentType: "application/json",
+        body: JSON.stringify({
+          type: "client_error",
+          errors: [
+            {
+              code: "user_quota_excedeed",
+              detail: "You do not have permission to upload files.",
+              attr: null,
+            },
+          ],
+        }),
+      }),
+    );
+
+    await triggerDuplicate(page, "TestDoc");
+
+    await expect(
+      page.getByText(
+        "You can no longer add documents, your personal quota has been reached. Contact your administrator.",
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText("An error occurred while duplicating the item."),
+    ).not.toBeVisible();
+  });
+
   test("Duplicate option is available for files but not folders", async ({
     page,
   }) => {

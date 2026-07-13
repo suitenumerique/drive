@@ -16,7 +16,7 @@ import { useCanCreateChildren } from "@/features/items/utils";
 import { getMyFilesQueryKey } from "@/utils/defaultRoutes";
 import { useConfig } from "@/features/config/ConfigProvider";
 import { getDriver } from "@/features/config/Config";
-import { APIError } from "@/features/api/APIError";
+import { errorToCode } from "@/features/api/APIError";
 import { useRefreshQueryCacheAfterMutation } from "./useRefreshItems";
 import { isIdInItemTree } from "../utils/utils";
 
@@ -33,6 +33,7 @@ import {
   customGetFilesFromEvent,
   isEmptyFolderMarker,
 } from "@/features/explorer/utils/dropTraversal";
+import { getCannotUploadReasonDescription } from "@/features/entitlement-disclaimers/disclaimers/CannotUploadDisclaimer";
 
 type FileUpload = FileWithPath & {
   parentId?: string;
@@ -421,10 +422,12 @@ export const useUploadZone = ({ item }: { item: Item }) => {
           ...prev,
           step: UploadingStep.NONE,
         }));
+        const description = getCannotUploadReasonDescription(entitlements.can_upload.reason);
         addToast(
           <ToasterItem type="error">
             <span>
               {entitlements.can_upload.message ||
+                description ||
                 t("entitlements.can_upload.cannot_upload")}
             </span>
           </ToasterItem>,
@@ -618,10 +621,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
             // Already handled by onCancelFile/onCancelAll
             continue;
           }
-          let errorCode = "unknown";
-          if (err instanceof APIError && err.data?.errors?.[0]?.code) {
-            errorCode = err.data.errors[0].code;
-          }
+          const errorCode = errorToCode(err) ?? "unknown";
 
           // Keep file in state with error status
           setUploadingState((prev) => ({
@@ -705,9 +705,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
       // Collect matches first: onCancelFile mutates the map we're iterating.
       const toCancel: string[] = [];
       for (const [filePath, upload] of activeUploadsRef.current) {
-        if (
-          deletedIds.some((id) => isIdInItemTree(upload.parentPath, id))
-        ) {
+        if (deletedIds.some((id) => isIdInItemTree(upload.parentPath, id))) {
           toCancel.push(filePath);
         }
       }

@@ -51,24 +51,12 @@ const Content = ({
   entitlements: Entitlements;
 }) => {
   const { t } = useTranslation();
+  const reasonTitle = getCannotUploadReasonDescription(
+    entitlements.can_upload.reason,
+  );
   return (
     <div>
-      {entitlements.can_upload.reason ===
-        EntitlementCanUploadReasons.NOT_ACTIVATED && (
-        <p>
-          {t(
-            "entitlements.disclaimers.cannot_upload.not_activated.description",
-          )}
-        </p>
-      )}
-      {entitlements.can_upload.reason ===
-        EntitlementCanUploadReasons.NO_ORGANIZATION && (
-        <p>
-          {t(
-            "entitlements.disclaimers.cannot_upload.no_organization.description",
-          )}
-        </p>
-      )}
+      {reasonTitle && <p>{reasonTitle}</p>}
       {config?.showPotentialOperators &&
         (entitlements.context?.potentialOperators?.length ?? 0) > 0 && (
           <div>
@@ -104,6 +92,17 @@ const Content = ({
         )}
     </div>
   );
+};
+
+export const getCannotUploadReasonDescription = (
+  reason?: EntitlementCanUploadReasons,
+) => {
+  if (reason) {
+    return i18n.t(
+      `entitlements.disclaimers.cannot_upload.${reason}.description`,
+    );
+  }
+  return undefined;
 };
 
 export default CannotUploadDisclaimer;

@@ -34,6 +34,7 @@ import {
   useMutationDuplicateItem,
 } from "./useMutations";
 import { DefaultRoute } from "@/utils/defaultRoutes";
+import { getCanUploadErrorDescription } from "@/utils/entitlements";
 import {
   addToast,
   ToasterItem,
@@ -179,11 +180,14 @@ export const useItemActionMenuItems = ({
         callback: async () => {
           try {
             await duplicateItem(effectiveItemId);
-          } catch {
+          } catch (err) {
             addToast(
               <ToasterItem type="error">
                 <span className="material-icons">content_copy</span>
-                <span>{t("explorer.item.actions.duplicate_error")}</span>
+                <span>
+                  {getCanUploadErrorDescription(err) ??
+                    t("explorer.item.actions.duplicate_error")}
+                </span>
               </ToasterItem>,
             );
           }
