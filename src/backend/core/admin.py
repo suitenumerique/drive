@@ -61,6 +61,7 @@ class UserAdmin(auth_admin.UserAdmin):
                 ),
             },
         ),
+        (_("Entitlements"), {"fields": ("storage_limit_override",)}),
         (_("Important dates"), {"fields": ("created_at", "updated_at")}),
     )
     add_fieldsets = (
@@ -82,6 +83,7 @@ class UserAdmin(auth_admin.UserAdmin):
         "is_staff",
         "is_superuser",
         "is_device",
+        "storage_limit_override",
         "created_at",
         "updated_at",
     )

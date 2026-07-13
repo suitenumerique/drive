@@ -27,6 +27,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(backend) add a local entitlements backend with per-user storage limits
 - ✨(backend) allow converting a file while it is being analyzed
 - ✨(frontend) add file type, contact and modification date topbar filters
 - ✨(frontend) add location, file type, contact and date search filters

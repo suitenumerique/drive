@@ -256,6 +256,19 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         ),
     )
 
+    storage_limit_override = models.BigIntegerField(
+        _("storage limit override"),
+        help_text=_(
+            "Storage limit in bytes for this user, used by the local entitlements "
+            "backend. Leave empty to use the configured default limit. "
+            "Set to 0 for unlimited storage."
+        ),
+        null=True,
+        blank=True,
+        default=None,
+        validators=[validators.MinValueValidator(0)],
+    )
+
     claims = models.JSONField(
         blank=True,
         default=dict,

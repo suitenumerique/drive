@@ -44,6 +44,34 @@ ENTITLEMENTS_BACKEND_PARAMETERS = {
 }
 ```
 
+### Local Backend
+
+The `LocalEntitlementsBackend` enforces a per-user storage quota computed from local data, without relying on any external service. Every user gets a default limit (10 GiB unless configured otherwise), and the usage is computed by the configured storage compute backend (by default, the sum of the sizes of the items the user created — files count against their creator).
+
+**Configuration:**
+
+```python
+ENTITLEMENTS_BACKEND = "core.entitlements.backends.local.LocalEntitlementsBackend"
+ENTITLEMENTS_BACKEND_PARAMETERS = {
+    # Default storage limit in bytes (optional, defaults to 10 GiB).
+    "default_storage_limit": 10737418240,
+    # Users created before this datetime have no limit (optional).
+    "exempt_users_created_before": "2026-01-01T00:00:00+00:00",
+    # Safety net expiry in seconds for the cached usage (optional, defaults to 3600).
+    "cache_timeout": 3600,
+}
+```
+
+**Caching:** the storage used by each user is cached (`storage_used:user:<id>` key) and invalidated whenever an item write changes it (upload, collaborative save, conversion, duplication, hard delete, creator reassignment). The `cache_timeout` expiry is only a safety net: a value primed concurrently with a write can stay stale for up to that duration.
+
+**Per-user override:** the limit can be overridden for each user through the `storage_limit_override` field, editable in the Django admin. Leave it empty to apply the configured default limit, set it to `0` for unlimited storage, or set any positive number of bytes. The override always takes precedence over the `exempt_users_created_before` cutoff.
+
+**Grandfathering:** when `exempt_users_created_before` is set, users created before that datetime (and without an override) have no storage limit. This allows rolling out quotas for new users only.
+
+Users without a limit (grandfathered or override set to `0`) get no `quota` entry in the entitlements response, so no quota gauge is rendered.
+
+Note that the quota is soft: `can_upload` is checked before the file size is known, so a single upload can overshoot the limit; the next one is then blocked.
+
 ### DeployCenter Backend
 
 The `DeployCenterEntitlementsBackend` integrates with an external [DeployCenter](https://github.com/suitenumerique/st-deploycenter) entitlements service to check user permissions based on their account email and other OIDC claims.
