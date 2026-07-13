@@ -59,7 +59,13 @@ def test_api_entitlements_deploycenter_get_entitlements_both_true():
             "entitlements": {
                 "can_access": True,
                 "can_upload": True,
-            }
+                "max_storage_account": 100000000,
+            },
+            "metrics": {
+                "account": {
+                    "storage_used": 25000000,
+                },
+            },
         },
         status=200,
     )
@@ -76,6 +82,11 @@ def test_api_entitlements_deploycenter_get_entitlements_both_true():
         "can_upload": {
             "result": True,
             "reason": None,
+        },
+        "quota": {
+            "state": "default",
+            "usage": 25000000,
+            "limit": 100000000,
         },
         "context": {
             "organization": None,
@@ -159,7 +170,13 @@ def test_api_entitlements_deploycenter_get_entitlements_can_access_false():
             "entitlements": {
                 "can_access": False,
                 "can_upload": True,
-            }
+                "max_storage_account": 100000000,
+            },
+            "metrics": {
+                "account": {
+                    "storage_used": 25000000,
+                },
+            },
         },
         status=200,
     )
@@ -176,6 +193,11 @@ def test_api_entitlements_deploycenter_get_entitlements_can_access_false():
         "can_upload": {
             "result": True,
             "reason": None,
+        },
+        "quota": {
+            "state": "default",
+            "usage": 25000000,
+            "limit": 100000000,
         },
         "context": {
             "organization": None,
@@ -208,7 +230,13 @@ def test_api_entitlements_deploycenter_get_entitlements_cache():
             "entitlements": {
                 "can_access": True,
                 "can_upload": True,
-            }
+                "max_storage_account": 100000000,
+            },
+            "metrics": {
+                "account": {
+                    "storage_used": 25000000,
+                },
+            },
         },
         status=200,
     )
@@ -225,6 +253,11 @@ def test_api_entitlements_deploycenter_get_entitlements_cache():
         "can_upload": {
             "result": True,
             "reason": None,
+        },
+        "quota": {
+            "state": "default",
+            "usage": 25000000,
+            "limit": 100000000,
         },
         "context": {
             "organization": None,
@@ -252,6 +285,11 @@ def test_api_entitlements_deploycenter_get_entitlements_cache():
             "result": True,
             "reason": None,
         },
+        "quota": {
+            "state": "default",
+            "usage": 25000000,
+            "limit": 100000000,
+        },
         "context": {
             "organization": None,
             "operator": None,
@@ -260,6 +298,214 @@ def test_api_entitlements_deploycenter_get_entitlements_cache():
     }
     # Verify that the request was not made again.
     assert len(responses.calls) == 1
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND="core.entitlements.backends.deploycenter.DeployCenterEntitlementsBackend",
+    ENTITLEMENTS_BACKEND_PARAMETERS=ENTITLEMENTS_BACKEND_PARAMETERS,
+)
+@responses.activate
+@pytest.mark.parametrize("reason", ["no_organization", "not_activated"])
+def test_api_entitlements_deploycenter_quota_hidden(reason):
+    """The quota gauge should be hidden when the service is not usable by the user."""
+    responses.add(
+        responses.GET,
+        ENTITLEMENTS_URL,
+        json={
+            "entitlements": {
+                "can_access": True,
+                "can_upload": False,
+                "can_upload_reason": reason,
+            }
+        },
+        status=200,
+    )
+
+    client = APIClient()
+    user = factories.UserFactory(claims={"siret": "12345678901234"})
+    client.force_authenticate(user)
+    response = client.get("/api/v1.0/entitlements/")
+    assert response.status_code == 200
+    assert "quota" not in response.json()
+    assert response.json()["can_upload"] == {
+        "result": False,
+        "reason": reason,
+    }
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND="core.entitlements.backends.deploycenter.DeployCenterEntitlementsBackend",
+    ENTITLEMENTS_BACKEND_PARAMETERS=ENTITLEMENTS_BACKEND_PARAMETERS,
+)
+@responses.activate
+def test_api_entitlements_deploycenter_quota_organization_excedeed():
+    """The quota gauge should be locked when the organization quota is reached."""
+    responses.add(
+        responses.GET,
+        ENTITLEMENTS_URL,
+        json={
+            "entitlements": {
+                "can_access": True,
+                "can_upload": False,
+                "can_upload_resolve_level": "organization",
+                "max_storage_organization": 100000000,
+            }
+        },
+        status=200,
+    )
+
+    client = APIClient()
+    user = factories.UserFactory(claims={"siret": "12345678901234"})
+    client.force_authenticate(user)
+    response = client.get("/api/v1.0/entitlements/")
+    assert response.status_code == 200
+    assert response.json()["quota"] == {
+        "state": "excedeed_locked",
+        "reason": "organization_quota_excedeed",
+    }
+    assert response.json()["can_upload"] == {
+        "result": False,
+        "reason": "organization_quota_excedeed",
+    }
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND="core.entitlements.backends.deploycenter.DeployCenterEntitlementsBackend",
+    ENTITLEMENTS_BACKEND_PARAMETERS=ENTITLEMENTS_BACKEND_PARAMETERS,
+)
+@responses.activate
+def test_api_entitlements_deploycenter_quota_error_metric_account_not_found():
+    """The quota gauge should be in error when the account metrics are missing."""
+    responses.add(
+        responses.GET,
+        ENTITLEMENTS_URL,
+        json={
+            "entitlements": {
+                "can_access": True,
+                "can_upload": True,
+                "max_storage_account": 100000000,
+            }
+        },
+        status=200,
+    )
+
+    client = APIClient()
+    user = factories.UserFactory(claims={"siret": "12345678901234"})
+    client.force_authenticate(user)
+    response = client.get("/api/v1.0/entitlements/")
+    assert response.status_code == 200
+    assert response.json()["quota"] == {
+        "state": "error",
+        "error": "metric_account_not_found",
+    }
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND="core.entitlements.backends.deploycenter.DeployCenterEntitlementsBackend",
+    ENTITLEMENTS_BACKEND_PARAMETERS=ENTITLEMENTS_BACKEND_PARAMETERS,
+)
+@responses.activate
+def test_api_entitlements_deploycenter_quota_error_max_storage_account_not_found():
+    """The quota gauge should be in error when the account storage limit is missing."""
+    responses.add(
+        responses.GET,
+        ENTITLEMENTS_URL,
+        json={
+            "entitlements": {
+                "can_access": True,
+                "can_upload": True,
+            },
+            "metrics": {
+                "account": {
+                    "storage_used": 25000000,
+                },
+            },
+        },
+        status=200,
+    )
+
+    client = APIClient()
+    user = factories.UserFactory(claims={"siret": "12345678901234"})
+    client.force_authenticate(user)
+    response = client.get("/api/v1.0/entitlements/")
+    assert response.status_code == 200
+    assert response.json()["quota"] == {
+        "state": "error",
+        "error": "max_storage_account_not_found",
+    }
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND="core.entitlements.backends.deploycenter.DeployCenterEntitlementsBackend",
+    ENTITLEMENTS_BACKEND_PARAMETERS=ENTITLEMENTS_BACKEND_PARAMETERS,
+)
+@responses.activate
+@pytest.mark.parametrize(
+    "resolve_level,expected_reason",
+    [
+        ("user", "user_quota_excedeed"),
+        ("user_override", "user_override_quota_excedeed"),
+        ("organization", "organization_quota_excedeed"),
+    ],
+)
+def test_api_entitlements_deploycenter_can_upload_reason_from_resolve_level(
+    resolve_level, expected_reason
+):
+    """When no explicit reason is given, it should be derived from the resolve level."""
+    responses.add(
+        responses.GET,
+        ENTITLEMENTS_URL,
+        json={
+            "entitlements": {
+                "can_access": True,
+                "can_upload": False,
+                "can_upload_resolve_level": resolve_level,
+            }
+        },
+        status=200,
+    )
+
+    client = APIClient()
+    user = factories.UserFactory(claims={"siret": "12345678901234"})
+    client.force_authenticate(user)
+    response = client.get("/api/v1.0/entitlements/")
+    assert response.status_code == 200
+    assert response.json()["can_upload"] == {
+        "result": False,
+        "reason": expected_reason,
+    }
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND="core.entitlements.backends.deploycenter.DeployCenterEntitlementsBackend",
+    ENTITLEMENTS_BACKEND_PARAMETERS=ENTITLEMENTS_BACKEND_PARAMETERS,
+)
+@responses.activate
+def test_api_entitlements_deploycenter_can_upload_explicit_reason_wins():
+    """An explicit reason should take precedence over the resolve level fallback."""
+    responses.add(
+        responses.GET,
+        ENTITLEMENTS_URL,
+        json={
+            "entitlements": {
+                "can_access": True,
+                "can_upload": False,
+                "can_upload_reason": "not_activated",
+                "can_upload_resolve_level": "user",
+            }
+        },
+        status=200,
+    )
+
+    client = APIClient()
+    user = factories.UserFactory(claims={"siret": "12345678901234"})
+    client.force_authenticate(user)
+    response = client.get("/api/v1.0/entitlements/")
+    assert response.status_code == 200
+    assert response.json()["can_upload"] == {
+        "result": False,
+        "reason": "not_activated",
+    }
 
 
 def test_api_entitlements_deploycenter_missing_base_url_parameter():

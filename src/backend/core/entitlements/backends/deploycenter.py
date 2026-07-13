@@ -6,11 +6,16 @@ from django.core.cache import cache
 
 import requests
 
-from core.entitlements.backends.base import EntitlementsBackend
+from core.entitlements.backends.base import (
+    CanUploadReason,
+    EntitlementsBackend,
+    QuotaError,
+    QuotaReason,
+    QuotaState,
+)
 
 logger = logging.getLogger(__name__)
 
-ENTITLEMENTS_CACHE_TIMEOUT = 60
 ENTITLEMENTS_CACHE_KEY_PREFIX = "entitlements:user:"
 
 
@@ -72,12 +77,81 @@ class DeployCenterEntitlementsBackend(EntitlementsBackend):
     def can_upload(self, user):
         """Check if a user can upload a file."""
         entitlements = self.get_entitlements(user)
+        result = entitlements.get("entitlements", {}).get("can_upload", False)
+        reason = entitlements.get("entitlements", {}).get("can_upload_reason", None)
+        resolve_level = entitlements.get("entitlements", {}).get("can_upload_resolve_level", None)
+
+        actual_reason = reason
+        if not actual_reason and not result:
+            if resolve_level == "user":
+                actual_reason = CanUploadReason.USER_QUOTA_EXCEDEED
+            elif resolve_level == "user_override":
+                actual_reason = CanUploadReason.USER_OVERRIDE_QUOTA_EXCEDEED
+            elif resolve_level == "organization":
+                actual_reason = CanUploadReason.ORGANIZATION_QUOTA_EXCEDEED
+
         return {
-            "result": entitlements.get("entitlements", {}).get("can_upload", False),
-            "reason": entitlements.get("entitlements", {}).get("can_upload_reason", None),
+            "result": result,
+            "reason": actual_reason,
         }
 
     def can_access(self, user):
         """Check if a user can access the app."""
         entitlements = self.get_entitlements(user)
         return {"result": entitlements.get("entitlements", {}).get("can_access", False)}
+
+    def get_quota(self, user):
+        """Get quota for a user."""
+        if not user.is_authenticated:
+            return {}
+
+        entitlements = self.get_entitlements(user)
+        can_upload = entitlements.get("entitlements", {}).get("can_upload", False)
+        can_upload_resolve_level = entitlements.get("entitlements", {}).get(
+            "can_upload_resolve_level", False
+        )
+        can_upload_reason = entitlements.get("entitlements", {}).get("can_upload_reason", None)
+
+        # Means that the service is not enabled in the user's organization or
+        # the user does not have organization.
+        # Do not render the gauge.
+        if not can_upload and can_upload_reason in [
+            CanUploadReason.NO_ORGANIZATION,
+            CanUploadReason.NOT_ACTIVATED,
+        ]:
+            return {}
+
+        max_storage_organization = entitlements.get("entitlements", {}).get(
+            "max_storage_organization", {}
+        )
+        # Means that the user's organization has reached the quota.
+        if (
+            not can_upload
+            and max_storage_organization
+            and can_upload_resolve_level == "organization"
+        ):
+            return {
+                "state": QuotaState.EXCEDEED_LOCKED,
+                "reason": QuotaReason.ORGANIZATION_QUOTA_EXCEDEED,
+            }
+
+        metric_account = entitlements.get("metrics", {}).get("account", {})
+        max_storage_account = entitlements.get("entitlements", {}).get("max_storage_account")
+
+        if not metric_account:
+            return {
+                "state": QuotaState.ERROR,
+                "error": QuotaError.METRIC_ACCOUNT_NOT_FOUND,
+            }
+
+        if max_storage_account is None:
+            return {
+                "state": QuotaState.ERROR,
+                "error": QuotaError.MAX_STORAGE_ACCOUNT_NOT_FOUND,
+            }
+
+        return {
+            "state": QuotaState.DEFAULT,
+            "usage": metric_account.get("storage_used", 0),
+            "limit": max_storage_account,
+        }
