@@ -1034,6 +1034,13 @@ class Item(TreeModel, BaseModel):
         indexes = [
             GistIndex(fields=["path"]),
             models.Index(NLevel(models.F("path")), name="drive_item_path_nlevel_idx"),
+            # Covers the storage used computation by creator.
+            models.Index(
+                fields=["creator"],
+                include=["size"],
+                condition=models.Q(hard_deleted_at__isnull=True),
+                name="item_creator_size_not_hdel_idx",
+            ),
         ]
 
     def __str__(self):
