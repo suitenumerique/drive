@@ -4,6 +4,8 @@ Test the item duplicate action API endpoint in drive's core app.
 
 from unittest import mock
 
+from django.test import override_settings
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -11,6 +13,42 @@ from core import factories, models
 from core.tests.conftest import TEAM, USER, VIA
 
 pytestmark = pytest.mark.django_db
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND="core.entitlements.backends.local.LocalEntitlementsBackend",
+    ENTITLEMENTS_BACKEND_PARAMETERS={"default_storage_limit": 1000},
+)
+def test_api_items_duplicate_over_quota():
+    """
+    An over-quota user should not be able to grow their storage usage by
+    duplicating a file (the duplicator becomes creator of the sized copy).
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    # The user already exceeds their storage limit with their own files.
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, creator=user, size=2000)
+
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        mimetype="text/plain",
+        filename="myfile.txt",
+        size=100,
+        users=[(user, models.RoleChoices.EDITOR)],
+    )
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/duplicate/")
+
+    assert response.status_code == 403
+    # The can_upload reason is exposed as the error code so the frontend can
+    # show a specific, translatable message.
+    assert response.json()["errors"][0]["code"] == "user_quota_excedeed"
+    assert not models.Item.objects.filter(
+        upload_state=models.ItemUploadStateChoices.DUPLICATING
+    ).exists()
 
 
 def test_api_items_duplicate_anonymous_user():

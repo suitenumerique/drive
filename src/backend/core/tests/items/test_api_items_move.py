@@ -6,12 +6,16 @@ import random
 from unittest import mock
 from uuid import uuid4
 
+from django.test import override_settings
+
 import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
 
 pytestmark = pytest.mark.django_db
+
+LOCAL_BACKEND = "core.entitlements.backends.local.LocalEntitlementsBackend"
 
 # pytest.skip("move API is not re implemented using ltree yet", allow_module_level=True)
 
@@ -674,6 +678,151 @@ def test_api_items_move_to_root():
     assert response.json()["results"][1]["id"] == str(folder.id)
 
     item.refresh_from_db()
+    assert item.creator == mover
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND=LOCAL_BACKEND,
+    ENTITLEMENTS_BACKEND_PARAMETERS={"default_storage_limit": 1000},
+)
+def test_api_items_move_file_to_root_over_quota():
+    """
+    An over-quota user should not be able to take ownership of a file by moving
+    it from a shared folder to their own root.
+    """
+    creator = factories.UserFactory()
+    mover = factories.UserFactory()
+    client = APIClient()
+    client.force_login(mover)
+
+    # The mover already exceeds their storage limit with their own files.
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, creator=mover, size=2000)
+
+    folder = factories.ItemFactory(
+        creator=creator,
+        users=[(creator, models.RoleChoices.OWNER), (mover, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    item = factories.ItemFactory(
+        creator=creator,
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        size=100,
+    )
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/move/", data={})
+
+    assert response.status_code == 403
+    # The can_upload reason is exposed as the error code so the frontend can
+    # show a specific, translatable message.
+    assert response.json()["errors"][0]["code"] == "user_quota_excedeed"
+
+    # The item has not moved and its creator is unchanged.
+    item.refresh_from_db()
+    assert item.creator == creator
+    assert item.parent().id == folder.id
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND=LOCAL_BACKEND,
+    ENTITLEMENTS_BACKEND_PARAMETERS={"default_storage_limit": 1000},
+)
+def test_api_items_move_file_to_root_over_quota_with_direct_access():
+    """
+    An over-quota user moving a file they already have a direct access on should
+    not be blocked: the creator is not reassigned so no storage shifts.
+    """
+    creator = factories.UserFactory()
+    mover = factories.UserFactory()
+    client = APIClient()
+    client.force_login(mover)
+
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, creator=mover, size=2000)
+
+    folder = factories.ItemFactory(
+        creator=creator,
+        users=[(creator, models.RoleChoices.OWNER), (mover, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    item = factories.ItemFactory(
+        creator=creator,
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        size=100,
+        users=[(mover, models.RoleChoices.OWNER)],
+    )
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/move/", data={})
+
+    assert response.status_code == 200
+    item.refresh_from_db()
+    assert item.parent() is None
+    assert item.creator == creator
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND=LOCAL_BACKEND,
+    ENTITLEMENTS_BACKEND_PARAMETERS={"default_storage_limit": 1000},
+)
+def test_api_items_move_folder_to_root_over_quota():
+    """
+    An over-quota user can still move a folder to their root: folders carry no
+    size and descendants keep their creators, so no storage shifts.
+    """
+    creator = factories.UserFactory()
+    mover = factories.UserFactory()
+    client = APIClient()
+    client.force_login(mover)
+
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, creator=mover, size=2000)
+
+    folder = factories.ItemFactory(
+        creator=creator,
+        users=[(creator, models.RoleChoices.OWNER), (mover, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    item = factories.ItemFactory(
+        creator=creator,
+        parent=folder,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/move/", data={})
+
+    assert response.status_code == 200
+    item.refresh_from_db()
+    assert item.parent() is None
+    assert item.creator == mover
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND=LOCAL_BACKEND,
+    ENTITLEMENTS_BACKEND_PARAMETERS={"default_storage_limit": 1000},
+)
+def test_api_items_move_file_to_root_under_quota():
+    """A user with free storage can move a shared file to their root and become creator."""
+    creator = factories.UserFactory()
+    mover = factories.UserFactory()
+    client = APIClient()
+    client.force_login(mover)
+
+    folder = factories.ItemFactory(
+        creator=creator,
+        users=[(creator, models.RoleChoices.OWNER), (mover, models.RoleChoices.OWNER)],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    item = factories.ItemFactory(
+        creator=creator,
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        size=100,
+    )
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/move/", data={})
+
+    assert response.status_code == 200
+    item.refresh_from_db()
+    assert item.parent() is None
     assert item.creator == mover
 
 
