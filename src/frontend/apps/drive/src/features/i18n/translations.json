@@ -39,6 +39,32 @@
         "title": "You don't have the necessary permissions to access this page.",
         "button": "Home"
       },
+      "settings_modal": {
+        "title": "Settings",
+        "tabs": {
+          "storage": {
+            "title": "Storage"
+          }
+        }
+      },
+      "quota": {
+        "gauge": {
+          "exceeded_locked": {
+            "title": "Organization quota exceeded",
+            "label": "Contact an administrator to increase the quota",
+            "reason": {
+              "organization_quota_excedeed": {
+                "description": "Org. quota exceeded"
+              }
+            }
+          },
+          "error": {
+            "title": "Quota error",
+            "label": "Contact support to resolve the error",
+            "tooltip": "Error: {{error}}"
+          }
+        }
+      },
       "share_modal": {
         "options": {
           "link_reach": {
@@ -713,6 +739,32 @@
       "403": {
         "title": "Vous n'avez pas les permissions nécessaires pour accéder à cette page.",
         "button": "Accueil"
+      },
+      "settings_modal": {
+        "title": "Paramètres",
+        "tabs": {
+          "storage": {
+            "title": "Stockage"
+          }
+        }
+      },
+      "quota": {
+        "gauge": {
+          "exceeded_locked": {
+            "title": "Quota organisation dépassé",
+            "label": "Contactez un administrateur pour augmenter le quota",
+            "reason": {
+              "organization_quota_excedeed": {
+                "description": "Quota org. dépassé"
+              }
+            }
+          },
+          "error": {
+            "title": "Erreur de quota",
+            "label": "Contactez le support pour résoudre l'erreur",
+            "tooltip": "Erreur: {{error}}"
+          }
+        }
       },
       "share_modal": {
         "options": {
@@ -1396,6 +1448,32 @@
       "403": {
         "title": "U beschikt niet over de benodigde rechten om dit bestand te openen.",
         "button": "Home"
+      },
+      "settings_modal": {
+        "title": "Instellingen",
+        "tabs": {
+          "storage": {
+            "title": "Opslag"
+          }
+        }
+      },
+      "quota": {
+        "gauge": {
+          "exceeded_locked": {
+            "title": "Organisatiequotum overschreden",
+            "label": "Neem contact op met een beheerder om het quotum te verhogen",
+            "reason": {
+              "organization_quota_excedeed": {
+                "description": "Org. quotum overschreden"
+              }
+            }
+          },
+          "error": {
+            "title": "Quotafout",
+            "label": "Neem contact op met de support om de fout op te lossen",
+            "tooltip": "Fout: {{error}}"
+          }
+        }
       },
       "share_modal": {
         "options": {

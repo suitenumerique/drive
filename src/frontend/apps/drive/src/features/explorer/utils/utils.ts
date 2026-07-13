@@ -125,6 +125,13 @@ export const getExtensionFromName = (str: string) => {
 
 const SIZE_UNIT_KEYS = ["B", "KB", "MB", "GB", "TB", "PB"] as const;
 
+export type SizeUnit = (typeof SIZE_UNIT_KEYS)[number];
+
+export const formatSizeTo = (octets: number, unit: SizeUnit) => {
+  const unitIndex = SIZE_UNIT_KEYS.indexOf(unit);
+  return octets / 1000 ** unitIndex;
+};
+
 export const formatSize = (size: number, t?: (key: string) => string) => {
   let convertedSize = size;
   let unitIndex = 0;

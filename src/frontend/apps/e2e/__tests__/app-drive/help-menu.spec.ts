@@ -71,6 +71,9 @@ test.describe("Help menu", () => {
     await expect(
       page.getByRole("button", { name: "User menu" }),
     ).toBeVisible();
-    await expect(page.locator(".c__left-panel__footer__drive")).toHaveCount(0);
+    // The footer still renders (it hosts the storage gauge), but the help
+    // menu button must not.
+    const footer = page.locator(".c__left-panel__footer__drive");
+    await expect(footer.getByRole("button", { name: "Help" })).toHaveCount(0);
   });
 });

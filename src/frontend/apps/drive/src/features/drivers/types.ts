@@ -234,6 +234,7 @@ export type ApiConfig = {
       showPotentialOperators: boolean;
     };
   };
+  FRONTEND_STORAGE_GAUGE_INFORMATION_LINK?: string;
   FRONTEND_CSS_URL?: string;
   FRONTEND_JS_URL?: string;
   theme_customization?: ThemeCustomization;

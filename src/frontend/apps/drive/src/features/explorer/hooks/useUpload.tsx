@@ -17,7 +17,10 @@ import { getMyFilesQueryKey } from "@/utils/defaultRoutes";
 import { useConfig } from "@/features/config/ConfigProvider";
 import { getDriver } from "@/features/config/Config";
 import { errorToCode } from "@/features/api/APIError";
-import { useRefreshQueryCacheAfterMutation } from "./useRefreshItems";
+import {
+  useRefreshEntitlementsQueryCache,
+  useRefreshQueryCacheAfterMutation,
+} from "./useRefreshItems";
 import { isIdInItemTree } from "../utils/utils";
 
 type ActiveUpload = {
@@ -240,6 +243,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
   const driver = getDriver();
   const refresh = useRefreshQueryCacheAfterMutation();
+  const refreshEntitlements = useRefreshEntitlementsQueryCache();
 
   const canCreateChildren = useCanCreateChildren(item);
 
@@ -547,6 +551,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
       // (abort === undefined means it hasn't started uploading yet).
       // Map iteration follows insertion order → FIFO is preserved.
       // The loop exits when no more queued entries remain.
+      let hasUploadedFiles = false;
       while (true) {
         let nextEntry: [string, ActiveUpload] | undefined;
         for (const entry of activeUploadsRef.current) {
@@ -598,6 +603,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
           }
           activeUploadsRef.current.delete(filePath);
           refresh(file.parentId);
+          hasUploadedFiles = true;
           setUploadingState((prev) => ({
             ...prev,
             filesMeta: {
@@ -640,6 +646,12 @@ export const useUploadZone = ({ item }: { item: Item }) => {
       }
 
       isProcessingRef.current = false;
+
+      // The backend invalidates its entitlements cache when an upload ends,
+      // so a single refetch once the queue is drained reflects the whole batch.
+      if (hasUploadedFiles) {
+        refreshEntitlements();
+      }
 
       setUploadingState((prev) => ({
         ...prev,

@@ -27,7 +27,6 @@ import { addItemsMovedToast } from "../toasts/addItemsMovedToast";
 import { ExplorerTreeMoveConfirmationModal } from "./ExplorerTreeMoveConfirmationModal";
 import { canDrop } from "../ExplorerDndProvider";
 import React from "react";
-import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
 import { useAuth } from "@/features/auth/Auth";
 import { ExplorerTreeNavItem } from "./nav/ExplorerTreeNavItem";
 import { useRouter } from "next/router";
@@ -111,7 +110,7 @@ export const ExplorerTree = () => {
       <ExplorerTreeActions />
       <HorizontalSeparator withPadding={false} />
       <ExplorerTreeNavDefault />
-      
+
       {initialOpenState && (
         <TreeView
           selectedNodeId={defaultSelectedNodeId}
@@ -175,10 +174,6 @@ export const ExplorerTree = () => {
         />
       )}
       <ExplorerTreeNav />
-      <div className="explorer__tree__mobile-navs">
-        <HorizontalSeparator />
-        <LeftPanelMobile />
-      </div>
       {moveState && moveConfirmationModal.isOpen && (
         <ExplorerTreeMoveConfirmationModal
           isOpen={moveConfirmationModal.isOpen}

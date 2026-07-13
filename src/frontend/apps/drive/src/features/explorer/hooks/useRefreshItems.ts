@@ -14,11 +14,16 @@ export const useGetQueryKeyToRefresh = () => {
     if (parentId) {
       queryKeys.push(["items", parentId, "children"]);
     }
-    // let queryKey = parentId ? ["items", parentId, "children"] : [];
-    // if (queryKeyForRoute.length > 0) {
-    //   queryKey = queryKeyForRoute;
-    // }
     return queryKeys;
+  };
+};
+
+export const useRefreshEntitlementsQueryCache = () => {
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.invalidateQueries({
+      queryKey: ["entitlements"],
+    });
   };
 };
 
@@ -45,6 +50,7 @@ export const useDeleteMutationCallbacks = (
   const getQueryKey = useGetQueryKeyToRefresh();
   const removeItems = useRemoveItemsFromPaginatedList();
   const queryKeys = defaultQueryKey ?? getQueryKey(parentId);
+  const refreshEntitlements = useRefreshEntitlementsQueryCache();
 
   const onMutate = async (itemIds: string[]) => {
     const returnPreviousItems: Map<string[], Item[]> = new Map();
@@ -78,6 +84,11 @@ export const useDeleteMutationCallbacks = (
       queryClient.invalidateQueries({
         queryKey: key,
       });
+    }
+
+    // Means hard deleting.
+    if (!parentId) {
+      refreshEntitlements();
     }
   };
 

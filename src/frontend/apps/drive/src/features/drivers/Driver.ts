@@ -105,6 +105,13 @@ export type Entitlements = {
     operator?: EntitlementOperator;
     potentialOperators?: EntitlementOperator[];
   };
+  quota?: {
+    state: "default" | "excedeed_locked" | "error";
+    reason?: string;
+    error?: string;
+    usage?: number;
+    limit?: number;
+  };
 };
 
 export abstract class Driver {
