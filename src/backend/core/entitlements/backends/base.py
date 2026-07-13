@@ -57,3 +57,6 @@ class EntitlementsBackend(ABC):
     def get_quota(self, user):  # pylint: disable=unused-argument
         """Get quota for a user."""
         return {}
+
+    def invalidate_cache(self, user_ids):  # noqa: B027
+        """Invalidate any cached entitlements for these users. No-op by default."""

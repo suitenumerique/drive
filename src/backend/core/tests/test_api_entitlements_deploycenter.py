@@ -3,15 +3,24 @@ Test Entitlements API endpoints with DeployCenter entitlements backend.
 """
 
 import urllib.parse
+from io import BytesIO
+from unittest import mock
 
+from django.core.cache import cache
+from django.core.files.storage import default_storage
 from django.test import override_settings
 
 import pytest
 import responses
 from rest_framework.test import APIClient
 
-from core import factories
-from core.entitlements.backends.deploycenter import DeployCenterEntitlementsBackend
+from core import factories, models
+from core.api.viewsets import malware_detection
+from core.entitlements import get_entitlements_backend
+from core.entitlements.backends.deploycenter import (
+    ENTITLEMENTS_CACHE_KEY_PREFIX,
+    DeployCenterEntitlementsBackend,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -298,6 +307,124 @@ def test_api_entitlements_deploycenter_get_entitlements_cache():
     }
     # Verify that the request was not made again.
     assert len(responses.calls) == 1
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND="core.entitlements.backends.deploycenter.DeployCenterEntitlementsBackend",
+    ENTITLEMENTS_BACKEND_PARAMETERS=ENTITLEMENTS_BACKEND_PARAMETERS,
+)
+@responses.activate
+def test_api_entitlements_deploycenter_invalidate_cache():
+    """Invalidating the cache should force the next read to hit DeployCenter again."""
+    responses.add(
+        responses.GET,
+        ENTITLEMENTS_URL,
+        json={
+            "entitlements": {
+                "can_access": True,
+                "can_upload": True,
+                "max_storage_account": 100000000,
+            },
+            "metrics": {
+                "account": {
+                    "storage_used": 25000000,
+                },
+            },
+        },
+        status=200,
+    )
+
+    client = APIClient()
+    user = factories.UserFactory(claims={"siret": "12345678901234"})
+    client.force_authenticate(user)
+
+    client.get("/api/v1.0/entitlements/")
+    client.get("/api/v1.0/entitlements/")
+    assert len(responses.calls) == 1
+
+    get_entitlements_backend().invalidate_cache([user.id])
+    assert cache.get(f"{ENTITLEMENTS_CACHE_KEY_PREFIX}{user.id}") is None
+
+    client.get("/api/v1.0/entitlements/")
+    assert len(responses.calls) == 2
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND="core.entitlements.backends.deploycenter.DeployCenterEntitlementsBackend",
+    ENTITLEMENTS_BACKEND_PARAMETERS=ENTITLEMENTS_BACKEND_PARAMETERS,
+)
+@responses.activate
+def test_api_entitlements_deploycenter_cache_invalidated_on_upload_ended(
+    django_capture_on_commit_callbacks,
+):
+    """Ending an upload should invalidate the uploader's cached entitlements."""
+    responses.add(
+        responses.GET,
+        ENTITLEMENTS_URL,
+        json={
+            "entitlements": {
+                "can_access": True,
+                "can_upload": True,
+                "max_storage_account": 100000000,
+            },
+            "metrics": {
+                "account": {
+                    "storage_used": 25000000,
+                },
+            },
+        },
+        status=200,
+    )
+
+    client = APIClient()
+    user = factories.UserFactory(claims={"siret": "12345678901234"})
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE, filename="my_file.txt", creator=user
+    )
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+
+    with (
+        mock.patch.object(malware_detection, "analyse_file"),
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+    assert response.status_code == 200
+
+    # The can_upload gate cached pre-upload entitlements during the request:
+    # they must be gone once the upload has been committed.
+    assert len(responses.calls) == 1
+    assert cache.get(f"{ENTITLEMENTS_CACHE_KEY_PREFIX}{user.id}") is None
+
+    client.get("/api/v1.0/entitlements/")
+    assert len(responses.calls) == 2
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND="core.entitlements.backends.deploycenter.DeployCenterEntitlementsBackend",
+    ENTITLEMENTS_BACKEND_PARAMETERS=ENTITLEMENTS_BACKEND_PARAMETERS,
+)
+def test_api_entitlements_deploycenter_cache_invalidated_on_hard_delete(
+    django_capture_on_commit_callbacks,
+):
+    """Hard deleting a folder should invalidate every descendant creator's entitlements."""
+    owner = factories.UserFactory()
+    other = factories.UserFactory()
+    folder = factories.ItemFactory(creator=owner, type=models.ItemTypeChoices.FOLDER)
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, parent=folder, creator=owner, size=100)
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, parent=folder, creator=other, size=200)
+
+    cache.set(f"{ENTITLEMENTS_CACHE_KEY_PREFIX}{owner.id}", {"entitlements": {}})
+    cache.set(f"{ENTITLEMENTS_CACHE_KEY_PREFIX}{other.id}", {"entitlements": {}})
+
+    folder.soft_delete()
+    with django_capture_on_commit_callbacks(execute=True):
+        folder.hard_delete()
+
+    assert cache.get(f"{ENTITLEMENTS_CACHE_KEY_PREFIX}{owner.id}") is None
+    assert cache.get(f"{ENTITLEMENTS_CACHE_KEY_PREFIX}{other.id}") is None
 
 
 @override_settings(

@@ -65,6 +65,10 @@ class DeployCenterEntitlementsBackend(EntitlementsBackend):
         cache.set(cache_key, entitlements, timeout=self.cache_timeout)
         return entitlements
 
+    def invalidate_cache(self, user_ids):
+        """Drop cached entitlements so the next read refetches from DeployCenter."""
+        cache.delete_many([f"{ENTITLEMENTS_CACHE_KEY_PREFIX}{user_id}" for user_id in user_ids])
+
     def get_context(self, user):
         """Get context for a user."""
         attributes_whitelist = ["organization", "operator", "potentialOperators"]

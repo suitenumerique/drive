@@ -42,6 +42,7 @@ from lasuite.drf.models.choices import (
 from pydantic import BaseModel as PydanticBaseModel
 from timezone_field import TimeZoneField
 
+from core.storage.cache import invalidate_storage_used_cache
 from core.utils.item_title import manage_unique_title as manage_unique_title_utils
 from wopi.conversion.policy import target_extension_for
 
@@ -317,6 +318,9 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         # Set creator of items if not yet set (e.g. items created via server-to-server API)
         item_ids = [invitation.item_id for invitation in valid_invitations]
         Item.objects.filter(id__in=item_ids, creator__isnull=True).update(creator=self)
+        # The bulk update bypasses the post_save signal invalidating the
+        # storage used cache.
+        transaction.on_commit(lambda: invalidate_storage_used_cache([self.id]))
 
         valid_invitations.delete()
 
@@ -497,6 +501,11 @@ class UserReconciliation(BaseModel):
             LinkTrace.objects.filter(id__in=ids_to_delete).delete()
 
         Item.objects.bulk_update(updated_items, ["creator"])
+        # The bulk update bypasses the post_save signal invalidating the
+        # storage used cache, and both users' usage change.
+        transaction.on_commit(
+            lambda: invalidate_storage_used_cache([self.active_user_id, self.inactive_user_id])
+        )
         Invitation.objects.bulk_update(updated_invitations, ["issuer"])
 
         User.objects.bulk_update([self.active_user, self.inactive_user], ["is_active"])
@@ -1473,11 +1482,23 @@ class Item(TreeModel, BaseModel):
                 }
             )
 
+        # Collect the creators impacted before marking the tree as hard deleted:
+        # descendants can have different creators and their bulk update below
+        # bypasses the post_save signal invalidating the storage used cache.
+        creator_ids = set(
+            self.descendants()
+            .filter(hard_deleted_at__isnull=True)
+            .values_list("creator_id", flat=True)
+        )
+        creator_ids.add(self.creator_id)
+
         self.hard_deleted_at = timezone.now()
         self.save(update_fields=["hard_deleted_at"])
 
         # Mark all descendants as hard deleted
         self.descendants().update(hard_deleted_at=self.hard_deleted_at)
+
+        transaction.on_commit(lambda: invalidate_storage_used_cache(creator_ids))
 
     @transaction.atomic
     def restore(self):
