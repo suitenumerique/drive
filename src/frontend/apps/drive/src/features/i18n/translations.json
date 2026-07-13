@@ -376,6 +376,9 @@
               "settings_workspace": "Workspace settings",
               "settings_folder": "Folder settings",
               "delete_item": "Delete",
+              "delete_workspace": "Delete workspace",
+              "delete_folder": "Delete folder",
+              "delete_file": "Delete file",
               "share": "Share",
               "share_view": "View shares"
             },
@@ -560,6 +563,10 @@
             "toast_one": "Item deleted forever",
             "toast_other": "{{count}} items deleted forever"
           },
+          "restore": {
+            "toast_one": "Item restored",
+            "toast_other": "{{count}} items restored"
+          },
           "move": {
             "toast_one": "{{count}} item moved",
             "toast_other": "{{count}} items moved",
@@ -641,6 +648,7 @@
         "explorer": {
           "cancel": "Cancel",
           "choose": "Choose",
+          "picker_caption": "Select one or more files",
           "picker_label_zero": "No files selected",
           "picker_label_one": "{{count}} file selected",
           "picker_label_other": "{{count}} files selected",
@@ -1698,6 +1706,15 @@
           }
         },
         "filters": {
+          "location": {
+            "label": "Locatie",
+            "options": {
+              "my_files": "Mijn bestanden",
+              "shared_with_me": "Gedeeld met mij",
+              "starred": "Favorieten",
+              "trashbin": "Prullenbak"
+            }
+          },
           "scopes": {
             "label": "Locatie",
             "options": {
@@ -1713,6 +1730,39 @@
               "folder": "Map",
               "reset": "Reset"
             }
+          },
+          "category": {
+            "label": "Type",
+            "options": {
+              "doc": "Tekstdocument",
+              "powerpoint": "Presentatie",
+              "calc": "Spreadsheet",
+              "pdf": "PDF",
+              "image": "Afbeelding",
+              "video": "Video",
+              "audio": "Audio",
+              "archive": "Archief",
+              "other": "Overig"
+            }
+          },
+          "contact": {
+            "label": "Gedeeld met",
+            "placeholder": "Zoek een naam",
+            "empty": "Geen contacten gevonden",
+            "reset": "Opnieuw instellen"
+          },
+          "modified": {
+            "label": "Gewijzigd",
+            "options": {
+              "today": "Vandaag",
+              "last_7_days": "Laatste 7 dagen",
+              "last_30_days": "Laatste 30 dagen",
+              "this_year": "Dit jaar",
+              "more_than_a_year": "Meer dan een jaar geleden",
+              "custom": "Aangepaste periode"
+            },
+            "start": "Begin",
+            "end": "Einde"
           },
           "workspace": {
             "label": "Werkruimte"
@@ -1744,6 +1794,9 @@
               "settings_workspace": "Werkruimte instellingen",
               "settings_folder": "Map instellingen",
               "delete_item": "Verwijder",
+              "delete_workspace": "Ruimte verwijderen",
+              "delete_folder": "Map verwijderen",
+              "delete_file": "Bestand verwijderen",
               "share": "Deel",
               "share_view": "Bekijk delen"
             },
@@ -1928,6 +1981,10 @@
             "toast_one": "Item permanent verwijderd",
             "toast_other": "{{count}} items permanent verwijderd"
           },
+          "restore": {
+            "toast_one": "Item hersteld",
+            "toast_other": "{{count}} items hersteld"
+          },
           "move": {
             "toast_one": "{{count}} item verplaatst",
             "toast_other": "{{count}} items verplaatst",
@@ -1990,7 +2047,6 @@
         "copy_link": "Kopieer link",
         "languages": "Talen"
       },
- 
       "time": {
         "years_ago_one": "{{count}} jaar geleden",
         "years_ago_other": "{{count}} jaren geleden",
@@ -2010,6 +2066,7 @@
         "explorer": {
           "choose": "Kiezen",
           "cancel": "Annuleren",
+          "picker_caption": "Selecteer een of meerdere bestanden",
           "picker_label_zero": "Geen bestanden geselecteerd",
           "picker_label_one": "{{count}} bestand geselecteerd",
           "picker_label_other": "{{count}} bestanden geselecteerd",
