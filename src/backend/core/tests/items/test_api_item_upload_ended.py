@@ -178,17 +178,22 @@ def test_api_item_upload_ended_empty_file():
     assert response.json()["mimetype"] == "application/x-empty"
 
 
+@pytest.mark.parametrize("reason", [None, "user_quota_excedeed"])
 @mock.patch("core.api.viewsets.get_entitlements_backend")
 def test_api_item_upload_ended_entitlements_backend_returns_falsy(
-    mock_get_entitlements_backend,
+    mock_get_entitlements_backend, reason
 ):
     """
     Test that the API returns a 403 when the entitlements backend returns a falsy result.
-    It should hard delete the item.
+    It should hard delete the item. When the backend gives a reason, it is exposed as
+    the error code so the frontend can show a specific, translatable message.
     """
     # Mock the entitlement backend to return a falsy result
     mock_entitlement_backend = mock.Mock()
-    mock_entitlement_backend.can_upload.return_value = {"result": False}
+    return_value = {"result": False}
+    if reason:
+        return_value["reason"] = reason
+    mock_entitlement_backend.can_upload.return_value = return_value
     mock_get_entitlements_backend.return_value = mock_entitlement_backend
 
     user = factories.UserFactory()
@@ -210,7 +215,7 @@ def test_api_item_upload_ended_entitlements_backend_returns_falsy(
         "type": "client_error",
         "errors": [
             {
-                "code": "permission_denied",
+                "code": reason or "permission_denied",
                 "detail": "You do not have permission to upload files.",
                 "attr": None,
             }

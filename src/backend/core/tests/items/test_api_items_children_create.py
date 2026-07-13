@@ -544,13 +544,16 @@ def test_api_items_create_item_children_race_condition():
         assert response2.status_code == 201
 
 
+@pytest.mark.parametrize("reason", [None, "user_quota_excedeed"])
 @pytest.mark.parametrize("message", [None, "Hello World"])
 @mock.patch("core.api.viewsets.get_entitlements_backend")
 def test_api_items_children_create_entitlements_backend_returns_falsy(
-    mock_get_entitlements_backend, message
+    mock_get_entitlements_backend, message, reason
 ):
     """
     Test that the API returns a 403 when the entitlements backend returns a falsy result.
+    When the backend gives a reason, it is exposed as the error code so the frontend
+    can show a specific, translatable message.
     """
 
     # Mock the entitlement backend to return a falsy result
@@ -558,6 +561,8 @@ def test_api_items_children_create_entitlements_backend_returns_falsy(
     return_value = {"result": False}
     if message:
         return_value["message"] = message
+    if reason:
+        return_value["reason"] = reason
     mock_entitlement_backend.can_upload.return_value = return_value
     mock_get_entitlements_backend.return_value = mock_entitlement_backend
 
@@ -581,7 +586,7 @@ def test_api_items_children_create_entitlements_backend_returns_falsy(
         "type": "client_error",
         "errors": [
             {
-                "code": "permission_denied",
+                "code": reason or "permission_denied",
                 "detail": message or "You do not have permission to upload files.",
                 "attr": None,
             }

@@ -800,7 +800,8 @@ class ItemViewSet(
         if not can_upload["result"]:
             self._complete_item_deletion(item)
             raise drf.exceptions.PermissionDenied(
-                detail=can_upload.get("message", "You do not have permission to upload files.")
+                detail=can_upload.get("message", "You do not have permission to upload files."),
+                code=can_upload.get("reason"),
             )
 
         s3_client = default_storage.connection.meta.client
@@ -1089,7 +1090,8 @@ class ItemViewSet(
                 and not can_upload["result"]
             ):
                 raise drf.exceptions.PermissionDenied(
-                    detail=can_upload.get("message", "You do not have permission to upload files.")
+                    detail=can_upload.get("message", "You do not have permission to upload files."),
+                    code=can_upload.get("reason"),
                 )
 
             extension = serializer.validated_data.pop("extension", None)
