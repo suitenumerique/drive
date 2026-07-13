@@ -47,6 +47,7 @@ pytestmark = pytest.mark.django_db
     THEME_CUSTOMIZATION_FILE_PATH="",
     FRONTEND_EXTERNAL_HOME_URL="https://test.com",
     FRONTEND_ENTITLEMENTS_DISCLAIMERS={},
+    FRONTEND_STORAGE_GAUGE_INFORMATION_LINK="https://test.com/storage",
 )
 @pytest.mark.parametrize("is_authenticated", [False, True])
 def test_api_config(is_authenticated):
@@ -85,6 +86,7 @@ def test_api_config(is_authenticated):
         "FRONTEND_CSS_URL": "http://testcss/",
         "FRONTEND_JS_URL": "http://testjs/",
         "FRONTEND_ENTITLEMENTS_DISCLAIMERS": {},
+        "FRONTEND_STORAGE_GAUGE_INFORMATION_LINK": "https://test.com/storage",
         "LANGUAGES": [
             ["en-us", "English"],
             ["fr-fr", "French"],
