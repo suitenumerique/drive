@@ -88,19 +88,19 @@ class UserUsageMetricSerializer(serializers.BaseSerializer):
         return output
 
 
-class OrganizationUsageMetricSerializer(serializers.Serializer):
+# pylint: disable=abstract-method
+class OrganizationUsageMetricSerializer(serializers.BaseSerializer):
     """Serialize aggregated usage metrics for an organization."""
-
-    account_id_key = serializers.CharField()
-    account_id_value = serializers.CharField()
-    total_storage = serializers.IntegerField()
 
     def to_representation(self, instance):
         """Return the organization usage metric."""
+        storage_compute_backend = get_storage_compute_backend()
         return {
             "account": {"type": "organization"},
             instance["account_id_key"]: instance["account_id_value"],
-            "metrics": {"storage_used": instance["total_storage"]},
+            "metrics": {
+                "storage_used": storage_compute_backend.compute_storage_used(instance["users"])
+            },
         }
 
 

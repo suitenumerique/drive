@@ -6,6 +6,10 @@ from django.core.cache import cache
 
 import requests
 
+from core.api.serializers import (
+    OrganizationUsageMetricSerializer,
+    UserUsageMetricSerializer,
+)
 from core.entitlements.backends.base import (
     CanUploadReason,
     EntitlementsBackend,
@@ -13,6 +17,7 @@ from core.entitlements.backends.base import (
     QuotaReason,
     QuotaState,
 )
+from core.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +28,40 @@ class DeployCenterEntitlementsBackend(EntitlementsBackend):
     """Entitlements backend that checks permissions via a DeployCenter service."""
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
-    def __init__(self, base_url, service_id, api_key, cache_timeout=10, oidc_claims=None):
+    def __init__(  # noqa: PLR0913
+        self,
+        base_url,
+        service_id,
+        api_key,
+        cache_timeout=10,
+        oidc_claims=None,
+        organization_claim="siret",
+    ):
         self.base_url = base_url
         self.service_id = service_id
         self.api_key = api_key
         self.cache_timeout = cache_timeout
         self.oidc_claims = oidc_claims or []
+        self.organization_claim = organization_claim
+
+    def build_usage_metrics(self, user):
+        """Build the usage metric entries pushed to the DeployCenter service."""
+        user_entry = dict(UserUsageMetricSerializer(user).data)
+        organization_value = user.claims.get(self.organization_claim)
+        if organization_value is None:
+            return [user_entry]
+        user_entry[self.organization_claim] = organization_value
+        organization_users = User.objects.filter(
+            is_active=True, **{f"claims__{self.organization_claim}": organization_value}
+        )
+        organization_entry = OrganizationUsageMetricSerializer(
+            {
+                "account_id_key": self.organization_claim,
+                "account_id_value": organization_value,
+                "users": organization_users,
+            }
+        ).data
+        return [user_entry, organization_entry]
 
     def fetch_entitlements(self, user):
         """Fetch entitlements for a user from the DeployCenter service."""
@@ -42,9 +75,10 @@ class DeployCenterEntitlementsBackend(EntitlementsBackend):
             if value is not None:
                 params[claim] = value
 
-        response = requests.get(
+        response = requests.post(
             self.base_url,
             params=params,
+            json={"usage_metrics": self.build_usage_metrics(user)},
             headers={"X-Service-Auth": f"Bearer {self.api_key}"},
             timeout=10,
         )

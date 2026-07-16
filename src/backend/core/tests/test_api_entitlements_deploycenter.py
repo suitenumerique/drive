@@ -2,6 +2,7 @@
 Test Entitlements API endpoints with DeployCenter entitlements backend.
 """
 
+import json
 import urllib.parse
 from io import BytesIO
 from unittest import mock
@@ -62,7 +63,7 @@ def test_api_entitlements_deploycenter_get_entitlements_anonymous():
 def test_api_entitlements_deploycenter_get_entitlements_both_true():
     """Authenticated users should get entitlements when both can_access and can_upload are True."""
     responses.add(
-        responses.GET,
+        responses.POST,
         ENTITLEMENTS_URL,
         json={
             "entitlements": {
@@ -112,6 +113,21 @@ def test_api_entitlements_deploycenter_get_entitlements_both_true():
     assert responses.calls[0].request.headers["X-Service-Auth"] == (
         f"Bearer {ENTITLEMENTS_BACKEND_PARAMETERS['api_key']}"
     )
+    assert responses.calls[0].request.headers["Content-Type"] == "application/json"
+    assert json.loads(responses.calls[0].request.body) == {
+        "usage_metrics": [
+            {
+                "account": {"type": "user", "id": user.sub, "email": user.email},
+                "siret": "21140001500015",
+                "metrics": {"storage_used": 0},
+            },
+            {
+                "account": {"type": "organization"},
+                "siret": "21140001500015",
+                "metrics": {"storage_used": 0},
+            },
+        ],
+    }
 
 
 @override_settings(
@@ -122,7 +138,7 @@ def test_api_entitlements_deploycenter_get_entitlements_both_true():
 def test_api_entitlements_deploycenter_get_entitlements_can_upload_false():
     """Authenticated users should get correct entitlements when can_upload is False."""
     responses.add(
-        responses.GET,
+        responses.POST,
         ENTITLEMENTS_URL,
         json={
             "entitlements": {
@@ -173,7 +189,7 @@ def test_api_entitlements_deploycenter_get_entitlements_can_upload_false():
 def test_api_entitlements_deploycenter_get_entitlements_can_access_false():
     """Authenticated users should get correct entitlements when can_access is False."""
     responses.add(
-        responses.GET,
+        responses.POST,
         ENTITLEMENTS_URL,
         json={
             "entitlements": {
@@ -233,7 +249,7 @@ def test_api_entitlements_deploycenter_get_entitlements_can_access_false():
 def test_api_entitlements_deploycenter_get_entitlements_cache():
     """Authenticated users should get entitlements from cache when doing subsequent requests."""
     responses.add(
-        responses.GET,
+        responses.POST,
         ENTITLEMENTS_URL,
         json={
             "entitlements": {
@@ -317,7 +333,7 @@ def test_api_entitlements_deploycenter_get_entitlements_cache():
 def test_api_entitlements_deploycenter_invalidate_cache():
     """Invalidating the cache should force the next read to hit DeployCenter again."""
     responses.add(
-        responses.GET,
+        responses.POST,
         ENTITLEMENTS_URL,
         json={
             "entitlements": {
@@ -359,7 +375,7 @@ def test_api_entitlements_deploycenter_cache_invalidated_on_upload_ended(
 ):
     """Ending an upload should invalidate the uploader's cached entitlements."""
     responses.add(
-        responses.GET,
+        responses.POST,
         ENTITLEMENTS_URL,
         json={
             "entitlements": {
@@ -436,7 +452,7 @@ def test_api_entitlements_deploycenter_cache_invalidated_on_hard_delete(
 def test_api_entitlements_deploycenter_quota_hidden(reason):
     """The quota gauge should be hidden when the service is not usable by the user."""
     responses.add(
-        responses.GET,
+        responses.POST,
         ENTITLEMENTS_URL,
         json={
             "entitlements": {
@@ -468,7 +484,7 @@ def test_api_entitlements_deploycenter_quota_hidden(reason):
 def test_api_entitlements_deploycenter_quota_organization_excedeed():
     """The quota gauge should be locked when the organization quota is reached."""
     responses.add(
-        responses.GET,
+        responses.POST,
         ENTITLEMENTS_URL,
         json={
             "entitlements": {
@@ -504,7 +520,7 @@ def test_api_entitlements_deploycenter_quota_organization_excedeed():
 def test_api_entitlements_deploycenter_quota_error_metric_account_not_found():
     """The quota gauge should be in error when the account metrics are missing."""
     responses.add(
-        responses.GET,
+        responses.POST,
         ENTITLEMENTS_URL,
         json={
             "entitlements": {
@@ -535,7 +551,7 @@ def test_api_entitlements_deploycenter_quota_error_metric_account_not_found():
 def test_api_entitlements_deploycenter_quota_error_max_storage_account_not_found():
     """The quota gauge should be in error when the account storage limit is missing."""
     responses.add(
-        responses.GET,
+        responses.POST,
         ENTITLEMENTS_URL,
         json={
             "entitlements": {
@@ -580,7 +596,7 @@ def test_api_entitlements_deploycenter_can_upload_reason_from_resolve_level(
 ):
     """When no explicit reason is given, it should be derived from the resolve level."""
     responses.add(
-        responses.GET,
+        responses.POST,
         ENTITLEMENTS_URL,
         json={
             "entitlements": {
@@ -611,7 +627,7 @@ def test_api_entitlements_deploycenter_can_upload_reason_from_resolve_level(
 def test_api_entitlements_deploycenter_can_upload_explicit_reason_wins():
     """An explicit reason should take precedence over the resolve level fallback."""
     responses.add(
-        responses.GET,
+        responses.POST,
         ENTITLEMENTS_URL,
         json={
             "entitlements": {
@@ -633,6 +649,106 @@ def test_api_entitlements_deploycenter_can_upload_explicit_reason_wins():
         "result": False,
         "reason": "not_activated",
     }
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND="core.entitlements.backends.deploycenter.DeployCenterEntitlementsBackend",
+    ENTITLEMENTS_BACKEND_PARAMETERS=ENTITLEMENTS_BACKEND_PARAMETERS,
+)
+@responses.activate
+def test_api_entitlements_deploycenter_usage_metrics_organization_aggregation():
+    """The organization entry should aggregate active users sharing the same siret."""
+    responses.add(
+        responses.POST,
+        ENTITLEMENTS_URL,
+        json={"entitlements": {"can_access": True, "can_upload": True}},
+        status=200,
+    )
+
+    user = factories.UserFactory(claims={"siret": "21140001500015"})
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, creator=user, size=700)
+    colleague = factories.UserFactory(claims={"siret": "21140001500015"})
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, creator=colleague, size=800)
+    stranger = factories.UserFactory(claims={"siret": "99999999999999"})
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, creator=stranger, size=1000)
+    former_colleague = factories.UserFactory(claims={"siret": "21140001500015"}, is_active=False)
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, creator=former_colleague, size=1000)
+
+    client = APIClient()
+    client.force_authenticate(user)
+    response = client.get("/api/v1.0/entitlements/")
+    assert response.status_code == 200
+    assert json.loads(responses.calls[0].request.body) == {
+        "usage_metrics": [
+            {
+                "account": {"type": "user", "id": user.sub, "email": user.email},
+                "siret": "21140001500015",
+                "metrics": {"storage_used": 700},
+            },
+            {
+                "account": {"type": "organization"},
+                "siret": "21140001500015",
+                "metrics": {"storage_used": 1500},
+            },
+        ],
+    }
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND="core.entitlements.backends.deploycenter.DeployCenterEntitlementsBackend",
+    ENTITLEMENTS_BACKEND_PARAMETERS=ENTITLEMENTS_BACKEND_PARAMETERS,
+)
+@responses.activate
+def test_api_entitlements_deploycenter_usage_metrics_no_organization_claim():
+    """Without a siret claim, only the user entry should be sent, without a siret."""
+    responses.add(
+        responses.POST,
+        ENTITLEMENTS_URL,
+        json={"entitlements": {"can_access": True, "can_upload": True}},
+        status=200,
+    )
+
+    client = APIClient()
+    user = factories.UserFactory(claims={})
+    client.force_authenticate(user)
+    response = client.get("/api/v1.0/entitlements/")
+    assert response.status_code == 200
+    assert "siret" not in responses.calls[0].request.url
+    assert json.loads(responses.calls[0].request.body) == {
+        "usage_metrics": [
+            {
+                "account": {"type": "user", "id": user.sub, "email": user.email},
+                "metrics": {"storage_used": 0},
+            },
+        ],
+    }
+
+
+def test_api_entitlements_deploycenter_usage_metrics_custom_organization_claim():
+    """A custom organization claim should drive both the lookup and the payload key."""
+    backend = DeployCenterEntitlementsBackend(
+        base_url=ENTITLEMENTS_URL,
+        service_id=8,
+        api_key="secret",
+        organization_claim="org_id",
+    )
+    user = factories.UserFactory(claims={"org_id": "acme", "siret": "21140001500015"})
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, creator=user, size=700)
+    colleague = factories.UserFactory(claims={"org_id": "acme"})
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, creator=colleague, size=800)
+
+    assert backend.build_usage_metrics(user) == [
+        {
+            "account": {"type": "user", "id": user.sub, "email": user.email},
+            "org_id": "acme",
+            "metrics": {"storage_used": 700},
+        },
+        {
+            "account": {"type": "organization"},
+            "org_id": "acme",
+            "metrics": {"storage_used": 1500},
+        },
+    ]
 
 
 def test_api_entitlements_deploycenter_missing_base_url_parameter():
