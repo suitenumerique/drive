@@ -13,6 +13,7 @@ from django.utils import timezone
 
 import boto3
 import botocore
+from lasuite.malware_detection.models import MalwareDetection
 
 from core.api.utils import sanitize_filename
 from core.models import Item, ItemTypeChoices, ItemUploadStateChoices
@@ -66,6 +67,9 @@ def process_item_purge(item_id):
             except FileNotFoundError:
                 # File already absent from storage: ignore and continue
                 pass
+
+            # Drop any malware detection record so the analysis is not relaunched
+            MalwareDetection.objects.filter(path=item.file_key).delete()
 
         item.delete()
 

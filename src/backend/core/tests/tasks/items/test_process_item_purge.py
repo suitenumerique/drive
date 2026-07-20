@@ -9,6 +9,7 @@ from django.core.files.storage import default_storage
 from django.utils import timezone
 
 import pytest
+from lasuite.malware_detection.models import MalwareDetection, MalwareDetectionStatus
 
 from core import factories, models
 from core.tasks.item import process_item_purge
@@ -206,6 +207,28 @@ def test_process_item_purge_file_missing_from_storage():
     process_item_purge(item.id)
 
     assert not models.Item.objects.filter(id=item.id).exists()
+
+
+def test_process_item_purge_deletes_malware_detection_record():
+    """Test the process item purge task deletes the related malware detection record."""
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="foo.txt",
+    )
+    item.soft_delete()
+    item.hard_delete()
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+    MalwareDetection.objects.create(
+        path=item.file_key,
+        status=MalwareDetectionStatus.PROCESSING,
+        parameters={"item_id": str(item.id)},
+    )
+
+    process_item_purge(item.id)
+
+    assert not models.Item.objects.filter(id=item.id).exists()
+    assert not default_storage.exists(item.file_key)
+    assert not MalwareDetection.objects.filter(path=item.file_key).exists()
 
 
 def test_process_item_purge_stops_on_subfolder_delete_failure(monkeypatch):

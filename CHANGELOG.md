@@ -19,6 +19,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(docker) pin collabora image and adapt to its new runtime contract
+- 🐛(backend) delete malware detection record when purging an item
 
 ## [v0.20.0] - 2026-07-15
 
