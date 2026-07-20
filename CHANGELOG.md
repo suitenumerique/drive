@@ -15,6 +15,7 @@ and this project adheres to
 ### Changed
 
 - 🔧(docker) drop the unused pip upgrade and apk caches from the image
+- ✨(backend) expose item existence in the malware detection admin
 
 ### Fixed
 
