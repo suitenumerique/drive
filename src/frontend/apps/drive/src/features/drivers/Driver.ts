@@ -160,6 +160,7 @@ export abstract class Driver {
     parentId?: string;
     filename: string;
     file: File;
+    uploadAcl?: string;
     progressHandler?: (progress: number) => void;
   }): { promise: Promise<Item>; abort: () => Promise<void> };
   abstract createFileFromTemplate(data: {

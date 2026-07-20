@@ -355,6 +355,7 @@ export class StandardDriver extends Driver {
     parentId?: string;
     file: File;
     filename: string;
+    uploadAcl?: string;
     progressHandler?: (progress: number) => void;
   }): { promise: Promise<Item>; abort: () => Promise<void> } {
     let abortUpload: (() => void) | undefined;
@@ -368,7 +369,7 @@ export class StandardDriver extends Driver {
     };
 
     const promise = (async () => {
-      const { parentId, file, progressHandler, ...rest } = data;
+      const { parentId, file, uploadAcl, progressHandler, ...rest } = data;
       const url = parentId ? `items/${parentId}/children/` : `items/`;
       const response = await fetchAPI(
         url,
@@ -401,9 +402,12 @@ export class StandardDriver extends Driver {
         progressHandler?.(proxiedProgress);
       };
 
-      const upload = uploadFile(item.policy, file, (progress) => {
-        progressHandlerProxy(progress);
-      });
+      const upload = uploadFile(
+        item.policy,
+        file,
+        uploadAcl,
+        progressHandlerProxy,
+      );
       abortUpload = upload.abort;
 
       if (aborted) {
@@ -529,17 +533,21 @@ const jsonToItem = (data: any): Item => {
  * Upload a file, using XHR so we can report on progress through a handler.
  * @param url The URL to PUT the file to.
  * @param file The file to upload.
+ * @param acl The ACL signed in the upload policy, empty when the policy signs none.
  * @param progressHandler A handler that receives progress updates as a single integer `0 <= x <= 100`.
  */
 export const uploadFile = (
   url: string,
   file: File,
+  acl: string | undefined,
   progressHandler: (progress: number) => void,
 ): { promise: Promise<unknown>; abort: () => void } => {
   const xhr = new XMLHttpRequest();
   const promise = new Promise((resolve, reject) => {
     xhr.open("PUT", url);
-    xhr.setRequestHeader("X-amz-acl", "private");
+    if (acl) {
+      xhr.setRequestHeader("X-amz-acl", acl);
+    }
     xhr.setRequestHeader("Content-Type", file.type);
 
     xhr.addEventListener("error", reject);
