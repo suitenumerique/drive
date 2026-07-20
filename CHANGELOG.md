@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) make the upload ACL configurable to support GCS based storages
+
 ### Changed
 
 - 🔧(docker) drop the unused pip upgrade and apk caches from the image

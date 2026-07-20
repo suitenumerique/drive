@@ -15,6 +15,7 @@ This document lists all configurable environment variables for the Drive applica
 | `AWS_S3_DOMAIN_REPLACE` | The S3 domain to used by the frontend application. Used by the docker compose stack. | `None` |
 | `AWS_S3_REGION_NAME` | AWS S3 region name for file storage | `None` |
 | `AWS_S3_SECRET_ACCESS_KEY` | AWS S3 secret access key for file storage | `None` |
+| `AWS_S3_UPLOAD_ACL` | ACL applied to uploaded objects, set to an empty string for storages that do not support ACLs (e.g. GCS based providers). When empty, objects get the bucket's default object ACL: make sure it keeps objects private | `private` |
 | `AWS_S3_UPLOAD_POLICY_EXPIRATION` | AWS S3 upload policy expiration time in seconds | `86400` (24h) |
 | `AWS_STORAGE_BUCKET_NAME` | AWS S3 bucket name for file storage | `drive-media-storage` |
 | `CACHES_DEFAULT_TIMEOUT` | Default cache timeout in seconds | `30` |

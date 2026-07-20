@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
+from django.test import override_settings
 from django.utils import timezone
 
 import pytest
@@ -135,6 +136,30 @@ def test_api_items_create_file_authenticated_success():
     assert query_params.pop("X-Amz-Signature") is not None
 
     assert len(query_params) == 0
+
+
+@override_settings(AWS_S3_UPLOAD_ACL="")
+def test_api_items_create_file_authenticated_success_without_upload_acl():
+    """The upload policy should not sign an ACL when AWS_S3_UPLOAD_ACL is empty."""
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.txt",
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+
+    policy_parsed = urlparse(response.json()["policy"])
+    query_params = parse_qs(policy_parsed.query)
+
+    assert query_params["X-Amz-SignedHeaders"] == ["host"]
 
 
 def test_api_items_create_file_authenticated_extension_not_allowed():

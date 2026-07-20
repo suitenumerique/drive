@@ -130,10 +130,14 @@ def generate_upload_policy(item):
     else:
         s3_client = default_storage.connection.meta.client
 
+    params = {"Bucket": default_storage.bucket_name, "Key": key}
+    if settings.AWS_S3_UPLOAD_ACL:
+        params["ACL"] = settings.AWS_S3_UPLOAD_ACL
+
     # Generate the policy
     policy = s3_client.generate_presigned_url(
         ClientMethod="put_object",
-        Params={"Bucket": default_storage.bucket_name, "Key": key, "ACL": "private"},
+        Params=params,
         ExpiresIn=settings.AWS_S3_UPLOAD_POLICY_EXPIRATION,
     )
 

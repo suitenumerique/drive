@@ -212,6 +212,14 @@ class Base(Configuration):
         environ_name="AWS_S3_SIGNATURE_VERSION",
         environ_prefix=None,
     )
+    # ACL applied to uploaded objects and signed in the upload policy. Set it
+    # to an empty string for object storages that do not support ACLs (e.g.
+    # Google Cloud Storage based providers).
+    AWS_S3_UPLOAD_ACL = values.Value(
+        "private",
+        environ_name="AWS_S3_UPLOAD_ACL",
+        environ_prefix=None,
+    )
     AWS_S3_UPLOAD_POLICY_EXPIRATION = values.Value(
         60,  # 1 minute
         environ_name="AWS_S3_UPLOAD_POLICY_EXPIRATION",
