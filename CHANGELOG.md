@@ -16,6 +16,7 @@ and this project adheres to
 
 - 🔧(docker) drop the unused pip upgrade and apk caches from the image
 - ✨(backend) expose item existence in the malware detection admin
+- ✨(backend) show human readable item size in the admin
 
 ### Fixed
 

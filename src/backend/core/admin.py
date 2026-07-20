@@ -165,7 +165,7 @@ class ItemAdmin(admin.ModelAdmin):
                     "id",
                     "title",
                     "filename",
-                    "size",
+                    "size_display",
                     "deleted_at",
                     "ancestors_deleted_at",
                     "malware_detection_info",
@@ -215,7 +215,7 @@ class ItemAdmin(admin.ModelAdmin):
         "numchild",
         "path",
         "filename",
-        "size",
+        "size_display",
         "deleted_at",
         "ancestors_deleted_at",
         "malware_detection_info",
@@ -230,6 +230,13 @@ class ItemAdmin(admin.ModelAdmin):
         queryset = queryset.annotate_with_numchild()
 
         return queryset
+
+    @admin.display(description=_("size"))
+    def size_display(self, obj):
+        """Return the human readable size of the item file."""
+        if obj.size is None:
+            return None
+        return filesizeformat(obj.size)
 
     def trigger_file_analysis(self, request, queryset):
         """Reanalyse the file of the items."""
