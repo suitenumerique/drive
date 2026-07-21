@@ -3,14 +3,9 @@
 # ---- base image to inherit from ----
 FROM python:3.13.9-alpine AS base
 
-# Upgrade pip to its latest release to speed up dependencies installation
-# We must do taht to avoid having an outdated pip version with security issues
-RUN python -m pip install --upgrade pip
-
 # Upgrade system packages to install security updates
-RUN apk update && \
-  apk upgrade && \
-  apk add git
+RUN apk --no-cache upgrade && \
+  apk add --no-cache git
 
 # ---- Back-end builder image ----
 FROM base AS back-builder
@@ -53,7 +48,7 @@ FROM base AS link-collector
 ARG DRIVE_STATIC_ROOT=/data/static
 
 # Install libmagic, pango & rdfind
-RUN apk add \
+RUN apk add --no-cache \
   libmagic \
   pango \
   rdfind
@@ -72,7 +67,7 @@ RUN DJANGO_CONFIGURATION=Build \
 
 # Replace duplicated file by a symlink to decrease the overall size of the
 # final image
-RUN rdfind -makesymlinks true -followsymlinks true -makeresultsfile false ${DRIVE_STATIC_ROOT}
+RUN rdfind -makesymlinks true -followsymlinks true -makeresultsfile false "${DRIVE_STATIC_ROOT}"
 
 # ---- Core application image ----
 FROM base AS core
@@ -80,13 +75,13 @@ FROM base AS core
 ENV PYTHONUNBUFFERED=1
 
 # Install required system libs
-RUN apk add \
+RUN apk add --no-cache \
   cairo \
   file \
   font-noto \
   font-noto-emoji \
-  gettext \
   gdk-pixbuf \
+  gettext \
   libffi-dev \
   pandoc \
   pango \
@@ -129,7 +124,7 @@ FROM core AS backend-development
 USER root:root
 
 # Install psql
-RUN apk add postgresql-client
+RUN apk add --no-cache postgresql-client
 
 # Install development dependencies
 RUN --mount=from=ghcr.io/astral-sh/uv:0.9.10,source=/uv,target=/bin/uv \
