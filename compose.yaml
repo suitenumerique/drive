@@ -243,9 +243,14 @@ services:
       - default
 
   collabora:
-    image: collabora/code:latest
+    image: collabora/code:26.04.2.2.1
+    # The entrypoint runs coolwsd directly (no shell in the image), so
+    # options are passed as command arguments instead of extra_params.
+    command: ["--o:ssl.enable=false"]
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo -e \"GET /hosting/discovery HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" > /dev/tcp/localhost/9980'"]
+      # The built-in probe targets https; pass the same override so it
+      # checks the plain-http endpoint we actually serve.
+      test: ["CMD", "/usr/bin/coolwsd", "--probe", "--o:ssl.enable=false"]
       interval: 30s
       retries: 5
       start_period: 60s
@@ -253,7 +258,6 @@ services:
     ports:
       - "9980:9980"
     environment:
-      - extra_params=--o:ssl.enable=false
       - username=drive
       - password=password
       - server_name=localhost:9980
