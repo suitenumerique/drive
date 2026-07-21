@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- 🔧(docker) drop the unused pip upgrade and apk caches from the image
+
 ### Fixed
 
 - 🐛(docker) pin collabora image and adapt to its new runtime contract
