@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(docker) pin collabora image and adapt to its new runtime contract
+
 ## [v0.20.0] - 2026-07-15
 
 ### Added
