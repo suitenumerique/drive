@@ -1038,8 +1038,8 @@ class ItemViewSet(
                 user=self.request.user,
                 role=models.RoleChoices.OWNER,
             )
-            # The post_save signal only invalidates the storage used cache of
-            # the new creator, the previous one loses this item from its usage.
+            # Saving the item only invalidates the storage used cache of the
+            # new creator, the previous one loses this item from its usage.
             previous_creator_id = item.creator_id
             transaction.on_commit(lambda: invalidate_storage_used_cache([previous_creator_id]))
             item.creator = user

@@ -48,6 +48,9 @@ from wopi.conversion.policy import target_extension_for
 
 logger = getLogger(__name__)
 
+# Item fields whose update can change the storage used by a user.
+STORAGE_USED_FIELDS = {"size", "creator", "creator_id", "hard_deleted_at"}
+
 
 def get_trashbin_cutoff():
     """
@@ -331,7 +334,7 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         # Set creator of items if not yet set (e.g. items created via server-to-server API)
         item_ids = [invitation.item_id for invitation in valid_invitations]
         Item.objects.filter(id__in=item_ids, creator__isnull=True).update(creator=self)
-        # The bulk update bypasses the post_save signal invalidating the
+        # The bulk update bypasses Item.save() invalidating the
         # storage used cache.
         transaction.on_commit(lambda: invalidate_storage_used_cache([self.id]))
 
@@ -514,7 +517,7 @@ class UserReconciliation(BaseModel):
             LinkTrace.objects.filter(id__in=ids_to_delete).delete()
 
         Item.objects.bulk_update(updated_items, ["creator"])
-        # The bulk update bypasses the post_save signal invalidating the
+        # The bulk update bypasses Item.save() invalidating the
         # storage used cache, and both users' usage change.
         transaction.on_commit(
             lambda: invalidate_storage_used_cache([self.active_user_id, self.inactive_user_id])
@@ -1102,7 +1105,21 @@ class Item(TreeModel, BaseModel):
         if not self.path:
             self.path = str(self.id)
 
-        return super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
+
+        self._invalidate_storage_used_cache(kwargs.get("update_fields"))
+
+    def _invalidate_storage_used_cache(self, update_fields):
+        """
+        Invalidate the creator's cached storage usage when a save may have
+        changed it. Bulk queryset updates bypass save() and must invalidate
+        the cache explicitly.
+        """
+        if update_fields and STORAGE_USED_FIELDS.isdisjoint(update_fields):
+            return
+        if not self.creator_id:
+            return
+        transaction.on_commit(lambda: invalidate_storage_used_cache([self.creator_id]))
 
     def delete(self, using=None, keep_parents=False):
         if self.deleted_at is None and self.ancestors_deleted_at is None:
@@ -1504,7 +1521,7 @@ class Item(TreeModel, BaseModel):
 
         # Collect the creators impacted before marking the tree as hard deleted:
         # descendants can have different creators and their bulk update below
-        # bypasses the post_save signal invalidating the storage used cache.
+        # bypasses Item.save() invalidating the storage used cache.
         creator_ids = set(
             self.descendants()
             .filter(hard_deleted_at__isnull=True)
