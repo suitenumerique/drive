@@ -12,6 +12,7 @@ import {
   useDeleteMutationCallbacks,
   useRefreshItemCache,
   useRefreshFavoriteCache,
+  useRefreshEntitlementsQueryCache,
 } from "./useRefreshItems";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 
@@ -222,6 +223,7 @@ export const useMutationDuplicateItem = () => {
   const { item } = useGlobalExplorer();
 
   const refresh = useRefreshQueryCacheAfterMutation();
+  const refreshEntitlements = useRefreshEntitlementsQueryCache();
 
   return useMutation({
     mutationFn: (itemId: string) => {
@@ -230,6 +232,7 @@ export const useMutationDuplicateItem = () => {
     onSuccess: () => {
       const parentId = item?.originalId ?? item?.id;
       refresh(parentId);
+      refreshEntitlements();
     },
     meta: {
       // The caller already toasts a localized message on failure.

@@ -7,6 +7,7 @@ import {
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
 import { useRemoveItemsFromPaginatedList } from "../hooks/useOptimisticPagination";
+import { useRefreshEntitlementsQueryCache } from "../hooks/useRefreshItems";
 import {
   getMyFilesQueryKey,
   getRecentItemsQueryKey,
@@ -25,6 +26,7 @@ export const useMoveItems = () => {
   const driver = getDriver();
 
   const removeItems = useRemoveItemsFromPaginatedList();
+  const refreshEntitlements = useRefreshEntitlementsQueryCache();
 
   return useMutation({
     mutationFn: async (payload: MoveItemPayload) => {
@@ -48,6 +50,7 @@ export const useMoveItems = () => {
       queryClient.invalidateQueries({
         queryKey: ["items", payload.parentId],
       });
+      refreshEntitlements();
     },
     onError: (err, variables) => {
       // If the mutation fails, you could invalidate to ensure fresh data
