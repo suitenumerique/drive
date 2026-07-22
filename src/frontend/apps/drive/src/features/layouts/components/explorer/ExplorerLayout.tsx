@@ -17,7 +17,6 @@ import {
 } from "@/features/explorer/components/GlobalExplorerContext";
 import { ExplorerRightPanelContent } from "@/features/explorer/components/right-panel/ExplorerRightPanelContent";
 import { GlobalLayout } from "../global/GlobalLayout";
-import { LeftPanelMobile } from "../left-panel/LeftPanelMobile";
 import { useRouter } from "next/router";
 import { useSyncUserLanguage } from "../../hooks/useSyncUserLanguage";
 import { Item } from "@/features/drivers/types";
@@ -130,7 +129,7 @@ export const ExplorerPanelsLayout = ({
       rightPanelContent={<ExplorerRightPanelContent item={rightPanelItem} />}
       rightPanelIsOpen={rightPanelOpen}
       onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
-      leftPanelContent={user ? <ExplorerTree /> : <LeftPanelMobile />}
+      leftPanelContent={user ? <ExplorerTree /> : undefined}
       leftPanelFooter={<LeftPanelFooter />}
       isLeftPanelOpen={isLeftPanelOpen}
       hideLeftPanelOnDesktop={!user || isMinimalLayout}
@@ -145,7 +144,7 @@ export const ExplorerPanelsLayout = ({
   );
 };
 
-const LeftPanelFooter = () => {
+export const LeftPanelFooter = () => {
   const { isTablet } = useResponsive();
   const settingsModal = useModal();
 
@@ -166,7 +165,16 @@ type LeftPanelFooterProps = {
   openSettingsModal: () => void;
 };
 
-const LeftPanelFooterMobile = (props: LeftPanelFooterProps) => {
+export const LeftPanelFooterMobile = (props: LeftPanelFooterProps) => {
+  const { user } = useAuth();
+  if (!user) {
+    return (
+      <div className="c__left-panel__footer__drive">
+        <HelpMenuButton />
+        <UserProfile />
+      </div>
+    );
+  }
   return (
     <div className="c__left-panel__footer__drive">
       <UserProfile />
@@ -256,6 +264,7 @@ const LeftPanelFooterStorageGauge = (props: { onClick: () => void }) => {
   if (!storageGauge) {
     return null;
   }
+  console.log("storageGauge", storageGauge);
   return <StorageGaugeButton {...storageGauge} onClick={props.onClick} />;
 };
 
@@ -276,7 +285,7 @@ const useStorageGauge = () => {
         used: usageFormatted,
         total: limitFormatted,
       };
-    } else if (quota.state === "excedeed_locked") {
+    } else if (quota.state === "exceeded_locked") {
       return {
         quota: quota,
         used: 0,

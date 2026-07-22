@@ -91,7 +91,7 @@ test("Show the specific quota message when the move is rejected", async ({
         type: "client_error",
         errors: [
           {
-            code: "user_quota_excedeed",
+            code: "user_quota_exceeded",
             detail: "You cannot take ownership of more storage.",
             attr: null,
           },

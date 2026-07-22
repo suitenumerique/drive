@@ -135,7 +135,7 @@ test.describe("Duplicate item", () => {
           type: "client_error",
           errors: [
             {
-              code: "user_quota_excedeed",
+              code: "user_quota_exceeded",
               detail: "You do not have permission to upload files.",
               attr: null,
             },

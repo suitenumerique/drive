@@ -5,7 +5,7 @@ import { clickToMyFiles } from "./utils-navigate";
 import { uploadFile } from "./utils/upload-utils";
 
 type QuotaPayload = {
-  state: "default" | "excedeed_locked" | "error";
+  state: "default" | "exceeded_locked" | "error";
   reason?: string;
   error?: string;
   usage?: number;
@@ -159,8 +159,8 @@ test.describe("StorageGauge", () => {
       await mockEntitlements(
         page,
         baseEntitlements({
-          state: "excedeed_locked",
-          reason: "organization_quota_excedeed",
+          state: "exceeded_locked",
+          reason: "organization_quota_exceeded",
         }),
       );
 
@@ -232,8 +232,8 @@ test.describe("StorageGauge", () => {
       await mockEntitlements(
         page,
         baseEntitlements({
-          state: "excedeed_locked",
-          reason: "organization_quota_excedeed",
+          state: "exceeded_locked",
+          reason: "organization_quota_exceeded",
         }),
       );
 
