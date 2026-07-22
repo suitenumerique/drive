@@ -715,7 +715,7 @@ def test_api_items_move_file_to_root_over_quota():
     assert response.status_code == 403
     # The can_upload reason is exposed as the error code so the frontend can
     # show a specific, translatable message.
-    assert response.json()["errors"][0]["code"] == "user_quota_excedeed"
+    assert response.json()["errors"][0]["code"] == "user_quota_exceeded"
 
     # The item has not moved and its creator is unchanged.
     item.refresh_from_db()

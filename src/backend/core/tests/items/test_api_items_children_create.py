@@ -544,7 +544,7 @@ def test_api_items_create_item_children_race_condition():
         assert response2.status_code == 201
 
 
-@pytest.mark.parametrize("reason", [None, "user_quota_excedeed"])
+@pytest.mark.parametrize("reason", [None, "user_quota_exceeded"])
 @pytest.mark.parametrize("message", [None, "Hello World"])
 @mock.patch("core.api.viewsets.get_entitlements_backend")
 def test_api_items_children_create_entitlements_backend_returns_falsy(

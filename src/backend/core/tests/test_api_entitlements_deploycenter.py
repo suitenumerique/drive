@@ -481,7 +481,7 @@ def test_api_entitlements_deploycenter_quota_hidden(reason):
     ENTITLEMENTS_BACKEND_PARAMETERS=ENTITLEMENTS_BACKEND_PARAMETERS,
 )
 @responses.activate
-def test_api_entitlements_deploycenter_quota_organization_excedeed():
+def test_api_entitlements_deploycenter_quota_organization_exceeded():
     """The quota gauge should be locked when the organization quota is reached."""
     responses.add(
         responses.POST,
@@ -503,12 +503,12 @@ def test_api_entitlements_deploycenter_quota_organization_excedeed():
     response = client.get("/api/v1.0/entitlements/")
     assert response.status_code == 200
     assert response.json()["quota"] == {
-        "state": "excedeed_locked",
-        "reason": "organization_quota_excedeed",
+        "state": "exceeded_locked",
+        "reason": "organization_quota_exceeded",
     }
     assert response.json()["can_upload"] == {
         "result": False,
-        "reason": "organization_quota_excedeed",
+        "reason": "organization_quota_exceeded",
     }
 
 
@@ -586,9 +586,9 @@ def test_api_entitlements_deploycenter_quota_error_max_storage_account_not_found
 @pytest.mark.parametrize(
     "resolve_level,expected_reason",
     [
-        ("user", "user_quota_excedeed"),
-        ("user_override", "user_override_quota_excedeed"),
-        ("organization", "organization_quota_excedeed"),
+        ("user", "user_quota_exceeded"),
+        ("user_override", "user_override_quota_exceeded"),
+        ("organization", "organization_quota_exceeded"),
     ],
 )
 def test_api_entitlements_deploycenter_can_upload_reason_from_resolve_level(

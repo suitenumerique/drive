@@ -178,7 +178,7 @@ def test_api_item_upload_ended_empty_file():
     assert response.json()["mimetype"] == "application/x-empty"
 
 
-@pytest.mark.parametrize("reason", [None, "user_quota_excedeed"])
+@pytest.mark.parametrize("reason", [None, "user_quota_exceeded"])
 @mock.patch("core.api.viewsets.get_entitlements_backend")
 def test_api_item_upload_ended_entitlements_backend_returns_falsy(
     mock_get_entitlements_backend, reason

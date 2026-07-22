@@ -122,11 +122,11 @@ class DeployCenterEntitlementsBackend(EntitlementsBackend):
         actual_reason = reason
         if not actual_reason and not result:
             if resolve_level == "user":
-                actual_reason = CanUploadReason.USER_QUOTA_EXCEDEED
+                actual_reason = CanUploadReason.USER_QUOTA_EXCEEDED
             elif resolve_level == "user_override":
-                actual_reason = CanUploadReason.USER_OVERRIDE_QUOTA_EXCEDEED
+                actual_reason = CanUploadReason.USER_OVERRIDE_QUOTA_EXCEEDED
             elif resolve_level == "organization":
-                actual_reason = CanUploadReason.ORGANIZATION_QUOTA_EXCEDEED
+                actual_reason = CanUploadReason.ORGANIZATION_QUOTA_EXCEEDED
 
         return {
             "result": result,
@@ -169,8 +169,8 @@ class DeployCenterEntitlementsBackend(EntitlementsBackend):
             and can_upload_resolve_level == "organization"
         ):
             return {
-                "state": QuotaState.EXCEDEED_LOCKED,
-                "reason": QuotaReason.ORGANIZATION_QUOTA_EXCEDEED,
+                "state": QuotaState.EXCEEDED_LOCKED,
+                "reason": QuotaReason.ORGANIZATION_QUOTA_EXCEEDED,
             }
 
         metric_account = entitlements.get("metrics", {}).get("account", {})

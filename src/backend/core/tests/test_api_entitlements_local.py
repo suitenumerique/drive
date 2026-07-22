@@ -107,7 +107,7 @@ def test_api_entitlements_local_over_default_limit():
     assert response.status_code == 200
     assert response.json()["can_upload"] == {
         "result": False,
-        "reason": "user_quota_excedeed",
+        "reason": "user_quota_exceeded",
         "message": "You have exceeded your storage limit.",
     }
     assert response.json()["quota"] == {
@@ -166,7 +166,7 @@ def test_api_entitlements_local_override_exceeded():
     assert response.status_code == 200
     assert response.json()["can_upload"] == {
         "result": False,
-        "reason": "user_override_quota_excedeed",
+        "reason": "user_override_quota_exceeded",
         "message": "You have exceeded your storage limit.",
     }
     assert response.json()["quota"] == {
@@ -253,7 +253,7 @@ def test_api_entitlements_local_override_beats_grandfathering():
     assert response.status_code == 200
     assert response.json()["can_upload"] == {
         "result": False,
-        "reason": "user_override_quota_excedeed",
+        "reason": "user_override_quota_exceeded",
         "message": "You have exceeded your storage limit.",
     }
 
@@ -308,7 +308,7 @@ def test_api_entitlements_local_upload_blocked_via_items_api():
             {
                 # The can_upload reason is exposed as the error code so the
                 # frontend can show a specific, translatable message.
-                "code": "user_quota_excedeed",
+                "code": "user_quota_exceeded",
                 "detail": "You have exceeded your storage limit.",
                 "attr": None,
             }

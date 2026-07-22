@@ -45,7 +45,7 @@ def test_api_items_duplicate_over_quota():
     assert response.status_code == 403
     # The can_upload reason is exposed as the error code so the frontend can
     # show a specific, translatable message.
-    assert response.json()["errors"][0]["code"] == "user_quota_excedeed"
+    assert response.json()["errors"][0]["code"] == "user_quota_exceeded"
     assert not models.Item.objects.filter(
         upload_state=models.ItemUploadStateChoices.DUPLICATING
     ).exists()

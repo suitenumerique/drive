@@ -112,9 +112,9 @@ class LocalEntitlementsBackend(EntitlementsBackend):
             return {
                 "result": False,
                 "reason": (
-                    CanUploadReason.USER_OVERRIDE_QUOTA_EXCEDEED
+                    CanUploadReason.USER_OVERRIDE_QUOTA_EXCEEDED
                     if override_set
-                    else CanUploadReason.USER_QUOTA_EXCEDEED
+                    else CanUploadReason.USER_QUOTA_EXCEEDED
                 ),
                 "message": "You have exceeded your storage limit.",
             }

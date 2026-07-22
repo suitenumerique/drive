@@ -8,14 +8,14 @@ class QuotaState(StrEnum):
     """State of a quota gauge returned by get_quota."""
 
     DEFAULT = "default"
-    EXCEDEED_LOCKED = "excedeed_locked"
+    EXCEEDED_LOCKED = "exceeded_locked"
     ERROR = "error"
 
 
 class QuotaReason(StrEnum):
     """Reasons explaining why the quota gauge is locked (get_quota output)."""
 
-    ORGANIZATION_QUOTA_EXCEDEED = "organization_quota_excedeed"
+    ORGANIZATION_QUOTA_EXCEEDED = "organization_quota_exceeded"
 
 
 class CanUploadReason(StrEnum):
@@ -23,9 +23,9 @@ class CanUploadReason(StrEnum):
 
     NO_ORGANIZATION = "no_organization"
     NOT_ACTIVATED = "not_activated"
-    USER_QUOTA_EXCEDEED = "user_quota_excedeed"
-    USER_OVERRIDE_QUOTA_EXCEDEED = "user_override_quota_excedeed"
-    ORGANIZATION_QUOTA_EXCEDEED = "organization_quota_excedeed"
+    USER_QUOTA_EXCEEDED = "user_quota_exceeded"
+    USER_OVERRIDE_QUOTA_EXCEEDED = "user_override_quota_exceeded"
+    ORGANIZATION_QUOTA_EXCEEDED = "organization_quota_exceeded"
 
 
 class QuotaError(StrEnum):
