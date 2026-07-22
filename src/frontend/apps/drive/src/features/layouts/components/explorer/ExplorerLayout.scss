@@ -1,8 +1,17 @@
+@use "sass:map";
+@use "@/styles/cunningham-tokens-sass" as *;
+
+$tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
+
 .c__left-panel__footer__drive {
   padding: 12px;
   display: flex;
   gap: 4px;
   align-items: center;
+
+  @media (max-width: $tablet) {
+    justify-content: space-between;
+  }
 }
 
 // Toast component from cunningham-react is not used in the drive app, so we hide it.
@@ -28,4 +37,10 @@
 
 .c__tooltip__content {
   word-break: break-word;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }

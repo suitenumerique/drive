@@ -14,11 +14,10 @@ import {
 } from "@/features/ui/components/toaster/Toaster";
 import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { useConfig } from "@/features/config/ConfigProvider";
-import { LeftPanelMobile } from "@/features/layouts/components/left-panel/LeftPanelMobile";
 import { useThemeCustomization } from "@/hooks/useThemeCustomization";
 import { Feedback } from "@/features/feedback/Feedback";
 import { useRedirectAfterLogin } from "@/hooks/useRedirectAfterLogin";
-
+import { LeftPanelFooter } from "@/features/layouts/components/explorer/ExplorerLayout";
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -28,14 +27,14 @@ export default function HomePage() {
 
   useEffect(() => {
     const failure = new URLSearchParams(window.location.search).get(
-      "auth_error"
+      "auth_error",
     );
     if (failure === "alpha") {
       addToast(
         <ToasterItem type="error">
           <span className="material-icons">science</span>
           <span>{t("authentication.error.alpha")}</span>
-        </ToasterItem>
+        </ToasterItem>,
       );
     }
     if (failure === "user_cannot_access_app") {
@@ -43,7 +42,7 @@ export default function HomePage() {
         <ToasterItem type="error">
           <span className="material-icons">lock</span>
           <span>{t("authentication.error.user_cannot_access_app")}</span>
-        </ToasterItem>
+        </ToasterItem>,
       );
     }
   }, []);
@@ -58,10 +57,10 @@ export default function HomePage() {
 /**
  * If the FRONTEND_EXTERNAL_HOME_URL is set, we redirect to it.
  * Otherwise, we display the home page.
- * 
+ *
  * Redirection to FRONTEND_EXTERNAL_HOME_URL is done in this component
  * to avoid conflicts with the useEffect and redirection logic in the HomePage component.
- * 
+ *
  * HomePage: if there is a user, redirect to the explorer.
  * HomePageContent: if the FRONTEND_EXTERNAL_HOME_URL is set, we redirect to it.
  *                  Otherwise, we display the home page.
@@ -70,7 +69,7 @@ const HomePageContent = () => {
   const { t } = useTranslation();
   const { config } = useConfig();
   const footerCustommization = useThemeCustomization("footer");
-  const [redirectFailed, setRedirectFailed] = useState(false)
+  const [redirectFailed, setRedirectFailed] = useState(false);
 
   useEffect(() => {
     const checkSiteAndRedirect = async () => {
@@ -80,18 +79,18 @@ const HomePageContent = () => {
       try {
         // Make sure the site is reachable before redirecting. Resilience.
         await fetch(config.FRONTEND_EXTERNAL_HOME_URL, {
-          method: 'HEAD', // Use HEAD to avoid downloading the full page
-          mode: 'no-cors', // Needed for cross-origin requests
-        })
-        window.location.replace(config.FRONTEND_EXTERNAL_HOME_URL)
+          method: "HEAD", // Use HEAD to avoid downloading the full page
+          mode: "no-cors", // Needed for cross-origin requests
+        });
+        window.location.replace(config.FRONTEND_EXTERNAL_HOME_URL);
       } catch (error) {
-        console.warn('Site is not reachable:', error)
-        setRedirectFailed(true)
+        console.warn("Site is not reachable:", error);
+        setRedirectFailed(true);
       }
-    }
+    };
 
-    checkSiteAndRedirect()
-  }, [config?.FRONTEND_EXTERNAL_HOME_URL])
+    checkSiteAndRedirect();
+  }, [config?.FRONTEND_EXTERNAL_HOME_URL]);
 
   if (config?.FRONTEND_EXTERNAL_HOME_URL && !redirectFailed) {
     return null;
@@ -137,15 +136,14 @@ const HomePageContent = () => {
       <Footer {...footerCustommization} />
     </HomePageLayout>
   );
-}
+};
 
-
-const HomePageLayout = ({children}: {children: React.ReactNode}) => {
+const HomePageLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <MainLayout
       enableResize
       hideLeftPanelOnDesktop={true}
-      leftPanelContent={<LeftPanelMobile />}
+      leftPanelFooter={<LeftPanelFooter />}
       icon={
         <div className="drive__header__left">
           <img src={logoGouv.src} alt="" />
@@ -159,7 +157,7 @@ const HomePageLayout = ({children}: {children: React.ReactNode}) => {
       <Toaster />
     </MainLayout>
   );
-}
+};
 
 /**
  * Only context stuff, containing Auth, etc ...
@@ -170,9 +168,7 @@ const HomePageLayout = ({children}: {children: React.ReactNode}) => {
 HomePage.getLayout = function getLayout(page: React.ReactElement) {
   return (
     <div className="drive__home drive__home--feedback">
-      <GlobalLayout>
-        {page}
-      </GlobalLayout>
+      <GlobalLayout>{page}</GlobalLayout>
     </div>
   );
 };

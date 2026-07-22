@@ -19,7 +19,7 @@ import { useClipboard } from "@/hooks/useCopyToClipboard";
 export const UserProfile = () => {
   const { user } = useAuth();
   return (
-    <>
+    <div className="user-profile">
       {user ? (
         <UserMenu
           user={user}
@@ -33,7 +33,7 @@ export const UserProfile = () => {
           <AnonymousCTA />
         </>
       )}
-    </>
+    </div>
   );
 };
 
