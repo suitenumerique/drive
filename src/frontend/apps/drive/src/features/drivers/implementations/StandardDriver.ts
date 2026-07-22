@@ -533,7 +533,7 @@ const jsonToItem = (data: any): Item => {
  * Upload a file, using XHR so we can report on progress through a handler.
  * @param url The URL to PUT the file to.
  * @param file The file to upload.
- * @param acl The ACL signed in the upload policy, empty when the policy signs none.
+ * @param acl The ACL signed in the upload policy, absent when the policy signs none.
  * @param progressHandler A handler that receives progress updates as a single integer `0 <= x <= 100`.
  */
 export const uploadFile = (

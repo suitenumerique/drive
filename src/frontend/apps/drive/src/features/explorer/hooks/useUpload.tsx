@@ -561,7 +561,10 @@ export const useUploadZone = ({ item }: { item: Item }) => {
           filename: file.name,
           file,
           parentId: file.parentId,
-          uploadAcl: config.AWS_S3_UPLOAD_ACL,
+          uploadAcl:
+            config.AWS_S3_UPLOAD_ACL === "default"
+              ? undefined
+              : config.AWS_S3_UPLOAD_ACL,
           progressHandler: (progress) => {
             setUploadingState((prev) => ({
               ...prev,

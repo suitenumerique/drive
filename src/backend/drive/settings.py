@@ -213,8 +213,9 @@ class Base(Configuration):
         environ_prefix=None,
     )
     # ACL applied to uploaded objects and signed in the upload policy. Set it
-    # to an empty string for object storages that do not support ACLs (e.g.
-    # Google Cloud Storage based providers).
+    # to "default" to let the bucket's default object ACL apply, for object
+    # storages that do not support ACLs (e.g. Google Cloud Storage based
+    # providers).
     AWS_S3_UPLOAD_ACL = values.Value(
         "private",
         environ_name="AWS_S3_UPLOAD_ACL",

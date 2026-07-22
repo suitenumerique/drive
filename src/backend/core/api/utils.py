@@ -131,7 +131,7 @@ def generate_upload_policy(item):
         s3_client = default_storage.connection.meta.client
 
     params = {"Bucket": default_storage.bucket_name, "Key": key}
-    if settings.AWS_S3_UPLOAD_ACL:
+    if settings.AWS_S3_UPLOAD_ACL and settings.AWS_S3_UPLOAD_ACL != "default":
         params["ACL"] = settings.AWS_S3_UPLOAD_ACL
 
     # Generate the policy

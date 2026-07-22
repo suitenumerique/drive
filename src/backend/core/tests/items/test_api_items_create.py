@@ -138,9 +138,9 @@ def test_api_items_create_file_authenticated_success():
     assert len(query_params) == 0
 
 
-@override_settings(AWS_S3_UPLOAD_ACL="")
+@override_settings(AWS_S3_UPLOAD_ACL="default")
 def test_api_items_create_file_authenticated_success_without_upload_acl():
-    """The upload policy should not sign an ACL when AWS_S3_UPLOAD_ACL is empty."""
+    """The upload policy should not sign an ACL when AWS_S3_UPLOAD_ACL is "default"."""
     user = factories.UserFactory()
 
     client = APIClient()
