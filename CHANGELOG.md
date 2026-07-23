@@ -13,6 +13,7 @@ and this project adheres to
 - ✨(backend) make the upload ACL configurable to support GCS based storages
 - ✨(frontend) show the messages widget button on the homepage
 - ✨(frontend) open the messages widget from the help menu
+- ✨(backend) add an item batch share endpoint gated by ALLOW_SHARE_IMPORT_FILE
 
 ### Changed
 

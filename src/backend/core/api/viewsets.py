@@ -31,7 +31,7 @@ from corsheaders.middleware import (
     ACCESS_CONTROL_ALLOW_METHODS,
     ACCESS_CONTROL_ALLOW_ORIGIN,
 )
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
 from lasuite.drf.models.choices import (
     PRIVILEGED_ROLES,
     LinkReachChoices,
@@ -47,7 +47,10 @@ from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
 from core.entitlements import get_entitlements_backend
-from core.services.accesses import synchronize_descendants_accesses
+from core.services.accesses import (
+    batch_share_process_rows,
+    synchronize_descendants_accesses,
+)
 from core.services.item_exports import build_zip_stream, export_descendants
 from core.services.sdk_relay import SDKRelayManager
 from core.services.search_indexers import (
@@ -1489,6 +1492,84 @@ class ItemViewSet(
 
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
+    @extend_schema(
+        request=serializers.BatchShareSerializer,
+        responses={
+            200: inline_serializer(
+                name="BatchShareResponse",
+                fields={
+                    "accesses_created": drf.serializers.IntegerField(),
+                    "invitations_created": drf.serializers.IntegerField(),
+                    "skipped": drf.serializers.ListField(child=drf.serializers.DictField()),
+                },
+            )
+        },
+    )
+    @drf.decorators.action(detail=True, methods=["post"], url_path="batch-share")
+    def batch_share(self, request, *args, **kwargs):
+        """
+        Share an item with a list of contacts in a single request.
+
+        Emails matching an existing user get an access, unknown emails get an
+        invitation. All rows are validated before any database write so a
+        rejected batch never creates a partial share state.
+        """
+        if not settings.ALLOW_SHARE_IMPORT_FILE:
+            raise drf.exceptions.PermissionDenied(
+                "Batch sharing from an imported file is not enabled."
+            )
+
+        item = self.get_object()
+
+        serializer = serializers.BatchShareSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # Deduplicate rows by email, keeping the first occurrence
+        rows = {}
+        for row in serializer.validated_data["rows"]:
+            rows.setdefault(row["email"], row["role"])
+
+        # A user cannot grant a role higher than their own. This also enforces
+        # that only owners can assign the owner role.
+        user_role_priority = models.RoleChoices.get_priority(item.get_role(request.user))
+        for role in rows.values():
+            if models.RoleChoices.get_priority(role) > user_role_priority:
+                raise drf.exceptions.PermissionDenied(
+                    f"You cannot grant the role {role} which is higher than your own role."
+                )
+
+        created_accesses, created_invitations, skipped = batch_share_process_rows(
+            item, request.user, rows
+        )
+
+        for email, role in created_accesses + created_invitations:
+            item.send_invitation_email(
+                email,
+                role,
+                request.user,
+                request.user.language or settings.LANGUAGE_CODE,
+            )
+
+        posthog_capture(
+            "item_batch_share",
+            request.user,
+            {
+                "accesses_created": len(created_accesses),
+                "invitations_created": len(created_invitations),
+                "skipped": len(skipped),
+            },
+            item=item,
+        )
+
+        return drf.response.Response(
+            {
+                "accesses_created": len(created_accesses),
+                "invitations_created": len(created_invitations),
+                "skipped": skipped,
+            },
+            status=drf.status.HTTP_200_OK,
+        )
+
     @drf.decorators.action(detail=True, methods=["post", "delete"], url_path="favorite")
     def favorite(self, request, *args, **kwargs):
         """
@@ -2246,6 +2327,7 @@ class ConfigView(drf.views.APIView):
             Return a dictionary of public settings.
         """
         array_settings = [
+            "ALLOW_SHARE_IMPORT_FILE",
             "AWS_S3_UPLOAD_ACL",
             "CRISP_WEBSITE_ID",
             "DATA_UPLOAD_MAX_MEMORY_SIZE",

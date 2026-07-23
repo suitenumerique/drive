@@ -998,6 +998,10 @@ class Base(Configuration):
     # Sentry
     SENTRY_DSN = values.Value(None, environ_name="SENTRY_DSN", environ_prefix=None)
 
+    ALLOW_SHARE_IMPORT_FILE = values.BooleanValue(
+        default=False, environ_name="ALLOW_SHARE_IMPORT_FILE", environ_prefix=None
+    )
+
     # Frontend
     FRONTEND_THEME = values.Value(None, environ_name="FRONTEND_THEME", environ_prefix=None)
     FRONTEND_MORE_LINK = values.Value(

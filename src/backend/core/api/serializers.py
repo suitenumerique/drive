@@ -871,6 +871,26 @@ class MoveItemSerializer(serializers.Serializer):
     target_item_id = serializers.UUIDField(required=False)
 
 
+BATCH_SHARE_MAX_ROWS = 100  # Keep in sync with the ui-kit share import modal max rows
+
+
+class BatchShareRowSerializer(serializers.Serializer):
+    """One row of a batch share payload: a contact email and the role to grant."""
+
+    email = serializers.EmailField()
+    role = serializers.ChoiceField(choices=models.RoleChoices.choices)
+
+    def validate_email(self, value):
+        """Normalize emails to lower case like invitations do."""
+        return value.lower()
+
+
+class BatchShareSerializer(serializers.Serializer):
+    """Validate the payload of the item batch-share action."""
+
+    rows = BatchShareRowSerializer(many=True, allow_empty=False, max_length=BATCH_SHARE_MAX_ROWS)
+
+
 class SDKRelayEventSerializer(serializers.Serializer):
     """Serializer for SDK relay events."""
 

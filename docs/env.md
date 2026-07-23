@@ -7,6 +7,7 @@ This document lists all configurable environment variables for the Drive applica
 |---------------------|-------------|---------------|
 | `ALLOWED_HOSTS` | List of allowed hosts for the application (used in Production) | `[]` |
 | `ALLOW_LOGOUT_GET_METHOD` | Allow logout via GET method | `True` |
+| `ALLOW_SHARE_IMPORT_FILE` | Enable batch sharing of an item from an imported contacts file | `False` |
 | `API_USERS_LIST_LIMIT` | Maximum number of users returned in API user list | `5` |
 | `API_USERS_LIST_THROTTLE_RATE_BURST` | Burst throttle rate for user list API | `30/minute` |
 | `API_USERS_LIST_THROTTLE_RATE_SUSTAINED` | Sustained throttle rate for user list API | `180/hour` |

@@ -18,6 +18,7 @@ pytestmark = pytest.mark.django_db
 
 
 @override_settings(
+    ALLOW_SHARE_IMPORT_FILE=True,
     AWS_S3_UPLOAD_ACL="private",
     CRISP_WEBSITE_ID="123",
     DATA_UPLOAD_MAX_MEMORY_SIZE=2048,
@@ -61,6 +62,7 @@ def test_api_config(is_authenticated):
     response = client.get("/api/v1.0/config/")
     assert response.status_code == HTTP_200_OK
     assert response.json() == {
+        "ALLOW_SHARE_IMPORT_FILE": True,
         "AWS_S3_UPLOAD_ACL": "private",
         "CRISP_WEBSITE_ID": "123",
         "DATA_UPLOAD_MAX_MEMORY_SIZE": 2048,
