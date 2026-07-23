@@ -702,10 +702,10 @@
   dependencies:
     tslib "^2.8.0"
 
-"@gouvfr-lasuite/cunningham-react@4.3.0":
-  version "4.3.0"
-  resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/cunningham-react/-/cunningham-react-4.3.0.tgz#a92f70e5f32d2b9cae4971642544d306e7fadfed"
-  integrity sha512-jGUebugMdK4LnyctS3EPrd1hKdt7oN4o22oazARuerq9JP0Yb9cmB49NsyleoFaMerF7nTJoD4eJCy0Y/9AeoQ==
+"@gouvfr-lasuite/cunningham-react@4.4.0":
+  version "4.4.0"
+  resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/cunningham-react/-/cunningham-react-4.4.0.tgz#0a04d84848487b1e06bb504635f6075454d6c2b4"
+  integrity sha512-nWv1nQvGLIfz1cE08D0cQ1zn05+eX7PWOeenv4yAyDSb4I6pgrNMD+7zxnBlyOj9LPyvk66QClhivaPns66Gnw==
   dependencies:
     "@fontsource-variable/roboto-flex" "5.2.5"
     "@fontsource/material-icons-outlined" "5.2.5"
@@ -742,16 +742,16 @@
   resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/integration/-/integration-1.0.2.tgz#ed0000f4b738c5a19bb60f5b80a9a2f5d9414234"
   integrity sha512-npOotZQSyu6SffHiPP+jQVOkJ3qW2KE2cANhEK92sNLX9uZqQaCqljO5GhzsBmh0lB76fiXnrr9i8SIpnDUSZg==
 
-"@gouvfr-lasuite/ui-kit@0.27.0":
-  version "0.27.0"
-  resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/ui-kit/-/ui-kit-0.27.0.tgz#a8c51a6eed016e6c1dce55484b10c9ae74f751a5"
-  integrity sha512-6JKpbT+JGr5oJQHKkT0DiLcy/wMyuHFjmzvS++lpaslRHbPU7O3JYbkt9ilYW/r0wyNc6BRLN8ERpNmgUP3DEQ==
+"@gouvfr-lasuite/ui-kit@0.28.0":
+  version "0.28.0"
+  resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/ui-kit/-/ui-kit-0.28.0.tgz#6b3cc898a62b649b726ae3aad3dd446d9f29427b"
+  integrity sha512-HUSogjMIvVWVkzFNrNCoBLM4wY6hCMwY48UrppTvPKhiufJh/aDSSCwWXCzj9qa0YWJDn2+YIVnH2xpu6XJh7g==
   dependencies:
     "@dnd-kit/core" "6.3.1"
     "@dnd-kit/modifiers" "9.0.0"
     "@dnd-kit/sortable" "10.0.0"
     "@fontsource/material-icons" "5.2.5"
-    "@gouvfr-lasuite/cunningham-react" "4.3.0"
+    "@gouvfr-lasuite/cunningham-react" "4.4.0"
     "@gouvfr-lasuite/cunningham-tokens" "3.1.0"
     "@gouvfr-lasuite/integration" "1.0.2"
     "@types/node" "22.10.7"
@@ -763,6 +763,7 @@
     react-resizable-panels "2.1.7"
     react-stately "3.37.0"
     react-virtualized "9.22.6"
+    read-excel-file "9.3.1"
 
 "@humanfs/core@^0.19.2":
   version "0.19.2"
@@ -5034,6 +5035,11 @@ fflate@^0.4.8:
   resolved "https://registry.yarnpkg.com/fflate/-/fflate-0.4.8.tgz#f90b82aefbd8ac174213abb338bd7ef848f0f5ae"
   integrity sha512-FJqqoDBR00Mdj9ppamLa/Y7vxm+PRmNWA67N846RvsoYVMKB4q3y/de5PA7gUmRMYK/8CMz2GDZQmCRN1wBcWA==
 
+fflate@^0.8.3:
+  version "0.8.3"
+  resolved "https://registry.yarnpkg.com/fflate/-/fflate-0.8.3.tgz#bc27d8eb30343d4d512abb03480202ce65d825fc"
+  integrity sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==
+
 figlet@1.8.1:
   version "1.8.1"
   resolved "https://registry.yarnpkg.com/figlet/-/figlet-1.8.1.tgz#e8e8a07e8c16be24c31086d7d5de8a9b9cf7f0fd"
@@ -5271,7 +5277,7 @@ gopd@^1.0.1, gopd@^1.2.0:
   resolved "https://registry.yarnpkg.com/gopd/-/gopd-1.2.0.tgz#89f56b8217bdbc8802bd299df6d7f1081d7e51a1"
   integrity sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==
 
-graceful-fs@^4.1.6, graceful-fs@^4.2.0, graceful-fs@^4.2.9:
+graceful-fs@^4.1.6, graceful-fs@^4.2.0, graceful-fs@^4.2.2, graceful-fs@^4.2.9:
   version "4.2.11"
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.11.tgz#4183e4e8bf08bb6e05bbb2f7d2e0c8f712ca40e3"
   integrity sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==
@@ -7256,6 +7262,15 @@ react@19.2.0:
   resolved "https://registry.yarnpkg.com/react/-/react-19.2.0.tgz#d33dd1721698f4376ae57a54098cb47fc75d93a5"
   integrity sha512-tmbWg6W31tQLeB5cdIBOicJDJRR2KzXsV7uSK9iNfLWQ5bIZfxuPEHp7M8wiHyHnn0DD1i7w3Zmin0FtkrwoCQ==
 
+read-excel-file@9.3.1:
+  version "9.3.1"
+  resolved "https://registry.yarnpkg.com/read-excel-file/-/read-excel-file-9.3.1.tgz#8bbd360bb297106e432e5798f74c1bc66dcbefe0"
+  integrity sha512-yzC1vJ/yl3PGJfCDrOI6/rBagF0bRm/CK1NTNXYdomB+13mDB9SFyoRibsDXxDAFrwCANfuRqzuUWDljkkSEuQ==
+  dependencies:
+    fflate "^0.8.3"
+    saxen "^11.0.2"
+    unzipper-esm "^0.13.2"
+
 readdirp@^4.0.1:
   version "4.1.2"
   resolved "https://registry.yarnpkg.com/readdirp/-/readdirp-4.1.2.tgz#eb85801435fbf2a7ee58f19e0921b068fc69948d"
@@ -7442,6 +7457,11 @@ sass@1.94.0:
     source-map-js ">=0.6.2 <2.0.0"
   optionalDependencies:
     "@parcel/watcher" "^2.4.1"
+
+saxen@^11.0.2:
+  version "11.1.1"
+  resolved "https://registry.yarnpkg.com/saxen/-/saxen-11.1.1.tgz#0208e438b574887ee27e70712f0aa2de1bce3714"
+  integrity sha512-J4BkmJFaM7VgE7pgkFGsNEcqqM3h7+Mz80vfLWFhx7uNOCOXIu6LLjQHYWNejdst3pf/3JUaBIG9+pkk1umlow==
 
 scheduler@^0.27.0:
   version "0.27.0"
@@ -8033,6 +8053,14 @@ unrs-resolver@^1.6.2:
     "@unrs/resolver-binding-win32-arm64-msvc" "1.12.2"
     "@unrs/resolver-binding-win32-ia32-msvc" "1.12.2"
     "@unrs/resolver-binding-win32-x64-msvc" "1.12.2"
+
+unzipper-esm@^0.13.2:
+  version "0.13.3"
+  resolved "https://registry.yarnpkg.com/unzipper-esm/-/unzipper-esm-0.13.3.tgz#731e1b28f895f174a5351cf84ea24e8adb4f155c"
+  integrity sha512-LUO6VZ6fCzkDbdMev0/fOhoIeVGKaOkTIOoYxVLE0SQjfvmAHK+oywl7lfhloSZIsdGJ25mJ18Mtd9CyTASjrA==
+  dependencies:
+    graceful-fs "^4.2.2"
+    node-int64 "^0.4.0"
 
 update-browserslist-db@^1.2.3:
   version "1.2.3"
