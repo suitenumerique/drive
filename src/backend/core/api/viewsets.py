@@ -47,6 +47,7 @@ from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
 from core.entitlements import get_entitlements_backend
+from core.services.accesses import synchronize_descendants_accesses
 from core.services.item_exports import build_zip_stream, export_descendants
 from core.services.sdk_relay import SDKRelayManager
 from core.services.search_indexers import (
@@ -1954,7 +1955,7 @@ class ItemAccessViewSet(
 
         access = serializer.save()
 
-        self._syncronize_descendants_accesses(access)
+        synchronize_descendants_accesses(self.item, access)
 
         if access.role != old_role:
             posthog_capture(
@@ -2015,7 +2016,7 @@ class ItemAccessViewSet(
             )
 
         access = serializer.save(item_id=self.kwargs["resource_id"])
-        self._syncronize_descendants_accesses(access)
+        synchronize_descendants_accesses(self.item, access)
         if access.user:
             access.item.send_invitation_email(
                 access.user.email,
@@ -2049,31 +2050,6 @@ class ItemAccessViewSet(
             },
             item=item,
         )
-
-    def _syncronize_descendants_accesses(self, access):
-        """
-        Syncronize the accesses of the descendants of the item
-        by removing accesses with roles lower than the current user's role.
-        """
-        descendants = self.item.descendants().filter(ancestors_deleted_at__isnull=True)
-
-        condition_filter = db.Q()
-        if access.user:
-            condition_filter |= db.Q(user=access.user)
-        if access.team:
-            condition_filter |= db.Q(team=access.team)
-
-        role_priority = models.RoleChoices.get_priority(access.role)
-
-        lower_roles = [
-            role
-            for role in models.RoleChoices.values
-            if models.RoleChoices.get_priority(role) <= role_priority
-        ]
-
-        models.ItemAccess.objects.filter(
-            condition_filter, item__in=descendants, role__in=lower_roles
-        ).delete()
 
 
 class InvitationViewset(
