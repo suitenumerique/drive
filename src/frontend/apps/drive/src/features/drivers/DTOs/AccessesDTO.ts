@@ -18,6 +18,14 @@ export type DTODeleteAccess = {
   accessId: string;
 };
 
+export type DTOBatchShare = {
+  itemId: string;
+  rows: {
+    email: string;
+    role: Role;
+  }[];
+};
+
 export type DTOUpdateLinkConfiguration = {
   itemId: string;
   link_reach: LinkReach;

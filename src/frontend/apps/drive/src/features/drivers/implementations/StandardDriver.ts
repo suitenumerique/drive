@@ -12,6 +12,7 @@ import {
   DTOUpdateInvitation,
 } from "../DTOs/InvitationDTO";
 import {
+  DTOBatchShare,
   DTOCreateAccess,
   DTOUpdateLinkConfiguration,
 } from "../DTOs/AccessesDTO";
@@ -189,6 +190,15 @@ export class StandardDriver extends Driver {
       body: JSON.stringify({
         user_id: data.userId,
         role: data.role,
+      }),
+    });
+  }
+
+  async batchShare(payload: DTOBatchShare): Promise<void> {
+    await fetchAPI(`items/${payload.itemId}/batch-share/`, {
+      method: "POST",
+      body: JSON.stringify({
+        rows: payload.rows,
       }),
     });
   }

@@ -3,3 +3,5 @@ FRONTEND_HELP_MENU_CONFIG={"documentationUrl": "https://docs.numerique.gouv.fr/d
 WOPI_CLIENTS="collabora"
 # Report uploads as safe synchronously so files are ready instantly in e2e.
 MALWARE_DETECTION_BACKEND=lasuite.malware_detection.backends.dummy.DummyBackend
+# Enable the share modal contacts file import tested by share-import.spec.ts
+ALLOW_SHARE_IMPORT_FILE=True

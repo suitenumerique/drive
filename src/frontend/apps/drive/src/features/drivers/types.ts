@@ -201,6 +201,7 @@ export interface ThemeCustomization {
 }
 
 export type ApiConfig = {
+  ALLOW_SHARE_IMPORT_FILE?: boolean;
   AWS_S3_UPLOAD_ACL?: string;
   DATA_UPLOAD_MAX_MEMORY_SIZE?: number;
   POSTHOG_KEY?: string;

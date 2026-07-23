@@ -14,6 +14,7 @@ and this project adheres to
 - ✨(frontend) show the messages widget button on the homepage
 - ✨(frontend) open the messages widget from the help menu
 - ✨(backend) add an item batch share endpoint gated by ALLOW_SHARE_IMPORT_FILE
+- ✨(frontend) share an item with contacts imported from a file
 
 ### Changed
 

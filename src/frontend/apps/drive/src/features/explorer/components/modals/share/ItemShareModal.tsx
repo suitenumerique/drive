@@ -9,6 +9,7 @@ import {
   User,
 } from "@/features/drivers/types";
 import {
+  useMutationBatchShare,
   useMutationCreateAccess,
   useMutationCreateInvitation,
   useMutationDeleteAccess,
@@ -16,6 +17,7 @@ import {
   useMutationUpdateAccess,
   useMutationUpdateInvitation,
 } from "@/features/explorer/hooks/useMutationsAccesses";
+import { useConfig } from "@/features/config/ConfigProvider";
 import { useMutationUpdateLinkConfiguration } from "@/features/explorer/hooks/useMutations";
 import {
   useInfiniteItemInvitations,
@@ -32,7 +34,9 @@ import {
 } from "@gouvfr-lasuite/ui-kit";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Alert, VariantType } from "@gouvfr-lasuite/cunningham-react";
+import { errorToString } from "@/features/api/APIError";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/features/auth/Auth";
 import posthog from "posthog-js";
@@ -50,6 +54,7 @@ export const ItemShareModal = ({
 }: WorkspaceShareModalProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { config } = useConfig();
   const { user } = useAuth();
   const copyToClipboard = useClipboard();
   const itemId = initialItem.originalId ?? initialItem.id;
@@ -77,6 +82,8 @@ export const ItemShareModal = ({
   const { mutateAsync: deleteAccess } = useMutationDeleteAccess();
   const { mutateAsync: deleteInvitation } = useMutationDeleteInvitation();
   const { mutateAsync: updateInvitation } = useMutationUpdateInvitation();
+  const { mutateAsync: batchShare } = useMutationBatchShare();
+  const [importModalChildren, setImportModalChildren] = useState<ReactNode>();
 
   const rolesOptions = useMemo(
     () =>
@@ -498,6 +505,30 @@ export const ItemShareModal = ({
           link_role: linkRole,
         });
       }}
+      allowFileImport={config.ALLOW_SHARE_IMPORT_FILE ?? false}
+      onImportContacts={async (rows) => {
+        try {
+          await batchShare({
+            itemId,
+            rows: rows.map((row) => ({
+              email: row.email,
+              role: row.role as Role,
+            })),
+          });
+          posthog.capture("import_share_contacts", {
+            item_id: itemId,
+            row_count: rows.length,
+          });
+          return true;
+        } catch (error) {
+          setImportModalChildren(
+            <Alert type={VariantType.ERROR}>{errorToString(error)}</Alert>,
+          );
+          return false;
+        }
+      }}
+      importModalChildren={importModalChildren}
+      onImportFileChange={() => setImportModalChildren(undefined)}
     >
       {!item?.abilities.accesses_manage && <HorizontalSeparator />}
     </ShareModal>
