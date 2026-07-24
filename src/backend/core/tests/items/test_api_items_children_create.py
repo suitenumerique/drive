@@ -3,7 +3,7 @@ Tests for items API endpoint in drive's core app: create
 """
 
 from concurrent.futures import ThreadPoolExecutor
-from random import choice, randint
+from random import randint
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
@@ -414,7 +414,10 @@ def test_api_items_children_create_force_id_existing():
     }
 
 
-def test_api_items_children_create_not_a_folder():
+@pytest.mark.parametrize(
+    "item_type", [type for type in ItemTypeChoices.values if type != ItemTypeChoices.FOLDER]
+)
+def test_api_items_children_create_not_a_folder(item_type):
     """
     It should not be possible to create a nested item below an item
     of type other than folder.
@@ -423,13 +426,11 @@ def test_api_items_children_create_not_a_folder():
     client = APIClient()
     client.force_login(user)
 
-    access = factories.UserItemAccessFactory(
-        user=user,
-        role="editor",
-        item__type=choice(
-            [type for type in ItemTypeChoices.values if type != ItemTypeChoices.FOLDER]
-        ),
-    )
+    if item_type == ItemTypeChoices.SHORTCUT:
+        item = factories.ShortcutFactory()
+    else:
+        item = factories.ItemFactory(type=item_type)
+    access = factories.UserItemAccessFactory(user=user, role="editor", item=item)
 
     response = client.post(
         f"/api/v1.0/items/{access.item.id!s}/children/",

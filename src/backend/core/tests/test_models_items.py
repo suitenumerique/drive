@@ -1106,7 +1106,10 @@ def test_models_items_nb_accesses_cache_is_invalidated_on_access_removal(
 @pytest.mark.parametrize("item_type", models.ItemTypeChoices.values)
 def test_models_items_default_upload_state(item_type):
     """The default value for the upload_state field depends on the item type."""
-    item = factories.ItemFactory(type=item_type)
+    if item_type == models.ItemTypeChoices.SHORTCUT:
+        item = factories.ShortcutFactory()
+    else:
+        item = factories.ItemFactory(type=item_type)
     assert item.upload_state == (
         models.ItemUploadStateChoices.PENDING if item.type == models.ItemTypeChoices.FILE else None
     )

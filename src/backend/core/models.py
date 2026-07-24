@@ -71,6 +71,7 @@ class ItemTypeChoices(models.TextChoices):
 
     FOLDER = "folder", _("Folder")
     FILE = "file", _("File")
+    SHORTCUT = "shortcut", _("Shortcut")
 
 
 class ItemUploadStateChoices(models.TextChoices):
@@ -1020,6 +1021,13 @@ class Item(TreeModel, BaseModel):
     )
     mimetype = models.CharField(max_length=255, null=True, blank=True)
     is_restricted = models.BooleanField(default=False)
+    target = models.OneToOneField(
+        "self",
+        on_delete=models.CASCADE,
+        related_name="shortcut",
+        null=True,
+        blank=True,
+    )
     main_workspace = models.BooleanField(default=False)
     size = models.BigIntegerField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
@@ -1050,6 +1058,13 @@ class Item(TreeModel, BaseModel):
             models.CheckConstraint(
                 condition=(models.Q(is_restricted=False) | models.Q(type=ItemTypeChoices.FOLDER)),
                 name="check_is_restricted_only_on_folders",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(type=ItemTypeChoices.SHORTCUT) & models.Q(target__isnull=False))
+                    | (~models.Q(type=ItemTypeChoices.SHORTCUT) & models.Q(target__isnull=True))
+                ),
+                name="check_target_only_on_shortcuts",
             ),
         ]
         indexes = [
