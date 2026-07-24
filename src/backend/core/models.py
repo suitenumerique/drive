@@ -71,6 +71,7 @@ class ItemTypeChoices(models.TextChoices):
 
     FOLDER = "folder", _("Folder")
     FILE = "file", _("File")
+    SHORTCUT = "shortcut", _("Shortcut")
 
 
 class ItemUploadStateChoices(models.TextChoices):
@@ -1020,6 +1021,13 @@ class Item(TreeModel, BaseModel):
     )
     mimetype = models.CharField(max_length=255, null=True, blank=True)
     is_restricted = models.BooleanField(default=False)
+    target = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        related_name="shortcuts",
+        null=True,
+        blank=True,
+    )
     main_workspace = models.BooleanField(default=False)
     size = models.BigIntegerField(null=True, blank=True)
     quota_excluded = models.BooleanField(
@@ -1054,6 +1062,17 @@ class Item(TreeModel, BaseModel):
             models.CheckConstraint(
                 condition=(models.Q(is_restricted=False) | models.Q(type=ItemTypeChoices.FOLDER)),
                 name="check_is_restricted_only_on_folders",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(type=ItemTypeChoices.SHORTCUT) & models.Q(target__isnull=False))
+                    | (~models.Q(type=ItemTypeChoices.SHORTCUT) & models.Q(target__isnull=True))
+                ),
+                name="check_target_only_on_shortcuts",
+            ),
+            models.UniqueConstraint(
+                fields=["target"],
+                name="unique_shortcut_per_target",
             ),
         ]
         indexes = [
@@ -1231,6 +1250,11 @@ class Item(TreeModel, BaseModel):
         if len(self.path) > 1:
             return self._meta.model.objects.filter(path=str(self.path[:-1])).first()
         return None
+
+    @property
+    def shortcut(self):
+        """Return the shortcut targeting this item, if any."""
+        return self._meta.model.objects.filter(target=self).first()
 
     def invalidate_nb_accesses_cache(self):
         """
