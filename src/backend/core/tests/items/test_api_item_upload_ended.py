@@ -50,7 +50,10 @@ def test_api_item_upload_ended_on_none_file_item(item_type):
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(type=item_type)
+    if item_type == ItemTypeChoices.RESTRICTION:
+        item = factories.RestrictionFactory()
+    else:
+        item = factories.ItemFactory(type=item_type)
     factories.UserItemAccessFactory(item=item, user=user, role="owner")
 
     response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")

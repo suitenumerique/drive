@@ -650,6 +650,12 @@ class CreateItemSerializer(ItemSerializer):
         """Validate that filename is set for files."""
         extension = attrs.get("extension")
 
+        if attrs["type"] == models.ItemTypeChoices.RESTRICTION:
+            raise serializers.ValidationError(
+                {"type": _("Restrictions can only be created by restricting a folder.")},
+                code="item_create_restriction_forbidden",
+            )
+
         if attrs["type"] == models.ItemTypeChoices.FILE:
             if extension:
                 # Template-based creation: title is required, filename is computed

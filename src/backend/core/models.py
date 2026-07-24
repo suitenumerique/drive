@@ -71,6 +71,7 @@ class ItemTypeChoices(models.TextChoices):
 
     FOLDER = "folder", _("Folder")
     FILE = "file", _("File")
+    RESTRICTION = "restriction", _("Restriction")
 
 
 class ItemUploadStateChoices(models.TextChoices):
@@ -804,6 +805,12 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
 
     path_property = "path"
 
+    def annotate_has_restriction(self):
+        """Annotate whether a restriction targets each item."""
+        return self.annotate(
+            has_restriction=models.Exists(self.model.objects.filter(target=models.OuterRef("pk")))
+        )
+
     def readable_per_se(self, user):
         """
         Filters the queryset to return documents that the given user has
@@ -1019,6 +1026,13 @@ class Item(TreeModel, BaseModel):
         blank=True,
     )
     mimetype = models.CharField(max_length=255, null=True, blank=True)
+    target = models.OneToOneField(
+        "self",
+        on_delete=models.CASCADE,
+        related_name="restriction",
+        null=True,
+        blank=True,
+    )
     main_workspace = models.BooleanField(default=False)
     size = models.BigIntegerField(null=True, blank=True)
     quota_excluded = models.BooleanField(
@@ -1049,7 +1063,14 @@ class Item(TreeModel, BaseModel):
                     | models.Q(deleted_at=models.F("ancestors_deleted_at"))
                 ),
                 name="check_deleted_at_matches_ancestors_deleted_at_when_set",
-            )
+            ),
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(type=ItemTypeChoices.RESTRICTION) & models.Q(target__isnull=False))
+                    | (~models.Q(type=ItemTypeChoices.RESTRICTION) & models.Q(target__isnull=True))
+                ),
+                name="check_target_only_on_restrictions",
+            ),
         ]
         indexes = [
             GistIndex(fields=["path"]),
@@ -1216,6 +1237,13 @@ class Item(TreeModel, BaseModel):
     def is_root(self):
         """Return True if the item is the root of the tree."""
         return len(self.path) == 1
+
+    @property
+    def is_restricted(self):
+        """Return whether a restriction targets this folder."""
+        if (annotated := getattr(self, "has_restriction", None)) is not None:
+            return annotated
+        return self._meta.model.objects.filter(target=self).exists()
 
     def get_root(self):
         """Return the root of the tree."""
