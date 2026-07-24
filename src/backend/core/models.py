@@ -1019,6 +1019,7 @@ class Item(TreeModel, BaseModel):
         blank=True,
     )
     mimetype = models.CharField(max_length=255, null=True, blank=True)
+    is_restricted = models.BooleanField(default=False)
     main_workspace = models.BooleanField(default=False)
     size = models.BigIntegerField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
@@ -1045,7 +1046,11 @@ class Item(TreeModel, BaseModel):
                     | models.Q(deleted_at=models.F("ancestors_deleted_at"))
                 ),
                 name="check_deleted_at_matches_ancestors_deleted_at_when_set",
-            )
+            ),
+            models.CheckConstraint(
+                condition=(models.Q(is_restricted=False) | models.Q(type=ItemTypeChoices.FOLDER)),
+                name="check_is_restricted_only_on_folders",
+            ),
         ]
         indexes = [
             GistIndex(fields=["path"]),
