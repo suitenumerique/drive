@@ -18,6 +18,7 @@ import { useThemeCustomization } from "@/hooks/useThemeCustomization";
 import { Feedback } from "@/features/feedback/Feedback";
 import { useRedirectAfterLogin } from "@/hooks/useRedirectAfterLogin";
 import { LeftPanelFooter } from "@/features/layouts/components/explorer/ExplorerLayout";
+import { useMessagesWidget } from "@/features/feedback/useMessagesWidget";
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -70,6 +71,7 @@ const HomePageContent = () => {
   const { config } = useConfig();
   const footerCustommization = useThemeCustomization("footer");
   const [redirectFailed, setRedirectFailed] = useState(false);
+  const { canLoadWidget, showButton } = useMessagesWidget();
 
   useEffect(() => {
     const checkSiteAndRedirect = async () => {
@@ -91,6 +93,12 @@ const HomePageContent = () => {
 
     checkSiteAndRedirect();
   }, [config?.FRONTEND_EXTERNAL_HOME_URL]);
+
+  useEffect(() => {
+    if (canLoadWidget) {
+      showButton();
+    }
+  }, [canLoadWidget]);
 
   if (config?.FRONTEND_EXTERNAL_HOME_URL && !redirectFailed) {
     return null;

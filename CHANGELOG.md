@@ -11,6 +11,8 @@ and this project adheres to
 ### Added
 
 - ✨(backend) make the upload ACL configurable to support GCS based storages
+- ✨(frontend) show the messages widget button on the homepage
+- ✨(frontend) open the messages widget from the help menu
 
 ### Changed
 
