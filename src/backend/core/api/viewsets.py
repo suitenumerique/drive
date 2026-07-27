@@ -365,7 +365,7 @@ class ItemViewSet(
     3. **Favorite**: Get list of favorite items for a user. Mark or unmark
         a item as favorite.
         Examples:
-        - GET /items/favorite/
+        - GET /items/favorites/
         - POST, DELETE /items/{id}/favorite/
 
     4. **Link Configuration**: Update item link configuration.
@@ -915,6 +915,7 @@ class ItemViewSet(
         detail=False,
         methods=["get"],
         permission_classes=[permissions.IsAuthenticated],
+        url_path="favorites",
     )
     def favorite_list(self, request, *args, **kwargs):
         """Get list of favorite items for the current user."""

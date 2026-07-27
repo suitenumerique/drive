@@ -13,7 +13,7 @@ def test_api_item_favorite_list_anonymous():
 
     client = APIClient()
 
-    response = client.get("/api/v1.0/items/favorite_list/")
+    response = client.get("/api/v1.0/items/favorites/")
 
     assert response.status_code == 401
 
@@ -27,7 +27,7 @@ def test_api_item_favorite_list_authenticated_no_favorite():
 
     client.force_login(user)
 
-    response = client.get("/api/v1.0/items/favorite_list/")
+    response = client.get("/api/v1.0/items/favorites/")
 
     assert response.status_code == 200
 
@@ -59,7 +59,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
         item__update_upload_state=models.ItemUploadStateChoices.READY,
     ).item
 
-    response = client.get("/api/v1.0/items/favorite_list/")
+    response = client.get("/api/v1.0/items/favorites/")
 
     assert response.status_code == 200
 
@@ -139,7 +139,7 @@ def test_api_item_favorite_list_with_suspicious_items():
     )
 
     # Non-creator should only see normal item in favorite list, not suspicious one
-    response = client.get("/api/v1.0/items/favorite_list/")
+    response = client.get("/api/v1.0/items/favorites/")
     assert response.status_code == 200
     content = response.json()
 
@@ -151,7 +151,7 @@ def test_api_item_favorite_list_with_suspicious_items():
 
     # Creator should see all their favorited items including suspicious one
     client.force_login(creator)
-    response = client.get("/api/v1.0/items/favorite_list/")
+    response = client.get("/api/v1.0/items/favorites/")
     assert response.status_code == 200
     content = response.json()
 
@@ -184,7 +184,7 @@ def test_api_item_favorite_list_children():
 
     factories.UserItemAccessFactory(item=parent_item, user=user)
 
-    response = client.get("/api/v1.0/items/favorite_list/")
+    response = client.get("/api/v1.0/items/favorites/")
     assert response.status_code == 200
     content = response.json()
     assert content["count"] == 1
@@ -215,7 +215,7 @@ def test_api_item_favorite_list_filtering(django_assert_num_queries):
     )
 
     with django_assert_num_queries(6):
-        response = client.get("/api/v1.0/items/favorite_list/?type=folder")
+        response = client.get("/api/v1.0/items/favorites/?type=folder")
 
     assert response.status_code == 200
     content = response.json()
@@ -223,7 +223,7 @@ def test_api_item_favorite_list_filtering(django_assert_num_queries):
     assert content["results"][0]["id"] == str(child_item.id)
 
     with django_assert_num_queries(6):
-        response = client.get("/api/v1.0/items/favorite_list/?type=file")
+        response = client.get("/api/v1.0/items/favorites/?type=file")
 
     assert response.status_code == 200
     content = response.json()
@@ -279,7 +279,7 @@ def test_api_item_favorite_list_ordering_by_fields(ordering, django_assert_num_q
     querystring = f"?ordering={ordering}"
 
     with django_assert_num_queries(6):
-        response = client.get(f"/api/v1.0/items/favorite_list/{querystring:s}")
+        response = client.get(f"/api/v1.0/items/favorites/{querystring:s}")
     assert response.status_code == 200
     results = response.json()["results"]
     assert len(results) == 2
@@ -313,7 +313,7 @@ def test_api_items_favorite_list_filter_category():
         update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
-    response = client.get("/api/v1.0/items/favorite_list/?category=image")
+    response = client.get("/api/v1.0/items/favorites/?category=image")
 
     assert response.status_code == 200
     ids = {result["id"] for result in response.json()["results"]}

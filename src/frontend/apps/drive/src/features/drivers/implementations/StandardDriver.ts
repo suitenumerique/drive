@@ -342,7 +342,7 @@ export class StandardDriver extends Driver {
   async getFavoriteItems(
     filters?: ItemFilters,
   ): Promise<PaginatedChildrenResult> {
-    const response = await fetchAPI(`items/favorite_list/`, {
+    const response = await fetchAPI(`items/favorites/`, {
       params: { ...convertFiltersToQueryParams(filters ?? {}), page_size: 200 },
     });
 
