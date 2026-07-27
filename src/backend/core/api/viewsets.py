@@ -759,6 +759,32 @@ class ItemViewSet(
         )
         queryset = queryset.filter(path__in=root_paths)
 
+        # Hide restricted roots the user already reaches through a live
+        # shortcut, so the folder shows up in a single location
+        if user.is_authenticated:
+            reachable_shortcuts = models.Item.objects.filter(
+                type=models.ItemTypeChoices.SHORTCUT,
+                target_id=db.OuterRef("pk"),
+                ancestors_deleted_at__isnull=True,
+            ).filter(
+                db.Exists(
+                    models.ItemAccess.objects.filter(
+                        db.Q(user=user) | db.Q(team__in=user.teams),
+                        item__path__ancestors=db.OuterRef("path"),
+                    )
+                )
+                | db.Exists(
+                    models.Item.objects.filter(
+                        path__ancestors=db.OuterRef("path"),
+                        link_reach__in=[
+                            LinkReachChoices.PUBLIC,
+                            LinkReachChoices.AUTHENTICATED,
+                        ],
+                    )
+                )
+            )
+            queryset = queryset.exclude(db.Q(is_restricted=True) & db.Exists(reachable_shortcuts))
+
         # Annotate the queryset with an attribute marking instances as highest ancestor
         # in order to save some time while computing abilities in the instance
         queryset = queryset.annotate(
