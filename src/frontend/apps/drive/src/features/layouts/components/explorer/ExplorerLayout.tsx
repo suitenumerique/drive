@@ -43,6 +43,7 @@ import i18n from "@/features/i18n/initI18n";
 import { useMemo } from "react";
 import { UserProfile } from "@/features/ui/components/user/UserProfile";
 import { Gaufre } from "@/features/ui/components/gaufre/Gaufre";
+import { useMessagesWidget } from "@/features/feedback/useMessagesWidget";
 
 export const getGlobalExplorerLayout = (page: React.ReactElement) => {
   return <GlobalExplorerLayout>{page}</GlobalExplorerLayout>;
@@ -199,20 +200,26 @@ const HelpMenuButton = () => {
   const helpMenuConfig = config?.FRONTEND_HELP_MENU_CONFIG;
   const hasHelpMenu =
     !!helpMenuConfig && Object.keys(helpMenuConfig).length > 0;
+  const { showWidget } = useMessagesWidget();
 
   if (!hasHelpMenu) {
     return null;
   }
 
+  const getOnContactUs = () => {
+    if (helpMenuConfig.supportMessagesWidget) {
+      return () => showWidget();
+    }
+    return helpMenuConfig.supportEmail
+      ? () => window.open(helpMenuConfig.supportEmail)
+      : undefined;
+  };
+
   return (
     <HelpMenu
       documentationUrl={helpMenuConfig.documentationUrl}
       legal={helpMenuConfig.legal}
-      onContactUs={
-        helpMenuConfig.supportEmail
-          ? () => window.open(helpMenuConfig.supportEmail)
-          : undefined
-      }
+      onContactUs={getOnContactUs()}
     />
   );
 };

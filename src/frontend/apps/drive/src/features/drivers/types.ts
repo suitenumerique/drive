@@ -222,6 +222,7 @@ export type ApiConfig = {
       legalNoticeUrl?: string;
     };
     supportEmail?: string;
+    supportMessagesWidget?: boolean;
   };
   FRONTEND_THEME?: string;
   FRONTEND_HIDE_GAUFRE?: boolean;
