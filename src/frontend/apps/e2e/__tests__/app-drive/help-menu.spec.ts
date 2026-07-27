@@ -139,6 +139,37 @@ test.describe("Help menu", () => {
     expect(openedUrls).toEqual([]);
   });
 
+  test("shows the messages widget button on the homepage when configured", async ({
+    page,
+  }) => {
+    const widgetPath = "https://widget.example.com/";
+    await overrideHelpMenuConfig(page, HELP_MENU_CONFIG, {
+      FRONTEND_FEEDBACK_MESSAGES_WIDGET_API_URL: "https://widget.example.com/api/",
+      FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH: widgetPath,
+      FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL: "drive",
+    });
+    // Serve an empty loader script so the injected loader does not hit the
+    // network for real.
+    await page.route(`${widgetPath}loader.js`, (route) =>
+      route.fulfill({ contentType: "application/javascript", body: "" }),
+    );
+    // No login: the home page only renders for anonymous users, and it is
+    // where the widget button is shown.
+    await page.goto("/");
+
+    // The button loader queues an init call and injects its loader script.
+    await expect(
+      page.locator(`script[src="${widgetPath}loader.js"]`),
+    ).toHaveCount(1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const widgetCalls = await page.evaluate(() => (window as any)._stmsg_widget);
+    expect(widgetCalls).toHaveLength(1);
+    expect(widgetCalls[0][0]).toBe("loader");
+    expect(widgetCalls[0][1]).toBe("init");
+    expect(widgetCalls[0][2].params.channel).toBe("drive");
+    expect(widgetCalls[0][2].script).toBe(`${widgetPath}feedback.js`);
+  });
+
   test("does not render the help menu when the config is empty", async ({
     page,
   }) => {
