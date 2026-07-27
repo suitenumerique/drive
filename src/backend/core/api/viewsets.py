@@ -968,6 +968,7 @@ class ItemViewSet(
         # than on the user_roles annotation.
         queryset = (
             self.queryset.select_related("creator")
+            .annotate_has_restriction()
             .filter(deleted_at__gte=models.get_trashbin_cutoff())
             .owned_by(user)
         )
@@ -1141,7 +1142,12 @@ class ItemViewSet(
             )
 
         # GET: List children
-        queryset = item.children().select_related("creator").filter(deleted_at__isnull=True)
+        queryset = (
+            item.children()
+            .select_related("creator")
+            .annotate_has_restriction()
+            .filter(deleted_at__isnull=True)
+        )
         queryset = self._filter_suspicious_items(queryset, request.user)
         queryset = self._exclude_pending_items(queryset)
         queryset = self.filter_queryset(queryset)
@@ -1239,6 +1245,7 @@ class ItemViewSet(
 
         tree = (
             self.queryset.select_related("creator")
+            .annotate_has_restriction()
             .filter(clause, type=models.ItemTypeChoices.FOLDER, deleted_at__isnull=True)
             .order_by("created_at")
         )
@@ -1623,6 +1630,19 @@ class ItemViewSet(
             {"detail": "item was already not marked as favorite"},
             status=drf.status.HTTP_200_OK,
         )
+
+    @drf.decorators.action(detail=True, methods=["post", "delete"], url_path="restrict")
+    def restrict(self, request, *args, **kwargs):
+        """Activate or deactivate restriction on the folder based on the HTTP method."""
+        item = self.get_object()
+
+        if request.method == "POST":
+            item = item.restrict(request.user)
+        else:
+            item = item.unrestrict()
+
+        serializer = self.get_serializer(item)
+        return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
     def _authorize_subrequest(self, request, pattern):
         """
