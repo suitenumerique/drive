@@ -1144,10 +1144,20 @@ class ItemViewSet(
         # GET: List children
         queryset = (
             item.children()
-            .select_related("creator")
+            .select_related("creator", "target")
             .annotate_has_restriction()
             .filter(deleted_at__isnull=True)
         )
+        if request.user.is_authenticated:
+            queryset = queryset.prefetch_related(
+                db.Prefetch(
+                    "target__accesses",
+                    queryset=models.ItemAccess.objects.filter(
+                        db.Q(user=request.user) | db.Q(team__in=request.user.teams)
+                    ),
+                    to_attr="viewer_accesses",
+                )
+            )
         queryset = self._filter_suspicious_items(queryset, request.user)
         queryset = self._exclude_pending_items(queryset)
         queryset = self.filter_queryset(queryset)
@@ -1244,9 +1254,13 @@ class ItemViewSet(
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
         tree = (
-            self.queryset.select_related("creator")
+            self.queryset.select_related("creator", "target")
             .annotate_has_restriction()
-            .filter(clause, type=models.ItemTypeChoices.FOLDER, deleted_at__isnull=True)
+            .filter(
+                clause,
+                type__in=[models.ItemTypeChoices.FOLDER, models.ItemTypeChoices.RESTRICTION],
+                deleted_at__isnull=True,
+            )
             .order_by("created_at")
         )
 
