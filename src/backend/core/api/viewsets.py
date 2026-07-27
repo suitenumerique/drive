@@ -457,7 +457,7 @@ class ItemViewSet(
     def get_queryset(self):
         """Get queryset performing all annotation and filtering on the item tree structure."""
         user = self.request.user
-        queryset = super().get_queryset().select_related("creator")
+        queryset = super().get_queryset().select_related("creator").annotate_has_restriction()
         # Remove items with upload_state SUSPICIOUS for non-creators
         queryset = self._filter_suspicious_items(queryset, user)
 
@@ -522,7 +522,7 @@ class ItemViewSet(
         for path in root_paths:
             path_list |= db.Q(path__descendants=path)
 
-        queryset = self.queryset.select_related("creator")
+        queryset = self.queryset.select_related("creator").annotate_has_restriction()
         # Remove items with upload_state SUSPICIOUS for non-creators
         queryset = self._filter_suspicious_items(queryset, user)
         queryset = self._exclude_pending_items(queryset)

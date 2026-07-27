@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from functools import cached_property
+
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.db.models import Q, QuerySet
@@ -37,6 +39,16 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
         self.is_owner = self.access_role == RoleChoices.OWNER
         self.is_owner_or_admin = self.is_owner or self.access_role == RoleChoices.ADMIN
 
+    @cached_property
+    def is_restricted(self) -> bool:
+        """Return whether the item is a restricted folder, querying once and only for roots."""
+        # Only a folder at the tree root can be restricted
+        return (
+            self.item.type == models.ItemTypeChoices.FOLDER
+            and self.item.is_root
+            and self.item.is_restricted
+        )
+
     def has_access_role(self) -> bool:
         """Return whether the user holds a role through accesses on a live item."""
         # Based on accesses only so that anonymous users granted by a link
@@ -60,6 +72,10 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
     def can_manage(self) -> bool:
         """Return whether the user can manage the item and its accesses."""
         return self.is_owner_or_admin and not self.is_deleted
+
+    def can_move(self) -> bool:
+        """Return whether the user can move the item: a restricted folder must stay at the root."""
+        return self.can_manage() and not self.is_restricted
 
     def can_update(self) -> bool:
         """Return whether the user can modify the item."""
@@ -111,6 +127,17 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
             and bool(settings.WOPI_ONLYOFFICE_CONVERT_JWT_SECRET)
         )
 
+    def can_restrict(self) -> bool:
+        """Return whether the user can toggle restriction on the folder."""
+        # A restricted folder lives at the tree root: deactivation must stay
+        # possible there, while activation requires a parent for the restriction
+        return (
+            self.is_owner
+            and not self.is_deleted
+            and self.item.type == models.ItemTypeChoices.FOLDER
+            and (self.item.depth > 1 or self.is_restricted)
+        )
+
     def can_favorite(self) -> bool:
         """Return whether the user can mark the item as favorite."""
         return self.can_get() and self.user.is_authenticated
@@ -144,7 +171,8 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
             "link_configuration": self.can_manage(),
             "invite_owner": self.can_invite_owner(),
             "link_select_options": self.link_select_options(),
-            "move": self.can_manage(),
+            "move": self.can_move(),
+            "restrict": self.can_restrict(),
             "restore": self.can_restore(),
             "retrieve": self.can_retrieve(),
             "tree": self.can_get(),
