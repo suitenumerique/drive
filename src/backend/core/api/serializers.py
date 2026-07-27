@@ -11,6 +11,7 @@ from os.path import splitext
 from urllib.parse import quote
 
 from django.conf import settings
+from django.db.models import Q
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -234,6 +235,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     creator = UserLightSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
+    target = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = models.Item
@@ -255,6 +257,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "numchild",
             "numchild_folder",
             "path",
+            "target",
             "title",
             "updated_at",
             "user_role",
@@ -288,6 +291,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "link_reach",
             "nb_accesses",
             "path",
+            "target",
             "updated_at",
             "user_role",
             "type",
@@ -331,6 +335,40 @@ class ListItemSerializer(serializers.ModelSerializer):
         if request:
             return item.get_role(request.user)
         return None
+
+    def _get_target_can_access(self, target):
+        """Return whether the request user can open the shortcut target."""
+        request = self.context.get("request")
+        user = request.user if request else None
+        if user is not None and user.is_authenticated:
+            accesses = getattr(target, "viewer_accesses", None)
+            if accesses is None:
+                has_access = models.ItemAccess.objects.filter(
+                    Q(user=user) | Q(team__in=user.teams),
+                    item=target,
+                ).exists()
+            else:
+                has_access = bool(accesses)
+            if has_access:
+                return True
+        return target.link_reach == LinkReachChoices.PUBLIC or (
+            target.link_reach == LinkReachChoices.AUTHENTICATED
+            and user is not None
+            and user.is_authenticated
+        )
+
+    def get_target(self, item) -> dict | None:
+        """Return the shortcut target contract, None for other item types."""
+        if item.type != models.ItemTypeChoices.SHORTCUT or item.target_id is None:
+            return None
+        target = item.target
+        return {
+            "id": str(target.id),
+            "title": target.title,
+            "is_restricted": target.is_restricted,
+            "deleted": target.deleted_at is not None,
+            "can_access": self._get_target_can_access(target),
+        }
 
     def get_url(self, item):
         """Return the URL of the item."""
@@ -487,6 +525,7 @@ class ItemSerializer(ListItemSerializer):
             "numchild",
             "numchild_folder",
             "path",
+            "target",
             "title",
             "updated_at",
             "user_role",
