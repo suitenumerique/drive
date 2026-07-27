@@ -353,6 +353,82 @@ def test_models_items_restricted_unrestrict_without_live_shortcut():
     assert not models.Item.objects.filter(target=folder).exists()
 
 
+def test_models_items_restricted_unrestrict_removes_redundant_access():
+    """Deactivating restriction removes explicit accesses inferior or equal to inherited."""
+    parent_owner = factories.UserFactory()
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(parent_owner, models.RoleChoices.OWNER)],
+    )
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    factories.UserItemAccessFactory(item=folder, user=parent_owner, role="editor")
+
+    folder = folder.unrestrict()
+
+    assert not models.ItemAccess.objects.filter(item=folder, user=parent_owner).exists()
+
+
+def test_models_items_restricted_unrestrict_keeps_superior_access():
+    """Deactivating restriction keeps explicit accesses superior to inherited."""
+    reader = factories.UserFactory()
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(reader, models.RoleChoices.READER)],
+    )
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    factories.UserItemAccessFactory(item=folder, user=reader, role="editor")
+
+    folder = folder.unrestrict()
+
+    assert models.ItemAccess.objects.filter(item=folder, user=reader, role="editor").exists()
+
+
+def test_models_items_restricted_unrestrict_removes_redundant_team_access():
+    """Deactivating restriction removes explicit team accesses inferior or equal to inherited."""
+    team = "test-team"
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    factories.TeamItemAccessFactory(item=parent, team=team, role="owner")
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    factories.TeamItemAccessFactory(item=folder, team=team, role="editor")
+
+    folder = folder.unrestrict()
+
+    assert not models.ItemAccess.objects.filter(item=folder, team=team).exists()
+
+
+def test_models_items_restricted_unrestrict_keeps_superior_team_access():
+    """Deactivating restriction keeps explicit team accesses superior to inherited."""
+    team = "test-team"
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    factories.TeamItemAccessFactory(item=parent, team=team, role="reader")
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    factories.TeamItemAccessFactory(item=folder, team=team, role="editor")
+
+    folder = folder.unrestrict()
+
+    assert models.ItemAccess.objects.filter(item=folder, team=team, role="editor").exists()
+
+
+def test_models_items_restricted_unrestrict_keeps_access_without_inheritance():
+    """Deactivating restriction keeps explicit accesses when there is no inherited role."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+
+    folder = folder.unrestrict()
+
+    assert models.ItemAccess.objects.filter(item=folder, user=user, role="owner").exists()
+
+
 def test_models_items_restricted_deactivate_restriction_deduplicates_title():
     """Deactivating restriction renames the folder when its title was reused."""
     user = factories.UserFactory()

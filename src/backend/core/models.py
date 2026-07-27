@@ -1647,6 +1647,27 @@ class Item(TreeModel, BaseModel):
 
         return item
 
+    def _normalize_explicit_accesses(self):
+        """Delete explicit accesses inferior or equal to the inherited role."""
+        inherited_accesses = (
+            ItemAccess.objects.filter(item__path__ancestors=self.path)
+            .exclude(item=self)
+            .values_list("user_id", "team", "role")
+        )
+        inherited_roles = {}
+        for user_id, team, role in inherited_accesses:
+            key = (user_id, team)
+            inherited_roles[key] = RoleChoices.max(inherited_roles.get(key), role)
+
+        redundant_ids = [
+            access.id
+            for access in ItemAccess.objects.filter(item=self)
+            if RoleChoices.get_priority(access.role)
+            <= RoleChoices.get_priority(inherited_roles.get((access.user_id, access.team)))
+        ]
+        if redundant_ids:
+            ItemAccess.objects.filter(id__in=redundant_ids).delete()
+
     @transaction.atomic
     def unrestrict(self):
         """Lift restriction and reattach the folder at its shortcut location."""
@@ -1680,6 +1701,7 @@ class Item(TreeModel, BaseModel):
             )
             self.save(update_fields=["title"])
             self.move(parent)
+            self._normalize_explicit_accesses()
 
         self.invalidate_nb_accesses_cache()
 
