@@ -1686,6 +1686,17 @@ class Item(TreeModel, BaseModel):
         if redundant_ids:
             ItemAccess.objects.filter(id__in=redundant_ids).delete()
 
+    def _normalize_explicit_link_reach(self):
+        """Reset the link reach to inherit when inferior or equal to the inherited one."""
+        # The cached ancestors definition predates the move, recompute it
+        self._ancestors_link_definition = None
+        inherited_reach = self.ancestors_link_definition["link_reach"]
+        if LinkReachChoices.get_priority(self.link_reach) <= LinkReachChoices.get_priority(
+            inherited_reach
+        ):
+            self.link_reach = None
+            self.save(update_fields=["link_reach", "updated_at"])
+
     @transaction.atomic
     def unrestrict(self):
         """Lift restriction and reattach the folder at the restriction's location."""
@@ -1714,6 +1725,8 @@ class Item(TreeModel, BaseModel):
             item.save(update_fields=["title", "updated_at"])
             item.move(parent)
             item._normalize_explicit_accesses()  # noqa: SLF001  # pylint: disable=protected-access
+            item._normalize_explicit_link_reach()  # noqa: SLF001  # pylint: disable=protected-access
+
         item.invalidate_nb_accesses_cache()
 
         return item

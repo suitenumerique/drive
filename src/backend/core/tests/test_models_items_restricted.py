@@ -498,6 +498,49 @@ def test_models_items_restricted_unrestrict_keeps_access_without_inheritance():
     assert models.ItemAccess.objects.filter(item=folder, user=user, role="owner").exists()
 
 
+def test_models_items_restricted_unrestrict_resets_redundant_link_reach():
+    """Deactivating restriction resets a link reach inferior or equal to inherited."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=LinkReachChoices.PUBLIC,
+        link_role="reader",
+        users=[(user, "owner")],
+    )
+    folder = factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=None,
+    )
+    folder = folder.restrict(user)
+    assert folder.link_reach == LinkReachChoices.RESTRICTED
+
+    folder = folder.unrestrict()
+
+    assert folder.link_reach is None
+
+
+def test_models_items_restricted_unrestrict_keeps_superior_link_reach():
+    """Deactivating restriction keeps a link reach superior to inherited."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=LinkReachChoices.AUTHENTICATED,
+        link_role="reader",
+        users=[(user, "owner")],
+    )
+    folder = factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=LinkReachChoices.PUBLIC,
+    )
+    folder = folder.restrict(user)
+
+    folder = folder.unrestrict()
+
+    assert folder.link_reach == LinkReachChoices.PUBLIC
+
+
 def test_models_items_restricted_unrestrict_deduplicates_title():
     """Deactivating restriction renames the folder when its title was reused."""
     user = factories.UserFactory()
