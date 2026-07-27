@@ -356,8 +356,8 @@ class ItemViewSet(
        Example: DELETE /items/{id}/
 
     ### Additional Actions:
-    1. **Trashbin**: List soft deleted items for a item owner
-        Example: GET /items/{id}/trashbin/
+    1. **Trashbin**: List soft deleted items for an items owner
+        Example: GET /items/trashbin/
 
     2. **Children**: List or create child items.
         Example: GET, POST /items/{id}/children/
