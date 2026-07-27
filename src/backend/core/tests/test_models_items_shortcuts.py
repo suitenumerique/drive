@@ -51,6 +51,18 @@ def test_models_items_shortcuts_deleted_with_their_target():
     assert not models.Item.objects.filter(pk=shortcut.pk).exists()
 
 
+def test_models_items_shortcuts_move_rejects_own_target_subtree():
+    """A shortcut cannot be moved under the subtree of its own target."""
+    shortcut = factories.ShortcutFactory()
+    folder = factories.ItemFactory(
+        parent=shortcut.target,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
+    with pytest.raises(ValidationError, match="cannot be moved under its own target"):
+        shortcut.move(folder)
+
+
 def test_models_items_shortcuts_item_factory_never_generates_shortcuts():
     """The generic item factory should only draw folder and file types."""
     types = {factories.ItemFactory().type for _ in range(20)}
