@@ -982,7 +982,7 @@ class ItemManager(TreeManager.from_queryset(ItemQuerySet)):
         return item
 
 
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods,too-many-instance-attributes
 class Item(TreeModel, BaseModel):
     """Item in the tree."""
 
@@ -1665,6 +1665,43 @@ class Item(TreeModel, BaseModel):
             target=item,
             title=item.title,
         )
+        item.invalidate_nb_accesses_cache()
+
+        return item
+
+    @transaction.atomic
+    def unrestrict(self):
+        """Lift restriction and reattach the folder at its shortcut location."""
+        item = self._meta.model.objects.select_for_update().get(pk=self.pk)
+
+        if not item.is_restricted:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("This folder is not restricted"),
+                        code="item_unrestrict_not_restricted",
+                    )
+                }
+            )
+
+        shortcut = self._meta.model.objects.select_for_update().filter(target=item).first()
+        parent = None
+        if shortcut:
+            if shortcut.ancestors_deleted_at is None:
+                parent = shortcut.parent()
+            self._meta.model.objects.filter(pk=shortcut.pk).delete()
+
+        # The flag must fall before the move: move() refuses restricted folders
+        item.is_restricted = False
+        item.save(update_fields=["is_restricted", "updated_at"])
+
+        if parent:
+            item.title = manage_unique_title_utils(
+                self._meta.model.objects.children(parent.path), item.title
+            )
+            item.save(update_fields=["title", "updated_at"])
+            item.move(parent)
+
         item.invalidate_nb_accesses_cache()
 
         return item

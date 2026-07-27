@@ -322,6 +322,82 @@ def test_models_items_restricted_cuts_link_inheritance():
     }
 
 
+def test_models_items_restricted_unrestrict_moves_folder_back():
+    """Deactivating restriction reattaches the subtree at the shortcut location."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    child = factories.ItemFactory(parent=folder, type=models.ItemTypeChoices.FILE)
+    folder = folder.restrict(user)
+
+    folder = folder.unrestrict()
+
+    child.refresh_from_db()
+    assert folder.is_restricted is False
+    assert str(folder.path) == f"{parent.id!s}.{folder.id!s}"
+    assert str(child.path) == f"{parent.id!s}.{folder.id!s}.{child.id!s}"
+    assert not models.Item.objects.filter(target=folder).exists()
+
+
+def test_models_items_restricted_unrestrict_follows_moved_shortcut():
+    """Deactivating restriction reattaches the folder at the shortcut's current parent."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    other = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    folder.shortcut.move(other)
+
+    folder = folder.unrestrict()
+
+    assert str(folder.path) == f"{other.id!s}.{folder.id!s}"
+
+
+def test_models_items_restricted_unrestrict_without_live_shortcut():
+    """Deactivating restriction leaves the folder at the root when its shortcut is trashed."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    parent.soft_delete()
+
+    folder = folder.unrestrict()
+
+    assert folder.is_restricted is False
+    assert str(folder.path) == str(folder.id)
+    assert not models.Item.objects.filter(target=folder).exists()
+
+
+def test_models_items_restricted_deactivate_restriction_deduplicates_title():
+    """Deactivating restriction renames the folder when its title was reused."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    shortcut = folder.shortcut
+    shortcut.title = "renamed shortcut"
+    shortcut.save()
+    models.Item.objects.create_child(
+        parent=parent,
+        creator=user,
+        type=models.ItemTypeChoices.FOLDER,
+        title=folder.title,
+    )
+
+    folder = folder.unrestrict()
+
+    assert folder.title.endswith("_01")
+    assert str(folder.path) == f"{parent.id!s}.{folder.id!s}"
+
+
+def test_models_items_restricted_unrestrict_requires_restricted():
+    """Only a restricted folder can be deactivated."""
+    folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+
+    with pytest.raises(ValidationError, match="This folder is not restricted"):
+        folder.unrestrict()
+
+
 def test_models_items_restricted_move_rejects_restricted_roots():
     """A restricted folder cannot be moved: it must be deactivated first."""
     user = factories.UserFactory()
