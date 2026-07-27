@@ -33,6 +33,7 @@ and this project adheres to
 - ✨(backend) add a local entitlements backend with per-user storage limits
 - ✨(frontend) add storage gauge and settings modal
 - ♻️(backend) route permission decisions through a swappable backend
+- ✨(backend) add restricted access on folders, detached behind a shortcut
 
 ### Fixed
 
