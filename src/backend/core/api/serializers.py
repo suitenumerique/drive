@@ -250,6 +250,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "is_restricted",
             "nb_accesses",
             "numchild",
             "numchild_folder",
@@ -282,6 +283,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "creator",
             "depth",
             "is_favorite",
+            "is_restricted",
             "link_role",
             "link_reach",
             "nb_accesses",
@@ -480,6 +482,7 @@ class ItemSerializer(ListItemSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "is_restricted",
             "nb_accesses",
             "numchild",
             "numchild_folder",
@@ -512,6 +515,7 @@ class ItemSerializer(ListItemSerializer):
             "creator",
             "depth",
             "is_favorite",
+            "is_restricted",
             "nb_accesses",
             "link_role",
             "link_reach",
@@ -536,7 +540,7 @@ class ItemSerializer(ListItemSerializer):
         raise NotImplementedError("Create method can not be used.")
 
     def update(self, instance, validated_data):
-        """Validate that the title is unique in the current path."""
+        """Update an item, handling title uniqueness."""
         if validated_data.get("title") and instance.title != validated_data.get("title"):
             if instance.depth > 1:
                 validated_data["title"] = instance.manage_unique_title(validated_data.get("title"))

@@ -1624,6 +1624,19 @@ class ItemViewSet(
             status=drf.status.HTTP_200_OK,
         )
 
+    @drf.decorators.action(detail=True, methods=["post", "delete"], url_path="restrict")
+    def restrict(self, request, *args, **kwargs):
+        """Activate or deactivate restriction on the folder based on the HTTP method."""
+        item = self.get_object()
+
+        if request.method == "POST":
+            item = item.restrict(request.user)
+        else:
+            item = item.unrestrict()
+
+        serializer = self.get_serializer(item)
+        return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
+
     def _authorize_subrequest(self, request, pattern):
         """
         Shared method to authorize access based on the original URL of an Nginx subrequest
