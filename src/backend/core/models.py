@@ -1553,6 +1553,30 @@ class Item(TreeModel, BaseModel):
                 }
             )
 
+        if self.is_restricted:
+            raise ValidationError(
+                {
+                    "target": ValidationError(
+                        _("A restricted folder cannot be moved"),
+                        code="item_move_restricted",
+                    )
+                }
+            )
+
+        if (
+            self.type == ItemTypeChoices.RESTRICTION
+            and target
+            and str(target.path).startswith(str(self.target.path))
+        ):
+            raise ValidationError(
+                {
+                    "target": ValidationError(
+                        _("A restriction cannot be moved under its own target"),
+                        code="item_move_restriction_under_target",
+                    )
+                }
+            )
+
         old_path = self.path
         if target:
             self.path = f"{target.path!s}.{self.id!s}"
@@ -1566,6 +1590,80 @@ class Item(TreeModel, BaseModel):
             self._meta.model.objects.filter(path__descendants=old_path).update(
                 path=RawSQL("%s || subpath(path, nlevel(%s))", (str(self.path), str(old_path)))
             )
+
+    @transaction.atomic
+    def restrict(self, user):
+        """Restrict the folder by detaching it to the tree root behind a restriction."""
+        item = self._meta.model.objects.select_for_update().get(pk=self.pk)
+
+        if item.type != ItemTypeChoices.FOLDER:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("Only folders can be restricted"),
+                        code="item_restrict_type_folder_only",
+                    )
+                }
+            )
+        if item.is_restricted:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("This folder is already restricted"),
+                        code="item_restrict_already_restricted",
+                    )
+                }
+            )
+        if item.depth == 1:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("A root folder cannot be restricted"),
+                        code="item_restrict_root",
+                    )
+                }
+            )
+        if item.ancestors_deleted_at:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("A deleted folder cannot be restricted"),
+                        code="item_restrict_deleted",
+                    )
+                }
+            )
+        if item.get_role(user) != RoleChoices.OWNER:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("Only owners can restrict a folder"),
+                        code="item_restrict_owner_only",
+                    )
+                }
+            )
+
+        parent = item.parent()
+
+        ItemAccess.objects.update_or_create(
+            item=item, user=user, defaults={"role": RoleChoices.OWNER}
+        )
+
+        item.move(None)
+
+        if item.link_reach is None:
+            item.link_reach = LinkReachChoices.RESTRICTED
+            item.save(update_fields=["link_reach", "updated_at"])
+
+        self._meta.model.objects.create_child(
+            parent=parent,
+            creator=user,
+            type=ItemTypeChoices.RESTRICTION,
+            target=item,
+            title=item.title,
+        )
+        item.invalidate_nb_accesses_cache()
+
+        return item
 
 
 class MirrorItemTask(BaseModel):

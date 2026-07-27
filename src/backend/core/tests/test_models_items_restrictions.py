@@ -51,6 +51,18 @@ def test_models_items_restrictions_deleted_with_their_target():
     assert not models.Item.objects.filter(pk=restriction.pk).exists()
 
 
+def test_models_items_restrictions_move_rejects_own_target_subtree():
+    """A restriction cannot be moved under the subtree of its own target."""
+    restriction = factories.RestrictionFactory()
+    folder = factories.ItemFactory(
+        parent=restriction.target,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
+    with pytest.raises(ValidationError, match="cannot be moved under its own target"):
+        restriction.move(folder)
+
+
 def test_models_items_restrictions_item_factory_never_generates_restrictions():
     """The generic item factory should only draw folder and file types."""
     types = {factories.ItemFactory().type for _ in range(20)}
