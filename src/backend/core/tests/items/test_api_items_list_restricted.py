@@ -125,6 +125,26 @@ def test_api_items_list_restricted_visible_when_shortcut_trashed():
     assert str(folder.id) in _listed_ids(client)
 
 
+def test_api_items_list_restricted_hidden_again_after_restore():
+    """Restoring the trashed container hides the restricted root again."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner")],
+    )
+    folder = _create_restricted_folder(parent, factories.UserFactory())
+    factories.UserItemAccessFactory(item=folder, user=user, role="reader")
+    parent.soft_delete()
+    parent.restore()
+
+    client = APIClient()
+    client.force_login(user)
+
+    listed = _listed_ids(client)
+    assert str(parent.id) in listed
+    assert str(folder.id) not in listed
+
+
 @pytest.mark.parametrize("reach", ["public", "authenticated"])
 def test_api_items_list_restricted_hidden_via_link_on_container(reach):
     """An open link on the container makes the shortcut reachable and hides the root."""
