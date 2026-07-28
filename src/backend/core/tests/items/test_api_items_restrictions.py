@@ -198,6 +198,27 @@ def test_api_items_restrictions_children_list_constant_queries():
     assert len(many) == len(single)
 
 
+def test_api_items_restrictions_excluded_from_search():
+    """Restrictions never show up as search results."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner")],
+    )
+    folder = _create_restricted_folder(parent, factories.UserFactory())
+    restriction = folder.restriction
+    restriction.title = "restriction"
+    restriction.save()
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get("/api/v1.0/items/search/", {"title": "restriction"})
+
+    assert response.status_code == 200
+    assert response.json()["results"] == []
+
+
 def test_api_items_restrictions_tree_includes_restrictions():
     """The tree endpoint includes restriction entries so excluded users see them."""
     parent_owner = factories.UserFactory()

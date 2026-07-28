@@ -1456,6 +1456,9 @@ class ItemViewSet(
         queryset = self._filter_suspicious_items(queryset, user)
         queryset = self._exclude_pending_items(queryset)
 
+        # Restrictions are tree entries, not searchable content
+        queryset = queryset.exclude(type=models.ItemTypeChoices.RESTRICTION)
+
         queryset = queryset.annotate_is_favorite(user)
 
         if workspace:
