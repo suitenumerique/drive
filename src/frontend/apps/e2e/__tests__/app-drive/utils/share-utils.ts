@@ -159,19 +159,16 @@ export const shareCurrentItemWithWebkitUser = async (
 ) => {
   await clickOnBreadcrumbButtonAction(page, "Share");
   const shareModal = await expectShareModal(page);
-  await expect(
-    shareModal.getByRole("combobox", { name: "Quick search input" }),
-  ).toBeVisible();
-  await shareModal
-    .getByRole("combobox", { name: "Quick search input" })
-    .click();
-  await shareModal
-    .getByRole("combobox", { name: "Quick search input" })
-    .fill("webkit");
+  const searchInput = shareModal.getByRole("combobox", {
+    name: "Search for a user to invite",
+  });
+  await expect(searchInput).toBeVisible();
+  await searchInput.click();
+  await searchInput.fill("webkit");
   const userSearchItem = await getUserSearchResult(page, "user@webkit.test");
   await expect(userSearchItem).toBeVisible();
   await userSearchItem.click();
   await selectRoleUser(page, userRole);
-  await page.getByRole("button", { name: "Share" }).click();
+  await shareModal.getByTestId("share-invite-button").click();
   await expectUserInMembersList(page, "user@webkit.test", userRole);
 };
