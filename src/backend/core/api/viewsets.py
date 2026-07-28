@@ -670,6 +670,12 @@ class ItemViewSet(
 
     def perform_create(self, serializer):
         """Set the current user as creator and owner of the newly created object."""
+        if serializer.validated_data.get("is_restricted"):
+            raise drf.exceptions.ValidationError(
+                {"is_restricted": "A root folder cannot be restricted."},
+                code="item_create_restricted_root",
+            )
+
         extension = serializer.validated_data.pop("extension", None)
 
         obj = models.Item.objects.create_child(
@@ -1151,12 +1157,23 @@ class ItemViewSet(
 
             extension = serializer.validated_data.pop("extension", None)
 
-            child_item = models.Item.objects.create_child(
-                creator=request.user,
-                parent=item,
-                **serializer.validated_data,
-                **self.get_create_extra_attributes(),
-            )
+            # The child must be created unrestricted first: activation moves
+            # it to the root and refuses an already restricted folder
+            is_restricted = serializer.validated_data.pop("is_restricted", False)
+            if is_restricted and item.get_role(request.user) != models.RoleChoices.OWNER:
+                raise drf.exceptions.PermissionDenied(
+                    "Only owners of the parent folder can create a restricted folder."
+                )
+
+            with transaction.atomic():
+                child_item = models.Item.objects.create_child(
+                    creator=request.user,
+                    parent=item,
+                    **serializer.validated_data,
+                    **self.get_create_extra_attributes(),
+                )
+                if is_restricted:
+                    child_item = child_item.restrict(request.user)
 
             if extension:
                 self._create_file_from_template(child_item, extension)
