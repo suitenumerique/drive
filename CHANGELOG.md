@@ -34,6 +34,7 @@ and this project adheres to
 - ✨(frontend) add storage gauge and settings modal
 - ♻️(backend) route permission decisions through a swappable backend
 - ✨(backend) add restricted access on folders, detached behind a shortcut
+- ✨(backend) allow restricting a folder at creation
 
 ### Fixed
 

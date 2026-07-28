@@ -637,6 +637,7 @@ class CreateItemSerializer(ItemSerializer):
             "creator",
             "depth",
             "is_favorite",
+            "is_restricted",
             "link_role",
             "link_reach",
             "nb_accesses",
@@ -745,6 +746,18 @@ class CreateItemSerializer(ItemSerializer):
             raise serializers.ValidationError(
                 {"title": _("This field is required for folders.")},
                 code="item_create_folder_title_required",
+            )
+
+        if attrs["type"] == models.ItemTypeChoices.SHORTCUT:
+            raise serializers.ValidationError(
+                {"type": _("Shortcuts can only be created by restricting a folder.")},
+                code="item_create_shortcut_forbidden",
+            )
+
+        if attrs.get("is_restricted") and attrs["type"] != models.ItemTypeChoices.FOLDER:
+            raise serializers.ValidationError(
+                {"is_restricted": _("Only folders can be restricted.")},
+                code="item_create_restricted_only_on_folders",
             )
 
         return super().validate(attrs)

@@ -59,6 +59,27 @@ def test_api_items_create_authenticated_success():
     assert item.type == ItemTypeChoices.FOLDER
 
 
+def test_api_items_create_restricted_root_rejected():
+    """A root item cannot be created restricted: no parent can hold its shortcut."""
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "title": "my item",
+            "type": ItemTypeChoices.FOLDER,
+            "is_restricted": True,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert not Item.objects.exists()
+
+
 def test_api_items_create_file_authenticated_no_filename():
     """
     Creating a file item without providing a filename should fail.

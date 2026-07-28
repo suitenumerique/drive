@@ -16,7 +16,7 @@ from rest_framework.test import APIClient
 
 from core import factories
 from core.api.utils import sanitize_filename
-from core.models import Item, ItemTypeChoices, LinkReachChoices, LinkRoleChoices
+from core.models import Item, ItemAccess, ItemTypeChoices, LinkReachChoices, LinkRoleChoices
 
 pytestmark = pytest.mark.django_db
 
@@ -412,6 +412,90 @@ def test_api_items_children_create_force_id_existing():
             }
         ],
     }
+
+
+def test_api_items_children_create_restricted_by_parent_owner():
+    """A parent owner can create a folder restricted from the start."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=ItemTypeChoices.FOLDER,
+        users=[(user, "owner")],
+    )
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/children/",
+        {"type": "folder", "title": "salaries", "is_restricted": True},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    folder = Item.objects.get(id=response.json()["id"])
+    assert folder.is_restricted is True
+    assert str(folder.path) == str(folder.id)
+    assert str(folder.shortcut.path) == f"{parent.id!s}.{folder.shortcut.id!s}"
+    assert ItemAccess.objects.filter(item=folder, user=user, role="owner").exists()
+
+
+def test_api_items_children_create_restricted_forbidden_for_editor():
+    """An editor of the parent cannot create a restricted folder."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=ItemTypeChoices.FOLDER,
+        users=[(user, "editor")],
+    )
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/children/",
+        {"type": "folder", "title": "salaries", "is_restricted": True},
+        format="json",
+    )
+
+    assert response.status_code == 403
+    assert not Item.objects.filter(title="salaries").exists()
+
+
+def test_api_items_children_create_restricted_file_rejected():
+    """A file cannot be created restricted."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=ItemTypeChoices.FOLDER,
+        users=[(user, "owner")],
+    )
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/children/",
+        {"type": "file", "filename": "file.txt", "is_restricted": True},
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"][0]["code"] == "item_create_restricted_only_on_folders"
+
+
+def test_api_items_children_create_shortcut_rejected():
+    """A shortcut cannot be created directly through the API."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=ItemTypeChoices.FOLDER,
+        users=[(user, "owner")],
+    )
+    target = factories.ItemFactory(type=ItemTypeChoices.FOLDER, is_restricted=True)
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/children/",
+        {"type": "shortcut", "title": "sneaky", "target": str(target.id)},
+        format="json",
+    )
+
+    assert response.status_code == 400
 
 
 @pytest.mark.parametrize(
