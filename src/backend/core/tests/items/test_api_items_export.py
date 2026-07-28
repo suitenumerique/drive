@@ -260,6 +260,32 @@ def test_api_items_export_file_missing_from_storage():
         assert archive.read("gone.txt") == b""
 
 
+def test_api_items_export_skips_shortcuts():
+    """Shortcuts leave no entry in the exported archive."""
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes=b"kept",
+        upload_bytes__filename="kept.txt",
+    )
+    restricted = factories.ItemFactory(parent=folder, type=models.ItemTypeChoices.FOLDER)
+    restricted.restrict(factories.UserFactory())
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get(f"/api/v1.0/items/{folder.pk}/export/")
+
+    assert response.status_code == 200
+    assert _zip_names(response) == ["kept.txt"]
+
+
 def test_api_items_export_empty_folder():
     """Exporting an empty folder returns an empty zip archive."""
     user = factories.UserFactory()

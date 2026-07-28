@@ -197,6 +197,27 @@ def test_api_items_shortcuts_children_list_constant_queries():
     assert len(many) == len(single)
 
 
+def test_api_items_shortcuts_excluded_from_search():
+    """Shortcuts never show up as search results."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, "owner")],
+    )
+    folder = _create_restricted_folder(parent, factories.UserFactory())
+    shortcut = folder.shortcut
+    shortcut.title = "shortcut"
+    shortcut.save()
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get("/api/v1.0/items/search/", {"title": "shortcut"})
+
+    assert response.status_code == 200
+    assert response.json()["results"] == []
+
+
 def test_api_items_shortcuts_tree_includes_shortcuts():
     """The tree endpoint includes shortcut entries so excluded users see them."""
     parent_owner = factories.UserFactory()
