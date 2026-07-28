@@ -125,6 +125,49 @@ def test_api_items_restrictions_non_restriction_target_is_none():
     assert response.json()["target"] is None
 
 
+def test_api_items_restrictions_delete_detaches_the_target():
+    """Deleting a restriction detaches the restricted folder without touching it."""
+    parent_owner = factories.UserFactory()
+    owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(parent_owner, "owner")],
+    )
+    folder = _create_restricted_folder(parent, owner)
+    restriction = folder.restriction
+
+    client = APIClient()
+    client.force_login(parent_owner)
+
+    response = client.delete(f"/api/v1.0/items/{restriction.id!s}/")
+
+    assert response.status_code == 204
+    assert not models.Item.objects.filter(pk=restriction.pk).exists()
+    folder.refresh_from_db()
+    assert folder.is_restricted is False
+    assert folder.deleted_at is None
+    assert models.ItemAccess.objects.filter(item=folder, user=owner, role="owner").exists()
+
+
+def test_api_items_restrictions_delete_forbidden_for_reader():
+    """A reader of the containing folder cannot detach a restriction."""
+    reader = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(reader, "reader")],
+    )
+    folder = _create_restricted_folder(parent, factories.UserFactory())
+    restriction = folder.restriction
+
+    client = APIClient()
+    client.force_login(reader)
+
+    response = client.delete(f"/api/v1.0/items/{restriction.id!s}/")
+
+    assert response.status_code == 403
+    assert models.Item.objects.filter(pk=restriction.pk).exists()
+
+
 def test_api_items_restrictions_children_list_constant_queries():
     """The number of queries does not grow with the number of restrictions listed."""
     parent_owner = factories.UserFactory()

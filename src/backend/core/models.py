@@ -1697,6 +1697,20 @@ class Item(TreeModel, BaseModel):
             self.link_reach = None
             self.save(update_fields=["link_reach", "updated_at"])
 
+    def detach(self):
+        """Delete this restriction row, leaving its restricted target untouched."""
+        if self.type != ItemTypeChoices.RESTRICTION:
+            raise ValidationError(
+                {
+                    "type": ValidationError(
+                        _("Only restrictions can be detached"),
+                        code="item_detach_not_a_restriction",
+                    )
+                }
+            )
+
+        self._meta.model.objects.filter(pk=self.pk).delete()
+
     @transaction.atomic
     def unrestrict(self):
         """Lift restriction and reattach the folder at the restriction's location."""

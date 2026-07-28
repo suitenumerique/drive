@@ -689,7 +689,10 @@ class ItemViewSet(
 
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
-        instance.soft_delete()
+        if instance.type == models.ItemTypeChoices.RESTRICTION:
+            instance.detach()
+        else:
+            instance.soft_delete()
 
     def perform_update(self, serializer):
         """Override to check if a file is renamed in order to rename file on storage."""
