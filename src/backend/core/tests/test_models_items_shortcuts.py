@@ -132,6 +132,98 @@ def test_models_items_shortcuts_ancestor_restore_brings_them_back():
     assert str(folder.path) == str(folder.id)
 
 
+def test_models_items_shortcuts_target_soft_delete_trashes_its_shortcut():
+    """Trashing a restricted folder trashes its shortcut along."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    shortcut = folder.shortcut
+
+    folder.soft_delete()
+
+    folder.refresh_from_db()
+    shortcut.refresh_from_db()
+    assert shortcut.deleted_at == folder.deleted_at
+    assert shortcut.ancestors_deleted_at == folder.deleted_at
+    assert folder.deleted_at is not None
+    assert folder.is_restricted is True
+    assert str(folder.path) == str(folder.id)
+
+
+def test_models_items_shortcuts_target_restore_restores_its_shortcut():
+    """Restoring a restricted folder restores its shortcut."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    shortcut = folder.shortcut
+    folder.soft_delete()
+
+    folder.restore()
+
+    folder.refresh_from_db()
+    shortcut.refresh_from_db()
+    assert folder.deleted_at is None
+    assert folder.is_restricted is True
+    assert str(folder.path) == str(folder.id)
+    assert shortcut.deleted_at is None
+    assert shortcut.ancestors_deleted_at is None
+
+
+def test_models_items_shortcuts_target_restore_leaves_shortcut_in_trashed_subtree():
+    """The shortcut stays in the trash when its own subtree was trashed meanwhile."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    shortcut = folder.shortcut
+    folder.soft_delete()
+    parent.soft_delete()
+
+    folder.restore()
+
+    folder.refresh_from_db()
+    shortcut.refresh_from_db()
+    assert folder.deleted_at is None
+    assert str(folder.path) == str(folder.id)
+    assert shortcut.deleted_at is not None
+
+
+def test_models_items_shortcuts_target_restore_ignores_previous_cycle_shortcut():
+    """A shortcut trashed in a previous cycle is not revived by a later restore."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    shortcut = folder.shortcut
+    folder.soft_delete()
+    parent.soft_delete()
+    folder.restore()  # the shortcut stays trashed with the first timestamp
+    parent.restore()
+
+    folder.soft_delete()
+    folder.restore()
+
+    shortcut.refresh_from_db()
+    assert shortcut.deleted_at is not None
+
+
+def test_models_items_shortcuts_target_hard_delete_marks_the_shortcut():
+    """Hard deleting a restricted folder hard deletes its shortcut."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    shortcut = folder.shortcut
+    folder.soft_delete()
+
+    folder.hard_delete()
+
+    shortcut.refresh_from_db()
+    assert shortcut.hard_deleted_at is not None
+
+
 def test_models_items_shortcuts_item_factory_never_generates_shortcuts():
     """The generic item factory should only draw folder and file types."""
     types = {factories.ItemFactory().type for _ in range(20)}
