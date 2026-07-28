@@ -63,6 +63,31 @@ def test_models_items_shortcuts_move_rejects_own_target_subtree():
         shortcut.move(folder)
 
 
+def test_models_items_shortcuts_detach_deletes_the_row():
+    """Detaching a shortcut deletes its row and leaves the target untouched."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    shortcut = folder.shortcut
+
+    shortcut.detach()
+
+    assert not models.Item.objects.filter(pk=shortcut.pk).exists()
+    folder.refresh_from_db()
+    assert folder.is_restricted is True
+    assert str(folder.path) == str(folder.id)
+    assert models.ItemAccess.objects.filter(item=folder, user=user, role="owner").exists()
+
+
+def test_models_items_shortcuts_detach_rejects_other_types():
+    """Only shortcuts can be detached."""
+    folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+
+    with pytest.raises(ValidationError, match="Only shortcuts can be detached"):
+        folder.detach()
+
+
 def test_models_items_shortcuts_item_factory_never_generates_shortcuts():
     """The generic item factory should only draw folder and file types."""
     types = {factories.ItemFactory().type for _ in range(20)}

@@ -1679,6 +1679,20 @@ class Item(TreeModel, BaseModel):
             self.link_reach = None
             self.save(update_fields=["link_reach"])
 
+    def detach(self):
+        """Delete this shortcut row, leaving its restricted target untouched."""
+        if self.type != ItemTypeChoices.SHORTCUT:
+            raise ValidationError(
+                {
+                    "type": ValidationError(
+                        _("Only shortcuts can be detached"),
+                        code="item_detach_not_a_shortcut",
+                    )
+                }
+            )
+
+        self._meta.model.objects.filter(pk=self.pk).delete()
+
     @transaction.atomic
     def unrestrict(self):
         """Lift restriction and reattach the folder at its shortcut location."""
