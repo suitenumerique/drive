@@ -1436,6 +1436,16 @@ class Item(TreeModel, BaseModel):
 
         self.save(update_fields=["deleted_at", "ancestors_deleted_at"])
 
+        # The restriction of a restricted folder lives in another subtree: trash
+        # it along so that restoring the folder can bring it back
+        self._meta.model.objects.filter(
+            target=self,
+            ancestors_deleted_at__isnull=True,
+        ).update(
+            deleted_at=self.deleted_at,
+            ancestors_deleted_at=self.deleted_at,
+        )
+
         # Mark all descendants as soft deleted
         if self.type == ItemTypeChoices.FOLDER:
             self.descendants().filter(ancestors_deleted_at__isnull=True).update(
@@ -1482,6 +1492,9 @@ class Item(TreeModel, BaseModel):
 
         # Mark all descendants as hard deleted
         self.descendants().update(hard_deleted_at=self.hard_deleted_at)
+
+        # The restriction of a restricted folder must not survive its target
+        self._meta.model.objects.filter(target=self).update(hard_deleted_at=self.hard_deleted_at)
 
         transaction.on_commit(lambda: invalidate_storage_used_cache(creator_ids))
 
@@ -1537,6 +1550,16 @@ class Item(TreeModel, BaseModel):
             models.Q(deleted_at__isnull=False)
             | models.Q(ancestors_deleted_at__lt=current_deleted_at)
         ).update(ancestors_deleted_at=None)
+
+        # Bring back the restriction trashed along the restricted folder, unless
+        # its own subtree went to the trash meanwhile
+        restriction = self._meta.model.objects.filter(
+            target=self, deleted_at=current_deleted_at
+        ).first()
+        if restriction and not restriction.ancestors().filter(deleted_at__isnull=False).exists():
+            self._meta.model.objects.filter(pk=restriction.pk).update(
+                deleted_at=None, ancestors_deleted_at=None
+            )
 
     @transaction.atomic
     def move(self, target):
