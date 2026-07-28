@@ -125,6 +125,40 @@ def test_models_items_shortcuts_ancestor_restore_does_not_recreate():
     assert str(folder.path) == str(folder.id)
 
 
+def test_models_items_shortcuts_target_soft_delete_detaches():
+    """Trashing a restricted folder detaches its shortcut."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    shortcut = folder.shortcut
+
+    folder.soft_delete()
+
+    assert not models.Item.objects.filter(pk=shortcut.pk).exists()
+    folder.refresh_from_db()
+    assert folder.deleted_at is not None
+    assert folder.is_restricted is True
+    assert str(folder.path) == str(folder.id)
+
+
+def test_models_items_shortcuts_target_restore_stays_detached():
+    """A restored restricted folder comes back as a detached root."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    folder.soft_delete()
+
+    folder.restore()
+
+    folder.refresh_from_db()
+    assert folder.deleted_at is None
+    assert folder.is_restricted is True
+    assert str(folder.path) == str(folder.id)
+    assert not models.Item.objects.filter(target=folder).exists()
+
+
 def test_models_items_shortcuts_item_factory_never_generates_shortcuts():
     """The generic item factory should only draw folder and file types."""
     types = {factories.ItemFactory().type for _ in range(20)}

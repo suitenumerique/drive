@@ -1428,6 +1428,10 @@ class Item(TreeModel, BaseModel):
                 ancestors_deleted_at__isnull=True,
             ).delete()
 
+        # No shortcut may keep pointing into the trash
+        if self.is_restricted:
+            self._meta.model.objects.filter(target=self).delete()
+
         self.ancestors_deleted_at = self.deleted_at = timezone.now()
 
         self.save(update_fields=["deleted_at", "ancestors_deleted_at"])
