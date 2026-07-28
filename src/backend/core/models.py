@@ -1420,6 +1420,14 @@ class Item(TreeModel, BaseModel):
                 "Cannot delete this item because one or more ancestors are already deleted."
             )
 
+        # Restricted folders survive their container: delete (detach) the
+        # shortcuts of the subtree instead of trashing them
+        if self.type == ItemTypeChoices.FOLDER:
+            self.descendants().filter(
+                type=ItemTypeChoices.SHORTCUT,
+                ancestors_deleted_at__isnull=True,
+            ).delete()
+
         self.ancestors_deleted_at = self.deleted_at = timezone.now()
 
         self.save(update_fields=["deleted_at", "ancestors_deleted_at"])
