@@ -901,8 +901,17 @@ class Base(Configuration):
         },
     }
 
+    # Static bearer tokens allowing trusted applications (e.g. Docs) to call the
+    # API server-to-server while impersonating a user via X-User-Sub/X-User-Email.
+    SERVER_TO_SERVER_API_TOKENS = values.ListValue(
+        [],
+        environ_name="SERVER_TO_SERVER_API_TOKENS",
+        environ_prefix=None,
+    )
+
     REST_FRAMEWORK = {
         "DEFAULT_AUTHENTICATION_CLASSES": (
+            "core.authentication.server_to_server.ServerToServerUserAuthentication",
             "mozilla_django_oidc.contrib.drf.OIDCAuthentication",
             "rest_framework.authentication.SessionAuthentication",
         ),
