@@ -22,6 +22,9 @@ class ItemFilter(django_filters.FilterSet):
     title = django_filters.CharFilter(
         field_name="title", lookup_expr="unaccent__icontains", label=_("Title")
     )
+    external_app = django_filters.CharFilter(
+        field_name="metadata__external_app", label=_("External app")
+    )
     category = django_filters.ChoiceFilter(
         method="filter_category", label=_("File type"), choices=enums.FILE_CATEGORY_CHOICES
     )

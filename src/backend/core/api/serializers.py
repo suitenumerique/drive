@@ -268,6 +268,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "metadata",
         ]
         read_only_fields = [
             "id",
@@ -298,6 +299,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "metadata",
         ]
 
     def to_representation(self, instance):
@@ -421,6 +423,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "metadata",
         ]
         read_only_fields = [
             "id",
@@ -446,6 +449,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "metadata",
         ]
 
 
@@ -498,6 +502,7 @@ class ItemSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "metadata",
         ]
         read_only_fields = [
             "id",
@@ -528,6 +533,7 @@ class ItemSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "metadata",
         ]
 
     def create(self, validated_data):
@@ -539,7 +545,7 @@ class ItemSerializer(ListItemSerializer):
             if instance.depth > 1:
                 validated_data["title"] = instance.manage_unique_title(validated_data.get("title"))
 
-            if instance.type == models.ItemTypeChoices.FILE:
+            if instance.type == models.ItemTypeChoices.FILE and not instance.is_external:
                 # Just check for validation, the real filename
                 # will be use later in the rename_file task
                 utils.sanitize_filename(validated_data["title"])
@@ -601,6 +607,7 @@ class CreateItemSerializer(ItemSerializer):
             "description",
             "hard_delete_at",
             "extension",
+            "metadata",
         ]
         read_only_fields = [
             "abilities",
@@ -651,8 +658,16 @@ class CreateItemSerializer(ItemSerializer):
     def validate(self, attrs):
         """Validate that filename is set for files."""
         extension = attrs.get("extension")
+        is_external = bool((attrs.get("metadata") or {}).get("external_app"))
 
-        if attrs["type"] == models.ItemTypeChoices.FILE:
+        if attrs["type"] == models.ItemTypeChoices.FILE and is_external:
+            # External items point to a resource hosted by another app: they have
+            # no filename and no physical file, only a title.
+            if not attrs.get("title"):
+                raise serializers.ValidationError(
+                    {"title": _("This field is required.")},
+                )
+        elif attrs["type"] == models.ItemTypeChoices.FILE:
             if extension:
                 # Template-based creation: title is required, filename is computed
                 if not attrs.get("title"):

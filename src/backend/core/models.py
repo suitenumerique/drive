@@ -955,7 +955,7 @@ class ItemManager(TreeManager.from_queryset(ItemQuerySet)):
         unique in the same path.
         """
         if parent:
-            if parent.type != ItemTypeChoices.FOLDER:
+            if parent.type != ItemTypeChoices.FOLDER and not parent.is_external:
                 raise ValidationError(
                     {
                         "type": ValidationError(
@@ -1028,6 +1028,12 @@ class Item(TreeModel, BaseModel):
         default=dict,
         help_text=_("Malware detection info when the analysis status is unsafe."),
     )
+    metadata = models.JSONField(
+        null=True,
+        blank=True,
+        default=dict,
+        help_text=_("Metadata describing an external resource this item points to."),
+    )
 
     label_size = 7
 
@@ -1068,11 +1074,16 @@ class Item(TreeModel, BaseModel):
         self._ancestors_link_definition = None
         self._computed_link_definition = None
 
+    @property
+    def is_external(self):
+        """An item is external when it points to a resource hosted by another app."""
+        return bool(self.metadata and self.metadata.get("external_app"))
+
     def save(self, *args, **kwargs):
         """Set the upload state to pending if it's the first save and it's a file"""
         # Validate filename requirements based on item type
         if self.type == ItemTypeChoices.FILE:
-            if self.filename is None:
+            if self.filename is None and not self.is_external:
                 raise ValidationError(
                     {
                         "filename": ValidationError(
@@ -1100,7 +1111,12 @@ class Item(TreeModel, BaseModel):
                 ItemUploadStateChoices.CONVERTING,
             )
         ):
-            self.upload_state = ItemUploadStateChoices.PENDING
+            # External items have no physical file to upload: they are ready as is.
+            self.upload_state = (
+                ItemUploadStateChoices.READY
+                if self.is_external
+                else ItemUploadStateChoices.PENDING
+            )
 
         if not self.path:
             self.path = str(self.id)
@@ -1365,10 +1381,12 @@ class Item(TreeModel, BaseModel):
             and user.is_authenticated
             and self.type == ItemTypeChoices.FILE
             and self.upload_state == ItemUploadStateChoices.READY
+            and not self.is_external
         )
         can_export = can_get and self.type == ItemTypeChoices.FOLDER
         can_convert = (
             can_update
+            and not self.is_external
             and self.type == ItemTypeChoices.FILE
             and self.upload_state
             in (
@@ -1386,7 +1404,7 @@ class Item(TreeModel, BaseModel):
             "children_list": can_get,
             "children_create": can_create_children,
             "destroy": can_destroy,
-            "download": can_get,
+            "download": can_get and not self.is_external,
             "duplicate": can_duplicate,
             "export": can_export,
             "hard_delete": can_hard_delete,
@@ -1401,8 +1419,8 @@ class Item(TreeModel, BaseModel):
             "media_auth": can_get,
             "partial_update": can_update,
             "update": can_update,
-            "upload_ended": can_update and user.is_authenticated,
-            "wopi": can_get,
+            "upload_ended": can_update and user.is_authenticated and not self.is_external,
+            "wopi": can_get and not self.is_external,
             "convert": can_convert,
         }
 
@@ -1488,8 +1506,9 @@ class Item(TreeModel, BaseModel):
 
         self.save(update_fields=["deleted_at", "ancestors_deleted_at"])
 
-        # Mark all descendants as soft deleted
-        if self.type == ItemTypeChoices.FOLDER:
+        # Mark all descendants as soft deleted. External FILE items can carry
+        # descendants too (e.g. sub-documents of a Docs document).
+        if self.type == ItemTypeChoices.FOLDER or self.is_external:
             self.descendants().filter(ancestors_deleted_at__isnull=True).update(
                 ancestors_deleted_at=self.ancestors_deleted_at,
             )

@@ -28,6 +28,7 @@ def get_wopi_client_config(item, user):
     """
     if (
         item.type != models.ItemTypeChoices.FILE
+        or item.filename is None
         or item.upload_state == models.ItemUploadStateChoices.SUSPICIOUS
         or (item.creator != user and item.upload_state != models.ItemUploadStateChoices.READY)
     ):
