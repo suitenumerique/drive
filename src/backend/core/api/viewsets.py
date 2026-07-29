@@ -46,6 +46,8 @@ from rest_framework.throttling import UserRateThrottle
 from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
+from core.services import external_apps
+from core.services.external_apps import get_external_app_backend
 from core.entitlements import get_entitlements_backend
 from core.services.item_exports import build_zip_stream, export_descendants
 from core.services.sdk_relay import SDKRelayManager
@@ -450,6 +452,24 @@ class ItemViewSet(
         """Exclude items with PENDING upload_state from listing views."""
         return queryset.exclude(upload_state=models.ItemUploadStateChoices.PENDING)
 
+    def _exclude_external_descendants(self, queryset):
+        """
+        Hide items living under an external-app item (e.g. sub-documents of a
+        Docs document) from listing views: only the pointer item itself should
+        surface in the Drive UI. External apps calling us server-to-server
+        must keep seeing them.
+        """
+        if self.request.auth == "s2s":
+            return queryset
+
+        # ltree "path__ancestors" includes the item itself: exclude self so the
+        # pointer item stays visible while its descendants are hidden.
+        external_ancestor = models.Item.objects.filter(
+            path__ancestors=db.OuterRef("path"),
+            metadata__external_app__isnull=False,
+        ).exclude(pk=db.OuterRef("pk"))
+        return queryset.exclude(db.Exists(external_ancestor))
+
     def get_queryset(self):
         """Get queryset performing all annotation and filtering on the item tree structure."""
         user = self.request.user
@@ -660,6 +680,39 @@ class ItemViewSet(
         item.size = len(template_content)
         item.save(update_fields=["upload_state", "mimetype", "size", "updated_at"])
 
+    def _sync_external_document(self, item):
+        """
+        When an external item is created from Drive, create the matching
+        resource in the external app through its back-channel backend.
+
+        Skipped for server-to-server requests: the item creation was initiated
+        by the external app itself, which already owns the resource.
+        """
+        if self.request.auth == "s2s":
+            return
+
+        app_name = (item.metadata or {}).get("external_app")
+        if not app_name:
+            return
+
+        backend = get_external_app_backend(app_name)
+        if backend is None:
+            logger.warning("No backend configured for external app %s", app_name)
+            return
+
+        try:
+            backend.create_resource(item, self.request.user)
+        except external_apps.ExternalAppError as exc:
+            logger.error(
+                "External app %s creation failed for item %s: %s",
+                app_name,
+                item.id,
+                exc,
+            )
+            item.soft_delete()
+            item.delete()
+            raise drf.exceptions.APIException(detail=str(exc)) from exc
+
     def perform_create(self, serializer):
         """Set the current user as creator and owner of the newly created object."""
         extension = serializer.validated_data.pop("extension", None)
@@ -677,9 +730,49 @@ class ItemViewSet(
             user=self.request.user,
             role=models.RoleChoices.OWNER,
         )
+        self._sync_external_document(obj)
+
+    def _notify_external_apps(self, item, action):
+        """
+        Notify external apps that the pointer items of a deleted/restored
+        subtree changed state. `action` is one of "delete", "restore", "purge".
+
+        Skipped for server-to-server requests (the external app initiated the
+        operation itself). Never blocks the Drive operation on failure.
+        """
+        if self.request.auth == "s2s":
+            return
+
+        pointers = models.Item.objects.filter(
+            path__descendants=item.path,
+            metadata__external_app__isnull=False,
+            hard_deleted_at__isnull=True,
+        ).values_list("id", "metadata")
+
+        ids_by_app = {}
+        for item_id, metadata in pointers:
+            app_name = (metadata or {}).get("external_app")
+            if app_name:
+                ids_by_app.setdefault(app_name, []).append(str(item_id))
+
+        for app_name, ids in ids_by_app.items():
+            backend = get_external_app_backend(app_name)
+            if backend is None:
+                logger.warning("No backend configured for external app %s", app_name)
+                continue
+            try:
+                getattr(backend, f"{action}_resources")(ids)
+            except Exception:  # noqa: BLE001  pylint: disable=broad-exception-caught
+                logger.exception(
+                    "External app %s %s notification failed for item %s",
+                    app_name,
+                    action,
+                    item.id,
+                )
 
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
+        self._notify_external_apps(instance, "delete")
         instance.soft_delete()
 
     def perform_update(self, serializer):
@@ -698,6 +791,7 @@ class ItemViewSet(
         Hard delete an item.
         """
         instance = self.get_object()
+        self._notify_external_apps(instance, "purge")
         instance.hard_delete()
         process_item_purge.delay(instance.id)
         return drf.response.Response(status=status.HTTP_204_NO_CONTENT)
@@ -738,6 +832,9 @@ class ItemViewSet(
         """List top level items with pagination and filtering."""
         # Not calling filter_queryset. We do our own cooking.
         queryset = self.get_queryset()
+        # Before root filtering, so a directly-shared sub-document can not be
+        # promoted to a "highest ancestor" in the listing.
+        queryset = self._exclude_external_descendants(queryset)
 
         filterset = ListItemFilter(self.request.GET, queryset=queryset, request=self.request)
         if not filterset.is_valid():
@@ -903,6 +1000,7 @@ class ItemViewSet(
 
     def _complete_item_deletion(self, item):
         """Completely delete an item."""
+        self._notify_external_apps(item, "purge")
         item.soft_delete()
         item.hard_delete()
         process_item_purge.delay(item.id)
@@ -916,6 +1014,7 @@ class ItemViewSet(
         """Get list of favorite items for the current user."""
         user = request.user
         queryset = self.get_queryset_for_descendants()
+        queryset = self._exclude_external_descendants(queryset)
         queryset = queryset.annotate(is_favorite=db.Value(True, output_field=db.BooleanField()))
         queryset = queryset.annotate_user_roles(user)
 
@@ -961,6 +1060,7 @@ class ItemViewSet(
             .filter(deleted_at__gte=models.get_trashbin_cutoff())
             .owned_by(user)
         )
+        queryset = self._exclude_external_descendants(queryset)
 
         # Apply filtering similar to children method
         filterset = ItemFilter(request.GET, queryset=queryset)
@@ -1076,6 +1176,7 @@ class ItemViewSet(
         """
         item = self.get_object()
         item.restore()
+        self._notify_external_apps(item, "restore")
 
         return drf_response.Response(
             {"detail": "item has been successfully restored."},
@@ -1099,10 +1200,14 @@ class ItemViewSet(
             )
             serializer.is_valid(raise_exception=True)
 
+            is_external = bool(
+                (serializer.validated_data.get("metadata") or {}).get("external_app")
+            )
             entitlements_backend = get_entitlements_backend()
             can_upload = entitlements_backend.can_upload(self.request.user)
             if (
                 serializer.validated_data.get("type") == models.ItemTypeChoices.FILE
+                and not is_external
                 and not can_upload["result"]
             ):
                 raise drf.exceptions.PermissionDenied(
@@ -1120,6 +1225,8 @@ class ItemViewSet(
 
             if extension:
                 self._create_file_from_template(child_item, extension)
+
+            self._sync_external_document(child_item)
 
             # Set the created instance to the serializer
             serializer.instance = child_item
@@ -1251,6 +1358,54 @@ class ItemViewSet(
             utils.flat_to_nested(serializer.data), status=drf.status.HTTP_200_OK
         )
 
+    @drf.decorators.action(detail=True, methods=["get"], url_path="tree-descendants")
+    def tree_descendants(self, request, pk=None):
+        """
+        Return the full descendants tree of an external item as a nested structure.
+
+        The subtree root is the topmost readable ancestor sharing the same
+        external_app, so requesting any node of a document tree returns the
+        whole document tree.
+        """
+        item = self.get_object()
+
+        external_app = (item.metadata or {}).get("external_app")
+
+        root = item
+        if external_app:
+            root = (
+                self.queryset.filter(
+                    path__ancestors=item.path,
+                    metadata__external_app=external_app,
+                    ancestors_deleted_at__isnull=True,
+                )
+                .readable_per_se(request.user)
+                .order_by("path")
+                .first()
+            ) or item
+
+        queryset = (
+            self.queryset.select_related("creator")
+            .filter(
+                path__descendants=root.path,
+                deleted_at__isnull=True,
+                ancestors_deleted_at__isnull=True,
+            )
+            .order_by("path")
+        )
+        queryset = self._filter_suspicious_items(queryset, request.user)
+        queryset = queryset.annotate_user_roles(request.user)
+        queryset = queryset.annotate_is_favorite(request.user)
+        queryset = queryset.annotate_with_numchild()
+
+        serializer = serializers.ListItemSerializer(
+            queryset, many=True, context={"request": request}
+        )
+
+        return drf.response.Response(
+            utils.flat_to_nested(serializer.data), status=drf.status.HTTP_200_OK
+        )
+
     @drf.decorators.action(
         url_path="recents",
         detail=False,
@@ -1261,6 +1416,7 @@ class ItemViewSet(
         """Get list of recents items for the current user."""
         user = self.request.user
         queryset = self.get_queryset_for_descendants()
+        queryset = self._exclude_external_descendants(queryset)
 
         filterset = ItemFilter(self.request.GET, queryset=queryset, request=self.request)
         if not filterset.is_valid():
@@ -1411,6 +1567,7 @@ class ItemViewSet(
             path_list |= db.Q(path__descendants=top_level_item)
 
         queryset = queryset.filter(path_list)
+        queryset = self._exclude_external_descendants(queryset)
 
         # use indexed search ONLY when the feature flag is enabled
         if indexer and settings.FEATURES_INDEXED_SEARCH is True:
@@ -2292,6 +2449,7 @@ class ConfigView(drf.views.APIView):
             "FRONTEND_STORAGE_GAUGE_INFORMATION_LINK",
             "FRONTEND_CSS_URL",
             "FRONTEND_JS_URL",
+            "FRONTEND_DOCS_URL",
             "MEDIA_BASE_URL",
             "POSTHOG_KEY",
             "POSTHOG_HOST",

@@ -17,6 +17,7 @@ from lasuite.malware_detection.models import MalwareDetection
 
 from core.api.utils import sanitize_filename
 from core.models import Item, ItemTypeChoices, ItemUploadStateChoices
+from core.services.external_apps import get_external_app_backend
 
 from drive.celery_app import app
 
@@ -60,8 +61,14 @@ def process_item_purge(item_id):
         return
 
     # Get descendants, leaf first. Don't burst memory
+    external_ids_by_app = {}
     for item in Item.objects.filter(path__descendants=root.path).order_by("-path").iterator():
-        if item.type == ItemTypeChoices.FILE and item.file_key:
+        if item.is_external:
+            # External items have no physical file in Drive; their app purges
+            # its own storage through the backstop notification below.
+            app_name = item.metadata.get("external_app")
+            external_ids_by_app.setdefault(app_name, []).append(str(item.id))
+        elif item.type == ItemTypeChoices.FILE and item.file_key:
             try:
                 default_storage.delete(item.file_key)
             except FileNotFoundError:
@@ -72,6 +79,22 @@ def process_item_purge(item_id):
             MalwareDetection.objects.filter(path=item.file_key).delete()
 
         item.delete()
+
+    # Guaranteed external-app purge notification: covers the cron path and
+    # retries. External apps' purge endpoints are idempotent.
+    for app_name, ids in external_ids_by_app.items():
+        backend = get_external_app_backend(app_name)
+        if backend is None:
+            logger.warning("No backend configured for external app %s", app_name)
+            continue
+        try:
+            backend.purge_resources(ids)
+        except Exception:  # noqa: BLE001  pylint: disable=broad-exception-caught
+            logger.exception(
+                "External app %s purge notification failed for root %s",
+                app_name,
+                item_id,
+            )
 
 
 @app.task
