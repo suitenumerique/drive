@@ -909,6 +909,31 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # Base URL of the Docs frontend, used by the Drive frontend to open
+    # documents (exposed through the config endpoint).
+    FRONTEND_DOCS_URL = values.Value(
+        None,
+        environ_name="FRONTEND_DOCS_URL",
+        environ_prefix=None,
+    )
+
+    # Registry of external apps whose resources are pointed to by Drive items
+    # (metadata.external_app). Each entry configures a backend class handling
+    # the back-channel lifecycle calls (create/delete/restore/purge).
+    # The default sources the legacy DOCS_* env vars for compatibility.
+    EXTERNAL_APPS = values.DictValue(
+        default={
+            "docs": {
+                "backend": "core.services.external_apps.docs.DocsExternalAppBackend",
+                "api_base_url": os.environ.get("DOCS_API_BASE_URL"),
+                "token": os.environ.get("DOCS_SERVER_TO_SERVER_TOKEN"),
+                "frontend_url": os.environ.get("FRONTEND_DOCS_URL"),
+            }
+        },
+        environ_name="EXTERNAL_APPS",
+        environ_prefix=None,
+    )
+
     REST_FRAMEWORK = {
         "DEFAULT_AUTHENTICATION_CLASSES": (
             "core.authentication.server_to_server.ServerToServerUserAuthentication",
