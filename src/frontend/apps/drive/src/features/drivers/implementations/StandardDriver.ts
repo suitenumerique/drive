@@ -450,8 +450,9 @@ export class StandardDriver extends Driver {
 
   async createFileFromTemplate(data: {
     parentId?: string;
-    extension: string;
+    extension?: string;
     title: string;
+    metadata?: { external_app?: string };
   }): Promise<Item> {
     const url = data.parentId ? `items/${data.parentId}/children/` : `items/`;
 
@@ -461,7 +462,8 @@ export class StandardDriver extends Driver {
         method: "POST",
         body: JSON.stringify({
           type: "file",
-          extension: data.extension,
+          ...(data.extension ? { extension: data.extension } : {}),
+          ...(data.metadata ? { metadata: data.metadata } : {}),
           title: data.title,
         }),
       },

@@ -26,7 +26,7 @@ export const ItemIcon = ({
   if (extendedIcon) {
     return <FileIconContent icon={extendedIcon} size={size} />;
   }
-  return <FileIcon file={itemToPreviewFile(item)} size={size} />;
+  return <FileIcon file={itemToPreviewFile(item)} size={size} type={type} />;
 };
 
 /**
@@ -43,6 +43,10 @@ export const getItemExtendedIcon = (
 ): string | null => {
   if (item.type === ItemType.FOLDER) {
     return folderIcon.src;
+  }
+
+  if (item.metadata?.external_app === "docs") {
+    return ICONS[type][MimeCategory.DOCS];
   }
 
   const uploadState = item.upload_state;

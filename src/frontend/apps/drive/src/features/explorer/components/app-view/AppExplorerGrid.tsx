@@ -20,6 +20,7 @@ import { openWopiInNewTab } from "@/features/wopi/openWopi";
 import { itemToPreviewFile } from "@/features/explorer/utils/utils";
 import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { ConvertLegacyFileModal } from "@/features/explorer/components/modals/ConvertLegacyFileModal";
+import { useConfig } from "@/features/config/ConfigProvider";
 
 /**
  * Wrapper around EmbeddedExplorerGrid to display a list of items in a table.
@@ -33,6 +34,7 @@ import { ConvertLegacyFileModal } from "@/features/explorer/components/modals/Co
 export const AppExplorerGrid = () => {
   const { t } = useTranslation();
   const appExplorer = useAppExplorer();
+  const { config } = useConfig();
 
   const router = useRouter();
 
@@ -53,6 +55,18 @@ export const AppExplorerGrid = () => {
   const handleFileClick =
     appExplorer.onFileClick ??
     ((item: Item) => {
+      if (item.metadata?.external_app === "docs") {
+        if (config.FRONTEND_DOCS_URL) {
+          window.open(
+            `${config.FRONTEND_DOCS_URL}/docs/${item.id}/`,
+            "_blank",
+            "noopener",
+          );
+        } else {
+          addToast(<ToasterItem>{t("explorer.grid.no_url")}</ToasterItem>);
+        }
+        return;
+      }
       if (item.abilities.convert) {
         setItemToConvert(item);
         convertModal.open();

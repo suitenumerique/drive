@@ -84,6 +84,9 @@ export type Item = {
   url_preview?: string;
   size?: number;
   mimetype?: string;
+  metadata?: {
+    external_app?: string;
+  };
   user_roles?: Role[];
   user_role?: Role;
   link_reach?: LinkReach;
@@ -237,6 +240,7 @@ export type ApiConfig = {
   FRONTEND_STORAGE_GAUGE_INFORMATION_LINK?: string;
   FRONTEND_CSS_URL?: string;
   FRONTEND_JS_URL?: string;
+  FRONTEND_DOCS_URL?: string;
   theme_customization?: ThemeCustomization;
 };
 

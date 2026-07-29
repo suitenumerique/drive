@@ -1,4 +1,10 @@
-import { MenuItem, IconSize } from "@gouvfr-lasuite/ui-kit";
+import {
+  MenuItem,
+  IconSize,
+  FileIconContent,
+  ICONS,
+  MimeCategory,
+} from "@gouvfr-lasuite/ui-kit";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import createFolderSvg from "@/assets/icons/create_folder.svg";
@@ -89,6 +95,18 @@ export const useCreateMenuItems = ({
 
   if (includeCreate) {
     items.push(
+      {
+        icon: (
+          <FileIconContent
+            icon={ICONS.mini[MimeCategory.DOCS]}
+            size={IconSize.MEDIUM}
+          />
+        ),
+        label: t("explorer.tree.create.file.docs_document"),
+        callback: () =>
+          openCreateFileModal(ExplorerCreateFileType.DOCS_DOCUMENT),
+      },
+      { type: "separator" },
       {
         icon: renderFileIcon({
           type: ItemType.FILE,

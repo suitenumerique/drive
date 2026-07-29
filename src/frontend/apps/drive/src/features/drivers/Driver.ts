@@ -175,8 +175,9 @@ export abstract class Driver {
   }): { promise: Promise<Item>; abort: () => Promise<void> };
   abstract createFileFromTemplate(data: {
     parentId: string;
-    extension: string;
+    extension?: string;
     title: string;
+    metadata?: { external_app?: string };
   }): Promise<Item>;
   abstract duplicateItem(id: string): Promise<Item>;
   abstract deleteItems(ids: string[]): Promise<void>;

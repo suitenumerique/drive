@@ -362,7 +362,8 @@
             "file": {
               "doc": "New text document",
               "powerpoint": "New slides",
-              "calc": "New spreadsheet"
+              "calc": "New spreadsheet",
+              "docs_document": "New Docs document"
             }
           },
           "import": {
@@ -504,7 +505,8 @@
               "label": "File name",
               "placeholder": "Enter file name",
               "cancel": "Cancel",
-              "submit": "Create"
+              "submit": "Create",
+              "title_docs": "New Docs document"
             }
           },
           "upload": {
@@ -1084,7 +1086,8 @@
             "file": {
               "doc": "Nouveau document texte",
               "powerpoint": "Nouvelles diapositives",
-              "calc": "Nouveau tableau de calcul"
+              "calc": "Nouveau tableau de calcul",
+              "docs_document": "Nouveau Docs"
             },
             "workspace": "Nouvel espace"
           },
@@ -1213,7 +1216,8 @@
               "label": "Nom du fichier",
               "placeholder": "Entrez le nom du fichier",
               "cancel": "Annuler",
-              "submit": "Créer"
+              "submit": "Créer",
+              "title_docs": "Nouveau Docs"
             }
           },
           "upload": {
@@ -1779,7 +1783,8 @@
             "file": {
               "doc": "Nieuw tekstdocument",
               "powerpoint": "Nieuwe presentatie",
-              "calc": "Nieuwe spreadsheet"
+              "calc": "Nieuwe spreadsheet",
+              "docs_document": "Nieuw Docs"
             },
             "workspace": "Nieuwe werkruimte"
           },
@@ -1922,7 +1927,8 @@
               "label": "Bestandsnaam",
               "placeholder": "Voer bestandsnaam in",
               "cancel": "Annuleren",
-              "submit": "Maken"
+              "submit": "Maken",
+              "title_docs": "Nieuw Docs-document"
             }
           },
           "upload": {

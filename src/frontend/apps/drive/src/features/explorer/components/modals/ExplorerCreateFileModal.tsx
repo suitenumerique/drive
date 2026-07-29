@@ -19,6 +19,7 @@ export enum ExplorerCreateFileType {
   DOC = "doc",
   POWERPOINT = "powerpoint",
   CALC = "calc",
+  DOCS_DOCUMENT = "docs",
 }
 
 const getExtension = (type: ExplorerCreateFileType) => {
@@ -29,6 +30,9 @@ const getExtension = (type: ExplorerCreateFileType) => {
       return "odp";
     case ExplorerCreateFileType.CALC:
       return "ods";
+    case ExplorerCreateFileType.DOCS_DOCUMENT:
+      // Docs documents are external items: no template file, no extension.
+      return undefined;
   }
 };
 
@@ -53,6 +57,9 @@ export const ExplorerCreateFileModal = (
         parentId: props.parentId,
         extension: extension,
         title: data.filename,
+        ...(props.type === ExplorerCreateFileType.DOCS_DOCUMENT
+          ? { metadata: { external_app: "docs" } }
+          : {}),
       },
       {
         onSuccess: (createdItem) => {
