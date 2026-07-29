@@ -143,13 +143,11 @@ Then, only for the **first iteration of each user** (guaranteed) and for
 4. `09 move to trash`, `10 view trash`, `11 empty trash` — non-seed writes
    clean up after themselves, as in the mixed scenario.
 
-At the end of the test a **tearDown thread group** (`cleanup leftovers`)
-logs back in as each user and hard-deletes every folder it created — the
-seeds and any folder orphaned by an iteration interrupted when `DURATION`
-elapsed. Unlike the mixed scenario, a read-heavy run therefore leaves the
-instance fully clean (only the `load-user-*` user rows remain). Each
-tearDown thread only touches folders named `load-<its thread number>-*`, so
-real data on an account targeted via `USER_EMAIL` is never affected.
+A read-heavy run intentionally leaves data behind: the seed folders, plus
+any folder orphaned by an iteration interrupted when `DURATION` elapsed.
+The target instance is expected to be reset by ops (database + bucket)
+between test campaigns — consecutive runs without a reset accumulate one
+seed per user per run and skew comparisons.
 
 Implementation notes:
 
