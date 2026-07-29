@@ -68,6 +68,10 @@ class Base(Configuration):
     """
 
     DEBUG = False
+    # Deliberately a plain literal, not a values.Value: this setting exposes
+    # unauthenticated login endpoints and must never be switchable from the
+    # environment. Enable it only by deploying an allowlisted configuration
+    # (see the guard in post_setup).
     LOAD_E2E_URLS = False
     USE_SWAGGER = False
 
@@ -1581,6 +1585,19 @@ class Base(Configuration):
                 "OIDC_ALLOW_DUPLICATE_EMAILS cannot be set to True simultaneously. "
             )
 
+        # The e2e auth endpoints allow logging in as anyone without credentials.
+        # They may only be exposed by configurations explicitly allowlisted
+        # here; adding one must be a deliberate, reviewed act.
+        if cls.LOAD_E2E_URLS and cls.__name__ not in (
+            "Development",
+            "Test",
+            "ContinuousIntegration",
+            "LoadTest",
+        ):
+            raise ValueError(
+                f"LOAD_E2E_URLS must never be enabled on the {cls.__name__} configuration."
+            )
+
         if cls.POSTHOG_KEY is not None:
             posthog.api_key = cls.POSTHOG_KEY
             posthog.host = cls.POSTHOG_HOST
@@ -1777,3 +1794,16 @@ class PreProduction(Production):
 
     nota bene: it should inherit from the Production environment.
     """
+
+
+class LoadTest(Production):
+    """
+    Load-testing environment settings
+
+    Identical to Production except it exposes the e2e authentication
+    endpoints used by the load-test scenarios (see load-tests/ at the
+    repository root). Never deploy this configuration on an environment
+    holding real user data.
+    """
+
+    LOAD_E2E_URLS = True
