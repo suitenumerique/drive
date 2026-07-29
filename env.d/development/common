@@ -111,3 +111,9 @@ MALWARE_DETECTION_DUMMY_SLEEP=10
 # Must be a valid Fernet key (32 url-safe base64-encoded bytes)
 # To create one, use the bin/fernetkey command.
 # OIDC_STORE_REFRESH_TOKEN_KEY="your-32-byte-encryption-key=="
+
+# Docs <-> Drive POC integration
+SERVER_TO_SERVER_API_TOKENS=docs-drive-poc-secret
+FRONTEND_DOCS_URL=http://localhost:3001
+DOCS_API_BASE_URL=http://docs-app-dev-1:8000/api/v1.0
+DOCS_SERVER_TO_SERVER_TOKEN=docs-drive-poc-secret
