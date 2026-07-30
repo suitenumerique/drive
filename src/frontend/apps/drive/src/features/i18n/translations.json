@@ -769,8 +769,8 @@
           "key_mismatch": {
             "title": "Ce fichier a été chiffré avec une autre clé",
             "body": "Le fichier a été chiffré pour vous à un moment où vous utilisiez une autre clé de chiffrement — probablement avant une réinitialisation de vos clés ou un changement d'appareil sans restauration de sauvegarde. Votre clé actuelle ne peut plus le déchiffrer. Demandez à un propriétaire ou administrateur de ce fichier de vous retirer de la liste d'accès puis de vous ajouter à nouveau afin qu'il soit rechiffré avec votre clé actuelle.",
-            "share_time_fingerprint_label": "Empreinte au moment du partage avec vous :",
-            "fingerprint_label": "Empreinte de votre clé actuelle :"
+            "share_time_version_label": "Version de la clé au moment du partage avec vous :",
+            "current_version_label": "Version actuelle de votre clé :"
           },
           "pending_self": {
             "title": "Terminez votre configuration du chiffrement pour ouvrir ce fichier",

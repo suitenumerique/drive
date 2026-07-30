@@ -373,9 +373,10 @@ export class EncryptedRelay {
   private roomId: string;
   private userId: string;
   private userName: string;
-  private vaultClient: any;
+  private vaultClient: VaultClient;
   private encryptedSymmetricKey: ArrayBuffer;
   private encryptedKeyChain: ArrayBuffer[];
+  private keyVersion: number;
   private callbacks: RelayCallbacks;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
@@ -423,9 +424,10 @@ export class EncryptedRelay {
     roomId: string;
     userId: string;
     userName: string;
-    vaultClient: any;
+    vaultClient: VaultClient;
     encryptedSymmetricKey: ArrayBuffer;
     encryptedKeyChain: ArrayBuffer[];
+    keyVersion: number;
     callbacks: RelayCallbacks;
   }) {
     this.roomId = opts.roomId;
@@ -434,6 +436,7 @@ export class EncryptedRelay {
     this.vaultClient = opts.vaultClient;
     this.encryptedSymmetricKey = opts.encryptedSymmetricKey;
     this.encryptedKeyChain = opts.encryptedKeyChain;
+    this.keyVersion = opts.keyVersion;
     this.callbacks = opts.callbacks;
   }
 
@@ -470,7 +473,7 @@ export class EncryptedRelay {
       this.processing = this.processing.then(() => this.handleMessage(data));
     };
 
-    this.ws.onclose = event => {
+    this.ws.onclose = () => {
       this.callbacks.onConnectionChange(false);
       // Pending settlement promises become unresolvable once the socket
       // is gone — the relay on the other side of a future reconnect
@@ -819,6 +822,7 @@ export class EncryptedRelay {
         const { data: plaintext } = await this.vaultClient.decryptWithKey(
           ciphertext,
           this.cloneKey(),
+          this.keyVersion,
           this.cloneKeyChain()
         );
 

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { fetchRegisteredKeys } from '@/features/encryption/fetchRegisteredKeys';
+
 /**
  * True when the SDK threw a `VaultError` carrying the
  * `WRONG_SECRET_KEY` code. In drive this almost always means the file
@@ -21,29 +23,30 @@ export const isWrongSecretKeyError = (
 
 interface KeyMismatchPanelProps {
   /**
-   * Fingerprint stored on the user's access row at share time (i.e.
-   * the fingerprint of the key the file was actually encrypted for).
-   * Comes from `item.encryption_public_key_fingerprint_for_user` on
-   * Drive or `doc.accesses_fingerprints_per_user[currentUser.sub]` on
-   * Docs. Optional — if absent, only the current key is shown.
+   * Encryption public key VERSION stored on the user's access row at
+   * share time (i.e. the version of the key the file was actually
+   * encrypted for). Comes from
+   * `item.encryption_public_key_version_for_user` on Drive. Optional —
+   * if absent, only the current version is shown. This is the per-access
+   * staleness marker: when it lags behind the user's current version the
+   * access needs re-wrapping.
    */
-  shareTimeFingerprint?: string | null;
+  shareTimeVersion?: number | null;
 }
 
 /**
  * Friendly panel shown when `isWrongSecretKeyError` is true. Explains
- * the situation and surfaces BOTH the fingerprint the file was
- * encrypted for (stored at share time) and the user's current key's
- * fingerprint, so they can see the mismatch concretely and give the
- * new fingerprint to whoever re-adds them.
+ * the situation and surfaces BOTH the key version the file was
+ * encrypted for (stored at share time) and the user's CURRENT key
+ * version, so they can see the staleness concretely: the access was
+ * wrapped for version N of their key, their current version is M, so a
+ * re-encryption is needed.
  */
 export const KeyMismatchPanel = ({
-  shareTimeFingerprint,
+  shareTimeVersion,
 }: KeyMismatchPanelProps = {}) => {
   const { t } = useTranslation();
-  const [currentFingerprint, setCurrentFingerprint] = useState<string | null>(
-    null
-  );
+  const [currentVersion, setCurrentVersion] = useState<number | null>(null);
 
   useEffect(() => {
     const vault = window.__driveVaultClient;
@@ -51,12 +54,12 @@ export const KeyMismatchPanel = ({
     let cancelled = false;
     (async () => {
       try {
-        const { publicKey } = await vault.getPublicKey();
-        const raw = await vault.computeKeyFingerprint(publicKey);
-        const formatted = vault.formatFingerprint(raw);
-        if (!cancelled) setCurrentFingerprint(formatted);
+        const sub = vault.getAuthContext()?.suiteUserId;
+        if (!sub) return;
+        const { versions } = await fetchRegisteredKeys([sub]);
+        if (!cancelled) setCurrentVersion(versions[sub] ?? null);
       } catch {
-        // Ignore — we just won't show the fingerprint row.
+        // Ignore — we just won't show the current version row.
       }
     })();
     return () => {
@@ -64,16 +67,9 @@ export const KeyMismatchPanel = ({
     };
   }, []);
 
-  const formatShareTime = (() => {
-    const vault = window.__driveVaultClient;
-    if (!shareTimeFingerprint) return null;
-    if (!vault) return shareTimeFingerprint;
-    try {
-      return vault.formatFingerprint(shareTimeFingerprint);
-    } catch {
-      return shareTimeFingerprint;
-    }
-  })();
+  const hasShareTimeVersion =
+    shareTimeVersion !== undefined && shareTimeVersion !== null;
+  const hasCurrentVersion = currentVersion !== null;
 
   return (
     <div
@@ -117,7 +113,7 @@ export const KeyMismatchPanel = ({
           'The file was encrypted for you at a time when you were using a different encryption key — possibly before you reset your keys or switched device without restoring a backup. Your current key can no longer decrypt it. Ask an owner or administrator of this file to remove you from the access list and add you back so it gets re-encrypted for your current key.'
         )}
       </span>
-      {(formatShareTime || currentFingerprint) && (
+      {(hasShareTimeVersion || hasCurrentVersion) && (
         <div
           style={{
             display: 'flex',
@@ -128,11 +124,11 @@ export const KeyMismatchPanel = ({
               'var(--c--contextuals--content--semantic--neutral--tertiary)',
           }}
         >
-          {formatShareTime && (
+          {hasShareTimeVersion && (
             <div>
               {t(
-                'explorer.encrypted.key_mismatch.share_time_fingerprint_label',
-                'Fingerprint at the time it was shared with you:'
+                'explorer.encrypted.key_mismatch.share_time_version_label',
+                'Key version at the time it was shared with you:'
               )}{' '}
               <code
                 style={{
@@ -142,15 +138,15 @@ export const KeyMismatchPanel = ({
                   borderRadius: '3px',
                 }}
               >
-                {formatShareTime}
+                {shareTimeVersion}
               </code>
             </div>
           )}
-          {currentFingerprint && (
+          {hasCurrentVersion && (
             <div>
               {t(
-                'explorer.encrypted.key_mismatch.fingerprint_label',
-                'Your current key fingerprint:'
+                'explorer.encrypted.key_mismatch.current_version_label',
+                'Your current key version:'
               )}{' '}
               <code
                 style={{
@@ -160,7 +156,7 @@ export const KeyMismatchPanel = ({
                   borderRadius: '3px',
                 }}
               >
-                {currentFingerprint}
+                {currentVersion}
               </code>
             </div>
           )}

@@ -1,5 +1,6 @@
 import { fetchAPI } from "@/features/api/fetchApi";
 import { fromBase64, toBase64 } from "@/features/encryption/recursive/binary";
+import { fetchRegisteredKeys } from "@/features/encryption/fetchRegisteredKeys";
 import {
   Driver,
   Entitlements,
@@ -213,10 +214,10 @@ export class StandardDriver extends Driver {
     // via the share UI once the user has onboarded.
     let perUserEncryptedKeys: Record<string, string | null> | undefined;
     // Matched pair with `perUserEncryptedKeys`: same key set, value is
-    // the fingerprint of the user's pubkey at wrap time (or null when
-    // the user is pending). Backend stores it on the access row so
+    // the version of the user's encryption pubkey at wrap time (or null
+    // when the user is pending). Backend stores it on the access row so
     // clients can later detect a key-rotation mismatch.
-    let perUserFingerprints: Record<string, string | null> | undefined;
+    let perUserVersions: Record<string, number | null> | undefined;
     let isEncryptionRoot: boolean | undefined; // present iff the move toggles the flag
 
     if (sourceEncrypted && targetEncrypted && sourceIsRoot) {
@@ -327,7 +328,8 @@ export class StandardDriver extends Driver {
           'No users with access — cannot re-anchor item as its own encryption root.',
         );
       }
-      const { publicKeys } = await vaultClient.fetchPublicKeys(userSubs);
+      const { publicKeys, versions } =
+        await fetchRegisteredKeys(userSubs);
       const usersWithKeys = new Set(Object.keys(publicKeys));
 
       // The only catastrophic case is the OPERATOR (the user doing
@@ -352,25 +354,35 @@ export class StandardDriver extends Driver {
       }
 
       // Wrap K_item only for users who have a pubkey; the rest get a
-      // `null` placeholder that the backend will treat as pending.
+      // `null` placeholder that the backend will treat as pending. Pass a
+      // labeled recipient map (sub → {email, name}) built from the same
+      // access rows — the vault resolves + trust-checks each key (binding +
+      // TOFU); the labels are display-only, shown if the trust modal opens.
+      const recipients: Record<string, { email: string; name?: string }> = {};
+      for (const a of accesses) {
+        if (a.user.sub && publicKeys[a.user.sub]) {
+          recipients[a.user.sub] = {
+            email: a.user.email,
+            name: a.user.full_name,
+          };
+        }
+      }
       const { encryptedKeys } = await vaultClient.shareKeys(
         entryKey,
-        publicKeys,
+        recipients,
         chainToItem.length > 0 ? chainToItem : undefined,
       );
       perUserEncryptedKeys = {};
-      // Fingerprints travel as matched pairs with the per-user wraps —
+      // Versions travel as matched pairs with the per-user wraps —
       // the backend writes `(encrypted_item_symmetric_key_for_user,
-      // encryption_public_key_fingerprint)` together on each access
+      // encryption_public_key_version)` together on each access
       // row, identical to /encrypt/.
-      perUserFingerprints = {};
+      perUserVersions = {};
       for (const userSub of userSubs) {
         const wrap = encryptedKeys[userSub];
         perUserEncryptedKeys[userSub] = wrap ? toBase64(wrap) : null;
         const pubKey = publicKeys[userSub];
-        perUserFingerprints[userSub] = pubKey
-          ? await vaultClient.computeKeyFingerprint(pubKey)
-          : null;
+        perUserVersions[userSub] = pubKey ? versions[userSub] : null;
       }
       const pendingCount = userSubs.length - usersWithKeys.size;
       if (pendingCount > 0) {
@@ -394,8 +406,8 @@ export class StandardDriver extends Driver {
       ...(perUserEncryptedKeys
         ? { per_user_encrypted_keys: perUserEncryptedKeys }
         : {}),
-      ...(perUserFingerprints
-        ? { encryption_public_key_fingerprints: perUserFingerprints }
+      ...(perUserVersions
+        ? { encryption_public_key_versions: perUserVersions }
         : {}),
     };
     await fetchAPI(`items/${id}/move/`, {
@@ -419,9 +431,9 @@ export class StandardDriver extends Driver {
       body.encrypted_item_symmetric_key_for_user =
         data.encrypted_item_symmetric_key_for_user;
     }
-    if (data.encryption_public_key_fingerprint) {
-      body.encryption_public_key_fingerprint =
-        data.encryption_public_key_fingerprint;
+    if (data.encryption_public_key_version) {
+      body.encryption_public_key_version =
+        data.encryption_public_key_version;
     }
     await fetchAPI(`items/${data.itemId}/accesses/`, {
       method: "POST",
@@ -781,7 +793,7 @@ export class StandardDriver extends Driver {
     itemId: string,
     data: {
       encryptedSymmetricKeyPerUser: Record<string, string | null>;
-      encryptionPublicKeyFingerprintPerUser: Record<string, string | null>;
+      encryptionPublicKeyVersionPerUser: Record<string, number | null>;
       encryptedKeysForDescendants: Record<string, string>;
       fileKeyMapping?: Record<string, string>;
     },
@@ -792,8 +804,8 @@ export class StandardDriver extends Driver {
       method: "PATCH",
       body: JSON.stringify({
         encrypted_symmetric_key_per_user: data.encryptedSymmetricKeyPerUser,
-        encryption_public_key_fingerprint_per_user:
-          data.encryptionPublicKeyFingerprintPerUser,
+        encryption_public_key_version_per_user:
+          data.encryptionPublicKeyVersionPerUser,
         encrypted_keys_for_descendants: data.encryptedKeysForDescendants,
         file_key_mapping: data.fileKeyMapping ?? {},
       }),
@@ -860,7 +872,7 @@ export class StandardDriver extends Driver {
     accessId: string,
     data: {
       encrypted_item_symmetric_key_for_user: string;
-      encryption_public_key_fingerprint: string;
+      encryption_public_key_version: number;
     },
   ): Promise<void> {
     await fetchAPI(

@@ -105,8 +105,8 @@ class ItemAccessSerializer(serializers.ModelSerializer):
     encrypted_item_symmetric_key_for_user = serializers.CharField(
         required=False, allow_blank=True, write_only=True
     )
-    encryption_public_key_fingerprint = serializers.CharField(
-        required=False, allow_blank=True, max_length=16
+    encryption_public_key_version = serializers.IntegerField(
+        required=False, allow_null=True, min_value=1
     )
     is_pending_encryption = serializers.SerializerMethodField(read_only=True)
 
@@ -126,7 +126,7 @@ class ItemAccessSerializer(serializers.ModelSerializer):
             "item",
             "is_explicit",
             "encrypted_item_symmetric_key_for_user",
-            "encryption_public_key_fingerprint",
+            "encryption_public_key_version",
             "is_pending_encryption",
         ]
         read_only_fields = [
@@ -253,18 +253,18 @@ class ListItemSerializer(serializers.ModelSerializer):
     is_pending_encryption_for_user = serializers.SerializerMethodField(
         read_only=True
     )
-    encryption_public_key_fingerprint_for_user = serializers.SerializerMethodField(
+    encryption_public_key_version_for_user = serializers.SerializerMethodField(
         read_only=True
     )
 
-    def get_encryption_public_key_fingerprint_for_user(self, item):
-        """Fingerprint of the user's public key AT THE TIME they were
-        granted access. Stored on the ItemAccess row that holds their
-        wrapped symmetric key.
+    def get_encryption_public_key_version_for_user(self, item):
+        """Version of the user's encryption public key AT THE TIME they
+        were granted access. Stored on the ItemAccess row that holds
+        their wrapped symmetric key.
 
         Clients use this to tell the user which key the document was
         encrypted for if decryption fails with "wrong secret key" —
-        the user can compare it to their current key's fingerprint and
+        the user can compare it to their current key's version and
         understand that a collaborator needs to re-add them so the key
         gets wrapped against their current public key.
 
@@ -283,7 +283,7 @@ class ListItemSerializer(serializers.ModelSerializer):
                 user=request.user,
                 encrypted_item_symmetric_key_for_user__isnull=False,
             )
-            .values_list("encryption_public_key_fingerprint", flat=True)
+            .values_list("encryption_public_key_version", flat=True)
             .first()
         )
 
@@ -390,7 +390,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "is_encryption_root",
             "is_inside_encrypted_subtree",
             "is_pending_encryption_for_user",
-            "encryption_public_key_fingerprint_for_user",
+            "encryption_public_key_version_for_user",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -430,7 +430,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "is_encryption_root",
             "is_inside_encrypted_subtree",
             "is_pending_encryption_for_user",
-            "encryption_public_key_fingerprint_for_user",
+            "encryption_public_key_version_for_user",
             "is_favorite",
             "link_role",
             "link_reach",
@@ -665,7 +665,7 @@ class ItemSerializer(ListItemSerializer):
             "is_wopi_supported",
             "encrypted_item_symmetric_key_for_user",
             "is_pending_encryption_for_user",
-            "encryption_public_key_fingerprint_for_user",
+            "encryption_public_key_version_for_user",
             "accesses_user_ids",
         ]
         read_only_fields = [
@@ -702,7 +702,7 @@ class ItemSerializer(ListItemSerializer):
             "is_wopi_supported",
             "encrypted_item_symmetric_key_for_user",
             "is_pending_encryption_for_user",
-            "encryption_public_key_fingerprint_for_user",
+            "encryption_public_key_version_for_user",
             "accesses_user_ids",
         ]
 
@@ -1069,7 +1069,7 @@ class MoveItemSerializer(serializers.Serializer):
         {"target_item_id": "..." | null,
          "is_encryption_root": true,
          "per_user_encrypted_keys": {"<sub>": "<base64>" | null, ...},
-         "encryption_public_key_fingerprints": {"<sub>": "<fp>" | null, ...}}
+         "encryption_public_key_versions": {"<sub>": <version:int> | null, ...}}
         - The caller's own sub MUST map to a non-null wrapped key. Other
           users may be `null` (access row stored as pending until they
           finish encryption onboarding — symmetric to /encrypt/).
@@ -1107,8 +1107,8 @@ class MoveItemSerializer(serializers.Serializer):
         child=serializers.CharField(allow_null=True),
         required=False,
     )
-    encryption_public_key_fingerprints = serializers.DictField(
-        child=serializers.CharField(allow_null=True, allow_blank=True, max_length=16),
+    encryption_public_key_versions = serializers.DictField(
+        child=serializers.IntegerField(allow_null=True, min_value=1),
         required=False,
     )
     # Encrypt-on-move payload (plaintext → encrypted). Snake_case here
@@ -1167,10 +1167,10 @@ class AcceptEncryptionAccessSerializer(serializers.Serializer):
             "→ validated. To revert, delete the access row instead."
         ),
     )
-    encryption_public_key_fingerprint = serializers.CharField(
+    encryption_public_key_version = serializers.IntegerField(
         required=True,
-        allow_blank=False,
-        max_length=16,
+        allow_null=False,
+        min_value=1,
     )
 
 
@@ -1198,29 +1198,27 @@ class EncryptItemSerializer(serializers.Serializer):
             "never null."
         ),
     )
-    encryption_public_key_fingerprint_per_user = serializers.DictField(
-        # Required: the client must send a fingerprint entry for every
+    encryption_public_key_version_per_user = serializers.DictField(
+        # Required: the client must send a version entry for every
         # user it sent a wrapped-key entry for. Symmetric keys and
-        # fingerprints travel as matched pairs — keeping them coupled
+        # versions travel as matched pairs — keeping them coupled
         # means an encrypted access row always has the "what key was
-        # this wrapped for" display hint stored alongside.
+        # this wrapped for" staleness marker stored alongside.
         #
         # Not security-sensitive in the crypto sense — the actual wrap
-        # is the wrapped key itself. The fingerprint is a display hint
+        # is the wrapped key itself. The version is a staleness marker
         # surfaced in the client's key-mismatch panel. Since it comes
         # from the encrypting client, we trust it as we trust any
         # other client-provided metadata; a malicious client could
         # send wrong values, but the worst it achieves is confusing
         # the very user whose client was sending the lie.
-        child=serializers.CharField(
-            allow_null=True, allow_blank=True, max_length=16
-        ),
+        child=serializers.IntegerField(allow_null=True, min_value=1),
         required=True,
         help_text=(
-            "Mapping of user OIDC sub → fingerprint of their public key "
-            "at encryption time. Must cover the same set of users as "
+            "Mapping of user OIDC sub → version of their encryption public "
+            "key at encryption time. Must cover the same set of users as "
             "`encrypted_symmetric_key_per_user`; null is valid for "
-            "pending users (no public key to fingerprint yet)."
+            "pending users (no public key to version yet)."
         ),
     )
     encrypted_keys_for_descendants = serializers.DictField(

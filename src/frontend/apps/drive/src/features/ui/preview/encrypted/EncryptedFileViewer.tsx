@@ -4,6 +4,7 @@ import {
   MimeCategory,
 } from "@/features/explorer/utils/mimeTypes";
 import { useDecryptedContent } from "@/features/items/hooks/useDecryptedContent";
+import { Item } from "@/features/drivers/types";
 import { useTranslation } from "react-i18next";
 import { ImageViewer } from "../image-viewer/ImageViewer";
 import { VideoPlayer } from "../video-player/VideoPlayer";
@@ -116,7 +117,7 @@ export const EncryptedFileViewer = ({
       title: file.title,
       is_encrypted: true,
     };
-    return <OOEditor item={itemLike as any} />;
+    return <OOEditor item={itemLike as unknown as Item} />;
   }
 
   return (
@@ -151,7 +152,9 @@ const NonOfficeEncryptedViewer = ({
     is_encrypted: true,
     mimetype: file.mimetype,
   };
-  const { blobUrl, isDecrypting, error } = useDecryptedContent(item as any);
+  const { blobUrl, isDecrypting, error } = useDecryptedContent(
+    item as unknown as Item
+  );
 
   if (isDecrypting) {
     return (
@@ -187,7 +190,7 @@ const NonOfficeEncryptedViewer = ({
     if (isWrongSecretKeyError(error)) {
       return (
         <KeyMismatchPanel
-          shareTimeFingerprint={file.encryption_public_key_fingerprint_for_user}
+          shareTimeVersion={file.encryption_public_key_version_for_user}
         />
       );
     }

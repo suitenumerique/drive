@@ -79,7 +79,7 @@ def test_api_items_encrypt_standalone_file():
         f"/api/v1.0/items/{item.id!s}/encrypt/",
         {
             "encrypted_symmetric_key_per_user": {user.sub: "encrypted_key_for_user"},
-            "encryption_public_key_fingerprint_per_user": {user.sub: "fp"},
+            "encryption_public_key_version_per_user": {user.sub: 1},
             "encrypted_keys_for_descendants": {},
         },
         format="json",
@@ -118,7 +118,7 @@ def test_api_items_encrypt_folder_with_children():
         f"/api/v1.0/items/{folder.id!s}/encrypt/",
         {
             "encrypted_symmetric_key_per_user": {user.sub: "root_key_for_user"},
-            "encryption_public_key_fingerprint_per_user": {user.sub: "fp"},
+            "encryption_public_key_version_per_user": {user.sub: 1},
             "encrypted_keys_for_descendants": {
                 str(subfolder.pk): "subfolder_wrapped_key",
                 str(file_item.pk): "file_wrapped_key",
@@ -202,7 +202,7 @@ def test_api_items_encrypt_missing_user_keys():
         f"/api/v1.0/items/{item.id!s}/encrypt/",
         {
             "encrypted_symmetric_key_per_user": {user1.sub: "key1"},
-            "encryption_public_key_fingerprint_per_user": {user1.sub: "fp1"},
+            "encryption_public_key_version_per_user": {user1.sub: 1},
         },
         format="json",
     )
@@ -388,7 +388,7 @@ def test_api_items_key_chain_prefers_root_over_hybrid_wrap():
         user=user,
         role="owner",
         encrypted_item_symmetric_key_for_user="hybrid_side_door_wrap",
-        encryption_public_key_fingerprint="fp",
+        encryption_public_key_version=1,
     )
 
     client = APIClient()
@@ -439,7 +439,7 @@ def test_api_items_key_chain_falls_back_to_hybrid_for_outsiders():
         user=outsider,
         role="reader",
         encrypted_item_symmetric_key_for_user="outsider_wrap",
-        encryption_public_key_fingerprint="fp-outsider",
+        encryption_public_key_version=4,
     )
 
     client = APIClient()

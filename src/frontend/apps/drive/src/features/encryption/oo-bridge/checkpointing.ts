@@ -8,7 +8,7 @@
 
 import { convertFromInternal } from './x2tConverter';
 import { getPatchIndex } from './changesPipeline';
-import { acquireSaveLock, releaseSaveLock, isSaveLocked } from './locks';
+import { acquireSaveLock, releaseSaveLock } from './locks';
 import { pauseIncomingOT, resumeIncomingOT } from './incomingOtGate';
 
 const CHECKPOINT_CHANGES_THRESHOLD = 50;
@@ -22,6 +22,7 @@ const CHECKPOINT_CHANGES_THRESHOLD = 50;
 const CHECKPOINT_TIME_INTERVAL_MS = 120_000;
 
 /** Reference to the OnlyOffice editor instance */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor internals
 let editorInstance: any = null;
 
 /** Original file format (e.g. "docx") */
@@ -75,6 +76,7 @@ let saveResultCallback:
 let isSaveLeader: (() => boolean) | null = null;
 
 export function initCheckpointing(opts: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor internals
   editor: any;
   format: string;
   type: string;
@@ -213,6 +215,7 @@ async function saveCheckpoint(): Promise<void> {
     // asc_nativeGetFile() is on the INNER editor object inside the OO iframe,
     // not on the DocsAPI.DocEditor wrapper. Access it via the iframe's window.
     const ooIframe = document.querySelector('iframe[name="frameEditor"]') as HTMLIFrameElement | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor inner window
     const innerWindow = ooIframe?.contentWindow as any;
     const innerEditor = innerWindow?.editor || innerWindow?.editorCell;
 
@@ -346,7 +349,7 @@ async function saveCheckpoint(): Promise<void> {
     // `converted.buffer` is detached after the await — read the
     // byte count from the local capture above.
     try {
-      await uploadCallback(converted.buffer, originalFormat);
+      await uploadCallback(converted.buffer as ArrayBuffer, originalFormat);
     } catch (error) {
       transientFailure =
         error instanceof Error ? error.message : String(error);

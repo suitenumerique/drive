@@ -128,13 +128,17 @@ export const ItemShareModal = ({
 
     const promises = inviteByUsername.map(async (user) => {
       let memberEncryptedSymmetricKey: string | undefined;
-      let memberKeyFingerprint: string | undefined;
+      let memberKeyVersion: number | undefined;
 
       if (entryKey && user.sub) {
-        const wrapped = await wrapSubtreeKeyForUser(entryKey, user.sub);
+        const wrapped = await wrapSubtreeKeyForUser(entryKey, {
+          sub: user.sub,
+          email: user.email,
+          name: user.full_name,
+        });
         if (wrapped) {
           memberEncryptedSymmetricKey = wrapped.wrappedKeyBase64;
-          memberKeyFingerprint = wrapped.fingerprint;
+          memberKeyVersion = wrapped.version;
         }
         // wrapped === null → invitee has no public key yet; omit the
         // key fields → backend creates the row pending.
@@ -145,7 +149,7 @@ export const ItemShareModal = ({
         userId: user.id,
         role: role as Role,
         encrypted_item_symmetric_key_for_user: memberEncryptedSymmetricKey,
-        encryption_public_key_fingerprint: memberKeyFingerprint,
+        encryption_public_key_version: memberKeyVersion,
       });
     });
 

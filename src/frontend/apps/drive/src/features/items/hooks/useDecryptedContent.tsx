@@ -54,7 +54,7 @@ export const useDecryptedContent = (item?: Item) => {
 
       // 3. Decrypt via vault with key chain
       // The vault client must be available on window (loaded by VaultClientProvider)
-      const vaultClient = (window as any).__driveVaultClient;
+      const vaultClient = window.__driveVaultClient;
       if (!vaultClient) {
         throw new Error(
           "Vault client not initialized. Encryption keys are required.",
@@ -79,9 +79,15 @@ export const useDecryptedContent = (item?: Item) => {
       }
       const encryptedSymmetricKey = entryKeyBytes.buffer;
 
+      // Version of the user's encryption key this wrap was produced against,
+      // stored on the access row. Default to 1 for the current single-version
+      // reality when the field is absent.
+      const keyVersion = item.encryption_public_key_version_for_user ?? 1;
+
       const { data: decryptedBuffer } = await vaultClient.decryptWithKey(
         encryptedBuffer,
         encryptedSymmetricKey,
+        keyVersion,
         encryptedKeyChain.length > 0 ? encryptedKeyChain : undefined,
       );
 
@@ -139,7 +145,7 @@ export const downloadDecryptedFile = async (
   const encryptedBuffer = await response.arrayBuffer();
 
   // 3. Decrypt via vault
-  const vaultClient = (window as any).__driveVaultClient;
+  const vaultClient = window.__driveVaultClient;
   if (!vaultClient) {
     throw new Error("Vault client not initialized.");
   }
@@ -159,9 +165,15 @@ export const downloadDecryptedFile = async (
     entryKeyBytes[i] = entryKeyBinary.charCodeAt(i);
   }
 
+  // Version of the user's encryption key this wrap was produced against,
+  // stored on the access row. Default to 1 for the current single-version
+  // reality when the field is absent.
+  const keyVersion = item.encryption_public_key_version_for_user ?? 1;
+
   const { data: decryptedBuffer } = await vaultClient.decryptWithKey(
     encryptedBuffer,
     entryKeyBytes.buffer,
+    keyVersion,
     encryptedKeyChain.length > 0 ? encryptedKeyChain : undefined,
   );
 

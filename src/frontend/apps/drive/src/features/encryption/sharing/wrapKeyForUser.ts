@@ -11,15 +11,28 @@
  *
  * Both paths need the same primitives: fetch the subtree's key chain,
  * unwrap the caller's own entry key, wrap it for the invitee, and
- * compute the fingerprint of the invitee's public key so the backend
- * can track key-change events later.
+ * record the version of the invitee's public key so the backend can
+ * track key-change events later.
  */
 
 import { getDriver } from '@/features/config/Config';
+import { fetchRegisteredKeys } from '@/features/encryption/fetchRegisteredKeys';
 
 export interface WrappedKeyForUser {
   wrappedKeyBase64: string;
-  fingerprint: string;
+  version: number;
+}
+
+/**
+ * A share recipient: the OIDC sub plus a display-only label (email required,
+ * name optional). The vault wraps for the sub after its own binding + TOFU
+ * trust check; the label is surfaced only if the "verify recipients" trust
+ * modal opens, so callers pass the user's real email/name.
+ */
+export interface ShareRecipient {
+  sub: string;
+  email: string;
+  name?: string;
 }
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -59,28 +72,31 @@ export async function fetchSubtreeEntryKey(
  */
 export async function wrapSubtreeKeyForUser(
   encryptedSymmetricKey: ArrayBuffer,
-  userSub: string,
+  recipient: ShareRecipient,
 ): Promise<WrappedKeyForUser | null> {
   const vaultClient = window.__driveVaultClient;
   if (!vaultClient) {
     throw new Error('Vault client not available');
   }
-  const { publicKeys } = await vaultClient.fetchPublicKeys([userSub]);
-  const userPublicKey = publicKeys[userSub];
+  const { sub, email, name } = recipient;
+  const { publicKeys, versions } = await fetchRegisteredKeys([sub]);
+  const userPublicKey = publicKeys[sub];
   if (!userPublicKey) {
     return null;
   }
-  const { encryptedKeys } = await vaultClient.shareKeys(
-    encryptedSymmetricKey,
-    { [userSub]: userPublicKey },
-  );
-  const wrappedKey = encryptedKeys[userSub];
+  // Pass a labeled recipient map (sub → {email, name}): the vault resolves +
+  // trust-checks the key itself (binding + TOFU). The fetched publicKey above
+  // only gates on the user being registered; the label is display-only, shown
+  // if the trust modal opens.
+  const { encryptedKeys } = await vaultClient.shareKeys(encryptedSymmetricKey, {
+    [sub]: { email, name },
+  });
+  const wrappedKey = encryptedKeys[sub];
   if (!wrappedKey) {
     return null;
   }
-  const fingerprint = await vaultClient.computeKeyFingerprint(userPublicKey);
   return {
     wrappedKeyBase64: arrayBufferToBase64(wrappedKey),
-    fingerprint,
+    version: versions[sub],
   };
 }

@@ -8,6 +8,7 @@ import {
   fetchSubtreeEntryKey,
   wrapSubtreeKeyForUser,
 } from './wrapKeyForUser';
+import { fetchRegisteredKeys } from '@/features/encryption/fetchRegisteredKeys';
 
 interface Props {
   itemId: string;
@@ -82,7 +83,7 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
         return;
       }
       try {
-        const { publicKeys } = await vaultClient.fetchPublicKeys(subs);
+        const { publicKeys } = await fetchRegisteredKeys(subs);
         if (cancelled) return;
         const next: Record<string, boolean> = {};
         for (const sub of subs) {
@@ -102,7 +103,7 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
     };
     // pendingSubsSignature intentionally used instead of `pending` itself
     // to avoid re-firing on unrelated Access array identity changes.
-  }, [pendingSubsSignature]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pendingSubsSignature]);
 
   if (pending.length === 0) {
     return null;
@@ -117,7 +118,11 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
     });
     try {
       const entryKey = await fetchSubtreeEntryKey(itemId);
-      const wrapped = await wrapSubtreeKeyForUser(entryKey, access.user.sub);
+      const wrapped = await wrapSubtreeKeyForUser(entryKey, {
+        sub: access.user.sub,
+        email: access.user.email,
+        name: access.user.full_name,
+      });
       if (!wrapped) {
         // Race: the key probe said they had one but fetching just now
         // returned nothing. Surface a concrete message and remove the
@@ -142,7 +147,7 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
         itemId: access.item.id,
         accessId: access.id,
         encrypted_item_symmetric_key_for_user: wrapped.wrappedKeyBase64,
-        encryption_public_key_fingerprint: wrapped.fingerprint,
+        encryption_public_key_version: wrapped.version,
       });
       // Invalidate the currently-viewed item's access cache too when
       // it differs from where the access lives — the modal is looking

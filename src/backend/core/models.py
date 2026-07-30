@@ -1223,13 +1223,13 @@ class ItemAccess(BaseModel):
             "This is the user's entry point into the key chain."
         ),
     )
-    encryption_public_key_fingerprint = models.CharField(
-        max_length=16,
+    encryption_public_key_version = models.PositiveIntegerField(
+        _("encryption public key version"),
         null=True,
         blank=True,
         help_text=_(
-            "Fingerprint of the user's public key at the time of sharing. "
-            "Used to detect key changes — if the user's current public key fingerprint "
+            "Version of the user's encryption public key at the time of sharing. "
+            "Used to detect key changes — if the user's current public key version "
             "differs from this value, the access needs re-encryption."
         ),
     )

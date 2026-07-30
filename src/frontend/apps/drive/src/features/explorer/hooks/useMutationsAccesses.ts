@@ -82,7 +82,7 @@ export const useMutationAcceptEncryptionAccess = () => {
         itemId: string;
         accessId: string;
         encrypted_item_symmetric_key_for_user: string;
-        encryption_public_key_fingerprint: string;
+        encryption_public_key_version: number;
       },
     ) => {
       return driver.acceptEncryptionAccess(
@@ -91,8 +91,8 @@ export const useMutationAcceptEncryptionAccess = () => {
         {
           encrypted_item_symmetric_key_for_user:
             payload.encrypted_item_symmetric_key_for_user,
-          encryption_public_key_fingerprint:
-            payload.encryption_public_key_fingerprint,
+          encryption_public_key_version:
+            payload.encryption_public_key_version,
         },
       );
     },

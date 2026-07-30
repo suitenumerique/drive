@@ -859,7 +859,7 @@ def _encrypted_root(user, role="owner"):
         user=user,
         role=role,
         encrypted_item_symmetric_key_for_user="WRAP-USER-ROOT",
-        encryption_public_key_fingerprint="fp-root",
+        encryption_public_key_version=1,
     )
     return item
 
@@ -953,7 +953,7 @@ def test_api_items_move_re_anchor_to_plaintext():
         user=other,
         role="reader",
         encrypted_item_symmetric_key_for_user="WRAP-OTHER-ROOT",
-        encryption_public_key_fingerprint="fp-other",
+        encryption_public_key_version=2,
     )
     file_item = _encrypted_child(root, item_type=models.ItemTypeChoices.FILE)
 
@@ -971,9 +971,9 @@ def test_api_items_move_re_anchor_to_plaintext():
                 user.sub: "WRAP-USER-NEW-ROOT",
                 other.sub: "WRAP-OTHER-NEW-ROOT",
             },
-            "encryption_public_key_fingerprints": {
-                user.sub: "fp-user",
-                other.sub: "fp-other",
+            "encryption_public_key_versions": {
+                user.sub: 3,
+                other.sub: 2,
             },
         },
         format="json",
@@ -988,7 +988,7 @@ def test_api_items_move_re_anchor_to_plaintext():
     # item with the wrap.
     user_access = models.ItemAccess.objects.get(item=file_item, user=user)
     assert user_access.encrypted_item_symmetric_key_for_user == "WRAP-USER-NEW-ROOT"
-    assert user_access.encryption_public_key_fingerprint == "fp-user"
+    assert user_access.encryption_public_key_version == 3
     other_access = models.ItemAccess.objects.get(item=file_item, user=other)
     assert other_access.encrypted_item_symmetric_key_for_user == "WRAP-OTHER-NEW-ROOT"
 
@@ -1008,7 +1008,7 @@ def test_api_items_move_re_anchor_with_pending_collaborator():
     factories.UserItemAccessFactory(
         item=root, user=pending, role="reader",
         encrypted_item_symmetric_key_for_user=None,  # pending on root too
-        encryption_public_key_fingerprint=None,
+        encryption_public_key_version=None,
     )
     file_item = _encrypted_child(root, item_type=models.ItemTypeChoices.FILE)
 
@@ -1025,8 +1025,8 @@ def test_api_items_move_re_anchor_with_pending_collaborator():
                 user.sub: "WRAP-USER-NEW-ROOT",
                 pending.sub: None,
             },
-            "encryption_public_key_fingerprints": {
-                user.sub: "fp-user",
+            "encryption_public_key_versions": {
+                user.sub: 3,
                 pending.sub: None,
             },
         },
@@ -1036,7 +1036,7 @@ def test_api_items_move_re_anchor_with_pending_collaborator():
     assert response.status_code == 200, response.json()
     pending_access = models.ItemAccess.objects.get(item=file_item, user=pending)
     assert pending_access.encrypted_item_symmetric_key_for_user is None
-    assert pending_access.encryption_public_key_fingerprint is None
+    assert pending_access.encryption_public_key_version is None
 
 
 def test_api_items_move_re_anchor_caller_must_have_wrap():
@@ -1062,7 +1062,7 @@ def test_api_items_move_re_anchor_caller_must_have_wrap():
             "target_item_id": str(plain_target.id),
             "is_encryption_root": True,
             "per_user_encrypted_keys": {user.sub: None},
-            "encryption_public_key_fingerprints": {user.sub: None},
+            "encryption_public_key_versions": {user.sub: None},
         },
         format="json",
     )
@@ -1087,7 +1087,7 @@ def test_api_items_move_re_anchor_into_encrypted_rejected():
             "target_item_id": str(root_b.id),
             "is_encryption_root": True,
             "per_user_encrypted_keys": {user.sub: "WRAP"},
-            "encryption_public_key_fingerprints": {user.sub: "fp"},
+            "encryption_public_key_versions": {user.sub: 1},
         },
         format="json",
     )
@@ -1116,7 +1116,7 @@ def test_api_items_move_demote_self_rooted_into_chain():
         user=user,
         role="owner",
         encrypted_item_symmetric_key_for_user="WRAP-USER-FILE-ROOT",
-        encryption_public_key_fingerprint="fp-user",
+        encryption_public_key_version=3,
     )
 
     dest_root = _encrypted_root(user)
@@ -1142,7 +1142,7 @@ def test_api_items_move_demote_self_rooted_into_chain():
     # — chain users use the chain, originals use their per-user wrap.
     user_access = models.ItemAccess.objects.get(item=file_item, user=user)
     assert user_access.encrypted_item_symmetric_key_for_user == "WRAP-USER-FILE-ROOT"
-    assert user_access.encryption_public_key_fingerprint == "fp-user"
+    assert user_access.encryption_public_key_version == 3
 
 
 def test_api_items_move_demote_preserves_outsider_wrap():
@@ -1167,12 +1167,12 @@ def test_api_items_move_demote_preserves_outsider_wrap():
     factories.UserItemAccessFactory(
         item=file_item, user=user, role="owner",
         encrypted_item_symmetric_key_for_user="WRAP-USER-FILE",
-        encryption_public_key_fingerprint="fp-user",
+        encryption_public_key_version=3,
     )
     factories.UserItemAccessFactory(
         item=file_item, user=outsider, role="reader",
         encrypted_item_symmetric_key_for_user="WRAP-OUTSIDER-FILE",
-        encryption_public_key_fingerprint="fp-outsider",
+        encryption_public_key_version=4,
     )
 
     # Destination tree only `user` has access to.
@@ -1194,7 +1194,7 @@ def test_api_items_move_demote_preserves_outsider_wrap():
     # their wrap on this item directly.
     outsider_access = models.ItemAccess.objects.get(item=file_item, user=outsider)
     assert outsider_access.encrypted_item_symmetric_key_for_user == "WRAP-OUTSIDER-FILE"
-    assert outsider_access.encryption_public_key_fingerprint == "fp-outsider"
+    assert outsider_access.encryption_public_key_version == 4
 
 
 def test_api_items_move_demote_requires_chain_wrap():
@@ -1210,7 +1210,7 @@ def test_api_items_move_demote_requires_chain_wrap():
     )
     factories.UserItemAccessFactory(
         item=file_item, user=user, role="owner",
-        encrypted_item_symmetric_key_for_user="WRAP", encryption_public_key_fingerprint="fp",
+        encrypted_item_symmetric_key_for_user="WRAP", encryption_public_key_version=1,
     )
     dest_root = _encrypted_root(user)
 
@@ -1240,7 +1240,7 @@ def test_api_items_move_demote_to_plaintext_rejected():
     )
     factories.UserItemAccessFactory(
         item=file_item, user=user, role="owner",
-        encrypted_item_symmetric_key_for_user="WRAP", encryption_public_key_fingerprint="fp",
+        encrypted_item_symmetric_key_for_user="WRAP", encryption_public_key_version=1,
     )
     plain_target = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")],

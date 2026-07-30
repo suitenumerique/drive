@@ -14,6 +14,16 @@ import {
 } from './MissingEncryptionKeysModal';
 import { ModalEncryptionOnboarding } from './ModalEncryptionOnboarding';
 
+// Drive-owned handle to the live VaultClient, stashed on window so non-React
+// call sites (drivers, deep helpers) can reach it without threading it through.
+// Not part of the SDK surface, so it lives here rather than in the vendored
+// declaration or its shim.
+declare global {
+  interface Window {
+    __driveVaultClient: VaultClient | null;
+  }
+}
+
 const VAULT_URL = process.env.NEXT_PUBLIC_VAULT_URL ?? 'http://localhost:7201';
 const INTERFACE_URL =
   process.env.NEXT_PUBLIC_INTERFACE_URL ?? 'http://localhost:7202';

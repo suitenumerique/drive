@@ -5,11 +5,11 @@ import { Item, ItemType, LinkReach } from '@/features/drivers/types';
 import { getDriver } from '@/features/config/Config';
 import { APIError, errorToString } from '@/features/api/APIError';
 import { useAuth } from '@/features/auth/Auth';
+import { fetchRegisteredKeys } from '@/features/encryption/fetchRegisteredKeys';
 import { useVaultClient } from '../VaultClientProvider';
 import {
   chainForNode,
   fetchSubtree,
-  filesOnly,
   foldersOnly,
   innerEncryptionRoots,
   isInsideInnerRoot,
@@ -170,6 +170,29 @@ export type UseRecursiveEncryptionJob = {
  * PATCH commits the whole fileKeyMapping + encryptedKeysForDescendants in a
  * DB transaction. Failure pre-commit ⇒ DB untouched; rollback is `return;`.
  */
+
+type RecipientLabel = { email: string; name?: string };
+
+/**
+ * Build the SDK's labeled recipient map (sub → {email, name}) for a set of
+ * subs, reading each label from the sourced access-row labels. The vault only
+ * uses the subs (it resolves + trust-checks keys itself); the labels are shown
+ * if the verify-recipients trust modal opens. The fallback placeholder guards
+ * only a sub that has a key but no resolvable access row (should not happen for
+ * individual accesses) and is never shown for a trusted recipient — the modal
+ * surfaces only the blocked ones.
+ */
+function toRecipients(
+  subs: string[],
+  labels: Record<string, RecipientLabel>,
+): Record<string, RecipientLabel> {
+  const recipients: Record<string, RecipientLabel> = {};
+  for (const sub of subs) {
+    recipients[sub] = labels[sub] ?? { email: 'unknown@unknown.invalid' };
+  }
+  return recipients;
+}
+
 export function useRecursiveEncryptionJob({
   mode,
   item,
@@ -188,7 +211,9 @@ export function useRecursiveEncryptionJob({
   const flatRef = useRef<FlatNode[]>([]);
   const processableIdsRef = useRef<string[]>([]);
   const publicKeysRef = useRef<Record<string, ArrayBuffer>>({});
+  const versionsRef = useRef<Record<string, number>>({});
   const pendingUserIdsRef = useRef<string[]>([]);
+  const recipientLabelsRef = useRef<Record<string, RecipientLabel>>({});
   // For encrypt mode, the root's per-user wrapped key map (committed).
   const rootEncryptedKeysRef = useRef<Record<string, ArrayBuffer>>({});
   // Current user's wrapped copy of the root key — entry key passed to the
@@ -218,7 +243,9 @@ export function useRecursiveEncryptionJob({
       flatRef.current = [];
       processableIdsRef.current = [];
       publicKeysRef.current = {};
+      versionsRef.current = {};
       pendingUserIdsRef.current = [];
+      recipientLabelsRef.current = {};
       rootEncryptedKeysRef.current = {};
       currentUserRootWrappedRef.current = null;
       folderWrappedKeysRef.current = new Map();
@@ -343,8 +370,26 @@ export function useRecursiveEncryptionJob({
           }
 
           if (errors.length === 0 && userIds.length > 0) {
-            const { publicKeys } = await vaultClient.fetchPublicKeys(userIds);
+            const { publicKeys, versions } =
+              await fetchRegisteredKeys(userIds);
             if (cancelled) return;
+
+            // Source display labels (email/name) for the recipients so the
+            // SDK's verify-recipients trust modal can identify them — the job
+            // otherwise carries only subs (accesses_user_ids) + pubkeys, and
+            // emails live on the item's access rows.
+            const accessRows = await driver.getItemAccesses(item.id);
+            if (cancelled) return;
+            const labels: Record<string, RecipientLabel> = {};
+            for (const a of accessRows) {
+              if (a.user.sub) {
+                labels[a.user.sub] = {
+                  email: a.user.email,
+                  name: a.user.full_name,
+                };
+              }
+            }
+            recipientLabelsRef.current = labels;
 
             const missing = userIds.filter(uid => !publicKeys[uid]);
             const callerMissing = user?.sub && missing.includes(user.sub);
@@ -372,6 +417,7 @@ export function useRecursiveEncryptionJob({
               // pending on the backend and accepted later from the share
               // dialog. Informational, not blocking.
               publicKeysRef.current = publicKeys;
+              versionsRef.current = versions;
               pendingUserIdsRef.current = missing;
               dispatch({
                 type: 'SET_PENDING_USER_COUNT',
@@ -498,6 +544,7 @@ export function useRecursiveEncryptionJob({
           flat: flatRef.current,
           processableIds: processableIdsRef.current,
           publicKeys: publicKeysRef.current,
+          recipientLabels: recipientLabelsRef.current,
           rootEncryptedKeysRef,
           currentUserRootWrappedRef,
           folderWrappedKeysRef,
@@ -573,38 +620,29 @@ export function useRecursiveEncryptionJob({
           encryptedSymmetricKeyPerUser[uid] = null;
         }
 
-        // Compute a fingerprint for each user whose public key we have
-        // and null for pending users (no public key → no fingerprint).
-        // Backend stores the map verbatim on the ItemAccess rows so
-        // clients can later tell which key each user's wrapped key was
-        // produced for — the "Fingerprint at the time it was shared
-        // with you" line in the key-mismatch panel reads directly from
-        // here. Mirrors the symmetric-key payload: every user on the
-        // access list appears in the map exactly once.
-        const encryptionPublicKeyFingerprintPerUser: Record<
+        // Record the encryption public key version for each user whose
+        // public key we have and null for pending users (no public key →
+        // no version). Backend stores the map verbatim on the ItemAccess
+        // rows so clients can later tell which key version each user's
+        // wrapped key was produced for — the key-staleness check in the
+        // key-mismatch panel reads directly from here. Mirrors the
+        // symmetric-key payload: every user on the access list appears
+        // in the map exactly once.
+        const encryptionPublicKeyVersionPerUser: Record<
           string,
-          string | null
+          number | null
         > = {};
-        for (const [uid, publicKey] of Object.entries(publicKeysRef.current)) {
-          try {
-            encryptionPublicKeyFingerprintPerUser[uid] =
-              await vaultClient.computeKeyFingerprint(publicKey);
-          } catch (err) {
-            console.warn(
-              '[encrypt] computeKeyFingerprint failed for',
-              uid,
-              err,
-            );
-            encryptionPublicKeyFingerprintPerUser[uid] = null;
-          }
+        for (const uid of Object.keys(publicKeysRef.current)) {
+          encryptionPublicKeyVersionPerUser[uid] =
+            versionsRef.current[uid] ?? null;
         }
         for (const uid of pendingUserIdsRef.current) {
-          encryptionPublicKeyFingerprintPerUser[uid] = null;
+          encryptionPublicKeyVersionPerUser[uid] = null;
         }
 
         await driver.encryptItem(item.id, {
           encryptedSymmetricKeyPerUser,
-          encryptionPublicKeyFingerprintPerUser,
+          encryptionPublicKeyVersionPerUser,
           encryptedKeysForDescendants,
           fileKeyMapping,
         });
@@ -739,6 +777,7 @@ type EncryptPipelineArgs = {
   flat: FlatNode[];
   processableIds: string[];
   publicKeys: Record<string, ArrayBuffer>;
+  recipientLabels: Record<string, RecipientLabel>;
   rootEncryptedKeysRef: React.MutableRefObject<Record<string, ArrayBuffer>>;
   currentUserRootWrappedRef: React.MutableRefObject<ArrayBuffer | null>;
   folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
@@ -754,6 +793,7 @@ async function encryptPipeline({
   flat,
   processableIds,
   publicKeys,
+  recipientLabels,
   rootEncryptedKeysRef,
   currentUserRootWrappedRef,
   folderWrappedKeysRef,
@@ -766,13 +806,12 @@ async function encryptPipeline({
   // and encryptWithoutKey is called with the actual file content below.
   if (rootItem.type === ItemType.FOLDER) {
     dispatch({ type: 'UPDATE_ROW', id: rootItem.id, state: 'running' });
-    // Vault SDK is safe-by-default: public-key buffers in
-    // `userPublicKeys` are structured-cloned by postMessage (never in
-    // the transferList), so the same map stays valid for the
-    // `computeKeyFingerprint` calls that follow at submit time.
+    // Pass a labeled recipient map; the vault resolves + trust-checks each key
+    // itself (binding + TOFU) and uses only the subs. `publicKeys` is keyed by
+    // userId; labels come from the sourced access rows.
     const { encryptedKeys } = await vaultClient.encryptWithoutKey(
       new ArrayBuffer(0),
-      publicKeys
+      toRecipients(Object.keys(publicKeys), recipientLabels)
     );
     if (signal.aborted) throw abortError();
     rootEncryptedKeysRef.current = encryptedKeys;
@@ -827,6 +866,7 @@ async function encryptPipeline({
         flat,
         targetId: id,
         publicKeys,
+        recipientLabels,
         rootEncryptedKeysRef,
         currentUserRootWrappedRef,
         folderWrappedKeysRef,
@@ -846,6 +886,7 @@ type StageOneEncryptArgs = {
   flat: FlatNode[];
   targetId: string;
   publicKeys: Record<string, ArrayBuffer>;
+  recipientLabels: Record<string, RecipientLabel>;
   rootEncryptedKeysRef: React.MutableRefObject<Record<string, ArrayBuffer>>;
   currentUserRootWrappedRef: React.MutableRefObject<ArrayBuffer | null>;
   folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
@@ -860,6 +901,7 @@ async function stageOneEncryption({
   flat,
   targetId,
   publicKeys,
+  recipientLabels,
   rootEncryptedKeysRef,
   currentUserRootWrappedRef,
   folderWrappedKeysRef,
@@ -889,12 +931,17 @@ async function stageOneEncryption({
 
     if (rootItem.type === ItemType.FILE && targetId === rootItem.id) {
       // optimizeMemory: hot path — `plaintext` is the full file body
-      // (often several MB) and is discarded after this call. publicKeys
-      // is never in the transferList regardless of the flag.
+      // (often several MB) and is discarded after this call. Pass a labeled
+      // recipient map; the vault resolves + trust-checks each key (binding +
+      // TOFU) and uses only the subs.
       const { encryptedContent: ct, encryptedKeys } =
-        await vaultClient.encryptWithoutKey(plaintext, publicKeys, {
-          optimizeMemory: true,
-        });
+        await vaultClient.encryptWithoutKey(
+          plaintext,
+          toRecipients(Object.keys(publicKeys), recipientLabels),
+          {
+            optimizeMemory: true,
+          }
+        );
       encryptedContent = ct;
       rootEncryptedKeysRef.current = encryptedKeys;
       wrappedKey = new ArrayBuffer(0);
@@ -1244,11 +1291,14 @@ async function decryptPipeline({
         }
         const ciphertext = await resp.arrayBuffer();
 
+        const keyVersion = node.item.encryption_public_key_version_for_user ?? 1;
+
         // optimizeMemory: hot path — file body, ciphertext discarded
         // after this call and plaintext goes straight to S3.
         const { data: plaintext } = await vaultClient.decryptWithKey(
           ciphertext,
           entryKey,
+          keyVersion,
           chain.length > 0 ? chain : undefined,
           { optimizeMemory: true }
         );

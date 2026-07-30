@@ -1050,8 +1050,8 @@ class ItemViewSet(
         encrypted_symmetric_key = validated_data.get("encrypted_symmetric_key")
         is_encryption_root_flag = validated_data.get("is_encryption_root")
         per_user_encrypted_keys = validated_data.get("per_user_encrypted_keys")
-        fingerprint_per_user = validated_data.get(
-            "encryption_public_key_fingerprints", {}
+        version_per_user = validated_data.get(
+            "encryption_public_key_versions", {}
         )
         # Encrypt-on-move payload: the presence of either field is the
         # signal we're looking at the plaintext-into-chain shape (an
@@ -1268,25 +1268,25 @@ class ItemViewSet(
                     code="item_move_caller_wrap_required",
                 )
 
-            # Per-user fingerprints must cover the same set as the wraps.
+            # Per-user versions must cover the same set as the wraps.
             provided_user_subs = set(per_user_encrypted_keys.keys())
-            fingerprint_subs = set(fingerprint_per_user.keys())
-            if fingerprint_subs != provided_user_subs:
-                fp_missing = provided_user_subs - fingerprint_subs
-                fp_extra = fingerprint_subs - provided_user_subs
+            version_subs = set(version_per_user.keys())
+            if version_subs != provided_user_subs:
+                version_missing = provided_user_subs - version_subs
+                version_extra = version_subs - provided_user_subs
                 errors = {}
-                if fp_missing:
-                    errors["missing_users"] = sorted(fp_missing)
-                if fp_extra:
-                    errors["extra_users"] = sorted(fp_extra)
+                if version_missing:
+                    errors["missing_users"] = sorted(version_missing)
+                if version_extra:
+                    errors["extra_users"] = sorted(version_extra)
                 raise drf.exceptions.ValidationError(
                     {
-                        "encryption_public_key_fingerprints": _(
-                            "Fingerprint set must match per-user key set."
+                        "encryption_public_key_versions": _(
+                            "Version set must match per-user key set."
                         ),
                         **errors,
                     },
-                    code="item_move_fingerprints_mismatch",
+                    code="item_move_versions_mismatch",
                 )
 
         elif is_encryption_root_flag is False:
@@ -1395,13 +1395,13 @@ class ItemViewSet(
                     access.encrypted_item_symmetric_key_for_user = (
                         per_user_encrypted_keys[user_sub]
                     )
-                    access.encryption_public_key_fingerprint = (
-                        fingerprint_per_user.get(user_sub) or None
+                    access.encryption_public_key_version = (
+                        version_per_user.get(user_sub) or None
                     )
                     access.save(
                         update_fields=[
                             "encrypted_item_symmetric_key_for_user",
-                            "encryption_public_key_fingerprint",
+                            "encryption_public_key_version",
                         ]
                     )
                     remaining_user_subs.discard(user_sub)
@@ -1428,8 +1428,8 @@ class ItemViewSet(
                         encrypted_item_symmetric_key_for_user=per_user_encrypted_keys[
                             user_sub
                         ],
-                        encryption_public_key_fingerprint=(
-                            fingerprint_per_user.get(user_sub) or None
+                        encryption_public_key_version=(
+                            version_per_user.get(user_sub) or None
                         ),
                     )
 
@@ -2162,27 +2162,27 @@ class ItemViewSet(
         # over the role they currently hold via inheritance so permissions
         # don't change — the new ItemAccess exists purely to hold the
         # encrypted key material.
-        # Per-user fingerprint map — required, must cover the same set
+        # Per-user version map — required, must cover the same set
         # of user subs as the wrapped-key map. Stored alongside the
         # wrapped key so clients can later tell which key the file was
         # encrypted for (surfaced in the "key mismatch" panel when
         # decrypt fails on a rotated key).
-        fingerprint_per_user = serializer.validated_data[
-            "encryption_public_key_fingerprint_per_user"
+        version_per_user = serializer.validated_data[
+            "encryption_public_key_version_per_user"
         ]
-        fingerprint_subs = set(fingerprint_per_user.keys())
-        if fingerprint_subs != provided_user_subs:
-            fp_missing = provided_user_subs - fingerprint_subs
-            fp_extra = fingerprint_subs - provided_user_subs
+        version_subs = set(version_per_user.keys())
+        if version_subs != provided_user_subs:
+            version_missing = provided_user_subs - version_subs
+            version_extra = version_subs - provided_user_subs
             errors = {}
-            if fp_missing:
-                errors["missing_users"] = list(fp_missing)
-            if fp_extra:
-                errors["extra_users"] = list(fp_extra)
+            if version_missing:
+                errors["missing_users"] = list(version_missing)
+            if version_extra:
+                errors["extra_users"] = list(version_extra)
             return drf.response.Response(
                 {
                     "detail": _(
-                        "Provided fingerprints do not match the users in "
+                        "Provided versions do not match the users in "
                         "encrypted_symmetric_key_per_user."
                     ),
                     **errors,
@@ -2200,11 +2200,11 @@ class ItemViewSet(
                     user_sub
                 ]
                 update_fields = ["encrypted_item_symmetric_key_for_user"]
-                if user_sub in fingerprint_per_user:
-                    access.encryption_public_key_fingerprint = (
-                        fingerprint_per_user[user_sub] or None
+                if user_sub in version_per_user:
+                    access.encryption_public_key_version = (
+                        version_per_user[user_sub] or None
                     )
-                    update_fields.append("encryption_public_key_fingerprint")
+                    update_fields.append("encryption_public_key_version")
                 access.save(update_fields=update_fields)
                 remaining_user_subs.discard(user_sub)
 
@@ -2228,8 +2228,8 @@ class ItemViewSet(
                     encrypted_item_symmetric_key_for_user=encrypted_key_per_user[
                         user_sub
                     ],
-                    encryption_public_key_fingerprint=(
-                        fingerprint_per_user.get(user_sub) or None
+                    encryption_public_key_version=(
+                        version_per_user.get(user_sub) or None
                     ),
                 )
 
@@ -2368,7 +2368,7 @@ class ItemViewSet(
         # Clear all per-user encrypted keys on this item's accesses
         models.ItemAccess.objects.filter(item=item).update(
             encrypted_item_symmetric_key_for_user=None,
-            encryption_public_key_fingerprint=None,
+            encryption_public_key_version=None,
         )
 
         # Collect file items in the effective scope for post-commit
@@ -3157,13 +3157,13 @@ class ItemAccessViewSet(
         access.encrypted_item_symmetric_key_for_user = (
             serializer.validated_data["encrypted_item_symmetric_key_for_user"]
         )
-        access.encryption_public_key_fingerprint = (
-            serializer.validated_data["encryption_public_key_fingerprint"]
+        access.encryption_public_key_version = (
+            serializer.validated_data["encryption_public_key_version"]
         )
         access.save(
             update_fields=[
                 "encrypted_item_symmetric_key_for_user",
-                "encryption_public_key_fingerprint",
+                "encryption_public_key_version",
             ]
         )
 

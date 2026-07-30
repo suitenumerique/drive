@@ -5,7 +5,7 @@ export type DTOCreateAccess = {
   userId: string;
   role: Role;
   encrypted_item_symmetric_key_for_user?: string;
-  encryption_public_key_fingerprint?: string;
+  encryption_public_key_version?: number;
 };
 
 export type DTOUpdateAccess = {

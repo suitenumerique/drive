@@ -28,6 +28,7 @@ interface X2TModule {
 }
 
 // Store on window to survive HMR module reloads
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- x2t WASM module global
 const getWindow = (): any => (typeof window !== 'undefined' ? window : {});
 const getX2TModule = (): X2TModule | null => getWindow().__x2tModule ?? null;
 const setX2TModule = (m: X2TModule) => { getWindow().__x2tModule = m; };
@@ -48,6 +49,7 @@ function getX2T(): Promise<X2TModule> {
   if (pending) return pending;
 
   // Check if Module was loaded by a previous render
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- x2t WASM module global
   const existing = (window as any).Module;
   if (existing?.FS?.readdir) {
     setX2TModule(existing as X2TModule);
@@ -59,6 +61,7 @@ function getX2T(): Promise<X2TModule> {
 
     if (document.querySelector(`script[src="${x2tUrl}"]`)) {
       const poll = setInterval(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- x2t WASM module global
         const mod = (window as any).Module;
         if (mod?.FS?.readdir) {
           clearInterval(poll);
@@ -74,10 +77,12 @@ function getX2T(): Promise<X2TModule> {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- x2t WASM module global
     (window as any).Module = {
       locateFile: (path: string) =>
         new URL(`/onlyoffice/x2t/${path}`, window.location.origin).href,
       onRuntimeInitialized: () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- x2t WASM module global
         const mod = (window as any).Module as X2TModule;
         try { mod.FS.mkdir('/working'); } catch {}
         try { mod.FS.mkdir('/working/media'); } catch {}

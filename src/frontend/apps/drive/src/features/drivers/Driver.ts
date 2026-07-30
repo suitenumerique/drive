@@ -202,7 +202,7 @@ export abstract class Driver {
     itemId: string,
     data: {
       encryptedSymmetricKeyPerUser: Record<string, string | null>;
-      encryptionPublicKeyFingerprintPerUser: Record<string, string | null>;
+      encryptionPublicKeyVersionPerUser: Record<string, number | null>;
       encryptedKeysForDescendants: Record<string, string>;
       fileKeyMapping?: Record<string, string>;
     }
@@ -241,7 +241,7 @@ export abstract class Driver {
     accessId: string,
     data: {
       encrypted_item_symmetric_key_for_user: string;
-      encryption_public_key_fingerprint: string;
+      encryption_public_key_version: number;
     }
   ): Promise<void>;
 }

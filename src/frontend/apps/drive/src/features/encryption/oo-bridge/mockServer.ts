@@ -39,6 +39,7 @@ export interface MockServerOptions {
   userId?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor internals
 let editorInstance: any = null;
 /**
  * Diagnostic counter — when > 0, every `sendToEditor` call is logged
@@ -48,6 +49,7 @@ let editorInstance: any = null;
  */
 let verboseSends = 0;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor internals
 export function setEditorInstance(editor: any): void {
   editorInstance = editor;
 }
@@ -258,6 +260,7 @@ export function createMockServerCallbacks(
                     peerLocksShownToEditor.add(key);
                   }
                 }
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice message protocol
                 sendToEditor({ type: 'getLock', locks } as any);
               })
               .catch(err => {
@@ -267,6 +270,7 @@ export function createMockServerCallbacks(
                 // either have a fresh connection or have surfaced the
                 // disconnect to the user.
                 console.warn('[lockArbitrator] claim failed:', err);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice message protocol
                 sendToEditor({ type: 'getLock', locks: {} } as any);
               });
             break;
@@ -284,6 +288,7 @@ export function createMockServerCallbacks(
               block,
             };
           }
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice message protocol
           sendToEditor({ type: 'getLock', locks } as any);
           break;
         }
@@ -383,10 +388,12 @@ export function createMockServerCallbacks(
           break;
 
         case 'message': {
-          const payload = (msg as any).messages
-            ? ((msg as any).messages as unknown[])
-            : (msg as any).message !== undefined
-              ? [(msg as any).message]
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice message protocol
+          const anyMsg = msg as any;
+          const payload = anyMsg.messages
+            ? (anyMsg.messages as unknown[])
+            : anyMsg.message !== undefined
+              ? [anyMsg.message]
               : [];
           if (payload.length > 0) {
             options.onMessageBroadcast?.(payload);
@@ -396,6 +403,7 @@ export function createMockServerCallbacks(
 
         case 'meta': {
           const payload =
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice message protocol
             ((msg as any).messages as unknown[] | undefined) ?? [];
           if (payload.length > 0) {
             options.onMetaBroadcast?.(payload);
