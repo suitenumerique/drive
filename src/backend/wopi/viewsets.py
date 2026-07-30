@@ -16,7 +16,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from sentry_sdk import capture_exception
 
-from core.api.utils import get_item_file_head_object
+from core.api.utils import get_item_file_head_object, sanitize_filename
 from core.models import Item
 from wopi.authentication import WopiAccessTokenAuthentication
 from wopi.permissions import AccessTokenPermission
@@ -322,19 +322,26 @@ class WopiViewSet(viewsets.ViewSet):
         return Response(status=200)
 
     def _resolve_rename_target(self, item, request):
-        """Return the filename requested by a rename, with the current extension."""
+        """Return the title and filename requested by a rename."""
         requested_name = request.META.get("HTTP_X_WOPI_REQUESTEDNAME")
 
         if not requested_name:
             raise ValidationError("No filename provided")
 
         # Convert it to utf-7 to avoid issues with special characters
-        new_filename = requested_name.encode("ascii").decode("utf-7")
+        new_title = requested_name.encode("ascii").decode("utf-7")
+
+        # The requested name ends up in the storage key, sanitize it like the
+        # rename task does while keeping the requested name as the item title
+        try:
+            new_filename = sanitize_filename(new_title)
+        except ValidationError as error:
+            raise ValidationError("Invalid filename") from error
 
         _, current_extension = splitext(item.filename)
         new_filename_with_extension = f"{new_filename}{current_extension}"
 
-        return new_filename, new_filename_with_extension
+        return new_title, new_filename, new_filename_with_extension
 
     def _rename_file(self, request, pk=None):
         """
@@ -347,7 +354,9 @@ class WopiViewSet(viewsets.ViewSet):
             return Response(status=401)
 
         try:
-            new_filename, new_filename_with_extension = self._resolve_rename_target(item, request)
+            new_title, new_filename, new_filename_with_extension = self._resolve_rename_target(
+                item, request
+            )
         except ValidationError as error:
             return Response(
                 status=400,
@@ -379,7 +388,7 @@ class WopiViewSet(viewsets.ViewSet):
 
         file_key = item.file_key
         item.filename = new_filename_with_extension
-        item.title = new_filename
+        item.title = new_title
 
         # ensure renaming the file in the database and on the storage are done atomically
         with transaction.atomic():

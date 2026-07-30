@@ -49,7 +49,7 @@ def test_rename_file_success():
     assert response.status_code == 200
 
     item.refresh_from_db()
-    assert item.filename == "new name.txt"
+    assert item.filename == "new_name.txt"
     assert item.title == "new name"
 
     assert len(response.content) == 0
@@ -88,9 +88,9 @@ def test_rename_file_success_accept_json():
     assert response.status_code == 200
 
     item.refresh_from_db()
-    assert item.filename == "new name.txt"
+    assert item.filename == "new_name.txt"
     assert item.title == "new name"
-    assert response.json()["Name"] == "new name"
+    assert response.json()["Name"] == "new_name"
 
 
 def test_rename_file_no_filename():
@@ -238,6 +238,44 @@ def test_rename_file_with_invalid_lock():
     )
     assert response.status_code == 409
     assert response.headers.get(X_WOPI_LOCK) == "1234567890"
+
+
+def test_rename_file_with_path_separator():
+    """Path separators in the requested name are stripped before renaming."""
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    item = factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.EDITOR,
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
+
+    service = AccessUserItemService()
+    access_token, _ = service.insert_new_access(item, user)
+
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+    client = APIClient()
+    response = client.post(
+        f"/api/v1.0/wopi/files/{item.id}/",
+        HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        headers={
+            "X-WOPI-Override": "RENAME_FILE",
+            # "+AC8-" is the UTF-7 encoding of "/"
+            "X-WOPI-RequestedName": "bridge+AC8-",
+            "Accept": "application/json",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["Name"] == "bridge"
+
+    item.refresh_from_db()
+    assert item.filename == "bridge.txt"
 
 
 def test_rename_file_storage_error():
