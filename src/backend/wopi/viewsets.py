@@ -5,7 +5,7 @@ import uuid
 from os.path import splitext
 
 from django.conf import settings
-from django.core.exceptions import RequestDataTooBig
+from django.core.exceptions import RequestDataTooBig, ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import transaction
@@ -321,6 +321,21 @@ class WopiViewSet(viewsets.ViewSet):
         lock_service.lock(new_lock_value)
         return Response(status=200)
 
+    def _resolve_rename_target(self, item, request):
+        """Return the filename requested by a rename, with the current extension."""
+        requested_name = request.META.get("HTTP_X_WOPI_REQUESTEDNAME")
+
+        if not requested_name:
+            raise ValidationError("No filename provided")
+
+        # Convert it to utf-7 to avoid issues with special characters
+        new_filename = requested_name.encode("ascii").decode("utf-7")
+
+        _, current_extension = splitext(item.filename)
+        new_filename_with_extension = f"{new_filename}{current_extension}"
+
+        return new_filename, new_filename_with_extension
+
     def _rename_file(self, request, pk=None):
         """
         Rename the file
@@ -331,25 +346,20 @@ class WopiViewSet(viewsets.ViewSet):
         if not abilities["update"]:
             return Response(status=401)
 
-        new_filename = request.META.get("HTTP_X_WOPI_REQUESTEDNAME")
-
-        if not new_filename:
+        try:
+            new_filename, new_filename_with_extension = self._resolve_rename_target(item, request)
+        except ValidationError as error:
             return Response(
                 status=400,
-                headers={X_WOPI_INVALIDFILENAMERROR: "No filename provided"},
+                headers={X_WOPI_INVALIDFILENAMERROR: error.messages[0]},
             )
 
-        # Convert it to utf-7 to avoid issues with special characters
-        new_filename = new_filename.encode("ascii").decode("utf-7")
         lock_service = LockService(item)
         if lock_service.is_locked():
             current_lock_value = lock_service.get_lock(default="")
             lock_value = request.META.get(HTTP_X_WOPI_LOCK)
             if current_lock_value != lock_value:
                 return Response(status=409, headers={X_WOPI_LOCK: current_lock_value})
-
-        _, current_extension = splitext(item.filename)
-        new_filename_with_extension = f"{new_filename}{current_extension}"
 
         parent_path = item.path[:-1]
         # Filter on siblings with the desired filename
