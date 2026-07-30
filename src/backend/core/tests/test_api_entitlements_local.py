@@ -419,6 +419,31 @@ def test_api_entitlements_local_cache_invalidated_on_item_save(
     assert response.json()["quota"]["usage"] == 700
 
 
+@override_settings(
+    ENTITLEMENTS_BACKEND=LOCAL_BACKEND,
+    ENTITLEMENTS_BACKEND_PARAMETERS={"default_storage_limit": 1000},
+)
+def test_api_entitlements_local_cache_invalidated_on_quota_excluded(
+    django_capture_on_commit_callbacks,
+):
+    """Flagging an item as quota excluded should invalidate the creator's cached usage."""
+    client = APIClient()
+    user = factories.UserFactory()
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FILE, creator=user, size=400)
+    client.force_authenticate(user)
+
+    response = client.get("/api/v1.0/entitlements/")
+    assert response.json()["quota"]["usage"] == 400
+
+    item.quota_excluded = True
+    with django_capture_on_commit_callbacks(execute=True):
+        item.save(update_fields=["quota_excluded"])
+
+    assert cache.get(get_storage_used_cache_key(user.id)) is None
+    response = client.get("/api/v1.0/entitlements/")
+    assert response.json()["quota"]["usage"] == 0
+
+
 def test_api_entitlements_local_cache_invalidated_on_hard_delete(
     django_capture_on_commit_callbacks,
 ):

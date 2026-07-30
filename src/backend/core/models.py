@@ -49,7 +49,7 @@ from wopi.conversion.policy import target_extension_for
 logger = getLogger(__name__)
 
 # Item fields whose update can change the storage used by a user.
-STORAGE_USED_FIELDS = {"size", "creator", "creator_id", "hard_deleted_at"}
+STORAGE_USED_FIELDS = {"size", "creator", "creator_id", "hard_deleted_at", "quota_excluded"}
 
 
 def get_trashbin_cutoff():
@@ -1021,6 +1021,10 @@ class Item(TreeModel, BaseModel):
     mimetype = models.CharField(max_length=255, null=True, blank=True)
     main_workspace = models.BooleanField(default=False)
     size = models.BigIntegerField(null=True, blank=True)
+    quota_excluded = models.BooleanField(
+        default=False,
+        help_text=_("Exclude this item from its creator's storage quota computation."),
+    )
     description = models.TextField(null=True, blank=True)
     malware_detection_info = models.JSONField(
         null=True,
@@ -1054,8 +1058,8 @@ class Item(TreeModel, BaseModel):
             models.Index(
                 fields=["creator"],
                 include=["size"],
-                condition=models.Q(hard_deleted_at__isnull=True),
-                name="item_creator_size_not_hdel_idx",
+                condition=models.Q(hard_deleted_at__isnull=True, quota_excluded=False),
+                name="item_creator_size_quota_idx",
             ),
         ]
 

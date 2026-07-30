@@ -39,3 +39,21 @@ def test_compute_storage_used_keeps_soft_deleted_items():
     soft_deleted.soft_delete()
 
     assert CreatorStorageComputeBackend().compute_storage_used([user]) == 350
+
+
+def test_compute_storage_used_excludes_quota_excluded_items():
+    """Items flagged as quota excluded should not count toward the storage used."""
+    user = factories.UserFactory()
+    factories.ItemFactory(creator=user, size=100)
+    factories.ItemFactory(creator=user, size=250, quota_excluded=True)
+
+    assert CreatorStorageComputeBackend().compute_storage_used([user]) == 100
+
+
+def test_compute_storage_used_only_quota_excluded_items():
+    """A user owning only quota excluded items should have a storage used of zero."""
+    user = factories.UserFactory()
+    factories.ItemFactory(creator=user, size=100, quota_excluded=True)
+    factories.ItemFactory(creator=user, size=250, quota_excluded=True)
+
+    assert CreatorStorageComputeBackend().compute_storage_used([user]) == 0
