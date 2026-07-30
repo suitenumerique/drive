@@ -25,7 +25,6 @@ import {
   convertFromInternal,
   convertFromInternalToPdf,
 } from './x2tConverter';
-import { extractMedia } from './odtBundle';
 import { EXTENSION_TO_X2T_TYPE } from './types';
 import { getEffectiveMimetype } from '@/features/explorer/utils/mimeTypes';
 import { KeyMismatchPanel } from '@/features/encryption/KeyMismatchPanel';
@@ -60,9 +59,6 @@ import {
   acquireCellLock,
   releaseCellLock,
   releaseAllUserLocks,
-  acquireSaveLock,
-  releaseSaveLock,
-  isSaveLocked,
   resetAllLocks,
 } from './locks';
 import {
@@ -97,7 +93,9 @@ declare global {
 }
 
 interface OOEditorInstance {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
   connectMockServer: (callbacks: any) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
   sendMessageToOO: (msg: any) => void;
   asc_nativeGetFile: () => Uint8Array;
   destroyEditor: () => void;
@@ -171,6 +169,7 @@ function sendToEditorGuarded(msg: { type?: string } & Record<string, unknown>) {
     );
     return;
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
   sendToEditor(msg as any);
 }
 
@@ -195,7 +194,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     detail: string;
   } | null>(null);
   const [saveRetrying, setSaveRetrying] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
+  const [, setIsConnected] = useState(false);
   const [relayFailed, setRelayFailed] = useState(false);
   /**
    * Bumped when the relay tells us our history cursor is stale (close
@@ -235,23 +234,6 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   // excluded from leader election: a crashed editor can't run
   // `forceSave`. Cleared when the peer disconnects or we rejoin.
   const crashedPeersRef = useRef<Set<string>>(new Set());
-  /**
-   * Set true when a `peer:needs-save` arrives from a peer recovering
-   * from a crash. The next `save:committed` broadcast we observe is
-   * then the save that the crashed peer asked for, and we must reinit
-   * ourselves from the fresh S3 bytes to keep our OO load-phase IDs
-   * aligned with the recovering peer's fresh load. Without this
-   * realignment, saveChanges we broadcast after the peer's reload
-   * reference internal ids they no longer recognise (and vice-versa)
-   * — the OT engine then silently drops those patches or crashes.
-   *
-   * Cleared after triggering reinit, or by a timeout if the save
-   * never lands (leader dead, network wedged, etc).
-   */
-  const pendingRecoveryReinitRef = useRef(false);
-  const pendingRecoveryReinitTimerRef = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
   /**
    * Peer state transfer (CryptPad-style). We keep the .bin OO loaded
    * from AND every saveChanges frame observed since that load, all
@@ -324,6 +306,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   const awaitingPeerStateRef = useRef(false);
   // Reference to the inner OO iframe's window — used to register media in
   // g_oDocumentUrls when inbound saveChanges envelopes carry inline images.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
   const innerWindowRef = useRef<any>(null);
   /**
    * Remote saveChanges envelopes that arrived before OO finished loading
@@ -526,6 +509,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       const ooIframe = document.querySelector(
         'iframe[name="frameEditor"]'
       ) as HTMLIFrameElement | null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
       const innerWindow = ooIframe?.contentWindow as any;
       const innerEditor = innerWindow?.editor || innerWindow?.editorCell;
       // OO exposes a few aliases; walk them defensively.
@@ -540,6 +524,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         );
         return;
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
       const preview = content.slice(0, 5).map((el: any, i: number) => {
         let text = '';
         try {
@@ -572,7 +557,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   // is a quick way to eyeball whether the IDs referenced in the live
   // saveChanges resolve on both peers.
   if (typeof window !== 'undefined') {
-    (window as any).__driveLogIds = (label?: string) =>
+    window.__driveLogIds = (label?: string) =>
       logParagraphIds(label ?? 'manual');
   }
 
@@ -1079,11 +1064,17 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           return bytes.buffer;
         });
 
+        // Version of the user's encryption key this wrap was produced against,
+        // stored on the access row. Default to 1 for the current single-version
+        // reality when the field is absent.
+        const keyVersion = item.encryption_public_key_version_for_user ?? 1;
+
         // optimizeMemory: hot path — decrypted document bins are routinely
         // several MB and `encryptedBuffer` is not reused after this call.
         const { data: decryptedBuffer } = await vaultClient.decryptWithKey(
           encryptedBuffer,
           entryKeyBytes.buffer,
+          keyVersion,
           encryptedKeyChain.length > 0 ? encryptedKeyChain : undefined,
           { optimizeMemory: true }
         );
@@ -1099,12 +1090,14 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         setState('converting');
         const converted = await convertToInternal(decryptedBuffer, filename);
         const bin: Uint8Array = converted.bin;
-        let extractedImages: Array<{ name: string; data: Uint8Array }> =
+        const extractedImages: Array<{ name: string; data: Uint8Array }> =
           converted.images;
         if (cancelled) return;
 
         // Step 4: Create blob URL and load editor
-        const blob = new Blob([bin], {
+        // Copy into a fresh ArrayBuffer-backed view so the value is a
+        // valid `BlobPart` (a Uint8Array over a `SharedArrayBuffer` is not).
+        const blob = new Blob([new Uint8Array(bin)], {
           type: 'application/octet-stream',
         });
         // `let` so we can swap in a peer-provided blob after the
@@ -1113,10 +1106,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
 
         // Initialize participant tracking
         // Use user.sub (OIDC subject) — same ID the relay server uses
-        const localUser = initLocalUser(
-          user.sub!,
-          user.full_name || user.email
-        );
+        initLocalUser(user.sub!, user.full_name || user.email);
         const uniqueOOId = getUniqueOOId();
         resetPatchIndex(0);
 
@@ -1201,6 +1191,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               // encryptedRelay.ts), so they broadcast end-to-end
               // encrypted between editor peers.
               chat: true,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
             } as any,
             // Single source of truth for permissions — there used to be
             // TWO `permissions` blocks on this object, the second one
@@ -1222,6 +1213,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               editCommentAuthorOnly: false,
               macros: 'none',
               protect: false,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
             } as any,
           },
           events: {
@@ -1235,6 +1227,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 const ooIframe = document.querySelector(
                   'iframe[name="frameEditor"]'
                 ) as HTMLIFrameElement | null;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                 const innerWindow = ooIframe?.contentWindow as any;
                 const docUrls = innerWindow?.AscCommon?.g_oDocumentUrls;
                 if (docUrls && extractedImages.length > 0) {
@@ -1385,6 +1378,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   const ooIframe = document.querySelector(
                     'iframe[name="frameEditor"]'
                   ) as HTMLIFrameElement | null;
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                   const innerWindow = ooIframe?.contentWindow as any;
                   const editor = innerWindow?.editor;
                   // Resolve the prototype that holds `asc_PasteData`
@@ -1395,9 +1389,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                   const proto = editor && Object.getPrototypeOf(editor);
                   if (proto && typeof proto.asc_PasteData === 'function') {
                     const original = proto.asc_PasteData;
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                     if (!(original as any).__driveSlidePasteWrapped) {
                       proto.asc_PasteData = function (
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                         this: any,
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                         ...args: any[]
                       ) {
                         // args[0] is the format kind: 4 = OO internal
@@ -1408,6 +1405,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                           formatKind === 8 &&
                           typeof this.Paste === 'function'
                         ) {
+                          // eslint-disable-next-line @typescript-eslint/no-this-alias
                           const self = this;
                           setTimeout(() => {
                             try {
@@ -1423,6 +1421,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                         }
                         return original.apply(this, args);
                       };
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                       (proto.asc_PasteData as any).__driveSlidePasteWrapped =
                         true;
                     }
@@ -1485,6 +1484,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 const ooIframe = document.querySelector(
                   'iframe[name="frameEditor"]'
                 ) as HTMLIFrameElement | null;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                 const innerWindow = ooIframe?.contentWindow as any;
                 const innerEditor =
                   innerWindow?.editor || innerWindow?.editorCell;
@@ -1521,6 +1521,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 const ooIframe = document.querySelector(
                   'iframe[name="frameEditor"]'
                 ) as HTMLIFrameElement | null;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                 const innerWindow = ooIframe?.contentWindow as any;
                 innerWindowRef.current = innerWindow;
 
@@ -1879,7 +1880,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 ) {
                   let imgCounter = 0;
                   innerWindow.AscCommon.sendImgUrls = function (
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                     api: any,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                     images: any[],
                     callback: (
                       data: Array<{ url: string; path: string }>
@@ -2026,16 +2029,17 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     proto._downloadAsUsingServer = function (
                       _actionType: unknown,
                       _options: unknown,
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                       oAdditionalData: any,
                       _dataContainer: unknown,
                       downloadType: unknown
                     ) {
-                      (window as any).__driveDownloadCtx = {
+                      window.__driveDownloadCtx = {
                         title: oAdditionalData?.title,
                         outputformat: oAdditionalData?.outputformat,
                         downloadType,
                       };
-                      // eslint-disable-next-line prefer-rest-params
+                      // eslint-disable-next-line prefer-rest-params, @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                       return original.apply(this, arguments as any);
                     };
                     proto.__driveDownloadPatched = true;
@@ -2051,6 +2055,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               setErrorCode(null);
               setState('error');
             },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
           } as any,
         };
 
@@ -2065,7 +2070,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // passes null for userName, panel passes the username) and the same
         // user ends up with two different colors. Returning a deterministic
         // color per id keeps both call sites in sync.
-        (window as any).APP = (window as any).APP || {};
+        const app = (window.APP ??= {});
         // Theme hooks: OO's ChangeTheme calls window.parent.APP.changeTheme
         // when the LOCAL user picks a slide theme. The patched SDK in this
         // bundle also calls APP.remoteTheme() when applying a remote peer's
@@ -2073,10 +2078,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         // actual theme data already propagates through the normal OT
         // saveChanges pipeline (ChangeTheme creates a history point), so
         // these callbacks are purely notification hooks — no-ops are safe.
-        (window as any).APP.changeTheme = (_indexTheme: number) => {
+        app.changeTheme = (_indexTheme: number) => {
           /* no-op — theme change propagates via OT saveChanges */
         };
-        (window as any).APP.remoteTheme = () => {
+        app.remoteTheme = () => {
           /* no-op — remote theme applied by OO internally via ChangeTheme(id, null, true) */
         };
         // Image insertion: OO calls window.parent.APP.UploadImageFiles when
@@ -2122,7 +2127,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         };
 
         // Drag-and-drop / paste path.
-        (window as any).APP.UploadImageFiles = (
+        app.UploadImageFiles = (
           files: FileList | File[],
           _documentId: string,
           _documentUserId: string,
@@ -2163,7 +2168,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           odp: 'application/vnd.oasis.opendocument.presentation',
         };
 
-        (window as any).APP.printPdf = (
+        app.printPdf = (
           dataContainer: { data: Uint8Array | ArrayBuffer | null },
           callback: (result: unknown) => void
         ) => {
@@ -2172,6 +2177,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               const ooIframe = document.querySelector(
                 'iframe[name="frameEditor"]'
               ) as HTMLIFrameElement | null;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
               const innerWindow = ooIframe?.contentWindow as any;
               const innerEditor =
                 innerWindow?.editor || innerWindow?.editorCell;
@@ -2192,6 +2198,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 binBuffer = rawBin.buffer;
               }
 
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
               const ctx = (window as any).__driveDownloadCtx ?? {};
               const title: string = ctx.title || `document.${x2tExtension}`;
               const ext = (
@@ -2337,7 +2344,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
 
         // Modal "Insert image / Replace image / From file" path: opens a
         // file picker and forwards the result through the same converter.
-        (window as any).APP.AddImage = (
+        app.AddImage = (
           successCb: (res: { url: string; name: string }) => void,
           errorCb?: (err?: unknown) => void
         ) => {
@@ -2360,7 +2367,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           input.click();
         };
 
-        (window as any).APP.getUserColor = (userId: string) => {
+        app.getUserColor = (userId: string) => {
           if (!userId) return null;
           // 16 colors evenly distributed on the HSL wheel — same id → same color.
           let hash = 0;
@@ -2523,6 +2530,10 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               encryptedSymmetricKey: entryKeyBytes.buffer,
               encryptedKeyChain:
                 encryptedKeyChain.length > 0 ? encryptedKeyChain : [],
+              // Version of the user's encryption key the entry-point wrap was
+              // produced against, stored on the access row. Default to 1 for the
+              // current single-version reality when the field is absent.
+              keyVersion: item.encryption_public_key_version_for_user ?? 1,
               callbacks: {
                 onSaveChanges: (_userId, message, media) => {
                   // Media is accumulated the same way in both phases so it
@@ -2579,6 +2590,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       message as Record<string, unknown>
                     );
                     withIncomingOTGate(() =>
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                       sendToEditorGuarded(message as any)
                     );
                   };
@@ -2613,6 +2625,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     }
                   }
                   addRemoteUser(userId, userName, userId);
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                   sendToEditor(buildConnectStateMessage() as any);
                 },
                 onPeerLeave: userId => {
@@ -2664,6 +2677,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       })),
                     });
                   }
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                   sendToEditor(buildConnectStateMessage() as any);
                 },
                 onRoomState: peers => {
@@ -2694,6 +2708,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       addRemoteUser(peer.userId, peer.userName, peer.userId);
                     }
                   }
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                   sendToEditor(buildConnectStateMessage() as any);
 
                   // If other editable peers are already in the room, ask
@@ -2759,6 +2774,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                       user: remoteOOId || userId,
                       time: Date.now(),
                     };
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                     const guid = (block as any)?.guid;
                     const key =
                       guid ||
@@ -2771,6 +2787,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     sendToEditor({
                       type: 'getLock',
                       locks,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                     } as any);
                   if (!documentReadyRef.current) {
                     pendingRemoteChangesRef.current.push(apply);
@@ -2796,6 +2813,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                           time: Date.now(),
                         },
                       ],
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                     } as any);
                   if (!documentReadyRef.current) {
                     pendingRemoteChangesRef.current.push(apply);
@@ -2805,6 +2823,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 },
                 onMessageBroadcast: (_userId, messages) => {
                   const apply = () =>
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                     sendToEditorGuarded({ type: 'message', messages } as any);
                   if (!documentReadyRef.current) {
                     pendingRemoteChangesRef.current.push(apply);
@@ -2814,6 +2833,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                 },
                 onMetaBroadcast: (_userId, messages) => {
                   const apply = () =>
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                     sendToEditorGuarded({ type: 'meta', messages } as any);
                   if (!documentReadyRef.current) {
                     pendingRemoteChangesRef.current.push(apply);
@@ -3022,6 +3042,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     sendToEditorGuarded({
                       type: 'getLock',
                       locks,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                     } as any);
                   }
                 },
@@ -3228,6 +3249,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
           for (const chainMsg of peerDump.chain) {
             const apply = () => {
               observeIncomingSaveChanges(chainMsg as Record<string, unknown>);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
               withIncomingOTGate(() => sendToEditorGuarded(chainMsg as any));
             };
             handleIncomingSaveChanges(
@@ -3377,6 +3399,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
                     document.querySelector(
                       'iframe[name="frameEditor"]'
                     ) as HTMLIFrameElement | null
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- OnlyOffice editor bundle boundary
                   )?.contentWindow as any;
                   const innerEditor =
                     innerWindow?.editor || innerWindow?.editorCell;
@@ -3536,7 +3559,6 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       // destroyed instance.
       setEditorInstance(null);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.id, reinitKey]);
 
   if (state === 'error') {
@@ -3551,7 +3573,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
     if (isKeyMismatch) {
       return (
         <KeyMismatchPanel
-          shareTimeFingerprint={item.encryption_public_key_fingerprint_for_user}
+          shareTimeVersion={item.encryption_public_key_version_for_user}
         />
       );
     }

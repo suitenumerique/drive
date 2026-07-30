@@ -91,6 +91,10 @@ export interface OOConfig {
       name: string;
     };
     lang: string;
+    coEditing?: {
+      mode: 'fast' | 'strict';
+      change: boolean;
+    };
     customization?: {
       chat?: boolean;
       compactToolbar: boolean;
@@ -267,3 +271,53 @@ export const EXTENSION_TO_X2T_TYPE: Record<string, string> = {
   ppt: 'presentation',
   odp: 'presentation',
 };
+
+/**
+ * Context captured when OnlyOffice routes a download/print through our
+ * patched `_downloadAsUsingServer`, read back in the `printPdf` hook to
+ * pick the target format.
+ */
+export interface DriveDownloadContext {
+  title?: string;
+  outputformat?: string;
+  downloadType?: unknown;
+}
+
+/**
+ * The `window.APP` bridge object OnlyOffice's `connectMockServer` reads
+ * from. Only the hooks the drive bridge installs are typed here; the
+ * signatures are derived from how OnlyOffice invokes each one.
+ */
+export interface OOAppBridge {
+  changeTheme?: (indexTheme: number) => void;
+  remoteTheme?: () => void;
+  UploadImageFiles?: (
+    files: FileList | File[],
+    documentId: string,
+    documentUserId: string,
+    jwt: string,
+    callback: (err: number | null, urls: string[]) => void
+  ) => void;
+  printPdf?: (
+    dataContainer: { data: Uint8Array | ArrayBuffer | null },
+    callback: (result: unknown) => void
+  ) => void;
+  AddImage?: (
+    successCb: (res: { url: string; name: string }) => void,
+    errorCb?: (err?: unknown) => void
+  ) => void;
+  getUserColor?: (
+    userId: string
+  ) => { r: number; g: number; b: number; a: number } | null;
+}
+
+// Globals the drive OO bridge itself sets on `window` (as opposed to the
+// OnlyOffice-owned `DocsAPI`, declared in OOEditor.tsx). Typed so the
+// assignment/read sites need no `any`.
+declare global {
+  interface Window {
+    __driveLogIds?: (label?: string) => void;
+    __driveDownloadCtx?: DriveDownloadContext;
+    APP?: OOAppBridge;
+  }
+}
