@@ -26,6 +26,7 @@ and this project adheres to
 
 - 🐛(docker) pin collabora image and adapt to its new runtime contract
 - 🐛(backend) delete malware detection record when purging an item
+- 🔒️(backend) validate the filename requested by a WOPI rename
 
 ## [v0.20.0] - 2026-07-15
 

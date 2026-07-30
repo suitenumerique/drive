@@ -278,6 +278,138 @@ def test_rename_file_with_path_separator():
     assert item.filename == "bridge.txt"
 
 
+@pytest.mark.parametrize(
+    "requested_name",
+    [
+        "malware.exe",
+        # "+AC8-" and "+AFw-" are the UTF-7 encodings of "/" and "\"
+        "bridge+AC8-",
+        "+AC8-",
+        "..+AC8-..",
+        "malware.exe+AC8-",
+        "bridge+AFw-",
+    ],
+)
+def test_rename_file_keeps_the_current_extension(requested_name):
+    """A rename never changes the extension nor puts a separator in the filename."""
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    item = factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.EDITOR,
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
+
+    service = AccessUserItemService()
+    access_token, _ = service.insert_new_access(item, user)
+
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+    client = APIClient()
+    client.post(
+        f"/api/v1.0/wopi/files/{item.id}/",
+        HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        headers={
+            "X-WOPI-Override": "RENAME_FILE",
+            "X-WOPI-RequestedName": requested_name,
+        },
+    )
+
+    item.refresh_from_db()
+    assert item.filename.endswith(".txt")
+    assert "/" not in item.filename
+    assert "\\" not in item.filename
+
+
+def test_rename_file_extension_not_allowed():
+    """Renaming to a filename whose extension is not allowed should return 400."""
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    item = factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.EDITOR,
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
+
+    service = AccessUserItemService()
+    access_token, _ = service.insert_new_access(item, user)
+
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+    client = APIClient()
+    response = client.post(
+        f"/api/v1.0/wopi/files/{item.id}/",
+        HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        headers={
+            "X-WOPI-Override": "RENAME_FILE",
+            "X-WOPI-RequestedName": "malware.exe",
+        },
+    )
+    assert response.status_code == 400
+    assert response.headers.get(X_WOPI_INVALIDFILENAMERROR) == "This file extension is not allowed"
+
+    item.refresh_from_db()
+    assert item.filename == "wopi_test"
+
+
+def test_rename_file_cannot_drop_the_current_extension():
+    """Renaming twice through a path separator should not clear the file extension."""
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    item = factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.EDITOR,
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
+
+    service = AccessUserItemService()
+    access_token, _ = service.insert_new_access(item, user)
+
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+    client = APIClient()
+
+    # A first rename ending with a separator would make the extension empty
+    response = client.post(
+        f"/api/v1.0/wopi/files/{item.id}/",
+        HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        headers={
+            "X-WOPI-Override": "RENAME_FILE",
+            "X-WOPI-RequestedName": "bridge+AC8-",
+        },
+    )
+    assert response.status_code == 200
+
+    # A second rename would then apply an arbitrary extension
+    response = client.post(
+        f"/api/v1.0/wopi/files/{item.id}/",
+        HTTP_AUTHORIZATION=f"Bearer {access_token}",
+        headers={
+            "X-WOPI-Override": "RENAME_FILE",
+            "X-WOPI-RequestedName": "malware.exe",
+        },
+    )
+    assert response.status_code == 200
+
+    item.refresh_from_db()
+    assert item.filename == "malware.exe.txt"
+
+
 def test_rename_file_storage_error():
     """File rename should fail when storage operation fails."""
     folder = factories.ItemFactory(

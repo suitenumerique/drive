@@ -322,26 +322,37 @@ class WopiViewSet(viewsets.ViewSet):
         return Response(status=200)
 
     def _resolve_rename_target(self, item, request):
-        """Return the title and filename requested by a rename."""
+        """Return the title and filename requested by a rename, both validated."""
         requested_name = request.META.get("HTTP_X_WOPI_REQUESTEDNAME")
 
         if not requested_name:
             raise ValidationError("No filename provided")
 
         # Convert it to utf-7 to avoid issues with special characters
-        new_title = requested_name.encode("ascii").decode("utf-7")
+        title = requested_name.encode("ascii").decode("utf-7")
 
         # The requested name ends up in the storage key, sanitize it like the
         # rename task does while keeping the requested name as the item title
         try:
-            new_filename = sanitize_filename(new_title)
+            filename = sanitize_filename(title)
         except ValidationError as error:
             raise ValidationError("Invalid filename") from error
 
         _, current_extension = splitext(item.filename)
-        new_filename_with_extension = f"{new_filename}{current_extension}"
+        filename_with_extension = f"{filename}{current_extension}"
 
-        return new_title, new_filename, new_filename_with_extension
+        if (
+            settings.RESTRICT_UPLOAD_FILE_TYPE
+            and current_extension.lower() not in settings.FILE_EXTENSIONS_ALLOWED
+        ):
+            logger.info(
+                "rename_file: file extension not allowed %s for filename %s",
+                current_extension,
+                filename_with_extension,
+            )
+            raise ValidationError("This file extension is not allowed")
+
+        return title, filename, filename_with_extension
 
     def _rename_file(self, request, pk=None):
         """
