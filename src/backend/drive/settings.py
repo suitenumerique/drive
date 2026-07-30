@@ -1296,6 +1296,15 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # Extra attributes applied to items created through the external API,
+    # keyed by the token audience of the request,
+    # e.g. {"some_audience": {"quota_excluded": True}}
+    EXTERNAL_API_AUD_ITEM_ATTRIBUTES = values.DictValue(
+        default={},
+        environ_name="EXTERNAL_API_AUD_ITEM_ATTRIBUTES",
+        environ_prefix=None,
+    )
+
     OIDC_RS_PRIVATE_KEY_STR = values.Value(
         default=None,
         environ_name="OIDC_RS_PRIVATE_KEY_STR",

@@ -59,6 +59,29 @@ def test_api_items_create_authenticated_success():
     assert item.type == ItemTypeChoices.FOLDER
 
 
+@override_settings(
+    EXTERNAL_API_AUD_ITEM_ATTRIBUTES={"some_service_provider": {"quota_excluded": True}}
+)
+def test_api_items_create_authenticated_ignores_aud_item_attributes():
+    """Per-audience attributes only apply to the external API, never to the regular API."""
+    user = factories.UserFactory()
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "title": "my item",
+            "type": ItemTypeChoices.FOLDER,
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+    item = Item.objects.get()
+    assert item.quota_excluded is False
+
+
 def test_api_items_create_file_authenticated_no_filename():
     """
     Creating a file item without providing a filename should fail.

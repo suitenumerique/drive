@@ -664,6 +664,10 @@ class ItemViewSet(
         item.size = len(template_content)
         item.save(update_fields=["upload_state", "mimetype", "size", "updated_at"])
 
+    def get_create_extra_attributes(self):
+        """Extra model attributes applied to items created by this viewset (subclass hook)."""
+        return {}
+
     def perform_create(self, serializer):
         """Set the current user as creator and owner of the newly created object."""
         extension = serializer.validated_data.pop("extension", None)
@@ -672,6 +676,7 @@ class ItemViewSet(
             creator=self.request.user,
             link_reach=LinkReachChoices.RESTRICTED,
             **serializer.validated_data,
+            **self.get_create_extra_attributes(),
         )
         if extension:
             self._create_file_from_template(obj, extension)
@@ -1121,6 +1126,7 @@ class ItemViewSet(
                 creator=request.user,
                 parent=item,
                 **serializer.validated_data,
+                **self.get_create_extra_attributes(),
             )
 
             if extension:
