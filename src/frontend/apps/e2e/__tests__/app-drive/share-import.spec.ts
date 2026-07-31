@@ -77,7 +77,9 @@ test.describe("Share modal contacts import", () => {
     await expect(
       importModal.getByText("2 rows ready to be imported."),
     ).toBeVisible();
-    await importModal.getByRole("button", { name: "Import", exact: true }).click();
+    await importModal
+      .getByRole("button", { name: "Import", exact: true })
+      .click();
 
     await expect(importModal).toBeHidden();
     await expectUserInMembersList(page, "user@webkit.test", "Editor");
@@ -85,6 +87,39 @@ test.describe("Share modal contacts import", () => {
     await expect(shareModal.getByTestId("invitations-list")).toContainText(
       "imported@example.com",
     );
+  });
+
+  test("dragging a file over the import modal does not trigger the explorer upload toast", async ({
+    page,
+  }) => {
+    await clearDb();
+    await mockConfig(page, true);
+    await login(page, "drive@example.com");
+    await goToNewFolder(page, "Import drag folder");
+
+    const importModal = await openImportModal(page);
+    const dropzone = importModal.locator(".c__file-uploader__dropzone");
+    const dataTransfer = await page.evaluateHandle(() => {
+      const dt = new DataTransfer();
+      dt.items.add(
+        new File(["email,role"], "contacts.csv", { type: "text/csv" }),
+      );
+      return dt;
+    });
+
+    await dropzone.dispatchEvent("dragenter", { dataTransfer });
+    await dropzone.dispatchEvent("dragover", { dataTransfer });
+
+    // The import dropzone reacts to the drag, proving the events flowed...
+    await expect(
+      importModal.locator(".c__file-uploader__dropzone--dragging"),
+    ).toBeVisible();
+    // ...but the explorer upload toast behind the modal must stay hidden.
+    await expect(
+      page.getByText("Drop your files here to transfer them in", {
+        exact: false,
+      }),
+    ).toBeHidden();
   });
 
   test("a failed import shows the backend error inside the import modal", async ({
@@ -112,7 +147,9 @@ test.describe("Share modal contacts import", () => {
 
     const importModal = await openImportModal(page);
     await importModal.locator('input[type="file"]').setInputFiles(CONTACTS_CSV);
-    await importModal.getByRole("button", { name: "Import", exact: true }).click();
+    await importModal
+      .getByRole("button", { name: "Import", exact: true })
+      .click();
 
     await expect(
       importModal.getByText("This import is not valid."),
