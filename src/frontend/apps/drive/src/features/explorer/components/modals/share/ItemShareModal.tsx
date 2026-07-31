@@ -34,8 +34,7 @@ import {
 } from "@gouvfr-lasuite/ui-kit";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
-import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, VariantType } from "@gouvfr-lasuite/cunningham-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { errorToString } from "@/features/api/APIError";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/features/auth/Auth";
@@ -84,7 +83,7 @@ export const ItemShareModal = ({
   const { mutateAsync: deleteInvitation } = useMutationDeleteInvitation();
   const { mutateAsync: updateInvitation } = useMutationUpdateInvitation();
   const { mutateAsync: batchShare } = useMutationBatchShare();
-  const [importModalChildren, setImportModalChildren] = useState<ReactNode>();
+  const [importErrorMessage, setImportErrorMessage] = useState<string>();
 
   const rolesOptions = useMemo(
     () =>
@@ -526,14 +525,12 @@ export const ItemShareModal = ({
             });
             return true;
           } catch (error) {
-            setImportModalChildren(
-              <Alert type={VariantType.ERROR}>{errorToString(error)}</Alert>,
-            );
+            setImportErrorMessage(errorToString(error));
             return false;
           }
         }}
-        importModalChildren={importModalChildren}
-        onImportFileChange={() => setImportModalChildren(undefined)}
+        importErrorMessage={importErrorMessage}
+        onImportFileChange={() => setImportErrorMessage(undefined)}
       >
         {!item?.abilities.accesses_manage && <HorizontalSeparator />}
       </ShareModal>
