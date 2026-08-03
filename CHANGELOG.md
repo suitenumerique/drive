@@ -15,6 +15,9 @@ and this project adheres to
 - ✨(frontend) open the messages widget from the help menu
 - ✨(backend) add an item batch share endpoint gated by ALLOW_SHARE_IMPORT_FILE
 - ✨(frontend) share an item with contacts imported from a file
+- ✨(backend) add a quota_excluded flag on items
+- ✨(backend) apply per-audience attributes to external api items
+- ✨(backend) add a grant_unlimited_storage command
 
 ### Changed
 
