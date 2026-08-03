@@ -1,8 +1,11 @@
 """Test the PUT file content viewset."""
 
+from unittest import mock
+
 from django.core.files.storage import default_storage
 
 import pytest
+from lasuite.malware_detection import malware_detection
 from rest_framework.test import APIClient
 
 from core import factories, models
@@ -38,16 +41,19 @@ def test_put_file_content_connected_user_with_access():
     client = APIClient()
     assert item.size == 0
     updated_at = item.updated_at
-    response = client.post(
-        f"/api/v1.0/wopi/files/{item.id}/contents/",
-        data=b"new content",
-        content_type="text/plain",
-        HTTP_AUTHORIZATION=f"Bearer {access_token}",
-        headers={
-            "X-WOPI-Override": "PUT",
-            "X-WOPI-Lock": "1234567890",
-        },
-    )
+    with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
+        response = client.post(
+            f"/api/v1.0/wopi/files/{item.id}/contents/",
+            data=b"new content",
+            content_type="text/plain",
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+            headers={
+                "X-WOPI-Override": "PUT",
+                "X-WOPI-Lock": "1234567890",
+            },
+        )
+
+    mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
     assert response.status_code == 200
     assert "X-WOPI-ItemVersion" in response.headers
 
@@ -61,6 +67,7 @@ def test_put_file_content_connected_user_with_access():
     assert response.headers.get("X-WOPI-ItemVersion") == file["ETag"].strip('"')
     item.refresh_from_db()
     assert item.size == 11  # the size should have been updated
+    assert item.upload_state == models.ItemUploadStateChoices.READY
     assert item.updated_at > updated_at
 
 

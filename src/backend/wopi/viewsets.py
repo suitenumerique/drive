@@ -11,6 +11,7 @@ from django.core.files.storage import default_storage
 from django.db import transaction
 from django.http import StreamingHttpResponse
 
+from lasuite.malware_detection import malware_detection
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -187,7 +188,11 @@ class WopiViewSet(viewsets.ViewSet):
         s3_client = default_storage.connection.meta.client
         default_storage.save(item.file_key, file)
         item.size = file.size
+        # Keep the item READY during re-analysis: non-creators cannot open
+        # non-READY files in WOPI.
         item.save(update_fields=["size", "updated_at"])
+
+        malware_detection.analyse_file(item.file_key, item_id=item.id)
 
         head_response = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
         return Response(

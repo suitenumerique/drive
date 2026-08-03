@@ -31,6 +31,7 @@ and this project adheres to
 - 🐛(docker) pin collabora image and adapt to its new runtime contract
 - 🐛(backend) delete malware detection record when purging an item
 - 🔒️(backend) reject unsafe filenames requested by WOPI renames
+- 🔒️(backend) analyze file content written through WOPI
 
 ## [v0.20.0] - 2026-07-15
 
