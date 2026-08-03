@@ -35,6 +35,8 @@ X_WOPI_ITEMVERSION = "X-WOPI-ItemVersion"
 X_WOPI_LOCK = "X-WOPI-Lock"
 S3_VERSION_ID = "VersionId"
 
+ILLEGAL_FILENAME_CHARS = ("/", "\\")
+
 
 class WopiViewSet(viewsets.ViewSet):
     """
@@ -332,24 +334,39 @@ class WopiViewSet(viewsets.ViewSet):
             return Response(status=401)
 
         new_filename = request.META.get("HTTP_X_WOPI_REQUESTEDNAME")
-
         if not new_filename:
+            invalid_filename_error = "No filename provided"
+        else:
+            # Convert it to utf-7 to avoid issues with special characters
+            new_filename = new_filename.encode("ascii").decode("utf-7")
+            new_filename_with_extension = f"{new_filename}{splitext(item.filename)[1]}"
+            _, target_extension = splitext(new_filename_with_extension)
+
+            invalid_filename_error = None
+            if any(char in new_filename for char in ILLEGAL_FILENAME_CHARS):
+                invalid_filename_error = "Invalid filename"
+            elif settings.RESTRICT_UPLOAD_FILE_TYPE and target_extension.lower() not in {
+                extension.lower() for extension in settings.FILE_EXTENSIONS_ALLOWED
+            }:
+                logger.info(
+                    "rename_file: file extension not allowed %r for filename %r",
+                    target_extension,
+                    new_filename_with_extension,
+                )
+                invalid_filename_error = "This file extension is not allowed"
+
+        if invalid_filename_error:
             return Response(
                 status=400,
-                headers={X_WOPI_INVALIDFILENAMERROR: "No filename provided"},
+                headers={X_WOPI_INVALIDFILENAMERROR: invalid_filename_error},
             )
 
-        # Convert it to utf-7 to avoid issues with special characters
-        new_filename = new_filename.encode("ascii").decode("utf-7")
         lock_service = LockService(item)
         if lock_service.is_locked():
             current_lock_value = lock_service.get_lock(default="")
             lock_value = request.META.get(HTTP_X_WOPI_LOCK)
             if current_lock_value != lock_value:
                 return Response(status=409, headers={X_WOPI_LOCK: current_lock_value})
-
-        _, current_extension = splitext(item.filename)
-        new_filename_with_extension = f"{new_filename}{current_extension}"
 
         parent_path = item.path[:-1]
         # Filter on siblings with the desired filename
