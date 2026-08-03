@@ -142,6 +142,11 @@ class Base(Configuration):
     MEDIA_URL_PREVIEW = "/media/preview/"
     MEDIA_ROOT = os.path.join(DATA_DIR, "media")
     MEDIA_BASE_URL = values.Value(None, environ_name="MEDIA_BASE_URL", environ_prefix=None)
+    MEDIA_AUTH_ORIGINAL_URL_HEADER = values.Value(
+        default="HTTP_X_ORIGINAL_URL",
+        environ_name="MEDIA_AUTH_ORIGINAL_URL_HEADER",
+        environ_prefix=None,
+    )
 
     SITE_ID = 1
 
