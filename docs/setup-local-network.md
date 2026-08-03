@@ -70,7 +70,7 @@ In `src/frontend/apps/drive/.env.development`, override the environment variable
 
 ```env
 NEXT_PUBLIC_S3_DOMAIN_REPLACE=http://<YOUR_IP>:9000
-NEXT_PUBLIC_API_ORIGIN=http://<YOUR_IP>:8071
+NEXT_PUBLIC_API_ORIGIN=http://<YOUR_IP>:8171
 ```
 
 ## 5. Update the backend OIDC settings

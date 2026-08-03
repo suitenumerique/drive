@@ -431,6 +431,7 @@ class Base(Configuration):
             ".odt",
             ".oform",
             ".oft",
+            ".ogg",
             ".one",
             ".opj",
             ".opju",
@@ -581,6 +582,7 @@ class Base(Configuration):
             "application/gzip",
             "application/json",
             "application/msword",
+            "application/ogg",
             "application/pdf",
             "application/pgp-signature",
             "application/pkcs10",
@@ -685,6 +687,7 @@ class Base(Configuration):
             "audio/basic",
             "audio/mp4",
             "audio/mpeg",
+            "audio/ogg",
             "audio/wav",
             "audio/webm",
             "audio/x-aac",
@@ -726,6 +729,7 @@ class Base(Configuration):
             "video/mp2t",
             "video/mp4",
             "video/mpeg",
+            "video/ogg",
             "video/quicktime",
             "video/webm",
             "video/x-m4v",
@@ -1145,7 +1149,6 @@ class Base(Configuration):
         environ_name="OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION",
         environ_prefix=None,
     )
-
     OIDC_STORE_ACCESS_TOKEN = values.BooleanValue(
         default=False, environ_name="OIDC_STORE_ACCESS_TOKEN", environ_prefix=None
     )

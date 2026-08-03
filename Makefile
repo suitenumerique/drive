@@ -78,7 +78,7 @@ create-env-local-files:
 	@touch env.d/development/kc_postgresql.local
 .PHONY: create-env-local-files
 
-create-docker-network: ## create the docker network if it doesn't exist
+create-docker-network: ## create the shared lasuite-network if it doesn't exist
 	@docker network create lasuite-network || true
 .PHONY: create-docker-network
 

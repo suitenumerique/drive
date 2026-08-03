@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 📝(doc) drop the removed main workspace from the resource server example
+
 ## [v0.20.0] - 2026-07-15
 
 ### Added

@@ -30,7 +30,7 @@ Default configuration:
 EXTERNAL_API = {
     "items": {
         "enabled": True,
-        "actions": ["list", "retrieve", "children", "upload_ended"],
+        "actions": ["create", "list", "retrieve", "children", "upload_ended"],
     },
     "item_access": {
         "enabled": False,
@@ -63,38 +63,21 @@ Then you can requests some routes that are available at `/external_api/v1.0/*`, 
 
 #### Upload a file
 
-Here is an example of a view that create a file on the main workspace in Drive.
+Here is an example of a view that creates a file at the root of the user's Drive.
 
 ```python
     @method_decorator(refresh_oidc_access_token)
     def upload_file(self, request):
         """
-        Create a new file in the main workspace.
+        Create a new file at the root of the user's Drive.
         """
 
         # Get the access token from the session
         access_token = request.session.get('oidc_access_token')
 
-        # Get the main workspace
-        response = requests.get(
-            f"{settings.DRIVE_API}/items/",
-            headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
-        )
-        response.raise_for_status()
-        data = response.json()
-        items = data['results']
-        main_workspace = None
-        for item in items:
-            if item['main_workspace']:
-                main_workspace = item
-                break
-
-        if not main_workspace:
-            return drf.response.Response(status=404, data={"error": "No main workspace found"})
-
-        # Create a new file in the main workspace
+        # Create a new file at the root
         response = requests.post(
-            f"{settings.DRIVE_API}/items/{main_workspace['id']}/children/",
+            f"{settings.DRIVE_API}/items/",
             json={
                 "type": "file",
                 "filename": "test.txt",
@@ -127,19 +110,33 @@ Here is an example of a view that create a file on the main workspace in Drive.
         )
         response.raise_for_status()
 
-        return drf.response.Response(data)
+        return drf.response.Response(item)
 ```
+
 
 #### Create a new folder
 
-Using the same logic as the previous example, you can create a folder in the main workspace.
+Using the same logic as the previous example, you can create a folder at the root.
 
 ```python
 response = requests.post(
-    f"{settings.DRIVE_API}/items/{main_workspace['id']}/children/",
+    f"{settings.DRIVE_API}/items/",
     json={
         "type": "folder",
         "title": "My folder",
+    },
+    headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+)
+```
+
+To create an item inside an existing folder, post to its `children/` route.
+
+```python
+response = requests.post(
+    f"{settings.DRIVE_API}/items/{parent_id}/children/",
+    json={
+        "type": "folder",
+        "title": "My subfolder",
     },
     headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
 )

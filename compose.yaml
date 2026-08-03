@@ -19,12 +19,7 @@ services:
   redis:
     image: redis:5
     ports:
-      - "6379:6379"
-
-  mailcatcher:
-    image: sj26/mailcatcher:latest
-    ports:
-      - "1081:1080"
+      - "6479:6379"
 
   minio:
     user: ${DOCKER_USER:-1000}
@@ -33,8 +28,8 @@ services:
       - MINIO_ROOT_USER=drive
       - MINIO_ROOT_PASSWORD=password
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9100:9000"
+      - "9101:9001"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 1s
@@ -44,6 +39,13 @@ services:
     command: minio server --console-address :9001 /data
     volumes:
       - ./data/media:/data
+    networks:
+      default: {}
+      # Reachable from the meet stack, which uploads recordings to the presigned
+      # URLs Drive hands out.
+      lasuite:
+        aliases:
+          - drive-minio
 
   createbuckets:
     image: minio/mc
@@ -75,20 +77,23 @@ services:
       - env.d/development/postgresql
       - env.d/development/postgresql.${ENV_OVERRIDE:-local}
     ports:
-      - "8071:8000"
+      - "8171:8000"
     volumes:
       - ./src/backend:/app
       - ./data/static:/data/static
       - /app/.venv
     networks:
-      - lasuite
-      - default
+      default: {}
+      # Not "app-dev": the meet stack has a backend of its own, and its
+      # containers use on this network too. This is the external API endpoint
+      # meet pushes recordings to.
+      lasuite:
+        aliases:
+          - drive-app-dev
     depends_on:
       postgresql:
         condition: service_healthy
         restart: true
-      mailcatcher:
-        condition: service_started
       redis:
         condition: service_started
       createbuckets:
@@ -96,9 +101,9 @@ services:
       celery-dev:
         condition: service_started
       collabora:
-        condition: service_healthy
+        condition: service_started
       onlyoffice:
-        condition: service_healthy
+        condition: service_started
 
   ds-proxy:
     image: demarchenumerique/ds-proxy:v2.0.0-alpha.4
@@ -154,16 +159,17 @@ services:
   nginx:
     image: nginx:1.25
     ports:
-      - "8083:8083"
+      - "8085:8083"
     networks:
       default: {}
       lasuite:
+        # Not "nginx": the meet stack has an nginx of its own, and its backend
+        # containers use this network too.
         aliases:
-          - nginx
+          - drive-nginx
     volumes:
       - ./docker/files/development/etc/nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
-      - keycloak
       - app-dev
 
   frontend-dev:
@@ -173,14 +179,14 @@ services:
       dockerfile: ./src/frontend/Dockerfile
       target: drive-dev
       args:
-        API_ORIGIN: "http://localhost:8071"
+        API_ORIGIN: "http://localhost:8171"
     image: drive:frontend-development
     volumes:
       - ./src/frontend/:/home/frontend/
       - /home/frontend/node_modules
       - /home/frontend/apps/drive/node_modules
     ports:
-      - "3000:3000"
+      - "3100:3000"
 
   crowdin:
     image: crowdin/cli:3.16.0
@@ -200,54 +206,13 @@ services:
     volumes:
       - ".:/app"
 
-  kc_postgresql:
-    image: postgres:14.3
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
-      interval: 1s
-      timeout: 2s
-      retries: 300
-    ports:
-      - "6433:5432"
-    env_file:
-      - env.d/development/kc_postgresql
-      - env.d/development/kc_postgresql.local
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.3.2
-    volumes:
-      - ./docker/auth/realm.json:/opt/keycloak/data/import/realm.json
-    command:
-      - start-dev
-      - --features=preview
-      - --import-realm
-      - --proxy=edge
-      - --hostname=http://localhost:8083
-      - --hostname-strict=false
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: postgres
-      KC_DB_URL_HOST: kc_postgresql
-      KC_DB_URL_DATABASE: keycloak
-      KC_DB_PASSWORD: pass
-      KC_DB_USERNAME: drive
-      KC_DB_SCHEMA: public
-      PROXY_ADDRESS_FORWARDING: "true"
-    ports:
-      - "8080:8080"
-    depends_on:
-      - kc_postgresql
-    networks:
-      - lasuite
-      - default
-
   collabora:
     image: collabora/code:latest
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo -e \"GET /hosting/discovery HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" > /dev/tcp/localhost/9980'"]
       interval: 30s
       retries: 5
+      start_interval: 2s
       start_period: 60s
       timeout: 10s
     ports:
