@@ -627,7 +627,7 @@ class ItemViewSet(
     def _create_file_from_template(self, item, extension):
         """Read template file and upload it to storage for the given item."""
         template_path = os.path.join(
-            settings.BASE_DIR, "assets", "file_templates", f"template.{extension}"
+            settings.BASE_DIR, "assets", "file_templates", enums.TEMPLATE_FILES[extension]
         )
 
         try:

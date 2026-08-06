@@ -11,6 +11,14 @@ from django.utils.translation import gettext_lazy as _
 # pylint: disable=no-member
 ALL_LANGUAGES = {language: _(name) for language, name in global_settings.LANGUAGES}
 
+# Mapping of the extensions accepted for file creation from a template to
+# the template file shipped in assets/file_templates.
+TEMPLATE_FILES = {
+    "odt": "template.odt",
+    "ods": "template.ods",
+    "odp": "template.odp",
+}
+
 # Mapping of file type categories to the filename extensions they group together.
 # Used to filter items by file type, the "other" category matching any unlisted extension.
 FILE_CATEGORY_EXTENSIONS = {

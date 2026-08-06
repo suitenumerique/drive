@@ -15,7 +15,7 @@ from django.utils.translation import gettext_lazy as _
 from lasuite.drf.models.choices import LinkReachChoices, get_equivalent_link_definition
 from rest_framework import serializers
 
-from core import models
+from core import enums, models
 from core.api import utils
 from core.api.fields import SchemaField
 from core.storage import get_storage_compute_backend
@@ -550,11 +550,7 @@ class ItemSerializer(ListItemSerializer):
 class CreateItemSerializer(ItemSerializer):
     """Serializer used to create a new item"""
 
-    TEMPLATE_EXTENSION_CHOICES = [
-        ("odt", "odt"),
-        ("ods", "ods"),
-        ("odp", "odp"),
-    ]
+    TEMPLATE_EXTENSION_CHOICES = [(ext, ext) for ext in enums.TEMPLATE_FILES]
 
     policy = serializers.SerializerMethodField()
     title = serializers.CharField(max_length=255, required=False)
