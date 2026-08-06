@@ -16,14 +16,14 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "22"
 
       - name: Restore the mail templates
         uses: actions/cache@v4
         id: mail-templates
         with:
           path: "src/backend/core/templates/mail"
-          key: mail-templates-${{ hashFiles('src/mail/mjml') }}
+          key: mail-templates-${{ hashFiles('src/mail/mjml/**', 'src/mail/yarn.lock', 'src/mail/bin/**') }}
 
       - name: Install yarn
         if: steps.mail-templates.outputs.cache-hit != 'true'
@@ -42,4 +42,4 @@ jobs:
         uses: actions/cache@v4
         with:
           path: "src/backend/core/templates/mail"
-          key: mail-templates-${{ hashFiles('src/mail/mjml') }}
+          key: mail-templates-${{ hashFiles('src/mail/mjml/**', 'src/mail/yarn.lock', 'src/mail/bin/**') }}
