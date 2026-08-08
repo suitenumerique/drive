@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from core.models import Item, ItemUploadStateChoices
+from core.tasks.item import process_item_purge
 
 
 class Command(BaseCommand):
@@ -33,7 +34,8 @@ class Command(BaseCommand):
         count = 0
         for item in items.iterator():
             item.soft_delete()
-            item.delete()
+            item.hard_delete()
+            process_item_purge.delay(item.id)
             count += 1
 
         self.stdout.write(f"Cleaned {count} stale pending item(s).")
