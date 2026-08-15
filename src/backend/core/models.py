@@ -1609,6 +1609,19 @@ class Item(TreeModel, BaseModel):
                 }
             )
 
+        if target:
+            target_path = str(target.path)
+            self_path = str(self.path)
+            if target_path == self_path or target_path.startswith(f"{self_path}."):
+                raise ValidationError(
+                    {
+                        "target": ValidationError(
+                            _("Cannot move an item to itself or one of its descendants"),
+                            code="item_move_target_is_descendant",
+                        )
+                    }
+                )
+
         old_path = self.path
         if target:
             self.path = f"{target.path!s}.{self.id!s}"
