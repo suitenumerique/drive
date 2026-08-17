@@ -12,8 +12,8 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "@playwright/test": "1.58.2",
-    "@types/node": "24.10.1"
+    "@playwright/test": "1.62.1",
+    "@types/node": "24.13.3"
   },
   "dependencies": {
     "pdf-lib": "1.17.1"

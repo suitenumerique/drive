@@ -5,7 +5,7 @@
   "type": "module",
   "dependencies": {
     "@html-to/text-cli": "0.6.0",
-    "mjml": "5.0.0"
+    "mjml": "5.4.0"
   },
   "private": true,
   "scripts": {
@@ -14,7 +14,7 @@
     "build": "yarn build-mjml-to-html && yarn build-html-to-plain-text"
   },
   "volta": {
-    "node": "24.11.1"
+    "node": "24.19.0"
   },
   "repository": "https://github.com/suitenumerique/drive",
   "author": "DINUM",
