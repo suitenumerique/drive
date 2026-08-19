@@ -16,7 +16,10 @@
     "lint": "yarn workspace drive run lint",
     "build-theme": "yarn workspace drive build-theme"
   },
-  "resolutions": {},
+  "resolutions": {
+    "postcss": "8.5.26",
+    "sharp": "0.35.3"
+  },
   "devDependencies": {
     "turbo": "2.9.14"
   },
