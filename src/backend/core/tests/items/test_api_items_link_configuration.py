@@ -1,5 +1,9 @@
 """Tests for link configuration of items on API endpoint"""
 
+from datetime import timedelta
+
+from django.utils import timezone
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -538,3 +542,141 @@ def test_api_items_link_configuration_sync_link_reach_descendants():
 
     assert folder3.link_reach is None
     assert folder3.computed_link_reach == models.LinkReachChoices.PUBLIC
+
+
+def test_api_items_link_configuration_update_expiration_success():
+    """An owner should be able to set and clear an expiration date on a public link."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(users=[(user, models.RoleChoices.OWNER)])
+    expires_at = timezone.now() + timedelta(days=1)
+
+    response = client.put(
+        f"/api/v1.0/items/{item.id!s}/link-configuration/",
+        {
+            "link_reach": models.LinkReachChoices.PUBLIC,
+            "link_role": models.LinkRoleChoices.READER,
+            "link_expires_at": expires_at.isoformat(),
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+    item.refresh_from_db()
+    assert item.link_expires_at == expires_at
+
+    response = client.put(
+        f"/api/v1.0/items/{item.id!s}/link-configuration/",
+        {
+            "link_reach": models.LinkReachChoices.PUBLIC,
+            "link_role": models.LinkRoleChoices.READER,
+            "link_expires_at": None,
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+    item.refresh_from_db()
+    assert item.link_expires_at is None
+
+
+def test_api_items_link_configuration_update_expiration_in_the_past():
+    """Setting an expiration date in the past should be rejected."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(users=[(user, models.RoleChoices.OWNER)])
+
+    response = client.put(
+        f"/api/v1.0/items/{item.id!s}/link-configuration/",
+        {
+            "link_reach": models.LinkReachChoices.PUBLIC,
+            "link_role": models.LinkRoleChoices.READER,
+            "link_expires_at": (timezone.now() - timedelta(minutes=1)).isoformat(),
+        },
+        format="json",
+    )
+    assert response.status_code == 400
+    assert response.json()["errors"][0] == {
+        "attr": "link_expires_at",
+        "code": "invalid",
+        "detail": "Expiration date must be in the future.",
+    }
+
+
+def test_api_items_link_configuration_update_expiration_restricted():
+    """Setting an expiration date on a restricted link should be rejected."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(users=[(user, models.RoleChoices.OWNER)])
+
+    response = client.put(
+        f"/api/v1.0/items/{item.id!s}/link-configuration/",
+        {
+            "link_reach": models.LinkReachChoices.RESTRICTED,
+            "link_expires_at": (timezone.now() + timedelta(days=1)).isoformat(),
+        },
+        format="json",
+    )
+    assert response.status_code == 400
+    assert response.json()["errors"][0] == {
+        "attr": "link_expires_at",
+        "code": "invalid",
+        "detail": "Cannot set an expiration date on a restricted link.",
+    }
+
+
+def test_api_items_link_configuration_update_restricted_clears_expiration():
+    """Switching a link back to restricted should clear its expiration date."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_expires_at=timezone.now() + timedelta(days=1),
+    )
+
+    response = client.put(
+        f"/api/v1.0/items/{item.id!s}/link-configuration/",
+        {"link_reach": models.LinkReachChoices.RESTRICTED},
+        format="json",
+    )
+    assert response.status_code == 200
+    item.refresh_from_db()
+    assert item.link_expires_at is None
+
+
+def test_api_items_link_configuration_sync_expiration_descendants():
+    """Syncing descendants' link reach should also clear their expiration date."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    folder = factories.ItemFactory(
+        users=[(user, models.RoleChoices.OWNER)],
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    child = factories.ItemFactory(
+        parent=folder,
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_expires_at=timezone.now() + timedelta(days=1),
+    )
+
+    response = client.put(
+        f"/api/v1.0/items/{folder.id!s}/link-configuration/",
+        {
+            "link_reach": models.LinkReachChoices.PUBLIC,
+            "link_role": models.LinkRoleChoices.READER,
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+    child.refresh_from_db()
+    assert child.link_reach is None
+    assert child.link_expires_at is None
