@@ -995,6 +995,8 @@ class Item(TreeModel, BaseModel):
     link_role = models.CharField(
         max_length=20, choices=LinkRoleChoices.choices, default=LinkRoleChoices.READER
     )
+    link_expires_at = models.DateTimeField(_("link expiration date"), null=True, blank=True)
+    link_password = models.CharField(_("link password"), max_length=128, null=True, blank=True)
     creator = models.ForeignKey(
         User,
         on_delete=models.RESTRICT,
