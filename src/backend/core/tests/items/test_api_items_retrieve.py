@@ -47,6 +47,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "target": None,
         "link_reach": "public",
         "link_role": item.link_role,
+        "link_expires_at": None,
         "nb_accesses": 0,
         "numchild": 0,
         "numchild_folder": 0,
@@ -107,6 +108,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "target": None,
         "link_reach": item.link_reach,
         "link_role": item.link_role,
+        "link_expires_at": None,
         "nb_accesses": 0,
         "numchild": 0,
         "numchild_folder": 0,
@@ -214,6 +216,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "target": None,
         "link_reach": reach,
         "link_role": item.link_role,
+        "link_expires_at": None,
         "nb_accesses": 0,
         "numchild": 0,
         "numchild_folder": 0,
@@ -280,6 +283,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "target": None,
         "link_reach": item.link_reach,
         "link_role": item.link_role,
+        "link_expires_at": None,
         "nb_accesses": 0,
         "numchild": 0,
         "numchild_folder": 0,
@@ -424,6 +428,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "target": None,
         "link_reach": item.link_reach,
         "link_role": item.link_role,
+        "link_expires_at": None,
         "nb_accesses": 2,
         "numchild": 0,
         "numchild_folder": 0,
@@ -494,6 +499,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "target": None,
         "link_reach": "restricted",
         "link_role": item.link_role,
+        "link_expires_at": None,
         "nb_accesses": 2,
         "numchild": 0,
         "numchild_folder": 0,
@@ -674,6 +680,7 @@ def test_api_items_retrieve_authenticated_related_team_members(teams, role, mock
         "target": None,
         "link_reach": "restricted",
         "link_role": item.link_role,
+        "link_expires_at": None,
         "nb_accesses": 5,
         "numchild": 0,
         "numchild_folder": 0,
@@ -752,6 +759,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(teams, rol
         "target": None,
         "link_reach": "restricted",
         "link_role": item.link_role,
+        "link_expires_at": None,
         "nb_accesses": 5,
         "numchild": 0,
         "numchild_folder": 0,
@@ -830,6 +838,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_t
         "target": None,
         "link_reach": "restricted",
         "link_role": item.link_role,
+        "link_expires_at": None,
         "nb_accesses": 5,
         "numchild": 0,
         "numchild_folder": 0,
@@ -1254,6 +1263,7 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "target": None,
         "link_reach": "public",
         "link_role": item.link_role,
+        "link_expires_at": None,
         "nb_accesses": 1,
         "numchild": 0,
         "numchild_folder": 0,
@@ -1330,6 +1340,7 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         "target": None,
         "link_reach": "public",
         "link_role": item.link_role,
+        "link_expires_at": None,
         "nb_accesses": 1,
         "numchild": 0,
         "numchild_folder": 0,
@@ -1396,6 +1407,7 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "target": None,
         "link_reach": "public",
         "link_role": item.link_role,
+        "link_expires_at": None,
         "nb_accesses": 1,
         "numchild": 0,
         "numchild_folder": 0,
@@ -1546,6 +1558,7 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "quota_excluded": False,
         "link_reach": "public",
         "link_role": item.link_role,
+        "link_expires_at": None,
         "nb_accesses": 1,
         "numchild": 0,
         "numchild_folder": 0,
@@ -1617,3 +1630,36 @@ def test_api_items_retrieve_quota_excluded():
 
     assert response.status_code == 200
     assert response.json()["quota_excluded"] is True
+
+
+@pytest.mark.parametrize("reach", ["public", "authenticated"])
+def test_api_items_retrieve_link_expired(reach):
+    """Link holders should not be able to retrieve an item whose link has expired."""
+    item = factories.ItemFactory(
+        link_reach=reach, link_expires_at=timezone.now() - timedelta(minutes=1)
+    )
+
+    client = APIClient()
+    client.force_login(factories.UserFactory())
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 403
+
+
+def test_api_items_retrieve_link_expired_owner():
+    """An expired link should not prevent users with an access from retrieving the item."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        link_reach="public",
+        link_expires_at=timezone.now() - timedelta(minutes=1),
+        users=[(user, "reader")],
+    )
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["link_expires_at"] == item.link_expires_at.isoformat().replace(
+        "+00:00", "Z"
+    )
