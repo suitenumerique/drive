@@ -1493,7 +1493,7 @@ class ItemViewSet(
         if models.LinkReachChoices.get_priority(
             item.link_reach
         ) >= models.LinkReachChoices.get_priority(previous_link_reach):
-            item.descendants().update(link_reach=None)
+            item.descendants().update(link_reach=None, link_expires_at=None)
 
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
