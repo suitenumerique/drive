@@ -1205,7 +1205,7 @@ class ItemViewSet(
                 ancestors_deleted_at__isnull=True,
             )
             .order_by("path")
-            .values_list("path", "link_reach", "link_role", named=True)
+            .only("path", "link_reach", "link_role", "link_expires_at")
         )
 
         if len(ancestors) == 0:
@@ -1232,9 +1232,7 @@ class ItemViewSet(
 
             # Compute cache for ancestors links to avoid many queries while computing
             # abilties for his items in the tree!
-            ancestors_links.append(
-                {"link_reach": ancestor.link_reach, "link_role": ancestor.link_role}
-            )
+            ancestors_links.append(ancestor.link_definition)
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
         tree = (

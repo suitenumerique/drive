@@ -2,8 +2,10 @@
 # pylint: disable=too-many-lines
 
 import uuid
+from datetime import timedelta
 
 from django.contrib.auth.models import AnonymousUser
+from django.utils import timezone
 
 import pytest
 from rest_framework.test import APIClient
@@ -843,3 +845,36 @@ def test_api_items_tree_authenticated_with_access_authenticated():
             },
         ],
     }
+
+
+def test_api_items_tree_link_expired_ancestor():
+    """An ancestor whose link has expired should not be the root of the returned tree."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(
+        title="root",
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_expires_at=timezone.now() - timedelta(minutes=1),
+    )
+    child = factories.ItemFactory(
+        title="child",
+        parent=root,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.PUBLIC,
+    )
+    grandchild = factories.ItemFactory(
+        title="grandchild",
+        parent=child,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=None,
+    )
+
+    response = client.get(f"/api/v1.0/items/{grandchild.id}/tree/")
+    assert response.status_code == 200
+    tree = response.json()
+    assert tree["title"] == "child"
+    assert tree["abilities"]["retrieve"] is True
+    assert [item["title"] for item in tree["children"]] == ["grandchild"]
