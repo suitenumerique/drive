@@ -13,6 +13,7 @@ from urllib.parse import quote
 from django.conf import settings
 from django.db.models import Q
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from lasuite.drf.models.choices import LinkReachChoices, get_equivalent_link_definition
@@ -809,10 +810,18 @@ class LinkItemSerializer(serializers.ModelSerializer):
         fields = [
             "link_role",
             "link_reach",
+            "link_expires_at",
         ]
+
+    def validate_link_expires_at(self, value):
+        """Validate that the expiration date is in the future."""
+        if value is not None and value <= timezone.now():
+            raise serializers.ValidationError(_("Expiration date must be in the future."))
+        return value
 
     def _validate_against_ancestors(self, link_reach: str, link_role: str) -> None:
         """Validate the link definition against the options allowed by ancestors."""
+        # Get available options based on ancestors' link definition
         available_options = LinkReachChoices.get_select_options(
             **self.instance.ancestors_link_definition
         )
@@ -857,6 +866,13 @@ class LinkItemSerializer(serializers.ModelSerializer):
 
         if not link_reach:
             raise serializers.ValidationError({"link_reach": _("This field is required.")})
+
+        if link_reach == LinkReachChoices.RESTRICTED:
+            if attrs.get("link_expires_at") is not None:
+                raise serializers.ValidationError(
+                    {"link_expires_at": _("Cannot set an expiration date on a restricted link.")}
+                )
+            attrs["link_expires_at"] = None
 
         self._validate_against_ancestors(link_reach, link_role)
 
