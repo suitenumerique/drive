@@ -72,6 +72,7 @@ This document lists all configurable environment variables for the Drive applica
 | `LOGGING_LEVEL_LOGGERS_APP` | Logging level for application loggers | `INFO` |
 | `LOGGING_LEVEL_LOGGERS_ROOT` | Logging level for root logger | `INFO` |
 | `MAX_PAGE_SIZE` | Limit the maximum page size the client may request | `200` |
+| `MEDIA_AUTH_FORWARD_HEADERS` | Headers carrying the original URL of a media auth subrequest, tried in order | `["X-Original-Url", "X-Forwarded-Uri"]` |
 | `MEDIA_BASE_URL` | Base URL for media files | `None` |
 | `OIDC_AUTH_REQUEST_EXTRA_PARAMS` | Extra parameters for OIDC auth requests | `{}` |
 | `OIDC_ALLOW_DUPLICATE_EMAILS` | Allow multiple users with same email | `False` |

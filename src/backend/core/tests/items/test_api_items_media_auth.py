@@ -399,3 +399,54 @@ def test_api_items_media_auth_filename_with_hash():
         timeout=1,
     )
     assert response.content.decode("utf-8") == "my prose"
+
+
+def test_api_items_media_auth_forwarded_uri_header_public():
+    """
+    The media-auth endpoint should accept the "X-Forwarded-Uri" header as an
+    alternative to "X-Original-Url" and reach the same authorization decision (200).
+    """
+    item = factories.ItemFactory(
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+
+    original_url = f"http://localhost/media/{item.file_key:s}"
+    now = timezone.now()
+    with freeze_time(now):
+        response = APIClient().get("/api/v1.0/items/media-auth/", HTTP_X_FORWARDED_URI=original_url)
+
+    assert response.status_code == 200
+
+    authorization = response["Authorization"]
+    assert "AWS4-HMAC-SHA256 Credential=" in authorization
+    assert "SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=" in authorization
+    assert response["X-Amz-Date"] == now.strftime("%Y%m%dT%H%M%SZ")
+
+
+@pytest.mark.parametrize("reach", ["authenticated", "restricted"])
+def test_api_items_media_auth_forwarded_uri_header_blocked(reach):
+    """
+    Anonymous users must still be blocked (403) when the original URL is carried by
+    the "X-Forwarded-Uri" header, mirroring the "X-Original-Url" behaviour.
+    """
+    item = factories.ItemFactory(link_reach=reach)
+
+    filename = f"{uuid.uuid4()!s}.jpg"
+    media_url = f"http://localhost/media/item/{item.pk!s}/{filename:s}"
+
+    response = APIClient().get("/api/v1.0/items/media-auth/", HTTP_X_FORWARDED_URI=media_url)
+
+    assert response.status_code == 403
+    assert "Authorization" not in response
+
+
+def test_api_items_media_auth_no_forward_header():
+    """A subrequest carrying none of the accepted headers should be denied (403)."""
+    response = APIClient().get("/api/v1.0/items/media-auth/")
+
+    assert response.status_code == 403
+    assert "Authorization" not in response

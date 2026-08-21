@@ -143,6 +143,15 @@ class Base(Configuration):
     MEDIA_ROOT = os.path.join(DATA_DIR, "media")
     MEDIA_BASE_URL = values.Value(None, environ_name="MEDIA_BASE_URL", environ_prefix=None)
 
+    # Request headers carrying the original URL of a media auth subrequest, tried in order.
+    # nginx ingress uses "X-Original-Url"; Traefik's ForwardAuth uses "X-Forwarded-Uri".
+    # Add other proxy header names here (or via the env var) as needed.
+    MEDIA_AUTH_FORWARD_HEADERS = values.ListValue(
+        ["X-Original-Url", "X-Forwarded-Uri"],
+        environ_name="MEDIA_AUTH_FORWARD_HEADERS",
+        environ_prefix=None,
+    )
+
     SITE_ID = 1
 
     STORAGES = {
