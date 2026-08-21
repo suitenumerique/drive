@@ -41,7 +41,7 @@ from lasuite.oidc_login.decorators import refresh_oidc_access_token
 from rest_framework import response as drf_response
 from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny
-from rest_framework.throttling import UserRateThrottle
+from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
@@ -433,6 +433,7 @@ class ItemViewSet(
         permissions.ItemPermission,
     ]
     queryset = models.Item.objects.filter(hard_deleted_at__isnull=True)
+    throttle_scope = None
     serializer_class = serializers.ItemSerializer
     list_serializer_class = serializers.ListItemSerializer
     trashbin_serializer_class = serializers.ListItemSerializer
@@ -449,13 +450,15 @@ class ItemViewSet(
         """
         Rate limit the actions inserting an item, whatever its type: only files are
         bounded by the upload entitlement, so nothing else caps how many rows a
-        client can create.
+        client can create. Password attempts on a link are limited by their scope.
         """
         self.throttle_classes = []
         if self.action in {"create", "duplicate"} or (
             self.action == "children" and self.request.method == "POST"
         ):
             self.throttle_classes = [ItemCreateThrottleBurst, ItemCreateThrottleSustained]
+        elif self.action == "unlock":
+            self.throttle_classes = [ScopedRateThrottle]
 
         return super().get_throttles()
 
@@ -1803,6 +1806,25 @@ class ItemViewSet(
             },
             status=drf.status.HTTP_200_OK,
         )
+
+    @drf.decorators.action(detail=True, methods=["post"], throttle_scope="items_unlock")
+    def unlock(self, request, *args, **kwargs):
+        """Unlock the item share link with its password for the current session."""
+        item = self.get_object()
+        serializer = serializers.LinkPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        password_item_id = item.computed_link_definition["link_password_item"]
+        password_item = (
+            item if password_item_id == item.id else models.Item.objects.get(pk=password_item_id)
+        )
+        if not password_item.check_link_password(serializer.validated_data["password"]):
+            raise drf.exceptions.PermissionDenied()
+
+        request.user.unlocked_link_items.add(str(password_item_id))
+        request.session[UNLOCKED_LINK_ITEMS_SESSION_KEY] = list(request.user.unlocked_link_items)
+
+        return drf.response.Response(self.get_serializer(item).data, status=drf.status.HTTP_200_OK)
 
     @drf.decorators.action(detail=True, methods=["post", "delete"], url_path="favorite")
     def favorite(self, request, *args, **kwargs):
