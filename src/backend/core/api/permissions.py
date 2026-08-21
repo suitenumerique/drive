@@ -13,6 +13,7 @@ ACTION_FOR_METHOD_TO_PERMISSION = {
     "children": {"GET": "children_list", "POST": "children_create"},
     "batch_share": {"POST": "accesses_manage"},
     "deletion_info": {"POST": "destroy"},
+    "unlock": {"POST": "unlock"},
 }
 
 
