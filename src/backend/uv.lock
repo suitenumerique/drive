@@ -480,7 +480,7 @@ wheels = [
 
 [[package]]
 name = "django-lasuite"
-version = "0.0.26"
+version = "0.0.28"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
@@ -491,9 +491,9 @@ dependencies = [
     { name = "requests" },
     { name = "requests-toolbelt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5a/d7/6c022ff6b2e5c6f7226005c5f62920763ddb9ae2d4948b6af6d206314036/django_lasuite-0.0.26.tar.gz", hash = "sha256:b4ffb15d3e56e366d71b527195d26198e2d26e28cc1ab1c11aefdc581db9c02b", size = 34952, upload-time = "2026-04-03T14:02:33.957Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/00/07/015974a4051c72959a495afc0ed9a1811c51be17607cabb67fb877f3b533/django_lasuite-0.0.28.tar.gz", hash = "sha256:1c0cf66aa32a22e78ba0ad70d73884796e32e0ba602e9e0339a136de83dcb603", size = 35151, upload-time = "2026-08-21T13:12:42.381Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/ab/18a1505061b536616ea4b9f75154042116ca4f1a9f64467f5a3549c686d2/django_lasuite-0.0.26-py3-none-any.whl", hash = "sha256:ba812e643eae3f55a50a69bf09eaa3b8ffa4fe9dd3296b8e27b4f7bbc25e3400", size = 54158, upload-time = "2026-04-03T14:02:32.691Z" },
+    { url = "https://files.pythonhosted.org/packages/41/5e/37ff49d85c58c333d0897c36038bcc3639786f39a8ce1796d72d3acbed44/django_lasuite-0.0.28-py3-none-any.whl", hash = "sha256:d1ee30fc19f42a6dbbe883e442ab3c1708368cfa46421ab4e1eba8523df40b8e", size = 54785, upload-time = "2026-08-21T13:12:41.001Z" },
 ]
 
 [package.optional-dependencies]
@@ -739,7 +739,7 @@ requires-dist = [
     { name = "django-debug-toolbar", marker = "extra == 'dev'", specifier = "==6.3.0" },
     { name = "django-extensions", marker = "extra == 'dev'", specifier = "==4.1" },
     { name = "django-filter", specifier = "==25.2" },
-    { name = "django-lasuite", extras = ["all"], specifier = "==0.0.26" },
+    { name = "django-lasuite", extras = ["all"], specifier = "==0.0.28" },
     { name = "django-ltree", specifier = "==0.6.0" },
     { name = "django-parler", specifier = "==2.3" },
     { name = "django-pydantic-field", specifier = "==0.5.4" },
