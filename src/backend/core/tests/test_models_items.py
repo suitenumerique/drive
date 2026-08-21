@@ -1561,3 +1561,43 @@ def test_models_items_link_password_item_closest_link_wins():
     child = factories.ItemFactory(parent=parent, link_reach="public")
 
     assert child.computed_link_definition["link_password_item"] is None
+
+
+@pytest.mark.parametrize("is_authenticated", [True, False])
+def test_models_items_get_abilities_link_password_locked(is_authenticated):
+    """A password protected link should not grant any ability until unlocked."""
+    item = factories.ItemFactory(link_reach="public", link_role="editor")
+    item.set_link_password("s3cret")
+    user = factories.UserFactory() if is_authenticated else AnonymousUser()
+
+    abilities = item.get_abilities(user)
+    assert abilities["retrieve"] is False
+    assert abilities["update"] is False
+
+    user.unlocked_link_items = {str(item.id)}
+    abilities = item.get_abilities(user)
+    assert abilities["retrieve"] is True
+    assert abilities["update"] is True
+
+
+def test_models_items_get_abilities_link_password_explicit_access():
+    """Users with an explicit access should not be locked out by the link password."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_reach="public", link_role="reader", users=[(user, "editor")])
+    item.set_link_password("s3cret")
+
+    assert item.get_abilities(user)["update"] is True
+
+
+def test_models_items_get_abilities_link_password_inherited_from_ancestor():
+    """The password of the ancestor providing the link should protect its descendants."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    parent.set_link_password("s3cret")
+    parent.save()
+    child = factories.ItemFactory(parent=parent, link_reach=None)
+
+    assert child.get_abilities(AnonymousUser())["retrieve"] is False
+
+    user = AnonymousUser()
+    user.unlocked_link_items = {str(parent.id)}
+    assert child.get_abilities(user)["retrieve"] is True
