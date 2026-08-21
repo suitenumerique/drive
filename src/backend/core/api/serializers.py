@@ -1,6 +1,6 @@
 """Client serializers for the drive core app."""
 
-# pylint: disable=no-name-in-module
+# pylint: disable=no-name-in-module,too-many-lines
 
 from __future__ import annotations
 
@@ -877,6 +877,12 @@ class LinkItemSerializer(serializers.ModelSerializer):
         self._validate_against_ancestors(link_reach, link_role)
 
         return attrs
+
+
+class LinkPasswordSerializer(serializers.Serializer):
+    """Validate the password submitted to unlock an item share link."""
+
+    password = serializers.CharField(required=True, allow_blank=False)
 
 
 class InvitationSerializer(serializers.ModelSerializer):
