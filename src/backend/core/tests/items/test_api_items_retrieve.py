@@ -1588,3 +1588,22 @@ def test_api_items_retrieve_link_expired_owner():
     assert response.json()["link_expires_at"] == item.link_expires_at.isoformat().replace(
         "+00:00", "Z"
     )
+
+
+def test_api_items_retrieve_link_password_locked():
+    """Link holders should not retrieve a password protected item until they unlock it."""
+    item = factories.ItemFactory(link_reach="public")
+    item.set_link_password("s3cret")
+    item.save()
+
+    client = APIClient()
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+    assert response.status_code == 401
+
+    session = client.session
+    session["unlocked_link_items"] = [str(item.id)]
+    session.save()
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+    assert response.status_code == 200
+    assert response.json()["abilities"]["password_locked"] is False
