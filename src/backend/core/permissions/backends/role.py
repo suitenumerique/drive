@@ -38,11 +38,30 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods,too-many-instanc
             self.access_role = RoleChoices.max(*(role for role, _ in accesses))
             self._has_direct_access = any(item_id == item.pk for _, item_id in accesses)
         self.is_deleted = bool(item.ancestors_deleted_at)
-        link_definition = item.computed_link_definition
+        link_reachable, link_locked = self._link_status()
+        if link_reachable and not link_locked:
+            # The link boosts access when its role exceeds the user's explicit
+            # access, and never reduces it
+            self.role = RoleChoices.max(
+                self.access_role, item.computed_link_definition["link_role"]
+            )
+        else:
+            self.role = self.access_role
+        self.is_owner = self.access_role == RoleChoices.OWNER
+        self.is_owner_or_admin = self.is_owner or self.access_role == RoleChoices.ADMIN
+
+    def _link_status(self) -> tuple[bool, bool]:
+        """Return whether the link reaches the user and is locked by its password."""
+        link_definition = self.item.computed_link_definition
         link_reach = link_definition["link_reach"]
-        if link_reach == LinkReachChoices.PUBLIC or (
-            link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated
-        ):
+        link_reachable = link_reach == LinkReachChoices.PUBLIC or (
+            link_reach == LinkReachChoices.AUTHENTICATED and self.user.is_authenticated
+        )
+        link_unlock_key = link_definition["link_unlock_key"]
+        link_locked = link_unlock_key is not None and link_unlock_key not in getattr(
+            self.user, "unlocked_link_items", ()
+        )
+        if link_reachable and not link_locked:
             # The highest of the access role and the link role, needed for a user
             # with an access lower than the link role and for a user without access
             self.role = RoleChoices.max(self.access_role, link_definition["link_role"])

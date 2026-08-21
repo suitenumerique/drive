@@ -1058,6 +1058,10 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         link_not_expired = models.Q(link_expires_at__isnull=True) | models.Q(
             link_expires_at__gt=timezone.now()
         )
+        unlocked_ids = {key.split(":")[0] for key in getattr(user, "unlocked_link_items", ())}
+        link_open = link_not_expired & (
+            models.Q(link_password__isnull=True) | models.Q(id__in=unlocked_ids)
+        )
         if user.is_authenticated:
             return self.filter(
                 models.Q(accesses__user=user)
@@ -1067,11 +1071,11 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
                     models.Q(
                         link_reach__in=[LinkReachChoices.PUBLIC, LinkReachChoices.AUTHENTICATED]
                     )
-                    & link_not_expired
+                    & link_open
                 )
             )
 
-        return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC) & link_not_expired)
+        return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC) & link_open)
 
     def filter_non_deleted(self, **kwargs):
         """Filter the non deleted items"""
