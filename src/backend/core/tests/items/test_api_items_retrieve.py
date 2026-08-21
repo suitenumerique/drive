@@ -48,6 +48,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "link_reach": "public",
         "link_role": item.link_role,
         "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 0,
         "numchild": 0,
         "numchild_folder": 0,
@@ -109,6 +110,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "link_reach": item.link_reach,
         "link_role": item.link_role,
         "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 0,
         "numchild": 0,
         "numchild_folder": 0,
@@ -217,6 +219,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "link_reach": reach,
         "link_role": item.link_role,
         "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 0,
         "numchild": 0,
         "numchild_folder": 0,
@@ -284,6 +287,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "link_reach": item.link_reach,
         "link_role": item.link_role,
         "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 0,
         "numchild": 0,
         "numchild_folder": 0,
@@ -429,6 +433,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "link_reach": item.link_reach,
         "link_role": item.link_role,
         "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 2,
         "numchild": 0,
         "numchild_folder": 0,
@@ -500,6 +505,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "link_reach": "restricted",
         "link_role": item.link_role,
         "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 2,
         "numchild": 0,
         "numchild_folder": 0,
@@ -681,6 +687,7 @@ def test_api_items_retrieve_authenticated_related_team_members(teams, role, mock
         "link_reach": "restricted",
         "link_role": item.link_role,
         "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 5,
         "numchild": 0,
         "numchild_folder": 0,
@@ -760,6 +767,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(teams, rol
         "link_reach": "restricted",
         "link_role": item.link_role,
         "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 5,
         "numchild": 0,
         "numchild_folder": 0,
@@ -839,6 +847,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_t
         "link_reach": "restricted",
         "link_role": item.link_role,
         "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 5,
         "numchild": 0,
         "numchild_folder": 0,
@@ -1264,6 +1273,7 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "link_reach": "public",
         "link_role": item.link_role,
         "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 1,
         "numchild": 0,
         "numchild_folder": 0,
@@ -1341,6 +1351,7 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         "link_reach": "public",
         "link_role": item.link_role,
         "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 1,
         "numchild": 0,
         "numchild_folder": 0,
@@ -1408,6 +1419,7 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "link_reach": "public",
         "link_role": item.link_role,
         "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 1,
         "numchild": 0,
         "numchild_folder": 0,
@@ -1559,6 +1571,7 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "link_reach": "public",
         "link_role": item.link_role,
         "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 1,
         "numchild": 0,
         "numchild_folder": 0,
@@ -1682,3 +1695,19 @@ def test_api_items_retrieve_link_password_locked():
     response = client.get(f"/api/v1.0/items/{item.id!s}/")
     assert response.status_code == 200
     assert response.json()["abilities"]["unlock"] is False
+
+
+def test_api_items_retrieve_has_link_password():
+    """The item should tell whether its link has a password without exposing it."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_reach="public", users=[(user, "owner")])
+    item.set_link_password("s3cret")
+    item.save()
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["has_link_password"] is True
+    assert "link_password" not in response.json()
