@@ -49,14 +49,17 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
         link_locked = link_password_item is not None and str(link_password_item) not in getattr(
             self.user, "unlocked_link_items", ()
         )
-        if link_reachable and not link_locked:
-            # The highest of the access role and the link role, needed for a user
-            # with an access lower than the link role and for a user without access
-            self.role = RoleChoices.max(self.access_role, link_definition["link_role"])
-        else:
-            self.role = self.access_role
-        self.is_owner = self.access_role == RoleChoices.OWNER
-        self.is_owner_or_admin = self.is_owner or self.access_role == RoleChoices.ADMIN
+        return link_reachable, link_locked
+
+    def password_locked(self) -> bool:
+        """Return whether unlocking the link would grant the user more than their role."""
+        link_reachable, link_locked = self._link_status()
+        return (
+            link_reachable
+            and link_locked
+            and RoleChoices.get_priority(self.item.computed_link_definition["link_role"])
+            > RoleChoices.get_priority(self.access_role)
+        )
 
     @cached_property
     def is_restricted(self) -> bool:
@@ -193,6 +196,7 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
             "invite_owner": self.can_invite_owner(),
             "link_select_options": self.link_select_options(),
             "move": self.can_move(),
+            "password_locked": self.password_locked(),
             "restrict": self.can_restrict(),
             "restore": self.can_restore(),
             "retrieve": self.can_retrieve(),
