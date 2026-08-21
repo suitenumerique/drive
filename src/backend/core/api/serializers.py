@@ -10,9 +10,10 @@ from urllib.parse import quote
 
 from django.conf import settings
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from lasuite.drf.models.choices import LinkReachChoices, get_equivalent_link_definition
+from lasuite.drf.models.choices import LinkReachChoices
 from rest_framework import serializers
 
 from core import enums, models
@@ -232,6 +233,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     creator = UserLightSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
+    has_link_password = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Item
@@ -248,6 +250,8 @@ class ListItemSerializer(serializers.ModelSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "link_expires_at",
+            "has_link_password",
             "nb_accesses",
             "numchild",
             "numchild_folder",
@@ -282,6 +286,8 @@ class ListItemSerializer(serializers.ModelSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "link_expires_at",
+            "has_link_password",
             "nb_accesses",
             "path",
             "updated_at",
@@ -306,7 +312,7 @@ class ListItemSerializer(serializers.ModelSerializer):
 
         if paths_links_mapping is not None:
             links = paths_links_mapping.get(str(instance.path[:-1]), [])
-            instance.ancestors_link_definition = get_equivalent_link_definition(links)
+            instance.ancestors_link_definition = models.get_equivalent_link_definition(links)
 
         return super().to_representation(instance)
 
@@ -384,6 +390,10 @@ class ListItemSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         return wopi_utils.is_item_wopi_supported(item, request.user if request else None)
 
+    def get_has_link_password(self, item) -> bool:
+        """Return whether the item link is protected by a password."""
+        return bool(item.link_password)
+
 
 class ListItemLightSerializer(ListItemSerializer):
     """
@@ -402,6 +412,8 @@ class ListItemLightSerializer(ListItemSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "link_expires_at",
+            "has_link_password",
             "numchild",
             "numchild_folder",
             "path",
@@ -431,6 +443,8 @@ class ListItemLightSerializer(ListItemSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "link_expires_at",
+            "has_link_password",
             "path",
             "updated_at",
             "user_role",
@@ -478,6 +492,8 @@ class ItemSerializer(ListItemSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "link_expires_at",
+            "has_link_password",
             "nb_accesses",
             "numchild",
             "numchild_folder",
@@ -513,6 +529,8 @@ class ItemSerializer(ListItemSerializer):
             "nb_accesses",
             "link_role",
             "link_reach",
+            "link_expires_at",
+            "has_link_password",
             "path",
             "updated_at",
             "user_role",
@@ -579,6 +597,8 @@ class CreateItemSerializer(ItemSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "link_expires_at",
+            "has_link_password",
             "nb_accesses",
             "numchild",
             "numchild_folder",
@@ -610,6 +630,8 @@ class CreateItemSerializer(ItemSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "link_expires_at",
+            "has_link_password",
             "nb_accesses",
             "path",
             "updated_at",
@@ -736,13 +758,24 @@ class LinkItemSerializer(serializers.ModelSerializer):
     """
 
     link_reach = serializers.ChoiceField(choices=LinkReachChoices.choices, required=True)
+    link_password = serializers.CharField(
+        write_only=True, required=False, allow_null=True, allow_blank=False
+    )
 
     class Meta:
         model = models.Item
         fields = [
             "link_role",
             "link_reach",
+            "link_expires_at",
+            "link_password",
         ]
+
+    def validate_link_expires_at(self, value):
+        """Validate that the expiration date is in the future."""
+        if value is not None and value <= timezone.now():
+            raise serializers.ValidationError(_("Expiration date must be in the future."))
+        return value
 
     def validate(self, attrs):
         """Validate that link_role and link_reach are compatible using get_select_options."""
@@ -752,9 +785,21 @@ class LinkItemSerializer(serializers.ModelSerializer):
         if not link_reach:
             raise serializers.ValidationError({"link_reach": _("This field is required.")})
 
+        if link_reach == LinkReachChoices.RESTRICTED:
+            if attrs.get("link_expires_at") is not None:
+                raise serializers.ValidationError(
+                    {"link_expires_at": _("Cannot set an expiration date on a restricted link.")}
+                )
+            if attrs.get("link_password") is not None:
+                raise serializers.ValidationError(
+                    {"link_password": _("Cannot set a password on a restricted link.")}
+                )
+            attrs["link_expires_at"] = None
+            attrs["link_password"] = None
+
         # Get available options based on ancestors' link definition
         available_options = LinkReachChoices.get_select_options(
-            **self.instance.ancestors_link_definition
+            self.instance.ancestors_link_reach, self.instance.ancestors_link_role
         )
 
         # Validate link_reach is allowed
@@ -791,6 +836,18 @@ class LinkItemSerializer(serializers.ModelSerializer):
             )
 
         return attrs
+
+    def update(self, instance, validated_data):
+        """Hash the link password instead of storing it as is."""
+        if "link_password" in validated_data:
+            instance.set_link_password(validated_data.pop("link_password"))
+        return super().update(instance, validated_data)
+
+
+class LinkPasswordSerializer(serializers.Serializer):
+    """Validate the password submitted to unlock an item share link."""
+
+    password = serializers.CharField(required=True, allow_blank=False)
 
 
 class InvitationSerializer(serializers.ModelSerializer):

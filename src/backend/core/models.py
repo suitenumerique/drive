@@ -13,6 +13,7 @@ from os.path import splitext
 from django.conf import settings
 from django.contrib.auth import models as auth_models
 from django.contrib.auth.base_user import AbstractBaseUser
+from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GistIndex
 from django.contrib.sites.models import Site
@@ -37,7 +38,9 @@ from lasuite.drf.models.choices import (
     LinkReachChoices,
     LinkRoleChoices,
     RoleChoices,
-    get_equivalent_link_definition,
+)
+from lasuite.drf.models.choices import (
+    get_equivalent_link_definition as get_equivalent_reach_role,
 )
 from pydantic import BaseModel as PydanticBaseModel
 from timezone_field import TimeZoneField
@@ -799,6 +802,24 @@ class AnnotateUserRoleQuerySetMixin:
         )
 
 
+def get_equivalent_link_definition(links):
+    """
+    Return the (reach, role, password item) equivalent to a list of link definitions.
+    The password is the one of the closest link providing the equivalent reach and role.
+    """
+    definition = get_equivalent_reach_role(links)
+    definition["link_password_item"] = None
+    if definition["link_reach"] not in (None, LinkReachChoices.RESTRICTED):
+        for link in reversed(links):
+            if (
+                link["link_reach"] == definition["link_reach"]
+                and link["link_role"] == definition["link_role"]
+            ):
+                definition["link_password_item"] = link.get("link_password_item")
+                break
+    return definition
+
+
 class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
     """Custom queryset for Item model with additional methods."""
 
@@ -811,14 +832,17 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         :param user: The user for whom readable documents are to be fetched.
         :return: A queryset of documents readable by the user.
         """
+        link_not_expired = models.Q(link_expires_at__isnull=True) | models.Q(
+            link_expires_at__gt=timezone.now()
+        )
         if user.is_authenticated:
             return self.filter(
                 models.Q(accesses__user=user)
                 | models.Q(accesses__team__in=user.teams)
-                | ~models.Q(link_reach=LinkReachChoices.RESTRICTED)
+                | (~models.Q(link_reach=LinkReachChoices.RESTRICTED) & link_not_expired)
             )
 
-        return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC))
+        return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC) & link_not_expired)
 
     def filter_non_deleted(self, **kwargs):
         """Filter the non deleted items"""
@@ -981,7 +1005,7 @@ class ItemManager(TreeManager.from_queryset(ItemQuerySet)):
         return item
 
 
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods,too-many-instance-attributes
 class Item(TreeModel, BaseModel):
     """Item in the tree."""
 
@@ -995,6 +1019,8 @@ class Item(TreeModel, BaseModel):
     link_role = models.CharField(
         max_length=20, choices=LinkRoleChoices.choices, default=LinkRoleChoices.READER
     )
+    link_expires_at = models.DateTimeField(_("link expiration date"), null=True, blank=True)
+    link_password = models.CharField(_("link password"), max_length=128, null=True, blank=True)
     creator = models.ForeignKey(
         User,
         on_delete=models.RESTRICT,
@@ -1259,17 +1285,38 @@ class Item(TreeModel, BaseModel):
         paths_links_mapping = {}
 
         for ancestor in ancestors:
-            ancestors_links.append(
-                {"link_reach": ancestor.link_reach, "link_role": ancestor.link_role}
-            )
+            ancestors_links.append(ancestor.link_definition)
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
         return paths_links_mapping
 
     @property
+    def is_link_expired(self):
+        """Return whether the link expiration date is past."""
+        return self.link_expires_at is not None and self.link_expires_at <= timezone.now()
+
+    @property
     def link_definition(self):
-        """Returns link reach/role as a definition in dictionary format."""
-        return {"link_reach": self.link_reach, "link_role": self.link_role}
+        """Return link reach/role/password item as a definition in dictionary format."""
+        if self.is_link_expired:
+            return {
+                "link_reach": LinkReachChoices.RESTRICTED,
+                "link_role": None,
+                "link_password_item": None,
+            }
+        return {
+            "link_reach": self.link_reach,
+            "link_role": self.link_role,
+            "link_password_item": self.id if self.link_password else None,
+        }
+
+    def set_link_password(self, raw_password):
+        """Store the hash of the given link password, or remove it when empty."""
+        self.link_password = make_password(raw_password) if raw_password else None
+
+    def check_link_password(self, raw_password):
+        """Return whether the given password matches the link password."""
+        return bool(self.link_password) and check_password(raw_password, self.link_password)
 
     @property
     def ancestors_link_definition(self):
@@ -1321,6 +1368,28 @@ class Item(TreeModel, BaseModel):
         """Actual link role on the document."""
         return self.computed_link_definition["link_role"]
 
+    def get_role_from_link(self, user, role):
+        """
+        Return the role granted by the link to the user, and whether unlocking the link with
+        its password would grant the user more than the given explicit role.
+        """
+        link_definition = self.computed_link_definition
+        link_reach = link_definition["link_reach"]
+        link_role = link_definition["link_role"]
+        if not (
+            link_reach == LinkReachChoices.PUBLIC
+            or (link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated)
+        ):
+            return None, False
+
+        link_password_item = link_definition["link_password_item"]
+        if link_password_item is not None and str(link_password_item) not in getattr(
+            user, "unlocked_link_items", ()
+        ):
+            return None, RoleChoices.get_priority(link_role) > RoleChoices.get_priority(role)
+
+        return link_role, False
+
     def get_abilities(self, user):
         """
         Compute and return abilities for a given user on the item.
@@ -1338,21 +1407,16 @@ class Item(TreeModel, BaseModel):
         # Anonymous users should also not see item accesses
         has_access_role = bool(role) and not is_deleted
         link_select_options = (
-            LinkReachChoices.get_select_options(**self.ancestors_link_definition)
+            LinkReachChoices.get_select_options(self.ancestors_link_reach, self.ancestors_link_role)
             if has_access_role
             else {}
         )
 
-        link_definition = self.computed_link_definition
-
-        link_reach = link_definition["link_reach"]
-        if link_reach == LinkReachChoices.PUBLIC or (
-            link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated
-        ):
-            # Set the user role to the highest role between the item role and the link role
-            # Needed for a user with an access lower than link_role
-            # Needed for a user without access to determine the role he has.
-            role = RoleChoices.max(role, link_definition["link_role"])
+        role_from_link, password_locked = self.get_role_from_link(user, role)
+        # Set the user role to the highest role between the item role and the link role
+        # Needed for a user with an access lower than link_role
+        # Needed for a user without access to determine the role he has.
+        role = RoleChoices.max(role, role_from_link)
         can_get = bool(role) and not is_deleted
         retrieve = can_get or is_owner
         can_manage = is_owner_or_admin and not is_deleted
@@ -1399,6 +1463,7 @@ class Item(TreeModel, BaseModel):
             "invite_owner": is_owner and not is_deleted,
             "link_select_options": link_select_options,
             "move": can_manage,
+            "password_locked": password_locked,
             "restore": is_owner,
             "retrieve": retrieve,
             "tree": can_get,

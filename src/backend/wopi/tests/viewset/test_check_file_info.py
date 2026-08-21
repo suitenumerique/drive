@@ -14,7 +14,7 @@ from rest_framework.test import APIClient
 
 from core import factories, models
 from wopi.exceptions import WopiRequestSignatureError
-from wopi.services.access import AccessUserItemService
+from wopi.services.access import AccessUserItemNotAllowed, AccessUserItemService
 from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
 from wopi.utils import signature as signature_utils
 
@@ -551,3 +551,32 @@ def test_check_file_info_connected_user_with_access_proof_keys_configured_but_no
             )
 
     mock_verify_wopi_proof.assert_not_called()
+
+
+def test_check_file_info_anonymous_user_link_password():
+    """The link unlocked when the token was issued should still grant access to the WOPI client."""
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_role=models.LinkRoleChoices.READER,
+    )
+    item.set_link_password("s3cret")
+    item.save()
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+
+    service = AccessUserItemService()
+    user = AnonymousUser()
+    with pytest.raises(AccessUserItemNotAllowed):
+        service.insert_new_access(item, user)
+
+    user.unlocked_link_items = {str(item.id)}
+    access_token, _ = service.insert_new_access(item, user)
+
+    response = APIClient().get(
+        f"/api/v1.0/wopi/files/{item.id}/", HTTP_AUTHORIZATION=f"Bearer {access_token}"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["UserCanWrite"] is False
