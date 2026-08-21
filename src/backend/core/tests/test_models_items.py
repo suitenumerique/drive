@@ -694,7 +694,9 @@ def test_models_items_not_root_get_abilities_editor_user(
         filename="document.pdf" if item_type == models.ItemTypeChoices.FILE else None,
         update_upload_state=upload_state,
     )
-    link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    link_select_options = LinkReachChoices.get_select_options(
+        item.ancestors_link_reach, item.ancestors_link_role
+    )
     can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
@@ -808,7 +810,9 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         creator=other_user,
         users=[(other_user, "owner")],
     )
-    link_select_options = LinkReachChoices.get_select_options(**child.ancestors_link_definition)
+    link_select_options = LinkReachChoices.get_select_options(
+        child.ancestors_link_reach, child.ancestors_link_role
+    )
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -1537,3 +1541,23 @@ def test_models_items_link_password_set_and_check():
     item.set_link_password("")
     assert item.link_password is None
     assert item.check_link_password("") is False
+
+
+def test_models_items_link_password_item_inherited_from_ancestor():
+    """The ancestor providing the link should be the one whose password applies."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    parent.set_link_password("s3cret")
+    parent.save()
+    child = factories.ItemFactory(parent=parent, link_reach=None)
+
+    assert child.computed_link_definition["link_password_item"] == parent.id
+
+
+def test_models_items_link_password_item_closest_link_wins():
+    """A descendant defining its own equivalent link should use its own password setting."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    parent.set_link_password("s3cret")
+    parent.save()
+    child = factories.ItemFactory(parent=parent, link_reach="public")
+
+    assert child.computed_link_definition["link_password_item"] is None

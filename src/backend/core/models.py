@@ -3,6 +3,7 @@ Declare and configure the models for the drive core application
 """
 # pylint: disable=too-many-lines
 
+import hashlib
 import smtplib
 import uuid
 from datetime import timedelta
@@ -38,8 +39,8 @@ from lasuite.drf.models.choices import (
     LinkReachChoices,
     LinkRoleChoices,
     RoleChoices,
-    get_equivalent_link_definition,
 )
+from lasuite.drf.models.choices import get_equivalent_link_definition as get_equivalent_reach_role
 from pydantic import BaseModel as PydanticBaseModel
 from timezone_field import TimeZoneField
 
@@ -801,6 +802,31 @@ class AnnotateUserRoleQuerySetMixin:
         )
 
 
+def link_unlock_key(item_id, link_password):
+    """Return the key remembering an unlock, bound to the password it was made with."""
+    return f"{item_id}:{hashlib.sha256(link_password.encode()).hexdigest()[:12]}"
+
+
+def get_equivalent_link_definition(links):
+    """
+    Return the (reach, role, password item) equivalent to a list of link definitions.
+    The password is the one of the closest link providing the equivalent reach and role.
+    """
+    definition = get_equivalent_reach_role(links)
+    definition["link_password_item"] = None
+    definition["link_unlock_key"] = None
+    if definition["link_reach"] not in (None, LinkReachChoices.RESTRICTED):
+        for link in reversed(links):
+            if (
+                link["link_reach"] == definition["link_reach"]
+                and link["link_role"] == definition["link_role"]
+            ):
+                definition["link_password_item"] = link.get("link_password_item")
+                definition["link_unlock_key"] = link.get("link_unlock_key")
+                break
+    return definition
+
+
 class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
     """Custom queryset for Item model with additional methods."""
 
@@ -1306,10 +1332,20 @@ class Item(TreeModel, BaseModel):
 
     @property
     def link_definition(self):
-        """Return link reach/role as a definition in dictionary format."""
+        """Return link reach/role/password item as a definition in dictionary format."""
         if self.is_link_expired:
-            return {"link_reach": LinkReachChoices.RESTRICTED, "link_role": None}
-        return {"link_reach": self.link_reach, "link_role": self.link_role}
+            return {
+                "link_reach": LinkReachChoices.RESTRICTED,
+                "link_role": None,
+                "link_password_item": None,
+                "link_unlock_key": None,
+            }
+        return {
+            "link_reach": self.link_reach,
+            "link_role": self.link_role,
+            "link_password_item": self.id if self.link_password else None,
+            "link_unlock_key": self.link_unlock_key,
+        }
 
     @property
     def link_unlock_key(self):
