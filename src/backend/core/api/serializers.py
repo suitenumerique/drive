@@ -816,6 +816,12 @@ class LinkItemSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class LinkPasswordSerializer(serializers.Serializer):
+    """Validate the password submitted to unlock an item share link."""
+
+    password = serializers.CharField(required=True, allow_blank=False)
+
+
 class InvitationSerializer(serializers.ModelSerializer):
     """Serialize invitations."""
 
