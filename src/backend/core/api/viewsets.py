@@ -35,7 +35,6 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, inline_seri
 from lasuite.drf.models.choices import (
     PRIVILEGED_ROLES,
     LinkReachChoices,
-    get_equivalent_link_definition,
 )
 from lasuite.malware_detection import malware_detection
 from lasuite.oidc_login.decorators import refresh_oidc_access_token
@@ -488,7 +487,7 @@ class ItemViewSet(
         traced_items_ids = []
         for item in traced_items:
             links = ancestors_link_definition.get(str(item.path[:-1]), [])
-            item.ancestors_link_definition = get_equivalent_link_definition(links)
+            item.ancestors_link_definition = models.get_equivalent_link_definition(links)
             if item.computed_link_reach != LinkReachChoices.RESTRICTED:
                 traced_items_ids.append(item.id)
 
@@ -1205,7 +1204,7 @@ class ItemViewSet(
                 ancestors_deleted_at__isnull=True,
             )
             .order_by("path")
-            .only("path", "link_reach", "link_role", "link_expires_at")
+            .only("path", "link_reach", "link_role", "link_expires_at", "link_password")
         )
 
         if len(ancestors) == 0:
