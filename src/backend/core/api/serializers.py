@@ -279,6 +279,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
     target = RestrictionTargetSerializer(read_only=True, allow_null=True)
+    has_link_password = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Item
@@ -297,6 +298,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "link_reach",
             "is_restricted",
             "link_expires_at",
+            "has_link_password",
             "nb_accesses",
             "numchild",
             "numchild_folder",
@@ -334,6 +336,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "link_role",
             "link_reach",
             "link_expires_at",
+            "has_link_password",
             "nb_accesses",
             "path",
             "target",
@@ -437,6 +440,10 @@ class ListItemSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         return wopi_utils.is_item_wopi_supported(item, request.user if request else None)
 
+    def get_has_link_password(self, item) -> bool:
+        """Return whether the item link is protected by a password."""
+        return bool(item.link_password)
+
 
 class ListItemLightSerializer(ListItemSerializer):
     """
@@ -456,6 +463,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "link_role",
             "link_reach",
             "link_expires_at",
+            "has_link_password",
             "numchild",
             "numchild_folder",
             "path",
@@ -486,6 +494,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "link_role",
             "link_reach",
             "link_expires_at",
+            "has_link_password",
             "path",
             "updated_at",
             "user_role",
@@ -535,6 +544,7 @@ class ItemSerializer(ListItemSerializer):
             "link_reach",
             "is_restricted",
             "link_expires_at",
+            "has_link_password",
             "nb_accesses",
             "numchild",
             "numchild_folder",
@@ -573,6 +583,7 @@ class ItemSerializer(ListItemSerializer):
             "link_role",
             "link_reach",
             "link_expires_at",
+            "has_link_password",
             "path",
             "updated_at",
             "user_role",
@@ -640,6 +651,7 @@ class CreateItemSerializer(ItemSerializer):
             "link_role",
             "link_reach",
             "link_expires_at",
+            "has_link_password",
             "nb_accesses",
             "numchild",
             "numchild_folder",
@@ -672,6 +684,7 @@ class CreateItemSerializer(ItemSerializer):
             "link_role",
             "link_reach",
             "link_expires_at",
+            "has_link_password",
             "nb_accesses",
             "path",
             "updated_at",
