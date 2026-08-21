@@ -967,6 +967,11 @@ class Base(Configuration):
                 environ_name="API_ITEMS_CREATE_THROTTLE_RATE_BURST",
                 environ_prefix=None,
             ),
+            "items_unlock": values.Value(
+                default="10/minute",
+                environ_name="API_ITEMS_UNLOCK_THROTTLE_RATE",
+                environ_prefix=None,
+            ),
         },
     }
 

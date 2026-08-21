@@ -10,6 +10,7 @@ This document lists all configurable environment variables for the Drive applica
 | `ALLOW_SHARE_IMPORT_FILE` | Enable batch sharing of an item from an imported contacts file | `False` |
 | `API_ITEMS_CREATE_THROTTLE_RATE_BURST` | Burst throttle rate for the item creation endpoints (create, children and duplicate) | `300/minute` |
 | `API_ITEMS_CREATE_THROTTLE_RATE_SUSTAINED` | Sustained throttle rate for the item creation endpoints (create, children and duplicate) | `5000/hour` |
+| `API_ITEMS_UNLOCK_THROTTLE_RATE` | Throttle rate for the item link unlock API | `10/minute` |
 | `API_USERS_LIST_LIMIT` | Maximum number of users returned in API user list | `5` |
 | `API_USERS_LIST_THROTTLE_RATE_BURST` | Burst throttle rate for user list API | `30/minute` |
 | `API_USERS_LIST_THROTTLE_RATE_SUSTAINED` | Sustained throttle rate for user list API | `180/hour` |
