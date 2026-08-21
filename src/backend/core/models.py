@@ -1331,6 +1331,16 @@ class Item(TreeModel, BaseModel):
         """Actual link role on the document."""
         return self.computed_link_definition["link_role"]
 
+    def get_role_from_link(self, user):
+        """Return the role granted by the link to the user, if any."""
+        link_definition = self.computed_link_definition
+        link_reach = link_definition["link_reach"]
+        if link_reach == LinkReachChoices.PUBLIC or (
+            link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated
+        ):
+            return link_definition["link_role"]
+        return None
+
     def get_abilities(self, user):
         """
         Compute and return abilities for a given user on the item.
@@ -1353,16 +1363,10 @@ class Item(TreeModel, BaseModel):
             else {}
         )
 
-        link_definition = self.computed_link_definition
-
-        link_reach = link_definition["link_reach"]
-        if link_reach == LinkReachChoices.PUBLIC or (
-            link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated
-        ):
-            # Set the user role to the highest role between the item role and the link role
-            # Needed for a user with an access lower than link_role
-            # Needed for a user without access to determine the role he has.
-            role = RoleChoices.max(role, link_definition["link_role"])
+        # Set the user role to the highest role between the item role and the link role
+        # Needed for a user with an access lower than link_role
+        # Needed for a user without access to determine the role he has.
+        role = RoleChoices.max(role, self.get_role_from_link(user))
         can_get = bool(role) and not is_deleted
         retrieve = can_get or is_owner
         can_manage = is_owner_or_admin and not is_deleted
