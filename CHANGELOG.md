@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) add an expiration date to item share links
+- ✨(backend) protect item share links with a password
 
 ## [v0.21.1] - 2026-08-21
 

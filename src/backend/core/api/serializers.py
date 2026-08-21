@@ -758,6 +758,9 @@ class LinkItemSerializer(serializers.ModelSerializer):
     """
 
     link_reach = serializers.ChoiceField(choices=LinkReachChoices.choices, required=True)
+    link_password = serializers.CharField(
+        write_only=True, required=False, allow_null=True, allow_blank=False
+    )
 
     class Meta:
         model = models.Item
@@ -765,6 +768,7 @@ class LinkItemSerializer(serializers.ModelSerializer):
             "link_role",
             "link_reach",
             "link_expires_at",
+            "link_password",
         ]
 
     def validate_link_expires_at(self, value):
@@ -786,7 +790,12 @@ class LinkItemSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     {"link_expires_at": _("Cannot set an expiration date on a restricted link.")}
                 )
+            if attrs.get("link_password") is not None:
+                raise serializers.ValidationError(
+                    {"link_password": _("Cannot set a password on a restricted link.")}
+                )
             attrs["link_expires_at"] = None
+            attrs["link_password"] = None
 
         # Get available options based on ancestors' link definition
         available_options = LinkReachChoices.get_select_options(
@@ -827,6 +836,12 @@ class LinkItemSerializer(serializers.ModelSerializer):
             )
 
         return attrs
+
+    def update(self, instance, validated_data):
+        """Hash the link password instead of storing it as is."""
+        if "link_password" in validated_data:
+            instance.set_link_password(validated_data.pop("link_password"))
+        return super().update(instance, validated_data)
 
 
 class LinkPasswordSerializer(serializers.Serializer):
