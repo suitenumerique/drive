@@ -1410,6 +1410,14 @@ class ItemViewSet(
         files_by_uuid = {str(d.pk): d for d in queryset}
         ordered_files = [files_by_uuid[id] for id in result_ids if id in files_by_uuid]
 
+        # The index only knows the link reach and ignores link expiration and password:
+        # keep only the items the user can actually retrieve.
+        paths_links_mapping = self._compute_ancestors_link_definition(ordered_files)
+        for item in ordered_files:
+            links = paths_links_mapping.get(str(item.path[:-1]), [])
+            item.ancestors_link_definition = models.get_equivalent_link_definition(links)
+        ordered_files = [item for item in ordered_files if item.get_abilities(user)["retrieve"]]
+
         page = self.paginate_queryset(ordered_files)
 
         if page is not None:
