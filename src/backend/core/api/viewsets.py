@@ -79,6 +79,8 @@ from .filters import (
 
 logger = logging.getLogger(__name__)
 
+UNLOCKED_LINK_ITEMS_SESSION_KEY = "unlocked_link_items"
+
 ITEM_FOLDER = "item"
 UUID_REGEX = r"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
 FILE_EXT_REGEX = '[^.\\/:*?&"<>|\r\n]+'
@@ -456,6 +458,13 @@ class ItemViewSet(
             self.throttle_classes = [ItemCreateThrottleBurst, ItemCreateThrottleSustained]
 
         return super().get_throttles()
+
+    def initial(self, request, *args, **kwargs):
+        """Attach the link items unlocked in the session to the user before checking permissions."""
+        request.user.unlocked_link_items = set(
+            request.session.get(UNLOCKED_LINK_ITEMS_SESSION_KEY, [])
+        )
+        super().initial(request, *args, **kwargs)
 
     def _filter_suspicious_items(self, queryset, user):
         """
