@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(backend) fix malware re-analysis of a file already scanned
+
 ## [v0.21.0] - 2026-08-07
 
 ### Added

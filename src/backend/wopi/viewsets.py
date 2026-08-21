@@ -13,13 +13,13 @@ from django.db import transaction
 from django.http import StreamingHttpResponse
 from django.utils.timezone import now
 
-from lasuite.malware_detection import malware_detection
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from sentry_sdk import capture_exception
 
 from core.api.utils import get_item_file_head_object
+from core.malware_detection import reanalyse_file
 from core.models import Item
 from wopi.authentication import WopiAccessTokenAuthentication, get_access_token
 from wopi.exceptions import WopiRequestSignatureError
@@ -248,7 +248,7 @@ class WopiViewSet(viewsets.ViewSet):
         # non-READY files in WOPI.
         item.save(update_fields=["size", "updated_at"])
 
-        malware_detection.analyse_file(item.file_key, item_id=item.id)
+        reanalyse_file(item.file_key, item_id=item.id)
 
         head_response = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
         return Response(

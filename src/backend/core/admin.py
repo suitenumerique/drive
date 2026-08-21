@@ -12,11 +12,11 @@ from django.shortcuts import redirect
 from django.template.defaultfilters import filesizeformat
 from django.utils.translation import gettext_lazy as _
 
-from lasuite.malware_detection import malware_detection
 from lasuite.malware_detection.admin import MalwareDetectionAdmin as BaseMalwareDetectionAdmin
 from lasuite.malware_detection.models import MalwareDetection
 
 from core import models
+from core.malware_detection import reanalyse_file
 from core.tasks.user_reconciliation import user_reconciliation_csv_import_job
 
 
@@ -245,7 +245,7 @@ class ItemAdmin(admin.ModelAdmin):
 
         for item in queryset:
             if item.type == models.ItemTypeChoices.FILE:
-                malware_detection.analyse_file(item.file_key, item_id=item.id)
+                reanalyse_file(item.file_key, item_id=item.id)
 
         self.message_user(request, "The files have been scheduled for a new analysis.")
 
