@@ -886,6 +886,28 @@ def test_api_items_tree_authenticated_with_access_authenticated():
     }
 
 
+@pytest.mark.parametrize("target_is_child", [False, True])
+def test_api_items_tree_link_password_locked(target_is_child):
+    """An anonymous visitor must unlock the ancestor before browsing its tree."""
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    root.set_link_password("s3cret")
+    root.save()
+    child = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER, link_reach=None)
+    target = child if target_is_child else root
+    client = APIClient()
+
+    assert client.get(f"/api/v1.0/items/{target.id}/").status_code == 401
+    assert client.get(f"/api/v1.0/items/{target.id}/tree/").status_code == 401
+
+    response = client.post(
+        f"/api/v1.0/items/{root.id}/unlock/", {"password": "s3cret"}, format="json"
+    )
+    assert response.status_code == 200
+    response = client.get(f"/api/v1.0/items/{target.id}/tree/")
+    assert response.status_code == 200
+    assert response.json()["id"] == str(root.id)
+
+
 def test_api_items_tree_link_expired_ancestor():
     """An ancestor whose link has expired should not be the root of the returned tree."""
     user = factories.UserFactory()
