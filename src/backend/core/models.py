@@ -1368,23 +1368,27 @@ class Item(TreeModel, BaseModel):
         """Actual link role on the document."""
         return self.computed_link_definition["link_role"]
 
-    def get_role_from_link(self, user):
-        """Return the role granted by the link to the user, if any."""
+    def get_role_from_link(self, user, role):
+        """
+        Return the role granted by the link to the user, and whether unlocking the link with
+        its password would grant the user more than the given explicit role.
+        """
         link_definition = self.computed_link_definition
         link_reach = link_definition["link_reach"]
+        link_role = link_definition["link_role"]
         if not (
             link_reach == LinkReachChoices.PUBLIC
             or (link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated)
         ):
-            return None
+            return None, False
 
         link_password_item = link_definition["link_password_item"]
         if link_password_item is not None and str(link_password_item) not in getattr(
             user, "unlocked_link_items", ()
         ):
-            return None
+            return None, RoleChoices.get_priority(link_role) > RoleChoices.get_priority(role)
 
-        return link_definition["link_role"]
+        return link_role, False
 
     def get_abilities(self, user):
         """
@@ -1408,10 +1412,11 @@ class Item(TreeModel, BaseModel):
             else {}
         )
 
+        role_from_link, password_locked = self.get_role_from_link(user, role)
         # Set the user role to the highest role between the item role and the link role
         # Needed for a user with an access lower than link_role
         # Needed for a user without access to determine the role he has.
-        role = RoleChoices.max(role, self.get_role_from_link(user))
+        role = RoleChoices.max(role, role_from_link)
         can_get = bool(role) and not is_deleted
         retrieve = can_get or is_owner
         can_manage = is_owner_or_admin and not is_deleted
@@ -1458,6 +1463,7 @@ class Item(TreeModel, BaseModel):
             "invite_owner": is_owner and not is_deleted,
             "link_select_options": link_select_options,
             "move": can_manage,
+            "password_locked": password_locked,
             "restore": is_owner,
             "retrieve": retrieve,
             "tree": can_get,

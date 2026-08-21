@@ -299,6 +299,7 @@ def test_models_items_get_abilities_forbidden(
         "media_auth": False,
         "download": False,
         "move": False,
+        "password_locked": False,
         "link_configuration": False,
         "link_select_options": {},
         "partial_update": False,
@@ -351,6 +352,7 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         "media_auth": True,
         "download": True,
         "move": False,
+        "password_locked": False,
         "partial_update": False,
         "restore": False,
         "retrieve": True,
@@ -456,6 +458,7 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913
         "media_auth": True,
         "download": True,
         "move": False,
+        "password_locked": False,
         "partial_update": True,
         "restore": False,
         "retrieve": True,
@@ -526,6 +529,7 @@ def test_models_items_not_root_get_abilities_owner(
         "media_auth": True,
         "download": True,
         "move": True,
+        "password_locked": False,
         "partial_update": True,
         "restore": True,
         "retrieve": True,
@@ -556,6 +560,7 @@ def test_models_items_not_root_get_abilities_owner(
         "media_auth": False,
         "download": False,
         "move": False,
+        "password_locked": False,
         "partial_update": False,
         "restore": True,
         "retrieve": True,
@@ -616,6 +621,7 @@ def test_models_items_not_root_get_abilities_administrator(
         "media_auth": True,
         "download": True,
         "move": True,
+        "password_locked": False,
         "partial_update": True,
         "restore": False,
         "retrieve": True,
@@ -688,6 +694,7 @@ def test_models_items_not_root_get_abilities_editor_user(
         "media_auth": True,
         "download": True,
         "move": False,
+        "password_locked": False,
         "partial_update": True,
         "restore": False,
         "retrieve": True,
@@ -741,6 +748,7 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "media_auth": True,
         "download": True,
         "move": False,
+        "password_locked": False,
         "partial_update": access_from_link,
         "restore": False,
         "retrieve": True,
@@ -801,6 +809,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "link_select_options": link_select_options,
         "media_auth": True,
         "move": True,
+        "password_locked": False,
         "partial_update": True,
         "restore": True,
         "retrieve": True,
@@ -832,6 +841,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "link_select_options": {},
         "media_auth": False,
         "move": False,
+        "password_locked": False,
         "partial_update": False,
         "restore": True,
         "retrieve": True,
@@ -1488,11 +1498,13 @@ def test_models_items_get_abilities_link_password_locked(is_authenticated):
     abilities = item.get_abilities(user)
     assert abilities["retrieve"] is False
     assert abilities["update"] is False
+    assert abilities["password_locked"] is True
 
     user.unlocked_link_items = {str(item.id)}
     abilities = item.get_abilities(user)
     assert abilities["retrieve"] is True
     assert abilities["update"] is True
+    assert abilities["password_locked"] is False
 
 
 def test_models_items_get_abilities_link_password_explicit_access():
@@ -1501,7 +1513,21 @@ def test_models_items_get_abilities_link_password_explicit_access():
     item = factories.ItemFactory(link_reach="public", link_role="reader", users=[(user, "editor")])
     item.set_link_password("s3cret")
 
-    assert item.get_abilities(user)["update"] is True
+    abilities = item.get_abilities(user)
+    assert abilities["update"] is True
+    assert abilities["password_locked"] is False
+
+
+def test_models_items_get_abilities_link_password_lower_explicit_access():
+    """Unlocking the link should be offered when it grants more than the explicit access."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_reach="public", link_role="editor", users=[(user, "reader")])
+    item.set_link_password("s3cret")
+
+    abilities = item.get_abilities(user)
+    assert abilities["retrieve"] is True
+    assert abilities["update"] is False
+    assert abilities["password_locked"] is True
 
 
 def test_models_items_get_abilities_link_password_inherited_from_ancestor():
