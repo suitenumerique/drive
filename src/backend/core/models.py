@@ -1372,11 +1372,19 @@ class Item(TreeModel, BaseModel):
         """Return the role granted by the link to the user, if any."""
         link_definition = self.computed_link_definition
         link_reach = link_definition["link_reach"]
-        if link_reach == LinkReachChoices.PUBLIC or (
-            link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated
+        if not (
+            link_reach == LinkReachChoices.PUBLIC
+            or (link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated)
         ):
-            return link_definition["link_role"]
-        return None
+            return None
+
+        link_password_item = link_definition["link_password_item"]
+        if link_password_item is not None and str(link_password_item) not in getattr(
+            user, "unlocked_link_items", ()
+        ):
+            return None
+
+        return link_definition["link_role"]
 
     def get_abilities(self, user):
         """
