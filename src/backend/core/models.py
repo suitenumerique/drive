@@ -13,6 +13,7 @@ from os.path import splitext
 from django.conf import settings
 from django.contrib.auth import models as auth_models
 from django.contrib.auth.base_user import AbstractBaseUser
+from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GistIndex
 from django.contrib.sites.models import Site
@@ -1309,6 +1310,14 @@ class Item(TreeModel, BaseModel):
         if self.is_link_expired:
             return {"link_reach": LinkReachChoices.RESTRICTED, "link_role": None}
         return {"link_reach": self.link_reach, "link_role": self.link_role}
+
+    def set_link_password(self, raw_password):
+        """Store the hash of the given link password, or remove it when empty."""
+        self.link_password = make_password(raw_password) if raw_password else None
+
+    def check_link_password(self, raw_password):
+        """Return whether the given password matches the link password."""
+        return bool(self.link_password) and check_password(raw_password, self.link_password)
 
     @property
     def ancestors_link_definition(self):
