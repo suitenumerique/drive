@@ -1563,6 +1563,22 @@ class ItemViewSet(
             breadcrumb = prefix + breadcrumb
         return drf.response.Response(self.get_serializer(breadcrumb, many=True).data)
 
+    def _filter_retrievable(self, items, user):
+        """
+        Keep only the items the user can retrieve: the search scope and the index only
+        know the link reach and ignore link expiration and password.
+        """
+        paths_links_mapping = self._compute_ancestors_link_definition(items)
+        for item in items:
+            links = paths_links_mapping.get(str(item.path[:-1]), [])
+            item.ancestors_link_definition = models.get_equivalent_link_definition(links)
+        # Deleted items are only reached through explicit accesses, never through a link
+        return [
+            item
+            for item in items
+            if item.ancestors_deleted_at or item.get_abilities(user)["retrieve"]
+        ]
+
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
     @method_decorator(refresh_oidc_access_token)
     def _indexed_search(self, request, queryset, indexer, text):
@@ -1590,6 +1606,7 @@ class ItemViewSet(
 
         files_by_uuid = {str(d.pk): d for d in queryset}
         ordered_files = [files_by_uuid[id] for id in result_ids if id in files_by_uuid]
+        ordered_files = self._filter_retrievable(ordered_files, user)
 
         page = self.paginate_queryset(ordered_files)
 
@@ -1682,11 +1699,17 @@ class ItemViewSet(
                 text=filterset.form.cleaned_data.pop("title"),
             )
 
+        # Link passwords are the only restriction the scope cannot express, keep the
+        # database pagination when the scope holds none
+        scope_has_link_password = queryset.filter(link_password__isnull=False).exists()
+
         # Without the indexer, the "title" filtering is kept
         queryset = filterset.filter_queryset(queryset)
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_user_has_direct_access(user)
         queryset = queryset.annotate_with_numchild()
+        if scope_has_link_password:
+            queryset = self._filter_retrievable(list(queryset), user)
 
         page = self.paginate_queryset(queryset)
 
