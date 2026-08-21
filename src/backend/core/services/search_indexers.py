@@ -196,6 +196,8 @@ class BaseItemIndexer(ABC):
         queryset = queryset or models.Item.objects.filter(
             main_workspace=False,
         )
+        # Shortcuts are tree entries, not indexable content
+        queryset = queryset.exclude(type=models.ItemTypeChoices.SHORTCUT)
         queryset = queryset.order_by("id")
 
         while True:

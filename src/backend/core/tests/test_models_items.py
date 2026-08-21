@@ -55,6 +55,18 @@ def test_models_items_path_for_children_contains_parent_path():
     assert str(child.path) == f"{parent.id!s}.{child.id!s}"
 
 
+def test_models_items_parent_resolves_by_path_after_move():
+    """The parent should stay the direct one after the subtree was moved."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    child = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    new_grandparent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+
+    parent.move(new_grandparent)
+    child.refresh_from_db()
+
+    assert child.parent() == parent
+
+
 def test_models_items_title_max_length():
     """The "title" field should be 100 characters maximum."""
     factories.ItemFactory(title="a" * 255)
@@ -101,7 +113,12 @@ def test_models_items_soft_delete(depth):
 
     with pytest.raises(RuntimeError) as exc_info:
         items[-1].soft_delete()
-        assert str(exc_info) == "This item is already deleted or has deleted ancestors."
+
+    # The item deleted at random is either the last item itself or one of its ancestors
+    assert str(exc_info.value) in (
+        "This item is already deleted or has deleted ancestors.",
+        "Cannot delete this item because one or more ancestors are already deleted.",
+    )
 
     assert deleted_item.deleted_at is not None
     assert deleted_item.ancestors_deleted_at == deleted_item.deleted_at
@@ -302,6 +319,7 @@ def test_models_items_get_abilities_forbidden(
         "link_configuration": False,
         "link_select_options": {},
         "partial_update": False,
+        "restrict": False,
         "restore": False,
         "retrieve": False,
         "tree": False,
@@ -352,6 +370,7 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         "download": True,
         "move": False,
         "partial_update": False,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
@@ -457,6 +476,7 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913
         "download": True,
         "move": False,
         "partial_update": True,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
@@ -527,6 +547,7 @@ def test_models_items_not_root_get_abilities_owner(
         "download": True,
         "move": True,
         "partial_update": True,
+        "restrict": False,
         "restore": True,
         "retrieve": True,
         "tree": True,
@@ -557,6 +578,7 @@ def test_models_items_not_root_get_abilities_owner(
         "download": False,
         "move": False,
         "partial_update": False,
+        "restrict": False,
         "restore": True,
         "retrieve": True,
         "tree": False,
@@ -617,6 +639,7 @@ def test_models_items_not_root_get_abilities_administrator(
         "download": True,
         "move": True,
         "partial_update": True,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
@@ -687,6 +710,7 @@ def test_models_items_not_root_get_abilities_editor_user(
         "download": True,
         "move": False,
         "partial_update": True,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
@@ -740,6 +764,7 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "download": True,
         "move": False,
         "partial_update": access_from_link,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
@@ -798,6 +823,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "media_auth": True,
         "move": True,
         "partial_update": True,
+        "restrict": False,
         "restore": True,
         "retrieve": True,
         "tree": True,
@@ -829,6 +855,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "media_auth": False,
         "move": False,
         "partial_update": False,
+        "restrict": False,
         "restore": True,
         "retrieve": True,
         "tree": False,
@@ -1089,7 +1116,10 @@ def test_models_items_nb_accesses_cache_is_invalidated_on_access_removal(
 @pytest.mark.parametrize("item_type", models.ItemTypeChoices.values)
 def test_models_items_default_upload_state(item_type):
     """The default value for the upload_state field depends on the item type."""
-    item = factories.ItemFactory(type=item_type)
+    if item_type == models.ItemTypeChoices.SHORTCUT:
+        item = factories.ShortcutFactory()
+    else:
+        item = factories.ItemFactory(type=item_type)
     assert item.upload_state == (
         models.ItemUploadStateChoices.PENDING if item.type == models.ItemTypeChoices.FILE else None
     )

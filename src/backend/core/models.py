@@ -42,9 +42,9 @@ from lasuite.drf.models.choices import (
 from pydantic import BaseModel as PydanticBaseModel
 from timezone_field import TimeZoneField
 
+from core.permissions import get_permissions_backend
 from core.storage.cache import invalidate_storage_used_cache
 from core.utils.item_title import manage_unique_title as manage_unique_title_utils
-from wopi.conversion.policy import target_extension_for
 
 logger = getLogger(__name__)
 
@@ -71,6 +71,7 @@ class ItemTypeChoices(models.TextChoices):
 
     FOLDER = "folder", _("Folder")
     FILE = "file", _("File")
+    SHORTCUT = "shortcut", _("Shortcut")
 
 
 class ItemUploadStateChoices(models.TextChoices):
@@ -981,7 +982,7 @@ class ItemManager(TreeManager.from_queryset(ItemQuerySet)):
         return item
 
 
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods,too-many-instance-attributes
 class Item(TreeModel, BaseModel):
     """Item in the tree."""
 
@@ -1019,6 +1020,14 @@ class Item(TreeModel, BaseModel):
         blank=True,
     )
     mimetype = models.CharField(max_length=255, null=True, blank=True)
+    is_restricted = models.BooleanField(default=False)
+    target = models.ForeignKey(
+        "self",
+        on_delete=models.CASCADE,
+        related_name="shortcuts",
+        null=True,
+        blank=True,
+    )
     main_workspace = models.BooleanField(default=False)
     size = models.BigIntegerField(null=True, blank=True)
     quota_excluded = models.BooleanField(
@@ -1049,7 +1058,22 @@ class Item(TreeModel, BaseModel):
                     | models.Q(deleted_at=models.F("ancestors_deleted_at"))
                 ),
                 name="check_deleted_at_matches_ancestors_deleted_at_when_set",
-            )
+            ),
+            models.CheckConstraint(
+                condition=(models.Q(is_restricted=False) | models.Q(type=ItemTypeChoices.FOLDER)),
+                name="check_is_restricted_only_on_folders",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(type=ItemTypeChoices.SHORTCUT) & models.Q(target__isnull=False))
+                    | (~models.Q(type=ItemTypeChoices.SHORTCUT) & models.Q(target__isnull=True))
+                ),
+                name="check_target_only_on_shortcuts",
+            ),
+            models.UniqueConstraint(
+                fields=["target"],
+                name="unique_shortcut_per_target",
+            ),
         ]
         indexes = [
             GistIndex(fields=["path"]),
@@ -1197,9 +1221,7 @@ class Item(TreeModel, BaseModel):
             nb_accesses = cache.get(cache_key)
 
             if nb_accesses is None:
-                nb_accesses = ItemAccess.objects.filter(
-                    item__path__ancestors=self.path,
-                ).count()
+                nb_accesses = get_permissions_backend().effective_accesses(self).count()
                 cache.set(cache_key, nb_accesses)
 
             return nb_accesses
@@ -1223,6 +1245,17 @@ class Item(TreeModel, BaseModel):
         """Return the root of the tree."""
         return self.ancestors().filter(path__depth=1).first()
 
+    def parent(self):
+        """Return the direct parent, looked up by its exact path."""
+        if len(self.path) > 1:
+            return self._meta.model.objects.filter(path=str(self.path[:-1])).first()
+        return None
+
+    @property
+    def shortcut(self):
+        """Return the shortcut targeting this item, if any."""
+        return self._meta.model.objects.filter(target=self).first()
+
     def invalidate_nb_accesses_cache(self):
         """
         Invalidate the cache for number of accesses, including on affected descendants.
@@ -1239,10 +1272,7 @@ class Item(TreeModel, BaseModel):
         try:
             roles = self.user_roles or []
         except AttributeError:
-            roles = ItemAccess.objects.filter(
-                models.Q(user=user) | models.Q(team__in=user.teams),
-                item__path__ancestors=self.path,
-            ).values_list("role", flat=True)
+            roles = get_permissions_backend().roles_for(user, self)
 
         return RoleChoices.max(*roles)
 
@@ -1322,93 +1352,8 @@ class Item(TreeModel, BaseModel):
         return self.computed_link_definition["link_role"]
 
     def get_abilities(self, user):
-        """
-        Compute and return abilities for a given user on the item.
-        """
-        # First get the role based on specific access
-        role = self.get_role(user)
-        # Characteristics that are based only on specific access
-        is_owner = role == RoleChoices.OWNER
-        is_deleted = self.ancestors_deleted_at
-        is_owner_or_admin = is_owner or role == RoleChoices.ADMIN
-
-        # Compute access roles before adding link roles because we don't
-        # want anonymous users to access versions (we wouldn't know from
-        # which date to allow them anyway)
-        # Anonymous users should also not see item accesses
-        has_access_role = bool(role) and not is_deleted
-        link_select_options = (
-            LinkReachChoices.get_select_options(**self.ancestors_link_definition)
-            if has_access_role
-            else {}
-        )
-
-        link_definition = self.computed_link_definition
-
-        link_reach = link_definition["link_reach"]
-        if link_reach == LinkReachChoices.PUBLIC or (
-            link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated
-        ):
-            # Set the user role to the highest role between the item role and the link role
-            # Needed for a user with an access lower than link_role
-            # Needed for a user without access to determine the role he has.
-            role = RoleChoices.max(role, link_definition["link_role"])
-        can_get = bool(role) and not is_deleted
-        retrieve = can_get or is_owner
-        can_manage = is_owner_or_admin and not is_deleted
-        can_update = (is_owner_or_admin or role == RoleChoices.EDITOR) and not is_deleted
-        can_create_children = can_update and user.is_authenticated
-        can_hard_delete = (
-            is_owner
-            if self.is_root
-            else (is_owner_or_admin or (user.is_authenticated and self.creator == user))
-        )
-        can_destroy = can_hard_delete and not is_deleted
-        can_duplicate = (
-            can_get
-            and user.is_authenticated
-            and self.type == ItemTypeChoices.FILE
-            and self.upload_state == ItemUploadStateChoices.READY
-        )
-        can_export = can_get and self.type == ItemTypeChoices.FOLDER
-        can_convert = (
-            can_update
-            and self.type == ItemTypeChoices.FILE
-            and self.upload_state
-            in (
-                ItemUploadStateChoices.READY,
-                ItemUploadStateChoices.ANALYZING,
-            )
-            and bool(target_extension_for(self.extension))
-            and bool(settings.WOPI_ONLYOFFICE_CONVERT_JWT_SECRET)
-        )
-
-        return {
-            "accesses_manage": can_manage,
-            "accesses_view": has_access_role,
-            "breadcrumb": can_get,
-            "children_list": can_get,
-            "children_create": can_create_children,
-            "destroy": can_destroy,
-            "download": can_get,
-            "duplicate": can_duplicate,
-            "export": can_export,
-            "hard_delete": can_hard_delete,
-            "favorite": can_get and user.is_authenticated,
-            "link_configuration": can_manage,
-            "invite_owner": is_owner and not is_deleted,
-            "link_select_options": link_select_options,
-            "move": can_manage,
-            "restore": is_owner,
-            "retrieve": retrieve,
-            "tree": can_get,
-            "media_auth": can_get,
-            "partial_update": can_update,
-            "update": can_update,
-            "upload_ended": can_update and user.is_authenticated,
-            "wopi": can_get,
-            "convert": can_convert,
-        }
+        """Compute and return abilities for a given user on the item."""
+        return get_permissions_backend().abilities(user, self)
 
     def send_email(self, subject, emails, context=None, language=None):
         """Generate and send email from a template."""
@@ -1492,6 +1437,17 @@ class Item(TreeModel, BaseModel):
 
         self.save(update_fields=["deleted_at", "ancestors_deleted_at"])
 
+        # The shortcut of a restricted folder lives in another subtree: trash
+        # it along so that restoring the folder can bring it back
+        if self.is_restricted:
+            self._meta.model.objects.filter(
+                target=self,
+                ancestors_deleted_at__isnull=True,
+            ).update(
+                deleted_at=self.deleted_at,
+                ancestors_deleted_at=self.deleted_at,
+            )
+
         # Mark all descendants as soft deleted
         if self.type == ItemTypeChoices.FOLDER:
             self.descendants().filter(ancestors_deleted_at__isnull=True).update(
@@ -1538,6 +1494,12 @@ class Item(TreeModel, BaseModel):
 
         # Mark all descendants as hard deleted
         self.descendants().update(hard_deleted_at=self.hard_deleted_at)
+
+        # The shortcut of a restricted folder must not survive its target
+        if self.is_restricted:
+            self._meta.model.objects.filter(target=self).update(
+                hard_deleted_at=self.hard_deleted_at
+            )
 
         transaction.on_commit(lambda: invalidate_storage_used_cache(creator_ids))
 
@@ -1594,6 +1556,17 @@ class Item(TreeModel, BaseModel):
             | models.Q(ancestors_deleted_at__lt=current_deleted_at)
         ).update(ancestors_deleted_at=None)
 
+        # Bring back the shortcut trashed along the restricted folder, unless
+        # its own subtree went to the trash meanwhile
+        if self.is_restricted:
+            shortcut = self._meta.model.objects.filter(
+                target=self, deleted_at=current_deleted_at
+            ).first()
+            if shortcut and not shortcut.ancestors().filter(deleted_at__isnull=False).exists():
+                self._meta.model.objects.filter(pk=shortcut.pk).update(
+                    deleted_at=None, ancestors_deleted_at=None
+                )
+
     @transaction.atomic
     def move(self, target):
         """
@@ -1605,6 +1578,30 @@ class Item(TreeModel, BaseModel):
                     "target": ValidationError(
                         _("Only folders can be targeted when moving an item"),
                         code="item_move_target_not_a_folder",
+                    )
+                }
+            )
+
+        if self.is_restricted:
+            raise ValidationError(
+                {
+                    "target": ValidationError(
+                        _("A restricted folder cannot be moved"),
+                        code="item_move_restricted",
+                    )
+                }
+            )
+
+        if (
+            self.type == ItemTypeChoices.SHORTCUT
+            and target
+            and str(target.path).startswith(str(self.target.path))
+        ):
+            raise ValidationError(
+                {
+                    "target": ValidationError(
+                        _("A shortcut cannot be moved under its own target"),
+                        code="item_move_shortcut_under_target",
                     )
                 }
             )
@@ -1622,6 +1619,168 @@ class Item(TreeModel, BaseModel):
             self._meta.model.objects.filter(path__descendants=old_path).update(
                 path=RawSQL("%s || subpath(path, nlevel(%s))", (str(self.path), str(old_path)))
             )
+
+    @transaction.atomic
+    def restrict(self, user):
+        """Restrict the folder by detaching it to the tree root behind a shortcut."""
+        item = self._meta.model.objects.select_for_update().get(pk=self.pk)
+
+        if item.type != ItemTypeChoices.FOLDER:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("Only folders can be restricted"),
+                        code="item_restrict_type_folder_only",
+                    )
+                }
+            )
+        if item.is_restricted:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("This folder is already restricted"),
+                        code="item_restrict_already_restricted",
+                    )
+                }
+            )
+        if item.depth == 1:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("A root folder cannot be restricted"),
+                        code="item_restrict_root",
+                    )
+                }
+            )
+        if item.ancestors_deleted_at:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("A deleted folder cannot be restricted"),
+                        code="item_restrict_deleted",
+                    )
+                }
+            )
+        if item.get_role(user) != RoleChoices.OWNER:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("Only owners can restrict a folder"),
+                        code="item_restrict_owner_only",
+                    )
+                }
+            )
+
+        parent = item.parent()
+
+        ItemAccess.objects.update_or_create(
+            item=item, user=user, defaults={"role": RoleChoices.OWNER}
+        )
+
+        # The move must run while the flag is still unset: move() refuses
+        # restricted folders
+        item.move(None)
+
+        item.is_restricted = True
+        if item.link_reach is None:
+            item.link_reach = LinkReachChoices.RESTRICTED
+        item.save(update_fields=["is_restricted", "link_reach", "updated_at"])
+
+        self._meta.model.objects.create_child(
+            parent=parent,
+            creator=user,
+            type=ItemTypeChoices.SHORTCUT,
+            target=item,
+            title=item.title,
+        )
+        item.invalidate_nb_accesses_cache()
+
+        return item
+
+    def _normalize_explicit_accesses(self):
+        """Delete explicit accesses inferior or equal to the inherited role."""
+        inherited_accesses = (
+            ItemAccess.objects.filter(item__path__ancestors=self.path)
+            .exclude(item=self)
+            .values_list("user_id", "team", "role")
+        )
+        inherited_roles = {}
+        for user_id, team, role in inherited_accesses:
+            key = (user_id, team)
+            inherited_roles[key] = RoleChoices.max(inherited_roles.get(key), role)
+
+        redundant_ids = [
+            access.id
+            for access in ItemAccess.objects.filter(item=self)
+            if RoleChoices.get_priority(access.role)
+            <= RoleChoices.get_priority(inherited_roles.get((access.user_id, access.team)))
+        ]
+        if redundant_ids:
+            ItemAccess.objects.filter(id__in=redundant_ids).delete()
+
+    def _normalize_explicit_link_reach(self):
+        """Reset the link reach to inherit when inferior or equal to the inherited one."""
+        # The cached ancestors definition predates the move, recompute it
+        self._ancestors_link_definition = None
+        inherited_reach = self.ancestors_link_definition["link_reach"]
+        if LinkReachChoices.get_priority(self.link_reach) <= LinkReachChoices.get_priority(
+            inherited_reach
+        ):
+            self.link_reach = None
+            self.save(update_fields=["link_reach", "updated_at"])
+
+    def detach(self):
+        """Delete this shortcut row, leaving its restricted target untouched."""
+        if self.type != ItemTypeChoices.SHORTCUT:
+            raise ValidationError(
+                {
+                    "type": ValidationError(
+                        _("Only shortcuts can be detached"),
+                        code="item_detach_not_a_shortcut",
+                    )
+                }
+            )
+
+        self._meta.model.objects.filter(pk=self.pk).delete()
+
+    @transaction.atomic
+    def unrestrict(self):
+        """Lift restriction and reattach the folder at its shortcut location."""
+        item = self._meta.model.objects.select_for_update().get(pk=self.pk)
+
+        if not item.is_restricted:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("This folder is not restricted"),
+                        code="item_unrestrict_not_restricted",
+                    )
+                }
+            )
+
+        shortcut = self._meta.model.objects.select_for_update().filter(target=item).first()
+        parent = None
+        if shortcut:
+            if shortcut.ancestors_deleted_at is None:
+                parent = shortcut.parent()
+            self._meta.model.objects.filter(pk=shortcut.pk).delete()
+
+        # The flag must fall before the move: move() refuses restricted folders
+        item.is_restricted = False
+        item.save(update_fields=["is_restricted", "updated_at"])
+
+        if parent:
+            item.title = manage_unique_title_utils(
+                self._meta.model.objects.children(parent.path), item.title
+            )
+            item.save(update_fields=["title", "updated_at"])
+            item.move(parent)
+            item._normalize_explicit_accesses()  # noqa: SLF001  # pylint: disable=protected-access
+            item._normalize_explicit_link_reach()  # noqa: SLF001  # pylint: disable=protected-access
+
+        item.invalidate_nb_accesses_cache()
+
+        return item
 
 
 class MirrorItemTask(BaseModel):

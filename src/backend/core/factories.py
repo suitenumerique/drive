@@ -68,7 +68,7 @@ class ItemFactory(factory.django.DjangoModelFactory):
     creator = factory.SubFactory(UserFactory)
     deleted_at = None
     link_reach = LinkReachChoices.RESTRICTED
-    type = factory.fuzzy.FuzzyChoice([t[0] for t in models.ItemTypeChoices.choices])
+    type = factory.fuzzy.FuzzyChoice([models.ItemTypeChoices.FOLDER, models.ItemTypeChoices.FILE])
     filename = factory.lazy_attribute(
         lambda o: fake.file_name() if o.type == models.ItemTypeChoices.FILE else None
     )
@@ -136,6 +136,18 @@ class ItemFactory(factory.django.DjangoModelFactory):
             self.save()
 
             default_storage.save(self.file_key, BytesIO(content))
+
+
+class ShortcutFactory(ItemFactory):
+    """A factory to create shortcuts pointing to a restricted root folder."""
+
+    type = models.ItemTypeChoices.SHORTCUT
+    filename = None
+    target = factory.SubFactory(
+        ItemFactory,
+        type=models.ItemTypeChoices.FOLDER,
+        is_restricted=True,
+    )
 
 
 class UserItemAccessFactory(factory.django.DjangoModelFactory):

@@ -6,6 +6,7 @@ import time
 from io import BytesIO
 
 from django.conf import settings
+from django.contrib.auth.hashers import make_password
 from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand, CommandError
 
@@ -80,7 +81,7 @@ def get_or_create_demo_user(user_data):
             "email": email,
             "full_name": user_data["full_name"],
             "short_name": user_data["short_name"],
-            "password": "!",  # NOSONAR
+            "password": make_password("pass"),  # NOSONAR
             "is_superuser": False,
             "is_active": True,
             "is_staff": False,

@@ -51,6 +51,9 @@ and this project adheres to
 - ✨(frontend) add location, file type, contact and date search filters
 - ✨(backend) add a local entitlements backend with per-user storage limits
 - ✨(frontend) add storage gauge and settings modal
+- ♻️(backend) route permission decisions through a swappable backend
+- ✨(backend) add restricted access on folders, detached behind a shortcut
+- ✨(backend) allow restricting a folder at creation
 
 ### Fixed
 
@@ -59,6 +62,7 @@ and this project adheres to
 - 🐛(backend) exclude folders from file type search results
 - 🐛(frontend) keep uploaded items usable while malware analysis runs
 - 🐛(backend) stream export files from S3 without buffering
+- 🐛(backend) resolve the direct parent by exact path after a move
 
 ## [v0.19.0] - 2026-06-09
 
