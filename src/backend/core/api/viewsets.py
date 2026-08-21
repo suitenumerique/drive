@@ -1383,6 +1383,22 @@ class ItemViewSet(
         serializer = self.get_serializer(breadcrumb, many=True)
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
+    def _filter_retrievable(self, items, user):
+        """
+        Keep only the items the user can retrieve: the search scope and the index only
+        know the link reach and ignore link expiration and password.
+        """
+        paths_links_mapping = self._compute_ancestors_link_definition(items)
+        for item in items:
+            links = paths_links_mapping.get(str(item.path[:-1]), [])
+            item.ancestors_link_definition = models.get_equivalent_link_definition(links)
+        # Deleted items are only reached through explicit accesses, never through a link
+        return [
+            item
+            for item in items
+            if item.ancestors_deleted_at or item.get_abilities(user)["retrieve"]
+        ]
+
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
     @method_decorator(refresh_oidc_access_token)
     def _indexed_search(self, request, queryset, indexer, text):
@@ -1409,6 +1425,7 @@ class ItemViewSet(
 
         files_by_uuid = {str(d.pk): d for d in queryset}
         ordered_files = [files_by_uuid[id] for id in result_ids if id in files_by_uuid]
+        ordered_files = self._filter_retrievable(ordered_files, user)
 
         page = self.paginate_queryset(ordered_files)
 
@@ -1505,8 +1522,9 @@ class ItemViewSet(
         queryset = filterset.filter_queryset(queryset)
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
+        items = self._filter_retrievable(list(queryset), user)
 
-        page = self.paginate_queryset(queryset)
+        page = self.paginate_queryset(items)
 
         if page is not None:
             items = self._compute_parents(page)
@@ -1514,7 +1532,7 @@ class ItemViewSet(
             result = self.get_paginated_response(serializer.data)
             return result
 
-        items = self._compute_parents(queryset)
+        items = self._compute_parents(items)
         serializer = self.get_serializer(items, many=True)
         return drf.response.Response(serializer.data)
 
