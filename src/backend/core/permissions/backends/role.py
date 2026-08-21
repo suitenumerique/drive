@@ -59,7 +59,9 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
         """Return the link reach and role options selectable on the item."""
         if not self.has_access_role():
             return {}
-        return LinkReachChoices.get_select_options(**self.item.ancestors_link_definition)
+        return LinkReachChoices.get_select_options(
+            self.item.ancestors_link_reach, self.item.ancestors_link_role
+        )
 
     def can_get(self) -> bool:
         """Return whether the user can read the item."""

@@ -16,7 +16,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from lasuite.drf.models.choices import LinkReachChoices, get_equivalent_link_definition
+from lasuite.drf.models.choices import LinkReachChoices
 from rest_framework import serializers
 
 from core import enums, models
@@ -359,7 +359,7 @@ class ListItemSerializer(serializers.ModelSerializer):
 
         if paths_links_mapping is not None:
             links = paths_links_mapping.get(str(instance.path[:-1]), [])
-            instance.ancestors_link_definition = get_equivalent_link_definition(links)
+            instance.ancestors_link_definition = models.get_equivalent_link_definition(links)
 
         return super().to_representation(instance)
 
@@ -823,7 +823,7 @@ class LinkItemSerializer(serializers.ModelSerializer):
         """Validate the link definition against the options allowed by ancestors."""
         # Get available options based on ancestors' link definition
         available_options = LinkReachChoices.get_select_options(
-            **self.instance.ancestors_link_definition
+            self.instance.ancestors_link_reach, self.instance.ancestors_link_role
         )
 
         # Validate link_reach is allowed
