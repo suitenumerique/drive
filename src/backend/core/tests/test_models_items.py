@@ -1438,3 +1438,17 @@ def test_models_items_link_expired_ancestor_not_inherited():
     assert child.ancestors_link_reach == LinkReachChoices.RESTRICTED
     assert child.computed_link_reach == LinkReachChoices.RESTRICTED
     assert child.get_abilities(AnonymousUser())["retrieve"] is False
+
+
+def test_models_items_link_password_set_and_check():
+    """The link password should be stored hashed and checked against the raw value."""
+    item = factories.ItemFactory()
+
+    item.set_link_password("s3cret")
+    assert item.link_password != "s3cret"
+    assert item.check_link_password("s3cret") is True
+    assert item.check_link_password("wrong") is False
+
+    item.set_link_password("")
+    assert item.link_password is None
+    assert item.check_link_password("") is False
