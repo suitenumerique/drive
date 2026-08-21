@@ -80,6 +80,7 @@ def test_api_items_trashbin_format(settings):
         "link_reach": item.link_reach,
         "link_role": item.link_role,
         "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 3,
         "numchild": 0,
         "numchild_folder": 0,
