@@ -130,6 +130,7 @@ and this project adheres to
 - ♻️(backend) route permission decisions through a swappable backend
 - ✨(backend) add restricted access on folders, detached behind a restriction
 - ✨(backend) add an expiration date to item share links
+- ✨(backend) protect item share links with a password
 
 ### Changed
 
