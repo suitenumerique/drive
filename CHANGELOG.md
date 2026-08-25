@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.21.2] - 2026-08-25
+
 ### Added
 
 - 🔧(helm) schedule the malware detection reconciliation commands
@@ -513,7 +515,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.21.1...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.21.2...main
+[v0.21.2]: https://github.com/suitenumerique/drive/releases/v0.21.2
 [v0.21.1]: https://github.com/suitenumerique/drive/releases/v0.21.1
 [v0.21.0]: https://github.com/suitenumerique/drive/releases/v0.21.0
 [v0.20.0]: https://github.com/suitenumerique/drive/releases/v0.20.0
