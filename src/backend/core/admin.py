@@ -225,7 +225,11 @@ class ItemAdmin(admin.ModelAdmin):
     search_fields = ("id", "title", "creator__email")
     list_filter = ("upload_state", "link_reach", "link_role")
     show_facets = admin.ShowFacets.ALWAYS
-    actions = ("trigger_file_analysis",)
+    actions = (
+        "trigger_file_analysis",
+        "mark_items_ready",
+        "mark_items_file_too_large",
+    )
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
@@ -248,6 +252,29 @@ class ItemAdmin(admin.ModelAdmin):
                 malware_detection.analyse_file(item.file_key, item_id=item.id)
 
         self.message_user(request, "The files have been scheduled for a new analysis.")
+
+    def _force_upload_state(self, request, queryset, upload_state):
+        """Force the upload state of the selected file items and drop their detections."""
+        items = queryset.filter(type=models.ItemTypeChoices.FILE)
+        paths = [item.file_key for item in items]
+        deleted, _details = MalwareDetection.objects.filter(path__in=paths).delete()
+        updated = items.update(upload_state=upload_state)
+        self.message_user(
+            request,
+            f"{updated} items marked as {upload_state}, {deleted} detections deleted.",
+        )
+
+    @admin.action(description=_("Mark items as ready"))
+    def mark_items_ready(self, request, queryset):
+        """Force selected file items to the ready state."""
+        self._force_upload_state(request, queryset, models.ItemUploadStateChoices.READY)
+
+    @admin.action(description=_("Mark items as too large to analyze"))
+    def mark_items_file_too_large(self, request, queryset):
+        """Force selected file items to the too large to analyze state."""
+        self._force_upload_state(
+            request, queryset, models.ItemUploadStateChoices.FILE_TOO_LARGE_TO_ANALYZE
+        )
 
 
 @admin.register(models.Invitation)
@@ -306,6 +333,34 @@ class MalwareDetectionAdmin(BaseMalwareDetectionAdmin):
 
     list_display = BaseMalwareDetectionAdmin.list_display + ("item_exists", "item_size")
     list_filter = BaseMalwareDetectionAdmin.list_filter + (ItemExistsFilter,)
+    actions = BaseMalwareDetectionAdmin.actions + (
+        "abandon_analysis_mark_item_ready",
+        "abandon_analysis_mark_item_file_too_large",
+    )
+
+    def _abandon_analyses(self, request, queryset, upload_state):
+        """Delete the selected detections and force the upload state of their items."""
+        item_ids = [
+            item_id for item_id in queryset.values_list("parameters__item_id", flat=True) if item_id
+        ]
+        updated = models.Item.objects.filter(id__in=item_ids).update(upload_state=upload_state)
+        deleted, _details = queryset.delete()
+        self.message_user(
+            request,
+            f"{deleted} detections deleted, {updated} items marked as {upload_state}.",
+        )
+
+    @admin.action(description=_("Abandon analysis and mark item as ready"))
+    def abandon_analysis_mark_item_ready(self, request, queryset):
+        """Delete selected detections and mark their items as ready."""
+        self._abandon_analyses(request, queryset, models.ItemUploadStateChoices.READY)
+
+    @admin.action(description=_("Abandon analysis and mark item as too large to analyze"))
+    def abandon_analysis_mark_item_file_too_large(self, request, queryset):
+        """Delete selected detections and mark their items as too large to analyze."""
+        self._abandon_analyses(
+            request, queryset, models.ItemUploadStateChoices.FILE_TOO_LARGE_TO_ANALYZE
+        )
 
     def get_queryset(self, request):
         """Annotate records with the existence and size of their related item."""

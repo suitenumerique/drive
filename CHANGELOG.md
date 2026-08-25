@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - 🔧(helm) schedule the malware detection reconciliation commands
+- ✨(admin) add actions to abandon malware analyses
 
 ## [v0.21.1] - 2026-08-21
 
