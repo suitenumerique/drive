@@ -13,6 +13,10 @@ and this project adheres to
 - 🔧(helm) schedule the malware detection reconciliation commands
 - ✨(admin) add actions to abandon malware analyses
 
+### Fixed
+
+- 🐛(backend) fix malware analysis processing slots exhaustion
+
 ## [v0.21.1] - 2026-08-21
 
 ### Fixed
