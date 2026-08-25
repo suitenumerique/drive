@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- 🔧(helm) schedule the malware detection reconciliation commands
+
 ## [v0.21.1] - 2026-08-21
 
 ### Fixed

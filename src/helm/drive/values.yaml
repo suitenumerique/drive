@@ -272,6 +272,18 @@ backend:
         - "/bin/sh"
         - "-c"
         - python manage.py purge_deleted_items
+    - name: check-pending-malware-analysis-tasks
+      schedule: "*/5 * * * *"
+      command:
+        - "/bin/sh"
+        - "-c"
+        - python manage.py check_analysis_pending
+    - name: reschedule-processing-malware-analysis
+      schedule: "0 4 * * *"
+      command:
+        - "/bin/sh"
+        - "-c"
+        - python manage.py reschedule_processing_analysis
 
   ## @param backend.themeCustomization.enabled Enable theme customization
   ## @param backend.themeCustomization.file_content Content of the theme customization file. Must be a json object.
