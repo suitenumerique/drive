@@ -57,6 +57,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(backend) populate `User.teams` from a configurable OIDC claim (`OIDC_TEAMS_CLAIM`)
 - ✨(backend) allow converting a file while it is being analyzed
 - ✨(frontend) add file type, contact and modification date topbar filters
 - ✨(frontend) add location, file type, contact and date search filters
