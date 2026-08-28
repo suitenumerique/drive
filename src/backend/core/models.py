@@ -1361,7 +1361,14 @@ class Item(TreeModel, BaseModel):
         can_hard_delete = (
             is_owner
             if self.is_root
-            else (is_owner_or_admin or (user.is_authenticated and self.creator == user))
+            else (
+                is_owner_or_admin
+                or (
+                    user.is_authenticated
+                    and self.creator_id == user.pk
+                    and role == RoleChoices.EDITOR
+                )
+            )
         )
         can_destroy = can_hard_delete and not is_deleted
         can_duplicate = (

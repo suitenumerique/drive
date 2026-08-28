@@ -153,6 +153,77 @@ def test_api_items_delete_authenticated_owner(via, mock_user_teams):
     assert item.deleted_at is not None
 
 
+def test_api_items_delete_child_by_creator_after_access_revoked():
+    """
+    A user who created a child inside a shared folder must not be able to delete
+    it once the owner has revoked their access, even though they remain its
+    creator. Deleting would otherwise wipe the whole subtree, including content
+    added by the owner.
+    """
+    owner = factories.UserFactory()
+    creator = factories.UserFactory()
+
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, "owner")],
+    )
+    access = factories.UserItemAccessFactory(
+        item=folder, user=creator, role="editor"
+    )
+
+    creator_client = APIClient()
+    creator_client.force_login(creator)
+
+    # The creator builds a subfolder inside the shared folder.
+    response = creator_client.post(
+        f"/api/v1.0/items/{folder.id}/children/",
+        {"title": "sub", "type": models.ItemTypeChoices.FOLDER},
+        format="json",
+    )
+    assert response.status_code == 201
+    child_id = response.json()["id"]
+
+    # The owner revokes the creator's access.
+    access.delete()
+
+    existing_items = models.Item.objects.count()
+    response = creator_client.delete(f"/api/v1.0/items/{child_id}/")
+
+    assert response.status_code == 403
+    assert models.Item.objects.count() == existing_items
+    assert models.Item.objects.get(id=child_id).deleted_at is None
+
+
+def test_api_items_delete_child_by_creator_with_editor_access():
+    """
+    A user who is still an editor of the parent folder should be able to delete
+    a child they created inside it.
+    """
+    owner = factories.UserFactory()
+    creator = factories.UserFactory()
+
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, "owner"), (creator, "editor")],
+    )
+
+    creator_client = APIClient()
+    creator_client.force_login(creator)
+
+    response = creator_client.post(
+        f"/api/v1.0/items/{folder.id}/children/",
+        {"title": "sub", "type": models.ItemTypeChoices.FOLDER},
+        format="json",
+    )
+    assert response.status_code == 201
+    child_id = response.json()["id"]
+
+    response = creator_client.delete(f"/api/v1.0/items/{child_id}/")
+
+    assert response.status_code == 204
+    assert models.Item.objects.get(id=child_id).deleted_at is not None
+
+
 def test_api_items_delete_suspicious_item_should_not_work_for_non_creator():
     """
     Non-creators should not be able to delete suspicious items.

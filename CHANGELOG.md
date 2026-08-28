@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(backend) prevent item deletion by a creator whose access was revoked
+
 ## [v0.21.2] - 2026-08-25
 
 ### Added

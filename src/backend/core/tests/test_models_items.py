@@ -839,6 +839,57 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
     }
 
 
+def test_models_items_get_abilities_delete_non_root_by_creator_with_editor_access():
+    """
+    The creator of a non-root item keeps the right to delete it as long as they
+    still hold editor access on it.
+    """
+    owner = factories.UserFactory()
+    creator = factories.UserFactory()
+
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, "owner"), (creator, "editor")],
+    )
+    child = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        parent=folder,
+        creator=creator,
+    )
+
+    abilities = child.get_abilities(creator)
+    assert abilities["destroy"] is True
+    assert abilities["hard_delete"] is True
+
+
+def test_models_items_get_abilities_delete_non_root_by_creator_without_access():
+    """
+    Once the creator's access has been revoked, they must no longer be able to
+    delete an item they created, even though they remain its creator. This
+    guards against deleting a subtree in a folder they can no longer access.
+    """
+    owner = factories.UserFactory()
+    creator = factories.UserFactory()
+
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, "owner"), (creator, "editor")],
+    )
+    child = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        parent=folder,
+        creator=creator,
+    )
+
+    # Revoke the creator's access.
+    models.ItemAccess.objects.filter(item=folder, user=creator).delete()
+
+    abilities = child.get_abilities(creator)
+    assert abilities["destroy"] is False
+    assert abilities["hard_delete"] is False
+    assert abilities["retrieve"] is False
+
+
 def test_models_items__email_invitation__success():
     """
     The email invitation is sent successfully.
