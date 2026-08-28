@@ -191,7 +191,7 @@ jobs:
 
       - name: Wait for Keycloak to be ready
         run: |
-          timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:8083/)" != "302" ]]; do echo "Waiting for Keycloak..." && sleep 2; done' && echo "Keycloak is ready!"
+          timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:8004/)" != "302" ]]; do echo "Waiting for Keycloak..." && sleep 2; done' && echo "Keycloak is ready!"
 
       - name: Wait for frontend to be ready
         run: |

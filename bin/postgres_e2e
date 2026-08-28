@@ -9,4 +9,4 @@ POSTGRES_USER=$(grep POSTGRES_USER "$ENV_FILE" | cut -d'=' -f2)
 POSTGRES_DB=$(grep POSTGRES_DB "$ENV_FILE" | cut -d'=' -f2)
 
 # Execute PostgreSQL command (run as postgres user, not host user)
-_docker_compose exec -T postgresql psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 "$@"
+_docker_compose exec -T drive-postgresql psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 "$@"
