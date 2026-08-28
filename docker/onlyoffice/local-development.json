@@ -1,7 +1,7 @@
 {
   "wopi": {
     "enable": true,
-    "host": "http://localhost:9981",
+    "host": "http://onlyoffice.drive.lasuite.localhost:8206",
     "pdfView": [],
     "pdfEdit": [],
     "forms": [],
