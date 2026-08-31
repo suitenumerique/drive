@@ -61,6 +61,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(backend) add upload-only ("file request") link mode (#770)
 - ✨(backend) allow converting a file while it is being analyzed
 - ✨(frontend) add file type, contact and modification date topbar filters
 - ✨(frontend) add location, file type, contact and date search filters
