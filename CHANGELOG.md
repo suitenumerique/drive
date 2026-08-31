@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- 📈(backend) add a Sentry performance monitoring sample rate setting
+
 ### Fixed
 
 - 🐛(backend) prevent item deletion by a creator whose access was revoked

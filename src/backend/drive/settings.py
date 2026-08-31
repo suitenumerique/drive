@@ -997,6 +997,9 @@ class Base(Configuration):
 
     # Sentry
     SENTRY_DSN = values.Value(None, environ_name="SENTRY_DSN", environ_prefix=None)
+    SENTRY_TRACES_SAMPLE_RATE = values.FloatValue(
+        default=0.0, environ_name="SENTRY_TRACES_SAMPLE_RATE", environ_prefix=None
+    )
 
     ALLOW_SHARE_IMPORT_FILE = values.BooleanValue(
         default=False, environ_name="ALLOW_SHARE_IMPORT_FILE", environ_prefix=None
@@ -1572,6 +1575,7 @@ class Base(Configuration):
                 environment=cls.__name__.lower(),
                 release=get_release(),
                 integrations=[DjangoIntegration()],
+                traces_sample_rate=cls.SENTRY_TRACES_SAMPLE_RATE,
             )
             sentry_sdk.set_tag("application", "backend")
 
