@@ -61,6 +61,7 @@ and this project adheres to
 
 ### Added
 
+- ✨(frontend) show the user's workspaces (personal + shared/team drives) in the sidebar
 - ✨(backend) allow converting a file while it is being analyzed
 - ✨(frontend) add file type, contact and modification date topbar filters
 - ✨(frontend) add location, file type, contact and date search filters

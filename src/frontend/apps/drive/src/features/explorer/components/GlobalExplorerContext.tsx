@@ -331,6 +331,18 @@ const TreeProviderInitializer = ({
     };
 
     items.push(favoritesNode);
+
+    // The user's workspaces (root items) as top-level sidebar entries: the
+    // personal main workspace ("Espace de stockage") plus every shared/team
+    // drive they can access. Each node is lazily expandable through the tree's
+    // onLoadChildren handler, like any other item.
+    const workspaces = await getDriver().getItems({ type: ItemType.FOLDER });
+    items.push(
+      ...(itemsToTreeItems(
+        workspaces.children,
+      ) as TreeViewDataType<TreeItem>[]),
+    );
+
     treeContext?.treeData.resetTree(items);
     setTreeIsInitialized(true);
   };
