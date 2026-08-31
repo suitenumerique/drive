@@ -167,9 +167,7 @@ def test_api_items_delete_child_by_creator_after_access_revoked():
         type=models.ItemTypeChoices.FOLDER,
         users=[(owner, "owner")],
     )
-    access = factories.UserItemAccessFactory(
-        item=folder, user=creator, role="editor"
-    )
+    access = factories.UserItemAccessFactory(item=folder, user=creator, role="editor")
 
     creator_client = APIClient()
     creator_client.force_login(creator)
