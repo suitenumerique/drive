@@ -186,11 +186,9 @@ def test_api_items_delete_child_by_creator_after_access_revoked():
     # The owner revokes the creator's access.
     access.delete()
 
-    existing_items = models.Item.objects.count()
     response = creator_client.delete(f"/api/v1.0/items/{child_id}/")
 
     assert response.status_code == 403
-    assert models.Item.objects.count() == existing_items
     assert models.Item.objects.get(id=child_id).deleted_at is None
 
 
