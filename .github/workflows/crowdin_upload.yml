@@ -40,7 +40,7 @@ jobs:
           DJANGO_CONFIGURATION=Build python manage.py makemessages -a --keep-pot
       # frontend i18n
       - name: Restore the frontend cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: "src/frontend/**/node_modules"
           key: front-node_modules-${{ hashFiles('src/frontend/**/yarn.lock') }}
