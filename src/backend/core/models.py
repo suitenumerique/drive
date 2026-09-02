@@ -818,14 +818,17 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         :param user: The user for whom readable documents are to be fetched.
         :return: A queryset of documents readable by the user.
         """
+        link_not_expired = models.Q(link_expires_at__isnull=True) | models.Q(
+            link_expires_at__gt=timezone.now()
+        )
         if user.is_authenticated:
             return self.filter(
                 models.Q(accesses__user=user)
                 | models.Q(accesses__team__in=user.teams)
-                | ~models.Q(link_reach=LinkReachChoices.RESTRICTED)
+                | (~models.Q(link_reach=LinkReachChoices.RESTRICTED) & link_not_expired)
             )
 
-        return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC))
+        return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC) & link_not_expired)
 
     def filter_non_deleted(self, **kwargs):
         """Filter the non deleted items"""
@@ -1296,8 +1299,15 @@ class Item(TreeModel, BaseModel):
         return paths_links_mapping
 
     @property
+    def is_link_expired(self):
+        """Return whether the link expiration date is past."""
+        return self.link_expires_at is not None and self.link_expires_at <= timezone.now()
+
+    @property
     def link_definition(self):
-        """Returns link reach/role as a definition in dictionary format."""
+        """Return link reach/role as a definition in dictionary format."""
+        if self.is_link_expired:
+            return {"link_reach": LinkReachChoices.RESTRICTED, "link_role": None}
         return {"link_reach": self.link_reach, "link_role": self.link_role}
 
     @property

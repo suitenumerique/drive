@@ -1479,3 +1479,47 @@ def test_models_items_restore_complex_bis():
     assert item.ancestors_deleted_at == item.deleted_at
     assert child1.ancestors_deleted_at == item.deleted_at
     assert child2.ancestors_deleted_at == item.deleted_at
+
+
+@pytest.mark.parametrize("is_authenticated", [True, False])
+@pytest.mark.parametrize("reach", ["public", "authenticated"])
+def test_models_items_get_abilities_link_expired(is_authenticated, reach):
+    """An expired link should not grant any ability to link holders."""
+    item = factories.ItemFactory(
+        link_reach=reach,
+        link_role="editor",
+        link_expires_at=timezone.now() - timedelta(minutes=1),
+    )
+    user = factories.UserFactory() if is_authenticated else AnonymousUser()
+
+    assert item.computed_link_reach == LinkReachChoices.RESTRICTED
+    assert item.computed_link_role is None
+    abilities = item.get_abilities(user)
+    assert abilities["retrieve"] is False
+    assert abilities["update"] is False
+
+
+def test_models_items_get_abilities_link_not_expired():
+    """A link with a future expiration date should grant abilities as usual."""
+    item = factories.ItemFactory(
+        link_reach="public",
+        link_role="reader",
+        link_expires_at=timezone.now() + timedelta(minutes=1),
+    )
+
+    assert item.computed_link_reach == LinkReachChoices.PUBLIC
+    assert item.get_abilities(AnonymousUser())["retrieve"] is True
+
+
+def test_models_items_link_expired_ancestor_not_inherited():
+    """An expired link on an ancestor should not be inherited by its descendants."""
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach="public",
+        link_expires_at=timezone.now() - timedelta(minutes=1),
+    )
+    child = factories.ItemFactory(parent=parent, link_reach=None)
+
+    assert child.ancestors_link_reach == LinkReachChoices.RESTRICTED
+    assert child.computed_link_reach == LinkReachChoices.RESTRICTED
+    assert child.get_abilities(AnonymousUser())["retrieve"] is False
