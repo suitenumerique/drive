@@ -1565,9 +1565,7 @@ class Item(TreeModel, BaseModel):
         paths_links_mapping = {}
 
         for ancestor in ancestors:
-            ancestors_links.append(
-                {"link_reach": ancestor.link_reach, "link_role": ancestor.link_role}
-            )
+            ancestors_links.append(ancestor.link_definition)
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
         return paths_links_mapping
@@ -1590,13 +1588,13 @@ class Item(TreeModel, BaseModel):
         ancestors = (
             cls.objects.filter(path__in=paths, ancestors_deleted_at__isnull=True)
             .order_by("path")
-            .values_list("path", "link_reach", "link_role")
+            .only("path", "link_reach", "link_role")
         )
         paths_links_mapping = {}
-        for path, link_reach, link_role in ancestors:
+        for ancestor in ancestors:
             # Paths are sorted so the closest ancestor found is already mapped. Deleted
             # ancestors are skipped, as when walking the ancestors of a single item.
-            labels = str(path).split(".")
+            labels = str(ancestor.path).split(".")
             ancestors_links = next(
                 (
                     paths_links_mapping[parent_path]
@@ -1605,9 +1603,9 @@ class Item(TreeModel, BaseModel):
                 ),
                 [],
             )
-            paths_links_mapping[str(path)] = [
+            paths_links_mapping[str(ancestor.path)] = [
                 *ancestors_links,
-                {"link_reach": link_reach, "link_role": link_role},
+                ancestor.link_definition,
             ]
 
         return paths_links_mapping
