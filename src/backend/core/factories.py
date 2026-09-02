@@ -170,3 +170,17 @@ class InvitationFactory(factory.django.DjangoModelFactory):
     item = factory.SubFactory(ItemFactory)
     role = factory.fuzzy.FuzzyChoice([role[0] for role in RoleChoices.choices])
     issuer = factory.SubFactory(UserFactory)
+
+
+class AccessRequestFactory(factory.django.DjangoModelFactory):
+    """A factory to create access requests for testing."""
+
+    class Meta:
+        model = models.AccessRequest
+
+    item = factory.SubFactory(ItemFactory)
+    requester = factory.SubFactory(UserFactory)
+    status = factory.fuzzy.FuzzyChoice(
+        [status[0] for status in models.AccessRequestStatusChoices.choices]
+    )
+    message = factory.Faker("sentence")

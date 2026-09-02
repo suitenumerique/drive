@@ -843,6 +843,52 @@ class InvitationSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class AccessRequestSerializer(serializers.ModelSerializer):
+    """Serialize access requests."""
+
+    abilities = serializers.SerializerMethodField(read_only=True)
+    requester = UserSerializer(read_only=True)
+
+    class Meta:
+        model = models.AccessRequest
+        fields = [
+            "id",
+            "abilities",
+            "created_at",
+            "item",
+            "requester",
+            "status",
+            "message",
+        ]
+        read_only_fields = [
+            "id",
+            "abilities",
+            "created_at",
+            "item",
+            "requester",
+        ]
+
+    def get_abilities(self, access_request) -> dict:
+        """Return abilities of the logged-in user on the instance."""
+        request = self.context.get("request")
+        if request:
+            return access_request.get_abilities(request.user)
+        return {}
+
+    def validate(self, attrs):
+        """Validate access request data."""
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        attrs["item_id"] = self.context["resource_id"]
+
+        # Only set the requester if the instance is being created
+        if self.instance is None:
+            attrs["requester"] = user
+
+        return attrs
+
+
 # Suppress the warning about not implementing `create` and `update` methods
 # since we don't use a model and only rely on the serializer for validation
 # pylint: disable=abstract-method

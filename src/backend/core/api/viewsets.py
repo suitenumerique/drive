@@ -2276,6 +2276,168 @@ class InvitationViewset(
         )
 
 
+class ItemAccessRequestViewSet(
+    drf.mixins.CreateModelMixin,
+    drf.mixins.ListModelMixin,
+    drf.mixins.RetrieveModelMixin,
+    drf.mixins.DestroyModelMixin,
+    drf.mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    """API ViewSet for access requests on items.
+
+    GET /api/v1.0/items/<item_id>/access-requests/
+        Return the list of access requests related to that item (owners/admins only).
+
+    POST /api/v1.0/items/<item_id>/access-requests/ with expected data:
+        - message: str (optional)
+        Return the newly created access request. An email is sent to the item owners.
+        Any authenticated user can create one request (pending) per item.
+
+    PATCH /api/v1.0/items/<item_id>/access-requests/<id>/ with expected data:
+        - status: str ["accepted"|"refused"] (owners/admins only, on a pending request)
+        Accepting grants READER access to the requester, refusing keeps them out.
+        An email is sent to the requester in both cases.
+
+    DELETE /api/v1.0/items/<item_id>/access-requests/<id>/
+        Delete a pending access request (owners/admins only).
+    """
+
+    lookup_field = "id"
+    pagination_class = Pagination
+    permission_classes = [permissions.AccessRequestPermission]
+    queryset = models.AccessRequest.objects.select_related("item", "requester").order_by(
+        "-created_at"
+    )
+    serializer_class = serializers.AccessRequestSerializer
+    resource_field_name = "item"
+
+    @cached_property
+    def item(self) -> models.Item:
+        """Get related item from resource ID in url and annotate user roles."""
+        try:
+            return models.Item.objects.annotate_user_roles(self.request.user).get(
+                pk=self.kwargs["resource_id"]
+            )
+        except models.Item.DoesNotExist as excpt:
+            raise drf.exceptions.NotFound() from excpt
+
+    def get_serializer_context(self):
+        """Extra context provided to the serializer class."""
+        context = super().get_serializer_context()
+        context["resource_id"] = self.kwargs["resource_id"]
+        return context
+
+    def get_queryset(self):
+        """Return the access requests related to the item in the URL."""
+        return super().get_queryset().filter(item=self.kwargs["resource_id"])
+
+    def _validate_requester(self, user):
+        """Refuse to let a user who already accesses the item, or who already has a
+        pending request, ask for access again."""
+        if self.item.get_role(user) in PRIVILEGED_ROLES:
+            raise drf.serializers.ValidationError(
+                "You already have access to this item.",
+                code="access_request_already_has_access",
+            )
+
+        if models.AccessRequest.objects.filter(
+            item_id=self.kwargs["resource_id"],
+            requester=user,
+            status=models.AccessRequestStatusChoices.PENDING,
+        ).exists():
+            raise drf.serializers.ValidationError(
+                "You already requested access to this item and your request is pending.",
+                code="access_request_already_pending",
+            )
+
+    def perform_create(self, serializer):
+        """Save the request then notify the item owners by email."""
+        requester = serializer.validated_data["requester"]
+        self._validate_requester(requester)
+
+        try:
+            access_request = serializer.save()
+        except IntegrityError as excpt:
+            raise drf.serializers.ValidationError(
+                "You already requested access to this item and your request is pending.",
+                code="access_request_already_pending",
+            ) from excpt
+
+        access_request.item.send_access_request_email(
+            access_request.requester,
+            access_request.message,
+            access_request.item.get_owners(),
+            self.request.user.language or settings.LANGUAGE_CODE,
+        )
+
+        posthog_capture(
+            "item_access_request_created",
+            self.request.user,
+            {"id": str(access_request.id)},
+            item=access_request.item,
+        )
+
+    def update(self, request, *args, **kwargs):
+        """Accept or refuse a pending access request."""
+        access_request = self.get_object()
+        payload = request.data.get("status")
+
+        if payload == models.AccessRequestStatusChoices.ACCEPTED:
+            self._accept(access_request)
+        elif payload == models.AccessRequestStatusChoices.REFUSED:
+            self._refuse(access_request)
+        else:
+            raise drf.serializers.ValidationError(
+                "Invalid access request status",
+                code="invalid_access_request_status",
+            )
+
+        return drf_response.Response(self.get_serializer(access_request).data)
+
+    def _accept(self, access_request):
+        """Grant READER access to the requester and mark the request accepted."""
+        with transaction.atomic():
+            models.ItemAccess.objects.update_or_create(
+                item=access_request.item,
+                user=access_request.requester,
+                defaults={"role": models.RoleChoices.READER},
+            )
+            access_request.status = models.AccessRequestStatusChoices.ACCEPTED
+            access_request.save()
+
+        access_request.item.send_access_request_answer_email(
+            access_request.requester,
+            True,
+            self.request.user.language or settings.LANGUAGE_CODE,
+        )
+
+        posthog_capture(
+            "item_access_request_accepted",
+            self.request.user,
+            {"id": str(access_request.id)},
+            item=access_request.item,
+        )
+
+    def _refuse(self, access_request):
+        """Mark the access request as refused."""
+        access_request.status = models.AccessRequestStatusChoices.REFUSED
+        access_request.save()
+
+        access_request.item.send_access_request_answer_email(
+            access_request.requester,
+            False,
+            self.request.user.language or settings.LANGUAGE_CODE,
+        )
+
+        posthog_capture(
+            "item_access_request_refused",
+            self.request.user,
+            {"id": str(access_request.id)},
+            item=access_request.item,
+        )
+
+
 class ReconciliationConfirmView(drf.views.APIView):
     """API endpoint to confirm user reconciliation emails.
 
