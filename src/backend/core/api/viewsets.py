@@ -1295,7 +1295,7 @@ class ItemViewSet(
                 ancestors_deleted_at__isnull=True,
             )
             .order_by("path")
-            .only("path", "link_reach", "link_role")
+            .only("path", "link_reach", "link_role", "link_expires_at")
         )
 
         if len(ancestors) == 0:
