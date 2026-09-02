@@ -74,6 +74,9 @@ data/static:
 data/postgresql.local:
 	@mkdir -p data/postgresql.local
 
+data/postgresql.e2e:
+	@mkdir -p data/postgresql.e2e
+
 interop:
 	mkdir -p interop
 	curl -sL $(INTEROP_URL) | tar -xzf - --strip-components=1 -C interop
@@ -94,6 +97,7 @@ bootstrap: \
   data/media \
   data/static \
   data/postgresql.local \
+  data/postgresql.e2e \
   create-env-local-files \
   interop \
   build \
@@ -143,7 +147,6 @@ bootstrap-e2e: \
   data/postgresql.local \
   data/postgresql.e2e \
   create-env-local-files \
-  interop \
   build-backend \
   back-i18n-compile \
   run-backend-e2e
@@ -156,6 +159,7 @@ clear-db-e2e: ## quickly clears the database for e2e tests, used in the e2e test
 run-backend-e2e: ## start the backend container for e2e tests, always remove the postgresql.e2e volume first
 	@$(MAKE) stop
 	rm -rf data/postgresql.e2e
+	$(MAKE) data/postgresql.e2e
 	@ENV_OVERRIDE=e2e $(MAKE) run-backend
 	@ENV_OVERRIDE=e2e $(MAKE) migrate
 .PHONY: run-backend-e2e
