@@ -1290,9 +1290,7 @@ class Item(TreeModel, BaseModel):
         paths_links_mapping = {}
 
         for ancestor in ancestors:
-            ancestors_links.append(
-                {"link_reach": ancestor.link_reach, "link_role": ancestor.link_role}
-            )
+            ancestors_links.append(ancestor.link_definition)
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
         return paths_links_mapping
