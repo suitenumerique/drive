@@ -10,7 +10,8 @@ import {
 } from "@/features/explorer/hooks/useMutationsAccesses";
 import { errorToCode } from "@/features/api/APIError";
 
-const ITEM_URL_PATTERN = /\/explorer\/items\/(?:files\/)?([0-9a-f-]{36})/;
+const ITEM_URL_PATTERN =
+  /\/(?:explorer\/items\/files\/|explorer\/items\/|wopi\/)([0-9a-f-]{36})/;
 
 export const formatItemIdFromRedirectTo = (
   redirectTo?: string | string[],
