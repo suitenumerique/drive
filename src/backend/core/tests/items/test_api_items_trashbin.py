@@ -90,7 +90,7 @@ def test_api_items_trashbin_format(settings):
         "upload_state": models.ItemUploadStateChoices.READY
         if item.type == models.ItemTypeChoices.FILE
         else None,
-        "url": f"http://localhost:8083/media/item/{item.id!s}/{item.filename}"
+        "url": f"{settings.MEDIA_BASE_URL}/media/item/{item.id!s}/{item.filename}"
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/"

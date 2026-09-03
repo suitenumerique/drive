@@ -35,7 +35,7 @@ def test_api_items_list_anonymous(reach, role):
     assert len(results) == 0
 
 
-def test_api_items_list_format():
+def test_api_items_list_format(settings):
     """Validate the format of items as returned by the list view."""
     user = factories.UserFactory()
     client = APIClient()
@@ -119,7 +119,7 @@ def test_api_items_list_format():
             "user_role": None,
             "type": models.ItemTypeChoices.FILE,
             "upload_state": item3.upload_state,
-            "url": f"http://localhost:8083/media/item/{item3.id!s}/{item3.filename}",
+            "url": f"{settings.MEDIA_BASE_URL}/media/item/{item3.id!s}/{item3.filename}",
             "url_permalink": f"http://testserver/api/v1.0/items/{item3.id!s}/download/",
             "url_preview": None,
             "mimetype": item3.mimetype,
@@ -159,9 +159,9 @@ def test_api_items_list_format():
             "user_role": access2.role,
             "type": models.ItemTypeChoices.FILE,
             "upload_state": item2.upload_state,
-            "url": f"http://localhost:8083/media/item/{item2.id!s}/logo.png",
+            "url": f"{settings.MEDIA_BASE_URL}/media/item/{item2.id!s}/logo.png",
             "url_permalink": f"http://testserver/api/v1.0/items/{item2.id!s}/download/",
-            "url_preview": f"http://localhost:8083/media/preview/item/{item2.id!s}/logo.png",
+            "url_preview": f"{settings.MEDIA_BASE_URL}/media/preview/item/{item2.id!s}/logo.png",
             "mimetype": item2.mimetype,
             "main_workspace": False,
             "filename": item2.filename,

@@ -16,7 +16,7 @@ pytestmark = pytest.mark.django_db
 # pylint: disable=too-many-lines
 
 
-def test_api_items_children_list_anonymous_public_standalone():
+def test_api_items_children_list_anonymous_public_standalone(settings):
     """Anonymous users should be allowed to retrieve the children of a public item."""
     item = factories.ItemFactory(link_reach="public", type=models.ItemTypeChoices.FOLDER)
     child1, child2 = factories.ItemFactory.create_batch(
@@ -62,7 +62,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "upload_state": child1.upload_state
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
-                "url": f"http://localhost:8083/media/item/{child1.id!s}/{child1.filename}"
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child1.id!s}/{child1.filename}"
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/"
@@ -108,7 +108,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "upload_state": child2.upload_state
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
-                "url": f"http://localhost:8083/media/item/{child2.id!s}/{child2.filename}"
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child2.id!s}/{child2.filename}"
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/"
@@ -128,7 +128,7 @@ def test_api_items_children_list_anonymous_public_standalone():
     }
 
 
-def test_api_items_children_list_anonymous_public_parent():
+def test_api_items_children_list_anonymous_public_parent(settings):
     """
     Anonymous users should be allowed to retrieve the children of an item who
     has a public ancestor.
@@ -192,7 +192,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "user_role": None,
                 "type": models.ItemTypeChoices.FILE,
                 "upload_state": models.ItemUploadStateChoices.READY,
-                "url": f"http://localhost:8083/media/item/{child1.id!s}/{child1.filename}",
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child1.id!s}/{child1.filename}",
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/",
                 "url_preview": None,
                 "mimetype": None,
@@ -232,9 +232,11 @@ def test_api_items_children_list_anonymous_public_parent():
                 "user_role": None,
                 "type": models.ItemTypeChoices.FILE,
                 "upload_state": models.ItemUploadStateChoices.READY,
-                "url": f"http://localhost:8083/media/item/{child2.id!s}/logo.png",
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child2.id!s}/logo.png",
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/",
-                "url_preview": f"http://localhost:8083/media/preview/item/{child2.id!s}/logo.png",
+                "url_preview": (
+                    f"{settings.MEDIA_BASE_URL}/media/preview/item/{child2.id!s}/logo.png"
+                ),
                 "mimetype": "image/png",
                 "main_workspace": False,
                 "filename": child2.filename,
@@ -272,9 +274,7 @@ def test_api_items_children_list_anonymous_restricted_or_authenticated(reach):
 
 
 @pytest.mark.parametrize("reach", ["public", "authenticated"])
-def test_api_items_children_list_authenticated_unrelated_public_or_authenticated(
-    reach,
-):
+def test_api_items_children_list_authenticated_unrelated_public_or_authenticated(reach, settings):
     """
     Authenticated users should be able to retrieve the children of a public/authenticated
     item to which they are not related.
@@ -328,7 +328,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "upload_state": models.ItemUploadStateChoices.READY
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
-                "url": f"http://localhost:8083/media/item/{child1.id!s}/{child1.filename}"
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child1.id!s}/{child1.filename}"
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/"
@@ -374,7 +374,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "upload_state": models.ItemUploadStateChoices.READY
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
-                "url": f"http://localhost:8083/media/item/{child2.id!s}/{child2.filename}"
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child2.id!s}/{child2.filename}"
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/"
@@ -395,9 +395,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
 
 
 @pytest.mark.parametrize("reach", ["public", "authenticated"])
-def test_api_items_children_list_authenticated_public_or_authenticated_parent(
-    reach,
-):
+def test_api_items_children_list_authenticated_public_or_authenticated_parent(reach, settings):
     """
     Authenticated users should be allowed to retrieve the children of an item who
     has a public or authenticated ancestor.
@@ -457,7 +455,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "upload_state": child1.upload_state
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
-                "url": f"http://localhost:8083/media/item/{child1.id!s}/{child1.filename}"
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child1.id!s}/{child1.filename}"
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/"
@@ -503,7 +501,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "upload_state": child2.upload_state
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
-                "url": f"http://localhost:8083/media/item/{child2.id!s}/{child2.filename}"
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child2.id!s}/{child2.filename}"
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/"
@@ -553,7 +551,7 @@ def test_api_items_children_list_authenticated_unrelated_restricted():
     }
 
 
-def test_api_items_children_list_authenticated_related_direct():
+def test_api_items_children_list_authenticated_related_direct(settings):
     """
     Authenticated users should be allowed to retrieve the children of an item
     to which they are directly related whatever the role.
@@ -611,7 +609,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "upload_state": models.ItemUploadStateChoices.READY
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
-                "url": f"http://localhost:8083/media/item/{child1.id!s}/{child1.filename}"
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child1.id!s}/{child1.filename}"
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/"
@@ -657,7 +655,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "upload_state": models.ItemUploadStateChoices.READY
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
-                "url": f"http://localhost:8083/media/item/{child2.id!s}/{child2.filename}"
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child2.id!s}/{child2.filename}"
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/"
@@ -677,7 +675,7 @@ def test_api_items_children_list_authenticated_related_direct():
     }
 
 
-def test_api_items_children_list_authenticated_related_parent():
+def test_api_items_children_list_authenticated_related_parent(settings):
     """
     Authenticated users should be allowed to retrieve the children of a item if they
     are related to one of its ancestors whatever the role.
@@ -743,7 +741,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "upload_state": models.ItemUploadStateChoices.READY
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
-                "url": f"http://localhost:8083/media/item/{child1.id!s}/{child1.filename}"
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child1.id!s}/{child1.filename}"
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/"
@@ -789,7 +787,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "upload_state": models.ItemUploadStateChoices.READY
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
-                "url": f"http://localhost:8083/media/item/{child2.id!s}/{child2.filename}"
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child2.id!s}/{child2.filename}"
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/"
@@ -872,9 +870,7 @@ def test_api_items_children_list_authenticated_related_team_none(mock_user_teams
     }
 
 
-def test_api_items_children_list_authenticated_related_team_members(
-    mock_user_teams,
-):
+def test_api_items_children_list_authenticated_related_team_members(mock_user_teams, settings):
     """
     Authenticated users should be allowed to retrieve the children of an item to which they
     are related via a team whatever the role.
@@ -932,7 +928,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "upload_state": models.ItemUploadStateChoices.READY
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
-                "url": f"http://localhost:8083/media/item/{child1.id!s}/{child1.filename}"
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child1.id!s}/{child1.filename}"
                 if child1.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_permalink": f"http://testserver/api/v1.0/items/{child1.id!s}/download/"
@@ -978,7 +974,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "upload_state": models.ItemUploadStateChoices.READY
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
-                "url": f"http://localhost:8083/media/item/{child2.id!s}/{child2.filename}"
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child2.id!s}/{child2.filename}"
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/"
@@ -998,7 +994,7 @@ def test_api_items_children_list_authenticated_related_team_members(
     }
 
 
-def test_api_items_children_list_filter_type():
+def test_api_items_children_list_filter_type(settings):
     """
     Authenticated users should be allowed to retrieve the children of an item
     to which they are directly related whatever the role and filter by type.
@@ -1117,7 +1113,7 @@ def test_api_items_children_list_filter_type():
                 "upload_state": models.ItemUploadStateChoices.READY
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
-                "url": f"http://localhost:8083/media/item/{child2.id!s}/{child2.filename}"
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{child2.id!s}/{child2.filename}"
                 if child2.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_permalink": f"http://testserver/api/v1.0/items/{child2.id!s}/download/"

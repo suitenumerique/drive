@@ -27,7 +27,7 @@ def build_search_url(**kwargs):
 
 @pytest.mark.usefixtures("indexer_settings")
 @responses.activate
-def test_api_items_search_authenticated_fulltext_query(indexer_settings):
+def test_api_items_search_authenticated_fulltext_query(indexer_settings, settings):
     """
     Authenticated users should be able to search for items by title.
     """
@@ -98,7 +98,7 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
             "type": "file",
             "updated_at": item_b.updated_at.isoformat().replace("+00:00", "Z"),
             "upload_state": str(item_b.upload_state),
-            "url": f"http://localhost:8083/media/item/{item_b.id!s}/{item_b.filename}",
+            "url": f"{settings.MEDIA_BASE_URL}/media/item/{item_b.id!s}/{item_b.filename}",
             "url_permalink": f"http://testserver/api/v1.0/items/{item_b.id!s}/download/",
             "url_preview": None,
             "user_role": folder_access.role,
@@ -179,7 +179,7 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
             "type": "file",
             "updated_at": item_c.updated_at.isoformat().replace("+00:00", "Z"),
             "upload_state": str(item_c.upload_state),
-            "url": f"http://localhost:8083/media/item/{item_c.id!s}/{item_c.filename}",
+            "url": f"{settings.MEDIA_BASE_URL}/media/item/{item_c.id!s}/{item_c.filename}",
             "url_permalink": f"http://testserver/api/v1.0/items/{item_c.id!s}/download/",
             "url_preview": None,
             "user_role": folder_access.role,
