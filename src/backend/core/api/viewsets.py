@@ -21,7 +21,7 @@ from django.db.models.functions import Coalesce
 from django.http import StreamingHttpResponse
 from django.urls import reverse
 from django.utils.decorators import method_decorator
-from django.utils.functional import cached_property
+from django.utils.functional import SimpleLazyObject, cached_property
 from django.utils.text import capfirst, slugify
 from django.utils.translation import gettext_lazy as _
 
@@ -433,10 +433,24 @@ class ItemViewSet(
     favorite_list_serializer_class = serializers.ListItemLightSerializer
 
     def initial(self, request, *args, **kwargs):
-        """Attach the link items unlocked in the session to the user before checking permissions."""
-        request.user.unlocked_link_items = set(
-            request.session.get(UNLOCKED_LINK_ITEMS_SESSION_KEY, [])
-        )
+        """Attach the link items the user unlocked before checking permissions."""
+        session_ids = set(request.session.get(UNLOCKED_LINK_ITEMS_SESSION_KEY, []))
+        user = request.user
+        if user.is_authenticated:
+            # Lazy: only queried when an item link actually carries a password
+            user.unlocked_link_items = SimpleLazyObject(
+                lambda: (
+                    session_ids
+                    | {
+                        str(item_id)
+                        for item_id in models.LinkTrace.objects.filter(
+                            user=user, link_unlocked_at__isnull=False
+                        ).values_list("item_id", flat=True)
+                    }
+                )
+            )
+        else:
+            user.unlocked_link_items = session_ids
         super().initial(request, *args, **kwargs)
 
     def _filter_suspicious_items(self, queryset, user):
@@ -1667,7 +1681,16 @@ class ItemViewSet(
             raise drf.exceptions.PermissionDenied()
 
         request.user.unlocked_link_items.add(str(password_item_id))
-        request.session[UNLOCKED_LINK_ITEMS_SESSION_KEY] = list(request.user.unlocked_link_items)
+        if request.user.is_authenticated:
+            models.LinkTrace.objects.update_or_create(
+                user=request.user,
+                item=password_item,
+                defaults={"link_unlocked_at": timezone.now()},
+            )
+        else:
+            request.session[UNLOCKED_LINK_ITEMS_SESSION_KEY] = list(
+                request.user.unlocked_link_items
+            )
 
         return drf.response.Response(self.get_serializer(item).data, status=drf.status.HTTP_200_OK)
 

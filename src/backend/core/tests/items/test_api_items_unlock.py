@@ -130,3 +130,68 @@ def test_api_items_unlock_throttled(settings, monkeypatch):
     assert client.post(url, {"password": "wrong"}, format="json").status_code == 403
     assert client.post(url, {"password": "wrong"}, format="json").status_code == 403
     assert client.post(url, {"password": "s3cret"}, format="json").status_code == 429
+
+
+def test_api_items_unlock_authenticated_persists_across_sessions():
+    """An authenticated user should keep their unlocks from one session to another."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_reach="public", link_role="reader")
+    item.set_link_password("s3cret")
+    item.save()
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/unlock/", {"password": "s3cret"}, format="json"
+    )
+    assert response.status_code == 200
+    assert models.LinkTrace.objects.filter(
+        user=user, item=item, link_unlocked_at__isnull=False
+    ).exists()
+
+    other_client = APIClient()
+    other_client.force_login(user)
+    response = other_client.get(f"/api/v1.0/items/{item.id!s}/")
+    assert response.status_code == 200
+    assert response.json()["abilities"]["password_locked"] is False
+
+
+def test_api_items_unlock_anonymous_does_not_persist():
+    """An anonymous unlock should not outlive its session."""
+    item = factories.ItemFactory(link_reach="public", link_role="reader")
+    item.set_link_password("s3cret")
+    item.save()
+
+    client = APIClient()
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/unlock/", {"password": "s3cret"}, format="json"
+    )
+    assert response.status_code == 200
+    assert not models.LinkTrace.objects.filter(link_unlocked_at__isnull=False).exists()
+
+    assert APIClient().get(f"/api/v1.0/items/{item.id!s}/").status_code == 401
+
+
+def test_api_items_unlock_password_change_locks_again():
+    """Changing the link password should invalidate previous unlocks."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_reach="public", link_role="reader")
+    item.set_link_password("s3cret")
+    item.save()
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        f"/api/v1.0/items/{item.id!s}/unlock/", {"password": "s3cret"}, format="json"
+    )
+    assert response.status_code == 200
+
+    item.set_link_password("new-s3cret")
+    item.save()
+
+    assert not models.LinkTrace.objects.filter(
+        user=user, item=item, link_unlocked_at__isnull=False
+    ).exists()
+    other_client = APIClient()
+    other_client.force_login(user)
+    assert other_client.get(f"/api/v1.0/items/{item.id!s}/").status_code == 403
