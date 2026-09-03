@@ -848,17 +848,21 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         link_not_expired = models.Q(link_expires_at__isnull=True) | models.Q(
             link_expires_at__gt=timezone.now()
         )
-        unlocked_ids = {key.split(":")[0] for key in getattr(user, "unlocked_link_items", ())}
-        link_open = link_not_expired & (
-            models.Q(link_password__isnull=True) | models.Q(id__in=unlocked_ids)
-        )
         if user.is_authenticated:
+            link_unlocked = models.Q(
+                link_traces__user=user, link_traces__link_unlocked_at__isnull=False
+            )
+            link_open = link_not_expired & (models.Q(link_password__isnull=True) | link_unlocked)
             return self.filter(
                 models.Q(accesses__user=user)
                 | models.Q(accesses__team__in=user.teams)
                 | (~models.Q(link_reach=LinkReachChoices.RESTRICTED) & link_open)
             )
 
+        unlocked_ids = {key.split(":")[0] for key in getattr(user, "unlocked_link_items", ())}
+        link_open = link_not_expired & (
+            models.Q(link_password__isnull=True) | models.Q(id__in=unlocked_ids)
+        )
         return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC) & link_open)
 
     def filter_non_deleted(self, **kwargs):
@@ -1359,6 +1363,8 @@ class Item(TreeModel, BaseModel):
     def set_link_password(self, raw_password):
         """Store the hash of the given link password, or remove it when empty."""
         self.link_password = make_password(raw_password) if raw_password else None
+        # Changing the password locks the link again for everyone
+        self.link_traces.update(link_unlocked_at=None)
 
     def check_link_password(self, raw_password):
         """Return whether the given password matches the link password."""
@@ -1871,6 +1877,7 @@ class LinkTrace(BaseModel):
         related_name="link_traces",
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="link_traces")
+    link_unlocked_at = models.DateTimeField(_("link unlocked at"), null=True, blank=True)
 
     class Meta:
         db_table = "drive_link_trace"
