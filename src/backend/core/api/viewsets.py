@@ -463,10 +463,12 @@ class ItemViewSet(
         return super().get_throttles()
 
     def initial(self, request, *args, **kwargs):
-        """Attach the link items unlocked in the session to the user before checking permissions."""
-        request.user.unlocked_link_items = set(
-            request.session.get(UNLOCKED_LINK_ITEMS_SESSION_KEY, [])
-        )
+        """Attach the link items unlocked in the session to anonymous users."""
+        # Authenticated users read their unlocks from the database, see User
+        if not request.user.is_authenticated:
+            request.user.unlocked_link_items = set(
+                request.session.get(UNLOCKED_LINK_ITEMS_SESSION_KEY, [])
+            )
         super().initial(request, *args, **kwargs)
 
     def _filter_suspicious_items(self, queryset, user):
@@ -1863,8 +1865,17 @@ class ItemViewSet(
         if not password_item.check_link_password(serializer.validated_data["password"]):
             raise drf.exceptions.PermissionDenied()
 
-        request.user.unlocked_link_items.add(str(password_item_id))
-        request.session[UNLOCKED_LINK_ITEMS_SESSION_KEY] = list(request.user.unlocked_link_items)
+        request.user.unlocked_link_items.add(password_item.link_unlock_key)
+        if request.user.is_authenticated:
+            models.LinkTrace.objects.update_or_create(
+                user=request.user,
+                item=password_item,
+                defaults={"link_unlocked_at": timezone.now()},
+            )
+        else:
+            request.session[UNLOCKED_LINK_ITEMS_SESSION_KEY] = list(
+                request.user.unlocked_link_items
+            )
 
         return drf.response.Response(self.get_serializer(item).data, status=drf.status.HTTP_200_OK)
 

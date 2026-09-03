@@ -3,7 +3,6 @@ Declare and configure the models for the drive core application
 """
 # pylint: disable=too-many-lines
 
-import hashlib
 import smtplib
 import uuid
 from datetime import timedelta
@@ -14,7 +13,7 @@ from os.path import splitext
 from django.conf import settings
 from django.contrib.auth import models as auth_models
 from django.contrib.auth.base_user import AbstractBaseUser
-from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth.hashers import check_password, identify_hasher, make_password
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GistIndex
 from django.contrib.sites.models import Site
@@ -395,6 +394,17 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         Must be cached if retrieved remotely.
         """
         return []
+
+    @cached_property
+    def unlocked_link_items(self):
+        """Return the unlock keys of the item links the user unlocked."""
+        # An item link password cleared in bulk leaves its unlocked traces behind
+        return {
+            link_unlock_key(item_id, link_password)
+            for item_id, link_password in self.link_traces.filter(
+                link_unlocked_at__isnull=False, item__link_password__isnull=False
+            ).values_list("item_id", "item__link_password")
+        }
 
 
 class UserReconciliation(BaseModel):
@@ -994,7 +1004,9 @@ class AnnotateUserRoleQuerySetMixin:
 
 def link_unlock_key(item_id, link_password):
     """Return the key remembering an unlock, bound to the password it was made with."""
-    return f"{item_id}:{hashlib.sha256(link_password.encode()).hexdigest()[:12]}"
+    # The salt is regenerated with every password, no need to hash anything
+    salt = identify_hasher(link_password).decode(link_password)["salt"]
+    return f"{item_id}:{salt}"
 
 
 def get_equivalent_link_definition(links):
@@ -1058,11 +1070,13 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         link_not_expired = models.Q(link_expires_at__isnull=True) | models.Q(
             link_expires_at__gt=timezone.now()
         )
-        unlocked_ids = {key.split(":")[0] for key in getattr(user, "unlocked_link_items", ())}
-        link_open = link_not_expired & (
-            models.Q(link_password__isnull=True) | models.Q(id__in=unlocked_ids)
-        )
         if user.is_authenticated:
+            link_unlocked = models.Q(
+                id__in=LinkTrace.objects.filter(user=user, link_unlocked_at__isnull=False).values(
+                    "item_id"
+                )
+            )
+            link_open = link_not_expired & (models.Q(link_password__isnull=True) | link_unlocked)
             return self.filter(
                 models.Q(accesses__user=user)
                 | models.Q(accesses__team__in=user.teams)
@@ -1075,7 +1089,13 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
                 )
             )
 
-        return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC) & link_open)
+        link_open = models.Q(link_password__isnull=True)
+        for key in getattr(user, "unlocked_link_items", ()):
+            item_id, salt = key.split(":", 1)
+            link_open |= models.Q(id=item_id, link_password__contains=salt)
+        return self.filter(
+            models.Q(link_reach=LinkReachChoices.PUBLIC) & link_not_expired & link_open
+        )
 
     def filter_non_deleted(self, **kwargs):
         """Filter the non deleted items"""
@@ -1702,6 +1722,8 @@ class Item(TreeModel, BaseModel):
     def set_link_password(self, raw_password):
         """Store the hash of the given link password, or remove it when empty."""
         self.link_password = make_password(raw_password) if raw_password else None
+        # Changing the password locks the link again for everyone
+        self.link_traces.update(link_unlocked_at=None)
 
     def check_link_password(self, raw_password):
         """Return whether the given password matches the link password."""
@@ -2234,6 +2256,7 @@ class LinkTrace(BaseModel):
         related_name="link_traces",
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="link_traces")
+    link_unlocked_at = models.DateTimeField(_("link unlocked at"), null=True, blank=True)
 
     class Meta:
         db_table = "drive_link_trace"
