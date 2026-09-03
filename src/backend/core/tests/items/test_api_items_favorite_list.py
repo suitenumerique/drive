@@ -39,7 +39,7 @@ def test_api_item_favorite_list_authenticated_no_favorite():
     }
 
 
-def test_api_item_favorite_list_authenticated_with_favorite():
+def test_api_item_favorite_list_authenticated_with_favorite(settings):
     """Authenticated users with a favorite should receive the favorite."""
 
     user = factories.UserFactory()
@@ -87,7 +87,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "type": item.type,
                 "updated_at": item.updated_at.isoformat().replace("+00:00", "Z"),
                 "upload_state": item.upload_state,
-                "url": f"http://localhost:8083/media/item/{item.id!s}/{item.filename}"
+                "url": f"{settings.MEDIA_BASE_URL}/media/item/{item.id!s}/{item.filename}"
                 if item.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/"
