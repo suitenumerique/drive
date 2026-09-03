@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) add file-scanner malware webhook endpoint
+
 ### Fixed
 
 - 🐛(backend) fix anonymous export of public folders
