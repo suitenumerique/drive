@@ -65,7 +65,7 @@ test.describe("Share modal contacts import", () => {
     await clearDb();
     // Make sure the webkit user exists so its row creates an access
     // while the unknown email creates an invitation.
-    await request.post("http://localhost:8071/api/v1.0/e2e/user-auth/", {
+    await request.post("http://localhost:8200/api/v1.0/e2e/user-auth/", {
       data: { email: "user@webkit.test" },
     });
     await mockConfig(page, true);

@@ -61,7 +61,7 @@ test.describe("SDK file picker", () => {
     // a cancel — fetch it via the authenticated search endpoint (the
     // root items list only returns top-level workspaces).
     const searchRes = await page.request.get(
-      "http://localhost:8071/api/v1.0/items/search/?q=pv_cm",
+      "http://localhost:8200/api/v1.0/items/search/?q=pv_cm",
     );
     expect(searchRes.ok()).toBeTruthy();
     const body = await searchRes.json();
