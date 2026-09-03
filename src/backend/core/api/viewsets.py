@@ -20,6 +20,7 @@ from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
 from django.http import StreamingHttpResponse
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.utils.functional import SimpleLazyObject, cached_property
 from django.utils.text import capfirst, slugify
@@ -1493,18 +1494,29 @@ class ItemViewSet(
         if workspace:
             item_access_queryset = item_access_queryset.filter(item__id=workspace)
 
-        top_level_items = item_access_queryset.values_list("item__path", flat=True)
+        top_level_paths = list(item_access_queryset.values_list("item__path", flat=True))
+
+        # Items unlocked with their link password stay searchable while their link is live
+        if user.is_authenticated and not workspace:
+            link_not_expired = db.Q(link_expires_at__isnull=True) | db.Q(
+                link_expires_at__gt=timezone.now()
+            )
+            top_level_paths += self.queryset.filter(
+                link_not_expired,
+                link_traces__user=user,
+                link_traces__link_unlocked_at__isnull=False,
+                link_reach__in=[LinkReachChoices.PUBLIC, LinkReachChoices.AUTHENTICATED],
+                hard_deleted_at__isnull=True,
+            ).values_list("path", flat=True)
+
         # Then look for all items that are children of the top level items
 
-        if not top_level_items:
+        if not top_level_paths:
             return self.get_response_for_queryset(queryset.none())
 
         # Among the results, we may have items that are ancestors/descendants
         # of each other. In this case we want to keep only the highest ancestors.
-        root_paths = utils.filter_root_paths(
-            top_level_items,
-            skip_sorting=True,
-        )
+        root_paths = utils.filter_root_paths(sorted(top_level_paths, key=str), skip_sorting=True)
 
         path_list = db.Q()
         for top_level_item in root_paths:

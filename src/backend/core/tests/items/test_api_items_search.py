@@ -2,6 +2,8 @@
 
 import random
 
+from django.utils import timezone
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -892,6 +894,68 @@ def test_api_items_search_excludes_deleted_root_item_by_default():
     item.soft_delete()
 
     response = client.get("/api/v1.0/items/search/?title=ywh_export")
+
+    assert response.status_code == 200
+    assert response.json()["results"] == []
+
+
+def test_api_items_search_unlocked_link_items():
+    """Items whose link password was unlocked should show up in search results."""
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        title="Unlocked folder", type=models.ItemTypeChoices.FOLDER, link_reach="public"
+    )
+    folder.set_link_password("s3cret")
+    folder.save()
+    child = factories.ItemFactory(
+        title="Unlocked child",
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    models.LinkTrace.objects.create(user=user, item=folder, link_unlocked_at=timezone.now())
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get("/api/v1.0/items/search/", {"title": "Unlocked"})
+
+    assert response.status_code == 200
+    assert {r["id"] for r in response.json()["results"]} == {str(folder.id), str(child.id)}
+
+
+def test_api_items_search_locked_link_items_hidden():
+    """Items behind a link password the user did not unlock should stay hidden."""
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        title="Locked folder", type=models.ItemTypeChoices.FOLDER, link_reach="public"
+    )
+    folder.set_link_password("s3cret")
+    folder.save()
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get("/api/v1.0/items/search/", {"title": "Locked"})
+
+    assert response.status_code == 200
+    assert response.json()["results"] == []
+
+
+def test_api_items_search_unlocked_expired_link_items_hidden():
+    """Unlocked items whose link has expired should stay hidden from search."""
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        title="Expired folder",
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach="public",
+        link_expires_at=timezone.now() - timezone.timedelta(days=1),
+    )
+    folder.set_link_password("s3cret")
+    folder.save()
+    models.LinkTrace.objects.create(user=user, item=folder, link_unlocked_at=timezone.now())
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get("/api/v1.0/items/search/", {"title": "Expired"})
 
     assert response.status_code == 200
     assert response.json()["results"] == []
