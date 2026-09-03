@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) add file-scanner malware webhook endpoint
+- 🔧(backend) make malware reschedule delay configurable
 
 ## [v0.26.0] - 2026-11-04
 
