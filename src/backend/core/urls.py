@@ -57,6 +57,10 @@ urlpatterns = [
                     "user-reconciliations/<str:user_type>/<uuid:confirmation_id>/",
                     viewsets.ReconciliationConfirmView.as_view(),
                 ),
+                path(
+                    "webhooks/malware/",
+                    include("lasuite.malware_detection.urls"),
+                ),
                 *sdk_relay_router.urls,
                 *entitlements_router.urls,
             ]
