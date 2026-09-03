@@ -1496,6 +1496,15 @@ class Base(Configuration):
         environ_name="MALWARE_DETECTION_DUMMY_SLEEP",
         environ_prefix=None,
     )
+    # Days before the reschedule_processing_analysis command re-submits a
+    # stuck analysis. Accepts floats — the file-scanner backend needs a much
+    # lower value than the JCOP-era 3-day default because a lost webhook is
+    # only recovered by this command.
+    MALWARE_DETECTION_RESCHEDULE_PROCESSING_ANALYSIS_DAYS = values.FloatValue(
+        3,
+        environ_name="MALWARE_DETECTION_RESCHEDULE_PROCESSING_ANALYSIS_DAYS",
+        environ_prefix=None,
+    )
 
     # Metrics
     METRICS_ENABLED = values.BooleanValue(
