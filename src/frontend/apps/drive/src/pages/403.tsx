@@ -21,7 +21,7 @@ export const formatItemIdFromRedirectTo = (
   }
   const url = Array.isArray(redirectTo) ? redirectTo[0] : redirectTo;
   try {
-    const match = decodeURIComponent(url).match(ITEM_URL_PATTERN);
+    const match = ITEM_URL_PATTERN.exec(decodeURIComponent(url));
     return match ? match[1] : null;
   } catch {
     return null;
@@ -40,6 +40,15 @@ export default function UnauthorizedPage() {
   const createAccessRequest = useMutationCreateAccessRequest();
 
   const canAskForAccess = Boolean(itemId) && !requestSent && !alreadyRequested;
+
+  let pageMessage: string;
+  if (requestSent) {
+    pageMessage = t("403.ask_for_access.success");
+  } else if (alreadyRequested) {
+    pageMessage = t("403.ask_for_access.already_requested");
+  } else {
+    pageMessage = t("403.ask_for_access.description");
+  }
 
   const handleAskForAccess = () => {
     if (!itemId) {
@@ -62,13 +71,7 @@ export default function UnauthorizedPage() {
 
   return (
     <GenericDisclaimer
-      message={
-        requestSent
-          ? t("403.ask_for_access.success")
-          : alreadyRequested
-            ? t("403.ask_for_access.already_requested")
-            : t("403.ask_for_access.description")
-      }
+      message={pageMessage}
       imageSrc="/assets/403-background.png"
     >
       {canAskForAccess && (

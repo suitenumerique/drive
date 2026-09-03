@@ -57,7 +57,7 @@
         font-size: 0.875rem;
         color: var(--c--contextuals--content--semantic--neutral--secondary);
         white-space: pre-wrap;
-        word-break: break-word;
+        overflow-wrap: anywhere;
       }
 
       &__actions {
