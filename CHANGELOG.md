@@ -11,7 +11,11 @@ and this project adheres to
 ### Added
 
 - ✨(frontend) restrict and reopen folder access from the share modal
+<<<<<<< HEAD
 - 🔊(backend) log rejected WOPI requests
+=======
+- ✨(backend) add file-scanner malware webhook endpoint
+>>>>>>> 40a36612 (✨(backend) add file-scanner malware webhook endpoint)
 
 ## [v0.25.3] - 2026-10-23
 
