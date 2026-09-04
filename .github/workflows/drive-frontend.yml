@@ -182,6 +182,9 @@ jobs:
       - name: Serve frontend (stock nginx + prod vhost)
         run: make ci-serve-frontend-build
 
+      - name: Check that drive backend is ready
+        run: docker compose logs drive-backend
+
       - name: Run e2e tests
         working-directory: src/frontend/apps/e2e
         run: yarn test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}
