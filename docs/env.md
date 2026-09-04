@@ -71,6 +71,10 @@ This document lists all configurable environment variables for the Drive applica
 | `LOGOUT_REDIRECT_URL` | URL to redirect after logout | `None` |
 | `LOGGING_LEVEL_LOGGERS_APP` | Logging level for application loggers | `INFO` |
 | `LOGGING_LEVEL_LOGGERS_ROOT` | Logging level for root logger | `INFO` |
+| `MALWARE_DETECTION_BACKEND` | Dotted path of the malware detection backend class, see [malware detection](./malware_detection.md) | `lasuite.malware_detection.backends.dummy.DummyBackend` |
+| `MALWARE_DETECTION_PARAMETERS` | JSON dict of parameters passed to the malware detection backend | `{"callback_path": "core.malware_detection.malware_detection_callback"}` |
+| `MALWARE_DETECTION_DUMMY_SLEEP` | Delay in seconds before the development SleepyDummyBackend reports safe | `3` |
+| `MALWARE_DETECTION_RESCHEDULE_PROCESSING_ANALYSIS_DAYS` | Days before the reschedule_processing_analysis command re-submits a stuck analysis (accepts floats) | `3` |
 | `MAX_PAGE_SIZE` | Limit the maximum page size the client may request | `200` |
 | `MEDIA_BASE_URL` | Base URL for media files | `None` |
 | `OIDC_AUTH_REQUEST_EXTRA_PARAMS` | Extra parameters for OIDC auth requests | `{}` |
