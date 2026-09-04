@@ -3,7 +3,9 @@
   "version": "0.21.2",
   "private": true,
   "scripts": {
+    "predev": "node scripts/copy-pdf-assets.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-pdf-assets.mjs",
     "build": "next build --no-lint",
     "start": "next start",
     "lint": "next lint",

@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# pdf.js runtime assets, copied from pdfjs-dist by scripts/copy-pdf-assets.mjs
+/public/cmaps
+/public/standard_fonts
+/public/wasm
