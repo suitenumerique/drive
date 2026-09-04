@@ -457,7 +457,7 @@ class ItemViewSet(
     def get_queryset(self):
         """Get queryset performing all annotation and filtering on the item tree structure."""
         user = self.request.user
-        queryset = super().get_queryset().select_related("creator")
+        queryset = super().get_queryset().select_related("creator").annotate_has_restriction()
         # Remove items with upload_state SUSPICIOUS for non-creators
         queryset = self._filter_suspicious_items(queryset, user)
 
@@ -522,7 +522,7 @@ class ItemViewSet(
         for path in root_paths:
             path_list |= db.Q(path__descendants=path)
 
-        queryset = self.queryset.select_related("creator")
+        queryset = self.queryset.select_related("creator").annotate_has_restriction()
         # Remove items with upload_state SUSPICIOUS for non-creators
         queryset = self._filter_suspicious_items(queryset, user)
         queryset = self._exclude_pending_items(queryset)
@@ -689,7 +689,10 @@ class ItemViewSet(
 
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
-        instance.soft_delete()
+        if instance.type == models.ItemTypeChoices.RESTRICTION:
+            instance.detach()
+        else:
+            instance.soft_delete()
 
     def perform_update(self, serializer):
         """Override to check if a file is renamed in order to rename file on storage."""
@@ -767,6 +770,39 @@ class ItemViewSet(
             skip_sorting=True,
         )
         queryset = queryset.filter(path__in=root_paths)
+
+        # Hide restricted roots the user already reaches through a live
+        # restriction, so the folder shows up in a single location
+        if user.is_authenticated:
+            reachable_restrictions = models.Item.objects.filter(
+                type=models.ItemTypeChoices.RESTRICTION,
+                target_id=db.OuterRef("pk"),
+                ancestors_deleted_at__isnull=True,
+            ).filter(
+                db.Exists(
+                    models.ItemAccess.objects.filter(
+                        db.Q(user=user) | db.Q(team__in=user.teams),
+                        item__path__ancestors=db.OuterRef("path"),
+                    )
+                )
+                | (
+                    db.Exists(
+                        models.Item.objects.filter(
+                            path__ancestors=db.OuterRef("path"),
+                            link_reach__in=[
+                                LinkReachChoices.PUBLIC,
+                                LinkReachChoices.AUTHENTICATED,
+                            ],
+                        )
+                    )
+                    & db.Exists(
+                        models.LinkTrace.objects.filter(
+                            user=user, item__path__ancestors=db.OuterRef("path")
+                        )
+                    )
+                )
+            )
+            queryset = queryset.exclude(db.Exists(reachable_restrictions))
 
         # Annotate the queryset with an attribute marking instances as highest ancestor
         # in order to save some time while computing abilities in the instance
@@ -968,6 +1004,7 @@ class ItemViewSet(
         # than on the user_roles annotation.
         queryset = (
             self.queryset.select_related("creator")
+            .annotate_has_restriction()
             .filter(deleted_at__gte=models.get_trashbin_cutoff())
             .owned_by(user)
         )
@@ -1141,7 +1178,22 @@ class ItemViewSet(
             )
 
         # GET: List children
-        queryset = item.children().select_related("creator").filter(deleted_at__isnull=True)
+        queryset = (
+            item.children()
+            .select_related("creator", "target")
+            .annotate_has_restriction()
+            .filter(deleted_at__isnull=True)
+        )
+        if request.user.is_authenticated:
+            queryset = queryset.prefetch_related(
+                db.Prefetch(
+                    "target__accesses",
+                    queryset=models.ItemAccess.objects.filter(
+                        db.Q(user=request.user) | db.Q(team__in=request.user.teams)
+                    ),
+                    to_attr="viewer_accesses",
+                )
+            )
         queryset = self._filter_suspicious_items(queryset, request.user)
         queryset = self._exclude_pending_items(queryset)
         queryset = self.filter_queryset(queryset)
@@ -1238,8 +1290,13 @@ class ItemViewSet(
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
         tree = (
-            self.queryset.select_related("creator")
-            .filter(clause, type=models.ItemTypeChoices.FOLDER, deleted_at__isnull=True)
+            self.queryset.select_related("creator", "target")
+            .annotate_has_restriction()
+            .filter(
+                clause,
+                type__in=[models.ItemTypeChoices.FOLDER, models.ItemTypeChoices.RESTRICTION],
+                deleted_at__isnull=True,
+            )
             .order_by("created_at")
         )
 
@@ -1398,6 +1455,9 @@ class ItemViewSet(
         # Remove items with upload_state SUSPICIOUS for non-creators
         queryset = self._filter_suspicious_items(queryset, user)
         queryset = self._exclude_pending_items(queryset)
+
+        # Restrictions are tree entries, not searchable content
+        queryset = queryset.exclude(type=models.ItemTypeChoices.RESTRICTION)
 
         queryset = queryset.annotate_is_favorite(user)
 
@@ -1623,6 +1683,19 @@ class ItemViewSet(
             {"detail": "item was already not marked as favorite"},
             status=drf.status.HTTP_200_OK,
         )
+
+    @drf.decorators.action(detail=True, methods=["post", "delete"], url_path="restrict")
+    def restrict(self, request, *args, **kwargs):
+        """Activate or deactivate restriction on the folder based on the HTTP method."""
+        item = self.get_object()
+
+        if request.method == "POST":
+            item = item.restrict(request.user)
+        else:
+            item = item.unrestrict()
+
+        serializer = self.get_serializer(item)
+        return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
     def _authorize_subrequest(self, request, pattern):
         """

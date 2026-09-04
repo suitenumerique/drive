@@ -479,8 +479,25 @@ def test_services_search_indexers_index_errors(indexer_settings):
         body=json_dumps({"message": "Authentication failed."}),
     )
 
+    indexer = SearchIndexer()
     with pytest.raises(HTTPError):
-        SearchIndexer().index()
+        indexer.index()
+
+
+@pytest.mark.usefixtures("indexer_settings")
+@patch.object(SearchIndexer, "push")
+def test_services_search_indexers_index_skips_restrictions(mock_push):
+    """Restrictions are never sent to the search index."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+
+    count = SearchIndexer().index()
+
+    assert count == 2
+    indexed_ids = {doc["id"] for call in mock_push.call_args_list for doc in call.args[0]}
+    assert indexed_ids == {str(parent.id), str(folder.id)}
 
 
 @patch.object(SearchIndexer, "push")
@@ -871,8 +888,9 @@ def test_services_search_indexers_search_errors(indexer_settings):
         body=json_dumps({"message": "Authentication failed."}),
     )
 
+    indexer = SearchIndexer()
     with pytest.raises(HTTPError):
-        SearchIndexer().search("alpha", token="mytoken")
+        indexer.search("alpha", token="mytoken")
 
 
 @patch("requests.post")

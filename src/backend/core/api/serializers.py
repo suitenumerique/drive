@@ -2,6 +2,8 @@
 
 # pylint: disable=no-name-in-module
 
+from __future__ import annotations
+
 import json
 import logging
 from datetime import timedelta
@@ -9,6 +11,7 @@ from os.path import splitext
 from urllib.parse import quote
 
 from django.conf import settings
+from django.db.models import Q
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -219,6 +222,48 @@ class ItemAccessLightSerializer(ItemAccessSerializer):
         ]
 
 
+class RestrictionTargetSerializer(serializers.ModelSerializer):
+    """Serialize the restricted folder a restriction points to."""
+
+    deleted = serializers.SerializerMethodField()
+    can_access = serializers.SerializerMethodField()
+    is_restricted = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.Item
+        fields = ["id", "title", "is_restricted", "deleted", "can_access"]
+        read_only_fields = ["id", "title", "is_restricted", "deleted", "can_access"]
+
+    def get_deleted(self, target) -> bool:
+        """Return whether the target is in the trash."""
+        return target.deleted_at is not None
+
+    def get_is_restricted(self, target) -> bool:  # pylint: disable=unused-argument
+        """Return True: the target of an existing restriction is restricted by definition."""
+        return True
+
+    def get_can_access(self, target) -> bool:
+        """Return whether the request user can open the target."""
+        request = self.context.get("request")
+        user = request.user if request else None
+        if user is not None and user.is_authenticated:
+            accesses = getattr(target, "viewer_accesses", None)
+            if accesses is None:
+                has_access = models.ItemAccess.objects.filter(
+                    Q(user=user) | Q(team__in=user.teams),
+                    item=target,
+                ).exists()
+            else:
+                has_access = bool(accesses)
+            if has_access:
+                return True
+        return target.link_reach == LinkReachChoices.PUBLIC or (
+            target.link_reach == LinkReachChoices.AUTHENTICATED
+            and user is not None
+            and user.is_authenticated
+        )
+
+
 class ListItemSerializer(serializers.ModelSerializer):
     """Serialize items with limited fields for display in lists."""
 
@@ -232,6 +277,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     creator = UserLightSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
+    target = RestrictionTargetSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = models.Item
@@ -248,10 +294,12 @@ class ListItemSerializer(serializers.ModelSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "is_restricted",
             "nb_accesses",
             "numchild",
             "numchild_folder",
             "path",
+            "target",
             "title",
             "updated_at",
             "user_role",
@@ -280,10 +328,12 @@ class ListItemSerializer(serializers.ModelSerializer):
             "creator",
             "depth",
             "is_favorite",
+            "is_restricted",
             "link_role",
             "link_reach",
             "nb_accesses",
             "path",
+            "target",
             "updated_at",
             "user_role",
             "type",
@@ -478,10 +528,12 @@ class ItemSerializer(ListItemSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "is_restricted",
             "nb_accesses",
             "numchild",
             "numchild_folder",
             "path",
+            "target",
             "title",
             "updated_at",
             "user_role",
@@ -510,6 +562,7 @@ class ItemSerializer(ListItemSerializer):
             "creator",
             "depth",
             "is_favorite",
+            "is_restricted",
             "nb_accesses",
             "link_role",
             "link_reach",
@@ -648,6 +701,12 @@ class CreateItemSerializer(ItemSerializer):
         """Validate that filename is set for files."""
         extension = attrs.get("extension")
 
+        if attrs["type"] == models.ItemTypeChoices.RESTRICTION:
+            raise serializers.ValidationError(
+                {"type": _("Restrictions can only be created by restricting a folder.")},
+                code="item_create_restriction_forbidden",
+            )
+
         if attrs["type"] == models.ItemTypeChoices.FILE:
             if extension:
                 # Template-based creation: title is required, filename is computed
@@ -744,15 +803,8 @@ class LinkItemSerializer(serializers.ModelSerializer):
             "link_reach",
         ]
 
-    def validate(self, attrs):
-        """Validate that link_role and link_reach are compatible using get_select_options."""
-        link_reach = attrs.get("link_reach")
-        link_role = attrs.get("link_role")
-
-        if not link_reach:
-            raise serializers.ValidationError({"link_reach": _("This field is required.")})
-
-        # Get available options based on ancestors' link definition
+    def _validate_against_ancestors(self, link_reach: str, link_role: str) -> None:
+        """Validate the link definition against the options allowed by ancestors."""
         available_options = LinkReachChoices.get_select_options(
             **self.instance.ancestors_link_definition
         )
@@ -784,11 +836,21 @@ class LinkItemSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {
                     "link_role": (
-                        f"Link role '{link_role}' is not allowed for link reach '{link_reach}'. "
-                        f"Allowed roles: {allowed_roles_str}"
+                        f"Link role '{link_role}' is not allowed for link reach "
+                        f"'{link_reach}'. Allowed roles: {allowed_roles_str}"
                     )
                 }
             )
+
+    def validate(self, attrs: dict) -> dict:
+        """Validate that link_role and link_reach are compatible using get_select_options."""
+        link_reach = attrs.get("link_reach")
+        link_role = attrs.get("link_role")
+
+        if not link_reach:
+            raise serializers.ValidationError({"link_reach": _("This field is required.")})
+
+        self._validate_against_ancestors(link_reach, link_role)
 
         return attrs
 

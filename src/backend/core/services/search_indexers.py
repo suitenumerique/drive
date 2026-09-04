@@ -196,6 +196,8 @@ class BaseItemIndexer(ABC):
         queryset = queryset or models.Item.objects.filter(
             main_workspace=False,
         )
+        # Restrictions are tree entries, not indexable content
+        queryset = queryset.exclude(type=models.ItemTypeChoices.RESTRICTION)
         queryset = queryset.order_by("id")
 
         while True:
