@@ -37,7 +37,17 @@
       },
       "403": {
         "title": "You don't have the necessary permissions to access this page.",
-        "button": "Home"
+        "button": "Home",
+        "ask_for_access": {
+          "title": "Limited access",
+          "description": "You don't have access to this document yet.",
+          "button": "Ask for access",
+          "message_label": "Message (optional)",
+          "message_placeholder": "Tell the owners why you need access…",
+          "success": "Your access request has been sent. The owners will be notified.",
+          "already_requested": "You already requested access to this document.",
+          "error": "Your access request could not be sent. Please try again."
+        }
       },
       "settings_modal": {
         "title": "Settings",
@@ -66,6 +76,11 @@
         }
       },
       "share_modal": {
+        "access_requests": {
+          "title": "Access requests",
+          "accept": "Accept",
+          "refuse": "Refuse"
+        },
         "options": {
           "link_reach": {
             "authenticated": "Connected",
@@ -746,7 +761,17 @@
       },
       "403": {
         "title": "Vous n'avez pas les permissions nécessaires pour accéder à cette page.",
-        "button": "Accueil"
+        "button": "Accueil",
+        "ask_for_access": {
+          "title": "Accès limité",
+          "description": "Vous n'avez pas encore accès à ce document.",
+          "button": "Demander l'accès",
+          "message_label": "Message (facultatif)",
+          "message_placeholder": "Expliquez aux propriétaires pourquoi vous avez besoin d'y accéder…",
+          "success": "Votre demande d'accès a été envoyée. Les propriétaires en seront notifiés.",
+          "already_requested": "Vous avez déjà demandé l'accès à ce document.",
+          "error": "Votre demande d'accès n'a pas pu être envoyée. Veuillez réessayer."
+        }
       },
       "settings_modal": {
         "title": "Paramètres",
@@ -775,6 +800,11 @@
         }
       },
       "share_modal": {
+        "access_requests": {
+          "title": "Demandes d'accès",
+          "accept": "Accepter",
+          "refuse": "Refuser"
+        },
         "options": {
           "link_reach": {
             "authenticated": "Connecté",
@@ -1455,7 +1485,17 @@
       },
       "403": {
         "title": "U beschikt niet over de benodigde rechten om dit bestand te openen.",
-        "button": "Home"
+        "button": "Home",
+        "ask_for_access": {
+          "title": "Beperkte toegang",
+          "description": "U heeft nog geen toegang tot dit document.",
+          "button": "Toegang aanvragen",
+          "message_label": "Bericht (optioneel)",
+          "message_placeholder": "Leg aan de eigenaars uit waarom u toegang nodig heeft…",
+          "success": "Uw toegangsverzoek is verzonden. De eigenaars worden op de hoogte gebracht.",
+          "already_requested": "U heeft al toegang tot dit document aangevraagd.",
+          "error": "Uw toegangsverzoek kon niet worden verzonden. Probeer het opnieuw."
+        }
       },
       "settings_modal": {
         "title": "Instellingen",
@@ -1484,6 +1524,11 @@
         }
       },
       "share_modal": {
+        "access_requests": {
+          "title": "Toegangsverzoeken",
+          "accept": "Accepteren",
+          "refuse": "Weigeren"
+        },
         "options": {
           "link_reach": {
             "authenticated": "Verbonden",

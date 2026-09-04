@@ -98,6 +98,14 @@ class MirrorItemTaskStatusChoices(models.TextChoices):
     FAILED = "failed", _("Failed")
 
 
+class AccessRequestStatusChoices(models.TextChoices):
+    """Defines the possible statuses of an access request."""
+
+    PENDING = "pending", _("Pending")
+    ACCEPTED = "accepted", _("Accepted")
+    REFUSED = "refused", _("Refused")
+
+
 class DuplicateEmailError(Exception):
     """Raised when an email is already associated with a pre-existing user."""
 
@@ -1417,6 +1425,64 @@ class Item(TreeModel, BaseModel):
 
         self.send_email(subject, [email], context, language)
 
+    def get_owners(self):
+        """Return the users who own this item (directly or via an ancestor)."""
+        owners_items = (self.ancestors() | Item.objects.filter(pk=self.pk)).filter(
+            ancestors_deleted_at__isnull=True
+        )
+        return User.objects.filter(
+            itemaccess__item__in=owners_items,
+            itemaccess__role=RoleChoices.OWNER,
+        ).distinct()
+
+    def send_access_request_email(self, requester, message, owners, language=None):
+        """Notify the item owners that a user has requested access."""
+        language = language or get_language()
+        requester_name = requester.full_name or requester.email
+        requester_name_email = (
+            f"{requester.full_name:s} ({requester.email})"
+            if requester.full_name
+            else requester.email
+        )
+
+        with override(language):
+            context = {
+                "title": _("{name} is asking for access to an item you own").format(
+                    name=requester_name
+                ),
+                "message": _("{name} requested access to the following item:").format(
+                    name=requester_name_email
+                ),
+            }
+            if message:
+                context["message"] += " " + _('They added this message: "{message}".').format(
+                    message=message
+                )
+            subject = _("{name} is asking for access: {title}").format(
+                name=requester_name, title=self.title
+            )
+
+        emails = [owner.email for owner in owners if owner.email]
+        if emails:
+            self.send_email(subject, emails, context, language)
+
+    def send_access_request_answer_email(self, requester, accepted, language=None):
+        """Notify the requester that their access request has been handled."""
+        language = language or get_language()
+
+        with override(language):
+            if accepted:
+                title = _("Your access request has been accepted")
+                message = _("Access to the following item has been granted to you:")
+            else:
+                title = _("Your access request has been declined")
+                message = _("Your request to access the following item has been declined:")
+            context = {"title": title, "message": message}
+            subject = _("{title}: {filename}").format(title=title, filename=self.title)
+
+        if requester.email:
+            self.send_email(subject, [requester.email], context, language)
+
     @transaction.atomic
     def soft_delete(self):
         """
@@ -2140,4 +2206,68 @@ class Invitation(BaseModel):
             "update": is_owner_or_admin,
             "partial_update": is_owner_or_admin,
             "retrieve": is_owner_or_admin,
+        }
+
+
+class AccessRequestManager(models.Manager):
+    """Manager for the AccessRequest model."""
+
+
+class AccessRequest(BaseModel):
+    """Request from a user to be granted access to an item."""
+
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="access_requests",
+    )
+    requester = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="access_requests",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=AccessRequestStatusChoices.choices,
+        default=AccessRequestStatusChoices.PENDING,
+    )
+    message = models.TextField(blank=True)
+
+    objects = AccessRequestManager()
+
+    class Meta:
+        db_table = "drive_access_request"
+        ordering = ("-created_at",)
+        verbose_name = _("Access request")
+        verbose_name_plural = _("Access requests")
+        constraints = [
+            # A requester cannot create two pending requests for the same item.
+            models.UniqueConstraint(
+                fields=["item", "requester"],
+                condition=models.Q(status=AccessRequestStatusChoices.PENDING),
+                name="unique_pending_access_request",
+                violation_error_message=_(
+                    "You already requested access to this item and your request is pending."
+                ),
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.requester!s} requested access to {self.item!s} ({self.status})"
+
+    @property
+    def is_pending(self):
+        """Tell whether the request is still pending."""
+        return self.status == AccessRequestStatusChoices.PENDING
+
+    def get_abilities(self, user):
+        """Compute and return abilities for a given user on the access request."""
+        user_role = self.item.get_role(user)
+        is_owner_or_admin = user_role in PRIVILEGED_ROLES
+
+        return {
+            "retrieve": is_owner_or_admin or self.requester_id == user.id,
+            "update": is_owner_or_admin and self.is_pending,
+            "partial_update": is_owner_or_admin and self.is_pending,
+            "destroy": is_owner_or_admin and self.is_pending,
         }
