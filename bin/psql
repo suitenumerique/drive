@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+#
+# Run psql commands in the postgresql container.
+#
+# This scripts requires that the postgresql container is already running.
+#
+# Usage: bin/psql [OPTIONS] [ARG]
+#
+# If you need to run a psql shell session, you should define the TTY=1 environment variable:
+#
+# TTY=1 bin/psql
+#
+
+# shellcheck source=bin/_config.sh
+source "$(dirname "${BASH_SOURCE[0]}")/_config.sh"
+
+declare cmd="psql -U \${POSTGRES_USER} -d \${POSTGRES_DB} -v ON_ERROR_STOP=1 $*"
+declare -a opts
+declare -i TTY=${TTY:-0}
+
+if [[ ${TTY} -eq 0 ]]; then 
+  opts+=("-T")
+fi
+
+# Run psql command using the postgres user, not host user
+_docker_compose exec "${opts[@]}" postgresql sh -c "${cmd}"
