@@ -21,7 +21,7 @@
     "sharp": "0.35.3"
   },
   "devDependencies": {
-    "turbo": "2.9.14"
+    "turbo": "2.10.10"
   },
   "packageManager": "yarn@1.22.22"
 }
