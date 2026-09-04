@@ -85,11 +85,12 @@ jobs:
           fail-on-cache-miss: true
 
       - name: Build frontend (static export, .env.development)
+        env:
+          NEXT_PUBLIC_S3_DOMAIN_REPLACE: http://localhost:8001
+          NEXT_PUBLIC_API_ORIGIN: http://localhost:8200
+          NEXT_PUBLIC_POSTHOG_TEST_MODE: true
         run: |
           cd src/frontend/apps/drive
-          set -a
-          . ./.env.development
-          set +a
           yarn build
 
       - name: Upload frontend bundle
@@ -191,11 +192,19 @@ jobs:
 
       - name: Wait for Keycloak to be ready
         run: |
-          timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:8083/)" != "302" ]]; do echo "Waiting for Keycloak..." && sleep 2; done' && echo "Keycloak is ready!"
+          timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:8004/)" != "302" ]]; do echo "Waiting for Keycloak..." && sleep 2; done' && echo "Keycloak is ready!"
 
       - name: Wait for frontend to be ready
         run: |
           timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:3000/)" != "200" ]]; do echo "Waiting for frontend..." && sleep 1; done' && echo "Frontend is ready!"
+
+      - name: Check that drive backend is ready
+        run: |
+          bin/compose ps
+          bin/compose logs
+          ENV_OVERRIDE=e2e bin/compose restart drive-backend
+          echo "===="
+          bin/compose logs drive-backend
 
       - name: Run e2e tests
         run: |

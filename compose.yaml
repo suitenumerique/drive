@@ -1,10 +1,16 @@
-name: drive
+name: lasuite
+
+include:
+  - interop/compose.yml
 
 services:
-  postgresql:
+  drive-postgresql:
     image: postgres:16
+    user: ${DOCKER_USER:-1000}
+    networks:
+      - lasuite
     ports:
-      - "6434:5432"
+      - "8201:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
       interval: 1s
@@ -16,49 +22,22 @@ services:
     volumes:
       - ./data/postgresql.${ENV_OVERRIDE:-local}:/var/lib/postgresql/data
 
-  redis:
-    image: redis:5
-    ports:
-      - "6379:6379"
-
-  mailcatcher:
-    image: sj26/mailcatcher:latest
-    ports:
-      - "1081:1080"
-
-  minio:
-    user: ${DOCKER_USER:-1000}
-    image: minio/minio
-    environment:
-      - MINIO_ROOT_USER=drive
-      - MINIO_ROOT_PASSWORD=password
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 1s
-      timeout: 20s
-      retries: 300
-    entrypoint: ""
-    command: minio server --console-address :9001 /data
-    volumes:
-      - ./data/media:/data
-
   createbuckets:
     image: minio/mc
+    networks:
+      - lasuite
     depends_on:
       minio:
         condition: service_healthy
         restart: true
     entrypoint: >
       sh -c "
-      /usr/bin/mc alias set drive http://minio:9000 drive password && \
+      /usr/bin/mc alias set drive http://minio:9000 lasuite password && \
       /usr/bin/mc mb drive/drive-media-storage && \
       /usr/bin/mc version enable drive/drive-media-storage && \
       exit 0;"
 
-  app-dev:
+  drive-backend:
     build:
       context: .
       target: backend-development
@@ -75,16 +54,15 @@ services:
       - env.d/development/postgresql
       - env.d/development/postgresql.${ENV_OVERRIDE:-local}
     ports:
-      - "8071:8000"
+      - "8200:8000"
     volumes:
       - ./src/backend:/app
       - ./data/static:/data/static
       - /app/.venv
     networks:
       - lasuite
-      - default
     depends_on:
-      postgresql:
+      drive-postgresql:
         condition: service_healthy
         restart: true
       mailcatcher:
@@ -93,7 +71,7 @@ services:
         condition: service_started
       createbuckets:
         condition: service_started
-      celery-dev:
+      drive-celery:
         condition: service_started
       collabora:
         condition: service_healthy
@@ -122,19 +100,20 @@ services:
         "--s3-region",
         "us-east-1",
       ]
+    networks:
+      - lasuite
     ports:
-      - "4444:4444"
+      - "8204:4444"
     environment:
       - RUST_LOG=debug,ds_proxy::http::handlers::fetch=trace,ds_proxy::http::handlers::forward=trace
       - RUST_BACKTRACE=full
     volumes:
       - ./docker/files/development/ds_proxy/:/etc/dsproxy/:ro
 
-  celery-dev:
+  drive-celery:
     user: ${DOCKER_USER:-1000}
     image: drive:backend-development
     networks:
-      - default
       - lasuite
     command: ["celery", "-A", "drive.celery_app", "worker", "-l", "DEBUG"]
     environment:
@@ -151,96 +130,43 @@ services:
       - ./data/static:/data/static
       - /app/.venv
 
-  nginx:
+  drive-nginx:
     image: nginx:1.25
-    ports:
-      - "8083:8083"
     networks:
-      default: {}
-      lasuite:
-        aliases:
-          - nginx
+      - lasuite
+    ports:
+      - "8202:8083"
     volumes:
       - ./docker/files/development/etc/nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
       - keycloak
-      - app-dev
+      - drive-backend 
 
-  frontend-dev:
+  drive-frontend:
     user: "${DOCKER_USER:-1000}"
     build:
       context: .
       dockerfile: ./src/frontend/Dockerfile
       target: drive-dev
       args:
-        API_ORIGIN: "http://localhost:8071"
+        API_ORIGIN: "http://drive.lasuite.localhost:8200"
     image: drive:frontend-development
     volumes:
       - ./src/frontend/:/home/frontend/
       - /home/frontend/node_modules
       - /home/frontend/apps/drive/node_modules
+    networks:
+      - lasuite
     ports:
-      - "3000:3000"
+      - "8203:3000"
 
-  crowdin:
-    image: crowdin/cli:3.16.0
-    volumes:
-      - ".:/app"
-    env_file:
-      - env.d/development/crowdin
-      - env.d/development/crowdin.local
-    user: "${DOCKER_USER:-1000}"
-    working_dir: /app
-
-  node:
+  drive-node:
     image: node:22
     user: "${DOCKER_USER:-1000}"
     environment:
       HOME: /tmp
     volumes:
       - ".:/app"
-
-  kc_postgresql:
-    image: postgres:14.3
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
-      interval: 1s
-      timeout: 2s
-      retries: 300
-    ports:
-      - "6433:5432"
-    env_file:
-      - env.d/development/kc_postgresql
-      - env.d/development/kc_postgresql.local
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.3.2
-    volumes:
-      - ./docker/auth/realm.json:/opt/keycloak/data/import/realm.json
-    command:
-      - start-dev
-      - --features=preview
-      - --import-realm
-      - --proxy=edge
-      - --hostname=http://localhost:8083
-      - --hostname-strict=false
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: postgres
-      KC_DB_URL_HOST: kc_postgresql
-      KC_DB_URL_DATABASE: keycloak
-      KC_DB_PASSWORD: pass
-      KC_DB_USERNAME: drive
-      KC_DB_SCHEMA: public
-      PROXY_ADDRESS_FORWARDING: "true"
-    ports:
-      - "8080:8080"
-    depends_on:
-      - kc_postgresql
-    networks:
-      - lasuite
-      - default
 
   collabora:
     image: collabora/code:26.04.2.2.1
@@ -256,11 +182,13 @@ services:
       start_period: 60s
       timeout: 10s
     ports:
-      - "9980:9980"
+      - "8205:9980"
+    networks:
+      - lasuite
     environment:
       - username=drive
       - password=password
-      - server_name=localhost:9980
+      - server_name=drive.lasuite.localhost:8205
       - aliasgroup1=app-dev:8000
 
   onlyoffice:
@@ -277,15 +205,10 @@ services:
       JWT_ENABLED: "true"
       JWT_SECRET: "ThisIsNotASecretKeyDev"
     ports:
-      - "9981:80"
+      - "8206:80"
+    networks:
+      - lasuite
     volumes:
       - ./docker/onlyoffice/local-development.json:/etc/onlyoffice/documentserver/local-production-linux.json
       # Enable debug
       - ./docker/onlyoffice/log4js/production.json:/etc/onlyoffice/documentserver/log4js/production.json
-
-networks:
-  default: {}
-  lasuite:
-    name: lasuite-network
-    driver: bridge
-    external: true

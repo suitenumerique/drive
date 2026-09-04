@@ -1181,7 +1181,7 @@ def test_api_items_retrieve_permanently_deleted_related(role, depth):
         models.ItemUploadStateChoices.SUSPICIOUS,
     ],
 )
-def test_api_items_retrieve_file_with_url_property(upload_state):
+def test_api_items_retrieve_file_with_url_property(upload_state, settings):
     """
     The `url` property should not be none if the item is not pending.
     """
@@ -1232,9 +1232,9 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "user_role": models.RoleChoices.OWNER,
         "type": models.ItemTypeChoices.FILE,
         "upload_state": upload_state,
-        "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
+        "url": f"{settings.MEDIA_BASE_URL}/media/item/{item.id!s}/logo.png",
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/",
-        "url_preview": f"http://localhost:8083/media/preview/item/{item.id!s}/logo.png",
+        "url_preview": f"{settings.MEDIA_BASE_URL}/media/preview/item/{item.id!s}/logo.png",
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,
@@ -1255,7 +1255,7 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         models.ItemUploadStateChoices.SUSPICIOUS,
     ],
 )
-def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state):
+def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state, settings):
     """
     The `url` property should not be none if the item is not pending but the
     url preview should.
@@ -1307,7 +1307,7 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         "user_role": models.RoleChoices.OWNER,
         "type": models.ItemTypeChoices.FILE,
         "upload_state": upload_state,
-        "url": f"http://localhost:8083/media/item/{item.id!s}/document.odt",
+        "url": f"{settings.MEDIA_BASE_URL}/media/item/{item.id!s}/document.odt",
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/",
         "url_preview": None,
         "mimetype": "application/vnd.oasis.opendocument.text",
@@ -1321,7 +1321,7 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
     }
 
 
-def test_api_items_retrieve_file_with_url_property_with_spaces():
+def test_api_items_retrieve_file_with_url_property_with_spaces(settings):
     """
     The `url` property should have white spaces encoded.
     """
@@ -1372,10 +1372,10 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "user_role": models.RoleChoices.OWNER,
         "type": models.ItemTypeChoices.FILE,
         "upload_state": models.ItemUploadStateChoices.READY,
-        "url": f"http://localhost:8083/media/item/{item.id!s}/logo%20with%20spaces.png",
+        "url": f"{settings.MEDIA_BASE_URL}/media/item/{item.id!s}/logo%20with%20spaces.png",
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/",
         "url_preview": (
-            f"http://localhost:8083/media/preview/item/{item.id!s}/logo%20with%20spaces.png"
+            f"{settings.MEDIA_BASE_URL}/media/preview/item/{item.id!s}/logo%20with%20spaces.png"
         ),
         "mimetype": "image/png",
         "main_workspace": False,
@@ -1469,7 +1469,7 @@ def test_api_items_retrieve_suspicious_item_should_not_work_for_anonymous():
     assert response.status_code == 404
 
 
-def test_api_items_retrieve_file_analysing_not_creator():
+def test_api_items_retrieve_file_analysing_not_creator(settings):
     """
     The `url` property should not be none if the item is not pending.
     """
@@ -1520,9 +1520,9 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "user_role": access.role,
         "type": models.ItemTypeChoices.FILE,
         "upload_state": models.ItemUploadStateChoices.ANALYZING,
-        "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
+        "url": f"{settings.MEDIA_BASE_URL}/media/item/{item.id!s}/logo.png",
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/",
-        "url_preview": f"http://localhost:8083/media/preview/item/{item.id!s}/logo.png",
+        "url_preview": f"{settings.MEDIA_BASE_URL}/media/preview/item/{item.id!s}/logo.png",
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,

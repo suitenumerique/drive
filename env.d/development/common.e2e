@@ -5,3 +5,26 @@ WOPI_CLIENTS="collabora"
 MALWARE_DETECTION_BACKEND=lasuite.malware_detection.backends.dummy.DummyBackend
 # Enable the share modal contacts file import tested by share-import.spec.ts
 ALLOW_SHARE_IMPORT_FILE=True
+
+# Mail
+DJANGO_EMAIL_LOGO_IMG="http://localhost:8203/assets/logo-suite-numerique.png"
+DJANGO_EMAIL_URL_APP="http://localhost:8203"
+
+# User reconciliation
+USER_RECONCILIATION_FORM_URL="http://localhost:8203"
+
+# Media
+AWS_S3_DOMAIN_REPLACE=http://localhost:8001
+MEDIA_BASE_URL=http://localhost:8202
+
+# OIDC
+OIDC_OP_AUTHORIZATION_ENDPOINT=http://localhost:8004/realms/lasuite/protocol/openid-connect/auth
+
+LOGIN_REDIRECT_URL=http://localhost:8203
+LOGIN_REDIRECT_URL_FAILURE=http://localhost:8203
+LOGOUT_REDIRECT_URL=http://localhost:8203
+
+OIDC_REDIRECT_ALLOWED_HOSTS="localhost:8004,localhost:8203"
+
+# Resource Server Backend
+OIDC_OP_URL=http://localhost:8004/realms/lasuite

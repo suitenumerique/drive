@@ -134,7 +134,8 @@ def create_reconciliation_demo(stdout, output_path, checked):
         stdout.write("  2. Emails are pre-checked: skip the confirmation step.")
     else:
         stdout.write(
-            "  2. Open the two confirmation links from mailcatcher (http://localhost:1081)."
+            "  2. Open the two confirmation links from mailcatcher "
+            "(http://mailcatcher.lasuite.localhost:8000)."
         )
     stdout.write(
         "  3. Admin > Core > User reconciliations > select rows > "

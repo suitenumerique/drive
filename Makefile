@@ -26,12 +26,7 @@
 BOLD := \033[1m
 RESET := \033[0m
 GREEN := \033[1;32m
-
-
-# -- Database
-
-DB_HOST                 = postgresql
-DB_PORT                 = 5432
+SHELL := /bin/env bash
 
 # -- Docker
 # Get the current user ID to use for docker run and docker exec commands
@@ -40,22 +35,25 @@ DOCKER_GID              = $(shell id -g)
 DOCKER_USER             = $(DOCKER_UID):$(DOCKER_GID)
 COMPOSE                 = DOCKER_USER=$(DOCKER_USER) docker compose
 COMPOSE_EXEC            = $(COMPOSE) exec
-COMPOSE_EXEC_APP        = $(COMPOSE_EXEC) app-dev
+COMPOSE_EXEC_APP        = $(COMPOSE_EXEC) drive-backend
 COMPOSE_RUN             = $(COMPOSE) run --rm
-COMPOSE_RUN_APP         = $(COMPOSE_RUN) app-dev
-COMPOSE_RUN_APP_NO_DEPS = $(COMPOSE_RUN) --no-deps app-dev 
+COMPOSE_RUN_APP         = $(COMPOSE_RUN) drive-backend
+COMPOSE_RUN_APP_NO_DEPS = $(COMPOSE_RUN) --no-deps drive-backend 
 
 COMPOSE_RUN_CROWDIN     = $(COMPOSE_RUN) crowdin crowdin
 
 # -- Backend
-MANAGE              	= $(COMPOSE_RUN_APP) python manage.py
-MANAGE_EXEC         	= $(COMPOSE_EXEC_APP) python manage.py
-MAIL_YARN           	= $(COMPOSE_RUN) -w /app/src/mail node yarn
-PSQL_E2E 				= ./bin/postgres_e2e
+MANAGE              	  = $(COMPOSE_RUN_APP) python manage.py
+MANAGE_EXEC         	  = $(COMPOSE_EXEC_APP) python manage.py
+MAIL_YARN           	  = $(COMPOSE_RUN) -w /app/src/mail drive-node yarn
+PSQL                    = ./bin/psql
 
 # -- Frontend
-PATH_FRONT          	= ./src/frontend
-PATH_FRONT_DRIVE  		= $(PATH_FRONT)/apps/drive
+PATH_FRONT          	  = ./src/frontend
+PATH_FRONT_DRIVE  		  = $(PATH_FRONT)/apps/drive
+
+# -- Interop 
+INTEROP_URL             = https://github.com/suitenumerique/interop/archive/refs/heads/main.tar.gz
 
 # ==============================================================================
 # RULES
@@ -68,6 +66,17 @@ data/media:
 data/static:
 	@mkdir -p data/static
 
+data/postgresql.local:
+	@mkdir -p data/postgresql.local
+
+data/postgresql.e2e:
+	@mkdir -p data/postgresql.e2e
+
+interop:
+	mkdir -p interop
+	curl -sL $(INTEROP_URL) | tar -xzf - --strip-components=1 -C interop
+	cd interop && make bootstrap
+
 # -- Project
 
 create-env-local-files: ## create env.local files in env.d/development
@@ -78,22 +87,20 @@ create-env-local-files:
 	@touch env.d/development/kc_postgresql.local
 .PHONY: create-env-local-files
 
-create-docker-network: ## create the docker network if it doesn't exist
-	@docker network create lasuite-network || true
-.PHONY: create-docker-network
-
 bootstrap: ## Prepare Docker images for the project
 bootstrap: \
-	data/media \
-	data/static \
-	create-env-local-files \
-	build \
-	create-docker-network \
-	migrate \
-	back-i18n-compile \
-	mails-install \
-	mails-build \
-	run
+  data/media \
+  data/static \
+  data/postgresql.local \
+  data/postgresql.e2e \
+  create-env-local-files \
+  interop \
+  build \
+  migrate \
+  back-i18n-compile \
+  mails-install \
+  mails-build \
+  run
 .PHONY: bootstrap
 
 # -- Docker/compose
@@ -104,48 +111,50 @@ build: ## build the project containers
 .PHONY: build
 
 build-backend: cache ?=
-build-backend: ## build the app-dev container
-	@$(COMPOSE) build app-dev $(cache)
+build-backend: ## build the drive-backend container
+	@$(COMPOSE) build drive-backend $(cache)
 .PHONY: build-backend
 
 build-frontend: cache ?=
 build-frontend: ## build the frontend container
-	@$(COMPOSE) build frontend-dev $(cache)
-.PHONY: build-frontend-development
+	@$(COMPOSE) build drive-frontend $(cache)
+.PHONY: build-frontend
 
 down: ## stop and remove containers, networks, images, and volumes
 	@$(COMPOSE) down
 	rm -rf data/postgresql.*
 .PHONY: down
 
-logs: ## display app-dev logs (follow mode)
-	@$(COMPOSE) logs -f app-dev
-.PHONY: logs
+logs: ## display drive-backend logs (follow mode)
+	@$(COMPOSE) logs -f drive-backend
 
 run-backend: ## start the backend container
-	@$(COMPOSE) up --force-recreate -d celery-dev
-	@$(COMPOSE) up --force-recreate -d nginx
+	@$(COMPOSE) up --no-recreate -d drive-celery
+	@$(COMPOSE) up --no-recreate -d drive-nginx
 	@$(MAKE) configure-wopi
 .PHONY: run-backend
 
 bootstrap-e2e: ## bootstrap the backend container for e2e tests, without frontend
 bootstrap-e2e: \
-	data/media \
-	data/static \
-	create-env-local-files \
-	build-backend \
-	create-docker-network \
-	back-i18n-compile \
-	run-backend-e2e
+  data/media \
+  data/static \
+  interop \
+  data/postgresql.local \
+  data/postgresql.e2e \
+  create-env-local-files \
+  build-backend \
+  back-i18n-compile \
+  run-backend-e2e
 .PHONY: bootstrap-e2e
 
 clear-db-e2e: ## quickly clears the database for e2e tests, used in the e2e tests
-	$(PSQL_E2E) -c "$$(cat bin/clear_db_e2e.sql)"
+	$(PSQL) < bin/clear_db_e2e.sql
 .PHONY: clear-db-e2e
 
 run-backend-e2e: ## start the backend container for e2e tests, always remove the postgresql.e2e volume first
 	@$(MAKE) stop
 	rm -rf data/postgresql.e2e
+	$(MAKE) data/postgresql.e2e
 	@ENV_OVERRIDE=e2e $(MAKE) run-backend
 	@ENV_OVERRIDE=e2e $(MAKE) migrate
 .PHONY: run-backend-e2e
@@ -164,7 +173,7 @@ backend-exec-command: ## execute a command in the backend container
 run: ## start the development server and frontend development
 run: 
 	@$(MAKE) run-backend
-	@$(COMPOSE) up --force-recreate -d frontend-dev
+	@$(COMPOSE) up --no-recreate -d drive-frontend
 .PHONY: run
 
 status: ## an alias for "docker compose ps"
@@ -174,6 +183,10 @@ status: ## an alias for "docker compose ps"
 stop: ## stop the development server using Docker
 	@$(COMPOSE) stop
 .PHONY: stop
+
+interop-update: ## update interop services
+	$(MAKE) -B interop
+.PHONY: interop-update
 
 # -- Backend
 
@@ -241,7 +254,7 @@ makemigrations:  ## run django makemigrations for the drive project.
 
 migrate:  ## run django migrations for the drive project.
 	@echo "$(BOLD)Running migrations$(RESET)"
-	@$(COMPOSE) up -d postgresql
+	@$(COMPOSE) up -d drive-postgresql
 	@$(MANAGE) migrate
 .PHONY: migrate
 
@@ -269,7 +282,7 @@ shell: ## connect to django shell
 # -- Database
 
 dbshell: ## connect to database shell
-	docker compose exec app-dev python manage.py dbshell
+	docker compose exec drive-backend python manage.py dbshell
 .PHONY: dbshell
 
 resetdb: FLUSH_ARGS ?=
@@ -352,18 +365,18 @@ help:
 .PHONY: help
 
 # Front
-frontend-development-install: ## install the frontend locally
+frontend-install: ## install the frontend locally
 	cd $(PATH_FRONT_DRIVE) && yarn
-.PHONY: frontend-development-install
+.PHONY: frontend-install
 
 frontend-lint: ## run the frontend linter
 	cd $(PATH_FRONT) && yarn lint
 .PHONY: frontend-lint
 
-run-frontend-development: ## Run the frontend in development mode
-	@$(COMPOSE) stop frontend-dev
+run-frontend: ## Run the frontend in development mode
+	@$(COMPOSE) stop drive-frontend
 	cd $(PATH_FRONT_DRIVE) && yarn dev
-.PHONY: run-frontend-development
+.PHONY: run-frontend
 
 frontend-i18n-extract: ## Extract the frontend translation inside a json to be used for crowdin
 	cd $(PATH_FRONT) && yarn i18n:extract
