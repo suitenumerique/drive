@@ -23,4 +23,4 @@ if [[ ${TTY} -eq 0 ]]; then
 fi
 
 # Run psql command using the postgres user, not host user
-_docker_compose exec "${opts[@]}" drive-postgresql sh -c "${cmd}"
+_docker_compose exec "${opts[@]}" postgresql sh -c "${cmd}"
