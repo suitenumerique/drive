@@ -12,8 +12,13 @@ and this project adheres to
 
 - 📈(backend) add a Sentry performance monitoring sample rate setting
 
+### Changed
+
+- ♻️(frontend) migrate to the merged @gouvfr-lasuite/ui-components package
+
 ### Fixed
 
+- 🐛(frontend) render the JPEG 2000 layers of scanned PDFs in the preview
 - 🐛(backend) prevent item deletion by a creator whose access was revoked
 
 ## [v0.21.2] - 2026-08-25
