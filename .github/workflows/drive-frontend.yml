@@ -183,7 +183,9 @@ jobs:
         run: make ci-serve-frontend-build
 
       - name: Check that drive backend is ready
-        run: docker compose logs drive-backend
+        run: |
+          bin/compose ps
+          bin/compose logs
 
       - name: Run e2e tests
         working-directory: src/frontend/apps/e2e
