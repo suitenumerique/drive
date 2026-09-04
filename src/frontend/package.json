@@ -17,6 +17,11 @@
     "build-theme": "yarn workspace drive build-theme"
   },
   "resolutions": {
+    "@react-aria/calendar": "3.10.1",
+    "@react-aria/datepicker": "3.17.1",
+    "@react-aria/i18n": "3.13.1",
+    "@react-stately/calendar": "3.10.1",
+    "@react-stately/datepicker": "3.17.1",
     "postcss": "8.5.26",
     "sharp": "0.35.3"
   },
