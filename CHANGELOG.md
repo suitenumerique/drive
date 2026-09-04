@@ -14,8 +14,13 @@ and this project adheres to
 - ♻️(backend) route permission decisions through a swappable backend
 - ✨(backend) add restricted access on folders, detached behind a restriction
 
+### Changed
+
+- ♻️(frontend) migrate to the merged @gouvfr-lasuite/ui-components package
+
 ### Fixed
 
+- 🐛(frontend) render the JPEG 2000 layers of scanned PDFs in the preview
 - 🐛(backend) prevent item deletion by a creator whose access was revoked
 - 🐛(backend) resolve the direct parent by exact path after a move
 
