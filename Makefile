@@ -48,14 +48,14 @@ COMPOSE_RUN_APP_NO_DEPS = $(COMPOSE_RUN) --no-deps app-dev
 COMPOSE_RUN_CROWDIN     = $(COMPOSE_RUN) crowdin crowdin
 
 # -- Backend
-MANAGE              	= $(COMPOSE_RUN_APP) python manage.py
-MANAGE_EXEC         	= $(COMPOSE_EXEC_APP) python manage.py
-MAIL_YARN           	= $(COMPOSE_RUN) -w /app/src/mail node yarn
-PSQL_E2E 				= ./bin/postgres_e2e
+MANAGE                  = $(COMPOSE_RUN_APP) python manage.py
+MANAGE_EXEC             = $(COMPOSE_EXEC_APP) python manage.py
+MAIL_YARN               = $(COMPOSE_RUN) -w /app/src/mail drive-node yarn
+PSQL                    = ./bin/psql
 
 # -- Frontend
-PATH_FRONT          	= ./src/frontend
-PATH_FRONT_DRIVE  		= $(PATH_FRONT)/apps/drive
+PATH_FRONT              = ./src/frontend
+PATH_FRONT_DRIVE        = $(PATH_FRONT)/apps/drive
 
 # ==============================================================================
 # RULES
@@ -140,7 +140,7 @@ bootstrap-e2e: \
 .PHONY: bootstrap-e2e
 
 clear-db-e2e: ## quickly clears the database for e2e tests, used in the e2e tests
-	$(PSQL_E2E) -c "$$(cat bin/clear_db_e2e.sql)"
+	$(PSQL) < bin/clear_db_e2e.sql
 .PHONY: clear-db-e2e
 
 run-backend-e2e: ## start the backend container for e2e tests, always remove the postgresql.e2e volume first
