@@ -20,8 +20,9 @@ from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
 from django.http import StreamingHttpResponse
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django.utils.functional import cached_property
+from django.utils.functional import SimpleLazyObject, cached_property
 from django.utils.text import capfirst, slugify
 from django.utils.translation import gettext_lazy as _
 
@@ -35,7 +36,6 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, inline_seri
 from lasuite.drf.models.choices import (
     PRIVILEGED_ROLES,
     LinkReachChoices,
-    get_equivalent_link_definition,
 )
 from lasuite.malware_detection import malware_detection
 from lasuite.oidc_login.decorators import refresh_oidc_access_token
@@ -78,6 +78,8 @@ from .filters import (
 )
 
 logger = logging.getLogger(__name__)
+
+UNLOCKED_LINK_ITEMS_SESSION_KEY = "unlocked_link_items"
 
 ITEM_FOLDER = "item"
 UUID_REGEX = r"[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
@@ -419,6 +421,7 @@ class ItemViewSet(
         permissions.ItemPermission,
     ]
     queryset = models.Item.objects.filter(hard_deleted_at__isnull=True)
+    throttle_scope = None
     serializer_class = serializers.ItemSerializer
     list_serializer_class = serializers.ListItemSerializer
     trashbin_serializer_class = serializers.ListItemSerializer
@@ -429,6 +432,27 @@ class ItemViewSet(
     breadcrumb_serializer_class = serializers.BreadcrumbItemSerializer
     recents_serializer_class = serializers.ListItemLightSerializer
     favorite_list_serializer_class = serializers.ListItemLightSerializer
+
+    def initial(self, request, *args, **kwargs):
+        """Attach the link items the user unlocked before checking permissions."""
+        session_ids = set(request.session.get(UNLOCKED_LINK_ITEMS_SESSION_KEY, []))
+        user = request.user
+        if user.is_authenticated:
+            # Lazy: only queried when an item link actually carries a password
+            user.unlocked_link_items = SimpleLazyObject(
+                lambda: (
+                    session_ids
+                    | {
+                        str(item_id)
+                        for item_id in models.LinkTrace.objects.filter(
+                            user=user, link_unlocked_at__isnull=False
+                        ).values_list("item_id", flat=True)
+                    }
+                )
+            )
+        else:
+            user.unlocked_link_items = session_ids
+        super().initial(request, *args, **kwargs)
 
     def _filter_suspicious_items(self, queryset, user):
         """
@@ -488,7 +512,7 @@ class ItemViewSet(
         traced_items_ids = []
         for item in traced_items:
             links = ancestors_link_definition.get(str(item.path[:-1]), [])
-            item.ancestors_link_definition = get_equivalent_link_definition(links)
+            item.ancestors_link_definition = models.get_equivalent_link_definition(links)
             if item.computed_link_reach != LinkReachChoices.RESTRICTED:
                 traced_items_ids.append(item.id)
 
@@ -1257,7 +1281,7 @@ class ItemViewSet(
                 ancestors_deleted_at__isnull=True,
             )
             .order_by("path")
-            .values_list("path", "link_reach", "link_role", named=True)
+            .only("path", "link_reach", "link_role", "link_expires_at", "link_password")
         )
 
         if len(ancestors) == 0:
@@ -1284,9 +1308,7 @@ class ItemViewSet(
 
             # Compute cache for ancestors links to avoid many queries while computing
             # abilties for his items in the tree!
-            ancestors_links.append(
-                {"link_reach": ancestor.link_reach, "link_role": ancestor.link_role}
-            )
+            ancestors_links.append(ancestor.link_definition)
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
         tree = (
@@ -1403,6 +1425,14 @@ class ItemViewSet(
         files_by_uuid = {str(d.pk): d for d in queryset}
         ordered_files = [files_by_uuid[id] for id in result_ids if id in files_by_uuid]
 
+        # The index only knows the link reach and ignores link expiration and password:
+        # keep only the items the user can actually retrieve.
+        paths_links_mapping = self._compute_ancestors_link_definition(ordered_files)
+        for item in ordered_files:
+            links = paths_links_mapping.get(str(item.path[:-1]), [])
+            item.ancestors_link_definition = models.get_equivalent_link_definition(links)
+        ordered_files = [item for item in ordered_files if item.get_abilities(user)["retrieve"]]
+
         page = self.paginate_queryset(ordered_files)
 
         if page is not None:
@@ -1464,18 +1494,29 @@ class ItemViewSet(
         if workspace:
             item_access_queryset = item_access_queryset.filter(item__id=workspace)
 
-        top_level_items = item_access_queryset.values_list("item__path", flat=True)
+        top_level_paths = list(item_access_queryset.values_list("item__path", flat=True))
+
+        # Items unlocked with their link password stay searchable while their link is live
+        if user.is_authenticated and not workspace:
+            link_not_expired = db.Q(link_expires_at__isnull=True) | db.Q(
+                link_expires_at__gt=timezone.now()
+            )
+            top_level_paths += self.queryset.filter(
+                link_not_expired,
+                link_traces__user=user,
+                link_traces__link_unlocked_at__isnull=False,
+                link_reach__in=[LinkReachChoices.PUBLIC, LinkReachChoices.AUTHENTICATED],
+                hard_deleted_at__isnull=True,
+            ).values_list("path", flat=True)
+
         # Then look for all items that are children of the top level items
 
-        if not top_level_items:
+        if not top_level_paths:
             return self.get_response_for_queryset(queryset.none())
 
         # Among the results, we may have items that are ancestors/descendants
         # of each other. In this case we want to keep only the highest ancestors.
-        root_paths = utils.filter_root_paths(
-            top_level_items,
-            skip_sorting=True,
-        )
+        root_paths = utils.filter_root_paths(sorted(top_level_paths, key=str), skip_sorting=True)
 
         path_list = db.Q()
         for top_level_item in root_paths:
@@ -1555,7 +1596,7 @@ class ItemViewSet(
         if models.LinkReachChoices.get_priority(
             item.link_reach
         ) >= models.LinkReachChoices.get_priority(previous_link_reach):
-            item.descendants().update(link_reach=None)
+            item.descendants().update(link_reach=None, link_expires_at=None, link_password=None)
 
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
@@ -1636,6 +1677,34 @@ class ItemViewSet(
             },
             status=drf.status.HTTP_200_OK,
         )
+
+    @drf.decorators.action(detail=True, methods=["post"], throttle_scope="items_unlock")
+    def unlock(self, request, *args, **kwargs):
+        """Unlock the item share link with its password for the current session."""
+        item = self.get_object()
+        serializer = serializers.LinkPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        password_item_id = item.computed_link_definition["link_password_item"]
+        password_item = (
+            item if password_item_id == item.id else models.Item.objects.get(pk=password_item_id)
+        )
+        if not password_item.check_link_password(serializer.validated_data["password"]):
+            raise drf.exceptions.PermissionDenied()
+
+        request.user.unlocked_link_items.add(str(password_item_id))
+        if request.user.is_authenticated:
+            models.LinkTrace.objects.update_or_create(
+                user=request.user,
+                item=password_item,
+                defaults={"link_unlocked_at": timezone.now()},
+            )
+        else:
+            request.session[UNLOCKED_LINK_ITEMS_SESSION_KEY] = list(
+                request.user.unlocked_link_items
+            )
+
+        return drf.response.Response(self.get_serializer(item).data, status=drf.status.HTTP_200_OK)
 
     @drf.decorators.action(detail=True, methods=["post", "delete"], url_path="favorite")
     def favorite(self, request, *args, **kwargs):

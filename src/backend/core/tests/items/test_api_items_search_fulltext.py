@@ -1,10 +1,12 @@
 """Tests for the Item viewset search method with fulltext."""
 
 import secrets
+from datetime import timedelta
 from json import loads as json_loads
 from operator import itemgetter
 
 from django.test import RequestFactory
+from django.utils import timezone
 
 import pytest
 import responses
@@ -87,6 +89,8 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
             "is_wopi_supported": False,
             "link_reach": item_b.link_reach,
             "link_role": item_b.link_role,
+            "link_expires_at": None,
+            "has_link_password": False,
             "main_workspace": False,
             "mimetype": None,
             "nb_accesses": 1,
@@ -126,6 +130,8 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
                     "is_wopi_supported": False,
                     "link_reach": folder.link_reach,
                     "link_role": folder.link_role,
+                    "link_expires_at": None,
+                    "has_link_password": False,
                     "main_workspace": False,
                     "mimetype": None,
                     "nb_accesses": 1,
@@ -168,6 +174,8 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
             "is_wopi_supported": False,
             "link_reach": item_c.link_reach,
             "link_role": item_c.link_role,
+            "link_expires_at": None,
+            "has_link_password": False,
             "main_workspace": False,
             "mimetype": None,
             "nb_accesses": 1,
@@ -207,6 +215,8 @@ def test_api_items_search_authenticated_fulltext_query(indexer_settings):
                     "is_wopi_supported": False,
                     "link_reach": folder.link_reach,
                     "link_role": folder.link_role,
+                    "link_expires_at": None,
+                    "has_link_password": False,
                     "main_workspace": False,
                     "mimetype": None,
                     "nb_accesses": 1,
@@ -519,3 +529,48 @@ def test_api_items_search_feature_disabled(indexer_settings):
     results = content.pop("results")
 
     assert [r["id"] for r in results] == [str(d.pk) for d in docs]
+
+
+@pytest.mark.usefixtures("indexer_settings")
+@responses.activate
+def test_api_items_search_fulltext_excludes_unreadable_links(indexer_settings):
+    """
+    Items returned by the index but no longer readable through their link, because it
+    has expired or is locked by a password, should be excluded from the results.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    indexer_settings.SEARCH_INDEXER_QUERY_URL = "http://find/api/v1.0/search"
+
+    readable = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, link_reach="public", users=[(user, "reader")]
+    )
+    expired = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach="public",
+        link_expires_at=timezone.now() - timedelta(minutes=1),
+    )
+    locked = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    locked.set_link_password("s3cret")
+    locked.save()
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach="public",
+        link_expires_at=timezone.now() - timedelta(minutes=1),
+    )
+    inherited = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER, parent=folder, link_reach=None
+    )
+
+    responses.add(
+        responses.POST,
+        "http://find/api/v1.0/search",
+        json=[{"_id": str(item.pk)} for item in (readable, expired, locked, inherited)],
+        status=200,
+    )
+
+    response = client.get("/api/v1.0/items/search/?title=alpha")
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()["results"]] == [str(readable.id)]
