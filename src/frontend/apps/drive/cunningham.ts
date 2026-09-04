@@ -1,4 +1,4 @@
-import { cunninghamConfig } from "@gouvfr-lasuite/ui-kit";
+import { cunninghamConfig } from "@gouvfr-lasuite/ui-components";
 import deepMerge from "deepmerge";
 
 const themesImages = {

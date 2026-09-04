@@ -6,7 +6,7 @@ import {
   ICONS,
   IconSize,
   MimeCategory,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
 import { itemToPreviewFile } from "../../utils/utils";
 
 type ItemIconProps = {

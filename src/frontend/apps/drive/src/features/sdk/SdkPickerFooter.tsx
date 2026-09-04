@@ -1,8 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
 import { Item, LinkReach } from "../drivers/types";
-import { Button } from "@gouvfr-lasuite/cunningham-react";
-import { Spinner } from "@gouvfr-lasuite/ui-kit";
+import { Button, Spinner } from "@gouvfr-lasuite/ui-components";
 import { ClientMessageType, SDKRelayManager } from "./SdkRelayManager";
 import { useMutationUpdateLinkConfiguration } from "../explorer/hooks/useMutations";
 

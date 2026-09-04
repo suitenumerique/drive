@@ -3,7 +3,7 @@ import {
   TreeDataItem,
   TreeViewDataType,
   TreeViewNodeTypeEnum,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
 import { TreeItem, TreeItemData } from "@/features/drivers/types";
 
 /**

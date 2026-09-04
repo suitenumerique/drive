@@ -1,4 +1,4 @@
-import { Button } from "@gouvfr-lasuite/cunningham-react";
+import { Button } from "@gouvfr-lasuite/ui-components";
 import clsx from "clsx";
 import { ToastContainer, ToastContentProps, toast } from "react-toastify";
 
@@ -26,7 +26,7 @@ export const ToasterItem = ({
       className={clsx(
         "suite__toaster__item",
         "suite__toaster__item--" + type,
-        className
+        className,
       )}
     >
       <div className="suite__toaster__item__content">{children}</div>
@@ -44,7 +44,7 @@ export const ToasterItem = ({
 
 export const addToast = (
   children: React.ReactNode,
-  options: Parameters<typeof toast>[1] = {}
+  options: Parameters<typeof toast>[1] = {},
 ) => {
   return toast(children, {
     position: "bottom-center",

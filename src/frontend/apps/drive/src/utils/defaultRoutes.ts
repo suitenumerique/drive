@@ -4,7 +4,7 @@ import { SharedWithMeIcon } from "@/features/ui/components/icon/SharedWithMeIcon
 import { StarredIcon } from "@/features/ui/components/icon/StarredIcon";
 import { TrashIcon } from "@/features/ui/components/icon/TrashIcon";
 import { JSX } from "react";
-import { IconProps } from "@gouvfr-lasuite/ui-kit";
+import { IconProps } from "@gouvfr-lasuite/ui-components";
 
 export enum DefaultRoute {
   MY_FILES = "my-files",

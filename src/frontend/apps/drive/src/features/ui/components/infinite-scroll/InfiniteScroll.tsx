@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, ReactNode } from "react";
-import { Loader, useCunningham } from "@gouvfr-lasuite/cunningham-react";
+import { Loader, useCunningham } from "@gouvfr-lasuite/ui-components";
 
 interface InfiniteScrollProps {
   /** Whether there are more items to load */
@@ -48,7 +48,7 @@ export const InfiniteScroll = ({
         fetchNextPage();
       }
     },
-    [hasNextPage, isFetchingNextPage, fetchNextPage]
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
   );
 
   useEffect(() => {

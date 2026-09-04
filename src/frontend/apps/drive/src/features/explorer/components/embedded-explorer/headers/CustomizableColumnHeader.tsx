@@ -1,7 +1,11 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@gouvfr-lasuite/cunningham-react";
-import { DropdownMenu, IconSize, MenuItem } from "@gouvfr-lasuite/ui-kit";
+import {
+  Button,
+  DropdownMenu,
+  IconSize,
+  MenuItem,
+} from "@gouvfr-lasuite/ui-components";
 import { ColumnType, SortState } from "@/features/explorer/types/columns";
 import { COLUMN_REGISTRY } from "@/features/explorer/config/columnRegistry";
 import { SortColumnButton } from "./SortColumnButton";

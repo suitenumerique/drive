@@ -13,7 +13,7 @@ import {
   Decision,
   useModal,
   useModals,
-} from "@gouvfr-lasuite/cunningham-react";
+} from "@gouvfr-lasuite/ui-components";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import undoIcon from "@/assets/icons/undo_blue.svg";
@@ -100,7 +100,7 @@ export const TrashPageSelectionBarActions = () => {
         <span>
           {t("explorer.actions.restore.toast", { count: selectedItems.length })}
         </span>
-      </ToasterItem>
+      </ToasterItem>,
     );
     await restoreItem.mutateAsync(selectedItems.map((item) => item.id));
     setSelectedItems([]);
@@ -114,7 +114,7 @@ export const TrashPageSelectionBarActions = () => {
       <ToasterItem>
         <span className="material-icons">delete</span>
         <span>{t("explorer.actions.hard_delete.toast", { count: 1 })}</span>
-      </ToasterItem>
+      </ToasterItem>,
     );
     await hardDeleteItem.mutateAsync(selectedItems.map((item) => item.id));
     setSelectedItems([]);

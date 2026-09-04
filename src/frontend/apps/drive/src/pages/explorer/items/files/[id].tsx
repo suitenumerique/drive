@@ -4,8 +4,7 @@ import {
   CustomFilesPreview,
   CustomFilesPreviewMode,
 } from "@/features/ui/preview/CustomFilesPreview";
-import { Icon } from "@gouvfr-lasuite/ui-kit";
-import { Button } from "@gouvfr-lasuite/cunningham-react";
+import { Icon, Button } from "@gouvfr-lasuite/ui-components";
 import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
 import { useItem } from "@/features/explorer/hooks/useQueries";

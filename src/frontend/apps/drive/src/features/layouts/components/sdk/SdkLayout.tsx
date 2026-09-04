@@ -1,6 +1,6 @@
 import { Auth } from "@/features/auth/Auth";
 import { GlobalExplorerProvider } from "@/features/explorer/components/GlobalExplorerContext";
-import { HorizontalSeparator, Spinner } from "@gouvfr-lasuite/ui-kit";
+import { HorizontalSeparator, Spinner } from "@gouvfr-lasuite/ui-components";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 

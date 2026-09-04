@@ -1,5 +1,9 @@
-import { Filter, FilterOption, useResponsive } from "@gouvfr-lasuite/ui-kit";
-import { CalendarRange } from "@gouvfr-lasuite/cunningham-react";
+import {
+  Filter,
+  FilterOption,
+  useResponsive,
+  CalendarRange,
+} from "@gouvfr-lasuite/ui-components";
 import { useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { RangeValue } from "react-aria-components";

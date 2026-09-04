@@ -15,10 +15,9 @@ import { useRouter } from "next/router";
 import { DefaultRoute, getDefaultRouteId } from "@/utils/defaultRoutes";
 import { useMemo, useState } from "react";
 import { canCreateChildren } from "@/features/items/utils";
-import { Spinner } from "@gouvfr-lasuite/ui-kit";
+import { Spinner, useModal } from "@gouvfr-lasuite/ui-components";
 import { openWopiInNewTab } from "@/features/wopi/openWopi";
 import { itemToPreviewFile } from "@/features/explorer/utils/utils";
-import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { ConvertLegacyFileModal } from "@/features/explorer/components/modals/ConvertLegacyFileModal";
 
 /**

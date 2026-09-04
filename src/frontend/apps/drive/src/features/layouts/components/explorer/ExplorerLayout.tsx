@@ -8,7 +8,14 @@ import {
   StorageGaugeButton,
   StorageGaugeInformation,
   useResponsive,
-} from "@gouvfr-lasuite/ui-kit";
+  Button,
+  Modal,
+  ModalProps,
+  ModalSize,
+  ModalTab,
+  Tooltip,
+  useModal,
+} from "@gouvfr-lasuite/ui-components";
 import { HeaderIcon, HeaderRight } from "../header/Header";
 import {
   GlobalExplorerProvider,
@@ -28,16 +35,7 @@ import {
 import { ColumnPreferencesProvider } from "@/features/explorer/hooks/useColumnPreferences";
 import { EntitlementDisclaimers } from "@/features/entitlement-disclaimers/EntitlementDisclaimers";
 import { useEntitlements } from "@/features/entitlement-disclaimers/hooks/useEntitlements";
-import { Info, Warning } from "@gouvfr-lasuite/ui-kit/icons";
-import {
-  Button,
-  Modal,
-  ModalProps,
-  ModalSize,
-  ModalTab,
-  Tooltip,
-  useModal,
-} from "@gouvfr-lasuite/cunningham-react";
+import { Info, Warning } from "@gouvfr-lasuite/ui-components/icons";
 import { useTranslation } from "react-i18next";
 import i18n from "@/features/i18n/initI18n";
 import { useMemo } from "react";

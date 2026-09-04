@@ -4,7 +4,7 @@ import {
   useRemoveItemsFromPaginatedList,
   useUpdateItemInPaginatedList,
 } from "./useOptimisticPagination";
-import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import { useTreeContext } from "@gouvfr-lasuite/ui-components";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { generateTreeId } from "../components/GlobalExplorerContext";
 

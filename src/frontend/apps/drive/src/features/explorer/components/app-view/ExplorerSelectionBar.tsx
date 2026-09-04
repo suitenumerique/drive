@@ -1,4 +1,4 @@
-import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
+import { Button, useModal } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import {
