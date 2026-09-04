@@ -85,11 +85,12 @@ jobs:
           fail-on-cache-miss: true
 
       - name: Build frontend (static export, .env.development)
+        env:
+          NEXT_PUBLIC_S3_DOMAIN_REPLACE: http://localhost:8001
+          NEXT_PUBLIC_API_ORIGIN: http://localhost:8200
+          NEXT_PUBLIC_POSTHOG_TEST_MODE: true
         run: |
           cd src/frontend/apps/drive
-          set -a
-          . ./.env.development
-          set +a
           yarn build
 
       - name: Upload frontend bundle
