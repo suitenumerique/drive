@@ -1,4 +1,4 @@
-import { FooterProps, TreeViewDataType } from "@gouvfr-lasuite/ui-kit";
+import { FooterProps, TreeViewDataType } from "@gouvfr-lasuite/ui-components";
 import { ColumnPreferences } from "../explorer/types/columns";
 
 export enum ItemType {
@@ -189,7 +189,7 @@ export type User = {
   column_preferences?: ColumnPreferences | null;
 };
 
-export type UserLight = Pick<User, "id" | "full_name" | "short_name">
+export type UserLight = Pick<User, "id" | "full_name" | "short_name">;
 
 export type LocalizedThemeCustomization<T> = {
   default: T;
@@ -231,7 +231,7 @@ export type ApiConfig = {
   FRONTEND_EXTERNAL_HOME_URL?: string;
   FRONTEND_RELEASE_NOTE_ENABLED?: boolean;
   FRONTEND_ENTITLEMENTS_DISCLAIMERS?: {
-    "cannot_upload"?: {
+    cannot_upload?: {
       enabled: boolean;
       showPotentialOperators: boolean;
     };

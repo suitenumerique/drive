@@ -1,4 +1,4 @@
-import { Icon } from "@gouvfr-lasuite/ui-kit";
+import { Icon } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";

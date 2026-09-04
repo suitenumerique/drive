@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ReleaseNoteModal } from "@gouvfr-lasuite/ui-kit";
+import { ReleaseNoteModal } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 
 import { useConfig } from "@/features/config/ConfigProvider";

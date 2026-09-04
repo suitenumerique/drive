@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { Item } from "@/features/drivers/types";
 import { useEffect, useRef } from "react";
 import { useAppExplorer } from "./AppExplorer";
-import { ContextMenu, useResponsive } from "@gouvfr-lasuite/ui-kit";
+import { ContextMenu, useResponsive } from "@gouvfr-lasuite/ui-components";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import { useSetSelectedItems } from "@/features/explorer/stores/selectionStore";
 import { AppExplorerSelectionBarGate } from "./AppExplorerSelectionBarGate";
@@ -15,7 +15,6 @@ import {
 import { AppExplorerGrid } from "@/features/explorer/components/app-view/AppExplorerGrid";
 import { useCreateMenuItems } from "../../hooks/useCreateMenuItems";
 
-
 /**
  * - Handles the area selection of items
  * - Selection bar
@@ -23,12 +22,8 @@ import { useCreateMenuItems } from "../../hooks/useCreateMenuItems";
  */
 export const AppExplorerInner = () => {
   const appExplorer = useAppExplorer();
-  const {
-    itemId,
-    setRightPanelForcedItem,
-    displayMode,
-    dropZone,
-  } = useGlobalExplorer();
+  const { itemId, setRightPanelForcedItem, displayMode, dropZone } =
+    useGlobalExplorer();
   const setSelectedItems = useSetSelectedItems();
   const showFilters = appExplorer.showFilters ?? true;
   const onSelectionStart = ({ event, selection }: SelectionEvent) => {

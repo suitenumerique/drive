@@ -1,7 +1,6 @@
 import { getSimpleLayout } from "@/features/layouts/components/simple/SimpleLayout";
 import { GenericDisclaimer } from "@/features/ui/components/generic-disclaimer/GenericDisclaimer";
-import { Icon } from "@gouvfr-lasuite/ui-kit";
-import { Button } from "@gouvfr-lasuite/cunningham-react";
+import { Icon, Button } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 
 export default function UnauthorizedPage() {

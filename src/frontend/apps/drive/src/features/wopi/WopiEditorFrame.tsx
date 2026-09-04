@@ -1,8 +1,11 @@
 import { useEffect, useRef } from "react";
-import { useCunningham } from "@gouvfr-lasuite/cunningham-react";
+import {
+  useCunningham,
+  ErrorPreview,
+  FilePreviewType,
+} from "@gouvfr-lasuite/ui-components";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDriver } from "@/features/config/Config";
-import { ErrorPreview, FilePreviewType } from "@gouvfr-lasuite/ui-kit";
 
 interface WopiEditorFrameProps {
   item: FilePreviewType;

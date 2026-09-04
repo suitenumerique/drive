@@ -3,7 +3,7 @@ import {
   Filter,
   FilterOption,
   IconSize,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Key } from "react-aria-components";

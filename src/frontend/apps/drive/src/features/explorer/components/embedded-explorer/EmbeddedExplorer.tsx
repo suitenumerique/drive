@@ -13,7 +13,7 @@ import {
   getOriginalIdFromTreeId,
 } from "@/features/explorer/components/GlobalExplorerContext";
 import { useQuery } from "@tanstack/react-query";
-import { Spinner } from "@gouvfr-lasuite/ui-kit";
+import { Spinner } from "@gouvfr-lasuite/ui-components";
 import { ItemFilters } from "@/features/drivers/Driver";
 import {
   EmbeddedExplorerGrid,

@@ -2,7 +2,7 @@ import {
   IconProps as BaseIconProps,
   IconSize,
   iconSizeMap,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
 
 export type IconProps = Partial<BaseIconProps>;
 

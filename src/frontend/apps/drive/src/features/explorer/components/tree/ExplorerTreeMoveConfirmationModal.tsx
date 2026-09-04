@@ -1,5 +1,5 @@
 import { Item } from "@/features/drivers/types";
-import { Button, Modal, ModalSize } from "@gouvfr-lasuite/cunningham-react";
+import { Button, Modal, ModalSize } from "@gouvfr-lasuite/ui-components";
 import { Trans, useTranslation } from "react-i18next";
 
 export type ConfirmationMoveState = {
@@ -34,7 +34,7 @@ export const ExplorerTreeMoveConfirmationModal = ({
       onClose={onClose}
       size={ModalSize.MEDIUM}
       aria-label={t(
-        "explorer.tree.workspace.move.confirmation_modal.aria_label"
+        "explorer.tree.workspace.move.confirmation_modal.aria_label",
       )}
       rightActions={
         <>
@@ -43,7 +43,7 @@ export const ExplorerTreeMoveConfirmationModal = ({
           </Button>
           <Button color="error" onClick={onMove}>
             {t(
-              "explorer.tree.workspace.move.confirmation_modal.confirm_button"
+              "explorer.tree.workspace.move.confirmation_modal.confirm_button",
             )}
           </Button>
         </>

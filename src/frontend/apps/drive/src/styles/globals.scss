@@ -1,5 +1,6 @@
-@use "@gouvfr-lasuite/ui-kit/sass/fonts";
-@use "@gouvfr-lasuite/ui-kit/style";
+@use "@gouvfr-lasuite/ui-components/fonts/marianne";
+@use "@gouvfr-lasuite/ui-components/sass/fonts/material-icons";
+@use "@gouvfr-lasuite/ui-components/style";
 @use "./cunningham-tokens.css";
 @use "./../features/layouts/components/global/GlobalLayout.scss";
 @use "./../features/layouts/components/explorer/ExplorerLayout.scss";

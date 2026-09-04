@@ -1,4 +1,4 @@
-import { HorizontalSeparator } from "@gouvfr-lasuite/ui-kit";
+import { HorizontalSeparator } from "@gouvfr-lasuite/ui-components";
 import { useHasSelection } from "@/features/explorer/stores/selectionStore";
 import { ExplorerSelectionBar } from "@/features/explorer/components/app-view/ExplorerSelectionBar";
 import { ExplorerFilters } from "@/features/explorer/components/filters";

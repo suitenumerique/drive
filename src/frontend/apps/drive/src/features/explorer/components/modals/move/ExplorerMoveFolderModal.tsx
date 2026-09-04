@@ -4,13 +4,11 @@ import {
   Modal,
   ModalSize,
   useModal,
-} from "@gouvfr-lasuite/cunningham-react";
-import { useQueryClient } from "@tanstack/react-query";
-import {
   HorizontalSeparator,
   useResponsive,
   useTreeContext,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
+import { useQueryClient } from "@tanstack/react-query";
 import { Trans, useTranslation } from "react-i18next";
 import { useMoveItems } from "@/features/explorer/api/useMoveItem";
 import { addItemsMovedToast } from "../../toasts/addItemsMovedToast";
@@ -114,8 +112,7 @@ export const ExplorerMoveFolder = ({
       selected.length === 1
         ? selected[0].id
         : (itemsExplorer.currentItemId ?? undefined);
-    const newParentItem =
-      selected.length === 1 ? selected[0] : item;
+    const newParentItem = selected.length === 1 ? selected[0] : item;
 
     const newRootId = newParentItem?.path.split(".")[0];
     return {
@@ -249,8 +246,7 @@ export const ExplorerMoveFolder = ({
             </Button>
             <Button
               disabled={
-                !itemsExplorer.currentItemId &&
-                localSelectedItems.length === 0
+                !itemsExplorer.currentItemId && localSelectedItems.length === 0
               }
               onClick={onMove}
               fullWidth={true}

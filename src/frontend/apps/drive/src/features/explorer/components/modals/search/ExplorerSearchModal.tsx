@@ -3,15 +3,13 @@ import {
   ModalProps,
   ModalSize,
   useModals,
-} from "@gouvfr-lasuite/cunningham-react";
-import { useTranslation } from "react-i18next";
-
-import {
   QuickSearch,
   QuickSearchGroup,
   QuickSearchItemTemplate,
   SmartScroller,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
+import { useTranslation } from "react-i18next";
+
 import { useEffect, useRef, useState } from "react";
 import { Item, ItemType } from "@/features/drivers/types";
 import { getDriver } from "@/features/config/Config";

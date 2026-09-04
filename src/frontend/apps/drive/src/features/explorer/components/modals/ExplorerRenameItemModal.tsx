@@ -3,7 +3,8 @@ import {
   Modal,
   ModalProps,
   ModalSize,
-} from "@gouvfr-lasuite/cunningham-react";
+  removeFileExtension,
+} from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { Item } from "@/features/drivers/types";
@@ -13,7 +14,6 @@ import { useRef } from "react";
 import { useTreeUtils } from "../../hooks/useTreeUtils";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import { useSelectionStore } from "../../stores/selectionStore";
-import { removeFileExtension } from "@gouvfr-lasuite/ui-kit";
 
 type Inputs = {
   title: string;
