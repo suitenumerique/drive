@@ -186,6 +186,9 @@ jobs:
         run: |
           bin/compose ps
           bin/compose logs
+          ENV_OVERRIDE=e2e bin/compose restart drive-backend
+          echo "===="
+          bin/compose logs drive-backend
 
       - name: Run e2e tests
         working-directory: src/frontend/apps/e2e
