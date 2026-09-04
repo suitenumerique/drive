@@ -26,12 +26,7 @@
 BOLD := \033[1m
 RESET := \033[0m
 GREEN := \033[1;32m
-
-
-# -- Database
-
-DB_HOST                 = postgresql
-DB_PORT                 = 5432
+SHELL := /bin/env bash
 
 # -- Docker
 # Get the current user ID to use for docker run and docker exec commands
