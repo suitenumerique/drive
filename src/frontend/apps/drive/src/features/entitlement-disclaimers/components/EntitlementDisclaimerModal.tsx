@@ -3,7 +3,7 @@ import {
   Modal,
   ModalSize,
   useModal,
-} from "@gouvfr-lasuite/cunningham-react";
+} from "@gouvfr-lasuite/ui-components";
 import { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 

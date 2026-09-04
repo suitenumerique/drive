@@ -11,7 +11,7 @@ import type { AppProps } from "next/app";
 import {
   ContextMenuProvider,
   CunninghamProvider,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
   MutationCache,

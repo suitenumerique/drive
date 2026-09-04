@@ -12,7 +12,7 @@ import {
   TreeViewDataType,
   TreeViewItem,
   TreeViewNodeTypeEnum,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
 import { DroppableNodeTree } from "./DroppableNodeTree";
 import {
   NavigationEventType,

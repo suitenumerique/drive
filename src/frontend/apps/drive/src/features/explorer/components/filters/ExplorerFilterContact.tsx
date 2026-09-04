@@ -1,4 +1,7 @@
-import { UserSearchFilter, UserSearchFilterItem } from "@gouvfr-lasuite/ui-kit";
+import {
+  UserSearchFilter,
+  UserSearchFilterItem,
+} from "@gouvfr-lasuite/ui-components";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useContacts } from "@/features/users/hooks/useUserQueries";

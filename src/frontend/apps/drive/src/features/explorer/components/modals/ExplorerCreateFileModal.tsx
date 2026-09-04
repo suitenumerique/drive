@@ -3,7 +3,7 @@ import {
   Modal,
   ModalProps,
   ModalSize,
-} from "@gouvfr-lasuite/cunningham-react";
+} from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
@@ -37,7 +37,7 @@ export const ExplorerCreateFileModal = (
     parentId?: string;
     redirectAfterCreate?: boolean;
     type: ExplorerCreateFileType;
-  }
+  },
 ) => {
   const { t } = useTranslation();
   const form = useForm<Inputs>();
@@ -63,7 +63,7 @@ export const ExplorerCreateFileModal = (
             setSelectedItems([createdItem]);
           }
         },
-      }
+      },
     );
   };
 

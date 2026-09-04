@@ -11,14 +11,18 @@ import {
   Breadcrumbs,
 } from "@/features/ui/components/breadcrumbs/Breadcrumbs";
 import { useTranslation } from "react-i18next";
-import { Icon, IconSize } from "@gouvfr-lasuite/ui-kit";
+import {
+  Icon,
+  IconSize,
+  Button,
+  useModal,
+} from "@gouvfr-lasuite/ui-components";
 import { NavigationItem } from "../GlobalExplorerContext";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 import clsx from "clsx";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
 import { useItem } from "../../hooks/useQueries";
 import { useRouter } from "next/router";
-import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
 import { ItemShareModal } from "../modals/share/ItemShareModal";
 import {
   clearFromRoute,

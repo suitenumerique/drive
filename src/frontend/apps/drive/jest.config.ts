@@ -25,7 +25,8 @@ const config: Config = {
         tsconfig: {
           jsx: "react-jsx",
           // "bundler" (matching the app tsconfig) honors package.json "exports"
-          // subpaths such as "@gouvfr-lasuite/ui-kit/icons"; classic "node" does not.
+          // subpaths such as "@gouvfr-lasuite/ui-components/icons"; classic
+          // "node" does not.
           moduleResolution: "bundler",
         },
       },

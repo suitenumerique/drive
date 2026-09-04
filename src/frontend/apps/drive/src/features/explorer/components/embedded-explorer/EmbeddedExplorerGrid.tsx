@@ -32,9 +32,8 @@ import { useTableKeyboardNavigation } from "@/features/explorer/hooks/useTableKe
 import clsx from "clsx";
 import { isTablet } from "@/features/ui/components/responsive/ResponsiveDivs";
 import { useDragItemContext } from "@/features/explorer/components/ExplorerDndProvider";
-import { useModal } from "@gouvfr-lasuite/cunningham-react";
+import { useModal, useContextMenuContext } from "@gouvfr-lasuite/ui-components";
 import { ExplorerMoveFolder } from "@/features/explorer/components/modals/move/ExplorerMoveFolderModal";
-import { useContextMenuContext } from "@gouvfr-lasuite/ui-kit";
 import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
 import {
   ColumnConfig,

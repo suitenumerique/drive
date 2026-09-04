@@ -1,4 +1,4 @@
-import { Button } from "@gouvfr-lasuite/cunningham-react";
+import { Button } from "@gouvfr-lasuite/ui-components";
 import { Item } from "@/features/drivers/types";
 import clsx from "clsx";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";

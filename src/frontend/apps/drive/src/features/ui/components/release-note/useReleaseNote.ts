@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { ReleaseNoteStep } from "@gouvfr-lasuite/ui-kit";
+import { ReleaseNoteStep } from "@gouvfr-lasuite/ui-components";
 
 import { useAuth } from "@/features/auth/Auth";
 import { fetchAPI } from "@/features/api/fetchApi";

@@ -1,5 +1,9 @@
 import { Item, ItemType } from "@/features/drivers/types";
-import { useTreeContext, MenuItem } from "@gouvfr-lasuite/ui-kit";
+import {
+  useTreeContext,
+  MenuItem,
+  useModal,
+} from "@gouvfr-lasuite/ui-components";
 import {
   Shared,
   Download,
@@ -11,8 +15,7 @@ import {
   ArrowRight,
   Info,
   Trash,
-} from "@gouvfr-lasuite/ui-kit/icons";
-import { useModal } from "@gouvfr-lasuite/cunningham-react";
+} from "@gouvfr-lasuite/ui-components/icons";
 import { t } from "i18next";
 import {
   itemToTreeItem,

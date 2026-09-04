@@ -4,7 +4,7 @@ import { ALL, handleFilterChange } from "./filterUtils";
 import { ExplorerFilterCategory } from "./ExplorerFilterCategory";
 import { ExplorerFilterContact } from "./ExplorerFilterContact";
 import { ExplorerFilterModified } from "./ExplorerFilterModified";
-import { SmartScroller } from "@gouvfr-lasuite/ui-kit";
+import { SmartScroller } from "@gouvfr-lasuite/ui-components";
 
 export const ExplorerFilters = () => {
   const { filters, onFiltersChange } = useAppExplorer();

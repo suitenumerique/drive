@@ -1,4 +1,4 @@
-import { MainLayout } from "@gouvfr-lasuite/ui-kit";
+import { MainLayout } from "@gouvfr-lasuite/ui-components";
 import { GlobalLayout } from "../global/GlobalLayout";
 import { HeaderRight } from "../header/Header";
 import { Toaster } from "@/features/ui/components/toaster/Toaster";

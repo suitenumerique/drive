@@ -1,4 +1,4 @@
-import { LanguagePicker, useResponsive } from "@gouvfr-lasuite/ui-kit";
+import { LanguagePicker, useResponsive } from "@gouvfr-lasuite/ui-components";
 import { useAuth } from "@/features/auth/Auth";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -43,7 +43,6 @@ export const LANGUAGES = [
   },
 ];
 
-
 export const HeaderRight = ({
   displaySearch,
   currentItem,
@@ -53,7 +52,6 @@ export const HeaderRight = ({
 }) => {
   const { user } = useAuth();
 
-  
   const isMinimalLayout = useIsMinimalLayout();
 
   const { isTablet } = useResponsive();
@@ -68,7 +66,6 @@ export const HeaderRight = ({
     }
     return {};
   }, [currentItem, isMinimalLayout]);
-
 
   return (
     <>
@@ -85,7 +82,6 @@ export const HeaderRight = ({
     </>
   );
 };
-
 
 export const LanguagePickerUserMenu = () => {
   const { i18n } = useTranslation();
