@@ -671,10 +671,10 @@
   resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/integration/-/integration-1.0.2.tgz#ed0000f4b738c5a19bb60f5b80a9a2f5d9414234"
   integrity sha512-npOotZQSyu6SffHiPP+jQVOkJ3qW2KE2cANhEK92sNLX9uZqQaCqljO5GhzsBmh0lB76fiXnrr9i8SIpnDUSZg==
 
-"@gouvfr-lasuite/ui-components@1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/ui-components/-/ui-components-1.1.1.tgz#46e57557b0135c9d65206fe48440edb2fe48cc21"
-  integrity sha512-Htui2Ig4cASWhka0b8RzX5SQMlByLAuydqxut1Frf2IFd9tBi17m3D+Wwn8MRSMEpaSB2t44mF39I9jOXm4W+Q==
+"@gouvfr-lasuite/ui-components@1.1.2":
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/@gouvfr-lasuite/ui-components/-/ui-components-1.1.2.tgz#3f822bd52fe79523484f9224dc6ea9dcedcc69f6"
+  integrity sha512-03YigDM5qTqOB/coMZ4SUL1pHCFQGxVHRzoX8WBa6TojDi/2sJHmkAiTQBBmR5uMAJfALBm9yU0LTyc7KrAq0w==
   dependencies:
     "@dnd-kit/core" "6.3.1"
     "@dnd-kit/modifiers" "9.0.0"
@@ -932,7 +932,14 @@
     "@swc/helpers" "^0.5.0"
     intl-messageformat "^10.1.0"
 
-"@internationalized/number@^3.6.5", "@internationalized/number@^3.6.7":
+"@internationalized/number@^3.6.5":
+  version "3.6.8"
+  resolved "https://registry.yarnpkg.com/@internationalized/number/-/number-3.6.8.tgz#aaa3e16fb9d64a8d7f130ccf848c626914dfdf9e"
+  integrity sha512-8UmMFia46DUt+k97zKd9fKWXcWHR+k8ae3eYzILETuT2KbIvLyOfac7zesw+sJdRAAZ7Q9pM1Mk22aXp2LD0Ig==
+  dependencies:
+    "@swc/helpers" "^0.5.0"
+
+"@internationalized/number@^3.6.7":
   version "3.6.7"
   resolved "https://registry.yarnpkg.com/@internationalized/number/-/number-3.6.7.tgz#5a0a8fa413b5f8679a59dcf37e2a74dc508b8371"
   integrity sha512-3ji1fcrT+FPAK86UqEhB/psHixYo6niWPJtt7+qRaYFynt/BaJG8GhAPimtWUpEiVSTq8ZM8L5psMxGquiB/Vg==
