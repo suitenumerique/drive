@@ -176,6 +176,8 @@ jobs:
           path: src/frontend/apps/drive/out
 
       - name: Start Docker services
+        env:
+          KC_HOSTNAME: http://localhost:8004
         run: |
           make bootstrap-e2e run-backend-e2e
 
