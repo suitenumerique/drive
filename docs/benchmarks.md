@@ -40,10 +40,11 @@ The old `DRIVE_BENCH_*` environment variables are no longer used.
 
 ## Modes
 
-`pghero` measures nine scenarios: folder listings as owner and editor with two
-sort orders, a second page, nested children, accessible roots, shared roots and
-search. It records API wall times, then profiles SQL in a separate pass. The
-fixture contains direct shares, link traces and favorites; `ANALYZE` runs before
+`pghero` measures ten scenarios: folder listings as owner and editor with two
+sort orders, a second page, nested children, accessible roots for a user with
+many shares and for a user with one inherited share, shared roots and search.
+It records API wall times, then profiles SQL in a separate pass. The fixture
+contains direct shares, link traces and favorites; `ANALYZE` runs before
 measurement.
 
 `historical` retains the `restricted_2` fixture, scenarios, session authentication

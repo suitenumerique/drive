@@ -44,7 +44,7 @@ def test_benchmark_smoke(mode, tmp_path):
         assert set(cursor.fetchall()) == before
     result = json.loads(output.read_text(encoding="utf-8"))
     assert result["mode"] == mode
-    assert len(result["scenarios"]) == (9 if mode == "pghero" else 7)
+    assert len(result["scenarios"]) == (10 if mode == "pghero" else 7)
     assert result["config"]["reps"] == 2
 
 

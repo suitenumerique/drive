@@ -340,6 +340,7 @@ class Benchmark:  # pylint: disable=too-many-instance-attributes,too-many-argume
             {"page_size": self.page_size, "ordering": "-type,title"},
         )
         run("accessible_roots", "reader", "/api/v1.0/items/", {"page_size": self.page_size})
+        run("accessible_roots_bob", "bob", "/api/v1.0/items/", {"page_size": self.page_size})
         run(
             "shared_roots",
             "reader",
