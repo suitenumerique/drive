@@ -136,3 +136,86 @@ def test_api_items_favorites_ancestors_links_across_trees():
     for item in listed:
         expected = {**_serialized(item, user), "is_favorite": True}
         assert results[str(item.id)] == {field: expected[field] for field in fields}
+
+
+def _build_access_trees(user):
+    """Create trees the user holds direct accesses in; search returns the accessed folders."""
+    # Tree A: the accessed folder inherits an open link from its root
+    root_a = _folder(link_reach="public", link_role="editor")
+    child_a = _folder(parent=root_a, users=[(user, "reader")])
+
+    # Tree B: the link is inherited through two levels, the middle one carrying no link
+    root_b = _folder(link_reach="authenticated", link_role="reader")
+    mid_b = _folder(parent=root_b, link_reach=None)
+    child_b = _folder(parent=mid_b, users=[(user, "reader")])
+
+    # Tree C: the accessed folder sits under a restricted folder
+    owner = factories.UserFactory()
+    container = _folder()
+    folder_c = _folder(parent=container, users=[(owner, "owner")])
+    folder_c = folder_c.restrict(owner)
+    child_c = _folder(parent=folder_c, users=[(user, "reader")])
+
+    # A folder the user owns directly
+    own = _folder(users=[(user, "owner")])
+
+    return [child_a, child_b, child_c, own], [root_a, root_b, mid_b, container, folder_c]
+
+
+def _expected_search_payload(item, user):
+    """Build the expected search representation, computed item by item."""
+    ancestors = {
+        str(ancestor.pk): ancestor
+        for ancestor in models.Item.objects.filter(pk__in=list(item.path)[:-1])
+    }
+    # Parents absent from the results are serialized without the favorite
+    # annotation, and the read-only field is skipped entirely: no is_favorite key.
+    return {
+        **_serialized(item, user),
+        "parents": [
+            {
+                key: value
+                for key, value in _serialized(ancestors[str(label)], user).items()
+                if key != "is_favorite"
+            }
+            for label in list(item.path)[:-1]
+        ],
+    }
+
+
+def test_api_items_search_ancestors_links_across_trees():
+    """Search results and their parents carry the links of their own tree, fully serialized."""
+    user = factories.UserFactory()
+    searched, hidden = _build_access_trees(user)
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get("/api/v1.0/items/search/")
+
+    assert response.status_code == 200
+    results = {result["id"]: result for result in response.json()["results"]}
+    assert set(results) == {str(item.id) for item in searched}
+    assert not set(results) & {str(item.id) for item in hidden}
+    for item in searched:
+        assert results[str(item.id)] == _expected_search_payload(item, user)
+
+
+def test_api_items_search_ancestors_links_num_queries(django_assert_num_queries):
+    """Search serializes results and parents without querying per item."""
+    user = factories.UserFactory()
+    searched, _hidden = _build_access_trees(user)
+
+    client = APIClient()
+    client.force_login(user)
+    # Cold cache: one count per searched item and parent for its number of accesses.
+    with django_assert_num_queries(14):
+        response = client.get("/api/v1.0/items/search/")
+    assert response.status_code == 200
+    assert {result["id"] for result in response.json()["results"]} == {
+        str(item.id) for item in searched
+    }
+
+    # The numbers of accesses are now cached: the serialization itself is measured.
+    with django_assert_num_queries(6):
+        response = client.get("/api/v1.0/items/search/")
+    assert response.status_code == 200
