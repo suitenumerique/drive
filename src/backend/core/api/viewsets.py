@@ -752,11 +752,14 @@ class ItemViewSet(
 
         # Among the results, we may have items that are ancestors/descendants
         # of each other. In this case we want to keep only the highest ancestors.
-        root_paths = utils.filter_root_paths(
-            queryset.order_by("path").values_list("path", flat=True),
-            skip_sorting=True,
-        )
-        queryset = queryset.filter(path__in=root_paths)
+        # Filter them back by id: equality on a list of paths goes through the
+        # GiST index, which is much slower than the primary key for that.
+        ids_by_path = {
+            str(path): item_id
+            for path, item_id in queryset.order_by("path").values_list("path", "id")
+        }
+        root_paths = utils.filter_root_paths(list(ids_by_path), skip_sorting=True)
+        queryset = queryset.filter(id__in=[ids_by_path[path] for path in root_paths])
 
         # Hide restricted roots the user already reaches through a live
         # restriction, so the folder shows up in a single location
