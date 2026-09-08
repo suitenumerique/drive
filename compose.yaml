@@ -2,6 +2,7 @@ name: drive
 
 services:
   postgresql:
+    user: ${DOCKER_USER:-1000}
     image: postgres:16
     ports:
       - "6434:5432"
@@ -163,8 +164,26 @@ services:
     volumes:
       - ./docker/files/development/etc/nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
-      - keycloak
-      - app-dev
+      keycloak:
+        condition: service_healthy
+        restart: true
+      app-dev:
+        condition: service_started
+
+  # The static service is only used in the CI to serve the build
+  static:
+    image: nginx:1.25
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: curl -sf http://127.0.0.1:3000/ || exit 1
+      interval: 2s
+      timeout: 10s
+      retries: 30
+      start_period: 2s
+    volumes:
+      - ./src/frontend/apps/drive/out:/usr/share/nginx/html:ro
+      - ./src/frontend/apps/drive/conf/default.conf:/etc/nginx/conf.d/default.conf:ro
 
   frontend-dev:
     user: "${DOCKER_USER:-1000}"
@@ -177,8 +196,8 @@ services:
     image: drive:frontend-development
     volumes:
       - ./src/frontend/:/home/frontend/
-      - /home/frontend/node_modules
-      - /home/frontend/apps/drive/node_modules
+      - ./src/frontend/node_modules:/home/frontend/node_modules
+      - ./src/frontend/apps/drive/node_modules:/home/frontend/apps/drive/node_modules
     ports:
       - "3000:3000"
 
@@ -224,6 +243,14 @@ services:
       - --proxy=edge
       - --hostname=http://localhost:8083
       - --hostname-strict=false
+      - --health-enabled=true
+      - --metrics-enabled=true
+    healthcheck:
+      test: ['CMD-SHELL', 'exec 3<>/dev/tcp/localhost/9000; echo -e "GET /health/live HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3; grep "HTTP/1.1 200 OK" <&3']
+      start_period: 5s
+      interval: 1s
+      timeout: 2s
+      retries: 300
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
@@ -237,7 +264,9 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - kc_postgresql
+      kc_postgresql:
+        condition: service_healthy
+        restart: true
     networks:
       - lasuite
       - default

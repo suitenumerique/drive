@@ -85,12 +85,12 @@ jobs:
           fail-on-cache-miss: true
 
       - name: Build frontend (static export, .env.development)
-        run: |
-          cd src/frontend/apps/drive
-          set -a
-          . ./.env.development
-          set +a
-          yarn build
+        env:
+          NEXT_PUBLIC_S3_DOMAIN_REPLACE: http://localhost:9000
+          NEXT_PUBLIC_API_ORIGIN: http://localhost:8071
+          NEXT_PUBLIC_POSTHOG_TEST_MODE: true
+        working-directory: src/frontend/apps/drive
+        run: yarn build
 
       - name: Upload frontend bundle
         uses: actions/upload-artifact@v4
@@ -151,24 +151,21 @@ jobs:
 
       - name: Install Playwright Browsers (cache miss)
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: |
-          cd src/frontend/apps/e2e
-          npx playwright install --with-deps ${{ matrix.browser }}
+        working-directory: src/frontend/apps/e2e
+        run: npx playwright install --with-deps ${{ matrix.browser }}
 
       - name: Install Playwright system deps (cache hit)
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: |
-          cd src/frontend/apps/e2e
-          npx playwright install-deps ${{ matrix.browser }}
+        working-directory: src/frontend/apps/e2e
+        run: npx playwright install-deps ${{ matrix.browser }}
 
       - name: Build the drive SDK
-        run: |
-          cd src/frontend/packages/sdk
-          yarn build
+        working-directory: src/frontend/packages/sdk
+        run: yarn build
 
       - name: Start sdk-consumer dev server
+        working-directory: src/frontend/apps/sdk-consumer
         run: |
-          cd src/frontend/apps/sdk-consumer
           nohup yarn dev > /tmp/sdk-consumer.log 2>&1 &
           echo "sdk-consumer PID $!"
 
@@ -180,27 +177,14 @@ jobs:
 
       - name: Start Docker services
         run: |
-          make bootstrap-e2e
+          make bootstrap-e2e run-backend-e2e
 
       - name: Serve frontend (stock nginx + prod vhost)
-        run: |
-          docker run -d --rm --name drive-static -p 3000:3000 \
-            -v "$PWD/src/frontend/apps/drive/out:/usr/share/nginx/html:ro" \
-            -v "$PWD/src/frontend/apps/drive/conf/default.conf:/etc/nginx/conf.d/default.conf:ro" \
-            nginx:1.25
-
-      - name: Wait for Keycloak to be ready
-        run: |
-          timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:8083/)" != "302" ]]; do echo "Waiting for Keycloak..." && sleep 2; done' && echo "Keycloak is ready!"
-
-      - name: Wait for frontend to be ready
-        run: |
-          timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:3000/)" != "200" ]]; do echo "Waiting for frontend..." && sleep 1; done' && echo "Frontend is ready!"
+        run: make ci-serve-frontend-build
 
       - name: Run e2e tests
-        run: |
-          cd src/frontend/apps/e2e
-          yarn test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}
+        working-directory: src/frontend/apps/e2e
+        run: yarn test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}
 
       - uses: actions/upload-artifact@v4
         if: always()
