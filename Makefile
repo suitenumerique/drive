@@ -126,20 +126,20 @@ bootstrap: \
 .PHONY: bootstrap
 
 # -- Docker/compose
-build: cache ?= --no-cache
 build: ## build the project containers
-	@$(MAKE) build-backend cache=$(cache)
-	@$(MAKE) build-frontend cache=$(cache)
+build: \
+  build-backend \
+  build-frontend
 .PHONY: build
 
 build-backend: cache ?=
 build-backend: ## build the app-dev container
-	@$(COMPOSE) build app-dev $(cache)
+	$(COMPOSE) build app-dev $(cache)
 .PHONY: build-backend
 
 build-frontend: cache ?=
 build-frontend: ## build the frontend container
-	@$(COMPOSE) build frontend-dev $(cache)
+	$(COMPOSE) build frontend-dev $(cache)
 .PHONY: build-frontend-development
 
 down: ## stop and remove containers, networks, images, and volumes
@@ -152,7 +152,6 @@ logs: ## display app-dev logs (follow mode)
 .PHONY: logs
 
 run-backend: ## start the backend container
-	@$(COMPOSE) up --force-recreate -d celery-dev
 	@$(COMPOSE) up --force-recreate -d nginx
 	@$(MAKE) configure-wopi
 .PHONY: run-backend
@@ -202,9 +201,8 @@ backend-exec-command: ## execute a command in the backend container
 .PHONY: backend-exec-command
 
 run: ## start the development server and frontend development
-run: 
-	@$(MAKE) run-backend
-	@$(COMPOSE) up --force-recreate -d frontend-dev
+run: run-backend
+	$(COMPOSE) up --force-recreate -d frontend-dev
 .PHONY: run
 
 status: ## an alias for "docker compose ps"
@@ -218,12 +216,12 @@ stop: ## stop the development server using Docker
 # -- Backend
 
 demo: ## flush db then create a demo for load testing purpose
-	@$(MAKE) resetdb
+demo: resetdb
 	@$(MANAGE) create_demo
 .PHONY: demo
 
 reconciliation-demo: ## create demo data and a CSV to test user reconciliation via the admin
-	@$(MAKE) resetdb
+reconciliation-demo: resetdb
 	@$(MANAGE) create_reconciliation_demo
 .PHONY: reconciliation-demo
 
@@ -275,14 +273,14 @@ test-back-parallel: ## run all back-end tests in parallel
 
 makemigrations:  ## run django makemigrations for the drive project.
 	@echo "$(BOLD)Running makemigrations$(RESET)"
-	@$(COMPOSE) up -d postgresql
-	@$(MANAGE) makemigrations
+	$(COMPOSE) up -d postgresql
+	$(MANAGE) makemigrations
 .PHONY: makemigrations
 
 migrate:  ## run django migrations for the drive project.
 	@echo "$(BOLD)Running migrations$(RESET)"
-	@$(COMPOSE) up -d postgresql
-	@$(MANAGE) migrate
+	$(COMPOSE) up -d postgresql
+	$(MANAGE) migrate
 .PHONY: migrate
 
 superuser: ## Create an admin superuser with password "admin"
@@ -309,7 +307,7 @@ shell: ## connect to django shell
 # -- Database
 
 dbshell: ## connect to database shell
-	docker compose exec app-dev python manage.py dbshell
+	$(MANAGE_EXEC) dbshell
 .PHONY: dbshell
 
 resetdb: FLUSH_ARGS ?=
