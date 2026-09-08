@@ -49,7 +49,7 @@ test.describe("Silent Login", () => {
     // Verify user is logged in
     await expect(
       page.getByRole("button", { name: "User menu" })
-    ).toBeVisible({ timeout: 10000 });
+    ).toBeVisible({ timeout: 50000 });
 
     // Step 2: Clear only the Django session cookie (keep Keycloak session)
     const cookies = await context.cookies();

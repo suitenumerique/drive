@@ -192,6 +192,10 @@ run-backend-e2e: ## start the backend container for e2e tests, always remove the
 	ENV_OVERRIDE=e2e $(MAKE) run-backend
 .PHONY: run-backend-e2e
 
+install-e2e:
+	cd src/frontend/apps/e2e && yarn install -d
+.PHONY: install-e2e
+
 run-tests-e2e: ## run the e2e tests, example: make run-tests-e2e -- --project chromium --headed
 run-tests-e2e: is-e2e-backend-running
 	@args="$(filter-out $@,$(MAKECMDGOALS))" && \
@@ -284,11 +288,15 @@ makemigrations:  ## run django makemigrations for the drive project.
 	$(MANAGE) makemigrations
 .PHONY: makemigrations
 
-migrate:  ## run django migrations for the drive project.
+migrate:  ## run django database migrations for the drive project.
 	@echo "$(BOLD)Running migrations$(RESET)"
 	@$(COMPOSE) up -d drive-postgresql
 	@$(MANAGE) migrate
 .PHONY: migrate
+
+migrate-e2e:  ## run django e2e database migrations for the drive project
+	@ENV_OVERRIDE=e2e $(MAKE) migrate
+.PHONY: migrate-e2e
 
 superuser: ## Create an admin superuser with password "admin"
 	@echo "$(BOLD)Creating a Django superuser$(RESET)"
