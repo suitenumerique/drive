@@ -548,6 +548,7 @@ class ItemViewSet(
         page = self.paginate_queryset(queryset)
         if page is not None:
             items = list(page)
+            models.Item.prefetch_nb_accesses(items)
             if with_ancestors_link_definition:
                 paths_links_mapping = self._compute_ancestors_link_definition(items)
                 context["paths_links_mapping"] = paths_links_mapping
@@ -556,6 +557,7 @@ class ItemViewSet(
             return result
 
         items = list(queryset)
+        models.Item.prefetch_nb_accesses(items)
         if with_ancestors_link_definition:
             paths_links_mapping = self._compute_ancestors_link_definition(items)
             context["paths_links_mapping"] = paths_links_mapping
