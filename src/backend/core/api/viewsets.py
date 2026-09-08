@@ -565,42 +565,31 @@ class ItemViewSet(
     def _compute_ancestors_link_definition(self, items):
         """
         Compute ancestors link definition for the items collection.
-        On the collection, we look for the deepest items, compute ancestors link definition
-        for each item and aggregate them in order to inject it in the serializer context.
+        All ancestors are loaded in a single query on their ids, then the link
+        definitions are chained by path prefix to be injected in the serializer
+        context. Like _compute_parents, path labels are item ids: probing the
+        primary key is cheaper than matching ltree paths through the GiST index.
         """
-        if not items:
+        ancestors_ids = set()
+        for item in items:
+            labels = str(item.path).split(".")
+            ancestors_ids.update(labels[:-1])
+        if not ancestors_ids:
             return {}
 
-        # Find deepest items and group them by parent path
-        # Items at the same depth in multiple trees (same parent path) share the same ancestors,
-        items_sorted = sorted(items, key=lambda x: len(x.path), reverse=True)
-        items_by_tree = {}  # Group deepest items by parent_path
-        seen_paths = set()  # Track all paths we've processed
-
-        for item in items_sorted:
-            # Check if this item is a parent of any longer path we've already seen
-            # A descendant path would start with the item's path followed by a dot
-            item_path_prefix = f"{item.path}."
-            has_descendants = any(
-                seen_path.startswith(item_path_prefix) for seen_path in seen_paths
-            )
-
-            if not has_descendants:
-                # Get parent path (empty string for root items)
-                parent_path = str(item.path[:-1]) if item.depth > 1 else ""
-                if parent_path not in items_by_tree:
-                    items_by_tree[parent_path] = item
-
-            # Add this item's path to the set for future checks (shorter paths)
-            seen_paths.add(str(item.path))
-
-        # Compute ancestors links paths mapping for one item per tree group and aggregate
+        definitions = {
+            str(path): {"link_reach": link_reach, "link_role": link_role}
+            for path, link_reach, link_role in models.Item.objects.filter(
+                id__in=ancestors_ids, ancestors_deleted_at__isnull=True
+            ).values_list("path", "link_reach", "link_role")
+        }
         paths_links_mapping = {}
-        for item in items_by_tree.values():
-            item_mapping = item.compute_ancestors_links_paths_mapping()
-            paths_links_mapping |= item_mapping
-
-        # Update the serializer context with the aggregated mapping
+        for path in definitions:
+            labels = path.split(".")
+            chain = (".".join(labels[:depth]) for depth in range(1, len(labels) + 1))
+            paths_links_mapping[path] = [
+                definitions[prefix] for prefix in chain if prefix in definitions
+            ]
         return paths_links_mapping
 
     def retrieve(self, request, *args, **kwargs):
@@ -832,7 +821,7 @@ class ItemViewSet(
         # Apply ordering only now that everyting is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
-        return self.get_response_for_queryset(queryset)
+        return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
     @drf.decorators.action(detail=True, methods=["post"], url_path="upload-ended")
     def upload_ended(self, request, *args, **kwargs):

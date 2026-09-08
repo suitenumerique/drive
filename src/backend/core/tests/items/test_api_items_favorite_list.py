@@ -278,7 +278,7 @@ def test_api_item_favorite_list_ordering_by_fields(ordering, django_assert_num_q
     is_descending = ordering.startswith("-")
     querystring = f"?ordering={ordering}"
 
-    with django_assert_num_queries(6):
+    with django_assert_num_queries(5):
         response = client.get(f"/api/v1.0/items/favorites/{querystring:s}")
     assert response.status_code == 200
     results = response.json()["results"]
