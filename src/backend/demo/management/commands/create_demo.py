@@ -13,6 +13,7 @@ from django.core.management.base import BaseCommand, CommandError
 from faker import Faker
 
 from core import factories, models
+from core.services.benchmark import PROFILES, Benchmark
 
 from demo import defaults
 
@@ -261,6 +262,30 @@ def create_demo(stdout, *, file_types=False):
             item.save(update_fields=["title"])
 
 
+def create_bench(stdout, profile, role):
+    """Build the benchmark dataset and give development users the accesses of one bench user."""
+    if models.Item.objects.filter(title="bench-ws").exists():
+        raise CommandError("The benchmark dataset already exists, reset the database first")
+
+    with Timeit(stdout, f"Creating {profile} benchmark dataset"):
+        data = Benchmark(
+            mode="pghero", profile=profile, reps=None, restrictions=True, output=None
+        ).build_dataset()
+
+    with Timeit(stdout, f"Copying {role} accesses to development users"):
+        source = data[role]
+        dev_emails = [dev_user["email"] for dev_user in defaults.DEV_USERS]
+        for user in models.User.objects.filter(email__in=dev_emails):
+            models.ItemAccess.objects.bulk_create(
+                models.ItemAccess(item_id=access.item_id, user=user, role=access.role)
+                for access in models.ItemAccess.objects.filter(user=source)
+            )
+            models.LinkTrace.objects.bulk_create(
+                models.LinkTrace(item_id=trace.item_id, user=user)
+                for trace in models.LinkTrace.objects.filter(user=source)
+            )
+
+
 class Command(BaseCommand):
     """A management command to create a demo database."""
 
@@ -282,6 +307,17 @@ class Command(BaseCommand):
             default=False,
             help="Create items for several file types",
         )
+        parser.add_argument(
+            "--bench",
+            choices=tuple(PROFILES),
+            help="Also build the benchmark dataset of this profile",
+        )
+        parser.add_argument(
+            "--bench-role",
+            choices=("alice", "bob", "reader"),
+            default="bob",
+            help="Bench user whose accesses and link traces development users receive",
+        )
 
     def handle(self, *args, **options):
         """Handling of the management command."""
@@ -297,3 +333,5 @@ class Command(BaseCommand):
             self.stdout,
             file_types=options["file_types"],
         )
+        if options["bench"]:
+            create_bench(self.stdout, options["bench"], options["bench_role"])

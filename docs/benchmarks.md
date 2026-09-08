@@ -66,6 +66,17 @@ boolean restriction implementation.
 Files sit in the first folder of each chain. PgHero mode defaults to 10 repetitions;
 historical mode uses 10, 5, 3 and 3 respectively.
 
+## Browse the dataset
+
+```bash
+bin/manage create_demo --bench big --bench-role reader
+```
+
+Builds the `pghero` dataset, with restrictions, in the configured database and
+copies the accesses and link traces of one bench user (`alice`, `bob` or
+`reader`, default `bob`) to the development users. Files have no content in
+object storage. Run `make resetdb` before building it again.
+
 ## Compare
 
 ```bash
