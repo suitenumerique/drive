@@ -1205,11 +1205,19 @@ class ItemViewSet(
         # Apply ordering only now that everything is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
-        # Pre-compute number of accesses
+        # Pre-compute number of accesses with a correlated subquery: joining the
+        # accesses would force a GROUP BY on the listing and on its pagination count
         item_nb_accesses = item.nb_accesses
+        direct_accesses = (
+            models.ItemAccess.objects.filter(item=db.OuterRef("pk"))
+            .order_by()
+            .values("item")
+            .annotate(count=db.Count("pk"))
+            .values("count")
+        )
         queryset = queryset.annotate(
             _nb_accesses=db.Value(item_nb_accesses)
-            + Coalesce(db.Count("accesses", distinct=True), 0),
+            + Coalesce(db.Subquery(direct_accesses, output_field=db.IntegerField()), 0),
         )
 
         # Pass ancestors' links paths mapping to the serializer as a context variable
