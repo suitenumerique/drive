@@ -1223,6 +1223,17 @@ class Item(TreeModel, BaseModel):
 
             return nb_accesses
 
+    @classmethod
+    def prefetch_nb_accesses(cls, items):
+        """Read the cached number of accesses of the items in a single cache round trip."""
+        keys = {
+            item.get_nb_accesses_cache_key(): item
+            for item in items
+            if not hasattr(item, "_nb_accesses")
+        }
+        for key, nb_accesses in cache.get_many(keys).items():
+            keys[key]._nb_accesses = nb_accesses  # pylint: disable=protected-access  # noqa: SLF001
+
     @property
     def numchild(self):
         """Return the number of non-deleted children from annotation."""
