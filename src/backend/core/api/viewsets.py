@@ -1434,7 +1434,7 @@ class ItemViewSet(
         queryset = self.queryset
         indexer = get_file_indexer()
 
-        queryset = queryset.select_related("creator")
+        queryset = queryset.select_related("creator").annotate_has_restriction()
         filterset = SearchItemFilter(request.GET, queryset=queryset, request=self.request)
 
         if not filterset.is_valid():
@@ -1524,14 +1524,24 @@ class ItemViewSet(
                 if item_id not in parents and item_id not in missing_parent_ids:
                     missing_parent_ids.add(item_id)
 
-        # Fetch missing ancestors from database
+        # Fetch missing ancestors from database, annotated like the items so that
+        # the serializer does not query per parent for its roles and restriction
         if missing_parent_ids:
+            user = self.request.user
             for parent in (
-                models.Item.objects.annotate_with_numchild()
+                models.Item.objects.select_related("creator")
+                .annotate_has_restriction()
+                .annotate_user_roles(user)
+                .annotate_with_numchild()
                 .filter(id__in=missing_parent_ids)
                 .iterator()
             ):
                 parents[str(parent.id)] = parent
+        models.Item.prefetch_nb_accesses(parents.values())
+        paths_links_mapping = self._compute_ancestors_link_definition(parents.values())
+        for item in parents.values():
+            links = paths_links_mapping.get(str(item.path[:-1]), [])
+            item.ancestors_link_definition = get_equivalent_link_definition(links)
 
         # Set parents for each item
         for item in items:
