@@ -28,11 +28,6 @@ RESET := \033[0m
 GREEN := \033[1;32m
 SHELL := /usr/bin/env bash
 
-# -- Database
-
-DB_HOST                 = postgresql
-DB_PORT                 = 5432
-
 # -- Docker
 # Get the current user ID to use for docker run and docker exec commands
 DOCKER_UID              = $(shell id -u)
