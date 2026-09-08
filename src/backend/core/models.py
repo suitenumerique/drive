@@ -1821,7 +1821,10 @@ class LinkTrace(BaseModel):
         on_delete=models.CASCADE,
         related_name="link_traces",
     )
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="link_traces")
+    # The unique constraint on (user, item) already covers lookups by user
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="link_traces", db_index=False
+    )
 
     class Meta:
         db_table = "drive_link_trace"
@@ -1847,7 +1850,10 @@ class ItemFavorite(BaseModel):
         on_delete=models.CASCADE,
         related_name="favorited_by_users",
     )
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="favorite_items")
+    # The unique constraint on (user, item) already covers lookups by user
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="favorite_items", db_index=False
+    )
 
     class Meta:
         db_table = "drive_item_favorite"
