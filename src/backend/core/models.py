@@ -807,8 +807,12 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
 
     def annotate_has_restriction(self):
         """Annotate whether a restriction targets each item."""
+        # A left join on the unique target index costs one probe per returned row,
+        # whereas PostgreSQL turns the equivalent EXISTS into a full scan of the table
         return self.annotate(
-            has_restriction=models.Exists(self.model.objects.filter(target=models.OuterRef("pk")))
+            has_restriction=models.ExpressionWrapper(
+                models.Q(restriction__isnull=False), output_field=models.BooleanField()
+            )
         )
 
     def readable_per_se(self, user):
