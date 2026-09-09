@@ -99,6 +99,8 @@ This document lists all configurable environment variables for the Drive applica
 | `OIDC_USER_INFO` | List of OIDC user info claims | `[]` |
 | `OIDC_USERINFO_FULLNAME_FIELDS` | Fields to use for full name | `["first_name", "last_name"]` |
 | `OIDC_USERINFO_SHORTNAME_FIELD` | Field to use for short name | `first_name` |
+| `PERMISSIONS_BACKEND` | Permissions backend class for items | `core.permissions.backends.role.RolePermissionsBackend` |
+| `PERMISSIONS_BACKEND_PARAMETERS` | Dictionary of parameters for the permissions backend | `{}` |
 | `POSTHOG_HOST` | PostHog analytics host URL | `https://eu.i.posthog.com` |
 | `POSTHOG_KEY` | PostHog analytics API key | `None` |
 | `REDIS_URL` | Redis connection URL | `redis://redis:6379/0` |
