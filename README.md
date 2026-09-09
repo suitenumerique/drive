@@ -80,6 +80,7 @@ We hope to see many more, here is an incomplete list of public LaSuite Drive ins
 | [fichiers.suite.anct.gouv.fr](/)     | ANCT         | Réservé aux agents publics français travaillant pour l'administration territoriale et la sphère publique élargie. Connexion via ProConnect requise.     |
 | [fichiers.lasuite.coop](/)           | lasuite.coop | Démonstration gratuite et ouverte à tous. Les contenus et comptes sont réinitialisés après un mois.                                                      |
 | [mosacloud.cloud](/)                 | mosa.cloud   | Instance de démonstration de mosa.cloud, une entreprise néerlandaise proposant des services autour des applications La Suite.                              |
+| [email.eu](https://email.eu/)        | Email.eu     | Espace de travail souverain pour les entreprises. Compte requis.                                                                                          |
 
 ### Local Development (for contributors)
 
