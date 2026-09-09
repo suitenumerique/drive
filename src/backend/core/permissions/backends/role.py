@@ -138,6 +138,17 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
             and (self.item.depth > 1 or self.is_restricted)
         )
 
+    def can_leave(self) -> bool:
+        """Return whether the user can remove themselves from this item."""
+        if not self.user.is_authenticated or self.is_deleted:
+            return False
+        if self.has_access_role():
+            # get_role returns the maximum role across the item and all its ancestors,
+            # so a user who is owner on a parent but has an explicit editor access on a
+            # child will still be considered owner here and cannot leave the child.
+            return not self.is_owner_or_admin
+        return self.item.has_link_trace(self.user)
+
     def can_favorite(self) -> bool:
         """Return whether the user can mark the item as favorite."""
         return self.can_get() and self.user.is_authenticated
@@ -168,6 +179,7 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
             "export": self.can_export(),
             "hard_delete": self.can_hard_delete(),
             "favorite": self.can_favorite(),
+            "leave": self.can_leave(),
             "link_configuration": self.can_manage(),
             "invite_owner": self.can_invite_owner(),
             "link_select_options": self.link_select_options(),
