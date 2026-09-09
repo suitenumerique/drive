@@ -12,6 +12,7 @@ and this project adheres to
 
 - 🐛(frontend) refresh the Recent view after item mutations
 - 🧑‍💻(project) install frontend dependencies via container in bootstrap
+- 🐛(backend) gate item creation at the root on the upload entitlement
 
 ## [v0.22.0] - 2026-09-09
 
