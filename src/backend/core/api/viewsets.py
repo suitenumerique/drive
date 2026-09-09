@@ -14,7 +14,7 @@ from django.contrib.postgres.search import TrigramSimilarity
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, transaction
 from django.db import models as db
 from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
@@ -538,6 +538,7 @@ class ItemViewSet(
         queryset = queryset.annotate_is_favorite(user)
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.annotate_user_has_link_trace(user)
         return queryset
 
     def get_response_for_queryset(
@@ -621,6 +622,10 @@ class ItemViewSet(
                 models.LinkTrace.objects.create(item=instance, user=request.user)
             except IntegrityError:
                 pass  # Race condition: trace already created by concurrent request
+
+        # The annotation computed before the trace was created is now stale; update it
+        # so has_link_trace() returns the correct value when serializing abilities.
+        instance.user_has_link_trace = user.is_authenticated
 
         return drf.response.Response(serializer.data)
 
@@ -814,6 +819,7 @@ class ItemViewSet(
         queryset = queryset.annotate_is_favorite(user)
         queryset = filterset.filters["is_favorite"].filter(queryset, filter_data["is_favorite"])
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.annotate_user_has_link_trace(user)
 
         # Apply ordering only now that everyting is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
@@ -977,6 +983,7 @@ class ItemViewSet(
 
         queryset = queryset.filter(id__in=favorite_items_ids)
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.annotate_user_has_link_trace(user)
 
         # Apply ordering only now that everyting is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
@@ -1304,6 +1311,7 @@ class ItemViewSet(
         tree = tree.annotate_user_roles(user)
         tree = tree.annotate_is_favorite(user)
         tree = tree.annotate_with_numchild()
+        tree = tree.annotate_user_has_link_trace(user)
         tree = self._filter_suspicious_items(tree, user)
 
         serializer = self.get_serializer(
@@ -1339,6 +1347,7 @@ class ItemViewSet(
         queryset = queryset.annotate_is_favorite(user)
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.annotate_user_has_link_trace(user)
 
         # Apply ordering only now that everyting is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
@@ -1696,6 +1705,34 @@ class ItemViewSet(
 
         serializer = self.get_serializer(item)
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
+
+    @drf.decorators.action(
+        detail=True,
+        methods=["post"],
+    )
+    def leave(self, request, *args, **kwargs):
+        """
+        Remove item_accesses if exists and the link_trace related to the current item
+        for the connected user.
+        """
+        item = self.get_object()
+        try:
+            with transaction.atomic():
+                models.ItemAccess.objects.filter(
+                    item__path__descendants=item.path, user=request.user
+                ).delete()
+                models.LinkTrace.objects.filter(
+                    item__path__descendants=item.path, user=request.user
+                ).delete()
+        except DatabaseError:
+            logger.error(
+                "Impossible to leave item %s for user %s",
+                str(item.id),
+                str(request.user.id),
+            )
+            raise
+        posthog_capture("item_left", request.user, {}, item=item)
+        return drf.response.Response(status=drf.status.HTTP_204_NO_CONTENT)
 
     def _authorize_subrequest(self, request, pattern):
         """

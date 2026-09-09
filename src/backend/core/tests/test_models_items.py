@@ -313,6 +313,7 @@ def test_models_items_get_abilities_forbidden(
         "hard_delete": False,
         "favorite": False,
         "invite_owner": False,
+        "leave": False,
         "media_auth": False,
         "download": False,
         "move": False,
@@ -328,7 +329,8 @@ def test_models_items_get_abilities_forbidden(
         "wopi": False,
         "convert": False,
     }
-    nb_queries = 1 if is_authenticated else 0
+    # 1 query for get_role + 1 for has_link_trace (called when has_access_role=False)
+    nb_queries = 2 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
@@ -364,6 +366,7 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         "hard_delete": False,
         "favorite": is_authenticated,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {},
         "media_auth": True,
@@ -379,7 +382,8 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         "wopi": True,
         "convert": False,
     }
-    nb_queries = 1 if is_authenticated else 0
+    # 1 query for get_role + 1 for has_link_trace (called when has_access_role=False)
+    nb_queries = 2 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
@@ -470,6 +474,7 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913
         "hard_delete": False,
         "favorite": is_authenticated,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {},
         "media_auth": True,
@@ -485,7 +490,8 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913
         "wopi": True,
         "convert": False,
     }
-    nb_queries = 1 if is_authenticated else 0
+    # 1 query for get_role + 1 for has_link_trace (called when has_access_role=False)
+    nb_queries = 2 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
@@ -537,6 +543,7 @@ def test_models_items_not_root_get_abilities_owner(
         "hard_delete": True,
         "favorite": True,
         "invite_owner": True,
+        "leave": False,
         "link_configuration": True,
         "link_select_options": {
             "authenticated": ["reader", "editor"],
@@ -574,6 +581,7 @@ def test_models_items_not_root_get_abilities_owner(
         "hard_delete": True,
         "favorite": False,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {},
         "media_auth": False,
@@ -631,6 +639,7 @@ def test_models_items_not_root_get_abilities_administrator(
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": True,
         "link_select_options": {
             "authenticated": ["reader", "editor"],
@@ -708,6 +717,7 @@ def test_models_items_not_root_get_abilities_editor_user(
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
+        "leave": True,
         "link_configuration": False,
         "link_select_options": link_select_options,
         "media_auth": True,
@@ -758,6 +768,7 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
+        "leave": True,
         "link_configuration": False,
         "link_select_options": {
             "authenticated": ["reader", "editor"],
@@ -786,6 +797,32 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         for key, value in item.get_abilities(user).items()
         if key not in ["link_select_options"]
     )
+
+
+def test_models_items_get_abilities_leave_link_trace_only():
+    """
+    An authenticated user with only a link trace (no explicit ItemAccess) can leave.
+    This is the case for users who accessed an item via a public/authenticated link.
+    """
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_traces=[user])
+    assert item.get_abilities(user)["leave"] is True
+
+
+def test_models_items_get_abilities_leave_owner_on_parent_editor_on_child():
+    """
+    A user who is owner on a parent AND has an explicit editor access on a child
+    cannot leave the child. get_role returns the max role across all ancestors,
+    so the inherited owner role wins and leave is denied.
+    The redundant editor record on the child is not removable via leave.
+    """
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(
+        users=[(user, "owner")],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    child = factories.ItemFactory(parent=parent, users=[(user, "editor")])
+    assert child.get_abilities(user)["leave"] is False
 
 
 def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
@@ -822,6 +859,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "hard_delete": True,
         "favorite": True,
         "invite_owner": True,
+        "leave": False,
         "link_configuration": True,
         "link_select_options": link_select_options,
         "media_auth": True,
@@ -854,6 +892,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "hard_delete": True,
         "favorite": False,
         "invite_owner": False,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {},
         "media_auth": False,
