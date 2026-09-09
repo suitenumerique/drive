@@ -905,6 +905,28 @@ def test_api_items_retrieve_numqueries_with_link_trace(django_assert_num_queries
     assert response.json()["id"] == str(item.id)
 
 
+def test_api_items_retrieve_first_visit_leave_ability():
+    """
+    On a user's first visit to an item via a public/authenticated link, the LinkTrace
+    is created during retrieve(). The annotation is computed before the trace exists,
+    so we force-update it afterwards. The response must show leave=True, not False.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(link_reach="authenticated")
+
+    # No LinkTrace exists yet — this is the first visit
+    assert not models.LinkTrace.objects.filter(item=item, user=user).exists()
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["abilities"]["leave"] is True
+    assert models.LinkTrace.objects.filter(item=item, user=user).exists()
+
+
 def test_api_items_retrieve_concurrent_link_trace_creation():
     """
     A concurrent retrieve request should not fail when a LinkTrace for the same
