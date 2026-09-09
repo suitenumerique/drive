@@ -3,6 +3,7 @@ Tests for items API endpoint in drive's core app: create
 """
 
 from concurrent.futures import ThreadPoolExecutor
+from unittest import mock
 from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
@@ -475,3 +476,111 @@ def test_api_items_create_file_authenticated_success_invalid_filename():
     assert query_params.pop("X-Amz-Signature") is not None
 
     assert len(query_params) == 0
+
+
+@pytest.mark.parametrize("reason", [None, "user_quota_exceeded"])
+@pytest.mark.parametrize("message", [None, "Hello World"])
+@mock.patch("core.api.viewsets.get_entitlements_backend")
+def test_api_items_create_file_entitlements_backend_returns_falsy(
+    mock_get_entitlements_backend, message, reason
+):
+    """
+    Creating a file at the root is gated on the upload entitlement, just like
+    creating one in a folder: an over quota user must not grow their storage
+    from anywhere in the tree.
+    """
+    mock_entitlement_backend = mock.Mock()
+    return_value = {"result": False}
+    if message:
+        return_value["message"] = message
+    if reason:
+        return_value["reason"] = reason
+    mock_entitlement_backend.can_upload.return_value = return_value
+    mock_get_entitlements_backend.return_value = mock_entitlement_backend
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "filename": "file.txt",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {
+        "type": "client_error",
+        "errors": [
+            {
+                "code": reason or "permission_denied",
+                "detail": message or "You do not have permission to upload files.",
+                "attr": None,
+            }
+        ],
+    }
+    assert not Item.objects.exists()
+
+
+@mock.patch("core.api.viewsets.get_entitlements_backend")
+def test_api_items_create_file_from_template_entitlements_backend_returns_falsy(
+    mock_get_entitlements_backend,
+):
+    """
+    Template based creation finalizes the item itself, so it never goes through
+    the upload-ended gate: the entitlement must be checked upfront or the file
+    is created and its bytes stored for free.
+    """
+    mock_entitlement_backend = mock.Mock()
+    mock_entitlement_backend.can_upload.return_value = {
+        "result": False,
+        "reason": "user_quota_exceeded",
+    }
+    mock_get_entitlements_backend.return_value = mock_entitlement_backend
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "type": ItemTypeChoices.FILE,
+            "title": "my document",
+            "extension": "odt",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json()["errors"][0]["code"] == "user_quota_exceeded"
+    assert not Item.objects.exists()
+
+
+@mock.patch("core.api.viewsets.get_entitlements_backend")
+def test_api_items_create_folder_entitlements_backend_returns_falsy(
+    mock_get_entitlements_backend,
+):
+    """Folders hold no bytes: they stay creatable when the upload entitlement is falsy."""
+    mock_entitlement_backend = mock.Mock()
+    mock_entitlement_backend.can_upload.return_value = {
+        "result": False,
+        "reason": "user_quota_exceeded",
+    }
+    mock_get_entitlements_backend.return_value = mock_entitlement_backend
+
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "type": ItemTypeChoices.FOLDER,
+            "title": "my folder",
+        },
+    )
+
+    assert response.status_code == 201
+    assert Item.objects.get().type == ItemTypeChoices.FOLDER
