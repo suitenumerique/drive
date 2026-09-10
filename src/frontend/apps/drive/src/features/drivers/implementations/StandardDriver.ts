@@ -500,6 +500,12 @@ export class StandardDriver extends Driver {
     return jsonToItem(await response.json());
   }
 
+  async leaveItem(id: string): Promise<void> {
+    await fetchAPI(`items/${id}/leave/`, {
+      method: "POST",
+    });
+  }
+
   async convertItem(itemId: string): Promise<Item> {
     const response = await fetchAPI(`items/${itemId}/convert/`, {
       method: "POST",

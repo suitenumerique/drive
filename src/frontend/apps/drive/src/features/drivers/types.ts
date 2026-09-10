@@ -109,6 +109,7 @@ export type Item = {
     update: boolean;
     upload_ended: boolean;
     convert?: boolean;
+    leave?: boolean;
   };
   policy?: string;
 };
