@@ -1,14 +1,15 @@
-import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
 import {
-  NavigationEventType,
-  useGlobalExplorer,
-} from "@/features/explorer/components/GlobalExplorerContext";
-import {
+  Button,
+  useModal,
   DropdownMenu,
   HorizontalSeparator,
   IconSize,
   useDropdownMenu,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
+import {
+  NavigationEventType,
+  useGlobalExplorer,
+} from "@/features/explorer/components/GlobalExplorerContext";
 import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
 import createFolderSvg from "@/assets/icons/add_folder.svg";
 import { EmbeddedExplorerGridBreadcrumbs } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridBreadcrumbs";

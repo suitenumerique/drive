@@ -1,6 +1,6 @@
 import { CellContext } from "@tanstack/react-table";
 import { Item } from "@/features/drivers/types";
-import { Tooltip } from "@gouvfr-lasuite/cunningham-react";
+import { Tooltip } from "@gouvfr-lasuite/ui-components";
 import { timeAgo } from "@/features/explorer/utils/utils";
 import { Draggable } from "@/features/explorer/components/Draggable";
 import { useDisableDragGridItem } from "@/features/explorer/components/embedded-explorer/hooks";
@@ -8,7 +8,7 @@ import { useDisableDragGridItem } from "@/features/explorer/components/embedded-
 type EmbeddedExplorerGridUpdatedAtCellProps = CellContext<Item, Date>;
 
 export const EmbeddedExplorerGridUpdatedAtCell = (
-  params: EmbeddedExplorerGridUpdatedAtCellProps
+  params: EmbeddedExplorerGridUpdatedAtCellProps,
 ) => {
   const item = params.row.original;
   const disableDrag = useDisableDragGridItem(item);

@@ -4,7 +4,8 @@ import {
   IconSize,
   useDropdownMenu,
   UserMenu,
-} from "@gouvfr-lasuite/ui-kit";
+  Button,
+} from "@gouvfr-lasuite/ui-components";
 import { useAuth } from "@/features/auth/Auth";
 import { logout } from "@/features/auth/Auth";
 import {
@@ -12,7 +13,6 @@ import {
   LANGUAGES,
 } from "@/features/layouts/components/header/Header";
 import { AnonymousCTA } from "../anonymous-cta/AnonymousCTA";
-import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { useClipboard } from "@/hooks/useCopyToClipboard";
 

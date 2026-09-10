@@ -6,7 +6,7 @@ import {
   generateTreeId,
 } from "../components/GlobalExplorerContext";
 import { useRemoveItemsFromPaginatedList } from "./useOptimisticPagination";
-import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import { useTreeContext } from "@gouvfr-lasuite/ui-components";
 import {
   useRefreshQueryCacheAfterMutation,
   useDeleteMutationCallbacks,

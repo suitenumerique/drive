@@ -1,4 +1,4 @@
-import { MenuItem, IconSize } from "@gouvfr-lasuite/ui-kit";
+import { MenuItem, IconSize, useModal } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import createFolderSvg from "@/assets/icons/create_folder.svg";
@@ -11,7 +11,6 @@ import {
   ExplorerCreateFileType,
 } from "../components/modals/ExplorerCreateFileModal";
 import { ExplorerCreateFolderModal } from "../components/modals/ExplorerCreateFolderModal";
-import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { isMyFilesRoute } from "@/utils/defaultRoutes";

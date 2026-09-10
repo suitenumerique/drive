@@ -1,4 +1,4 @@
-import { Button } from "@gouvfr-lasuite/cunningham-react";
+import { Button } from "@gouvfr-lasuite/ui-components";
 import { login } from "../Auth";
 import { useTranslation } from "react-i18next";
 import { SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL } from "@/features/api/fetchApi";
@@ -12,7 +12,7 @@ export const LoginButton = () => {
       onClick={() => {
         sessionStorage.setItem(
           SESSION_STORAGE_REDIRECT_AFTER_LOGIN_URL,
-          window.location.href
+          window.location.href,
         );
         login();
       }}

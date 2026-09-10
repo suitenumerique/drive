@@ -17,7 +17,7 @@ import {
   TreeViewDataType,
   TreeViewNodeTypeEnum,
   useTreeContext,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
 import { ExplorerDndProvider } from "./ExplorerDndProvider";
 import { useFirstLevelItems } from "../hooks/useQueries";
 import { useTranslation } from "react-i18next";

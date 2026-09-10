@@ -1,7 +1,7 @@
 import { CellContext } from "@tanstack/react-table";
 import { Item, TRANSIENT_UPLOAD_STATES } from "@/features/drivers/types";
 import { memo, useState } from "react";
-import { Button } from "@gouvfr-lasuite/cunningham-react";
+import { Button } from "@gouvfr-lasuite/ui-components";
 import { Draggable } from "@/features/explorer/components/Draggable";
 import { useDisableDragGridItem } from "./hooks";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";

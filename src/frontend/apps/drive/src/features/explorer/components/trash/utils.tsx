@@ -2,7 +2,7 @@ import {
   ModalSize,
   useModals,
   VariantType,
-} from "@gouvfr-lasuite/cunningham-react";
+} from "@gouvfr-lasuite/ui-components";
 import i18n from "@/features/i18n/initI18n";
 
 export const messageModalTrashNavigate = (

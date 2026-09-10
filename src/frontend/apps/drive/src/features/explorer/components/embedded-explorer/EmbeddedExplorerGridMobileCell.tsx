@@ -6,7 +6,7 @@ import { timeAgo } from "@/features/explorer/utils/utils";
 import { LoadingRing } from "@/features/ui/components/loading-ring/LoadingRing";
 import { useTransientItem } from "@/features/explorer/hooks/useTransientItem";
 import clsx from "clsx";
-import { removeFileExtension } from "@gouvfr-lasuite/ui-kit";
+import { removeFileExtension } from "@gouvfr-lasuite/ui-components";
 
 type EmbeddedExplorerGridMobileCellProps = CellContext<Item, unknown>;
 

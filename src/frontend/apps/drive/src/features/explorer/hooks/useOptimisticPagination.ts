@@ -1,5 +1,5 @@
 import { Item } from "@/features/drivers/types";
-import { PaginatedChildrenResult } from "@gouvfr-lasuite/ui-kit";
+import { PaginatedChildrenResult } from "@gouvfr-lasuite/ui-components";
 import { QueryClient, QueryKey, useQueryClient } from "@tanstack/react-query";
 
 /**
@@ -14,7 +14,7 @@ import { QueryClient, QueryKey, useQueryClient } from "@tanstack/react-query";
 export const removeItemsFromPaginatedList = (
   queryClient: QueryClient,
   queryKey: QueryKey,
-  itemIds: string[]
+  itemIds: string[],
 ): void => {
   // Get all queries matching the queryKey pattern
   const queriesData = queryClient.getQueriesData({
@@ -33,13 +33,13 @@ export const removeItemsFromPaginatedList = (
 
     // Deep clone to avoid mutating the original data
     const updatedData: { pages: PaginatedChildrenResult<Item>[] } = JSON.parse(
-      JSON.stringify(data)
+      JSON.stringify(data),
     );
 
     // Remove items from all pages
     updatedData.pages.forEach((page) => {
       page.children = page.children?.filter(
-        (child) => !itemIds.includes(child.id)
+        (child) => !itemIds.includes(child.id),
       );
     });
 
@@ -89,7 +89,7 @@ export const updateItemInPaginatedList = (
   queryClient: QueryClient,
   queryKey: QueryKey,
   itemId: string,
-  partialUpdate: Partial<Item>
+  partialUpdate: Partial<Item>,
 ): void => {
   // Get all queries matching the queryKey pattern
   const queriesData = queryClient.getQueriesData({
@@ -108,14 +108,14 @@ export const updateItemInPaginatedList = (
 
     // Deep clone to avoid mutating the original data
     const updatedData: { pages: PaginatedChildrenResult<Item>[] } = JSON.parse(
-      JSON.stringify(data)
+      JSON.stringify(data),
     );
 
     // Update item in all pages
     updatedData.pages.forEach((page) => {
       if (page.children) {
         page.children = page.children.map((child) =>
-          child.id === itemId ? { ...child, ...partialUpdate } : child
+          child.id === itemId ? { ...child, ...partialUpdate } : child,
         );
       }
     });

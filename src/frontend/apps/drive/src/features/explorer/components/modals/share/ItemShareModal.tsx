@@ -31,7 +31,7 @@ import {
   removeFileExtension,
   ShareModal,
   ShareModalCopyLinkFooter,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";

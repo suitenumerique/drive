@@ -1,13 +1,5 @@
-import { useModal } from "@gouvfr-lasuite/cunningham-react";
-import { useTranslation } from "react-i18next";
-import { useGlobalExplorer } from "../GlobalExplorerContext";
-import { Item, TreeItem } from "@/features/drivers/types";
 import {
-  DefaultRoute,
-  getDefaultRoute,
-  ORDERED_DEFAULT_ROUTES,
-} from "@/utils/defaultRoutes";
-import {
+  useModal,
   HorizontalSeparator,
   IconSize,
   OpenMap,
@@ -17,7 +9,15 @@ import {
   TreeViewMoveResult,
   TreeViewNodeTypeEnum,
   useTreeContext,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
+import { useTranslation } from "react-i18next";
+import { useGlobalExplorer } from "../GlobalExplorerContext";
+import { Item, TreeItem } from "@/features/drivers/types";
+import {
+  DefaultRoute,
+  getDefaultRoute,
+  ORDERED_DEFAULT_ROUTES,
+} from "@/utils/defaultRoutes";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ExplorerTreeItem } from "./ExplorerTreeItem";
 import { useMoveItems } from "../../api/useMoveItem";

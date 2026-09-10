@@ -1,7 +1,13 @@
 import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
 import Head from "next/head";
 import { useTranslation } from "next-i18next";
-import { Hero, Footer, MainLayout, HomeGutter } from "@gouvfr-lasuite/ui-kit";
+import {
+  Hero,
+  Footer,
+  MainLayout,
+  HomeGutter,
+  Button,
+} from "@gouvfr-lasuite/ui-components";
 import { login, useAuth } from "@/features/auth/Auth";
 import { useEffect, useState } from "react";
 import logoGouv from "@/assets/logo-gouv.svg";
@@ -12,7 +18,6 @@ import {
   Toaster,
   ToasterItem,
 } from "@/features/ui/components/toaster/Toaster";
-import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { useConfig } from "@/features/config/ConfigProvider";
 import { useThemeCustomization } from "@/hooks/useThemeCustomization";
 import { Feedback } from "@/features/feedback/Feedback";

@@ -19,9 +19,12 @@ import {
 } from "./GlobalExplorerContext";
 import { Item, TreeItem } from "@/features/drivers/types";
 import { ExplorerDragOverlay } from "./tree/ExploreDragOverlay";
-import { TreeViewNodeTypeEnum, useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import {
+  TreeViewNodeTypeEnum,
+  useTreeContext,
+  useModal,
+} from "@gouvfr-lasuite/ui-components";
 import { addItemsMovedToast } from "./toasts/addItemsMovedToast";
-import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { createContext, useContext, useState } from "react";
 import {
   ConfirmationMoveState,
@@ -29,10 +32,7 @@ import {
 } from "./tree/ExplorerTreeMoveConfirmationModal";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { useMutationCreateFavoriteItem } from "../hooks/useMutations";
-import {
-  useSelectionCount,
-  useSelectionStore,
-} from "../stores/selectionStore";
+import { useSelectionCount, useSelectionStore } from "../stores/selectionStore";
 
 const activationConstraint = {
   distance: 20,

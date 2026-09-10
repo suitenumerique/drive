@@ -2,10 +2,14 @@ import { CellContext } from "@tanstack/react-table";
 import { Item, LinkReach } from "@/features/drivers/types";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Draggable } from "@/features/explorer/components/Draggable";
-import { Tooltip } from "@gouvfr-lasuite/cunningham-react";
+import {
+  Tooltip,
+  Icon,
+  IconSize,
+  removeFileExtension,
+} from "@gouvfr-lasuite/ui-components";
 import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
 import { useDisableDragGridItem } from "@/features/explorer/components/embedded-explorer/hooks";
-import { Icon, IconSize, removeFileExtension } from "@gouvfr-lasuite/ui-kit";
 import { LoadingRing } from "@/features/ui/components/loading-ring/LoadingRing";
 import { useEmbeddedExplorerGirdContext } from "./EmbeddedExplorerGrid";
 import { useIsItemSelected } from "@/features/explorer/stores/selectionStore";

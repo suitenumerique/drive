@@ -1,6 +1,6 @@
 import { Item, ItemUploadState } from "@/features/drivers/types";
 import { ItemIcon } from "../icons/ItemIcon";
-import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
+import { Button, useModal, IconSize } from "@gouvfr-lasuite/ui-components";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import { useSelectedItems } from "../../stores/selectionStore";
 import { InfoRow } from "@/features/ui/components/info/InfoRow";
@@ -8,7 +8,6 @@ import { useTranslation } from "react-i18next";
 
 import multipleSelection from "@/assets/mutliple-selection.png";
 import emptySelection from "@/assets/empty-selection.png";
-import { IconSize } from "@gouvfr-lasuite/ui-kit";
 import { ItemShareModal } from "../modals/share/ItemShareModal";
 import { ItemInfo } from "@/features/items/components/ItemInfo";
 
@@ -103,7 +102,7 @@ export const ExplorerRightPanelContent = ({
             <div className="explorer__right-panel__suspicious-warning">
               <div className="explorer__right-panel__suspicious-warning__text">
                 {t(
-                  `explorer.rightPanel.${firstSelectedItem.upload_state}.text`
+                  `explorer.rightPanel.${firstSelectedItem.upload_state}.text`,
                 )}
               </div>
             </div>
