@@ -182,8 +182,8 @@ is-e2e-backend-running: ## check if the backend is running (with configured e2e 
 		(echo -e "e2e backend is not running. You should run the following command(s) first:\nmake bootstrap-e2e && make run-backend-e2e" && false)
 .PHONY: is-e2e-backend-running
 
-run-backend-e2e: ## start the backend container for e2e tests, always remove the postgresql.e2e volume first
-	$(COMPOSE) stop postgresql drive-backend
+run-backend-e2e: ## start the backend container for e2e tests, always remove the drive-postgresql.e2e volume first
+	$(COMPOSE) stop drive-postgresql drive-backend
 	ENV_OVERRIDE=e2e $(MAKE) run-backend
 .PHONY: run-backend-e2e
 
@@ -279,7 +279,7 @@ test-back-parallel: ## run all back-end tests in parallel
 
 makemigrations:  ## run django makemigrations for the drive project.
 	@echo "$(BOLD)Running makemigrations$(RESET)"
-	$(COMPOSE) up -d postgresql
+	$(COMPOSE) up -d drive-postgresql
 	$(MANAGE) makemigrations
 .PHONY: makemigrations
 
