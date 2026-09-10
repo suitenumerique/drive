@@ -3,8 +3,26 @@
 # Trigger collabora configuration
 python manage.py trigger_wopi_configuration
 
+# Keep the total worker count at WEB_CONCURRENCY: the metrics pool below
+# takes one worker, the main pool gets the rest (at least one).
+MAIN_WORKERS=$((${WEB_CONCURRENCY:-2} - 1))
+if [ "$MAIN_WORKERS" -lt 1 ]; then
+    MAIN_WORKERS=1
+fi
+echo "WEB_CONCURRENCY=${WEB_CONCURRENCY:-unset} MAIN_WORKERS=$MAIN_WORKERS"
+
 # Start the Django backend
-gunicorn -b :8000 drive.wsgi:application --log-file - &
+gunicorn -b :8000 -w "$MAIN_WORKERS" drive.wsgi:application --log-file - &
+
+# Start a dedicated Django backend pool for the usage metrics endpoint.
+# DeployCenter calls it synchronously while Drive itself is blocked waiting
+# on a DeployCenter entitlements response: served by the main pool, this
+# callback would queue behind the very workers waiting for it (deadlock
+# until timeout). An isolated pool guarantees it always gets a worker.
+# Its access log is enabled with a distinctive prefix so the platform
+# logs show which requests were served by this pool.
+gunicorn -b :8001 -w 1 drive.wsgi:application --log-file - \
+    --access-logfile - --access-logformat 'metrics-pool %(h)s "%(r)s" %(s)s' &
 
 # Start the Nginx server
 bin/run &
