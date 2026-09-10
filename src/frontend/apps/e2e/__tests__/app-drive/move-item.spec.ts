@@ -13,7 +13,7 @@ import { expectExplorerBreadcrumbs } from "./utils-explorer";
 
 test("Move an item to a new folder", async ({ page }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await createFolderInCurrentFolder(page, "John");
@@ -32,7 +32,7 @@ test("Show an error toast when the server rejects the move", async ({
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await createFolderInCurrentFolder(page, "John");
@@ -76,7 +76,7 @@ test("Show the specific quota message when the move is rejected", async ({
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await createFolderInCurrentFolder(page, "John");
@@ -120,7 +120,7 @@ test("Show the specific quota message when the move is rejected", async ({
 
 test("Search and select to move an item", async ({ page }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   // Create the folder structure
@@ -154,7 +154,7 @@ test("Search and select to move an item", async ({ page }) => {
 
 test("Move item to root", async ({ page }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   // Create the folder structure

@@ -19,7 +19,7 @@ test("Add an item to starred and verify it's displayed in the starred tree and p
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await createFolderInCurrentFolder(page, "testFolder");
@@ -33,7 +33,7 @@ test("Remove an item from starred and verify it's not displayed in the starred t
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await createFolderInCurrentFolder(page, "testFolder");
@@ -50,7 +50,7 @@ test("Add an item to starred and one of it's children to starred and verify it's
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await createFolderInCurrentFolder(page, "John");

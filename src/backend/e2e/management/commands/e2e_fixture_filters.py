@@ -28,7 +28,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """E2E fixture filters."""
-        user = get_or_create_e2e_user("drive@example.com")
+        user = get_or_create_e2e_user("drive@drive.world")
         contact = factories.UserFactory(
             email="alice@example.com",
             full_name="Alice Doe",

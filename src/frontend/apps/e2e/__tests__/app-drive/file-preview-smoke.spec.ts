@@ -16,7 +16,7 @@ const ASSETS = path.join(__dirname, "./assets");
 test.describe("File Preview Smoke Tests", () => {
   test.beforeEach(async ({ page }) => {
     await clearDb();
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
     await clickToMyFiles(page);
   });

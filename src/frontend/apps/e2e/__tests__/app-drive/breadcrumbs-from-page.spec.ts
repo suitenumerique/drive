@@ -14,7 +14,7 @@ test("Check that the from page is guessed when the user paste a new url in the b
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await createFolderInCurrentFolder(page, "Bar");
@@ -35,7 +35,7 @@ test("Check that the from page is guessed when the user paste a new url and was 
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
 
   await clickToMyFiles(page);

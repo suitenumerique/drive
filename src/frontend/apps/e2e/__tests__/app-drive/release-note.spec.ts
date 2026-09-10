@@ -5,7 +5,7 @@ const CURRENT_VERSION = "0.16.0";
 
 test.describe("Release Note", () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
   });
 
   test.describe("Feature flag", () => {

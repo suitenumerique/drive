@@ -16,7 +16,7 @@ test("Filter items by file type category", async ({ page }) => {
   await clearDb();
 
   await runFixture("e2e_fixture_filters");
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
 
   await page.goto("/");
   await clickToMyFiles(page);
@@ -47,7 +47,7 @@ test("Filter items by file type category", async ({ page }) => {
 });
 
 test("Filter items by shared contact", async ({ page }) => {
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
 
   await page.goto("/");
   await clickToMyFiles(page);
@@ -71,7 +71,7 @@ test("Filter items by shared contact", async ({ page }) => {
 });
 
 test("Filter items by modification date", async ({ page }) => {
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
 
   await page.goto("/");
   await clickToMyFiles(page);
@@ -92,7 +92,7 @@ test("Filter items by modification date", async ({ page }) => {
 });
 
 test("Filter items by modification date custom", async ({ page }) => {
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
 
   await page.goto("/");
   await clickToMyFiles(page);
@@ -161,7 +161,7 @@ test("Public folder — anonymous visitor sees filters without the contact filte
   browser,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
 
   await page.goto("/");
   await clickToMyFiles(page);

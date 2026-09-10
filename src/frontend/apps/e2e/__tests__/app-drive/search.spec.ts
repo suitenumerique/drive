@@ -9,7 +9,7 @@ test("Search somes items and shows them in the search modal", async ({
   await clearDb();
 
   await runFixture("e2e_fixture_search");
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
 
   await page.goto("/");
 
@@ -52,7 +52,7 @@ test("Search somes items and shows them in the search modal", async ({
 });
 
 test("Search folder and click on it", async ({ page }) => {
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
 
   await page.goto("/");
   await clickToMyFiles(page);
@@ -70,7 +70,7 @@ test("Search folder and click on it", async ({ page }) => {
 });
 
 test("Search file and click on it", async ({ page }) => {
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
 
   await page.goto("/");
   await clickToMyFiles(page);
@@ -91,7 +91,7 @@ test("Search file and click on it", async ({ page }) => {
 });
 
 test("Search folder from trash and cannot navigate to it", async ({ page }) => {
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
 
   await page.goto("/");
   await clickToMyFiles(page);
@@ -132,7 +132,7 @@ test("Search folder from trash and cannot navigate to it", async ({ page }) => {
 });
 
 test("Search a deleted file and click on it", async ({ page }) => {
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
 
   await page.goto("/");
   await clickToMyFiles(page);
@@ -162,7 +162,7 @@ test("Search a deleted file and click on it", async ({ page }) => {
 test("Filter search results by location", async ({ page }) => {
   await clearDb();
   await runFixture("e2e_fixture_search");
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
 
   await page.goto("/");
   await page.getByRole("button", { name: "Search" }).click();

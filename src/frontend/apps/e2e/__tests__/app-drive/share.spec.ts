@@ -50,7 +50,7 @@ const MultiUserTest = base.extend<TwoUsers>({
 
 MultiUserTest("Share folder with user", async ({ userA, userB }) => {
   await clearDb();
-  await login(userA.page, "drive@example.com");
+  await login(userA.page, "drive@drive.world");
   await login(userB.page, "user@webkit.test");
 
   // User A creates a folder and shares it with User B
@@ -77,7 +77,7 @@ MultiUserTest(
   "share a folder and a sub folder with user and verify the roles",
   async ({ userA, userB }) => {
     await clearDb();
-    await login(userA.page, "drive@example.com");
+    await login(userA.page, "drive@drive.world");
     await login(userB.page, "user@webkit.test");
 
     // User A creates a folder and shares it with User B
@@ -108,7 +108,7 @@ MultiUserTest(
   "share a folder and verify the link reach",
   async ({ userA, userB }) => {
     await clearDb();
-    await login(userA.page, "drive@example.com");
+    await login(userA.page, "drive@drive.world");
     await login(userB.page, "user@webkit.test");
 
     // User A creates a folder and shares it with User B
@@ -138,7 +138,7 @@ MultiUserTest(
 
 MultiUserTest("share a folder and posthog event is sent", async ({ userA }) => {
   await clearDb();
-  await login(userA.page, "drive@example.com");
+  await login(userA.page, "drive@drive.world");
 
   const { expectEventSent } = await setupPosthogEventCapture(userA.page);
 
@@ -158,7 +158,7 @@ MultiUserTest(
   "click parent folder link in share modal navigates to parent",
   async ({ userA, userB }) => {
     await clearDb();
-    await login(userA.page, "drive@example.com");
+    await login(userA.page, "drive@drive.world");
     await login(userB.page, "user@webkit.test");
 
     const { expectEventSent } = await setupPosthogEventCapture(userA.page);

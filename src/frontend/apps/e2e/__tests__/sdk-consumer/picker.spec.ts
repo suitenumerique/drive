@@ -17,7 +17,7 @@ test.describe("SDK file picker", () => {
     page,
   }) => {
     // 1. Log in and upload a file in the drive app.
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
     await clickToMyFiles(page);
     await expect(page.getByText("This tab is empty")).toBeVisible();
@@ -78,7 +78,7 @@ test.describe("SDK file picker", () => {
     browser,
   }) => {
     // 1. Log in and upload a file in the drive app.
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
     await clickToMyFiles(page);
     await expect(page.getByText("This tab is empty")).toBeVisible();

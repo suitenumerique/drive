@@ -12,7 +12,7 @@ test("Checks that if one of the parents of the current folder is deleted, it red
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await createFolderInCurrentFolder(page, "Test");
@@ -29,7 +29,7 @@ test("Check that if we delete the current folder, it redirects to the parent fol
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await createFolderInCurrentFolder(page, "Test");

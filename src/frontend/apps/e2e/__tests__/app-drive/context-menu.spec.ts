@@ -17,7 +17,7 @@ import { expectMoveFolderModal } from "./utils/move-utils";
 test.describe("Context menu", () => {
   test.beforeEach(async ({ page }) => {
     await clearDb();
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
     await clickToMyFiles(page);
   });

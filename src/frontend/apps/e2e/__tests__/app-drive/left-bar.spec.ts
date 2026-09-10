@@ -10,7 +10,7 @@ import {
 
 test.describe("Left bar navigation", () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
   });
 

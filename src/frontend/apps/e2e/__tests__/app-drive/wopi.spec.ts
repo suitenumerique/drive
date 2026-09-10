@@ -45,7 +45,7 @@ test("Double-clicking a file with convert ability opens the conversion modal", a
 }) => {
   test.skip(browserName !== "chromium", "Only runs on chromium");
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await mockRequiresConversion(page);
   await page.goto("/");
   await clickToMyFiles(page);
@@ -68,7 +68,7 @@ test("Cancelling the conversion modal (convert mocked) does not call the convert
 }) => {
   test.skip(browserName !== "chromium", "Only runs on chromium");
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await mockRequiresConversion(page);
   await page.goto("/");
   await clickToMyFiles(page);
@@ -102,7 +102,7 @@ test("Confirming the conversion modal (convert mocked) shows the converting plac
 }) => {
   test.skip(browserName !== "chromium", "Only runs on chromium");
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await mockRequiresConversion(page);
   await page.goto("/");
   await clickToMyFiles(page);
@@ -201,7 +201,7 @@ test("Conversion failure removes the converting placeholder and shows an error t
 }) => {
   test.skip(browserName !== "chromium", "Only runs on chromium");
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await mockRequiresConversion(page);
   await page.goto("/");
   await clickToMyFiles(page);
@@ -299,7 +299,7 @@ test("Double-clicking a WOPI file opens the editor in a new tab", async ({
 }) => {
   test.skip(browserName !== "chromium", "Only runs on chromium");
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await expect(page.getByText("This tab is empty")).toBeVisible();
@@ -328,7 +328,7 @@ test("Navigating the previewer onto a WOPI file shows the Open in editor placeho
 }) => {
   test.skip(browserName !== "chromium", "Only runs on chromium");
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await expect(page.getByText("This tab is empty")).toBeVisible();
@@ -380,7 +380,7 @@ test("Copy and paste works in wopi editor", async ({
   test.skip(browserName !== "chromium", "Only runs on chromium");
   grantClipboardPermissions(browserName, context);
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await expect(page.getByText("This tab is empty")).toBeVisible();

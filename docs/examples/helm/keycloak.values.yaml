@@ -19,4 +19,4 @@ keycloak:
     name: drive
     username: drive
     password: drive
-    email: drive@example.com
+    email: drive@drive.world

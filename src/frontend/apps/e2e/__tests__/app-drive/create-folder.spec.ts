@@ -3,7 +3,7 @@ import { clearDb, login } from "./utils-common";
 
 test("Create a folder", async ({ page }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
 
   await page.goto("/");
   await expect(page.getByText("This tab is empty")).toBeVisible();

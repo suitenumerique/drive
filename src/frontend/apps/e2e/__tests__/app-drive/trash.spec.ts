@@ -16,7 +16,7 @@ test("Checks that hard deleting an item from the trash refreshes the list", asyn
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
 
@@ -40,7 +40,7 @@ test("Checks that hard deleting an item from the trash via the selection bar ref
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
 
@@ -70,7 +70,7 @@ test("Checks that double-clicking a deleted folder in the trash shows a folder m
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
 
@@ -99,7 +99,7 @@ test("Checks that double-clicking a deleted file in the trash shows a file messa
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
 

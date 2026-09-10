@@ -45,7 +45,7 @@ const setupReadOnlyFolderSharedWithWebkitUser = async (
   userB: Page,
 ) => {
   await clearDb();
-  await login(userA, "drive@example.com");
+  await login(userA, "drive@drive.world");
   await login(userB, "user@webkit.test");
 
   await userA.goto("/");
@@ -142,7 +142,7 @@ const virtualTabs: Array<{
 for (const { go, label } of virtualTabs) {
   test(`+ New from ${label} tab creates in My files`, async ({ page }) => {
     await clearDb();
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
     await go(page);
 
@@ -158,7 +158,7 @@ test("+ New inside a writable folder still creates in place", async ({
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
 

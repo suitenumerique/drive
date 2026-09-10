@@ -44,7 +44,7 @@ test("Share url leads to standalone file preview", async ({
   }
   grantClipboardPermissions(browserName, context);
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await expect(page.getByText("This tab is empty")).toBeVisible();
@@ -82,10 +82,10 @@ test("Share url leads to standalone file preview", async ({
 test("Wrong url leads to 404 instead of standalone file preview", async ({
   page,
 }) => {
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   // This uuid is valid but does not exist in the database.
   await page.goto(
-    "http://localhost:3000/explorer/items/files/c36ee34b-56c8-460b-b5fc-22245c5a3da4",
+    "http://localhost:8203/explorer/items/files/c36ee34b-56c8-460b-b5fc-22245c5a3da4",
   );
 
   const filePreview = page.getByTestId("file-preview");
@@ -104,7 +104,7 @@ test("Public file preview — authenticated user sees MyFilesCTA", async ({
   }
   grantClipboardPermissions(browserName, context);
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await expect(page.getByText("This tab is empty")).toBeVisible();
@@ -133,7 +133,7 @@ test("Public file preview — anonymous user sees AnonymousCTA", async ({
   }
   grantClipboardPermissions(browserName, context);
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await expect(page.getByText("This tab is empty")).toBeVisible();
@@ -179,7 +179,7 @@ test("Public file preview — anonymous get redirected to FRONTEND_EXTERNAL_HOME
   }
   grantClipboardPermissions(browserName, context);
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
   await expect(page.getByText("This tab is empty")).toBeVisible();

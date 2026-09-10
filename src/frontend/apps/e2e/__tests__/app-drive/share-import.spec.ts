@@ -48,7 +48,7 @@ test.describe("Share modal contacts import", () => {
   }) => {
     await clearDb();
     await mockConfig(page, false);
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await goToNewFolder(page, "Import disabled");
 
     const shareModal = await openShareModal(page);
@@ -69,7 +69,7 @@ test.describe("Share modal contacts import", () => {
       data: { email: "user@webkit.test" },
     });
     await mockConfig(page, true);
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await goToNewFolder(page, "Import contacts folder");
 
     const importModal = await openImportModal(page);
@@ -94,7 +94,7 @@ test.describe("Share modal contacts import", () => {
   }) => {
     await clearDb();
     await mockConfig(page, true);
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await goToNewFolder(page, "Import drag folder");
 
     const importModal = await openImportModal(page);
@@ -142,7 +142,7 @@ test.describe("Share modal contacts import", () => {
         },
       });
     });
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await goToNewFolder(page, "Import error folder");
 
     const importModal = await openImportModal(page);

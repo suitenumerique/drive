@@ -9,7 +9,7 @@ const MOBILE_VIEWPORT = { width: 375, height: 667 };
 test.describe("Mobile actions menu", () => {
   test.beforeEach(async ({ page }) => {
     await clearDb();
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
   });
 
   test("My Files shows more menu with create and import options", async ({

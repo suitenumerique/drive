@@ -91,7 +91,7 @@ const openSettingsModal = async (page: Page) => {
 
 test.describe("StorageGauge", () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
   });
 
   test.describe("Gauge button states", () => {
