@@ -156,7 +156,7 @@ logs: ## display drive-backend logs (follow mode)
 	@$(COMPOSE) logs -f drive-backend
 
 run-backend: ## start the backend container
-	@$(COMPOSE) up --no-recreate -d drive-nginx
+	@$(COMPOSE) up --force-recreate -d drive-nginx
 	@$(MAKE) configure-wopi
 .PHONY: run-backend
 
@@ -292,6 +292,8 @@ migrate:  ## run django database migrations for the drive project.
 
 migrate-e2e:  ## run django e2e database migrations for the drive project
 	@ENV_OVERRIDE=e2e $(MAKE) migrate
+	@ENV_OVERRIDE=e2e $(MANAGE) e2e_fixture_filters
+	@ENV_OVERRIDE=e2e $(MANAGE) e2e_fixture_search
 .PHONY: migrate-e2e
 
 superuser: ## Create an admin superuser with password "admin"
@@ -411,7 +413,7 @@ frontend-lint: ## run the frontend linter
 
 run-frontend-development: ## Run the frontend in development mode
 	@$(COMPOSE) stop drive-frontend
-	cd $(DRIVE_APP_FRONTEND_PATH) && yarn dev
+	cd $(DRIVE_APP_FRONTEND_PATH) && yarn dev -p 8203
 .PHONY: run-frontend-development
 
 run-frontend-sdk-development: ## Run the frontend SDK consumer in development mode
