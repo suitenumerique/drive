@@ -176,19 +176,14 @@ clear-db-e2e: ## quickly clears the database for e2e tests, used in the e2e test
 .PHONY: clear-db-e2e
 
 is-e2e-backend-running: ## check if the backend is running (with configured e2e database)
-	@CONTAINER_ID=$$($(COMPOSE) ps app-dev --filter status=running -q | grep -v "🐳"); \
+	@CONTAINER_ID=$$($(COMPOSE) ps drive-backend --filter status=running -q | grep -v "🐳"); \
 	docker inspect $$CONTAINER_ID --format "{{ range .Config.Env }}{{ println . }}{{ end }}" | \
 		grep DB_NAME=drive_e2e || \
 		(echo -e "e2e backend is not running. You should run the following command(s) first:\nmake bootstrap-e2e && make run-backend-e2e" && false)
 .PHONY: is-e2e-backend-running
 
-migrate-e2e: ## run backend migrations for the e2e database
-	$(COMPOSE) stop postgresql app-dev
-	ENV_OVERRIDE=e2e $(MAKE) migrate
-.PHONY: migrate-e2e
-
 run-backend-e2e: ## start the backend container for e2e tests, always remove the postgresql.e2e volume first
-	$(COMPOSE) stop postgresql app-dev
+	$(COMPOSE) stop postgresql drive-backend
 	ENV_OVERRIDE=e2e $(MAKE) run-backend
 .PHONY: run-backend-e2e
 
@@ -405,18 +400,18 @@ help:
 .PHONY: help
 
 # Front
-frontend-install: ## install the frontend locally
+frontend-development-install: ## install the frontend locally
 	cd $(DRIVE_APP_FRONTEND_PATH) && yarn
-.PHONY: frontend-install
+.PHONY: frontend-development-install
 
 frontend-lint: ## run the frontend linter
 	cd $(FRONTEND_PATH) && yarn lint
 .PHONY: frontend-lint
 
-run-frontend: ## Run the frontend in development mode
+run-frontend-development: ## Run the frontend in development mode
 	@$(COMPOSE) stop drive-frontend
 	cd $(DRIVE_APP_FRONTEND_PATH) && yarn dev
-.PHONY: run-frontend
+.PHONY: run-frontend-development
 
 run-frontend-sdk-development: ## Run the frontend SDK consumer in development mode
 	cd $(CONSUMER_APP_FRONTEND_PATH) && yarn dev
