@@ -269,6 +269,23 @@ export const useMutationDuplicateItem = () => {
   });
 };
 
+export const useMutationLeaveItem = () => {
+  const driver = getDriver();
+  const refresh = useRefreshQueryCacheAfterMutation();
+
+  return useMutation({
+    mutationFn: (itemId: string) => {
+      return driver.leaveItem(itemId);
+    },
+    onSuccess: () => {
+      refresh();
+    },
+    meta: {
+      noGlobalError: true,
+    },
+  });
+};
+
 export const useMutationConvertItem = () => {
   const driver = getDriver();
   const { item } = useGlobalExplorer();

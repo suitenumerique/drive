@@ -124,6 +124,7 @@ export type Item = {
     upload_ended: boolean;
     convert?: boolean;
     restrict?: boolean;
+    leave?: boolean;
   };
   policy?: string;
 };
