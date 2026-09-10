@@ -14,6 +14,8 @@ import { ExplorerCreateFolderModal } from "../components/modals/ExplorerCreateFo
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { isMyFilesRoute } from "@/utils/defaultRoutes";
+import { useEntitlements } from "@/features/entitlement-disclaimers/hooks/useEntitlements";
+import { getCannotUploadReasonDescription } from "@/features/entitlement-disclaimers/disclaimers/CannotUploadDisclaimer";
 
 type UseCreateMenuItemsProps = {
   includeImport?: boolean;
@@ -46,6 +48,18 @@ export const useCreateMenuItems = ({
   // On "My files", the item is created without a parent, which already puts
   // it in the current view — no redirect needed.
   const shouldRedirectToCreated = !canCreateHere && !isOnMyFiles;
+
+  // Creating a document writes a real file to storage, so it is gated on the
+  // same entitlement as an upload. Assume it is allowed while the query is in
+  // flight: the backend rejects the creation anyway, and greying the entries
+  // out on every page load would be worse than a rare late disable.
+  const { data: entitlements } = useEntitlements();
+  const canUpload = entitlements?.can_upload.result ?? true;
+  const cannotUploadReason = canUpload
+    ? undefined
+    : (entitlements?.can_upload.message ??
+      getCannotUploadReasonDescription(entitlements?.can_upload.reason) ??
+      t("entitlements.can_upload.cannot_upload"));
 
   const createFolderModal = useModal();
   const [createFileModalType, setCreateFileModalType] =
@@ -97,6 +111,8 @@ export const useCreateMenuItems = ({
         }),
         label: t("explorer.tree.create.file.doc"),
         callback: () => openCreateFileModal(ExplorerCreateFileType.DOC),
+        isDisabled: !canUpload,
+        subText: cannotUploadReason,
       },
       {
         icon: renderFileIcon({
@@ -107,6 +123,8 @@ export const useCreateMenuItems = ({
         }),
         label: t("explorer.tree.create.file.powerpoint"),
         callback: () => openCreateFileModal(ExplorerCreateFileType.POWERPOINT),
+        isDisabled: !canUpload,
+        subText: cannotUploadReason,
       },
       {
         icon: renderFileIcon({
@@ -117,6 +135,8 @@ export const useCreateMenuItems = ({
         }),
         label: t("explorer.tree.create.file.calc"),
         callback: () => openCreateFileModal(ExplorerCreateFileType.CALC),
+        isDisabled: !canUpload,
+        subText: cannotUploadReason,
       },
     );
   }

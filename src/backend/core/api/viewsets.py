@@ -664,12 +664,26 @@ class ItemViewSet(
         item.size = len(template_content)
         item.save(update_fields=["upload_state", "mimetype", "size", "updated_at"])
 
+    def _check_can_upload(self, user, item_type):
+        """Refuse the creation of a file when the upload entitlement is falsy."""
+        if item_type != models.ItemTypeChoices.FILE:
+            return
+
+        can_upload = get_entitlements_backend().can_upload(user)
+        if not can_upload["result"]:
+            raise drf.exceptions.PermissionDenied(
+                detail=can_upload.get("message", "You do not have permission to upload files."),
+                code=can_upload.get("reason"),
+            )
+
     def get_create_extra_attributes(self):
         """Extra model attributes applied to items created by this viewset (subclass hook)."""
         return {}
 
     def perform_create(self, serializer):
         """Set the current user as creator and owner of the newly created object."""
+        self._check_can_upload(self.request.user, serializer.validated_data["type"])
+
         extension = serializer.validated_data.pop("extension", None)
 
         obj = models.Item.objects.create_child(
@@ -1146,16 +1160,7 @@ class ItemViewSet(
             )
             serializer.is_valid(raise_exception=True)
 
-            entitlements_backend = get_entitlements_backend()
-            can_upload = entitlements_backend.can_upload(self.request.user)
-            if (
-                serializer.validated_data.get("type") == models.ItemTypeChoices.FILE
-                and not can_upload["result"]
-            ):
-                raise drf.exceptions.PermissionDenied(
-                    detail=can_upload.get("message", "You do not have permission to upload files."),
-                    code=can_upload.get("reason"),
-                )
+            self._check_can_upload(self.request.user, serializer.validated_data["type"])
 
             extension = serializer.validated_data.pop("extension", None)
 
