@@ -15,6 +15,7 @@ import {
   ArrowRight,
   Info,
   Trash,
+  Leave,
 } from "@gouvfr-lasuite/ui-components/icons";
 import { t } from "i18next";
 import {
@@ -23,6 +24,7 @@ import {
 } from "../components/GlobalExplorerContext";
 import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 import { baseApiUrl } from "@/features/api/utils";
+import { ConfirmationLeaveModal } from "../components/modals/ConfirmationLeaveModal";
 import { ExplorerRenameItemModal } from "../components/modals/ExplorerRenameItemModal";
 import { ExplorerCreateFolderModal } from "../components/modals/ExplorerCreateFolderModal";
 import { ItemShareModal } from "../components/modals/share/ItemShareModal";
@@ -70,6 +72,8 @@ export const useItemActionMenuItems = ({
   const { mutateAsync: createFavoriteItem } = useMutationCreateFavoriteItem();
   const { mutateAsync: duplicateItem } = useMutationDuplicateItem();
 
+  const leaveModal = useModal();
+
   const shareItemModal = useModal();
   const renameModal = useModal();
   const moveModal = useModal();
@@ -81,7 +85,8 @@ export const useItemActionMenuItems = ({
     renameModal.isOpen ||
     shareItemModal.isOpen ||
     moveModal.isOpen ||
-    createFolderModal.isOpen;
+    createFolderModal.isOpen ||
+    leaveModal.isOpen;
 
   useEffect(() => {
     onModalOpenChange?.(isModalOpen);
@@ -245,6 +250,16 @@ export const useItemActionMenuItems = ({
         isHidden: !item.abilities?.destroy || item.main_workspace || minimal,
         callback: () => handleDelete(effectiveItemId, item),
       },
+      {
+        icon: <Leave />,
+        label: t("explorer.item.actions.leave"),
+        variant: "danger" as const,
+        isHidden: !item.abilities?.leave,
+        callback: () => {
+          setCurrentItem(effectiveItem);
+          leaveModal.open();
+        },
+      },
     ];
   };
 
@@ -278,6 +293,13 @@ export const useItemActionMenuItems = ({
         <ExplorerCreateFolderModal
           {...createFolderModal}
           parentId={currentItem.id}
+        />
+      )}
+      {currentItem && leaveModal.isOpen && (
+        <ConfirmationLeaveModal
+          {...leaveModal}
+          item={currentItem}
+          key={currentItem.id}
         />
       )}
     </>

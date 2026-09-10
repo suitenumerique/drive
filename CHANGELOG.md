@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) allow to leave an item #826
+- ✨(frontend) allow to leave an item #826
+
 ## [v0.22.0] - 2026-09-09
 
 ### Added
