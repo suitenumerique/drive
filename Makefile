@@ -23,10 +23,11 @@
 # ==============================================================================
 # VARIABLES
 
-BOLD := \033[1m
+BOLD  := \033[1m
 RESET := \033[0m
 GREEN := \033[1;32m
 SHELL := /usr/bin/env bash
+ECHO   = echo -e
 
 # -- Docker
 # Get the current user ID to use for docker run and docker exec commands
@@ -278,13 +279,13 @@ test-back-parallel: ## run all back-end tests in parallel
 .PHONY: test-back-parallel
 
 makemigrations:  ## run django makemigrations for the drive project.
-	@echo "$(BOLD)Running makemigrations$(RESET)"
+	@$(ECHO) "$(BOLD)Running makemigrations$(RESET)"
 	$(COMPOSE) up -d drive-postgresql
 	$(MANAGE) makemigrations
 .PHONY: makemigrations
 
 migrate:  ## run django database migrations for the drive project.
-	@echo "$(BOLD)Running migrations$(RESET)"
+	@$(ECHO) "$(BOLD)Running migrations$(RESET)"
 	@$(COMPOSE) up -d drive-postgresql
 	@$(MANAGE) migrate
 .PHONY: migrate
@@ -294,7 +295,7 @@ migrate-e2e:  ## run django e2e database migrations for the drive project
 .PHONY: migrate-e2e
 
 superuser: ## Create an admin superuser with password "admin"
-	@echo "$(BOLD)Creating a Django superuser$(RESET)"
+	@$(ECHO) "$(BOLD)Creating a Django superuser$(RESET)"
 	@$(MANAGE) createsuperuser --email admin@example.com --password admin
 .PHONY: superuser
 
@@ -322,7 +323,7 @@ dbshell: ## connect to database shell
 
 resetdb: FLUSH_ARGS ?=
 resetdb: ## flush database and create a superuser "admin"
-	@echo "$(BOLD)Flush database$(RESET)"
+	@$(ECHO) "$(BOLD)Flush database$(RESET)"
 	@$(MANAGE) flush $(FLUSH_ARGS)
 	@${MAKE} superuser
 .PHONY: resetdb
@@ -394,8 +395,8 @@ clean-media: ## remove all media files
 .PHONY: clean-media
 
 help:
-	@echo "$(BOLD)drive Makefile"
-	@echo "Please use 'make $(BOLD)target$(RESET)' where $(BOLD)target$(RESET) is one of:"
+	@$(ECHO) "$(BOLD)drive Makefile"
+	@$(ECHO) "Please use 'make $(BOLD)target$(RESET)' where $(BOLD)target$(RESET) is one of:"
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(firstword $(MAKEFILE_LIST)) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(GREEN)%-30s$(RESET) %s\n", $$1, $$2}'
 .PHONY: help
 
