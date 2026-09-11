@@ -48,7 +48,7 @@ test.describe("Share modal contacts import", () => {
   }) => {
     await clearDb();
     await mockConfig(page, false);
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await goToNewFolder(page, "Import disabled");
 
     const shareModal = await openShareModal(page);
@@ -65,11 +65,11 @@ test.describe("Share modal contacts import", () => {
     await clearDb();
     // Make sure the webkit user exists so its row creates an access
     // while the unknown email creates an invitation.
-    await request.post("http://localhost:8071/api/v1.0/e2e/user-auth/", {
+    await request.post("http://localhost:8200/api/v1.0/e2e/user-auth/", {
       data: { email: "user@webkit.test" },
     });
     await mockConfig(page, true);
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await goToNewFolder(page, "Import contacts folder");
 
     const importModal = await openImportModal(page);
@@ -94,7 +94,7 @@ test.describe("Share modal contacts import", () => {
   }) => {
     await clearDb();
     await mockConfig(page, true);
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await goToNewFolder(page, "Import drag folder");
 
     const importModal = await openImportModal(page);
@@ -142,7 +142,7 @@ test.describe("Share modal contacts import", () => {
         },
       });
     });
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await goToNewFolder(page, "Import error folder");
 
     const importModal = await openImportModal(page);

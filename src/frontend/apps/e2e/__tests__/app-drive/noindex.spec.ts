@@ -3,7 +3,7 @@ import { login } from "./utils-common";
 
 test.describe("Search engine indexing prevention", () => {
   test("should have noindex meta tag in head", async ({ page }) => {
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
     await expect(
       page.getByRole("button", { name: "User menu" }),

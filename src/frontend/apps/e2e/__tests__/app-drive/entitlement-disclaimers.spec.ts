@@ -105,7 +105,7 @@ const expectNotVisibleAfterDecision = async (
 
 test.describe("EntitlementDisclaimers", () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
   });
 
   test.describe("Visibility rules", () => {

@@ -13,7 +13,7 @@ test("Public folder — authenticated user does not see AnonymousCTA", async ({
   page,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
 
@@ -33,7 +33,7 @@ test("Public folder — anonymous user sees AnonymousCTA and login redirects", a
   browser,
 }) => {
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
 
@@ -69,7 +69,7 @@ test("Public folder — anonymous dropdown menu copies link and switches languag
     return;
   }
   await clearDb();
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await page.goto("/");
   await clickToMyFiles(page);
 

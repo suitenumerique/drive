@@ -2,7 +2,7 @@ import test, { expect } from "@playwright/test";
 
 import { clearDb, login } from "./utils-common";
 
-const API_BASE = "http://localhost:8071/api/v1.0";
+const API_BASE = "http://localhost:8200/api/v1.0";
 
 test("Backend user language syncs to browser on load", async ({ page }) => {
   await clearDb();

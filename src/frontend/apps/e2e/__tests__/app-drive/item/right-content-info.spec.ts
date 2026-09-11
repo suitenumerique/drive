@@ -7,7 +7,7 @@ import { createFolderInCurrentFolder } from "../utils-item";
 test.describe("Right content info", () => {
   test.beforeEach(async ({ page }) => {
     await clearDb();
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
     await clickToMyFiles(page);
   });

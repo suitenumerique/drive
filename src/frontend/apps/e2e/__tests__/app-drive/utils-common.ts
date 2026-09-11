@@ -60,7 +60,7 @@ export const runTarget = async (target: string) => {
 };
 
 export const login = async (page: Page, email: string) => {
-  await page.request.post("http://localhost:8071/api/v1.0/e2e/user-auth/", {
+  await page.request.post("http://localhost:8200/api/v1.0/e2e/user-auth/", {
     data: {
       email,
     },

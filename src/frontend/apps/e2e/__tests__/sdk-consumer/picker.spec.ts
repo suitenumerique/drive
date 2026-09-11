@@ -17,7 +17,7 @@ test.describe("SDK file picker", () => {
     page,
   }) => {
     // 1. Log in and upload a file in the drive app.
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
     await clickToMyFiles(page);
     await expect(page.getByText("This tab is empty")).toBeVisible();
@@ -61,7 +61,7 @@ test.describe("SDK file picker", () => {
     // a cancel — fetch it via the authenticated search endpoint (the
     // root items list only returns top-level workspaces).
     const searchRes = await page.request.get(
-      "http://localhost:8071/api/v1.0/items/search/?q=pv_cm",
+      "http://localhost:8200/api/v1.0/items/search/?q=pv_cm",
     );
     expect(searchRes.ok()).toBeTruthy();
     const body = await searchRes.json();
@@ -78,7 +78,7 @@ test.describe("SDK file picker", () => {
     browser,
   }) => {
     // 1. Log in and upload a file in the drive app.
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
     await clickToMyFiles(page);
     await expect(page.getByText("This tab is empty")).toBeVisible();

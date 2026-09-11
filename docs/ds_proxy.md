@@ -37,7 +37,7 @@ S3_TRANSFER_CONFIG_MAX_CONCURRENCY: 1
 You have to change the settings related to S3 in the `env.d/development/common.local` file:
 
 ```
-AWS_S3_DOMAIN_REPLACE=http://localhost:4444/upstream
+AWS_S3_DOMAIN_REPLACE=http://drive.lasuite.localhost:8204/upstream
 AWS_S3_ENDPOINT_URL=http://ds-proxy:4444/upstream
 ```
 
@@ -62,9 +62,6 @@ That's all, ds_proxy is running and Drive configured to use it. All the file upl
 Once you have an up and running stack with tilt, you can enable ds_proxy and configure drive to use it.
 
 In the `src/helm/helmfile.yaml` file change the `ds_proxy.enabled` value to `true`.
-Then in the `src/helm/env.d/dev/values.drive.yaml.gotmpl` file you will have to comment/uncomment these variables:
-    - `AWS_S3_ENDPOINT_URL`
-    - `nginx.ingress.kubernetes.io/upstream-vhost` (present twice)
-    - `host` (in the `serviceMedia`)
+Then in the `src/helm/env.d/dev/values.drive.yaml.gotmpl` file you will have to comment/uncomment these variables: - `AWS_S3_ENDPOINT_URL` - `nginx.ingress.kubernetes.io/upstream-vhost` (present twice) - `host` (in the `serviceMedia`)
 
 Reloading the tilt stack should deploy DS Proxy.

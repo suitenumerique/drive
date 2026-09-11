@@ -17,7 +17,7 @@ def test_api_items_search_anonymous():
     assert response.status_code == 401
 
 
-def test_api_items_search_authenticated_without_filters():
+def test_api_items_search_authenticated_without_filters(settings):
     """
     Authenticated users should be able to search for items.
     Without filters, all the items the user has access to should be returned.
@@ -293,7 +293,7 @@ def test_api_items_search_authenticated_without_filters():
             "type": "file",
             "updated_at": children.updated_at.isoformat().replace("+00:00", "Z"),
             "upload_state": "ready",
-            "url": f"http://localhost:8083/media/item/{children.id!s}/{children.filename}",
+            "url": f"{settings.MEDIA_BASE_URL}/media/item/{children.id!s}/{children.filename}",
             "url_permalink": f"http://testserver/api/v1.0/items/{children.id!s}/download/",
             "url_preview": None,
             "user_role": top_parent_access.role,

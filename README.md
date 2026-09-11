@@ -125,13 +125,13 @@ dependency-related or migration-related issues.
 
 Your Docker services should now be up and running! 🎉
 
-You can access the project by going to <http://localhost:3000>.
+You can access the project by going to <http://drive.lasuite.localhost:8203>.
 
 You will be prompted to log in. The default credentials are:
 
 ```
-username: drive
-password: drive
+username: user@lasuite.fr
+password: lasuite
 ```
 
 Note that if you need to run them afterward, you can use the eponym Make rule:
@@ -198,7 +198,7 @@ $ make run-backend
 #### Django admin
 
 You can access the Django admin site at
-[http://localhost:8071/admin](http://localhost:8071/admin).
+[http://drive.lasuite.localhost:8200/admin](http://drive.lasuite.localhost:8200/admin).
 
 You first need to create a superuser account:
 

@@ -3,7 +3,7 @@ import { login } from "./utils-common";
 
 test.describe("Custom CSS and JS injection", () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
   });
 
   test("should inject a stylesheet link when FRONTEND_CSS_URL is set", async ({

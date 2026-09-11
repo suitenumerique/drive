@@ -7,7 +7,7 @@ import { navigateToFolder } from "./utils-navigate";
 test.describe("Create file from template", () => {
   test.beforeEach(async ({ page }) => {
     await clearDb();
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
   });
 
@@ -49,7 +49,7 @@ test.describe("Create file from template", () => {
 test.describe("Create file from template in a folder", () => {
   test.beforeEach(async ({ page }) => {
     await clearDb();
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
     await createFolderInCurrentFolder(page, "Test folder");
     await navigateToFolder(page, "Test folder", ["My files", "Test folder"]);

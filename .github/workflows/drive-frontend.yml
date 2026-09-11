@@ -176,11 +176,21 @@ jobs:
           path: src/frontend/apps/drive/out
 
       - name: Start Docker services
+        env:
+          KC_HOSTNAME: http://localhost:8004
         run: |
           make bootstrap-e2e run-backend-e2e
 
       - name: Serve frontend (stock nginx + prod vhost)
         run: make ci-serve-frontend-build
+
+      - name: Check that drive backend is ready
+        run: |
+          bin/compose ps
+          bin/compose logs
+          ENV_OVERRIDE=e2e bin/compose restart drive-backend
+          echo "===="
+          bin/compose logs drive-backend
 
       - name: Run e2e tests
         working-directory: src/frontend/apps/e2e

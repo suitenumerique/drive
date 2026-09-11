@@ -46,7 +46,7 @@ test.describe("Help menu", () => {
     page,
   }) => {
     await overrideHelpMenuConfig(page, HELP_MENU_CONFIG);
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
 
     const footer = page.locator(".c__left-panel__footer__drive");
@@ -64,7 +64,7 @@ test.describe("Help menu", () => {
     await overrideHelpMenuConfig(page, {
       documentationUrl: HELP_MENU_CONFIG.documentationUrl,
     });
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
 
     const footer = page.locator(".c__left-panel__footer__drive");
@@ -81,7 +81,7 @@ test.describe("Help menu", () => {
   }) => {
     await overrideHelpMenuConfig(page, HELP_MENU_CONFIG);
     await spyOnWindowOpen(page);
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
 
     const footer = page.locator(".c__left-panel__footer__drive");
@@ -115,7 +115,7 @@ test.describe("Help menu", () => {
       route.fulfill({ contentType: "application/javascript", body: "" }),
     );
     await spyOnWindowOpen(page);
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
 
     const footer = page.locator(".c__left-panel__footer__drive");
@@ -174,7 +174,7 @@ test.describe("Help menu", () => {
     page,
   }) => {
     await overrideHelpMenuConfig(page, {});
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
 
     // The user menu confirms the layout has loaded before asserting absence.

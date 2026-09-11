@@ -24,7 +24,7 @@ const DOCX_FILE_PATH = path.join(__dirname, "/assets/empty_doc.docx");
 test.describe("Custom columns", () => {
   test.beforeEach(async ({ page }) => {
     await clearDb();
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
     await clickToMyFiles(page);
   });
@@ -346,7 +346,7 @@ test.describe("Custom columns analytics", () => {
   }) => {
     await clearDb();
     const { expectEventSentWithProps } = await setupPosthogEventCapture(page);
-    await login(page, "drive@example.com");
+    await login(page, "drive@drive.world");
     await page.goto("/");
     await clickToMyFiles(page);
     await createFolderInCurrentFolder(page, "MyFolder");

@@ -111,7 +111,7 @@ def test_api_items_create_file_authenticated_no_filename():
     }
 
 
-def test_api_items_create_file_authenticated_success():
+def test_api_items_create_file_authenticated_success(settings):
     """
     Authenticated users should be able to create a file item and must provide a filename.
     """
@@ -144,14 +144,17 @@ def test_api_items_create_file_authenticated_success():
     policy_parsed = urlparse(policy)
 
     assert policy_parsed.scheme == "http"
-    assert policy_parsed.netloc == "localhost:9000"
+    assert policy_parsed.netloc in (
+        urlparse(url).netloc
+        for url in [settings.AWS_S3_DOMAIN_REPLACE, settings.AWS_S3_ENDPOINT_URL]
+    )
     assert policy_parsed.path == f"/drive-media-storage/item/{item.id!s}/file.txt"
 
     query_params = parse_qs(policy_parsed.query)
 
     assert query_params.pop("X-Amz-Algorithm") == ["AWS4-HMAC-SHA256"]
     assert query_params.pop("X-Amz-Credential") == [
-        f"drive/{now.strftime('%Y%m%d')}/eu-east-1/s3/aws4_request"
+        f"lasuite/{now.strftime('%Y%m%d')}/eu-east-1/s3/aws4_request"
     ]
     assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
@@ -426,7 +429,7 @@ def test_api_items_create_item_race_condition():
         assert response2.status_code == 201
 
 
-def test_api_items_create_file_authenticated_success_invalid_filename():
+def test_api_items_create_file_authenticated_success_invalid_filename(settings):
     """
     Authenticated users should be able to create a file item and must provide a filename.
     When the filename is invalid it should be sanitize in order to be used with a filesystem.
@@ -460,14 +463,17 @@ def test_api_items_create_file_authenticated_success_invalid_filename():
     policy_parsed = urlparse(policy)
 
     assert policy_parsed.scheme == "http"
-    assert policy_parsed.netloc == "localhost:9000"
+    assert policy_parsed.netloc in (
+        urlparse(url).netloc
+        for url in [settings.AWS_S3_DOMAIN_REPLACE, settings.AWS_S3_ENDPOINT_URL]
+    )
     assert policy_parsed.path == f"/drive-media-storage/item/{item.id!s}/img_srcx_onerroralert.txt"
 
     query_params = parse_qs(policy_parsed.query)
 
     assert query_params.pop("X-Amz-Algorithm") == ["AWS4-HMAC-SHA256"]
     assert query_params.pop("X-Amz-Credential") == [
-        f"drive/{now.strftime('%Y%m%d')}/eu-east-1/s3/aws4_request"
+        f"lasuite/{now.strftime('%Y%m%d')}/eu-east-1/s3/aws4_request"
     ]
     assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]

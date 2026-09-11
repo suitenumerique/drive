@@ -337,7 +337,7 @@ def test_authentication_getter_new_user_with_email(monkeypatch):
     """
     klass = OIDCAuthenticationBackend()
 
-    email = "drive@example.com"
+    email = "drive@drive.world"
 
     def get_userinfo_mocked(*args):
         return {"sub": "123", "email": email, "first_name": "John", "last_name": "Doe"}
@@ -551,7 +551,7 @@ def test_authentication_store_claims_new_user(monkeypatch):
     """
     klass = OIDCAuthenticationBackend()
 
-    email = "drive@example.com"
+    email = "drive@drive.world"
 
     def get_userinfo_mocked(*args):
         return {
@@ -581,8 +581,8 @@ def test_authentication_store_claims_existing_user(monkeypatch):
     Test that the claims are stored on the user when an existing user is authenticated.
     """
     klass = OIDCAuthenticationBackend()
-    user = UserFactory(email="drive@example.com", sub="123", claims={"iss": "https://obsolete.com"})
-    email = "drive@example.com"
+    user = UserFactory(email="drive@drive.world", sub="123", claims={"iss": "https://obsolete.com"})
+    email = "drive@drive.world"
 
     def get_userinfo_mocked(*args):
         return {
@@ -613,7 +613,7 @@ def test_authentication_get_or_create_user_raises_exception_when_entitlement_bac
     when the entitlement backend's can_access method returns a falsy result.
     """
     klass = OIDCAuthenticationBackend()
-    email = "drive@example.com"
+    email = "drive@drive.world"
 
     def get_userinfo_mocked(*args):
         return {"sub": "123", "email": email, "first_name": "John", "last_name": "Doe"}

@@ -23,10 +23,11 @@
 # ==============================================================================
 # VARIABLES
 
-BOLD := \033[1m
+BOLD  := \033[1m
 RESET := \033[0m
 GREEN := \033[1;32m
 SHELL := /usr/bin/env bash
+ECHO   = echo -e
 
 # -- Docker
 # Get the current user ID to use for docker run and docker exec commands
@@ -35,17 +36,17 @@ DOCKER_GID              = $(shell id -g)
 DOCKER_USER             = $(DOCKER_UID):$(DOCKER_GID)
 COMPOSE                 = DOCKER_USER=$(DOCKER_USER) docker compose
 COMPOSE_EXEC            = $(COMPOSE) exec
-COMPOSE_EXEC_APP        = $(COMPOSE_EXEC) app-dev
+COMPOSE_EXEC_APP        = $(COMPOSE_EXEC) drive-backend
 COMPOSE_RUN             = $(COMPOSE) run --rm
-COMPOSE_RUN_APP         = $(COMPOSE_RUN) app-dev
-COMPOSE_RUN_APP_NO_DEPS = $(COMPOSE_RUN) --no-deps app-dev 
+COMPOSE_RUN_APP         = $(COMPOSE_RUN) drive-backend
+COMPOSE_RUN_APP_NO_DEPS = $(COMPOSE_RUN) --no-deps drive-backend 
 
 COMPOSE_RUN_CROWDIN     = $(COMPOSE_RUN) crowdin crowdin
 
 # -- Backend
 MANAGE                  = $(COMPOSE_RUN_APP) python manage.py
 MANAGE_EXEC             = $(COMPOSE_EXEC_APP) python manage.py
-MAIL_YARN               = $(COMPOSE_RUN) -w /app/src/mail node yarn
+MAIL_YARN               = $(COMPOSE_RUN) -w /app/src/mail drive-node yarn
 PSQL                    = ./bin/psql
 
 # -- Frontend
@@ -53,6 +54,9 @@ FRONTEND_PATH              = ./src/frontend
 DRIVE_APP_FRONTEND_PATH    = $(FRONTEND_PATH)/apps/drive
 CONSUMER_APP_FRONTEND_PATH = $(FRONTEND_PATH)/apps/sdk-consumer
 DRIVE_SDK_FRONTEND_PATH    = $(FRONTEND_PATH)/packages/sdk
+
+# -- Interop 
+INTEROP_URL             = https://github.com/suitenumerique/interop/archive/refs/heads/main.tar.gz
 
 # ==============================================================================
 # RULES
@@ -93,6 +97,11 @@ src/frontend/apps/drive/out/index.html:
 	@mkdir -p src/frontend/apps/drive/out/
 	@touch src/frontend/apps/drive/out/index.html
 
+interop:
+	mkdir -p interop
+	curl -sL $(INTEROP_URL) | tar -xzf - --strip-components=1 -C interop
+	cd interop && make bootstrap
+
 # -- Project
 
 create-dev-local-files: ## create local files and directories for development
@@ -107,22 +116,18 @@ create-dev-local-files: \
   env.d/development/kc_postgresql.local
 .PHONY: create-dev-local-files
 
-create-docker-network: ## create the docker network if it doesn't exist
-	@docker network create lasuite-network || true
-.PHONY: create-docker-network
-
 bootstrap: ## Prepare Docker images for the project
 bootstrap: \
-	data/media \
-	data/static \
-	create-dev-local-files \
-	build \
-	create-docker-network \
-	migrate \
-	back-i18n-compile \
-	mails-install \
-	mails-build \
-	run
+  data/media \
+  data/static \
+  create-dev-local-files \
+  interop \
+  build \
+  migrate \
+  back-i18n-compile \
+  mails-install \
+  mails-build \
+  run
 .PHONY: bootstrap
 
 # -- Docker/compose
@@ -133,39 +138,38 @@ build: \
 .PHONY: build
 
 build-backend: cache ?=
-build-backend: ## build the app-dev container
-	$(COMPOSE) build app-dev $(cache)
+build-backend: ## build the drive-backend container
+	@$(COMPOSE) build drive-backend $(cache)
 .PHONY: build-backend
 
 build-frontend: cache ?=
 build-frontend: ## build the frontend container
-	$(COMPOSE) build frontend-dev $(cache)
-.PHONY: build-frontend-development
+	@$(COMPOSE) build drive-frontend $(cache)
+.PHONY: build-frontend
 
 down: ## stop and remove containers, networks, images, and volumes
 	@$(COMPOSE) down
 	rm -rf data/postgresql.*
 .PHONY: down
 
-logs: ## display app-dev logs (follow mode)
-	@$(COMPOSE) logs -f app-dev
-.PHONY: logs
+logs: ## display drive-backend logs (follow mode)
+	@$(COMPOSE) logs -f drive-backend
 
 run-backend: ## start the backend container
-	@$(COMPOSE) up --force-recreate -d nginx
+	@$(COMPOSE) up --force-recreate -d drive-nginx
 	@$(MAKE) configure-wopi
 .PHONY: run-backend
 
 bootstrap-e2e: ## bootstrap the backend container for e2e tests, without frontend
 bootstrap-e2e: \
-	data/media \
-	data/static \
-	create-dev-local-files \
-	build-backend \
-	create-docker-network \
-	back-i18n-compile \
-	migrate-e2e \
-	frontend-development-install
+  data/media \
+  data/static \
+  interop \
+  create-dev-local-files \
+  build-backend \
+  back-i18n-compile \
+  migrate-e2e \
+  frontend-development-install
 .PHONY: bootstrap-e2e
 
 clear-db-e2e: ## quickly clears the database for e2e tests, used in the e2e tests
@@ -173,21 +177,20 @@ clear-db-e2e: ## quickly clears the database for e2e tests, used in the e2e test
 .PHONY: clear-db-e2e
 
 is-e2e-backend-running: ## check if the backend is running (with configured e2e database)
-	@CONTAINER_ID=$$($(COMPOSE) ps app-dev --filter status=running -q | grep -v "🐳"); \
+	@CONTAINER_ID=$$($(COMPOSE) ps drive-backend --filter status=running -q | grep -v "🐳"); \
 	docker inspect $$CONTAINER_ID --format "{{ range .Config.Env }}{{ println . }}{{ end }}" | \
 		grep DB_NAME=drive_e2e || \
 		(echo -e "e2e backend is not running. You should run the following command(s) first:\nmake bootstrap-e2e && make run-backend-e2e" && false)
 .PHONY: is-e2e-backend-running
 
-migrate-e2e: ## run backend migrations for the e2e database
-	$(COMPOSE) stop postgresql app-dev
-	ENV_OVERRIDE=e2e $(MAKE) migrate
-.PHONY: migrate-e2e
-
-run-backend-e2e: ## start the backend container for e2e tests, always remove the postgresql.e2e volume first
-	$(COMPOSE) stop postgresql app-dev
+run-backend-e2e: ## start the backend container for e2e tests, always remove the drive-postgresql.e2e volume first
+	$(COMPOSE) stop drive-postgresql drive-backend
 	ENV_OVERRIDE=e2e $(MAKE) run-backend
 .PHONY: run-backend-e2e
+
+install-e2e:
+	cd src/frontend/apps/e2e && yarn install -d
+.PHONY: install-e2e
 
 run-tests-e2e: ## run the e2e tests, example: make run-tests-e2e -- --project chromium --headed
 run-tests-e2e: is-e2e-backend-running
@@ -202,7 +205,7 @@ backend-exec-command: ## execute a command in the backend container
 
 run: ## start the development server and frontend development
 run: run-backend
-	$(COMPOSE) up --force-recreate -d frontend-dev
+	@$(COMPOSE) up --no-recreate -d drive-frontend
 .PHONY: run
 
 status: ## an alias for "docker compose ps"
@@ -212,6 +215,10 @@ status: ## an alias for "docker compose ps"
 stop: ## stop the development server using Docker
 	@$(COMPOSE) stop
 .PHONY: stop
+
+interop-update: ## update interop services
+	$(MAKE) -B interop
+.PHONY: interop-update
 
 # -- Backend
 
@@ -272,19 +279,25 @@ test-back-parallel: ## run all back-end tests in parallel
 .PHONY: test-back-parallel
 
 makemigrations:  ## run django makemigrations for the drive project.
-	@echo "$(BOLD)Running makemigrations$(RESET)"
-	$(COMPOSE) up -d postgresql
+	@$(ECHO) "$(BOLD)Running makemigrations$(RESET)"
+	$(COMPOSE) up -d drive-postgresql
 	$(MANAGE) makemigrations
 .PHONY: makemigrations
 
-migrate:  ## run django migrations for the drive project.
-	@echo "$(BOLD)Running migrations$(RESET)"
-	$(COMPOSE) up -d postgresql
-	$(MANAGE) migrate
+migrate:  ## run django database migrations for the drive project.
+	@$(ECHO) "$(BOLD)Running migrations$(RESET)"
+	@$(COMPOSE) up -d drive-postgresql
+	@$(MANAGE) migrate
 .PHONY: migrate
 
+migrate-e2e:  ## run django e2e database migrations for the drive project
+	@ENV_OVERRIDE=e2e $(MAKE) migrate
+	@ENV_OVERRIDE=e2e $(MANAGE) e2e_fixture_filters
+	@ENV_OVERRIDE=e2e $(MANAGE) e2e_fixture_search
+.PHONY: migrate-e2e
+
 superuser: ## Create an admin superuser with password "admin"
-	@echo "$(BOLD)Creating a Django superuser$(RESET)"
+	@$(ECHO) "$(BOLD)Creating a Django superuser$(RESET)"
 	@$(MANAGE) createsuperuser --email admin@example.com --password admin
 .PHONY: superuser
 
@@ -312,7 +325,7 @@ dbshell: ## connect to database shell
 
 resetdb: FLUSH_ARGS ?=
 resetdb: ## flush database and create a superuser "admin"
-	@echo "$(BOLD)Flush database$(RESET)"
+	@$(ECHO) "$(BOLD)Flush database$(RESET)"
 	@$(MANAGE) flush $(FLUSH_ARGS)
 	@${MAKE} superuser
 .PHONY: resetdb
@@ -384,8 +397,8 @@ clean-media: ## remove all media files
 .PHONY: clean-media
 
 help:
-	@echo "$(BOLD)drive Makefile"
-	@echo "Please use 'make $(BOLD)target$(RESET)' where $(BOLD)target$(RESET) is one of:"
+	@$(ECHO) "$(BOLD)drive Makefile"
+	@$(ECHO) "Please use 'make $(BOLD)target$(RESET)' where $(BOLD)target$(RESET) is one of:"
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(firstword $(MAKEFILE_LIST)) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(GREEN)%-30s$(RESET) %s\n", $$1, $$2}'
 .PHONY: help
 
@@ -399,8 +412,8 @@ frontend-lint: ## run the frontend linter
 .PHONY: frontend-lint
 
 run-frontend-development: ## Run the frontend in development mode
-	@$(COMPOSE) stop frontend-dev
-	cd $(DRIVE_APP_FRONTEND_PATH) && yarn dev
+	@$(COMPOSE) stop drive-frontend
+	cd $(DRIVE_APP_FRONTEND_PATH) && yarn dev -p 8203
 .PHONY: run-frontend-development
 
 run-frontend-sdk-development: ## Run the frontend SDK consumer in development mode

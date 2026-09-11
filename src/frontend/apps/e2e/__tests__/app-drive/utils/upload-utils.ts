@@ -36,7 +36,7 @@ export const setupUploadTest = async (
   page: Page,
   maxMemorySize: number = 10 * 1024 * 1024,
 ) => {
-  await login(page, "drive@example.com");
+  await login(page, "drive@drive.world");
   await mockConfigWithUploadLimit(page, maxMemorySize);
   await page.goto("/");
   await clickToMyFiles(page);
