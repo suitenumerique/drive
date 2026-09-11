@@ -53,6 +53,7 @@ FRONTEND_PATH              = ./src/frontend
 DRIVE_APP_FRONTEND_PATH    = $(FRONTEND_PATH)/apps/drive
 CONSUMER_APP_FRONTEND_PATH = $(FRONTEND_PATH)/apps/sdk-consumer
 DRIVE_SDK_FRONTEND_PATH    = $(FRONTEND_PATH)/packages/sdk
+FRONTEND_YARN              = $(COMPOSE_RUN) frontend-dev yarn
 
 # ==============================================================================
 # RULES
@@ -140,6 +141,7 @@ build-backend: ## build the app-dev container
 build-frontend: cache ?=
 build-frontend: ## build the frontend container
 	$(COMPOSE) build frontend-dev $(cache)
+	@$(FRONTEND_YARN) install --frozen-lockfile
 .PHONY: build-frontend-development
 
 down: ## stop and remove containers, networks, images, and volumes
