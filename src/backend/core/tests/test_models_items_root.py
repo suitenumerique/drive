@@ -64,6 +64,7 @@ def test_models_sub_item_abilities_downgraded():
         "media_auth": True,
         "download": True,
         "move": False,
+        "password_locked": False,
         "partial_update": True,
         "restrict": False,
         "restore": False,
@@ -101,6 +102,7 @@ def test_models_sub_item_abilities_downgraded():
         "media_auth": True,
         "download": True,
         "move": False,
+        "password_locked": False,
         "partial_update": False,
         "restrict": False,
         "restore": False,
@@ -137,7 +139,9 @@ def test_models_items_root_get_abilities_owner(
     item = factories.ItemFactory(
         users=[(user, "owner")], type=item_type, update_upload_state=upload_state
     )
-    link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    link_select_options = LinkReachChoices.get_select_options(
+        item.ancestors_link_reach, item.ancestors_link_role
+    )
     can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": True,
@@ -156,6 +160,7 @@ def test_models_items_root_get_abilities_owner(
         "media_auth": True,
         "download": True,
         "move": True,
+        "password_locked": False,
         "partial_update": True,
         "restrict": False,
         "restore": True,
@@ -189,6 +194,7 @@ def test_models_items_root_get_abilities_owner(
         "media_auth": False,
         "download": False,
         "move": False,
+        "password_locked": False,
         "partial_update": False,
         "restrict": False,
         "restore": True,
@@ -228,7 +234,9 @@ def test_models_items_root_get_abilities_administrator(
         filename=("document.pdf" if item_type == models.ItemTypeChoices.FILE else None),
         update_upload_state=upload_state,
     )
-    link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    link_select_options = LinkReachChoices.get_select_options(
+        item.ancestors_link_reach, item.ancestors_link_role
+    )
     can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": True,
@@ -247,6 +255,7 @@ def test_models_items_root_get_abilities_administrator(
         "media_auth": True,
         "download": True,
         "move": True,
+        "password_locked": False,
         "partial_update": True,
         "restrict": False,
         "restore": False,
@@ -297,7 +306,9 @@ def test_models_items_root_get_abilities_editor_user(
         filename="document.pdf" if item_type == models.ItemTypeChoices.FILE else None,
         update_upload_state=upload_state,
     )
-    link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    link_select_options = LinkReachChoices.get_select_options(
+        item.ancestors_link_reach, item.ancestors_link_role
+    )
     can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
@@ -316,6 +327,7 @@ def test_models_items_root_get_abilities_editor_user(
         "media_auth": True,
         "download": True,
         "move": False,
+        "password_locked": False,
         "partial_update": True,
         "restrict": False,
         "restore": False,
@@ -351,7 +363,9 @@ def test_models_items_root_get_abilities_reader_user(
     user = factories.UserFactory()
     item = factories.ItemFactory(users=[(user, "reader")], type=item_type)
     access_from_link = item.link_reach != "restricted" and item.link_role == "editor"
-    link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    link_select_options = LinkReachChoices.get_select_options(
+        item.ancestors_link_reach, item.ancestors_link_role
+    )
     can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
@@ -370,6 +384,7 @@ def test_models_items_root_get_abilities_reader_user(
         "media_auth": True,
         "download": True,
         "move": False,
+        "password_locked": False,
         "partial_update": access_from_link,
         "restrict": False,
         "restore": False,

@@ -80,6 +80,8 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "id": str(item.id),
                 "link_reach": item.link_reach,
                 "link_role": item.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "numchild": 0,
                 "numchild_folder": 0,
                 "path": str(item.path),

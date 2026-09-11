@@ -44,16 +44,16 @@ class AccessUserItem:
         return {
             "item": str(self.item.id),
             "user": str(self.user.id) if not self.user.is_anonymous else None,
+            "unlocked_link_items": sorted(getattr(self.user, "unlocked_link_items", ())),
         }
 
     @classmethod
     def from_dict(cls, data: dict):
         """Convert a dictionary to an access user item"""
         try:
-            return cls(
-                item=Item.objects.get(id=UUID(data["item"])),
-                user=User.objects.get(id=UUID(data["user"])) if data["user"] else AnonymousUser(),
-            )
+            user = User.objects.get(id=UUID(data["user"])) if data["user"] else AnonymousUser()
+            user.unlocked_link_items = set(data.get("unlocked_link_items", []))
+            return cls(item=Item.objects.get(id=UUID(data["item"])), user=user)
         except (Item.DoesNotExist, User.DoesNotExist) as error:
             raise AccessUserItemNotFoundError("Resource not found") from error
         except (KeyError, ValueError) as error:

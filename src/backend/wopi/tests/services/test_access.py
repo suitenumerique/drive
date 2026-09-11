@@ -30,6 +30,7 @@ def test_access_user_item_to_dict():
     assert access_user_item.to_dict() == {
         "item": str(item.id),
         "user": str(user.id),
+        "unlocked_link_items": [],
     }
 
 
@@ -40,6 +41,20 @@ def test_access_user_item_to_dict_with_anonymous_user():
     assert access_user_item.to_dict() == {
         "item": str(item.id),
         "user": None,
+        "unlocked_link_items": [],
+    }
+
+
+def test_access_user_item_to_dict_with_unlocked_link_items():
+    """The link items unlocked by the user should be carried by the access token."""
+    item = ItemFactory()
+    user = AnonymousUser()
+    user.unlocked_link_items = {str(item.id)}
+    access_user_item = AccessUserItem(item=item, user=user)
+    assert access_user_item.to_dict() == {
+        "item": str(item.id),
+        "user": None,
+        "unlocked_link_items": [str(item.id)],
     }
 
 
@@ -54,6 +69,19 @@ def test_access_user_item_from_dict():
     access_user_item = AccessUserItem.from_dict(data)
     assert access_user_item.item == item
     assert access_user_item.user == user
+    assert access_user_item.user.unlocked_link_items == set()  # pylint: disable=no-member
+
+
+def test_access_user_item_from_dict_with_unlocked_link_items():
+    """The link items unlocked by the user should be restored from the access token."""
+    item = ItemFactory()
+    data = {
+        "item": str(item.id),
+        "user": None,
+        "unlocked_link_items": [str(item.id)],
+    }
+    access_user_item = AccessUserItem.from_dict(data)
+    assert access_user_item.user.unlocked_link_items == {str(item.id)}  # pylint: disable=no-member
 
 
 def test_access_user_item_from_dict_with_anonymous_user():

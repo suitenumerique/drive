@@ -399,3 +399,26 @@ def test_api_items_media_auth_filename_with_hash():
         timeout=1,
     )
     assert response.content.decode("utf-8") == "my prose"
+
+
+def test_api_items_media_auth_link_password_locked():
+    """Attachments of a password protected item require the link to be unlocked."""
+    item = factories.ItemFactory(
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    item.set_link_password("s3cret")
+    item.save()
+    original_url = f"http://localhost/media/{item.file_key:s}"
+
+    client = APIClient()
+    response = client.get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url)
+    assert response.status_code == 403
+
+    session = client.session
+    session["unlocked_link_items"] = [str(item.id)]
+    session.save()
+
+    response = client.get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url)
+    assert response.status_code == 200

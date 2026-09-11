@@ -26,18 +26,40 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
         # The access role is based on accesses only, before any link boost
         self.access_role = item.get_role(user)
         self.is_deleted = bool(item.ancestors_deleted_at)
-        link_definition = item.computed_link_definition
-        link_reach = link_definition["link_reach"]
-        if link_reach == LinkReachChoices.PUBLIC or (
-            link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated
-        ):
+        link_reachable, link_locked = self._link_status()
+        if link_reachable and not link_locked:
             # The highest of the access role and the link role, needed for a user
             # with an access lower than the link role and for a user without access
-            self.role = RoleChoices.max(self.access_role, link_definition["link_role"])
+            self.role = RoleChoices.max(
+                self.access_role, item.computed_link_definition["link_role"]
+            )
         else:
             self.role = self.access_role
         self.is_owner = self.access_role == RoleChoices.OWNER
         self.is_owner_or_admin = self.is_owner or self.access_role == RoleChoices.ADMIN
+
+    def _link_status(self) -> tuple[bool, bool]:
+        """Return whether the link reaches the user and is locked by its password."""
+        link_definition = self.item.computed_link_definition
+        link_reach = link_definition["link_reach"]
+        link_reachable = link_reach == LinkReachChoices.PUBLIC or (
+            link_reach == LinkReachChoices.AUTHENTICATED and self.user.is_authenticated
+        )
+        link_password_item = link_definition["link_password_item"]
+        link_locked = link_password_item is not None and str(link_password_item) not in getattr(
+            self.user, "unlocked_link_items", ()
+        )
+        return link_reachable, link_locked
+
+    def password_locked(self) -> bool:
+        """Return whether unlocking the link would grant the user more than their role."""
+        link_reachable, link_locked = self._link_status()
+        return (
+            link_reachable
+            and link_locked
+            and RoleChoices.get_priority(self.item.computed_link_definition["link_role"])
+            > RoleChoices.get_priority(self.access_role)
+        )
 
     @cached_property
     def is_restricted(self) -> bool:
@@ -59,7 +81,9 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
         """Return the link reach and role options selectable on the item."""
         if not self.has_access_role():
             return {}
-        return LinkReachChoices.get_select_options(**self.item.ancestors_link_definition)
+        return LinkReachChoices.get_select_options(
+            self.item.ancestors_link_reach, self.item.ancestors_link_role
+        )
 
     def can_get(self) -> bool:
         """Return whether the user can read the item."""
@@ -172,6 +196,7 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
             "invite_owner": self.can_invite_owner(),
             "link_select_options": self.link_select_options(),
             "move": self.can_move(),
+            "password_locked": self.password_locked(),
             "restrict": self.can_restrict(),
             "restore": self.can_restore(),
             "retrieve": self.can_retrieve(),

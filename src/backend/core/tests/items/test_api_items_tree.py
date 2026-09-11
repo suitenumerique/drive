@@ -2,8 +2,10 @@
 # pylint: disable=too-many-lines
 
 import uuid
+from datetime import timedelta
 
 from django.contrib.auth.models import AnonymousUser
+from django.utils import timezone
 
 import pytest
 from rest_framework.test import APIClient
@@ -162,6 +164,8 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "target": None,
                 "link_reach": level2_1.link_reach,
                 "link_role": level2_1.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "nb_accesses": 0,
                 "numchild": 0,
                 "numchild_folder": 0,
@@ -203,6 +207,8 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "target": None,
                 "link_reach": level2_2.link_reach,
                 "link_role": level2_2.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "nb_accesses": 0,
                 "numchild": 0,
                 "numchild_folder": 0,
@@ -238,6 +244,8 @@ def test_items_api_anonymous_to_a_public_tree_structure():
         "target": None,
         "link_reach": level1_2.link_reach,
         "link_role": level1_2.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 0,
         "numchild": 2,
         "numchild_folder": 2,
@@ -399,6 +407,8 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "target": None,
                         "link_reach": level2_1.item.link_reach,
                         "link_role": level2_1.item.link_role,
+                        "link_expires_at": None,
+                        "has_link_password": False,
                         "nb_accesses": 3,
                         "numchild": 0,
                         "numchild_folder": 0,
@@ -449,6 +459,8 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                                 "target": None,
                                 "link_reach": level3_1.item.link_reach,
                                 "link_role": level3_1.item.link_role,
+                                "link_expires_at": None,
+                                "has_link_password": False,
                                 "nb_accesses": 4,
                                 "numchild": 0,
                                 "numchild_folder": 0,
@@ -489,6 +501,8 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "target": None,
                         "link_reach": level2_2.item.link_reach,
                         "link_role": level2_2.item.link_role,
+                        "link_expires_at": None,
+                        "has_link_password": False,
                         "nb_accesses": 3,
                         "numchild": 5,
                         "numchild_folder": 1,
@@ -524,6 +538,8 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "target": None,
                 "link_reach": level1_1.item.link_reach,
                 "link_role": level1_1.item.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "nb_accesses": 2,
                 "numchild": 5,
                 "numchild_folder": 2,
@@ -565,6 +581,8 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "target": None,
                 "link_reach": level1_2.item.link_reach,
                 "link_role": level1_2.item.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "nb_accesses": 2,
                 "numchild": 2,
                 "numchild_folder": 2,
@@ -606,6 +624,8 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "target": None,
                 "link_reach": level1_3.item.link_reach,
                 "link_role": level1_3.item.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "nb_accesses": 2,
                 "numchild": 1,
                 "numchild_folder": 1,
@@ -641,6 +661,8 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
         "target": None,
         "link_reach": root.item.link_reach,
         "link_role": root.item.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 1,
         "numchild": 5,
         "numchild_folder": 3,
@@ -759,6 +781,8 @@ def test_api_items_tree_authenticated_with_access_authenticated():
         "target": None,
         "link_reach": "authenticated",
         "link_role": level1_1.link_role,
+        "link_expires_at": None,
+        "has_link_password": False,
         "nb_accesses": 0,
         "numchild": 2,
         "numchild_folder": 2,
@@ -805,6 +829,8 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "target": None,
                 "link_reach": "authenticated",
                 "link_role": level2_1.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "nb_accesses": 0,
                 "numchild": 0,
                 "numchild_folder": 0,
@@ -846,6 +872,8 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "target": None,
                 "link_reach": "authenticated",
                 "link_role": level2_2.link_role,
+                "link_expires_at": None,
+                "has_link_password": False,
                 "nb_accesses": 0,
                 "numchild": 4,
                 "numchild_folder": 0,
@@ -869,3 +897,36 @@ def test_api_items_tree_authenticated_with_access_authenticated():
             },
         ],
     }
+
+
+def test_api_items_tree_link_expired_ancestor():
+    """An ancestor whose link has expired should not be the root of the returned tree."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(
+        title="root",
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_expires_at=timezone.now() - timedelta(minutes=1),
+    )
+    child = factories.ItemFactory(
+        title="child",
+        parent=root,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.PUBLIC,
+    )
+    grandchild = factories.ItemFactory(
+        title="grandchild",
+        parent=child,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=None,
+    )
+
+    response = client.get(f"/api/v1.0/items/{grandchild.id}/tree/")
+    assert response.status_code == 200
+    tree = response.json()
+    assert tree["title"] == "child"
+    assert tree["abilities"]["retrieve"] is True
+    assert [item["title"] for item in tree["children"]] == ["grandchild"]

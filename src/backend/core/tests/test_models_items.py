@@ -316,6 +316,7 @@ def test_models_items_get_abilities_forbidden(
         "media_auth": False,
         "download": False,
         "move": False,
+        "password_locked": False,
         "link_configuration": False,
         "link_select_options": {},
         "partial_update": False,
@@ -369,6 +370,7 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         "media_auth": True,
         "download": True,
         "move": False,
+        "password_locked": False,
         "partial_update": False,
         "restrict": False,
         "restore": False,
@@ -475,6 +477,7 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913
         "media_auth": True,
         "download": True,
         "move": False,
+        "password_locked": False,
         "partial_update": True,
         "restrict": False,
         "restore": False,
@@ -546,6 +549,7 @@ def test_models_items_not_root_get_abilities_owner(
         "media_auth": True,
         "download": True,
         "move": True,
+        "password_locked": False,
         "partial_update": True,
         "restrict": False,
         "restore": True,
@@ -579,6 +583,7 @@ def test_models_items_not_root_get_abilities_owner(
         "media_auth": False,
         "download": False,
         "move": False,
+        "password_locked": False,
         "partial_update": False,
         "restrict": False,
         "restore": True,
@@ -640,6 +645,7 @@ def test_models_items_not_root_get_abilities_administrator(
         "media_auth": True,
         "download": True,
         "move": True,
+        "password_locked": False,
         "partial_update": True,
         "restrict": False,
         "restore": False,
@@ -694,7 +700,9 @@ def test_models_items_not_root_get_abilities_editor_user(
         filename="document.pdf" if item_type == models.ItemTypeChoices.FILE else None,
         update_upload_state=upload_state,
     )
-    link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    link_select_options = LinkReachChoices.get_select_options(
+        item.ancestors_link_reach, item.ancestors_link_role
+    )
     can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
@@ -713,6 +721,7 @@ def test_models_items_not_root_get_abilities_editor_user(
         "media_auth": True,
         "download": True,
         "move": False,
+        "password_locked": False,
         "partial_update": True,
         "restrict": False,
         "restore": False,
@@ -767,6 +776,7 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "media_auth": True,
         "download": True,
         "move": False,
+        "password_locked": False,
         "partial_update": access_from_link,
         "restrict": False,
         "restore": False,
@@ -808,7 +818,9 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         creator=other_user,
         users=[(other_user, "owner")],
     )
-    link_select_options = LinkReachChoices.get_select_options(**child.ancestors_link_definition)
+    link_select_options = LinkReachChoices.get_select_options(
+        child.ancestors_link_reach, child.ancestors_link_role
+    )
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -826,6 +838,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "link_select_options": link_select_options,
         "media_auth": True,
         "move": True,
+        "password_locked": False,
         "partial_update": True,
         "restrict": False,
         "restore": True,
@@ -858,6 +871,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "link_select_options": {},
         "media_auth": False,
         "move": False,
+        "password_locked": False,
         "partial_update": False,
         "restrict": False,
         "restore": True,
@@ -1479,3 +1493,137 @@ def test_models_items_restore_complex_bis():
     assert item.ancestors_deleted_at == item.deleted_at
     assert child1.ancestors_deleted_at == item.deleted_at
     assert child2.ancestors_deleted_at == item.deleted_at
+
+
+@pytest.mark.parametrize("is_authenticated", [True, False])
+@pytest.mark.parametrize("reach", ["public", "authenticated"])
+def test_models_items_get_abilities_link_expired(is_authenticated, reach):
+    """An expired link should not grant any ability to link holders."""
+    item = factories.ItemFactory(
+        link_reach=reach,
+        link_role="editor",
+        link_expires_at=timezone.now() - timedelta(minutes=1),
+    )
+    user = factories.UserFactory() if is_authenticated else AnonymousUser()
+
+    assert item.computed_link_reach == LinkReachChoices.RESTRICTED
+    assert item.computed_link_role is None
+    abilities = item.get_abilities(user)
+    assert abilities["retrieve"] is False
+    assert abilities["update"] is False
+
+
+def test_models_items_get_abilities_link_not_expired():
+    """A link with a future expiration date should grant abilities as usual."""
+    item = factories.ItemFactory(
+        link_reach="public",
+        link_role="reader",
+        link_expires_at=timezone.now() + timedelta(minutes=1),
+    )
+
+    assert item.computed_link_reach == LinkReachChoices.PUBLIC
+    assert item.get_abilities(AnonymousUser())["retrieve"] is True
+
+
+def test_models_items_link_expired_ancestor_not_inherited():
+    """An expired link on an ancestor should not be inherited by its descendants."""
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach="public",
+        link_expires_at=timezone.now() - timedelta(minutes=1),
+    )
+    child = factories.ItemFactory(parent=parent, link_reach=None)
+
+    assert child.ancestors_link_reach == LinkReachChoices.RESTRICTED
+    assert child.computed_link_reach == LinkReachChoices.RESTRICTED
+    assert child.get_abilities(AnonymousUser())["retrieve"] is False
+
+
+def test_models_items_link_password_set_and_check():
+    """The link password should be stored hashed and checked against the raw value."""
+    item = factories.ItemFactory()
+
+    item.set_link_password("s3cret")
+    assert item.link_password != "s3cret"
+    assert item.check_link_password("s3cret") is True
+    assert item.check_link_password("wrong") is False
+
+    item.set_link_password("")
+    assert item.link_password is None
+    assert item.check_link_password("") is False
+
+
+def test_models_items_link_password_item_inherited_from_ancestor():
+    """The ancestor providing the link should be the one whose password applies."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    parent.set_link_password("s3cret")
+    parent.save()
+    child = factories.ItemFactory(parent=parent, link_reach=None)
+
+    assert child.computed_link_definition["link_password_item"] == parent.id
+
+
+def test_models_items_link_password_item_closest_link_wins():
+    """A descendant defining its own equivalent link should use its own password setting."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    parent.set_link_password("s3cret")
+    parent.save()
+    child = factories.ItemFactory(parent=parent, link_reach="public")
+
+    assert child.computed_link_definition["link_password_item"] is None
+
+
+@pytest.mark.parametrize("is_authenticated", [True, False])
+def test_models_items_get_abilities_link_password_locked(is_authenticated):
+    """A password protected link should not grant any ability until unlocked."""
+    item = factories.ItemFactory(link_reach="public", link_role="editor")
+    item.set_link_password("s3cret")
+    user = factories.UserFactory() if is_authenticated else AnonymousUser()
+
+    abilities = item.get_abilities(user)
+    assert abilities["retrieve"] is False
+    assert abilities["update"] is False
+    assert abilities["password_locked"] is True
+
+    user.unlocked_link_items = {str(item.id)}
+    abilities = item.get_abilities(user)
+    assert abilities["retrieve"] is True
+    assert abilities["update"] is True
+    assert abilities["password_locked"] is False
+
+
+def test_models_items_get_abilities_link_password_explicit_access():
+    """Users with an explicit access should not be locked out by the link password."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_reach="public", link_role="reader", users=[(user, "editor")])
+    item.set_link_password("s3cret")
+
+    abilities = item.get_abilities(user)
+    assert abilities["update"] is True
+    assert abilities["password_locked"] is False
+
+
+def test_models_items_get_abilities_link_password_lower_explicit_access():
+    """Unlocking the link should be offered when it grants more than the explicit access."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(link_reach="public", link_role="editor", users=[(user, "reader")])
+    item.set_link_password("s3cret")
+
+    abilities = item.get_abilities(user)
+    assert abilities["retrieve"] is True
+    assert abilities["update"] is False
+    assert abilities["password_locked"] is True
+
+
+def test_models_items_get_abilities_link_password_inherited_from_ancestor():
+    """The password of the ancestor providing the link should protect its descendants."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    parent.set_link_password("s3cret")
+    parent.save()
+    child = factories.ItemFactory(parent=parent, link_reach=None)
+
+    assert child.get_abilities(AnonymousUser())["retrieve"] is False
+
+    user = AnonymousUser()
+    user.unlocked_link_items = {str(parent.id)}
+    assert child.get_abilities(user)["retrieve"] is True
