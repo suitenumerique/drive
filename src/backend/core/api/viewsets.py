@@ -548,6 +548,7 @@ class ItemViewSet(
         page = self.paginate_queryset(queryset)
         if page is not None:
             items = list(page)
+            models.Item.prefetch_nb_accesses(items)
             if with_ancestors_link_definition:
                 paths_links_mapping = self._compute_ancestors_link_definition(items)
                 context["paths_links_mapping"] = paths_links_mapping
@@ -556,6 +557,7 @@ class ItemViewSet(
             return result
 
         items = list(queryset)
+        models.Item.prefetch_nb_accesses(items)
         if with_ancestors_link_definition:
             paths_links_mapping = self._compute_ancestors_link_definition(items)
             context["paths_links_mapping"] = paths_links_mapping
@@ -565,42 +567,29 @@ class ItemViewSet(
     def _compute_ancestors_link_definition(self, items):
         """
         Compute ancestors link definition for the items collection.
-        On the collection, we look for the deepest items, compute ancestors link definition
-        for each item and aggregate them in order to inject it in the serializer context.
+        All ancestors are loaded in a single query on their paths, then the link
+        definitions are chained by path prefix to be injected in the serializer context.
         """
-        if not items:
+        ancestors_paths = set()
+        for item in items:
+            labels = str(item.path).split(".")
+            ancestors_paths.update(".".join(labels[:depth]) for depth in range(1, len(labels)))
+        if not ancestors_paths:
             return {}
 
-        # Find deepest items and group them by parent path
-        # Items at the same depth in multiple trees (same parent path) share the same ancestors,
-        items_sorted = sorted(items, key=lambda x: len(x.path), reverse=True)
-        items_by_tree = {}  # Group deepest items by parent_path
-        seen_paths = set()  # Track all paths we've processed
-
-        for item in items_sorted:
-            # Check if this item is a parent of any longer path we've already seen
-            # A descendant path would start with the item's path followed by a dot
-            item_path_prefix = f"{item.path}."
-            has_descendants = any(
-                seen_path.startswith(item_path_prefix) for seen_path in seen_paths
-            )
-
-            if not has_descendants:
-                # Get parent path (empty string for root items)
-                parent_path = str(item.path[:-1]) if item.depth > 1 else ""
-                if parent_path not in items_by_tree:
-                    items_by_tree[parent_path] = item
-
-            # Add this item's path to the set for future checks (shorter paths)
-            seen_paths.add(str(item.path))
-
-        # Compute ancestors links paths mapping for one item per tree group and aggregate
+        definitions = {
+            str(path): {"link_reach": link_reach, "link_role": link_role}
+            for path, link_reach, link_role in models.Item.objects.filter(
+                path__in=ancestors_paths, ancestors_deleted_at__isnull=True
+            ).values_list("path", "link_reach", "link_role")
+        }
         paths_links_mapping = {}
-        for item in items_by_tree.values():
-            item_mapping = item.compute_ancestors_links_paths_mapping()
-            paths_links_mapping |= item_mapping
-
-        # Update the serializer context with the aggregated mapping
+        for path in definitions:
+            labels = path.split(".")
+            chain = (".".join(labels[:depth]) for depth in range(1, len(labels) + 1))
+            paths_links_mapping[path] = [
+                definitions[prefix] for prefix in chain if prefix in definitions
+            ]
         return paths_links_mapping
 
     def retrieve(self, request, *args, **kwargs):
@@ -765,11 +754,14 @@ class ItemViewSet(
 
         # Among the results, we may have items that are ancestors/descendants
         # of each other. In this case we want to keep only the highest ancestors.
-        root_paths = utils.filter_root_paths(
-            queryset.order_by("path").values_list("path", flat=True),
-            skip_sorting=True,
-        )
-        queryset = queryset.filter(path__in=root_paths)
+        # Filter them back by id: equality on a list of paths goes through the
+        # GiST index, which is much slower than the primary key for that.
+        ids_by_path = {
+            str(path): item_id
+            for path, item_id in queryset.order_by("path").values_list("path", "id")
+        }
+        root_paths = utils.filter_root_paths(list(ids_by_path), skip_sorting=True)
+        queryset = queryset.filter(id__in=[ids_by_path[path] for path in root_paths])
 
         # Hide restricted roots the user already reaches through a live
         # restriction, so the folder shows up in a single location
@@ -818,7 +810,7 @@ class ItemViewSet(
         # Apply ordering only now that everyting is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
-        return self.get_response_for_queryset(queryset)
+        return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
     @drf.decorators.action(detail=True, methods=["post"], url_path="upload-ended")
     def upload_ended(self, request, *args, **kwargs):
@@ -1205,11 +1197,19 @@ class ItemViewSet(
         # Apply ordering only now that everything is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
-        # Pre-compute number of accesses
+        # Pre-compute number of accesses with a correlated subquery: joining the
+        # accesses would force a GROUP BY on the listing and on its pagination count
         item_nb_accesses = item.nb_accesses
+        direct_accesses = (
+            models.ItemAccess.objects.filter(item=db.OuterRef("pk"))
+            .order_by()
+            .values("item")
+            .annotate(count=db.Count("pk"))
+            .values("count")
+        )
         queryset = queryset.annotate(
             _nb_accesses=db.Value(item_nb_accesses)
-            + Coalesce(db.Count("accesses", distinct=True), 0),
+            + Coalesce(db.Subquery(direct_accesses, output_field=db.IntegerField()), 0),
         )
 
         # Pass ancestors' links paths mapping to the serializer as a context variable
@@ -1434,7 +1434,7 @@ class ItemViewSet(
         queryset = self.queryset
         indexer = get_file_indexer()
 
-        queryset = queryset.select_related("creator")
+        queryset = queryset.select_related("creator").annotate_has_restriction()
         filterset = SearchItemFilter(request.GET, queryset=queryset, request=self.request)
 
         if not filterset.is_valid():
@@ -1524,14 +1524,24 @@ class ItemViewSet(
                 if item_id not in parents and item_id not in missing_parent_ids:
                     missing_parent_ids.add(item_id)
 
-        # Fetch missing ancestors from database
+        # Fetch missing ancestors from database, annotated like the items so that
+        # the serializer does not query per parent for its roles and restriction
         if missing_parent_ids:
+            user = self.request.user
             for parent in (
-                models.Item.objects.annotate_with_numchild()
+                models.Item.objects.select_related("creator")
+                .annotate_has_restriction()
+                .annotate_user_roles(user)
+                .annotate_with_numchild()
                 .filter(id__in=missing_parent_ids)
                 .iterator()
             ):
                 parents[str(parent.id)] = parent
+        models.Item.prefetch_nb_accesses(parents.values())
+        paths_links_mapping = self._compute_ancestors_link_definition(parents.values())
+        for item in parents.values():
+            links = paths_links_mapping.get(str(item.path[:-1]), [])
+            item.ancestors_link_definition = get_equivalent_link_definition(links)
 
         # Set parents for each item
         for item in items:

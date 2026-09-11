@@ -807,8 +807,12 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
 
     def annotate_has_restriction(self):
         """Annotate whether a restriction targets each item."""
+        # A left join on the unique target index costs one probe per returned row,
+        # whereas PostgreSQL turns the equivalent EXISTS into a full scan of the table
         return self.annotate(
-            has_restriction=models.Exists(self.model.objects.filter(target=models.OuterRef("pk")))
+            has_restriction=models.ExpressionWrapper(
+                models.Q(restriction__isnull=False), output_field=models.BooleanField()
+            )
         )
 
     def readable_per_se(self, user):
@@ -1222,6 +1226,17 @@ class Item(TreeModel, BaseModel):
                 cache.set(cache_key, nb_accesses)
 
             return nb_accesses
+
+    @classmethod
+    def prefetch_nb_accesses(cls, items):
+        """Read the cached number of accesses of the items in a single cache round trip."""
+        keys = {
+            item.get_nb_accesses_cache_key(): item
+            for item in items
+            if not hasattr(item, "_nb_accesses")
+        }
+        for key, nb_accesses in cache.get_many(keys).items():
+            keys[key]._nb_accesses = nb_accesses  # pylint: disable=protected-access  # noqa: SLF001
 
     @property
     def numchild(self):
@@ -1806,7 +1821,10 @@ class LinkTrace(BaseModel):
         on_delete=models.CASCADE,
         related_name="link_traces",
     )
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="link_traces")
+    # The unique constraint on (user, item) already covers lookups by user
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="link_traces", db_index=False
+    )
 
     class Meta:
         db_table = "drive_link_trace"
@@ -1832,7 +1850,10 @@ class ItemFavorite(BaseModel):
         on_delete=models.CASCADE,
         related_name="favorited_by_users",
     )
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="favorite_items")
+    # The unique constraint on (user, item) already covers lookups by user
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="favorite_items", db_index=False
+    )
 
     class Meta:
         db_table = "drive_item_favorite"
