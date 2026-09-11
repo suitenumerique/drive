@@ -27,8 +27,7 @@ services:
     ports:
       - "1081:1080"
 
-  minio:
-    user: ${DOCKER_USER:-1000}
+  minio-base:
     image: minio/minio
     environment:
       - MINIO_ROOT_USER=drive
@@ -43,21 +42,39 @@ services:
       retries: 300
     entrypoint: ""
     command: minio server --console-address :9001 /data
+
+  minio-ci:
+    extends: minio-base
+    hostname: minio
+    volumes:
+      - /data/media:/data
+
+  minio:
+    extends: minio-base
+    user: ${DOCKER_USER:-1000}
     volumes:
       - ./data/media:/data
 
-  createbuckets:
+  createbuckets-base:
     image: minio/mc
-    depends_on:
-      minio:
-        condition: service_healthy
-        restart: true
     entrypoint: >
       sh -c "
       /usr/bin/mc alias set drive http://minio:9000 drive password && \
       /usr/bin/mc mb drive/drive-media-storage && \
       /usr/bin/mc version enable drive/drive-media-storage && \
       exit 0;"
+
+  createbuckets-ci:
+    extends: createbuckets-base
+    depends_on:
+      minio-ci:
+        condition: service_healthy
+
+  createbuckets:
+    extends: createbuckets-base
+    depends_on:
+      minio:
+        condition: service_healthy
 
   app-dev:
     build:
