@@ -26,6 +26,7 @@ and this project adheres to
 
 ### Fixed
 
+- 🐛(frontend) resolve region-less browser languages to the locale we ship
 - 🐛(frontend) render the JPEG 2000 layers of scanned PDFs in the preview
 - 🐛(backend) prevent item deletion by a creator whose access was revoked
 - 🐛(backend) resolve the direct parent by exact path after a move
