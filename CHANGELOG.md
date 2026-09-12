@@ -11,6 +11,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(frontend) refresh the Recent view after item mutations
+- 🧑‍💻(project) install frontend dependencies via container in bootstrap
 
 ## [v0.22.0] - 2026-09-09
 
