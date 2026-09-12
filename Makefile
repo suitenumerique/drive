@@ -49,8 +49,10 @@ MAIL_YARN               = $(COMPOSE_RUN) -w /app/src/mail node yarn
 PSQL                    = ./bin/psql
 
 # -- Frontend
-PATH_FRONT              = ./src/frontend
-PATH_FRONT_DRIVE        = $(PATH_FRONT)/apps/drive
+FRONTEND_PATH              = ./src/frontend
+DRIVE_APP_FRONTEND_PATH    = $(FRONTEND_PATH)/apps/drive
+CONSUMER_APP_FRONTEND_PATH = $(FRONTEND_PATH)/apps/sdk-consumer
+DRIVE_SDK_FRONTEND_PATH    = $(FRONTEND_PATH)/packages/sdk
 
 # ==============================================================================
 # RULES
@@ -63,15 +65,47 @@ data/media:
 data/static:
 	@mkdir -p data/static
 
+data/postgresql.local:
+	@mkdir -p data/postgresql.local
+
+data/postgresql.e2e:
+	@mkdir -p data/postgresql.e2e
+
+env.d/development/crowdin.local:
+	@touch env.d/development/crowdin.local
+
+env.d/development/common.local:
+	@touch env.d/development/common.local
+
+env.d/development/postgresql.local:
+	@touch env.d/development/postgresql.local
+
+env.d/development/kc_postgresql.local:
+	@touch env.d/development/kc_postgresql.local
+
+src/frontend/node_modules:
+	@mkdir -p src/frontend/node_modules
+
+src/frontend/apps/drive/node_modules:
+	@mkdir -p src/frontend/apps/drive/node_modules
+
+src/frontend/apps/drive/out/index.html:
+	@mkdir -p src/frontend/apps/drive/out/
+	@touch src/frontend/apps/drive/out/index.html
+
 # -- Project
 
-create-env-local-files: ## create env.local files in env.d/development
-create-env-local-files: 
-	@touch env.d/development/crowdin.local
-	@touch env.d/development/common.local
-	@touch env.d/development/postgresql.local
-	@touch env.d/development/kc_postgresql.local
-.PHONY: create-env-local-files
+create-dev-local-files: ## create local files and directories for development
+create-dev-local-files: \
+  data/postgresql.local \
+  data/postgresql.e2e \
+  src/frontend/node_modules \
+  src/frontend/apps/drive/node_modules \
+  env.d/development/crowdin.local \
+  env.d/development/common.local \
+  env.d/development/postgresql.local \
+  env.d/development/kc_postgresql.local
+.PHONY: create-dev-local-files
 
 create-docker-network: ## create the docker network if it doesn't exist
 	@docker network create lasuite-network || true
@@ -81,7 +115,7 @@ bootstrap: ## Prepare Docker images for the project
 bootstrap: \
 	data/media \
 	data/static \
-	create-env-local-files \
+	create-dev-local-files \
 	build \
 	create-docker-network \
 	migrate \
@@ -92,20 +126,20 @@ bootstrap: \
 .PHONY: bootstrap
 
 # -- Docker/compose
-build: cache ?= --no-cache
 build: ## build the project containers
-	@$(MAKE) build-backend cache=$(cache)
-	@$(MAKE) build-frontend cache=$(cache)
+build: \
+  build-backend \
+  build-frontend
 .PHONY: build
 
 build-backend: cache ?=
 build-backend: ## build the app-dev container
-	@$(COMPOSE) build app-dev $(cache)
+	$(COMPOSE) build app-dev $(cache)
 .PHONY: build-backend
 
 build-frontend: cache ?=
 build-frontend: ## build the frontend container
-	@$(COMPOSE) build frontend-dev $(cache)
+	$(COMPOSE) build frontend-dev $(cache)
 .PHONY: build-frontend-development
 
 down: ## stop and remove containers, networks, images, and volumes
@@ -118,7 +152,6 @@ logs: ## display app-dev logs (follow mode)
 .PHONY: logs
 
 run-backend: ## start the backend container
-	@$(COMPOSE) up --force-recreate -d celery-dev
 	@$(COMPOSE) up --force-recreate -d nginx
 	@$(MAKE) configure-wopi
 .PHONY: run-backend
@@ -127,26 +160,37 @@ bootstrap-e2e: ## bootstrap the backend container for e2e tests, without fronten
 bootstrap-e2e: \
 	data/media \
 	data/static \
-	create-env-local-files \
+	create-dev-local-files \
 	build-backend \
 	create-docker-network \
 	back-i18n-compile \
-	run-backend-e2e
+	migrate-e2e \
+	frontend-development-install
 .PHONY: bootstrap-e2e
 
 clear-db-e2e: ## quickly clears the database for e2e tests, used in the e2e tests
 	POSTGRES_DB=drive_e2e $(PSQL) < bin/clear_records.sql
 .PHONY: clear-db-e2e
 
+is-e2e-backend-running: ## check if the backend is running (with configured e2e database)
+	@CONTAINER_ID=$$($(COMPOSE) ps app-dev --filter status=running -q | grep -v "🐳"); \
+	docker inspect $$CONTAINER_ID --format "{{ range .Config.Env }}{{ println . }}{{ end }}" | \
+		grep DB_NAME=drive_e2e || \
+		(echo -e "e2e backend is not running. You should run the following command(s) first:\nmake bootstrap-e2e && make run-backend-e2e" && false)
+.PHONY: is-e2e-backend-running
+
+migrate-e2e: ## run backend migrations for the e2e database
+	$(COMPOSE) stop postgresql app-dev
+	ENV_OVERRIDE=e2e $(MAKE) migrate
+.PHONY: migrate-e2e
+
 run-backend-e2e: ## start the backend container for e2e tests, always remove the postgresql.e2e volume first
-	@$(MAKE) stop
-	rm -rf data/postgresql.e2e
-	@ENV_OVERRIDE=e2e $(MAKE) run-backend
-	@ENV_OVERRIDE=e2e $(MAKE) migrate
+	$(COMPOSE) stop postgresql app-dev
+	ENV_OVERRIDE=e2e $(MAKE) run-backend
 .PHONY: run-backend-e2e
 
 run-tests-e2e: ## run the e2e tests, example: make run-tests-e2e -- --project chromium --headed
-	@$(MAKE) run-backend-e2e	
+run-tests-e2e: is-e2e-backend-running
 	@args="$(filter-out $@,$(MAKECMDGOALS))" && \
 	cd src/frontend/apps/e2e && yarn test $${args:-${1}}
 .PHONY: run-tests-e2e
@@ -157,9 +201,8 @@ backend-exec-command: ## execute a command in the backend container
 .PHONY: backend-exec-command
 
 run: ## start the development server and frontend development
-run: 
-	@$(MAKE) run-backend
-	@$(COMPOSE) up --force-recreate -d frontend-dev
+run: run-backend
+	$(COMPOSE) up --force-recreate -d frontend-dev
 .PHONY: run
 
 status: ## an alias for "docker compose ps"
@@ -173,12 +216,12 @@ stop: ## stop the development server using Docker
 # -- Backend
 
 demo: ## flush db then create a demo for load testing purpose
-	@$(MAKE) resetdb
+demo: resetdb
 	@$(MANAGE) create_demo
 .PHONY: demo
 
 reconciliation-demo: ## create demo data and a CSV to test user reconciliation via the admin
-	@$(MAKE) resetdb
+reconciliation-demo: resetdb
 	@$(MANAGE) create_reconciliation_demo
 .PHONY: reconciliation-demo
 
@@ -230,14 +273,14 @@ test-back-parallel: ## run all back-end tests in parallel
 
 makemigrations:  ## run django makemigrations for the drive project.
 	@echo "$(BOLD)Running makemigrations$(RESET)"
-	@$(COMPOSE) up -d postgresql
-	@$(MANAGE) makemigrations
+	$(COMPOSE) up -d postgresql
+	$(MANAGE) makemigrations
 .PHONY: makemigrations
 
 migrate:  ## run django migrations for the drive project.
 	@echo "$(BOLD)Running migrations$(RESET)"
-	@$(COMPOSE) up -d postgresql
-	@$(MANAGE) migrate
+	$(COMPOSE) up -d postgresql
+	$(MANAGE) migrate
 .PHONY: migrate
 
 superuser: ## Create an admin superuser with password "admin"
@@ -264,7 +307,7 @@ shell: ## connect to django shell
 # -- Database
 
 dbshell: ## connect to database shell
-	docker compose exec app-dev python manage.py dbshell
+	$(MANAGE_EXEC) dbshell
 .PHONY: dbshell
 
 resetdb: FLUSH_ARGS ?=
@@ -348,20 +391,28 @@ help:
 
 # Front
 frontend-development-install: ## install the frontend locally
-	cd $(PATH_FRONT_DRIVE) && yarn
+	cd $(DRIVE_APP_FRONTEND_PATH) && yarn
 .PHONY: frontend-development-install
 
 frontend-lint: ## run the frontend linter
-	cd $(PATH_FRONT) && yarn lint
+	cd $(FRONTEND_PATH) && yarn lint
 .PHONY: frontend-lint
 
 run-frontend-development: ## Run the frontend in development mode
 	@$(COMPOSE) stop frontend-dev
-	cd $(PATH_FRONT_DRIVE) && yarn dev
+	cd $(DRIVE_APP_FRONTEND_PATH) && yarn dev
 .PHONY: run-frontend-development
 
+run-frontend-sdk-development: ## Run the frontend SDK consumer in development mode
+	cd $(CONSUMER_APP_FRONTEND_PATH) && yarn dev
+.PHONY: run-frontend-development
+
+build-frontend-sdk: ## Build drive SDK package
+	cd $(DRIVE_SDK_FRONTEND_PATH) && yarn build
+.PHONY: build-frontend-sdk
+
 frontend-i18n-extract: ## Extract the frontend translation inside a json to be used for crowdin
-	cd $(PATH_FRONT) && yarn i18n:extract
+	cd $(FRONTEND_PATH) && yarn i18n:extract
 .PHONY: frontend-i18n-extract
 
 frontend-i18n-generate: ## Generate the frontend json files used for crowdin
@@ -371,8 +422,13 @@ frontend-i18n-generate: \
 .PHONY: frontend-i18n-generate
 
 frontend-i18n-compile: ## Format the crowin json files used deploy to the apps
-	cd $(PATH_FRONT) && yarn i18n:deploy
+	cd $(FRONTEND_PATH) && yarn i18n:deploy
 .PHONY: frontend-i18n-compile
+
+ci-serve-frontend-build: ## service static build (used in the CI)
+ci-serve-frontend-build: src/frontend/apps/drive/out/index.html
+	$(COMPOSE) up -d --wait static
+.PHONY: ci-serve-frontend-build
 
 # -- K8S
 build-k8s-cluster: ## build the kubernetes cluster using kind
