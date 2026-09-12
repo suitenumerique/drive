@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Fixed
 
+- 🐛(docker) pull the minio images from quay.io
 - 🐛(frontend) refresh the Recent view after item mutations
 
 ## [v0.22.0] - 2026-09-09
