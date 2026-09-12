@@ -29,7 +29,7 @@ services:
 
   minio:
     user: ${DOCKER_USER:-1000}
-    image: minio/minio
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     environment:
       - MINIO_ROOT_USER=drive
       - MINIO_ROOT_PASSWORD=password
@@ -47,7 +47,7 @@ services:
       - ./data/media:/data
 
   createbuckets:
-    image: minio/mc
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
     depends_on:
       minio:
         condition: service_healthy
