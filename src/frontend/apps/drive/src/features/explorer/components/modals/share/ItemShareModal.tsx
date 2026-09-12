@@ -40,6 +40,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/features/auth/Auth";
 import { DragEventBarrier } from "@/features/ui/components/drag-event-barrier/DragEventBarrier";
 import posthog from "posthog-js";
+import { AccessRequestsSection } from "./AccessRequestsSection";
 
 type WorkspaceShareModalProps = {
   isOpen: boolean;
@@ -533,6 +534,10 @@ export const ItemShareModal = ({
         onImportFileChange={() => setImportErrorMessage(undefined)}
       >
         {!item?.abilities.accesses_manage && <HorizontalSeparator />}
+        <AccessRequestsSection
+          itemId={itemId}
+          canManageAccesses={item?.abilities.accesses_manage ?? false}
+        />
       </ShareModal>
     </DragEventBarrier>
   );

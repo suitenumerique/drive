@@ -101,6 +101,38 @@ class InvitationPermission(CreateWithPriviliegedRolesMixin, IsAuthenticated):
         return abilities.get(view.action, False)
 
 
+class AccessRequestPermission(IsAuthenticated):
+    """A permission class for the ItemAccessRequestViewSet.
+
+    Creating an access request is open to any authenticated user (a user who does not yet
+    have access can ask for it). Listing or acting on requests requires privileged roles
+    on the item (owners/admins) since they are the ones who manage them.
+    """
+
+    resources = "access requests"
+
+    def has_permission(self, request, view):
+        """Check the current user is allowed to perform the action."""
+        if super().has_permission(request, view) is False:
+            return False
+
+        if view.action == "create":
+            return True
+
+        role = getattr(view, view.resource_field_name).get_role(request.user)
+        if role not in PRIVILEGED_ROLES:
+            raise exceptions.PermissionDenied(
+                f"You are not allowed to manage {self.resources} for this resource."
+            )
+
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        """Check permission for a given object."""
+        abilities = obj.get_abilities(request.user)
+        return abilities.get(view.action, False)
+
+
 class ItemAccessPermission(CreateWithPriviliegedRolesMixin, IsAuthenticated):
     """Permission class for the ItemAccessViewSet."""
 
