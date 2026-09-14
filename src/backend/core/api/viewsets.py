@@ -1403,11 +1403,15 @@ class ItemViewSet(
         for item in items:
             links = paths_links_mapping.get(str(item.path[:-1]), [])
             item.ancestors_link_definition = models.get_equivalent_link_definition(links)
-        # Deleted items are only reached through explicit accesses, never through a link
+        # A link never grants access to deleted items, an explicit role does
         return [
             item
             for item in items
-            if item.ancestors_deleted_at or item.get_abilities(user)["retrieve"]
+            if (
+                bool(item.get_role(user))
+                if item.ancestors_deleted_at
+                else item.get_abilities(user)["retrieve"]
+            )
         ]
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments

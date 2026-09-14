@@ -968,6 +968,38 @@ def test_api_items_search_unlocked_folder_hides_locked_descendant(settings):
     }
 
 
+def test_api_items_search_unlocked_folder_hides_deleted_descendant(settings):
+    """Unlocking a folder should not expose its deleted items."""
+    settings.FEATURES_INDEXED_SEARCH = False
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        title="Shared folder", type=models.ItemTypeChoices.FOLDER, link_reach="public"
+    )
+    folder.set_link_password("folder-password")
+    folder.save()
+    deleted_child = factories.ItemFactory(
+        title="Shared deleted child",
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        link_reach=None,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    deleted_child.soft_delete()
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        f"/api/v1.0/items/{folder.id}/unlock/",
+        {"password": "folder-password"},
+        format="json",
+    )
+    assert response.status_code == 200
+
+    response = client.get("/api/v1.0/items/search/", {"title": "Shared", "scope": "deleted"})
+    assert response.status_code == 200
+    assert response.json()["results"] == []
+
+
 def test_api_items_search_locked_link_items_hidden():
     """Items behind a link password the user did not unlock should stay hidden."""
     user = factories.UserFactory()
