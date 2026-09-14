@@ -1379,8 +1379,8 @@ class Item(TreeModel, BaseModel):
         )
 
         with override(language):
-            msg_html = render_to_string("mail/html/invitation.html", context)
-            msg_plain = render_to_string("mail/text/invitation.txt", context)
+            msg_html = render_to_string("mail/html/template.html", context)
+            msg_plain = render_to_string("mail/text/template.txt", context)
             subject = str(subject)  # Force translation
 
             try:
@@ -2141,3 +2141,84 @@ class Invitation(BaseModel):
             "partial_update": is_owner_or_admin,
             "retrieve": is_owner_or_admin,
         }
+
+
+class ItemAskForAccess(BaseModel):
+    """Relation model to request access to an item."""
+
+    item = models.ForeignKey(
+        Item,
+        on_delete=models.CASCADE,
+        related_name="ask_for_accesses",
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="ask_for_accesses",
+    )
+    role = models.CharField(max_length=20, choices=RoleChoices.choices, default=RoleChoices.READER)
+
+    class Meta:
+        db_table = "drive_item_ask_for_access"
+        verbose_name = _("Item ask for access")
+        verbose_name_plural = _("Item ask for accesses")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "item"],
+                name="unique_item_ask_for_access_user",
+                violation_error_message=_("This user has already asked for access to this item."),
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user!s} asked for access to item {self.item!s}"
+
+    def get_abilities(self, user):
+        """Compute and return abilities for a given user."""
+        user_role = self.item.get_role(user)
+        is_privileged = user_role in PRIVILEGED_ROLES
+        set_role_to = [
+            role
+            for role in RoleChoices.values
+            if RoleChoices.get_priority(role) <= RoleChoices.get_priority(user_role)
+        ]
+        return {
+            "destroy": is_privileged,
+            "accept": is_privileged,
+            "retrieve": is_privileged,
+            "set_role_to": set_role_to,
+        }
+
+    def accept(self, role=None):
+        """Grant access to the item and delete the request."""
+        ItemAccess.objects.update_or_create(
+            item=self.item,
+            user=self.user,
+            defaults={"role": role or self.role},
+            create_defaults={"role": role or self.role},
+        )
+        self.delete()
+
+    def send_ask_for_access_email(self, recipient_email, language=None):
+        """Notify a single recipient (admin/owner) that a user requested access."""
+        language = language or get_language()
+        requester = self.user
+        requester_name = requester.full_name or requester.email
+        requester_name_email = (
+            f"{requester.full_name:s} ({requester.email})"
+            if requester.full_name
+            else requester.email
+        )
+
+        with override(language):
+            context = {
+                "title": _("{name} is asking for access to an item").format(name=requester_name),
+                "message": _("{name} is requesting access to the following item:").format(
+                    name=requester_name_email
+                ),
+            }
+            subject = _("{name} is asking for access to: {title}").format(
+                name=requester_name, title=self.item.title
+            )
+
+        self.item.send_email(subject, [recipient_email], context, language)
