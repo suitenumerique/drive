@@ -1532,6 +1532,9 @@ class ItemViewSet(
             path_list |= db.Q(path__descendants=top_level_item)
 
         queryset = queryset.filter(path_list)
+        # Link passwords are the only restriction the scope cannot express, keep the
+        # database pagination when the scope holds none
+        scope_has_link_password = queryset.filter(link_password__isnull=False).exists()
 
         # use indexed search ONLY when the feature flag is enabled
         if indexer and settings.FEATURES_INDEXED_SEARCH is True:
@@ -1548,9 +1551,10 @@ class ItemViewSet(
         queryset = filterset.filter_queryset(queryset)
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
-        items = self._filter_retrievable(list(queryset), user)
+        if scope_has_link_password:
+            queryset = self._filter_retrievable(list(queryset), user)
 
-        page = self.paginate_queryset(items)
+        page = self.paginate_queryset(queryset)
 
         if page is not None:
             items = self._compute_parents(page)
@@ -1558,7 +1562,7 @@ class ItemViewSet(
             result = self.get_paginated_response(serializer.data)
             return result
 
-        items = self._compute_parents(items)
+        items = self._compute_parents(queryset)
         serializer = self.get_serializer(items, many=True)
         return drf.response.Response(serializer.data)
 
