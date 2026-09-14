@@ -139,7 +139,7 @@ jobs:
         id: mail-templates
         with:
           path: "src/backend/core/templates/mail"
-          key: mail-templates-${{ hashFiles('src/mail/mjml') }}
+          key: mail-templates-${{ hashFiles('src/mail/mjml/**', 'src/mail/yarn.lock', 'src/mail/bin/**') }}
 
       - name: Start and configure MinIO
         working-directory: .
