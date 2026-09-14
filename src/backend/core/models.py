@@ -3,7 +3,6 @@ Declare and configure the models for the drive core application
 """
 # pylint: disable=too-many-lines
 
-import hashlib
 import smtplib
 import uuid
 from datetime import timedelta
@@ -14,7 +13,7 @@ from os.path import splitext
 from django.conf import settings
 from django.contrib.auth import models as auth_models
 from django.contrib.auth.base_user import AbstractBaseUser
-from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth.hashers import check_password, identify_hasher, make_password
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GistIndex
 from django.contrib.sites.models import Site
@@ -804,7 +803,9 @@ class AnnotateUserRoleQuerySetMixin:
 
 def link_unlock_key(item_id, link_password):
     """Return the key remembering an unlock, bound to the password it was made with."""
-    return f"{item_id}:{hashlib.sha256(link_password.encode()).hexdigest()[:12]}"
+    # The salt is regenerated with every password, no need to hash anything
+    salt = identify_hasher(link_password).decode(link_password)["salt"]
+    return f"{item_id}:{salt}"
 
 
 def get_equivalent_link_definition(links):
@@ -859,11 +860,13 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
                 | (~models.Q(link_reach=LinkReachChoices.RESTRICTED) & link_open)
             )
 
-        unlocked_ids = {key.split(":")[0] for key in getattr(user, "unlocked_link_items", ())}
-        link_open = link_not_expired & (
-            models.Q(link_password__isnull=True) | models.Q(id__in=unlocked_ids)
+        link_open = models.Q(link_password__isnull=True)
+        for key in getattr(user, "unlocked_link_items", ()):
+            item_id, salt = key.split(":", 1)
+            link_open |= models.Q(id=item_id, link_password__contains=salt)
+        return self.filter(
+            models.Q(link_reach=LinkReachChoices.PUBLIC) & link_not_expired & link_open
         )
-        return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC) & link_open)
 
     def filter_non_deleted(self, **kwargs):
         """Filter the non deleted items"""

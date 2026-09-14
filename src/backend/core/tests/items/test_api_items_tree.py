@@ -921,6 +921,24 @@ def test_api_items_tree_link_password_locked(target_is_child):
     assert response.json()["id"] == str(root.id)
 
 
+def test_api_items_tree_link_password_changed():
+    """An unlock made with a former password should not open the tree anymore."""
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, link_reach="public")
+    root.set_link_password("s3cret")
+    root.save()
+    client = APIClient()
+    response = client.post(
+        f"/api/v1.0/items/{root.id}/unlock/", {"password": "s3cret"}, format="json"
+    )
+    assert response.status_code == 200
+    assert client.get(f"/api/v1.0/items/{root.id}/tree/").status_code == 200
+
+    root.set_link_password("changed")
+    root.save()
+
+    assert client.get(f"/api/v1.0/items/{root.id}/tree/").status_code == 401
+
+
 def test_api_items_tree_link_expired_ancestor():
     """An ancestor whose link has expired should not be the root of the returned tree."""
     user = factories.UserFactory()
