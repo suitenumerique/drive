@@ -39,15 +39,20 @@ AWS_S3_ENDPOINT_URL=http://minio:9000
 MEDIA_BASE_URL=http://localhost:8083
 
 # OIDC
-OIDC_OP_JWKS_ENDPOINT=http://nginx:8083/realms/drive/protocol/openid-connect/certs
-OIDC_OP_AUTHORIZATION_ENDPOINT=http://localhost:8083/realms/drive/protocol/openid-connect/auth
-OIDC_OP_TOKEN_ENDPOINT=http://nginx:8083/realms/drive/protocol/openid-connect/token
-OIDC_OP_USER_ENDPOINT=http://nginx:8083/realms/drive/protocol/openid-connect/userinfo
+# The provider is Dex (docker/auth/dex.yaml), served by nginx under /dex
+OIDC_OP_JWKS_ENDPOINT=http://nginx:8083/dex/keys
+OIDC_OP_AUTHORIZATION_ENDPOINT=http://localhost:8083/dex/auth
+OIDC_OP_TOKEN_ENDPOINT=http://nginx:8083/dex/token
+OIDC_OP_USER_ENDPOINT=http://nginx:8083/dex/userinfo
 
 OIDC_RP_CLIENT_ID=drive
 OIDC_RP_CLIENT_SECRET=ThisIsAnExampleKeyForDevPurposeOnly
 OIDC_RP_SIGN_ALGO=RS256
-OIDC_RP_SCOPES="openid email"
+# "profile" gives the "name" and "preferred_username" claims
+OIDC_RP_SCOPES="openid email profile"
+# Dex has no first_name/last_name claims: build names from the standard ones
+OIDC_USERINFO_FULLNAME_FIELDS=name
+OIDC_USERINFO_SHORTNAME_FIELD=preferred_username
 
 LOGIN_REDIRECT_URL=http://localhost:3000
 LOGIN_REDIRECT_URL_FAILURE=http://localhost:3000
@@ -57,8 +62,8 @@ OIDC_REDIRECT_ALLOWED_HOSTS="localhost:8083,localhost:3000"
 OIDC_AUTH_REQUEST_EXTRA_PARAMS={"acr_values": "eidas1"}
 
 # Resource Server Backend
-OIDC_OP_URL=http://localhost:8083/realms/drive
-OIDC_OP_INTROSPECTION_ENDPOINT = http://nginx:8083/realms/drive/protocol/openid-connect/token/introspect
+OIDC_OP_URL=http://localhost:8083/dex
+OIDC_OP_INTROSPECTION_ENDPOINT = http://nginx:8083/dex/token/introspect
 OIDC_RESOURCE_SERVER_ENABLED=False
 OIDC_RS_CLIENT_ID=drive
 OIDC_RS_CLIENT_SECRET=ThisIsAnExampleKeyForDevPurposeOnly

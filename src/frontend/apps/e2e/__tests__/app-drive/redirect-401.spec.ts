@@ -1,5 +1,5 @@
 import test, { expect } from "@playwright/test";
-import { clearDb, keyCloakSignIn, login } from "./utils-common";
+import { clearDb, oidcSignIn, login } from "./utils-common";
 import { createFolderInCurrentFolder } from "./utils-item";
 import { navigateToFolder } from "./utils-navigate";
 
@@ -9,7 +9,7 @@ test("Redirects to /401 when session cookies are cleared then re-login and get r
 }) => {
   await clearDb();
   await page.goto("/");
-  await keyCloakSignIn(page, "drive", "drive");
+  await oidcSignIn(page, "drive@drive.world", "drive");
 
   await createFolderInCurrentFolder(page, "Secret folder");
   await navigateToFolder(page, "Secret folder", ["My files", "Secret folder"]);
@@ -29,7 +29,7 @@ test("Redirects to /401 when session cookies are cleared then re-login and get r
     .getByRole("button", { name: "Login" })
     .click();
 
-  await keyCloakSignIn(page, "drive", "drive", false);
+  await oidcSignIn(page, "drive@drive.world", "drive", false);
 
   await expect(page).toHaveURL(folderUrl, { timeout: 10000 });
 });

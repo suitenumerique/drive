@@ -10,49 +10,30 @@ ipconfig getifaddr en0
 
 This returns something like `192.168.1.91`. Replace this IP in all steps below with your own.
 
-## 2. Update Keycloak realm (redirect URIs)
+## 2. Update the Dex client (redirect URIs) and issuer
 
-In `docker/auth/realm.json`, find the `drive` client's `redirectUris` and `webOrigins` arrays and add your IP:
-
-```json
-"redirectUris": [
-  "http://localhost:8070/*",
-  "http://localhost:8071/*",
-  "http://localhost:3200/*",
-  "http://localhost:8088/*",
-  "http://localhost:3000/*",
-  "http://<YOUR_IP>:8071/*"
-],
-"webOrigins": [
-  "http://localhost:3200",
-  "http://localhost:8088",
-  "http://localhost:8070",
-  "http://localhost:3000",
-  "http://<YOUR_IP>:3000"
-],
-```
-
-**Important**: Keycloak imports `realm.json` only on first startup. If the database already exists, you must either:
-- Delete the Keycloak database and recreate both services:
-  ```bash
-  docker compose down -v kc_postgresql keycloak
-  docker compose up -d kc_postgresql keycloak
-  ```
-- Or add the URIs manually via the Keycloak admin console at `http://<YOUR_IP>:8083/admin/` (admin / admin) → **Clients → drive → Valid redirect URIs**
-
-## 3. Update Keycloak hostname
-
-In `compose.yaml`, update the Keycloak `--hostname` flag:
+Dex only accepts exact redirect URIs. In `docker/auth/dex.yaml`, add the backend
+callback for your IP to the `drive` client, and update the issuer so the URLs
+Dex advertises are reachable from your device:
 
 ```yaml
-keycloak:
-  command:
-    - start-dev
-    - --features=preview
-    - --import-realm
-    - --proxy=edge
-    - --hostname=http://<YOUR_IP>:8083   # was http://localhost:8083
-    - --hostname-strict=false
+issuer: http://<YOUR_IP>:8083/dex   # was http://localhost:8083/dex
+
+staticClients:
+  - id: drive
+    redirectURIs:
+      - http://localhost:8071/api/v1.0/callback/
+      - http://<YOUR_IP>:8071/api/v1.0/callback/
+```
+
+## 3. Update the nginx silent-login redirect
+
+In `docker/files/development/etc/nginx/conf.d/default.conf`, the `location = /dex/auth`
+block redirects `prompt=none` requests back to the backend callback. Point it to
+your IP as well:
+
+```nginx
+return 302 http://<YOUR_IP>:8071/api/v1.0/callback/?error=login_required&state=$arg_state;
 ```
 
 ## 4. Update the frontend API origin
@@ -78,8 +59,8 @@ NEXT_PUBLIC_API_ORIGIN=http://<YOUR_IP>:8071
 In `env.d/development/common.local`, add or update:
 
 ```env
-OIDC_OP_URL=http://<YOUR_IP>:8083/realms/drive
-OIDC_OP_AUTHORIZATION_ENDPOINT=http://<YOUR_IP>:8083/realms/drive/protocol/openid-connect/auth
+OIDC_OP_URL=http://<YOUR_IP>:8083/dex
+OIDC_OP_AUTHORIZATION_ENDPOINT=http://<YOUR_IP>:8083/dex/auth
 LOGIN_REDIRECT_URL=http://<YOUR_IP>:3000
 LOGIN_REDIRECT_URL_FAILURE=http://<YOUR_IP>:3000
 LOGOUT_REDIRECT_URL=http://<YOUR_IP>:3000
@@ -88,7 +69,7 @@ CSRF_TRUSTED_ORIGINS=http://<YOUR_IP>:3000,http://<YOUR_IP>:8071
 MEDIA_BASE_URL=http://<YOUR_IP>:8083
 ```
 
-**Note**: The token, userinfo, and JWKS endpoints (`OIDC_OP_TOKEN_ENDPOINT`, `OIDC_OP_USER_ENDPOINT`, `OIDC_OP_JWKS_ENDPOINT`) are called server-side (backend container → Keycloak container). Since they communicate over the Docker network, they don't need to be updated.
+**Note**: The token, userinfo, and JWKS endpoints (`OIDC_OP_TOKEN_ENDPOINT`, `OIDC_OP_USER_ENDPOINT`, `OIDC_OP_JWKS_ENDPOINT`) are called server-side (backend container → Dex container). Since they communicate over the Docker network, they don't need to be updated.
 
 ## 6. Restart the services
 
@@ -97,13 +78,13 @@ docker compose down
 docker compose up -d
 ```
 
-Wait for Keycloak to fully start (it can take a minute). You can check with:
+Dex starts in a few seconds. You can check with:
 
 ```bash
-docker compose logs -f keycloak
+docker compose logs -f dex
 ```
 
-Look for `Listening on: http://0.0.0.0:8080` in the logs.
+Look for `listening on 0.0.0.0:5556` in the logs.
 
 ## 7. Access from your device
 
@@ -115,4 +96,4 @@ http://<YOUR_IP>:3000
 
 ## Reverting
 
-To go back to localhost-only, revert the changes in `compose.yaml`, `docker/auth/realm.json`, `src/frontend/apps/drive/.env.development`, and `env.d/development/common.local`, then restart the services.
+To go back to localhost-only, revert the changes in `compose.yaml`, `docker/auth/dex.yaml`, the nginx dev config, `src/frontend/apps/drive/.env.development`, and `env.d/development/common.local`, then restart the services.

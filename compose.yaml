@@ -164,7 +164,7 @@ services:
     volumes:
       - ./docker/files/development/etc/nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
-      keycloak:
+      dex:
         condition: service_healthy
         restart: true
       app-dev:
@@ -219,54 +219,21 @@ services:
     volumes:
       - ".:/app"
 
-  kc_postgresql:
-    image: postgres:14.3
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
-      interval: 1s
-      timeout: 2s
-      retries: 300
-    ports:
-      - "6433:5432"
-    env_file:
-      - env.d/development/kc_postgresql
-      - env.d/development/kc_postgresql.local
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.3.2
+  dex:
+    # Lightweight OpenID Connect provider used in place of Keycloak for
+    # development (in-memory storage, static users/clients, no database).
+    # Configuration and dev users live in docker/auth/dex.yaml.
+    image: ghcr.io/dexidp/dex:v2.45.1
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
     volumes:
-      - ./docker/auth/realm.json:/opt/keycloak/data/import/realm.json
-    command:
-      - start-dev
-      - --features=preview
-      - --import-realm
-      - --proxy=edge
-      - --hostname=http://localhost:8083
-      - --hostname-strict=false
-      - --health-enabled=true
-      - --metrics-enabled=true
+      - ./docker/auth/dex.yaml:/etc/dex/config.yaml:ro
     healthcheck:
-      test: ['CMD-SHELL', 'exec 3<>/dev/tcp/localhost/9000; echo -e "GET /health/live HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3; grep "HTTP/1.1 200 OK" <&3']
-      start_period: 5s
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:5556/dex/healthz"]
       interval: 1s
       timeout: 2s
-      retries: 300
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: postgres
-      KC_DB_URL_HOST: kc_postgresql
-      KC_DB_URL_DATABASE: keycloak
-      KC_DB_PASSWORD: pass
-      KC_DB_USERNAME: drive
-      KC_DB_SCHEMA: public
-      PROXY_ADDRESS_FORWARDING: "true"
+      retries: 60
     ports:
-      - "8080:8080"
-    depends_on:
-      kc_postgresql:
-        condition: service_healthy
-        restart: true
+      - "5556:5556"
     networks:
       - lasuite
       - default

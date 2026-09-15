@@ -10,7 +10,7 @@ from django.core.management.base import BaseCommand, CommandError
 from core import factories, models
 
 DEFAULT_OUTPUT = "demo/reconciliation_demo.csv"
-# Active user = the demo dev user, which exists in the Keycloak realm so it can
+# Active user = the demo dev user, which is declared in the dev OIDC provider (Dex) so it can
 # be used to log in on the frontend and check the merged content.
 ACTIVE_EMAIL = "drive@drive.world"
 INACTIVE_EMAIL = "inactive.recon@example.com"
@@ -140,7 +140,7 @@ def create_reconciliation_demo(stdout, output_path, checked):
         "  3. Admin > Core > User reconciliations > select rows > "
         "'Process selected user reconciliations'."
     )
-    stdout.write(f"\nLog in on the frontend as {ACTIVE_EMAIL} (via Keycloak):")
+    stdout.write(f"\nLog in on the frontend as {ACTIVE_EMAIL} (via Dex, password: drive):")
     stdout.write("  - before: 'Déjà visible (compte actif)' and 'Rôle à fusionner' (reader).")
     stdout.write(
         "  - after:  the 'À transférer' folder and its files appear, and the role "
