@@ -30,9 +30,15 @@ SHELL := /usr/bin/env bash
 
 # -- Docker
 # Get the current user ID to use for docker run and docker exec commands
+ifneq ($(findstring podman,$(DOCKER_HOST)),)
+DOCKER_UID          = 0
+DOCKER_GID          = 0
+else
 DOCKER_UID              = $(shell id -u)
 DOCKER_GID              = $(shell id -g)
-DOCKER_USER             = $(DOCKER_UID):$(DOCKER_GID)
+DOCKER_GID              = $(shell id -g)
+endif
+DOCKER_USER        ?= $(DOCKER_UID):$(DOCKER_GID)
 COMPOSE                 = DOCKER_USER=$(DOCKER_USER) docker compose
 COMPOSE_EXEC            = $(COMPOSE) exec
 COMPOSE_EXEC_APP        = $(COMPOSE_EXEC) app-dev
