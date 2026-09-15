@@ -1,5 +1,5 @@
 import test, { expect, Page, Route } from "@playwright/test";
-import { keyCloakSignIn } from "./utils-common";
+import { oidcSignIn } from "./utils-common";
 
 const SILENT_LOGIN_RETRY_KEY = "silent-login-retry";
 
@@ -38,20 +38,20 @@ const clearSilentLoginRetryKey = async (page: Page) => {
 };
 
 test.describe("Silent Login", () => {
-  test("Silent login succeeds with active Keycloak session", async ({
+  test("Silent login succeeds with active OIDC provider session", async ({
     page,
     context,
   }) => {
-    // Step 1: First login interactively via Keycloak
+    // Step 1: First login interactively via the OIDC provider (Dex)
     await page.goto("/");
-    await keyCloakSignIn(page, "drive", "drive");
+    await oidcSignIn(page, "drive@drive.world", "drive");
 
     // Verify user is logged in
     await expect(
       page.getByRole("button", { name: "User menu" })
     ).toBeVisible({ timeout: 10000 });
 
-    // Step 2: Clear only the Django session cookie (keep Keycloak session)
+    // Step 2: Clear only the Django session cookie
     const cookies = await context.cookies();
     const djangoSessionCookie = cookies.find(
       (cookie) => cookie.name === "drive_sessionid"
@@ -81,11 +81,11 @@ test.describe("Silent Login", () => {
     await page.goto("/");
 
     // Step 6: Wait for the login page to be shown.
-    // IMPORTANT: Ideally what we should test is that the user is automatically logged in, 
-    // but we don't have a way to do that yet with the current setup as its seems that
-    // Keycloak always returns a "login_failed" error when not running behind https.
-    // So instead we just test that the redirect to the authenticate endpoint occurs with
-    // silent=true.
+    // IMPORTANT: Ideally what we should test is that the user is automatically logged in,
+    // but the dev OIDC provider (Dex) keeps no browser session: a prompt=none request is
+    // answered with "login_required" (see the nginx dev config), exactly as if the session
+    // had expired. So instead we just test that the redirect to the authenticate endpoint
+    // occurs with silent=true.
     await expect(
       page.getByRole("button", { name: "Sign in" }).first()
     ).toBeVisible({ timeout: 10000 });
@@ -94,7 +94,7 @@ test.describe("Silent Login", () => {
     expect(silentLoginRequestMade).toBe(true);
   });
 
-  test("Silent login fails gracefully without Keycloak session", async ({
+  test("Silent login fails gracefully without OIDC provider session", async ({
     page,
     context,
   }) => {
@@ -167,9 +167,9 @@ test.describe("Silent Login", () => {
   test("No silent login redirect when user is already logged in", async ({
     page,
   }) => {
-    // Step 1: Login interactively via Keycloak
+    // Step 1: Login interactively via the OIDC provider (Dex)
     await page.goto("/");
-    await keyCloakSignIn(page, "drive", "drive");
+    await oidcSignIn(page, "drive@drive.world", "drive");
 
     // Step 2: Verify user is logged in
     await expect(

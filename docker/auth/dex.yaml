@@ -1,0 +1,114 @@
+# Dex configuration for the local development stack (compose.yaml).
+#
+# Dex is a lightweight OpenID Connect provider that replaces Keycloak (and its
+# dedicated PostgreSQL database) in development. It runs entirely in memory:
+# users and the "drive" client are declared statically below, nothing is
+# persisted between restarts.
+#
+# It is reachable through the nginx service, so the issuer is served from
+# http://localhost:8083/dex (see docker/files/development/etc/nginx/conf.d).
+#
+# Do not use this configuration in production.
+
+issuer: http://localhost:8083/dex
+
+storage:
+  type: memory
+
+web:
+  http: 0.0.0.0:5556
+
+frontend:
+  issuer: Drive (dev)
+  theme: light
+
+logger:
+  level: info
+  format: text
+
+oauth2:
+  responseTypes: ["code"]
+  # Do not ask users to approve the "drive" client on every login.
+  skipApprovalScreen: true
+  alwaysShowLoginScreen: false
+  passwordConnector: local
+
+expiry:
+  idTokens: "24h"
+
+# The Drive backend (Django, mozilla-django-oidc) client.
+#
+# Dex only accepts exact redirect URIs (no wildcards): add one entry per origin
+# the backend may be reached from (see docs/setup-local-network.md).
+staticClients:
+  - id: drive
+    name: Drive
+    secret: ThisIsAnExampleKeyForDevPurposeOnly
+    redirectURIs:
+      - http://localhost:8071/api/v1.0/callback/
+
+# Built-in username/password database.
+#
+# Login is done with the *email* address. Passwords are bcrypt hashes
+# (cost >= 10), e.g.:
+#   python3 -c 'import bcrypt; print(bcrypt.hashpw(b"pass", bcrypt.gensalt(10)).decode())'
+#
+# `name` is exposed as the OIDC "name" claim and `preferredUsername` as
+# "preferred_username"; the backend maps them to full_name / short_name
+# (see OIDC_USERINFO_* in env.d/development/common).
+enablePasswordDB: true
+staticPasswords:
+  # drive@drive.world / drive
+  - email: drive@drive.world
+    hash: "$2b$10$Sz1K3YLWsO4qyO24tM6AgOVhY5dUcHbIpv99WA0vzm2Fl5vt.csmu"
+    username: drive
+    name: John Doe
+    preferredUsername: John
+    userID: 1e5a0cc4-2a55-4f2b-8e2f-0c2b9f3f6c01
+  # paige.turner@library.book / pass
+  - email: paige.turner@library.book
+    hash: "$2b$10$fsqLojDmrCkbHLXzZwMx6uxEI4XrXQkNru3p2IGPFkvaava/Sjv12"
+    username: paige
+    name: Paige Turner
+    preferredUsername: Paige
+    userID: 1e5a0cc4-2a55-4f2b-8e2f-0c2b9f3f6c02
+  # miles.ahead@roadmap.fwd / pass
+  - email: miles.ahead@roadmap.fwd
+    hash: "$2b$10$CT3iZX1EHywbXIBNmlrodeSvVj78719/786/OspDeOnfGKkraHoEO"
+    username: miles
+    name: Miles Ahead
+    preferredUsername: Miles
+    userID: 1e5a0cc4-2a55-4f2b-8e2f-0c2b9f3f6c03
+  # archie.vist@vaulted.docs / pass
+  - email: archie.vist@vaulted.docs
+    hash: "$2b$10$fSycxL/Ei/UZlDKhmLdHPeW/VneW/bZTg9v2T.CryA5KDXnXPJ/Xy"
+    username: archie
+    name: Archie Vist
+    preferredUsername: Archie
+    userID: 1e5a0cc4-2a55-4f2b-8e2f-0c2b9f3f6c04
+  # mark.down@plain.text / pass
+  - email: mark.down@plain.text
+    hash: "$2b$10$RrLYzYbE0b6/7j7la8SbwO5WRW7X/fmi7PEnkX7uC0QkeAnyfnuhS"
+    username: mark
+    name: Mark Down
+    preferredUsername: Mark
+    userID: 1e5a0cc4-2a55-4f2b-8e2f-0c2b9f3f6c05
+  # E2E users: user@<browser>.test / password-e2e-<browser>
+  - email: user@chromium.test
+    hash: "$2b$10$Rri14/5j/9k8rLMNoA55K.QZDyDODpTP6BUyIN4sHJbS9.JZLi2I6"
+    username: user-e2e-chromium
+    name: E2E Chromium
+    preferredUsername: E2E
+    userID: 1e5a0cc4-2a55-4f2b-8e2f-0c2b9f3f6e01
+  - email: user@webkit.test
+    hash: "$2b$10$SN/vMiriH/wgOYR/RGumou7BtWmixfcCi0iWzZ5b04FR4sMi45yNO"
+    username: user-e2e-webkit
+    name: E2E Webkit
+    preferredUsername: E2E
+    userID: 1e5a0cc4-2a55-4f2b-8e2f-0c2b9f3f6e02
+  - email: user@firefox.test
+    hash: "$2b$10$tyLOxMCqdMus1WjTxuWeAOrhV2IWy0L1oKGWE84yCW94iPqc6tgbK"
+    username: user-e2e-firefox
+    name: E2E Firefox
+    preferredUsername: E2E
+    userID: 1e5a0cc4-2a55-4f2b-8e2f-0c2b9f3f6e03

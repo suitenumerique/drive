@@ -87,9 +87,6 @@ env.d/development/common.local:
 env.d/development/postgresql.local:
 	@touch env.d/development/postgresql.local
 
-env.d/development/kc_postgresql.local:
-	@touch env.d/development/kc_postgresql.local
-
 src/frontend/node_modules:
 	@mkdir -p src/frontend/node_modules
 
@@ -110,8 +107,7 @@ create-dev-local-files: \
   src/frontend/apps/drive/node_modules \
   env.d/development/crowdin.local \
   env.d/development/common.local \
-  env.d/development/postgresql.local \
-  env.d/development/kc_postgresql.local
+  env.d/development/postgresql.local
 .PHONY: create-dev-local-files
 
 create-docker-network: ## create the docker network if it doesn't exist
@@ -135,8 +131,8 @@ bootstrap: \
 # -- Docker/compose
 build: ## build the project containers
 build: \
-  build-backend \
-  build-frontend
+  build-backend
+#   build-frontend
 .PHONY: build
 
 build-backend: cache ?=
