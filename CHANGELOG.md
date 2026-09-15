@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) ask for access on an item/folder 
+- ✨(frontend) ask for access on an item/folder
 
 ### Fixed
 

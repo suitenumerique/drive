@@ -37,7 +37,12 @@
       },
       "403": {
         "title": "You don't have the necessary permissions to access this page.",
-        "button": "Home"
+        "button": "Home",
+        "ask_for_access": {
+          "button": "Request access",
+          "success": "Your access request has been sent.",
+          "already_requested": "You have already requested access to this item."
+        }
       },
       "settings_modal": {
         "title": "Settings",
@@ -84,6 +89,13 @@
             "inherited_edit": "Inherited. To lower role or remove access, edit",
             "parent_folder": "the parent folder."
           }
+        },
+        "ask_for_access": {
+          "title": "Access requests",
+          "accept": "Accept",
+          "deny": "Deny",
+          "request_access": "Request access",
+          "request_sent": "Access request sent"
         }
       },
       "file_download_modal": {
@@ -746,7 +758,12 @@
       },
       "403": {
         "title": "Vous n'avez pas les permissions nécessaires pour accéder à cette page.",
-        "button": "Accueil"
+        "button": "Accueil",
+        "ask_for_access": {
+          "button": "Demander l'accès",
+          "success": "Votre demande d'accès a été envoyée.",
+          "already_requested": "Vous avez déjà demandé l'accès à cet élément."
+        }
       },
       "settings_modal": {
         "title": "Paramètres",
@@ -793,6 +810,13 @@
             "inherited_edit": "Hérité. Pour réduire le rôle ou supprimer l'accès, modifiez",
             "parent_folder": "le dossier parent."
           }
+        },
+        "ask_for_access": {
+          "title": "Demandes d'accès",
+          "accept": "Accepter",
+          "deny": "Refuser",
+          "request_access": "Demander l'accès",
+          "request_sent": "Demande d'accès envoyée"
         }
       },
       "file_download_modal": {
@@ -1455,7 +1479,12 @@
       },
       "403": {
         "title": "U beschikt niet over de benodigde rechten om dit bestand te openen.",
-        "button": "Home"
+        "button": "Home",
+        "ask_for_access": {
+          "button": "Toegang aanvragen",
+          "success": "Uw toegangsverzoek is verzonden.",
+          "already_requested": "U heeft al toegang aangevraagd voor dit item."
+        }
       },
       "settings_modal": {
         "title": "Instellingen",
@@ -1502,6 +1531,13 @@
             "inherited_edit": "Herediteerd. Om de rol te verlagen of het toegang te verwijderen, bewerkt u",
             "parent_folder": "de bovenliggende map."
           }
+        },
+        "ask_for_access": {
+          "title": "Toegangsverzoeken",
+          "accept": "Accepteren",
+          "deny": "Weigeren",
+          "request_access": "Toegang aanvragen",
+          "request_sent": "Toegangsverzoek verzonden"
         }
       },
       "file_download_modal": {
