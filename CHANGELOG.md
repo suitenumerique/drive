@@ -13,6 +13,11 @@ and this project adheres to
 - 🐛(frontend) refresh the Recent view after item mutations
 - 🧑‍💻(project) install frontend dependencies via container in bootstrap
 
+### Added
+
+- ✨(backend) allow to leave an item #826
+- ✨(frontend) allow to leave an item #826
+
 ## [v0.22.0] - 2026-09-09
 
 ### Added
