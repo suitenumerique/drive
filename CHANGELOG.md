@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) add configurable security rules and structured alerts
+
 ### Fixed
 
 - 🐛(frontend) refresh the Recent view after item mutations

@@ -1106,6 +1106,36 @@ class Base(Configuration):
     CELERY_BROKER_URL = values.Value("redis://redis:6379/0")
     CELERY_BROKER_TRANSPORT_OPTIONS = values.DictValue({})
     CELERY_TASK_ROUTES = values.DictValue({})
+    CELERY_IMPORTS = ("core.tasks.security_monitoring",)
+
+    # Opt-in local security analysis. No events are sent to PostHog automatically.
+    SECURITY_MONITORING_ENABLED = values.BooleanValue(False, environ_prefix=None)
+    SECURITY_MONITORING_INPUT = values.Value("/data/security/events.jsonl", environ_prefix=None)
+    SECURITY_MONITORING_WORKDIR = values.Value("/data/security/processed", environ_prefix=None)
+    SECURITY_MONITORING_RULES = values.Value(
+        os.path.join(BASE_DIR, "core", "security_rules.yaml"), environ_prefix=None
+    )
+    SECURITY_MONITORING_BATCH_SIZE = values.PositiveIntegerValue(100, environ_prefix=None)
+    SECURITY_MONITORING_MAX_LINE_BYTES = values.PositiveIntegerValue(65536, environ_prefix=None)
+    SECURITY_MONITORING_INTERVAL_SECONDS = values.PositiveIntegerValue(10, environ_prefix=None)
+    # The dedicated worker exports bare JSONL on stdout; Celery diagnostics use stderr.
+    CELERY_WORKER_REDIRECT_STDOUTS = values.BooleanValue(True, environ_prefix=None)
+
+    @property
+    def CELERY_BEAT_SCHEDULE(self):  # pylint: disable=invalid-name
+        """Schedule the bridge on its own queue only when explicitly enabled."""
+        if not self.SECURITY_MONITORING_ENABLED:
+            return {}
+        return {
+            "security-monitoring": {
+                "task": "core.tasks.security_monitoring.process_security_logs",
+                "schedule": self.SECURITY_MONITORING_INTERVAL_SECONDS,
+                "options": {
+                    "queue": "security-monitoring",
+                    "expires": self.SECURITY_MONITORING_INTERVAL_SECONDS,
+                },
+            }
+        }
 
     # Session
     SESSION_ENGINE = "django.contrib.sessions.backends.cache"

@@ -1,0 +1,24 @@
+# Optional monitoring overlay; load after compose.yaml.
+services:
+  # Explicit profile: starting the usual Drive stack does not start monitoring.
+  # Both processes share checkpoints and input/output files, on a dedicated queue.
+  security-worker:
+    extends:
+      file: compose.yaml
+      service: celery-dev
+    profiles: ["security-monitoring"]
+    environment:
+      - DJANGO_CONFIGURATION=Development
+      - SECURITY_MONITORING_ENABLED=true
+      - CELERY_WORKER_REDIRECT_STDOUTS=false
+    command: ["celery", "-q", "-A", "drive.celery_app", "worker", "-Q", "security-monitoring", "--concurrency=1", "-l", "INFO"]
+    volumes:
+      - ./data/security:/data/security
+    depends_on:
+      redis:
+        condition: service_started
+
+  security-beat:
+    extends:
+      service: security-worker
+    command: ["celery", "-q", "-A", "drive.celery_app", "beat", "-l", "INFO", "--schedule", "/data/security/celerybeat-schedule"]
