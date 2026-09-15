@@ -49,7 +49,14 @@ from core.utils.item_title import manage_unique_title as manage_unique_title_uti
 logger = getLogger(__name__)
 
 # Item fields whose update can change the storage used by a user.
-STORAGE_USED_FIELDS = {"size", "creator", "creator_id", "hard_deleted_at", "quota_excluded"}
+STORAGE_USED_FIELDS = {
+    "size",
+    "expected_size",
+    "creator",
+    "creator_id",
+    "hard_deleted_at",
+    "quota_excluded",
+}
 
 
 def get_trashbin_cutoff():
@@ -1035,6 +1042,11 @@ class Item(TreeModel, BaseModel):
     )
     main_workspace = models.BooleanField(default=False)
     size = models.BigIntegerField(null=True, blank=True)
+    expected_size = models.PositiveBigIntegerField(
+        null=True,
+        blank=True,
+        help_text=_("Bytes reserved before issuing the upload authorization."),
+    )
     quota_excluded = models.BooleanField(
         default=False,
         help_text=_("Exclude this item from its creator's storage quota computation."),

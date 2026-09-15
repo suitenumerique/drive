@@ -396,6 +396,7 @@ export class StandardDriver extends Driver {
           body: JSON.stringify({
             type: ItemType.FILE,
             ...rest,
+            expected_size: file.size,
           }),
         },
         {

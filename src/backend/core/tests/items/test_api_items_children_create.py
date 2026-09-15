@@ -130,6 +130,7 @@ def test_api_items_children_create_authenticated_success(reach, role, depth):
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/children/",
         {
+            "expected_size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
@@ -201,6 +202,7 @@ def test_api_items_children_create_related_success(role, depth):
         response = client.post(
             f"/api/v1.0/items/{item.id!s}/children/",
             {
+                "expected_size": 8,
                 "type": ItemTypeChoices.FILE,
                 "filename": "file.txt",
             },
@@ -231,7 +233,7 @@ def test_api_items_children_create_related_success(role, depth):
     ]
     assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
-    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["content-length;host;x-amz-acl"]
     assert query_params.pop("X-Amz-Signature") is not None
 
     assert len(query_params) == 0
@@ -260,6 +262,7 @@ def test_api_items_children_create_related_success_override_s3_endpoint(settings
         response = client.post(
             f"/api/v1.0/items/{item.id!s}/children/",
             {
+                "expected_size": 8,
                 "type": ItemTypeChoices.FILE,
                 "filename": "file.txt",
             },
@@ -290,7 +293,7 @@ def test_api_items_children_create_related_success_override_s3_endpoint(settings
     ]
     assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
-    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["content-length;host;x-amz-acl"]
     assert query_params.pop("X-Amz-Signature") is not None
 
     assert len(query_params) == 0
@@ -309,6 +312,7 @@ def test_api_items_children_create_file_extension_not_allowed(settings):
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/children/",
         {
+            "expected_size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.notallowed",
         },
@@ -342,6 +346,7 @@ def test_api_items_children_create_file_extension_not_allowed_not_checking_exten
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/children/",
         {
+            "expected_size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.notallowed",
         },
@@ -365,6 +370,7 @@ def test_api_items_children_create_force_id_success():
     response = client.post(
         f"/api/v1.0/items/{access.item.id!s}/children/",
         {
+            "expected_size": 8,
             "id": str(forced_id),
             "title": "my item",
             "type": ItemTypeChoices.FILE,
@@ -393,6 +399,7 @@ def test_api_items_children_create_force_id_existing():
     response = client.post(
         f"/api/v1.0/items/{access.item.id!s}/children/",
         {
+            "expected_size": 8,
             "id": str(item.id),
             "title": "my item",
             "type": ItemTypeChoices.FILE,
@@ -455,6 +462,7 @@ def test_api_items_children_create_not_a_folder(item_type):
     response = client.post(
         f"/api/v1.0/items/{access.item.id!s}/children/",
         {
+            "expected_size": 8,
             "type": "file",
             "filename": "file.txt",
         },
@@ -598,6 +606,7 @@ def test_api_items_children_create_entitlements_backend_returns_falsy(
     response = client.post(
         f"/api/v1.0/items/{access.item.id!s}/children/",
         {
+            "expected_size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
@@ -639,6 +648,7 @@ def test_api_items_children_create_related_success_sanitize_filename(
         response = client.post(
             f"/api/v1.0/items/{item.id!s}/children/",
             {
+                "expected_size": 8,
                 "type": ItemTypeChoices.FILE,
                 "filename": "><img src=x onerror=alert()>␊.txt",
             },
@@ -672,7 +682,7 @@ def test_api_items_children_create_related_success_sanitize_filename(
     ]
     assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
-    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["content-length;host;x-amz-acl"]
     assert query_params.pop("X-Amz-Signature") is not None
 
     assert len(query_params) == 0
@@ -701,6 +711,7 @@ def test_api_items_children_create_related_invalid_filename(
         response = client.post(
             f"/api/v1.0/items/{item.id!s}/children/",
             {
+                "expected_size": 8,
                 "type": ItemTypeChoices.FILE,
                 "filename": "!@#$%^&*().txt",
             },

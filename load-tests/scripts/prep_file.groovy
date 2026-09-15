@@ -5,6 +5,7 @@ def parts = vars.get("current_upfile").split("\u001F", 3)
 def relDir = parts[0]
 vars.put("cf_parent", relDir.isEmpty() ? vars.get("folder_id") : vars.get("upfid_" + relDir))
 vars.put("cf_abs", parts[1])
+vars.put("cf_size", String.valueOf(new File(parts[1]).length()))
 vars.put("cf_name", parts[2])
 def mime = java.net.URLConnection.guessContentTypeFromName(parts[2])
 vars.put("cf_mime", mime ?: "application/octet-stream")

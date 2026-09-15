@@ -98,7 +98,7 @@ def test_api_item_upload_ended_on_wrong_upload_state():
     }
 
 
-def test_api_item_upload_ended_success_grist_file():
+def test_api_item_upload_ended_success_grist_file(django_capture_on_commit_callbacks):
     """Upload a .grist file (SQLite format) should succeed."""
     user = factories.UserFactory()
     client = APIClient()
@@ -112,7 +112,8 @@ def test_api_item_upload_ended_success_grist_file():
     default_storage.save(item.file_key, BytesIO(sqlite_header))
 
     with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
-        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
     assert response.status_code == 200
@@ -122,7 +123,7 @@ def test_api_item_upload_ended_success_grist_file():
     assert item.mimetype == "application/vnd.sqlite3"
 
 
-def test_api_item_upload_ended_success():
+def test_api_item_upload_ended_success(django_capture_on_commit_callbacks):
     """
     Users should be able to end an upload on items that are files and in the UPLOADING upload state.
     """
@@ -141,7 +142,8 @@ def test_api_item_upload_ended_success():
     with (
         mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file,
     ):
-        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
     assert response.status_code == 200
@@ -154,7 +156,7 @@ def test_api_item_upload_ended_success():
     assert response.json()["mimetype"] == "text/plain"
 
 
-def test_api_item_upload_ended_empty_file():
+def test_api_item_upload_ended_empty_file(django_capture_on_commit_callbacks):
     """Upload an empty file should not raise an error."""
     user = factories.UserFactory()
     client = APIClient()
@@ -168,7 +170,8 @@ def test_api_item_upload_ended_empty_file():
     with (
         mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file,
     ):
-        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
     assert response.status_code == 200
@@ -302,7 +305,7 @@ def test_api_item_upload_ended_mimetype_not_allowed(settings, caplog):
     assert not default_storage.exists(item.file_key)
 
 
-def test_api_item_upload_ended_mimetype_not_allowed_not_checking_mimetype(settings):
+def test_api_item_upload_ended_mimetype_not_allowed_not_checking_mimetype(settings, django_capture_on_commit_callbacks):
     """
     Test that the API returns a 200 when the mimetype is not allowed but not checking the mimetype.
     """
@@ -321,7 +324,8 @@ def test_api_item_upload_ended_mimetype_not_allowed_not_checking_mimetype(settin
     )
 
     with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
-        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
     assert response.status_code == 200

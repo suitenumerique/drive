@@ -111,12 +111,16 @@ Here is an example of a view that create a file on the main workspace in Drive.
         if not main_workspace:
             return drf.response.Response(status=404, data={"error": "No main workspace found"})
 
-        # Create a new file in the main workspace
+        import os
+        sample_file_path = os.path.join(os.path.dirname(__file__), "sample.txt")
+
+        # Reserve the file size before requesting an upload authorization.
         response = requests.post(
             f"{settings.DRIVE_API}/items/{main_workspace['id']}/children/",
             json={
                 "type": "file",
                 "filename": "test.txt",
+                "expected_size": os.path.getsize(sample_file_path),
             },
             headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
         )
@@ -124,9 +128,7 @@ Here is an example of a view that create a file on the main workspace in Drive.
         item = response.json()
         policy = item['policy']
 
-        # Upload file content using the presigned URL
-        import os
-        sample_file_path = os.path.join(os.path.dirname(__file__), "sample.txt")
+        # Upload the raw file using the size-bound presigned URL
         with open(sample_file_path, "rb") as f:
             upload_response = requests.put(
                 policy,

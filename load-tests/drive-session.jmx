@@ -468,7 +468,7 @@
                 <collectionProp name="Arguments.arguments">
                   <elementProp name="" elementType="HTTPArgument">
                     <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                    <stringProp name="Argument.value">{&quot;filename&quot;: &quot;${cf_name}&quot;, &quot;type&quot;: &quot;file&quot;}</stringProp>
+                    <stringProp name="Argument.value">{&quot;filename&quot;: &quot;${cf_name}&quot;, &quot;type&quot;: &quot;file&quot;, &quot;expected_size&quot;: ${cf_size}}</stringProp>
                     <stringProp name="Argument.metadata">=</stringProp>
                   </elementProp>
                 </collectionProp>

@@ -6,9 +6,10 @@ import re
 import unicodedata
 from datetime import datetime
 from os.path import splitext
+from urllib.parse import parse_qs, urlparse
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.files.storage import default_storage
 
 import boto3
@@ -106,6 +107,9 @@ def generate_upload_policy(item):
     Generate a S3 upload policy for a given item.
     """
 
+    if item.expected_size is None:
+        raise ValueError("An upload authorization requires a storage reservation.")
+
     # Generate a unique key for the item
     key = f"{item.key_base}/{item.filename}"
 
@@ -130,7 +134,11 @@ def generate_upload_policy(item):
     else:
         s3_client = default_storage.connection.meta.client
 
-    params = {"Bucket": default_storage.bucket_name, "Key": key}
+    params = {
+        "Bucket": default_storage.bucket_name,
+        "Key": key,
+        "ContentLength": item.expected_size,
+    }
     if settings.AWS_S3_UPLOAD_ACL and settings.AWS_S3_UPLOAD_ACL != "default":
         params["ACL"] = settings.AWS_S3_UPLOAD_ACL
 
@@ -140,6 +148,12 @@ def generate_upload_policy(item):
         Params=params,
         ExpiresIn=settings.AWS_S3_UPLOAD_POLICY_EXPIRATION,
     )
+
+    signed_headers = parse_qs(urlparse(policy).query).get("X-Amz-SignedHeaders", [""])[0]
+    if "content-length" not in signed_headers.split(";"):
+        raise ImproperlyConfigured(
+            "Upload authorizations require SigV4 with signed Content-Length."
+        )
 
     return policy
 

@@ -34,6 +34,7 @@ def test_models_sub_item_abilities_downgraded():
     response = client.post(
         f"/api/v1.0/items/{item.id!s}/children/",
         data={
+                 "expected_size": 8,
             "type": models.ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
