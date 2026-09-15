@@ -1,6 +1,9 @@
 """Test API items breadcrumb."""
 
 import uuid
+from datetime import timedelta
+
+from django.utils import timezone
 
 import pytest
 from rest_framework.test import APIClient
@@ -380,3 +383,27 @@ def test_api_items_breadcrumb_authenticated_with_access_authenticated():
             "main_workspace": False,
         },
     ]
+
+
+def test_api_items_breadcrumb_link_expired_ancestor():
+    """An ancestor whose link has expired should not be part of the breadcrumb."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(
+        title="root",
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_expires_at=timezone.now() - timedelta(minutes=1),
+    )
+    child = factories.ItemFactory(
+        title="child",
+        parent=root,
+        type=models.ItemTypeChoices.FOLDER,
+        link_reach=models.LinkReachChoices.PUBLIC,
+    )
+
+    response = client.get(f"/api/v1.0/items/{child.id}/breadcrumb/")
+    assert response.status_code == 200
+    assert [item["title"] for item in response.json()] == ["child"]
