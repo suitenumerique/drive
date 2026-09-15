@@ -64,8 +64,10 @@ export const fetchAPI = async (
   if (response.status === 403 && redirectOn40x) {
     // We don't want to save the attempted url when having a 403 error because
     // it would be a redirect loop and it means we know that the user is not
-    // allowed to access the page.
-    redirect("/403", false);
+    // allowed to access the page. We pass it as ?from= so the 403 page can
+    // offer the user to request access to the item.
+    const from = encodeURIComponent(window.location.href);
+    redirect(`/403?from=${from}`, false);
     // So that the app can handle the error and not show a toast by verifying the error code.
     throw new APIError(response.status);
   }

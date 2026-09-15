@@ -117,6 +117,17 @@ class ItemAccessPermission(CreateWithPriviliegedRolesMixin, IsAuthenticated):
         return abilities.get(view.action, False)
 
 
+class ItemAskForAccessPermission(IsAuthenticated):
+    """Permission class for the ItemAskForAccessViewSet."""
+
+    resources = "accesses"
+
+    def has_object_permission(self, request, view, obj):
+        """Check permission for a given object."""
+        abilities = obj.get_abilities(request.user)
+        return abilities.get(view.action, False)
+
+
 class ItemPermission(permissions.BasePermission):
     """Subclass to handle soft deletion specificities."""
 

@@ -9,10 +9,13 @@ import {
   User,
 } from "@/features/drivers/types";
 import {
+  useMutationAcceptAskForAccess,
   useMutationBatchShare,
   useMutationCreateAccess,
+  useMutationCreateAskForAccess,
   useMutationCreateInvitation,
   useMutationDeleteAccess,
+  useMutationDeleteAskForAccess,
   useMutationDeleteInvitation,
   useMutationUpdateAccess,
   useMutationUpdateInvitation,
@@ -23,14 +26,17 @@ import {
   useInfiniteItemInvitations,
   useItem,
   useItemAccesses,
+  useItemAskForAccesses,
 } from "@/features/explorer/hooks/useQueries";
 import { useUsers } from "@/features/users/hooks/useUserQueries";
 import { useClipboard } from "@/hooks/useCopyToClipboard";
 import {
+  Button,
   HorizontalSeparator,
   removeFileExtension,
   ShareModal,
   ShareModalCopyLinkFooter,
+  UserRow,
 } from "@gouvfr-lasuite/ui-components";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
@@ -531,10 +537,91 @@ export const ItemShareModal = ({
         }}
         importErrorMessage={importErrorMessage}
         onImportFileChange={() => setImportErrorMessage(undefined)}
+        cannotViewChildren={
+          !item?.abilities.accesses_view ? (
+            <ItemShareAskForAccessButton itemId={itemId} />
+          ) : undefined
+        }
       >
-        {!item?.abilities.accesses_manage && <HorizontalSeparator />}
+        {item?.abilities.accesses_manage ? (
+          <ItemShareAskForAccessRequests itemId={itemId} />
+        ) : (
+          <HorizontalSeparator />
+        )}
       </ShareModal>
     </DragEventBarrier>
+  );
+};
+
+const ItemShareAskForAccessRequests = ({ itemId }: { itemId: string }) => {
+  const { t } = useTranslation();
+  const { data: requests } = useItemAskForAccesses(itemId);
+  const { mutate: acceptRequest } = useMutationAcceptAskForAccess();
+  const { mutate: denyRequest } = useMutationDeleteAskForAccess();
+
+  if (!requests?.length) {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="workspace-share-modal__access-requests">
+        <div className="workspace-share-modal__access-requests-title">
+          <span>{t("share_modal.ask_for_access.title")}</span>
+        </div>
+        {requests.map((request) => (
+          <div key={request.id} className="workspace-share-modal__access-request-row">
+            <UserRow
+              fullName={request.user.full_name}
+              email={request.user.email}
+              showEmail={true}
+            />
+            <div className="workspace-share-modal__access-request-actions">
+              <span className="workspace-share-modal__access-request-role">
+                {t(`roles.${request.role}`)}
+              </span>
+              <Button
+                onClick={() =>
+                  acceptRequest({ itemId, askForAccessId: request.id })
+                }
+              >
+                {t("share_modal.ask_for_access.accept")}
+              </Button>
+              <Button
+                variant="bordered"
+                onClick={() =>
+                  denyRequest({ itemId, askForAccessId: request.id })
+                }
+              >
+                {t("share_modal.ask_for_access.deny")}
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <HorizontalSeparator />
+    </>
+  );
+};
+
+const ItemShareAskForAccessButton = ({ itemId }: { itemId: string }) => {
+  const { t } = useTranslation();
+  const { data: requests } = useItemAskForAccesses(itemId);
+  const { mutate: createRequest, isPending } = useMutationCreateAskForAccess();
+
+  const hasRequested = !!requests?.length;
+
+  return (
+    <div className="workspace-share-modal__ask-for-access">
+        <Button
+          disabled={hasRequested || isPending}
+          onClick={() => createRequest({ itemId })}
+        >
+          {hasRequested
+            ? t("share_modal.ask_for_access.request_sent")
+            : t("share_modal.ask_for_access.request_access")}
+        </Button>
+    </div>
   );
 };
 
