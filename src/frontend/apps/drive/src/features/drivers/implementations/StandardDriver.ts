@@ -14,11 +14,15 @@ import {
 import {
   DTOBatchShare,
   DTOCreateAccess,
+  DTOCreateAccessRequest,
+  DTODeleteAccess,
+  DTOUpdateAccess,
+  DTOUpdateAccessRequest,
   DTOUpdateLinkConfiguration,
 } from "../DTOs/AccessesDTO";
-import { DTOUpdateAccess } from "../DTOs/AccessesDTO";
 import {
   Access,
+  AccessRequest,
   ApiConfig,
   APIList,
   Invitation,
@@ -29,7 +33,6 @@ import {
   UserLight,
   WopiInfo,
 } from "../types";
-import { DTODeleteAccess } from "../DTOs/AccessesDTO";
 import { convertFiltersToQueryParams } from "@/features/explorer/components/filters/filterUtils";
 
 export class StandardDriver extends Driver {
@@ -274,6 +277,41 @@ export class StandardDriver extends Driver {
     const response = await fetchAPI(`items/${itemId}/invitations/`);
     const data = await response.json();
     return data;
+  }
+
+  async getItemAccessRequests(
+    itemId: string,
+  ): Promise<APIList<AccessRequest>> {
+    const response = await fetchAPI(`items/${itemId}/access-requests/`);
+    const data = await response.json();
+    return data;
+  }
+
+  async createAccessRequest(
+    data: DTOCreateAccessRequest,
+  ): Promise<AccessRequest> {
+    const response = await fetchAPI(`items/${data.itemId}/access-requests/`, {
+      method: "POST",
+      body: JSON.stringify({
+        message: data.message,
+      }),
+    });
+    return (await response.json()) as AccessRequest;
+  }
+
+  async updateAccessRequest(
+    payload: DTOUpdateAccessRequest,
+  ): Promise<AccessRequest> {
+    const response = await fetchAPI(
+      `items/${payload.itemId}/access-requests/${payload.accessRequestId}/`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: payload.status,
+        }),
+      },
+    );
+    return (await response.json()) as AccessRequest;
   }
 
   async moveItems(ids: string[], parentId?: string): Promise<void> {
