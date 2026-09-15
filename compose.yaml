@@ -96,10 +96,10 @@ services:
         condition: service_started
       celery-dev:
         condition: service_started
-      collabora:
-        condition: service_healthy
-      onlyoffice:
-        condition: service_healthy
+#      collabora:
+#        condition: service_healthy
+#      onlyoffice:
+#        condition: service_healthy
 
   ds-proxy:
     image: demarchenumerique/ds-proxy:v2.0.0-alpha.4
@@ -271,46 +271,46 @@ services:
       - lasuite
       - default
 
-  collabora:
-    image: collabora/code:26.04.2.2.1
-    # The entrypoint runs coolwsd directly (no shell in the image), so
-    # options are passed as command arguments instead of extra_params.
-    command: ["--o:ssl.enable=false"]
-    healthcheck:
-      # The built-in probe targets https; pass the same override so it
-      # checks the plain-http endpoint we actually serve.
-      test: ["CMD", "/usr/bin/coolwsd", "--probe", "--o:ssl.enable=false"]
-      interval: 30s
-      retries: 5
-      start_period: 60s
-      timeout: 10s
-    ports:
-      - "9980:9980"
-    environment:
-      - username=drive
-      - password=password
-      - server_name=localhost:9980
-      - aliasgroup1=app-dev:8000
+#  collabora:
+#    image: collabora/code:26.04.2.2.1
+#    # The entrypoint runs coolwsd directly (no shell in the image), so
+#    # options are passed as command arguments instead of extra_params.
+#    command: ["--o:ssl.enable=false"]
+#    healthcheck:
+#      # The built-in probe targets https; pass the same override so it
+#      # checks the plain-http endpoint we actually serve.
+#      test: ["CMD", "/usr/bin/coolwsd", "--probe", "--o:ssl.enable=false"]
+#      interval: 30s
+#      retries: 5
+#      start_period: 60s
+#      timeout: 10s
+#    ports:
+#      - "9980:9980"
+#    environment:
+#      - username=drive
+#      - password=password
+#      - server_name=localhost:9980
+#      - aliasgroup1=app-dev:8000
 
-  onlyoffice:
-    image: onlyoffice/documentserver-de
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/hosting/discovery"]
-      interval: 30s
-      retries: 5
-      start_period: 60s
-      timeout: 10s
-    environment:
-      TZ: "Europe/Berlin"
-      USE_UNAUTHORIZED_STORAGE: "true"
-      JWT_ENABLED: "true"
-      JWT_SECRET: "ThisIsNotASecretKeyDev"
-    ports:
-      - "9981:80"
-    volumes:
-      - ./docker/onlyoffice/local-development.json:/etc/onlyoffice/documentserver/local-production-linux.json
-      # Enable debug
-      - ./docker/onlyoffice/log4js/production.json:/etc/onlyoffice/documentserver/log4js/production.json
+#  onlyoffice:
+#    image: onlyoffice/documentserver-de
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://localhost/hosting/discovery"]
+#      interval: 30s
+#      retries: 5
+#      start_period: 60s
+#      timeout: 10s
+#    environment:
+#      TZ: "Europe/Berlin"
+#      USE_UNAUTHORIZED_STORAGE: "true"
+#      JWT_ENABLED: "true"
+#      JWT_SECRET: "ThisIsNotASecretKeyDev"
+#    ports:
+#      - "9981:80"
+#    volumes:
+#      - ./docker/onlyoffice/local-development.json:/etc/onlyoffice/documentserver/local-production-linux.json
+#      # Enable debug
+#      - ./docker/onlyoffice/log4js/production.json:/etc/onlyoffice/documentserver/log4js/production.json
 
 networks:
   default: {}
