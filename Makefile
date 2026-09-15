@@ -204,9 +204,8 @@ backend-exec-command: ## execute a command in the backend container
 	$(MANAGE_EXEC) $${args}
 .PHONY: backend-exec-command
 
-run: ## start the development server and frontend development
+run: ## start the development server
 run: run-backend
-	$(COMPOSE) up --force-recreate -d frontend-dev
 .PHONY: run
 
 status: ## an alias for "docker compose ps"
