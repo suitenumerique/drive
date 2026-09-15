@@ -88,7 +88,7 @@ services:
       redis:
         condition: service_started
       createbuckets:
-        condition: service_started
+        condition: service_completed_successfully
       celery-dev:
         condition: service_started
 #      collabora:
