@@ -1114,6 +1114,20 @@ def test_models_items__email_invitation__skipped_when_email_host_missing(
 # item number of accesses
 
 
+def test_models_items_prefetch_nb_accesses(django_assert_num_queries):
+    """Cached numbers of accesses are read at once, missing ones are computed on access."""
+    cached = factories.ItemFactory()
+    missing = factories.ItemFactory()
+    factories.UserItemAccessFactory.create_batch(2, item=cached)
+    assert cached.nb_accesses == 2
+
+    items = list(models.Item.objects.filter(pk__in=[cached.pk, missing.pk]))
+    with django_assert_num_queries(0):
+        models.Item.prefetch_nb_accesses(items)
+    with django_assert_num_queries(1):
+        assert {item.nb_accesses for item in items} == {2, 0}
+
+
 def test_models_items_nb_accesses_cache_is_set_and_retrieved(
     django_assert_num_queries,
 ):
