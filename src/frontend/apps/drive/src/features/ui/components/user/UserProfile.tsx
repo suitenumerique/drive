@@ -8,10 +8,8 @@ import {
 } from "@gouvfr-lasuite/ui-components";
 import { useAuth } from "@/features/auth/Auth";
 import { logout } from "@/features/auth/Auth";
-import {
-  LanguagePickerUserMenu,
-  LANGUAGES,
-} from "@/features/layouts/components/header/Header";
+import { LanguagePickerUserMenu } from "@/features/layouts/components/header/Header";
+import { LANGUAGES } from "@/features/i18n/conf";
 import { AnonymousCTA } from "../anonymous-cta/AnonymousCTA";
 import { useTranslation } from "react-i18next";
 import { useClipboard } from "@/hooks/useCopyToClipboard";

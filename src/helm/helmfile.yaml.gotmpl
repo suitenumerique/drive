@@ -1,7 +1,7 @@
 environments:
   dev:
     values:
-      - version: 0.22.0
+      - version: 0.22.1
 ---
 repositories:
 - name: dev-backends
@@ -32,7 +32,7 @@ releases:
           password: pass
       - minio:
           enabled: true
-          image: minio/minio
+          image: quay.io/minio/minio
           name: minio
           # serviceNameOverride: drive-minio
           ingress:

@@ -1,5 +1,5 @@
 {
-  "en": {
+  "en-us": {
     "translation": {
       "entitlements": {
         "can_upload": {
@@ -723,7 +723,7 @@
       }
     }
   },
-  "fr": {
+  "fr-fr": {
     "translation": {
       "entitlements": {
         "can_upload": {
@@ -1447,7 +1447,7 @@
       }
     }
   },
-  "nl": {
+  "nl-nl": {
     "translation": {
       "entitlements": {
         "can_upload": {
