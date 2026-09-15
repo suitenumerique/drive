@@ -94,6 +94,7 @@ This document lists all configurable environment variables for the Drive applica
 | `OIDC_STORE_ID_TOKEN` | Store OIDC ID token | `True` |
 | `OIDC_STORE_REFRESH_TOKEN` | Store OIDC refresh token | `False` |
 | `OIDC_STORE_REFRESH_TOKEN_KEY` | Key for storing OIDC refresh token | `None` |
+| `OIDC_TEAMS_CLAIM` | Name of the OIDC claim holding the user's teams/groups, stored on the user and exposed through `User.teams` for team-based access. Empty keeps `User.teams` empty. | `None` |
 | `OIDC_USE_NONCE` | Use nonce for OIDC requests | `True` |
 | `OIDC_USE_PKCE` | Use PKCE when interacting with OIDC server | `False` |
 | `OIDC_USER_INFO` | List of OIDC user info claims | `[]` |
