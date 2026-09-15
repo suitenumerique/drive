@@ -89,6 +89,8 @@ services:
         condition: service_started
       createbuckets:
         condition: service_completed_successfully
+      minio:
+        condition: service_started
       celery-dev:
         condition: service_started
 #      collabora:
