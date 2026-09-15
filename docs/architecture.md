@@ -6,7 +6,7 @@
 flowchart TD
     User -- HTTP --> Front("Frontend (NextJS SPA)")
     Front -- REST API --> Back("Backend (Django)")
-    Front -- OIDC --> Back -- OIDC ---> OIDC("Keycloak / ProConnect")
+    Front -- OIDC --> Back -- OIDC ---> OIDC("OIDC provider (Dex in dev / ProConnect)")
     Back --> DB("Database (PostgreSQL)")
     Back <--> Celery --> DB
     Back ----> S3-Compatible

@@ -52,12 +52,7 @@ services:
       minio:
         condition: service_healthy
         restart: true
-    entrypoint: >
-      sh -c "
-      /usr/bin/mc alias set drive http://minio:9000 drive password && \
-      /usr/bin/mc mb drive/drive-media-storage && \
-      /usr/bin/mc version enable drive/drive-media-storage && \
-      exit 0;"
+    entrypoint: ["/bin/sh", "-c", "mc alias set drive http://minio:9000 drive password && mc mb drive/drive-media-storage && mc version enable drive/drive-media-storage"]
 
   app-dev:
     build:
@@ -93,13 +88,15 @@ services:
       redis:
         condition: service_started
       createbuckets:
+        condition: service_completed_successfully
+      minio:
         condition: service_started
       celery-dev:
         condition: service_started
-      collabora:
-        condition: service_healthy
-      onlyoffice:
-        condition: service_healthy
+#      collabora:
+#        condition: service_healthy
+#      onlyoffice:
+#        condition: service_healthy
 
   ds-proxy:
     image: demarchenumerique/ds-proxy:v2.0.0-alpha.4
@@ -164,7 +161,7 @@ services:
     volumes:
       - ./docker/files/development/etc/nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
-      keycloak:
+      dex:
         condition: service_healthy
         restart: true
       app-dev:
@@ -219,98 +216,65 @@ services:
     volumes:
       - ".:/app"
 
-  kc_postgresql:
-    image: postgres:14.3
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready"]
-      interval: 1s
-      timeout: 2s
-      retries: 300
-    ports:
-      - "6433:5432"
-    env_file:
-      - env.d/development/kc_postgresql
-      - env.d/development/kc_postgresql.local
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:26.3.2
+  dex:
+    # Lightweight OpenID Connect provider used in place of Keycloak for
+    # development (in-memory storage, static users/clients, no database).
+    # Configuration and dev users live in docker/auth/dex.yaml.
+    image: ghcr.io/dexidp/dex:v2.45.1
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
     volumes:
-      - ./docker/auth/realm.json:/opt/keycloak/data/import/realm.json
-    command:
-      - start-dev
-      - --features=preview
-      - --import-realm
-      - --proxy=edge
-      - --hostname=http://localhost:8083
-      - --hostname-strict=false
-      - --health-enabled=true
-      - --metrics-enabled=true
+      - ./docker/auth/dex.yaml:/etc/dex/config.yaml:ro
     healthcheck:
-      test: ['CMD-SHELL', 'exec 3<>/dev/tcp/localhost/9000; echo -e "GET /health/live HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3; grep "HTTP/1.1 200 OK" <&3']
-      start_period: 5s
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:5556/dex/healthz"]
       interval: 1s
       timeout: 2s
-      retries: 300
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: postgres
-      KC_DB_URL_HOST: kc_postgresql
-      KC_DB_URL_DATABASE: keycloak
-      KC_DB_PASSWORD: pass
-      KC_DB_USERNAME: drive
-      KC_DB_SCHEMA: public
-      PROXY_ADDRESS_FORWARDING: "true"
+      retries: 60
     ports:
-      - "8080:8080"
-    depends_on:
-      kc_postgresql:
-        condition: service_healthy
-        restart: true
+      - "5556:5556"
     networks:
       - lasuite
       - default
 
-  collabora:
-    image: collabora/code:26.04.2.2.1
-    # The entrypoint runs coolwsd directly (no shell in the image), so
-    # options are passed as command arguments instead of extra_params.
-    command: ["--o:ssl.enable=false"]
-    healthcheck:
-      # The built-in probe targets https; pass the same override so it
-      # checks the plain-http endpoint we actually serve.
-      test: ["CMD", "/usr/bin/coolwsd", "--probe", "--o:ssl.enable=false"]
-      interval: 30s
-      retries: 5
-      start_period: 60s
-      timeout: 10s
-    ports:
-      - "9980:9980"
-    environment:
-      - username=drive
-      - password=password
-      - server_name=localhost:9980
-      - aliasgroup1=app-dev:8000
+#  collabora:
+#    image: collabora/code:26.04.2.2.1
+#    # The entrypoint runs coolwsd directly (no shell in the image), so
+#    # options are passed as command arguments instead of extra_params.
+#    command: ["--o:ssl.enable=false"]
+#    healthcheck:
+#      # The built-in probe targets https; pass the same override so it
+#      # checks the plain-http endpoint we actually serve.
+#      test: ["CMD", "/usr/bin/coolwsd", "--probe", "--o:ssl.enable=false"]
+#      interval: 30s
+#      retries: 5
+#      start_period: 60s
+#      timeout: 10s
+#    ports:
+#      - "9980:9980"
+#    environment:
+#      - username=drive
+#      - password=password
+#      - server_name=localhost:9980
+#      - aliasgroup1=app-dev:8000
 
-  onlyoffice:
-    image: onlyoffice/documentserver-de
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/hosting/discovery"]
-      interval: 30s
-      retries: 5
-      start_period: 60s
-      timeout: 10s
-    environment:
-      TZ: "Europe/Berlin"
-      USE_UNAUTHORIZED_STORAGE: "true"
-      JWT_ENABLED: "true"
-      JWT_SECRET: "ThisIsNotASecretKeyDev"
-    ports:
-      - "9981:80"
-    volumes:
-      - ./docker/onlyoffice/local-development.json:/etc/onlyoffice/documentserver/local-production-linux.json
-      # Enable debug
-      - ./docker/onlyoffice/log4js/production.json:/etc/onlyoffice/documentserver/log4js/production.json
+#  onlyoffice:
+#    image: onlyoffice/documentserver-de
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://localhost/hosting/discovery"]
+#      interval: 30s
+#      retries: 5
+#      start_period: 60s
+#      timeout: 10s
+#    environment:
+#      TZ: "Europe/Berlin"
+#      USE_UNAUTHORIZED_STORAGE: "true"
+#      JWT_ENABLED: "true"
+#      JWT_SECRET: "ThisIsNotASecretKeyDev"
+#    ports:
+#      - "9981:80"
+#    volumes:
+#      - ./docker/onlyoffice/local-development.json:/etc/onlyoffice/documentserver/local-production-linux.json
+#      # Enable debug
+#      - ./docker/onlyoffice/log4js/production.json:/etc/onlyoffice/documentserver/log4js/production.json
 
 networks:
   default: {}

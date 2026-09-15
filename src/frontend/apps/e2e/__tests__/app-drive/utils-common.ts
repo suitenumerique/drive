@@ -7,9 +7,13 @@ import path from "path";
 const ROOT_PATH = path.join(__dirname, "/../../../../../..");
 const CLEAR_DB_TARGET = "clear-db-e2e";
 
-export const keyCloakSignIn = async (
+/**
+ * Sign in through the development OIDC provider (Dex, see docker/auth/dex.yaml).
+ * Dex authenticates users by email address.
+ */
+export const oidcSignIn = async (
   page: Page,
-  username: string,
+  email: string,
   password: string,
   fromHome: boolean = true,
 ) => {
@@ -17,15 +21,13 @@ export const keyCloakSignIn = async (
     await page.getByRole("button", { name: "Sign in" }).first().click();
   }
 
-  await expect(page.getByText("Sign in to your account").first()).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Log in to Your Account" }),
+  ).toBeVisible();
 
-  if (await page.getByLabel("Restart login").isVisible()) {
-    await page.getByLabel("Restart login").click();
-  }
-
-  await page.getByRole("textbox", { name: "username" }).fill(username);
-  await page.getByRole("textbox", { name: "password" }).fill(password);
-  await page.getByRole("button", { name: "Sign in" }).first().click();
+  await page.getByRole("textbox", { name: "Email Address" }).fill(email);
+  await page.getByRole("textbox", { name: "Password" }).fill(password);
+  await page.getByRole("button", { name: "Login" }).click();
 };
 
 export const clearDb = async () => {

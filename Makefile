@@ -30,9 +30,15 @@ SHELL := /usr/bin/env bash
 
 # -- Docker
 # Get the current user ID to use for docker run and docker exec commands
+ifneq ($(findstring podman,$(DOCKER_HOST)),)
+DOCKER_UID          = 0
+DOCKER_GID          = 0
+else
 DOCKER_UID              = $(shell id -u)
 DOCKER_GID              = $(shell id -g)
-DOCKER_USER             = $(DOCKER_UID):$(DOCKER_GID)
+DOCKER_GID              = $(shell id -g)
+endif
+DOCKER_USER        ?= $(DOCKER_UID):$(DOCKER_GID)
 COMPOSE                 = DOCKER_USER=$(DOCKER_USER) docker compose
 COMPOSE_EXEC            = $(COMPOSE) exec
 COMPOSE_EXEC_APP        = $(COMPOSE_EXEC) app-dev
@@ -81,9 +87,6 @@ env.d/development/common.local:
 env.d/development/postgresql.local:
 	@touch env.d/development/postgresql.local
 
-env.d/development/kc_postgresql.local:
-	@touch env.d/development/kc_postgresql.local
-
 src/frontend/node_modules:
 	@mkdir -p src/frontend/node_modules
 
@@ -104,8 +107,7 @@ create-dev-local-files: \
   src/frontend/apps/drive/node_modules \
   env.d/development/crowdin.local \
   env.d/development/common.local \
-  env.d/development/postgresql.local \
-  env.d/development/kc_postgresql.local
+  env.d/development/postgresql.local
 .PHONY: create-dev-local-files
 
 create-docker-network: ## create the docker network if it doesn't exist
@@ -129,8 +131,8 @@ bootstrap: \
 # -- Docker/compose
 build: ## build the project containers
 build: \
-  build-backend \
-  build-frontend
+  build-backend
+#   build-frontend
 .PHONY: build
 
 build-backend: cache ?=
