@@ -403,3 +403,39 @@ def test_put_file_content_with_no_lock_header_and_body_size_0(data):
     )
     assert file["Body"].read() == data
     assert response.headers.get("X-WOPI-ItemVersion") == file["ETag"].strip('"')
+
+
+@pytest.mark.usefixtures("configure_wopi_clients")
+def test_put_file_content_posthog_event(settings):
+    """Putting file content should send an 'item_edited' event."""
+    settings.POSTHOG_KEY = "fake-key"
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        size=0,
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
+    access_token, _ = AccessUserItemService().insert_new_access(item, user)
+    LockService(item).lock("1234567890")
+
+    client = APIClient()
+    with (
+        mock.patch.object(malware_detection, "analyse_file"),
+        mock.patch("wopi.viewsets.WopiViewSet._verify_request_signature"),
+        mock.patch("wopi.viewsets.posthog_capture") as mock_capture,
+    ):
+        response = client.post(
+            f"/api/v1.0/wopi/files/{item.id}/contents/",
+            data=b"new content",
+            content_type="text/plain",
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+            headers={
+                "X-WOPI-Override": "PUT",
+                "X-WOPI-Lock": "1234567890",
+            },
+        )
+
+    assert response.status_code == 200
+    mock_capture.assert_called_once_with("item_edited", user, {"wopi_client": "vendorA"}, item=item)
