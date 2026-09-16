@@ -1,5 +1,7 @@
 """Test the item hard delete endpoint."""
 
+from unittest import mock
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -170,3 +172,20 @@ def test_api_items_hard_delete_suspicious_item_should_work_for_creator():
     assert response.status_code == 204
 
     assert not models.Item.objects.filter(id=suspicious_item.id).exists()
+
+
+def test_api_items_hard_delete_posthog_event(settings):
+    """Hard deleting an item should send an 'item_hard_deleted' event."""
+    settings.POSTHOG_KEY = "fake-key"
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, models.RoleChoices.OWNER)])
+    item.soft_delete()
+
+    client = APIClient()
+    client.force_login(user)
+
+    with mock.patch("core.api.viewsets.posthog_capture") as mock_capture:
+        response = client.delete(f"/api/v1.0/items/{item.id!s}/hard-delete/")
+
+    assert response.status_code == 204
+    mock_capture.assert_called_once_with("item_hard_deleted", user, {}, item=item)

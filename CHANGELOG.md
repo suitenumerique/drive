@@ -15,6 +15,7 @@ and this project adheres to
 - ✨(backend) add a command to profile the main API endpoints
 - ✨(backend) schedule management commands with celery beat
 - ✨(backend) capture a posthog event on template based creation
+- ✨(backend) capture posthog events on item deletion
 
 ### Changed
 
