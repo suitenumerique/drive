@@ -714,6 +714,7 @@ class ItemViewSet(
             instance.detach()
         else:
             instance.soft_delete()
+            posthog_capture("item_deleted", self.request.user, {}, item=instance)
 
     def perform_update(self, serializer):
         """Override to check if a file is renamed in order to rename file on storage."""
@@ -733,6 +734,7 @@ class ItemViewSet(
         instance = self.get_object()
         instance.hard_delete()
         process_item_purge.delay(instance.id)
+        posthog_capture("item_hard_deleted", request.user, {}, item=instance)
         return drf.response.Response(status=status.HTTP_204_NO_CONTENT)
 
     @drf.decorators.action(detail=True, methods=["post"], url_path="convert")

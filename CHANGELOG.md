@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) capture a posthog event on template based creation
+- ✨(backend) capture posthog events on item deletion
 
 ### Fixed
 
