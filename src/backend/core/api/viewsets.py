@@ -664,6 +664,13 @@ class ItemViewSet(
         item.size = len(template_content)
         item.save(update_fields=["upload_state", "mimetype", "size", "updated_at"])
 
+        posthog_capture(
+            "item_created_from_template",
+            self.request.user,
+            {"extension": extension},
+            item=item,
+        )
+
     def _check_can_upload(self, user, item_type):
         """Refuse the creation of a file when the upload entitlement is falsy."""
         if item_type != models.ItemTypeChoices.FILE:
@@ -707,6 +714,7 @@ class ItemViewSet(
             instance.detach()
         else:
             instance.soft_delete()
+            posthog_capture("item_deleted", self.request.user, {}, item=instance)
 
     def perform_update(self, serializer):
         """Override to check if a file is renamed in order to rename file on storage."""
@@ -726,6 +734,7 @@ class ItemViewSet(
         instance = self.get_object()
         instance.hard_delete()
         process_item_purge.delay(instance.id)
+        posthog_capture("item_hard_deleted", request.user, {}, item=instance)
         return drf.response.Response(status=status.HTTP_204_NO_CONTENT)
 
     @drf.decorators.action(detail=True, methods=["post"], url_path="convert")
@@ -756,6 +765,13 @@ class ItemViewSet(
             placeholder.soft_delete()
             placeholder.delete()
             raise
+
+        posthog_capture(
+            "item_converted",
+            request.user,
+            {"converted_item_id": placeholder.id},
+            item=source,
+        )
 
         serializer = self.get_serializer(placeholder)
         return drf.response.Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -1807,6 +1823,8 @@ class ItemViewSet(
 
         descendants = export_descendants(folder)
         zip_stream = build_zip_stream(descendants)
+
+        posthog_capture("item_exported", request.user, {}, item=folder)
 
         encoded_name = quote(f"{folder.title}.zip", safe="")
         return StreamingHttpResponse(

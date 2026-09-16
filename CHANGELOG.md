@@ -8,6 +8,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) capture a posthog event on template based creation
+- ✨(backend) capture posthog events on item deletion
+- ✨(backend) capture a posthog event on conversion request
+- ✨(backend) capture a posthog event on folder export
+- ✨(wopi) capture a posthog event on document edition
+
 ### Fixed
 
 - 🐛(frontend) refresh the Recent view after item mutations
