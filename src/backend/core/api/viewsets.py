@@ -766,6 +766,13 @@ class ItemViewSet(
             placeholder.delete()
             raise
 
+        posthog_capture(
+            "item_converted",
+            request.user,
+            {"converted_item_id": placeholder.id},
+            item=source,
+        )
+
         serializer = self.get_serializer(placeholder)
         return drf.response.Response(serializer.data, status=status.HTTP_201_CREATED)
 
