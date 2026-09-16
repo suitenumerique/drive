@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- ✨(backend) require a size reservation to upload a file
+
 ### Fixed
 
 - 🐛(frontend) refresh the Recent view after item mutations
