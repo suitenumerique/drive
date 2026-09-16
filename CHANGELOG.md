@@ -14,6 +14,7 @@ and this project adheres to
 - ✨(backend) add a command to generate a production sized dataset
 - ✨(backend) add a command to profile the main API endpoints
 - ✨(backend) schedule management commands with celery beat
+- ✨(backend) capture a posthog event on template based creation
 
 ### Changed
 
@@ -25,9 +26,6 @@ and this project adheres to
 - ⚡️(backend) speed up the item list, recents and favorites on large databases
 - 🐛(backend) do not clean a pending item whose upload just ended
 - 🐛(backend) purge the stored object of stale pending items
-
-### Fixed
-
 - 🔒️(backend) serve WOPI file content as a sandboxed download
 
 ## [v0.23.0] - 2026-09-23
