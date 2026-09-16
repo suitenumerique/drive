@@ -668,12 +668,17 @@ class ItemViewSet(
         """Extra model attributes applied to items created by this viewset (subclass hook)."""
         return {}
 
+    def get_create_owner(self):
+        """User set as creator and owner of items created by this viewset (subclass hook)."""
+        return self.request.user
+
     def perform_create(self, serializer):
-        """Set the current user as creator and owner of the newly created object."""
+        """Set the create owner as creator and owner of the newly created object."""
         extension = serializer.validated_data.pop("extension", None)
+        owner = self.get_create_owner()
 
         obj = models.Item.objects.create_child(
-            creator=self.request.user,
+            creator=owner,
             link_reach=LinkReachChoices.RESTRICTED,
             **serializer.validated_data,
             **self.get_create_extra_attributes(),
@@ -683,7 +688,7 @@ class ItemViewSet(
         serializer.instance = obj
         models.ItemAccess.objects.create(
             item=obj,
-            user=self.request.user,
+            user=owner,
             role=models.RoleChoices.OWNER,
         )
 
