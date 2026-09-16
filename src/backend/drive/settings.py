@@ -1325,6 +1325,14 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # Token audiences allowed to create items on behalf of another user through
+    # the external API, by passing an "owner_email" field.
+    EXTERNAL_API_AUD_CREATE_ON_BEHALF = values.ListValue(
+        default=[],
+        environ_name="EXTERNAL_API_AUD_CREATE_ON_BEHALF",
+        environ_prefix=None,
+    )
+
     OIDC_RS_PRIVATE_KEY_STR = values.Value(
         default=None,
         environ_name="OIDC_RS_PRIVATE_KEY_STR",

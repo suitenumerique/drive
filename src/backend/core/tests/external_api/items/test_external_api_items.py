@@ -288,6 +288,28 @@ def test_api_items_create_resource_server_no_aud_attributes_setting(
     assert child.quota_excluded is False
 
 
+def test_api_items_create_on_behalf_resource_server_aud_not_allowed(
+    user_token, resource_server_backend, user_specific_sub
+):
+    """Audiences missing from EXTERNAL_API_AUD_CREATE_ON_BEHALF cannot pass owner_email."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+    owner = factories.UserFactory()
+
+    response = client.post(
+        "/external_api/v1.0/items/",
+        {
+            "type": models.ItemTypeChoices.FILE,
+            "filename": "file.txt",
+            "owner_email": owner.email,
+        },
+    )
+
+    assert response.status_code == 403
+    assert models.Item.objects.exists() is False
+
+
+@override_settings(EXTERNAL_API_AUD_CREATE_ON_BEHALF=["some_service_provider"])
 def test_api_items_create_on_behalf_resource_server_existing_user(
     user_token, resource_server_backend, user_specific_sub
 ):
@@ -316,6 +338,7 @@ def test_api_items_create_on_behalf_resource_server_existing_user(
     assert models.Invitation.objects.exists() is False
 
 
+@override_settings(EXTERNAL_API_AUD_CREATE_ON_BEHALF=["some_service_provider"])
 def test_api_items_create_on_behalf_resource_server_invalid_email(
     user_token, resource_server_backend, user_specific_sub
 ):
@@ -340,6 +363,7 @@ def test_api_items_create_on_behalf_resource_server_invalid_email(
 
 
 @override_settings(
+    EXTERNAL_API_AUD_CREATE_ON_BEHALF=["some_service_provider"],
     ENTITLEMENTS_BACKEND="core.entitlements.backends.local.LocalEntitlementsBackend",
     ENTITLEMENTS_BACKEND_PARAMETERS={"default_storage_limit": 1000},
 )

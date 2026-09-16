@@ -76,10 +76,17 @@ Audiences without an entry keep the default item attributes.
 
 ## Create items on behalf of another user
 
-Pass an `owner_email` field when creating an item at the root through the external API.
+List in the `EXTERNAL_API_AUD_CREATE_ON_BEHALF` setting the token audiences allowed to pass an
+`owner_email` field when creating an item at the root. Set it via the
+`EXTERNAL_API_AUD_CREATE_ON_BEHALF` environment variable as a comma-separated list:
+
+```shell
+EXTERNAL_API_AUD_CREATE_ON_BEHALF=some_audience,another_audience
+```
+
 The user matching `owner_email` becomes the creator and owner of the item, so it counts in
 their storage quota. The token user keeps an owner access, which lets it finish the upload
-with `upload-ended`.
+with `upload-ended`. Audiences missing from the setting get a `403` when passing `owner_email`.
 
 ## Request Drive
 

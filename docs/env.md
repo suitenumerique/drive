@@ -47,6 +47,7 @@ This document lists all configurable environment variables for the Drive applica
 | `EMAIL_URL_APP` | URL used in emails to link back to the app | `None` |
 | `EMAIL_USE_SSL` | Use SSL for SMTP connection | `False` |
 | `EMAIL_USE_TLS` | Use TLS for SMTP connection | `False` |
+| `EXTERNAL_API_AUD_CREATE_ON_BEHALF` | Comma-separated token audiences allowed to create items on behalf of another user through the external API, by passing an `owner_email` field, e.g. `some_audience,another_audience` | `[]` |
 | `EXTERNAL_API_AUD_ITEM_ATTRIBUTES` | Extra attributes applied to items created through the external API, keyed by the token audience of the request, e.g. `{"some_audience": {"quota_excluded": true}}` | `{}` |
 | `FEATURES_ALPHA` | Enable alpha features | `False` |
 | `FEATURES_INDEXED_SEARCH` | Enable the search of indexed files through the API | `True` |

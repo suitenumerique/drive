@@ -62,6 +62,13 @@ class ResourceServerItemViewSet(ResourceServerRestrictionMixin, ItemViewSet):
         if not owner_email:
             return self.request.user
 
+        audience = getattr(self.request, "resource_server_token_audience", None)
+        if audience not in settings.EXTERNAL_API_AUD_CREATE_ON_BEHALF:
+            raise drf.exceptions.PermissionDenied(
+                detail="You are not allowed to create items on behalf of another user.",
+                code="item_create_on_behalf_not_allowed",
+            )
+
         try:
             self.owner_email = drf.serializers.EmailField().run_validation(owner_email)
         except drf.exceptions.ValidationError as excpt:
