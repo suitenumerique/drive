@@ -10,7 +10,7 @@ import { useState, useCallback } from "react";
 
 export const UserProfile = () => {
   const { user } = useAuth();
-  const { hasKeys } = useVaultClient();
+  const { hasKeys, isEnabled: isEncryptionEnabled } = useVaultClient();
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -37,7 +37,7 @@ export const UserProfile = () => {
         user={user}
         logout={logout}
         termOfServiceUrl="https://docs.numerique.gouv.fr/docs/8e298e03-c95f-44c7-be4a-ffb618af1854/"
-        settingsCTA={handleEncryptionClick}
+        settingsCTA={isEncryptionEnabled ? handleEncryptionClick : undefined}
         actions={<LanguagePickerUserMenu />}
       />
 

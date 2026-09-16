@@ -3414,6 +3414,9 @@ class ConfigView(drf.views.APIView):
         array_settings = [
             "CRISP_WEBSITE_ID",
             "DATA_UPLOAD_MAX_MEMORY_SIZE",
+            "ENCRYPTION_FEATURE_ENABLED",
+            "ENCRYPTION_INTERFACE_URL",
+            "ENCRYPTION_VAULT_URL",
             "ENVIRONMENT",
             "FRONTEND_THEME",
             "FRONTEND_MORE_LINK",

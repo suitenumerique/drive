@@ -52,6 +52,9 @@ This document lists all configurable environment variables for the Drive applica
 | `EMAIL_PORT` | SMTP port for email sending | `None` |
 | `EMAIL_USE_SSL` | Use SSL for SMTP connection | `False` |
 | `EMAIL_USE_TLS` | Use TLS for SMTP connection | `False` |
+| `ENCRYPTION_FEATURE_ENABLED` | Enable end-to-end encryption of items through the encryption service (see the dedicated section below). Use with caution | `False` |
+| `ENCRYPTION_INTERFACE_URL` | Origin of the encryption service interface host (e.g. `https://encryption.example.com`). Required when the feature is enabled | `None` |
+| `ENCRYPTION_VAULT_URL` | Origin of the encryption service vault host, which serves the client SDK (e.g. `https://data.encryption.example.com`). Required when the feature is enabled | `None` |
 | `FEATURES_ALPHA` | Enable alpha features | `False` |
 | `FEATURES_INDEXED_SEARCH` | Enable the search of indexed files through the API | `True` |
 | `FILE_EXTENSIONS_ALLOWED` | List of file extension allowed to be uploaded | See in the settings.py file |
@@ -132,3 +135,14 @@ This document lists all configurable environment variables for the Drive applica
 | `WOPI_CONFIGURATION_CRONTAB_HOUR` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `3` |
 | `WOPI_CONFIGURATION_CRONTAB_DAY_OF_MONTH` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `*` |
 | `WOPI_CONFIGURATION_CRONTAB_MONTH_OF_YEAR` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `*` |
+
+
+## End-to-end encryption
+
+`ENCRYPTION_FEATURE_ENABLED` turns on client-side end-to-end encryption of files and folders through the shared encryption service ([suitenumerique/encryption](https://github.com/suitenumerique/encryption)). It is **off by default**, and the flag is read at runtime, so the same image can run with the feature enabled in one environment (e.g. pre-production) and disabled in another (e.g. production). When it is off, the frontend never loads the encryption SDK and shows no encryption option at all.
+
+Enabling it implies:
+
+- **A deployed instance of the encryption service.** Users' browsers must reach it at `ENCRYPTION_VAULT_URL` (its `data.` host, which serves the SDK and the vault iframe) and `ENCRYPTION_INTERFACE_URL` (its interface host). Both must be set, otherwise the feature stays off.
+- **That instance must be configured for this frontend**: its `ALLOWED_FRAME_ANCESTORS` must list this application's origin, it must use the same OIDC provider (users are matched on the `sub` claim), and it must share the same registrable domain as the other products for the browser to share keys between them (for example `docs.example.com`, `drive.example.com`, `encryption.example.com` and `data.encryption.example.com` all sit under `example.com`; an encryption service hosted on `encryption.other-domain.com` would keep a separate key store per product).
+- **Use with caution.** Encrypted content can only be read by users holding the keys: the server cannot recover it, and a user who loses both their device keys and their backup loses access to their encrypted items. Do not enable it in production without a validated deployment of the encryption service and a tested recovery process.

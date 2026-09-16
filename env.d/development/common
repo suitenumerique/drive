@@ -72,6 +72,13 @@ FRONTEND_FEEDBACK_MESSAGES_WIDGET_API_URL=
 FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL=
 FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH=
 
+# End-to-end encryption, off by default. To enable it locally, run the encryption
+# service (https://github.com/suitenumerique/encryption) and set these in
+# env.d/development/common.local (gitignored):
+# ENCRYPTION_FEATURE_ENABLED=True
+# ENCRYPTION_VAULT_URL=http://data.encryption.localhost:7200
+# ENCRYPTION_INTERFACE_URL=http://encryption.localhost:7200
+
 # WOPI
 WOPI_CLIENTS="onlyoffice"
 WOPI_COLLABORA_DISCOVERY_URL="http://collabora:9980/hosting/discovery"

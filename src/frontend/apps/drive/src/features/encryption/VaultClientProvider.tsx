@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/Auth';
+import { useConfig } from '@/features/config/ConfigProvider';
 import {
   MISSING_KEYS_EVENT,
   MissingEncryptionKeysModal,
@@ -24,11 +25,8 @@ declare global {
   }
 }
 
-const VAULT_URL = process.env.NEXT_PUBLIC_VAULT_URL ?? 'http://localhost:7201';
-const INTERFACE_URL =
-  process.env.NEXT_PUBLIC_INTERFACE_URL ?? 'http://localhost:7202';
-
 export interface VaultClientContextValue {
+  isEnabled: boolean;
   client: VaultClient | null;
   isReady: boolean;
   isLoading: boolean;
@@ -53,6 +51,7 @@ export interface VaultClientContextValue {
 }
 
 const VaultClientContext = createContext<VaultClientContextValue>({
+  isEnabled: false,
   client: null,
   isReady: false,
   isLoading: true,
@@ -64,7 +63,7 @@ const VaultClientContext = createContext<VaultClientContextValue>({
   openEncryptionOnboarding: () => {},
 });
 
-function loadClientScript(): Promise<void> {
+function loadClientScript(vaultUrl: string): Promise<void> {
   return new Promise((resolve, reject) => {
     if (window.EncryptionClient?.VaultClient) {
       resolve();
@@ -72,7 +71,7 @@ function loadClientScript(): Promise<void> {
     }
 
     const existing = document.querySelector(
-      `script[src="${VAULT_URL}/client.js"]`
+      `script[src="${vaultUrl}/client.js"]`
     );
     if (existing) {
       existing.addEventListener('load', () => resolve());
@@ -83,7 +82,7 @@ function loadClientScript(): Promise<void> {
     }
 
     const script = document.createElement('script');
-    script.src = `${VAULT_URL}/client.js`;
+    script.src = `${vaultUrl}/client.js`;
     script.async = true;
     script.onload = () => resolve();
     script.onerror = () =>
@@ -98,6 +97,7 @@ export function VaultClientProvider({
   children: React.ReactNode;
 }) {
   const { user } = useAuth();
+  const { config } = useConfig();
   const { i18n } = useTranslation();
   const clientRef = useRef<VaultClient | null>(null);
   const [clientInitialized, setClientInitialized] = useState(false);
@@ -108,20 +108,33 @@ export function VaultClientProvider({
   const [publicKey, setPublicKey] = useState<ArrayBuffer | null>(null);
   const initRef = useRef(false);
 
+  const vaultUrl = config.ENCRYPTION_VAULT_URL ?? null;
+  const interfaceUrl = config.ENCRYPTION_INTERFACE_URL ?? null;
+  const isEnabled =
+    config.ENCRYPTION_FEATURE_ENABLED === true && !!vaultUrl && !!interfaceUrl;
+
   useEffect(() => {
     if (initRef.current) return;
+
+    if (!isEnabled || !vaultUrl || !interfaceUrl) {
+      setIsLoading(false);
+      return;
+    }
+
     initRef.current = true;
 
+    const resolvedVaultUrl: string = vaultUrl;
+    const resolvedInterfaceUrl: string = interfaceUrl;
     let destroyed = false;
 
     async function init() {
       try {
-        await loadClientScript();
+        await loadClientScript(resolvedVaultUrl);
         if (destroyed) return;
 
         const client = new window.EncryptionClient.VaultClient({
-          vaultUrl: VAULT_URL,
-          interfaceUrl: INTERFACE_URL,
+          vaultUrl: resolvedVaultUrl,
+          interfaceUrl: resolvedInterfaceUrl,
           lang: i18n.language,
         });
 
@@ -181,11 +194,17 @@ export function VaultClientProvider({
         window.__driveVaultClient = null;
       }
     };
-  }, []);
+  }, [isEnabled, vaultUrl, interfaceUrl]);
 
   useEffect(() => {
     const client = clientRef.current;
-    if (!client || !clientInitialized || !user?.sub) {
+    if (!client || !clientInitialized) {
+      return;
+    }
+
+    if (!user?.sub) {
+      // Anonymous visitor: nothing to set up, stop reporting "loading".
+      setIsLoading(false);
       return;
     }
 
@@ -268,6 +287,7 @@ export function VaultClientProvider({
   return (
     <VaultClientContext.Provider
       value={{
+        isEnabled,
         client: isReady ? clientRef.current : null,
         isReady,
         isLoading,

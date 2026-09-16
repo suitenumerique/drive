@@ -28,6 +28,7 @@ import { DefaultRoute } from "@/utils/defaultRoutes";
 import { ModalRecursiveEncrypt } from "@/features/encryption/ModalRecursiveEncrypt";
 import { ModalRecursiveRemoveEncryption } from "@/features/encryption/ModalRecursiveRemoveEncryption";
 import { ModalEncryptionNotRoot } from "@/features/encryption/ModalEncryptionNotRoot";
+import { useVaultClient } from "@/features/encryption/VaultClientProvider";
 
 type UseItemActionMenuItemsOptions = {
   onModalOpenChange?: (isModalOpen: boolean) => void;
@@ -50,6 +51,7 @@ export const useItemActionMenuItems = ({
     useGlobalExplorer();
   const { handleDownloadItem } = useDownloadItem();
   const { deleteItems: deleteItem } = useDeleteItem();
+  const { isEnabled: isEncryptionEnabled } = useVaultClient();
   const treeContext = useTreeContext();
 
   const { mutateAsync: deleteFavoriteItem } = useMutationDeleteFavoriteItem();
@@ -193,7 +195,7 @@ export const useItemActionMenuItems = ({
         },
       },
       { type: "separator" },
-      ...(!item.is_encrypted && item.abilities?.encrypt
+      ...(isEncryptionEnabled && !item.is_encrypted && item.abilities?.encrypt
         ? [
             {
               icon: <span className="material-icons">lock</span>,
