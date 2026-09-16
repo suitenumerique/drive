@@ -16,6 +16,7 @@ and this project adheres to
 - ✨(backend) schedule management commands with celery beat
 - ✨(backend) capture a posthog event on template based creation
 - ✨(backend) capture posthog events on item deletion
+- ✨(backend) capture a posthog event on conversion request
 
 ### Changed
 

@@ -135,3 +135,26 @@ def test_convert_endpoint_returns_403_for_unsupported_extension():
 
     assert response.status_code == 403
     delay_mock.assert_not_called()
+
+
+def test_convert_endpoint_posthog_event(settings):
+    """Requesting a conversion should send an 'item_converted' event."""
+    settings.POSTHOG_KEY = "fake-key"
+    user, item = _build_user_and_item()
+    client = APIClient()
+    client.force_login(user)
+
+    with (
+        mock.patch("core.api.viewsets.convert_file.delay"),
+        mock.patch("core.api.viewsets.posthog_capture") as mock_capture,
+    ):
+        response = client.post(f"/api/v1.0/items/{item.id}/convert/")
+
+    assert response.status_code == 201
+    placeholder = models.Item.objects.get(id=response.json()["id"])
+    mock_capture.assert_called_once_with(
+        "item_converted",
+        user,
+        {"converted_item_id": placeholder.id},
+        item=item,
+    )
