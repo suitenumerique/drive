@@ -185,6 +185,18 @@ class UserListThrottleSustained(UserRateThrottle):
     scope = "user_list_sustained"
 
 
+class ItemCreateThrottleBurst(UserRateThrottle):
+    """Throttle for the item creation endpoints."""
+
+    scope = "item_create_burst"
+
+
+class ItemCreateThrottleSustained(UserRateThrottle):
+    """Throttle for the item creation endpoints."""
+
+    scope = "item_create_sustained"
+
+
 class UserViewSet(
     SerializerPerActionMixin,
     drf.mixins.UpdateModelMixin,
@@ -430,6 +442,21 @@ class ItemViewSet(
     breadcrumb_serializer_class = serializers.BreadcrumbItemSerializer
     recents_serializer_class = serializers.ListItemLightSerializer
     favorite_list_serializer_class = serializers.ListItemLightSerializer
+    throttle_classes = []
+
+    def get_throttles(self):
+        """
+        Rate limit the actions inserting an item, whatever its type: only files are
+        bounded by the upload entitlement, so nothing else caps how many rows a
+        client can create.
+        """
+        self.throttle_classes = []
+        if self.action in {"create", "duplicate"} or (
+            self.action == "children" and self.request.method == "POST"
+        ):
+            self.throttle_classes = [ItemCreateThrottleBurst, ItemCreateThrottleSustained]
+
+        return super().get_throttles()
 
     def _filter_suspicious_items(self, queryset, user):
         """

@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) rate limit the item creation endpoints
+
 ### Changed
 
 - ✨(backend) require a size reservation to upload a file
