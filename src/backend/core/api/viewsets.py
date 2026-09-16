@@ -686,11 +686,12 @@ class ItemViewSet(
         if extension:
             self._create_file_from_template(obj, extension)
         serializer.instance = obj
-        models.ItemAccess.objects.create(
-            item=obj,
-            user=owner,
-            role=models.RoleChoices.OWNER,
-        )
+        if owner:
+            models.ItemAccess.objects.create(
+                item=obj,
+                user=owner,
+                role=models.RoleChoices.OWNER,
+            )
 
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""

@@ -8,7 +8,9 @@ because the resource server viewsets inherit from the api viewsets.
 
 from datetime import timedelta
 from io import BytesIO
+from unittest import mock
 
+from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 from django.test import override_settings
 from django.utils import timezone
@@ -336,6 +338,93 @@ def test_api_items_create_on_behalf_resource_server_existing_user(
         )
     ) == {owner.id, user_specific_sub.id}
     assert models.Invitation.objects.exists() is False
+
+
+@override_settings(
+    EXTERNAL_API_AUD_CREATE_ON_BEHALF=["some_service_provider"], EMAIL_HOST="localhost"
+)
+@pytest.mark.parametrize("owner_email", ["newcomer@example.com", " newcomer@example.com "])
+@pytest.mark.usefixtures("resource_server_backend")
+def test_api_items_create_on_behalf_resource_server_unknown_email(
+    user_token,
+    user_specific_sub,
+    owner_email,
+    mailoutbox,
+    django_capture_on_commit_callbacks,
+):
+    """An unknown owner_email leaves the creator empty until the invited user first logs in."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    with django_capture_on_commit_callbacks(execute=True):
+        response = client.post(
+            "/external_api/v1.0/items/",
+            {
+                "type": models.ItemTypeChoices.FILE,
+                "filename": "file.txt",
+                "owner_email": owner_email,
+            },
+        )
+        assert not mailoutbox
+
+    assert response.status_code == 201
+    item = models.Item.objects.get(id=response.json()["id"])
+    assert item.creator is None
+    assert list(models.ItemAccess.objects.filter(item=item).values_list("user_id", "role")) == [
+        (user_specific_sub.id, models.RoleChoices.OWNER)
+    ]
+    invitation = models.Invitation.objects.get()
+    assert invitation.email == "newcomer@example.com"
+    assert invitation.item == item
+    assert invitation.role == models.RoleChoices.OWNER
+    assert invitation.issuer == user_specific_sub
+    assert len(mailoutbox) == 1
+    assert mailoutbox[0].to == ["newcomer@example.com"]
+    assert "file.txt" in mailoutbox[0].body
+    assert str(item.id) in mailoutbox[0].body
+
+    owner = factories.UserFactory(email="newcomer@example.com")
+
+    item.refresh_from_db()
+    assert item.creator == owner
+    assert models.ItemAccess.objects.filter(
+        item=item, user=owner, role=models.RoleChoices.OWNER
+    ).exists()
+    assert models.Invitation.objects.exists() is False
+
+
+@override_settings(EXTERNAL_API_AUD_CREATE_ON_BEHALF=["some_service_provider"])
+def test_api_items_create_on_behalf_resource_server_invitation_failure(
+    user_token,
+    resource_server_backend,
+    user_specific_sub,
+    mailoutbox,
+    django_capture_on_commit_callbacks,
+):
+    """An invitation failure rolls back the item and accesses without sending an email."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    with (
+        django_capture_on_commit_callbacks(execute=True),
+        mock.patch.object(
+            models.Invitation, "save", side_effect=ValidationError("Invitation rejected.")
+        ),
+    ):
+        response = client.post(
+            "/external_api/v1.0/items/",
+            {
+                "type": models.ItemTypeChoices.FILE,
+                "filename": "file.txt",
+                "owner_email": "newcomer@example.com",
+            },
+        )
+
+    assert response.status_code == 400
+    assert not models.Item.objects.exists()
+    assert not models.ItemAccess.objects.exists()
+    assert not models.Invitation.objects.exists()
+    assert not mailoutbox
 
 
 @override_settings(EXTERNAL_API_AUD_CREATE_ON_BEHALF=["some_service_provider"])

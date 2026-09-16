@@ -76,11 +76,9 @@ class ResourceServerItemViewSet(ResourceServerRestrictionMixin, ItemViewSet):
 
         try:
             owner = models.User.objects.get(email__iexact=self.owner_email)
-        except models.User.DoesNotExist as excpt:
-            raise drf.exceptions.ValidationError(
-                {"owner_email": "No user matches this email."},
-                code="item_create_on_behalf_unknown_email",
-            ) from excpt
+        except models.User.DoesNotExist:
+            # Unknown email: the item is created without creator and assigned at first login
+            return None
         except models.User.MultipleObjectsReturned as excpt:
             raise drf.exceptions.ValidationError(
                 {"owner_email": "Several users share this email."},
@@ -108,6 +106,21 @@ class ResourceServerItemViewSet(ResourceServerRestrictionMixin, ItemViewSet):
             user=self.request.user,
             role=models.RoleChoices.OWNER,
         )
+        if item.creator_id is None:
+            invitation = models.Invitation.objects.create(
+                email=self.owner_email,
+                item=item,
+                role=models.RoleChoices.OWNER,
+                issuer=self.request.user,
+            )
+            transaction.on_commit(
+                lambda: item.send_invitation_email(
+                    invitation.email,
+                    invitation.role,
+                    self.request.user,
+                    self.request.user.language or settings.LANGUAGE_CODE,
+                )
+            )
 
 
 class ResourceServerUserViewSet(ResourceServerRestrictionMixin, UserViewSet):

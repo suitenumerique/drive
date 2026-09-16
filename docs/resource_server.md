@@ -86,7 +86,9 @@ EXTERNAL_API_AUD_CREATE_ON_BEHALF=some_audience,another_audience
 
 The user matching `owner_email` becomes the creator and owner of the item, so it counts in
 their storage quota. The token user keeps an owner access, which lets it finish the upload
-with `upload-ended`. Audiences missing from the setting get a `403` when passing `owner_email`.
+with `upload-ended`. If no user matches `owner_email`, the item is created without creator
+and an owner invitation is sent to this email: the item is assigned to the user when they
+first log in. Audiences missing from the setting get a `403` when passing `owner_email`.
 
 ## Request Drive
 
