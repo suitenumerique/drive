@@ -126,6 +126,7 @@ def test_api_items_create_file_authenticated_success():
         response = client.post(
             "/api/v1.0/items/",
             {
+                "size": 8,
                 "type": ItemTypeChoices.FILE,
                 "filename": "file.txt",
             },
@@ -156,7 +157,7 @@ def test_api_items_create_file_authenticated_success():
     ]
     assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
-    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["content-length;host;x-amz-acl"]
     assert query_params.pop("X-Amz-Signature") is not None
 
     assert len(query_params) == 0
@@ -173,6 +174,7 @@ def test_api_items_create_file_authenticated_success_without_upload_acl():
     response = client.post(
         "/api/v1.0/items/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
@@ -183,7 +185,7 @@ def test_api_items_create_file_authenticated_success_without_upload_acl():
     policy_parsed = urlparse(response.json()["policy"])
     query_params = parse_qs(policy_parsed.query)
 
-    assert query_params["X-Amz-SignedHeaders"] == ["host"]
+    assert query_params["X-Amz-SignedHeaders"] == ["content-length;host"]
 
 
 def test_api_items_create_file_authenticated_extension_not_allowed():
@@ -196,6 +198,7 @@ def test_api_items_create_file_authenticated_extension_not_allowed():
     response = client.post(
         "/api/v1.0/items/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.notallowed",
         },
@@ -224,6 +227,7 @@ def test_api_items_create_file_authenticated_extension_case_insensitive():
     response = client.post(
         "/api/v1.0/items/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.JPG",
         },
@@ -245,6 +249,7 @@ def test_api_items_create_file_authenticated_not_checking_extension(settings):
     response = client.post(
         "/api/v1.0/items/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file.notallowed",
         },
@@ -268,6 +273,7 @@ def test_api_items_create_file_authenticated_no_extension_but_checking_it_should
     response = client.post(
         "/api/v1.0/items/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": "file",
         },
@@ -299,6 +305,7 @@ def test_api_items_create_file_authenticated_hidden_file_but_checking_extension_
     response = client.post(
         "/api/v1.0/items/",
         {
+            "size": 8,
             "type": ItemTypeChoices.FILE,
             "filename": ".file",
         },
@@ -442,6 +449,7 @@ def test_api_items_create_file_authenticated_success_invalid_filename():
         response = client.post(
             "/api/v1.0/items/",
             {
+                "size": 8,
                 "type": ItemTypeChoices.FILE,
                 "filename": "><img src=x onerror=alert()>␊.txt",
             },
@@ -472,7 +480,7 @@ def test_api_items_create_file_authenticated_success_invalid_filename():
     ]
     assert query_params.pop("X-Amz-Date") == [now.strftime("%Y%m%dT%H%M%SZ")]
     assert query_params.pop("X-Amz-Expires") == ["60"]
-    assert query_params.pop("X-Amz-SignedHeaders") == ["host;x-amz-acl"]
+    assert query_params.pop("X-Amz-SignedHeaders") == ["content-length;host;x-amz-acl"]
     assert query_params.pop("X-Amz-Signature") is not None
 
     assert len(query_params) == 0
@@ -507,6 +515,7 @@ def test_api_items_create_file_entitlements_backend_returns_falsy(
         {
             "type": ItemTypeChoices.FILE,
             "filename": "file.txt",
+            "size": 8,
         },
     )
 

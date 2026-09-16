@@ -606,6 +606,7 @@ class CreateItemSerializer(ItemSerializer):
     TEMPLATE_EXTENSION_CHOICES = [(ext, ext) for ext in enums.TEMPLATE_FILES]
 
     policy = serializers.SerializerMethodField()
+    size = serializers.IntegerField(min_value=0, required=False)
     title = serializers.CharField(max_length=255, required=False)
     numchild_folder = serializers.SerializerMethodField()
     numchild = serializers.SerializerMethodField()
@@ -672,7 +673,6 @@ class CreateItemSerializer(ItemSerializer):
             "url_permalink",
             "policy",
             "main_workspace",
-            "size",
             "hard_delete_at",
         ]
 
@@ -746,7 +746,27 @@ class CreateItemSerializer(ItemSerializer):
                 code="item_create_folder_title_required",
             )
 
+        self._validate_upload_size(attrs)
         return super().validate(attrs)
+
+    def _validate_upload_size(self, attrs):
+        """Require a bounded reservation only for client-uploaded files."""
+        if attrs["type"] == models.ItemTypeChoices.FILE and not attrs.get("extension"):
+            if "size" not in attrs:
+                raise serializers.ValidationError(
+                    {"size": _("This field is required for uploads.")},
+                    code="required",
+                )
+            if attrs["size"] > settings.DATA_UPLOAD_MAX_MEMORY_SIZE:
+                raise serializers.ValidationError(
+                    {"size": _("The file size is higher than the allowed max size.")},
+                    code="file_size_exceeded",
+                )
+        elif "size" in attrs:
+            raise serializers.ValidationError(
+                {"size": _("This field is only allowed for uploads.")},
+                code="unexpected_upload_size",
+            )
 
     def get_policy(self, item):
         """Return the policy to use if the item is a file."""

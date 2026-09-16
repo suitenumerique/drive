@@ -26,9 +26,9 @@ class LocalEntitlementsBackend(EntitlementsBackend):
     limit, 0: unlimited). Users created before ``exempt_users_created_before``
     and without an override are exempted from any limit.
 
-    The quota is soft: ``can_upload`` is checked before the file size is
-    known, so a single upload can overshoot the limit; the next one is then
-    blocked.
+    Direct uploads reserve their declared size before an authorization is
+    issued. Admission calls the existing cached can_upload decision after creating
+    the reservation, allowing eventual consistency in quota enforcement.
     """
 
     def __init__(

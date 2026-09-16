@@ -955,6 +955,16 @@ class Base(Configuration):
                 environ_name="API_SDK_EVENT_RELAY_THROTTLE_RATE",
                 environ_prefix=None,
             ),
+            "item_create_sustained": values.Value(
+                default="5000/hour",
+                environ_name="API_ITEMS_CREATE_THROTTLE_RATE_SUSTAINED",
+                environ_prefix=None,
+            ),
+            "item_create_burst": values.Value(
+                default="300/minute",
+                environ_name="API_ITEMS_CREATE_THROTTLE_RATE_BURST",
+                environ_prefix=None,
+            ),
         },
     }
 
