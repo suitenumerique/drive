@@ -74,6 +74,13 @@ With this configuration, every item created by a request authenticated with the
 `some_audience` audience is excluded from its creator's storage quota computation.
 Audiences without an entry keep the default item attributes.
 
+## Create items on behalf of another user
+
+Pass an `owner_email` field when creating an item at the root through the external API.
+The user matching `owner_email` becomes the creator and owner of the item, so it counts in
+their storage quota. The token user keeps an owner access, which lets it finish the upload
+with `upload-ended`.
+
 ## Request Drive
 
 In order to request drive from an external resource provider, you need to implement the basic setup of `django-lasuite` [Using the OIDC Authentication Backend to request a resource server](https://github.com/suitenumerique/django-lasuite/blob/main/documentation/how-to-use-oidc-call-to-resource-server.md)

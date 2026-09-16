@@ -288,6 +288,90 @@ def test_api_items_create_resource_server_no_aud_attributes_setting(
     assert child.quota_excluded is False
 
 
+def test_api_items_create_on_behalf_resource_server_existing_user(
+    user_token, resource_server_backend, user_specific_sub
+):
+    """The owner_email user becomes creator and owner, the token user keeps an owner access."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+    owner = factories.UserFactory()
+
+    response = client.post(
+        "/external_api/v1.0/items/",
+        {
+            "type": models.ItemTypeChoices.FILE,
+            "filename": "file.txt",
+            "owner_email": owner.email.upper(),
+        },
+    )
+
+    assert response.status_code == 201
+    item = models.Item.objects.get(id=response.json()["id"])
+    assert item.creator == owner
+    assert set(
+        models.ItemAccess.objects.filter(item=item, role=models.RoleChoices.OWNER).values_list(
+            "user_id", flat=True
+        )
+    ) == {owner.id, user_specific_sub.id}
+    assert models.Invitation.objects.exists() is False
+
+
+def test_api_items_create_on_behalf_resource_server_invalid_email(
+    user_token, resource_server_backend, user_specific_sub
+):
+    """An invalid owner_email should be rejected."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    response = client.post(
+        "/external_api/v1.0/items/",
+        {
+            "type": models.ItemTypeChoices.FILE,
+            "filename": "file.txt",
+            "owner_email": "not-an-email",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["errors"] == [
+        {"attr": "owner_email", "code": "invalid", "detail": "Enter a valid email address."}
+    ]
+    assert models.Item.objects.exists() is False
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND="core.entitlements.backends.local.LocalEntitlementsBackend",
+    ENTITLEMENTS_BACKEND_PARAMETERS={"default_storage_limit": 1000},
+)
+def test_api_items_create_on_behalf_resource_server_owner_over_quota(
+    user_token, resource_server_backend, user_specific_sub
+):
+    """Creating on behalf of a user over quota should be refused."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+    owner = factories.UserFactory()
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, creator=owner, size=1500)
+
+    response = client.post(
+        "/external_api/v1.0/items/",
+        {
+            "type": models.ItemTypeChoices.FILE,
+            "filename": "file.txt",
+            "owner_email": owner.email,
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json()["errors"] == [
+        {
+            "attr": None,
+            "code": "user_quota_exceeded",
+            "detail": "You have exceeded your storage limit.",
+        }
+    ]
+    assert models.Item.objects.filter(creator=owner).count() == 1
+
+
 # Non allowed actions on resource server.
 
 
