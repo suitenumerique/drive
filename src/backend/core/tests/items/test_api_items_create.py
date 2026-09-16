@@ -584,3 +584,30 @@ def test_api_items_create_folder_entitlements_backend_returns_falsy(
 
     assert response.status_code == 201
     assert Item.objects.get().type == ItemTypeChoices.FOLDER
+
+
+def test_api_items_create_file_from_template_posthog_event(settings):
+    """Creating a file from a template should send an 'item_created_from_template' event."""
+    settings.POSTHOG_KEY = "fake-key"
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    with mock.patch("core.api.viewsets.posthog_capture") as mock_capture:
+        response = client.post(
+            "/api/v1.0/items/",
+            {
+                "type": ItemTypeChoices.FILE,
+                "title": "my document",
+                "extension": "odt",
+            },
+        )
+
+    assert response.status_code == 201
+    item = Item.objects.get(id=response.json()["id"])
+    mock_capture.assert_called_once_with(
+        "item_created_from_template",
+        user,
+        {"extension": "odt"},
+        item=item,
+    )

@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) capture a posthog event on template based creation
+
 ### Fixed
 
 - 🐛(frontend) refresh the Recent view after item mutations

@@ -664,6 +664,13 @@ class ItemViewSet(
         item.size = len(template_content)
         item.save(update_fields=["upload_state", "mimetype", "size", "updated_at"])
 
+        posthog_capture(
+            "item_created_from_template",
+            self.request.user,
+            {"extension": extension},
+            item=item,
+        )
+
     def _check_can_upload(self, user, item_type):
         """Refuse the creation of a file when the upload entitlement is falsy."""
         if item_type != models.ItemTypeChoices.FILE:
