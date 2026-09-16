@@ -14,6 +14,7 @@ and this project adheres to
 - ✨(backend) capture posthog events on item deletion
 - ✨(backend) capture a posthog event on conversion request
 - ✨(backend) capture a posthog event on folder export
+- ✨(wopi) capture a posthog event on document edition
 
 ### Fixed
 

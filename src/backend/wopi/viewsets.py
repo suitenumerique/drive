@@ -21,6 +21,7 @@ from sentry_sdk import capture_exception
 
 from core.api.utils import get_item_file_head_object
 from core.models import Item
+from core.utils.analytics import posthog_capture
 from wopi.authentication import WopiAccessTokenAuthentication, get_access_token
 from wopi.exceptions import WopiRequestSignatureError
 from wopi.permissions import AccessTokenPermission
@@ -249,6 +250,14 @@ class WopiViewSet(viewsets.ViewSet):
         item.save(update_fields=["size", "updated_at"])
 
         malware_detection.analyse_file(item.file_key, item_id=item.id)
+
+        wopi_client_config = get_wopi_client_config(item, request.user)
+        posthog_capture(
+            "item_edited",
+            request.user if request.user.is_authenticated else None,
+            {"wopi_client": wopi_client_config["client"] if wopi_client_config else None},
+            item=item,
+        )
 
         head_response = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
         return Response(
