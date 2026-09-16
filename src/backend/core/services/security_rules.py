@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -70,8 +71,30 @@ def load_rules(path):
         excluded = rule.get("exclude_actors", [])
         if not isinstance(excluded, list) or any(not isinstance(actor, str) for actor in excluded):
             raise ValueError("exclude_actors must be a list of identifiers")
+        _environment_overrides(rule)
         _validate_conditions(rule)
     return rules
+
+
+def _environment_overrides(rule):
+    """Allow explicit YAML opt-in to integer environment overrides only."""
+    conditions = rule.get("conditions")
+    if not isinstance(conditions, list):
+        return  # The schema validator reports malformed conditions.
+    for condition in conditions:
+        if not isinstance(condition, dict):
+            continue  # The schema validator reports malformed conditions below.
+        for field in ("threshold", "window_seconds", "min_distinct_resources"):
+            name = condition.get(f"{field}_env")
+            if name is None:
+                continue
+            if not isinstance(name, str) or not re.fullmatch(r"SECURITY_[A-Z0-9_]+", name):
+                raise ValueError("rule overrides must name a SECURITY_ environment variable")
+            if name in os.environ:
+                try:
+                    condition[field] = int(os.environ[name])
+                except ValueError:
+                    raise ValueError(f"{name} must be an integer") from None
 
 
 def _validate_conditions(rule):
@@ -103,6 +126,8 @@ def _validate_conditions(rule):
         ):
             raise ValueError("self_grant_roles must list known target roles")
         _template(condition.get("explanation"), "explanation")
+        if "recommendation" in condition:
+            _template(condition["recommendation"], "recommendation")
 
 
 def validate_event(event):
@@ -130,6 +155,7 @@ def is_self_escalation(event, roles):
     """Only count evidenced self-grants, never infer them from a permission change."""
     context = event.get("context", {})
     old_role, new_role = context.get("old_role"), context.get("new_role")
+    effective = context.get("actor_effective_role")
     return (
         context.get("target_actor") == event["actor"]
         and "old_role" in context
@@ -138,6 +164,10 @@ def is_self_escalation(event, roles):
         and old_role in ROLE_ORDER
         and new_role in roles
         and ROLE_ORDER[new_role] > ROLE_ORDER[old_role]
+        and "actor_effective_role" in context
+        and isinstance(effective, (str, type(None)))
+        and effective in ROLE_ORDER
+        and ROLE_ORDER[new_role] > ROLE_ORDER[effective]
     )
 
 
@@ -263,7 +293,9 @@ class SecurityRules:
             "threshold": condition["threshold"],
             "actor": {"id": event["actor"], "full_name": context.get("actor_full_name")},
             "explanation": condition["explanation"].format(**substitutions),
-            "recommendation": rule["recommendation"].format(**substitutions),
+            "recommendation": condition.get("recommendation", rule["recommendation"]).format(
+                **substitutions
+            ),
             "evidence": [entry[1] for entry in entries[:50]],
             "evidence_truncated": len(entries) > 50,
             "metric": condition.get("metric", "count"),

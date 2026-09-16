@@ -120,6 +120,7 @@ def test_escalation_requires_self_grant_and_increased_role(rules):
                 action="permission_changed",
                 target_actor="alice",
                 old_role="reader",
+                actor_effective_role="reader",
                 new_role="admin",
             ),
             "unused",
@@ -287,7 +288,7 @@ def test_packaged_fixture_and_posthog_sdk_without_network(tmp_path):
     rules = load_rules(root / "security_rules.yaml")
     first = security_bridge.process_batch(source, tmp_path, rules)
     second = security_bridge.process_batch(source, tmp_path, rules)
-    assert (first["lines"], second["lines"]) == (100, 20)
+    assert (first["lines"], second["lines"]) == (100, 60)
     assert first["rejected"] + second["rejected"] == 0
     alerts = read_outputs(tmp_path)
     assert [alert["rule"] for alert in alerts] == [
@@ -295,7 +296,9 @@ def test_packaged_fixture_and_posthog_sdk_without_network(tmp_path):
         "permission_probing",
         *["permission_escalation"] * 5,
     ]
-    assert alerts[0]["threshold"] == 20
+    assert alerts[0]["threshold"] == 100
+    assert alerts[0]["condition"] == "downloads_ten_minutes"
+    assert alerts[0]["severity"] == "high"
     assert alerts[1]["threshold"] == 10
     assert all(alert["recommendation"] for alert in alerts)
     client = Posthog("offline-test-key", send=False)
@@ -319,7 +322,7 @@ def test_command_prints_only_alert_jsonl_to_stdout(tmp_path, capsys):
         "process_security_logs",
         input=str(source),
         workdir=str(tmp_path),
-        batch_size=120,
+        batch_size=160,
         alerts_stdout=True,
     )
     captured = capsys.readouterr()
@@ -330,7 +333,7 @@ def test_command_prints_only_alert_jsonl_to_stdout(tmp_path, capsys):
 @pytest.mark.parametrize(
     "rule_index,condition_index,threshold,seconds,distinct",
     [
-        (0, 0, 20, 60, 0),
+        (0, 0, 60, 60, 0),
         (0, 1, 100, 600, 0),
         (0, 2, 300, 3600, 0),
         (0, 3, 2000000000, 3600, 0),
@@ -361,7 +364,12 @@ def test_brief_thresholds_and_distinct_resources(
         if condition.get("metric") == "bytes":
             entry["context"]["bytes"] = 1000000000
         if condition.get("self_grant_roles"):
-            entry["context"].update(target_actor="alice", old_role="reader", new_role="admin")
+            entry["context"].update(
+                target_actor="alice",
+                old_role="reader",
+                new_role="admin",
+                actor_effective_role="reader",
+            )
         # Repeated access to one object must not meet a five-object predicate.
         if distinct:
             entry["resource"] = "same-file"
@@ -378,7 +386,23 @@ def test_brief_thresholds_and_distinct_resources(
     else:
         assert len(alerts) == 1
         assert alerts[0]["observed_value"] == threshold
+        if (rule_index, condition_index) == (0, 0):
+            assert alerts[0]["severity"] == "medium"
         assert alerts[0]["actor"]["full_name"] == "Alice Example"
+
+
+@pytest.mark.parametrize("downloads,expected_alerts", [(55, 0), (60, 1), (61, 1)])
+def test_download_demo_boundaries(downloads, expected_alerts):
+    """The reference minute burst alerts at 60, with no duplicate at 61 downloads."""
+    engine = SecurityRules(load_rules(Path(__file__).parents[1] / "security_rules.yaml"), {})
+    alerts = []
+    for index in range(downloads):
+        alerts.extend(engine.process(event(index / 2, bytes=1), "unused"))
+    assert len(alerts) == expected_alerts
+    if alerts:
+        assert alerts[0]["condition"] == "downloads_minute"
+        assert alerts[0]["count"] == 60
+        assert alerts[0]["severity"] == "medium"
 
 
 def test_custom_yaml_rule_and_minimal_event(tmp_path):
@@ -429,3 +453,41 @@ def test_periodic_stdout_recovery(tmp_path, rules, settings, capsys, monkeypatch
     assert process_security_logs.run()["published"] == 1
     assert json.loads(capsys.readouterr().out)["alert_id"] == first["alert_id"]
     assert security_bridge.publish_alerts(directory, io.StringIO()) == 0
+
+
+def test_threshold_env_override_and_critical_default(monkeypatch):
+    """Per-user thresholds can be tuned by environment; hard self-grants stay immediate."""
+    path = Path(__file__).parents[1] / "security_rules.yaml"
+    monkeypatch.setenv("SECURITY_MASS_DOWNLOAD_MINUTE_THRESHOLD", "35")
+    monkeypatch.setenv("SECURITY_MASS_DOWNLOAD_MINUTE_WINDOW_SECONDS", "90")
+    monkeypatch.setenv("SECURITY_PROBING_FIVE_MINUTES_MIN_DISTINCT_RESOURCES", "6")
+    monkeypatch.setenv("SECURITY_PERMISSION_CHANGES_FIVE_MINUTES_MIN_DISTINCT_RESOURCES", "7")
+    rules = load_rules(path)
+    assert rules[0]["conditions"][0]["threshold"] == 35
+    assert rules[0]["conditions"][0]["window_seconds"] == 90
+    assert rules[1]["conditions"][0]["min_distinct_resources"] == 6
+    assert rules[2]["conditions"][1]["min_distinct_resources"] == 7
+    hard = rules[2]["conditions"][0]
+    assert (hard["threshold"], hard["window_seconds"], hard["severity"]) == (1, 0, "critical")
+    monkeypatch.setenv("SECURITY_MASS_DOWNLOAD_MINUTE_THRESHOLD", "invalid")
+    with pytest.raises(ValueError, match="must be an integer"):
+        load_rules(path)
+
+
+def test_inherited_privilege_is_not_a_self_escalation():
+    """A local role increase is not an exploit if equal rights were already inherited."""
+    rules = load_rules(Path(__file__).parents[1] / "security_rules.yaml")
+    rules[2]["conditions"] = [rules[2]["conditions"][0]]
+    engine = SecurityRules([rules[2]], {})
+    base = {"target_actor": "alice", "old_role": "reader", "new_role": "admin"}
+    assert not engine.process(event(0, action="permission_changed", **base), "unused")
+    for second, role in enumerate(("admin", "owner"), start=1):
+        assert not engine.process(
+            event(second, action="permission_changed", actor_effective_role=role, **base), "unused"
+        )
+    alerts = engine.process(
+        event(3, action="permission_changed", actor_effective_role="reader", **base), "unused"
+    )
+    assert alerts[0]["severity"] == "critical"
+    assert "bypass" in alerts[0]["explanation"]
+    assert "immediately" in alerts[0]["recommendation"]

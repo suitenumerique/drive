@@ -1,5 +1,14 @@
 # Optional monitoring overlay; load after compose.yaml.
 services:
+  # The API produces events into the same bind mount as the reader. Demo PostHog
+  # credentials remain confined to the monitoring services' security.local file.
+  app-dev:
+    environment:
+      - SECURITY_AUDIT_ENABLED=true
+      - SECURITY_AUDIT_PATH=/data/security/events.jsonl
+    volumes:
+      - ./data/security:/data/security
+
   # Explicit profile: starting the usual Drive stack does not start monitoring.
   # Both processes share checkpoints and input/output files, on a dedicated queue.
   security-worker:
@@ -7,6 +16,9 @@ services:
       file: compose.yaml
       service: celery-dev
     profiles: ["security-monitoring"]
+    env_file:
+      - path: env.d/development/security.local
+        required: false
     environment:
       - DJANGO_CONFIGURATION=Development
       - SECURITY_MONITORING_ENABLED=true

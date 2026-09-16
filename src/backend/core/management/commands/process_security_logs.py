@@ -13,6 +13,9 @@ from core.services.security_rules import load_rules
 class Command(BaseCommand):
     """Accept raw events or already analyzed alerts as JSONL."""
 
+    # These commands operate on files/HTTP only, without Drive database access.
+    requires_system_checks = []
+
     help = (
         "Process one JSONL batch and write local alert/PostHog exports; sends no network traffic."
     )
