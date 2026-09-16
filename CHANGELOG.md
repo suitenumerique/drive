@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- ✨(backend) allow creating items on behalf of another user via the external API
+
 ### Fixed
 
 - 🐛(frontend) refresh the Recent view after item mutations
