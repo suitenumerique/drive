@@ -4,6 +4,7 @@ Tests for the recursive folder export endpoint.
 
 import io
 import zipfile
+from unittest import mock
 
 from django.core.files.storage import default_storage
 
@@ -340,3 +341,22 @@ def test_api_items_export_filename_with_unicode():
     assert response.status_code == 200
     disposition = response["Content-Disposition"]
     assert disposition == "attachment; filename*=UTF-8''%C3%A9t%C3%A9%202026.zip"
+
+
+def test_api_items_export_posthog_event(settings):
+    """Exporting a folder should send an 'item_exported' event."""
+    settings.POSTHOG_KEY = "fake-key"
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    client = APIClient()
+    client.force_login(user)
+
+    with mock.patch("core.api.viewsets.posthog_capture") as mock_capture:
+        response = client.get(f"/api/v1.0/items/{folder.pk}/export/")
+
+    assert response.status_code == 200
+    mock_capture.assert_called_once_with("item_exported", user, {}, item=folder)

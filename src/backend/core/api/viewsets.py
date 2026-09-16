@@ -1824,6 +1824,8 @@ class ItemViewSet(
         descendants = export_descendants(folder)
         zip_stream = build_zip_stream(descendants)
 
+        posthog_capture("item_exported", request.user, {}, item=folder)
+
         encoded_name = quote(f"{folder.title}.zip", safe="")
         return StreamingHttpResponse(
             zip_stream,
