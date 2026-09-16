@@ -57,6 +57,7 @@ from core.services.search_indexers import (
     get_file_indexer,
     get_visited_items_ids_of,
 )
+from core.services.uploads import reserve_upload
 from core.storage.cache import invalidate_storage_used_cache
 from core.tasks.item import duplicate_file, process_item_purge, rename_file
 from core.utils.analytics import posthog_capture
@@ -682,24 +683,36 @@ class ItemViewSet(
 
     def perform_create(self, serializer):
         """Set the current user as creator and owner of the newly created object."""
-        self._check_can_upload(self.request.user, serializer.validated_data["type"])
-
-        extension = serializer.validated_data.pop("extension", None)
-
-        obj = models.Item.objects.create_child(
-            creator=self.request.user,
-            link_reach=LinkReachChoices.RESTRICTED,
-            **serializer.validated_data,
-            **self.get_create_extra_attributes(),
-        )
-        if extension:
-            self._create_file_from_template(obj, extension)
-        serializer.instance = obj
+        self._create_item(serializer)
         models.ItemAccess.objects.create(
-            item=obj,
+            item=serializer.instance,
             user=self.request.user,
             role=models.RoleChoices.OWNER,
         )
+
+    def _create_item(self, serializer, parent=None):
+        """Use the same admission check for root, child and external API uploads."""
+        data = serializer.validated_data.copy()
+        extension = data.pop("extension", None)
+        attributes = self.get_create_extra_attributes()
+        if parent is not None:
+            attributes["parent"] = parent
+        else:
+            attributes["link_reach"] = LinkReachChoices.RESTRICTED
+
+        if data["type"] == models.ItemTypeChoices.FILE and not extension:
+            with reserve_upload(self.request.user, get_entitlements_backend()):
+                serializer.instance = models.Item.objects.create_child(
+                    creator=self.request.user, **data, **attributes
+                )
+        else:
+            if extension:
+                self._check_can_upload(self.request.user, data["type"])
+            serializer.instance = models.Item.objects.create_child(
+                creator=self.request.user, **data, **attributes
+            )
+            if extension:
+                self._create_file_from_template(serializer.instance, extension)
 
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
@@ -854,31 +867,21 @@ class ItemViewSet(
                 code="item_upload_state_not_pending",
             )
 
-        entitlements_backend = get_entitlements_backend()
-        can_upload = entitlements_backend.can_upload(self.request.user)
-        if not can_upload["result"]:
-            self._complete_item_deletion(item)
-            raise drf.exceptions.PermissionDenied(
-                detail=can_upload.get("message", "You do not have permission to upload files."),
-                code=can_upload.get("reason"),
-            )
+        if item.size is None:
+            can_upload = get_entitlements_backend().can_upload(item.creator)
+            if not can_upload["result"]:
+                self._complete_item_deletion(item)
+                raise drf.exceptions.PermissionDenied(
+                    detail=can_upload.get("message", "You do not have permission to upload files."),
+                    code=can_upload.get("reason"),
+                )
 
         s3_client = default_storage.connection.meta.client
 
         head_response = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
         file_size = head_response["ContentLength"]
 
-        if file_size > settings.DATA_UPLOAD_MAX_MEMORY_SIZE:
-            self._complete_item_deletion(item)
-            logger.info(
-                "upload_ended: file size (%s) for file %s higher than the allowed max size",
-                file_size,
-                item.file_key,
-            )
-            raise drf.exceptions.ValidationError(
-                detail="The file size is higher than the allowed max size.",
-                code="file_size_exceeded",
-            )
+        self._validate_uploaded_size(item, file_size)
 
         if file_size > 2048:
             range_response = s3_client.get_object(
@@ -907,12 +910,6 @@ class ItemViewSet(
                 detail="The file type is not allowed.",
                 code="file_type_not_allowed",
             )
-
-        item.upload_state = models.ItemUploadStateChoices.ANALYZING
-        item.mimetype = mimetype
-        item.size = file_size
-
-        item.save(update_fields=["upload_state", "mimetype", "size"])
 
         if head_response["ContentType"] != mimetype:
             logger.info(
@@ -943,7 +940,22 @@ class ItemViewSet(
                     error.response["Error"]["Message"],
                 )
 
-        malware_detection.analyse_file(item.file_key, item_id=item.id)
+        with transaction.atomic():
+            item = models.Item.objects.select_for_update().get(pk=item.pk)
+            if item.hard_deleted_at or item.ancestors_deleted_at:
+                raise drf.exceptions.PermissionDenied()
+            if item.upload_state != models.ItemUploadStateChoices.PENDING:
+                raise drf.exceptions.ValidationError(
+                    {"item": "This action is only available for items in PENDING state."},
+                    code="item_upload_state_not_pending",
+                )
+            item.upload_state = models.ItemUploadStateChoices.ANALYZING
+            item.mimetype = mimetype
+            item.size = file_size
+            item.save(update_fields=["upload_state", "mimetype", "size"])
+            transaction.on_commit(
+                lambda: malware_detection.analyse_file(item.file_key, item_id=item.id)
+            )
 
         serializer = self.get_serializer(item)
 
@@ -959,6 +971,27 @@ class ItemViewSet(
         )
 
         return drf_response.Response(serializer.data, status=status.HTTP_200_OK)
+
+    def _validate_uploaded_size(self, item, file_size):
+        """Verify storage metadata even though the PUT has a signed length."""
+        if item.size is not None and file_size != item.size:
+            self._complete_item_deletion(item)
+            raise drf.exceptions.ValidationError(
+                detail="The uploaded file size does not match the reserved size.",
+                code="file_size_mismatch",
+            )
+
+        if file_size > settings.DATA_UPLOAD_MAX_MEMORY_SIZE:
+            self._complete_item_deletion(item)
+            logger.info(
+                "upload_ended: file size (%s) for file %s higher than the allowed max size",
+                file_size,
+                item.file_key,
+            )
+            raise drf.exceptions.ValidationError(
+                detail="The file size is higher than the allowed max size.",
+                code="file_size_exceeded",
+            )
 
     def _complete_item_deletion(self, item):
         """Completely delete an item."""
@@ -1160,22 +1193,7 @@ class ItemViewSet(
             )
             serializer.is_valid(raise_exception=True)
 
-            self._check_can_upload(self.request.user, serializer.validated_data["type"])
-
-            extension = serializer.validated_data.pop("extension", None)
-
-            child_item = models.Item.objects.create_child(
-                creator=request.user,
-                parent=item,
-                **serializer.validated_data,
-                **self.get_create_extra_attributes(),
-            )
-
-            if extension:
-                self._create_file_from_template(child_item, extension)
-
-            # Set the created instance to the serializer
-            serializer.instance = child_item
+            self._create_item(serializer, parent=item)
 
             headers = self.get_success_headers(serializer.data)
             return drf.response.Response(

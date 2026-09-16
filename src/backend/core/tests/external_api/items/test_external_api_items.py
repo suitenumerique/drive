@@ -137,6 +137,7 @@ def test_api_items_upload_resource_server_using_access_token(
     response = client.post(
         f"/external_api/v1.0/items/{item.id!s}/children/",
         {
+            "size": 8,
             "type": models.ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
@@ -172,6 +173,7 @@ def test_api_items_upload_root_resource_server_using_access_token(
     response = client.post(
         "/external_api/v1.0/items/",
         {
+            "size": 8,
             "type": models.ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
@@ -207,6 +209,7 @@ def test_api_items_create_root_resource_server_applies_aud_attributes(
     response = client.post(
         "/external_api/v1.0/items/",
         {
+            "size": 8,
             "type": models.ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
@@ -237,6 +240,7 @@ def test_api_items_create_children_resource_server_applies_aud_attributes(
     response = client.post(
         f"/external_api/v1.0/items/{item.id!s}/children/",
         {
+            "size": 8,
             "type": models.ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
@@ -258,6 +262,7 @@ def test_api_items_create_resource_server_aud_not_configured(
     response = client.post(
         "/external_api/v1.0/items/",
         {
+            "size": 8,
             "type": models.ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
@@ -278,6 +283,7 @@ def test_api_items_create_resource_server_no_aud_attributes_setting(
     response = client.post(
         "/external_api/v1.0/items/",
         {
+            "size": 8,
             "type": models.ItemTypeChoices.FILE,
             "filename": "file.txt",
         },
