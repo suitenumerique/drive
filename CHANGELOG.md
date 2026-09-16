@@ -17,6 +17,7 @@ and this project adheres to
 - ✨(backend) capture a posthog event on template based creation
 - ✨(backend) capture posthog events on item deletion
 - ✨(backend) capture a posthog event on conversion request
+- ✨(backend) capture a posthog event on folder export
 
 ### Changed
 
