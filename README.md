@@ -71,6 +71,7 @@ LaSuite Drive empowers teams to securely store, share, and collaborate on files 
 ## Getting started 🔧
 
 ### Self-host
+Docs supports Kubernetes and community-provided methods such as Nix with the [lasuite-drive](https://search.nixos.org/packages?channel=unstable&query=lasuite-drive#show=lasuite-drive) package.
 
 - 🚀 Easy to install, scalable and secure file storage solution
 
