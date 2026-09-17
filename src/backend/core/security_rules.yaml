@@ -1,0 +1,87 @@
+# Per-user reference defaults; calibrate against representative deployment traffic.
+# 60/min is a secondary medium signal; 100/10min remains the primary high signal.
+# Platform averages do not establish individual behaviour or a false-positive rate.
+# Add a named rule below to count another action without changing Python.
+# Conditions are OR-ed; each can emit one alert until its predicate falls below threshold.
+# window_seconds: 0 evaluates each event immediately. 2 GB = 2,000,000,000 bytes.
+rules:
+  - name: mass_download
+    action: file_downloaded
+    severity: high
+    exclude_actors: []
+    recommendation: "Check with this person whether the downloads were expected. If they do not recognise this activity, investigate a possible compromised account."
+    conditions:
+      - id: downloads_minute
+        threshold_env: SECURITY_MASS_DOWNLOAD_MINUTE_THRESHOLD
+        window_seconds_env: SECURITY_MASS_DOWNLOAD_MINUTE_WINDOW_SECONDS
+        threshold: 60
+        window_seconds: 60
+        severity: medium
+        explanation: "{count} downloads in {window_seconds} seconds, reaching the configured threshold of {threshold}."
+      - id: downloads_ten_minutes
+        threshold_env: SECURITY_MASS_DOWNLOAD_TEN_MINUTES_THRESHOLD
+        window_seconds_env: SECURITY_MASS_DOWNLOAD_TEN_MINUTES_WINDOW_SECONDS
+        threshold: 100
+        window_seconds: 600
+        explanation: "{count} downloads in {window_seconds} seconds, reaching the configured threshold of {threshold}."
+      - id: downloads_hour
+        threshold_env: SECURITY_MASS_DOWNLOAD_HOUR_THRESHOLD
+        window_seconds_env: SECURITY_MASS_DOWNLOAD_HOUR_WINDOW_SECONDS
+        threshold: 300
+        window_seconds: 3600
+        explanation: "{count} downloads in {window_seconds} seconds, reaching the configured threshold of {threshold}."
+      - id: bytes_hour
+        threshold_env: SECURITY_MASS_DOWNLOAD_BYTES_HOUR_THRESHOLD
+        window_seconds_env: SECURITY_MASS_DOWNLOAD_BYTES_HOUR_WINDOW_SECONDS
+        metric: bytes
+        threshold: 2000000000
+        window_seconds: 3600
+        explanation: "At least {observed_value} downloaded bytes recorded across {count} downloads in {window_seconds} seconds; configured threshold: {threshold} bytes. Downloads without a byte size are not included in this byte total."
+  - name: permission_probing
+    action: permission_denied
+    severity: medium
+    exclude_actors: []
+    recommendation: "Check the denied access attempts and affected resources. Confirm whether the user encountered a legitimate access problem before investigating possible probing."
+    conditions:
+      - id: denials_five_minutes
+        threshold_env: SECURITY_PROBING_FIVE_MINUTES_THRESHOLD
+        window_seconds_env: SECURITY_PROBING_FIVE_MINUTES_WINDOW_SECONDS
+        min_distinct_resources_env: SECURITY_PROBING_FIVE_MINUTES_MIN_DISTINCT_RESOURCES
+        threshold: 10
+        window_seconds: 300
+        min_distinct_resources: 5
+        explanation: "{count} permission denials affecting {distinct_resources} distinct resources in {window_seconds} seconds; threshold: {threshold} denials on at least {min_distinct_resources} resources."
+      - id: denials_hour
+        threshold_env: SECURITY_PROBING_HOUR_THRESHOLD
+        window_seconds_env: SECURITY_PROBING_HOUR_WINDOW_SECONDS
+        threshold: 30
+        window_seconds: 3600
+        explanation: "{count} permission denials in {window_seconds} seconds, reaching the configured threshold of {threshold}."
+  - name: permission_escalation
+    action: permission_changed
+    severity: high
+    exclude_actors: []
+    recommendation: "Review who granted which permissions to whom and confirm the change was authorised. If unexpected, investigate the account and revoke inappropriate grants using the normal incident procedure."
+    conditions:
+      # Intentionally no env override: one impossible privilege increase is critical.
+      - id: self_grant_privileged
+        threshold: 1
+        window_seconds: 0
+        self_grant_roles: [admin, owner]
+        severity: critical
+        explanation: "A self-grant raises its author above their prior effective rights to admin or owner. This should be impossible through the legitimate API and may indicate a bug or an access-control bypass."
+        recommendation: "Investigate immediately: preserve the event evidence, verify effective rights before the change, and examine the API or code path that allowed this grant. Treat a confirmed bypass as a security incident."
+      - id: changes_five_minutes
+        threshold_env: SECURITY_PERMISSION_CHANGES_FIVE_MINUTES_THRESHOLD
+        window_seconds_env: SECURITY_PERMISSION_CHANGES_FIVE_MINUTES_WINDOW_SECONDS
+        min_distinct_resources_env: SECURITY_PERMISSION_CHANGES_FIVE_MINUTES_MIN_DISTINCT_RESOURCES
+        threshold: 10
+        window_seconds: 300
+        min_distinct_resources: 5
+        explanation: "{count} permission changes affecting {distinct_resources} distinct resources in {window_seconds} seconds; threshold: {threshold} changes on at least {min_distinct_resources} resources. These changes require review and do not alone prove self-escalation."
+      - id: changes_hour
+        threshold_env: SECURITY_PERMISSION_CHANGES_HOUR_THRESHOLD
+        window_seconds_env: SECURITY_PERMISSION_CHANGES_HOUR_WINDOW_SECONDS
+        threshold: 25
+        window_seconds: 3600
+        explanation: "{count} permission changes in {window_seconds} seconds, reaching the configured threshold of {threshold}. These changes require review and do not alone prove self-escalation."

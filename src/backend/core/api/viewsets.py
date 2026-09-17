@@ -47,6 +47,7 @@ from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
 from core.entitlements import get_entitlements_backend
+from core.monitoring_utils import audit_access_change, audit_actor_role, log_audit_event
 from core.services.accesses import (
     batch_share_process_rows,
     synchronize_descendants_accesses,
@@ -1545,11 +1546,14 @@ class ItemViewSet(
         return items
 
     @drf.decorators.action(detail=True, methods=["put"], url_path="link-configuration")
+    @transaction.atomic
     def link_configuration(self, request, *args, **kwargs):
         """Update link configuration with specific rights (cf get_abilities)."""
         # Check permissions first
         item = self.get_object()
         previous_link_reach = item.link_reach
+        previous_link_role = item.link_role
+        effective_role = audit_actor_role(item, request)
 
         # Deserialize and validate the data
         serializer = serializers.LinkItemSerializer(item, data=request.data, partial=True)
@@ -1561,6 +1565,20 @@ class ItemViewSet(
             item.link_reach
         ) >= models.LinkReachChoices.get_priority(previous_link_reach):
             item.descendants().update(link_reach=None)
+
+        if (previous_link_reach, previous_link_role) != (item.link_reach, item.link_role):
+            audit_access_change(
+                request,
+                item,
+                effective_role=effective_role,
+                old_role=previous_link_role,
+                new_role=item.link_role,
+                target_kind="link",
+                old_reach=previous_link_reach,
+                new_reach=item.link_reach,
+                created=models.LinkReachChoices.get_priority(item.link_reach)
+                > models.LinkReachChoices.get_priority(previous_link_reach),
+            )
 
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
@@ -1578,6 +1596,7 @@ class ItemViewSet(
         },
     )
     @drf.decorators.action(detail=True, methods=["post"], url_path="batch-share")
+    @transaction.atomic
     def batch_share(self, request, *args, **kwargs):
         """
         Share an item with a list of contacts in a single request.
@@ -1611,7 +1630,7 @@ class ItemViewSet(
                 )
 
         created_accesses, created_invitations, skipped = batch_share_process_rows(
-            item, request.user, rows
+            item, request.user, rows, audit_request=request
         )
 
         for email, role in created_accesses + created_invitations:
@@ -1757,6 +1776,9 @@ class ItemViewSet(
             logger.debug("item ID (pk) not found in URL parameters: %s", url_params)
             raise drf.exceptions.PermissionDenied()
 
+        # Preserve the parsed resource even when the subsequent permission check fails.
+        request.security_resource_id = pk
+
         # Fetch the item and check if the user has access
         queryset = models.Item.objects.all()
         queryset = self._filter_suspicious_items(queryset, request.user)
@@ -1840,9 +1862,19 @@ class ItemViewSet(
             raise drf.exceptions.PermissionDenied()
 
         # Generate S3 authorization headers using the extracted URL parameters
-        request = utils.generate_s3_authorization_headers(f"{url_params.get('key'):s}")
+        storage_request = utils.generate_s3_authorization_headers(f"{url_params.get('key'):s}")
 
-        return drf.response.Response("authorized", headers=request.headers, status=200)
+        # The UI requests media directly; /download/ only redirects here. Log once
+        # at this common authorization point, excluding thumbnails and HEAD checks.
+        original_method = request.META.get("HTTP_X_ORIGINAL_METHOD", request.method)
+        if original_method == "GET" and not url_params.get("preview"):
+            context = {"stage": "media_authorized"}
+            if item.size is not None and item.size >= 0 and not request.META.get("HTTP_RANGE"):
+                context["bytes"] = item.size
+                context["bytes_semantics"] = "authorized_file_size"
+            log_audit_event("file_downloaded", request=request, resource_id=item.pk, **context)
+
+        return drf.response.Response("authorized", headers=storage_request.headers, status=200)
 
     @drf.decorators.action(detail=True, methods=["get"], url_path="wopi")
     def wopi(self, request, *args, **kwargs):
@@ -2083,6 +2115,7 @@ class ItemAccessViewSet(
         )
         return drf.response.Response(serializer.data)
 
+    @transaction.atomic
     def update(self, request, *args, **kwargs):
         """
         We not use the update mixin to apply a specific behavior we can't implement using
@@ -2096,6 +2129,7 @@ class ItemAccessViewSet(
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
         old_role = instance.role
+        effective_role = audit_actor_role(self.item, request)
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         role = serializer.validated_data.get("role")
@@ -2117,6 +2151,16 @@ class ItemAccessViewSet(
             # We have to delete the current access, this item will have an inherited access
             # with the correct role.
             instance.delete()
+            audit_access_change(
+                request,
+                self.item,
+                effective_role=effective_role,
+                old_role=old_role,
+                new_role=role,
+                target_actor=instance.user_id,
+                target_team=instance.team,
+                operation="restore_inheritance",
+            )
             return drf.response.Response(status=drf.status.HTTP_204_NO_CONTENT)
 
         access = serializer.save()
@@ -2124,6 +2168,16 @@ class ItemAccessViewSet(
         synchronize_descendants_accesses(self.item, access)
 
         if access.role != old_role:
+            audit_access_change(
+                request,
+                self.item,
+                effective_role=effective_role,
+                old_role=old_role,
+                new_role=access.role,
+                target_actor=access.user_id,
+                target_team=access.team,
+                operation="update",
+            )
             posthog_capture(
                 "item_access_updated",
                 request.user,
@@ -2142,6 +2196,7 @@ class ItemAccessViewSet(
         kwargs["partial"] = True
         return self.update(request, *args, **kwargs)
 
+    @transaction.atomic
     def perform_create(self, serializer):
         """
         Actually create the new item access:
@@ -2181,8 +2236,20 @@ class ItemAccessViewSet(
                 }
             )
 
+        effective_role = audit_actor_role(self.item, self.request)
         access = serializer.save(item_id=self.kwargs["resource_id"])
         synchronize_descendants_accesses(self.item, access)
+        audit_access_change(
+            self.request,
+            self.item,
+            effective_role=effective_role,
+            old_role=None,
+            new_role=access.role,
+            target_actor=access.user_id,
+            target_team=access.team,
+            created=True,
+            operation="grant",
+        )
         if access.user:
             access.item.send_invitation_email(
                 access.user.email,
@@ -2201,12 +2268,24 @@ class ItemAccessViewSet(
             item=access.item,
         )
 
+    @transaction.atomic
     def perform_destroy(self, instance):
         """Delete the item access and capture the event."""
         access_id = instance.id
         item = instance.item
         role = instance.role
+        effective_role = audit_actor_role(item, self.request)
         super().perform_destroy(instance)
+        audit_access_change(
+            self.request,
+            item,
+            effective_role=effective_role,
+            old_role=role,
+            new_role=None,
+            target_actor=instance.user_id,
+            target_team=instance.team,
+            operation="revoke",
+        )
         posthog_capture(
             "item_access_deleted",
             self.request.user,
@@ -2295,10 +2374,21 @@ class InvitationViewset(
                 code="invitation_role_owner_limited_to_owners",
             )
 
+    @transaction.atomic
     def perform_create(self, serializer):
         """Save invitation to an item then send an email to the invited user."""
         self._validate_provided_role(serializer.validated_data.get("role"))
         invitation = serializer.save()
+        log_audit_event(
+            "share_created",
+            request=self.request,
+            resource_id=invitation.item_id,
+            on_commit=True,
+            target_kind="invitation",
+            invitation_id=str(invitation.pk),
+            new_role=invitation.role,
+            pending=True,
+        )
 
         invitation.item.send_invitation_email(
             invitation.email,
@@ -2317,14 +2407,26 @@ class InvitationViewset(
             item=invitation.item,
         )
 
+    @transaction.atomic
     def perform_update(self, serializer):
         """Update the invitation and capture the event."""
         self._validate_provided_role(serializer.validated_data.get("role"))
 
         old_role = serializer.instance.role
+        effective_role = audit_actor_role(self.item, self.request)
         super().perform_update(serializer)
 
         if serializer.instance.role != old_role:
+            audit_access_change(
+                self.request,
+                self.item,
+                effective_role=effective_role,
+                old_role=old_role,
+                new_role=serializer.instance.role,
+                target_kind="invitation",
+                invitation_id=str(serializer.instance.pk),
+                pending=True,
+            )
             posthog_capture(
                 "item_invitation_updated",
                 self.request.user,
@@ -2336,12 +2438,24 @@ class InvitationViewset(
                 item=serializer.instance.item,
             )
 
+    @transaction.atomic
     def perform_destroy(self, instance):
         """Delete the invitation and capture the event."""
         invitation_id = instance.id
         item = instance.item
         role = instance.role
+        effective_role = audit_actor_role(item, self.request)
         super().perform_destroy(instance)
+        audit_access_change(
+            self.request,
+            item,
+            effective_role=effective_role,
+            old_role=role,
+            new_role=None,
+            target_kind="invitation",
+            invitation_id=str(invitation_id),
+            pending=True,
+        )
 
         posthog_capture(
             "item_invitation_deleted",
