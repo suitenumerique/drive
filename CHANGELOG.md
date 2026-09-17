@@ -8,8 +8,16 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) audit committed permission and share changes, add security rehearsals and an optional email digest
+- ✨(backend) connect opt-in Drive audit events to the security rules engine
+- ✨(backend) add isolated demo PostHog delivery and rule overrides
+- ✨(backend) add configurable security rules and structured alerts
+
 ### Fixed
 
+- 🐛(backend) exclude storage quota refusals from security access-denial events
 - 🐛(frontend) refresh the Recent view after item mutations
 - 🧑‍💻(project) install frontend dependencies via container in bootstrap
 - 🐛(backend) gate item creation at the root on the upload entitlement

@@ -42,6 +42,8 @@ COMPOSE_RUN_APP_NO_DEPS = $(COMPOSE_RUN) --no-deps app-dev
 
 COMPOSE_RUN_CROWDIN     = $(COMPOSE_RUN) crowdin crowdin
 
+SECURITY_COMPOSE = $(COMPOSE) -f compose.yaml -f compose.security.yaml --profile security-monitoring
+
 # -- Backend
 MANAGE                  = $(COMPOSE_RUN_APP) python manage.py
 MANAGE_EXEC             = $(COMPOSE_EXEC_APP) python manage.py
@@ -152,6 +154,27 @@ down: ## stop and remove containers, networks, images, and volumes
 logs: ## display app-dev logs (follow mode)
 	@$(COMPOSE) logs -f app-dev
 .PHONY: logs
+
+# -- Optional security monitoring (Drive dependencies must already be running)
+security-demo: ## rehearse reference workloads ten times with local HTTP capture
+	$(SECURITY_COMPOSE) exec -T security-worker python manage.py rehearse_security_monitoring --runs 10
+.PHONY: security-demo
+
+security-demo-http: ## exercise the local Drive API, storage and scheduled detection
+	$(SECURITY_COMPOSE) exec -T security-worker python manage.py exercise_security_api
+.PHONY: security-demo-http
+
+security-run: ## enable API audit events and apply security configuration changes
+	$(SECURITY_COMPOSE) up -d --no-deps app-dev security-worker security-beat
+.PHONY: security-run
+
+security-status: ## inspect API, security services and Redis
+	$(SECURITY_COMPOSE) ps app-dev security-worker security-beat redis
+.PHONY: security-status
+
+security-stop: ## stop security consumers without deleting data or stopping Drive
+	$(SECURITY_COMPOSE) stop security-beat security-worker
+.PHONY: security-stop
 
 run-backend: ## start the backend container
 	@$(COMPOSE) up --force-recreate -d nginx

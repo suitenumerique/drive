@@ -5,9 +5,10 @@ from django.db import transaction
 from django.db.models.functions import Lower
 
 from core import models
+from core.monitoring_utils import audit_access_change, audit_actor_role, log_audit_event
 
 
-def batch_share_process_rows(item, issuer, rows):
+def batch_share_process_rows(item, issuer, rows, *, audit_request=None):
     """
     Create the accesses and invitations for the given {email: role} mapping.
 
@@ -49,6 +50,7 @@ def batch_share_process_rows(item, issuer, rows):
     skipped = []
     created_accesses = []
     created_invitations = []
+    effective_role = audit_actor_role(item, audit_request) if audit_request is not None else None
     with transaction.atomic():
         for email, role in rows.items():
             if user := users_by_email.get(email):
@@ -60,11 +62,35 @@ def batch_share_process_rows(item, issuer, rows):
                     continue
                 access = models.ItemAccess.objects.create(item=item, user=user, role=role)
                 synchronize_descendants_accesses(item, access)
+                if audit_request is not None:
+                    audit_access_change(
+                        audit_request,
+                        item,
+                        effective_role=effective_role,
+                        old_role=None,
+                        new_role=role,
+                        target_actor=user.pk,
+                        operation="grant",
+                        created=True,
+                    )
                 created_accesses.append((email, role))
             elif email in already_invited:
                 skipped.append({"email": email, "reason": "already_invited"})
             else:
-                models.Invitation.objects.create(item=item, email=email, role=role, issuer=issuer)
+                invitation = models.Invitation.objects.create(
+                    item=item, email=email, role=role, issuer=issuer
+                )
+                if audit_request is not None:
+                    log_audit_event(
+                        "share_created",
+                        request=audit_request,
+                        resource_id=item.pk,
+                        on_commit=True,
+                        target_kind="invitation",
+                        invitation_id=str(invitation.pk),
+                        new_role=role,
+                        pending=True,
+                    )
                 created_invitations.append((email, role))
 
     return created_accesses, created_invitations, skipped

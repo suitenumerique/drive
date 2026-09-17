@@ -198,6 +198,17 @@ To start all the services, except the frontend container, you can use the follow
 $ make run-backend
 ```
 
+#### Optional security monitoring
+
+After starting Drive, run `make security-run` to enable structured audit events
+and the isolated Celery rules engine. `make security-demo` runs ten synthetic
+rehearsals without cloud credentials; `make security-demo-http` exercises the
+local API, object storage and scheduled detection.
+
+See [event coverage, rules and email digests](docs/security-monitoring.md) and
+[isolated PostHog delivery](docs/security-posthog-demo.md) for configuration.
+Monitoring is opt-in and does not replace Drive's existing product analytics.
+
 #### Django admin
 
 You can access the Django admin site at
