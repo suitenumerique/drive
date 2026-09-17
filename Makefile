@@ -164,8 +164,8 @@ security-demo-http: ## exercise the local Drive API, storage and scheduled detec
 	$(SECURITY_COMPOSE) exec -T security-worker python manage.py exercise_security_api
 .PHONY: security-demo-http
 
-security-run: ## enable API audit events and reload the isolated security services
-	$(SECURITY_COMPOSE) up -d --no-deps --force-recreate app-dev security-worker security-beat
+security-run: ## enable API audit events and apply security configuration changes
+	$(SECURITY_COMPOSE) up -d --no-deps app-dev security-worker security-beat
 .PHONY: security-run
 
 security-status: ## inspect API, security services and Redis

@@ -125,6 +125,31 @@ def _anchor(source, offset):
     return hashlib.sha256(source.read(min(128, offset))).hexdigest()
 
 
+def _head_anchor(source, offset):
+    source.seek(0)
+    return hashlib.sha256(source.read(min(4096, offset))).hexdigest()
+
+
+def validate_checkpoint(input_path, source, state):
+    """Check stream continuity without relying on Docker's device/inode numbers.
+
+    The original checkpoints only have a tail anchor; they acquire a head anchor
+    on their next successful read. These bounded checks are not a full-file audit.
+    """
+    if state.get("version") != 1 or state["source"][0] != str(Path(input_path).resolve()):
+        raise ValueError("input path changed: use a fresh work directory")
+    offset = state["offset"]
+    if (
+        os.fstat(source.fileno()).st_size < offset
+        or _anchor(source, offset) != state["anchor"]
+        or (
+            "head_anchor" in state
+            and _head_anchor(source, offset) != state["head_anchor"]
+        )
+    ):
+        raise ValueError("input truncated or rewritten: use a fresh work directory")
+
+
 def _initial_state(input_path, source):
     stat = os.fstat(source.fileno())
     return {
@@ -133,6 +158,7 @@ def _initial_state(input_path, source):
         "source_id": str(uuid4()),
         "offset": 0,
         "anchor": _anchor(source, 0),
+        "head_anchor": _head_anchor(source, 0),
         "engine": {},
     }
 
@@ -174,6 +200,7 @@ def _read_batch(source, state, engine, batch_size, max_line_bytes):
             )
         state["offset"] = source.tell()
     state["anchor"] = _anchor(source, state["offset"])
+    state["head_anchor"] = _head_anchor(source, state["offset"])
     result.update(alerts=len(alerts), rejected=len(rejected))
     result["batch"] = f"{state['source_id']}-{start:016d}-{state['offset']:016d}"
     return {
@@ -189,8 +216,9 @@ def _read_batch(source, state, engine, batch_size, max_line_bytes):
 def process_batch(input_path, directory, rules, batch_size=100, max_line_bytes=65536):
     """Process at most batch_size records; callers may schedule this periodically.
 
-    File replacement/truncation is intentionally refused: use a fresh directory
-    for a new source or changed rules. All workers must share this same directory.
+    Path changes and detected content changes are refused. Device/inode changes
+    alone are harmless if the saved content anchors still match. All workers
+    must share this same directory; changed rules need a fresh directory.
     """
     if batch_size < 1 or max_line_bytes < 1:
         raise ValueError("batch_size and max_line_bytes must be positive")
@@ -215,18 +243,14 @@ def process_batch(input_path, directory, rules, batch_size=100, max_line_bytes=6
                 if state_path.exists()
                 else current
             )
-            if state.get("version") != 1 or state["source"] != current["source"]:
-                raise ValueError(
-                    "input replaced: use a fresh work directory after draining the old file"
-                )
-            if (
-                os.fstat(source.fileno()).st_size < state["offset"]
-                or _anchor(source, state["offset"]) != state["anchor"]
-            ):
-                raise ValueError("input truncated or rewritten: use a fresh work directory")
+            validate_checkpoint(input_path, source, state)
+            refreshed = state["source"] != current["source"] or "head_anchor" not in state
+            state["source"] = current["source"]
             engine = SecurityRules(rules, state["engine"])
             pending = _read_batch(source, state, engine, batch_size, max_line_bytes)
         if not pending["result"]["lines"]:
+            if refreshed:
+                _atomic_write(state_path, _json(state))
             return {"status": "waiting_for_complete_line"}
         # Save everything needed to finish, including the engine's windows, before
         # publishing outputs. A killed worker can resume without running rules twice.

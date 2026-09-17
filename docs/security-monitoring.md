@@ -289,8 +289,15 @@ The rule YAML and Compose service YAML solve different problems.
 windows), `pending.json` during a batch, `batches/*.alerts.jsonl`,
 `*.posthog.jsonl` and `*.rejected.jsonl`. Rejected lines include their offset,
 reason and original text. Partial trailing lines wait; oversized lines stop the
-batch. Detected source replacement/truncation/rewrite requires a new work
-directory after the previous stream has been drained. Never edit live state.
+batch. Resume checks compare the resolved input path, file length, the last 128
+consumed bytes and the first 4096 consumed bytes (or fewer for a short stream).
+Device/inode changes alone, including Docker Desktop remounts, do not reset the
+cursor or replay alerts. Legacy checkpoints acquire the head check after their
+existing tail check passes. These bounded checks do not verify every byte in
+the middle of a large file. A changed path or detected truncation/rewrite still
+requires a new work directory after draining the previous stream. A fresh work
+directory replays the input, including enabled delivery channels; do not use it
+as a routine restart procedure. Never edit live state.
 
 An atomic local journal publishes batch files before advancing the checkpoint.
 The stdout publisher has its own `stdout-state.json` cursor and lock. It flushes

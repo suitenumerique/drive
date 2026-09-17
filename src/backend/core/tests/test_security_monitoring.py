@@ -166,6 +166,65 @@ def test_partial_line_and_bad_records(tmp_path, rules):
     assert len(read_outputs(directory, "rejected")) == 2
 
 
+@pytest.mark.parametrize("legacy", [False, True])
+def test_docker_file_identity_change_preserves_checkpoint(tmp_path, rules, legacy):
+    """A remount must not replay alerts or reset the engine/delivery cursors."""
+    source, directory = tmp_path / "events.jsonl", tmp_path / "output"
+    append_events(source, [event(i) for i in range(3)])
+    security_bridge.process_batch(source, directory, rules)
+    state_path = directory / "state.json"
+    state = json.loads(state_path.read_text())
+    state["source"][1:] = [-1, -1]
+    if legacy:
+        del state["head_anchor"]
+    state_path.write_text(json.dumps(state))
+    for name in ("stdout-state.json", "posthog-state.json", "digest-state.json"):
+        (directory / name).write_text('{"unchanged": true}')
+    before = {p.name: p.read_bytes() for p in (directory / "batches").iterdir()}
+
+    result = security_bridge.process_batch(source, directory, rules)
+
+    assert result["status"] == "waiting_for_complete_line"
+    resumed = json.loads(state_path.read_text())
+    for key in ("source_id", "offset", "engine", "anchor"):
+        assert resumed[key] == state[key]
+    assert resumed["source"][1:] == [source.stat().st_dev, source.stat().st_ino]
+    assert "head_anchor" in resumed
+    assert before == {p.name: p.read_bytes() for p in (directory / "batches").iterdir()}
+    for name in ("stdout-state.json", "posthog-state.json", "digest-state.json"):
+        assert (directory / name).read_text() == '{"unchanged": true}'
+
+
+def test_identical_file_remount_keeps_detection_window(tmp_path, rules):
+    """New events after a changed inode still complete the existing window."""
+    source, directory = tmp_path / "events.jsonl", tmp_path / "output"
+    append_events(source, [event(0), event(1)])
+    security_bridge.process_batch(source, directory, rules)
+    replacement = tmp_path / "copy.jsonl"
+    replacement.write_bytes(source.read_bytes())
+    replacement.replace(source)
+    append_events(source, [event(2)])
+    result = security_bridge.process_batch(source, directory, rules)
+    assert result["events"] == 1
+    assert result["alerts"] == 1
+    assert len(read_outputs(directory)) == 1
+
+
+def test_rewritten_head_is_refused_even_when_tail_matches(tmp_path, rules):
+    """Matching final bytes must not hide an edit to the start of the stream."""
+    source, directory = tmp_path / "events.jsonl", tmp_path / "output"
+    append_events(source, [event(i) for i in range(3)])
+    security_bridge.process_batch(source, directory, rules)
+    original = source.read_bytes()
+    changed = original.replace(b"alice", b"bruce", 1)
+    assert changed[-128:] == original[-128:]
+    replacement = tmp_path / "rewritten.jsonl"
+    replacement.write_bytes(changed)
+    replacement.replace(source)
+    with pytest.raises(ValueError, match="truncated or rewritten"):
+        security_bridge.process_batch(source, directory, rules)
+
+
 def test_pending_batch_recovers_without_duplicate_outputs(tmp_path, rules, monkeypatch):
     """A crash after output publication must not rerun the detector or duplicate its output."""
     source, directory = tmp_path / "events.jsonl", tmp_path / "output"
