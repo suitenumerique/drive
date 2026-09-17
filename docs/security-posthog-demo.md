@@ -76,6 +76,10 @@ Each call sends at most the configured batch size (default 100, maximum 1000)
 and a bounded payload. Redirects are refused. Timeout/HTTP failure/negative
 acknowledgement leave the cursor unchanged, with persistent exponential backoff
 from 10 seconds to 5 minutes. Errors contain no token, payload or server body.
+The sender accepts the current `{"status": "Ok"}` acknowledgement and legacy
+numeric success responses. A response reporting `quota_limited` retains the
+batch for retry even when the HTTP status is 200. Capture acceptance alone is
+not proof that an event is visible in a dashboard.
 
 Delivery uses `demo-posthog-state.json` and its own lock in the workdir. Analysis
 and stdout retain their own independent cursors. The destination is bound to a

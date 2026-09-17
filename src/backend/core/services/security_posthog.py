@@ -151,9 +151,12 @@ def _post(destination, events):
                 acknowledgement = response.json()
             except ValueError:
                 raise DeliveryError("PostHog acknowledgement is not JSON; batch retained") from None
-            if acknowledgement != 1 and not (
-                isinstance(acknowledgement, dict) and acknowledgement.get("status") == 1
-            ):
+            if isinstance(acknowledgement, dict):
+                if acknowledgement.get("quota_limited"):
+                    raise DeliveryError("PostHog quota limited; batch retained")
+                acknowledgement = acknowledgement.get("status")
+            # Cloud returns {"status": "Ok"}; older capture endpoints return 1.
+            if acknowledgement not in (1, "Ok"):
                 raise DeliveryError("PostHog did not acknowledge capture; batch retained")
     except requests.RequestException:
         raise DeliveryError("PostHog connection failed; batch retained") from None

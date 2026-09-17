@@ -21,7 +21,7 @@ from core.tasks.security_monitoring import send_security_alerts
 @pytest.fixture(name="receiver")
 def receiver_fixture():
     """Record actual HTTP requests and control capture acknowledgements."""
-    state = SimpleNamespace(requests=[], status=200, acknowledgement={"status": 1})
+    state = SimpleNamespace(requests=[], status=200, acknowledgement={"status": "Ok"})
 
     class Handler(BaseHTTPRequestHandler):
         """Minimal local stand-in for the documented batch capture endpoint."""
@@ -93,7 +93,15 @@ def test_http_batches_resume_and_leave_drive_client_untouched(outbox, receiver, 
         send_demo_batch(outbox, DemoDestination(receiver.host, "phc_other_project"))
 
 
-@pytest.mark.parametrize("status,acknowledgement", [(307, {"status": 1}), (200, {"status": 0})])
+@pytest.mark.parametrize(
+    "status,acknowledgement",
+    [
+        (307, {"status": "Ok"}),
+        (200, {"status": 0}),
+        (200, {"status": "Unknown"}),
+        (200, {"status": "Ok", "quota_limited": ["events"]}),
+    ],
+)
 def test_no_redirect_or_false_acknowledgement(outbox, receiver, status, acknowledgement):
     """Redirects cannot leak the token, and a failed capture never advances the cursor."""
     receiver.status, receiver.acknowledgement = status, acknowledgement
@@ -101,6 +109,16 @@ def test_no_redirect_or_false_acknowledgement(outbox, receiver, status, acknowle
     assert result["status"] == "retry"
     assert len(receiver.requests) == 1
     assert "offset" not in json.loads((outbox / "demo-posthog-state.json").read_text())
+
+
+@pytest.mark.parametrize("acknowledgement", [1, {"status": 1}])
+def test_legacy_capture_acknowledgements(outbox, receiver, acknowledgement):
+    """Older numeric success responses still advance the shared cursor once."""
+    receiver.acknowledgement = acknowledgement
+    destination = DemoDestination(receiver.host, "phc_test")
+    assert send_demo_batch(outbox, destination) == {"status": "accepted", "sent": 7}
+    assert send_demo_batch(outbox, destination) == {"status": "caught_up", "sent": 0}
+    assert len(receiver.requests) == 1
 
 
 def test_delivery_off_by_default_and_separate_configuration(settings, capsys):
