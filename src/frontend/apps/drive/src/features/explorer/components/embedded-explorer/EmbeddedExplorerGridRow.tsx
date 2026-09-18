@@ -1,14 +1,22 @@
 import { memo } from "react";
 import { Row, flexRender } from "@tanstack/react-table";
 import clsx from "clsx";
-import { Item, ItemType, TRANSIENT_UPLOAD_STATES } from "@/features/drivers/types";
+import { isUnavailableRestriction } from "@/features/drivers/utils";
+import {
+  Item,
+  ItemType,
+  TRANSIENT_UPLOAD_STATES,
+} from "@/features/drivers/types";
 import { Droppable } from "@/features/explorer/components/Droppable";
 import { useIsItemSelected } from "@/features/explorer/stores/selectionStore";
 
 export type EmbeddedExplorerGridRowProps = {
   row: Row<Item>;
   isOvered: boolean;
-  onClickRow: (e: React.MouseEvent<HTMLTableRowElement>, row: Row<Item>) => void;
+  onClickRow: (
+    e: React.MouseEvent<HTMLTableRowElement>,
+    row: Row<Item>,
+  ) => void;
   onContextMenuRow: (
     e: React.MouseEvent<HTMLTableRowElement>,
     row: Row<Item>,
@@ -34,6 +42,7 @@ const EmbeddedExplorerGridRowComponent = ({
         selected: isSelected,
         over: isOvered,
         duplicating: isTransient,
+        "explorer__grid__row--restricted": isUnavailableRestriction(item),
       })}
       data-id={item.id}
       tabIndex={0}

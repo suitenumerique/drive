@@ -1,5 +1,9 @@
 import { Item, ItemType } from "@/features/drivers/types";
 import {
+  isFolder,
+  isUnavailableRestriction,
+} from "@/features/drivers/utils";
+import {
   useTreeContext,
   MenuItem,
   useModal,
@@ -50,7 +54,11 @@ type UseItemActionMenuItemsOptions = {
 type UseItemActionMenuItemsReturn = {
   getMenuItems: (
     item: Item,
-    options?: { minimal?: boolean; itemId?: string; allowCreate?: boolean },
+    options?: {
+      minimal?: boolean;
+      itemId?: string;
+      allowCreate?: boolean;
+    },
   ) => MenuItem[];
   modals: React.ReactNode;
   isModalOpen: boolean;
@@ -121,7 +129,11 @@ export const useItemActionMenuItems = ({
 
   const getMenuItems = (
     item: Item,
-    options?: { minimal?: boolean; itemId?: string; allowCreate?: boolean },
+    options?: {
+      minimal?: boolean;
+      itemId?: string;
+      allowCreate?: boolean;
+    },
   ): MenuItem[] => {
     const minimal = options?.minimal ?? false;
     const allowCreate = options?.allowCreate ?? false;
@@ -154,7 +166,8 @@ export const useItemActionMenuItems = ({
       {
         icon: <Shared />,
         label: t("explorer.item.actions.share"),
-        isHidden: !item.abilities?.accesses_view,
+        isHidden:
+          !item.abilities?.accesses_view || isUnavailableRestriction(item),
         callback: () => {
           setCurrentItem(effectiveItem);
           shareItemModal.open();
@@ -163,7 +176,7 @@ export const useItemActionMenuItems = ({
       {
         icon: <Download />,
         label: t("explorer.item.actions.download"),
-        isHidden: item.type === ItemType.FOLDER || minimal,
+        isHidden: isFolder(item) || minimal,
         callback: () => {
           handleDownloadItem(item);
         },
@@ -211,7 +224,8 @@ export const useItemActionMenuItems = ({
       {
         icon: <Edit />,
         label: t("explorer.item.actions.rename"),
-        isHidden: !item.abilities?.update,
+        isHidden:
+          !item.abilities?.update || item.type === ItemType.RESTRICTION,
         callback: () => {
           setCurrentItem(effectiveItem);
           renameModal.open();

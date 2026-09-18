@@ -1,8 +1,4 @@
-import {
-  Item,
-  ItemType,
-  TRANSIENT_UPLOAD_STATES,
-} from "@/features/drivers/types";
+import { Item, TRANSIENT_UPLOAD_STATES } from "@/features/drivers/types";
 import {
   createContext,
   useCallback,
@@ -30,9 +26,13 @@ import {
 import { EmbeddedExplorerGridActionsCell } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridActionsCell";
 import { useTableKeyboardNavigation } from "@/features/explorer/hooks/useTableKeyboardNavigation";
 import clsx from "clsx";
+import { getNavigableItem, isFolder } from "@/features/drivers/utils";
 import { isTablet } from "@/features/ui/components/responsive/ResponsiveDivs";
 import { useDragItemContext } from "@/features/explorer/components/ExplorerDndProvider";
-import { useModal, useContextMenuContext } from "@gouvfr-lasuite/ui-components";
+import {
+  useModal,
+  useContextMenuContext,
+} from "@gouvfr-lasuite/ui-components";
 import { ExplorerMoveFolder } from "@/features/explorer/components/modals/move/ExplorerMoveFolderModal";
 import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
 import {
@@ -285,10 +285,12 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
 
   const openRow = useCallback(
     (row: Row<Item>) => {
-      if (row.original.type === ItemType.FOLDER) {
+      const item = getNavigableItem(row.original);
+      if (!item) return;
+      if (isFolder(row.original)) {
         props.onNavigate({
           type: NavigationEventType.ITEM,
-          item: row.original,
+          item,
         });
       } else {
         props.onFileClick?.(row.original);

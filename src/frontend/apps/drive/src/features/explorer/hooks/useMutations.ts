@@ -1,9 +1,10 @@
 import { getDriver } from "@/features/config/Config";
-import { Item } from "@/features/drivers/types";
+import { Item, ItemType, TreeItem } from "@/features/drivers/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   useGlobalExplorer,
   generateTreeId,
+  itemToTreeItem,
 } from "../components/GlobalExplorerContext";
 import { useRemoveItemsFromPaginatedList } from "./useOptimisticPagination";
 import { useTreeContext } from "@gouvfr-lasuite/ui-components";
@@ -15,6 +16,7 @@ import {
   useRefreshEntitlementsQueryCache,
 } from "./useRefreshItems";
 import { DefaultRoute } from "@/utils/defaultRoutes";
+import { useSelectionStore } from "../stores/selectionStore";
 
 // ============================================================================
 // MUTATIONS
@@ -152,6 +154,51 @@ export const useMutationUpdateLinkConfiguration = () => {
         queryKey: ["itemAccesses"],
       });
     },
+  });
+};
+
+export const useMutationUpdateRestriction = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  const treeContext = useTreeContext<TreeItem>();
+  const selectionStore = useSelectionStore();
+  const { refreshMobileNodes, setRightPanelForcedItem } = useGlobalExplorer();
+
+  return useMutation({
+    mutationFn: (payload: { id: string; is_restricted: boolean }) =>
+      driver.updateItemRestriction(payload),
+    onSuccess: async (item) => {
+      // The selected row may have been replaced by a restriction or removed.
+      selectionStore.clear();
+      setRightPanelForcedItem(undefined);
+      queryClient.setQueryData(["items", item.id], item);
+      // Restriction moves the subtree, changing inherited access, links and paths.
+      await Promise.all(
+        [
+          "items",
+          "itemAccesses",
+          "itemInvitations",
+          "breadcrumb",
+          "searchItems",
+          "firstLevelItems",
+        ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+      );
+      // The favorites tree is imperative and does not observe query invalidation.
+      // Reload its roots so no removed restriction or old descendant path survives.
+      if (treeContext) {
+        const favorites = await driver.getFavoriteItems({
+          type: ItemType.FOLDER,
+        });
+        treeContext.treeData.updateNode(DefaultRoute.FAVORITES, {
+          children: favorites.children.map((favorite) =>
+            itemToTreeItem(favorite, DefaultRoute.FAVORITES, true),
+          ),
+          pagination: favorites.pagination,
+        });
+      }
+      refreshMobileNodes();
+    },
+    meta: { showErrorOn403: true },
   });
 };
 

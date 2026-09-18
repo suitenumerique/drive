@@ -23,6 +23,11 @@ import { useRouter } from "next/router";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { setFromRoute } from "../../utils/utils";
 import folderIconTree from "@/assets/tree/folder.svg";
+import { FolderRestricted } from "@gouvfr-lasuite/ui-components/icons";
+import {
+  getNavigableItem,
+  isUnavailableRestriction,
+} from "@/features/drivers/utils";
 
 type ExplorerTreeItemProps = NodeRendererProps<TreeDataItem<TreeItem>>;
 
@@ -53,15 +58,28 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
               }
               return;
             }
+            const navigableItem = getNavigableItem(item as Item);
+            if (!navigableItem) return;
             setFromRoute(DefaultRoute.FAVORITES);
             onNavigate({
               type: NavigationEventType.ITEM,
-              item: item as Item,
+              item: navigableItem,
             });
           }}
         >
-          <div className="explorer__tree__item" data-testid="tree_item_content">
-            <div className="explorer__tree__item__content">
+          <div
+            className="explorer__tree__item"
+            data-testid="tree_item_content"
+          >
+            <div
+              className="explorer__tree__item__content"
+              style={
+                item.nodeType === TreeViewNodeTypeEnum.NODE &&
+                isUnavailableRestriction(item)
+                  ? { opacity: 0.5, cursor: "not-allowed" }
+                  : undefined
+              }
+            >
               <ExplorerTreeItemIcon item={item} size={IconSize.MEDIUM} />
               {/* 
                 We need to check the nodeType because the generic type T in TreeViewDataType 
@@ -103,6 +121,9 @@ export const ExplorerTreeItemIcon = ({
   size?: IconSize;
 }) => {
   if (item.nodeType === TreeViewNodeTypeEnum.NODE) {
+    if (item.is_restricted || item.type === ItemType.RESTRICTION) {
+      return <FolderRestricted size={IconSize.SMALL} />;
+    }
     return (
       <img
         className="c__file-icon icon--small"
