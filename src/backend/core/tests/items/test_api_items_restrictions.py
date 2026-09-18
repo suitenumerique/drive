@@ -18,7 +18,8 @@ def _create_restricted_folder(parent, user):
     return folder.restrict(user)
 
 
-def test_api_items_restrictions_children_list_exposes_target():
+@pytest.mark.parametrize("filters", [{}, {"type": "folder"}, {"category": "pdf"}])
+def test_api_items_restrictions_children_list_exposes_target(filters):
     """The children listing exposes the restriction target, greyed for excluded users."""
     parent_owner = factories.UserFactory()
     owner = factories.UserFactory()
@@ -32,7 +33,7 @@ def test_api_items_restrictions_children_list_exposes_target():
     client = APIClient()
     client.force_login(parent_owner)
 
-    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/")
+    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/", filters)
 
     assert response.status_code == 200
     results = {result["id"]: result for result in response.json()["results"]}
@@ -45,6 +46,8 @@ def test_api_items_restrictions_children_list_exposes_target():
         "deleted": False,
         "can_access": False,
     }
+    parent_response = client.get(f"/api/v1.0/items/{parent.id!s}/")
+    assert parent_response.json()["numchild_folder"] == 1
 
 
 def test_api_items_restrictions_children_list_target_accessible():
