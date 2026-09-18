@@ -15,15 +15,13 @@ import {
   Icon,
   IconSize,
   Button,
-  useModal,
 } from "@gouvfr-lasuite/ui-components";
-import { NavigationItem } from "../GlobalExplorerContext";
+import { NavigationItem, useGlobalExplorer } from "../GlobalExplorerContext";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 import clsx from "clsx";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
 import { useItem } from "../../hooks/useQueries";
 import { useRouter } from "next/router";
-import { ItemShareModal } from "../modals/share/ItemShareModal";
 import {
   clearFromRoute,
   getFromRoute,
@@ -186,6 +184,7 @@ const BaseBreadcrumbs = ({
   const breadcrumbsItems = useMemo(() => {
     if (forcedBreadcrumbsItems) {
       return forcedBreadcrumbsItems.map((item) => ({
+        id: item.id,
         content: (
           <BreadcrumbItemButton
             item={item}
@@ -198,6 +197,7 @@ const BaseBreadcrumbs = ({
 
     if (defaultRouteData && !showAllFolderItem) {
       breadcrumbsItems.push({
+        id: "default-route",
         content: getDefaultRouteButton(defaultRouteData),
       });
     }
@@ -205,12 +205,14 @@ const BaseBreadcrumbs = ({
     const fromRouteButton = getFromRouteButton();
     if (fromRouteButton && !showAllFolderItem) {
       breadcrumbsItems.push({
+        id: "from-route",
         content: fromRouteButton,
       });
     }
 
     if (showAllFolderItem) {
       breadcrumbsItems.push({
+        id: "all-folders",
         content: (
           <div
             className="c__breadcrumbs__button"
@@ -233,6 +235,7 @@ const BaseBreadcrumbs = ({
     breadcrumbsData.forEach((item) => {
       const isActive = item.id === lastItem?.id;
       breadcrumbsItems.push({
+        id: item.id,
         content: (
           <BreadcrumbItemButton
             item={item}
@@ -245,6 +248,7 @@ const BaseBreadcrumbs = ({
 
     if (showMenuLastItem && lastItem) {
       breadcrumbsItems.push({
+        id: lastItem.id,
         content: <LastItemBreadcrumb item={lastItem} />,
       });
     }
@@ -290,7 +294,7 @@ export const BreadcrumbItemButton = ({
 
 export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const shareModal = useModal();
+  const { openShareModal } = useGlobalExplorer();
   const icon = useMemo(() => {
     if (item.computed_link_reach === LinkReach.PUBLIC) {
       return (
@@ -330,16 +334,13 @@ export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
         }
       />
       {icon && (
-        <>
-          <Button
-            variant="tertiary"
-            size="small"
-            icon={icon}
-            onClick={() => shareModal.open()}
-            data-testid="share-button"
-          />
-          {shareModal.isOpen && <ItemShareModal {...shareModal} item={item} />}
-        </>
+        <Button
+          variant="tertiary"
+          size="small"
+          icon={icon}
+          onClick={() => openShareModal(item)}
+          data-testid="share-button"
+        />
       )}
     </div>
   );

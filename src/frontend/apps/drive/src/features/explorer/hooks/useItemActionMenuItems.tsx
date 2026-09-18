@@ -29,7 +29,6 @@ import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 import { baseApiUrl } from "@/features/api/utils";
 import { ExplorerRenameItemModal } from "../components/modals/ExplorerRenameItemModal";
 import { ExplorerCreateFolderModal } from "../components/modals/ExplorerCreateFolderModal";
-import { ItemShareModal } from "../components/modals/share/ItemShareModal";
 import { useDeleteItem } from "./useDeleteItem";
 import { ExplorerMoveFolder } from "../components/modals/move/ExplorerMoveFolderModal";
 import { getParentIdFromPath, setManualNavigationItemId } from "../utils/utils";
@@ -78,7 +77,6 @@ export const useItemActionMenuItems = ({
   const { mutateAsync: createFavoriteItem } = useMutationCreateFavoriteItem();
   const { mutateAsync: duplicateItem } = useMutationDuplicateItem();
 
-  const shareItemModal = useModal();
   const renameModal = useModal();
   const moveModal = useModal();
   const createFolderModal = useModal();
@@ -87,7 +85,7 @@ export const useItemActionMenuItems = ({
 
   const isModalOpen =
     renameModal.isOpen ||
-    shareItemModal.isOpen ||
+    !!explorerContext.sharedItem ||
     moveModal.isOpen ||
     createFolderModal.isOpen;
 
@@ -169,8 +167,7 @@ export const useItemActionMenuItems = ({
         isHidden:
           !item.abilities?.accesses_view || isUnavailableRestriction(item),
         callback: () => {
-          setCurrentItem(effectiveItem);
-          shareItemModal.open();
+          explorerContext.openShareModal(effectiveItem);
         },
       },
       {
@@ -271,15 +268,6 @@ export const useItemActionMenuItems = ({
           key={currentItem.id}
         />
       )}
-      {currentItem &&
-        currentItem.abilities?.accesses_view &&
-        shareItemModal.isOpen && (
-          <ItemShareModal
-            {...shareItemModal}
-            item={currentItem}
-            key={currentItem.id}
-          />
-        )}
       {currentItem && moveModal.isOpen && (
         <ExplorerMoveFolder
           {...moveModal}
