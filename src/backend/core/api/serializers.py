@@ -228,11 +228,24 @@ class RestrictionTargetSerializer(serializers.ModelSerializer):
     deleted = serializers.SerializerMethodField()
     can_access = serializers.SerializerMethodField()
     is_restricted = serializers.SerializerMethodField()
+    abilities = serializers.SerializerMethodField()
 
     class Meta:
         model = models.Item
-        fields = ["id", "title", "is_restricted", "deleted", "can_access"]
-        read_only_fields = ["id", "title", "is_restricted", "deleted", "can_access"]
+        fields = ["id", "title", "path", "is_restricted", "deleted", "can_access", "abilities"]
+        read_only_fields = fields
+
+    def get_abilities(self, target) -> dict:
+        """Expose the destination's permissions without using the restriction's roles."""
+        request = self.context.get("request")
+        if not request:
+            return {}
+        # Targets are roots, so the prefetched direct accesses contain all their roles.
+        accesses = getattr(target, "viewer_accesses", None)
+        if accesses is not None:
+            target.user_roles = [access.role for access in accesses]
+        target.has_restriction = True
+        return target.get_abilities(request.user)
 
     def get_deleted(self, target) -> bool:
         """Return whether the target is in the trash."""
