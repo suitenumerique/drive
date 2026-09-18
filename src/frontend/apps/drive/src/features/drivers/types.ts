@@ -72,6 +72,8 @@ export type Item = {
     is_restricted: boolean;
     deleted: boolean;
     can_access: boolean;
+    path: string;
+    abilities: Item["abilities"];
   } | null;
   ancestors_link_reach: LinkReach | null;
   ancestors_link_role: LinkRole | null;

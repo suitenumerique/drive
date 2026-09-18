@@ -16,6 +16,19 @@ export const getNavigableItem = (item: Item): Item | undefined => {
   return { ...item, id: item.target.id, originalId: item.target.id };
 };
 
+// A restriction is a location entry; drops go into its actual folder.
+export const getDropTarget = (item: Item): Item | undefined => {
+  if (isUnavailableRestriction(item)) return undefined;
+  if (item.type !== ItemType.RESTRICTION || !item.target) return item;
+  return {
+    ...item,
+    ...item.target,
+    originalId: item.target.id,
+    type: ItemType.FOLDER,
+    target: null,
+  };
+};
+
 export const itemIsWorkspace = (item: Item) => {
   if (item.main_workspace) {
     return false;

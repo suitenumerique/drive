@@ -1,7 +1,10 @@
 import { memo } from "react";
 import { Row, flexRender } from "@tanstack/react-table";
 import clsx from "clsx";
-import { isUnavailableRestriction } from "@/features/drivers/utils";
+import {
+  getDropTarget,
+  isUnavailableRestriction,
+} from "@/features/drivers/utils";
 import {
   Item,
   ItemType,
@@ -32,6 +35,7 @@ const EmbeddedExplorerGridRowComponent = ({
   onOver,
 }: EmbeddedExplorerGridRowProps) => {
   const item = row.original;
+  const dropTarget = getDropTarget(item);
   const isSelected = useIsItemSelected(item.id);
   const isTransient = TRANSIENT_UPLOAD_STATES.includes(item.upload_state);
 
@@ -64,8 +68,8 @@ const EmbeddedExplorerGridRowComponent = ({
               item={item}
               disabled={
                 isSelected ||
-                item.type !== ItemType.FOLDER ||
-                !item.abilities?.children_create
+                dropTarget?.type !== ItemType.FOLDER ||
+                !dropTarget.abilities?.children_create
               }
               onOver={(isOver, draggedItem) =>
                 onOver(item.id, isOver, draggedItem)

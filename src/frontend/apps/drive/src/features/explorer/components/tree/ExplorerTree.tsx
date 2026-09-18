@@ -12,7 +12,8 @@ import {
 } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
-import { Item, TreeItem } from "@/features/drivers/types";
+import { Item, ItemType, TreeItem } from "@/features/drivers/types";
+import { getDropTarget } from "@/features/drivers/utils";
 import {
   DefaultRoute,
   getDefaultRoute,
@@ -91,10 +92,18 @@ export const ExplorerTree = () => {
   }, [treeContext?.treeData.nodes]);
 
   const handleMove = (result: TreeViewMoveResult) => {
+    const parent = treeContext?.treeData.getNode(result.targetModeId) as
+      | Item
+      | undefined;
+    const target = parent ? getDropTarget(parent) : undefined;
+    if (parent && !target) return;
     move.mutate(
       {
         ids: [result.sourceId],
-        parentId: result.targetModeId,
+        parentId:
+          parent?.type === ItemType.RESTRICTION
+            ? target?.id
+            : result.targetModeId,
         oldParentId: result.oldParentId ?? itemId,
       },
       {
@@ -121,9 +130,12 @@ export const ExplorerTree = () => {
               return;
             }
 
-            const parent = treeContext?.treeData.getNode(
+            const parentEntry = treeContext?.treeData.getNode(
               moveResult.newParentId,
             ) as Item | undefined;
+            const parent = parentEntry
+              ? getDropTarget(parentEntry)
+              : undefined;
             const oldParent = treeContext?.treeData.getNode(
               moveResult.oldParentId,
             ) as Item | undefined;
