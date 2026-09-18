@@ -22,15 +22,19 @@ minio:
   ingress:
     enabled: true
     hostname: {{ .Values.feature }}-drive-minio.{{ .Values.domain }}
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
     tls:
       enabled: true
-      secretName: drive-tls
+      secretName: minio-tls
   consoleIngress:
     enabled: true
     hostname: {{ .Values.feature }}-drive-minio-console.{{ .Values.domain }}
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt
     tls:
       enabled: true
-      secretName: drive-tls
+      secretName: minio-console-tls
   username: dinum
   password: password
   bucket: drive-media-storage
