@@ -77,6 +77,28 @@ def test_api_items_restrictions_children_list_target_accessible(role):
     )
 
 
+def test_api_items_restrictions_favorites_exposes_target():
+    """A favorite restriction includes the target needed for navigation and drops."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type="folder", users=[(user, "owner")])
+    folder = _create_restricted_folder(parent, user)
+    models.ItemFavorite.objects.create(item=folder.restriction, user=user)
+    models.ItemFavorite.objects.create(item=folder, user=user)
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get("/api/v1.0/items/favorites/", {"type": "folder"})
+
+    assert response.status_code == 200
+    results = {result["id"]: result for result in response.json()["results"]}
+    target = results[str(folder.restriction.id)]["target"]
+    assert target["id"] == str(folder.id)
+    assert target["can_access"] is True
+    assert target["abilities"]["children_create"] is True
+    assert results[str(folder.id)]["is_restricted"] is True
+    assert results[str(folder.id)]["target"] is None
+
+
 def test_api_items_restrictions_children_list_target_accessible_via_link():
     """A public link reach on the target grants access through the restriction."""
     parent_owner = factories.UserFactory()
