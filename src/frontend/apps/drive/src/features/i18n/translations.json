@@ -89,6 +89,13 @@
             "inherited_edit": "Inherited. To lower role or remove access, edit",
             "parent_folder": "the parent folder."
           }
+        },
+        "ask_for_access": {
+          "title": "Access requests",
+          "accept": "Accept",
+          "deny": "Deny",
+          "request_access": "Request access",
+          "request_sent": "Access request sent"
         }
       },
       "file_download_modal": {
@@ -803,6 +810,13 @@
             "inherited_edit": "Hérité. Pour réduire le rôle ou supprimer l'accès, modifiez",
             "parent_folder": "le dossier parent."
           }
+        },
+        "ask_for_access": {
+          "title": "Demandes d'accès",
+          "accept": "Accepter",
+          "deny": "Refuser",
+          "request_access": "Demander l'accès",
+          "request_sent": "Demande d'accès envoyée"
         }
       },
       "file_download_modal": {
@@ -1517,6 +1531,13 @@
             "inherited_edit": "Herediteerd. Om de rol te verlagen of het toegang te verwijderen, bewerkt u",
             "parent_folder": "de bovenliggende map."
           }
+        },
+        "ask_for_access": {
+          "title": "Toegangsverzoeken",
+          "accept": "Accepteren",
+          "deny": "Weigeren",
+          "request_access": "Toegang aanvragen",
+          "request_sent": "Toegangsverzoek verzonden"
         }
       },
       "file_download_modal": {

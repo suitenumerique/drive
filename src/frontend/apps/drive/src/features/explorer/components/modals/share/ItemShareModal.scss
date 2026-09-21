@@ -1,4 +1,43 @@
 .workspace-share-modal {
+  &__access-requests {
+    display: flex;
+    flex-direction: column;
+    gap: var(--c--globals--spacings--3xs);
+    padding: var(--c--globals--spacings--xs) var(--c--globals--spacings--base);
+    padding-top: 0;
+
+    &-title {
+      font-size: var(--c--globals--font--sizes--xs);
+      font-weight: 500;
+      color: var(--c--contextuals--content--semantic--neutral--tertiary);
+    }
+  }
+
+  &__access-request-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--c--globals--spacings--sm);
+  }
+
+  &__access-request-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--c--globals--spacings--xs);
+    flex-shrink: 0;
+  }
+
+  &__access-request-role {
+    color: var(--c--contextuals--content--semantic--neutral--tertiary);
+    white-space: nowrap;
+  }
+
+  &__ask-for-access {
+    padding: var(--c--globals--spacings--xs) var(--c--globals--spacings--base);
+    display: flex;
+    justify-content: center;
+  }
+
   &__parent-folder-link {
     background: none;
     border: none;
