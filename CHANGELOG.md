@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) ask for access on an item/folder 
+- ✨(frontend) ask for access on an item/folder
+
 ### Fixed
 
 - 🐛(frontend) refresh the Recent view after item mutations
