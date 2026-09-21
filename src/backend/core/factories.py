@@ -181,3 +181,16 @@ class InvitationFactory(factory.django.DjangoModelFactory):
     item = factory.SubFactory(ItemFactory)
     role = factory.fuzzy.FuzzyChoice([role[0] for role in RoleChoices.choices])
     issuer = factory.SubFactory(UserFactory)
+
+
+class ItemAskForAccessFactory(factory.django.DjangoModelFactory):
+    """A factory to create item access requests for testing."""
+
+    class Meta:
+        model = models.ItemAskForAccess
+
+    item = factory.SubFactory(ItemFactory)
+    user = factory.SubFactory(UserFactory)
+    role = factory.fuzzy.FuzzyChoice(
+        [r[0] for r in RoleChoices.choices if r[0] != RoleChoices.OWNER]
+    )
