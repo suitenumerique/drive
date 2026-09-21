@@ -29,7 +29,8 @@ class UserAuthViewSet(drf.viewsets.ViewSet):
         # Create user if doesn't exist
         user = models.User.objects.filter(email=serializer.validated_data["email"]).first()
         if not user:
-            user = models.User(email=serializer.validated_data["email"])
+            email = serializer.validated_data["email"]
+            user = models.User(email=email, full_name=email)
             user.set_unusable_password()
             user.save()
 
