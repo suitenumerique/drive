@@ -18,16 +18,12 @@ const EmbeddedExplorerGridActionsCellComponent = (
   const disableDrag = useDisableDragGridItem(item);
   const [isOpen, setIsOpen] = useState(false);
 
-  const { setIsActionModalOpen, isActionModalOpen } =
+  const { getItemActionMenuItems, isActionModalOpen } =
     useEmbeddedExplorerGirdContext();
 
   if (TRANSIENT_UPLOAD_STATES.includes(item.upload_state)) {
     return null;
   }
-
-  const handleModalOpenChange = (value: boolean) => {
-    setIsActionModalOpen(value);
-  };
 
   return (
     <div
@@ -42,10 +38,9 @@ const EmbeddedExplorerGridActionsCellComponent = (
         disabled={disableDrag || isActionModalOpen}
       >
         <ItemActionDropdown
-          item={item}
+          menuItems={getItemActionMenuItems(item)}
           isOpen={isOpen}
           setIsOpen={setIsOpen}
-          onModalOpenChange={handleModalOpenChange}
           trigger={
             <Button
               variant="tertiary"

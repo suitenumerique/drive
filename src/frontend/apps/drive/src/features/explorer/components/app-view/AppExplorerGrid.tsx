@@ -18,6 +18,7 @@ import { canCreateChildren } from "@/features/items/utils";
 import { Spinner, useModal } from "@gouvfr-lasuite/ui-components";
 import { openWopiInNewTab } from "@/features/wopi/openWopi";
 import { itemToPreviewFile } from "@/features/explorer/utils/utils";
+import { useAppRestrictionUpdated } from "./useAppRestrictionUpdated";
 import { ConvertLegacyFileModal } from "@/features/explorer/components/modals/ConvertLegacyFileModal";
 
 /**
@@ -43,6 +44,8 @@ export const AppExplorerGrid = () => {
     setPreviewItem,
     setPreviewItems,
   } = useGlobalExplorer();
+
+  const onRestrictionUpdated = useAppRestrictionUpdated();
 
   const effectiveOnNavigate = appExplorer.onNavigate ?? onNavigate;
 
@@ -132,6 +135,7 @@ export const AppExplorerGrid = () => {
     const gridContent = (
       <EmbeddedExplorerGrid
         items={appExplorer.childrenItems}
+        onRestrictionUpdated={onRestrictionUpdated}
         parentItem={item}
         gridActionsCell={appExplorer.gridActionsCell}
         onNavigate={effectiveOnNavigate}

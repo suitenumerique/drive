@@ -11,12 +11,9 @@ import {
   Breadcrumbs,
 } from "@/features/ui/components/breadcrumbs/Breadcrumbs";
 import { useTranslation } from "react-i18next";
-import {
-  Icon,
-  IconSize,
-  Button,
-} from "@gouvfr-lasuite/ui-components";
-import { NavigationItem, useGlobalExplorer } from "../GlobalExplorerContext";
+import { Icon, IconSize, Button } from "@gouvfr-lasuite/ui-components";
+import { NavigationItem } from "../GlobalExplorerContext";
+import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 import clsx from "clsx";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
@@ -37,6 +34,7 @@ type BaseBreadcrumbsProps = {
   showAllFolderItem?: boolean;
   showMenuLastItem?: boolean;
   forcedBreadcrumbsItems?: ItemBreadcrumb[];
+  onRestrictionUpdated?: (item: Item) => void | Promise<void>;
 };
 
 /**
@@ -63,6 +61,7 @@ const BaseBreadcrumbs = ({
   currentItemId,
   item: itemFromProps,
   forcedBreadcrumbsItems,
+  onRestrictionUpdated,
 }: BaseBreadcrumbsProps) => {
   const { t, i18n } = useTranslation();
   const router = useRouter();
@@ -249,7 +248,12 @@ const BaseBreadcrumbs = ({
     if (showMenuLastItem && lastItem) {
       breadcrumbsItems.push({
         id: lastItem.id,
-        content: <LastItemBreadcrumb item={lastItem} />,
+        content: (
+          <LastItemBreadcrumb
+            item={lastItem}
+            onRestrictionUpdated={onRestrictionUpdated}
+          />
+        ),
       });
     }
 
@@ -261,6 +265,7 @@ const BaseBreadcrumbs = ({
     breadcrumb,
     forcedBreadcrumbsItems,
     i18n.language,
+    onRestrictionUpdated,
   ]);
 
   return <Breadcrumbs items={breadcrumbsItems} />;
@@ -292,9 +297,17 @@ export const BreadcrumbItemButton = ({
   );
 };
 
-export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
+export const LastItemBreadcrumb = ({
+  item,
+  onRestrictionUpdated,
+}: {
+  item: Item;
+  onRestrictionUpdated?: (item: Item) => void | Promise<void>;
+}) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { openShareModal } = useGlobalExplorer();
+  const { getMenuItems, modals, openShareModal } = useItemActionMenuItems({
+    onRestrictionUpdated,
+  });
   const icon = useMemo(() => {
     if (item.computed_link_reach === LinkReach.PUBLIC) {
       return (
@@ -320,8 +333,9 @@ export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
 
   return (
     <div className="embedded-explorer__breadcrumbs__last-item">
+      {modals}
       <ItemActionDropdown
-        item={item}
+        menuItems={getMenuItems(item)}
         isOpen={isOpen}
         setIsOpen={setIsOpen}
         trigger={

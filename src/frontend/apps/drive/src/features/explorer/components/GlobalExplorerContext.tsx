@@ -31,7 +31,6 @@ import {
   SelectionStoreContext,
   useCreateSelectionStore,
 } from "@/features/explorer/stores/selectionStore";
-import { ItemShareModal } from "./modals/share/ItemShareModal";
 
 export interface GlobalExplorerContextType {
   displayMode: "sdk" | "app";
@@ -56,8 +55,6 @@ export interface GlobalExplorerContextType {
   cancelUploadsForDeletedItems: (deletedIds: string[]) => void;
   refreshMobileNodes: () => void;
   mobileNodesRefreshTrigger: number;
-  sharedItem: Item | undefined;
-  openShareModal: (item: Item) => void;
 }
 
 export const GlobalExplorerContext = createContext<
@@ -121,7 +118,6 @@ export const GlobalExplorerProvider = ({
   const [rightPanelForcedItem, setRightPanelForcedItem] = useState<Item>();
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [isLeftPanelOpen, setIsLeftPanelOpen] = useState(false);
-  const [sharedItem, setSharedItem] = useState<Item>();
 
   const [initialId] = useState<string | undefined>(itemId);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
@@ -216,8 +212,6 @@ export const GlobalExplorerProvider = ({
           setPreviewItems,
           refreshMobileNodes,
           mobileNodesRefreshTrigger,
-          sharedItem,
-          openShareModal: setSharedItem,
         }}
       >
         <TreeProvider
@@ -275,15 +269,6 @@ export const GlobalExplorerProvider = ({
           <TreeProviderInitializer>
             <ExplorerDndProvider>
               {isInitialized ? children : <SpinnerPage />}
-              {/* Keep sharing open when restriction updates replace rows or selection. */}
-              {sharedItem && (
-                <ItemShareModal
-                  key={sharedItem.id}
-                  item={sharedItem}
-                  isOpen
-                  onClose={() => setSharedItem(undefined)}
-                />
-              )}
             </ExplorerDndProvider>
           </TreeProviderInitializer>
         </TreeProvider>

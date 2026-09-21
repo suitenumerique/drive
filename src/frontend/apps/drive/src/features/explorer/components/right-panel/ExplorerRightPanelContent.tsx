@@ -2,6 +2,9 @@ import { Item, ItemUploadState } from "@/features/drivers/types";
 import { ItemIcon } from "../icons/ItemIcon";
 import { Button, IconSize } from "@gouvfr-lasuite/ui-components";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
+import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
+import { useAppRestrictionUpdated } from "../app-view/useAppRestrictionUpdated";
+import { useSelectionStore } from "../../stores/selectionStore";
 import { useSelectedItems } from "../../stores/selectionStore";
 import { InfoRow } from "@/features/ui/components/info/InfoRow";
 import { useTranslation } from "react-i18next";
@@ -17,7 +20,30 @@ type ExplorerRightPanelContentProps = {
 export const ExplorerRightPanelContent = ({
   item,
 }: ExplorerRightPanelContentProps) => {
-  const { setRightPanelOpen, openShareModal } = useGlobalExplorer();
+  const selectionStore = useSelectionStore();
+  const updateAppAfterRestriction = useAppRestrictionUpdated();
+  const { openShareModal, modals } = useItemActionMenuItems({
+    onRestrictionUpdated: async () => {
+      selectionStore.clear();
+      await updateAppAfterRestriction();
+    },
+  });
+
+  return (
+    <>
+      <RightPanelSelectionContent item={item} onShare={openShareModal} />
+      {modals}
+    </>
+  );
+};
+
+const RightPanelSelectionContent = ({
+  item,
+  onShare,
+}: ExplorerRightPanelContentProps & {
+  onShare: (item: Item) => void;
+}) => {
+  const { setRightPanelOpen } = useGlobalExplorer();
   const selectedItems = useSelectedItems();
   const { t } = useTranslation();
 
@@ -114,14 +140,14 @@ export const ExplorerRightPanelContent = ({
                   <Button
                     variant="secondary"
                     icon={<span className="material-icons">group</span>}
-                    onClick={() => openShareModal(firstSelectedItem)}
+                    onClick={() => onShare(firstSelectedItem)}
                   >
                     {firstSelectedItem?.nb_accesses}
                   </Button>
                 ) : (
                   <Button
                     variant="tertiary"
-                    onClick={() => openShareModal(firstSelectedItem)}
+                    onClick={() => onShare(firstSelectedItem)}
                   >
                     {t("explorer.rightPanel.share")}
                   </Button>

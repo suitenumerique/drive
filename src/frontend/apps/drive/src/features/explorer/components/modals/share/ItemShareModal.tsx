@@ -48,12 +48,14 @@ type WorkspaceShareModalProps = {
   isOpen: boolean;
   onClose: () => void;
   item: Item;
+  onRestrictionUpdated?: (item: Item) => void | Promise<void>;
 };
 
 export const ItemShareModal = ({
   isOpen,
   onClose,
   item: initialItem,
+  onRestrictionUpdated,
 }: WorkspaceShareModalProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -323,7 +325,9 @@ export const ItemShareModal = ({
   }, []);
 
   const updateLinkConfiguration = useMutationUpdateLinkConfiguration();
-  const updateRestriction = useMutationUpdateRestriction();
+  const updateRestriction = useMutationUpdateRestriction(
+    onRestrictionUpdated,
+  );
 
   return (
     <DragEventBarrier>

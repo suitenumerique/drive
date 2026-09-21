@@ -31,6 +31,9 @@ import React from "react";
 import { useAuth } from "@/features/auth/Auth";
 import { ExplorerTreeNavItem } from "./nav/ExplorerTreeNavItem";
 import { useRouter } from "next/router";
+import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
+import { useAppRestrictionUpdated } from "../app-view/useAppRestrictionUpdated";
+import { useSelectionStore } from "../../stores/selectionStore";
 
 export const ExplorerTree = () => {
   const move = useMoveItems();
@@ -43,11 +46,19 @@ export const ExplorerTree = () => {
   }>();
 
   const treeContext = useTreeContext<TreeItem>();
-  const [initialOpenState, setInitialOpenState] = useState<OpenMap | undefined>(
-    undefined,
-  );
+  const [initialOpenState, setInitialOpenState] = useState<
+    OpenMap | undefined
+  >(undefined);
 
   const { itemId, treeIsInitialized } = useGlobalExplorer();
+  const selectionStore = useSelectionStore();
+  const updateAppAfterRestriction = useAppRestrictionUpdated();
+  const { getMenuItems, modals: actionModals } = useItemActionMenuItems({
+    onRestrictionUpdated: async () => {
+      selectionStore.clear();
+      await updateAppAfterRestriction();
+    },
+  });
   const defaultSelectedNodeId = useMemo(() => {
     const defaultRoute = getDefaultRoute(router.pathname);
     if (defaultRoute) {
@@ -181,11 +192,14 @@ export const ExplorerTree = () => {
 
             return result;
           }}
-          renderNode={ExplorerTreeItem}
+          renderNode={(props) => (
+            <ExplorerTreeItem {...props} getMenuItems={getMenuItems} />
+          )}
           rootNodeId={"root"}
         />
       )}
       <ExplorerTreeNav />
+      {actionModals}
       {moveState && moveConfirmationModal.isOpen && (
         <ExplorerTreeMoveConfirmationModal
           isOpen={moveConfirmationModal.isOpen}

@@ -57,11 +57,15 @@ export type EmbeddedExplorerGridProps = {
   setRightPanelForcedItem?: (item: Item | undefined) => void;
   items: AppExplorerProps["childrenItems"];
   gridActionsCell?: AppExplorerProps["gridActionsCell"];
-  gridNameCell?: (params: EmbeddedExplorerGridNameCellProps) => React.ReactNode;
+  gridNameCell?: (
+    params: EmbeddedExplorerGridNameCellProps,
+  ) => React.ReactNode;
   onNavigate: (event: NavigationEvent) => void;
   parentItem?: Item;
   displayMode?: GlobalExplorerContextType["displayMode"];
   canSelect?: (item: Item) => boolean;
+  // As this component is standalone, the consumer might need to update the app after a restriction update.
+  onRestrictionUpdated?: (item: Item) => void | Promise<void>;
   onFileClick?: (item: Item) => void;
   disableKeyboardNavigation?: boolean;
   // Custom columns
@@ -85,6 +89,9 @@ type EmbeddedExplorerGridContextType = {
   disableItemDragAndDrop?: boolean;
   isActionModalOpen: boolean;
   setIsActionModalOpen: (value: boolean) => void;
+  getItemActionMenuItems: ReturnType<
+    typeof useItemActionMenuItems
+  >["getMenuItems"];
 };
 
 export const EmbeddedExplorerGridContext = createContext<
@@ -102,6 +109,14 @@ export const useEmbeddedExplorerGirdContext = () => {
 };
 
 /**
+ * This component must remain usable independently of the app explorer.
+ * It and its descendants, including their hooks, must not depend on
+ * GlobalExplorerProvider or read useGlobalExplorer.
+ * App-specific behavior must be supplied through explicit props or callbacks.
+ *
+ * TODO: Remove legacy global dependencies in delete, rename, move, keyboard
+ * navigation and drag state. Sharing must not add to those dependencies.
+ *
  * Standalone component to display a list of items in a table.
  *
  * It provides:
@@ -118,18 +133,24 @@ export const useEmbeddedExplorerGirdContext = () => {
 export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   const { t } = useTranslation();
 
+  const selectionStore = useSelectionStore();
   const [moveItem, setMoveItem] = useState<Item | null>(null);
   const moveModal = useModal();
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
-  const { getMenuItems: getItemActionMenuItems, modals: itemActionModals } =
-    useItemActionMenuItems({
-      onModalOpenChange: setIsActionModalOpen,
-    });
+  const {
+    getMenuItems: getItemActionMenuItems,
+    modals: itemActionModals,
+  } = useItemActionMenuItems({
+    onModalOpenChange: setIsActionModalOpen,
+    onRestrictionUpdated: async (item) => {
+      selectionStore.clear();
+      await props.onRestrictionUpdated?.(item);
+    },
+  });
   const contextMenu = useContextMenuContext();
 
   useTransientItemsPoller(props.items ?? EMPTY_ARRAY);
 
-  const selectionStore = useSelectionStore();
   // TODO: This hook makes use of the ExplorerContext to manage the overred items. So, this component is not really standalone as it should be.
   const { overedItemIds, setOveredItemIds } = useDragItemContext();
 
@@ -230,8 +251,13 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
       disableItemDragAndDrop: props.disableItemDragAndDrop,
       isActionModalOpen,
       setIsActionModalOpen,
+      getItemActionMenuItems,
     }),
-    [props.disableItemDragAndDrop, isActionModalOpen],
+    [
+      props.disableItemDragAndDrop,
+      isActionModalOpen,
+      getItemActionMenuItems,
+    ],
   );
 
   const applyShiftRangeSelect = useCallback(

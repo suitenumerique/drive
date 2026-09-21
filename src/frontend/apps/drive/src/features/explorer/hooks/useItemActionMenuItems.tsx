@@ -29,9 +29,13 @@ import { useDownloadItem } from "@/features/items/hooks/useDownloadItem";
 import { baseApiUrl } from "@/features/api/utils";
 import { ExplorerRenameItemModal } from "../components/modals/ExplorerRenameItemModal";
 import { ExplorerCreateFolderModal } from "../components/modals/ExplorerCreateFolderModal";
+import { ItemShareModal } from "../components/modals/share/ItemShareModal";
 import { useDeleteItem } from "./useDeleteItem";
 import { ExplorerMoveFolder } from "../components/modals/move/ExplorerMoveFolderModal";
-import { getParentIdFromPath, setManualNavigationItemId } from "../utils/utils";
+import {
+  getParentIdFromPath,
+  setManualNavigationItemId,
+} from "../utils/utils";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import {
@@ -48,9 +52,10 @@ import {
 
 type UseItemActionMenuItemsOptions = {
   onModalOpenChange?: (isModalOpen: boolean) => void;
+  onRestrictionUpdated?: (item: Item) => void | Promise<void>;
 };
 
-type UseItemActionMenuItemsReturn = {
+export type UseItemActionMenuItemsReturn = {
   getMenuItems: (
     item: Item,
     options?: {
@@ -61,10 +66,12 @@ type UseItemActionMenuItemsReturn = {
   ) => MenuItem[];
   modals: React.ReactNode;
   isModalOpen: boolean;
+  openShareModal: (item: Item) => void;
 };
 
 export const useItemActionMenuItems = ({
   onModalOpenChange,
+  onRestrictionUpdated,
 }: UseItemActionMenuItemsOptions = {}): UseItemActionMenuItemsReturn => {
   const router = useRouter();
   const { setRightPanelForcedItem, setRightPanelOpen, ...explorerContext } =
@@ -81,11 +88,12 @@ export const useItemActionMenuItems = ({
   const moveModal = useModal();
   const createFolderModal = useModal();
 
+  const [sharedItem, setSharedItem] = useState<Item>();
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
 
   const isModalOpen =
     renameModal.isOpen ||
-    !!explorerContext.sharedItem ||
+    !!sharedItem ||
     moveModal.isOpen ||
     createFolderModal.isOpen;
 
@@ -167,7 +175,7 @@ export const useItemActionMenuItems = ({
         isHidden:
           !item.abilities?.accesses_view || isUnavailableRestriction(item),
         callback: () => {
-          explorerContext.openShareModal(effectiveItem);
+          setSharedItem(effectiveItem);
         },
       },
       {
@@ -261,6 +269,17 @@ export const useItemActionMenuItems = ({
 
   const modals = (
     <>
+      {sharedItem && (
+        <ItemShareModal
+          key={
+            sharedItem.target?.id ?? sharedItem.originalId ?? sharedItem.id
+          }
+          item={sharedItem}
+          isOpen
+          onClose={() => setSharedItem(undefined)}
+          onRestrictionUpdated={onRestrictionUpdated}
+        />
+      )}
       {currentItem && renameModal.isOpen && (
         <ExplorerRenameItemModal
           {...renameModal}
@@ -285,5 +304,10 @@ export const useItemActionMenuItems = ({
     </>
   );
 
-  return { getMenuItems, modals, isModalOpen };
+  return {
+    getMenuItems,
+    modals,
+    isModalOpen,
+    openShareModal: setSharedItem,
+  };
 };

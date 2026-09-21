@@ -29,10 +29,18 @@ import {
   isUnavailableRestriction,
 } from "@/features/drivers/utils";
 
-type ExplorerTreeItemProps = NodeRendererProps<TreeDataItem<TreeItem>>;
+import { UseItemActionMenuItemsReturn } from "../../hooks/useItemActionMenuItems";
 
-export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
-  const { onNavigate, setPreviewItem, setPreviewItems } = useGlobalExplorer();
+type ExplorerTreeItemProps = NodeRendererProps<TreeDataItem<TreeItem>> & {
+  getMenuItems: UseItemActionMenuItemsReturn["getMenuItems"];
+};
+
+export const ExplorerTreeItem = ({
+  getMenuItems,
+  ...props
+}: ExplorerTreeItemProps) => {
+  const { onNavigate, setPreviewItem, setPreviewItems } =
+    useGlobalExplorer();
   const router = useRouter();
 
   const item: TreeViewDataType<TreeItemData> = props.node.data.value;
@@ -105,7 +113,10 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
             </div>
 
             {item?.nodeType === TreeViewNodeTypeEnum.NODE && (
-              <ExplorerTreeItemActions item={item as Item} />
+              <ExplorerTreeItemActions
+                item={item as Item}
+                getMenuItems={getMenuItems}
+              />
             )}
           </div>
         </TreeViewItem>
