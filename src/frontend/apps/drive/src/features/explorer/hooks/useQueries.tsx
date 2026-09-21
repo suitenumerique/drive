@@ -27,6 +27,15 @@ export const useItemAccesses = (itemId: string, enabled = true) => {
   });
 };
 
+export const useItemAskForAccesses = (itemId: string) => {
+  return useQuery({
+    queryKey: ["itemAskForAccesses", itemId],
+    queryFn: () => getDriver().getItemAskForAccesses(itemId),
+    staleTime: 0,
+    gcTime: 0,
+  });
+};
+
 export const useInfiniteItemInvitations = (itemId: string, enabled = true) => {
   const driver = getDriver();
   return useInfiniteQuery({
