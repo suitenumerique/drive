@@ -2680,6 +2680,8 @@ class ItemAskForAccess(BaseModel):
         """Compute and return abilities for a given user."""
         user_role = self.item.get_role(user)
         is_privileged = user_role in PRIVILEGED_ROLES
+        # get_priority(None) returns 0; all real roles have priority >= 1,
+        # so this yields [] when the user has no role on the item.
         set_role_to = [
             role
             for role in RoleChoices.values
@@ -2688,7 +2690,7 @@ class ItemAskForAccess(BaseModel):
         return {
             "destroy": is_privileged,
             "accept": is_privileged,
-            "retrieve": is_privileged,
+            "retrieve": is_privileged or self.user_id == user.pk,
             "set_role_to": set_role_to,
         }
 

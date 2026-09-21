@@ -1367,6 +1367,203 @@
                 }
             }
         },
+        "/api/v1.0/items/{resource_id}/ask-for-access/": {
+            "get": {
+                "operationId": "items_ask_for_access_list",
+                "description": "API ViewSet for item access requests.\n\nGET /api/v1.0/items/<resource_id>/ask-for-access/\n    Admins/owners see all pending requests for the item.\n    Other authenticated users see only their own request.\n\nPOST /api/v1.0/items/<resource_id>/ask-for-access/ with optional data:\n    - role: str [reader|editor|administrator]  (default: reader)\n    Creates an access request and notifies all admins/owners by email.\n\nPOST /api/v1.0/items/<resource_id>/ask-for-access/<pk>/accept/ with optional data:\n    - role: str  (override the requested role, capped to the accepting user's own role)\n    Grants access and deletes the request.\n\nDELETE /api/v1.0/items/<resource_id>/ask-for-access/<pk>/\n    Admins/owners can delete (deny) any request.",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": false,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedItemAskForAccessList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "items_ask_for_access_create",
+                "description": "Create an access request and notify all admins/owners by email.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ItemAskForAccess"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1.0/items/{resource_id}/ask-for-access/{id}/": {
+            "get": {
+                "operationId": "items_ask_for_access_retrieve",
+                "description": "API ViewSet for item access requests.\n\nGET /api/v1.0/items/<resource_id>/ask-for-access/\n    Admins/owners see all pending requests for the item.\n    Other authenticated users see only their own request.\n\nPOST /api/v1.0/items/<resource_id>/ask-for-access/ with optional data:\n    - role: str [reader|editor|administrator]  (default: reader)\n    Creates an access request and notifies all admins/owners by email.\n\nPOST /api/v1.0/items/<resource_id>/ask-for-access/<pk>/accept/ with optional data:\n    - role: str  (override the requested role, capped to the accepting user's own role)\n    Grants access and deletes the request.\n\nDELETE /api/v1.0/items/<resource_id>/ask-for-access/<pk>/\n    Admins/owners can delete (deny) any request.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ItemAskForAccess"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "items_ask_for_access_destroy",
+                "description": "API ViewSet for item access requests.\n\nGET /api/v1.0/items/<resource_id>/ask-for-access/\n    Admins/owners see all pending requests for the item.\n    Other authenticated users see only their own request.\n\nPOST /api/v1.0/items/<resource_id>/ask-for-access/ with optional data:\n    - role: str [reader|editor|administrator]  (default: reader)\n    Creates an access request and notifies all admins/owners by email.\n\nPOST /api/v1.0/items/<resource_id>/ask-for-access/<pk>/accept/ with optional data:\n    - role: str  (override the requested role, capped to the accepting user's own role)\n    Grants access and deletes the request.\n\nDELETE /api/v1.0/items/<resource_id>/ask-for-access/<pk>/\n    Admins/owners can delete (deny) any request.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1.0/items/{resource_id}/ask-for-access/{id}/accept/": {
+            "post": {
+                "operationId": "items_ask_for_access_accept_create",
+                "description": "Accept an access request, optionally overriding the requested role.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "primary key for the record as UUID"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "resource_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9a-z-]*$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "items"
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ItemAskForAccess"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1.0/items/{resource_id}/invitations/": {
             "get": {
                 "operationId": "items_invitations_list",
@@ -2793,6 +2990,70 @@
                     }
                 }
             },
+            "ItemAskForAccess": {
+                "type": "object",
+                "description": "Serialize item ask for access instances.",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true,
+                        "description": "primary key for the record as UUID"
+                    },
+                    "item": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "primary key for the record as UUID",
+                        "readOnly": true
+                    },
+                    "user": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/User"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "role": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemAskForAccessRoleEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "title": "Created on",
+                        "description": "date and time at which a record was created"
+                    },
+                    "abilities": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "Return abilities of the logged-in user on the instance.",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "abilities",
+                    "created_at",
+                    "id",
+                    "item",
+                    "role",
+                    "user"
+                ]
+            },
+            "ItemAskForAccessRoleEnum": {
+                "enum": [
+                    "reader",
+                    "editor",
+                    "administrator"
+                ],
+                "type": "string",
+                "description": "* `reader` - Reader\n* `editor` - Editor\n* `administrator` - Administrator"
+            },
             "ItemLight": {
                 "type": "object",
                 "description": "Minimal item serializer for nesting in item accesses.",
@@ -3400,6 +3661,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/Invitation"
+                        }
+                    }
+                }
+            },
+            "PaginatedItemAskForAccessList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ItemAskForAccess"
                         }
                     }
                 }
