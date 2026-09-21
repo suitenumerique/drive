@@ -225,6 +225,38 @@ def test_api_item_ask_for_access_create_authenticated_already_has_privileged_acc
     }
 
 
+def test_api_item_ask_for_access_create_notifies_ancestor_privileged_users():
+    """
+    Notification emails must reach privileged users inherited from ancestor folders,
+    not just those with a direct access record on the item itself.
+    """
+    parent_admin = UserFactory(language="en-us")
+    parent_owner = UserFactory(language="en-us")
+    parent = ItemFactory(
+        type="folder",
+        users=[
+            (parent_admin, RoleChoices.ADMIN),
+            (parent_owner, RoleChoices.OWNER),
+        ],
+    )
+    child = ItemFactory(parent=parent, type="folder")
+
+    requester = UserFactory()
+    client = APIClient()
+    client.force_login(requester)
+
+    assert len(mail.outbox) == 0
+
+    response = client.post(f"/api/v1.0/items/{child.id}/ask-for-access/")
+    assert response.status_code == 201
+
+    assert ItemAskForAccess.objects.filter(item=child, user=requester).exists()
+    assert len(mail.outbox) == 2
+    email_recipients = {email.to[0] for email in mail.outbox}
+    assert parent_admin.email in email_recipients
+    assert parent_owner.email in email_recipients
+
+
 ## List
 
 

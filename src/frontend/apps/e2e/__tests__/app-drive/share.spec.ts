@@ -27,7 +27,6 @@ import {
 } from "./utils-explorer";
 import { setupPosthogEventCapture } from "./utils/posthog-utils";
 
-
 MultiUserTest("Share folder with user", async ({ userA, userB }) => {
   await clearDb();
   await login(userA.page, "drive@example.com");
@@ -151,7 +150,11 @@ MultiUserTest(
     await shareCurrentItemWithWebkitUser(userA.page, "Editor");
     await closeShareModal(userA.page);
     await createFolderInCurrentFolder(userA.page, "Sub folder");
-    await navigateToFolder(userA.page, "Sub folder", ["My files", "Folder", "Sub folder"]);
+    await navigateToFolder(userA.page, "Sub folder", [
+      "My files",
+      "Folder",
+      "Sub folder",
+    ]);
 
     // Open share modal on the sub folder and click the parent folder link
     const shareModal = await openShareModal(userA.page);

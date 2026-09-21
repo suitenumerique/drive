@@ -298,7 +298,9 @@ export class StandardDriver extends Driver {
   }
 
   async getItemAskForAccesses(itemId: string): Promise<AskForAccess[]> {
-    const response = await fetchAPI(`items/${itemId}/ask-for-access/`);
+    const response = await fetchAPI(`items/${itemId}/ask-for-access/`, {
+      params: { page_size: 200 },
+    });
     const data = await response.json();
     return data.results;
   }
