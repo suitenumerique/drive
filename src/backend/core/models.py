@@ -1379,8 +1379,8 @@ class Item(TreeModel, BaseModel):
         )
 
         with override(language):
-            msg_html = render_to_string("mail/html/invitation.html", context)
-            msg_plain = render_to_string("mail/text/invitation.txt", context)
+            msg_html = render_to_string("mail/html/template.html", context)
+            msg_plain = render_to_string("mail/text/template.txt", context)
             subject = str(subject)  # Force translation
 
             try:
