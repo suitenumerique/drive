@@ -27,6 +27,11 @@ item_related_router.register(
     viewsets.InvitationViewset,
     basename="invitations",
 )
+item_related_router.register(
+    "ask-for-access",
+    viewsets.ItemAskForAccessViewSet,
+    basename="ask_for_access",
+)
 
 sdk_relay_router = DefaultRouter()
 sdk_relay_router.register(

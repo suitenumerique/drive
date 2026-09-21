@@ -950,6 +950,11 @@ class Base(Configuration):
                 environ_name="API_USERS_LIST_THROTTLE_RATE_BURST",
                 environ_prefix=None,
             ),
+            "item_ask_for_access": values.Value(
+                default="20/minute",
+                environ_name="API_ITEM_ASK_FOR_ACCESS_THROTTLE_RATE",
+                environ_prefix=None,
+            ),
             "sdk_event_relay": values.Value(
                 default="200/minute",
                 environ_name="API_SDK_EVENT_RELAY_THROTTLE_RATE",
