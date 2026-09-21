@@ -38,6 +38,7 @@ and this project adheres to
 - ✨(backend) browse the item tree and its accesses from the admin
 - ✨(backend) list the root items of a user in the admin
 - ✨(backend) ask for access on an item/folder 
+- ✨(frontend) ask for access on an item/folder
 
 ### Changed
 
