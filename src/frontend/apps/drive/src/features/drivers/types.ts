@@ -191,6 +191,20 @@ export type User = {
 
 export type UserLight = Pick<User, "id" | "full_name" | "short_name">;
 
+export type AskForAccess = {
+  id: string;
+  item: string;
+  user: User;
+  role: Role;
+  created_at: string;
+  abilities: {
+    destroy: boolean;
+    accept: boolean;
+    retrieve: boolean;
+    set_role_to: Role[];
+  };
+};
+
 export type LocalizedThemeCustomization<T> = {
   default: T;
   [key: string]: T;
