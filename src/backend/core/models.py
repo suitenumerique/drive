@@ -1813,7 +1813,7 @@ class Item(TreeModel, BaseModel):
                 else f"{base_url}/explorer/items/{self.id}/"
             ),
         }
-        send_templated_email(subject, emails, "invitation", context, language)
+        send_templated_email(subject, emails, "template", context, language)
 
     def send_invitation_email(self, email, role, sender, language=None):
         """Method allowing a user to send an email invitation to another user for a item."""
