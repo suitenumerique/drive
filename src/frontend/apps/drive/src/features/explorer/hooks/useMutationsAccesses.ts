@@ -1,5 +1,5 @@
 import { getDriver } from "@/features/config/Config";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useOnSuccessAccessOrInvitationMutation } from "./useRefreshItems";
 
 // ============================================================================
@@ -99,6 +99,57 @@ export const useMutationDeleteInvitation = () => {
     },
     onSuccess: (_, variables) => {
       onSuccessAccessOrInvitation(variables.itemId, true);
+    },
+  });
+};
+
+// ============================================================================
+// ASK FOR ACCESS MUTATIONS
+// ============================================================================
+
+export const useMutationCreateAskForAccess = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.createAskForAccess>) => {
+      return driver.createAskForAccess(...payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["itemAskForAccesses", variables.itemId],
+      });
+    },
+  });
+};
+
+export const useMutationDeleteAskForAccess = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.deleteAskForAccess>) => {
+      return driver.deleteAskForAccess(...payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["itemAskForAccesses", variables.itemId],
+      });
+    },
+  });
+};
+
+export const useMutationAcceptAskForAccess = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  const onSuccessAccessOrInvitation = useOnSuccessAccessOrInvitationMutation();
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.acceptAskForAccess>) => {
+      return driver.acceptAskForAccess(...payload);
+    },
+    onSuccess: (_, variables) => {
+      onSuccessAccessOrInvitation(variables.itemId, false);
+      queryClient.invalidateQueries({
+        queryKey: ["itemAskForAccesses", variables.itemId],
+      });
     },
   });
 };

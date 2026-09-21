@@ -37,7 +37,12 @@
       },
       "403": {
         "title": "You don't have the necessary permissions to access this page.",
-        "button": "Home"
+        "button": "Home",
+        "ask_for_access": {
+          "button": "Request access",
+          "success": "Your access request has been sent.",
+          "already_requested": "You have already requested access to this item."
+        }
       },
       "settings_modal": {
         "title": "Settings",
@@ -746,7 +751,12 @@
       },
       "403": {
         "title": "Vous n'avez pas les permissions nécessaires pour accéder à cette page.",
-        "button": "Accueil"
+        "button": "Accueil",
+        "ask_for_access": {
+          "button": "Demander l'accès",
+          "success": "Votre demande d'accès a été envoyée.",
+          "already_requested": "Vous avez déjà demandé l'accès à cet élément."
+        }
       },
       "settings_modal": {
         "title": "Paramètres",
@@ -1455,7 +1465,12 @@
       },
       "403": {
         "title": "U beschikt niet over de benodigde rechten om dit bestand te openen.",
-        "button": "Home"
+        "button": "Home",
+        "ask_for_access": {
+          "button": "Toegang aanvragen",
+          "success": "Uw toegangsverzoek is verzonden.",
+          "already_requested": "U heeft al toegang aangevraagd voor dit item."
+        }
       },
       "settings_modal": {
         "title": "Instellingen",
