@@ -1,6 +1,6 @@
 """Client serializers for the drive core app."""
 
-# pylint: disable=no-name-in-module
+# pylint: disable=no-name-in-module,too-many-lines
 
 from __future__ import annotations
 
@@ -970,3 +970,38 @@ class SDKRelayEventSerializer(serializers.Serializer):
             )
 
         return value
+
+
+class RoleSerializer(serializers.Serializer):
+    """Serializer to validate a role choice."""
+
+    role = serializers.ChoiceField(choices=models.RoleChoices.choices, required=False)
+
+
+class ItemAskForAccessCreateSerializer(serializers.Serializer):
+    """Serializer for creating an item ask for access (request body only)."""
+
+    role = serializers.ChoiceField(
+        choices=[r for r in models.RoleChoices if r != models.RoleChoices.OWNER],
+        required=False,
+        default=models.RoleChoices.READER,
+    )
+
+
+class ItemAskForAccessSerializer(serializers.ModelSerializer):
+    """Serialize item ask for access instances."""
+
+    abilities = serializers.SerializerMethodField(read_only=True)
+    user = UserSerializer(read_only=True)
+
+    class Meta:
+        model = models.ItemAskForAccess
+        fields = ["id", "item", "user", "role", "created_at", "abilities"]
+        read_only_fields = ["id", "item", "user", "role", "created_at", "abilities"]
+
+    def get_abilities(self, instance) -> dict:
+        """Return abilities of the logged-in user on the instance."""
+        request = self.context.get("request")
+        if request:
+            return instance.get_abilities(request.user)
+        return {}
