@@ -1,10 +1,5 @@
-import test, {
-  test as base,
-  BrowserContext,
-  expect,
-  Page,
-} from "@playwright/test";
-import { clearDb, login } from "./utils-common";
+import test, { expect } from "@playwright/test";
+import { clearDb, login, MultiUserTest } from "./utils-common";
 import {
   clickToFavorites,
   clickToMyFiles,
@@ -16,27 +11,6 @@ import { createFolderInCurrentFolder } from "./utils-item";
 import { shareCurrentItemWithWebkitUser } from "./utils/share-utils";
 import { expectRowItem } from "./utils-embedded-grid";
 import { expectExplorerBreadcrumbs } from "./utils-explorer";
-
-type TwoUsers = {
-  userA: { context: BrowserContext; page: Page };
-  userB: { context: BrowserContext; page: Page };
-};
-
-const MultiUserTest = base.extend<TwoUsers>({
-  userA: async ({ browser }, use) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await use({ context, page });
-    await context.close();
-  },
-
-  userB: async ({ browser }, use) => {
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    await use({ context, page });
-    await context.close();
-  },
-});
 
 const READ_ONLY_FOLDER = "ReadOnly folder";
 
