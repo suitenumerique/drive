@@ -17,20 +17,22 @@ export const useFavoriteItems = () => {
   });
 };
 
-export const useItemAccesses = (itemId: string) => {
+export const useItemAccesses = (itemId: string, enabled = true) => {
   return useQuery({
     queryKey: ["itemAccesses", itemId],
     queryFn: () => getDriver().getItemAccesses(itemId),
+    enabled,
     staleTime: 0,
     gcTime: 0,
   });
 };
 
-export const useInfiniteItemInvitations = (itemId: string) => {
+export const useInfiniteItemInvitations = (itemId: string, enabled = true) => {
   const driver = getDriver();
   return useInfiniteQuery({
     queryKey: ["itemInvitations", itemId],
     queryFn: () => driver.getItemInvitations(itemId),
+    enabled,
     initialPageParam: 1,
     getNextPageParam(lastPage, allPages) {
       return lastPage.next ? allPages.length + 1 : undefined;

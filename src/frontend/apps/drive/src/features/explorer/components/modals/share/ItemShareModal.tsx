@@ -18,7 +18,10 @@ import {
   useMutationUpdateInvitation,
 } from "@/features/explorer/hooks/useMutationsAccesses";
 import { useConfig } from "@/features/config/ConfigProvider";
-import { useMutationUpdateLinkConfiguration } from "@/features/explorer/hooks/useMutations";
+import {
+  useMutationUpdateLinkConfiguration,
+  useMutationUpdateRestriction,
+} from "@/features/explorer/hooks/useMutations";
 import {
   useInfiniteItemInvitations,
   useItem,
@@ -45,22 +48,28 @@ type WorkspaceShareModalProps = {
   isOpen: boolean;
   onClose: () => void;
   item: Item;
+  onRestrictionUpdated?: (item: Item) => void | Promise<void>;
 };
 
 export const ItemShareModal = ({
   isOpen,
   onClose,
   item: initialItem,
+  onRestrictionUpdated,
 }: WorkspaceShareModalProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { config } = useConfig();
   const { user } = useAuth();
   const copyToClipboard = useClipboard();
-  const itemId = initialItem.originalId ?? initialItem.id;
+  const isRestriction = initialItem.type === ItemType.RESTRICTION;
+  const itemId =
+    isRestriction && initialItem.target
+      ? initialItem.target.id
+      : (initialItem.originalId ?? initialItem.id);
   const { data: item, refetch: refetchItem } = useItem(itemId, {
     enabled: isOpen,
-    initialData: initialItem,
+    initialData: isRestriction ? undefined : initialItem,
   });
 
   useEffect(() => {
@@ -72,10 +81,13 @@ export const ItemShareModal = ({
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [queryValue, setQueryValue] = useState("");
   const previousSearchResult = useRef<User[]>([]);
-  const { data } = useItemAccesses(itemId);
+  // A restriction's target can be readable through a link without granting
+  // access to its member list. Wait for the target's own permissions.
+  const canViewAccesses = isOpen && !!item?.abilities.accesses_view;
+  const { data } = useItemAccesses(itemId, canViewAccesses);
 
   const { data: invitations, hasNextPage: hasNextInvitations } =
-    useInfiniteItemInvitations(itemId);
+    useInfiniteItemInvitations(itemId, canViewAccesses);
   const { mutateAsync: createAccess } = useMutationCreateAccess();
   const { mutateAsync: createInvitation } = useMutationCreateInvitation();
   const { mutateAsync: updateAccess } = useMutationUpdateAccess();
@@ -313,17 +325,32 @@ export const ItemShareModal = ({
   }, []);
 
   const updateLinkConfiguration = useMutationUpdateLinkConfiguration();
+  const updateRestriction = useMutationUpdateRestriction(
+    onRestrictionUpdated,
+  );
 
   return (
     <DragEventBarrier>
       <ShareModal
         isOpen={isOpen}
-        loading={isLoadingUsers ?? false}
+        loading={!item || isLoadingUsers || updateRestriction.isPending}
         onClose={onClose}
         aria-label="Share modal"
         modalTitle={`${t("explorer.actions.share.modal.title")} ${removeFileExtension(item?.title ?? "")}`}
-        canUpdate={item?.abilities.accesses_manage}
-        canView={item?.abilities.accesses_view}
+        canUpdate={item?.abilities.accesses_manage ?? false}
+        canView={item?.abilities.accesses_view ?? false}
+        canRestrict={
+          item?.type === ItemType.FOLDER &&
+          !!item.abilities.restrict &&
+          !updateRestriction.isPending
+        }
+        isRestricted={item?.is_restricted ?? false}
+        onRestrict={() =>
+          updateRestriction.mutate({ id: itemId, is_restricted: true })
+        }
+        onUnrestrict={() =>
+          updateRestriction.mutate({ id: itemId, is_restricted: false })
+        }
         accesses={accessesData}
         invitations={invitationsData}
         invitationRoles={rolesOptions}

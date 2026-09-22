@@ -17,7 +17,8 @@ import {
   useGlobalExplorer,
   getOriginalIdFromTreeId,
 } from "./GlobalExplorerContext";
-import { Item, TreeItem } from "@/features/drivers/types";
+import { Item, ItemType, TreeItem } from "@/features/drivers/types";
+import { getDropTarget } from "@/features/drivers/utils";
 import { ExplorerDragOverlay } from "./tree/ExploreDragOverlay";
 import {
   TreeViewNodeTypeEnum,
@@ -160,7 +161,8 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
       return;
     }
 
-    const overItem = { ...overItemRaw, id: overItemId };
+    const overItem = getDropTarget({ ...overItemRaw, id: overItemId });
+    if (!overItem) return;
 
     if (activeItem.id === overItem.id) {
       return;
@@ -267,7 +269,14 @@ export const snapToTopLeft: Modifier = ({
   return transform;
 };
 
-export const canDrop = (activeItem: Item, overItem: Item | TreeItem) => {
+export const canDrop = (
+  activeItem: Item,
+  overItem: Item | TreeItem,
+): boolean => {
+  if ("type" in overItem && overItem.type === ItemType.RESTRICTION) {
+    const target = getDropTarget(overItem as Item);
+    return target ? canDrop(activeItem, target) : false;
+  }
   // Extract the original item ID from the tree ID (handles favorites path format)
   const overItemId = overItem?.id
     ? getOriginalIdFromTreeId(overItem.id)
@@ -290,10 +299,18 @@ export const canDrop = (activeItem: Item, overItem: Item | TreeItem) => {
   const activePath = activeItem.path;
   const overPath = overItem.path;
 
-  const canDrop = overItem.abilities?.children_create;
+  // A location entry cannot be moved inside the folder it points to.
+  if (
+    activeItem.target &&
+    overPath?.split(".").includes(activeItem.target.id)
+  ) {
+    return false;
+  }
+
+  const canCreateChildren = overItem.abilities?.children_create;
   const canMove = activeItem.abilities?.move;
 
-  if (!canDrop || !canMove) {
+  if (!canCreateChildren || !canMove) {
     return false;
   }
 

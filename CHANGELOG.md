@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(frontend) restrict and reopen folder access from the share modal
+
 ### Fixed
 
 - 🐛(frontend) refresh the Recent view after item mutations
