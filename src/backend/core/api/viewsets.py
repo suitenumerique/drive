@@ -1050,6 +1050,15 @@ class ItemViewSet(
         )
 
         queryset = queryset.filter(id__in=favorite_items_ids)
+        queryset = queryset.select_related("target").prefetch_related(
+            db.Prefetch(
+                "target__accesses",
+                queryset=models.ItemAccess.objects.filter(
+                    db.Q(user=user) | db.Q(team__in=user.teams)
+                ),
+                to_attr="viewer_accesses",
+            )
+        )
         queryset = queryset.annotate_with_numchild()
 
         # Apply ordering only now that everyting is filtered and annotated
