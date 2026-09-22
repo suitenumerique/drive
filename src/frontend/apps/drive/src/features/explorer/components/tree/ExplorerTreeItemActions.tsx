@@ -4,11 +4,15 @@ import clsx from "clsx";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 import { useState } from "react";
 
+import { UseItemActionMenuItemsReturn } from "../../hooks/useItemActionMenuItems";
+
 export type ExplorerTreeItemActionsProps = {
   item: Item;
+  getMenuItems: UseItemActionMenuItemsReturn["getMenuItems"];
 };
 export const ExplorerTreeItemActions = ({
   item,
+  getMenuItems,
 }: ExplorerTreeItemActionsProps) => {
   const [isOpen, setIsOpen] = useState(false);
   return (
@@ -19,10 +23,11 @@ export const ExplorerTreeItemActions = ({
         })}
       >
         <ItemActionDropdown
-          item={item}
-          itemId={item.originalId ?? item.id}
+          menuItems={getMenuItems(item, {
+            minimal: true,
+            itemId: item.originalId ?? item.id,
+          })}
           isOpen={isOpen}
-          minimal={true}
           setIsOpen={setIsOpen}
           trigger={
             <Button

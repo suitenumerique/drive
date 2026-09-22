@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(frontend) restrict and reopen folder access from the share modal
+
 ### Security
 
 - ⬆️(backend) upgrade djangorestframework to 3.18.3 to fix CVEs

@@ -1,43 +1,23 @@
-import { Item } from "@/features/drivers/types";
-import { DropdownMenu } from "@gouvfr-lasuite/ui-components";
-import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
+import { DropdownMenu, MenuItem } from "@gouvfr-lasuite/ui-components";
 
 export type ItemActionDropdownProps = {
-  item: Item;
-  itemId?: string;
+  menuItems: MenuItem[];
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   trigger: React.ReactNode;
-  onModalOpenChange?: (isModalOpen: boolean) => void;
-  minimal?: boolean;
-  allowCreate?: boolean;
 };
 
 export const ItemActionDropdown = ({
-  item,
-  itemId,
+  menuItems,
   isOpen,
   setIsOpen,
   trigger,
-  onModalOpenChange,
-  minimal = false,
-  allowCreate = false,
-}: ItemActionDropdownProps) => {
-  const { getMenuItems, modals } = useItemActionMenuItems({
-    onModalOpenChange,
-  });
-  const menuItems = getMenuItems(item, { minimal, itemId, allowCreate });
-
-  return (
-    <>
-      <DropdownMenu
-        options={menuItems}
-        isOpen={isOpen}
-        onOpenChange={setIsOpen}
-      >
-        {trigger}
-      </DropdownMenu>
-      {modals}
-    </>
-  );
-};
+}: ItemActionDropdownProps) => (
+  <DropdownMenu
+    options={menuItems}
+    isOpen={isOpen}
+    onOpenChange={setIsOpen}
+  >
+    {trigger}
+  </DropdownMenu>
+);
