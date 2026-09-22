@@ -1036,6 +1036,7 @@ class ItemViewSet(
         )
 
         queryset = queryset.filter(id__in=favorite_items_ids)
+        queryset = queryset.with_restriction_target(user)
         queryset = queryset.annotate_with_numchild()
 
         # Apply ordering only now that everyting is filtered and annotated
@@ -1216,20 +1217,11 @@ class ItemViewSet(
         # GET: List children
         queryset = (
             item.children()
-            .select_related("creator", "target")
+            .select_related("creator")
+            .with_restriction_target(request.user)
             .annotate_has_restriction()
             .filter(deleted_at__isnull=True)
         )
-        if request.user.is_authenticated:
-            queryset = queryset.prefetch_related(
-                db.Prefetch(
-                    "target__accesses",
-                    queryset=models.ItemAccess.objects.filter(
-                        db.Q(user=request.user) | db.Q(team__in=request.user.teams)
-                    ),
-                    to_attr="viewer_accesses",
-                )
-            )
         queryset = self._filter_suspicious_items(queryset, request.user)
         queryset = self._exclude_pending_items(queryset)
         queryset = self.filter_queryset(queryset)
@@ -1336,7 +1328,8 @@ class ItemViewSet(
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
         tree = (
-            self.queryset.select_related("creator", "target")
+            self.queryset.select_related("creator")
+            .with_restriction_target(request.user)
             .annotate_has_restriction()
             .filter(
                 clause,
@@ -1385,6 +1378,7 @@ class ItemViewSet(
         queryset = queryset.annotate_is_favorite(user)
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.with_restriction_target(user)
 
         # Apply ordering only now that everyting is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
