@@ -155,6 +155,33 @@ export const useMutationUpdateLinkConfiguration = () => {
   });
 };
 
+export const useMutationUpdateRestriction = (
+  onRestrictionUpdated?: (item: Item) => void | Promise<void>,
+) => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { id: string; is_restricted: boolean }) =>
+      driver.updateItemRestriction(payload),
+    onSuccess: async (item) => {
+      queryClient.setQueryData(["items", item.id], item);
+      // Restriction moves the subtree, changing inherited access, links and paths.
+      await Promise.all(
+        [
+          "items",
+          "itemAccesses",
+          "itemInvitations",
+          "breadcrumb",
+          "searchItems",
+          "firstLevelItems",
+        ].map((key) => queryClient.invalidateQueries({ queryKey: [key] })),
+      );
+      await onRestrictionUpdated?.(item);
+    },
+    meta: { showErrorOn403: true },
+  });
+};
+
 export const useMutationRestoreItems = () => {
   const driver = getDriver();
   const queryClient = useQueryClient();
