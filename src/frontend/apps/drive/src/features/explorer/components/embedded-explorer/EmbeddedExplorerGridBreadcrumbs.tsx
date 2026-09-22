@@ -11,19 +11,14 @@ import {
   Breadcrumbs,
 } from "@/features/ui/components/breadcrumbs/Breadcrumbs";
 import { useTranslation } from "react-i18next";
-import {
-  Icon,
-  IconSize,
-  Button,
-  useModal,
-} from "@gouvfr-lasuite/ui-components";
+import { Icon, IconSize, Button } from "@gouvfr-lasuite/ui-components";
 import { NavigationItem } from "../GlobalExplorerContext";
+import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 import clsx from "clsx";
 import { useBreadcrumbQuery } from "../../hooks/useBreadcrumb";
 import { useItem } from "../../hooks/useQueries";
 import { useRouter } from "next/router";
-import { ItemShareModal } from "../modals/share/ItemShareModal";
 import {
   clearFromRoute,
   getFromRoute,
@@ -39,6 +34,7 @@ type BaseBreadcrumbsProps = {
   showAllFolderItem?: boolean;
   showMenuLastItem?: boolean;
   forcedBreadcrumbsItems?: ItemBreadcrumb[];
+  onRestrictionUpdated?: (item: Item) => void | Promise<void>;
 };
 
 /**
@@ -65,6 +61,7 @@ const BaseBreadcrumbs = ({
   currentItemId,
   item: itemFromProps,
   forcedBreadcrumbsItems,
+  onRestrictionUpdated,
 }: BaseBreadcrumbsProps) => {
   const { t, i18n } = useTranslation();
   const router = useRouter();
@@ -186,6 +183,7 @@ const BaseBreadcrumbs = ({
   const breadcrumbsItems = useMemo(() => {
     if (forcedBreadcrumbsItems) {
       return forcedBreadcrumbsItems.map((item) => ({
+        id: item.id,
         content: (
           <BreadcrumbItemButton
             item={item}
@@ -198,6 +196,7 @@ const BaseBreadcrumbs = ({
 
     if (defaultRouteData && !showAllFolderItem) {
       breadcrumbsItems.push({
+        id: "default-route",
         content: getDefaultRouteButton(defaultRouteData),
       });
     }
@@ -205,12 +204,14 @@ const BaseBreadcrumbs = ({
     const fromRouteButton = getFromRouteButton();
     if (fromRouteButton && !showAllFolderItem) {
       breadcrumbsItems.push({
+        id: "from-route",
         content: fromRouteButton,
       });
     }
 
     if (showAllFolderItem) {
       breadcrumbsItems.push({
+        id: "all-folders",
         content: (
           <div
             className="c__breadcrumbs__button"
@@ -233,6 +234,7 @@ const BaseBreadcrumbs = ({
     breadcrumbsData.forEach((item) => {
       const isActive = item.id === lastItem?.id;
       breadcrumbsItems.push({
+        id: item.id,
         content: (
           <BreadcrumbItemButton
             item={item}
@@ -245,7 +247,13 @@ const BaseBreadcrumbs = ({
 
     if (showMenuLastItem && lastItem) {
       breadcrumbsItems.push({
-        content: <LastItemBreadcrumb item={lastItem} />,
+        id: lastItem.id,
+        content: (
+          <LastItemBreadcrumb
+            item={lastItem}
+            onRestrictionUpdated={onRestrictionUpdated}
+          />
+        ),
       });
     }
 
@@ -257,6 +265,7 @@ const BaseBreadcrumbs = ({
     breadcrumb,
     forcedBreadcrumbsItems,
     i18n.language,
+    onRestrictionUpdated,
   ]);
 
   return <Breadcrumbs items={breadcrumbsItems} />;
@@ -288,9 +297,17 @@ export const BreadcrumbItemButton = ({
   );
 };
 
-export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
+export const LastItemBreadcrumb = ({
+  item,
+  onRestrictionUpdated,
+}: {
+  item: Item;
+  onRestrictionUpdated?: (item: Item) => void | Promise<void>;
+}) => {
   const [isOpen, setIsOpen] = useState(false);
-  const shareModal = useModal();
+  const { getMenuItems, modals, openShareModal } = useItemActionMenuItems({
+    onRestrictionUpdated,
+  });
   const icon = useMemo(() => {
     if (item.computed_link_reach === LinkReach.PUBLIC) {
       return (
@@ -316,8 +333,9 @@ export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
 
   return (
     <div className="embedded-explorer__breadcrumbs__last-item">
+      {modals}
       <ItemActionDropdown
-        item={item}
+        menuItems={getMenuItems(item)}
         isOpen={isOpen}
         setIsOpen={setIsOpen}
         trigger={
@@ -330,16 +348,13 @@ export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
         }
       />
       {icon && (
-        <>
-          <Button
-            variant="tertiary"
-            size="small"
-            icon={icon}
-            onClick={() => shareModal.open()}
-            data-testid="share-button"
-          />
-          {shareModal.isOpen && <ItemShareModal {...shareModal} item={item} />}
-        </>
+        <Button
+          variant="tertiary"
+          size="small"
+          icon={icon}
+          onClick={() => openShareModal(item)}
+          data-testid="share-button"
+        />
       )}
     </div>
   );

@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(frontend) restrict and reopen folder access from the share modal
+
 ## [v0.25.3] - 2026-10-23
 
 ### Security
