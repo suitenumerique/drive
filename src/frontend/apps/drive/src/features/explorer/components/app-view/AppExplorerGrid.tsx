@@ -1,4 +1,5 @@
 import { Item } from "@/features/drivers/types";
+import { isFolderAccessDenied } from "@/features/drivers/utils";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import clsx from "clsx";
@@ -18,6 +19,7 @@ import { canCreateChildren } from "@/features/items/utils";
 import { Spinner, useModal } from "@gouvfr-lasuite/ui-components";
 import { openWopiInNewTab } from "@/features/wopi/openWopi";
 import { itemToPreviewFile } from "@/features/explorer/utils/utils";
+import { useAppRestrictionUpdated } from "./useAppRestrictionUpdated";
 import { ConvertLegacyFileModal } from "@/features/explorer/components/modals/ConvertLegacyFileModal";
 
 /**
@@ -44,6 +46,8 @@ export const AppExplorerGrid = () => {
     setPreviewItems,
   } = useGlobalExplorer();
 
+  const onRestrictionUpdated = useAppRestrictionUpdated();
+
   const effectiveOnNavigate = appExplorer.onNavigate ?? onNavigate;
 
   const convertModal = useModal();
@@ -52,16 +56,17 @@ export const AppExplorerGrid = () => {
   const handleFileClick =
     appExplorer.onFileClick ??
     ((item: Item) => {
-      if (item.abilities.convert) {
+      const accessDenied = isFolderAccessDenied(item);
+      if (!accessDenied && item.abilities.convert) {
         setItemToConvert(item);
         convertModal.open();
         return;
       }
-      if (item.is_wopi_supported) {
+      if (!accessDenied && item.is_wopi_supported) {
         openWopiInNewTab(itemToPreviewFile(item));
         return;
       }
-      if (item.url) {
+      if (accessDenied || item.url) {
         // We need to ensure the preview items list is updated when clicking on a file from the grid. Because this list
         // can be updated when clicking on a file from the search modal which sets the preview items to a list of one item.
         setPreviewItems(appExplorer.childrenItems ?? []);
@@ -132,6 +137,7 @@ export const AppExplorerGrid = () => {
     const gridContent = (
       <EmbeddedExplorerGrid
         items={appExplorer.childrenItems}
+        onRestrictionUpdated={onRestrictionUpdated}
         parentItem={item}
         gridActionsCell={appExplorer.gridActionsCell}
         onNavigate={effectiveOnNavigate}
