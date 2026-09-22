@@ -1,9 +1,13 @@
-import { FooterProps, TreeViewDataType } from "@gouvfr-lasuite/ui-components";
+import {
+  FooterProps,
+  TreeViewDataType,
+} from "@gouvfr-lasuite/ui-components";
 import { ColumnPreferences } from "../explorer/types/columns";
 
 export enum ItemType {
   FILE = "file",
   FOLDER = "folder",
+  RESTRICTION = "restriction",
 }
 
 export enum LinkReach {
@@ -61,6 +65,16 @@ export type Item = {
     short_name: string;
   };
   type: ItemType;
+  is_restricted?: boolean;
+  target?: {
+    id: string;
+    title: string;
+    is_restricted: boolean;
+    deleted: boolean;
+    can_access: boolean;
+    path: string;
+    abilities: Item["abilities"];
+  } | null;
   ancestors_link_reach: LinkReach | null;
   ancestors_link_role: LinkRole | null;
   computed_link_reach: LinkReach | null;
@@ -109,6 +123,7 @@ export type Item = {
     update: boolean;
     upload_ended: boolean;
     convert?: boolean;
+    restrict?: boolean;
   };
   policy?: string;
 };
