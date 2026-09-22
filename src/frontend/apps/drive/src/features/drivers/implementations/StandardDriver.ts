@@ -96,6 +96,20 @@ export class StandardDriver extends Driver {
     return jsonToItem(data);
   }
 
+  async updateItemRestriction(payload: {
+    id: string;
+    is_restricted: boolean;
+  }): Promise<Item> {
+    const response = await fetchAPI(
+      `items/${payload.id}/restrict/`,
+      { method: payload.is_restricted ? "POST" : "DELETE" },
+      // A rejected restriction should leave the share modal open for retry.
+      { redirectOn40x: false },
+    );
+    const data = await response.json();
+    return jsonToItem(data);
+  }
+
   async restoreItems(ids: string[]): Promise<void> {
     for (const id of ids) {
       await fetchAPI(`items/${id}/restore/`, {
@@ -552,6 +566,10 @@ const jsonToItems = (data: any[]): Item[] => {
 const jsonToItem = (data: any): Item => {
   const item = {
     ...data,
+    title:
+      data.type === ItemType.RESTRICTION
+        ? (data.target?.title ?? data.title)
+        : data.title,
     updated_at: new Date(data.updated_at),
   };
   if (data.children) {
