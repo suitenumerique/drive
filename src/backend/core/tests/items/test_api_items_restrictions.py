@@ -18,7 +18,8 @@ def _create_restricted_folder(parent, user):
     return folder.restrict(user)
 
 
-def test_api_items_restrictions_children_list_exposes_target():
+@pytest.mark.parametrize("filters", [{}, {"type": "folder"}, {"category": "pdf"}])
+def test_api_items_restrictions_children_list_exposes_target(filters):
     """The children listing exposes the restriction target, greyed for excluded users."""
     parent_owner = factories.UserFactory()
     owner = factories.UserFactory()
@@ -32,7 +33,7 @@ def test_api_items_restrictions_children_list_exposes_target():
     client = APIClient()
     client.force_login(parent_owner)
 
-    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/")
+    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/", filters)
 
     assert response.status_code == 200
     results = {result["id"]: result for result in response.json()["results"]}
@@ -41,13 +42,18 @@ def test_api_items_restrictions_children_list_exposes_target():
     assert payload["target"] == {
         "id": str(folder.id),
         "title": folder.title,
+        "path": str(folder.path),
         "is_restricted": True,
         "deleted": False,
         "can_access": False,
+        "abilities": folder.get_abilities(parent_owner),
     }
+    parent_response = client.get(f"/api/v1.0/items/{parent.id!s}/")
+    assert parent_response.json()["numchild_folder"] == 1
 
 
-def test_api_items_restrictions_children_list_target_accessible():
+@pytest.mark.parametrize("role", ["reader", "editor", "administrator", "owner"])
+def test_api_items_restrictions_children_list_target_accessible(role):
     """The target is accessible for a user holding an explicit access on it."""
     user = factories.UserFactory()
     owner = factories.UserFactory()
@@ -56,7 +62,7 @@ def test_api_items_restrictions_children_list_target_accessible():
         users=[(user, "reader")],
     )
     folder = _create_restricted_folder(parent, owner)
-    factories.UserItemAccessFactory(item=folder, user=user, role="reader")
+    factories.UserItemAccessFactory(item=folder, user=user, role=role)
 
     client = APIClient()
     client.force_login(user)
@@ -66,6 +72,31 @@ def test_api_items_restrictions_children_list_target_accessible():
     assert response.status_code == 200
     results = {result["id"]: result for result in response.json()["results"]}
     assert results[str(folder.restriction.id)]["target"]["can_access"] is True
+    assert results[str(folder.restriction.id)]["target"]["abilities"]["children_create"] is (
+        role != "reader"
+    )
+
+
+def test_api_items_restrictions_favorites_exposes_target():
+    """A favorite restriction includes the target needed for navigation and drops."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type="folder", users=[(user, "owner")])
+    folder = _create_restricted_folder(parent, user)
+    models.ItemFavorite.objects.create(item=folder.restriction, user=user)
+    models.ItemFavorite.objects.create(item=folder, user=user)
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.get("/api/v1.0/items/favorites/", {"type": "folder"})
+
+    assert response.status_code == 200
+    results = {result["id"]: result for result in response.json()["results"]}
+    target = results[str(folder.restriction.id)]["target"]
+    assert target["id"] == str(folder.id)
+    assert target["can_access"] is True
+    assert target["abilities"]["children_create"] is True
+    assert results[str(folder.id)]["is_restricted"] is True
+    assert results[str(folder.id)]["target"] is None
 
 
 def test_api_items_restrictions_children_list_target_accessible_via_link():
