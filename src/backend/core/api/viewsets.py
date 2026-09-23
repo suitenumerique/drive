@@ -1240,8 +1240,9 @@ class ItemViewSet(
         except models.Item.DoesNotExist as exc:
             raise drf.exceptions.NotFound from exc
 
+        prefixes = [str(item.path[:i]) for i in range(1, len(item.path) + 1)]
         highest_ancestor = (
-            self.queryset.filter(path__ancestors=item.path, ancestors_deleted_at__isnull=True)
+            self.queryset.filter(path__in=prefixes, ancestors_deleted_at__isnull=True)
             .readable_per_se(request.user)
             .only("path")
             .order_by("path")
@@ -1357,8 +1358,9 @@ class ItemViewSet(
         """
         item = self.get_object()
 
+        prefixes = [str(item.path[:i]) for i in range(1, len(item.path) + 1)]
         highest_ancestor = (
-            self.queryset.filter(path__ancestors=item.path, ancestors_deleted_at__isnull=True)
+            self.queryset.filter(path__in=prefixes, ancestors_deleted_at__isnull=True)
             .readable_per_se(request.user)
             .only("path")
             .order_by("path")
