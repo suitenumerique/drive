@@ -59,9 +59,8 @@ for (const entryPoint of entryPoints) {
         .filter({ hasText: "Direct Editor" }),
     ).toContainText("Editor");
     // 5. Surface specifics: the right panel closes since its item left the
-    //    listing, while inside the folder the user stays in place. The
-    //    restricted folder left its parent's tree, so the breadcrumb no
-    //    longer shows the parent.
+    //    listing, while inside the folder the user stays in place and the
+    //    breadcrumb still leads back to the parent.
     if (entryPoint === "right panel")
       await expect(page.getByTestId("right-panel")).not.toBeVisible();
     if (entryPoint.includes("breadcrumb")) {
@@ -70,7 +69,7 @@ for (const entryPoint of entryPoints) {
         entryPoint === "breadcrumb"
           ? page.getByTestId("explorer-breadcrumbs")
           : page.locator(".explorer__content__breadcrumbs--mobile");
-      await expect(breadcrumbs).not.toContainText(names.parent);
+      await expect(breadcrumbs).toContainText(names.parent);
     }
     // 6. Reopen access from the same modal: everything is restored. The
     //    parent lists the folder again, the inherited reader is back and

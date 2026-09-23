@@ -882,3 +882,33 @@ def test_api_items_tree_authenticated_with_access_authenticated():
             },
         ],
     }
+
+
+def test_items_api_tree_direct_access_hides_inheriting_ancestors():
+    """Ancestors inheriting a restricted link reach stay hidden above a direct access."""
+    root = factories.ItemFactory(type="folder")
+    middle = factories.ItemFactory(type="folder", parent=root, link_reach=None)
+    factories.ItemFactory(type="folder", parent=root, link_reach=None)
+    item = factories.ItemFactory(type="folder", parent=middle, link_reach=None)
+    factories.ItemFactory(type="folder", parent=middle, link_reach=None)
+    reader = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=reader, role="reader")
+    client = APIClient()
+    client.force_login(reader)
+    response = client.get(f"/api/v1.0/items/{item.pk}/tree/")
+    assert response.status_code == 200
+    assert response.json()["id"] == str(item.pk)
+    assert response.json()["children"] == []
+
+
+def test_items_api_tree_inherited_public_link():
+    """Folders inheriting a public link reach remain visible below the public ancestor."""
+    root = factories.ItemFactory(type="folder", link_reach=models.LinkReachChoices.PUBLIC)
+    middle = factories.ItemFactory(type="folder", parent=root, link_reach=None)
+    item = factories.ItemFactory(type="folder", parent=middle, link_reach=None)
+    response = APIClient().get(f"/api/v1.0/items/{item.pk}/tree/")
+    assert response.status_code == 200
+    tree = response.json()
+    assert tree["id"] == str(root.pk)
+    assert [child["id"] for child in tree["children"]] == [str(middle.pk)]
+    assert [child["id"] for child in tree["children"][0]["children"]] == [str(item.pk)]
