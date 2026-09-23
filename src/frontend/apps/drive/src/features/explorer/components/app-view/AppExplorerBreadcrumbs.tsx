@@ -27,10 +27,19 @@ import {
 } from "@/utils/defaultRoutes";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 import { useCreateMenuItems } from "../../hooks/useCreateMenuItems";
+import { useAppRestrictionUpdated } from "./useAppRestrictionUpdated";
+import { useSelectionStore } from "../../stores/selectionStore";
+import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
 import { Item, ItemType } from "@/features/drivers/types";
 
 export const AppExplorerBreadcrumbs = () => {
   const { item, onNavigate } = useGlobalExplorer();
+  const selectionStore = useSelectionStore();
+  const updateAppAfterRestriction = useAppRestrictionUpdated();
+  const onRestrictionUpdated = async () => {
+    selectionStore.clear();
+    await updateAppAfterRestriction();
+  };
   const router = useRouter();
   const { t } = useTranslation();
   const createFolderModal = useModal();
@@ -50,6 +59,7 @@ export const AppExplorerBreadcrumbs = () => {
     <>
       <div className="explorer__content__breadcrumbs">
         <EmbeddedExplorerGridBreadcrumbs
+          onRestrictionUpdated={onRestrictionUpdated}
           currentItemId={item?.id}
           item={item}
           showMenuLastItem={true}
@@ -101,7 +111,16 @@ export const ExplorerBreadcrumbsMobile = () => {
   const router = useRouter();
   const { t } = useTranslation();
   const { item, onNavigate } = useGlobalExplorer();
+  const selectionStore = useSelectionStore();
+  const updateAppAfterRestriction = useAppRestrictionUpdated();
+  const onRestrictionUpdated = async () => {
+    selectionStore.clear();
+    await updateAppAfterRestriction();
+  };
   const { data: breadcrumb } = useBreadcrumbQuery(item?.id);
+  const { getMenuItems, modals: actionModals } = useItemActionMenuItems({
+    onRestrictionUpdated,
+  });
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
   const { menuItems, modals: createModals } = useCreateMenuItems({
@@ -128,116 +147,126 @@ export const ExplorerBreadcrumbsMobile = () => {
     };
   }, [breadcrumb]);
 
-  if (!item && defaultRouteData) {
-    return (
-      <>
-        <div className="explorer__content__breadcrumbs--mobile">
-          <div className="explorer__content__breadcrumbs--mobile__default-route">
-            <defaultRouteData.icon size={IconSize.MEDIUM} />
+  const renderContent = () => {
+    if (!item && defaultRouteData) {
+      return (
+        <>
+          <div className="explorer__content__breadcrumbs--mobile">
+            <div className="explorer__content__breadcrumbs--mobile__default-route">
+              <defaultRouteData.icon size={IconSize.MEDIUM} />
 
-            {t(defaultRouteData.label)}
+              {t(defaultRouteData.label)}
+            </div>
+            {defaultRouteId === DefaultRoute.MY_FILES && (
+              <DropdownMenu
+                options={menuItems}
+                isOpen={isCreateMenuOpen}
+                onOpenChange={setIsCreateMenuOpen}
+              >
+                <Button
+                  variant="tertiary"
+                  icon={<span className="material-icons">more_vert</span>}
+                  onClick={() => setIsCreateMenuOpen(true)}
+                />
+              </DropdownMenu>
+            )}
           </div>
-          {defaultRouteId === DefaultRoute.MY_FILES && (
-            <DropdownMenu
-              options={menuItems}
-              isOpen={isCreateMenuOpen}
-              onOpenChange={setIsCreateMenuOpen}
-            >
+          {defaultRouteId === DefaultRoute.MY_FILES && createModals}
+        </>
+      );
+    }
+
+    if (!items) {
+      return null;
+    }
+
+    const { workspace, parent, current } = items;
+
+    const workspaceTitle = workspace.main_workspace
+      ? t("explorer.workspaces.mainWorkspace")
+      : workspace.title;
+    const isRoot = current.id === workspace.id;
+    return (
+      <div className="explorer__content__breadcrumbs--mobile">
+        {isRoot ? (
+          <div className="explorer__content__breadcrumbs--mobile__workspace">
+            <ItemIcon
+              item={
+                {
+                  type: ItemType.FOLDER,
+                } as unknown as Item
+              }
+              size={IconSize.SMALL}
+            />
+            <span>{workspaceTitle}</span>
+          </div>
+        ) : (
+          <div className="explorer__content__breadcrumbs--mobile__container">
+            <div className="explorer__content__breadcrumbs--mobile__container__actions">
+              <Button
+                variant="bordered"
+                color="neutral"
+                icon={<span className="material-icons">chevron_left</span>}
+                onClick={() => {
+                  if (parent?.id === DefaultRoute.SHARED_WITH_ME) {
+                    router.push("/explorer/items/shared-with-me");
+                  } else if (parent?.id === DefaultRoute.MY_FILES) {
+                    router.push("/explorer/items/my-files");
+                  } else if (parent?.id === DefaultRoute.FAVORITES) {
+                    router.push("/explorer/items/favorites");
+                  } else if (parent?.id === DefaultRoute.RECENT) {
+                    router.push("/explorer/items/recent");
+                  } else {
+                    onNavigate({
+                      type: NavigationEventType.ITEM,
+                      item: parent,
+                    });
+                  }
+                }}
+              />
+            </div>
+            <div className="explorer__content__breadcrumbs--mobile__container__info">
+              <div className="explorer__content__breadcrumbs--mobile__container__info__title">
+                <ItemIcon
+                  item={
+                    {
+                      type: ItemType.FOLDER,
+                    } as unknown as Item
+                  }
+                  size={IconSize.SMALL}
+                />
+                <span>{workspaceTitle}</span>
+              </div>
+              <div className="explorer__content__breadcrumbs--mobile__container__info__folder">
+                {current.title}
+              </div>
+            </div>
+          </div>
+        )}
+        {item && (
+          <ItemActionDropdown
+            menuItems={getMenuItems(item, {
+              allowCreate: !!item.abilities?.children_create,
+            })}
+            isOpen={isActionMenuOpen}
+            setIsOpen={setIsActionMenuOpen}
+            trigger={
               <Button
                 variant="tertiary"
                 icon={<span className="material-icons">more_vert</span>}
-                onClick={() => setIsCreateMenuOpen(true)}
+                onClick={() => setIsActionMenuOpen(true)}
               />
-            </DropdownMenu>
-          )}
-        </div>
-        {defaultRouteId === DefaultRoute.MY_FILES && createModals}
-      </>
-    );
-  }
-
-  if (!items) {
-    return null;
-  }
-
-  const { workspace, parent, current } = items;
-
-  const workspaceTitle = workspace.main_workspace
-    ? t("explorer.workspaces.mainWorkspace")
-    : workspace.title;
-  const isRoot = current.id === workspace.id;
-  return (
-    <div className="explorer__content__breadcrumbs--mobile">
-      {isRoot ? (
-        <div className="explorer__content__breadcrumbs--mobile__workspace">
-          <ItemIcon
-            item={
-              {
-                type: ItemType.FOLDER,
-              } as unknown as Item
             }
-            size={IconSize.SMALL}
           />
-          <span>{workspaceTitle}</span>
-        </div>
-      ) : (
-        <div className="explorer__content__breadcrumbs--mobile__container">
-          <div className="explorer__content__breadcrumbs--mobile__container__actions">
-            <Button
-              variant="bordered"
-              color="neutral"
-              icon={<span className="material-icons">chevron_left</span>}
-              onClick={() => {
-                if (parent?.id === DefaultRoute.SHARED_WITH_ME) {
-                  router.push("/explorer/items/shared-with-me");
-                } else if (parent?.id === DefaultRoute.MY_FILES) {
-                  router.push("/explorer/items/my-files");
-                } else if (parent?.id === DefaultRoute.FAVORITES) {
-                  router.push("/explorer/items/favorites");
-                } else if (parent?.id === DefaultRoute.RECENT) {
-                  router.push("/explorer/items/recent");
-                } else {
-                  onNavigate({
-                    type: NavigationEventType.ITEM,
-                    item: parent,
-                  });
-                }
-              }}
-            />
-          </div>
-          <div className="explorer__content__breadcrumbs--mobile__container__info">
-            <div className="explorer__content__breadcrumbs--mobile__container__info__title">
-              <ItemIcon
-                item={
-                  {
-                    type: ItemType.FOLDER,
-                  } as unknown as Item
-                }
-                size={IconSize.SMALL}
-              />
-              <span>{workspaceTitle}</span>
-            </div>
-            <div className="explorer__content__breadcrumbs--mobile__container__info__folder">
-              {current.title}
-            </div>
-          </div>
-        </div>
-      )}
-      {item && (
-        <ItemActionDropdown
-          item={item}
-          isOpen={isActionMenuOpen}
-          setIsOpen={setIsActionMenuOpen}
-          allowCreate={!!item.abilities?.children_create}
-          trigger={
-            <Button
-              variant="tertiary"
-              icon={<span className="material-icons">more_vert</span>}
-              onClick={() => setIsActionMenuOpen(true)}
-            />
-          }
-        />
-      )}
-    </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <>
+      {renderContent()}
+      {actionModals}
+    </>
   );
 };

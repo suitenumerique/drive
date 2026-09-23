@@ -928,7 +928,9 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         )
 
         numchild_folder_sq = models.Subquery(
-            direct_children_qs.filter(type=ItemTypeChoices.FOLDER)
+            direct_children_qs.filter(
+                type__in=[ItemTypeChoices.FOLDER, ItemTypeChoices.RESTRICTION]
+            )
             .values(group_key=models.Value(1))
             .annotate(count=models.Count("pk"))
             .values("count"),

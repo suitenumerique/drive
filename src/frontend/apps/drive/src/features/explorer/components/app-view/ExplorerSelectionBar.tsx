@@ -8,7 +8,7 @@ import {
 import { useAppExplorer } from "@/features/explorer/components/app-view/AppExplorer";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
-import { useMutationDeleteItems } from "@/features/explorer/hooks/useMutations";
+import { useDeleteItem } from "@/features/explorer/hooks/useDeleteItem";
 import { useEffect } from "react";
 import { ExplorerMoveFolder } from "@/features/explorer/components/modals/move/ExplorerMoveFolderModal";
 
@@ -55,12 +55,12 @@ export const ExplorerSelectionBar = () => {
 
 export const ExplorerSelectionBarActions = () => {
   const { t } = useTranslation();
-  const { item, cancelUploadsForDeletedItems } = useGlobalExplorer();
+  const { item } = useGlobalExplorer();
   const selectedItems = useSelectedItems();
   const setSelectedItems = useSetSelectedItems();
   const moveModal = useModal();
 
-  const deleteItems = useMutationDeleteItems();
+  const { deleteItems, modals: deleteModals, isPending } = useDeleteItem();
 
   const handleDelete = async () => {
     let canDelete = true;
@@ -70,20 +70,10 @@ export const ExplorerSelectionBarActions = () => {
       }
     }
     if (canDelete) {
-      addToast(
-        <ToasterItem>
-          <span className="material-icons">delete</span>
-          <span>
-            {t("explorer.actions.delete.toast", {
-              count: selectedItems.length,
-            })}
-          </span>
-        </ToasterItem>,
+      const deletedIds = selectedItems.map(
+        (item) => item.originalId ?? item.id,
       );
-      const deletedIds = selectedItems.map((item) => item.id);
-      setSelectedItems([]);
-      await deleteItems.mutateAsync(deletedIds);
-      cancelUploadsForDeletedItems(deletedIds);
+      if (await deleteItems(deletedIds)) setSelectedItems([]);
     } else {
       addToast(
         <ToasterItem type="error">
@@ -97,6 +87,7 @@ export const ExplorerSelectionBarActions = () => {
   // Add event listener when component mounts and remove when unmounts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (document.querySelector('[role="dialog"]')) return;
       if ((event.metaKey || event.ctrlKey) && event.key === "Backspace") {
         event.preventDefault();
         handleDelete();
@@ -120,6 +111,7 @@ export const ExplorerSelectionBarActions = () => {
       /> */}
       <Button
         onClick={handleDelete}
+        disabled={isPending}
         icon={<span className="material-icons">delete</span>}
         variant="tertiary"
         size="small"
@@ -133,6 +125,7 @@ export const ExplorerSelectionBarActions = () => {
         aria-label={t("explorer.selectionBar.move")}
       />
 
+      {deleteModals}
       {moveModal.isOpen && (
         <ExplorerMoveFolder
           {...moveModal}
