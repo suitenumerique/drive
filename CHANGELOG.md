@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - 🔧(backend) allow enabling and configuring the psycopg connection pool
+- 🔧(helm) allow specific env vars for the backend web deployment
 
 ### Fixed
 

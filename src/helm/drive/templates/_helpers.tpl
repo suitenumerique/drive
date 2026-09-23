@@ -91,6 +91,18 @@ drive env vars
 {{- end }}
 
 {{/*
+drive backend env vars: backend.envVars overridden by component specific env vars
+Usage : {{ include "drive.backend.env" (list .Values.backend .Values.backend.django.envVars) }}
+*/}}
+{{- define "drive.backend.env" -}}
+{{- $envVars := deepCopy ((index . 0).envVars | default dict) -}}
+{{- range $key, $value := (index . 1 | default dict) }}
+{{- $_ := set $envVars $key $value -}}
+{{- end }}
+{{- include "drive.env.transformDict" $envVars -}}
+{{- end }}
+
+{{/*
 Common labels
 
 Requires array with top level scope and component name

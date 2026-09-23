@@ -187,6 +187,10 @@ backend:
   envVars:
     <<: *commonEnvVars
 
+  ## @param backend.django.envVars Backend web deployment specific environment variables, overriding backend.envVars (e.g. DB_PSYCOPG_POOL_ENABLED, which prefork celery workers do not benefit from)
+  django:
+    envVars: {}
+
   ## @param backend.podAnnotations Annotations to add to the backend Pod
   podAnnotations: {}
 
