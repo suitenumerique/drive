@@ -60,7 +60,7 @@ export const useMutationDeleteItems = () => {
   const driver = getDriver();
   const { item } = useGlobalExplorer();
 
-  const mutationCallbacks = useDeleteMutationCallbacks(
+  const { onSuccess } = useDeleteMutationCallbacks(
     item?.originalId ?? item?.id,
   );
 
@@ -68,7 +68,8 @@ export const useMutationDeleteItems = () => {
     mutationFn: async (...payload: Parameters<typeof driver.deleteItems>) => {
       await driver.deleteItems(...payload);
     },
-    ...mutationCallbacks,
+    // Keep rows and selection intact until the server confirms deletion.
+    onSuccess,
   });
 };
 

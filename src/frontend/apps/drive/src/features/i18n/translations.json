@@ -557,7 +557,15 @@
             "toast_other": "{{count}} items deleted",
             "low_rights_toast": "You don't have the necessary rights to delete these items.",
             "toast_error_one": "An error occurred while deleting the item.",
-            "toast_error_other": "An error occurred while deleting the items."
+            "toast_error_other": "An error occurred while deleting the items.",
+            "confirmation": {
+              "title_one": "Delete this folder?",
+              "title_other": "Delete these items?",
+              "content_one": "This folder contains at least one <strong>restricted folder</strong>. It won't be deleted and will stay with its owner. Everything else will be moved to trash.",
+              "content_other": "These items contain <strong>restricted folders</strong>. They will stay with their owners unless explicitly selected for deletion themselves. Everything else will be moved to trash.",
+              "cancel": "Cancel",
+              "confirm": "Delete"
+            }
           },
           "hard_delete": {
             "toast_one": "Item deleted forever",
@@ -1266,7 +1274,15 @@
             "toast_other": "{{count}} éléments supprimés",
             "low_rights_toast": "Vous ne pouvez pas restaurer ces éléments car vous n'avez pas les droits nécessaires.",
             "toast_error_one": "Une erreur est survenue lors de la suppression de l'élément.",
-            "toast_error_other": "Une erreur est survenue lors de la suppression des éléments."
+            "toast_error_other": "Une erreur est survenue lors de la suppression des éléments.",
+            "confirmation": {
+              "title_one": "Supprimer ce dossier ?",
+              "title_other": "Supprimer ces éléments ?",
+              "content_one": "Ce dossier contient au moins un <strong>dossier restreint</strong>. Il ne sera pas supprimé et restera chez son propriétaire. Tout le reste sera déplacé dans la corbeille.",
+              "content_other": "Ces éléments contiennent des <strong>dossiers restreints</strong>. Ils resteront chez leurs propriétaires, sauf s’ils sont eux-mêmes explicitement sélectionnés pour suppression. Tout le reste sera déplacé dans la corbeille.",
+              "cancel": "Annuler",
+              "confirm": "Supprimer"
+            }
           },
           "hard_delete": {
             "toast_one": "Élément supprimé définitivement",
@@ -1975,7 +1991,15 @@
             "toast_other": "{{count}} items verwijderd",
             "low_rights_toast": "U beschikt niet over de benodigde rechten om deze items te verwijderen.",
             "toast_error_one": "Er is een fout opgetreden bij het verwijderen van het item.",
-            "toast_error_other": "Er is een fout opgetreden bij het verwijderen van de items."
+            "toast_error_other": "Er is een fout opgetreden bij het verwijderen van de items.",
+            "confirmation": {
+              "title_one": "Deze map verwijderen?",
+              "title_other": "Deze items verwijderen?",
+              "content_one": "Deze map bevat minstens één <strong>afgeschermde map</strong>. Die wordt niet verwijderd en blijft bij de eigenaar. Al het overige wordt naar de prullenbak verplaatst.",
+              "content_other": "Deze items bevatten <strong>afgeschermde mappen</strong>. Die blijven bij hun eigenaren, tenzij ze zelf expliciet zijn geselecteerd voor verwijdering. Al het overige wordt naar de prullenbak verplaatst.",
+              "cancel": "Annuleren",
+              "confirm": "Verwijderen"
+            }
           },
           "hard_delete": {
             "toast_one": "Item permanent verwijderd",

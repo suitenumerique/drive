@@ -77,7 +77,11 @@ export const useItemActionMenuItems = ({
   const { setRightPanelForcedItem, setRightPanelOpen, ...explorerContext } =
     useGlobalExplorer();
   const { handleDownloadItem } = useDownloadItem();
-  const { deleteItems: deleteItem } = useDeleteItem();
+  const {
+    deleteItems: deleteItem,
+    modals: deleteModals,
+    isModalOpen: isDeleteModalOpen,
+  } = useDeleteItem();
   const treeContext = useTreeContext();
 
   const { mutateAsync: deleteFavoriteItem } = useMutationDeleteFavoriteItem();
@@ -92,6 +96,7 @@ export const useItemActionMenuItems = ({
   const [currentItem, setCurrentItem] = useState<Item | null>(null);
 
   const isModalOpen =
+    isDeleteModalOpen ||
     renameModal.isOpen ||
     !!sharedItem ||
     moveModal.isOpen ||
@@ -118,7 +123,7 @@ export const useItemActionMenuItems = ({
   };
 
   const handleDelete = async (effectiveItemId: string, item: Item) => {
-    await deleteItem([effectiveItemId]);
+    if (!(await deleteItem([effectiveItemId]))) return;
     const currentExplorerItem = explorerContext.item;
     if (!currentExplorerItem) return;
 
@@ -269,6 +274,7 @@ export const useItemActionMenuItems = ({
 
   const modals = (
     <>
+      {deleteModals}
       {sharedItem && (
         <ItemShareModal
           key={
