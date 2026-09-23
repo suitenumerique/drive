@@ -269,3 +269,7 @@ export enum WorkspaceType {
   PUBLIC = "public",
   SHARED = "shared",
 }
+
+export type ItemDeletionInfo = {
+  hasRestrictedDescendent: boolean;
+};

@@ -24,6 +24,7 @@ import {
   Invitation,
   Item,
   ItemBreadcrumb,
+  ItemDeletionInfo,
   ItemType,
   User,
   UserLight,
@@ -521,11 +522,24 @@ export class StandardDriver extends Driver {
     return jsonToItem(await response.json());
   }
 
+  async getItemsDeletionInfo(
+    ids: string[],
+  ): Promise<Record<string, ItemDeletionInfo>> {
+    const response = await fetchAPI(
+      "items/deletion-info/",
+      { method: "POST", body: JSON.stringify({ ids }) },
+      { redirectOn40x: false },
+    );
+    return response.json();
+  }
+
   async deleteItems(ids: string[]): Promise<void> {
     for (const id of ids) {
-      await fetchAPI(`items/${id}/`, {
-        method: "DELETE",
-      });
+      await fetchAPI(
+        `items/${id}/`,
+        { method: "DELETE" },
+        { redirectOn40x: false },
+      );
     }
   }
 

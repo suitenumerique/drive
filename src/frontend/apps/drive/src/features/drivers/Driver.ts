@@ -18,6 +18,7 @@ import {
   Invitation,
   Item,
   ItemBreadcrumb,
+  ItemDeletionInfo,
   ItemType,
   User,
   UserLight,
@@ -187,6 +188,10 @@ export abstract class Driver {
     title: string;
   }): Promise<Item>;
   abstract duplicateItem(id: string): Promise<Item>;
+  abstract getItemsDeletionInfo(
+    ids: string[],
+  ): Promise<Record<string, ItemDeletionInfo>>;
+
   abstract deleteItems(ids: string[]): Promise<void>;
   abstract hardDeleteItems(ids: string[]): Promise<void>;
   abstract getWopiInfo(itemId: string): Promise<WopiInfo>;
