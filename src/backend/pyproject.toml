@@ -54,7 +54,7 @@ dependencies = [
     "mozilla-django-oidc<5.0.0",
     "nested-multipart-parser==1.6.0",
     "posthog==7.12.0",
-    "psycopg[binary]==3.3.3",
+    "psycopg[binary,pool]==3.3.3",
     "pydantic==2.13.2",
     "PyJWT==2.13.0",
     "python-magic==0.4.27",
