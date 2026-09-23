@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.23.0] - 2026-09-23
+
 ### Added
 
 - 🔧(backend) allow enabling and configuring the psycopg connection pool
@@ -546,7 +548,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.22.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.23.0...main
+[v0.23.0]: https://github.com/suitenumerique/drive/releases/v0.23.0
 [v0.22.0]: https://github.com/suitenumerique/drive/releases/v0.22.0
 [v0.21.2]: https://github.com/suitenumerique/drive/releases/v0.21.2
 [v0.21.1]: https://github.com/suitenumerique/drive/releases/v0.21.1
