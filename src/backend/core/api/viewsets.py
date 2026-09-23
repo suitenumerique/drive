@@ -66,7 +66,7 @@ from wopi.services import access as access_service
 from wopi.tasks.conversion import convert_file
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
 
-from . import permissions, serializers, utils
+from . import deletion_serializers, permissions, serializers, utils
 from .filters import (
     ItemFilter,
     ItemOrdering,
@@ -1358,6 +1358,69 @@ class ItemViewSet(
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
+
+    @extend_schema(
+        request=deletion_serializers.ItemsDeletionInfoRequestSerializer,
+        responses={
+            200: {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "object",
+                    "properties": {"hasRestrictedDescendent": {"type": "boolean"}},
+                    "required": ["hasRestrictedDescendent"],
+                },
+            }
+        },
+    )
+    @drf.decorators.action(detail=False, methods=["post"], url_path="deletion-info")
+    def deletion_info(self, request):
+        """Return deletion metadata for an entire selection without changing items."""
+        payload = deletion_serializers.ItemsDeletionInfoRequestSerializer(data=request.data)
+        payload.is_valid(raise_exception=True)
+        ids = payload.validated_data["ids"]
+        restrictions = models.Item.objects.filter(
+            type=models.ItemTypeChoices.RESTRICTION,
+            path__descendants=db.OuterRef("path"),
+            deleted_at__isnull=True,
+            ancestors_deleted_at__isnull=True,
+            hard_deleted_at__isnull=True,
+            target__isnull=False,
+            target__deleted_at__isnull=True,
+            target__ancestors_deleted_at__isnull=True,
+            target__hard_deleted_at__isnull=True,
+        ).exclude(pk=db.OuterRef("pk"))
+        items = list(
+            self.queryset.filter(pk__in=ids)
+            .annotate_user_roles(request.user)
+            .annotate_has_restriction()
+            .annotate(has_restricted_descendent=db.Exists(restrictions))
+        )
+        if len(items) != len(ids):
+            raise drf.exceptions.NotFound()
+
+        # Permissions need inherited link settings as well as access roles.
+        # Fetch every ancestor once, even when the selection spans several trees.
+        ancestor_ids = {ancestor for item in items for ancestor in item.path[:-1]}
+        ancestors = {
+            str(ancestor.pk): ancestor.link_definition
+            for ancestor in self.queryset.filter(
+                pk__in=ancestor_ids, ancestors_deleted_at__isnull=True
+            )
+        }
+        for item in items:
+            item.ancestors_link_definition = get_equivalent_link_definition(
+                [ancestors[ancestor] for ancestor in item.path[:-1] if ancestor in ancestors]
+            )
+            self.check_object_permissions(request, item)
+            if item.type != models.ItemTypeChoices.FOLDER:
+                item.has_restricted_descendent = False
+
+        return drf.response.Response(
+            {
+                str(item.pk): deletion_serializers.ItemDeletionInfoSerializer(item).data
+                for item in items
+            }
+        )
 
     def _physical_breadcrumb(self, item, user):
         """Return the accessible, live part of an item's physical ancestor chain.
