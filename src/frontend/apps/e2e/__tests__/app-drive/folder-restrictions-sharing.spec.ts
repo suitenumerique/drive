@@ -54,7 +54,7 @@ for (const entryPoint of entryPoints) {
         entryPoint === "breadcrumb"
           ? page.getByTestId("explorer-breadcrumbs")
           : page.locator(".explorer__content__breadcrumbs--mobile");
-      await expect(breadcrumbs).not.toContainText(names.parent);
+      await expect(breadcrumbs).toContainText(names.parent);
     }
     await setRestriction(page, child.id, false);
     expect(

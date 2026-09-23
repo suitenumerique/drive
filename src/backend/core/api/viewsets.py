@@ -1359,36 +1359,93 @@ class ItemViewSet(
 
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
+    def _physical_breadcrumb(self, item, user):
+        """Return the accessible, live part of an item's physical ancestor chain.
+
+        For Root -> Projects -> Reports -> Current, a user with access to Projects
+        but not Root gets [Projects, Reports, Current]. If no ancestor (including
+        Current itself) is readable, return an empty list.
+
+        This follows stored paths only. A restricted folder lives in a separate
+        physical tree; breadcrumb() reconnects it to accessible parent hierarchies.
+        """
+        # Include Current itself, but exclude directly or indirectly deleted items.
+        ancestors = self.queryset.filter(
+            path__ancestors=item.path,
+            deleted_at__isnull=True,
+            ancestors_deleted_at__isnull=True,
+        )
+        # Projects can provide access through a user/team grant or sharing link;
+        # Reports and Current inherit that access within this physical tree.
+        highest = ancestors.readable_per_se(user).order_by("path").first()
+        if highest is None:
+            return []
+        # Keep Projects -> Reports -> Current, ordered from parent to child.
+        # The restriction flag lets breadcrumb() identify detached roots later.
+        chain = list(
+            ancestors.filter(path__descendants=highest.path)
+            .annotate_has_restriction()
+            .order_by("path")
+        )
+        # A missing/deleted ancestor must interrupt the chain, not be skipped.
+        # If Reports is missing, [Projects (depth 2), Current (depth 4)] becomes
+        # [Current]: Projects must not appear to be Current's immediate parent.
+        # Walking backwards keeps only the continuous chain nearest Current.
+        for index in range(len(chain) - 1, 0, -1):
+            if chain[index].depth != chain[index - 1].depth + 1:
+                return chain[index:]
+        return chain
+
     @drf.decorators.action(detail=True, methods=["get"])
     def breadcrumb(self, request, *args, **kwargs):
-        """
-        List the breadcrumb for an item
-        """
-        item = self.get_object()
+        """Reconnect accessible parent chains across nested restriction boundaries.
 
-        highest_ancestor = (
-            self.queryset.filter(path__ancestors=item.path, ancestors_deleted_at__isnull=True)
-            .readable_per_se(request.user)
-            .only("path")
-            .order_by("path")
-            .first()
-        )
-
-        if not highest_ancestor:
+        For Root -> Projects -> Restricted -> Current, restriction splits storage
+        into Root -> Projects -> Entry and a separate Restricted -> Current tree.
+        Follow Entry's target relationship backwards to rebuild the displayed
+        [Root, Projects, Restricted, Current] chain, without including Entry or
+        changing any stored paths/depths.
+        """
+        # Start with the readable physical segment, e.g. [Restricted, Current].
+        breadcrumb = self._physical_breadcrumb(self.get_object(), request.user)
+        if not breadcrumb:
             raise (
                 drf.exceptions.PermissionDenied()
                 if request.user.is_authenticated
                 else drf.exceptions.NotAuthenticated()
             )
-
-        breadcrumb = self.queryset.filter(
-            path__ancestors=item.path,
-            path__descendants=highest_ancestor.path,
-            ancestors_deleted_at__isnull=True,
-        ).order_by("path")
-
-        serializer = self.get_serializer(breadcrumb, many=True)
-        return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
+        visited = {item.pk for item in breadcrumb}
+        # Only reconnect at a physical root. If access starts below that root,
+        # stop rather than trying to expose the inaccessible hierarchy above it.
+        while breadcrumb[0].depth == 1 and breadcrumb[0].has_restriction:
+            entry = self.queryset.filter(
+                target=breadcrumb[0],
+                type=models.ItemTypeChoices.RESTRICTION,
+                deleted_at__isnull=True,
+                ancestors_deleted_at__isnull=True,
+            ).first()
+            if entry is None or entry.depth <= 1:
+                break
+            # A path [root_id, projects_id, entry_id] has Projects at [-2].
+            # The depth guard guarantees at least two IDs, but the parent record
+            # may still be missing/deleted. Use the entry's current location so
+            # moving Entry from Projects to Archive updates the breadcrumb too.
+            parent = self.queryset.filter(
+                pk=entry.path[-2], deleted_at__isnull=True, ancestors_deleted_at__isnull=True
+            ).first()
+            if parent is None or parent.pk in visited:
+                break
+            # This yields [Root, Projects], or just [Projects] if Root is private.
+            prefix = self._physical_breadcrumb(parent, request.user)
+            # Check the whole prefix: with breadcrumb [A, Current], parent B may
+            # be new while its prefix [A, B] would duplicate A and create a cycle.
+            if not prefix or any(item.pk in visited for item in prefix):
+                break
+            visited.update(item.pk for item in prefix)
+            # [Root, Projects] + [Restricted, Current]. If the new first item is
+            # itself a restricted root, repeat to cross the next boundary.
+            breadcrumb = prefix + breadcrumb
+        return drf.response.Response(self.get_serializer(breadcrumb, many=True).data)
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
     @method_decorator(refresh_oidc_access_token)
