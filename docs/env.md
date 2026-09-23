@@ -33,6 +33,10 @@ This document lists all configurable environment variables for the Drive applica
 | `DB_NAME` | Database name | `drive` |
 | `DB_PASSWORD` | Database password | `pass` |
 | `DB_PORT` | Database port | `5432` |
+| `DB_PSYCOPG_POOL_ENABLED` | Enable the psycopg connection pool on the default database. Keep it disabled on prefork celery workers: celery closes the pool after each task | `False` |
+| `DB_PSYCOPG_POOL_MAX_SIZE` | Maximum size of the psycopg connection pool (defaults to min size) | `None` |
+| `DB_PSYCOPG_POOL_MIN_SIZE` | Minimum size of the psycopg connection pool | `4` |
+| `DB_PSYCOPG_POOL_TIMEOUT` | Seconds to wait for a connection from the psycopg pool | `3` |
 | `DB_USER` | Database user | `dinum` |
 | `DJANGO_CELERY_BROKER_URL` | Celery broker URL for task queue | `redis://redis:6379/0` |
 | `DJANGO_CELERY_TASK_ROUTES` | Celery task routing configuration. Use this to route specific tasks to dedicated queues, e.g. `{"core.tasks.item.duplicate_file": {"queue": "duplicate_file"}}` | `{}` |

@@ -69,3 +69,34 @@ def test_load_e2e_urls_allowed_on_load_test_configuration():
     """The dedicated LoadTest configuration exposes the e2e auth endpoints."""
     assert LoadTest.LOAD_E2E_URLS is True
     LoadTest().post_setup()
+
+
+def test_psycopg_pool_disabled_by_default():
+    """The psycopg pool should not be configured unless DB_PSYCOPG_POOL_ENABLED is set."""
+
+    class TestSettings(Base):
+        """Fake test settings with their own database configuration."""
+
+        DATABASES = {"default": {"OPTIONS": {"sslmode": "require"}}}
+
+    TestSettings().post_setup()
+
+    assert TestSettings.DATABASES["default"]["OPTIONS"] == {"sslmode": "require"}
+
+
+def test_psycopg_pool_enabled(monkeypatch):
+    """Enabling DB_PSYCOPG_POOL_ENABLED should add the pool to the existing database options."""
+    monkeypatch.setenv("DB_PSYCOPG_POOL_ENABLED", "True")
+    monkeypatch.setenv("DB_PSYCOPG_POOL_MAX_SIZE", "10")
+
+    class TestSettings(Base):
+        """Fake test settings with their own database configuration."""
+
+        DATABASES = {"default": {"OPTIONS": {"sslmode": "require"}}}
+
+    TestSettings().post_setup()
+
+    assert TestSettings.DATABASES["default"]["OPTIONS"] == {
+        "sslmode": "require",
+        "pool": {"min_size": 4, "max_size": 10, "timeout": 3},
+    }

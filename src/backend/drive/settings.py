@@ -1615,6 +1615,21 @@ class Base(Configuration):
                 f"LOAD_E2E_URLS must never be enabled on the {cls.__name__} configuration."
             )
 
+        # Mutated in place: settings module globals are already set at this point.
+        if values.BooleanValue(False, environ_name="DB_PSYCOPG_POOL_ENABLED", environ_prefix=None):
+            # https://www.psycopg.org/psycopg3/docs/api/pool.html#psycopg_pool.ConnectionPool
+            cls.DATABASES["default"].setdefault("OPTIONS", {})["pool"] = {
+                "min_size": values.IntegerValue(
+                    4, environ_name="DB_PSYCOPG_POOL_MIN_SIZE", environ_prefix=None
+                ),
+                "max_size": values.IntegerValue(
+                    None, environ_name="DB_PSYCOPG_POOL_MAX_SIZE", environ_prefix=None
+                ),
+                "timeout": values.IntegerValue(
+                    3, environ_name="DB_PSYCOPG_POOL_TIMEOUT", environ_prefix=None
+                ),
+            }
+
         if cls.POSTHOG_KEY is not None:
             posthog.api_key = cls.POSTHOG_KEY
             posthog.host = cls.POSTHOG_HOST

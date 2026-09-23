@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- 🔧(backend) allow enabling and configuring the psycopg connection pool
+
 ### Fixed
 
 - 🐛(frontend) refresh the Recent view after item mutations
