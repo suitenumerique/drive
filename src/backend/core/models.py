@@ -823,9 +823,19 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         :return: A queryset of documents readable by the user.
         """
         if user.is_authenticated:
+            # Probe the accesses with an EXISTS rather than joining them: an OR
+            # across the join forces the planner to materialize it before any
+            # path ordering, and an access held through several teams would
+            # duplicate the row.
             return self.filter(
-                models.Q(accesses__user=user)
-                | models.Q(accesses__team__in=user.teams)
+                models.Q(
+                    models.Exists(
+                        ItemAccess.objects.filter(
+                            models.Q(user=user) | models.Q(team__in=user.teams),
+                            item=models.OuterRef("pk"),
+                        )
+                    )
+                )
                 | ~models.Q(link_reach=LinkReachChoices.RESTRICTED)
             )
 
