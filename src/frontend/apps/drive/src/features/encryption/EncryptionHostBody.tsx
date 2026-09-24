@@ -1,57 +1,21 @@
-import { Button, Loader, ModalSize } from "@gouvfr-lasuite/cunningham-react";
-import { useEffect, useState } from "react";
+import { Button, Loader } from "@gouvfr-lasuite/cunningham-react";
 import { useTranslation } from "react-i18next";
 import { EncryptionModalContent } from "./EncryptionLayout";
 import { useVaultClient } from "./VaultClientProvider";
 
-/**
- * The size the interface asks for its host modal: small (350px) by default, the
- * design system's medium one when the shown screen needs the room. Resets to
- * small whenever the modal closes, so the next opening starts at the default.
- */
-export const useInterfaceModalSize = (isOpen: boolean): ModalSize => {
-  const { client } = useVaultClient();
-  const [size, setSize] = useState<ModalSize>(ModalSize.SMALL);
-
-  useEffect(() => {
-    if (!client) return;
-
-    const handleSize = ({ size: wanted }: { size: "small" | "medium" }) => {
-      setSize(wanted === "medium" ? ModalSize.MEDIUM : ModalSize.SMALL);
-    };
-
-    client.on("interface:size", handleSize);
-
-    return () => {
-      client.off("interface:size", handleSize);
-    };
-  }, [client]);
-
-  useEffect(() => {
-    if (!isOpen) setSize(ModalSize.SMALL);
-  }, [isOpen]);
-
-  return size;
-};
-
 interface EncryptionHostBodyProps {
-  /** Receives the element the interface iframe is mounted into. */
-  hostRef: (element: HTMLDivElement | null) => void;
   onClose: () => void;
 }
 
 /**
- * The body of a modal hosting the encryption interface. The interface can only
- * be opened once the SDK script has loaded from the vault domain: until then a
- * loader, and if that load failed an explanation with a retry, instead of the
- * empty host the interface would otherwise never fill.
+ * What the product shows while the encryption interface comes up. The interface
+ * draws its own modal over the page once its SDK has loaded it, so this modal
+ * only carries a loader until then, or, if the SDK script itself could not be
+ * loaded from the vault domain, an explanation with a retry.
  */
-export const EncryptionHostBody = ({
-  hostRef,
-  onClose,
-}: EncryptionHostBodyProps) => {
+export const EncryptionHostBody = ({ onClose }: EncryptionHostBodyProps) => {
   const { t } = useTranslation();
-  const { client, isLoading, error } = useVaultClient();
+  const { error } = useVaultClient();
 
   if (error) {
     return (
@@ -79,13 +43,9 @@ export const EncryptionHostBody = ({
     );
   }
 
-  if (!client || isLoading) {
-    return (
-      <div className="drive__encryption-host drive__encryption-host--loading">
-        <Loader />
-      </div>
-    );
-  }
-
-  return <div ref={hostRef} className="drive__encryption-host" />;
+  return (
+    <div className="drive__encryption-host--loading">
+      <Loader />
+    </div>
+  );
 };

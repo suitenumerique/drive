@@ -15,6 +15,7 @@
         "button": "Home"
       },
       "share_modal": {
+        "verify_identity": "Verify identity",
         "options": {
           "link_reach": {
             "authenticated": "Connected",
@@ -527,6 +528,7 @@
         "button": "Accueil"
       },
       "share_modal": {
+        "verify_identity": "Vérifier l'identité",
         "options": {
           "link_reach": {
             "authenticated": "Connecté",

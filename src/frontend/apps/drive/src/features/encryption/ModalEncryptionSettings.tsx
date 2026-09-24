@@ -1,10 +1,7 @@
-import { Modal } from "@gouvfr-lasuite/cunningham-react";
-import { useCallback, useEffect, useState } from "react";
+import { Modal, ModalSize } from "@gouvfr-lasuite/cunningham-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  EncryptionHostBody,
-  useInterfaceModalSize,
-} from "./EncryptionHostBody";
+import { EncryptionHostBody } from "./EncryptionHostBody";
 import { useVaultClient } from "./VaultClientProvider";
 
 interface ModalEncryptionSettingsProps {
@@ -12,29 +9,34 @@ interface ModalEncryptionSettingsProps {
   onClose: () => void;
 }
 
+/**
+ * The encryption service's settings draw their own modal over the page; Drive
+ * only shows a loader until it is on screen.
+ */
 export const ModalEncryptionSettings = ({
   isOpen,
   onClose,
 }: ModalEncryptionSettingsProps) => {
   const { t } = useTranslation();
   const { client: vaultClient, refreshKeyState } = useVaultClient();
-  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
-  const [settingsOpened, setSettingsOpened] = useState(false);
+  const openedRef = useRef(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!isOpen || !vaultClient || !containerEl || settingsOpened) {
-      return;
-    }
+    if (!isOpen || !vaultClient || openedRef.current) return;
 
-    setSettingsOpened(true);
-    vaultClient.openSettings(containerEl);
-  }, [isOpen, vaultClient, containerEl, settingsOpened]);
+    openedRef.current = true;
+    vaultClient.openSettings();
+  }, [isOpen, vaultClient]);
 
   useEffect(() => {
     if (!vaultClient) return;
 
+    const handleReady = () => setReady(true);
+
     const handleClosed = () => {
-      setSettingsOpened(false);
+      openedRef.current = false;
+      setReady(false);
       refreshKeyState();
       onClose();
     };
@@ -43,40 +45,39 @@ export const ModalEncryptionSettings = ({
       refreshKeyState();
     };
 
+    vaultClient.on("interface:ready", handleReady);
     vaultClient.on("interface:closed", handleClosed);
     vaultClient.on("keys-destroyed", handleKeysDestroyed);
 
     return () => {
+      vaultClient.off("interface:ready", handleReady);
       vaultClient.off("interface:closed", handleClosed);
       vaultClient.off("keys-destroyed", handleKeysDestroyed);
     };
   }, [vaultClient, refreshKeyState, onClose]);
 
-  // The modal's close control only ASKS the interface to close: it may hold an
-  // unsaved recovery phrase and answer with its own confirmation. The modal goes
-  // away on 'interface:closed', which the interface emits once really done.
   const handleClose = useCallback(() => {
-    if (vaultClient) vaultClient.requestClose();
-    else onClose();
+    vaultClient?.closeInterface();
+    openedRef.current = false;
+    onClose();
   }, [vaultClient, onClose]);
 
   useEffect(() => {
     if (!isOpen) {
-      setSettingsOpened(false);
+      openedRef.current = false;
+      setReady(false);
     }
   }, [isOpen]);
 
-  const size = useInterfaceModalSize(isOpen);
-
   return (
     <Modal
-      isOpen={isOpen}
+      isOpen={isOpen && !ready}
       closeOnClickOutside={false}
       onClose={handleClose}
-      size={size}
+      size={ModalSize.SMALL}
       aria-label={t("encryption.host_modal.label", "Encryption")}
     >
-      <EncryptionHostBody hostRef={setContainerEl} onClose={onClose} />
+      <EncryptionHostBody onClose={handleClose} />
     </Modal>
   );
 };

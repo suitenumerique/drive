@@ -4,46 +4,16 @@
 // empty state inside a viewer. Only contextual tokens are used so the blocks
 // follow the theme.
 
-.c__modal--small:has(.drive__encryption-host),
+// Drive's own encryption cards use the design system's small modal widened to
+// 350px, the width the encryption service's own screens use.
 .c__modal--small:has(.drive__encryption-modal) {
   width: 350px;
-}
-
-/* The interface pads its own screens: the modal gives its iframe the bare box. */
-.c__modal:has(.drive__encryption-host) .c__modal__scroller {
-  padding: 0;
-}
-
-/* The design system's close control is a zero-height sticky spot inside the
-   scroller: while the modal does not scroll it sits in the top padding, and once
-   it scrolls it pins elsewhere, so the cross jumps and the content shows through
-   around it. Anchoring it to the modal box itself keeps it in the same corner
-   in every case, and a halo in the modal's colour masks what scrolls under it. */
-.c__modal:has(.drive__encryption-host) .c__modal__close,
-.c__modal:has(.drive__encryption-modal) .c__modal__close {
-  position: absolute;
-  top: 0.4rem;
-  right: 0.4rem;
-  height: auto;
-  z-index: 1;
-}
-
-.c__modal:has(.drive__encryption-host) .c__modal__close .c__button,
-.c__modal:has(.drive__encryption-modal) .c__modal__close .c__button {
-  top: 0;
-  right: 0;
-  background: var(--c--components--modal--background-color);
-  box-shadow: 0 0 0 4px var(--c--components--modal--background-color);
 }
 
 .drive__encryption-host--loading {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 120px;
-}
-
-.drive__encryption-host {
   min-height: 120px;
 }
 
@@ -355,4 +325,10 @@
 
 .drive__encryption-spin {
   animation: drive-encryption-spin 1s linear infinite;
+}
+
+.drive__encryption-verify-identity {
+  display: flex;
+  justify-content: center;
+  padding: var(--c--globals--spacings--2xs) 0;
 }

@@ -37,6 +37,9 @@ import { useAuth } from "@/features/auth/Auth";
 import { removeFileExtension } from "@/features/explorer/utils/mimeTypes";
 import posthog from "posthog-js";
 import { PendingEncryptionSection } from "@/features/encryption/sharing/PendingEncryptionSection";
+import { useVaultClient } from "@/features/encryption/VaultClientProvider";
+import { Button } from "@gouvfr-lasuite/cunningham-react";
+import type { ReactNode } from "react";
 import {
   fetchSubtreeEntryKey,
   wrapSubtreeKeyForUser,
@@ -112,6 +115,54 @@ export const ItemShareModal = ({
       previousSearchResult.current = [];
     }
   }, [users]);
+
+  const { client: vaultClient } = useVaultClient();
+
+  // On an encrypted item, a member's role menu also opens their encryption
+  // identity (fingerprint, trust decision); the ui-kit draws the rows itself,
+  // so the top of that menu is the one per-member slot it leaves. Not one's own.
+  const identityOf = (member: User): (() => void) | undefined => {
+    if (!item?.is_encrypted || !vaultClient || !member.sub) {
+      return undefined;
+    }
+    if (member.id === user?.id) {
+      return undefined;
+    }
+    return () =>
+      vaultClient.openRecipientProfile(member.sub, {
+        email: member.email,
+        name: member.full_name || undefined,
+      });
+  };
+
+  const withIdentity = (
+    member: User,
+    message: string | ReactNode | undefined,
+  ): string | ReactNode | undefined => {
+    const identity = identityOf(member);
+    if (!identity) {
+      return message;
+    }
+    return (
+      <>
+        {message}
+        <div className="drive__encryption-verify-identity">
+          <Button
+            size="small"
+            variant="tertiary"
+            icon={
+              <span className="material-icons" aria-hidden="true">
+                verified_user
+              </span>
+            }
+            onClick={identity}
+          >
+            {t("share_modal.verify_identity", "Verify identity")}
+          </Button>
+        </div>
+      </>
+    );
+  };
 
   const onInviteUser = async (users: User[], role: Role) => {
     const inviteByEmail = users.filter((user) => user.email === user.id);
@@ -421,51 +472,56 @@ export const ItemShareModal = ({
       hasNextInvitations={hasNextInvitations}
       searchUsersResult={queryValue === "" ? undefined : users}
       onInviteUser={(users, role) => onInviteUser(users, role as Role)}
-      accessRoleTopMessage={(access) => {
-        const availableRoles = access.abilities.set_role_to;
-        const maxNbRoles = Object.values(Role).length;
-        const isLastOwner =
-          ownerCount === 1 &&
-          availableRoles.length === 0 &&
-          access.role === Role.OWNER;
-        if (isLastOwner) {
-          // If the current user is not the last owner, we don't show the message
-          if (user?.id !== access.user.id) {
+      accessRoleTopMessage={(access) =>
+        withIdentity(
+          access.user,
+          (() => {
+            const availableRoles = access.abilities.set_role_to;
+            const maxNbRoles = Object.values(Role).length;
+            const isLastOwner =
+              ownerCount === 1 &&
+              availableRoles.length === 0 &&
+              access.role === Role.OWNER;
+            if (isLastOwner) {
+              // If the current user is not the last owner, we don't show the message
+              if (user?.id !== access.user.id) {
+                return undefined;
+              }
+
+              return t("share_modal.options.top_message.only_owner");
+            }
+
+            if (access.is_explicit) {
+              return undefined;
+            }
+
+            const canDelete = access.abilities.destroy && access.is_explicit;
+            const showRedirection =
+              !canDelete || availableRoles.length < maxNbRoles;
+
+            if (showRedirection) {
+              return (
+                <RedirectionToParentItem
+                  itemId={access.max_ancestors_role_item_id}
+                  afterRedirect={onClose}
+                />
+              );
+            }
+
+            if (
+              ownerCount === 1 &&
+              availableRoles.length === 0 &&
+              access.role === Role.OWNER
+            ) {
+              return t("share_modal.options.top_message.only_owner");
+            }
+            if (availableRoles.length === 0 && access.role !== Role.OWNER) {
+              return t("share_modal.options.top_message.to_lower_role");
+            }
             return undefined;
-          }
-
-          return t("share_modal.options.top_message.only_owner");
-        }
-
-        if (access.is_explicit) {
-          return undefined;
-        }
-
-        const canDelete = access.abilities.destroy && access.is_explicit;
-        const showRedirection =
-          !canDelete || availableRoles.length < maxNbRoles;
-
-        if (showRedirection) {
-          return (
-            <RedirectionToParentItem
-              itemId={access.max_ancestors_role_item_id}
-              afterRedirect={onClose}
-            />
-          );
-        }
-
-        if (
-          ownerCount === 1 &&
-          availableRoles.length === 0 &&
-          access.role === Role.OWNER
-        ) {
-          return t("share_modal.options.top_message.only_owner");
-        }
-        if (availableRoles.length === 0 && access.role !== Role.OWNER) {
-          return t("share_modal.options.top_message.to_lower_role");
-        }
-        return undefined;
-      }}
+          })(),
+        )
+      }
       getAccessRoles={(access) => {
         const availableRoles = access.abilities.set_role_to;
 
@@ -503,10 +559,7 @@ export const ItemShareModal = ({
       outsideSearchContent={
         <>
           {item?.is_encrypted && (
-            <PendingEncryptionSection
-              itemId={itemId}
-              accesses={accessesData}
-            />
+            <PendingEncryptionSection itemId={itemId} accesses={accessesData} />
           )}
           <ShareModalCopyLinkFooter
             onCopyLink={() => {
