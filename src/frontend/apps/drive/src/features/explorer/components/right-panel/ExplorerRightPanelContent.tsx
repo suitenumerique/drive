@@ -99,17 +99,11 @@ export const ExplorerRightPanelContent = ({
           </div>
           {firstSelectedItem.is_encrypted && (
             <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-                color: "var(--c--theme--colors--success-600, #18753c)",
-                fontSize: "14px",
-                marginTop: "8px",
-              }}
+              className="drive__encryption-inline"
+              style={{ marginTop: "8px" }}
             >
-              <span className="material-icons" style={{ fontSize: "18px" }}>
-                lock
+              <span className="material-icons" aria-hidden="true">
+                verified_user
               </span>
               {t("explorer.rightPanel.encrypted", "Encrypted")}
             </div>
@@ -118,7 +112,7 @@ export const ExplorerRightPanelContent = ({
             <div className="explorer__right-panel__suspicious-warning">
               <div className="explorer__right-panel__suspicious-warning__text">
                 {t(
-                  `explorer.rightPanel.${firstSelectedItem.upload_state}.text`
+                  `explorer.rightPanel.${firstSelectedItem.upload_state}.text`,
                 )}
               </div>
             </div>

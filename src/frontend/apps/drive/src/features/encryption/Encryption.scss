@@ -1,0 +1,358 @@
+// Encryption surfaces share one visual language with the encryption service's
+// own screens: an illustration, a bold title, a secondary description, then
+// stacked full-width actions inside a small (350px) modal, or a compact centered
+// empty state inside a viewer. Only contextual tokens are used so the blocks
+// follow the theme.
+
+.c__modal--small:has(.drive__encryption-host),
+.c__modal--small:has(.drive__encryption-modal) {
+  width: 350px;
+}
+
+/* The interface pads its own screens: the modal gives its iframe the bare box. */
+.c__modal:has(.drive__encryption-host) .c__modal__scroller {
+  padding: 0;
+}
+
+/* The design system's close control is a zero-height sticky spot inside the
+   scroller: while the modal does not scroll it sits in the top padding, and once
+   it scrolls it pins elsewhere, so the cross jumps and the content shows through
+   around it. Anchoring it to the modal box itself keeps it in the same corner
+   in every case, and a halo in the modal's colour masks what scrolls under it. */
+.c__modal:has(.drive__encryption-host) .c__modal__close,
+.c__modal:has(.drive__encryption-modal) .c__modal__close {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  height: auto;
+  z-index: 1;
+}
+
+.c__modal:has(.drive__encryption-host) .c__modal__close .c__button,
+.c__modal:has(.drive__encryption-modal) .c__modal__close .c__button {
+  top: 0;
+  right: 0;
+  background: var(--c--components--modal--background-color);
+  box-shadow: 0 0 0 4px var(--c--components--modal--background-color);
+}
+
+.drive__encryption-host--loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 120px;
+}
+
+.drive__encryption-host {
+  min-height: 120px;
+}
+
+.drive__encryption-modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--c--globals--spacings--base);
+
+  &__illustration {
+    display: flex;
+    justify-content: center;
+
+    img {
+      display: block;
+      width: 142px;
+      height: 100px;
+      object-fit: contain;
+    }
+  }
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--c--globals--spacings--st);
+    padding-right: var(--c--globals--spacings--base);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: var(--c--globals--font--weights--bold);
+    color: var(--c--contextuals--content--semantic--neutral--primary);
+    overflow-wrap: anywhere;
+  }
+
+  &__description {
+    margin: 0;
+    font-size: 14px;
+    line-height: 18px;
+    color: var(--c--contextuals--content--semantic--neutral--secondary);
+    overflow-wrap: anywhere;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--c--globals--spacings--sm);
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--c--globals--spacings--xs);
+
+    > .c__button {
+      width: 100%;
+      justify-content: center;
+    }
+
+    &--row {
+      flex-direction: row;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: var(--c--globals--spacings--sm);
+
+      > .c__button {
+        width: auto;
+      }
+    }
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--c--contextuals--content--semantic--neutral--secondary);
+  }
+
+  &__path {
+    margin: 0;
+    padding: var(--c--globals--spacings--xs);
+    border-radius: 4px;
+    background: var(--c--contextuals--background--surface--tertiary);
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--c--contextuals--content--semantic--neutral--primary);
+    overflow-wrap: anywhere;
+  }
+
+  // The per-item list of a recursive job.
+  &__rows {
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid var(--c--contextuals--border--surface--primary);
+    border-radius: 4px;
+    padding: 0 var(--c--globals--spacings--xs);
+  }
+}
+
+// A compact centered state inside a viewer or a page: small illustration, bold
+// 14px title, 12px description, text-link actions.
+.drive__encryption-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--c--globals--spacings--base);
+  height: 100%;
+  padding: var(--c--globals--spacings--md);
+  text-align: center;
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--c--globals--spacings--st);
+    max-width: 320px;
+  }
+
+  &__illustration {
+    display: block;
+    width: 102px;
+    height: 72px;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 14px;
+    line-height: 18px;
+    font-weight: var(--c--globals--font--weights--bold);
+    color: var(--c--contextuals--content--semantic--neutral--primary);
+  }
+
+  &__description {
+    margin: 0;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--c--contextuals--content--semantic--neutral--secondary);
+  }
+
+  &__actions {
+    display: flex;
+    gap: var(--c--globals--spacings--xs);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  &__versions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--c--globals--spacings--2xs);
+    font-size: 12px;
+    color: var(--c--contextuals--content--semantic--neutral--secondary);
+
+    code {
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: var(--c--contextuals--background--surface--tertiary);
+      color: var(--c--contextuals--content--semantic--neutral--primary);
+      font-family: monospace;
+    }
+  }
+}
+
+// The share modal's "action needed" block: people added to an encrypted item
+// before their key was wrapped.
+.drive__encryption-pending {
+  display: flex;
+  flex-direction: column;
+  gap: var(--c--globals--spacings--xs);
+  margin: var(--c--globals--spacings--xs) 0 var(--c--globals--spacings--base);
+
+  &__title {
+    margin: 0;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: var(--c--globals--font--weights--bold);
+    color: var(--c--contextuals--content--semantic--neutral--secondary);
+  }
+
+  &__rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--c--globals--spacings--xs);
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--c--globals--spacings--xs);
+    min-height: 42px;
+  }
+
+  &__who {
+    display: flex;
+    align-items: center;
+    gap: var(--c--globals--spacings--xs);
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__avatar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--c--contextuals--background--semantic--brand--primary);
+    color: var(--c--contextuals--content--semantic--brand--on-brand);
+    font-size: 10px;
+    font-weight: var(--c--globals--font--weights--bold);
+    text-transform: uppercase;
+  }
+
+  &__text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__name {
+    margin: 0;
+    font-size: 14px;
+    line-height: 18px;
+    font-weight: var(--c--globals--font--weights--medium);
+    color: var(--c--contextuals--content--semantic--neutral--primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__secondary {
+    margin: 0;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--c--contextuals--content--semantic--neutral--tertiary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__error {
+    margin: 0;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--c--contextuals--content--semantic--error--tertiary);
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 24px;
+    padding: 0 6px;
+    border-radius: 4px;
+    background: var(--c--contextuals--background--surface--tertiary);
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: var(--c--globals--font--weights--medium);
+    color: var(--c--contextuals--content--semantic--neutral--tertiary);
+    white-space: nowrap;
+
+    .material-icons {
+      font-size: 16px;
+    }
+  }
+}
+
+// The encrypted badge on an item icon (grid, tree, right panel).
+.drive__encryption-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  line-height: 1;
+  border-radius: 50%;
+  background: var(--c--contextuals--background--surface--primary);
+  color: var(--c--contextuals--content--semantic--brand--primary);
+}
+
+.drive__encryption-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--c--contextuals--content--semantic--brand--primary);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: var(--c--globals--font--weights--medium);
+
+  .material-icons {
+    font-size: 16px;
+  }
+}
+
+@keyframes drive-encryption-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.drive__encryption-spin {
+  animation: drive-encryption-spin 1s linear infinite;
+}

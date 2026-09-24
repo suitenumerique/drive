@@ -1,5 +1,5 @@
-import { useTranslation } from 'react-i18next';
-import { JobPhase } from './types';
+import { useTranslation } from "react-i18next";
+import { JobPhase } from "./types";
 
 type Props = {
   phase: JobPhase;
@@ -7,7 +7,7 @@ type Props = {
   done: number;
   skipped: number;
   failed: number;
-  mode: 'encrypt' | 'decrypt';
+  mode: "encrypt" | "decrypt";
 };
 
 export const JobSummary = ({
@@ -21,25 +21,26 @@ export const JobSummary = ({
   const { t } = useTranslation();
 
   const actionLabel =
-    mode === 'encrypt'
-      ? t('encryption.summary.encrypting', 'Encrypting')
-      : t('encryption.summary.decrypting', 'Decrypting');
+    mode === "encrypt"
+      ? t("encryption.summary.encrypting", "Encrypting")
+      : t("encryption.summary.decrypting", "Decrypting");
 
   const bar = (pct: number) => (
     <div
       style={{
-        height: '6px',
-        borderRadius: '3px',
-        background: 'var(--c--theme--colors--greyscale-100, #eee)',
-        overflow: 'hidden',
+        height: "6px",
+        borderRadius: "3px",
+        background: "var(--c--contextuals--background--surface--tertiary)",
+        overflow: "hidden",
       }}
     >
       <div
         style={{
           width: `${Math.max(0, Math.min(100, pct))}%`,
-          height: '100%',
-          background: 'var(--c--theme--colors--primary-500, #2563eb)',
-          transition: 'width 0.2s ease-out',
+          height: "100%",
+          background:
+            "var(--c--contextuals--background--semantic--brand--primary)",
+          transition: "width 0.2s ease-out",
         }}
       />
     </div>
@@ -49,62 +50,60 @@ export const JobSummary = ({
   let pct = 0;
 
   switch (phase) {
-    case 'discovering':
-      headline = t('encryption.summary.discovering', 'Discovering files…');
+    case "discovering":
+      headline = t("encryption.summary.discovering", "Discovering files…");
       break;
-    case 'validating':
-      headline = t('encryption.summary.validating', 'Validating…');
+    case "validating":
+      headline = t("encryption.summary.validating", "Validating…");
       break;
-    case 'ready':
+    case "ready":
       headline = t(
-        'encryption.summary.ready',
-        '{{total}} item(s) to process, {{skipped}} skipped',
+        "encryption.summary.ready",
+        "{{total}} item(s) to process, {{skipped}} skipped",
         { total, skipped },
       );
       break;
-    case 'staging':
+    case "staging":
       headline = `${actionLabel} ${done} / ${total}${
         skipped > 0
-          ? ` — ${t('encryption.summary.skipped_short', '{{n}} skipped', { n: skipped })}`
-          : ''
+          ? ` — ${t("encryption.summary.skipped_short", "{{n}} skipped", { n: skipped })}`
+          : ""
       }`;
       pct = total > 0 ? (done / total) * 100 : 0;
       break;
-    case 'committing':
-      headline = t('encryption.summary.committing', 'Finalizing…');
+    case "committing":
+      headline = t("encryption.summary.committing", "Finalizing…");
       pct = 100;
       break;
-    case 'success':
+    case "success":
       headline =
-        mode === 'encrypt'
-          ? t(
-              'encryption.summary.success_encrypt',
-              '{{n}} item(s) encrypted',
-              { n: done },
-            )
-          : t(
-              'encryption.summary.success_decrypt',
-              '{{n}} item(s) decrypted',
-              { n: done },
-            );
+        mode === "encrypt"
+          ? t("encryption.summary.success_encrypt", "{{n}} item(s) encrypted", {
+              n: done,
+            })
+          : t("encryption.summary.success_decrypt", "{{n}} item(s) decrypted", {
+              n: done,
+            });
       pct = 100;
       break;
-    case 'failed':
+    case "failed":
       headline =
         failed > 0
           ? t(
-              'encryption.summary.failed',
-              'Failed — {{n}} item(s) in error, no changes applied',
+              "encryption.summary.failed",
+              "Failed — {{n}} item(s) in error, no changes applied",
               { n: failed },
             )
-          : t('encryption.summary.failed_generic', 'Operation failed');
+          : t("encryption.summary.failed_generic", "Operation failed");
       break;
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-      <div style={{ fontWeight: 600 }}>{headline}</div>
-      {(phase === 'staging' || phase === 'committing' || phase === 'success') &&
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+      <div style={{ fontWeight: 600, fontSize: "14px", lineHeight: "18px" }}>
+        {headline}
+      </div>
+      {(phase === "staging" || phase === "committing" || phase === "success") &&
         bar(pct)}
     </div>
   );

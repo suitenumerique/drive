@@ -1,6 +1,11 @@
-import { Modal, ModalSize } from '@gouvfr-lasuite/cunningham-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useVaultClient } from './VaultClientProvider';
+import { Modal } from "@gouvfr-lasuite/cunningham-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  EncryptionHostBody,
+  useInterfaceModalSize,
+} from "./EncryptionHostBody";
+import { useVaultClient } from "./VaultClientProvider";
 
 interface ModalEncryptionOnboardingProps {
   isOpen: boolean;
@@ -13,6 +18,7 @@ export const ModalEncryptionOnboarding = ({
   onClose,
   onSuccess,
 }: ModalEncryptionOnboardingProps) => {
+  const { t } = useTranslation();
   const { client: vaultClient, refreshKeyState } = useVaultClient();
   const onboardingOpenedRef = useRef(false);
   const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
@@ -44,19 +50,21 @@ export const ModalEncryptionOnboarding = ({
       onClose();
     };
 
-    vaultClient.on('onboarding:complete', handleComplete);
-    vaultClient.on('interface:closed', handleClosed);
+    vaultClient.on("onboarding:complete", handleComplete);
+    vaultClient.on("interface:closed", handleClosed);
 
     return () => {
-      vaultClient.off('onboarding:complete', handleComplete);
-      vaultClient.off('interface:closed', handleClosed);
+      vaultClient.off("onboarding:complete", handleComplete);
+      vaultClient.off("interface:closed", handleClosed);
     };
   }, [vaultClient, refreshKeyState, onSuccess, onClose]);
 
+  // The modal's close control only ASKS the interface to close: it may hold an
+  // unsaved recovery phrase and answer with its own confirmation. The modal goes
+  // away on 'interface:closed', which the interface emits once really done.
   const handleClose = useCallback(() => {
-    vaultClient?.closeInterface();
-    onboardingOpenedRef.current = false;
-    onClose();
+    if (vaultClient) vaultClient.requestClose();
+    else onClose();
   }, [vaultClient, onClose]);
 
   useEffect(() => {
@@ -65,19 +73,17 @@ export const ModalEncryptionOnboarding = ({
     }
   }, [isOpen]);
 
+  const size = useInterfaceModalSize(isOpen);
+
   return (
     <Modal
       isOpen={isOpen}
-      closeOnClickOutside
+      closeOnClickOutside={false}
       onClose={handleClose}
-      size={ModalSize.LARGE}
+      size={size}
+      aria-label={t("encryption.host_modal.label", "Encryption")}
     >
-      <div style={{ minHeight: '400px' }}>
-        <div
-          ref={setContainerEl}
-          style={{ width: '100%', minHeight: '400px' }}
-        />
-      </div>
+      <EncryptionHostBody hostRef={setContainerEl} onClose={onClose} />
     </Modal>
   );
 };

@@ -1,14 +1,12 @@
-import { Button } from '@gouvfr-lasuite/cunningham-react';
-import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
-import { Access } from '@/features/drivers/types';
-import { useMutationAcceptEncryptionAccess } from '@/features/explorer/hooks/useMutationsAccesses';
-import {
-  fetchSubtreeEntryKey,
-  wrapSubtreeKeyForUser,
-} from './wrapKeyForUser';
-import { fetchRegisteredKeys } from '@/features/encryption/fetchRegisteredKeys';
+import { Button } from "@gouvfr-lasuite/cunningham-react";
+import { Icon } from "@gouvfr-lasuite/ui-kit";
+import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { Access } from "@/features/drivers/types";
+import { useMutationAcceptEncryptionAccess } from "@/features/explorer/hooks/useMutationsAccesses";
+import { fetchSubtreeEntryKey, wrapSubtreeKeyForUser } from "./wrapKeyForUser";
+import { fetchRegisteredKeys } from "@/features/encryption/fetchRegisteredKeys";
 
 interface Props {
   itemId: string;
@@ -56,7 +54,7 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
       pending
         .map((a) => a.user.sub)
         .sort()
-        .join(','),
+        .join(","),
     [pending],
   );
 
@@ -130,7 +128,7 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
         setHasPublicKeyBySub((m) => ({ ...m, [access.user.sub]: false }));
         throw new Error(
           t(
-            'share_modal.pending_encryption.no_public_key',
+            "share_modal.pending_encryption.no_public_key",
             "This user still hasn't completed their encryption onboarding.",
           ),
         );
@@ -154,7 +152,7 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
       // at a different query key and otherwise wouldn't refresh.
       if (access.item.id !== itemId) {
         queryClient.invalidateQueries({
-          queryKey: ['itemAccesses', itemId],
+          queryKey: ["itemAccesses", itemId],
         });
       }
     } catch (err) {
@@ -171,41 +169,22 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
     }
   };
 
+  const initials = (label: string) =>
+    label
+      .trim()
+      .split(/[\s.@_-]+/)
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?";
+
   return (
-    <div
-      style={{
-        margin: '0.5rem 0 1rem',
-        padding: '0.75rem',
-        border: '1px solid var(--c--theme--colors--warning-300, #ffd591)',
-        borderRadius: 4,
-        background: 'var(--c--theme--colors--warning-050, #fffbf0)',
-      }}
-    >
-      <div
-        style={{
-          fontWeight: 600,
-          marginBottom: '0.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-        }}
-      >
-        <span
-          className="material-icons"
-          style={{
-            fontSize: 18,
-            color: 'var(--c--theme--colors--warning-600, #b15600)',
-          }}
-        >
-          hourglass_empty
-        </span>
-        {t(
-          'share_modal.pending_encryption.title',
-          'Users pending encryption access ({{count}})',
-          { count: pending.length },
-        )}
-      </div>
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+    <div className="drive__encryption-pending">
+      <p className="drive__encryption-pending__title">
+        {t("share_modal.pending_encryption.section_title", "Action needed")}
+      </p>
+      <ul className="drive__encryption-pending__rows">
         {pending.map((access) => {
           const isBusy = inFlight.has(access.id);
           const error = errorByAccessId[access.id];
@@ -213,73 +192,63 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
           // Treat "probing" as "don't show the button yet" to avoid a
           // flicker where Accept appears then disappears.
           const canAccept = hasPublicKey === true && !probing;
+          const name = access.user.full_name || access.user.email;
           return (
-            <li
-              key={access.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.4rem 0',
-                gap: '0.5rem',
-                flexWrap: 'wrap',
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 500 }}>
-                  {access.user.full_name || access.user.email}
+            <li key={access.id} className="drive__encryption-pending__row">
+              <div className="drive__encryption-pending__who">
+                <span
+                  className="drive__encryption-pending__avatar"
+                  aria-hidden="true"
+                >
+                  {initials(name)}
+                </span>
+                <div className="drive__encryption-pending__text">
+                  <p className="drive__encryption-pending__name" title={name}>
+                    {name}
+                  </p>
+                  {access.user.email && access.user.full_name && (
+                    <p
+                      className="drive__encryption-pending__secondary"
+                      title={access.user.email}
+                    >
+                      {access.user.email}
+                    </p>
+                  )}
+                  {!canAccept && !probing && (
+                    <p className="drive__encryption-pending__secondary">
+                      {t(
+                        "share_modal.pending_encryption.awaiting_their_onboarding",
+                        "Waiting for them to enable encryption. You will be able to accept them once they have.",
+                      )}
+                    </p>
+                  )}
+                  {error && (
+                    <p className="drive__encryption-pending__error">{error}</p>
+                  )}
                 </div>
-                {access.user.email && access.user.full_name && (
-                  <div
-                    style={{
-                      fontSize: '0.85rem',
-                      color:
-                        'var(--c--contextuals--content--semantic--neutral--tertiary)',
-                    }}
-                  >
-                    {access.user.email}
-                  </div>
-                )}
-                {!canAccept && !probing && (
-                  <div
-                    style={{
-                      fontSize: '0.85rem',
-                      color:
-                        'var(--c--contextuals--content--semantic--neutral--tertiary)',
-                      marginTop: '0.25rem',
-                    }}
-                  >
-                    {t(
-                      'share_modal.pending_encryption.awaiting_their_onboarding',
-                      "Waiting for this user to complete their encryption onboarding. You'll be able to accept them once they have.",
-                    )}
-                  </div>
-                )}
-                {error && (
-                  <div
-                    style={{
-                      fontSize: '0.85rem',
-                      color: 'var(--c--theme--colors--danger-600, #c9191e)',
-                      marginTop: '0.25rem',
-                    }}
-                  >
-                    {error}
-                  </div>
-                )}
               </div>
-              {canAccept && (
+              {canAccept ? (
                 <Button
                   size="small"
+                  variant="bordered"
                   onClick={() => handleAccept(access)}
                   disabled={isBusy}
                 >
                   {isBusy
                     ? t(
-                        'share_modal.pending_encryption.accepting',
-                        'Accepting…',
+                        "share_modal.pending_encryption.accepting",
+                        "Accepting…",
                       )
-                    : t('share_modal.pending_encryption.accept', 'Accept')}
+                    : t("share_modal.pending_encryption.accept", "Accept")}
                 </Button>
+              ) : (
+                <span className="drive__encryption-pending__chip">
+                  <Icon aria-hidden name="schedule" />
+                  {t(
+                    "share_modal.pending_encryption.pending_chip",
+                    "Pending encryption",
+                  )}
+                </span>
               )}
             </li>
           );

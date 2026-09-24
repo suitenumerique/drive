@@ -331,13 +331,11 @@ export const LastItemBreadcrumb = ({ item }: { item: Item }) => {
           content={t("explorer.breadcrumbs.encrypted", "Encrypted folder")}
         >
           <span
-            className="material-icons"
-            style={{
-              fontSize: 18,
-              color: "var(--c--theme--colors--success-600, #18753c)",
-            }}
+            className="material-icons drive__encryption-inline"
+            style={{ fontSize: 18 }}
+            aria-hidden="true"
           >
-            lock
+            verified_user
           </span>
         </Tooltip>
       )}

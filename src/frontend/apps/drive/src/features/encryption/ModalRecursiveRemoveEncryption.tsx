@@ -1,9 +1,16 @@
-import { Button, Modal, ModalSize } from '@gouvfr-lasuite/cunningham-react';
-import { useTranslation } from 'react-i18next';
-import { Item, ItemType } from '@/features/drivers/types';
-import { useRecursiveEncryptionJob } from './recursive/useRecursiveEncryptionJob';
-import { JobFileRow } from './recursive/JobFileRow';
-import { JobSummary } from './recursive/JobSummary';
+import {
+  Alert,
+  Button,
+  Modal,
+  ModalSize,
+  VariantType,
+} from "@gouvfr-lasuite/cunningham-react";
+import { useTranslation } from "react-i18next";
+import { Item, ItemType } from "@/features/drivers/types";
+import { useRecursiveEncryptionJob } from "./recursive/useRecursiveEncryptionJob";
+import { JobFileRow } from "./recursive/JobFileRow";
+import { JobSummary } from "./recursive/JobSummary";
+import { EncryptionModalContent } from "./EncryptionLayout";
 
 interface Props {
   isOpen: boolean;
@@ -26,7 +33,7 @@ export const ModalRecursiveRemoveEncryption = ({
 }: Props) => {
   const { t } = useTranslation();
   const job = useRecursiveEncryptionJob({
-    mode: 'decrypt',
+    mode: "decrypt",
     item,
     isOpen,
     onSuccess: () => {
@@ -38,21 +45,21 @@ export const ModalRecursiveRemoveEncryption = ({
   const title =
     item.type === ItemType.FOLDER
       ? t(
-          'encryption.remove_modal.title_folder',
+          "encryption.remove_modal.title_folder",
           'Remove encryption from folder "{{title}}"',
           { title: item.title },
         )
       : t(
-          'encryption.remove_modal.title_file',
+          "encryption.remove_modal.title_file",
           'Remove encryption from file "{{title}}"',
           { title: item.title },
         );
 
   const busy =
-    job.phase === 'discovering' ||
-    job.phase === 'validating' ||
-    job.phase === 'staging' ||
-    job.phase === 'committing';
+    job.phase === "discovering" ||
+    job.phase === "validating" ||
+    job.phase === "staging" ||
+    job.phase === "committing";
 
   const hasValidation = job.validationErrors.length > 0;
 
@@ -61,54 +68,56 @@ export const ModalRecursiveRemoveEncryption = ({
       isOpen={isOpen}
       onClose={onClose}
       closeOnClickOutside={!busy}
-      size={ModalSize.LARGE}
-      title={title}
-      actions={
-        <>
-          <Button
-            variant="bordered"
-            onClick={() => {
-              if (busy) job.cancel();
-              onClose();
-            }}
-          >
-            {busy
-              ? t('common.cancel', 'Cancel')
-              : t('common.close', 'Close')}
-          </Button>
-          {job.phase === 'ready' && (
-            <Button
-              color="error"
-              onClick={() => job.confirm()}
-              disabled={!job.canConfirm}
-            >
-              {t('encryption.remove_modal.confirm', 'Remove encryption')}
-            </Button>
-          )}
-          {job.phase === 'failed' && (
-            <Button onClick={() => job.retry()}>
-              {t('common.retry', 'Retry')}
-            </Button>
-          )}
-        </>
-      }
+      size={ModalSize.MEDIUM}
+      aria-label={title}
     >
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-          minHeight: '200px',
-        }}
-      >
-        {job.phase === 'ready' && (
-          <p style={{ margin: 0 }}>
-            {t(
-              'encryption.remove_modal.description',
-              'The following items will be decrypted and stored in plain.',
+      <EncryptionModalContent
+        illustration="document-shield-x"
+        title={title}
+        description={
+          job.phase === "ready"
+            ? t(
+                "encryption.remove_modal.description",
+                "The content will be decrypted and stored in plain text on the server.",
+              )
+            : undefined
+        }
+        actions={
+          <>
+            {job.phase === "ready" && (
+              <Button onClick={() => job.confirm()} disabled={!job.canConfirm}>
+                {t("encryption.remove_modal.confirm", "Remove encryption")}
+              </Button>
             )}
-          </p>
+            {job.phase === "failed" && (
+              <Button onClick={() => job.retry()}>
+                {t("common.retry", "Retry")}
+              </Button>
+            )}
+            <Button
+              variant="bordered"
+              color="neutral"
+              onClick={() => {
+                if (busy) job.cancel();
+                onClose();
+              }}
+            >
+              {busy ? t("common.cancel", "Cancel") : t("common.close", "Close")}
+            </Button>
+          </>
+        }
+      >
+        {hasValidation && (
+          <Alert type={VariantType.ERROR}>
+            <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
+              {job.validationErrors.map((e, i) => (
+                <li key={i}>{e}</li>
+              ))}
+            </ul>
+          </Alert>
         )}
+
+        {job.topError && <Alert type={VariantType.ERROR}>{job.topError}</Alert>}
 
         <JobSummary
           phase={job.phase}
@@ -119,74 +128,23 @@ export const ModalRecursiveRemoveEncryption = ({
           mode="decrypt"
         />
 
-        {hasValidation && (
-          <div
-            style={{
-              padding: '0.75rem',
-              borderRadius: '4px',
-              background: 'var(--c--theme--colors--danger-100, #fde8e8)',
-            }}
-          >
-            <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
-              {job.validationErrors.map((e, i) => (
-                <li
-                  key={i}
-                  style={{
-                    color: 'var(--c--theme--colors--danger-text, #c00)',
-                  }}
-                >
-                  {e}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {job.topError && (
-          <div
-            style={{
-              padding: '0.75rem',
-              borderRadius: '4px',
-              background: 'var(--c--theme--colors--danger-100, #fde8e8)',
-              color: 'var(--c--theme--colors--danger-text, #c00)',
-            }}
-          >
-            {job.topError}
-          </div>
-        )}
-
         {job.rows.length > 0 && job.rows.length <= 50 && (
-          <div
-            style={{
-              maxHeight: '320px',
-              overflowY: 'auto',
-              border:
-                '1px solid var(--c--theme--colors--greyscale-200, #e5e7eb)',
-              borderRadius: '4px',
-              padding: '0 0.5rem',
-            }}
-          >
+          <div className="drive__encryption-modal__rows">
             {job.rows.map((r) => (
               <JobFileRow row={r} key={r.id} />
             ))}
           </div>
         )}
         {job.rows.length > 50 && (
-          <p
-            style={{
-              margin: 0,
-              fontSize: '0.85rem',
-              color: 'var(--c--theme--colors--greyscale-600, #6b7280)',
-            }}
-          >
+          <p className="drive__encryption-modal__hint">
             {t(
-              'encryption.remove_modal.large_set',
-              '{{count}} items in this folder. Per-item progress is hidden for large jobs — see the summary above.',
+              "encryption.remove_modal.large_set",
+              "{{count}} items in this folder. Per-item progress is hidden for large jobs — see the summary above.",
               { count: job.rows.length },
             )}
           </p>
         )}
-      </div>
+      </EncryptionModalContent>
     </Modal>
   );
 };

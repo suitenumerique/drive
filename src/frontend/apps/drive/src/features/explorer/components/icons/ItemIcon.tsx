@@ -37,7 +37,14 @@ export const ItemIcon = ({
   if (item.is_encrypted) {
     const badgeSize = Math.max(12, Math.round(imgSize * 0.4));
     return (
-      <div style={{ position: "relative", display: "inline-block", width: imgSize, height: imgSize }}>
+      <div
+        style={{
+          position: "relative",
+          display: "inline-block",
+          width: imgSize,
+          height: imgSize,
+        }}
+      >
         <img
           src={mimeIcon.src}
           alt=""
@@ -47,19 +54,11 @@ export const ItemIcon = ({
           draggable="false"
         />
         <span
-          className="material-icons"
-          style={{
-            position: "absolute",
-            bottom: -2,
-            right: -2,
-            fontSize: badgeSize,
-            color: "var(--c--theme--colors--success-600, #18753c)",
-            background: "white",
-            borderRadius: "50%",
-            lineHeight: 1,
-          }}
+          className="material-icons drive__encryption-badge"
+          style={{ fontSize: badgeSize }}
+          aria-hidden="true"
         >
-          lock
+          verified_user
         </span>
       </div>
     );

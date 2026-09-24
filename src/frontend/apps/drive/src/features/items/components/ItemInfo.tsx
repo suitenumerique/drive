@@ -50,16 +50,9 @@ export const ItemInfo = ({ item }: ItemInfoProps) => {
         <InfoRow
           label={t("explorer.rightPanel.security", "Security")}
           rightContent={
-            <span
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                color: "var(--c--theme--colors--success-600, #18753c)",
-              }}
-            >
-              <span className="material-icons" style={{ fontSize: "16px" }}>
-                lock
+            <span className="drive__encryption-inline">
+              <span className="material-icons" aria-hidden="true">
+                verified_user
               </span>
               {t("explorer.rightPanel.encrypted", "Encrypted")}
             </span>

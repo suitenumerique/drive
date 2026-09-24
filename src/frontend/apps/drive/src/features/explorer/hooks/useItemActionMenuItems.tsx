@@ -198,7 +198,7 @@ export const useItemActionMenuItems = ({
       ...(isEncryptionEnabled && !item.is_encrypted && item.abilities?.encrypt
         ? [
             {
-              icon: <span className="material-icons">lock</span>,
+              icon: <span className="material-icons">add_moderator</span>,
               label: t("explorer.item.actions.encrypt", "Encrypt"),
               callback: () => {
                 setCurrentItem(effectiveItem);
@@ -210,7 +210,7 @@ export const useItemActionMenuItems = ({
       ...(item.is_encrypted && item.abilities?.remove_encryption
         ? [
             {
-              icon: <span className="material-icons">lock_open</span>,
+              icon: <span className="material-icons">remove_moderator</span>,
               label: t(
                 "explorer.item.actions.remove_encryption",
                 "Remove encryption",

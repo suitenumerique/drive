@@ -23,7 +23,8 @@ import {
   MissingEncryptionKeysPanel,
 } from "@/features/encryption/MissingEncryptionKeysModal";
 import { useVaultClient } from "@/features/encryption/VaultClientProvider";
-import { Loader } from "@gouvfr-lasuite/cunningham-react";
+import { Button, Loader } from "@gouvfr-lasuite/cunningham-react";
+import { EncryptionState } from "@/features/encryption/EncryptionLayout";
 
 interface EncryptedFileViewerProps {
   file: FilePreviewType;
@@ -49,56 +50,24 @@ export const EncryptedFileViewer = ({
   // /key-chain/ (which would 403 and trigger the global /403 redirect).
   if (file.is_pending_encryption_for_user) {
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          gap: "16px",
-          textAlign: "center",
-          maxWidth: "420px",
-          margin: "0 auto",
-        }}
-      >
-        <span
-          className="material-icons"
-          style={{
-            fontSize: "48px",
-            color: "var(--c--theme--colors--warning-600, #b15600)",
-          }}
-        >
-          hourglass_empty
-        </span>
-        <span style={{ fontWeight: 600 }}>
-          {t(
-            "explorer.encrypted.pending_self.title",
-            "Complete your encryption onboarding to open this file",
-          )}
-        </span>
-        <span
-          style={{
-            fontSize: "14px",
-            color:
-              "var(--c--contextuals--content--semantic--neutral--tertiary)",
-          }}
-        >
-          {t(
-            "explorer.encrypted.pending_self.body",
-            "This file is encrypted and you haven't set up your encryption keys yet. First, complete your encryption onboarding from your profile menu — then a collaborator who already holds the decryption key will need to accept you from the share dialog before you can open this file.",
-          )}
-        </span>
-      </div>
+      <EncryptionState
+        illustration="document-encrypting"
+        title={t(
+          "explorer.encrypted.pending_self.title",
+          "Enable encryption to open this file",
+        )}
+        description={t(
+          "explorer.encrypted.pending_self.body",
+          "This file is encrypted. Enable encryption from your profile menu, then a collaborator who already has access will accept you from the share dialog.",
+        )}
+      />
     );
   }
 
-  // The server stores application/octet-stream for encrypted files (it
-  // can't inspect ciphertext). Fall back to the extension-derived
-  // mimetype so the right viewer / OO docType is picked.
   const effectiveMimetype =
-    getEffectiveMimetype(file as unknown as Parameters<typeof getEffectiveMimetype>[0]) ??
-    file.mimetype;
+    getEffectiveMimetype(
+      file as unknown as Parameters<typeof getEffectiveMimetype>[0],
+    ) ?? file.mimetype;
 
   // Office files: use OnlyOffice client-side editor (handles its own decryption).
   // Use the OO bridge's own MIME_TO_DOC_TYPE as the source of truth — it covers
@@ -141,7 +110,8 @@ const NonOfficeEncryptedViewer = ({
   onDownload,
 }: NonOfficeEncryptedViewerProps) => {
   const { t } = useTranslation();
-  const { openEncryptionOnboarding } = useVaultClient();
+  const { openEncryptionOnboarding, error: vaultClientError } =
+    useVaultClient();
   const category = getMimeCategory(effectiveMimetype);
 
   // Non-office files: decrypt and display with native viewers
@@ -153,36 +123,41 @@ const NonOfficeEncryptedViewer = ({
     mimetype: file.mimetype,
   };
   const { blobUrl, isDecrypting, error } = useDecryptedContent(
-    item as unknown as Item
+    item as unknown as Item,
   );
+
+  // No SDK, no decryption: say so rather than "enable encryption".
+  if (vaultClientError) {
+    return (
+      <EncryptionState
+        title={t(
+          "encryption.service_unavailable.title",
+          "Encryption service unavailable",
+        )}
+        description={t(
+          "encryption.service_unavailable.viewer_body",
+          "This file is encrypted and the encryption service could not be loaded. Check your connection and try again.",
+        )}
+        actions={
+          <Button
+            size="small"
+            variant="tertiary"
+            onClick={() => window.location.reload()}
+          >
+            {t("encryption.service_unavailable.retry", "Retry")}
+          </Button>
+        }
+      />
+    );
+  }
 
   if (isDecrypting) {
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          gap: "16px",
-        }}
+      <EncryptionState
+        title={t("explorer.encrypted.decrypting", "Decrypting...")}
       >
         <Loader />
-        <span
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            color: "var(--c--theme--colors--success-600, #18753c)",
-          }}
-        >
-          <span className="material-icons" style={{ fontSize: "20px" }}>
-            lock
-          </span>
-          {t("explorer.encrypted.decrypting", "Decrypting...")}
-        </span>
-      </div>
+      </EncryptionState>
     );
   }
 
@@ -195,29 +170,13 @@ const NonOfficeEncryptedViewer = ({
       );
     }
     if (isMissingKeysError(error)) {
-      return (
-        <MissingEncryptionKeysPanel onSetUp={openEncryptionOnboarding} />
-      );
+      return <MissingEncryptionKeysPanel onSetUp={openEncryptionOnboarding} />;
     }
     return (
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          gap: "16px",
-        }}
-      >
-        <span className="material-icons" style={{ fontSize: "48px", color: "var(--c--theme--colors--danger-600)" }}>
-          error
-        </span>
-        <span>{t("explorer.encrypted.error", "Failed to decrypt file")}</span>
-        <span style={{ fontSize: "12px", color: "var(--c--theme--colors--greyscale-600)" }}>
-          {error.message}
-        </span>
-      </div>
+      <EncryptionState
+        title={t("explorer.encrypted.error", "Failed to decrypt file")}
+        description={error.message}
+      />
     );
   }
 

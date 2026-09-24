@@ -552,7 +552,9 @@
           "accepting": "Acceptation…",
           "suffix": "(en attente d'accès au chiffrement)",
           "no_public_key": "Cet utilisateur n'a pas encore terminé sa configuration du chiffrement.",
-          "awaiting_their_onboarding": "En attente que cet utilisateur termine sa configuration du chiffrement. Vous pourrez l'accepter une fois cela fait."
+          "awaiting_their_onboarding": "En attente de l'activation du chiffrement par cette personne. Vous pourrez l'accepter une fois que ce sera fait.",
+          "section_title": "Action requise",
+          "pending_chip": "Chiffrement en attente"
         }
       },
       "file_download_modal": {
@@ -604,11 +606,11 @@
           "title_folder": "Chiffrer le dossier « {{title}} »",
           "title_file": "Chiffrer le fichier « {{title}} »",
           "confirm": "Chiffrer",
-          "description_folder": "Les éléments suivants seront chiffrés. Les sous-dossiers sont traités récursivement. Une fois chiffrés, leur contenu n'est accessible qu'aux utilisateurs disposant d'une clé de chiffrement.",
+          "description_folder": "Le dossier et tout son contenu seront chiffrés de bout en bout. Seules les personnes avec qui vous le partagez pourront y accéder.",
           "large_set": "{{count}} éléments dans ce dossier. La progression par élément n'est pas affichée pour les opérations volumineuses — voir le résumé ci-dessus.",
           "large_set_failures": "{{count}} en échec.",
-          "pending_users_title": "{{count}} collaborateur(s) n'ont pas terminé la configuration du chiffrement",
-          "pending_users_body": "Si vous continuez, ils verront toujours ce dossier dans leurs listes mais ne pourront pas ouvrir son contenu tant qu'ils n'auront pas terminé leur configuration ET qu'un autre utilisateur ne les aura pas acceptés depuis la fenêtre de partage."
+          "description_file": "Le fichier sera chiffré de bout en bout. Seules les personnes avec qui vous le partagez pourront y accéder.",
+          "pending_users": "{{count}} collaborateur(s) n'ont pas encore activé le chiffrement. Ils verront cet élément mais ne pourront pas l'ouvrir tant qu'ils ne l'auront pas fait et qu'une personne ne les aura pas acceptés depuis la fenêtre de partage."
         },
         "errors": {
           "self_missing_key": "Vous devez terminer votre configuration du chiffrement avant de chiffrer cet élément.",
@@ -620,11 +622,19 @@
           "subtree_mutated": "Le contenu du dossier a changé pendant l'opération ({{added}} ajoutés, {{removed}} supprimés)."
         },
         "missing_keys": {
-          "title": "Clés de chiffrement requises",
-          "body": "Le chiffrement de bout en bout doit être activé sur cet appareil pour continuer. Les clés de chiffrement sont stockées localement, par appareil — même si vous les avez configurées ailleurs, elles ne vous suivent pas automatiquement ici. Pour activer le chiffrement sur cet appareil, restaurez vos clés depuis une sauvegarde, ou générez une nouvelle paire si vous n'en avez jamais configurée.",
-          "viewer_body": "Ce fichier est chiffré de bout en bout. Le chiffrement doit être activé sur cet appareil pour l'ouvrir — les clés sont stockées localement, par appareil, et ne vous suivent pas automatiquement. Restaurez vos clés depuis une sauvegarde, ou générez une nouvelle paire si vous n'en avez jamais configurée.",
+          "title": "Activer le chiffrement sur cet appareil",
+          "body": "Les clés de chiffrement sont stockées sur chaque appareil. Pour continuer ici, restaurez vos clés depuis un autre appareil ou votre phrase de récupération, ou activez le chiffrement si vous ne l'avez jamais fait.",
+          "viewer_body": "Ce fichier est chiffré. Vous devez activer le chiffrement sur cet appareil pour l'ouvrir.",
           "set_up": "Activer le chiffrement",
-          "cancel": "Plus tard"
+          "cancel": "Plus tard",
+          "viewer_title": "Fichier chiffré"
+        },
+        "service_unavailable": {
+          "title": "Service de chiffrement indisponible",
+          "body": "Le service de chiffrement n'a pas pu être chargé. Vérifiez votre connexion et réessayez.",
+          "viewer_body": "Ce fichier est chiffré et le service de chiffrement n'a pas pu être chargé. Vérifiez votre connexion et réessayez.",
+          "retry": "Réessayer",
+          "close": "Fermer"
         },
         "not_root_modal": {
           "title": "Le chiffrement ne peut pas être retiré ici",
@@ -635,7 +645,7 @@
           "title_folder": "Retirer le chiffrement du dossier « {{title}} »",
           "title_file": "Retirer le chiffrement du fichier « {{title}} »",
           "confirm": "Retirer le chiffrement",
-          "description": "Les éléments suivants seront déchiffrés et stockés en clair.",
+          "description": "Le contenu sera déchiffré et stocké en clair sur le serveur.",
           "large_set": "{{count}} éléments dans ce dossier. La progression par élément n'est pas affichée pour les opérations volumineuses — voir le résumé ci-dessus."
         },
         "row": {
@@ -654,6 +664,9 @@
           "skipped_short": "{{n}} ignoré(s)",
           "failed": "Échec — {{n}} élément(s) en erreur, aucun changement appliqué",
           "failed_generic": "Échec de l'opération"
+        },
+        "host_modal": {
+          "label": "Chiffrement"
         }
       },
       "clipboard": {
@@ -773,8 +786,8 @@
             "current_version_label": "Version actuelle de votre clé :"
           },
           "pending_self": {
-            "title": "Terminez votre configuration du chiffrement pour ouvrir ce fichier",
-            "body": "Ce fichier est chiffré et vous n'avez pas encore configuré vos clés. Commencez par terminer votre configuration du chiffrement depuis le menu de votre profil — ensuite, un collaborateur qui détient déjà la clé de déchiffrement devra vous accepter depuis la fenêtre de partage avant que vous puissiez ouvrir ce fichier."
+            "title": "Activez le chiffrement pour ouvrir ce fichier",
+            "body": "Ce fichier est chiffré. Activez le chiffrement depuis le menu de votre profil, puis une personne ayant déjà accès vous acceptera depuis la fenêtre de partage."
           }
         },
         "modal": {
@@ -815,7 +828,9 @@
           "created_at": "Création",
           "size": "Poids",
           "created_by": "Créé par",
-          "description": "Description"
+          "description": "Description",
+          "encrypted": "Chiffré",
+          "security": "Sécurité"
         },
         "grid": {
           "name": "Nom",
@@ -826,7 +841,6 @@
               "default": "Cet onglet est vide",
               "folder": "Ce dossier est vide"
             },
-
             "caption_no_create": "Vous n'avez pas les droits pour ajouter des fichiers",
             "cta": {
               "default": "Importez ou créez des fichiers et dossiers ici.",
@@ -1086,7 +1100,9 @@
             "rename": "Renommer",
             "favorite": "Favoris",
             "unfavorite": "Retirer des favoris",
-            "delete": "Supprimer"
+            "delete": "Supprimer",
+            "encrypt": "Chiffrer",
+            "remove_encryption": "Retirer le chiffrement"
           }
         }
       },

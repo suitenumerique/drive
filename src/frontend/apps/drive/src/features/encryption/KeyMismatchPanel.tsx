@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
-import { fetchRegisteredKeys } from '@/features/encryption/fetchRegisteredKeys';
+import { fetchRegisteredKeys } from "@/features/encryption/fetchRegisteredKeys";
+import { EncryptionState } from "./EncryptionLayout";
 
 /**
  * True when the SDK threw a `VaultError` carrying the
@@ -15,10 +16,10 @@ import { fetchRegisteredKeys } from '@/features/encryption/fetchRegisteredKeys';
  * against the user's CURRENT public key.
  */
 export const isWrongSecretKeyError = (
-  err: Error | null | undefined
+  err: Error | null | undefined,
 ): boolean => {
   if (!err) return false;
-  return (err as VaultError).code === 'WRONG_SECRET_KEY';
+  return (err as VaultError).code === "WRONG_SECRET_KEY";
 };
 
 interface KeyMismatchPanelProps {
@@ -35,12 +36,11 @@ interface KeyMismatchPanelProps {
 }
 
 /**
- * Friendly panel shown when `isWrongSecretKeyError` is true. Explains
- * the situation and surfaces BOTH the key version the file was
- * encrypted for (stored at share time) and the user's CURRENT key
- * version, so they can see the staleness concretely: the access was
- * wrapped for version N of their key, their current version is M, so a
- * re-encryption is needed.
+ * Shown when `isWrongSecretKeyError` is true. Explains the situation and
+ * surfaces BOTH the key version the file was encrypted for (stored at share
+ * time) and the user's CURRENT key version, so the staleness is concrete: the
+ * access was wrapped for version N of their key, their current version is M,
+ * so a re-encryption is needed.
  */
 export const KeyMismatchPanel = ({
   shareTimeVersion,
@@ -72,96 +72,38 @@ export const KeyMismatchPanel = ({
   const hasCurrentVersion = currentVersion !== null;
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        gap: '16px',
-        padding: '24px',
-        textAlign: 'center',
-        maxWidth: '520px',
-        margin: '0 auto',
-      }}
+    <EncryptionState
+      title={t(
+        "explorer.encrypted.key_mismatch.title",
+        "This file was encrypted with a different key",
+      )}
+      description={t(
+        "explorer.encrypted.key_mismatch.body",
+        "The file was encrypted for you at a time when you were using a different encryption key — possibly before you reset your keys or switched device without restoring a backup. Your current key can no longer decrypt it. Ask an owner or administrator of this file to remove you from the access list and add you back so it gets re-encrypted for your current key.",
+      )}
     >
-      <span
-        className="material-icons"
-        style={{
-          fontSize: '48px',
-          color: 'var(--c--theme--colors--warning-600, #b15600)',
-        }}
-      >
-        key_off
-      </span>
-      <span style={{ fontWeight: 600 }}>
-        {t(
-          'explorer.encrypted.key_mismatch.title',
-          'This file was encrypted with a different key'
-        )}
-      </span>
-      <span
-        style={{
-          fontSize: '14px',
-          color: 'var(--c--contextuals--content--semantic--neutral--tertiary)',
-          lineHeight: 1.5,
-        }}
-      >
-        {t(
-          'explorer.encrypted.key_mismatch.body',
-          'The file was encrypted for you at a time when you were using a different encryption key — possibly before you reset your keys or switched device without restoring a backup. Your current key can no longer decrypt it. Ask an owner or administrator of this file to remove you from the access list and add you back so it gets re-encrypted for your current key.'
-        )}
-      </span>
       {(hasShareTimeVersion || hasCurrentVersion) && (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '6px',
-            fontSize: '13px',
-            color:
-              'var(--c--contextuals--content--semantic--neutral--tertiary)',
-          }}
-        >
+        <div className="drive__encryption-state__versions">
           {hasShareTimeVersion && (
             <div>
               {t(
-                'explorer.encrypted.key_mismatch.share_time_version_label',
-                'Key version at the time it was shared with you:'
-              )}{' '}
-              <code
-                style={{
-                  fontFamily: 'monospace',
-                  background: 'var(--c--theme--colors--greyscale-100, #f4f4f5)',
-                  padding: '2px 6px',
-                  borderRadius: '3px',
-                }}
-              >
-                {shareTimeVersion}
-              </code>
+                "explorer.encrypted.key_mismatch.share_time_version_label",
+                "Key version at the time it was shared with you:",
+              )}{" "}
+              <code>{shareTimeVersion}</code>
             </div>
           )}
           {hasCurrentVersion && (
             <div>
               {t(
-                'explorer.encrypted.key_mismatch.current_version_label',
-                'Your current key version:'
-              )}{' '}
-              <code
-                style={{
-                  fontFamily: 'monospace',
-                  background: 'var(--c--theme--colors--greyscale-100, #f4f4f5)',
-                  padding: '2px 6px',
-                  borderRadius: '3px',
-                }}
-              >
-                {currentVersion}
-              </code>
+                "explorer.encrypted.key_mismatch.current_version_label",
+                "Your current key version:",
+              )}{" "}
+              <code>{currentVersion}</code>
             </div>
           )}
         </div>
       )}
-    </div>
+    </EncryptionState>
   );
 };
