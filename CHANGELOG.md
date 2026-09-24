@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) add a command to generate a production sized dataset
+- ✨(backend) add a command to profile the main API endpoints
 
 ### Changed
 
