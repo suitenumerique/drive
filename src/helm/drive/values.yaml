@@ -263,6 +263,8 @@ backend:
   #       - "-c"
   #       - python manage.py flush --no-input
   ## @param backend.cronjobs Cronjob name, schedule, command
+  # These commands can instead be scheduled by celery beat with the
+  # PERIODIC_MANAGEMENT_COMMANDS env var: remove them here if you do so.
   cronjobs:
     - name: clean-pending-items
       schedule: "30 0 * * *"

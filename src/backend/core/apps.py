@@ -17,3 +17,10 @@ class CoreConfig(AppConfig):
         """
         # pylint: disable=import-outside-toplevel, unused-import
         from . import signals  # noqa: PLC0415,F401
+
+        # Register the periodic tasks before celery beat finalizes its app
+        from .tasks import management_commands  # noqa: PLC0415
+
+        # Celery only logs errors raised in its signal handlers: validate here so a
+        # misconfiguration stops the process instead of never running the command.
+        management_commands.get_periodic_management_commands()

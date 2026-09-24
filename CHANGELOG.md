@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) schedule management commands with celery beat
+
 ## [v0.23.0] - 2026-09-23
 
 ### Added
