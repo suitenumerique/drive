@@ -1328,6 +1328,46 @@ class Item(TreeModel, BaseModel):
 
         return paths_links_mapping
 
+    @classmethod
+    def compute_items_ancestors_links_paths_mapping(cls, items):
+        """
+        Compute the ancestors links of a collection of items in a single query. The
+        mapping is meant to be read at the items parent path: unlike the mapping
+        computed on an item, it covers the items parents and their ancestors but not
+        the items themselves, so that no query is needed for root items.
+        """
+        paths = set()
+        for item in items:
+            labels = str(item.path).split(".")
+            paths.update(".".join(labels[:depth]) for depth in range(1, len(labels)))
+        if not paths:
+            return {}
+
+        ancestors = (
+            cls.objects.filter(path__in=paths, ancestors_deleted_at__isnull=True)
+            .order_by("path")
+            .values_list("path", "link_reach", "link_role")
+        )
+        paths_links_mapping = {}
+        for path, link_reach, link_role in ancestors:
+            # Paths are sorted so the closest ancestor found is already mapped. Deleted
+            # ancestors are skipped, as when walking the ancestors of a single item.
+            labels = str(path).split(".")
+            ancestors_links = next(
+                (
+                    paths_links_mapping[parent_path]
+                    for depth in range(len(labels) - 1, 0, -1)
+                    if (parent_path := ".".join(labels[:depth])) in paths_links_mapping
+                ),
+                [],
+            )
+            paths_links_mapping[str(path)] = [
+                *ancestors_links,
+                {"link_reach": link_reach, "link_role": link_role},
+            ]
+
+        return paths_links_mapping
+
     @property
     def link_definition(self):
         """Returns link reach/role as a definition in dictionary format."""

@@ -44,3 +44,35 @@ def test_models_items_id_in_path(tree):
     )
 
     assert set(matched) == {accesses["root"], accesses["parent"], accesses["child"]}
+
+
+def test_models_items_compute_items_ancestors_links_paths_mapping(tree, django_assert_num_queries):
+    """
+    The mapping computed at once for several items should match, at the parent path of
+    each item, the mapping computed on each item.
+    """
+    tree["root"].link_reach = models.LinkReachChoices.AUTHENTICATED
+    tree["root"].save()
+    tree["sibling"].link_reach = models.LinkReachChoices.PUBLIC
+    tree["sibling"].save()
+    items = [tree["child"], tree["nephew"], tree["parent"], tree["other_root"]]
+
+    with django_assert_num_queries(1):
+        mapping = models.Item.compute_items_ancestors_links_paths_mapping(items)
+
+    for item in items:
+        parent_path = str(item.path[:-1])
+        expected = item.compute_ancestors_links_paths_mapping().get(parent_path, [])
+        assert mapping.get(parent_path, []) == expected
+
+
+def test_models_items_compute_items_ancestors_links_paths_mapping_roots(
+    tree, django_assert_num_queries
+):
+    """No query should be needed when all the items are roots."""
+    with django_assert_num_queries(0):
+        mapping = models.Item.compute_items_ancestors_links_paths_mapping(
+            [tree["root"], tree["other_root"]]
+        )
+
+    assert not mapping
