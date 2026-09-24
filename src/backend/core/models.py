@@ -773,6 +773,39 @@ class UserReconciliationCsvImport(BaseModel):
         self.send_email(subject, emails, context, language)
 
 
+class IdInPath(models.Func):  # pylint: disable=abstract-method
+    """
+    Whether an item id is one of the labels of a path, meaning the item is the one at
+    the path or one of its ancestors: an item path is made of its ancestors ids and its
+    own id.
+
+    Prefer it to an `item__path__ancestors` lookup in correlated subqueries: it is
+    resolved on the item id index of the filtered table without joining items, where
+    the ancestors lookup scans every row of the filtered table that matches the other
+    conditions (e.g. all the accesses of a user) for each outer row.
+
+    Measured on a production sized dataset (4M items, 140k accesses), for a user
+    holding 1,526 accesses and listing 200 items: the user roles subquery took
+    830ms with `item__path__ancestors`, because Postgres went through all the
+    accesses of the user for each listed item (305k index lookups). With IdInPath
+    it takes 5ms, with the same results. Do not switch back to `__ancestors` here:
+    its `@>` operator can only use the GiST index of paths, and Postgres misestimates
+    it, so it picks the wrong side of the join. See docs/scaling.md.
+    """
+
+    arity = 2
+    output_field = models.BooleanField()
+
+    def as_sql(self, compiler, connection, **extra_context):  # pylint: disable=arguments-differ
+        """Compare the id to the path labels cast to uuids."""
+        id_sql, id_params = compiler.compile(self.source_expressions[0])
+        path_sql, path_params = compiler.compile(self.source_expressions[1])
+        return (
+            f"{id_sql} = ANY(string_to_array(({path_sql})::text, '.')::uuid[])",
+            (*id_params, *path_params),
+        )
+
+
 class AnnotateUserRoleQuerySetMixin:
     """Mixin to use in a QuerySet to add user_roles annotation."""
 
@@ -786,7 +819,7 @@ class AnnotateUserRoleQuerySetMixin:
         if user.is_authenticated:
             user_roles_subquery = ItemAccess.objects.filter(
                 models.Q(user=user) | models.Q(team__in=user.teams),
-                item__path__ancestors=models.OuterRef(self.path_property),
+                IdInPath(models.F("item_id"), models.OuterRef(self.path_property)),
             ).values_list("role", flat=True)
 
             return self.annotate(
@@ -885,7 +918,7 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         if user.is_authenticated:
             user_roles_subquery = ItemAccess.objects.filter(
                 models.Q(user=user) | models.Q(team__in=user.teams),
-                item__path__ancestors=models.OuterRef("path"),
+                IdInPath(models.F("item_id"), models.OuterRef("path")),
             ).values_list("role", flat=True)
 
             return self.annotate(
