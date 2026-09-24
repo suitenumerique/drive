@@ -46,6 +46,19 @@ def test_models_items_id_in_path(tree):
     assert set(matched) == {accesses["root"], accesses["parent"], accesses["child"]}
 
 
+def test_models_items_id_in_subtrees(tree):
+    """IdInSubtrees should match the same items as OR-ing descendants lookups."""
+    paths = [tree["parent"].path, tree["other_root"].path]
+
+    matched = models.Item.objects.filter(models.IdInSubtrees(F("id"), paths))
+
+    assert set(matched) == {tree["parent"], tree["child"], tree["other_root"]}
+    assert set(matched) == set(
+        models.Item.objects.filter(path__descendants=paths[0])
+        | models.Item.objects.filter(path__descendants=paths[1])
+    )
+
+
 def test_models_items_compute_items_ancestors_links_paths_mapping(tree, django_assert_num_queries):
     """
     The mapping computed at once for several items should match, at the parent path of

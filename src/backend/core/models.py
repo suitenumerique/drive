@@ -806,6 +806,82 @@ class IdInPath(models.Func):  # pylint: disable=abstract-method
         )
 
 
+# ltree compares labels byte by byte and the hyphen is the lowest byte allowed in a
+# label, so the subtree of "a.b" (the path itself and all its descendants, and only
+# them) sorts in ["a.b", "a.b-"). Looking a subtree up as a range of the path btree
+# index is much faster than a `path__descendants` lookup on the GiST index.
+SUBTREE_UPPER_BOUND_SUFFIX = "-"
+
+
+class IdInSubtrees(models.Func):  # pylint: disable=abstract-method
+    """
+    Whether an item id belongs to one of the subtrees rooted at the given paths.
+
+    Equivalent to OR-ing `path__descendants` lookups, which Postgres resolves with one
+    scan of the GiST index per path: too slow for users reaching thousands of trees.
+    Instead, each subtree is looked up as a range of the path btree index. Ids are read
+    from the last label of the paths found, which lets the btree answer alone, and the
+    whole list is computed once before looking items up by id.
+    """
+
+    arity = 1
+    output_field = models.BooleanField()
+
+    def __init__(self, expression, paths, **extra):
+        super().__init__(expression, **extra)
+        self.paths = [str(path) for path in paths]
+
+    def as_sql(self, compiler, connection, **extra_context):  # pylint: disable=arguments-differ
+        """Build the id list from a join of the subtree ranges on the path index."""
+        # Example with paths ["A.B", "F"], where every label is an item id:
+        #
+        #   tree                     path btree index (sorted)
+        #   A                        A.B     ┐ subtree of A.B: ["A.B", "A.B-")
+        #   ├── A.B      ← path      A.B.C   ┘
+        #   │   └── A.B.C            A.C       excluded: "A.C" sorts after "A.B-"
+        #   └── A.C                  F       ┐ subtree of F: ["F", "F-")
+        #   F            ← path      F.G     ┘
+        #   └── F.G
+        #
+        # 1. The query receives two parameters, the lower and upper bounds:
+        #        %s = ["A.B", "F"]      %s = ["A.B-", "F-"]
+        #    unnest() with two arrays reads them side by side, element by element,
+        #    and builds a table with one row per subtree, named "subtree":
+        #        subtree
+        #        lower_bound | upper_bound
+        #        ------------+------------
+        #        A.B         | A.B-
+        #        F           | F-
+        #    The ::text[]::ltree[] casts turn the Python lists of strings into ltree
+        #    arrays, so that the bounds can be compared with paths.
+        # 2. Each row of "subtree" is joined with a range scan of the unique btree
+        #    index on paths, which returns A.B, A.B.C, F and F.G.
+        # 3. subpath(path, -1) keeps the last label, which is the item id: B, C, F, G.
+        #    Reading only the path lets Postgres answer from the btree alone (index
+        #    only scan). Selecting subtree_item.id instead needs the table, and
+        #    Postgres then picks the GiST index, about 40 times slower.
+        # 4. ARRAY() does not depend on the outer row: Postgres computes the id list
+        #    once, then looks the outer items up by primary key with
+        #    "id = ANY(...)". Written as "id IN (subquery)", the ranges were
+        #    misestimated and Postgres scanned the whole item table instead.
+        id_sql, id_params = compiler.compile(self.source_expressions[0])
+        table = connection.ops.quote_name(Item._meta.db_table)  # noqa: SLF001
+        # Only the compiled id expression and the quoted table name are interpolated
+        return (
+            f"{id_sql} = ANY(ARRAY("  # noqa: S608
+            "SELECT subpath(subtree_item.path, -1)::text::uuid "
+            "FROM unnest(%s::text[]::ltree[], %s::text[]::ltree[]) "
+            "AS subtree(lower_bound, upper_bound) "
+            f"JOIN {table} AS subtree_item ON subtree_item.path >= subtree.lower_bound "
+            "AND subtree_item.path < subtree.upper_bound))",
+            (
+                *id_params,
+                self.paths,
+                [f"{path}{SUBTREE_UPPER_BOUND_SUFFIX}" for path in self.paths],
+            ),
+        )
+
+
 class AnnotateUserRoleQuerySetMixin:
     """Mixin to use in a QuerySet to add user_roles annotation."""
 
