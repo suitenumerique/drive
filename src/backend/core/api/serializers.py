@@ -264,6 +264,17 @@ class RestrictionTargetSerializer(serializers.ModelSerializer):
         )
 
 
+class ItemListSerializer(serializers.ListSerializer):
+    """Serialize a list of items, reading what can be read at once for all of them."""
+
+    def to_representation(self, data):
+        """Read the number of accesses of all the items from the cache at once."""
+        items = list(data.all() if hasattr(data, "all") else data)
+        if "nb_accesses" in self.child.fields:
+            models.Item.prefetch_nb_accesses(items)
+        return super().to_representation(items)
+
+
 class ListItemSerializer(serializers.ModelSerializer):
     """Serialize items with limited fields for display in lists."""
 
@@ -281,6 +292,7 @@ class ListItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Item
+        list_serializer_class = ItemListSerializer
         fields = [
             "id",
             "abilities",

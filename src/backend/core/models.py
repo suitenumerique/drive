@@ -1359,6 +1359,22 @@ class Item(TreeModel, BaseModel):
             title,
         )
 
+    @classmethod
+    def prefetch_nb_accesses(cls, items):
+        """
+        Read the cached number of accesses of many items in a single cache round trip,
+        items missing from the cache compute it when their `nb_accesses` is read.
+        """
+        items_by_cache_key = {
+            item.get_nb_accesses_cache_key(): item
+            for item in items
+            if not hasattr(item, "_nb_accesses")
+        }
+        for cache_key, nb_accesses in cache.get_many(list(items_by_cache_key)).items():
+            if nb_accesses is not None:
+                # pylint: disable-next=protected-access
+                items_by_cache_key[cache_key]._nb_accesses = nb_accesses  # noqa: SLF001
+
     @property
     def nb_accesses(self):
         """Calculate the number of accesses."""

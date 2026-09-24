@@ -4,6 +4,7 @@ Unit tests for the lookups relying on item paths being made of item ids
 
 from unittest import mock
 
+from django.core.cache import cache
 from django.db.models import F, Value
 
 import pytest
@@ -122,6 +123,22 @@ def test_models_items_compute_items_ancestors_links_paths_mapping_roots(
         )
 
     assert not mapping
+
+
+def test_models_items_prefetch_nb_accesses(tree, django_assert_num_queries):
+    """The cached number of accesses of many items should be read at once."""
+    cache.set(tree["parent"].get_nb_accesses_cache_key(), 7)
+    items = [tree["parent"], tree["child"]]
+
+    with mock.patch.object(cache, "get_many", wraps=cache.get_many) as cache_get_many:
+        models.Item.prefetch_nb_accesses(items)
+
+    cache_get_many.assert_called_once()
+    with django_assert_num_queries(0):
+        assert items[0].nb_accesses == 7
+    # Items missing from the cache still compute their number of accesses
+    factories.UserItemAccessFactory(item=tree["root"])
+    assert items[1].nb_accesses == 1
 
 
 def test_models_items_serializer_fetches_wopi_configuration_once():
