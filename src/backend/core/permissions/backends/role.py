@@ -190,15 +190,21 @@ class RolePermissionsBackend(PermissionsBackend):
 
     def effective_accesses(self, item: models.Item) -> QuerySet[models.ItemAccess]:
         """Return the accesses applying to the item, direct or inherited."""
-        return models.ItemAccess.objects.filter(
-            item__path__ancestors=item.path,
-        )
+        # The path labels are the ids of the item and its ancestors (see IdInPath),
+        # looking them up by id is much faster than an ancestors lookup on paths,
+        # see roles_at and docs/scaling.md
+        return models.ItemAccess.objects.filter(item_id__in=str(item.path).split("."))
 
     def roles_at(self, user: models.User | AnonymousUser, path: str) -> QuerySet[str]:
         """Return the roles the user holds at the given path, direct or inherited."""
+        # Not `item__path__ancestors=path`: its `@>` operator can only use the GiST
+        # index of paths, about 10ms per call on a large database (2.4s for the 200
+        # items of a page). The path labels are the ids of the item and its
+        # ancestors (see IdInPath), so the accesses are looked up on their item id
+        # index instead: 85ms for the same 200 items. See docs/scaling.md.
         return models.ItemAccess.objects.filter(
             Q(user=user) | Q(team__in=user.teams),
-            item__path__ancestors=path,
+            item_id__in=str(path).split("."),
         ).values_list("role", flat=True)
 
     def abilities(
