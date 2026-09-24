@@ -526,15 +526,11 @@ class ItemViewSet(
             skip_sorting=True,
         )
 
-        path_list = db.Q()
-        for path in root_paths:
-            path_list |= db.Q(path__descendants=path)
-
         queryset = self.queryset.select_related("creator").annotate_has_restriction()
         # Remove items with upload_state SUSPICIOUS for non-creators
         queryset = self._filter_suspicious_items(queryset, user)
         queryset = self._exclude_pending_items(queryset)
-        queryset = queryset.filter(path_list)
+        queryset = queryset.filter(models.IdInSubtrees(db.F("id"), root_paths))
         queryset = queryset.filter(ancestors_deleted_at__isnull=True)
 
         return queryset
