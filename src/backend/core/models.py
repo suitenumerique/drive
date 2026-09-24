@@ -891,8 +891,8 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         """Filter items the given user owns, directly or through an ancestor access."""
         owner_access = ItemAccess.objects.filter(
             models.Q(user=user) | models.Q(team__in=user.teams),
+            IdInPath(models.F("item_id"), models.OuterRef("path")),
             role=RoleChoices.OWNER,
-            item__path__ancestors=models.OuterRef("path"),
         )
         return self.filter(models.Exists(owner_access))
 

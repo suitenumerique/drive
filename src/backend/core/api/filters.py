@@ -2,7 +2,7 @@
 
 from itertools import chain
 
-from django.db.models import Exists, OuterRef, Q, TextChoices
+from django.db.models import Exists, F, OuterRef, Q, TextChoices
 from django.utils.translation import gettext_lazy as _
 
 import django_filters
@@ -84,7 +84,7 @@ class ItemFilter(django_filters.FilterSet):
                 → Filters items shared with or by the given user
         """
         contact_access = models.ItemAccess.objects.filter(
-            user_id=value, item__path__ancestors=OuterRef("path")
+            models.IdInPath(F("item_id"), OuterRef("path")), user_id=value
         )
         return queryset.filter(Exists(contact_access) | Q(creator_id=value))
 
