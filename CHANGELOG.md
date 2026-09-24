@@ -17,6 +17,10 @@ and this project adheres to
 
 - 🔧(docker) replace MinIO with RustFS for local object storage
 
+### Fixed
+
+- ⚡️(backend) speed up the item list, recents and favorites on large databases
+
 ## [v0.23.0] - 2026-09-23
 
 ### Added
