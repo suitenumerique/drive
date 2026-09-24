@@ -141,10 +141,10 @@ jobs:
           path: "src/backend/core/templates/mail"
           key: mail-templates-${{ hashFiles('src/mail/mjml') }}
 
-      - name: Start and configure MinIO
+      - name: Start and configure RustFS
         working-directory: .
         run: |
-          bin/compose up -d --wait minio-ci
+          bin/compose up -d --wait rustfs-ci
           bin/compose run createbuckets-ci
 
       - name: "Set up Python"
