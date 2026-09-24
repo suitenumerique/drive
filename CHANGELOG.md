@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) add a command to generate a production sized dataset
+
 ### Changed
 
 - 🔧(docker) replace MinIO with RustFS for local object storage
