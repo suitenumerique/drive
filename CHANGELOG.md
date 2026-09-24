@@ -12,6 +12,7 @@ and this project adheres to
 
 - ✨(backend) rate limit the item creation endpoints
 - ✨(backend) add a command to generate a production sized dataset
+- ✨(backend) add a command to profile the main API endpoints
 
 ### Changed
 
