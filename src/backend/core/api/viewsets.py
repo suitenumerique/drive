@@ -796,13 +796,13 @@ class ItemViewSet(
                 db.Exists(
                     models.ItemAccess.objects.filter(
                         db.Q(user=user) | db.Q(team__in=user.teams),
-                        item__path__ancestors=db.OuterRef("path"),
+                        models.IdInPath(db.F("item_id"), db.OuterRef("path")),
                     )
                 )
                 | (
                     db.Exists(
                         models.Item.objects.filter(
-                            path__ancestors=db.OuterRef("path"),
+                            models.IdInPath(db.F("id"), db.OuterRef("path")),
                             link_reach__in=[
                                 LinkReachChoices.PUBLIC,
                                 LinkReachChoices.AUTHENTICATED,
@@ -811,7 +811,7 @@ class ItemViewSet(
                     )
                     & db.Exists(
                         models.LinkTrace.objects.filter(
-                            user=user, item__path__ancestors=db.OuterRef("path")
+                            models.IdInPath(db.F("item_id"), db.OuterRef("path")), user=user
                         )
                     )
                 )
