@@ -806,7 +806,7 @@ class ItemViewSet(
         # Apply ordering only now that everyting is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
-        return self.get_response_for_queryset(queryset)
+        return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
     @drf.decorators.action(detail=True, methods=["post"], url_path="upload-ended")
     def upload_ended(self, request, *args, **kwargs):
