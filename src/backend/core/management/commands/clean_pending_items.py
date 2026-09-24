@@ -1,11 +1,15 @@
 """Clean stale pending items that were never fully uploaded."""
 
+import logging
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.utils import timezone
 
 from core.models import Item, ItemUploadStateChoices
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -31,9 +35,20 @@ class Command(BaseCommand):
         )
 
         count = 0
+        failed = 0
         for item in items.iterator():
-            item.soft_delete()
-            item.delete()
+            try:
+                with transaction.atomic():
+                    # The item may already be in the trash, directly or through an ancestor
+                    if item.deleted_at is None and item.ancestors_deleted_at is None:
+                        item.soft_delete()
+                    item.delete()
+            except Exception:  # pylint: disable=broad-exception-caught
+                logger.exception("Failed to clean stale pending item %s", item.pk)
+                failed += 1
+                continue
             count += 1
 
         self.stdout.write(f"Cleaned {count} stale pending item(s).")
+        if failed:
+            self.stderr.write(f"Failed to clean {failed} stale pending item(s).")

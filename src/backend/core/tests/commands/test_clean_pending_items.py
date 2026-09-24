@@ -1,6 +1,7 @@
 """Tests for the clean_pending_items management command."""
 
 from datetime import timedelta
+from unittest import mock
 
 from django.core.management import call_command
 from django.utils import timezone
@@ -80,3 +81,63 @@ def test_clean_pending_items_custom_hours():
     call_command("clean_pending_items", "--hours=8")
 
     assert not models.Item.objects.filter(pk=item.pk).exists()
+
+
+def test_clean_pending_items_already_soft_deleted():
+    """Old pending items already in the trash should be deleted without error."""
+    old_date = timezone.now() - timedelta(hours=49)
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.PENDING,
+    )
+    models.Item.objects.filter(pk=item.pk).update(created_at=old_date)
+    item.soft_delete()
+
+    call_command("clean_pending_items")
+
+    assert not models.Item.objects.filter(pk=item.pk).exists()
+
+
+def test_clean_pending_items_ancestor_soft_deleted():
+    """Old pending items whose parent is in the trash should be deleted without error."""
+    old_date = timezone.now() - timedelta(hours=49)
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.PENDING,
+    )
+    models.Item.objects.filter(pk=item.pk).update(created_at=old_date)
+    parent.soft_delete()
+
+    call_command("clean_pending_items")
+
+    assert not models.Item.objects.filter(pk=item.pk).exists()
+    assert models.Item.objects.filter(pk=parent.pk).exists()
+
+
+def test_clean_pending_items_failure_does_not_stop_others():
+    """A failure on one item is rolled back and the other items are still cleaned."""
+    old_date = timezone.now() - timedelta(hours=49)
+    items = factories.ItemFactory.create_batch(
+        2,
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.PENDING,
+    )
+    models.Item.objects.filter(pk__in=[i.pk for i in items]).update(created_at=old_date)
+    failing, other = items
+
+    original_delete = models.Item.delete
+
+    def delete(self, *args, **kwargs):
+        if self.pk == failing.pk:
+            raise RuntimeError("boom")
+        return original_delete(self, *args, **kwargs)
+
+    with mock.patch.object(models.Item, "delete", delete):
+        call_command("clean_pending_items")
+
+    assert not models.Item.objects.filter(pk=other.pk).exists()
+    # The soft delete of the failing item was rolled back with the failed delete
+    failing.refresh_from_db()
+    assert failing.deleted_at is None
