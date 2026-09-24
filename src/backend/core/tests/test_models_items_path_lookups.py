@@ -59,6 +59,35 @@ def test_models_items_id_in_subtrees(tree):
     )
 
 
+def test_models_items_path_in_subtree_lookup(tree):
+    """The in_subtree lookup should match the same items as the descendants lookup."""
+    matched = models.Item.objects.filter(path__in_subtree=tree["parent"].path)
+
+    assert set(matched) == {tree["parent"], tree["child"]}
+    assert set(matched) == set(models.Item.objects.filter(path__descendants=tree["parent"].path))
+
+    matched = models.Item.objects.filter(path__in_subtree=tree["root"].path)
+
+    assert set(matched) == {
+        tree["root"],
+        tree["parent"],
+        tree["child"],
+        tree["sibling"],
+        tree["nephew"],
+    }
+
+
+def test_models_items_numchild_annotation_ignores_siblings_subtrees(tree):
+    """The children of a sibling or of a child should not be counted."""
+    item = models.Item.objects.annotate_with_numchild().get(pk=tree["parent"].pk)
+    assert item.numchild == 1
+    assert item.numchild_folder == 1
+
+    item = models.Item.objects.annotate_with_numchild().get(pk=tree["root"].pk)
+    assert item.numchild == 2
+    assert item.numchild_folder == 2
+
+
 def test_models_items_compute_items_ancestors_links_paths_mapping(tree, django_assert_num_queries):
     """
     The mapping computed at once for several items should match, at the parent path of
