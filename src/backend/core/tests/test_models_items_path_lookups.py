@@ -2,11 +2,15 @@
 Unit tests for the lookups relying on item paths being made of item ids
 """
 
+from unittest import mock
+
 from django.db.models import F, Value
 
 import pytest
+from rest_framework.test import APIRequestFactory
 
 from core import factories, models
+from core.api.serializers import ListItemSerializer
 
 pytestmark = pytest.mark.django_db
 
@@ -118,3 +122,29 @@ def test_models_items_compute_items_ancestors_links_paths_mapping_roots(
         )
 
     assert not mapping
+
+
+def test_models_items_serializer_fetches_wopi_configuration_once():
+    """The WOPI configuration should be fetched once for all the serialized items."""
+    user = factories.UserFactory()
+    items = factories.ItemFactory.create_batch(
+        3,
+        type=models.ItemTypeChoices.FILE,
+        creator=user,
+        users=[user],
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    request = APIRequestFactory().get("/")
+    request.user = user
+
+    with mock.patch(
+        "wopi.utils.get_wopi_configuration", return_value={"extensions": {}, "mimetypes": {}}
+    ) as get_wopi_configuration:
+        data = ListItemSerializer(
+            models.Item.objects.annotate_user_roles(user).filter(pk__in=[i.pk for i in items]),
+            many=True,
+            context={"request": request},
+        ).data
+
+    assert len(data) == 3
+    get_wopi_configuration.assert_called_once()
