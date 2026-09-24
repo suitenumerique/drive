@@ -492,8 +492,16 @@ class ItemViewSet(
             if item.computed_link_reach != LinkReachChoices.RESTRICTED:
                 traced_items_ids.append(item.id)
 
-        # Among all these items remove them that are restricted
-        return queryset.filter(db.Q(id__in=access_items_ids) | (db.Q(id__in=traced_items_ids)))
+        # Among all these items remove them that are restricted. A single subquery lets
+        # Postgres look items up by primary key, an OR would scan the whole table.
+        if traced_items_ids:
+            access_items_ids = access_items_ids.order_by().union(
+                models.Item.objects.filter(id__in=traced_items_ids)
+                .order_by()
+                .values_list("id", flat=True),
+                all=True,
+            )
+        return queryset.filter(id__in=access_items_ids)
 
     def get_queryset_for_descendants(self):
         """
