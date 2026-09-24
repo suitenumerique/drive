@@ -993,6 +993,16 @@ class Base(Configuration):
     )
     PURGE_GRACE_DAYS = values.Value(7, environ_name="PURGE_GRACE_DAYS", environ_prefix=None)
 
+    # Management commands scheduled by celery beat, as an alternative to external
+    # cron jobs. A crontab line followed by the command arguments, e.g.
+    # "30 0 * * * --hours=48". Empty: not scheduled.
+    CLEAN_PENDING_ITEMS_SCHEDULE = values.Value(
+        None, environ_name="CLEAN_PENDING_ITEMS_SCHEDULE", environ_prefix=None
+    )
+    PURGE_DELETED_ITEMS_SCHEDULE = values.Value(
+        None, environ_name="PURGE_DELETED_ITEMS_SCHEDULE", environ_prefix=None
+    )
+
     # Mail
     EMAIL_BACKEND = values.Value("django.core.mail.backends.smtp.EmailBackend")
     EMAIL_BRAND_NAME = values.Value(None)
