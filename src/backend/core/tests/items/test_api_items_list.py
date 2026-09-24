@@ -375,11 +375,11 @@ def test_api_items_list_authenticated_link_reach_restricted(
     folder_item = factories.ItemFactory(link_reach="public", type=models.ItemTypeChoices.FOLDER)
     models.LinkTrace.objects.create(item=folder_item, user=user)
 
-    with django_assert_num_queries(8):
+    with django_assert_num_queries(7):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(6):
+    with django_assert_num_queries(5):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
@@ -433,11 +433,11 @@ def test_api_items_list_authenticated_link_reach_public_or_authenticated(
         str(visible_child.id),
     }
 
-    with django_assert_num_queries(12):
+    with django_assert_num_queries(10):
         response = client.get("/api/v1.0/items/")
 
     # nb_accesses should now be cached
-    with django_assert_num_queries(9):
+    with django_assert_num_queries(7):
         response = client.get("/api/v1.0/items/")
 
     assert response.status_code == 200
