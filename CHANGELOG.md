@@ -25,6 +25,11 @@ and this project adheres to
 - 🧑‍💻(project) install frontend dependencies via container in bootstrap
 - 🐛(backend) gate item creation at the root on the upload entitlement
 
+### Added
+
+- ✨(backend) allow to leave an item #826
+- ✨(frontend) allow to leave an item #826
+
 ## [v0.22.0] - 2026-09-09
 
 ### Added

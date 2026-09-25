@@ -181,6 +181,7 @@ export abstract class Driver {
     title: string;
   }): Promise<Item>;
   abstract duplicateItem(id: string): Promise<Item>;
+  abstract leaveItem(id: string): Promise<void>;
   abstract deleteItems(ids: string[]): Promise<void>;
   abstract hardDeleteItems(ids: string[]): Promise<void>;
   abstract getWopiInfo(itemId: string): Promise<WopiInfo>;
