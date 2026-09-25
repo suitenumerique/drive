@@ -17,11 +17,11 @@
     "build-theme": "yarn workspace drive build-theme"
   },
   "resolutions": {
-    "postcss": "8.5.26",
+    "postcss": "8.5.28",
     "sharp": "0.35.3"
   },
   "devDependencies": {
-    "turbo": "2.9.14"
+    "turbo": "2.10.12"
   },
   "packageManager": "yarn@1.22.22"
 }
