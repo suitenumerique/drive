@@ -492,8 +492,16 @@ class ItemViewSet(
             if item.computed_link_reach != LinkReachChoices.RESTRICTED:
                 traced_items_ids.append(item.id)
 
-        # Among all these items remove them that are restricted
-        return queryset.filter(db.Q(id__in=access_items_ids) | (db.Q(id__in=traced_items_ids)))
+        # Among all these items remove them that are restricted. A single subquery lets
+        # Postgres look items up by primary key, an OR would scan the whole table.
+        if traced_items_ids:
+            access_items_ids = access_items_ids.order_by().union(
+                models.Item.objects.filter(id__in=traced_items_ids)
+                .order_by()
+                .values_list("id", flat=True),
+                all=True,
+            )
+        return queryset.filter(id__in=access_items_ids)
 
     def get_queryset_for_descendants(self):
         """
@@ -518,15 +526,11 @@ class ItemViewSet(
             skip_sorting=True,
         )
 
-        path_list = db.Q()
-        for path in root_paths:
-            path_list |= db.Q(path__descendants=path)
-
         queryset = self.queryset.select_related("creator").annotate_has_restriction()
         # Remove items with upload_state SUSPICIOUS for non-creators
         queryset = self._filter_suspicious_items(queryset, user)
         queryset = self._exclude_pending_items(queryset)
-        queryset = queryset.filter(path_list)
+        queryset = queryset.filter(models.IdInSubtrees(db.F("id"), root_paths))
         queryset = queryset.filter(ancestors_deleted_at__isnull=True)
 
         return queryset
@@ -564,44 +568,10 @@ class ItemViewSet(
 
     def _compute_ancestors_link_definition(self, items):
         """
-        Compute ancestors link definition for the items collection.
-        On the collection, we look for the deepest items, compute ancestors link definition
-        for each item and aggregate them in order to inject it in the serializer context.
+        Compute ancestors link definition for the items collection, in order to inject
+        it in the serializer context.
         """
-        if not items:
-            return {}
-
-        # Find deepest items and group them by parent path
-        # Items at the same depth in multiple trees (same parent path) share the same ancestors,
-        items_sorted = sorted(items, key=lambda x: len(x.path), reverse=True)
-        items_by_tree = {}  # Group deepest items by parent_path
-        seen_paths = set()  # Track all paths we've processed
-
-        for item in items_sorted:
-            # Check if this item is a parent of any longer path we've already seen
-            # A descendant path would start with the item's path followed by a dot
-            item_path_prefix = f"{item.path}."
-            has_descendants = any(
-                seen_path.startswith(item_path_prefix) for seen_path in seen_paths
-            )
-
-            if not has_descendants:
-                # Get parent path (empty string for root items)
-                parent_path = str(item.path[:-1]) if item.depth > 1 else ""
-                if parent_path not in items_by_tree:
-                    items_by_tree[parent_path] = item
-
-            # Add this item's path to the set for future checks (shorter paths)
-            seen_paths.add(str(item.path))
-
-        # Compute ancestors links paths mapping for one item per tree group and aggregate
-        paths_links_mapping = {}
-        for item in items_by_tree.values():
-            item_mapping = item.compute_ancestors_links_paths_mapping()
-            paths_links_mapping |= item_mapping
-
-        # Update the serializer context with the aggregated mapping
-        return paths_links_mapping
+        return models.Item.compute_items_ancestors_links_paths_mapping(items)
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -796,13 +766,13 @@ class ItemViewSet(
                 db.Exists(
                     models.ItemAccess.objects.filter(
                         db.Q(user=user) | db.Q(team__in=user.teams),
-                        item__path__ancestors=db.OuterRef("path"),
+                        models.IdInPath(db.F("item_id"), db.OuterRef("path")),
                     )
                 )
                 | (
                     db.Exists(
                         models.Item.objects.filter(
-                            path__ancestors=db.OuterRef("path"),
+                            models.IdInPath(db.F("id"), db.OuterRef("path")),
                             link_reach__in=[
                                 LinkReachChoices.PUBLIC,
                                 LinkReachChoices.AUTHENTICATED,
@@ -811,7 +781,7 @@ class ItemViewSet(
                     )
                     & db.Exists(
                         models.LinkTrace.objects.filter(
-                            user=user, item__path__ancestors=db.OuterRef("path")
+                            models.IdInPath(db.F("item_id"), db.OuterRef("path")), user=user
                         )
                     )
                 )
@@ -832,7 +802,7 @@ class ItemViewSet(
         # Apply ordering only now that everyting is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
-        return self.get_response_for_queryset(queryset)
+        return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
     @drf.decorators.action(detail=True, methods=["post"], url_path="upload-ended")
     def upload_ended(self, request, *args, **kwargs):

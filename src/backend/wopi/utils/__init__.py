@@ -15,16 +15,17 @@ from wopi.tasks.configure_wopi import (
 LAUNCH_URL_PLACEHOLDER_REGEX = r"(<(?P<name>[a-z]+)=(?P<placeholder>[a-zA-Z0-9_]+)&?>)"
 
 
-def is_item_wopi_supported(item, user):
+def is_item_wopi_supported(item, user, wopi_configuration=None):
     """
     Check if an item is supported by WOPI.
     """
-    return bool(get_wopi_client_config(item, user))
+    return bool(get_wopi_client_config(item, user, wopi_configuration=wopi_configuration))
 
 
-def get_wopi_client_config(item, user):
+def get_wopi_client_config(item, user, wopi_configuration=None):
     """
-    Get the WOPI client configuration for an item.
+    Get the WOPI client configuration for an item. The WOPI configuration can be
+    passed when checking many items, to fetch it from the cache only once.
     """
     if (
         item.type != models.ItemTypeChoices.FILE
@@ -33,7 +34,8 @@ def get_wopi_client_config(item, user):
     ):
         return None
 
-    wopi_configuration = get_wopi_configuration()
+    if wopi_configuration is None:
+        wopi_configuration = get_wopi_configuration()
 
     if not wopi_configuration:
         return None

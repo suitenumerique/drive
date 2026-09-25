@@ -8,9 +8,18 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) add a command to generate a production sized dataset
+- ✨(backend) add a command to profile the main API endpoints
+
 ### Changed
 
 - 🔧(docker) replace MinIO with RustFS for local object storage
+
+### Fixed
+
+- ⚡️(backend) speed up the item list, recents and favorites on large databases
 
 ## [v0.23.0] - 2026-09-23
 

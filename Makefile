@@ -227,6 +227,11 @@ reconciliation-demo: resetdb
 	@$(MANAGE) create_reconciliation_demo
 .PHONY: reconciliation-demo
 
+perf-dataset: ## flush db then create a production sized dataset to profile queries
+perf-dataset: resetdb
+	@$(MANAGE) create_perf_dataset
+.PHONY: perf-dataset
+
 index: ## index all files to remote search
 	@$(MANAGE) index
 .PHONY: index
