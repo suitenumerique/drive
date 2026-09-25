@@ -21,5 +21,31 @@
       color: var(--c--contextuals--content--semantic--neutral--primary);
       text-align: center;
     }
+
+    &__message {
+      width: 100%;
+      max-width: 28rem;
+      resize: vertical;
+      font-family: var(--font-family);
+      font-size: 1rem;
+      line-height: 1.5;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid
+        var(--c--contextuals--content--semantic--neutral--tertiary);
+      border-radius: 0.25rem;
+      background-color: #fff;
+      color: var(--c--contextuals--content--semantic--neutral--primary);
+    }
+
+    &__label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      align-self: flex-start;
+      color: var(--c--contextuals--content--semantic--neutral--secondary);
+    }
+
+    &__error {
+      color: var(--c--components--badge--danger--color) !important;
+    }
   }
 }
