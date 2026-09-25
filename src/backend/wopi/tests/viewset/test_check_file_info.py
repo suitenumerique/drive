@@ -14,7 +14,7 @@ from rest_framework.test import APIClient
 
 from core import factories, models
 from wopi.exceptions import WopiRequestSignatureError
-from wopi.services.access import AccessUserItemService
+from wopi.services.access import AccessUserItemNotAllowed, AccessUserItemService
 from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
 from wopi.utils import signature as signature_utils
 
@@ -551,3 +551,70 @@ def test_check_file_info_connected_user_with_access_proof_keys_configured_but_no
             )
 
     mock_verify_wopi_proof.assert_not_called()
+
+
+def test_check_file_info_anonymous_user_link_password():
+    """The link unlocked when the token was issued should still grant access to the WOPI client."""
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_role=models.LinkRoleChoices.READER,
+    )
+    item.set_link_password("s3cret")
+    item.save()
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+
+    service = AccessUserItemService()
+    user = AnonymousUser()
+    with pytest.raises(AccessUserItemNotAllowed):
+        service.insert_new_access(item, user)
+
+    user.unlocked_link_items = {item.link_unlock_key}
+    access_token, _ = service.insert_new_access(item, user)
+
+    response = APIClient().get(
+        f"/api/v1.0/wopi/files/{item.id}/", HTTP_AUTHORIZATION=f"Bearer {access_token}"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["UserCanWrite"] is False
+
+
+@pytest.mark.parametrize("is_authenticated", [False, True])
+def test_check_file_info_password_change_revokes_token(is_authenticated):
+    """Changing a link password must revoke WOPI access granted by the old password."""
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.PUBLIC,
+        link_role=models.LinkRoleChoices.READER,
+    )
+    item.set_link_password("old-password")
+    item.save()
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+
+    client = APIClient()
+    if is_authenticated:
+        client.force_login(factories.UserFactory())
+    response = client.post(
+        f"/api/v1.0/items/{item.id}/unlock/", {"password": "old-password"}, format="json"
+    )
+    assert response.status_code == 200
+    service = AccessUserItemService()
+    access_token, _ = service.insert_new_access(item, response.wsgi_request.user)
+    wopi_client = APIClient()
+    response = wopi_client.get(
+        f"/api/v1.0/wopi/files/{item.id}/", HTTP_AUTHORIZATION=f"Bearer {access_token}"
+    )
+    assert response.status_code == 200
+
+    item.set_link_password("new-password")
+    item.save()
+
+    response = wopi_client.get(
+        f"/api/v1.0/wopi/files/{item.id}/", HTTP_AUTHORIZATION=f"Bearer {access_token}"
+    )
+    assert response.status_code == 403

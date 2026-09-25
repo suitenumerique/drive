@@ -348,10 +348,14 @@ def test_models_items_restricted_cuts_link_inheritance():
     assert folder.computed_link_definition == {
         "link_reach": LinkReachChoices.RESTRICTED,
         "link_role": None,
+        "link_password_item": None,
+        "link_unlock_key": None,
     }
     assert child.computed_link_definition == {
         "link_reach": LinkReachChoices.RESTRICTED,
         "link_role": None,
+        "link_password_item": None,
+        "link_unlock_key": None,
     }
 
 
