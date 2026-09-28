@@ -26,6 +26,10 @@ and this project adheres to
 - 🐛(backend) do not clean a pending item whose upload just ended
 - 🐛(backend) purge the stored object of stale pending items
 
+### Fixed
+
+- 🔒️(backend) serve WOPI file content as a sandboxed download
+
 ## [v0.23.0] - 2026-09-23
 
 ### Added
