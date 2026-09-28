@@ -4,7 +4,6 @@ import {
   IconSize,
   useDropdownMenu,
   UserMenu,
-  UserMenuItem,
   Button,
 } from "@gouvfr-lasuite/ui-components";
 import { useAuth } from "@/features/auth/Auth";
@@ -20,7 +19,6 @@ import { ModalEncryptionSettings } from "@/features/encryption/ModalEncryptionSe
 import { useCallback, useState } from "react";
 
 export const UserProfile = () => {
-  const { t } = useTranslation();
   const { user } = useAuth();
   const { hasKeys, isEnabled: isEncryptionEnabled } = useVaultClient();
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
@@ -48,31 +46,10 @@ export const UserProfile = () => {
             user={user}
             logout={logout}
             termOfServiceUrl="https://docs.numerique.gouv.fr/docs/8e298e03-c95f-44c7-be4a-ffb618af1854/"
-            actions={
-              <>
-                {isEncryptionEnabled && (
-                  <UserMenuItem
-                    label={
-                      hasKeys
-                        ? t(
-                            "encryption.user_menu.settings",
-                            "Encryption settings",
-                          )
-                        : t("encryption.user_menu.enable", "Enable encryption")
-                    }
-                    icon={
-                      <Icon
-                        name="verified_user"
-                        size={IconSize.SMALL}
-                        aria-hidden="true"
-                      />
-                    }
-                    onClick={handleEncryptionClick}
-                  />
-                )}
-                <LanguagePickerUserMenu />
-              </>
+            appSettingsCTA={
+              isEncryptionEnabled ? handleEncryptionClick : undefined
             }
+            actions={<LanguagePickerUserMenu />}
           />
 
           {isOnboardingOpen && (

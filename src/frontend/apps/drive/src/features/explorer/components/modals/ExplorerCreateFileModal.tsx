@@ -17,6 +17,7 @@ import {
   BlankOdfExtension,
 } from "@/features/encryption/blank-odf/createBlankOdf";
 import { useRouter } from "next/router";
+import { useConfig } from "@/features/config/ConfigProvider";
 import { useSetSelectedItems } from "../../stores/selectionStore";
 
 type Inputs = {
@@ -58,6 +59,7 @@ export const ExplorerCreateFileModal = (
   const createFileFromTemplate = useMutationCreateFileFromTemplate();
   const createFile = useMutationCreateFile();
   const router = useRouter();
+  const { config } = useConfig();
   const setSelectedItems = useSetSelectedItems();
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
@@ -81,7 +83,15 @@ export const ExplorerCreateFileModal = (
         type: MIME_BY_EXT[extension],
       });
       createFile.mutate(
-        { parent: props.parent, filename, file: blankFile },
+        {
+          parent: props.parent,
+          filename,
+          file: blankFile,
+          uploadAcl:
+            config.AWS_S3_UPLOAD_ACL === "default"
+              ? undefined
+              : config.AWS_S3_UPLOAD_ACL,
+        },
         { onSuccess },
       );
       return;

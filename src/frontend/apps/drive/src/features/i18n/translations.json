@@ -687,7 +687,15 @@
               "title": "This file could not be decrypted",
               "body": "Something went wrong while decrypting this file. Try again."
             }
-          }
+          },
+          "relay_unavailable_headline": "Could not reach the collaboration server",
+          "relay_unavailable_body": "We couldn't connect to the collaboration server, so we can't tell whether someone else is currently editing this document. Opening it anyway could overwrite their changes. Please check your network and try again in a few moments, or contact support if the problem persists.",
+          "peer_state_unavailable_headline": "Could not synchronise with the active editor",
+          "peer_state_unavailable_body": "Another user is already editing this document. We tried to fetch their live state to join the session safely, but they didn't respond. Opening the document anyway could corrupt it. Please try again in a few moments, or contact support if the problem persists.",
+          "peer_state_unavailable_retry": "Try again",
+          "peer_state_unavailable_view_only": "Open in read-only",
+          "peer_resyncing": "A co-editor is resyncing, holding on for a moment...",
+          "flushing_on_close": "Saving your changes before closing…"
         }
       },
       "anonymous_cta": {
@@ -789,7 +797,10 @@
           "description_file": "The file will be encrypted end-to-end. Only people you share it with will be able to access its contents.",
           "pending_users_one": "{{count}} collaborator has not enabled encryption yet. They will be added as pending and get access once they enable it.",
           "pending_users_many": "{{count}} collaborators have not enabled encryption yet. They will be added as pending and get access once they enable it.",
-          "pending_users_other": "{{count}} collaborators have not enabled encryption yet. They will be added as pending and get access once they enable it."
+          "pending_users_other": "{{count}} collaborators have not enabled encryption yet. They will be added as pending and get access once they enable it.",
+          "title_folder_into_chain": "Encrypt and move folder \"{{title}}\"",
+          "title_file_into_chain": "Encrypt and move file \"{{title}}\"",
+          "confirm_into_chain": "Encrypt & move"
         },
         "errors": {
           "self_missing_key": "You need to complete your encryption onboarding before encrypting this item.",
@@ -798,7 +809,9 @@
           "no_accesses": "No users with access found on the root item.",
           "nothing_to_encrypt_file": "This file is already encrypted.",
           "nothing_to_decrypt_file": "This file is already plaintext.",
-          "subtree_mutated": "The folder contents changed during the operation ({{added}} added, {{removed}} removed)."
+          "subtree_mutated": "The folder contents changed during the operation ({{added}} added, {{removed}} removed).",
+          "intochain_missing_parent": "Destination parent missing for encrypt-on-move.",
+          "intochain_keychain_failed": "Could not retrieve the destination key chain ({{err}})."
         },
         "missing_keys": {
           "title": "Enable encryption on this device",
@@ -846,10 +859,6 @@
         },
         "host_modal": {
           "label": "Encryption"
-        },
-        "user_menu": {
-          "settings": "Encryption settings",
-          "enable": "Enable encryption"
         }
       },
       "file_preview": {
@@ -1547,7 +1556,15 @@
               "title": "Ce fichier n'a pas pu être déchiffré",
               "body": "Une erreur est survenue lors du déchiffrement de ce fichier. Réessayez."
             }
-          }
+          },
+          "relay_unavailable_headline": "Impossible de joindre le serveur de collaboration",
+          "relay_unavailable_body": "Nous n'avons pas pu nous connecter au serveur de collaboration, nous ne pouvons donc pas savoir si quelqu'un modifie actuellement ce document. L'ouvrir quand même pourrait écraser ses modifications. Vérifiez votre connexion et réessayez dans quelques instants, ou contactez le support si le problème persiste.",
+          "peer_state_unavailable_headline": "Impossible de se synchroniser avec l'éditeur actif",
+          "peer_state_unavailable_body": "Une autre personne modifie déjà ce document. Nous avons tenté de récupérer son état en direct pour rejoindre la session en toute sécurité, mais sans réponse. Ouvrir le document quand même pourrait le corrompre. Réessayez dans quelques instants, ou contactez le support si le problème persiste.",
+          "peer_state_unavailable_retry": "Réessayer",
+          "peer_state_unavailable_view_only": "Ouvrir en lecture seule",
+          "peer_resyncing": "Un co-éditeur se resynchronise, patientez un instant...",
+          "flushing_on_close": "Enregistrement de vos modifications avant la fermeture…"
         }
       },
       "anonymous_cta": {
@@ -1649,7 +1666,10 @@
           "description_file": "Le fichier sera chiffré de bout en bout. Seules les personnes avec qui vous le partagez pourront y accéder.",
           "pending_users_one": "{{count}} personne n'a pas encore activé le chiffrement. Elle sera ajoutée en attente et aura accès dès qu'elle l'aura activé.",
           "pending_users_many": "{{count}} personnes n'ont pas encore activé le chiffrement. Elles seront ajoutées en attente et auront accès dès qu'elles l'auront activé.",
-          "pending_users_other": "{{count}} personnes n'ont pas encore activé le chiffrement. Elles seront ajoutées en attente et auront accès dès qu'elles l'auront activé."
+          "pending_users_other": "{{count}} personnes n'ont pas encore activé le chiffrement. Elles seront ajoutées en attente et auront accès dès qu'elles l'auront activé.",
+          "title_folder_into_chain": "Chiffrer et déplacer le dossier « {{title}} »",
+          "title_file_into_chain": "Chiffrer et déplacer le fichier « {{title}} »",
+          "confirm_into_chain": "Chiffrer et déplacer"
         },
         "errors": {
           "self_missing_key": "Vous devez terminer votre configuration du chiffrement avant de chiffrer cet élément.",
@@ -1658,7 +1678,9 @@
           "no_accesses": "Aucun utilisateur n'a accès à l'élément racine.",
           "nothing_to_encrypt_file": "Ce fichier est déjà chiffré.",
           "nothing_to_decrypt_file": "Ce fichier est déjà en clair.",
-          "subtree_mutated": "Le contenu du dossier a changé pendant l'opération ({{added}} ajoutés, {{removed}} supprimés)."
+          "subtree_mutated": "Le contenu du dossier a changé pendant l'opération ({{added}} ajoutés, {{removed}} supprimés).",
+          "intochain_missing_parent": "Le dossier de destination est introuvable pour le chiffrement lors du déplacement.",
+          "intochain_keychain_failed": "Impossible de récupérer la chaîne de clés de la destination ({{err}})."
         },
         "missing_keys": {
           "title": "Activer le chiffrement sur cet appareil",
@@ -1706,10 +1728,6 @@
         },
         "host_modal": {
           "label": "Chiffrement"
-        },
-        "user_menu": {
-          "settings": "Paramètres de chiffrement",
-          "enable": "Activer le chiffrement"
         }
       },
       "file_preview": {
@@ -2407,7 +2425,15 @@
               "title": "This file could not be decrypted",
               "body": "Something went wrong while decrypting this file. Try again."
             }
-          }
+          },
+          "relay_unavailable_headline": "Kan de samenwerkingsserver niet bereiken",
+          "relay_unavailable_body": "We konden geen verbinding maken met de samenwerkingsserver, dus we weten niet of iemand anders dit document op dit moment bewerkt. Het toch openen kan hun wijzigingen overschrijven. Controleer uw netwerk en probeer het over enkele ogenblikken opnieuw, of neem contact op met support als het probleem aanhoudt.",
+          "peer_state_unavailable_headline": "Kan niet synchroniseren met de actieve editor",
+          "peer_state_unavailable_body": "Iemand anders bewerkt dit document al. We probeerden hun actuele staat op te halen om veilig aan de sessie deel te nemen, maar kregen geen antwoord. Het document toch openen kan het beschadigen. Probeer het over enkele ogenblikken opnieuw, of neem contact op met support als het probleem aanhoudt.",
+          "peer_state_unavailable_retry": "Opnieuw proberen",
+          "peer_state_unavailable_view_only": "Alleen-lezen openen",
+          "peer_resyncing": "Een medebewerker synchroniseert opnieuw, even geduld...",
+          "flushing_on_close": "Uw wijzigingen worden opgeslagen voor het sluiten…"
         }
       },
       "anonymous_cta": {
@@ -2509,7 +2535,10 @@
           "description_file": "The file will be encrypted end-to-end. Only people you share it with will be able to access its contents.",
           "pending_users_one": "{{count}} collaborator has not enabled encryption yet. They will be added as pending and get access once they enable it.",
           "pending_users_many": "{{count}} collaborators have not enabled encryption yet. They will be added as pending and get access once they enable it.",
-          "pending_users_other": "{{count}} collaborators have not enabled encryption yet. They will be added as pending and get access once they enable it."
+          "pending_users_other": "{{count}} collaborators have not enabled encryption yet. They will be added as pending and get access once they enable it.",
+          "title_folder_into_chain": "Map \"{{title}}\" versleutelen en verplaatsen",
+          "title_file_into_chain": "Bestand \"{{title}}\" versleutelen en verplaatsen",
+          "confirm_into_chain": "Versleutelen en verplaatsen"
         },
         "errors": {
           "self_missing_key": "You need to complete your encryption onboarding before encrypting this item.",
@@ -2518,7 +2547,9 @@
           "no_accesses": "No users with access found on the root item.",
           "nothing_to_encrypt_file": "This file is already encrypted.",
           "nothing_to_decrypt_file": "This file is already plaintext.",
-          "subtree_mutated": "The folder contents changed during the operation ({{added}} added, {{removed}} removed)."
+          "subtree_mutated": "The folder contents changed during the operation ({{added}} added, {{removed}} removed).",
+          "intochain_missing_parent": "Doelmap ontbreekt voor versleutelen bij verplaatsen.",
+          "intochain_keychain_failed": "Kan de sleutelketen van de bestemming niet ophalen ({{err}})."
         },
         "missing_keys": {
           "title": "Enable encryption on this device",
@@ -2566,10 +2597,6 @@
         },
         "host_modal": {
           "label": "Encryption"
-        },
-        "user_menu": {
-          "settings": "Encryption settings",
-          "enable": "Enable encryption"
         }
       },
       "file_preview": {

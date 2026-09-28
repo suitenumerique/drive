@@ -4186,7 +4186,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               {state === 'peer-resyncing' &&
                 t(
                   'explorer.encrypted.peer_resyncing',
-                  'A co-editor is resyncing — holding on for a moment...'
+                  'A co-editor is resyncing, holding on for a moment...'
                 )}
               {(state === 'loading' || state === 'mounting') &&
                 t('explorer.encrypted.loading_editor', 'Loading editor...')}

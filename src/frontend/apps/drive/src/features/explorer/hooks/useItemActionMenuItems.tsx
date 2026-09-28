@@ -138,6 +138,36 @@ export const useItemActionMenuItems = ({
     const effectiveItem = { ...item, id: effectiveItemId };
     const showAddChildren = allowCreate;
 
+    const encryptionEntries: MenuItem[] = [
+      ...(isEncryptionEnabled && !item.is_encrypted && item.abilities?.encrypt
+        ? [
+            {
+              icon: <span className="material-icons">add_moderator</span>,
+              label: t("explorer.item.actions.encrypt", "Encrypt"),
+              callback: () => {
+                setCurrentItem(effectiveItem);
+                encryptModal.open();
+              },
+            },
+          ]
+        : []),
+      ...(item.is_encrypted && item.abilities?.remove_encryption
+        ? [
+            {
+              icon: <span className="material-icons">remove_moderator</span>,
+              label: t(
+                "explorer.item.actions.remove_encryption",
+                "Remove encryption",
+              ),
+              callback: () => {
+                setCurrentItem(effectiveItem);
+                removeEncryptionModal.open();
+              },
+            },
+          ]
+        : []),
+    ];
+
     return [
       ...(showAddChildren
         ? [
@@ -236,34 +266,9 @@ export const useItemActionMenuItems = ({
         },
       },
       { type: "separator" },
-      ...(isEncryptionEnabled && !item.is_encrypted && item.abilities?.encrypt
-        ? [
-            {
-              icon: <span className="material-icons">add_moderator</span>,
-              label: t("explorer.item.actions.encrypt", "Encrypt"),
-              callback: () => {
-                setCurrentItem(effectiveItem);
-                encryptModal.open();
-              },
-            },
-          ]
+      ...(encryptionEntries.length
+        ? [...encryptionEntries, { type: "separator" as const }]
         : []),
-      ...(item.is_encrypted && item.abilities?.remove_encryption
-        ? [
-            {
-              icon: <span className="material-icons">remove_moderator</span>,
-              label: t(
-                "explorer.item.actions.remove_encryption",
-                "Remove encryption",
-              ),
-              callback: () => {
-                setCurrentItem(effectiveItem);
-                removeEncryptionModal.open();
-              },
-            },
-          ]
-        : []),
-      { type: "separator" },
       {
         icon: <Info />,
         label: t("explorer.item.actions.view_info"),

@@ -345,7 +345,13 @@ services:
       RELAY_PORT: "4100"
       DRIVE_API_URL: "http://app-dev:8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4100/health"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:4100/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
+        ]
       interval: 5s
       timeout: 5s
       retries: 3
