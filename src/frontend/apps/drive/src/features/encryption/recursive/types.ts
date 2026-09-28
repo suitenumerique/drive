@@ -26,7 +26,8 @@ export type JobPhase =
   | 'staging'
   | 'committing'
   | 'success'
-  | 'failed';
+  | 'failed'
+  | 'blocked';
 
 export type FlatNode = {
   item: Item;

@@ -109,11 +109,15 @@ export const ModalRecursiveRemoveEncryption = ({
       >
         {hasValidation && (
           <Alert type={VariantType.ERROR}>
-            <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
-              {job.validationErrors.map((e, i) => (
-                <li key={i}>{e}</li>
-              ))}
-            </ul>
+            {job.validationErrors.length === 1 ? (
+              job.validationErrors[0]
+            ) : (
+              <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
+                {job.validationErrors.map((e, i) => (
+                  <li key={i}>{e}</li>
+                ))}
+              </ul>
+            )}
           </Alert>
         )}
 
@@ -128,14 +132,16 @@ export const ModalRecursiveRemoveEncryption = ({
           mode="decrypt"
         />
 
-        {job.rows.length > 0 && job.rows.length <= 50 && (
-          <div className="drive__encryption-modal__rows">
-            {job.rows.map((r) => (
-              <JobFileRow row={r} key={r.id} />
-            ))}
-          </div>
-        )}
-        {job.rows.length > 50 && (
+        {job.phase !== "blocked" &&
+          job.rows.length > 0 &&
+          job.rows.length <= 50 && (
+            <div className="drive__encryption-modal__rows">
+              {job.rows.map((r) => (
+                <JobFileRow row={r} key={r.id} />
+              ))}
+            </div>
+          )}
+        {job.phase !== "blocked" && job.rows.length > 50 && (
           <p className="drive__encryption-modal__hint">
             {t(
               "encryption.remove_modal.large_set",

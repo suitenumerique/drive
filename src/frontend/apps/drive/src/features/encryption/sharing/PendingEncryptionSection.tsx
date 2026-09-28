@@ -1,5 +1,5 @@
 import { Button } from "@gouvfr-lasuite/cunningham-react";
-import { Icon } from "@gouvfr-lasuite/ui-kit";
+import { Icon, UserAvatar } from "@gouvfr-lasuite/ui-kit";
 import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useState } from "react";
 import { Access } from "@/features/drivers/types";
@@ -149,20 +149,10 @@ export const PendingEncryptionSection = ({
     !probing &&
     pending.some((access) => hasPublicKeyBySub[access.user.sub] !== true);
 
-  const initials = (label: string) =>
-    label
-      .trim()
-      .split(/[\s.@_-]+/)
-      .filter(Boolean)
-      .map((part) => part[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "?";
-
   return (
-    <div className="drive__encryption-pending">
+    <div className="c__share-modal__link-settings drive__encryption-pending">
       <div className="drive__encryption-pending__heading">
-        <p className="drive__encryption-pending__title">
+        <p className="c__share-modal__link-settings__title drive__encryption-pending__title">
           {t("share_modal.pending_encryption.section_title", "Action needed")}
         </p>
         {someoneWaiting && (
@@ -184,25 +174,27 @@ export const PendingEncryptionSection = ({
           return (
             <li key={access.id} className="drive__encryption-pending__row">
               <div className="drive__encryption-pending__who">
-                <span
-                  className="drive__encryption-pending__avatar"
-                  aria-hidden="true"
-                >
-                  {initials(name)}
-                </span>
+                {/* The design system's avatar, as in the member list, so the
+                    same person gets the same colour in both. */}
+                <UserAvatar fullName={name} size="small" />
                 <div className="drive__encryption-pending__text">
-                  <p className="drive__encryption-pending__name" title={name}>
+                  <p
+                    className="c__user-row__name drive__encryption-pending__name"
+                    title={name}
+                  >
                     {name}
                   </p>
                   {access.user.email && access.user.full_name && (
                     <p
-                      className="drive__encryption-pending__secondary"
+                      className="c__user-row__email drive__encryption-pending__secondary"
                       title={access.user.email}
                     >
                       {access.user.email}
                     </p>
                   )}
-                  {hasPublicKey && !probing && (
+                  {/* The Accept button already says it; a viewer who cannot accept
+                      gets the status instead. */}
+                  {hasPublicKey && !probing && !canAccept && (
                     <p className="drive__encryption-pending__enabled">
                       <Icon aria-hidden name="verified_user" />
                       {t(

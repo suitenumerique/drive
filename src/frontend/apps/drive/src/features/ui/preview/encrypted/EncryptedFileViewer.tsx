@@ -43,7 +43,11 @@ export const EncryptedFileViewer = ({
   onDownload,
 }: EncryptedFileViewerProps) => {
   const { t } = useTranslation();
-  const { hasKeys, openEncryptionOnboarding } = useVaultClient();
+  const {
+    hasKeys,
+    openEncryptionOnboarding,
+    error: vaultClientError,
+  } = useVaultClient();
 
   // Pending member: no key was wrapped for this user yet (the file was
   // encrypted before they enabled encryption). Render the explanation
@@ -78,6 +82,22 @@ export const EncryptedFileViewer = ({
         }
       />
     );
+  }
+
+  // No keys on this device (or not known yet): nothing can be decrypted, so say
+  // so up front instead of failing a decryption. Once onboarding completes,
+  // `hasKeys` flips and the file below mounts, which starts its decryption.
+  if (!vaultClientError && hasKeys === null) {
+    return (
+      <EncryptionState
+        title={t("explorer.encrypted.decrypting", "Decrypting...")}
+      >
+        <Loader />
+      </EncryptionState>
+    );
+  }
+  if (!vaultClientError && !hasKeys) {
+    return <MissingEncryptionKeysPanel onSetUp={openEncryptionOnboarding} />;
   }
 
   const effectiveMimetype =
@@ -180,7 +200,10 @@ const NonOfficeEncryptedViewer = ({
   }
 
   if (error) {
-    if (isMissingKeysError(error)) {
+    if (
+      isMissingKeysError(error) ||
+      (error as VaultError).code === "UNRESOLVED_USER"
+    ) {
       return <MissingEncryptionKeysPanel onSetUp={openEncryptionOnboarding} />;
     }
     return (

@@ -250,25 +250,8 @@ export const ItemShareModal = ({
     // return result;
     // Find parent_id_max_role for each access
     return result.map((access) => {
-      // Pending member → mutate the displayed name with a suffix so the
-      // ui-kit's row (which renders `user.full_name` verbatim) visibly marks
-      // the user. ShareModal has no extension slot for a badge with a
-      // tooltip; the "Action needed" section above explains the state.
-      const displayUser = access.is_pending_encryption
-        ? {
-            ...access.user,
-            full_name:
-              `${access.user.full_name || access.user.email} ` +
-              t(
-                "share_modal.pending_encryption.suffix",
-                "(waiting for encryption)",
-              ),
-          }
-        : access.user;
-
       const result = {
         ...access,
-        user: displayUser,
         can_delete: access.abilities.destroy,
       };
       if (!access.max_ancestors_role) {

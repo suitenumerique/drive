@@ -66,6 +66,7 @@ type Action =
   | { type: 'SET_PENDING_USER_COUNT'; count: number }
   | { type: 'PROMOTE_STAGED_TO_DONE' }
   | { type: 'RESET_FAILED_TO_PENDING' }
+  | { type: 'FAIL_RUNNING'; error: string }
   | { type: 'RESET' };
 
 const CONCURRENCY = 3;
@@ -112,6 +113,17 @@ function reducer(state: State, action: Action): State {
       const next = state.rows.map(r =>
         r.state === 'failed'
           ? { ...r, state: 'pending' as FileJobState, error: undefined }
+          : r
+      );
+      return { ...state, rows: next };
+    }
+    // The operation failed outside a file's own step (the commit, a missing
+    // item): rows still marked running would otherwise spin forever. Failing
+    // them also lets a retry pick them up again.
+    case 'FAIL_RUNNING': {
+      const next = state.rows.map(r =>
+        r.state === 'running'
+          ? { ...r, state: 'failed' as FileJobState, error: action.error }
           : r
       );
       return { ...state, rows: next };
@@ -506,7 +518,7 @@ export function useRecursiveEncryptionJob({
         dispatch({ type: 'SET_VALIDATION', errors });
 
         if (errors.length > 0) {
-          dispatch({ type: 'SET_PHASE', phase: 'failed' });
+          dispatch({ type: 'SET_PHASE', phase: 'blocked' });
           return;
         }
 
@@ -718,16 +730,19 @@ export function useRecursiveEncryptionJob({
         // the response body or falls back to the i18n generic string.
         message = errorToString(err);
       }
+      dispatch({ type: 'FAIL_RUNNING', error: message });
       dispatch({ type: 'SET_TOP_ERROR', error: message });
       dispatch({ type: 'SET_PHASE', phase: 'failed' });
     }
   }, [mode, vaultClient, user?.sub, item, queryClient, onSuccess, t]);
 
   const retry = useCallback(() => {
+    // Only a run that failed can be retried; a refused one needs its cause fixed.
+    if (state.phase !== 'failed') return;
     dispatch({ type: 'RESET_FAILED_TO_PENDING' });
     dispatch({ type: 'SET_TOP_ERROR', error: null });
     void confirm();
-  }, [confirm]);
+  }, [confirm, state.phase]);
 
   const cancel = useCallback(() => {
     abortRef.current?.abort();

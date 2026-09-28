@@ -551,7 +551,6 @@
         "pending_encryption": {
           "accept": "Accepter",
           "accepting": "Acceptation…",
-          "suffix": "(en attente de chiffrement)",
           "no_public_key": "Cet utilisateur n'a pas encore terminé sa configuration du chiffrement.",
           "section_title": "Action requise",
           "waiting_hint": "Les membres qui n'ont pas encore activé le chiffrement auront accès dès qu'ils l'auront fait.",

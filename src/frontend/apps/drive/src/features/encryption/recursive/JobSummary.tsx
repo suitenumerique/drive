@@ -20,6 +20,12 @@ export const JobSummary = ({
 }: Props) => {
   const { t } = useTranslation();
 
+  // Refused before anything ran: the reason is shown by the modal, and there is
+  // no progress to report.
+  if (phase === "blocked") {
+    return null;
+  }
+
   const actionLabel =
     mode === "encrypt"
       ? t("encryption.summary.encrypting", "Encrypting")

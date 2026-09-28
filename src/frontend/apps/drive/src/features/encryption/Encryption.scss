@@ -165,18 +165,14 @@
 
 // The share modal's "action needed" block: people added to an encrypted item
 // before their key was wrapped.
+// It reuses the design system's share-modal section classes (padding, title) so
+// it lines up with "Link settings" and the member list; only the separator and
+// what is specific to it are set here.
 .drive__encryption-pending {
-  display: flex;
-  flex-direction: column;
-  gap: var(--c--globals--spacings--xs);
-  margin: var(--c--globals--spacings--xs) 0 var(--c--globals--spacings--base);
+  border-top: 1px solid var(--c--contextuals--border--surface--primary);
 
   &__title {
     margin: 0;
-    font-size: 12px;
-    line-height: 16px;
-    font-weight: var(--c--globals--font--weights--bold);
-    color: var(--c--contextuals--content--semantic--neutral--secondary);
   }
 
   &__heading {
@@ -222,6 +218,7 @@
     justify-content: space-between;
     gap: var(--c--globals--spacings--xs);
     min-height: 42px;
+    padding: var(--c--globals--spacings--3xs) var(--c--globals--spacings--2xs);
   }
 
   &__who {
@@ -232,21 +229,6 @@
     flex: 1;
   }
 
-  &__avatar {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--c--contextuals--background--semantic--brand--primary);
-    color: var(--c--contextuals--content--semantic--brand--on-brand);
-    font-size: 10px;
-    font-weight: var(--c--globals--font--weights--bold);
-    text-transform: uppercase;
-  }
-
   &__text {
     display: flex;
     flex-direction: column;
@@ -255,10 +237,6 @@
 
   &__name {
     margin: 0;
-    font-size: 14px;
-    line-height: 18px;
-    font-weight: var(--c--globals--font--weights--medium);
-    color: var(--c--contextuals--content--semantic--neutral--primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -266,9 +244,6 @@
 
   &__secondary {
     margin: 0;
-    font-size: 12px;
-    line-height: 16px;
-    color: var(--c--contextuals--content--semantic--neutral--tertiary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
