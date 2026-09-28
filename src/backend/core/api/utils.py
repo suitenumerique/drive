@@ -103,6 +103,13 @@ def generate_s3_authorization_headers(key):
 
 def generate_upload_policy_for_key(key, content_type=None):
     """Generate a presigned S3 PUT URL for a given key."""
+    # This settings should be used if the backend application and the frontend application
+    # can't connect to the object storage with the same domain. This is the case in the
+    # docker compose stack used in development. The frontend application will use localhost
+    # to connect to the object storage while the backend application will use the object storage
+    # service name declared in the docker compose stack.
+    # This is needed because the domain name is used to compute the signature. So it can't be
+    # changed dynamically by the frontend application.
     if settings.AWS_S3_DOMAIN_REPLACE:
         s3_client = boto3.client(
             "s3",
@@ -117,7 +124,9 @@ def generate_upload_policy_for_key(key, content_type=None):
     else:
         s3_client = default_storage.connection.meta.client
 
-    params = {"Bucket": default_storage.bucket_name, "Key": key, "ACL": "private"}
+    params = {"Bucket": default_storage.bucket_name, "Key": key}
+    if settings.AWS_S3_UPLOAD_ACL and settings.AWS_S3_UPLOAD_ACL != "default":
+        params["ACL"] = settings.AWS_S3_UPLOAD_ACL
     if content_type:
         params["ContentType"] = content_type
 
@@ -132,10 +141,9 @@ def generate_upload_policy(item):
     """
     Generate a S3 upload policy for a given item.
     """
+    # Generate a unique key for the item
     key = f"{item.key_base}/{item.filename}"
-    policy = generate_upload_policy_for_key(key)
-
-    return policy
+    return generate_upload_policy_for_key(key)
 
 
 def is_previewable_item(item):
@@ -202,7 +210,8 @@ def detect_mimetype(file_buffer: bytes, filename: str | None = None) -> str:
     # Generic/unreliable MIME types that we should try to improve
     generic_types = {
         "application/octet-stream",
-        "application/x-ole-storage",  # used by .xls, .doc and .ppt
+        "application/x-ole-storage",  # used by .xls, .doc and .ppt (older libmagic)
+        "application/CDFV2",  # used by .xls, .doc and .ppt (newer libmagic)
         "application/zip",
         "text/plain",
     }
@@ -220,6 +229,11 @@ def detect_mimetype(file_buffer: bytes, filename: str | None = None) -> str:
 
     # Default to content-based detection (most reliable)
     return mimetype_from_content or "application/octet-stream"
+
+
+def format_template_filename(title, extension):
+    """Build a filename from a template title and extension, replacing '/' with '-'."""
+    return f"{title}.{extension}".replace("/", "-")
 
 
 def sanitize_filename(filename):

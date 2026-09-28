@@ -5,16 +5,14 @@ import {
   useGlobalExplorer,
   generateTreeId,
 } from "../components/GlobalExplorerContext";
-import {
-  useAddItemToPaginatedList,
-  useRemoveItemsFromPaginatedList,
-} from "./useOptimisticPagination";
-import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import { useRemoveItemsFromPaginatedList } from "./useOptimisticPagination";
+import { useTreeContext } from "@gouvfr-lasuite/ui-components";
 import {
   useRefreshQueryCacheAfterMutation,
   useDeleteMutationCallbacks,
   useRefreshItemCache,
   useRefreshFavoriteCache,
+  useRefreshEntitlementsQueryCache,
 } from "./useRefreshItems";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 
@@ -28,7 +26,8 @@ export const useMutationCreateFile = () => {
 
   return useMutation({
     mutationFn: async (...payload: Parameters<typeof driver.createFile>) => {
-      return driver.createFile(...payload);
+      const { promise } = driver.createFile(...payload);
+      return promise;
     },
     onSuccess: (data, variables) => {
       refresh(variables.parent?.id);
@@ -122,17 +121,14 @@ export const useMutationRenameItem = () => {
 
 export const useMutationCreateFolder = () => {
   const driver = getDriver();
-  const addItemToTopOfPaginatedList = useAddItemToPaginatedList();
+  const refresh = useRefreshQueryCacheAfterMutation();
 
   return useMutation({
     mutationFn: (...payload: Parameters<typeof driver.createFolder>) => {
       return driver.createFolder(...payload);
     },
-    onSuccess: (data, variables) => {
-      const queryKey = variables.parent
-        ? ["items", variables.parent.id, "children"]
-        : ["items", "infinite", JSON.stringify({ is_creator_me: true })];
-      addItemToTopOfPaginatedList(queryKey, data);
+    onSuccess: (_, variables) => {
+      refresh(variables.parent?.id);
     },
   });
 };
@@ -222,6 +218,46 @@ export const useMutationUpdateWorkspace = () => {
   });
 };
 
+export const useMutationDuplicateItem = () => {
+  const driver = getDriver();
+  const { item } = useGlobalExplorer();
+
+  const refresh = useRefreshQueryCacheAfterMutation();
+  const refreshEntitlements = useRefreshEntitlementsQueryCache();
+
+  return useMutation({
+    mutationFn: (itemId: string) => {
+      return driver.duplicateItem(itemId);
+    },
+    onSuccess: () => {
+      const parentId = item?.originalId ?? item?.id;
+      refresh(parentId);
+      refreshEntitlements();
+    },
+    meta: {
+      // The caller already toasts a localized message on failure.
+      noGlobalError: true,
+    },
+  });
+};
+
+export const useMutationConvertItem = () => {
+  const driver = getDriver();
+  const { item } = useGlobalExplorer();
+
+  const refresh = useRefreshQueryCacheAfterMutation();
+
+  return useMutation({
+    mutationFn: (itemId: string) => {
+      return driver.convertItem(itemId);
+    },
+    onSuccess: () => {
+      const parentId = item?.originalId ?? item?.id;
+      refresh(parentId);
+    },
+  });
+};
+
 export const useMutationCreateFavoriteItem = () => {
   const driver = getDriver();
 
@@ -258,10 +294,7 @@ export const useMutationDeleteFavoriteItem = () => {
         true,
       );
       treeContext?.treeData.deleteNode(rootFavoriteTreeId);
-      removeItems(
-        ["items", "infinite", JSON.stringify({ is_favorite: true })],
-        [itemId],
-      );
+      removeItems(["items", "infinite"], [itemId]);
       refreshItemCache(itemId, { is_favorite: false });
       refreshFavoriteCache(itemId, false);
     },

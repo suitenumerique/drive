@@ -50,7 +50,10 @@ def test_api_item_upload_ended_on_none_file_item(item_type):
     client = APIClient()
     client.force_login(user)
 
-    item = factories.ItemFactory(type=item_type)
+    if item_type == ItemTypeChoices.RESTRICTION:
+        item = factories.RestrictionFactory()
+    else:
+        item = factories.ItemFactory(type=item_type)
     factories.UserItemAccessFactory(item=item, user=user, role="owner")
 
     response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
@@ -95,6 +98,30 @@ def test_api_item_upload_ended_on_wrong_upload_state():
     }
 
 
+def test_api_item_upload_ended_success_grist_file():
+    """Upload a .grist file (SQLite format) should succeed."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=ItemTypeChoices.FILE, filename="my_table.grist")
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    # Minimal valid SQLite database header (100 bytes).
+    sqlite_header = b"SQLite format 3\x00\x10\x00\x01\x01\x00\x40\x20\x20" + b"\x00" * 76
+    default_storage.save(item.file_key, BytesIO(sqlite_header))
+
+    with mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file:
+        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
+    assert response.status_code == 200
+
+    item.refresh_from_db()
+    assert item.upload_state == ItemUploadStateChoices.ANALYZING
+    assert item.mimetype == "application/vnd.sqlite3"
+
+
 def test_api_item_upload_ended_success():
     """
     Users should be able to end an upload on items that are files and in the UPLOADING upload state.
@@ -113,12 +140,10 @@ def test_api_item_upload_ended_success():
 
     with (
         mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file,
-        mock.patch("core.api.viewsets.mirror_item") as mock_mirror_item,
     ):
         response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
-    mock_mirror_item.assert_called_once_with(item)
     assert response.status_code == 200
 
     item.refresh_from_db()
@@ -142,12 +167,10 @@ def test_api_item_upload_ended_empty_file():
 
     with (
         mock.patch.object(malware_detection, "analyse_file") as mock_analyse_file,
-        mock.patch("core.api.viewsets.mirror_item") as mock_mirror_item,
     ):
         response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     mock_analyse_file.assert_called_once_with(item.file_key, item_id=item.id)
-    mock_mirror_item.assert_called_once_with(item)
     assert response.status_code == 200
 
     item.refresh_from_db()
@@ -158,17 +181,22 @@ def test_api_item_upload_ended_empty_file():
     assert response.json()["mimetype"] == "application/x-empty"
 
 
+@pytest.mark.parametrize("reason", [None, "user_quota_exceeded"])
 @mock.patch("core.api.viewsets.get_entitlements_backend")
 def test_api_item_upload_ended_entitlements_backend_returns_falsy(
-    mock_get_entitlements_backend,
+    mock_get_entitlements_backend, reason
 ):
     """
     Test that the API returns a 403 when the entitlements backend returns a falsy result.
-    It should hard delete the item.
+    It should hard delete the item. When the backend gives a reason, it is exposed as
+    the error code so the frontend can show a specific, translatable message.
     """
     # Mock the entitlement backend to return a falsy result
     mock_entitlement_backend = mock.Mock()
-    mock_entitlement_backend.can_upload.return_value = {"result": False}
+    return_value = {"result": False}
+    if reason:
+        return_value["reason"] = reason
+    mock_entitlement_backend.can_upload.return_value = return_value
     mock_get_entitlements_backend.return_value = mock_entitlement_backend
 
     user = factories.UserFactory()
@@ -190,7 +218,7 @@ def test_api_item_upload_ended_entitlements_backend_returns_falsy(
         "type": "client_error",
         "errors": [
             {
-                "code": "permission_denied",
+                "code": reason or "permission_denied",
                 "detail": "You do not have permission to upload files.",
                 "attr": None,
             }

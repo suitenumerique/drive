@@ -19,7 +19,8 @@
   &__item {
     padding: 12px;
     border-radius: 4px;
-    min-width: 400px;
+    min-width: min(400px, 100vw);
+    max-width: min(560px, 100vw);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -33,6 +34,7 @@
       gap: 8px;
       align-items: center;
       flex-grow: 1;
+      width: 100%;
     }
 
     &--info {

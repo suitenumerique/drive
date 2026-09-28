@@ -1,12 +1,15 @@
 import { GenericDisclaimer } from "@/features/ui/components/generic-disclaimer/GenericDisclaimer";
 import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
-import { CustomFilesPreview } from "@/features/ui/preview/custom-files-preview/CustomFilesPreview";
-import { Icon } from "@gouvfr-lasuite/ui-kit";
-import { Button } from "@gouvfr-lasuite/cunningham-react";
+import {
+  CustomFilesPreview,
+  CustomFilesPreviewMode,
+} from "@/features/ui/preview/CustomFilesPreview";
+import { Icon, Button } from "@gouvfr-lasuite/ui-components";
 import { useRouter } from "next/router";
 import { useTranslation } from "react-i18next";
 import { useItem } from "@/features/explorer/hooks/useQueries";
-import { getGlobalExplorerLayout } from "@/features/layouts/components/explorer/ExplorerLayout";
+import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
+import { useAutoAcceptPendingMembers } from "@/features/encryption/sharing/useAutoAcceptPendingMembers";
 import type { NextPageWithLayout } from "@/pages/_app";
 
 const FilePage: NextPageWithLayout = () => {
@@ -15,6 +18,9 @@ const FilePage: NextPageWithLayout = () => {
   const itemId = router.query.id as string;
 
   const { data: item, isLoading, error } = useItem(itemId);
+  // This page has no explorer context, which is what hands the key to pending
+  // members when a manager opens an encrypted item: do it here too.
+  useAutoAcceptPendingMembers(item);
 
   // On 403, 401, the user is automatically redirected to the 401/403 page.
 
@@ -39,11 +45,18 @@ const FilePage: NextPageWithLayout = () => {
 
   return (
     <div>
-      <CustomFilesPreview currentItem={item} items={[item]} />
+      <CustomFilesPreview
+        currentItem={item}
+        items={[item]}
+        mode={CustomFilesPreviewMode.CONTEXTUAL}
+      />
     </div>
   );
 };
 
-FilePage.getLayout = getGlobalExplorerLayout;
+// GlobalLayout carries the auth and vault providers the encrypted viewers need.
+FilePage.getLayout = function getLayout(page: React.ReactElement) {
+  return <GlobalLayout>{page}</GlobalLayout>;
+};
 
 export default FilePage;

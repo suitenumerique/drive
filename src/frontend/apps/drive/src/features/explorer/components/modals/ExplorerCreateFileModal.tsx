@@ -3,7 +3,7 @@ import {
   Modal,
   ModalProps,
   ModalSize,
-} from "@gouvfr-lasuite/cunningham-react";
+} from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
@@ -16,6 +16,8 @@ import {
   createBlankOdf,
   BlankOdfExtension,
 } from "@/features/encryption/blank-odf/createBlankOdf";
+import { useRouter } from "next/router";
+import { useSetSelectedItems } from "../../stores/selectionStore";
 
 type Inputs = {
   filename: string;
@@ -47,13 +49,16 @@ export const ExplorerCreateFileModal = (
     // blank ODF client-side and route through `createFile`, which encrypts
     // and uploads via the same path as drag-drop.
     parent?: Item;
+    redirectAfterCreate?: boolean;
     type: ExplorerCreateFileType;
-  }
+  },
 ) => {
   const { t } = useTranslation();
   const form = useForm<Inputs>();
   const createFileFromTemplate = useMutationCreateFileFromTemplate();
   const createFile = useMutationCreateFile();
+  const router = useRouter();
+  const setSelectedItems = useSetSelectedItems();
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     const extension = EXT_BY_TYPE[props.type];
@@ -61,9 +66,13 @@ export const ExplorerCreateFileModal = (
       ? data.filename
       : `${data.filename}.${extension}`;
 
-    const onSuccess = () => {
+    const onSuccess = (createdItem?: Item) => {
       form.reset();
       props.onClose();
+      if (props.redirectAfterCreate && createdItem?.id) {
+        router.push(`/explorer/items/my-files`);
+        setSelectedItems([createdItem]);
+      }
     };
 
     if (props.parent?.is_encrypted) {

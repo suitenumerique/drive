@@ -1,0 +1,23 @@
+@use "sass:map";
+@use "@/styles/cunningham-tokens-sass" as *;
+
+$tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
+
+.anonymous-cta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &__separator {
+    width: 1px;
+    height: 24px;
+    background-color: var(--c--contextuals--border--surface--primary);
+  }
+
+  @media (max-width: $tablet) {
+
+    #anonymous-cta-try-out {
+        display: none;
+    }
+  }
+}

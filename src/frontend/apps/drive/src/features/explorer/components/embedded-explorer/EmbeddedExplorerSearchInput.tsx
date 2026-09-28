@@ -1,4 +1,4 @@
-import { Icon } from "@gouvfr-lasuite/ui-kit";
+import { Icon } from "@gouvfr-lasuite/ui-components";
 import { memo } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -18,7 +18,7 @@ export const EmbeddedExplorerSearchInput = memo(
           type="text"
           placeholder={t(
             "explorer.search.placeholder",
-            "Search for a folder..."
+            "Search for a folder...",
           )}
           value={props.value}
           autoFocus={true}
@@ -26,7 +26,7 @@ export const EmbeddedExplorerSearchInput = memo(
         />
       </div>
     );
-  }
+  },
 );
 
 EmbeddedExplorerSearchInput.displayName = "EmbeddedExplorerSearchInput";

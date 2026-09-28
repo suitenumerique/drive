@@ -19,13 +19,13 @@ test("Search somes items and shows them in the search modal", async ({
 
   // Expect no results before typing.
   let searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(0);
+  await expect(searchItems).toHaveCount(0);
 
   await input.fill("me");
 
   // Expect 3 results after typing "me".
   searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(3);
+  await expect(searchItems).toHaveCount(3);
 
   let searchItem = page.getByRole("option", { name: "Meetings Dev Team" });
   await expect(searchItem).toContainText("Dev Team");
@@ -43,7 +43,7 @@ test("Search somes items and shows them in the search modal", async ({
   await page.getByRole("combobox", { name: "Quick search input" }).fill("sale");
 
   searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(1);
+  await expect(searchItems).toHaveCount(1);
 
   searchItem = page.getByRole("option", {
     name: "Sales report",
@@ -85,7 +85,9 @@ test("Search file and click on it", async ({ page }) => {
 
   const filePreview = page.getByTestId("file-preview");
   await expect(filePreview).toBeVisible();
-  await expect(filePreview.getByText("Budget report")).toBeVisible();
+  await expect(
+    filePreview.getByRole("heading", { name: "Budget report" }),
+  ).toBeVisible();
 });
 
 test("Search folder from trash and cannot navigate to it", async ({ page }) => {
@@ -97,18 +99,18 @@ test("Search folder from trash and cannot navigate to it", async ({ page }) => {
   await page.getByRole("button", { name: "Search" }).click();
 
   let searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(0);
+  await expect(searchItems).toHaveCount(0);
 
   const input = page.getByRole("combobox", { name: "Quick search input" });
   await expect(input).toBeVisible();
   await input.fill("I am");
 
-  // Set the scope to trash.
+  // Set the location to the trash.
   await page.getByRole("button", { name: "Location" }).click();
-  await page.getByRole("option", { name: "Recycle bin" }).click();
+  await page.getByRole("option", { name: "Trash" }).click();
 
   searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(1);
+  await expect(searchItems).toHaveCount(1);
 
   const button = page.getByRole("option", { name: "I am deleted" });
   await button.click();
@@ -140,17 +142,60 @@ test("Search a deleted file and click on it", async ({ page }) => {
   await expect(input).toBeVisible();
   await input.fill("resum");
 
-  // Set the scope to trash.
+  // Set the location to the trash.
   await page.getByRole("button", { name: "Location" }).click();
-  await page.getByRole("option", { name: "Recycle bin" }).click();
+  await page.getByRole("option", { name: "Trash" }).click();
 
   let searchItems = page.getByTestId("search-item");
-  expect(searchItems).toHaveCount(1);
+  await expect(searchItems).toHaveCount(1);
 
   const button = page.getByRole("option", { name: "Resume" });
   await button.click();
 
   const filePreview = page.getByTestId("file-preview");
   await expect(filePreview).toBeVisible();
-  await expect(filePreview.getByText("Resume")).toBeVisible();
+  await expect(
+    filePreview.getByRole("heading", { name: "Resume" }),
+  ).toBeVisible();
+});
+
+test("Filter search results by location", async ({ page }) => {
+  await clearDb();
+  await runFixture("e2e_fixture_search");
+  await login(page, "drive@example.com");
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Search" }).click();
+
+  const input = page.getByRole("combobox", { name: "Quick search input" });
+  await input.fill("Quarterly");
+
+  // The keyword matches the three items, one per location.
+  await expect(page.getByTestId("search-item")).toHaveCount(3);
+
+  const setLocation = async (option: string) => {
+    await page.getByRole("button", { name: "Location" }).click();
+    await page.getByRole("option", { name: option }).click();
+  };
+
+  // My files keeps the two items created by the current user.
+  await setLocation("My files");
+  await expect(page.getByTestId("search-item")).toHaveCount(2);
+  await expect(
+    page.getByRole("option", { name: "Quarterly review shared" }),
+  ).toHaveCount(0);
+
+  // Shared with me keeps the item created by someone else.
+  await setLocation("Shared with me");
+  await expect(page.getByTestId("search-item")).toHaveCount(1);
+  await expect(
+    page.getByRole("option", { name: "Quarterly review shared" }),
+  ).toBeVisible();
+
+  // Starred keeps the favorite item only.
+  await setLocation("Starred");
+  await expect(page.getByTestId("search-item")).toHaveCount(1);
+  await expect(
+    page.getByRole("option", { name: "Quarterly review starred" }),
+  ).toBeVisible();
 });

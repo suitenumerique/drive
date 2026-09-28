@@ -1,4 +1,4 @@
-import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
+import { Button, useModal } from "@gouvfr-lasuite/ui-components";
 import { ExplorerSearchModal } from "@/features/explorer/components/modals/search/ExplorerSearchModal";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";

@@ -5,15 +5,18 @@ import {
 import { useMutationDeleteItems } from "./useMutations";
 import { useTranslation } from "react-i18next";
 import { useTreeUtils } from "./useTreeUtils";
+import { useGlobalExplorer } from "../components/GlobalExplorerContext";
 
 export const useDeleteItem = () => {
   const { t } = useTranslation();
   const treeUtils = useTreeUtils();
   const deleteItemsMutation = useMutationDeleteItems();
+  const { cancelUploadsForDeletedItems } = useGlobalExplorer();
 
   const deleteItems = async (itemIds: string[]) => {
     try {
       await deleteItemsMutation.mutateAsync(itemIds);
+      cancelUploadsForDeletedItems(itemIds);
       for (const itemId of itemIds) {
         treeUtils.deleteAllByOriginalId(itemId);
       }

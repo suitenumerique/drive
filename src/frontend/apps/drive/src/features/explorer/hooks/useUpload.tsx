@@ -1,13 +1,12 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { toast } from "react-toastify";
 import { Item } from "@/features/drivers/types";
 import { FileWithPath, useDropzone } from "react-dropzone";
-import { useMutationCreateFolder, useMutationCreateFile } from "./useMutations";
+import { useMutationCreateFolder } from "./useMutations";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRef } from "react";
 import { Id } from "react-toastify";
-import { FileUploadMeta } from "@/features/explorer/components/app-view/AppExplorerInner";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { FileUploadToast } from "../components/toasts/FileUploadToast";
@@ -16,8 +15,29 @@ import { getEntitlements } from "@/utils/entitlements";
 import { useCanCreateChildren } from "@/features/items/utils";
 import { getMyFilesQueryKey } from "@/utils/defaultRoutes";
 import { useConfig } from "@/features/config/ConfigProvider";
+import { getDriver } from "@/features/config/Config";
+import { errorToCode } from "@/features/api/APIError";
+import {
+  useRefreshEntitlementsQueryCache,
+  useRefreshQueryCacheAfterMutation,
+} from "./useRefreshItems";
+import { isIdInItemTree } from "../utils/utils";
+
+type ActiveUpload = {
+  file: FileUpload;
+  // Materialized path of the drop target folder (e.g. "root.A.B").
+  // Used by cancelUploadsForDeletedItems to detect ancestor deletions.
+  parentPath: string;
+  // Populated once the upload actually starts. Undefined while still queued.
+  abort?: () => Promise<void>;
+};
 import { formatSize } from "@/features/explorer/utils/utils";
 import { useVaultClient } from "@/features/encryption/VaultClientProvider";
+import {
+  customGetFilesFromEvent,
+  isEmptyFolderMarker,
+} from "@/features/explorer/utils/dropTraversal";
+import { getCannotUploadReasonDescription } from "@/features/entitlement-disclaimers/disclaimers/CannotUploadDisclaimer";
 
 type FileUpload = FileWithPath & {
   // Full parent Item — the driver derives parentId from it and, when
@@ -114,6 +134,12 @@ const useUpload = ({ item }: { item: Item }) => {
 
     for (const file of files) {
       const folder = getFolderByPath(file.path!);
+      // Empty-folder markers exist solely to materialize the folder chain
+      // via getFolderByPath above. They must never end up in folder.files,
+      // otherwise the upload loop would try to send them to the backend.
+      if (isEmptyFolderMarker(file)) {
+        continue;
+      }
       folder.files.push(file);
     }
     return {
@@ -185,7 +211,21 @@ const useUpload = ({ item }: { item: Item }) => {
   };
 };
 
-enum UploadingStep {
+export enum FileUploadStatus {
+  UPLOADING = "uploading",
+  DONE = "done",
+  ERROR = "error",
+  CANCELLED = "cancelled",
+}
+
+export type FileUploadMeta = {
+  file: File;
+  progress: number;
+  status: FileUploadStatus;
+  error?: string;
+};
+
+export enum UploadingStep {
   NONE = "none",
   PREPARING = "preparing",
   CREATE_FOLDERS = "create_folders",
@@ -210,7 +250,9 @@ export const useUploadZone = ({ item }: { item: Item }) => {
   const { config } = useConfig();
   const { hasKeys, promptMissingKeys } = useVaultClient();
 
-  const createFile = useMutationCreateFile();
+  const driver = getDriver();
+  const refresh = useRefreshQueryCacheAfterMutation();
+  const refreshEntitlements = useRefreshEntitlementsQueryCache();
 
   const canCreateChildren = useCanCreateChildren(item);
 
@@ -221,7 +263,61 @@ export const useUploadZone = ({ item }: { item: Item }) => {
     filesMeta: {},
   });
 
+  // Single source of truth for queued + in-flight uploads. Map preserves
+  // insertion order, giving us FIFO for free. An entry whose `abort` is
+  // undefined is still queued; once upload starts we populate `abort`.
+  // Removing an entry (delete/clear) is the cancellation signal.
+  const activeUploadsRef = useRef<Map<string, ActiveUpload>>(new Map());
+  // Whether the upload processing loop is currently running
+  const isProcessingRef = useRef(false);
+
   const { filesToUpload, handleHierarchy } = useUpload({ item: item! });
+
+  const onCancelFile = useCallback(async (fileName: string) => {
+    const upload = activeUploadsRef.current.get(fileName);
+    // Remove from the map first: this is the signal the processing loop
+    // uses in its catch block to distinguish user cancel from real errors.
+    activeUploadsRef.current.delete(fileName);
+    if (upload?.abort) {
+      await upload.abort();
+    }
+    setUploadingState((prev) => {
+      const meta = prev.filesMeta[fileName];
+      if (!meta || meta.status === FileUploadStatus.DONE) return prev;
+      return {
+        ...prev,
+        filesMeta: {
+          ...prev.filesMeta,
+          [fileName]: {
+            ...meta,
+            status: FileUploadStatus.CANCELLED,
+            progress: meta.progress,
+          },
+        },
+      };
+    });
+  }, []);
+
+  const onCancelAll = useCallback(async () => {
+    // Snapshot entries before clearing so we can abort in-flight uploads.
+    const entries = Array.from(activeUploadsRef.current.entries());
+    activeUploadsRef.current.clear();
+    for (const [, upload] of entries) {
+      if (upload.abort) {
+        await upload.abort();
+      }
+    }
+    setUploadingState((prev) => {
+      const newMeta = { ...prev.filesMeta };
+      for (const [name] of entries) {
+        const meta = newMeta[name];
+        if (meta && meta.status === FileUploadStatus.UPLOADING) {
+          newMeta[name] = { ...meta, status: FileUploadStatus.CANCELLED };
+        }
+      }
+      return { ...prev, filesMeta: newMeta };
+    });
+  }, []);
 
   const validateDrop = () => {
     const canUpload = canCreateChildren;
@@ -246,6 +342,10 @@ export const useUploadZone = ({ item }: { item: Item }) => {
     noClick: true,
     useFsAccessApi: false,
     validator: validateDrop,
+    // Custom traversal that preserves empty folders on drag & drop.
+    // Input change events (folder/file buttons) are delegated to
+    // file-selector inside this helper.
+    getFilesFromEvent: customGetFilesFromEvent,
     // If we do not set this, the click on the "..." menu of each items does not work, also click + select on items
     // does not work too. It might seems related to onFocus and onBlur events.
     noKeyboard: true,
@@ -295,34 +395,48 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         return;
       }
 
-      // Pre-check: dropping into an encrypted folder needs encryption
-      // keys on this device. Catch this BEFORE we mount the upload toast
-      // — otherwise the mutation rejects later, the toast empties out
-      // (mutation onError clears `filesMeta`), and we're left with a
-      // ghost toast on screen until the cleanup effect fires.
+      // Dropping into an encrypted folder needs encryption keys on this
+      // device. Check before any folder is created or the upload toast is
+      // mounted, so a missing key never leaves half-created folders or a
+      // toast full of failed files behind.
       if (item?.is_encrypted && hasKeys === false) {
         dismissDragToast();
         promptMissingKeys();
         return;
       }
 
+      // When the drop contains only empty-folder markers, there are no
+      // real files to upload. In that case we skip the FileUploadToast
+      // entirely and show a success toast once the folders have been created.
+      const hasOnlyEmptyFolders =
+        acceptedFiles.length > 0 &&
+        acceptedFiles.every((file) => isEmptyFolderMarker(file));
+
+      const showFileUploadToast = () => {
+        if (hasOnlyEmptyFolders || fileUploadsToastId.current) {
+          return;
+        }
+        fileUploadsToastId.current = addToast(
+          <FileUploadToast
+            uploadingState={uploadingState}
+            onCancelFile={onCancelFile}
+            onCancelAll={onCancelAll}
+          />,
+          {
+            autoClose: false,
+            onClose: () => {
+              fileUploadsToastId.current = null;
+            },
+          },
+        );
+      };
+
       setUploadingState((prev) => ({
         ...prev,
         step: UploadingStep.PREPARING,
       }));
 
-      if (!fileUploadsToastId.current) {
-        fileUploadsToastId.current = addToast(
-          <FileUploadToast uploadingState={uploadingState} />,
-          {
-            autoClose: false,
-            onClose: () => {
-              // We need to set this to null in order to re-show the toast when the user drops another file later.
-              fileUploadsToastId.current = null;
-            },
-          },
-        );
-      }
+      showFileUploadToast();
 
       const entitlements = await getEntitlements();
       if (!entitlements.can_upload.result) {
@@ -331,10 +445,14 @@ export const useUploadZone = ({ item }: { item: Item }) => {
           ...prev,
           step: UploadingStep.NONE,
         }));
+        const description = getCannotUploadReasonDescription(
+          entitlements.can_upload.reason,
+        );
         addToast(
           <ToasterItem type="error">
             <span>
               {entitlements.can_upload.message ||
+                description ||
                 t("entitlements.can_upload.cannot_upload")}
             </span>
           </ToasterItem>,
@@ -347,35 +465,41 @@ export const useUploadZone = ({ item }: { item: Item }) => {
         step: UploadingStep.CREATE_FOLDERS,
       }));
 
-      if (!fileUploadsToastId.current) {
-        fileUploadsToastId.current = addToast(
-          <FileUploadToast uploadingState={uploadingState} />,
-          {
-            autoClose: false,
-            onClose: () => {
-              // We need to set this to null in order to re-show the toast when the user drops another file later.
-              fileUploadsToastId.current = null;
-            },
-          },
-        );
-      }
+      showFileUploadToast();
       dismissDragToast();
 
       const upload = filesToUpload(acceptedFiles);
       await handleHierarchy(upload);
 
+      if (hasOnlyEmptyFolders) {
+        setUploadingState((prev) => ({
+          ...prev,
+          step: UploadingStep.DONE,
+        }));
+        addToast(
+          <ToasterItem type="info">
+            <span>{t("explorer.actions.upload.folders_created")}</span>
+          </ToasterItem>,
+        );
+        return;
+      }
+
+      // Strip empty-folder markers before any size/upload processing:
+      // they are zero-byte sentinels whose only purpose was to make
+      // filesToUpload create the corresponding FolderUpload nodes.
+      const realFiles = upload.files.filter(
+        (file) => !isEmptyFolderMarker(file),
+      );
+
       // Filter out files that exceed the maximum upload size.
-      // maxSize is undefined when DATA_UPLOAD_MAX_MEMORY_SIZE is not configured,
-      // meaning no size limit is enforced. Note: a value of 0 would also disable
-      // the check (falsy), which is acceptable since 0 is not a valid file size limit.
       const maxSize = config.DATA_UPLOAD_MAX_MEMORY_SIZE;
       const validFiles =
         maxSize !== undefined && maxSize !== null
-          ? upload.files.filter((file) => file.size <= maxSize)
-          : upload.files;
+          ? realFiles.filter((file) => file.size <= maxSize)
+          : realFiles;
       const tooLargeFiles =
         maxSize !== undefined && maxSize !== null
-          ? upload.files.filter((file) => file.size > maxSize)
+          ? realFiles.filter((file) => file.size > maxSize)
           : [];
       if (maxSize !== undefined && maxSize !== null) {
         for (const file of tooLargeFiles) {
@@ -384,7 +508,7 @@ export const useUploadZone = ({ item }: { item: Item }) => {
               <span>
                 {t("explorer.actions.upload.file_too_large", {
                   name: file.name,
-                  maxSize: formatSize(maxSize),
+                  maxSize: formatSize(maxSize, t),
                 })}
               </span>
             </ToasterItem>,
@@ -395,66 +519,161 @@ export const useUploadZone = ({ item }: { item: Item }) => {
       // Do not run "setUploadingState({});" because if a uploading is still in progress, it will be overwritten.
 
       // First, add all the files to the uploading state in order to display them in the toast.
-      const newUploadingState: UploadingState = {
-        step: UploadingStep.UPLOAD_FILES,
-        filesMeta: {},
-      };
+      const newFilesMeta: Record<string, FileUploadMeta> = {};
       for (const file of validFiles) {
-        newUploadingState.filesMeta[pathNicefy(file.path!)] = {
+        newFilesMeta[pathNicefy(file.path!)] = {
           file,
           progress: 0,
+          status: FileUploadStatus.UPLOADING,
         };
       }
-      setUploadingState(newUploadingState);
+      for (const file of tooLargeFiles) {
+        newFilesMeta[pathNicefy(file.path!)] = {
+          file,
+          progress: 0,
+          status: FileUploadStatus.ERROR,
+          error: "file_too_large",
+        };
+      }
 
-      // Then, upload all the files sequentially. We are not uploading them in parallel because the backend
-      // does not support it, it causes concurrency issues.
-      const promises = [];
+      // Update UI state
+      if (!isProcessingRef.current) {
+        setUploadingState({
+          step: UploadingStep.UPLOAD_FILES,
+          filesMeta: newFilesMeta,
+        });
+      } else {
+        setUploadingState((prev) => ({
+          step: UploadingStep.UPLOAD_FILES,
+          filesMeta: { ...prev.filesMeta, ...newFilesMeta },
+        }));
+      }
+
+      // Enqueue valid files in the single source of truth. The materialized
+      // path of the drop target is stored once per file so we can later
+      // resolve "was an ancestor of this upload deleted?" via isIdInItemTree.
+      const parentPath = item?.path ?? "";
       for (const file of validFiles) {
-        // We do not using "createFile.mutateAsync" because it causes unhandled errors.
-        // Instead, we use a promise that we can await to run all the uploads sequentially.
-        // Using "createFile.mutate" makes the error handled by the mutation hook itself.
-        promises.push(
-          () =>
-            new Promise<void>((resolve) => {
-              createFile.mutate(
-                {
-                  filename: file.name,
+        activeUploadsRef.current.set(pathNicefy(file.path!), {
+          file,
+          parentPath,
+        });
+      }
+
+      // If the processing loop is already running, it will pick up the new files
+      if (isProcessingRef.current) {
+        return;
+      }
+
+      // Start the processing loop
+      isProcessingRef.current = true;
+
+      // Pick the next queued entry: the first one without an abort handle
+      // (abort === undefined means it hasn't started uploading yet).
+      // Map iteration follows insertion order → FIFO is preserved.
+      // The loop exits when no more queued entries remain.
+      let hasUploadedFiles = false;
+      while (true) {
+        let nextEntry: [string, ActiveUpload] | undefined;
+        for (const entry of activeUploadsRef.current) {
+          if (!entry[1].abort) {
+            nextEntry = entry;
+            break;
+          }
+        }
+        if (!nextEntry) break;
+
+        const [filePath, upload] = nextEntry;
+        const file = upload.file;
+
+        const { promise, abort } = driver.createFile({
+          filename: file.name,
+          file,
+          parent: file.parent,
+          uploadAcl:
+            config.AWS_S3_UPLOAD_ACL === "default"
+              ? undefined
+              : config.AWS_S3_UPLOAD_ACL,
+          progressHandler: (progress) => {
+            setUploadingState((prev) => ({
+              ...prev,
+              filesMeta: {
+                ...prev.filesMeta,
+                [filePath]: {
                   file,
-                  parent: file.parent,
-                  progressHandler: (progress) => {
-                    setUploadingState((prev) => {
-                      const newState = {
-                        ...prev,
-                        filesMeta: {
-                          ...prev.filesMeta,
-                          [pathNicefy(file.path!)]: { file, progress },
-                        },
-                      };
-                      return newState;
-                    });
-                  },
+                  progress,
+                  status:
+                    progress >= 100
+                      ? FileUploadStatus.DONE
+                      : FileUploadStatus.UPLOADING,
                 },
-                {
-                  onError: () => {
-                    setUploadingState((prev) => {
-                      // Remove the file from the uploading state on error
-                      const newState = { ...prev };
-                      delete newState.filesMeta[pathNicefy(file.path!)];
-                      return newState;
-                    });
-                  },
-                  onSettled: () => {
-                    resolve();
-                  },
-                },
-              );
-            }),
-        );
+              },
+            }));
+          },
+        });
+
+        // Mark this entry as "in flight" so the loop won't pick it again.
+        upload.abort = abort;
+
+        try {
+          await promise;
+          // If the upload was cancelled mid-flight, the entry was removed
+          // from the map: skip the success state update.
+          if (!activeUploadsRef.current.has(filePath)) {
+            continue;
+          }
+          activeUploadsRef.current.delete(filePath);
+          refresh(file.parent?.id);
+          hasUploadedFiles = true;
+          setUploadingState((prev) => ({
+            ...prev,
+            filesMeta: {
+              ...prev.filesMeta,
+              [filePath]: {
+                file,
+                progress: 100,
+                status: FileUploadStatus.DONE,
+              },
+            },
+          }));
+        } catch (err) {
+          // If the entry was already removed from the map, onCancelFile (or
+          // onCancelAll) ran while the upload was in flight → user cancel.
+          const wasCancelled = !activeUploadsRef.current.has(filePath);
+          activeUploadsRef.current.delete(filePath);
+          if (
+            wasCancelled ||
+            (err instanceof DOMException && err.name === "AbortError")
+          ) {
+            // Already handled by onCancelFile/onCancelAll
+            continue;
+          }
+          const errorCode = errorToCode(err) ?? "unknown";
+
+          // Keep file in state with error status
+          setUploadingState((prev) => ({
+            ...prev,
+            filesMeta: {
+              ...prev.filesMeta,
+              [filePath]: {
+                file,
+                progress: prev.filesMeta[filePath]?.progress ?? 0,
+                status: FileUploadStatus.ERROR,
+                error: errorCode,
+              },
+            },
+          }));
+        }
       }
-      for (const promise of promises) {
-        await promise();
+
+      isProcessingRef.current = false;
+
+      // The backend invalidates its entitlements cache when an upload ends,
+      // so a single refetch once the queue is drained reflects the whole batch.
+      if (hasUploadedFiles) {
+        refreshEntitlements();
       }
+
       setUploadingState((prev) => ({
         ...prev,
         step: UploadingStep.DONE,
@@ -464,18 +683,26 @@ export const useUploadZone = ({ item }: { item: Item }) => {
 
   useEffect(() => {
     if (fileUploadsToastId.current) {
-      // If the uploading state is "upload_files" and there are no files, we dismiss the toast.
-      // It can happen if the upload fails for unknown reasons.
+      const activeFiles = Object.values(uploadingState.filesMeta).filter(
+        (meta) => meta.status !== FileUploadStatus.CANCELLED,
+      );
+      // Dismiss toast if no active files remain during upload
       if (
         (uploadingState.step === UploadingStep.UPLOAD_FILES &&
-          Object.keys(uploadingState.filesMeta).length === 0) ||
+          activeFiles.length === 0) ||
         uploadingState.step === UploadingStep.NONE
       ) {
         toast.dismiss(fileUploadsToastId.current);
         fileUploadsToastId.current = null;
       } else {
         toast.update(fileUploadsToastId.current, {
-          render: <FileUploadToast uploadingState={uploadingState} />,
+          render: (
+            <FileUploadToast
+              uploadingState={uploadingState}
+              onCancelFile={onCancelFile}
+              onCancelAll={onCancelAll}
+            />
+          ),
         });
       }
     }
@@ -497,7 +724,31 @@ export const useUploadZone = ({ item }: { item: Item }) => {
     return () => window.removeEventListener("beforeunload", unloadCallback);
   }, [uploadingState.step]);
 
+  /**
+   * Cancel every active upload whose drop-target folder is — or is a
+   * descendant of — any of the deleted items. We use isIdInItemTree to
+   * check whether a deletedId appears anywhere in the materialized path,
+   * which covers both direct parent and ancestor deletions.
+   */
+  const cancelUploadsForDeletedItems = useCallback(
+    (deletedIds: string[]) => {
+      if (activeUploadsRef.current.size === 0 || deletedIds.length === 0) {
+        return;
+      }
+      // Collect matches first: onCancelFile mutates the map we're iterating.
+      const toCancel: string[] = [];
+      for (const [filePath, upload] of activeUploadsRef.current) {
+        if (deletedIds.some((id) => isIdInItemTree(upload.parentPath, id))) {
+          toCancel.push(filePath);
+        }
+      }
+      toCancel.forEach((filePath) => void onCancelFile(filePath));
+    },
+    [onCancelFile],
+  );
+
   return {
     dropZone,
+    cancelUploadsForDeletedItems,
   };
 };

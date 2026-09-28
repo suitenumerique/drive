@@ -16,9 +16,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader } from '@gouvfr-lasuite/cunningham-react';
+import { Loader } from '@gouvfr-lasuite/ui-components';
 import { Item } from '@/features/drivers/types';
 import { getDriver } from '@/features/config/Config';
+import { useConfig } from '@/features/config/ConfigProvider';
 import { fetchAPI } from '@/features/api/fetchApi';
 import {
   convertToInternal,
@@ -180,6 +181,11 @@ function sendToEditorGuarded(msg: { type?: string } & Record<string, unknown>) {
 export const OOEditor = ({ item }: OOEditorProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { config } = useConfig();
+  // Must match the ACL signed in the presigned upload URL; none when the
+  // backend is configured to let the bucket default apply.
+  const uploadAcl =
+    config.AWS_S3_UPLOAD_ACL === 'default' ? undefined : config.AWS_S3_UPLOAD_ACL;
   const [state, setState] = useState<EditorState>('loading');
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
@@ -848,7 +854,9 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', uploadUrl);
-        xhr.setRequestHeader('X-amz-acl', 'private');
+        if (uploadAcl) {
+          xhr.setRequestHeader('X-amz-acl', uploadAcl);
+        }
         xhr.setRequestHeader('Content-Type', 'application/octet-stream');
         xhr.addEventListener('error', () =>
           reject(new Error('S3 upload network error'))
@@ -878,7 +886,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       // handled peer-to-peer.
       relayRef.current?.sendSaveCommitted();
     },
-    [item.id]
+    [item.id, uploadAcl]
   );
 
   /**
@@ -2209,7 +2217,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
               ).toLowerCase();
               const isPrint = ctx.downloadType === 'asc_onPrintUrl';
 
-              let outBytes: Uint8Array<ArrayBuffer>;
+              let outBytes: Uint8Array;
               const mime = MIME_BY_EXT[ext] || 'application/octet-stream';
 
               if (ext === 'pdf') {

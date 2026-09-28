@@ -2,6 +2,7 @@
 
 import logging
 import uuid
+from datetime import timedelta
 from os.path import splitext
 
 from django.conf import settings
@@ -10,7 +11,9 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import transaction
 from django.http import StreamingHttpResponse
+from django.utils.timezone import now
 
+from lasuite.malware_detection import malware_detection
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -18,10 +21,16 @@ from sentry_sdk import capture_exception
 
 from core.api.utils import get_item_file_head_object
 from core.models import Item
-from wopi.authentication import WopiAccessTokenAuthentication
+from wopi.authentication import WopiAccessTokenAuthentication, get_access_token
+from wopi.exceptions import WopiRequestSignatureError
 from wopi.permissions import AccessTokenPermission
 from wopi.services.lock import LockService
-from wopi.utils import get_wopi_client_config
+from wopi.utils import (
+    get_wopi_client_config,
+    get_wopi_client_proof_keys,
+    get_wopi_item_version,
+    signature,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +38,16 @@ logger = logging.getLogger(__name__)
 HTTP_X_WOPI_LOCK = "HTTP_X_WOPI_LOCK"
 HTTP_X_WOPI_OLD_LOCK = "HTTP_X_WOPI_OLDLOCK"
 HTTP_X_WOPI_OVERRIDE = "HTTP_X_WOPI_OVERRIDE"
+HTTP_X_WOPI_TIMESTAMP = "HTTP_X_WOPI_TIMESTAMP"
+HTTP_X_WOPI_PROOF = "HTTP_X_WOPI_PROOF"
+HTTP_X_WOPI_PROOFOLD = "HTTP_X_WOPI_PROOFOLD"
 
 X_WOPI_INVALIDFILENAMERROR = "X-WOPI-InvalidFileNameError"
 X_WOPI_ITEMVERSION = "X-WOPI-ItemVersion"
 X_WOPI_LOCK = "X-WOPI-Lock"
+S3_VERSION_ID = "VersionId"
+
+ILLEGAL_FILENAME_CHARS = ("/", "\\")
 
 
 class WopiViewSet(viewsets.ViewSet):
@@ -56,6 +71,48 @@ class WopiViewSet(viewsets.ViewSet):
         """Get the file id from the URL path."""
         return uuid.UUID(self.kwargs.get("pk"))
 
+    def _verify_request_signature(self, request):
+        """Verify the request signature."""
+        proof_keys = get_wopi_client_proof_keys(request.auth.item, request.user)
+
+        if not proof_keys:
+            # The proof key is not provided by the wopi client,
+            # so we can't verify the request signature and the request is accepted
+            return
+
+        request_signature = request.META.get(HTTP_X_WOPI_PROOF)
+        request_signature_old = request.META.get(HTTP_X_WOPI_PROOFOLD)
+
+        if not request_signature:
+            raise WopiRequestSignatureError("No signature provided, request rejected")
+
+        string_timestamp = request.META.get(HTTP_X_WOPI_TIMESTAMP)
+        if not string_timestamp:
+            raise WopiRequestSignatureError("No timestamp provided, request rejected")
+        try:
+            timestamp = int(string_timestamp)
+        except ValueError as e:
+            raise WopiRequestSignatureError("Invalid timestamp provided") from e
+
+        datetime_timestamp = signature.ticks_to_datetime(timestamp)
+        if datetime_timestamp < now() - timedelta(minutes=20):
+            raise WopiRequestSignatureError("Timestamp is too old, request rejected")
+
+        access_token = get_access_token(request)
+        expected_proof = signature.build_expected_proof(
+            access_token,
+            request.build_absolute_uri(),
+            timestamp,
+        )
+
+        if not signature.verify_wopi_proof(
+            proof_keys,
+            request_signature,
+            request_signature_old,
+            expected_proof,
+        ):
+            raise WopiRequestSignatureError("Invalid request signature")
+
     # pylint: disable=unused-argument
     def retrieve(self, request, pk=None):
         """
@@ -64,6 +121,8 @@ class WopiViewSet(viewsets.ViewSet):
         """
         item = request.auth.item
         abilities = item.get_abilities(request.user)
+
+        self._verify_request_signature(request)
 
         head_object = get_item_file_head_object(item)
         wopi_client = get_wopi_client_config(item, request.user)
@@ -80,7 +139,7 @@ class WopiViewSet(viewsets.ViewSet):
             "UserFriendlyName": request.user.full_name if not request.user.is_anonymous else None,
             "Size": head_object["ContentLength"],
             "UserId": str(request.user.id),
-            "Version": head_object.get("VersionId", ""),
+            "Version": get_wopi_item_version(head_object),
             "UserCanWrite": abilities["update"],
             "UserCanRename": abilities["update"],
             "UserCanPresent": False,
@@ -107,6 +166,7 @@ class WopiViewSet(viewsets.ViewSet):
         """
         Operations to get or put the file content.
         """
+        self._verify_request_signature(request)
         if request.method == "GET":
             return self._get_file_content(request, pk)
         if request.method == "POST":
@@ -126,6 +186,11 @@ class WopiViewSet(viewsets.ViewSet):
         head_object = get_item_file_head_object(item)
         if max_expected_size:
             if int(head_object["ContentLength"]) > int(max_expected_size):
+                logger.info(
+                    "get_file_content: file size %s exceeds X-WOPI-MaxExpectedSize header value %s",
+                    int(head_object["ContentLength"]),
+                    int(max_expected_size),
+                )
                 return Response(status=412)
 
         s3_client = default_storage.connection.meta.client
@@ -139,7 +204,7 @@ class WopiViewSet(viewsets.ViewSet):
             streaming_content=file["Body"].iter_chunks(),
             content_type=item.mimetype,
             headers={
-                "X-WOPI-ItemVersion": head_object["VersionId"],
+                "X-WOPI-ItemVersion": get_wopi_item_version(head_object),
                 "Content-Length": head_object["ContentLength"],
             },
             status=200,
@@ -179,10 +244,17 @@ class WopiViewSet(viewsets.ViewSet):
         s3_client = default_storage.connection.meta.client
         default_storage.save(item.file_key, file)
         item.size = file.size
+        # Keep the item READY during re-analysis: non-creators cannot open
+        # non-READY files in WOPI.
         item.save(update_fields=["size", "updated_at"])
 
+        malware_detection.analyse_file(item.file_key, item_id=item.id)
+
         head_response = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
-        return Response(status=200, headers={X_WOPI_ITEMVERSION: head_response["VersionId"]})
+        return Response(
+            status=200,
+            headers={X_WOPI_ITEMVERSION: get_wopi_item_version(head_response)},
+        )
 
     def detail_post(self, request, pk=None):
         """
@@ -198,6 +270,9 @@ class WopiViewSet(viewsets.ViewSet):
         """
         if not request.META.get(HTTP_X_WOPI_OVERRIDE) in self.detail_post_actions:
             return Response(status=404)
+
+        self._verify_request_signature(request)
+
         item = request.auth.item
         abilities = item.get_abilities(request.user)
 
@@ -323,24 +398,39 @@ class WopiViewSet(viewsets.ViewSet):
             return Response(status=401)
 
         new_filename = request.META.get("HTTP_X_WOPI_REQUESTEDNAME")
-
         if not new_filename:
+            invalid_filename_error = "No filename provided"
+        else:
+            # Convert it to utf-7 to avoid issues with special characters
+            new_filename = new_filename.encode("ascii").decode("utf-7")
+            new_filename_with_extension = f"{new_filename}{splitext(item.filename)[1]}"
+            _, target_extension = splitext(new_filename_with_extension)
+
+            invalid_filename_error = None
+            if any(char in new_filename for char in ILLEGAL_FILENAME_CHARS):
+                invalid_filename_error = "Invalid filename"
+            elif settings.RESTRICT_UPLOAD_FILE_TYPE and target_extension.lower() not in {
+                extension.lower() for extension in settings.FILE_EXTENSIONS_ALLOWED
+            }:
+                logger.info(
+                    "rename_file: file extension not allowed %r for filename %r",
+                    target_extension,
+                    new_filename_with_extension,
+                )
+                invalid_filename_error = "This file extension is not allowed"
+
+        if invalid_filename_error:
             return Response(
                 status=400,
-                headers={X_WOPI_INVALIDFILENAMERROR: "No filename provided"},
+                headers={X_WOPI_INVALIDFILENAMERROR: invalid_filename_error},
             )
 
-        # Convert it to utf-7 to avoid issues with special characters
-        new_filename = new_filename.encode("ascii").decode("utf-7")
         lock_service = LockService(item)
         if lock_service.is_locked():
             current_lock_value = lock_service.get_lock(default="")
             lock_value = request.META.get(HTTP_X_WOPI_LOCK)
             if current_lock_value != lock_value:
                 return Response(status=409, headers={X_WOPI_LOCK: current_lock_value})
-
-        _, current_extension = splitext(item.filename)
-        new_filename_with_extension = f"{new_filename}{current_extension}"
 
         parent_path = item.path[:-1]
         # Filter on siblings with the desired filename
@@ -381,11 +471,15 @@ class WopiViewSet(viewsets.ViewSet):
             )
 
         try:
-            s3_client.delete_object(
-                Bucket=default_storage.bucket_name,
-                Key=file_key,
-                VersionId=head_object["VersionId"],
-            )
+            delete_object_args = {
+                "Bucket": default_storage.bucket_name,
+                "Key": file_key,
+            }
+            version_id = head_object.get(S3_VERSION_ID)
+            if version_id:
+                delete_object_args[S3_VERSION_ID] = version_id
+
+            s3_client.delete_object(**delete_object_args)
         # pylint: disable=broad-exception-caught
         except Exception as e:  # noqa
             capture_exception(e)

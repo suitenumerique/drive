@@ -1,4 +1,6 @@
+import { ExplorerFilterModifiedValue } from "../explorer/components/filters/ExplorerFilterModified";
 import {
+  DTOBatchShare,
   DTOCreateAccess,
   DTODeleteAccess,
   DTOUpdateAccess,
@@ -18,6 +20,7 @@ import {
   ItemBreadcrumb,
   ItemType,
   User,
+  UserLight,
   WopiInfo,
   WorkspaceType,
 } from "./types";
@@ -40,12 +43,12 @@ export class MoveRequiresEncryption extends Error {
   constructor(
     public readonly itemId: string,
     public readonly reason:
-      | 'plaintext-into-encrypted'
-      | 'encrypted-out-of-root'
-      | 'encrypted-cross-root',
+      | "plaintext-into-encrypted"
+      | "encrypted-out-of-root"
+      | "encrypted-cross-root",
   ) {
     super(`Move ${itemId} requires encryption flow: ${reason}`);
-    this.name = 'MoveRequiresEncryption';
+    this.name = "MoveRequiresEncryption";
   }
 }
 
@@ -53,17 +56,6 @@ export enum ItemFiltersScope {
   ALL = "all",
   DELETED = "deleted",
   NOT_DELETED = "not_deleted",
-}
-
-export enum ItemFiltersOrdering {
-  CREATED_AT_ASC = "created_at",
-  CREATED_AT_DESC = "-created_at",
-  UPDATED_AT_ASC = "updated_at",
-  UPDATED_AT_DESC = "-updated_at",
-  TITLE_ASC = "title",
-  TITLE_DESC = "-title",
-  TYPE_ASC = "type",
-  TYPE_DESC = "-type",
 }
 
 export type ItemFilters = {
@@ -77,6 +69,15 @@ export type ItemFilters = {
   is_creator_me?: boolean;
   ordering?: string;
   is_favorite?: boolean;
+  category?: string;
+  contact?: string;
+  location?: string;
+
+  // This filter is not sent to the backend, it is only used to filter the items in the frontend.
+  // Actual filters are updated_at_after and updated_at_before.
+  modified?: ExplorerFilterModifiedValue;
+  updated_at_after?: string;
+  updated_at_before?: string;
 };
 
 export type PaginatedChildrenResult = {
@@ -91,15 +92,54 @@ export type UserFilters = {
   q?: string;
 };
 
-export type Entitlement = {
+// Reason is a string that describes the reason for the entitlement result.
+export type EntitlementReason = string;
+
+export type Entitlement<T extends EntitlementReason> = {
   result: boolean;
+  reason?: T;
   message?: string;
   [key: string]: unknown;
 };
 
+export enum EntitlementCanUploadReasons {
+  NO_ORGANIZATION = "no_organization",
+  NOT_ACTIVATED = "not_activated",
+  USER_QUOTA_EXCEEDED = "user_quota_exceeded",
+  USER_OVERRIDE_QUOTA_EXCEEDED = "user_override_quota_exceeded",
+  ORGANIZATION_QUOTA_EXCEEDED = "organization_quota_exceeded",
+}
+
+type EntitlementOperator = {
+  id: string;
+  name: string;
+  siret: string;
+  url: string | null;
+  config: object;
+  signupUrl: string;
+};
+
+type EntitlementOrganization = {
+  id: string;
+  type: string;
+  name: string;
+};
+
 export type Entitlements = {
-  can_access: Entitlement;
-  can_upload: Entitlement;
+  can_access: Entitlement<never>;
+  can_upload: Entitlement<EntitlementCanUploadReasons>;
+  context: {
+    organization?: EntitlementOrganization;
+    operator?: EntitlementOperator;
+    potentialOperators?: EntitlementOperator[];
+  };
+  quota?: {
+    state: "default" | "exceeded_locked" | "error";
+    reason?: string;
+    error?: string;
+    usage?: number;
+    limit?: number;
+  };
 };
 
 export abstract class Driver {
@@ -133,25 +173,26 @@ export abstract class Driver {
   abstract moveItems(ids: string[], parentId?: string): Promise<void>;
   abstract getChildren(
     id: string,
-    filters?: ItemFilters
+    filters?: ItemFilters,
   ): Promise<PaginatedChildrenResult>;
 
   abstract searchItems(filters?: ItemFilters): Promise<Item[]>;
   // Accesses
 
   abstract getRecentItems(
-    filters?: ItemFilters
+    filters?: ItemFilters,
   ): Promise<PaginatedChildrenResult>;
   abstract getFavoriteItems(
-    filters?: ItemFilters
+    filters?: ItemFilters,
   ): Promise<PaginatedChildrenResult>;
   abstract createFavoriteItem(itemId: string): Promise<void>;
   abstract deleteFavoriteItem(itemId: string): Promise<void>;
   abstract getItemAccesses(itemId: string): Promise<Access[]>;
   abstract createAccess(data: DTOCreateAccess): Promise<void>;
+  abstract batchShare(payload: DTOBatchShare): Promise<void>;
   abstract updateAccess(payload: DTOUpdateAccess): Promise<Access | void>;
   abstract updateLinkConfiguration(
-    payload: DTOUpdateLinkConfiguration
+    payload: DTOUpdateLinkConfiguration,
   ): Promise<void>;
   abstract deleteAccess(payload: DTODeleteAccess): Promise<void>;
   // Invitations
@@ -162,6 +203,7 @@ export abstract class Driver {
 
   // Users
   abstract getUsers(filters?: UserFilters): Promise<User[]>;
+  abstract getContacts(filters?: UserFilters): Promise<UserLight[]>;
   abstract updateUser(payload: Partial<User> & { id: string }): Promise<User>;
   // Tree
   abstract getTree(id: string): Promise<Item>;
@@ -185,15 +227,20 @@ export abstract class Driver {
     // client-side and sends the wrapped key.
     parent?: Item;
     filename: string;
-  }): Promise<Item>;
+    file: File;
+    uploadAcl?: string;
+    progressHandler?: (progress: number) => void;
+  }): { promise: Promise<Item>; abort: () => Promise<void> };
   abstract createFileFromTemplate(data: {
     parentId?: string;
     extension: string;
     title: string;
   }): Promise<Item>;
+  abstract duplicateItem(id: string): Promise<Item>;
   abstract deleteItems(ids: string[]): Promise<void>;
   abstract hardDeleteItems(ids: string[]): Promise<void>;
   abstract getWopiInfo(itemId: string): Promise<WopiInfo>;
+  abstract convertItem(itemId: string): Promise<Item>;
 
   abstract getEntitlements(): Promise<Entitlements>;
 
@@ -205,11 +252,11 @@ export abstract class Driver {
       encryptionPublicKeyVersionPerUser: Record<string, number | null>;
       encryptedKeysForDescendants: Record<string, string>;
       fileKeyMapping?: Record<string, string>;
-    }
+    },
   ): Promise<Item>;
   abstract removeEncryption(
     itemId: string,
-    data?: { fileKeyMapping?: Record<string, string> }
+    data?: { fileKeyMapping?: Record<string, string> },
   ): Promise<Item>;
   /**
    * Encrypt-on-move: ship a plaintext subtree into an encrypted destination
@@ -229,7 +276,7 @@ export abstract class Driver {
       encryptedSymmetricKey: string;
       encryptedKeysForDescendants: Record<string, string>;
       fileKeyMapping?: Record<string, string>;
-    }
+    },
   ): Promise<void>;
   abstract getKeyChain(itemId: string): Promise<{
     user_access_item_id: string;
@@ -242,6 +289,12 @@ export abstract class Driver {
     data: {
       encrypted_item_symmetric_key_for_user: string;
       encryption_public_key_version: number;
-    }
+    },
+  ): Promise<void>;
+
+  // User reconciliation
+  abstract confirmUserReconciliation(
+    userType: "active" | "inactive",
+    confirmationId: string,
   ): Promise<void>;
 }

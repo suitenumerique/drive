@@ -1,5 +1,9 @@
 """Client serializers for the drive core app."""
 
+# pylint: disable=no-name-in-module
+
+from __future__ import annotations
+
 import json
 import logging
 from datetime import timedelta
@@ -7,14 +11,16 @@ from os.path import splitext
 from urllib.parse import quote
 
 from django.conf import settings
+from django.db.models import Q
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from lasuite.drf.models.choices import LinkReachChoices, get_equivalent_link_definition
 from rest_framework import serializers
 
-from core import models
+from core import enums, models
 from core.api import utils
+from core.api.fields import SchemaField
 from core.storage import get_storage_compute_backend
 from wopi import utils as wopi_utils
 
@@ -32,6 +38,12 @@ class UserSerializer(serializers.ModelSerializer):
         allow_blank=False,
     )
 
+    column_preferences = SchemaField(
+        models.ColumnPreferences,
+        required=False,
+        allow_null=True,
+    )
+
     class Meta:
         model = models.User
         fields = [
@@ -42,6 +54,7 @@ class UserSerializer(serializers.ModelSerializer):
             "short_name",
             "language",
             "last_release_note_seen",
+            "column_preferences",
         ]
         read_only_fields = ["id", "sub", "email", "full_name", "short_name"]
 
@@ -56,8 +69,8 @@ class UserLightSerializer(UserSerializer):
 
 
 # pylint: disable=abstract-method
-class UsageMetricSerializer(serializers.BaseSerializer):
-    """Serialize usage metrics."""
+class UserUsageMetricSerializer(serializers.BaseSerializer):
+    """Serialize usage metrics for a single user."""
 
     def to_representation(self, instance):
         """Return the usage metric."""
@@ -69,12 +82,30 @@ class UsageMetricSerializer(serializers.BaseSerializer):
                 "email": instance.email,
             },
             "metrics": {
-                "storage_used": storage_compute_backend.compute_storage_used(instance),
+                "storage_used": storage_compute_backend.compute_storage_used(
+                    models.User.objects.filter(pk=instance.pk)
+                ),
             },
         }
         for claim in settings.METRICS_USER_CLAIMS_EXPOSED:
             output[claim] = instance.claims.get(claim)
         return output
+
+
+# pylint: disable=abstract-method
+class OrganizationUsageMetricSerializer(serializers.BaseSerializer):
+    """Serialize aggregated usage metrics for an organization."""
+
+    def to_representation(self, instance):
+        """Return the organization usage metric."""
+        storage_compute_backend = get_storage_compute_backend()
+        return {
+            "account": {"type": "organization"},
+            instance["account_id_key"]: instance["account_id_value"],
+            "metrics": {
+                "storage_used": storage_compute_backend.compute_storage_used(instance["users"])
+            },
+        }
 
 
 class ItemLightSerializer(serializers.ModelSerializer):
@@ -147,10 +178,7 @@ class ItemAccessSerializer(serializers.ModelSerializer):
         them (re-wrap the key) before they can decrypt.
         """
         item = instance.item
-        return bool(
-            item.is_encrypted
-            and instance.encrypted_item_symmetric_key_for_user is None
-        )
+        return bool(item.is_encrypted and instance.encrypted_item_symmetric_key_for_user is None)
 
     def get_fields(self):
         """Dynamically adjust encryption fields based on item encryption state.
@@ -161,14 +189,15 @@ class ItemAccessSerializer(serializers.ModelSerializer):
         have a key and the caller simply forgot to wrap it).
         """
         fields = super().get_fields()
+        # The key is write-only: reading accesses never needs the item's state
+        if not hasattr(self, "initial_data"):
+            return fields
+        item = self.context.get("item")
         resource_id = self.context.get("resource_id")
-        if resource_id:
-            try:
-                item = models.Item.objects.only("is_encrypted").get(pk=resource_id)
-                if not item.is_encrypted:
-                    fields.pop("encrypted_item_symmetric_key_for_user", None)
-            except models.Item.DoesNotExist:
-                pass
+        if item is None and resource_id:
+            item = models.Item.objects.only("is_encrypted").filter(pk=resource_id).first()
+        if item is not None and not item.is_encrypted:
+            fields.pop("encrypted_item_symmetric_key_for_user", None)
         return fields
 
     def get_abilities(self, instance):
@@ -234,6 +263,48 @@ class ItemAccessLightSerializer(ItemAccessSerializer):
         ]
 
 
+class RestrictionTargetSerializer(serializers.ModelSerializer):
+    """Serialize the restricted folder a restriction points to."""
+
+    deleted = serializers.SerializerMethodField()
+    can_access = serializers.SerializerMethodField()
+    is_restricted = serializers.SerializerMethodField()
+
+    class Meta:
+        model = models.Item
+        fields = ["id", "title", "is_restricted", "deleted", "can_access"]
+        read_only_fields = ["id", "title", "is_restricted", "deleted", "can_access"]
+
+    def get_deleted(self, target) -> bool:
+        """Return whether the target is in the trash."""
+        return target.deleted_at is not None
+
+    def get_is_restricted(self, target) -> bool:  # pylint: disable=unused-argument
+        """Return True: the target of an existing restriction is restricted by definition."""
+        return True
+
+    def get_can_access(self, target) -> bool:
+        """Return whether the request user can open the target."""
+        request = self.context.get("request")
+        user = request.user if request else None
+        if user is not None and user.is_authenticated:
+            accesses = getattr(target, "viewer_accesses", None)
+            if accesses is None:
+                has_access = models.ItemAccess.objects.filter(
+                    Q(user=user) | Q(team__in=user.teams),
+                    item=target,
+                ).exists()
+            else:
+                has_access = bool(accesses)
+            if has_access:
+                return True
+        return target.link_reach == LinkReachChoices.PUBLIC or (
+            target.link_reach == LinkReachChoices.AUTHENTICATED
+            and user is not None
+            and user.is_authenticated
+        )
+
+
 class ListItemSerializer(serializers.ModelSerializer):
     """Serialize items with limited fields for display in lists."""
 
@@ -248,14 +319,11 @@ class ListItemSerializer(serializers.ModelSerializer):
     creator = UserLightSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
+    target = RestrictionTargetSerializer(read_only=True, allow_null=True)
     is_encryption_root = serializers.SerializerMethodField(read_only=True)
     is_inside_encrypted_subtree = serializers.SerializerMethodField(read_only=True)
-    is_pending_encryption_for_user = serializers.SerializerMethodField(
-        read_only=True
-    )
-    encryption_public_key_version_for_user = serializers.SerializerMethodField(
-        read_only=True
-    )
+    is_pending_encryption_for_user = serializers.SerializerMethodField(read_only=True)
+    encryption_public_key_version_for_user = serializers.SerializerMethodField(read_only=True)
 
     def get_encryption_public_key_version_for_user(self, item):
         """Version of the user's encryption public key AT THE TIME they
@@ -263,40 +331,38 @@ class ListItemSerializer(serializers.ModelSerializer):
         their wrapped symmetric key.
 
         Clients use this to tell the user which key the document was
-        encrypted for if decryption fails with "wrong secret key" —
+        encrypted for if decryption fails with "wrong secret key":
         the user can compare it to their current key's version and
         understand that a collaborator needs to re-add them so the key
         gets wrapped against their current public key.
 
-        Looks up the same ItemAccess row `is_pending_encryption_for_user`
-        does (any ancestor on the subtree's key chain).
+        Looks up the same ItemAccess rows `is_pending_encryption_for_user`
+        does (any ancestor on the subtree's key chain). Read from
+        `annotate_encryption_state` when the queryset was annotated.
         """
         if not item.is_encrypted:
             return None
         request = self.context.get("request")
         if not request or not request.user.is_authenticated:
             return None
+        if hasattr(item, "annotated_encryption_public_key_version"):
+            return item.annotated_encryption_public_key_version
         return (
-            models.ItemAccess.objects.filter(
-                item__path__ancestors=item.path,
-                item__is_encrypted=True,
-                user=request.user,
-                encrypted_item_symmetric_key_for_user__isnull=False,
-            )
+            self._encryption_chain_keys(item, request.user)
             .values_list("encryption_public_key_version", flat=True)
             .first()
         )
 
     def get_is_pending_encryption_for_user(self, item):
         """True when the user has access to this encrypted item but no
-        usable wrapped key anywhere in the chain — i.e. they were added
+        usable wrapped key anywhere in the chain, i.e. they were added
         to the access list but haven't completed their encryption
         onboarding yet, so a validated collaborator must "accept" them
         before they can decrypt.
 
         Semantics: pending IFF the user has at least one encrypted-row
         ItemAccess in the chain AND none of those rows carry a non-null
-        wrapped key. This mirrors how decryption actually works — the
+        wrapped key. This mirrors how decryption actually works: the
         client walks up the chain to the encryption root and uses the
         first non-null wrap it finds. If any wrap exists in the chain,
         the user is NOT pending, regardless of NULL siblings further
@@ -308,25 +374,37 @@ class ListItemSerializer(serializers.ModelSerializer):
         `encrypted_item_symmetric_key_for_user` (plaintext has no key
         to wrap). Without this filter we'd mis-report such users as
         "pending" on any encrypted descendant they created themselves.
-
-        Costs two queries per serialized item, consistent with
-        `get_is_inside_encrypted_subtree` above.
         """
         if not item.is_encrypted:
             return False
         request = self.context.get("request")
         if not request or not request.user.is_authenticated:
             return False
-        chain_accesses = models.ItemAccess.objects.filter(
-            item__path__ancestors=item.path,
-            item__is_encrypted=True,
-            user=request.user,
-        )
+        if hasattr(item, "annotated_has_encryption_chain_access"):
+            return (
+                item.annotated_has_encryption_chain_access
+                and not item.annotated_has_encryption_chain_key
+            )
+        chain_accesses = self._encryption_chain_accesses(item, request.user)
         if not chain_accesses.exists():
             return False
-        return not chain_accesses.filter(
+        return not self._encryption_chain_keys(item, request.user).exists()
+
+    @staticmethod
+    def _encryption_chain_accesses(item, user):
+        """Return the user's accesses on the encrypted items of the chain leading to the item."""
+        return models.ItemAccess.objects.filter(
+            item__path__ancestors=item.path,
+            item__is_encrypted=True,
+            user=user,
+        )
+
+    @classmethod
+    def _encryption_chain_keys(cls, item, user):
+        """Return the user's chain accesses holding a wrapped key."""
+        return cls._encryption_chain_accesses(item, user).filter(
             encrypted_item_symmetric_key_for_user__isnull=False,
-        ).exists()
+        )
 
     def get_is_encryption_root(self, item):
         """True when this item is the root of its encrypted subtree.
@@ -344,12 +422,12 @@ class ListItemSerializer(serializers.ModelSerializer):
 
         Used to gate encrypt / remove-encryption actions on the client:
         once an ancestor is encrypted, the subtree must be operated on
-        at the outermost encryption root — otherwise we'd end up with a
+        at the outermost encryption root, otherwise we'd end up with a
         descendant in a state that conflicts with its ancestor's scope
         (e.g. plaintext sub inside encrypted T4 with no way back).
-        Costs one query per serialized item; fine for the small lists
-        this serializer powers.
         """
+        if hasattr(item, "annotated_inside_encrypted_subtree"):
+            return item.annotated_inside_encrypted_subtree
         return item.ancestors().filter(is_encrypted=True).exists()
 
     def get_accesses_user_ids(self, item):
@@ -364,11 +442,14 @@ class ListItemSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if not request or not request.user.is_authenticated:
             return None
+        if getattr(item, "annotated_accesses_user_ids", None) is not None:
+            return item.annotated_accesses_user_ids
         return list(
             models.ItemAccess.objects.filter(
                 item__path__ancestors=item.path,
                 user__isnull=False,
             )
+            .order_by("user__sub")
             .values_list("user__sub", flat=True)
             .distinct()
         )
@@ -394,10 +475,12 @@ class ListItemSerializer(serializers.ModelSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "is_restricted",
             "nb_accesses",
             "numchild",
             "numchild_folder",
             "path",
+            "target",
             "title",
             "updated_at",
             "user_role",
@@ -432,10 +515,12 @@ class ListItemSerializer(serializers.ModelSerializer):
             "is_pending_encryption_for_user",
             "encryption_public_key_version_for_user",
             "is_favorite",
+            "is_restricted",
             "link_role",
             "link_reach",
             "nb_accesses",
             "path",
+            "target",
             "updated_at",
             "user_role",
             "type",
@@ -533,6 +618,9 @@ class ListItemSerializer(serializers.ModelSerializer):
 
     def get_is_wopi_supported(self, item):
         """Return whether the item is supported by WOPI protocol."""
+        # A WOPI client would only ever receive ciphertext
+        if item.is_encrypted:
+            return False
         request = self.context.get("request")
         return wopi_utils.is_item_wopi_supported(item, request.user if request else None)
 
@@ -617,9 +705,7 @@ class SearchItemSerializer(ListItemSerializer):
 class ItemSerializer(ListItemSerializer):
     """Serialize items with all fields for display in detail views."""
 
-    encrypted_item_symmetric_key_for_user = serializers.SerializerMethodField(
-        read_only=True
-    )
+    encrypted_item_symmetric_key_for_user = serializers.SerializerMethodField(read_only=True)
     # `is_pending_encryption_for_user` and `get_is_pending_encryption_for_user`
     # are inherited from ListItemSerializer — declaring them again here
     # would drift. Kept only in the Meta.fields list below.
@@ -643,10 +729,12 @@ class ItemSerializer(ListItemSerializer):
             "is_favorite",
             "link_role",
             "link_reach",
+            "is_restricted",
             "nb_accesses",
             "numchild",
             "numchild_folder",
             "path",
+            "target",
             "title",
             "updated_at",
             "user_role",
@@ -682,6 +770,7 @@ class ItemSerializer(ListItemSerializer):
             "is_encryption_root",
             "is_inside_encrypted_subtree",
             "is_favorite",
+            "is_restricted",
             "nb_accesses",
             "link_role",
             "link_reach",
@@ -744,11 +833,7 @@ class ItemSerializer(ListItemSerializer):
 class CreateItemSerializer(ItemSerializer):
     """Serializer used to create a new item"""
 
-    TEMPLATE_EXTENSION_CHOICES = [
-        ("odt", "odt"),
-        ("ods", "ods"),
-        ("odp", "odp"),
-    ]
+    TEMPLATE_EXTENSION_CHOICES = [(ext, ext) for ext in enums.TEMPLATE_FILES]
 
     policy = serializers.SerializerMethodField()
     title = serializers.CharField(max_length=255, required=False)
@@ -852,6 +937,12 @@ class CreateItemSerializer(ItemSerializer):
         """Validate that filename is set for files."""
         extension = attrs.get("extension")
 
+        if attrs["type"] == models.ItemTypeChoices.RESTRICTION:
+            raise serializers.ValidationError(
+                {"type": _("Restrictions can only be created by restricting a folder.")},
+                code="item_create_restriction_forbidden",
+            )
+
         if attrs["type"] == models.ItemTypeChoices.FILE:
             if extension:
                 # Template-based creation: title is required, filename is computed
@@ -859,7 +950,7 @@ class CreateItemSerializer(ItemSerializer):
                     raise serializers.ValidationError(
                         {"title": _("This field is required.")},
                     )
-                attrs["filename"] = f"{attrs['title']}.{extension}"
+                attrs["filename"] = utils.format_template_filename(attrs["title"], extension)
             else:
                 # Regular file upload
                 if attrs.get("filename") is None:
@@ -948,15 +1039,8 @@ class LinkItemSerializer(serializers.ModelSerializer):
             "link_reach",
         ]
 
-    def validate(self, attrs):
-        """Validate that link_role and link_reach are compatible using get_select_options."""
-        link_reach = attrs.get("link_reach")
-        link_role = attrs.get("link_role")
-
-        if not link_reach:
-            raise serializers.ValidationError({"link_reach": _("This field is required.")})
-
-        # Get available options based on ancestors' link definition
+    def _validate_against_ancestors(self, link_reach: str, link_role: str) -> None:
+        """Validate the link definition against the options allowed by ancestors."""
         available_options = LinkReachChoices.get_select_options(
             **self.instance.ancestors_link_definition
         )
@@ -988,11 +1072,21 @@ class LinkItemSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {
                     "link_role": (
-                        f"Link role '{link_role}' is not allowed for link reach '{link_reach}'. "
-                        f"Allowed roles: {allowed_roles_str}"
+                        f"Link role '{link_role}' is not allowed for link reach "
+                        f"'{link_reach}'. Allowed roles: {allowed_roles_str}"
                     )
                 }
             )
+
+    def validate(self, attrs: dict) -> dict:
+        """Validate that link_role and link_reach are compatible using get_select_options."""
+        link_reach = attrs.get("link_reach")
+        link_role = attrs.get("link_role")
+
+        if not link_reach:
+            raise serializers.ValidationError({"link_reach": _("This field is required.")})
+
+        self._validate_against_ancestors(link_reach, link_role)
 
         return attrs
 
@@ -1126,6 +1220,26 @@ class MoveItemSerializer(serializers.Serializer):
     )
 
 
+BATCH_SHARE_MAX_ROWS = 100  # Keep in sync with the ui-kit share import modal max rows
+
+
+class BatchShareRowSerializer(serializers.Serializer):
+    """One row of a batch share payload: a contact email and the role to grant."""
+
+    email = serializers.EmailField()
+    role = serializers.ChoiceField(choices=models.RoleChoices.choices)
+
+    def validate_email(self, value):
+        """Normalize emails to lower case like invitations do."""
+        return value.lower()
+
+
+class BatchShareSerializer(serializers.Serializer):
+    """Validate the payload of the item batch-share action."""
+
+    rows = BatchShareRowSerializer(many=True, allow_empty=False, max_length=BATCH_SHARE_MAX_ROWS)
+
+
 class SDKRelayEventSerializer(serializers.Serializer):
     """Serializer for SDK relay events."""
 
@@ -1251,7 +1365,6 @@ class RemoveEncryptionSerializer(serializers.Serializer):
         required=False,
         default=dict,
         help_text=(
-            "Mapping of file item UUID to the new S3 key where the decrypted "
-            "content was uploaded."
+            "Mapping of file item UUID to the new S3 key where the decrypted content was uploaded."
         ),
     )

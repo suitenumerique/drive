@@ -9,6 +9,6 @@ setup("authenticate as drive", async ({ page }) => {
   await keyCloakSignIn(page, "drive", "drive");
 
   await expect(
-    page.getByRole("button", { name: "Open user menu" })
+    page.getByRole("button", { name: "User menu" })
   ).toBeVisible({ timeout: 10000 });
 });

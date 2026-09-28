@@ -4,7 +4,7 @@ import {
   Modal,
   ModalSize,
   VariantType,
-} from "@gouvfr-lasuite/cunningham-react";
+} from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { Item, ItemType } from "@/features/drivers/types";
 import { useRecursiveEncryptionJob } from "./recursive/useRecursiveEncryptionJob";

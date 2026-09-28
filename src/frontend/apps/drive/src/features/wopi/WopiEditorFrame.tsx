@@ -1,0 +1,102 @@
+import { useEffect, useRef } from "react";
+import {
+  useCunningham,
+  ErrorPreview,
+  FilePreviewType,
+} from "@gouvfr-lasuite/ui-components";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getDriver } from "@/features/config/Config";
+
+interface WopiEditorFrameProps {
+  item: FilePreviewType;
+  onFileRename?: (file: FilePreviewType, newName: string) => void;
+}
+
+export const WopiEditorFrame = ({
+  item,
+  onFileRename,
+}: WopiEditorFrameProps) => {
+  const { t } = useCunningham();
+  const formRef = useRef<HTMLFormElement>(null);
+  const queryClient = useQueryClient();
+
+  const {
+    data: wopiInfo,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["item", item.id, "wopi"],
+    refetchOnWindowFocus: false,
+    queryFn: () => getDriver().getWopiInfo(item.id),
+  });
+
+  useEffect(() => {
+    if (wopiInfo && formRef.current) {
+      formRef.current.submit();
+    }
+  }, [wopiInfo]);
+
+  // Listen for PostMessage events from the WOPI editor.
+  // At the moment only OnlyOffice supports this feature as Collabora
+  // does not post messages when renaming a file.
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      let data = event.data;
+      if (typeof data === "string") {
+        try {
+          data = JSON.parse(data);
+        } catch {
+          return;
+        }
+      }
+
+      if (!data || typeof data !== "object" || !data.MessageId) {
+        return;
+      }
+
+      if (data.MessageId === "File_Rename") {
+        onFileRename?.(item, data.Values.NewName);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [item.id, queryClient]);
+
+  if (isLoading) {
+    return <div>{t("components.filePreview.wopi.loading")}</div>;
+  }
+
+  if (isError || !wopiInfo) {
+    return <ErrorPreview file={item} />;
+  }
+
+  return (
+    <div className="wopi-editor">
+      <form
+        ref={formRef}
+        name="office_form"
+        target="office_frame"
+        action={wopiInfo.launch_url!}
+        method="post"
+      >
+        <input
+          name="access_token"
+          value={wopiInfo.access_token}
+          type="hidden"
+        />
+        <input
+          name="access_token_ttl"
+          value={wopiInfo.access_token_ttl}
+          type="hidden"
+        />
+      </form>
+      <iframe
+        name="office_frame"
+        className="wopi-editor-iframe"
+        title={item.title}
+        allow="clipboard-read *; clipboard-write *"
+      />
+    </div>
+  );
+};

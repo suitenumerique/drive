@@ -68,6 +68,10 @@ class Base(Configuration):
     """
 
     DEBUG = False
+    # Deliberately a plain literal, not a values.Value: this setting exposes
+    # unauthenticated login endpoints and must never be switchable from the
+    # environment. Enable it only by deploying an allowlisted configuration
+    # (see the guard in post_setup).
     LOAD_E2E_URLS = False
     USE_SWAGGER = False
 
@@ -132,6 +136,19 @@ class Base(Configuration):
     SEARCH_INDEXER_ALLOWED_MIMETYPES = values.ListValue(
         ["text/"],
         environ_name="SEARCH_INDEXER_ALLOWED_MIMETYPES",
+        environ_prefix=None,
+    )
+
+    # Item permissions
+    PERMISSIONS_BACKEND = values.Value(
+        "core.permissions.backends.role.RolePermissionsBackend",
+        environ_name="PERMISSIONS_BACKEND",
+        environ_prefix=None,
+    )
+
+    PERMISSIONS_BACKEND_PARAMETERS = values.DictValue(
+        {},
+        environ_name="PERMISSIONS_BACKEND_PARAMETERS",
         environ_prefix=None,
     )
 
@@ -212,6 +229,15 @@ class Base(Configuration):
         environ_name="AWS_S3_SIGNATURE_VERSION",
         environ_prefix=None,
     )
+    # ACL applied to uploaded objects and signed in the upload policy. Set it
+    # to "default" to let the bucket's default object ACL apply, for object
+    # storages that do not support ACLs (e.g. Google Cloud Storage based
+    # providers).
+    AWS_S3_UPLOAD_ACL = values.Value(
+        "private",
+        environ_name="AWS_S3_UPLOAD_ACL",
+        environ_prefix=None,
+    )
     AWS_S3_UPLOAD_POLICY_EXPIRATION = values.Value(
         60,  # 1 minute
         environ_name="AWS_S3_UPLOAD_POLICY_EXPIRATION",
@@ -219,43 +245,6 @@ class Base(Configuration):
     )
     AWS_S3_DOMAIN_REPLACE = values.Value(
         environ_name="AWS_S3_DOMAIN_REPLACE",
-        environ_prefix=None,
-    )
-
-    # Mirroring S3 settings
-    AWS_S3_MIRRORING_ACCESS_KEY_ID = SecretFileValue(
-        environ_name="AWS_S3_MIRRORING_ACCESS_KEY_ID",
-        environ_prefix=None,
-    )
-    AWS_S3_MIRRORING_SECRET_ACCESS_KEY = SecretFileValue(
-        environ_name="AWS_S3_MIRRORING_SECRET_ACCESS_KEY",
-        environ_prefix=None,
-    )
-    AWS_S3_MIRRORING_STORAGE_BUCKET_NAME = values.Value(
-        environ_name="AWS_S3_MIRRORING_STORAGE_BUCKET_NAME",
-        environ_prefix=None,
-    )
-    AWS_S3_MIRRORING_ENDPOINT_URL = values.Value(
-        environ_name="AWS_S3_MIRRORING_ENDPOINT_URL",
-        environ_prefix=None,
-    )
-    AWS_S3_MIRRORING_REGION_NAME = values.Value(
-        environ_name="AWS_S3_MIRRORING_REGION_NAME",
-        environ_prefix=None,
-    )
-    AWS_S3_MIRRORING_SIGNATURE_VERSION = values.Value(
-        "s3v4",
-        environ_name="AWS_S3_MIRRORING_SIGNATURE_VERSION",
-        environ_prefix=None,
-    )
-    AWS_S3_MIRRORING_REQUEST_CHECKSUM_CALCULATION = values.Value(
-        "when_supported",
-        environ_name="AWS_S3_MIRRORING_REQUEST_CHECKSUM_CALCULATION",
-        environ_prefix=None,
-    )
-    AWS_S3_MIRRORING_RESPONSE_CHECKSUM_VALIDATION = values.Value(
-        "when_supported",
-        environ_name="AWS_S3_MIRRORING_RESPONSE_CHECKSUM_VALIDATION",
         environ_prefix=None,
     )
 
@@ -677,6 +666,7 @@ class Base(Configuration):
             "application/vnd.openxmlformats-officedocument.wordprocessingml.template",
             "application/vnd.palm",
             "application/vnd.realvnc.bed",
+            "application/vnd.sqlite3",
             "application/vnd.sun.xml.calc",
             "application/vnd.sun.xml.calc.template",
             "application/vnd.sun.xml.draw",
@@ -705,6 +695,7 @@ class Base(Configuration):
             "application/x-rar-compressed",
             "application/x-research-info-systems",
             "application/x-sh",
+            "application/x-sqlite3",
             "application/x-sql",
             "application/x-subrip",
             "application/x-tar",
@@ -990,6 +981,7 @@ class Base(Configuration):
     TRASHBIN_CUTOFF_DAYS = values.Value(
         30, environ_name="TRASHBIN_CUTOFF_DAYS", environ_prefix=None
     )
+    PURGE_GRACE_DAYS = values.Value(7, environ_name="PURGE_GRACE_DAYS", environ_prefix=None)
 
     # Mail
     EMAIL_BACKEND = values.Value("django.core.mail.backends.smtp.EmailBackend")
@@ -999,12 +991,20 @@ class Base(Configuration):
     EMAIL_HOST_PASSWORD = SecretFileValue(None)
     EMAIL_LOGO_IMG = values.Value(None)
     EMAIL_PORT = values.PositiveIntegerValue(None)
+    EMAIL_URL_APP = values.Value(None)
     EMAIL_USE_TLS = values.BooleanValue(False)
     EMAIL_USE_SSL = values.BooleanValue(False)
     EMAIL_FROM = values.Value("from@example.com")
 
+    # User accounts reconciliation
+    USER_RECONCILIATION_FORM_URL = values.Value(
+        None, environ_name="USER_RECONCILIATION_FORM_URL", environ_prefix=None
+    )
+
     AUTH_USER_MODEL = "core.User"
-    INVITATION_VALIDITY_DURATION = 604800  # 7 days, in seconds
+    INVITATION_VALIDITY_DURATION = values.PositiveIntegerValue(
+        604800, environ_name="INVITATION_VALIDITY_DURATION", environ_prefix=None
+    )  # 7 days, in seconds
 
     # CORS
     CORS_ALLOW_CREDENTIALS = True
@@ -1014,6 +1014,13 @@ class Base(Configuration):
 
     # Sentry
     SENTRY_DSN = values.Value(None, environ_name="SENTRY_DSN", environ_prefix=None)
+    SENTRY_TRACES_SAMPLE_RATE = values.FloatValue(
+        default=0.0, environ_name="SENTRY_TRACES_SAMPLE_RATE", environ_prefix=None
+    )
+
+    ALLOW_SHARE_IMPORT_FILE = values.BooleanValue(
+        default=False, environ_name="ALLOW_SHARE_IMPORT_FILE", environ_prefix=None
+    )
 
     # Frontend
     FRONTEND_THEME = values.Value(None, environ_name="FRONTEND_THEME", environ_prefix=None)
@@ -1051,6 +1058,9 @@ class Base(Configuration):
     FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH = values.Value(
         None, environ_name="FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH", environ_prefix=None
     )
+    FRONTEND_HELP_MENU_CONFIG = values.DictValue(
+        {}, environ_name="FRONTEND_HELP_MENU_CONFIG", environ_prefix=None
+    )
     FRONTEND_HIDE_GAUFRE = values.BooleanValue(
         default=False, environ_name="FRONTEND_HIDE_GAUFRE", environ_prefix=None
     )
@@ -1062,6 +1072,14 @@ class Base(Configuration):
     )
     FRONTEND_RELEASE_NOTE_ENABLED = values.BooleanValue(
         default=True, environ_name="FRONTEND_RELEASE_NOTE_ENABLED", environ_prefix=None
+    )
+    FRONTEND_ENTITLEMENTS_DISCLAIMERS = values.DictValue(
+        {}, environ_name="FRONTEND_ENTITLEMENTS_DISCLAIMERS", environ_prefix=None
+    )
+    FRONTEND_STORAGE_GAUGE_INFORMATION_LINK = values.Value(
+        None,
+        environ_name="FRONTEND_STORAGE_GAUGE_INFORMATION_LINK",
+        environ_prefix=None,
     )
     FRONTEND_CSS_URL = values.Value(None, environ_name="FRONTEND_CSS_URL", environ_prefix=None)
     FRONTEND_JS_URL = values.Value(None, environ_name="FRONTEND_JS_URL", environ_prefix=None)
@@ -1158,6 +1176,17 @@ class Base(Configuration):
     )
     OIDC_STORE_ID_TOKEN = values.BooleanValue(
         default=True, environ_name="OIDC_STORE_ID_TOKEN", environ_prefix=None
+    )
+    OIDC_USE_PKCE = values.BooleanValue(
+        default=False, environ_name="OIDC_USE_PKCE", environ_prefix=None
+    )
+    OIDC_PKCE_CODE_CHALLENGE_METHOD = values.Value(
+        default="S256",
+        environ_name="OIDC_PKCE_CODE_CHALLENGE_METHOD",
+        environ_prefix=None,
+    )
+    OIDC_PKCE_CODE_VERIFIER_SIZE = values.IntegerValue(
+        default=64, environ_name="OIDC_PKCE_CODE_VERIFIER_SIZE", environ_prefix=None
     )
     OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION = values.BooleanValue(
         default=True,
@@ -1297,6 +1326,15 @@ class Base(Configuration):
         environ_prefix=None,
     )
 
+    # Extra attributes applied to items created through the external API,
+    # keyed by the token audience of the request,
+    # e.g. {"some_audience": {"quota_excluded": True}}
+    EXTERNAL_API_AUD_ITEM_ATTRIBUTES = values.DictValue(
+        default={},
+        environ_name="EXTERNAL_API_AUD_ITEM_ATTRIBUTES",
+        environ_prefix=None,
+    )
+
     OIDC_RS_PRIVATE_KEY_STR = values.Value(
         default=None,
         environ_name="OIDC_RS_PRIVATE_KEY_STR",
@@ -1419,8 +1457,31 @@ class Base(Configuration):
     WOPI_ACCESS_TOKEN_TIMEOUT = values.IntegerValue(
         60 * 60 * 10, environ_name="WOPI_ACCESS_TOKEN_TIMEOUT", environ_prefix=None
     )
+    WOPI_CONVERSION_SOURCE_TOKEN_TIMEOUT = values.IntegerValue(
+        120, environ_name="WOPI_CONVERSION_SOURCE_TOKEN_TIMEOUT", environ_prefix=None
+    )
     WOPI_LOCK_TIMEOUT = values.IntegerValue(
         30 * 60, environ_name="WOPI_LOCK_TIMEOUT", environ_prefix=None
+    )
+    WOPI_LEGACY_CONVERSION_TARGETS = {
+        "doc": "docx",
+        "xls": "xlsx",
+        "ppt": "pptx",
+    }
+    WOPI_ONLYOFFICE_CONVERT_HTTP_CONNECT_TIMEOUT = values.IntegerValue(
+        5, environ_name="WOPI_ONLYOFFICE_CONVERT_HTTP_CONNECT_TIMEOUT", environ_prefix=None
+    )
+    WOPI_ONLYOFFICE_CONVERT_HTTP_READ_TIMEOUT = values.IntegerValue(
+        60, environ_name="WOPI_ONLYOFFICE_CONVERT_HTTP_READ_TIMEOUT", environ_prefix=None
+    )
+    WOPI_ONLYOFFICE_CONVERT_DOWNLOAD_CONNECT_TIMEOUT = values.IntegerValue(
+        5, environ_name="WOPI_ONLYOFFICE_CONVERT_DOWNLOAD_CONNECT_TIMEOUT", environ_prefix=None
+    )
+    WOPI_ONLYOFFICE_CONVERT_DOWNLOAD_READ_TIMEOUT = values.IntegerValue(
+        30, environ_name="WOPI_ONLYOFFICE_CONVERT_DOWNLOAD_READ_TIMEOUT", environ_prefix=None
+    )
+    WOPI_ONLYOFFICE_CONVERT_JWT_SECRET = SecretFileValue(
+        None, environ_name="WOPI_ONLYOFFICE_CONVERT_JWT_SECRET", environ_prefix=None
     )
     WOPI_DISABLE_CHAT = values.IntegerValue(
         0, environ_name="WOPI_DISABLE_CHAT", environ_prefix=None
@@ -1456,6 +1517,12 @@ class Base(Configuration):
             environ_prefix=None,
         ),
     }
+    # Delay in seconds for the development SleepyDummyBackend safe result.
+    MALWARE_DETECTION_DUMMY_SLEEP = values.PositiveIntegerValue(
+        3,
+        environ_name="MALWARE_DETECTION_DUMMY_SLEEP",
+        environ_prefix=None,
+    )
 
     # Metrics
     METRICS_ENABLED = values.BooleanValue(
@@ -1479,7 +1546,7 @@ class Base(Configuration):
 
     # Entitlements
     ENTITLEMENTS_BACKEND = values.Value(
-        "core.entitlements.dummy_entitlements_backend.DummyEntitlementsBackend",
+        "core.entitlements.backends.static.StaticEntitlementsBackend",
         environ_name="ENTITLEMENTS_BACKEND",
         environ_prefix=None,
     )
@@ -1535,6 +1602,7 @@ class Base(Configuration):
                 environment=cls.__name__.lower(),
                 release=get_release(),
                 integrations=[DjangoIntegration()],
+                traces_sample_rate=cls.SENTRY_TRACES_SAMPLE_RATE,
             )
             sentry_sdk.set_tag("application", "backend")
 
@@ -1543,6 +1611,34 @@ class Base(Configuration):
                 "Both OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION and "
                 "OIDC_ALLOW_DUPLICATE_EMAILS cannot be set to True simultaneously. "
             )
+
+        # The e2e auth endpoints allow logging in as anyone without credentials.
+        # They may only be exposed by configurations explicitly allowlisted
+        # here; adding one must be a deliberate, reviewed act.
+        if cls.LOAD_E2E_URLS and cls.__name__ not in (
+            "Development",
+            "Test",
+            "ContinuousIntegration",
+            "LoadTest",
+        ):
+            raise ValueError(
+                f"LOAD_E2E_URLS must never be enabled on the {cls.__name__} configuration."
+            )
+
+        # Mutated in place: settings module globals are already set at this point.
+        if values.BooleanValue(False, environ_name="DB_PSYCOPG_POOL_ENABLED", environ_prefix=None):
+            # https://www.psycopg.org/psycopg3/docs/api/pool.html#psycopg_pool.ConnectionPool
+            cls.DATABASES["default"].setdefault("OPTIONS", {})["pool"] = {
+                "min_size": values.IntegerValue(
+                    4, environ_name="DB_PSYCOPG_POOL_MIN_SIZE", environ_prefix=None
+                ),
+                "max_size": values.IntegerValue(
+                    None, environ_name="DB_PSYCOPG_POOL_MAX_SIZE", environ_prefix=None
+                ),
+                "timeout": values.IntegerValue(
+                    3, environ_name="DB_PSYCOPG_POOL_TIMEOUT", environ_prefix=None
+                ),
+            }
 
         if cls.POSTHOG_KEY is not None:
             posthog.api_key = cls.POSTHOG_KEY
@@ -1603,7 +1699,11 @@ class Development(Base):
 
     ALLOWED_HOSTS = ["*"]
     CORS_ALLOW_ALL_ORIGINS = True
-    CSRF_TRUSTED_ORIGINS = ["http://localhost:8072", "http://localhost:3000"]
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:8072",
+        "http://localhost:3000",
+        *values.ListValue([], environ_name="CSRF_TRUSTED_ORIGINS"),
+    ]
     DEBUG = True
     LOAD_E2E_URLS = True
 
@@ -1648,6 +1748,9 @@ class Test(Base):
     SEARCH_INDEXER_CLASS = None
     OIDC_STORE_ACCESS_TOKEN = False
     OIDC_STORE_REFRESH_TOKEN = False
+
+    ENTITLEMENTS_BACKEND = "core.entitlements.backends.static.StaticEntitlementsBackend"
+    ENTITLEMENTS_BACKEND_PARAMETERS = {}
 
     def __init__(self):
         # pylint: disable=invalid-name
@@ -1733,3 +1836,16 @@ class PreProduction(Production):
 
     nota bene: it should inherit from the Production environment.
     """
+
+
+class LoadTest(Production):
+    """
+    Load-testing environment settings
+
+    Identical to Production except it exposes the e2e authentication
+    endpoints used by the load-test scenarios (see load-tests/ at the
+    repository root). Never deploy this configuration on an environment
+    holding real user data.
+    """
+
+    LOAD_E2E_URLS = True

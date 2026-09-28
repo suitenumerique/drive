@@ -222,14 +222,13 @@ function clearWorkingDir(x2t: X2TModule): void {
   }
 }
 
-// Emscripten's FS.readFile returns Uint8Array<ArrayBufferLike> (the backing
-// buffer might be a SharedArrayBuffer on some builds). Copy into a fresh
-// ArrayBuffer so the rest of the pipeline can use strict ArrayBuffer types
-// (Blob, the upload callback, etc.).
-function toStrictUint8Array(src: Uint8Array): Uint8Array<ArrayBuffer> {
+// Emscripten's FS.readFile may return a view over a SharedArrayBuffer on some
+// builds. Copy into a fresh ArrayBuffer so the rest of the pipeline (Blob, the
+// upload callback, etc.) always gets a plain one.
+function toStrictUint8Array(src: Uint8Array): Uint8Array {
   const out = new Uint8Array(new ArrayBuffer(src.byteLength));
   out.set(src);
-  return out as Uint8Array<ArrayBuffer>;
+  return out;
 }
 
 /** Extract embedded media files from the x2t working directory. */
@@ -257,7 +256,7 @@ function runConversion(
   inputName: string,
   inputData: Uint8Array,
   outputFormat: string
-): Uint8Array<ArrayBuffer> | null {
+): Uint8Array | null {
   x2t.FS.writeFile('/working/' + inputName, inputData);
 
   const outputPath = `/working/${inputName}.${outputFormat}`;
@@ -338,7 +337,7 @@ export async function convertToInternal(
   data: ArrayBuffer,
   filename: string
 ): Promise<{
-  bin: Uint8Array<ArrayBuffer>;
+  bin: Uint8Array;
   images: Array<{ name: string; data: Uint8Array }>;
 }> {
   const x2t = await getX2T();
@@ -399,7 +398,7 @@ export async function convertFromInternal(
   targetFormat: string,
   type?: string,
   media?: Map<string, Uint8Array>,
-): Promise<Uint8Array<ArrayBuffer>> {
+): Promise<Uint8Array> {
   const x2t = await getX2T();
   clearWorkingDir(x2t);
   const binData = new Uint8Array(bin);
@@ -510,7 +509,7 @@ export async function convertFromInternalToPdf(
   bin: ArrayBuffer,
   pdfLayoutBin: ArrayBuffer,
   media?: Map<string, Uint8Array>,
-): Promise<Uint8Array<ArrayBuffer>> {
+): Promise<Uint8Array> {
   const x2t = await getX2T();
   clearWorkingDir(x2t);
   await ensureFontsLoaded(x2t);

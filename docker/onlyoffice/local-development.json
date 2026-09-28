@@ -1,17 +1,29 @@
 {
-    "wopi": {
-        "enable": true,
-        "host": "http://localhost:9981",
-        "pdfView": ["pdf"],
-		"pdfEdit": [],
-		"forms": [],
-		"wordView": ["djvu", "epub", "fb2", "html", "mht", "mhtml", "stw", "sxw", "wps", "wpt", "xml"],
-		"wordEdit": ["docx", "dotx", "docm", "doc", "dot", "docm", "odt", "ott", "rtf", "txt"],
-		"cellView": ["et", "ett", "sxc"],
-		"cellEdit": ["xlsx", "xlsb", "xltx", "xlsm", "csv", "xls", "xlt", "ods", "ots", "fods"],
-		"slideView": ["dps", "dpt", "sxi"],
-		"slideEdit": ["pptx", "potx", "pptm", "ppt", "pot", "odp", "otp", "ppsx"],
-		"diagramView": [],
-		"diagramEdit": []
+  "wopi": {
+    "enable": true,
+    "host": "http://localhost:9981",
+    "pdfView": ["pdf"],
+    "pdfEdit": [],
+    "forms": [],
+    "wordView": ["djvu", "epub", "fb2", "html", "mht", "mhtml", "stw", "sxw", "wps", "wpt", "xml"],
+    "wordEdit": ["docx", "dotx", "docm", "doc", "dot", "odt", "ott", "rtf", "txt"],
+    "cellView": ["et", "ett", "sxc"],
+    "cellEdit": ["xlsx", "xlsb", "xltx", "xlsm", "csv", "xls", "xlt", "ods", "ots", "fods"],
+    "slideView": ["dps", "dpt", "sxi"],
+    "slideEdit": ["pptx", "potx", "pptm", "ppt", "pot", "odp", "otp", "ppsx"],
+    "diagramView": [],
+    "diagramEdit": []
+  },
+  "FileConverter": {
+    "converter": {
+      "maxDownloadBytes": 209715200
     }
+  },
+  "services": {
+    "CoAuthoring": {
+      "request-filtering-agent": {
+        "allowPrivateIPAddress": true
+      }
+    }
+  }
 }

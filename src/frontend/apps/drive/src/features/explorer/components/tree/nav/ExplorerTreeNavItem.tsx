@@ -1,5 +1,5 @@
 import { TreeItem } from "@/features/drivers/types";
-import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import { useTreeContext } from "@gouvfr-lasuite/ui-components";
 import { useRouter } from "next/router";
 import { useGlobalExplorer } from "../../GlobalExplorerContext";
 

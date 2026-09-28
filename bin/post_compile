@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Compile translation .mo files (gitignored, must be generated at build time)
+# 
+# 1. We cannot put this task in the scalingo_postbackend script because it requires
+# python environment, which is not available in the scalingo_postbackend script.
+# This script is executed by the python buildpack, that's why the python environment
+# is available.
+#
+# 2.According to this doc: https://doc.scalingo.com/languages/python/django/start
+# See "Compile .mo Message Translation File" section, we should be able to
+# run "python manage.py compilemessages" out of the box.
+# But it does not work ... it requires the gettext package to be installed.
+# And it appears that the documentation is outdated because the gettext package
+# is not installed by default.
+# So we install it manually using the same technique as the Scalingo apt-buildpack.
+# This is why we have this script.
+# The strange way of installing gettext is because the deploy user do not have
+# root privileges.
+
+
+set -o errexit    # always exit on error
+set -o pipefail   # don't ignore exit codes when piping output
+
+# Install gettext without root (same technique as Scalingo apt-buildpack)
+APT_CACHE_DIR="$(mktemp -d)"
+APT_STATE_DIR="$(mktemp -d)"
+mkdir -p "${APT_CACHE_DIR}/archives/partial" "${APT_STATE_DIR}/lists/partial"
+
+APT_OPTIONS=("-o" "debug::nolocking=true"
+             "-o" "dir::cache=${APT_CACHE_DIR}"
+             "-o" "dir::state=${APT_STATE_DIR}")
+
+echo "Downloading gettext package"
+apt-get "${APT_OPTIONS[@]}" update -qq
+apt-get "${APT_OPTIONS[@]}" -y -qq -d install --reinstall gettext
+
+mkdir -p .apt
+for DEB in "${APT_CACHE_DIR}/archives/"*.deb; do
+    dpkg -x "$DEB" .apt/
+done
+
+APT_DIR="$(pwd)/.apt"
+export PATH="${APT_DIR}/usr/bin:$PATH"
+export LD_LIBRARY_PATH="${APT_DIR}/usr/lib:${APT_DIR}/usr/lib/x86_64-linux-gnu:${APT_DIR}/lib:${APT_DIR}/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
+
+# Compile .mo translation files (gitignored, must be generated at build time)
+echo "Compiling translation .mo files"
+DJANGO_CONFIGURATION=Build python manage.py compilemessages --ignore=".venv/**/*"
+
+# Clean up
+rm -rf .apt "${APT_CACHE_DIR}" "${APT_STATE_DIR}"

@@ -31,5 +31,5 @@ test("Redirects to /401 when session cookies are cleared then re-login and get r
 
   await keyCloakSignIn(page, "drive", "drive", false);
 
-  await expect(page).toHaveURL(folderUrl);
+  await expect(page).toHaveURL(folderUrl, { timeout: 10000 });
 });

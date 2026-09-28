@@ -18,6 +18,8 @@ pytestmark = pytest.mark.django_db
 
 
 @override_settings(
+    ALLOW_SHARE_IMPORT_FILE=True,
+    AWS_S3_UPLOAD_ACL="private",
     CRISP_WEBSITE_ID="123",
     DATA_UPLOAD_MAX_MEMORY_SIZE=2048,
     ENCRYPTION_FEATURE_ENABLED=True,
@@ -32,6 +34,11 @@ pytestmark = pytest.mark.django_db
     FRONTEND_FEEDBACK_MESSAGES_WIDGET_API_URL="https://test.com",
     FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL="test",
     FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH="https://test.com",
+    FRONTEND_HELP_MENU_CONFIG={
+        "documentationUrl": "https://test.com/docs",
+        "legal": {"termsOfUseUrl": "https://test.com/tos"},
+        "supportEmail": "mailto:support@test.com",
+    },
     FRONTEND_HIDE_GAUFRE=True,
     FRONTEND_SILENT_LOGIN_ENABLED=True,
     FRONTEND_RELEASE_NOTE_ENABLED=True,
@@ -43,6 +50,8 @@ pytestmark = pytest.mark.django_db
     SENTRY_DSN="https://sentry.test/123",
     THEME_CUSTOMIZATION_FILE_PATH="",
     FRONTEND_EXTERNAL_HOME_URL="https://test.com",
+    FRONTEND_ENTITLEMENTS_DISCLAIMERS={},
+    FRONTEND_STORAGE_GAUGE_INFORMATION_LINK="https://test.com/storage",
 )
 @pytest.mark.parametrize("is_authenticated", [False, True])
 def test_api_config(is_authenticated):
@@ -56,6 +65,8 @@ def test_api_config(is_authenticated):
     response = client.get("/api/v1.0/config/")
     assert response.status_code == HTTP_200_OK
     assert response.json() == {
+        "ALLOW_SHARE_IMPORT_FILE": True,
+        "AWS_S3_UPLOAD_ACL": "private",
         "CRISP_WEBSITE_ID": "123",
         "DATA_UPLOAD_MAX_MEMORY_SIZE": 2048,
         "ENCRYPTION_FEATURE_ENABLED": True,
@@ -71,12 +82,19 @@ def test_api_config(is_authenticated):
         "FRONTEND_FEEDBACK_MESSAGES_WIDGET_API_URL": "https://test.com",
         "FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL": "test",
         "FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH": "https://test.com",
+        "FRONTEND_HELP_MENU_CONFIG": {
+            "documentationUrl": "https://test.com/docs",
+            "legal": {"termsOfUseUrl": "https://test.com/tos"},
+            "supportEmail": "mailto:support@test.com",
+        },
         "FRONTEND_HIDE_GAUFRE": True,
         "FRONTEND_SILENT_LOGIN_ENABLED": True,
         "FRONTEND_EXTERNAL_HOME_URL": "https://test.com",
         "FRONTEND_RELEASE_NOTE_ENABLED": True,
         "FRONTEND_CSS_URL": "http://testcss/",
         "FRONTEND_JS_URL": "http://testjs/",
+        "FRONTEND_ENTITLEMENTS_DISCLAIMERS": {},
+        "FRONTEND_STORAGE_GAUGE_INFORMATION_LINK": "https://test.com/storage",
         "LANGUAGES": [
             ["en-us", "English"],
             ["fr-fr", "French"],

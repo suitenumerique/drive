@@ -1,4 +1,4 @@
-import { Modal, ModalSize } from "@gouvfr-lasuite/cunningham-react";
+import { Modal, ModalSize } from "@gouvfr-lasuite/ui-components";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EncryptionHostBody } from "./EncryptionHostBody";

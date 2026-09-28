@@ -47,6 +47,8 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
                 "numchild": 0,
@@ -75,6 +77,12 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": None,
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -91,6 +99,8 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
                 "numchild": 0,
@@ -119,6 +129,12 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": None,
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
         ],
     }
@@ -175,6 +191,8 @@ def test_api_items_children_list_anonymous_public_parent():
                 "depth": 4,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
                 "numchild": 0,
@@ -197,6 +215,12 @@ def test_api_items_children_list_anonymous_public_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": None,
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -213,6 +237,8 @@ def test_api_items_children_list_anonymous_public_parent():
                 "depth": 4,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
                 "numchild": 0,
@@ -235,6 +261,12 @@ def test_api_items_children_list_anonymous_public_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": None,
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
         ],
     }
@@ -279,7 +311,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
     child1, child2 = factories.ItemFactory.create_batch(
         2, parent=item, update_upload_state=models.ItemUploadStateChoices.READY
     )
-    factories.UserItemAccessFactory(item=child1)
+    child1_access = factories.UserItemAccessFactory(item=child1)
 
     response = client.get(
         f"/api/v1.0/items/{item.id!s}/children/",
@@ -305,6 +337,8 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
                 "numchild": 0,
@@ -333,6 +367,12 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": [child1_access.user.sub],
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -349,6 +389,8 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
                 "numchild": 0,
@@ -377,6 +419,12 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": [],
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
         ],
     }
@@ -405,7 +453,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
     child1, child2 = factories.ItemFactory.create_batch(
         2, parent=item, update_upload_state=models.ItemUploadStateChoices.READY
     )
-    factories.UserItemAccessFactory(item=child1)
+    child1_access = factories.UserItemAccessFactory(item=child1)
 
     response = client.get(f"/api/v1.0/items/{item.id!s}/children/")
 
@@ -430,6 +478,8 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "depth": 4,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
                 "numchild": 0,
@@ -458,6 +508,12 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": [child1_access.user.sub],
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -474,6 +530,8 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "depth": 4,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
                 "numchild": 0,
@@ -502,6 +560,12 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": [],
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
         ],
     }
@@ -549,12 +613,12 @@ def test_api_items_children_list_authenticated_related_direct():
 
     item = factories.ItemFactory(link_reach="restricted", type=models.ItemTypeChoices.FOLDER)
     access = factories.UserItemAccessFactory(item=item, user=user)
-    factories.UserItemAccessFactory(item=item)
+    other_access = factories.UserItemAccessFactory(item=item)
 
     child1, child2 = factories.ItemFactory.create_batch(
         2, parent=item, update_upload_state=models.ItemUploadStateChoices.READY
     )
-    factories.UserItemAccessFactory(item=child1)
+    child1_access = factories.UserItemAccessFactory(item=child1)
 
     response = client.get(
         f"/api/v1.0/items/{item.id!s}/children/",
@@ -580,6 +644,8 @@ def test_api_items_children_list_authenticated_related_direct():
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
                 "numchild": 0,
@@ -608,6 +674,14 @@ def test_api_items_children_list_authenticated_related_direct():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": sorted(
+                    [user.sub, other_access.user.sub, child1_access.user.sub]
+                ),
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -624,6 +698,8 @@ def test_api_items_children_list_authenticated_related_direct():
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
                 "numchild": 0,
@@ -652,6 +728,12 @@ def test_api_items_children_list_authenticated_related_direct():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": sorted([user.sub, other_access.user.sub]),
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
         ],
     }
@@ -680,7 +762,7 @@ def test_api_items_children_list_authenticated_related_parent():
     child1, child2 = factories.ItemFactory.create_batch(
         2, parent=item, update_upload_state=models.ItemUploadStateChoices.READY
     )
-    factories.UserItemAccessFactory(item=child1)
+    child1_access = factories.UserItemAccessFactory(item=child1)
 
     grand_parent_access = factories.UserItemAccessFactory(item=grand_parent, user=user)
 
@@ -708,6 +790,8 @@ def test_api_items_children_list_authenticated_related_parent():
                 "depth": 4,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
                 "numchild": 0,
@@ -736,6 +820,12 @@ def test_api_items_children_list_authenticated_related_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": sorted([user.sub, child1_access.user.sub]),
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -752,6 +842,8 @@ def test_api_items_children_list_authenticated_related_parent():
                 "depth": 4,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
                 "numchild": 0,
@@ -780,6 +872,12 @@ def test_api_items_children_list_authenticated_related_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": [user.sub],
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
         ],
     }
@@ -893,6 +991,8 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
                 "numchild": 0,
@@ -921,6 +1021,12 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": [],
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -937,6 +1043,8 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
                 "numchild": 0,
@@ -965,6 +1073,12 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": [],
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
         ],
     }
@@ -982,17 +1096,17 @@ def test_api_items_children_list_filter_type():
 
     item = factories.ItemFactory(link_reach="restricted", type=models.ItemTypeChoices.FOLDER)
     access = factories.UserItemAccessFactory(item=item, user=user)
-    factories.UserItemAccessFactory(item=item)
+    other_access = factories.UserItemAccessFactory(item=item)
 
     child1 = factories.ItemFactory(parent=item, type=models.ItemTypeChoices.FOLDER)
-    factories.UserItemAccessFactory(item=child1)
+    child1_access = factories.UserItemAccessFactory(item=child1)
 
     child2 = factories.ItemFactory(
         parent=item,
         type=models.ItemTypeChoices.FILE,
         update_upload_state=models.ItemUploadStateChoices.READY,
     )
-    factories.UserItemAccessFactory(item=child2)
+    child2_access = factories.UserItemAccessFactory(item=child2)
 
     # filter by type: folder
     response = client.get(
@@ -1019,6 +1133,8 @@ def test_api_items_children_list_filter_type():
                 "depth": 2,
                 "id": str(child1.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child1.link_reach,
                 "link_role": child1.link_role,
                 "numchild": 0,
@@ -1043,6 +1159,14 @@ def test_api_items_children_list_filter_type():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": sorted(
+                    [user.sub, other_access.user.sub, child1_access.user.sub]
+                ),
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
         ],
     }
@@ -1072,6 +1196,8 @@ def test_api_items_children_list_filter_type():
                 "depth": 2,
                 "id": str(child2.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": child2.link_reach,
                 "link_role": child2.link_role,
                 "numchild": 0,
@@ -1100,6 +1226,14 @@ def test_api_items_children_list_filter_type():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": sorted(
+                    [user.sub, other_access.user.sub, child2_access.user.sub]
+                ),
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             },
         ],
     }
@@ -1379,6 +1513,8 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "depth": 3,
                 "id": str(item.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": "restricted",
                 "link_role": "reader",
                 "numchild": 1,
@@ -1401,6 +1537,12 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": [],
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             }
         ],
     }
@@ -1427,6 +1569,8 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "depth": 4,
                 "id": str(child.id),
                 "is_favorite": False,
+                "is_restricted": False,
+                "target": None,
                 "link_reach": "public",
                 "link_role": "editor",
                 "numchild": 0,
@@ -1449,6 +1593,12 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "accesses_user_ids": [],
+                "encryption_public_key_version_for_user": None,
+                "is_encrypted": False,
+                "is_encryption_root": False,
+                "is_inside_encrypted_subtree": False,
+                "is_pending_encryption_for_user": False,
             }
         ],
     }
@@ -1486,3 +1636,52 @@ def test_api_items_children_list_excludes_pending_items():
     assert response.status_code == 200
     results = response.json()
     assert results["count"] == 2
+
+
+def test_api_items_children_list_filter_category():
+    """The children list can be filtered by file type category."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[user])
+    factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+        filename="doc.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    png = factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+        filename="pic.png",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/?category=image")
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert {result["id"] for result in results} == {str(png.id)}
+
+
+def test_api_items_children_list_filter_contact_inherited():
+    """Filtering children by contact includes items shared through an ancestor."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    contact = factories.UserFactory()
+
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[user, contact])
+    child = factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FILE,
+        filename="doc.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    response = client.get(f"/api/v1.0/items/{parent.id!s}/children/?contact={contact.id!s}")
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert {result["id"] for result in results} == {str(child.id)}

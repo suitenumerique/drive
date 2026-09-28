@@ -42,15 +42,17 @@ def test_api_items_list_format():
     client.force_login(user)
 
     other_users = factories.UserFactory.create_batch(3)
+    item_users = factories.UserFactory.create_batch(2)
+    item2_users = factories.UserFactory.create_batch(2)
     item = factories.ItemFactory(
-        users=factories.UserFactory.create_batch(2),
+        users=item_users,
         favorited_by=[user, *other_users],
         link_traces=other_users,
         type=models.ItemTypeChoices.FOLDER,
         title="item 1",
     )
     item2 = factories.ItemFactory(
-        users=factories.UserFactory.create_batch(2),
+        users=item2_users,
         favorited_by=[user, *other_users],
         link_traces=other_users,
         type=models.ItemTypeChoices.FILE,
@@ -106,6 +108,8 @@ def test_api_items_list_format():
             },
             "depth": 1,
             "is_favorite": False,
+            "is_restricted": False,
+            "target": None,
             "link_reach": item3.link_reach,
             "link_role": item3.link_role,
             "nb_accesses": 0,
@@ -128,6 +132,12 @@ def test_api_items_list_format():
             "deleted_at": None,
             "hard_delete_at": None,
             "is_wopi_supported": False,
+            "accesses_user_ids": [],
+            "encryption_public_key_version_for_user": None,
+            "is_encrypted": False,
+            "is_encryption_root": False,
+            "is_inside_encrypted_subtree": False,
+            "is_pending_encryption_for_user": False,
         },
         {
             "id": str(item2.id),
@@ -144,6 +154,8 @@ def test_api_items_list_format():
             },
             "depth": 1,
             "is_favorite": True,
+            "is_restricted": False,
+            "target": None,
             "link_reach": item2.link_reach,
             "link_role": item2.link_role,
             "nb_accesses": 3,
@@ -166,6 +178,12 @@ def test_api_items_list_format():
             "deleted_at": None,
             "hard_delete_at": None,
             "is_wopi_supported": False,
+            "accesses_user_ids": sorted([user.sub, *(u.sub for u in item2_users)]),
+            "encryption_public_key_version_for_user": None,
+            "is_encrypted": False,
+            "is_encryption_root": False,
+            "is_inside_encrypted_subtree": False,
+            "is_pending_encryption_for_user": False,
         },
         {
             "id": str(item.id),
@@ -182,6 +200,8 @@ def test_api_items_list_format():
             },
             "depth": 1,
             "is_favorite": True,
+            "is_restricted": False,
+            "target": None,
             "link_reach": item.link_reach,
             "link_role": item.link_role,
             "nb_accesses": 3,
@@ -204,6 +224,12 @@ def test_api_items_list_format():
             "deleted_at": None,
             "hard_delete_at": None,
             "is_wopi_supported": False,
+            "accesses_user_ids": sorted([user.sub, *(u.sub for u in item_users)]),
+            "encryption_public_key_version_for_user": None,
+            "is_encrypted": False,
+            "is_encryption_root": False,
+            "is_inside_encrypted_subtree": False,
+            "is_pending_encryption_for_user": False,
         },
     ]
 

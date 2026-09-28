@@ -11,12 +11,14 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
   }
 
   &__filters {
-    padding: 0 12px 12px 12px;
+    padding: 0 12px 0 12px;
+    margin-bottom: 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
 
     &__inputs {
+      overflow-x: auto;
       display: flex;
       gap: 8px;
     }
@@ -96,6 +98,15 @@ $tablet: map.get($themes, "default", "globals", "breakpoints", "tablet");
 
   @media (max-width: $tablet) {
     --v-modal-top: 1rem;
+  }
+
+  .c__modal__title {
+    padding-bottom: 6px;
+    font-size: 14px;
+  }
+
+  .quick-search-input-container {
+    margin-top: 0;
   }
 
   /**

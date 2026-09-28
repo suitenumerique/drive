@@ -367,3 +367,7 @@ msgstr "Duits"
 #: drive/settings.py:253
 msgid "Dutch"
 msgstr "Nederlands"
+
+#: wopi/conversion/services.py:86
+msgid "converted"
+msgstr "geconverteerd"

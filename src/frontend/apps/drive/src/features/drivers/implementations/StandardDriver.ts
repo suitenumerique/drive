@@ -15,6 +15,7 @@ import {
   DTOUpdateInvitation,
 } from "../DTOs/InvitationDTO";
 import {
+  DTOBatchShare,
   DTOCreateAccess,
   DTOUpdateLinkConfiguration,
 } from "../DTOs/AccessesDTO";
@@ -28,9 +29,11 @@ import {
   ItemBreadcrumb,
   ItemType,
   User,
+  UserLight,
   WopiInfo,
 } from "../types";
 import { DTODeleteAccess } from "../DTOs/AccessesDTO";
+import { convertFiltersToQueryParams } from "@/features/explorer/components/filters/filterUtils";
 
 export class StandardDriver extends Driver {
   async getConfig(): Promise<ApiConfig> {
@@ -43,8 +46,7 @@ export class StandardDriver extends Driver {
     const params = {
       page: 1,
       page_size: 100,
-      ordering: "-type,-created_at",
-      ...(filters ? filters : {}),
+      ...(filters ? convertFiltersToQueryParams(filters) : {}),
     };
     const response = await fetchAPI(`items/`, {
       params,
@@ -70,7 +72,7 @@ export class StandardDriver extends Driver {
 
   async searchItems(filters?: ItemFilters): Promise<Item[]> {
     const response = await fetchAPI(`items/search/`, {
-      params: filters,
+      params: convertFiltersToQueryParams(filters ?? {}),
     });
     const data = await response.json();
     return jsonToItems(data.results);
@@ -78,7 +80,7 @@ export class StandardDriver extends Driver {
 
   async getTrashItems(filters?: ItemFilters): Promise<Item[]> {
     const response = await fetchAPI(`items/trashbin/`, {
-      params: { ...filters, page_size: 200 },
+      params: { ...convertFiltersToQueryParams(filters ?? {}), page_size: 200 },
     });
     const data = await response.json();
     return jsonToItems(data.results);
@@ -115,6 +117,14 @@ export class StandardDriver extends Driver {
     return data;
   }
 
+  async getContacts(filters?: UserFilters): Promise<UserLight[]> {
+    const response = await fetchAPI(`users/contacts/`, {
+      params: filters,
+    });
+    const data = await response.json();
+    return data;
+  }
+
   async updateUser(payload: Partial<User> & { id: string }): Promise<User> {
     const response = await fetchAPI(`users/${payload.id}/`, {
       method: "PATCH",
@@ -131,8 +141,7 @@ export class StandardDriver extends Driver {
     const params = {
       page: 1,
       page_size: filters?.page_size || 200,
-      ordering: "-type,-created_at",
-      ...(filters ? filters : {}),
+      ...(filters ? convertFiltersToQueryParams(filters) : {}),
     };
 
     const response = await fetchAPI(
@@ -224,18 +233,20 @@ export class StandardDriver extends Driver {
       // Case 4: self-rooted source attaches under destination chain.
       const vaultClient = window.__driveVaultClient;
       if (!vaultClient) {
-        throw new Error('Vault client not initialized — cannot wrap key for move.');
+        throw new Error(
+          "Vault client not initialized — cannot wrap key for move.",
+        );
       }
       // The item's per-user wrap on the caller's access row.
       const userEncryptedKey = item.encrypted_item_symmetric_key_for_user;
       if (!userEncryptedKey) {
         throw new Error(
-          'Self-rooted encrypted item has no per-user wrap on the caller — cannot derive K_item.',
+          "Self-rooted encrypted item has no per-user wrap on the caller — cannot derive K_item.",
         );
       }
       const newParentKeyChain = await this.getKeyChain(parentId!);
       const newEntryKey = fromBase64(newParentKeyChain.encrypted_key_for_user);
-      const newChainToParent = newParentKeyChain.chain.map(e =>
+      const newChainToParent = newParentKeyChain.chain.map((e) =>
         fromBase64(e.encrypted_symmetric_key),
       );
 
@@ -267,12 +278,14 @@ export class StandardDriver extends Driver {
         oldKeyChain.encryption_tree_root_item_id !==
         newParentKeyChain.encryption_tree_root_item_id
       ) {
-        throw new MoveRequiresEncryption(id, 'encrypted-cross-root');
+        throw new MoveRequiresEncryption(id, "encrypted-cross-root");
       }
 
       const vaultClient = window.__driveVaultClient;
       if (!vaultClient) {
-        throw new Error('Vault client not initialized — cannot rewrap key for move.');
+        throw new Error(
+          "Vault client not initialized — cannot rewrap key for move.",
+        );
       }
 
       const entryKey = fromBase64(oldKeyChain.encrypted_key_for_user);
@@ -281,11 +294,11 @@ export class StandardDriver extends Driver {
       // that to get the chain to the OLD parent itself.
       const oldChainToParent = oldKeyChain.chain
         .slice(0, -1)
-        .map(e => fromBase64(e.encrypted_symmetric_key));
+        .map((e) => fromBase64(e.encrypted_symmetric_key));
       const oldEncryptedKey = fromBase64(
         oldKeyChain.chain[oldKeyChain.chain.length - 1].encrypted_symmetric_key,
       );
-      const newChainToParent = newParentKeyChain.chain.map(e =>
+      const newChainToParent = newParentKeyChain.chain.map((e) =>
         fromBase64(e.encrypted_symmetric_key),
       );
 
@@ -297,12 +310,14 @@ export class StandardDriver extends Driver {
       );
       encryptedSymmetricKey = toBase64(newEncryptedKey);
     } else if (!sourceEncrypted && targetEncrypted) {
-      throw new MoveRequiresEncryption(id, 'plaintext-into-encrypted');
+      throw new MoveRequiresEncryption(id, "plaintext-into-encrypted");
     } else if (sourceEncrypted && !targetEncrypted) {
       // Case 3: re-anchor as its own encryption root.
       const vaultClient = window.__driveVaultClient;
       if (!vaultClient) {
-        throw new Error('Vault client not initialized — cannot re-anchor for move.');
+        throw new Error(
+          "Vault client not initialized — cannot re-anchor for move.",
+        );
       }
 
       const oldKeyChain = await this.getKeyChain(id);
@@ -310,7 +325,7 @@ export class StandardDriver extends Driver {
       // `oldKeyChain.chain` resolves to the item's own K_item — pass
       // it as-is so `shareKeys` lands on K_item, then re-wraps it
       // for each user's pubkey.
-      const chainToItem = oldKeyChain.chain.map(e =>
+      const chainToItem = oldKeyChain.chain.map((e) =>
         fromBase64(e.encrypted_symmetric_key),
       );
 
@@ -321,15 +336,14 @@ export class StandardDriver extends Driver {
       // silently miss everyone.
       const accesses = await this.getItemAccesses(id);
       const userSubs = Array.from(
-        new Set(accesses.map(a => a.user.sub).filter(Boolean)),
+        new Set(accesses.map((a) => a.user.sub).filter(Boolean)),
       );
       if (userSubs.length === 0) {
         throw new Error(
-          'No users with access — cannot re-anchor item as its own encryption root.',
+          "No users with access — cannot re-anchor item as its own encryption root.",
         );
       }
-      const { publicKeys, versions } =
-        await fetchRegisteredKeys(userSubs);
+      const { publicKeys, versions } = await fetchRegisteredKeys(userSubs);
       const usersWithKeys = new Set(Object.keys(publicKeys));
 
       // The only catastrophic case is the OPERATOR (the user doing
@@ -344,7 +358,7 @@ export class StandardDriver extends Driver {
       const actorSub = vaultClient.getAuthContext?.()?.suiteUserId;
       if (!actorSub) {
         throw new Error(
-          'Vault auth context is not set — cannot determine the operator for the re-anchor guard.',
+          "Vault auth context is not set — cannot determine the operator for the re-anchor guard.",
         );
       }
       if (!usersWithKeys.has(actorSub)) {
@@ -387,9 +401,9 @@ export class StandardDriver extends Driver {
       const pendingCount = userSubs.length - usersWithKeys.size;
       if (pendingCount > 0) {
         console.info(
-          '[StandardDriver.moveItem] re-anchor: marking',
+          "[StandardDriver.moveItem] re-anchor: marking",
           pendingCount,
-          'collaborator access row(s) as pending — they will be re-shared once their pubkey is available.',
+          "collaborator access row(s) as pending — they will be re-shared once their pubkey is available.",
         );
       }
       isEncryptionRoot = true; // promoting to self-root on the way out
@@ -400,7 +414,7 @@ export class StandardDriver extends Driver {
       ...(encryptedSymmetricKey
         ? { encrypted_symmetric_key: encryptedSymmetricKey }
         : {}),
-      ...(typeof isEncryptionRoot === 'boolean'
+      ...(typeof isEncryptionRoot === "boolean"
         ? { is_encryption_root: isEncryptionRoot }
         : {}),
       ...(perUserEncryptedKeys
@@ -410,10 +424,18 @@ export class StandardDriver extends Driver {
         ? { encryption_public_key_versions: perUserVersions }
         : {}),
     };
-    await fetchAPI(`items/${id}/move/`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    await fetchAPI(
+      `items/${id}/move/`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+      {
+        // A move can be rejected (e.g. quota gate): let the caller toast the
+        // error instead of redirecting the whole app to the 403 page.
+        redirectOn40x: false,
+      },
+    );
   }
 
   async getItemAccesses(itemId: string): Promise<Access[]> {
@@ -432,12 +454,20 @@ export class StandardDriver extends Driver {
         data.encrypted_item_symmetric_key_for_user;
     }
     if (data.encryption_public_key_version) {
-      body.encryption_public_key_version =
-        data.encryption_public_key_version;
+      body.encryption_public_key_version = data.encryption_public_key_version;
     }
     await fetchAPI(`items/${data.itemId}/accesses/`, {
       method: "POST",
       body: JSON.stringify(body),
+    });
+  }
+
+  async batchShare(payload: DTOBatchShare): Promise<void> {
+    await fetchAPI(`items/${payload.itemId}/batch-share/`, {
+      method: "POST",
+      body: JSON.stringify({
+        rows: payload.rows,
+      }),
     });
   }
 
@@ -520,10 +550,7 @@ export class StandardDriver extends Driver {
     }
   }
 
-  async createFolder(data: {
-    title: string;
-    parent?: Item;
-  }): Promise<Item> {
+  async createFolder(data: { title: string; parent?: Item }): Promise<Item> {
     const { parent, ...rest } = data;
     const url = parent ? `items/${parent.id}/children/` : `items/`;
     const body: Record<string, unknown> = {
@@ -566,11 +593,8 @@ export class StandardDriver extends Driver {
     const chain = keyChain.chain.map((e) =>
       fromBase64(e.encrypted_symmetric_key),
     );
-    const { encryptedContent, wrappedKey } = await vaultClient.encryptNestedWithoutKey(
-      content,
-      entryKey,
-      chain,
-    );
+    const { encryptedContent, wrappedKey } =
+      await vaultClient.encryptNestedWithoutKey(content, entryKey, chain);
     return {
       wrappedKey: toBase64(wrappedKey),
       encryptedContent,
@@ -612,7 +636,7 @@ export class StandardDriver extends Driver {
     filters?: ItemFilters,
   ): Promise<PaginatedChildrenResult> {
     const response = await fetchAPI(`items/recents/`, {
-      params: { ...filters, page_size: 200 },
+      params: { ...convertFiltersToQueryParams(filters ?? {}), page_size: 200 },
     });
     const data = await response.json();
     return {
@@ -628,8 +652,8 @@ export class StandardDriver extends Driver {
   async getFavoriteItems(
     filters?: ItemFilters,
   ): Promise<PaginatedChildrenResult> {
-    const response = await fetchAPI(`items/favorite_list/`, {
-      params: { ...filters, page_size: 200 },
+    const response = await fetchAPI(`items/favorites/`, {
+      params: { ...convertFiltersToQueryParams(filters ?? {}), page_size: 200 },
     });
 
     const data = await response.json();
@@ -655,81 +679,117 @@ export class StandardDriver extends Driver {
     });
   }
 
-  async createFile(data: {
+  createFile(data: {
     parent?: Item;
     file: File;
     filename: string;
+    uploadAcl?: string;
     progressHandler?: (progress: number) => void;
-  }): Promise<Item> {
-    const { parent, file, progressHandler, ...rest } = data;
-    const url = parent ? `items/${parent.id}/children/` : `items/`;
+  }): { promise: Promise<Item>; abort: () => Promise<void> } {
+    let abortUpload: (() => void) | undefined;
+    let aborted = false;
+    const abortController = new AbortController();
 
-    const body: Record<string, unknown> = {
-      type: ItemType.FILE,
-      ...rest,
+    const abort = async () => {
+      aborted = true;
+      abortUpload?.();
+      abortController.abort();
     };
 
-    // If the parent is encrypted, mint K_file wrapped by the parent's
-    // key and encrypt the file content client-side. The upload to the
-    // policy URL then carries ciphertext; the backend /upload-ended/
-    // short-circuits mimetype / malware analysis for encrypted items.
-    let encryptedBody: ArrayBuffer | null = null;
-    if (parent?.is_encrypted) {
-      const plaintext = await file.arrayBuffer();
-      const { wrappedKey, encryptedContent } = await this.encryptForParent(
-        parent,
-        plaintext,
+    const promise = (async () => {
+      const { parent, file, uploadAcl, progressHandler, ...rest } = data;
+      const url = parent ? `items/${parent.id}/children/` : `items/`;
+
+      const body: Record<string, unknown> = {
+        type: ItemType.FILE,
+        ...rest,
+      };
+
+      // If the parent is encrypted, mint K_file wrapped by the parent's
+      // key and encrypt the file content client-side. The upload to the
+      // policy URL then carries ciphertext; the backend /upload-ended/
+      // short-circuits mimetype / malware analysis for encrypted items.
+      let uploadedFile = file;
+      if (parent?.is_encrypted) {
+        const plaintext = await file.arrayBuffer();
+        const { wrappedKey, encryptedContent } = await this.encryptForParent(
+          parent,
+          plaintext,
+        );
+        body.encrypted_symmetric_key = wrappedKey;
+        uploadedFile = new File([encryptedContent], file.name, {
+          type: "application/octet-stream",
+        });
+      }
+
+      if (aborted) {
+        throw new DOMException("Upload cancelled", "AbortError");
+      }
+
+      const response = await fetchAPI(
+        url,
+        {
+          method: "POST",
+          body: JSON.stringify(body),
+        },
+        {
+          redirectOn40x: false,
+        },
       );
-      body.encrypted_symmetric_key = wrappedKey;
-      encryptedBody = encryptedContent;
-    }
+      const item = jsonToItem(await response.json());
+      if (!item.policy) {
+        throw new Error("No policy found");
+      }
 
-    const response = await fetchAPI(
-      url,
-      { method: "POST", body: JSON.stringify(body) },
-      {
-        // When entitlements are falsy, the backend returns a 403 error.
-        // We don't want to redirect to the login page in this case, instead
-        // we want to show an error.
-        redirectOn40x: false,
-      },
-    );
-    const item = jsonToItem(await response.json());
-    if (!item.policy) {
-      throw new Error("No policy found");
-    }
+      if (aborted) {
+        throw new DOMException("Upload cancelled", "AbortError");
+      }
 
-    // We want the upload progress ( that goes from 0 to 100) to be proxied to the progress handler ( that goes from 0 to 95)
-    // So the progression indicator still shows leave a 5% gap before the upload-ended is called.
-    // We want to wait until the upload-ended endpoint is called.
-    const progressHandlerProxy = (progress: number) => {
-      const proxyScale = 90;
-      const proxiedProgress = (progress * proxyScale) / 100;
-      progressHandler?.(proxiedProgress);
-    };
+      // We want the upload progress ( that goes from 0 to 100) to be proxied to the progress handler ( that goes from 0 to 95)
+      // So the progression indicator still shows leave a 5% gap before the upload-ended is called.
+      // We want to wait until the upload-ended endpoint is called.
+      const progressHandlerProxy = (progress: number) => {
+        const proxyScale = 90;
+        const proxiedProgress = (progress * proxyScale) / 100;
+        progressHandler?.(proxiedProgress);
+      };
 
-    if (encryptedBody) {
-      // Upload ciphertext with progress. XHR lets us report progress which
-      // fetch() can't do for request bodies.
-      await uploadArrayBuffer(
+      const upload = uploadFile(
         item.policy,
-        encryptedBody,
-        "application/octet-stream",
-        (progress) => progressHandlerProxy(progress),
+        uploadedFile,
+        uploadAcl,
+        progressHandlerProxy,
       );
-    } else {
-      await uploadFile(item.policy, file, (progress) => {
-        progressHandlerProxy(progress);
-      });
-    }
+      abortUpload = upload.abort;
 
-    await fetchAPI(`items/${item.id}/upload-ended/`, {
-      method: "POST",
-    });
+      if (aborted) {
+        upload.abort();
+        throw new DOMException("Upload cancelled", "AbortError");
+      }
 
-    progressHandler?.(100);
+      await upload.promise;
 
-    return item;
+      if (aborted) {
+        throw new DOMException("Upload cancelled", "AbortError");
+      }
+
+      await fetchAPI(
+        `items/${item.id}/upload-ended/`,
+        {
+          method: "POST",
+          signal: abortController.signal,
+        },
+        {
+          redirectOn40x: false,
+        },
+      );
+
+      progressHandler?.(100);
+
+      return item;
+    })();
+
+    return { promise, abort };
   }
 
   async createFileFromTemplate(data: {
@@ -756,6 +816,28 @@ export class StandardDriver extends Driver {
         redirectOn40x: false,
       },
     );
+    return jsonToItem(await response.json());
+  }
+
+  async duplicateItem(id: string): Promise<Item> {
+    const response = await fetchAPI(
+      `items/${id}/duplicate/`,
+      {
+        method: "POST",
+      },
+      {
+        // A duplication can be rejected (e.g. quota gate): let the global
+        // handler toast the error instead of redirecting to the 403 page.
+        redirectOn40x: false,
+      },
+    );
+    return jsonToItem(await response.json());
+  }
+
+  async convertItem(itemId: string): Promise<Item> {
+    const response = await fetchAPI(`items/${itemId}/convert/`, {
+      method: "POST",
+    });
     return jsonToItem(await response.json());
   }
 
@@ -875,13 +957,17 @@ export class StandardDriver extends Driver {
       encryption_public_key_version: number;
     },
   ): Promise<void> {
-    await fetchAPI(
-      `items/${itemId}/accesses/${accessId}/encryption-key/`,
-      {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      },
-    );
+    await fetchAPI(`items/${itemId}/accesses/${accessId}/encryption-key/`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async confirmUserReconciliation(
+    userType: "active" | "inactive",
+    confirmationId: string,
+  ): Promise<void> {
+    await fetchAPI(`user-reconciliations/${userType}/${confirmationId}/`);
   }
 }
 
@@ -905,23 +991,29 @@ const jsonToItem = (data: any): Item => {
 
 /**
  * Upload a file, using XHR so we can report on progress through a handler.
- * @param url The URL to POST the file to.
- * @param formData The multi-part request form data body to send (includes the file).
+ * @param url The URL to PUT the file to.
+ * @param file The file to upload.
+ * @param acl The ACL signed in the upload policy, absent when the policy signs none.
  * @param progressHandler A handler that receives progress updates as a single integer `0 <= x <= 100`.
  */
 export const uploadFile = (
   url: string,
   file: File,
+  acl: string | undefined,
   progressHandler: (progress: number) => void,
-) =>
-  new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
+): { promise: Promise<unknown>; abort: () => void } => {
+  const xhr = new XMLHttpRequest();
+  const promise = new Promise((resolve, reject) => {
     xhr.open("PUT", url);
-    xhr.setRequestHeader("X-amz-acl", "private");
+    if (acl) {
+      xhr.setRequestHeader("X-amz-acl", acl);
+    }
     xhr.setRequestHeader("Content-Type", file.type);
 
     xhr.addEventListener("error", reject);
-    xhr.addEventListener("abort", reject);
+    xhr.addEventListener("abort", () =>
+      reject(new DOMException("Upload cancelled", "AbortError")),
+    );
 
     xhr.addEventListener("readystatechange", () => {
       if (xhr.readyState === 4) {
@@ -930,6 +1022,10 @@ export const uploadFile = (
           // Because 'progress' event listener is not called when the file size is 0.
           progressHandler(100);
           return resolve(true);
+        }
+        if (xhr.status === 0) {
+          // Aborted - already handled by abort listener
+          return;
         }
         reject(new Error(`Failed to perform the upload on ${url}.`));
       }
@@ -945,44 +1041,5 @@ export const uploadFile = (
 
     xhr.send(file);
   });
-
-/**
- * Upload raw bytes to a presigned PUT URL with progress reporting. Used
- * for encrypted content where the ciphertext is held as an ArrayBuffer
- * rather than a File object.
- */
-export const uploadArrayBuffer = (
-  url: string,
-  buffer: ArrayBuffer,
-  contentType: string,
-  progressHandler: (progress: number) => void,
-) =>
-  new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", url);
-    xhr.setRequestHeader("X-amz-acl", "private");
-    xhr.setRequestHeader("Content-Type", contentType);
-
-    xhr.addEventListener("error", reject);
-    xhr.addEventListener("abort", reject);
-
-    xhr.addEventListener("readystatechange", () => {
-      if (xhr.readyState === 4) {
-        if (xhr.status === 200) {
-          progressHandler(100);
-          return resolve(true);
-        }
-        reject(new Error(`Failed to perform the upload on ${url}.`));
-      }
-    });
-
-    xhr.upload.addEventListener("progress", (progressEvent) => {
-      if (progressEvent.lengthComputable) {
-        progressHandler(
-          Math.floor((progressEvent.loaded / progressEvent.total) * 100),
-        );
-      }
-    });
-
-    xhr.send(buffer);
-  });
+  return { promise, abort: () => xhr.abort() };
+};

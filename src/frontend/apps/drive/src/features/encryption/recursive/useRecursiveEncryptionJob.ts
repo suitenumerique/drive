@@ -5,6 +5,7 @@ import { Item, ItemType, LinkReach } from '@/features/drivers/types';
 import { getDriver } from '@/features/config/Config';
 import { APIError, errorToString } from '@/features/api/APIError';
 import { useAuth } from '@/features/auth/Auth';
+import { useConfig } from '@/features/config/ConfigProvider';
 import { fetchRegisteredKeys } from '@/features/encryption/fetchRegisteredKeys';
 import { useVaultClient } from '../VaultClientProvider';
 import {
@@ -216,6 +217,9 @@ export function useRecursiveEncryptionJob({
   const queryClient = useQueryClient();
   const { client: vaultClient } = useVaultClient();
   const { user } = useAuth();
+  const { config } = useConfig();
+  const uploadAcl =
+    config.AWS_S3_UPLOAD_ACL === 'default' ? undefined : config.AWS_S3_UPLOAD_ACL;
 
   const [state, dispatch] = useReducer(reducer, INITIAL);
 
@@ -565,6 +569,7 @@ export function useRecursiveEncryptionJob({
           currentUserRootWrappedRef,
           folderWrappedKeysRef,
           signal: controller.signal,
+          uploadAcl,
           dispatch,
           onFileStaged: (id, staged) => stagedResults.set(id, staged),
         });
@@ -587,6 +592,7 @@ export function useRecursiveEncryptionJob({
           intoChainRootWrapRef,
           folderWrappedKeysRef,
           signal: controller.signal,
+          uploadAcl,
           dispatch,
           onFileStaged: (id, staged) => stagedResults.set(id, staged),
         });
@@ -597,6 +603,7 @@ export function useRecursiveEncryptionJob({
           flat: flatRef.current,
           processableIds: processableIdsRef.current,
           signal: controller.signal,
+          uploadAcl,
           dispatch,
           onFileStaged: (id, staged) => stagedResults.set(id, staged),
         });
@@ -734,7 +741,7 @@ export function useRecursiveEncryptionJob({
       dispatch({ type: 'SET_TOP_ERROR', error: message });
       dispatch({ type: 'SET_PHASE', phase: 'failed' });
     }
-  }, [mode, vaultClient, user?.sub, item, queryClient, onSuccess, t]);
+  }, [mode, vaultClient, user?.sub, item, queryClient, onSuccess, t, uploadAcl]);
 
   const retry = useCallback(() => {
     // Only a run that failed can be retried; a refused one needs its cause fixed.
@@ -801,6 +808,7 @@ type EncryptPipelineArgs = {
   currentUserRootWrappedRef: React.MutableRefObject<ArrayBuffer | null>;
   folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
   signal: AbortSignal;
+  uploadAcl: string | undefined;
   dispatch: DispatchFn;
   onFileStaged: (id: string, staged: StagedEncryptFile) => void;
 };
@@ -817,6 +825,7 @@ async function encryptPipeline({
   currentUserRootWrappedRef,
   folderWrappedKeysRef,
   signal,
+  uploadAcl,
   dispatch,
   onFileStaged,
 }: EncryptPipelineArgs): Promise<void> {
@@ -890,6 +899,7 @@ async function encryptPipeline({
         currentUserRootWrappedRef,
         folderWrappedKeysRef,
         signal,
+        uploadAcl,
         dispatch,
         onFileStaged,
       });
@@ -910,6 +920,7 @@ type StageOneEncryptArgs = {
   currentUserRootWrappedRef: React.MutableRefObject<ArrayBuffer | null>;
   folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
   signal: AbortSignal;
+  uploadAcl: string | undefined;
   dispatch: DispatchFn;
   onFileStaged: (id: string, staged: StagedEncryptFile) => void;
 };
@@ -925,6 +936,7 @@ async function stageOneEncryption({
   currentUserRootWrappedRef,
   folderWrappedKeysRef,
   signal,
+  uploadAcl,
   dispatch,
   onFileStaged,
 }: StageOneEncryptArgs): Promise<void> {
@@ -994,7 +1006,7 @@ async function stageOneEncryption({
       newFilename,
       signal
     );
-    await putToS3(uploadUrl, encryptedContent, signal);
+    await putToS3(uploadUrl, encryptedContent, signal, uploadAcl);
 
     onFileStaged(targetId, { itemId: targetId, newFilename, wrappedKey });
     dispatch({ type: 'UPDATE_ROW', id: targetId, state: 'staged' });
@@ -1020,6 +1032,7 @@ type EncryptIntoChainPipelineArgs = {
   intoChainRootWrapRef: React.MutableRefObject<ArrayBuffer | null>;
   folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
   signal: AbortSignal;
+  uploadAcl: string | undefined;
   dispatch: DispatchFn;
   onFileStaged: (id: string, staged: StagedEncryptFile) => void;
 };
@@ -1052,6 +1065,7 @@ async function encryptIntoChainPipeline({
   intoChainRootWrapRef,
   folderWrappedKeysRef,
   signal,
+  uploadAcl,
   dispatch,
   onFileStaged,
 }: EncryptIntoChainPipelineArgs): Promise<void> {
@@ -1127,6 +1141,7 @@ async function encryptIntoChainPipeline({
         intoChainRootWrapRef,
         folderWrappedKeysRef,
         signal,
+        uploadAcl,
         dispatch,
         onFileStaged,
       });
@@ -1145,6 +1160,7 @@ type StageOneEncryptIntoChainArgs = {
   intoChainRootWrapRef: React.MutableRefObject<ArrayBuffer | null>;
   folderWrappedKeysRef: React.MutableRefObject<Map<string, ArrayBuffer>>;
   signal: AbortSignal;
+  uploadAcl: string | undefined;
   dispatch: DispatchFn;
   onFileStaged: (id: string, staged: StagedEncryptFile) => void;
 };
@@ -1159,6 +1175,7 @@ async function stageOneEncryptionIntoChain({
   intoChainRootWrapRef,
   folderWrappedKeysRef,
   signal,
+  uploadAcl,
   dispatch,
   onFileStaged,
 }: StageOneEncryptIntoChainArgs): Promise<void> {
@@ -1227,7 +1244,7 @@ async function stageOneEncryptionIntoChain({
       newFilename,
       signal
     );
-    await putToS3(uploadUrl, encryptedContent, signal);
+    await putToS3(uploadUrl, encryptedContent, signal, uploadAcl);
 
     onFileStaged(targetId, { itemId: targetId, newFilename, wrappedKey });
     dispatch({ type: 'UPDATE_ROW', id: targetId, state: 'staged' });
@@ -1249,6 +1266,7 @@ type DecryptPipelineArgs = {
   flat: FlatNode[];
   processableIds: string[];
   signal: AbortSignal;
+  uploadAcl: string | undefined;
   dispatch: DispatchFn;
   onFileStaged: (id: string, staged: { newFilename: string }) => void;
 };
@@ -1259,6 +1277,7 @@ async function decryptPipeline({
   flat,
   processableIds,
   signal,
+  uploadAcl,
   dispatch,
   onFileStaged,
 }: DecryptPipelineArgs): Promise<void> {
@@ -1324,7 +1343,7 @@ async function decryptPipeline({
 
         const newFilename = stagedFilename(node.item.title);
         const uploadUrl = await getEncryptionUploadUrl(id, newFilename, signal);
-        await putToS3(uploadUrl, plaintext, signal);
+        await putToS3(uploadUrl, plaintext, signal, uploadAcl);
 
         onFileStaged(id, { newFilename });
         dispatch({ type: 'UPDATE_ROW', id, state: 'staged' });

@@ -1,4 +1,4 @@
-{{- $envVars := include "drive.common.env" (list . .Values.backend) -}}
+{{- $envVars := include "drive.backend.env" (list .Values.backend (.Values.backend.django | default dict).envVars) -}}
 {{- $fullName := include "drive.backend.fullname" . -}}
 {{- $component := "backend" -}}
 apiVersion: apps/v1

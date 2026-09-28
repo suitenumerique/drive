@@ -13,28 +13,38 @@ import {
   Decision,
   useModal,
   useModals,
-} from "@gouvfr-lasuite/cunningham-react";
+} from "@gouvfr-lasuite/ui-components";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import undoIcon from "@/assets/icons/undo_blue.svg";
 import cancelIcon from "@/assets/icons/cancel_blue.svg";
-import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
+import {
+  useSelectedItems,
+  useSetSelectedItems,
+} from "@/features/explorer/stores/selectionStore";
 import { ItemFilters } from "@/features/drivers/Driver";
 import { useState } from "react";
 import { HardDeleteConfirmationModal } from "@/features/explorer/components/modals/HardDeleteConfirmationModal";
 import { messageModalTrashNavigate } from "@/features/explorer/components/trash/utils";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { useDefaultRoute } from "@/hooks/useDefaultRoute";
+
 export default function TrashPage() {
   const { t } = useTranslation();
   const [filters, setFilters] = useState<ItemFilters>({});
-  const { data: trashItems } = useQuery({
+
+  const {
+    data: trashItems,
+    isLoading,
+    isPlaceholderData,
+  } = useQuery({
     queryKey: [
       "items",
       "trash",
       ...(Object.keys(filters).length ? [JSON.stringify(filters)] : []),
     ],
     queryFn: () => getDriver().getTrashItems(filters),
+    placeholderData: (previousData) => previousData,
   });
 
   const modals = useModals();
@@ -43,6 +53,8 @@ export default function TrashPage() {
 
   return (
     <AppExplorer
+      viewConfigKey={DefaultRoute.TRASH}
+      onComputedFiltersChange={setFilters}
       childrenItems={trashItems}
       gridActionsCell={ExplorerGridTrashActionsCell}
       disableItemDragAndDrop={true}
@@ -60,11 +72,13 @@ export default function TrashPage() {
         </div>
       }
       selectionBarActions={<TrashPageSelectionBarActions />}
-      filters={filters}
-      onFiltersChange={setFilters}
       onNavigate={() => {
         messageModalTrashNavigate(modals);
       }}
+      onFileClick={() => {
+        messageModalTrashNavigate(modals, true);
+      }}
+      isLoading={isLoading || isPlaceholderData}
     />
   );
 }
@@ -72,7 +86,8 @@ export default function TrashPage() {
 TrashPage.getLayout = getGlobalExplorerLayout;
 
 export const TrashPageSelectionBarActions = () => {
-  const { selectedItems, setSelectedItems } = useGlobalExplorer();
+  const selectedItems = useSelectedItems();
+  const setSelectedItems = useSetSelectedItems();
   const restoreItem = useMutationRestoreItems();
   const hardDeleteConfirmationModal = useModal();
   const hardDeleteItem = useMutationHardDeleteItems();
@@ -85,7 +100,7 @@ export const TrashPageSelectionBarActions = () => {
         <span>
           {t("explorer.actions.restore.toast", { count: selectedItems.length })}
         </span>
-      </ToasterItem>
+      </ToasterItem>,
     );
     await restoreItem.mutateAsync(selectedItems.map((item) => item.id));
     setSelectedItems([]);
@@ -99,7 +114,7 @@ export const TrashPageSelectionBarActions = () => {
       <ToasterItem>
         <span className="material-icons">delete</span>
         <span>{t("explorer.actions.hard_delete.toast", { count: 1 })}</span>
-      </ToasterItem>
+      </ToasterItem>,
     );
     await hardDeleteItem.mutateAsync(selectedItems.map((item) => item.id));
     setSelectedItems([]);
@@ -125,7 +140,7 @@ export const TrashPageSelectionBarActions = () => {
         <HardDeleteConfirmationModal
           {...hardDeleteConfirmationModal}
           onDecide={handleHardDelete}
-          multiple={selectedItems.length > 1}
+          count={selectedItems.length}
         />
       )}
     </>

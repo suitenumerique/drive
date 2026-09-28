@@ -360,3 +360,7 @@ msgstr ""
 #: drive/settings.py:252
 msgid "German"
 msgstr ""
+
+#: wopi/conversion/services.py:86
+msgid "converted"
+msgstr ""

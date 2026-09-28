@@ -1,4 +1,4 @@
-import { Button, Loader } from "@gouvfr-lasuite/cunningham-react";
+import { Button, Loader } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { EncryptionModalContent } from "./EncryptionLayout";
 import { useVaultClient } from "./VaultClientProvider";

@@ -4,6 +4,7 @@ from django.conf import settings
 from django.urls import include, path, re_path
 
 from lasuite.oidc_login.urls import urlpatterns as oidc_urls
+from lasuite.oidc_resource_server.urls import urlpatterns as oidc_resource_server_urls
 from rest_framework.routers import DefaultRouter
 
 from core.api import viewsets
@@ -51,6 +52,10 @@ urlpatterns = [
                 re_path(
                     r"^items/(?P<resource_id>[0-9a-z-]*)/",
                     include(item_related_router.urls),
+                ),
+                path(
+                    "user-reconciliations/<str:user_type>/<uuid:confirmation_id>/",
+                    viewsets.ReconciliationConfirmView.as_view(),
                 ),
                 *sdk_relay_router.urls,
                 *entitlements_router.urls,
@@ -111,6 +116,14 @@ if settings.OIDC_RESOURCE_SERVER_ENABLED:
             include(external_api_urls),
         )
     )
+
+    if settings.OIDC_RS_PRIVATE_KEY_STR:
+        urlpatterns.append(
+            path(
+                f"api/{settings.API_VERSION}/",
+                include([*oidc_resource_server_urls]),
+            )
+        )
 
 if settings.METRICS_ENABLED:
     usage_metrics_router = DefaultRouter()

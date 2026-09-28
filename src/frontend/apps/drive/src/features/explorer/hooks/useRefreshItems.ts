@@ -4,21 +4,33 @@ import {
   useRemoveItemsFromPaginatedList,
   useUpdateItemInPaginatedList,
 } from "./useOptimisticPagination";
-import { useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import { useTreeContext } from "@gouvfr-lasuite/ui-components";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { generateTreeId } from "../components/GlobalExplorerContext";
 
 export const useGetQueryKeyToRefresh = () => {
   return (parentId?: string) => {
-    const queryKeys = [["items", "infinite"]];
+    const queryKeys = [
+      ["items", "infinite"],
+      // The Recent view has its own key prefix (useInfiniteRecentItems), so
+      // invalidating ["items", "infinite"] does not prefix-match it. Without this,
+      // a mutation performed while viewing Recent (create, convert, delete,
+      // rename, upload…) doesn't refresh the list until a manual reload.
+      ["items", "recent", "infinite"],
+    ];
     if (parentId) {
       queryKeys.push(["items", parentId, "children"]);
     }
-    // let queryKey = parentId ? ["items", parentId, "children"] : [];
-    // if (queryKeyForRoute.length > 0) {
-    //   queryKey = queryKeyForRoute;
-    // }
     return queryKeys;
+  };
+};
+
+export const useRefreshEntitlementsQueryCache = () => {
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.invalidateQueries({
+      queryKey: ["entitlements"],
+    });
   };
 };
 
@@ -45,6 +57,7 @@ export const useDeleteMutationCallbacks = (
   const getQueryKey = useGetQueryKeyToRefresh();
   const removeItems = useRemoveItemsFromPaginatedList();
   const queryKeys = defaultQueryKey ?? getQueryKey(parentId);
+  const refreshEntitlements = useRefreshEntitlementsQueryCache();
 
   const onMutate = async (itemIds: string[]) => {
     const returnPreviousItems: Map<string[], Item[]> = new Map();
@@ -69,14 +82,21 @@ export const useDeleteMutationCallbacks = (
     });
   };
 
-  const onSuccess = () => {
-    if (queryKeys.length === 0) {
-      return;
+  const onSuccess = (_data: unknown, deletedIds: string[]) => {
+    for (const key of queryKeys) {
+      if (deletedIds?.some((id) => key.includes(id))) {
+        queryClient.removeQueries({ queryKey: key });
+        continue;
+      }
+      queryClient.invalidateQueries({
+        queryKey: key,
+      });
     }
 
-    queryClient.invalidateQueries({
-      queryKey: queryKeys,
-    });
+    // Means hard deleting.
+    if (!parentId) {
+      refreshEntitlements();
+    }
   };
 
   return { onMutate, onError, onSuccess };

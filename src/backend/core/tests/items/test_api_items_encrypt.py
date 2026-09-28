@@ -1,9 +1,17 @@
 """Tests for encryption of items on API endpoint."""
 
+from unittest import mock
+
+from django.core.exceptions import ValidationError
+from django.db import connection
+from django.test import RequestFactory
+from django.test.utils import CaptureQueriesContext
+
 import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
+from core.api import serializers
 
 pytestmark = pytest.mark.django_db
 
@@ -42,7 +50,7 @@ def test_api_items_encrypt_authenticated_unrelated():
         {"encrypted_symmetric_key_per_user": {}, "encrypted_keys_for_descendants": {}},
         format="json",
     )
-    assert response.status_code == 403 or response.status_code == 404
+    assert response.status_code in {403, 404}
 
 
 def test_api_items_encrypt_reader_forbidden():
@@ -631,3 +639,282 @@ def test_api_items_wopi_disabled_for_encrypted():
 
     abilities = item.get_abilities(user)
     assert abilities["wopi"] is False
+
+
+# ============================================================================
+# Operations refused on encrypted items
+# ============================================================================
+
+
+def _encrypt(item, key_holder=None, key="wrapped_key", version=1):
+    """Mark an item encrypted and give the key holder a wrapped key on it."""
+    item.is_encrypted = True
+    item.save()
+    if key_holder is not None:
+        models.ItemAccess.objects.filter(item=item, user=key_holder).update(
+            encrypted_item_symmetric_key_for_user=key,
+            encryption_public_key_version=version,
+        )
+
+
+def test_api_items_duplicate_refused_for_encrypted():
+    """An encrypted file cannot be duplicated: the copy would hold unreadable ciphertext."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    assert item.get_abilities(user)["duplicate"] is True
+    _encrypt(item, user)
+
+    client = APIClient()
+    client.force_login(user)
+    with mock.patch("core.tasks.item.duplicate_file.delay") as mock_delay:
+        response = client.post(f"/api/v1.0/items/{item.id!s}/duplicate/")
+
+    assert response.status_code == 403
+    mock_delay.assert_not_called()
+    assert models.Item.objects.count() == 1
+
+
+def test_api_items_convert_refused_for_encrypted(settings):
+    """An encrypted file cannot be sent to the conversion service."""
+    settings.WOPI_ONLYOFFICE_CONVERT_JWT_SECRET = "test-jwt-secret"
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="document.doc",
+        mimetype="application/msword",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    assert item.get_abilities(user)["convert"] is True
+    _encrypt(item, user)
+
+    client = APIClient()
+    client.force_login(user)
+    with mock.patch("core.api.viewsets.convert_file.delay") as mock_delay:
+        response = client.post(f"/api/v1.0/items/{item.id!s}/convert/")
+
+    assert response.status_code == 403
+    mock_delay.assert_not_called()
+    assert not models.Item.objects.filter(
+        upload_state=models.ItemUploadStateChoices.CONVERTING
+    ).exists()
+
+
+def test_api_items_export_refused_for_encrypted_folder():
+    """An encrypted folder cannot be exported as an archive."""
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    assert folder.get_abilities(user)["export"] is True
+    _encrypt(folder, user)
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.get(f"/api/v1.0/items/{folder.id!s}/export/")
+
+    assert response.status_code == 403
+
+
+def test_api_items_restrict_refused_for_encrypted_folder():
+    """An encrypted folder cannot be restricted: it would leave its key chain."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    folder = factories.ItemFactory(
+        parent=parent,
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    assert folder.get_abilities(user)["restrict"] is True
+    _encrypt(folder, user)
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(f"/api/v1.0/items/{folder.id!s}/restrict/")
+
+    assert response.status_code == 403
+    folder.refresh_from_db()
+    assert folder.is_restricted is False
+    assert str(folder.path) == f"{parent.id!s}.{folder.id!s}"
+
+    with pytest.raises(ValidationError) as excinfo:
+        folder.restrict(user)
+    assert excinfo.value.error_dict["is_restricted"][0].code == "item_restrict_encrypted"
+
+
+def test_api_items_unrestrict_refused_for_encrypted_folder():
+    """A restricted folder that became encrypted cannot be unrestricted."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    _encrypt(folder, user)
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.delete(f"/api/v1.0/items/{folder.id!s}/restrict/")
+
+    assert response.status_code == 403
+    folder.refresh_from_db()
+    assert folder.is_restricted is True
+
+
+def test_models_items_unrestrict_refused_into_encrypted_parent():
+    """A plaintext restricted folder cannot be reattached inside an encrypted folder."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+    _encrypt(parent, user)
+
+    with pytest.raises(ValidationError) as excinfo:
+        folder.unrestrict()
+    assert excinfo.value.error_dict["is_restricted"][0].code == "item_unrestrict_encrypted"
+
+    folder.refresh_from_db()
+    assert folder.is_restricted is True
+    assert str(folder.path) == str(folder.id)
+
+
+def test_api_items_children_from_template_refused_in_encrypted_folder():
+    """A template would be written in plaintext: refused inside an encrypted folder."""
+    user = factories.UserFactory()
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    _encrypt(folder, user)
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        f"/api/v1.0/items/{folder.id!s}/children/",
+        {
+            "title": "my document",
+            "extension": "odt",
+            "type": "file",
+            "encrypted_symmetric_key": "wrapped_key",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert "template" in str(response.json()).lower()
+    assert models.Item.objects.filter(title="my document").exists() is False
+
+
+# ============================================================================
+# Encryption fields in list payloads
+# ============================================================================
+
+
+def _encrypted_folder_with_children(owner, pending_user, nb_children):
+    """Build an encrypted root folder shared with a pending member, with encrypted files."""
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, models.RoleChoices.OWNER), (pending_user, models.RoleChoices.READER)],
+    )
+    _encrypt(folder, owner, version=3)
+    children = [
+        factories.ItemFactory(
+            parent=folder,
+            type=models.ItemTypeChoices.FILE,
+            update_upload_state=models.ItemUploadStateChoices.READY,
+            is_encrypted=True,
+            encrypted_symmetric_key=f"child_wrapped_{index}",
+        )
+        for index in range(nb_children)
+    ]
+    return folder, children
+
+
+def test_api_items_children_list_encryption_fields():
+    """Children of an encrypted folder expose the encryption state of the viewer."""
+    owner = factories.UserFactory()
+    pending_user = factories.UserFactory()
+    folder, _children = _encrypted_folder_with_children(owner, pending_user, 2)
+
+    client = APIClient()
+    client.force_login(owner)
+    response = client.get(f"/api/v1.0/items/{folder.id!s}/children/")
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert len(results) == 2
+    for result in results:
+        assert result["is_encrypted"] is True
+        assert result["is_encryption_root"] is False
+        assert result["is_inside_encrypted_subtree"] is True
+        assert result["is_pending_encryption_for_user"] is False
+        assert result["encryption_public_key_version_for_user"] == 3
+        assert result["accesses_user_ids"] == sorted([owner.sub, pending_user.sub])
+
+    client.force_login(pending_user)
+    response = client.get(f"/api/v1.0/items/{folder.id!s}/children/")
+
+    assert response.status_code == 200
+    for result in response.json()["results"]:
+        assert result["is_pending_encryption_for_user"] is True
+        assert result["encryption_public_key_version_for_user"] is None
+
+    response = client.get(f"/api/v1.0/items/{folder.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["is_encryption_root"] is True
+    assert response.json()["is_inside_encrypted_subtree"] is False
+    assert response.json()["is_pending_encryption_for_user"] is True
+    assert response.json()["encrypted_item_symmetric_key_for_user"] is None
+
+
+def test_api_items_children_list_encryption_fields_match_unannotated_serializer():
+    """The annotated list values are the ones the serializer computes on its own."""
+    owner = factories.UserFactory()
+    pending_user = factories.UserFactory()
+    folder, children = _encrypted_folder_with_children(owner, pending_user, 1)
+    fields = [
+        "accesses_user_ids",
+        "encryption_public_key_version_for_user",
+        "is_encryption_root",
+        "is_inside_encrypted_subtree",
+        "is_pending_encryption_for_user",
+    ]
+
+    for user in (owner, pending_user):
+        client = APIClient()
+        client.force_login(user)
+        listed = client.get(f"/api/v1.0/items/{folder.id!s}/children/").json()["results"][0]
+
+        request = RequestFactory().get("/")
+        request.user = user
+        child = models.Item.objects.get(pk=children[0].pk)
+        serialized = serializers.ListItemSerializer(child, context={"request": request}).data
+
+        assert {field: listed[field] for field in fields} == {
+            field: serialized[field] for field in fields
+        }
+
+
+def test_api_items_children_list_encryption_fields_constant_queries():
+    """The encryption fields cost no query per listed item."""
+    owner = factories.UserFactory()
+    pending_user = factories.UserFactory()
+    small_folder, _children = _encrypted_folder_with_children(owner, pending_user, 1)
+    large_folder, _children = _encrypted_folder_with_children(owner, pending_user, 4)
+
+    client = APIClient()
+    client.force_login(pending_user)
+    query_counts = []
+    for folder in (small_folder, large_folder):
+        # Warm the nb_accesses cache so that both requests run the same queries
+        client.get(f"/api/v1.0/items/{folder.id!s}/children/")
+        with CaptureQueriesContext(connection) as queries:
+            response = client.get(f"/api/v1.0/items/{folder.id!s}/children/")
+        assert response.status_code == 200
+        query_counts.append(len(queries))
+
+    assert query_counts[0] == query_counts[1]

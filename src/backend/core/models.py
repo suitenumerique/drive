@@ -6,6 +6,7 @@ Declare and configure the models for the drive core application
 import smtplib
 import uuid
 from datetime import timedelta
+from enum import StrEnum
 from logging import getLogger
 from os.path import splitext
 
@@ -30,6 +31,7 @@ from django.utils.translation import gettext_lazy as _
 from django_ltree.functions import NLevel
 from django_ltree.managers import TreeManager, TreeQuerySet
 from django_ltree.models import TreeModel
+from django_pydantic_field import SchemaField
 from lasuite.drf.models.choices import (
     PRIVILEGED_ROLES,
     LinkReachChoices,
@@ -37,11 +39,17 @@ from lasuite.drf.models.choices import (
     RoleChoices,
     get_equivalent_link_definition,
 )
+from pydantic import BaseModel as PydanticBaseModel
 from timezone_field import TimeZoneField
 
+from core.permissions import get_permissions_backend
+from core.storage.cache import invalidate_storage_used_cache
 from core.utils.item_title import manage_unique_title as manage_unique_title_utils
 
 logger = getLogger(__name__)
+
+# Item fields whose update can change the storage used by a user.
+STORAGE_USED_FIELDS = {"size", "creator", "creator_id", "hard_deleted_at", "quota_excluded"}
 
 
 def get_trashbin_cutoff():
@@ -63,6 +71,7 @@ class ItemTypeChoices(models.TextChoices):
 
     FOLDER = "folder", _("Folder")
     FILE = "file", _("File")
+    RESTRICTION = "restriction", _("Restriction")
 
 
 class ItemUploadStateChoices(models.TextChoices):
@@ -70,6 +79,7 @@ class ItemUploadStateChoices(models.TextChoices):
 
     PENDING = "pending", _("Pending")
     DUPLICATING = "duplicating", ("Duplicating")
+    CONVERTING = "converting", _("Converting")
     ANALYZING = "analyzing", _("Analyzing")
     SUSPICIOUS = "suspicious", _("Suspicious")
     FILE_TOO_LARGE_TO_ANALYZE = (
@@ -164,6 +174,25 @@ class UserManager(auth_models.UserManager):
         return None
 
 
+class ColumnType(StrEnum):
+    """Type of column allowed."""
+
+    LAST_MODIFIED = "last_modified"
+    CREATED = "created"
+    CREATED_BY = "created_by"
+    FILE_TYPE = "file_type"
+    FILE_SIZE = "file_size"
+
+
+class ColumnPreferences(PydanticBaseModel):
+    """Pydantic model to validate the custom columns a user can have."""
+
+    column1: ColumnType
+    column2: ColumnType
+
+    model_config = {"extra": "forbid"}
+
+
 class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
     """User model to work with OIDC only authentication."""
 
@@ -191,6 +220,7 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
     short_name = models.CharField(_("short name"), max_length=100, null=True, blank=True)
 
     email = models.EmailField(_("identity email address"), blank=True, null=True)
+    column_preferences = SchemaField(ColumnPreferences, blank=True, null=True, default=None)
 
     # Unlike the "email" field which stores the email coming from the OIDC token, this field
     # stores the email used by staff users to login to the admin site
@@ -228,6 +258,19 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
             "Whether this user should be treated as active. "
             "Unselect this instead of deleting accounts."
         ),
+    )
+
+    storage_limit_override = models.BigIntegerField(
+        _("storage limit override"),
+        help_text=_(
+            "Storage limit in bytes for this user, used by the local entitlements "
+            "backend. Leave empty to use the configured default limit. "
+            "Set to 0 for unlimited storage."
+        ),
+        null=True,
+        blank=True,
+        default=None,
+        validators=[validators.MinValueValidator(0)],
     )
 
     claims = models.JSONField(
@@ -292,6 +335,9 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         # Set creator of items if not yet set (e.g. items created via server-to-server API)
         item_ids = [invitation.item_id for invitation in valid_invitations]
         Item.objects.filter(id__in=item_ids, creator__isnull=True).update(creator=self)
+        # The bulk update bypasses Item.save() invalidating the
+        # storage used cache.
+        transaction.on_commit(lambda: invalidate_storage_used_cache([self.id]))
 
         valid_invitations.delete()
 
@@ -301,6 +347,41 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
             raise ValueError("User has no email address.")
         mail.send_mail(subject, message, from_email, [self.email], **kwargs)
 
+    def send_email(self, subject, context=None, language=None):
+        """Generate and send email to the user from a template."""
+
+        if not settings.EMAIL_HOST:
+            logger.info("EMAIL_HOST host is not set, skipping email sending")
+            return
+
+        context = context or {}
+        domain = settings.EMAIL_URL_APP or Site.objects.get_current().domain
+        language = language or get_language()
+        context.update(
+            {
+                "brandname": settings.EMAIL_BRAND_NAME,
+                "domain": domain,
+                "logo_img": settings.EMAIL_LOGO_IMG,
+            }
+        )
+
+        with override(language):
+            msg_html = render_to_string("mail/html/reconciliation.html", context)
+            msg_plain = render_to_string("mail/text/reconciliation.txt", context)
+            subject = str(subject)  # Force translation
+
+            try:
+                send_mail(
+                    subject.capitalize(),
+                    msg_plain,
+                    settings.EMAIL_FROM,
+                    [self.email],
+                    html_message=msg_html,
+                    fail_silently=False,
+                )
+            except smtplib.SMTPException as exception:
+                logger.error("email to %s was not sent: %s", self.email, exception)
+
     @cached_property
     def teams(self):
         """
@@ -308,6 +389,434 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         Must be cached if retrieved remotely.
         """
         return []
+
+
+class UserReconciliation(BaseModel):
+    """Model to run batch jobs to replace an active user by another one."""
+
+    active_email = models.EmailField(_("Active email address"))
+    inactive_email = models.EmailField(_("Email address to deactivate"))
+    active_email_checked = models.BooleanField(default=False)
+    inactive_email_checked = models.BooleanField(default=False)
+    active_user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="active_user",
+    )
+    inactive_user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="inactive_user",
+    )
+    active_email_confirmation_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, editable=False, null=True
+    )
+    inactive_email_confirmation_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, editable=False, null=True
+    )
+    source_unique_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name=_("Unique ID in the source file"),
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("pending", _("Pending")),
+            ("ready", _("Ready")),
+            ("done", _("Done")),
+            ("error", _("Error")),
+        ],
+        default="pending",
+    )
+    logs = models.TextField(blank=True)
+
+    class Meta:
+        db_table = "drive_user_reconciliation"
+        verbose_name = _("user reconciliation")
+        verbose_name_plural = _("user reconciliations")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Reconciliation from {self.inactive_email} to {self.active_email}"
+
+    def save(self, *args, **kwargs):
+        """
+        For pending queries, identify the actual users and send validation emails.
+        """
+        if self.status == "pending":
+            self.active_user = User.objects.filter(email=self.active_email).first()
+            self.inactive_user = User.objects.filter(email=self.inactive_email).first()
+
+            if self.active_user and self.inactive_user:
+                if not self.active_email_checked:
+                    self.send_reconciliation_confirm_email(
+                        self.active_user, "active", self.active_email_confirmation_id
+                    )
+                if not self.inactive_email_checked:
+                    self.send_reconciliation_confirm_email(
+                        self.inactive_user,
+                        "inactive",
+                        self.inactive_email_confirmation_id,
+                    )
+                self.status = "ready"
+            else:
+                self.status = "error"
+                self.logs = "Error: Both active and inactive users need to exist."
+
+        super().save(*args, **kwargs)
+
+    @transaction.atomic
+    def process_reconciliation_request(self):
+        """
+        Process the reconciliation request as a transaction.
+
+        - Transfer item accesses from inactive to active user, updating roles as needed.
+        - Transfer item favorites from inactive to active user.
+        - Transfer link traces from inactive to active user.
+        - Reassign items created by the inactive user to the active user.
+        - Reassign invitations issued by the inactive user to the active user.
+        - Activate the active user and deactivate the inactive user.
+        - Update the reconciliation entry itself.
+        """
+
+        # Prepare the data to perform the reconciliation on
+        updated_accesses, removed_accesses = self.prepare_itemaccess_reconciliation()
+        updated_linktraces, removed_linktraces = self.prepare_linktrace_reconciliation()
+        updated_favorites, removed_favorites = self.prepare_itemfavorite_reconciliation()
+        updated_items = self.prepare_item_creator_reconciliation()
+        updated_invitations = self.prepare_invitation_issuer_reconciliation()
+
+        self.active_user.is_active = True
+        self.inactive_user.is_active = False
+
+        # Actually perform the bulk operations
+        ItemAccess.objects.bulk_update(
+            updated_accesses,
+            [
+                "user",
+                "role",
+                "encrypted_item_symmetric_key_for_user",
+                "encryption_public_key_version",
+            ],
+        )
+        if removed_accesses:
+            ids_to_delete = [entry.id for entry in removed_accesses]
+            ItemAccess.objects.filter(id__in=ids_to_delete).delete()
+            # Bulk delete bypasses ItemAccess.delete(), so the nb_accesses cache
+            # of the affected items must be invalidated explicitly.
+            items_to_invalidate = {entry.item_id: entry.item for entry in removed_accesses}
+            for item in items_to_invalidate.values():
+                item.invalidate_nb_accesses_cache()
+
+        ItemFavorite.objects.bulk_update(updated_favorites, ["user"])
+        if removed_favorites:
+            ids_to_delete = [entry.id for entry in removed_favorites]
+            ItemFavorite.objects.filter(id__in=ids_to_delete).delete()
+
+        LinkTrace.objects.bulk_update(updated_linktraces, ["user"])
+        if removed_linktraces:
+            ids_to_delete = [entry.id for entry in removed_linktraces]
+            LinkTrace.objects.filter(id__in=ids_to_delete).delete()
+
+        Item.objects.bulk_update(updated_items, ["creator"])
+        # The bulk update bypasses Item.save() invalidating the
+        # storage used cache, and both users' usage change.
+        transaction.on_commit(
+            lambda: invalidate_storage_used_cache([self.active_user_id, self.inactive_user_id])
+        )
+        Invitation.objects.bulk_update(updated_invitations, ["issuer"])
+
+        User.objects.bulk_update([self.active_user, self.inactive_user], ["is_active"])
+
+        # Wrap up the reconciliation entry
+        self.logs += (
+            f"Requested update for {len(updated_accesses)} ItemAccess items "
+            f"and deletion for {len(removed_accesses)} ItemAccess items.\n"
+        )
+        self.status = "done"
+        self.save()
+
+        self.send_reconciliation_done_email()
+
+    def prepare_itemaccess_reconciliation(self):
+        """
+        Prepare the reconciliation by transferring item accesses from the inactive user
+        to the active user.
+        """
+        updated_accesses = []
+        removed_accesses = []
+        inactive_accesses = ItemAccess.objects.filter(user=self.inactive_user)
+
+        # Check items where the active user already has access
+        inactive_accesses_items = inactive_accesses.values_list("item", flat=True)
+        existing_accesses = ItemAccess.objects.filter(user=self.active_user).filter(
+            item__in=inactive_accesses_items
+        )
+        existing_roles_per_item = dict(existing_accesses.values_list("item", "role"))
+
+        for entry in inactive_accesses:
+            # A wrapped key belongs to the encryption identity of the inactive
+            # user, which the active user does not hold. It is kept only when
+            # it is the last one on its item, as dropping it would leave the
+            # encrypted content with nobody able to re-share its key.
+            keep_wrapped_key = bool(
+                entry.encrypted_item_symmetric_key_for_user
+            ) and not self._has_other_wrapped_key(entry)
+            if entry.item_id in existing_roles_per_item:
+                # Update role if needed
+                existing_role = existing_roles_per_item[entry.item_id]
+                max_role = RoleChoices.max(entry.role, existing_role)
+                if existing_role != max_role or keep_wrapped_key:
+                    existing_access = existing_accesses.get(item=entry.item)
+                    changed = existing_role != max_role
+                    existing_access.role = max_role
+                    if (
+                        keep_wrapped_key
+                        and not existing_access.encrypted_item_symmetric_key_for_user
+                    ):
+                        existing_access.encrypted_item_symmetric_key_for_user = (
+                            entry.encrypted_item_symmetric_key_for_user
+                        )
+                        existing_access.encryption_public_key_version = (
+                            entry.encryption_public_key_version
+                        )
+                        changed = True
+                    if changed:
+                        updated_accesses.append(existing_access)
+                removed_accesses.append(entry)
+            else:
+                entry.user = self.active_user
+                if not keep_wrapped_key:
+                    # Pending again: a collaborator holding the key re-wraps it
+                    # for the active user once they have enabled encryption
+                    entry.encrypted_item_symmetric_key_for_user = None
+                    entry.encryption_public_key_version = None
+                updated_accesses.append(entry)
+
+        return updated_accesses, removed_accesses
+
+    @staticmethod
+    def _has_other_wrapped_key(access):
+        """Return whether another access on the same item holds a wrapped key."""
+        return (
+            ItemAccess.objects.filter(
+                item_id=access.item_id,
+                encrypted_item_symmetric_key_for_user__isnull=False,
+            )
+            .exclude(encrypted_item_symmetric_key_for_user="")
+            .exclude(pk=access.pk)
+            .exists()
+        )
+
+    def prepare_itemfavorite_reconciliation(self):
+        """
+        Prepare the reconciliation by transferring item favorites from the inactive user
+        to the active user.
+        """
+        updated_favorites = []
+        removed_favorites = []
+
+        existing_favorites = ItemFavorite.objects.filter(user=self.active_user)
+        existing_favorite_item_ids = set(existing_favorites.values_list("item_id", flat=True))
+
+        inactive_favorites = ItemFavorite.objects.filter(user=self.inactive_user)
+
+        for entry in inactive_favorites:
+            if entry.item_id in existing_favorite_item_ids:
+                removed_favorites.append(entry)
+            else:
+                entry.user = self.active_user
+                updated_favorites.append(entry)
+
+        return updated_favorites, removed_favorites
+
+    def prepare_linktrace_reconciliation(self):
+        """
+        Prepare the reconciliation by transferring link traces from the inactive user
+        to the active user.
+        """
+        updated_linktraces = []
+        removed_linktraces = []
+
+        existing_linktraces = LinkTrace.objects.filter(user=self.active_user)
+        inactive_linktraces = LinkTrace.objects.filter(user=self.inactive_user)
+
+        for entry in inactive_linktraces:
+            if existing_linktraces.filter(item=entry.item).exists():
+                removed_linktraces.append(entry)
+            else:
+                entry.user = self.active_user
+                updated_linktraces.append(entry)
+
+        return updated_linktraces, removed_linktraces
+
+    def prepare_item_creator_reconciliation(self):
+        """
+        Prepare the reconciliation by reassigning items created by the inactive user
+        to the active user.
+        """
+        updated_items = []
+
+        inactive_items = Item.objects.filter(creator=self.inactive_user)
+
+        for entry in inactive_items:
+            entry.creator = self.active_user
+            updated_items.append(entry)
+
+        return updated_items
+
+    def prepare_invitation_issuer_reconciliation(self):
+        """
+        Prepare the reconciliation by reassigning invitations issued by the inactive user
+        to the active user.
+        """
+        updated_invitations = []
+
+        inactive_invitations = Invitation.objects.filter(issuer=self.inactive_user)
+
+        for entry in inactive_invitations:
+            entry.issuer = self.active_user
+            updated_invitations.append(entry)
+
+        return updated_invitations
+
+    def send_reconciliation_confirm_email(self, user, user_type, confirmation_id, language=None):
+        """Method allowing to send confirmation email for reconciliation requests."""
+        language = language or get_language()
+        domain = settings.EMAIL_URL_APP or Site.objects.get_current().domain
+
+        message = _(
+            """You have requested a reconciliation of your user accounts on Drive.
+            To confirm that you are the one who initiated the request
+            and that this email belongs to you:"""
+        )
+
+        with override(language):
+            subject = _("Confirm by clicking the link to start the reconciliation")
+            context = {
+                "title": subject,
+                "message": message,
+                "link": f"{domain}/user-reconciliations/{user_type}/{confirmation_id}/",
+                "link_label": str(_("Click here")),
+                "button_label": str(_("Confirm")),
+            }
+
+        user.send_email(subject, context, language)
+
+    def send_reconciliation_done_email(self, language=None):
+        """Method allowing to send done email for reconciliation requests."""
+        language = language or get_language()
+        domain = settings.EMAIL_URL_APP or Site.objects.get_current().domain
+
+        message = _(
+            """Your reconciliation request has been processed.
+            New documents are likely associated with your account:"""
+        )
+
+        with override(language):
+            subject = _("Your accounts have been merged")
+            context = {
+                "title": subject,
+                "message": message,
+                "link": f"{domain}/",
+                "link_label": str(_("Click here to see")),
+                "button_label": str(_("See my documents")),
+            }
+
+        self.active_user.send_email(subject, context, language)
+
+
+class UserReconciliationCsvImport(BaseModel):
+    """Model to import reconciliation requests from an external source."""
+
+    file = models.FileField(upload_to="imports/", verbose_name=_("CSV file"))
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("pending", _("Pending")),
+            ("running", _("Running")),
+            ("done", _("Done")),
+            ("error", _("Error")),
+        ],
+        default="pending",
+    )
+    logs = models.TextField(blank=True)
+
+    class Meta:
+        db_table = "drive_user_reconciliation_csv_import"
+        verbose_name = _("user reconciliation CSV import")
+        verbose_name_plural = _("user reconciliation CSV imports")
+
+    def __str__(self):
+        return f"User reconciliation CSV import {self.id}"
+
+    def send_email(self, subject, emails, context=None, language=None):
+        """Generate and send email to the user from a template."""
+
+        if not settings.EMAIL_HOST:
+            logger.debug("EMAIL_HOST host is not set, skipping email sending")
+            return
+
+        context = context or {}
+        domain = settings.EMAIL_URL_APP or Site.objects.get_current().domain
+        language = language or get_language()
+        context.update(
+            {
+                "brandname": settings.EMAIL_BRAND_NAME,
+                "domain": domain,
+                "logo_img": settings.EMAIL_LOGO_IMG,
+            }
+        )
+
+        with override(language):
+            msg_html = render_to_string("mail/html/reconciliation.html", context)
+            msg_plain = render_to_string("mail/text/reconciliation.txt", context)
+            subject = str(subject)  # Force translation
+
+            try:
+                send_mail(
+                    subject.capitalize(),
+                    msg_plain,
+                    settings.EMAIL_FROM,
+                    emails,
+                    html_message=msg_html,
+                    fail_silently=False,
+                )
+            except smtplib.SMTPException as exception:
+                logger.error("email to %s was not sent: %s", emails, exception)
+
+    def send_reconciliation_error_email(self, recipient_email, other_email, language=None):
+        """Method allowing to send email for reconciliation requests with errors."""
+        language = language or get_language()
+
+        emails = [recipient_email]
+
+        message = _(
+            """Your request for reconciliation was unsuccessful.
+            Reconciliation failed for the following email addresses:
+            {recipient_email}, {other_email}.
+            Please check for typos.
+            You can submit another request with the valid email addresses."""
+        ).format(recipient_email=recipient_email, other_email=other_email)
+
+        with override(language):
+            subject = _("Reconciliation of your Drive accounts not completed")
+            context = {
+                "title": subject,
+                "message": message,
+                "link": settings.USER_RECONCILIATION_FORM_URL,
+                "link_label": str(_("Click here")),
+                "button_label": str(_("Make a new request")),
+            }
+
+        self.send_email(subject, emails, context, language)
 
 
 class AnnotateUserRoleQuerySetMixin:
@@ -342,6 +851,12 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
 
     path_property = "path"
 
+    def annotate_has_restriction(self):
+        """Annotate whether a restriction targets each item."""
+        return self.annotate(
+            has_restriction=models.Exists(self.model.objects.filter(target=models.OuterRef("pk")))
+        )
+
     def readable_per_se(self, user):
         """
         Filters the queryset to return documents that the given user has
@@ -366,6 +881,33 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
             ),
             **kwargs,
         )
+
+    def created_by(self, user):
+        """Filter items created by the given user."""
+        return self.filter(creator=user)
+
+    def not_created_by(self, user):
+        """Filter items created by someone other than the given user."""
+        return self.exclude(creator=user)
+
+    def favorited_by(self, user):
+        """Filter items the given user marked as favorite."""
+        favorite = ItemFavorite.objects.filter(item_id=models.OuterRef("pk"), user=user)
+        return self.filter(models.Exists(favorite))
+
+    def not_favorited_by(self, user):
+        """Filter items the given user did not mark as favorite."""
+        favorite = ItemFavorite.objects.filter(item_id=models.OuterRef("pk"), user=user)
+        return self.exclude(models.Exists(favorite))
+
+    def owned_by(self, user):
+        """Filter items the given user owns, directly or through an ancestor access."""
+        owner_access = ItemAccess.objects.filter(
+            models.Q(user=user) | models.Q(team__in=user.teams),
+            role=RoleChoices.OWNER,
+            item__path__ancestors=models.OuterRef("path"),
+        )
+        return self.filter(models.Exists(owner_access))
 
     def annotate_is_favorite(self, user):
         """
@@ -400,6 +942,74 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
 
         return self.annotate(
             user_roles=models.Value([], output_field=output_field),
+        )
+
+    def annotate_encryption_state(self, user):
+        """
+        Annotate the per-user encryption fields read by the item serializers, so that
+        listing encrypted items costs no query per item. The subqueries on the user's
+        key chain only run for encrypted rows.
+        """
+        inside_encrypted_subtree = models.Exists(
+            Item.objects.filter(path__ancestors=models.OuterRef("path"), is_encrypted=True).exclude(
+                pk=models.OuterRef("pk")
+            )
+        )
+        if not user.is_authenticated:
+            return self.annotate(
+                annotated_inside_encrypted_subtree=inside_encrypted_subtree,
+                annotated_accesses_user_ids=models.Value(
+                    None, output_field=ArrayField(base_field=models.CharField())
+                ),
+                annotated_has_encryption_chain_access=models.Value(False),
+                annotated_has_encryption_chain_key=models.Value(False),
+                annotated_encryption_public_key_version=models.Value(
+                    None, output_field=models.IntegerField()
+                ),
+            )
+
+        accesses_user_ids = (
+            ItemAccess.objects.filter(
+                item__path__ancestors=models.OuterRef("path"), user__isnull=False
+            )
+            .order_by("user__sub")
+            .values_list("user__sub", flat=True)
+            .distinct()
+        )
+        chain_accesses = ItemAccess.objects.filter(
+            item__path__ancestors=models.OuterRef("path"),
+            item__is_encrypted=True,
+            user=user,
+        )
+        chain_keys = chain_accesses.filter(encrypted_item_symmetric_key_for_user__isnull=False)
+
+        def only_if_encrypted(expression, default):
+            return models.Case(
+                models.When(is_encrypted=True, then=expression),
+                default=default,
+                output_field=expression.output_field,
+            )
+
+        return self.annotate(
+            annotated_inside_encrypted_subtree=inside_encrypted_subtree,
+            annotated_accesses_user_ids=models.Func(
+                accesses_user_ids,
+                function="ARRAY",
+                output_field=ArrayField(base_field=models.CharField()),
+            ),
+            annotated_has_encryption_chain_access=only_if_encrypted(
+                models.Exists(chain_accesses), models.Value(False)
+            ),
+            annotated_has_encryption_chain_key=only_if_encrypted(
+                models.Exists(chain_keys), models.Value(False)
+            ),
+            annotated_encryption_public_key_version=only_if_encrypted(
+                models.Subquery(
+                    chain_keys.order_by("-created_at").values("encryption_public_key_version")[:1],
+                    output_field=models.IntegerField(),
+                ),
+                models.Value(None, output_field=models.IntegerField()),
+            ),
         )
 
     def annotate_with_numchild(self):
@@ -492,7 +1102,7 @@ class ItemManager(TreeManager.from_queryset(ItemQuerySet)):
         return item
 
 
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods,too-many-instance-attributes
 class Item(TreeModel, BaseModel):
     """Item in the tree."""
 
@@ -530,8 +1140,19 @@ class Item(TreeModel, BaseModel):
         blank=True,
     )
     mimetype = models.CharField(max_length=255, null=True, blank=True)
+    target = models.OneToOneField(
+        "self",
+        on_delete=models.CASCADE,
+        related_name="restriction",
+        null=True,
+        blank=True,
+    )
     main_workspace = models.BooleanField(default=False)
     size = models.BigIntegerField(null=True, blank=True)
+    quota_excluded = models.BooleanField(
+        default=False,
+        help_text=_("Exclude this item from its creator's storage quota computation."),
+    )
     description = models.TextField(null=True, blank=True)
     malware_detection_info = models.JSONField(
         null=True,
@@ -557,12 +1178,6 @@ class Item(TreeModel, BaseModel):
         ),
     )
 
-    # Remove them in a future release. They must be kept while the columns are not removed
-    _deprecated_numchild = models.PositiveIntegerField(default=0, db_column="numchild")
-    _deprecated_numchild_folder = models.PositiveIntegerField(
-        default=0, db_column="numchild_folder"
-    )
-
     label_size = 7
 
     objects = ItemManager()
@@ -579,11 +1194,25 @@ class Item(TreeModel, BaseModel):
                     | models.Q(deleted_at=models.F("ancestors_deleted_at"))
                 ),
                 name="check_deleted_at_matches_ancestors_deleted_at_when_set",
-            )
+            ),
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(type=ItemTypeChoices.RESTRICTION) & models.Q(target__isnull=False))
+                    | (~models.Q(type=ItemTypeChoices.RESTRICTION) & models.Q(target__isnull=True))
+                ),
+                name="check_target_only_on_restrictions",
+            ),
         ]
         indexes = [
             GistIndex(fields=["path"]),
             models.Index(NLevel(models.F("path")), name="drive_item_path_nlevel_idx"),
+            # Covers the storage used computation by creator.
+            models.Index(
+                fields=["creator"],
+                include=["size"],
+                condition=models.Q(hard_deleted_at__isnull=True, quota_excluded=False),
+                name="item_creator_size_quota_idx",
+            ),
         ]
 
     def __str__(self):
@@ -621,14 +1250,32 @@ class Item(TreeModel, BaseModel):
         if (
             self.created_at is None
             and self.type == ItemTypeChoices.FILE
-            and self.upload_state != ItemUploadStateChoices.DUPLICATING
+            and self.upload_state
+            not in (
+                ItemUploadStateChoices.DUPLICATING,
+                ItemUploadStateChoices.CONVERTING,
+            )
         ):
             self.upload_state = ItemUploadStateChoices.PENDING
 
         if not self.path:
             self.path = str(self.id)
 
-        return super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
+
+        self._invalidate_storage_used_cache(kwargs.get("update_fields"))
+
+    def _invalidate_storage_used_cache(self, update_fields):
+        """
+        Invalidate the creator's cached storage usage when a save may have
+        changed it. Bulk queryset updates bypass save() and must invalidate
+        the cache explicitly.
+        """
+        if update_fields and STORAGE_USED_FIELDS.isdisjoint(update_fields):
+            return
+        if not self.creator_id:
+            return
+        transaction.on_commit(lambda: invalidate_storage_used_cache([self.creator_id]))
 
     def delete(self, using=None, keep_parents=False):
         if self.deleted_at is None and self.ancestors_deleted_at is None:
@@ -702,9 +1349,7 @@ class Item(TreeModel, BaseModel):
             nb_accesses = cache.get(cache_key)
 
             if nb_accesses is None:
-                nb_accesses = ItemAccess.objects.filter(
-                    item__path__ancestors=self.path,
-                ).count()
+                nb_accesses = get_permissions_backend().effective_accesses(self).count()
                 cache.set(cache_key, nb_accesses)
 
             return nb_accesses
@@ -724,9 +1369,22 @@ class Item(TreeModel, BaseModel):
         """Return True if the item is the root of the tree."""
         return len(self.path) == 1
 
+    @property
+    def is_restricted(self):
+        """Return whether a restriction targets this folder."""
+        if (annotated := getattr(self, "has_restriction", None)) is not None:
+            return annotated
+        return self._meta.model.objects.filter(target=self).exists()
+
     def get_root(self):
         """Return the root of the tree."""
         return self.ancestors().filter(path__depth=1).first()
+
+    def parent(self):
+        """Return the direct parent, looked up by its exact path."""
+        if len(self.path) > 1:
+            return self._meta.model.objects.filter(path=str(self.path[:-1])).first()
+        return None
 
     def invalidate_nb_accesses_cache(self):
         """
@@ -744,10 +1402,7 @@ class Item(TreeModel, BaseModel):
         try:
             roles = self.user_roles or []
         except AttributeError:
-            roles = ItemAccess.objects.filter(
-                models.Q(user=user) | models.Q(team__in=user.teams),
-                item__path__ancestors=self.path,
-            ).values_list("role", flat=True)
+            roles = get_permissions_backend().roles_for(user, self)
 
         return RoleChoices.max(*roles)
 
@@ -827,83 +1482,8 @@ class Item(TreeModel, BaseModel):
         return self.computed_link_definition["link_role"]
 
     def get_abilities(self, user):
-        """
-        Compute and return abilities for a given user on the item.
-        """
-        # First get the role based on specific access
-        role = self.get_role(user)
-        # Characteristics that are based only on specific access
-        is_owner = role == RoleChoices.OWNER
-        is_deleted = self.ancestors_deleted_at
-        is_owner_or_admin = is_owner or role == RoleChoices.ADMIN
-
-        # Compute access roles before adding link roles because we don't
-        # want anonymous users to access versions (we wouldn't know from
-        # which date to allow them anyway)
-        # Anonymous users should also not see item accesses
-        has_access_role = bool(role) and not is_deleted
-        link_select_options = (
-            LinkReachChoices.get_select_options(**self.ancestors_link_definition)
-            if has_access_role
-            else {}
-        )
-
-        link_definition = self.computed_link_definition
-
-        link_reach = link_definition["link_reach"]
-        if link_reach == LinkReachChoices.PUBLIC or (
-            link_reach == LinkReachChoices.AUTHENTICATED and user.is_authenticated
-        ):
-            # Set the user role to the highest role between the item role and the link role
-            # Needed for a user with an access lower than link_role
-            # Needed for a user without access to determine the role he has.
-            role = RoleChoices.max(role, link_definition["link_role"])
-        can_get = bool(role) and not is_deleted
-        retrieve = can_get or is_owner
-        can_manage = is_owner_or_admin and not is_deleted
-        can_update = (is_owner_or_admin or role == RoleChoices.EDITOR) and not is_deleted
-        can_create_children = can_update and user.is_authenticated
-        can_hard_delete = (
-            is_owner
-            if self.is_root
-            else (is_owner_or_admin or (user.is_authenticated and self.creator == user))
-        )
-        can_destroy = can_hard_delete and not is_deleted
-        can_duplicate = (
-            can_get
-            and user.is_authenticated
-            and self.type == ItemTypeChoices.FILE
-            and self.upload_state == ItemUploadStateChoices.READY
-        )
-
-        return {
-            "accesses_manage": can_manage,
-            "accesses_view": has_access_role,
-            "breadcrumb": can_get,
-            "children_list": can_get,
-            "children_create": can_create_children,
-            "destroy": can_destroy,
-            "download": can_get,
-            "duplicate": can_duplicate,
-            "encrypt": can_manage and user.is_authenticated,
-            "encryption_upload_url": can_update and user.is_authenticated,
-            "hard_delete": can_hard_delete,
-            "favorite": can_get and user.is_authenticated,
-            "key_chain": can_get and user.is_authenticated,
-            "link_configuration": can_manage,
-            "invite_owner": is_owner and not is_deleted,
-            "link_select_options": link_select_options,
-            "move": can_manage,
-            "remove_encryption": can_manage and user.is_authenticated,
-            "restore": is_owner,
-            "retrieve": retrieve,
-            "tree": can_get,
-            "media_auth": can_get,
-            "partial_update": can_update,
-            "update": can_update,
-            "upload_ended": can_update and user.is_authenticated,
-            "wopi": can_get and not self.is_encrypted,
-        }
+        """Compute and return abilities for a given user on the item."""
+        return get_permissions_backend().abilities(user, self)
 
     def send_email(self, subject, emails, context=None, language=None):
         """Generate and send email from a template."""
@@ -913,14 +1493,18 @@ class Item(TreeModel, BaseModel):
             return
 
         context = context or {}
-        domain = Site.objects.get_current().domain
+        base_url = settings.EMAIL_URL_APP or Site.objects.get_current().domain
         language = language or get_language()
         context.update(
             {
                 "brandname": settings.EMAIL_BRAND_NAME,
                 "item": self,
-                "domain": domain,
-                "link": f"{domain}/explorer/items/{self.id}/",
+                "domain": base_url,
+                "link": (
+                    f"{base_url}/explorer/items/files/{self.id}/"
+                    if self.type == ItemTypeChoices.FILE
+                    else f"{base_url}/explorer/items/{self.id}/"
+                ),
                 "logo_img": settings.EMAIL_LOGO_IMG,
             }
         )
@@ -983,6 +1567,16 @@ class Item(TreeModel, BaseModel):
 
         self.save(update_fields=["deleted_at", "ancestors_deleted_at"])
 
+        # The restriction of a restricted folder lives in another subtree: trash
+        # it along so that restoring the folder can bring it back
+        self._meta.model.objects.filter(
+            target=self,
+            ancestors_deleted_at__isnull=True,
+        ).update(
+            deleted_at=self.deleted_at,
+            ancestors_deleted_at=self.deleted_at,
+        )
+
         # Mark all descendants as soft deleted
         if self.type == ItemTypeChoices.FOLDER:
             self.descendants().filter(ancestors_deleted_at__isnull=True).update(
@@ -1014,11 +1608,26 @@ class Item(TreeModel, BaseModel):
                 }
             )
 
+        # Collect the creators impacted before marking the tree as hard deleted:
+        # descendants can have different creators and their bulk update below
+        # bypasses Item.save() invalidating the storage used cache.
+        creator_ids = set(
+            self.descendants()
+            .filter(hard_deleted_at__isnull=True)
+            .values_list("creator_id", flat=True)
+        )
+        creator_ids.add(self.creator_id)
+
         self.hard_deleted_at = timezone.now()
         self.save(update_fields=["hard_deleted_at"])
 
         # Mark all descendants as hard deleted
         self.descendants().update(hard_deleted_at=self.hard_deleted_at)
+
+        # The restriction of a restricted folder must not survive its target
+        self._meta.model.objects.filter(target=self).update(hard_deleted_at=self.hard_deleted_at)
+
+        transaction.on_commit(lambda: invalidate_storage_used_cache(creator_ids))
 
     @transaction.atomic
     def restore(self):
@@ -1073,6 +1682,16 @@ class Item(TreeModel, BaseModel):
             | models.Q(ancestors_deleted_at__lt=current_deleted_at)
         ).update(ancestors_deleted_at=None)
 
+        # Bring back the restriction trashed along the restricted folder, unless
+        # its own subtree went to the trash meanwhile
+        restriction = self._meta.model.objects.filter(
+            target=self, deleted_at=current_deleted_at
+        ).first()
+        if restriction and not restriction.ancestors().filter(deleted_at__isnull=False).exists():
+            self._meta.model.objects.filter(pk=restriction.pk).update(
+                deleted_at=None, ancestors_deleted_at=None
+            )
+
     @transaction.atomic
     def move(self, target):
         """
@@ -1084,6 +1703,30 @@ class Item(TreeModel, BaseModel):
                     "target": ValidationError(
                         _("Only folders can be targeted when moving an item"),
                         code="item_move_target_not_a_folder",
+                    )
+                }
+            )
+
+        if self.is_restricted:
+            raise ValidationError(
+                {
+                    "target": ValidationError(
+                        _("A restricted folder cannot be moved"),
+                        code="item_move_restricted",
+                    )
+                }
+            )
+
+        if (
+            self.type == ItemTypeChoices.RESTRICTION
+            and target
+            and str(target.path).startswith(str(self.target.path))
+        ):
+            raise ValidationError(
+                {
+                    "target": ValidationError(
+                        _("A restriction cannot be moved under its own target"),
+                        code="item_move_restriction_under_target",
                     )
                 }
             )
@@ -1101,6 +1744,181 @@ class Item(TreeModel, BaseModel):
             self._meta.model.objects.filter(path__descendants=old_path).update(
                 path=RawSQL("%s || subpath(path, nlevel(%s))", (str(self.path), str(old_path)))
             )
+
+    @transaction.atomic
+    def restrict(self, user):
+        """Restrict the folder by detaching it to the tree root behind a restriction."""
+        item = self._meta.model.objects.select_for_update().get(pk=self.pk)
+
+        if item.type != ItemTypeChoices.FOLDER:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("Only folders can be restricted"),
+                        code="item_restrict_type_folder_only",
+                    )
+                }
+            )
+        if item.is_restricted:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("This folder is already restricted"),
+                        code="item_restrict_already_restricted",
+                    )
+                }
+            )
+        if item.depth == 1:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("A root folder cannot be restricted"),
+                        code="item_restrict_root",
+                    )
+                }
+            )
+        if item.ancestors_deleted_at:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("A deleted folder cannot be restricted"),
+                        code="item_restrict_deleted",
+                    )
+                }
+            )
+        if item.get_role(user) != RoleChoices.OWNER:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("Only owners can restrict a folder"),
+                        code="item_restrict_owner_only",
+                    )
+                }
+            )
+        # Detaching a folder from an encrypted tree would cut its key chain
+        if item.is_encrypted:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("An encrypted folder cannot be restricted"),
+                        code="item_restrict_encrypted",
+                    )
+                }
+            )
+
+        parent = item.parent()
+
+        ItemAccess.objects.update_or_create(
+            item=item, user=user, defaults={"role": RoleChoices.OWNER}
+        )
+
+        item.move(None)
+
+        if item.link_reach is None:
+            item.link_reach = LinkReachChoices.RESTRICTED
+            item.save(update_fields=["link_reach", "updated_at"])
+
+        self._meta.model.objects.create_child(
+            parent=parent,
+            creator=user,
+            type=ItemTypeChoices.RESTRICTION,
+            target=item,
+            title=item.title,
+        )
+        item.invalidate_nb_accesses_cache()
+
+        return item
+
+    def _normalize_explicit_accesses(self):
+        """Delete explicit accesses inferior or equal to the inherited role."""
+        inherited_accesses = (
+            ItemAccess.objects.filter(item__path__ancestors=self.path)
+            .exclude(item=self)
+            .values_list("user_id", "team", "role")
+        )
+        inherited_roles = {}
+        for user_id, team, role in inherited_accesses:
+            key = (user_id, team)
+            inherited_roles[key] = RoleChoices.max(inherited_roles.get(key), role)
+
+        redundant_ids = [
+            access.id
+            for access in ItemAccess.objects.filter(item=self)
+            if RoleChoices.get_priority(access.role)
+            <= RoleChoices.get_priority(inherited_roles.get((access.user_id, access.team)))
+        ]
+        if redundant_ids:
+            ItemAccess.objects.filter(id__in=redundant_ids).delete()
+
+    def _normalize_explicit_link_reach(self):
+        """Reset the link reach to inherit when inferior or equal to the inherited one."""
+        # The cached ancestors definition predates the move, recompute it
+        self._ancestors_link_definition = None
+        inherited_reach = self.ancestors_link_definition["link_reach"]
+        if LinkReachChoices.get_priority(self.link_reach) <= LinkReachChoices.get_priority(
+            inherited_reach
+        ):
+            self.link_reach = None
+            self.save(update_fields=["link_reach", "updated_at"])
+
+    def detach(self):
+        """Delete this restriction row, leaving its restricted target untouched."""
+        if self.type != ItemTypeChoices.RESTRICTION:
+            raise ValidationError(
+                {
+                    "type": ValidationError(
+                        _("Only restrictions can be detached"),
+                        code="item_detach_not_a_restriction",
+                    )
+                }
+            )
+
+        self._meta.model.objects.filter(pk=self.pk).delete()
+
+    @transaction.atomic
+    def unrestrict(self):
+        """Lift restriction and reattach the folder at the restriction's location."""
+        item = self._meta.model.objects.select_for_update().get(pk=self.pk)
+
+        restriction = self._meta.model.objects.select_for_update().filter(target=item).first()
+        if restriction is None:
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("This folder is not restricted"),
+                        code="item_unrestrict_not_restricted",
+                    )
+                }
+            )
+
+        parent = None
+        if restriction.ancestors_deleted_at is None:
+            parent = restriction.parent()
+        # Reattaching would drop the explicit accesses holding the wrapped keys
+        # of an encrypted folder, or put a plaintext folder in an encrypted tree
+        if parent and (item.is_encrypted or parent.is_encrypted):
+            raise ValidationError(
+                {
+                    "is_restricted": ValidationError(
+                        _("Restriction cannot be lifted on or into an encrypted folder"),
+                        code="item_unrestrict_encrypted",
+                    )
+                }
+            )
+        self._meta.model.objects.filter(pk=restriction.pk).delete()
+
+        if parent:
+            item.title = manage_unique_title_utils(
+                self._meta.model.objects.children(parent.path), item.title
+            )
+            item.save(update_fields=["title", "updated_at"])
+            item.move(parent)
+            item._normalize_explicit_accesses()  # noqa: SLF001  # pylint: disable=protected-access
+            item._normalize_explicit_link_reach()  # noqa: SLF001  # pylint: disable=protected-access
+
+        item.invalidate_nb_accesses_cache()
+
+        return item
 
 
 class MirrorItemTask(BaseModel):
@@ -1229,7 +2047,7 @@ class ItemAccess(BaseModel):
         blank=True,
         help_text=_(
             "Version of the user's encryption public key at the time of sharing. "
-            "Used to detect key changes — if the user's current public key version "
+            "Used to detect key changes: if the user's current public key version "
             "differs from this value, the access needs re-encryption."
         ),
     )

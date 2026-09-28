@@ -55,6 +55,25 @@ EXTERNAL_API = {
 
 Each endpoint has `enabled` (boolean) and `actions` (list of allowed actions). Only actions explicitly listed are accessible.
 
+## Customise created item attributes per audience
+
+Configure the `EXTERNAL_API_AUD_ITEM_ATTRIBUTES` setting to apply extra attributes to items
+created through the external API, depending on the token audience of the request (the claim
+configured by `OIDC_RS_AUDIENCE_CLAIM`). Set it via the `EXTERNAL_API_AUD_ITEM_ATTRIBUTES`
+environment variable (as JSON) or in Django settings.
+
+```python
+EXTERNAL_API_AUD_ITEM_ATTRIBUTES = {
+    "some_audience": {
+        "quota_excluded": True,
+    },
+}
+```
+
+With this configuration, every item created by a request authenticated with the
+`some_audience` audience is excluded from its creator's storage quota computation.
+Audiences without an entry keep the default item attributes.
+
 ## Request Drive
 
 In order to request drive from an external resource provider, you need to implement the basic setup of `django-lasuite` [Using the OIDC Authentication Backend to request a resource server](https://github.com/suitenumerique/django-lasuite/blob/main/documentation/how-to-use-oidc-call-to-resource-server.md)

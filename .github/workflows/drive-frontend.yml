@@ -8,6 +8,9 @@ on:
     branches:
       - "*"
 
+permissions:
+  contents: read
+
 jobs:
   install-front:
     uses: ./.github/workflows/front-dependencies-installation.yml
@@ -62,15 +65,55 @@ jobs:
           cd src/frontend/apps/drive
           yarn test
 
+  build-frontend-e2e:
+    runs-on: ubuntu-latest
+    needs: install-front
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+
+      - name: Restore the frontend cache
+        uses: actions/cache@v4
+        with:
+          path: "src/frontend/**/node_modules"
+          key: front-node_modules-${{ hashFiles('src/frontend/**/yarn.lock') }}
+          fail-on-cache-miss: true
+
+      - name: Build frontend (static export, .env.development)
+        env:
+          NEXT_PUBLIC_S3_DOMAIN_REPLACE: http://localhost:9000
+          NEXT_PUBLIC_API_ORIGIN: http://localhost:8071
+          NEXT_PUBLIC_POSTHOG_TEST_MODE: true
+        working-directory: src/frontend/apps/drive
+        run: yarn build
+
+      - name: Upload frontend bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: drive-frontend-out
+          path: src/frontend/apps/drive/out
+          retention-days: 1
+          if-no-files-found: error
+
   test-e2e:
     runs-on: ubuntu-latest
-    needs: [install-front, build-mails]
+    needs: [install-front, build-mails, build-frontend-e2e]
     strategy:
+      fail-fast: false
       matrix:
         browser:
           - chromium
           - webkit
           - firefox
+        shard:
+          - "1/3"
+          - "2/3"
+          - "3/3"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -93,31 +136,59 @@ jobs:
           path: "src/backend/core/templates/mail"
           key: mail-templates-${{ hashFiles('src/mail/mjml') }}
 
-      - name: Install Playwright Browsers
+      - name: Get Playwright version
+        id: playwright-version
         run: |
-          cd src/frontend/apps/e2e
-          npx playwright install --with-deps ${{matrix.browser}}
+          VERSION=$(node -p "require('./src/frontend/apps/e2e/package.json').devDependencies['@playwright/test'] || require('./src/frontend/apps/e2e/package.json').dependencies['@playwright/test']")
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ matrix.browser }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers (cache miss)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        working-directory: src/frontend/apps/e2e
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Install Playwright system deps (cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        working-directory: src/frontend/apps/e2e
+        run: npx playwright install-deps ${{ matrix.browser }}
+
+      - name: Build the drive SDK
+        working-directory: src/frontend/packages/sdk
+        run: yarn build
+
+      - name: Start sdk-consumer dev server
+        working-directory: src/frontend/apps/sdk-consumer
+        run: |
+          nohup yarn dev > /tmp/sdk-consumer.log 2>&1 &
+          echo "sdk-consumer PID $!"
+
+      - name: Download frontend bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: drive-frontend-out
+          path: src/frontend/apps/drive/out
 
       - name: Start Docker services
         run: |
-          make bootstrap-e2e
+          make bootstrap-e2e run-backend-e2e
 
-      - name: Start frontend
-        run: |
-          cd src/frontend && yarn dev &
-
-      - name: Wait for Keycloak to be ready
-        run: |
-          timeout 30 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:8083/)" != "302" ]]; do echo "Waiting for Keycloak..." && sleep 2; done' && echo "Keycloak is ready!"
+      - name: Serve frontend (stock nginx + prod vhost)
+        run: make ci-serve-frontend-build
 
       - name: Run e2e tests
-        run: |
-          cd src/frontend/apps/e2e
-          yarn test --project=${{ matrix.browser }}
+        working-directory: src/frontend/apps/e2e
+        run: yarn test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: report-${{ matrix.browser }}
+          name: report-${{ matrix.browser }}-shard-${{ strategy.job-index }}
           path: src/frontend/apps/e2e/report/
           retention-days: 7

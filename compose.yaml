@@ -2,6 +2,7 @@ name: drive
 
 services:
   postgresql:
+    user: ${DOCKER_USER:-1000}
     image: postgres:16
     ports:
       - "6434:5432"
@@ -26,9 +27,8 @@ services:
     ports:
       - "1081:1080"
 
-  minio:
-    user: ${DOCKER_USER:-1000}
-    image: minio/minio
+  minio-base:
+    image: quay.io/minio/minio
     environment:
       - MINIO_ROOT_USER=drive
       - MINIO_ROOT_PASSWORD=password
@@ -42,21 +42,39 @@ services:
       retries: 300
     entrypoint: ""
     command: minio server --console-address :9001 /data
+
+  minio-ci:
+    extends: minio-base
+    hostname: minio
+    volumes:
+      - /data/media:/data
+
+  minio:
+    extends: minio-base
+    user: ${DOCKER_USER:-1000}
     volumes:
       - ./data/media:/data
 
-  createbuckets:
-    image: minio/mc
-    depends_on:
-      minio:
-        condition: service_healthy
-        restart: true
+  createbuckets-base:
+    image: quay.io/minio/mc
     entrypoint: >
       sh -c "
       /usr/bin/mc alias set drive http://minio:9000 drive password && \
       /usr/bin/mc mb drive/drive-media-storage && \
       /usr/bin/mc version enable drive/drive-media-storage && \
       exit 0;"
+
+  createbuckets-ci:
+    extends: createbuckets-base
+    depends_on:
+      minio-ci:
+        condition: service_healthy
+
+  createbuckets:
+    extends: createbuckets-base
+    depends_on:
+      minio:
+        condition: service_healthy
 
   app-dev:
     build:
@@ -82,7 +100,7 @@ services:
       - /app/.venv
     networks:
       - lasuite
-      - default      
+      - default
     depends_on:
       postgresql:
         condition: service_healthy
@@ -101,8 +119,27 @@ services:
         condition: service_healthy
 
   ds-proxy:
-    image: demarchenumerique/ds-proxy:v2.0.0-alpha.2
-    command: ["proxy", "--address", "0.0.0.0:4444", "--password-file", "/etc/dsproxy/PASSWORD", "--salt", "12345678901234567890123456789012", "--keyring-file", "/etc/dsproxy/keyring.toml", "--upstream-url", "http://minio:9000", "--local-encryption-directory", "/var/tmp/local_encryption/", "--s3-access-key", "drive", "--s3-secret-key", "password", "--s3-region", "us-east-1"]
+    image: demarchenumerique/ds-proxy:v2.0.0-alpha.4
+    command:
+      [
+        "proxy",
+        "--address",
+        "0.0.0.0:4444",
+        "--password-file",
+        "/etc/dsproxy/PASSWORD",
+        "--keyring-file",
+        "/etc/dsproxy/keyring.toml",
+        "--upstream-url",
+        "http://minio:9000",
+        "--local-encryption-directory",
+        "/var/tmp/local_encryption/",
+        "--s3-access-key",
+        "drive",
+        "--s3-secret-key",
+        "password",
+        "--s3-region",
+        "us-east-1",
+      ]
     ports:
       - "4444:4444"
     environment:
@@ -126,6 +163,7 @@ services:
       - env.d/development/common.${ENV_OVERRIDE:-local}
       - env.d/development/postgresql
       - env.d/development/postgresql.local
+      - env.d/development/postgresql.${ENV_OVERRIDE:-local}
     volumes:
       - ./src/backend:/app
       - ./data/static:/data/static
@@ -143,8 +181,26 @@ services:
     volumes:
       - ./docker/files/development/etc/nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
-      - keycloak
-      - app-dev
+      keycloak:
+        condition: service_healthy
+        restart: true
+      app-dev:
+        condition: service_started
+
+  # The static service is only used in the CI to serve the build
+  static:
+    image: nginx:1.25
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: curl -sf http://127.0.0.1:3000/ || exit 1
+      interval: 2s
+      timeout: 10s
+      retries: 30
+      start_period: 2s
+    volumes:
+      - ./src/frontend/apps/drive/out:/usr/share/nginx/html:ro
+      - ./src/frontend/apps/drive/conf/default.conf:/etc/nginx/conf.d/default.conf:ro
 
   frontend-dev:
     user: "${DOCKER_USER:-1000}"
@@ -157,8 +213,8 @@ services:
     image: drive:frontend-development
     volumes:
       - ./src/frontend/:/home/frontend/
-      - /home/frontend/node_modules
-      - /home/frontend/apps/drive/node_modules
+      - ./src/frontend/node_modules:/home/frontend/node_modules
+      - ./src/frontend/apps/drive/node_modules:/home/frontend/apps/drive/node_modules
     ports:
       - "3000:3000"
 
@@ -204,6 +260,14 @@ services:
       - --proxy=edge
       - --hostname=http://localhost:8083
       - --hostname-strict=false
+      - --health-enabled=true
+      - --metrics-enabled=true
+    healthcheck:
+      test: ['CMD-SHELL', 'exec 3<>/dev/tcp/localhost/9000; echo -e "GET /health/live HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3; grep "HTTP/1.1 200 OK" <&3']
+      start_period: 5s
+      interval: 1s
+      timeout: 2s
+      retries: 300
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
@@ -217,15 +281,22 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - kc_postgresql
+      kc_postgresql:
+        condition: service_healthy
+        restart: true
     networks:
       - lasuite
       - default
 
   collabora:
-    image: collabora/code:latest
+    image: collabora/code:26.04.2.2.1
+    # The entrypoint runs coolwsd directly (no shell in the image), so
+    # options are passed as command arguments instead of extra_params.
+    command: ["--o:ssl.enable=false"]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9980/hosting/discovery"]
+      # The built-in probe targets https; pass the same override so it
+      # checks the plain-http endpoint we actually serve.
+      test: ["CMD", "/usr/bin/coolwsd", "--probe", "--o:ssl.enable=false"]
       interval: 30s
       retries: 5
       start_period: 60s
@@ -233,7 +304,6 @@ services:
     ports:
       - "9980:9980"
     environment:
-      - extra_params=--o:ssl.enable=false
       - username=drive
       - password=password
       - server_name=localhost:9980
@@ -250,6 +320,8 @@ services:
     environment:
       TZ: "Europe/Berlin"
       USE_UNAUTHORIZED_STORAGE: "true"
+      JWT_ENABLED: "true"
+      JWT_SECRET: "ThisIsNotASecretKeyDev"
     ports:
       - "9981:80"
     volumes:

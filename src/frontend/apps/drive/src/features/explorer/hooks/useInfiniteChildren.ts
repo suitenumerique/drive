@@ -31,5 +31,6 @@ export const useInfiniteChildren = (
     },
     initialPageParam: 1,
     enabled: enabled && itemId !== null,
+    placeholderData: (previousData) => previousData,
   });
 };

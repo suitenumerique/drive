@@ -45,6 +45,11 @@ class ResourceServerItemViewSet(ResourceServerRestrictionMixin, ItemViewSet):
         """Build resource_server_actions from settings."""
         return self._get_resource_server_actions("items")
 
+    def get_create_extra_attributes(self):
+        """Apply per-audience item attributes from EXTERNAL_API_AUD_ITEM_ATTRIBUTES."""
+        audience = getattr(self.request, "resource_server_token_audience", None)
+        return dict(settings.EXTERNAL_API_AUD_ITEM_ATTRIBUTES.get(audience) or {})
+
 
 class ResourceServerUserViewSet(ResourceServerRestrictionMixin, UserViewSet):
     """Resource Server Viewset for the Drive app."""

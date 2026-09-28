@@ -192,6 +192,8 @@ def test_api_item_accesses_create_authenticated_administrator(
         "max_ancestors_role_item_id": None,
         "max_role": role,
         "is_explicit": True,
+        "encryption_public_key_version": None,
+        "is_pending_encryption": False,
     }
     assert len(mail.outbox) == 1
     email = mail.outbox[0]
@@ -252,6 +254,8 @@ def test_api_item_accesses_create_authenticated_owner(via, depth, mock_user_team
     assert response.json() == {
         "id": str(new_item_access.id),
         "is_explicit": True,
+        "encryption_public_key_version": None,
+        "is_pending_encryption": False,
         "user": other_user,
         "team": "",
         "role": role,
@@ -490,3 +494,44 @@ def test_api_item_accesses_create_posthog_event(settings):
         {"id": access.id, "role": "editor"},
         item=item,
     )
+
+
+def test_api_item_accesses_create_synchronize_descendants_keeps_encrypted_accesses():
+    """
+    Synchronizing descendants removes lower plaintext accesses but keeps the accesses on
+    encrypted items: they hold the wrapped key of the user (or mark them pending).
+    """
+    user = factories.UserFactory()
+    other_user = factories.UserFactory()
+
+    root = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    parent = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+    plain_item = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    encrypted_item = factories.ItemFactory(
+        parent=parent, type=models.ItemTypeChoices.FOLDER, is_encrypted=True
+    )
+
+    factories.UserItemAccessFactory(item=root, user=user, role="owner")
+    factories.UserItemAccessFactory(item=plain_item, user=other_user, role="editor")
+    encrypted_access = factories.UserItemAccessFactory(
+        item=encrypted_item,
+        user=other_user,
+        role="editor",
+        encrypted_item_symmetric_key_for_user="other_user_key",
+        encryption_public_key_version=2,
+    )
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(
+        f"/api/v1.0/items/{parent.id!s}/accesses/",
+        {"user_id": str(other_user.id), "role": "administrator"},
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert not models.ItemAccess.objects.filter(item=plain_item, user=other_user).exists()
+    encrypted_access.refresh_from_db()
+    assert encrypted_access.role == "editor"
+    assert encrypted_access.encrypted_item_symmetric_key_for_user == "other_user_key"

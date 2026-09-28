@@ -9,6 +9,7 @@ import {
   User,
 } from "@/features/drivers/types";
 import {
+  useMutationBatchShare,
   useMutationCreateAccess,
   useMutationCreateInvitation,
   useMutationDeleteAccess,
@@ -16,6 +17,7 @@ import {
   useMutationUpdateAccess,
   useMutationUpdateInvitation,
 } from "@/features/explorer/hooks/useMutationsAccesses";
+import { useConfig } from "@/features/config/ConfigProvider";
 import { useMutationUpdateLinkConfiguration } from "@/features/explorer/hooks/useMutations";
 import {
   useInfiniteItemInvitations,
@@ -25,20 +27,22 @@ import {
 import { useUsers } from "@/features/users/hooks/useUserQueries";
 import { useClipboard } from "@/hooks/useCopyToClipboard";
 import {
+  Button,
   HorizontalSeparator,
+  removeFileExtension,
   ShareModal,
   ShareModalCopyLinkFooter,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { errorToString } from "@/features/api/APIError";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/features/auth/Auth";
-import { removeFileExtension } from "@/features/explorer/utils/mimeTypes";
+import { DragEventBarrier } from "@/features/ui/components/drag-event-barrier/DragEventBarrier";
 import posthog from "posthog-js";
 import { PendingEncryptionSection } from "@/features/encryption/sharing/PendingEncryptionSection";
 import { useVaultClient } from "@/features/encryption/VaultClientProvider";
-import { Button } from "@gouvfr-lasuite/cunningham-react";
 import type { ReactNode } from "react";
 import {
   fetchSubtreeEntryKey,
@@ -58,6 +62,7 @@ export const ItemShareModal = ({
 }: WorkspaceShareModalProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const { config } = useConfig();
   const { user } = useAuth();
   const copyToClipboard = useClipboard();
   const itemId = initialItem.originalId ?? initialItem.id;
@@ -85,6 +90,8 @@ export const ItemShareModal = ({
   const { mutateAsync: deleteAccess } = useMutationDeleteAccess();
   const { mutateAsync: deleteInvitation } = useMutationDeleteInvitation();
   const { mutateAsync: updateInvitation } = useMutationUpdateInvitation();
+  const { mutateAsync: batchShare } = useMutationBatchShare();
+  const [importErrorMessage, setImportErrorMessage] = useState<string>();
 
   const rolesOptions = useMemo(
     () =>
@@ -119,7 +126,7 @@ export const ItemShareModal = ({
   const { client: vaultClient } = useVaultClient();
 
   // On an encrypted item, a member's role menu also opens their encryption
-  // identity (fingerprint, trust decision); the ui-kit draws the rows itself,
+  // identity (fingerprint, trust decision); the share modal draws the rows itself,
   // so the top of that menu is the one per-member slot it leaves. Not one's own.
   const identityOf = (member: User): (() => void) | undefined => {
     if (!item?.is_encrypted || !vaultClient || !member.sub) {
@@ -170,7 +177,7 @@ export const ItemShareModal = ({
 
     // For encrypted items, fetch the subtree's entry key once and reuse
     // it for every invitee. If an invitee has no public key yet the
-    // helper returns null — the access row is then created pending and
+    // helper returns null: the access row is then created pending and
     // can be "accepted" later from the same share dialog.
     let entryKey: ArrayBuffer | null = null;
     if (item?.is_encrypted && inviteByUsername.length > 0) {
@@ -394,211 +401,238 @@ export const ItemShareModal = ({
   const updateLinkConfiguration = useMutationUpdateLinkConfiguration();
 
   return (
-    <ShareModal
-      isOpen={isOpen}
-      loading={isLoadingUsers ?? false}
-      onClose={onClose}
-      aria-label="Share modal"
-      modalTitle={`${t("explorer.actions.share.modal.title")} ${removeFileExtension(item?.title ?? "")}`}
-      canUpdate={item?.abilities.accesses_manage}
-      canView={item?.abilities.accesses_view}
-      accesses={accessesData}
-      invitations={invitationsData}
-      invitationRoles={rolesOptions}
-      onDeleteAccess={(access) =>
-        deleteAccess({
-          itemId: itemId,
-          accessId: access.id,
-        })
-      }
-      onDeleteInvitation={(invitation) =>
-        deleteInvitation({
-          itemId: itemId,
-          invitationId: invitation.id,
-        })
-      }
-      onUpdateInvitation={(invitation, role) =>
-        updateInvitation({
-          itemId: itemId,
-          invitationId: invitation.id,
-          role: role as Role,
-        })
-      }
-      onUpdateAccess={(access, role) => {
-        // TODO: This should be added in the ui kit directly?
-        if (role === access.role) {
-          return;
-        }
-
-        if (!access.is_explicit) {
-          onInviteUser([access.user], role as Role);
-        } else {
-          updateAccess({
+    <DragEventBarrier>
+      <ShareModal
+        isOpen={isOpen}
+        loading={isLoadingUsers ?? false}
+        onClose={onClose}
+        aria-label="Share modal"
+        modalTitle={`${t("explorer.actions.share.modal.title")} ${removeFileExtension(item?.title ?? "")}`}
+        canUpdate={item?.abilities.accesses_manage}
+        canView={item?.abilities.accesses_view}
+        accesses={accessesData}
+        invitations={invitationsData}
+        invitationRoles={rolesOptions}
+        onDeleteAccess={(access) =>
+          deleteAccess({
             itemId: itemId,
             accessId: access.id,
-            role: role as Role,
-            user_id: access.user.id,
-          });
+          })
         }
-      }}
-      onSearchUsers={onSearch}
-      hasNextMembers={false}
-      hasNextInvitations={hasNextInvitations}
-      searchUsersResult={queryValue === "" ? undefined : users}
-      onInviteUser={(users, role) => onInviteUser(users, role as Role)}
-      accessRoleTopMessage={(access) =>
-        withIdentity(
-          access.user,
-          (() => {
-            const availableRoles = access.abilities.set_role_to;
-            const maxNbRoles = Object.values(Role).length;
-            const isLastOwner =
-              ownerCount === 1 &&
-              availableRoles.length === 0 &&
-              access.role === Role.OWNER;
-            if (isLastOwner) {
-              // If the current user is not the last owner, we don't show the message
-              if (user?.id !== access.user.id) {
+        onDeleteInvitation={(invitation) =>
+          deleteInvitation({
+            itemId: itemId,
+            invitationId: invitation.id,
+          })
+        }
+        onUpdateInvitation={(invitation, role) =>
+          updateInvitation({
+            itemId: itemId,
+            invitationId: invitation.id,
+            role: role as Role,
+          })
+        }
+        onUpdateAccess={(access, role) => {
+          // TODO: This should be added in the ui kit directly?
+          if (role === access.role) {
+            return;
+          }
+
+          if (!access.is_explicit) {
+            onInviteUser([access.user], role as Role);
+          } else {
+            updateAccess({
+              itemId: itemId,
+              accessId: access.id,
+              role: role as Role,
+              user_id: access.user.id,
+            });
+          }
+        }}
+        onSearchUsers={onSearch}
+        hasNextMembers={false}
+        hasNextInvitations={hasNextInvitations}
+        searchUsersResult={queryValue === "" ? undefined : users}
+        onInviteUser={(users, role) => onInviteUser(users, role as Role)}
+        accessRoleTopMessage={(access) =>
+          withIdentity(
+            access.user,
+            (() => {
+              const availableRoles = access.abilities.set_role_to;
+              const maxNbRoles = Object.values(Role).length;
+              const isLastOwner =
+                ownerCount === 1 &&
+                availableRoles.length === 0 &&
+                access.role === Role.OWNER;
+              if (isLastOwner) {
+                // If the current user is not the last owner, we don't show the message
+                if (user?.id !== access.user.id) {
+                  return undefined;
+                }
+
+                return t("share_modal.options.top_message.only_owner");
+              }
+
+              if (access.is_explicit) {
                 return undefined;
               }
 
-              return t("share_modal.options.top_message.only_owner");
-            }
+              const canDelete = access.abilities.destroy && access.is_explicit;
+              const showRedirection =
+                !canDelete || availableRoles.length < maxNbRoles;
 
-            if (access.is_explicit) {
-              return undefined;
-            }
-
-            const canDelete = access.abilities.destroy && access.is_explicit;
-            const showRedirection =
-              !canDelete || availableRoles.length < maxNbRoles;
-
-            if (showRedirection) {
-              return (
-                <RedirectionToParentItem
-                  itemId={access.max_ancestors_role_item_id}
-                  afterRedirect={onClose}
-                />
-              );
-            }
-
-            if (
-              ownerCount === 1 &&
-              availableRoles.length === 0 &&
-              access.role === Role.OWNER
-            ) {
-              return t("share_modal.options.top_message.only_owner");
-            }
-            if (availableRoles.length === 0 && access.role !== Role.OWNER) {
-              return t("share_modal.options.top_message.to_lower_role");
-            }
-            return undefined;
-          })(),
-        )
-      }
-      getAccessRoles={(access) => {
-        const availableRoles = access.abilities.set_role_to;
-
-        const isDisabled = (role: Role) => {
-          return !availableRoles.includes(role) && access.role !== role;
-        };
-
-        return [
-          {
-            value: Role.READER,
-            subText: t("share_modal.options.subtext.reader"),
-            isDisabled: isDisabled(Role.READER),
-            label: t("roles.reader"),
-          },
-          {
-            value: Role.EDITOR,
-            subText: t("share_modal.options.subtext.editor"),
-            isDisabled: isDisabled(Role.EDITOR),
-            label: t("roles.editor"),
-          },
-          {
-            value: Role.ADMIN,
-            subText: t("share_modal.options.subtext.admin"),
-            isDisabled: isDisabled(Role.ADMIN),
-            label: t("roles.administrator"),
-          },
-          {
-            value: Role.OWNER,
-            subText: t("share_modal.options.subtext.owner"),
-            isDisabled: isDisabled(Role.OWNER),
-            label: t("roles.owner"),
-          },
-        ];
-      }}
-      outsideSearchContent={
-        <>
-          {item?.is_encrypted && (
-            <PendingEncryptionSection
-              itemId={itemId}
-              accesses={accessesData}
-              canAccept={!!item.abilities?.accesses_manage}
-            />
-          )}
-          <ShareModalCopyLinkFooter
-            onCopyLink={() => {
-              if (item?.type === ItemType.FILE) {
-                copyToClipboard(
-                  `${window.location.origin}/explorer/items/files/${itemId}`,
-                );
-              } else {
-                copyToClipboard(
-                  `${window.location.origin}/explorer/items/${itemId}`,
+              if (showRedirection) {
+                return (
+                  <RedirectionToParentItem
+                    itemId={access.max_ancestors_role_item_id}
+                    afterRedirect={onClose}
+                  />
                 );
               }
-              posthog.capture("click_copy_link", {
-                item_id: itemId,
-                item_title: item?.title,
-                item_size: item?.size,
-                item_mimetype: item?.mimetype,
-                item_type: item?.type,
-                item_link_reach: item?.computed_link_reach ?? item?.link_reach,
-                item_link_role: item?.computed_link_role ?? item?.link_role,
-              });
-            }}
-            onOk={() => {
-              onClose();
-            }}
-          />
-        </>
-      }
-      linkSettings={true}
-      accessRoleKey="max_role"
-      linkReachChoices={linkReachChoices}
-      linkRoleChoices={linkRoleChoices}
-      showLinkRole={true}
-      linkReach={item?.computed_link_reach ?? item?.link_reach}
-      linkRole={item?.computed_link_role ?? item?.link_role}
-      topLinkReachMessage={linkReachTopMessage}
-      topLinkRoleMessage={linkRoleTopMessage}
-      onUpdateLinkRole={(value) => {
-        updateLinkConfiguration.mutate({
-          itemId: itemId,
-          link_reach:
-            item?.computed_link_reach ??
-            item?.link_reach ??
-            LinkReach.RESTRICTED,
-          link_role: value as LinkRole,
-        });
-      }}
-      onUpdateLinkReach={(value) => {
-        const linkRole =
-          value === LinkReach.RESTRICTED
-            ? undefined
-            : (item?.computed_link_role ?? item?.link_role ?? LinkRole.READER);
-        updateLinkConfiguration.mutate({
-          itemId: itemId,
-          link_reach: value as LinkReach,
-          link_role: linkRole,
-        });
-      }}
-    >
-      {!item?.abilities.accesses_manage && <HorizontalSeparator />}
-    </ShareModal>
+
+              if (
+                ownerCount === 1 &&
+                availableRoles.length === 0 &&
+                access.role === Role.OWNER
+              ) {
+                return t("share_modal.options.top_message.only_owner");
+              }
+              if (availableRoles.length === 0 && access.role !== Role.OWNER) {
+                return t("share_modal.options.top_message.to_lower_role");
+              }
+              return undefined;
+            })(),
+          )
+        }
+        getAccessRoles={(access) => {
+          const availableRoles = access.abilities.set_role_to;
+
+          const isDisabled = (role: Role) => {
+            return !availableRoles.includes(role) && access.role !== role;
+          };
+
+          return [
+            {
+              value: Role.READER,
+              subText: t("share_modal.options.subtext.reader"),
+              isDisabled: isDisabled(Role.READER),
+              label: t("roles.reader"),
+            },
+            {
+              value: Role.EDITOR,
+              subText: t("share_modal.options.subtext.editor"),
+              isDisabled: isDisabled(Role.EDITOR),
+              label: t("roles.editor"),
+            },
+            {
+              value: Role.ADMIN,
+              subText: t("share_modal.options.subtext.admin"),
+              isDisabled: isDisabled(Role.ADMIN),
+              label: t("roles.administrator"),
+            },
+            {
+              value: Role.OWNER,
+              subText: t("share_modal.options.subtext.owner"),
+              isDisabled: isDisabled(Role.OWNER),
+              label: t("roles.owner"),
+            },
+          ];
+        }}
+        outsideSearchContent={
+          <>
+            {item?.is_encrypted && (
+              <PendingEncryptionSection
+                itemId={itemId}
+                accesses={accessesData}
+                canAccept={!!item.abilities?.accesses_manage}
+              />
+            )}
+            <ShareModalCopyLinkFooter
+              onCopyLink={() => {
+                if (item?.type === ItemType.FILE) {
+                  copyToClipboard(
+                    `${window.location.origin}/explorer/items/files/${itemId}`,
+                  );
+                } else {
+                  copyToClipboard(
+                    `${window.location.origin}/explorer/items/${itemId}`,
+                  );
+                }
+                posthog.capture("click_copy_link", {
+                  item_id: itemId,
+                  item_title: item?.title,
+                  item_size: item?.size,
+                  item_mimetype: item?.mimetype,
+                  item_type: item?.type,
+                  item_link_reach:
+                    item?.computed_link_reach ?? item?.link_reach,
+                  item_link_role: item?.computed_link_role ?? item?.link_role,
+                });
+              }}
+              onOk={() => {
+                onClose();
+              }}
+            />
+          </>
+        }
+        linkSettings={true}
+        accessRoleKey="max_role"
+        linkReachChoices={linkReachChoices}
+        linkRoleChoices={linkRoleChoices}
+        showLinkRole={true}
+        linkReach={item?.computed_link_reach ?? item?.link_reach}
+        linkRole={item?.computed_link_role ?? item?.link_role}
+        topLinkReachMessage={linkReachTopMessage}
+        topLinkRoleMessage={linkRoleTopMessage}
+        onUpdateLinkRole={(value) => {
+          updateLinkConfiguration.mutate({
+            itemId: itemId,
+            link_reach:
+              item?.computed_link_reach ??
+              item?.link_reach ??
+              LinkReach.RESTRICTED,
+            link_role: value as LinkRole,
+          });
+        }}
+        onUpdateLinkReach={(value) => {
+          const linkRole =
+            value === LinkReach.RESTRICTED
+              ? undefined
+              : (item?.computed_link_role ??
+                item?.link_role ??
+                LinkRole.READER);
+          updateLinkConfiguration.mutate({
+            itemId: itemId,
+            link_reach: value as LinkReach,
+            link_role: linkRole,
+          });
+        }}
+        allowFileImport={config.ALLOW_SHARE_IMPORT_FILE ?? false}
+        onImportContacts={async (rows) => {
+          try {
+            await batchShare({
+              itemId,
+              rows: rows.map((row) => ({
+                email: row.email,
+                role: row.role as Role,
+              })),
+            });
+            posthog.capture("import_share_contacts", {
+              item_id: itemId,
+              row_count: rows.length,
+            });
+            return true;
+          } catch (error) {
+            setImportErrorMessage(errorToString(error));
+            return false;
+          }
+        }}
+        importErrorMessage={importErrorMessage}
+        onImportFileChange={() => setImportErrorMessage(undefined)}
+      >
+        {!item?.abilities.accesses_manage && <HorizontalSeparator />}
+      </ShareModal>
+    </DragEventBarrier>
   );
 };
 

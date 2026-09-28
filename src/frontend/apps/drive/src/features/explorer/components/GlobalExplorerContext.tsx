@@ -1,12 +1,5 @@
-import {
-  SetStateAction,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { useAutoAcceptPendingMembers } from "@/features/encryption/sharing/useAutoAcceptPendingMembers";
-import { Dispatch } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Item,
@@ -25,7 +18,7 @@ import {
   TreeViewDataType,
   TreeViewNodeTypeEnum,
   useTreeContext,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
 import { ExplorerDndProvider } from "./ExplorerDndProvider";
 import { useFirstLevelItems } from "../hooks/useQueries";
 import { useTranslation } from "react-i18next";
@@ -34,14 +27,15 @@ import { SpinnerPage } from "@/features/ui/components/spinner/SpinnerPage";
 
 import { useAuth } from "@/features/auth/Auth";
 import { DefaultRoute } from "@/utils/defaultRoutes";
-import { CustomFilesPreview } from "@/features/ui/preview/custom-files-preview/CustomFilesPreview";
+import { CustomFilesPreview } from "@/features/ui/preview/CustomFilesPreview";
+import {
+  SelectionStoreContext,
+  useCreateSelectionStore,
+} from "@/features/explorer/stores/selectionStore";
 
 export interface GlobalExplorerContextType {
   displayMode: "sdk" | "app";
-  selectedItems: Item[];
-  selectedItemsMap: Record<string, Item>;
   mainWorkspace: Item | undefined;
-  setSelectedItems: Dispatch<SetStateAction<Item[]>>;
   itemId: string;
   item: Item | undefined;
   firstLevelItems: Item[] | undefined;
@@ -59,6 +53,7 @@ export interface GlobalExplorerContextType {
   setPreviewItem: (item: Item | undefined) => void;
   setPreviewItems: (items: Item[]) => void;
   isMinimalLayout?: boolean;
+  cancelUploadsForDeletedItems: (deletedIds: string[]) => void;
   refreshMobileNodes: () => void;
   mobileNodesRefreshTrigger: number;
 }
@@ -119,16 +114,7 @@ export const GlobalExplorerProvider = ({
   const driver = getDriver();
   const { user } = useAuth();
 
-  const [selectedItems, setSelectedItems] = useState<Item[]>([]);
-
-  // Avoid inifinite rerendering
-  const selectedItemsMap = useMemo(() => {
-    const map: Record<string, Item> = {};
-    selectedItems.forEach((item) => {
-      map[item.id] = item;
-    });
-    return map;
-  }, [selectedItems]);
+  const selectionStore = useCreateSelectionStore();
 
   const [rightPanelForcedItem, setRightPanelForcedItem] = useState<Item>();
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
@@ -179,7 +165,7 @@ export const GlobalExplorerProvider = ({
   useEffect(() => {
     // If we open the right panel and we have a selection, we need to clear it.
     if (rightPanelForcedItem?.id === itemId) {
-      setSelectedItems([]);
+      selectionStore.clear();
     }
   }, [rightPanelForcedItem]);
 
@@ -188,11 +174,13 @@ export const GlobalExplorerProvider = ({
    */
   useEffect(() => {
     if (rightPanelOpen) {
-      setSelectedItems([]);
+      selectionStore.clear();
     }
   }, [rightPanelOpen]);
 
-  const { dropZone } = useUploadZone({ item: item! });
+  const { dropZone, cancelUploadsForDeletedItems } = useUploadZone({
+    item: item!,
+  });
 
   /**
    * Preview states.
@@ -204,111 +192,110 @@ export const GlobalExplorerProvider = ({
   useAutoAcceptPendingMembers(previewItem);
 
   return (
-    <GlobalExplorerContext.Provider
-      value={{
-        treeIsInitialized,
-        setTreeIsInitialized,
-        firstLevelItems,
-        displayMode,
-        selectedItems,
-        selectedItemsMap,
-        mainWorkspace,
-        setSelectedItems,
-        itemId,
-        initialId,
-        item,
-        onNavigate,
-        dropZone,
-        rightPanelForcedItem,
-        setRightPanelForcedItem,
-        rightPanelOpen,
-        setRightPanelOpen,
-        isLeftPanelOpen,
-        setIsLeftPanelOpen,
-        setPreviewItem,
-        setPreviewItems,
-        refreshMobileNodes,
-        mobileNodesRefreshTrigger,
-      }}
-    >
-      <TreeProvider
-        initialTreeData={[]}
-        initialNodeId={initialId}
-        onLoadChildren={async (treeId, page) => {
-          // Extract the original item ID from the tree ID for API requests.
-          // Tree IDs for favorites follow the format: `parentTreeId::itemId` (e.g., `favorites::abc123`)
-          const originalId = getOriginalIdFromTreeId(treeId);
-          const isFavoriteItem = treeId.startsWith(DefaultRoute.FAVORITES);
+    <SelectionStoreContext.Provider value={selectionStore}>
+      <GlobalExplorerContext.Provider
+        value={{
+          treeIsInitialized,
+          setTreeIsInitialized,
+          firstLevelItems,
+          displayMode,
+          mainWorkspace,
+          itemId,
+          initialId,
+          item,
+          onNavigate,
+          dropZone,
+          cancelUploadsForDeletedItems,
+          rightPanelForcedItem,
+          setRightPanelForcedItem,
+          rightPanelOpen,
+          setRightPanelOpen,
+          isLeftPanelOpen,
+          setIsLeftPanelOpen,
+          setPreviewItem,
+          setPreviewItems,
+          refreshMobileNodes,
+          mobileNodesRefreshTrigger,
+        }}
+      >
+        <TreeProvider
+          initialTreeData={[]}
+          initialNodeId={initialId}
+          onLoadChildren={async (treeId, page) => {
+            // Extract the original item ID from the tree ID for API requests.
+            // Tree IDs for favorites follow the format: `parentTreeId::itemId` (e.g., `favorites::abc123`)
+            const originalId = getOriginalIdFromTreeId(treeId);
+            const isFavoriteItem = treeId.startsWith(DefaultRoute.FAVORITES);
 
-          if (originalId === DefaultRoute.FAVORITES) {
-            const response = await driver.getFavoriteItems({
+            if (originalId === DefaultRoute.FAVORITES) {
+              const response = await driver.getFavoriteItems({
+                page: page,
+                type: ItemType.FOLDER,
+              });
+
+              const result = response.children.map((item) =>
+                itemToTreeItem(item, treeId, true),
+              ) as TreeViewDataType<Item>[];
+
+              return {
+                children: result,
+                pagination: response.pagination,
+              };
+            }
+            const data = await driver.getChildren(originalId, {
               page: page,
               type: ItemType.FOLDER,
             });
-
-            const result = response.children.map((item) =>
-              itemToTreeItem(item, treeId, true),
+            const result = data.children.map((item) =>
+              itemToTreeItem(item, treeId, isFavoriteItem),
             ) as TreeViewDataType<Item>[];
 
             return {
               children: result,
-              pagination: response.pagination,
+              pagination: data.pagination,
             };
-          }
-          const data = await driver.getChildren(originalId, {
-            page: page,
-            type: ItemType.FOLDER,
-          });
-          const result = data.children.map((item) =>
-            itemToTreeItem(item, treeId, isFavoriteItem),
-          ) as TreeViewDataType<Item>[];
+          }}
+          onRefresh={async (treeId) => {
+            const originalId = getOriginalIdFromTreeId(treeId);
+            const isFavoriteItem = treeId.startsWith(DefaultRoute.FAVORITES);
+            const item = await driver.getItem(originalId);
+            // Extract parent tree ID from current tree ID
+            const parentTreeId = treeId.includes("::")
+              ? treeId.substring(0, treeId.lastIndexOf("::"))
+              : undefined;
+            return itemToTreeItem(
+              item,
+              parentTreeId,
+              isFavoriteItem,
+            ) as TreeViewDataType<Item>;
+          }}
+        >
+          <TreeProviderInitializer>
+            <ExplorerDndProvider>
+              {isInitialized ? children : <SpinnerPage />}
+            </ExplorerDndProvider>
+          </TreeProviderInitializer>
+        </TreeProvider>
+        <input
+          {...dropZone.getInputProps({
+            webkitdirectory: "true",
+            id: "import-folders",
+          })}
+        />
+        <input
+          {...dropZone.getInputProps({
+            id: "import-files",
+          })}
+        />
 
-          return {
-            children: result,
-            pagination: data.pagination,
-          };
-        }}
-        onRefresh={async (treeId) => {
-          const originalId = getOriginalIdFromTreeId(treeId);
-          const isFavoriteItem = treeId.startsWith(DefaultRoute.FAVORITES);
-          const item = await driver.getItem(originalId);
-          // Extract parent tree ID from current tree ID
-          const parentTreeId = treeId.includes("::")
-            ? treeId.substring(0, treeId.lastIndexOf("::"))
-            : undefined;
-          return itemToTreeItem(
-            item,
-            parentTreeId,
-            isFavoriteItem,
-          ) as TreeViewDataType<Item>;
-        }}
-      >
-        <TreeProviderInitializer>
-          <ExplorerDndProvider>
-            {isInitialized ? children : <SpinnerPage />}
-          </ExplorerDndProvider>
-        </TreeProviderInitializer>
-      </TreeProvider>
-      <input
-        {...dropZone.getInputProps({
-          webkitdirectory: "true",
-          id: "import-folders",
-        })}
-      />
-      <input
-        {...dropZone.getInputProps({
-          id: "import-files",
-        })}
-      />
-
-      <Toaster />
-      <CustomFilesPreview
-        currentItem={previewItem}
-        items={previewItems}
-        setPreviewItem={setPreviewItem}
-        onItemsChange={setPreviewItems}
-      />
-    </GlobalExplorerContext.Provider>
+        <Toaster />
+        <CustomFilesPreview
+          currentItem={previewItem}
+          items={previewItems}
+          setPreviewItem={setPreviewItem}
+        />
+      </GlobalExplorerContext.Provider>
+    </SelectionStoreContext.Provider>
   );
 };
 

@@ -7,7 +7,7 @@ import {
   WorkspaceType,
 } from "@/features/drivers/types";
 import i18n from "@/features/i18n/initI18n";
-import { FilePreviewType } from "@/features/ui/preview/files-preview/FilesPreview";
+import { FilePreviewType } from "@gouvfr-lasuite/ui-components";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 
 /**
@@ -123,15 +123,26 @@ export const getExtensionFromName = (str: string) => {
   return parts.pop()!;
 };
 
-export const formatSize = (size: number) => {
-  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+const SIZE_UNIT_KEYS = ["B", "KB", "MB", "GB", "TB", "PB"] as const;
+
+export type SizeUnit = (typeof SIZE_UNIT_KEYS)[number];
+
+export const formatSizeTo = (octets: number, unit: SizeUnit) => {
+  const unitIndex = SIZE_UNIT_KEYS.indexOf(unit);
+  return octets / 1000 ** unitIndex;
+};
+
+export const formatSize = (size: number, t?: (key: string) => string) => {
   let convertedSize = size;
   let unitIndex = 0;
 
-  while (convertedSize >= 1024 && unitIndex < units.length - 1) {
-    convertedSize /= 1024;
+  while (convertedSize >= 1000 && unitIndex < SIZE_UNIT_KEYS.length - 1) {
+    convertedSize /= 1000;
     unitIndex++;
   }
+
+  const unitKey = SIZE_UNIT_KEYS[unitIndex];
+  const unit = t ? t(`explorer.grid.size_units.${unitKey}`) : unitKey;
 
   return `${
     convertedSize < 10
@@ -139,7 +150,7 @@ export const formatSize = (size: number) => {
       : convertedSize < 100
         ? convertedSize.toFixed(1)
         : Math.round(convertedSize)
-  } ${units[unitIndex]}`;
+  } ${unit}`;
 };
 
 export const getParentIdFromPath = (path?: string) => {

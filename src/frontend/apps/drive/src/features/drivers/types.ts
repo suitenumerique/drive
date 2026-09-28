@@ -1,4 +1,5 @@
-import { FooterProps, TreeViewDataType } from "@gouvfr-lasuite/ui-kit";
+import { FooterProps, TreeViewDataType } from "@gouvfr-lasuite/ui-components";
+import { ColumnPreferences } from "../explorer/types/columns";
 
 export enum ItemType {
   FILE = "file",
@@ -18,11 +19,27 @@ export enum LinkRole {
 
 export enum ItemUploadState {
   PENDING = "pending",
+  DUPLICATING = "duplicating",
+  CONVERTING = "converting",
   ANALYZING = "analyzing",
   SUSPICIOUS = "suspicious",
   FILE_TOO_LARGE_TO_ANALYZE = "file_too_large_to_analyze",
   READY = "ready",
 }
+
+// States that lock the item in the UI: it is a placeholder with no usable
+// content yet, so selection, actions and navigation must stay disabled.
+export const TRANSIENT_UPLOAD_STATES: string[] = [
+  ItemUploadState.DUPLICATING,
+  ItemUploadState.CONVERTING,
+];
+
+// States that must be polled until they settle. Analysis runs in the
+// background on an already accessible item, so it is polled but not transient.
+export const POLLED_UPLOAD_STATES: string[] = [
+  ItemUploadState.ANALYZING,
+  ...TRANSIENT_UPLOAD_STATES,
+];
 
 export type ItemBreadcrumb = {
   id: string;
@@ -85,6 +102,7 @@ export type Item = {
     children_list: boolean;
     destroy: boolean;
     encrypt: boolean;
+    export: boolean;
     favorite: boolean;
     invite_owner: boolean;
     key_chain: boolean;
@@ -94,11 +112,13 @@ export type Item = {
     link_select_options: Record<LinkReach, LinkRole[] | null>;
     partial_update: boolean;
     remove_encryption: boolean;
+    duplicate: boolean;
     restore: boolean;
     retrieve: boolean;
     tree: boolean;
     update: boolean;
     upload_ended: boolean;
+    convert?: boolean;
   };
   policy?: string;
 };
@@ -178,7 +198,10 @@ export type User = {
   short_name: string;
   language: string;
   last_release_note_seen?: string | null;
+  column_preferences?: ColumnPreferences | null;
 };
+
+export type UserLight = Pick<User, "id" | "full_name" | "short_name">;
 
 export type LocalizedThemeCustomization<T> = {
   default: T;
@@ -190,6 +213,8 @@ export interface ThemeCustomization {
 }
 
 export type ApiConfig = {
+  ALLOW_SHARE_IMPORT_FILE?: boolean;
+  AWS_S3_UPLOAD_ACL?: string;
   DATA_UPLOAD_MAX_MEMORY_SIZE?: number;
   ENCRYPTION_FEATURE_ENABLED?: boolean;
   ENCRYPTION_INTERFACE_URL?: string | null;
@@ -204,11 +229,29 @@ export type ApiConfig = {
   FRONTEND_FEEDBACK_MESSAGES_WIDGET_API_URL?: string;
   FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL?: string;
   FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH?: string;
+  FRONTEND_HELP_MENU_CONFIG?: {
+    documentationUrl?: string;
+    legal?: {
+      personalDataUrl?: string;
+      termsOfUseUrl?: string;
+      accessibilityUrl?: string;
+      legalNoticeUrl?: string;
+    };
+    supportEmail?: string;
+    supportMessagesWidget?: boolean;
+  };
   FRONTEND_THEME?: string;
   FRONTEND_HIDE_GAUFRE?: boolean;
   FRONTEND_SILENT_LOGIN_ENABLED?: boolean;
   FRONTEND_EXTERNAL_HOME_URL?: string;
   FRONTEND_RELEASE_NOTE_ENABLED?: boolean;
+  FRONTEND_ENTITLEMENTS_DISCLAIMERS?: {
+    cannot_upload?: {
+      enabled: boolean;
+      showPotentialOperators: boolean;
+    };
+  };
+  FRONTEND_STORAGE_GAUGE_INFORMATION_LINK?: string;
   FRONTEND_CSS_URL?: string;
   FRONTEND_JS_URL?: string;
   theme_customization?: ThemeCustomization;

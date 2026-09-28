@@ -44,7 +44,7 @@ def test_get_file_content_connected_user_with_access():
     )
     assert response.status_code == 200
     assert response.streaming_content
-    assert response.headers["X-WOPI-ItemVersion"] == head_response["VersionId"]
+    assert response.headers["X-WOPI-ItemVersion"] == head_response["ETag"].strip('"')
     assert response.headers["Content-Length"] == "8"
 
 
@@ -85,6 +85,33 @@ def test_get_file_content_connected_user_not_linked_to_item():
         HTTP_AUTHORIZATION=f"Bearer {access_token}",
     )
     assert response.status_code == 403
+
+
+def test_get_file_content_prefers_query_param_over_authorization_header():
+    """Use the access_token query param even when an Authorization header is present."""
+    folder = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    item = factories.ItemFactory(
+        parent=folder,
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        link_role=models.LinkRoleChoices.EDITOR,
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
+
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+
+    service = AccessUserItemService()
+    access_token, _ = service.insert_new_access(item, user)
+
+    client = APIClient()
+    response = client.get(
+        f"/api/v1.0/wopi/files/{item.id}/contents/?access_token={access_token}",
+        HTTP_AUTHORIZATION="Bearer foreign-jwt-token",
+    )
+    assert response.status_code == 200
 
 
 def test_get_file_content_max_expected_size():

@@ -68,7 +68,7 @@ class ItemFactory(factory.django.DjangoModelFactory):
     creator = factory.SubFactory(UserFactory)
     deleted_at = None
     link_reach = LinkReachChoices.RESTRICTED
-    type = factory.fuzzy.FuzzyChoice([t[0] for t in models.ItemTypeChoices.choices])
+    type = factory.fuzzy.FuzzyChoice([models.ItemTypeChoices.FOLDER, models.ItemTypeChoices.FILE])
     filename = factory.lazy_attribute(
         lambda o: fake.file_name() if o.type == models.ItemTypeChoices.FILE else None
     )
@@ -138,6 +138,17 @@ class ItemFactory(factory.django.DjangoModelFactory):
             default_storage.save(self.file_key, BytesIO(content))
 
 
+class RestrictionFactory(ItemFactory):
+    """A factory to create restrictions pointing to a restricted root folder."""
+
+    type = models.ItemTypeChoices.RESTRICTION
+    filename = None
+    target = factory.SubFactory(
+        ItemFactory,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+
+
 class UserItemAccessFactory(factory.django.DjangoModelFactory):
     """Create fake item user accesses for testing."""
 
@@ -170,12 +181,3 @@ class InvitationFactory(factory.django.DjangoModelFactory):
     item = factory.SubFactory(ItemFactory)
     role = factory.fuzzy.FuzzyChoice([role[0] for role in RoleChoices.choices])
     issuer = factory.SubFactory(UserFactory)
-
-
-class MirrorItemTaskFactory(factory.django.DjangoModelFactory):
-    """A factory to create mirror item tasks for testing."""
-
-    class Meta:
-        model = models.MirrorItemTask
-
-    item = factory.SubFactory(ItemFactory)

@@ -4,13 +4,11 @@ import {
   Modal,
   ModalSize,
   useModal,
-} from "@gouvfr-lasuite/cunningham-react";
-import { useQueryClient } from "@tanstack/react-query";
-import {
   HorizontalSeparator,
   useResponsive,
   useTreeContext,
-} from "@gouvfr-lasuite/ui-kit";
+} from "@gouvfr-lasuite/ui-components";
+import { useQueryClient } from "@tanstack/react-query";
 import { Trans, useTranslation } from "react-i18next";
 import { useMoveItems } from "@/features/explorer/api/useMoveItem";
 import { addItemsMovedToast } from "../../toasts/addItemsMovedToast";
@@ -22,7 +20,7 @@ import {
 } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorer";
 import { AddFolderButton } from "./AddFolderButton";
 import { useGlobalExplorer } from "../../GlobalExplorerContext";
-import { useRef } from "react";
+import { useRef, useSyncExternalStore } from "react";
 import { useItem } from "@/features/explorer/hooks/useQueries";
 
 interface ExplorerMoveFolderProps {
@@ -87,13 +85,21 @@ export const ExplorerMoveFolder = ({
   const moveConfirmationModal = useModal();
   const createFolderModal = useModal();
 
+  // Subscribe to the embedded explorer's local selection store so the modal
+  // reactively updates when the user picks a target folder inside it.
+  const localSelectedItems = useSyncExternalStore(
+    itemsExplorer.selectionStore.subscribe,
+    itemsExplorer.selectionStore.getSelectedItems,
+    itemsExplorer.selectionStore.getSelectedItems,
+  );
+
   const { data: item } = useItem(itemsExplorer.currentItemId!, {
     enabled: !!itemsExplorer.currentItemId,
   });
 
   const onCloseModal = () => {
     onClose();
-    itemsExplorer.setSelectedItems([]);
+    itemsExplorer.selectionStore.clear();
   };
 
   const getMoveData = () => {
@@ -101,14 +107,12 @@ export const ExplorerMoveFolder = ({
     const pathSegments = itemsToMove[0].path.split(".");
     const oldParentId = pathSegments[pathSegments.length - 2];
     const oldRootParentId = pathSegments[0];
+    const selected = itemsExplorer.selectionStore.getSelectedItems();
     const newParentId =
-      itemsExplorer.selectedItems.length === 1
-        ? itemsExplorer.selectedItems[0].id
+      selected.length === 1
+        ? selected[0].id
         : (itemsExplorer.currentItemId ?? undefined);
-    const newParentItem =
-      itemsExplorer.selectedItems.length === 1
-        ? itemsExplorer.selectedItems[0]
-        : item;
+    const newParentItem = selected.length === 1 ? selected[0] : item;
 
     const newRootId = newParentItem?.path.split(".")[0];
     return {
@@ -124,7 +128,9 @@ export const ExplorerMoveFolder = ({
     newParentId: string | undefined,
     oldParentId: string,
   ) => {
-    moveItems.mutateAsync(
+    // mutate (not mutateAsync): a rejection is already handled by the
+    // mutation's onError, an unused rejected promise would be unhandled.
+    moveItems.mutate(
       {
         ids: ids,
         parentId: newParentId,
@@ -168,7 +174,7 @@ export const ExplorerMoveFolder = ({
     // If we are in the root, and no item is selected, we can't move
     if (
       itemsExplorer.currentItemId === null &&
-      itemsExplorer.selectedItems.length === 0
+      itemsExplorer.selectionStore.getSelectedItems().length === 0
     ) {
       return;
     }
@@ -240,8 +246,7 @@ export const ExplorerMoveFolder = ({
             </Button>
             <Button
               disabled={
-                !itemsExplorer.currentItemId &&
-                itemsExplorer.selectedItems.length === 0
+                !itemsExplorer.currentItemId && localSelectedItems.length === 0
               }
               onClick={onMove}
               fullWidth={true}
@@ -276,9 +281,7 @@ export const ExplorerMoveFolder = ({
           }}
           sourceItem={itemsToMove[0]}
           targetItem={
-            itemsExplorer.selectedItems.length === 1
-              ? itemsExplorer.selectedItems[0]
-              : item!
+            localSelectedItems.length === 1 ? localSelectedItems[0] : item!
           }
           onMove={() => {
             const data = getMoveData();

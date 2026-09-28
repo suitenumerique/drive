@@ -1,0 +1,3 @@
+active_email,inactive_email,active_email_checked,inactive_email_checked,id
+active1@example.com,inactive1@example.com,1,1,1
+active2@example.com,inactive2@example.com,1,1,2

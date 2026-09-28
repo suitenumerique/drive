@@ -1,4 +1,4 @@
-import { LaGaufreV2 } from "@gouvfr-lasuite/ui-kit";
+import { LaGaufreV2 } from "@gouvfr-lasuite/ui-components";
 import {
   removeQuotes,
   useCunninghamTheme,
@@ -22,7 +22,7 @@ export const Gaufre = () => {
     <LaGaufreV2
       widgetPath={widgetPath}
       apiUrl={apiUrl}
-      showMoreLimit={themeName === "anct" ? 100 : 6}
+      showMoreLimit={themeName.includes("anct") ? 100 : 6}
     />
   );
 };

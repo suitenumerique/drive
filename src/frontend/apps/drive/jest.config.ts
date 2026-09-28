@@ -11,6 +11,8 @@ const config: Config = {
     // Handle static assets FIRST (before path aliases)
     "\\.(css|less|scss|sass|svg|png|jpg|jpeg|gif)$":
       "<rootDir>/__mocks__/fileMock.js",
+    "^pretty-bytes$": "<rootDir>/__mocks__/pretty-bytes.js",
+    "^saxen$": "<rootDir>/__mocks__/saxen.js",
     // Then handle path aliases
     ...pathsToModuleNameMapper(tsconfig.compilerOptions.paths || {}, {
       prefix: "<rootDir>/",
@@ -21,8 +23,11 @@ const config: Config = {
       "ts-jest",
       {
         tsconfig: {
-          jsx: "react",
-          moduleResolution: "node",
+          jsx: "react-jsx",
+          // "bundler" (matching the app tsconfig) honors package.json "exports"
+          // subpaths such as "@gouvfr-lasuite/ui-components/icons"; classic
+          // "node" does not.
+          moduleResolution: "bundler",
         },
       },
     ],

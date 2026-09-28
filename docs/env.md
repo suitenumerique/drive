@@ -7,6 +7,7 @@ This document lists all configurable environment variables for the Drive applica
 |---------------------|-------------|---------------|
 | `ALLOWED_HOSTS` | List of allowed hosts for the application (used in Production) | `[]` |
 | `ALLOW_LOGOUT_GET_METHOD` | Allow logout via GET method | `True` |
+| `ALLOW_SHARE_IMPORT_FILE` | Enable batch sharing of an item from an imported contacts file | `False` |
 | `API_USERS_LIST_LIMIT` | Maximum number of users returned in API user list | `5` |
 | `API_USERS_LIST_THROTTLE_RATE_BURST` | Burst throttle rate for user list API | `30/minute` |
 | `API_USERS_LIST_THROTTLE_RATE_SUSTAINED` | Sustained throttle rate for user list API | `180/hour` |
@@ -15,15 +16,8 @@ This document lists all configurable environment variables for the Drive applica
 | `AWS_S3_DOMAIN_REPLACE` | The S3 domain to used by the frontend application. Used by the docker compose stack. | `None` |
 | `AWS_S3_REGION_NAME` | AWS S3 region name for file storage | `None` |
 | `AWS_S3_SECRET_ACCESS_KEY` | AWS S3 secret access key for file storage | `None` |
+| `AWS_S3_UPLOAD_ACL` | ACL applied to uploaded objects, set to `default` for storages that do not support ACLs (e.g. GCS based providers). With `default`, objects get the bucket's default object ACL: make sure it keeps objects private | `private` |
 | `AWS_S3_UPLOAD_POLICY_EXPIRATION` | AWS S3 upload policy expiration time in seconds | `86400` (24h) |
-| `AWS_S3_MIRRORING_ACCESS_KEY_ID` | AWS S3 access key id for the mirroring bucket | None |
-| `AWS_S3_MIRRORING_SECRET_ACCESS_KEY` | AWS S3 secret access key for the mirroring bucket | None |
-| `AWS_S3_MIRRORING_STORAGE_BUCKET_NAME` | AWS S3 bucket name for the mirroring bucket | None |
-| `AWS_S3_MIRRORING_ENDPOINT_URL` | AWS S3 endpoint url for the mirroring bucket | None |
-| `AWS_S3_MIRRORING_REGION_NAME` | AWS S3 region name for the mirroring bucket | None |
-| `AWS_S3_MIRRORING_SIGNATURE_VERSION` | AWS S3 signature version for the mirroring bucket | `s3v4` |
-| `AWS_S3_MIRRORING_REQUEST_CHECKSUM_CALCULATION` | AWS S3 request checksum calculation config for the mirroring bucket | `when_supported` |
-| `AWS_S3_MIRRORING_RESPONSE_CHECKSUM_VALIDATION` | AWS S3 response checksum calculation config for the mirroring bucket | `when_supported` |
 | `AWS_STORAGE_BUCKET_NAME` | AWS S3 bucket name for file storage | `drive-media-storage` |
 | `CACHES_DEFAULT_TIMEOUT` | Default cache timeout in seconds | `30` |
 | `CORS_ALLOW_ALL_ORIGINS` | Allow all origins for CORS | `False` |
@@ -39,9 +33,13 @@ This document lists all configurable environment variables for the Drive applica
 | `DB_NAME` | Database name | `drive` |
 | `DB_PASSWORD` | Database password | `pass` |
 | `DB_PORT` | Database port | `5432` |
+| `DB_PSYCOPG_POOL_ENABLED` | Enable the psycopg connection pool on the default database. Keep it disabled on prefork celery workers: celery closes the pool after each task | `False` |
+| `DB_PSYCOPG_POOL_MAX_SIZE` | Maximum size of the psycopg connection pool (defaults to min size) | `None` |
+| `DB_PSYCOPG_POOL_MIN_SIZE` | Minimum size of the psycopg connection pool | `4` |
+| `DB_PSYCOPG_POOL_TIMEOUT` | Seconds to wait for a connection from the psycopg pool | `3` |
 | `DB_USER` | Database user | `dinum` |
 | `DJANGO_CELERY_BROKER_URL` | Celery broker URL for task queue | `redis://redis:6379/0` |
-| `DJANGO_CELERY_TASK_ROUTES` | Celery task routing configuration. Use this to route specific tasks to dedicated queues, e.g. `{"core.tasks.storage.mirror_file": {"queue": "mirror"}}` | `{}` |
+| `DJANGO_CELERY_TASK_ROUTES` | Celery task routing configuration. Use this to route specific tasks to dedicated queues, e.g. `{"core.tasks.item.duplicate_file": {"queue": "duplicate_file"}}` | `{}` |
 | `EMAIL_BACKEND` | Email backend for sending emails | `django.core.mail.backends.smtp.EmailBackend` |
 | `EMAIL_BRAND_NAME` | Brand name for email templates | `None` |
 | `EMAIL_FROM` | Default sender email address | `from@example.com` |
@@ -50,11 +48,13 @@ This document lists all configurable environment variables for the Drive applica
 | `EMAIL_HOST_USER` | SMTP username for email sending | `None` |
 | `EMAIL_LOGO_IMG` | Logo image URL for email templates | `None` |
 | `EMAIL_PORT` | SMTP port for email sending | `None` |
+| `EMAIL_URL_APP` | URL used in emails to link back to the app | `None` |
 | `EMAIL_USE_SSL` | Use SSL for SMTP connection | `False` |
 | `EMAIL_USE_TLS` | Use TLS for SMTP connection | `False` |
 | `ENCRYPTION_FEATURE_ENABLED` | Enable end-to-end encryption of items through the encryption service (see the dedicated section below). Use with caution | `False` |
 | `ENCRYPTION_INTERFACE_URL` | Origin of the encryption service interface host (e.g. `https://encryption.example.com`). Required when the feature is enabled | `None` |
 | `ENCRYPTION_VAULT_URL` | Origin of the encryption service vault host, which serves the client SDK (e.g. `https://data.encryption.example.com`). Required when the feature is enabled | `None` |
+| `EXTERNAL_API_AUD_ITEM_ATTRIBUTES` | Extra attributes applied to items created through the external API, keyed by the token audience of the request, e.g. `{"some_audience": {"quota_excluded": true}}` | `{}` |
 | `FEATURES_ALPHA` | Enable alpha features | `False` |
 | `FEATURES_INDEXED_SEARCH` | Enable the search of indexed files through the API | `True` |
 | `FILE_EXTENSIONS_ALLOWED` | List of file extension allowed to be uploaded | See in the settings.py file |
@@ -69,7 +69,9 @@ This document lists all configurable environment variables for the Drive applica
 | `FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL` | Channel for feedback messages widget | `None` |
 | `FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH` | Path for feedback messages widget | `None` |
 | `FRONTEND_RELEASE_NOTE_ENABLED` | Enable release notes modal on connexion | `True` |
+| `FRONTEND_ENTITLEMENTS_DISCLAIMERS` | Enable entitlements disclaimers with custom params | `{}` |
 | `ITEM_FILE_MAX_SIZE` | Maximum file size for uploads in bytes | `5368709120` (5GB) |
+| `INVITATION_VALIDITY_DURATION` | Duration during which an invitation remains valid, in seconds | `604800` (7 days) |
 | `LANGUAGE_CODE` | Default language code | `en-us` |
 | `LOGIN_REDIRECT_URL` | URL to redirect after successful login | `None` |
 | `LOGIN_REDIRECT_URL_FAILURE` | URL to redirect after failed login | `None` |
@@ -93,14 +95,19 @@ This document lists all configurable environment variables for the Drive applica
 | `OIDC_RP_CLIENT_SECRET` | OIDC client secret | `None` |
 | `OIDC_RP_SCOPES` | OIDC scopes | `openid email` |
 | `OIDC_RP_SIGN_ALGO` | OIDC signing algorithm | `RS256` |
+| `OIDC_PKCE_CODE_CHALLENGE_METHOD` | OIDC PKCE challenge method | `S256` |
+| `OIDC_PKCE_CODE_VERIFIER_SIZE` | Length of the OIDC PKCE verifier code | `64` |
 | `OIDC_STORE_ACCESS_TOKEN` | Store OIDC access token | `False` |
 | `OIDC_STORE_ID_TOKEN` | Store OIDC ID token | `True` |
 | `OIDC_STORE_REFRESH_TOKEN` | Store OIDC refresh token | `False` |
 | `OIDC_STORE_REFRESH_TOKEN_KEY` | Key for storing OIDC refresh token | `None` |
 | `OIDC_USE_NONCE` | Use nonce for OIDC requests | `True` |
+| `OIDC_USE_PKCE` | Use PKCE when interacting with OIDC server | `False` |
 | `OIDC_USER_INFO` | List of OIDC user info claims | `[]` |
 | `OIDC_USERINFO_FULLNAME_FIELDS` | Fields to use for full name | `["first_name", "last_name"]` |
 | `OIDC_USERINFO_SHORTNAME_FIELD` | Field to use for short name | `first_name` |
+| `PERMISSIONS_BACKEND` | Permissions backend class for items | `core.permissions.backends.role.RolePermissionsBackend` |
+| `PERMISSIONS_BACKEND_PARAMETERS` | Dictionary of parameters for the permissions backend | `{}` |
 | `POSTHOG_HOST` | PostHog analytics host URL | `https://eu.i.posthog.com` |
 | `POSTHOG_KEY` | PostHog analytics API key | `None` |
 | `REDIS_URL` | Redis connection URL | `redis://redis:6379/0` |
@@ -120,9 +127,12 @@ This document lists all configurable environment variables for the Drive applica
 | `SEARCH_INDEXER_URL` | Find application endpoint for indexation | `None` |
 | `SEARCH_INDEXER_QUERY_LIMIT` | Maximum number of results expected from search endpoint | 50 |
 | `SENTRY_DSN` | Sentry DSN for error tracking | `None` |
+| `SENTRY_TRACES_SAMPLE_RATE` | Ratio of requests traced for Sentry performance monitoring (0 to 1) | `0.0` |
 | `SPECTACULAR_SETTINGS_ENABLE_DJANGO_DEPLOY_CHECK` | Enable Django deploy check in Spectacular | `False` |
 | `STORAGES_STATICFILES_BACKEND` | Backend for static files storage | `whitenoise.storage.CompressedManifestStaticFilesStorage` |
-| `TRASHBIN_CUTOFF_DAYS` | Number of days before items are permanently deleted from trash | `30` |
+| `TRASHBIN_CUTOFF_DAYS` | Number of days before items are automatically removed from trash after their soft deletion | `30` |
+| `PURGE_GRACE_DAYS` | Number of days before items and their associated file can be permanently purged from storage and database after the trashbin cutoff period | `7` |
+| `USER_RECONCILIATION_FORM_URL` | URL of a third-party form for user reconciliation requests, used in the email sent when a request fails | `None` |
 | `WOPI_CLIENTS` | List of client name. These client names will be used in the post_setup | [] |
 | `WOPI_{CLIENT_NAME}_DISCOVERY_URL` | The discovery url for each client present in the `WOPI_CLIENTS`. if `WOPI_CLIENTS=vendorA` then set `WOPI_VENDORA_DISCOVERY_URL` | |
 | `WOPI_EXCLUDED_MIMETYPES` | List of mimetypes excluded when parsing the discovery url | See settings.py module |
@@ -130,6 +140,12 @@ This document lists all configurable environment variables for the Drive applica
 | `WOPI_SRC_BASE_URL` | The backend url | None |
 | `WOPI_ACCESS_TOKEN_TIMEOUT` | TTL in seconds for the access_token_ttl sent to the WOPI client | `36000` (10H) |
 | `WOPI_LOCK_TIMEOUT` | TTL for the lock acquired by a WOPI client | `1800` (30 min) |
+| `WOPI_CONVERSION_SOURCE_TOKEN_TIMEOUT` | TTL in seconds for the short-lived token OnlyOffice uses to fetch the source file | `120` |
+| `WOPI_ONLYOFFICE_CONVERT_JWT_SECRET` | Shared secret for signing OnlyOffice /converter requests. Required for conversion to work. | `None` |
+| `WOPI_ONLYOFFICE_CONVERT_HTTP_CONNECT_TIMEOUT` | Connect timeout in seconds for the /converter request | `5` |
+| `WOPI_ONLYOFFICE_CONVERT_HTTP_READ_TIMEOUT` | Read timeout in seconds for the /converter request | `60` |
+| `WOPI_ONLYOFFICE_CONVERT_DOWNLOAD_CONNECT_TIMEOUT` | Connect timeout in seconds for downloading the converted file | `5` |
+| `WOPI_ONLYOFFICE_CONVERT_DOWNLOAD_READ_TIMEOUT` | Read timeout in seconds for downloading the converted file | `30` |
 | `WOPI_DISABLE_CHAT` | Disable chat in the WOPI client interface | `0` |
 | `WOPI_CONFIGURATION_CRONTAB_MINUTE` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `0` |
 | `WOPI_CONFIGURATION_CRONTAB_HOUR` | Used to configure the celery beat crontab, See https://docs.celeryq.dev/en/main/reference/celery.schedules.html#celery.schedules.crontab | `3` |

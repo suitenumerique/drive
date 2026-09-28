@@ -1,6 +1,13 @@
 import { getDriver } from "@/features/config/Config";
+import { getCanUploadErrorDescription } from "@/utils/entitlements";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import {
+  addToast,
+  ToasterItem,
+} from "@/features/ui/components/toaster/Toaster";
 import { useRemoveItemsFromPaginatedList } from "../hooks/useOptimisticPagination";
+import { useRefreshEntitlementsQueryCache } from "../hooks/useRefreshItems";
 import {
   getMyFilesQueryKey,
   getRecentItemsQueryKey,
@@ -19,11 +26,13 @@ export const useMoveItems = () => {
     oldParentId?: string;
   };
 
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const driver = getDriver();
   const { requestEncryption } = useRecursiveEncrypt();
 
   const removeItems = useRemoveItemsFromPaginatedList();
+  const refreshEntitlements = useRefreshEntitlementsQueryCache();
 
   /**
    * Move a single item, intercepting the one encryption-boundary case
@@ -106,6 +115,7 @@ export const useMoveItems = () => {
       queryClient.invalidateQueries({
         queryKey: ["items", payload.parentId],
       });
+      refreshEntitlements();
     },
     onError: (err, variables) => {
       // If the mutation fails, you could invalidate to ensure fresh data
@@ -116,6 +126,24 @@ export const useMoveItems = () => {
       queryClient.invalidateQueries({
         queryKey: ["items", variables.parentId, "children", "infinite"],
       });
+
+      addToast(
+        <ToasterItem type="error">
+          <span className="material-icons">arrow_forward</span>
+          <span>
+            {getCanUploadErrorDescription(err, (key) =>
+              t(`explorer.modal.move.errors.${key}`),
+            ) ??
+              t("explorer.actions.move.toast_error", {
+                count: variables.ids.length,
+              })}
+          </span>
+        </ToasterItem>,
+      );
+    },
+    meta: {
+      // The onError above already toasts a localized message.
+      noGlobalError: true,
     },
   });
 };

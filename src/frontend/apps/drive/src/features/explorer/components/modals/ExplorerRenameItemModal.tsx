@@ -3,16 +3,17 @@ import {
   Modal,
   ModalProps,
   ModalSize,
-} from "@gouvfr-lasuite/cunningham-react";
+  removeFileExtension,
+} from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { Item } from "@/features/drivers/types";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { useMutationRenameItem } from "../../hooks/useMutations";
 import { useRef } from "react";
-import { removeFileExtension } from "../../utils/mimeTypes";
 import { useTreeUtils } from "../../hooks/useTreeUtils";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
+import { useSelectionStore } from "../../stores/selectionStore";
 
 type Inputs = {
   title: string;
@@ -24,12 +25,9 @@ export const ExplorerRenameItemModal = (
   },
 ) => {
   const treeUtils = useTreeUtils();
-  const {
-    rightPanelOpen,
-    selectedItems,
-    rightPanelForcedItem,
-    setRightPanelForcedItem,
-  } = useGlobalExplorer();
+  const { rightPanelOpen, rightPanelForcedItem, setRightPanelForcedItem } =
+    useGlobalExplorer();
+  const selectionStore = useSelectionStore();
   const { t } = useTranslation();
   const form = useForm<Inputs>({
     defaultValues: {
@@ -51,7 +49,8 @@ export const ExplorerRenameItemModal = (
             title: data.title,
           });
 
-          const selectedItem = rightPanelForcedItem ?? selectedItems[0];
+          const selectedItem =
+            rightPanelForcedItem ?? selectionStore.getSelectedItems()[0];
 
           if (rightPanelOpen && selectedItem?.id === props.item.id) {
             const newRightPanelForcedItem = {

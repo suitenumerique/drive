@@ -194,6 +194,100 @@ def test_api_items_upload_root_resource_server_using_access_token(
     assert response.status_code == 200
 
 
+@override_settings(
+    EXTERNAL_API_AUD_ITEM_ATTRIBUTES={"some_service_provider": {"quota_excluded": True}}
+)
+def test_api_items_create_root_resource_server_applies_aud_attributes(
+    user_token, resource_server_backend, user_specific_sub
+):
+    """Items created at the root should get the attributes configured for the token audience."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    response = client.post(
+        "/external_api/v1.0/items/",
+        {
+            "type": models.ItemTypeChoices.FILE,
+            "filename": "file.txt",
+        },
+    )
+
+    assert response.status_code == 201
+    child = models.Item.objects.get(id=response.json()["id"])
+    assert child.quota_excluded is True
+
+
+@override_settings(
+    EXTERNAL_API_AUD_ITEM_ATTRIBUTES={"some_service_provider": {"quota_excluded": True}}
+)
+def test_api_items_create_children_resource_server_applies_aud_attributes(
+    user_token, resource_server_backend, user_specific_sub
+):
+    """Items created as children should get the attributes configured for the token audience."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    factories.UserItemAccessFactory(
+        item=item, user=user_specific_sub, role=models.RoleChoices.OWNER
+    )
+
+    response = client.post(
+        f"/external_api/v1.0/items/{item.id!s}/children/",
+        {
+            "type": models.ItemTypeChoices.FILE,
+            "filename": "file.txt",
+        },
+    )
+
+    assert response.status_code == 201
+    child = models.Item.objects.get(id=response.json()["id"])
+    assert child.quota_excluded is True
+
+
+@override_settings(EXTERNAL_API_AUD_ITEM_ATTRIBUTES={"other_audience": {"quota_excluded": True}})
+def test_api_items_create_resource_server_aud_not_configured(
+    user_token, resource_server_backend, user_specific_sub
+):
+    """Items created with an audience missing from the setting should keep default attributes."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    response = client.post(
+        "/external_api/v1.0/items/",
+        {
+            "type": models.ItemTypeChoices.FILE,
+            "filename": "file.txt",
+        },
+    )
+
+    assert response.status_code == 201
+    child = models.Item.objects.get(id=response.json()["id"])
+    assert child.quota_excluded is False
+
+
+def test_api_items_create_resource_server_no_aud_attributes_setting(
+    user_token, resource_server_backend, user_specific_sub
+):
+    """Items created with the default empty setting should keep default attributes."""
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    response = client.post(
+        "/external_api/v1.0/items/",
+        {
+            "type": models.ItemTypeChoices.FILE,
+            "filename": "file.txt",
+        },
+    )
+
+    assert response.status_code == 201
+    child = models.Item.objects.get(id=response.json()["id"])
+    assert child.quota_excluded is False
+
+
 # Non allowed actions on resource server.
 
 

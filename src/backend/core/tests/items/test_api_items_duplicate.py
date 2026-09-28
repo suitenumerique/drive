@@ -4,6 +4,8 @@ Test the item duplicate action API endpoint in drive's core app.
 
 from unittest import mock
 
+from django.test import override_settings
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -11,6 +13,42 @@ from core import factories, models
 from core.tests.conftest import TEAM, USER, VIA
 
 pytestmark = pytest.mark.django_db
+
+
+@override_settings(
+    ENTITLEMENTS_BACKEND="core.entitlements.backends.local.LocalEntitlementsBackend",
+    ENTITLEMENTS_BACKEND_PARAMETERS={"default_storage_limit": 1000},
+)
+def test_api_items_duplicate_over_quota():
+    """
+    An over-quota user should not be able to grow their storage usage by
+    duplicating a file (the duplicator becomes creator of the sized copy).
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    # The user already exceeds their storage limit with their own files.
+    factories.ItemFactory(type=models.ItemTypeChoices.FILE, creator=user, size=2000)
+
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        mimetype="text/plain",
+        filename="myfile.txt",
+        size=100,
+        users=[(user, models.RoleChoices.EDITOR)],
+    )
+
+    response = client.post(f"/api/v1.0/items/{item.id!s}/duplicate/")
+
+    assert response.status_code == 403
+    # The can_upload reason is exposed as the error code so the frontend can
+    # show a specific, translatable message.
+    assert response.json()["errors"][0]["code"] == "user_quota_exceeded"
+    assert not models.Item.objects.filter(
+        upload_state=models.ItemUploadStateChoices.DUPLICATING
+    ).exists()
 
 
 def test_api_items_duplicate_anonymous_user():
@@ -86,7 +124,51 @@ def test_api_items_duplicate_authenticated_sufficient_role(role):
     assert response_data["id"] != str(item.id)
 
     # The duplicated item should have the same title, mimetype, filename, description
-    assert response_data["title"] == item.title
+    assert response_data["title"] == f"Copy of {item.title}"
+    assert response_data["mimetype"] == item.mimetype
+    assert response_data["filename"] == item.filename
+    assert response_data["description"] == item.description
+    assert response_data["type"] == models.ItemTypeChoices.FILE
+
+    # A new item should exist in the database
+    duplicated_item = models.Item.objects.get(id=response_data["id"])
+    assert duplicated_item.creator == user
+
+
+@pytest.mark.parametrize("role", models.RoleChoices.values)
+def test_api_items_duplicate_authenticated_sufficient_role_in_french(role):
+    """
+    Authenticated users with editor, administrator or owner role should be able
+    to duplicate a ready file item with a translated duplicata name.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    # set drive cookie language to fr-FR
+    client.cookies["drive_language"] = "fr-FR"
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        mimetype="text/plain",
+        filename="myfile.txt",
+        description="A description",
+        users=[(user, role)],
+    )
+
+    with mock.patch("core.tasks.item.duplicate_file.delay") as mock_delay:
+        response = client.post(f"/api/v1.0/items/{item.id!s}/duplicate/")
+
+    assert response.status_code == 201
+    response_data = response.json()
+
+    # The task should have been triggered
+    mock_delay.assert_called_once()
+
+    # The duplicated item should be a different object
+    assert response_data["id"] != str(item.id)
+
+    # The duplicated item should have the same title, mimetype, filename, description
+    assert response_data["title"] == f"Copie de {item.title}"
     assert response_data["mimetype"] == item.mimetype
     assert response_data["filename"] == item.filename
     assert response_data["description"] == item.description
@@ -363,3 +445,33 @@ def test_api_items_duplicate_deleted_item():
     response = client.post(f"/api/v1.0/items/{item.id!s}/duplicate/")
 
     assert response.status_code == 403
+
+
+# Posthog events
+
+
+def test_api_items_duplicate_posthog_event(settings):
+    """Duplicating an item should send an 'item_duplicate' event."""
+    settings.POSTHOG_KEY = "fake-key"
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        mimetype="text/plain",
+        filename="myfile.txt",
+        users=[(user, "owner")],
+    )
+
+    with (
+        mock.patch("core.tasks.item.duplicate_file.delay"),
+        mock.patch("core.api.viewsets.posthog_capture") as mock_capture,
+    ):
+        response = client.post(f"/api/v1.0/items/{item.id!s}/duplicate/")
+
+    assert response.status_code == 201
+
+    duplicated_item = models.Item.objects.get(id=response.json()["id"])
+    mock_capture.assert_called_once_with("item_duplicate", user, {}, item=duplicated_item)

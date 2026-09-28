@@ -1,5 +1,7 @@
 """Test utils.detect_mimetype"""
 
+import magic
+
 from core.api import utils
 
 
@@ -156,3 +158,17 @@ def test_detect_mimetype_ole_storage():
     mimetype = utils.detect_mimetype(xls_ole_content, filename="document.xls")
 
     assert mimetype == "application/vnd.ms-excel"
+
+
+def test_detect_mimetype_cdfv2(monkeypatch):
+    """
+    Newer libmagic versions (e.g. on Scalingo's Ubuntu runtime) return
+    application/CDFV2 instead of application/x-ole-storage for the OLE2
+    compound-document container used by legacy .doc/.xls/.ppt. The function
+    should treat it as generic and fall back to extension-based detection.
+    """
+    monkeypatch.setattr(magic.Magic, "from_buffer", lambda self, buf: "application/CDFV2")
+
+    mimetype = utils.detect_mimetype(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1", filename="doclegacy.doc")
+
+    assert mimetype == "application/msword"

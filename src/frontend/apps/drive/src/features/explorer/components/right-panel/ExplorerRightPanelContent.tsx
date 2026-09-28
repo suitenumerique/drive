@@ -1,13 +1,13 @@
 import { Item, ItemUploadState } from "@/features/drivers/types";
 import { ItemIcon } from "../icons/ItemIcon";
-import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
+import { Button, useModal, IconSize } from "@gouvfr-lasuite/ui-components";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
+import { useSelectedItems } from "../../stores/selectionStore";
 import { InfoRow } from "@/features/ui/components/info/InfoRow";
 import { useTranslation } from "react-i18next";
 
 import multipleSelection from "@/assets/mutliple-selection.png";
 import emptySelection from "@/assets/empty-selection.png";
-import { IconSize } from "@gouvfr-lasuite/ui-kit";
 import { ItemShareModal } from "../modals/share/ItemShareModal";
 import { ItemInfo } from "@/features/items/components/ItemInfo";
 
@@ -18,7 +18,8 @@ type ExplorerRightPanelContentProps = {
 export const ExplorerRightPanelContent = ({
   item,
 }: ExplorerRightPanelContentProps) => {
-  const { setRightPanelOpen, selectedItems } = useGlobalExplorer();
+  const { setRightPanelOpen } = useGlobalExplorer();
+  const selectedItems = useSelectedItems();
   const shareModal = useModal();
   const { t } = useTranslation();
 

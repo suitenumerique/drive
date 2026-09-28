@@ -1,9 +1,34 @@
 {
-  "en": {
+  "en-us": {
     "translation": {
       "entitlements": {
         "can_upload": {
           "cannot_upload": "You don't have the necessary rights to transfer files."
+        },
+        "disclaimers": {
+          "close": "OK",
+          "cannot_upload": {
+            "title": "Uploads are unavailable",
+            "user_quota_exceeded": {
+              "description": "You can no longer add documents, your personal quota has been reached. Contact your administrator."
+            },
+            "user_override_quota_exceeded": {
+              "description": "You can no longer add documents, your personal storage limit has been reached. Contact your administrator."
+            },
+            "organization_quota_exceeded": {
+              "description": "You can no longer add documents, your organization quota has been reached. Contact your administrator."
+            },
+            "no_organization": {
+              "description": "Your account isn't linked to an organization, so you can't upload files yet. Contact your administrator to get access."
+            },
+            "not_activated": {
+              "description": "File upload isn't activated for your organization yet. Contact your administrator to enable it."
+            },
+            "potential_operators": {
+              "description": "Here is the list of potential operators for you, register on their website to get access.",
+              "link": "Register"
+            }
+          }
         }
       },
       "401": {
@@ -14,8 +39,33 @@
         "title": "You don't have the necessary permissions to access this page.",
         "button": "Home"
       },
+      "settings_modal": {
+        "title": "Settings",
+        "tabs": {
+          "storage": {
+            "title": "Storage"
+          }
+        }
+      },
+      "quota": {
+        "gauge": {
+          "exceeded_locked": {
+            "title": "Organization quota exceeded",
+            "label": "Contact an administrator to increase the quota",
+            "reason": {
+              "organization_quota_exceeded": {
+                "description": "Org. quota exceeded"
+              }
+            }
+          },
+          "error": {
+            "title": "Quota error",
+            "label": "Contact support to resolve the error",
+            "tooltip": "Error: {{error}}"
+          }
+        }
+      },
       "share_modal": {
-        "verify_identity": "Verify identity",
         "options": {
           "link_reach": {
             "authenticated": "Connected",
@@ -34,6 +84,17 @@
             "inherited_edit": "Inherited. To lower role or remove access, edit",
             "parent_folder": "the parent folder."
           }
+        },
+        "verify_identity": "Verify identity",
+        "pending_encryption": {
+          "accept": "Accept",
+          "accepting": "Accepting…",
+          "no_public_key": "This user still hasn't completed their encryption onboarding.",
+          "section_title": "Action needed",
+          "waiting_hint": "Members who have not enabled encryption yet get access once they do.",
+          "encryption_enabled": "Encryption enabled",
+          "waiting_chip": "Waiting for encryption",
+          "waiting_chip_hint": "Waiting for them to enable encryption"
         }
       },
       "file_download_modal": {
@@ -53,29 +114,11 @@
         "download": "Download anyway",
         "cancel": "Cancel"
       },
-      "file_preview": {
-        "suspicious": {
-          "title": "Suspicious file",
-          "description": "This file looks suspicious. It is only visible to you.",
-          "download": "Download file"
-        },
-        "error": {
-          "title": "An error occurred while loading the document.",
-          "description": "Please try again later."
-        },
-        "wopi": {
-          "loading": "Loading document...",
-          "error": "An error occurred while loading the document."
-        },
-        "unsupported": {
-          "title": "File type not supported for preview",
-          "description": "To view the file, download it to your device.",
-          "download": "Download file",
-          "heic_title": "HEIC files are not yet supported for preview."
-        }
-      },
       "common": {
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "close": "Close",
+        "retry": "Retry",
+        "got_it": "Got it"
       },
       "clipboard": {
         "success": "Copied to clipboard",
@@ -154,7 +197,8 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Spaces",
-          "all_folders": "All folders"
+          "all_folders": "All folders",
+          "encrypted": "Encrypted folder"
         },
         "modal": {
           "move": {
@@ -163,7 +207,14 @@
             "move_to_root": "Move to root",
             "aria_label": "Move folder modal",
             "description_one_item": "Choose the new location for <strong>{{name}}</strong>",
-            "description_multiple_items": "Choose the new location for the <strong>{{count}}</strong> selected elements"
+            "description_multiple_items": "Choose the new location for the <strong>{{count}}</strong> selected elements",
+            "errors": {
+              "user_quota_exceeded": "You can no longer move documents to the root, your personal quota has been reached. Contact your administrator.",
+              "user_override_quota_exceeded": "You can no longer move documents to the root, your personal storage limit has been reached. Contact your administrator.",
+              "organization_quota_exceeded": "You can no longer move documents to the root, your organization quota has been reached. Contact your administrator.",
+              "no_organization": "Your account isn't linked to an organization, so you can't move documents to the root yet. Contact your administrator to get access.",
+              "not_activated": "File upload isn't activated for your organization yet, so you can't move documents to the root. Contact your administrator to enable it."
+            }
           }
         },
         "drag_overlay": {
@@ -194,11 +245,35 @@
           "created_at": "Created at",
           "size": "Size",
           "created_by": "Created by",
-          "description": "Description"
+          "description": "Description",
+          "encrypted": "Encrypted",
+          "security": "Security"
         },
         "grid": {
           "name": "Name",
           "last_update": "Last Update",
+          "columns": {
+            "last_modified": "Last modified",
+            "created": "Created",
+            "created_by": "Created by",
+            "file_type": "File type",
+            "file_size": "File size",
+            "folder": "Folder",
+            "default_suffix": "(default)"
+          },
+          "size_units": {
+            "B": "B",
+            "KB": "KB",
+            "MB": "MB",
+            "GB": "GB",
+            "TB": "TB",
+            "PB": "PB"
+          },
+          "sort": {
+            "ascending": "Sort ascending",
+            "descending": "Sort descending",
+            "reset": "Reset sorting"
+          },
           "empty": {
             "default": "No folder found in the selected folder",
             "caption": {
@@ -230,6 +305,15 @@
           }
         },
         "filters": {
+          "location": {
+            "label": "Location",
+            "options": {
+              "my_files": "My files",
+              "shared_with_me": "Shared with me",
+              "starred": "Starred",
+              "trashbin": "Trash"
+            }
+          },
           "scopes": {
             "label": "Location",
             "options": {
@@ -245,6 +329,39 @@
               "folder": "Folder",
               "reset": "Reset"
             }
+          },
+          "category": {
+            "label": "Type",
+            "options": {
+              "doc": "Text document",
+              "powerpoint": "Slides",
+              "calc": "Spreadsheet",
+              "pdf": "PDF",
+              "image": "Image",
+              "video": "Video",
+              "audio": "Audio",
+              "archive": "Archive",
+              "other": "Other"
+            }
+          },
+          "contact": {
+            "label": "Shared with",
+            "placeholder": "Search for a name",
+            "empty": "No contact found",
+            "reset": "Reset"
+          },
+          "modified": {
+            "label": "Modified",
+            "options": {
+              "today": "Today",
+              "last_7_days": "Last 7 days",
+              "last_30_days": "Last 30 days",
+              "this_year": "This year",
+              "more_than_a_year": "More than a year",
+              "custom": "Custom range"
+            },
+            "start": "Start",
+            "end": "End"
           },
           "workspace": {
             "label": "Workspace"
@@ -276,6 +393,9 @@
               "settings_workspace": "Workspace settings",
               "settings_folder": "Folder settings",
               "delete_item": "Delete",
+              "delete_workspace": "Delete workspace",
+              "delete_folder": "Delete folder",
+              "delete_file": "Delete file",
               "share": "Share",
               "share_view": "View shares"
             },
@@ -305,9 +425,13 @@
           "title": "Trash",
           "description": "Automatic deletion after 30 days",
           "navigate": {
-            "modal": {
+            "modal_folder": {
               "title": "This folder is in the trash",
               "description": "To display this folder, you need to restore it first."
+            },
+            "modal_file": {
+              "title": "This file is in the trash",
+              "description": "To display this file, you need to restore it first."
             }
           },
           "hard_delete": {
@@ -404,6 +528,7 @@
             "toast": "Drop your files here to transfer them in {{title}}",
             "toast_no_rights": "You don't have the necessary rights to transfer files in {{title}}",
             "file_too_large": "The file \"{{name}}\" is too large. Maximum allowed size is {{maxSize}}.",
+            "folders_created": "All folders have been created successfully.",
             "steps": {
               "preparing": "Preparing the transfer...",
               "create_folders": "Creation of folders in progress..."
@@ -412,7 +537,36 @@
               "description_one": "{{count}} file being transferred",
               "description_other": "{{count}} files being transferred",
               "description_done_one": "{{count}} file transferred",
-              "description_done_other": "{{count}} files transferred"
+              "description_done_other": "{{count}} files transferred",
+              "error": "An error occurred",
+              "error_count_one": "{{count}} file could not be uploaded",
+              "error_count_other": "{{count}} files could not be uploaded",
+              "error_reasons": {
+                "file_size_exceeded": "The file exceeds the maximum allowed size.",
+                "file_type_not_allowed": "This file type is not allowed.",
+                "item_create_file_extension_not_allowed": "This file extension is not allowed.",
+                "file_too_large": "The file exceeds the maximum allowed size.",
+                "user_quota_exceeded": "You can no longer add documents, your personal quota has been reached. Contact your administrator.",
+                "user_override_quota_exceeded": "You can no longer add documents, your personal storage limit has been reached. Contact your administrator.",
+                "organization_quota_exceeded": "You can no longer add documents, your organization quota has been reached. Contact your administrator.",
+                "no_organization": "Your account isn't linked to an organization, so you can't upload files yet. Contact your administrator to get access.",
+                "not_activated": "File upload isn't activated for your organization yet. Contact your administrator to enable it.",
+                "unknown": "An unexpected error occurred."
+              },
+              "error_short": {
+                "file_too_large": "File too large",
+                "user_quota_exceeded": "Quota exceeded",
+                "user_override_quota_exceeded": "Quota exceeded",
+                "organization_quota_exceeded": "Quota exceeded",
+                "no_organization": "Upload not allowed",
+                "not_activated": "Upload not allowed"
+              }
+            },
+            "cancel_modal": {
+              "title": "Leave upload?",
+              "description": "Unfinished files will be lost.",
+              "keep": "Keep uploading",
+              "confirm": "Leave and cancel"
             }
           },
           "delete": {
@@ -426,9 +580,15 @@
             "toast_one": "Item deleted forever",
             "toast_other": "{{count}} items deleted forever"
           },
+          "restore": {
+            "toast_one": "Item restored",
+            "toast_other": "{{count}} items restored"
+          },
           "move": {
             "toast_one": "{{count}} item moved",
-            "toast_other": "{{count}} items moved"
+            "toast_other": "{{count}} items moved",
+            "toast_error_one": "An error occurred while moving the item.",
+            "toast_error_other": "An error occurred while moving the items."
           },
           "share": {
             "modal": {
@@ -442,6 +602,16 @@
               "placeholder": "Enter new name",
               "cancel": "Cancel",
               "submit": "Rename"
+            }
+          },
+          "convert": {
+            "modal": {
+              "title": "Convert to open this file",
+              "content": "This file needs to be converted before it can be edited. A copy will be created: your original file stays untouched.",
+              "cancel": "Cancel",
+              "confirm": "Convert",
+              "error": "Conversion failed. Please try again.",
+              "analyzing_notice": "This file is still being analyzed for malware. The conversion will start automatically once the analysis is complete."
             }
           }
         },
@@ -457,9 +627,79 @@
             "rename": "Rename",
             "favorite": "Star",
             "unfavorite": "Unstar",
-            "delete": "Delete"
+            "duplicate": "Duplicate",
+            "duplicate_error": "An error occurred while duplicating the item.",
+            "delete": "Delete",
+            "encrypt": "Encrypt",
+            "remove_encryption": "Remove encryption"
+          },
+          "duplicating": "duplication in progress",
+          "converting": "conversion in progress"
+        },
+        "encrypted": {
+          "decrypting": "Decrypting...",
+          "converting": "Preparing editor...",
+          "loading_editor": "Loading editor...",
+          "syncing_history": "Syncing collaborative state...",
+          "stale_resyncing": "Reconnecting after long disconnect — refetching document...",
+          "downloading": "Downloading...",
+          "download_to_inspect": "Download file",
+          "editor_error": "Failed to load editor",
+          "remove_encryption": "Remove encryption",
+          "no_keys_headline": "Encryption keys required",
+          "no_keys_body": "You don't have an encryption key pair set up for your account yet. Generate or restore your encryption keys from your profile menu, then reopen this document.",
+          "relay_failed": "Collaboration unavailable",
+          "conversion_hint_title": "Why does this happen?",
+          "conversion_odf_body": "Encrypted documents are opened with a lightweight browser-based editor that does not support all features available in non-encrypted mode. SmartArt elements and some shapes (e.g. Frame, Snip diagonal corner rectangle, math operators, most figured arrows, trapezoid, parallelogram, plus) are known to prevent ODF files (.odt, .ods, .odp) from loading in this mode.",
+          "conversion_odf_actions": "You can download the file to remove the SmartArt or unsupported shapes, then re-upload it. Alternatively, you can remove encryption from this document so it opens with the full-featured editor. If the issue persists after the cleanup, please contact the technical team to investigate.",
+          "conversion_odf_no_edit": "Please contact the owner of this document or a user with editing rights so they can remove the SmartArt, unsupported shapes, or encryption from the file. If the issue persists after the cleanup, please contact the technical team to investigate.",
+          "conversion_unexpected": "This error is unexpected for this file format. You can download the file to inspect it, or try removing encryption — the full-featured editor may be able to open it. If removing encryption works, please contact the technical team so they can investigate why the encrypted editor failed.",
+          "conversion_unexpected_no_edit": "Please contact the owner of this document or a user with editing rights to investigate.",
+          "save_error_fatal_title": "Saving failed — please contact support",
+          "save_error_fatal_body": "The document contains content we cannot serialize to the on-disk format (often a chart). Your recent edits are visible but unsaved. Please undo the last change or contact support. Details: ",
+          "save_error_transient_title": "Sync error — save will be retried",
+          "save_error_transient_body": "We could not upload the latest save. Details: ",
+          "save_error_retry": "Retry now",
+          "save_error_retrying": "Retrying…",
+          "oo_crashed_title": "Synchronization error",
+          "oo_crashed_body": "An error occurred while synchronizing with other peers. Because the document is end-to-end encrypted, we cannot always reconcile changes perfectly. Please reload the editor to fetch the latest saved state.",
+          "oo_crashed_waiting": "Waiting for peers to save…",
+          "oo_crashed_reload": "Reload editor",
+          "pending_self": {
+            "title": "Waiting for access",
+            "body_with_keys": "This file was encrypted before you enabled encryption, so its key could not be shared with you then. You will get access the next time the file owner opens it.",
+            "body_without_keys": "This file was encrypted before you enabled encryption, so its key could not be shared with you. Enable encryption on your account: you will get access the next time the file owner opens it."
+          },
+          "decryption_failure": {
+            "key_unavailable": {
+              "title": "This file was shared with a previous key",
+              "body": "That key is no longer on your account, most likely because you reset your encryption. Ask the file owner to remove you from its members and add you again."
+            },
+            "key_mismatch": {
+              "title": "This file was encrypted with a different key",
+              "body": "Your current encryption key cannot open it. Ask the file owner to remove you from its members and add you again."
+            },
+            "content_integrity": {
+              "title": "This file cannot be decrypted",
+              "body": "Your key is correct, but the stored content is damaged or was altered, so it cannot be trusted. Contact the owner of this file or your support."
+            },
+            "unknown": {
+              "title": "This file could not be decrypted",
+              "body": "Something went wrong while decrypting this file. Try again."
+            }
           }
         }
+      },
+      "anonymous_cta": {
+        "try_out": "Try it now",
+        "login": "Sign in"
+      },
+      "my_files_cta": {
+        "my_files": "My files"
+      },
+      "anonymous_dropdown_menu": {
+        "copy_link": "Copy link",
+        "languages": "Languages"
       },
       "time": {
         "years_ago_one": "{{count}} year ago",
@@ -478,7 +718,9 @@
       },
       "sdk": {
         "explorer": {
+          "cancel": "Cancel",
           "choose": "Choose",
+          "picker_caption": "Select one or more files",
           "picker_label_zero": "No files selected",
           "picker_label_one": "{{count}} file selected",
           "picker_label_other": "{{count}} files selected",
@@ -491,6 +733,27 @@
         "labels": {
           "app_name": "Updates to Drive",
           "see_whats_new": "See what's new"
+        },
+        "v0_16_0": {
+          "main_title": "What's new",
+          "steps": {
+            "0": {
+              "title": "Customizable columns",
+              "description": "Choose which information to display in your columns: last modified, creation date, author, file type, or size."
+            },
+            "1": {
+              "title": "Sort by column",
+              "description": "Sort your documents by creation date, size, type... Just click the sort button."
+            },
+            "2": {
+              "title": "Duplication",
+              "description": "Duplicate any document in one click."
+            },
+            "3": {
+              "title": "PDF viewer",
+              "description": "Open your PDFs right in Fichiers, with a new built-in viewer."
+            }
+          }
         },
         "v0_13_0": {
           "main_title": "Advanced sharing",
@@ -509,14 +772,123 @@
             }
           }
         }
+      },
+      "user_reconciliation": {
+        "title": "User reconciliation",
+        "success": "Your email address has been confirmed. To complete the merge of your accounts, please click the confirmation links sent to all the addresses you provided.",
+        "error": "An error occurred during email validation."
+      },
+      "encryption": {
+        "encrypt_modal": {
+          "title_folder": "Encrypt folder \"{{title}}\"",
+          "title_file": "Encrypt file \"{{title}}\"",
+          "confirm": "Encrypt",
+          "description_folder": "The folder and everything inside will be encrypted end-to-end. Only people you share it with will be able to access its contents.",
+          "large_set": "{{count}} items in this folder. Per-item progress is hidden for large jobs — see the summary above.",
+          "large_set_failures": "{{count}} failed.",
+          "description_file": "The file will be encrypted end-to-end. Only people you share it with will be able to access its contents.",
+          "pending_users_one": "{{count}} collaborator has not enabled encryption yet. They will be added as pending and get access once they enable it.",
+          "pending_users_many": "{{count}} collaborators have not enabled encryption yet. They will be added as pending and get access once they enable it.",
+          "pending_users_other": "{{count}} collaborators have not enabled encryption yet. They will be added as pending and get access once they enable it."
+        },
+        "errors": {
+          "self_missing_key": "You need to complete your encryption onboarding before encrypting this item.",
+          "no_keys_at_all": "Nobody with access to this item has completed encryption onboarding.",
+          "not_restricted": "The item must have restricted access (no public or authenticated link).",
+          "no_accesses": "No users with access found on the root item.",
+          "nothing_to_encrypt_file": "This file is already encrypted.",
+          "nothing_to_decrypt_file": "This file is already plaintext.",
+          "subtree_mutated": "The folder contents changed during the operation ({{added}} added, {{removed}} removed)."
+        },
+        "missing_keys": {
+          "title": "Enable encryption on this device",
+          "body": "Encryption keys are stored on each device. To continue here, restore your existing keys from another device or your recovery phrase, or enable encryption if you never did.",
+          "viewer_body": "This file is encrypted. You must enable encryption on this device to open it.",
+          "set_up": "Enable encryption",
+          "cancel": "Not now",
+          "viewer_title": "Encrypted file"
+        },
+        "service_unavailable": {
+          "title": "Encryption service unavailable",
+          "body": "The encryption service could not be loaded. Check your connection and try again.",
+          "viewer_body": "This file is encrypted and the encryption service could not be loaded. Check your connection and try again.",
+          "retry": "Retry",
+          "close": "Close"
+        },
+        "not_root_modal": {
+          "title": "Encryption cannot be removed here",
+          "body": "\"{{title}}\" is inside an encrypted folder. Encryption can only be removed from the top folder where it was applied — which will also decrypt every file inside.",
+          "root_path": "Top folder:"
+        },
+        "remove_modal": {
+          "title_folder": "Remove encryption from folder \"{{title}}\"",
+          "title_file": "Remove encryption from file \"{{title}}\"",
+          "confirm": "Remove encryption",
+          "description": "The content will be decrypted and stored in plain text on the server.",
+          "large_set": "{{count}} items in this folder. Per-item progress is hidden for large jobs — see the summary above."
+        },
+        "row": {
+          "already_encrypted": "Already encrypted",
+          "not_encrypted": "Not encrypted"
+        },
+        "summary": {
+          "discovering": "Discovering files…",
+          "validating": "Validating…",
+          "ready": "{{total}} item(s) to process, {{skipped}} skipped",
+          "encrypting": "Encrypting",
+          "decrypting": "Decrypting",
+          "committing": "Finalizing…",
+          "success_encrypt": "{{n}} item(s) encrypted",
+          "success_decrypt": "{{n}} item(s) decrypted",
+          "skipped_short": "{{n}} skipped",
+          "failed": "Failed — {{n}} item(s) in error, no changes applied",
+          "failed_generic": "Operation failed"
+        },
+        "host_modal": {
+          "label": "Encryption"
+        },
+        "user_menu": {
+          "settings": "Encryption settings",
+          "enable": "Enable encryption"
+        }
+      },
+      "file_preview": {
+        "unsupported": {
+          "heic_title": "HEIC files are not yet supported for preview."
+        }
       }
     }
   },
-  "fr": {
+  "fr-fr": {
     "translation": {
       "entitlements": {
         "can_upload": {
           "cannot_upload": "Vous n'avez pas les droits nécessaires pour transférer des fichiers."
+        },
+        "disclaimers": {
+          "close": "OK",
+          "cannot_upload": {
+            "title": "Les téléversements ne sont pas disponibles",
+            "user_quota_exceeded": {
+              "description": "Vous ne pouvez plus ajouter de documents, votre quota personnel est atteint. Contactez votre administrateur."
+            },
+            "user_override_quota_exceeded": {
+              "description": "Vous ne pouvez plus ajouter de documents, votre limite de stockage personnelle est atteinte. Contactez votre administrateur."
+            },
+            "organization_quota_exceeded": {
+              "description": "Vous ne pouvez plus ajouter de documents, votre quota d'organisation est atteint. Contactez votre administrateur."
+            },
+            "no_organization": {
+              "description": "Votre compte n'est pas rattaché à une organisation, vous ne pouvez pas encore téléverser de fichiers. Contactez votre administrateur pour obtenir un accès."
+            },
+            "not_activated": {
+              "description": "Le téléversement de fichiers n'est pas encore activé pour votre organisation. Contactez votre administrateur pour l'activer."
+            },
+            "potential_operators": {
+              "description": "Voici la liste des opérateurs potentiels pour vous, inscrivez-vous sur leur site pour obtenir un accès.",
+              "link": "Inscription"
+            }
+          }
         }
       },
       "401": {
@@ -527,8 +899,33 @@
         "title": "Vous n'avez pas les permissions nécessaires pour accéder à cette page.",
         "button": "Accueil"
       },
+      "settings_modal": {
+        "title": "Paramètres",
+        "tabs": {
+          "storage": {
+            "title": "Stockage"
+          }
+        }
+      },
+      "quota": {
+        "gauge": {
+          "exceeded_locked": {
+            "title": "Quota organisation dépassé",
+            "label": "Contactez un administrateur pour augmenter le quota",
+            "reason": {
+              "organization_quota_exceeded": {
+                "description": "Quota org. dépassé"
+              }
+            }
+          },
+          "error": {
+            "title": "Erreur de quota",
+            "label": "Contactez le support pour résoudre l'erreur",
+            "tooltip": "Erreur: {{error}}"
+          }
+        }
+      },
       "share_modal": {
-        "verify_identity": "Vérifier l'identité",
         "options": {
           "link_reach": {
             "authenticated": "Connecté",
@@ -548,6 +945,7 @@
             "parent_folder": "le dossier parent."
           }
         },
+        "verify_identity": "Vérifier l'identité",
         "pending_encryption": {
           "accept": "Accepter",
           "accepting": "Acceptation…",
@@ -576,106 +974,11 @@
         "download": "Télécharger quand même",
         "cancel": "Annuler"
       },
-      "file_preview": {
-        "suspicious": {
-          "title": "Fichier suspect",
-          "description": "Ce fichier semble suspect. Il n'est visible que pour vous.",
-          "download": "Télécharger le fichier"
-        },
-        "error": {
-          "title": "Une erreur est survenue lors du chargement du document.",
-          "description": "Veuillez réessayer plus tard."
-        },
-        "wopi": {
-          "loading": "Chargement du document...",
-          "error": "Une erreur est survenue lors du chargement du document."
-        },
-        "unsupported": {
-          "title": "Type de fichier non supporté pour la prévisualisation",
-          "description": "Pour visualiser le fichier, téléchargez-le sur votre appareil.",
-          "download": "Télécharger le fichier",
-          "heic_title": "Les fichiers HEIC ne sont pas encore supportés pour la prévisualisation."
-        }
-      },
       "common": {
         "cancel": "Annuler",
         "close": "Fermer",
         "retry": "Réessayer",
         "got_it": "J'ai compris"
-      },
-      "encryption": {
-        "encrypt_modal": {
-          "title_folder": "Chiffrer le dossier « {{title}} »",
-          "title_file": "Chiffrer le fichier « {{title}} »",
-          "confirm": "Chiffrer",
-          "description_folder": "Le dossier et tout son contenu seront chiffrés de bout en bout. Seules les personnes avec qui vous le partagez pourront y accéder.",
-          "large_set": "{{count}} éléments dans ce dossier. La progression par élément n'est pas affichée pour les opérations volumineuses — voir le résumé ci-dessus.",
-          "large_set_failures": "{{count}} en échec.",
-          "description_file": "Le fichier sera chiffré de bout en bout. Seules les personnes avec qui vous le partagez pourront y accéder.",
-          "pending_users_one": "{{count}} personne n'a pas encore activé le chiffrement. Elle sera ajoutée en attente et aura accès dès qu'elle l'aura activé.",
-          "pending_users_many": "{{count}} personnes n'ont pas encore activé le chiffrement. Elles seront ajoutées en attente et auront accès dès qu'elles l'auront activé.",
-          "pending_users_other": "{{count}} personnes n'ont pas encore activé le chiffrement. Elles seront ajoutées en attente et auront accès dès qu'elles l'auront activé."
-        },
-        "errors": {
-          "self_missing_key": "Vous devez terminer votre configuration du chiffrement avant de chiffrer cet élément.",
-          "no_keys_at_all": "Aucun utilisateur ayant accès à cet élément n'a terminé sa configuration du chiffrement.",
-          "not_restricted": "L'élément doit avoir un accès restreint (pas de lien public ou authentifié).",
-          "no_accesses": "Aucun utilisateur n'a accès à l'élément racine.",
-          "nothing_to_encrypt_file": "Ce fichier est déjà chiffré.",
-          "nothing_to_decrypt_file": "Ce fichier est déjà en clair.",
-          "subtree_mutated": "Le contenu du dossier a changé pendant l'opération ({{added}} ajoutés, {{removed}} supprimés)."
-        },
-        "missing_keys": {
-          "title": "Activer le chiffrement sur cet appareil",
-          "body": "Les clés de chiffrement sont stockées sur chaque appareil. Pour continuer ici, restaurez vos clés depuis un autre appareil ou votre phrase de récupération, ou activez le chiffrement si vous ne l'avez jamais fait.",
-          "viewer_body": "Ce fichier est chiffré. Vous devez activer le chiffrement sur cet appareil pour l'ouvrir.",
-          "set_up": "Activer le chiffrement",
-          "cancel": "Plus tard",
-          "viewer_title": "Fichier chiffré"
-        },
-        "service_unavailable": {
-          "title": "Service de chiffrement indisponible",
-          "body": "Le service de chiffrement n'a pas pu être chargé. Vérifiez votre connexion et réessayez.",
-          "viewer_body": "Ce fichier est chiffré et le service de chiffrement n'a pas pu être chargé. Vérifiez votre connexion et réessayez.",
-          "retry": "Réessayer",
-          "close": "Fermer"
-        },
-        "not_root_modal": {
-          "title": "Le chiffrement ne peut pas être retiré ici",
-          "body": "« {{title}} » se trouve à l'intérieur d'un dossier chiffré. Le chiffrement ne peut être retiré que depuis le dossier racine où il a été appliqué — ce qui déchiffrera également tous les fichiers qu'il contient.",
-          "root_path": "Dossier racine :"
-        },
-        "remove_modal": {
-          "title_folder": "Retirer le chiffrement du dossier « {{title}} »",
-          "title_file": "Retirer le chiffrement du fichier « {{title}} »",
-          "confirm": "Retirer le chiffrement",
-          "description": "Le contenu sera déchiffré et stocké en clair sur le serveur.",
-          "large_set": "{{count}} éléments dans ce dossier. La progression par élément n'est pas affichée pour les opérations volumineuses — voir le résumé ci-dessus."
-        },
-        "row": {
-          "already_encrypted": "Déjà chiffré",
-          "not_encrypted": "Non chiffré"
-        },
-        "summary": {
-          "discovering": "Découverte des fichiers…",
-          "validating": "Validation…",
-          "ready": "{{total}} élément(s) à traiter, {{skipped}} ignoré(s)",
-          "encrypting": "Chiffrement",
-          "decrypting": "Déchiffrement",
-          "committing": "Finalisation…",
-          "success_encrypt": "{{n}} élément(s) chiffré(s)",
-          "success_decrypt": "{{n}} élément(s) déchiffré(s)",
-          "skipped_short": "{{n}} ignoré(s)",
-          "failed": "Échec — {{n}} élément(s) en erreur, aucun changement appliqué",
-          "failed_generic": "Échec de l'opération"
-        },
-        "host_modal": {
-          "label": "Chiffrement"
-        },
-        "user_menu": {
-          "settings": "Paramètres de chiffrement",
-          "enable": "Activer le chiffrement"
-        }
       },
       "clipboard": {
         "success": "Copié dans le presse-papiers",
@@ -757,59 +1060,6 @@
           "all_folders": "Tous les dossiers",
           "encrypted": "Dossier chiffré"
         },
-        "encrypted": {
-          "decrypting": "Déchiffrement…",
-          "converting": "Préparation de l'éditeur…",
-          "loading_editor": "Chargement de l'éditeur…",
-          "syncing_history": "Synchronisation de l'état collaboratif…",
-          "stale_resyncing": "Reconnexion après une déconnexion prolongée — récupération du document…",
-          "downloading": "Téléchargement…",
-          "download_to_inspect": "Télécharger le fichier",
-          "editor_error": "Échec du chargement de l'éditeur",
-          "remove_encryption": "Retirer le chiffrement",
-          "no_keys_headline": "Clés de chiffrement requises",
-          "no_keys_body": "Vous n'avez pas encore configuré votre paire de clés de chiffrement. Générez-les ou restaurez-les depuis le menu de votre profil, puis rouvrez ce document.",
-          "relay_failed": "Collaboration indisponible",
-          "conversion_hint_title": "Pourquoi cela se produit-il ?",
-          "conversion_odf_body": "Les documents chiffrés sont ouverts avec un éditeur léger basé sur le navigateur qui ne prend pas en charge toutes les fonctionnalités disponibles en mode non chiffré. Les éléments SmartArt sont connus pour empêcher les fichiers ODF (.odt, .ods, .odp) d'être chargés dans ce mode.",
-          "conversion_odf_actions": "Vous pouvez télécharger le fichier pour en supprimer les éléments SmartArt, puis le re-téléverser. Vous pouvez aussi retirer le chiffrement de ce document pour l'ouvrir avec l'éditeur complet. Si le problème persiste après avoir supprimé les SmartArt, contactez l'équipe technique pour enquête.",
-          "conversion_odf_no_edit": "Veuillez contacter le propriétaire du document ou un utilisateur disposant des droits d'édition pour qu'il supprime les éléments SmartArt ou retire le chiffrement du fichier. Si le problème persiste après suppression des SmartArt, contactez l'équipe technique pour enquête.",
-          "conversion_unexpected": "Cette erreur est inattendue pour ce format de fichier. Vous pouvez télécharger le fichier pour l'inspecter, ou essayer de retirer le chiffrement — l'éditeur complet pourra peut-être l'ouvrir. Si cela fonctionne, contactez l'équipe technique pour qu'elle enquête sur la raison de l'échec de l'éditeur chiffré.",
-          "conversion_unexpected_no_edit": "Veuillez contacter le propriétaire du document ou un utilisateur disposant des droits d'édition pour enquêter.",
-          "save_error_fatal_title": "Échec de l'enregistrement — veuillez contacter le support",
-          "save_error_fatal_body": "Le document contient du contenu que nous ne pouvons pas sérialiser dans le format de stockage (souvent un graphique). Vos modifications récentes sont visibles mais non enregistrées. Veuillez annuler la dernière modification ou contacter le support. Détails : ",
-          "save_error_transient_title": "Erreur de synchronisation — l'enregistrement sera réessayé",
-          "save_error_transient_body": "Le dernier enregistrement n'a pas pu être téléversé. Détails : ",
-          "save_error_retry": "Réessayer maintenant",
-          "save_error_retrying": "Nouvelle tentative…",
-          "oo_crashed_title": "Erreur de synchronisation",
-          "oo_crashed_body": "Une erreur est survenue lors de la synchronisation avec les autres participants. Comme le document est chiffré de bout en bout, nous ne pouvons pas toujours réconcilier parfaitement les modifications. Veuillez recharger l'éditeur pour récupérer le dernier état enregistré.",
-          "oo_crashed_waiting": "En attente de l'enregistrement par un autre participant…",
-          "oo_crashed_reload": "Recharger l'éditeur",
-          "pending_self": {
-            "title": "En attente d'accès",
-            "body_with_keys": "Ce fichier a été chiffré avant que vous activiez le chiffrement, sa clé n'a donc pas pu vous être partagée à ce moment-là. Vous aurez accès la prochaine fois que le propriétaire du fichier l'ouvrira.",
-            "body_without_keys": "Ce fichier a été chiffré avant que vous activiez le chiffrement, sa clé n'a donc pas pu vous être partagée. Activez le chiffrement sur votre compte : vous aurez accès la prochaine fois que le propriétaire du fichier l'ouvrira."
-          },
-          "decryption_failure": {
-            "key_unavailable": {
-              "title": "Ce fichier a été partagé avec une ancienne clé",
-              "body": "Cette clé n'est plus sur votre compte, sans doute parce que vous avez réinitialisé votre chiffrement. Demandez au propriétaire du fichier de vous retirer de ses membres puis de vous ajouter à nouveau."
-            },
-            "key_mismatch": {
-              "title": "Ce fichier a été chiffré avec une autre clé",
-              "body": "Votre clé de chiffrement actuelle ne permet pas de l'ouvrir. Demandez au propriétaire du fichier de vous retirer de ses membres puis de vous ajouter à nouveau."
-            },
-            "content_integrity": {
-              "title": "Ce fichier ne peut pas être déchiffré",
-              "body": "Votre clé est la bonne, mais le contenu enregistré est endommagé ou a été modifié : il n'est pas fiable. Contactez le propriétaire de ce fichier ou votre support."
-            },
-            "unknown": {
-              "title": "Ce fichier n'a pas pu être déchiffré",
-              "body": "Une erreur est survenue lors du déchiffrement de ce fichier. Réessayez."
-            }
-          }
-        },
         "modal": {
           "move": {
             "title": "Déplacer",
@@ -817,7 +1067,14 @@
             "move_to_root": "Déplacer vers la racine",
             "aria_label": "Modal de déplacement de dossier",
             "description_one_item": "Choisissez le nouvel emplacement pour <strong>{{name}}</strong>",
-            "description_multiple_items": "Choisissez le nouvel emplacement pour les <strong>{{count}}</strong> éléments sélectionnés"
+            "description_multiple_items": "Choisissez le nouvel emplacement pour les <strong>{{count}}</strong> éléments sélectionnés",
+            "errors": {
+              "user_quota_exceeded": "Vous ne pouvez plus déplacer de documents à la racine, votre quota personnel est atteint. Contactez votre administrateur.",
+              "user_override_quota_exceeded": "Vous ne pouvez plus déplacer de documents à la racine, votre limite de stockage personnelle est atteinte. Contactez votre administrateur.",
+              "organization_quota_exceeded": "Vous ne pouvez plus déplacer de documents à la racine, votre quota d'organisation est atteint. Contactez votre administrateur.",
+              "no_organization": "Votre compte n'est pas rattaché à une organisation, vous ne pouvez pas encore déplacer de documents à la racine. Contactez votre administrateur pour obtenir un accès.",
+              "not_activated": "Le téléversement de fichiers n'est pas encore activé pour votre organisation. Vous ne pouvez donc pas déplacer de documents à la racine. Contactez votre administrateur pour l'activer."
+            }
           }
         },
         "drag_overlay": {
@@ -855,6 +1112,28 @@
         "grid": {
           "name": "Nom",
           "last_update": "Dernière modification",
+          "columns": {
+            "last_modified": "Dernière modification",
+            "created": "Création",
+            "created_by": "Créé par",
+            "file_type": "Type de fichier",
+            "file_size": "Taille",
+            "folder": "Dossier",
+            "default_suffix": "(par défaut)"
+          },
+          "size_units": {
+            "B": "o",
+            "KB": "ko",
+            "MB": "Mo",
+            "GB": "Go",
+            "TB": "To",
+            "PB": "Po"
+          },
+          "sort": {
+            "ascending": "Tri croissant",
+            "descending": "Tri décroissant",
+            "reset": "Réinitialiser le tri"
+          },
           "empty": {
             "default": "Aucun dossier trouvé dans le dossier sélectionné",
             "caption": {
@@ -886,6 +1165,15 @@
           }
         },
         "filters": {
+          "location": {
+            "label": "Emplacement",
+            "options": {
+              "my_files": "Mes fichiers",
+              "shared_with_me": "Partagés avec moi",
+              "starred": "Favoris",
+              "trashbin": "Corbeille"
+            }
+          },
           "scopes": {
             "label": "Emplacement",
             "options": {
@@ -901,6 +1189,39 @@
               "folder": "Dossier",
               "reset": "Réinitialiser"
             }
+          },
+          "category": {
+            "label": "Type",
+            "options": {
+              "doc": "Document texte",
+              "powerpoint": "Présentation",
+              "calc": "Tableur",
+              "pdf": "PDF",
+              "image": "Image",
+              "video": "Vidéo",
+              "audio": "Audio",
+              "archive": "Archive",
+              "other": "Autre"
+            }
+          },
+          "contact": {
+            "label": "Partagé avec",
+            "placeholder": "Rechercher un nom",
+            "empty": "Aucun contact trouvé",
+            "reset": "Réinitialiser"
+          },
+          "modified": {
+            "label": "Modifié",
+            "options": {
+              "today": "Aujourd'hui",
+              "last_7_days": "7 derniers jours",
+              "last_30_days": "30 derniers jours",
+              "this_year": "Cette année",
+              "more_than_a_year": "Il y a plus d'un an",
+              "custom": "Période personnalisée"
+            },
+            "start": "Début",
+            "end": "Fin"
           },
           "workspace": {
             "label": "Espace"
@@ -964,9 +1285,13 @@
           "title": "Corbeille",
           "description": "Suppression automatique après 30 jours",
           "navigate": {
-            "modal": {
+            "modal_folder": {
               "title": "Ce dossier est dans la corbeille",
               "description": "Pour afficher ce dossier, vous devez d'abord le restaurer."
+            },
+            "modal_file": {
+              "title": "Ce fichier est dans la corbeille",
+              "description": "Pour afficher ce fichier, vous devez d'abord le restaurer."
             }
           },
           "hard_delete": {
@@ -1063,6 +1388,7 @@
             "toast": "Déposez vos fichiers ici pour les transférer dans {{title}}",
             "toast_no_rights": "Vous n'avez pas les droits nécessaires pour transférer des fichiers dans {{title}}",
             "file_too_large": "Le fichier \"{{name}}\" est trop volumineux. La taille maximale autorisée est {{maxSize}}.",
+            "folders_created": "Tous les dossiers ont été créés avec succès.",
             "steps": {
               "preparing": "Préparation du transfert...",
               "create_folders": "Création des dossiers en cours..."
@@ -1071,7 +1397,36 @@
               "description_one": "{{count}} fichier en cours de transfert",
               "description_other": "{{count}} fichiers en cours de transfert",
               "description_done_one": "{{count}} fichier transféré",
-              "description_done_other": "{{count}} fichiers transférés"
+              "description_done_other": "{{count}} fichiers transférés",
+              "error": "Une erreur est survenue",
+              "error_count_one": "{{count}} fichier n'a pas pu être transféré",
+              "error_count_other": "{{count}} fichiers n'ont pas pu être transférés",
+              "error_reasons": {
+                "file_size_exceeded": "Le fichier dépasse la taille maximale autorisée.",
+                "file_type_not_allowed": "Ce type de fichier n'est pas autorisé.",
+                "item_create_file_extension_not_allowed": "Cette extension de fichier n'est pas autorisée.",
+                "file_too_large": "Le fichier dépasse la taille maximale autorisée.",
+                "user_quota_exceeded": "Vous ne pouvez plus ajouter de documents, votre quota personnel est atteint. Contactez votre administrateur.",
+                "user_override_quota_exceeded": "Vous ne pouvez plus ajouter de documents, votre limite de stockage personnelle est atteinte. Contactez votre administrateur.",
+                "organization_quota_exceeded": "Vous ne pouvez plus ajouter de documents, votre quota d'organisation est atteint. Contactez votre administrateur.",
+                "no_organization": "Votre compte n'est pas rattaché à une organisation, vous ne pouvez pas encore téléverser de fichiers. Contactez votre administrateur pour obtenir un accès.",
+                "not_activated": "Le téléversement de fichiers n'est pas encore activé pour votre organisation. Contactez votre administrateur pour l'activer.",
+                "unknown": "Une erreur inattendue est survenue."
+              },
+              "error_short": {
+                "file_too_large": "Fichier trop volumineux",
+                "user_quota_exceeded": "Quota atteint",
+                "user_override_quota_exceeded": "Quota atteint",
+                "organization_quota_exceeded": "Quota atteint",
+                "no_organization": "Téléversement non autorisé",
+                "not_activated": "Téléversement non autorisé"
+              }
+            },
+            "cancel_modal": {
+              "title": "Quitter le transfert ?",
+              "description": "Les fichiers non terminés seront perdus.",
+              "keep": "Continuer le transfert",
+              "confirm": "Quitter et annuler"
             }
           },
           "delete": {
@@ -1091,7 +1446,9 @@
           },
           "move": {
             "toast_one": "{{count}} élément déplacé",
-            "toast_other": "{{count}} éléments déplacés"
+            "toast_other": "{{count}} éléments déplacés",
+            "toast_error_one": "Une erreur est survenue lors du déplacement de l'élément.",
+            "toast_error_other": "Une erreur est survenue lors du déplacement des éléments."
           },
           "share": {
             "modal": {
@@ -1105,6 +1462,16 @@
               "placeholder": "Entrez le nouveau nom",
               "cancel": "Annuler",
               "submit": "Renommer"
+            }
+          },
+          "convert": {
+            "modal": {
+              "title": "Convertir pour ouvrir ce fichier",
+              "content": "Ce fichier nécessite une conversion pour être édité. Une copie sera créée : votre fichier original reste intact.",
+              "cancel": "Annuler",
+              "confirm": "Convertir",
+              "error": "La conversion a échoué. Veuillez réessayer.",
+              "analyzing_notice": "Ce fichier est encore en cours d'analyse antivirus. La conversion démarrera automatiquement une fois l'analyse terminée."
             }
           }
         },
@@ -1120,11 +1487,79 @@
             "rename": "Renommer",
             "favorite": "Favoris",
             "unfavorite": "Retirer des favoris",
+            "duplicate": "Dupliquer",
+            "duplicate_error": "Une erreur est survenue lors de la duplication.",
             "delete": "Supprimer",
             "encrypt": "Chiffrer",
             "remove_encryption": "Retirer le chiffrement"
+          },
+          "duplicating": "duplication en cours",
+          "converting": "conversion en cours"
+        },
+        "encrypted": {
+          "decrypting": "Déchiffrement…",
+          "converting": "Préparation de l'éditeur…",
+          "loading_editor": "Chargement de l'éditeur…",
+          "syncing_history": "Synchronisation de l'état collaboratif…",
+          "stale_resyncing": "Reconnexion après une déconnexion prolongée — récupération du document…",
+          "downloading": "Téléchargement…",
+          "download_to_inspect": "Télécharger le fichier",
+          "editor_error": "Échec du chargement de l'éditeur",
+          "remove_encryption": "Retirer le chiffrement",
+          "no_keys_headline": "Clés de chiffrement requises",
+          "no_keys_body": "Vous n'avez pas encore configuré votre paire de clés de chiffrement. Générez-les ou restaurez-les depuis le menu de votre profil, puis rouvrez ce document.",
+          "relay_failed": "Collaboration indisponible",
+          "conversion_hint_title": "Pourquoi cela se produit-il ?",
+          "conversion_odf_body": "Les documents chiffrés sont ouverts avec un éditeur léger basé sur le navigateur qui ne prend pas en charge toutes les fonctionnalités disponibles en mode non chiffré. Les éléments SmartArt sont connus pour empêcher les fichiers ODF (.odt, .ods, .odp) d'être chargés dans ce mode.",
+          "conversion_odf_actions": "Vous pouvez télécharger le fichier pour en supprimer les éléments SmartArt, puis le re-téléverser. Vous pouvez aussi retirer le chiffrement de ce document pour l'ouvrir avec l'éditeur complet. Si le problème persiste après avoir supprimé les SmartArt, contactez l'équipe technique pour enquête.",
+          "conversion_odf_no_edit": "Veuillez contacter le propriétaire du document ou un utilisateur disposant des droits d'édition pour qu'il supprime les éléments SmartArt ou retire le chiffrement du fichier. Si le problème persiste après suppression des SmartArt, contactez l'équipe technique pour enquête.",
+          "conversion_unexpected": "Cette erreur est inattendue pour ce format de fichier. Vous pouvez télécharger le fichier pour l'inspecter, ou essayer de retirer le chiffrement — l'éditeur complet pourra peut-être l'ouvrir. Si cela fonctionne, contactez l'équipe technique pour qu'elle enquête sur la raison de l'échec de l'éditeur chiffré.",
+          "conversion_unexpected_no_edit": "Veuillez contacter le propriétaire du document ou un utilisateur disposant des droits d'édition pour enquêter.",
+          "save_error_fatal_title": "Échec de l'enregistrement — veuillez contacter le support",
+          "save_error_fatal_body": "Le document contient du contenu que nous ne pouvons pas sérialiser dans le format de stockage (souvent un graphique). Vos modifications récentes sont visibles mais non enregistrées. Veuillez annuler la dernière modification ou contacter le support. Détails : ",
+          "save_error_transient_title": "Erreur de synchronisation — l'enregistrement sera réessayé",
+          "save_error_transient_body": "Le dernier enregistrement n'a pas pu être téléversé. Détails : ",
+          "save_error_retry": "Réessayer maintenant",
+          "save_error_retrying": "Nouvelle tentative…",
+          "oo_crashed_title": "Erreur de synchronisation",
+          "oo_crashed_body": "Une erreur est survenue lors de la synchronisation avec les autres participants. Comme le document est chiffré de bout en bout, nous ne pouvons pas toujours réconcilier parfaitement les modifications. Veuillez recharger l'éditeur pour récupérer le dernier état enregistré.",
+          "oo_crashed_waiting": "En attente de l'enregistrement par un autre participant…",
+          "oo_crashed_reload": "Recharger l'éditeur",
+          "pending_self": {
+            "title": "En attente d'accès",
+            "body_with_keys": "Ce fichier a été chiffré avant que vous activiez le chiffrement, sa clé n'a donc pas pu vous être partagée à ce moment-là. Vous aurez accès la prochaine fois que le propriétaire du fichier l'ouvrira.",
+            "body_without_keys": "Ce fichier a été chiffré avant que vous activiez le chiffrement, sa clé n'a donc pas pu vous être partagée. Activez le chiffrement sur votre compte : vous aurez accès la prochaine fois que le propriétaire du fichier l'ouvrira."
+          },
+          "decryption_failure": {
+            "key_unavailable": {
+              "title": "Ce fichier a été partagé avec une ancienne clé",
+              "body": "Cette clé n'est plus sur votre compte, sans doute parce que vous avez réinitialisé votre chiffrement. Demandez au propriétaire du fichier de vous retirer de ses membres puis de vous ajouter à nouveau."
+            },
+            "key_mismatch": {
+              "title": "Ce fichier a été chiffré avec une autre clé",
+              "body": "Votre clé de chiffrement actuelle ne permet pas de l'ouvrir. Demandez au propriétaire du fichier de vous retirer de ses membres puis de vous ajouter à nouveau."
+            },
+            "content_integrity": {
+              "title": "Ce fichier ne peut pas être déchiffré",
+              "body": "Votre clé est la bonne, mais le contenu enregistré est endommagé ou a été modifié : il n'est pas fiable. Contactez le propriétaire de ce fichier ou votre support."
+            },
+            "unknown": {
+              "title": "Ce fichier n'a pas pu être déchiffré",
+              "body": "Une erreur est survenue lors du déchiffrement de ce fichier. Réessayez."
+            }
           }
         }
+      },
+      "anonymous_cta": {
+        "try_out": "Essayer maintenant",
+        "login": "Se connecter"
+      },
+      "my_files_cta": {
+        "my_files": "Mes fichiers"
+      },
+      "anonymous_dropdown_menu": {
+        "copy_link": "Copier le lien",
+        "languages": "Langue"
       },
       "time": {
         "years_ago_one": "il y a {{count}} an",
@@ -1159,6 +1594,27 @@
           "app_name": "Mise à jour de Fichiers",
           "see_whats_new": "Voir les nouveautés"
         },
+        "v0_16_0": {
+          "main_title": "Nouveautés",
+          "steps": {
+            "0": {
+              "title": "Colonnes personnalisables",
+              "description": "Choisissez les informations affichées dans vos colonnes : date de modification, date de création, auteur, type de fichier ou taille."
+            },
+            "1": {
+              "title": "Tri par colonne",
+              "description": "Triez vos documents par date de création, taille, type… Un clic sur le bouton de tri suffit."
+            },
+            "2": {
+              "title": "Duplication",
+              "description": "Dupliquez n'importe quel document en un clic."
+            },
+            "3": {
+              "title": "Lecteur PDF",
+              "description": "Ouvrez vos PDF directement dans Fichiers, grâce à un nouveau lecteur intégré."
+            }
+          }
+        },
         "v0_13_0": {
           "main_title": "Partages avancés",
           "steps": {
@@ -1176,14 +1632,123 @@
             }
           }
         }
+      },
+      "user_reconciliation": {
+        "title": "Réconciliation de comptes",
+        "success": "Votre adresse e-mail a été confirmée. Pour finaliser la fusion de vos comptes, cliquez sur les liens de confirmation envoyés à toutes les adresses que vous avez fournies.",
+        "error": "Une erreur s'est produite lors de la validation de l'e-mail."
+      },
+      "encryption": {
+        "encrypt_modal": {
+          "title_folder": "Chiffrer le dossier « {{title}} »",
+          "title_file": "Chiffrer le fichier « {{title}} »",
+          "confirm": "Chiffrer",
+          "description_folder": "Le dossier et tout son contenu seront chiffrés de bout en bout. Seules les personnes avec qui vous le partagez pourront y accéder.",
+          "large_set": "{{count}} éléments dans ce dossier. La progression par élément n'est pas affichée pour les opérations volumineuses — voir le résumé ci-dessus.",
+          "large_set_failures": "{{count}} en échec.",
+          "description_file": "Le fichier sera chiffré de bout en bout. Seules les personnes avec qui vous le partagez pourront y accéder.",
+          "pending_users_one": "{{count}} personne n'a pas encore activé le chiffrement. Elle sera ajoutée en attente et aura accès dès qu'elle l'aura activé.",
+          "pending_users_many": "{{count}} personnes n'ont pas encore activé le chiffrement. Elles seront ajoutées en attente et auront accès dès qu'elles l'auront activé.",
+          "pending_users_other": "{{count}} personnes n'ont pas encore activé le chiffrement. Elles seront ajoutées en attente et auront accès dès qu'elles l'auront activé."
+        },
+        "errors": {
+          "self_missing_key": "Vous devez terminer votre configuration du chiffrement avant de chiffrer cet élément.",
+          "no_keys_at_all": "Aucun utilisateur ayant accès à cet élément n'a terminé sa configuration du chiffrement.",
+          "not_restricted": "L'élément doit avoir un accès restreint (pas de lien public ou authentifié).",
+          "no_accesses": "Aucun utilisateur n'a accès à l'élément racine.",
+          "nothing_to_encrypt_file": "Ce fichier est déjà chiffré.",
+          "nothing_to_decrypt_file": "Ce fichier est déjà en clair.",
+          "subtree_mutated": "Le contenu du dossier a changé pendant l'opération ({{added}} ajoutés, {{removed}} supprimés)."
+        },
+        "missing_keys": {
+          "title": "Activer le chiffrement sur cet appareil",
+          "body": "Les clés de chiffrement sont stockées sur chaque appareil. Pour continuer ici, restaurez vos clés depuis un autre appareil ou votre phrase de récupération, ou activez le chiffrement si vous ne l'avez jamais fait.",
+          "viewer_body": "Ce fichier est chiffré. Vous devez activer le chiffrement sur cet appareil pour l'ouvrir.",
+          "set_up": "Activer le chiffrement",
+          "cancel": "Plus tard",
+          "viewer_title": "Fichier chiffré"
+        },
+        "service_unavailable": {
+          "title": "Service de chiffrement indisponible",
+          "body": "Le service de chiffrement n'a pas pu être chargé. Vérifiez votre connexion et réessayez.",
+          "viewer_body": "Ce fichier est chiffré et le service de chiffrement n'a pas pu être chargé. Vérifiez votre connexion et réessayez.",
+          "retry": "Réessayer",
+          "close": "Fermer"
+        },
+        "not_root_modal": {
+          "title": "Le chiffrement ne peut pas être retiré ici",
+          "body": "« {{title}} » se trouve à l'intérieur d'un dossier chiffré. Le chiffrement ne peut être retiré que depuis le dossier racine où il a été appliqué — ce qui déchiffrera également tous les fichiers qu'il contient.",
+          "root_path": "Dossier racine :"
+        },
+        "remove_modal": {
+          "title_folder": "Retirer le chiffrement du dossier « {{title}} »",
+          "title_file": "Retirer le chiffrement du fichier « {{title}} »",
+          "confirm": "Retirer le chiffrement",
+          "description": "Le contenu sera déchiffré et stocké en clair sur le serveur.",
+          "large_set": "{{count}} éléments dans ce dossier. La progression par élément n'est pas affichée pour les opérations volumineuses — voir le résumé ci-dessus."
+        },
+        "row": {
+          "already_encrypted": "Déjà chiffré",
+          "not_encrypted": "Non chiffré"
+        },
+        "summary": {
+          "discovering": "Découverte des fichiers…",
+          "validating": "Validation…",
+          "ready": "{{total}} élément(s) à traiter, {{skipped}} ignoré(s)",
+          "encrypting": "Chiffrement",
+          "decrypting": "Déchiffrement",
+          "committing": "Finalisation…",
+          "success_encrypt": "{{n}} élément(s) chiffré(s)",
+          "success_decrypt": "{{n}} élément(s) déchiffré(s)",
+          "skipped_short": "{{n}} ignoré(s)",
+          "failed": "Échec — {{n}} élément(s) en erreur, aucun changement appliqué",
+          "failed_generic": "Échec de l'opération"
+        },
+        "host_modal": {
+          "label": "Chiffrement"
+        },
+        "user_menu": {
+          "settings": "Paramètres de chiffrement",
+          "enable": "Activer le chiffrement"
+        }
+      },
+      "file_preview": {
+        "unsupported": {
+          "heic_title": "Les fichiers HEIC ne sont pas encore supportés pour la prévisualisation."
+        }
       }
     }
   },
-  "nl": {
+  "nl-nl": {
     "translation": {
       "entitlements": {
         "can_upload": {
           "cannot_upload": "U heeft niet de benodigde rechten om bestanden te uploaden."
+        },
+        "disclaimers": {
+          "close": "OK",
+          "cannot_upload": {
+            "title": "Uploaden is niet beschikbaar",
+            "user_quota_exceeded": {
+              "description": "U kunt geen documenten meer toevoegen, uw persoonlijke quotum is bereikt. Neem contact op met uw beheerder."
+            },
+            "user_override_quota_exceeded": {
+              "description": "U kunt geen documenten meer toevoegen, uw persoonlijke opslaglimiet is bereikt. Neem contact op met uw beheerder."
+            },
+            "organization_quota_exceeded": {
+              "description": "U kunt geen documenten meer toevoegen, het quotum van uw organisatie is bereikt. Neem contact op met uw beheerder."
+            },
+            "no_organization": {
+              "description": "Uw account is niet gekoppeld aan een organisatie, dus u kunt nog geen bestanden uploaden. Neem contact op met uw beheerder voor toegang."
+            },
+            "not_activated": {
+              "description": "Het uploaden van bestanden is nog niet geactiveerd voor uw organisatie. Neem contact op met uw beheerder om dit in te schakelen."
+            },
+            "potential_operators": {
+              "description": "Hier is de lijst van potentiële operators voor u, registreer u op hun website voor toegang.",
+              "link": "Registreren"
+            }
+          }
         }
       },
       "401": {
@@ -1193,6 +1758,32 @@
       "403": {
         "title": "U beschikt niet over de benodigde rechten om dit bestand te openen.",
         "button": "Home"
+      },
+      "settings_modal": {
+        "title": "Instellingen",
+        "tabs": {
+          "storage": {
+            "title": "Opslag"
+          }
+        }
+      },
+      "quota": {
+        "gauge": {
+          "exceeded_locked": {
+            "title": "Organisatiequotum overschreden",
+            "label": "Neem contact op met een beheerder om het quotum te verhogen",
+            "reason": {
+              "organization_quota_exceeded": {
+                "description": "Org. quotum overschreden"
+              }
+            }
+          },
+          "error": {
+            "title": "Quotafout",
+            "label": "Neem contact op met de support om de fout op te lossen",
+            "tooltip": "Fout: {{error}}"
+          }
+        }
       },
       "share_modal": {
         "options": {
@@ -1213,6 +1804,17 @@
             "inherited_edit": "Herediteerd. Om de rol te verlagen of het toegang te verwijderen, bewerkt u",
             "parent_folder": "de bovenliggende map."
           }
+        },
+        "verify_identity": "Verify identity",
+        "pending_encryption": {
+          "accept": "Accept",
+          "accepting": "Accepting…",
+          "no_public_key": "This user still hasn't completed their encryption onboarding.",
+          "section_title": "Action needed",
+          "waiting_hint": "Members who have not enabled encryption yet get access once they do.",
+          "encryption_enabled": "Encryption enabled",
+          "waiting_chip": "Waiting for encryption",
+          "waiting_chip_hint": "Waiting for them to enable encryption"
         }
       },
       "file_download_modal": {
@@ -1232,29 +1834,11 @@
         "download": "Toch downloaden",
         "cancel": "Annuleren"
       },
-      "file_preview": {
-        "suspicious": {
-          "title": "Verdacht bestand",
-          "description": "Dit bestand is verdacht. Het is alleen voor jou zichtbaar.",
-          "download": "Bestand downloaden"
-        },
-        "error": {
-          "title": "Er is een fout opgetreden tijdens het laden van het document.",
-          "description": "Probeer het later opnieuw."
-        },
-        "wopi": {
-          "loading": "Document laden...",
-          "error": "Er is een fout opgetreden tijdens het laden van het document."
-        },
-        "unsupported": {
-          "title": "Bestandstype niet ondersteund voor voorbeeld",
-          "description": "Om het bestand te bekijken, downloadt u het naar uw apparaat.",
-          "download": "Bestand downloaden",
-          "heic_title": "HEIC bestanden worden nog niet ondersteund voor voorbeeld."
-        }
-      },
       "common": {
-        "cancel": "Annuleren"
+        "cancel": "Annuleren",
+        "close": "Close",
+        "retry": "Retry",
+        "got_it": "Got it"
       },
       "clipboard": {
         "success": "Gekopieërd naar klembord",
@@ -1333,7 +1917,8 @@
       "explorer": {
         "breadcrumbs": {
           "spaces": "Werkruimten",
-          "all_folders": "Alle mappen"
+          "all_folders": "Alle mappen",
+          "encrypted": "Encrypted folder"
         },
         "modal": {
           "move": {
@@ -1342,7 +1927,14 @@
             "move_to_root": "Verplaats naar root",
             "aria_label": "Map verplaatsen modal",
             "description_one_item": "Kies de nieuwe locatie voor <strong>{{name}}</strong>",
-            "description_multiple_items": "Kies de nieuwe locatie voor de <strong>{{count}}</strong> geselecteerde elementen"
+            "description_multiple_items": "Kies de nieuwe locatie voor de <strong>{{count}}</strong> geselecteerde elementen",
+            "errors": {
+              "user_quota_exceeded": "U kunt geen documenten meer naar de root verplaatsen, uw persoonlijke quotum is bereikt. Neem contact op met uw beheerder.",
+              "user_override_quota_exceeded": "U kunt geen documenten meer naar de root verplaatsen, uw persoonlijke opslaglimiet is bereikt. Neem contact op met uw beheerder.",
+              "organization_quota_exceeded": "U kunt geen documenten meer naar de root verplaatsen, het quotum van uw organisatie is bereikt. Neem contact op met uw beheerder.",
+              "no_organization": "Uw account is niet gekoppeld aan een organisatie, dus u kunt nog geen documenten naar de root verplaatsen. Neem contact op met uw beheerder voor toegang.",
+              "not_activated": "Het uploaden van bestanden is nog niet geactiveerd voor uw organisatie, dus u kunt geen documenten naar de root verplaatsen. Neem contact op met uw beheerder om dit in te schakelen."
+            }
           }
         },
         "drag_overlay": {
@@ -1373,11 +1965,35 @@
           "created_at": "Gecreëerd op",
           "size": "Grootte",
           "created_by": "Gecreëerd door",
-          "description": "Beschrijving"
+          "description": "Beschrijving",
+          "encrypted": "Encrypted",
+          "security": "Security"
         },
         "grid": {
           "name": "Naam",
           "last_update": "Laatste update",
+          "columns": {
+            "last_modified": "Laatst gewijzigd",
+            "created": "Aangemaakt",
+            "created_by": "Aangemaakt door",
+            "file_type": "Bestandstype",
+            "file_size": "Bestandsgrootte",
+            "folder": "Map",
+            "default_suffix": "(standaard)"
+          },
+          "size_units": {
+            "B": "B",
+            "KB": "KB",
+            "MB": "MB",
+            "GB": "GB",
+            "TB": "TB",
+            "PB": "PB"
+          },
+          "sort": {
+            "ascending": "Oplopend sorteren",
+            "descending": "Aflopend sorteren",
+            "reset": "Sortering resetten"
+          },
           "empty": {
             "default": "Geen map gevonden in de geselecteerde map",
             "caption": {
@@ -1409,6 +2025,15 @@
           }
         },
         "filters": {
+          "location": {
+            "label": "Locatie",
+            "options": {
+              "my_files": "Mijn bestanden",
+              "shared_with_me": "Gedeeld met mij",
+              "starred": "Favorieten",
+              "trashbin": "Prullenbak"
+            }
+          },
           "scopes": {
             "label": "Locatie",
             "options": {
@@ -1424,6 +2049,39 @@
               "folder": "Map",
               "reset": "Reset"
             }
+          },
+          "category": {
+            "label": "Type",
+            "options": {
+              "doc": "Tekstdocument",
+              "powerpoint": "Presentatie",
+              "calc": "Spreadsheet",
+              "pdf": "PDF",
+              "image": "Afbeelding",
+              "video": "Video",
+              "audio": "Audio",
+              "archive": "Archief",
+              "other": "Overig"
+            }
+          },
+          "contact": {
+            "label": "Gedeeld met",
+            "placeholder": "Zoek een naam",
+            "empty": "Geen contacten gevonden",
+            "reset": "Opnieuw instellen"
+          },
+          "modified": {
+            "label": "Gewijzigd",
+            "options": {
+              "today": "Vandaag",
+              "last_7_days": "Laatste 7 dagen",
+              "last_30_days": "Laatste 30 dagen",
+              "this_year": "Dit jaar",
+              "more_than_a_year": "Meer dan een jaar geleden",
+              "custom": "Aangepaste periode"
+            },
+            "start": "Begin",
+            "end": "Einde"
           },
           "workspace": {
             "label": "Werkruimte"
@@ -1455,6 +2113,9 @@
               "settings_workspace": "Werkruimte instellingen",
               "settings_folder": "Map instellingen",
               "delete_item": "Verwijder",
+              "delete_workspace": "Ruimte verwijderen",
+              "delete_folder": "Map verwijderen",
+              "delete_file": "Bestand verwijderen",
               "share": "Deel",
               "share_view": "Bekijk delen"
             },
@@ -1484,9 +2145,13 @@
           "title": "Prullenbak",
           "description": "Automatisch verwijderen na 30 dagen",
           "navigate": {
-            "modal": {
+            "modal_folder": {
               "title": "Deze map bevindt zich in de prullenbak",
               "description": "Om deze map weer te geven, moet u deze eerst herstellen."
+            },
+            "modal_file": {
+              "title": "Dit bestand bevindt zich in de prullenbak",
+              "description": "Om dit bestand weer te geven, moet u het eerst herstellen."
             }
           },
           "hard_delete": {
@@ -1583,6 +2248,7 @@
             "toast": "Zet uw bestanden hier neer om ze over te zetten in {{title}}",
             "toast_no_rights": "U beschikt niet over de benodigde rechten om bestanden over te dragen in {{title}}",
             "file_too_large": "Het bestand \"{{name}}\" is te groot. De maximale toegestane grootte is {{maxSize}}.",
+            "folders_created": "Alle mappen zijn succesvol aangemaakt.",
             "steps": {
               "preparing": "Voorbereiding van de overdracht...",
               "create_folders": "Creatie van mappen in progress..."
@@ -1591,7 +2257,36 @@
               "description_one": "{{count}} bestand wordt verplaatst",
               "description_other": "{{count}} bestanden wordt verplaatst",
               "description_done_one": "{{count}} bestand verplaatst",
-              "description_done_other": "{{count}} bestanden verplaatst"
+              "description_done_other": "{{count}} bestanden verplaatst",
+              "error": "Er is een fout opgetreden",
+              "error_count_one": "{{count}} bestand kon niet worden geüpload",
+              "error_count_other": "{{count}} bestanden konden niet worden geüpload",
+              "error_reasons": {
+                "file_size_exceeded": "Het bestand overschrijdt de maximale toegestane grootte.",
+                "file_type_not_allowed": "Dit bestandstype is niet toegestaan.",
+                "item_create_file_extension_not_allowed": "Deze bestandsextensie is niet toegestaan.",
+                "file_too_large": "Het bestand overschrijdt de maximale toegestane grootte.",
+                "user_quota_exceeded": "U kunt geen documenten meer toevoegen, uw persoonlijke quotum is bereikt. Neem contact op met uw beheerder.",
+                "user_override_quota_exceeded": "U kunt geen documenten meer toevoegen, uw persoonlijke opslaglimiet is bereikt. Neem contact op met uw beheerder.",
+                "organization_quota_exceeded": "U kunt geen documenten meer toevoegen, het quotum van uw organisatie is bereikt. Neem contact op met uw beheerder.",
+                "no_organization": "Uw account is niet gekoppeld aan een organisatie, dus u kunt nog geen bestanden uploaden. Neem contact op met uw beheerder voor toegang.",
+                "not_activated": "Het uploaden van bestanden is nog niet geactiveerd voor uw organisatie. Neem contact op met uw beheerder om dit in te schakelen.",
+                "unknown": "Er is een onverwachte fout opgetreden."
+              },
+              "error_short": {
+                "file_too_large": "Bestand te groot",
+                "user_quota_exceeded": "Quotum bereikt",
+                "user_override_quota_exceeded": "Quotum bereikt",
+                "organization_quota_exceeded": "Quotum bereikt",
+                "no_organization": "Uploaden niet toegestaan",
+                "not_activated": "Uploaden niet toegestaan"
+              }
+            },
+            "cancel_modal": {
+              "title": "Upload verlaten?",
+              "description": "Onvoltooide bestanden gaan verloren.",
+              "keep": "Doorgaan met uploaden",
+              "confirm": "Verlaten en annuleren"
             }
           },
           "delete": {
@@ -1605,9 +2300,15 @@
             "toast_one": "Item permanent verwijderd",
             "toast_other": "{{count}} items permanent verwijderd"
           },
+          "restore": {
+            "toast_one": "Item hersteld",
+            "toast_other": "{{count}} items hersteld"
+          },
           "move": {
             "toast_one": "{{count}} item verplaatst",
-            "toast_other": "{{count}} items verplaatst"
+            "toast_other": "{{count}} items verplaatst",
+            "toast_error_one": "Er is een fout opgetreden bij het verplaatsen van het item.",
+            "toast_error_other": "Er is een fout opgetreden bij het verplaatsen van de items."
           },
           "share": {
             "modal": {
@@ -1621,6 +2322,16 @@
               "placeholder": "Voor een nieuwe naam in",
               "cancel": "Annuleren",
               "submit": "Hernoem"
+            }
+          },
+          "convert": {
+            "modal": {
+              "title": "Converteren om dit bestand te openen",
+              "content": "Dit bestand moet worden geconverteerd om te kunnen bewerken. Er wordt een kopie gemaakt: uw originele bestand blijft ongewijzigd.",
+              "cancel": "Annuleren",
+              "confirm": "Converteren",
+              "error": "Conversie mislukt. Probeer het opnieuw.",
+              "analyzing_notice": "Dit bestand wordt nog gecontroleerd op malware. De conversie start automatisch zodra de analyse is voltooid."
             }
           }
         },
@@ -1636,9 +2347,79 @@
             "rename": "Hernoem",
             "favorite": "Favoriet",
             "unfavorite": "Verwijder uit favorieten",
-            "delete": "Verwijder"
+            "duplicate": "Dupliceer",
+            "duplicate_error": "Er is een fout opgetreden bij het dupliceren.",
+            "delete": "Verwijder",
+            "encrypt": "Encrypt",
+            "remove_encryption": "Remove encryption"
+          },
+          "duplicating": "duplicatie bezig",
+          "converting": "conversie bezig"
+        },
+        "encrypted": {
+          "decrypting": "Decrypting...",
+          "converting": "Preparing editor...",
+          "loading_editor": "Loading editor...",
+          "syncing_history": "Syncing collaborative state...",
+          "stale_resyncing": "Reconnecting after long disconnect — refetching document...",
+          "downloading": "Downloading...",
+          "download_to_inspect": "Download file",
+          "editor_error": "Failed to load editor",
+          "remove_encryption": "Remove encryption",
+          "no_keys_headline": "Encryption keys required",
+          "no_keys_body": "You don't have an encryption key pair set up for your account yet. Generate or restore your encryption keys from your profile menu, then reopen this document.",
+          "relay_failed": "Collaboration unavailable",
+          "conversion_hint_title": "Why does this happen?",
+          "conversion_odf_body": "Encrypted documents are opened with a lightweight browser-based editor that does not support all features available in non-encrypted mode. SmartArt elements and some shapes (e.g. Frame, Snip diagonal corner rectangle, math operators, most figured arrows, trapezoid, parallelogram, plus) are known to prevent ODF files (.odt, .ods, .odp) from loading in this mode.",
+          "conversion_odf_actions": "You can download the file to remove the SmartArt or unsupported shapes, then re-upload it. Alternatively, you can remove encryption from this document so it opens with the full-featured editor. If the issue persists after the cleanup, please contact the technical team to investigate.",
+          "conversion_odf_no_edit": "Please contact the owner of this document or a user with editing rights so they can remove the SmartArt, unsupported shapes, or encryption from the file. If the issue persists after the cleanup, please contact the technical team to investigate.",
+          "conversion_unexpected": "This error is unexpected for this file format. You can download the file to inspect it, or try removing encryption — the full-featured editor may be able to open it. If removing encryption works, please contact the technical team so they can investigate why the encrypted editor failed.",
+          "conversion_unexpected_no_edit": "Please contact the owner of this document or a user with editing rights to investigate.",
+          "save_error_fatal_title": "Saving failed — please contact support",
+          "save_error_fatal_body": "The document contains content we cannot serialize to the on-disk format (often a chart). Your recent edits are visible but unsaved. Please undo the last change or contact support. Details: ",
+          "save_error_transient_title": "Sync error — save will be retried",
+          "save_error_transient_body": "We could not upload the latest save. Details: ",
+          "save_error_retry": "Retry now",
+          "save_error_retrying": "Retrying…",
+          "oo_crashed_title": "Synchronization error",
+          "oo_crashed_body": "An error occurred while synchronizing with other peers. Because the document is end-to-end encrypted, we cannot always reconcile changes perfectly. Please reload the editor to fetch the latest saved state.",
+          "oo_crashed_waiting": "Waiting for peers to save…",
+          "oo_crashed_reload": "Reload editor",
+          "pending_self": {
+            "title": "Waiting for access",
+            "body_with_keys": "This file was encrypted before you enabled encryption, so its key could not be shared with you then. You will get access the next time the file owner opens it.",
+            "body_without_keys": "This file was encrypted before you enabled encryption, so its key could not be shared with you. Enable encryption on your account: you will get access the next time the file owner opens it."
+          },
+          "decryption_failure": {
+            "key_unavailable": {
+              "title": "This file was shared with a previous key",
+              "body": "That key is no longer on your account, most likely because you reset your encryption. Ask the file owner to remove you from its members and add you again."
+            },
+            "key_mismatch": {
+              "title": "This file was encrypted with a different key",
+              "body": "Your current encryption key cannot open it. Ask the file owner to remove you from its members and add you again."
+            },
+            "content_integrity": {
+              "title": "This file cannot be decrypted",
+              "body": "Your key is correct, but the stored content is damaged or was altered, so it cannot be trusted. Contact the owner of this file or your support."
+            },
+            "unknown": {
+              "title": "This file could not be decrypted",
+              "body": "Something went wrong while decrypting this file. Try again."
+            }
           }
         }
+      },
+      "anonymous_cta": {
+        "try_out": "Probeer het uit",
+        "login": "Inloggen"
+      },
+      "my_files_cta": {
+        "my_files": "Mijn bestanden"
+      },
+      "anonymous_dropdown_menu": {
+        "copy_link": "Kopieer link",
+        "languages": "Talen"
       },
       "time": {
         "years_ago_one": "{{count}} jaar geleden",
@@ -1658,6 +2439,8 @@
       "sdk": {
         "explorer": {
           "choose": "Kiezen",
+          "cancel": "Annuleren",
+          "picker_caption": "Selecteer een of meerdere bestanden",
           "picker_label_zero": "Geen bestanden geselecteerd",
           "picker_label_one": "{{count}} bestand geselecteerd",
           "picker_label_other": "{{count}} bestanden geselecteerd",
@@ -1670,6 +2453,27 @@
         "labels": {
           "app_name": "Wat is er nieuw",
           "see_whats_new": "Zie wat er nieuw is"
+        },
+        "v0_16_0": {
+          "main_title": "Wat is er nieuw",
+          "steps": {
+            "0": {
+              "title": "Aanpasbare kolommen",
+              "description": "Kies welke informatie in uw kolommen wordt weergegeven: laatst gewijzigd, aanmaakdatum, auteur, bestandstype of grootte."
+            },
+            "1": {
+              "title": "Sorteren op kolom",
+              "description": "Sorteer uw documenten op aanmaakdatum, grootte, type... Klik gewoon op de sorteerknop."
+            },
+            "2": {
+              "title": "Duplicatie",
+              "description": "Dupliceer elk document met één klik."
+            },
+            "3": {
+              "title": "PDF-lezer",
+              "description": "Open uw PDF's rechtstreeks in Fichiers, met een nieuwe ingebouwde lezer."
+            }
+          }
         },
         "v0_13_0": {
           "main_title": "Wat is er nieuw",
@@ -1687,6 +2491,90 @@
               "description": "Verplaats uw bestanden en mappen gemakkelijker met een nieuw \"Verplaatsen\" venster, ook op mobiel."
             }
           }
+        }
+      },
+      "user_reconciliation": {
+        "title": "Accountreconciliatie",
+        "success": "Uw e-mailadres is bevestigd. Klik op de bevestigingslinks die naar alle door u opgegeven adressen zijn verzonden om het samenvoegen van uw accounts te voltooien.",
+        "error": "Er is een fout opgetreden tijdens de e-mailvalidatie."
+      },
+      "encryption": {
+        "encrypt_modal": {
+          "title_folder": "Encrypt folder \"{{title}}\"",
+          "title_file": "Encrypt file \"{{title}}\"",
+          "confirm": "Encrypt",
+          "description_folder": "The folder and everything inside will be encrypted end-to-end. Only people you share it with will be able to access its contents.",
+          "large_set": "{{count}} items in this folder. Per-item progress is hidden for large jobs — see the summary above.",
+          "large_set_failures": "{{count}} failed.",
+          "description_file": "The file will be encrypted end-to-end. Only people you share it with will be able to access its contents.",
+          "pending_users_one": "{{count}} collaborator has not enabled encryption yet. They will be added as pending and get access once they enable it.",
+          "pending_users_many": "{{count}} collaborators have not enabled encryption yet. They will be added as pending and get access once they enable it.",
+          "pending_users_other": "{{count}} collaborators have not enabled encryption yet. They will be added as pending and get access once they enable it."
+        },
+        "errors": {
+          "self_missing_key": "You need to complete your encryption onboarding before encrypting this item.",
+          "no_keys_at_all": "Nobody with access to this item has completed encryption onboarding.",
+          "not_restricted": "The item must have restricted access (no public or authenticated link).",
+          "no_accesses": "No users with access found on the root item.",
+          "nothing_to_encrypt_file": "This file is already encrypted.",
+          "nothing_to_decrypt_file": "This file is already plaintext.",
+          "subtree_mutated": "The folder contents changed during the operation ({{added}} added, {{removed}} removed)."
+        },
+        "missing_keys": {
+          "title": "Enable encryption on this device",
+          "body": "Encryption keys are stored on each device. To continue here, restore your existing keys from another device or your recovery phrase, or enable encryption if you never did.",
+          "viewer_body": "This file is encrypted. You must enable encryption on this device to open it.",
+          "set_up": "Enable encryption",
+          "cancel": "Not now",
+          "viewer_title": "Encrypted file"
+        },
+        "service_unavailable": {
+          "title": "Encryption service unavailable",
+          "body": "The encryption service could not be loaded. Check your connection and try again.",
+          "viewer_body": "This file is encrypted and the encryption service could not be loaded. Check your connection and try again.",
+          "retry": "Retry",
+          "close": "Close"
+        },
+        "not_root_modal": {
+          "title": "Encryption cannot be removed here",
+          "body": "\"{{title}}\" is inside an encrypted folder. Encryption can only be removed from the top folder where it was applied — which will also decrypt every file inside.",
+          "root_path": "Top folder:"
+        },
+        "remove_modal": {
+          "title_folder": "Remove encryption from folder \"{{title}}\"",
+          "title_file": "Remove encryption from file \"{{title}}\"",
+          "confirm": "Remove encryption",
+          "description": "The content will be decrypted and stored in plain text on the server.",
+          "large_set": "{{count}} items in this folder. Per-item progress is hidden for large jobs — see the summary above."
+        },
+        "row": {
+          "already_encrypted": "Already encrypted",
+          "not_encrypted": "Not encrypted"
+        },
+        "summary": {
+          "discovering": "Discovering files…",
+          "validating": "Validating…",
+          "ready": "{{total}} item(s) to process, {{skipped}} skipped",
+          "encrypting": "Encrypting",
+          "decrypting": "Decrypting",
+          "committing": "Finalizing…",
+          "success_encrypt": "{{n}} item(s) encrypted",
+          "success_decrypt": "{{n}} item(s) decrypted",
+          "skipped_short": "{{n}} skipped",
+          "failed": "Failed — {{n}} item(s) in error, no changes applied",
+          "failed_generic": "Operation failed"
+        },
+        "host_modal": {
+          "label": "Encryption"
+        },
+        "user_menu": {
+          "settings": "Encryption settings",
+          "enable": "Enable encryption"
+        }
+      },
+      "file_preview": {
+        "unsupported": {
+          "heic_title": "HEIC bestanden worden nog niet ondersteund voor voorbeeld."
         }
       }
     }

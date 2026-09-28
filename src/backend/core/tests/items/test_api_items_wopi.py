@@ -40,11 +40,14 @@ def configure_wopi_settings(valid_mimetype, valid_wopi_launch_url):
         {
             "mimetypes": {
                 valid_mimetype: {
-                    "url": valid_wopi_launch_url,
+                    "launch_url": valid_wopi_launch_url,
                     "client": "vendorA",
                 },
             },
             "extensions": {},
+            "vendorA": {
+                "proof_keys": {},
+            },
         },
     )
 
@@ -300,3 +303,27 @@ def test_api_items_wopi_authenticated_user_item_mimetype_not_supported():
         ],
         "type": "validation_error",
     }
+
+
+def test_api_items_wopi_refused_for_encrypted_item(valid_mimetype, settings):
+    """A WOPI client would only receive ciphertext: no session for an encrypted file."""
+    settings.WOPI_SRC_BASE_URL = "http://app-dev:8000"
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        type=models.ItemTypeChoices.FILE,
+        mimetype=valid_mimetype,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    client = APIClient()
+    client.force_login(user)
+    assert client.get(f"/api/v1.0/items/{item.id!s}/").json()["is_wopi_supported"] is True
+
+    item.is_encrypted = True
+    item.save()
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/wopi/")
+    assert response.status_code == 403
+    assert client.get(f"/api/v1.0/items/{item.id!s}/").json()["is_wopi_supported"] is False

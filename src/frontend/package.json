@@ -1,6 +1,6 @@
 {
   "name": "main",
-  "version": "0.15.0",
+  "version": "0.23.0",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -16,9 +16,12 @@
     "lint": "yarn workspace drive run lint",
     "build-theme": "yarn workspace drive build-theme"
   },
-  "resolutions": {},
+  "resolutions": {
+    "postcss": "8.5.26",
+    "sharp": "0.35.3"
+  },
   "devDependencies": {
-    "turbo": "2.6.1"
+    "turbo": "2.9.14"
   },
   "packageManager": "yarn@1.22.22"
 }

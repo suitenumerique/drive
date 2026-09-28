@@ -41,9 +41,10 @@ def test_api_items_trashbin_format(settings):
     client.force_login(user)
     now = timezone.now()
     other_users = factories.UserFactory.create_batch(3)
+    item_users = factories.UserFactory.create_batch(2)
     item = factories.ItemFactory(
         deleted_at=now,
-        users=factories.UserFactory.create_batch(2),
+        users=item_users,
         favorited_by=[user, *other_users],
         link_traces=other_users,
         update_upload_state=models.ItemUploadStateChoices.READY,
@@ -103,7 +104,15 @@ def test_api_items_trashbin_format(settings):
         "size": None,
         "description": None,
         "hard_delete_at": ((now + timedelta(days=30)).isoformat()),
+        "is_restricted": False,
+        "target": None,
         "is_wopi_supported": False,
+        "accesses_user_ids": sorted([user.sub, *(u.sub for u in item_users)]),
+        "encryption_public_key_version_for_user": None,
+        "is_encrypted": False,
+        "is_encryption_root": False,
+        "is_inside_encrypted_subtree": False,
+        "is_pending_encryption_for_user": False,
     }
 
 

@@ -1,7 +1,7 @@
 import { CellContext } from "@tanstack/react-table";
-import { Item } from "@/features/drivers/types";
-import { useState } from "react";
-import { Button } from "@gouvfr-lasuite/cunningham-react";
+import { Item, TRANSIENT_UPLOAD_STATES } from "@/features/drivers/types";
+import { memo, useState } from "react";
+import { Button } from "@gouvfr-lasuite/ui-components";
 import { Draggable } from "@/features/explorer/components/Draggable";
 import { useDisableDragGridItem } from "./hooks";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
@@ -10,7 +10,7 @@ import { useEmbeddedExplorerGirdContext } from "./EmbeddedExplorerGrid";
 
 export type EmbeddedExplorerGridActionsCellProps = CellContext<Item, unknown>;
 
-export const EmbeddedExplorerGridActionsCell = (
+const EmbeddedExplorerGridActionsCellComponent = (
   params: EmbeddedExplorerGridActionsCellProps,
 ) => {
   const item = params.row.original;
@@ -18,10 +18,12 @@ export const EmbeddedExplorerGridActionsCell = (
   const disableDrag = useDisableDragGridItem(item);
   const [isOpen, setIsOpen] = useState(false);
 
-  // Disable drag when any modal is open because it conflicts with the keyboard navigation
-
   const { setIsActionModalOpen, isActionModalOpen } =
     useEmbeddedExplorerGirdContext();
+
+  if (TRANSIENT_UPLOAD_STATES.includes(item.upload_state)) {
+    return null;
+  }
 
   const handleModalOpenChange = (value: boolean) => {
     setIsActionModalOpen(value);
@@ -60,3 +62,7 @@ export const EmbeddedExplorerGridActionsCell = (
     </div>
   );
 };
+
+export const EmbeddedExplorerGridActionsCell = memo(
+  EmbeddedExplorerGridActionsCellComponent,
+);

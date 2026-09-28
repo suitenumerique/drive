@@ -1,5 +1,5 @@
 import { Item, ItemUploadState } from "@/features/drivers/types";
-import { ModalSize, useModals } from "@gouvfr-lasuite/cunningham-react";
+import { ModalSize, useModals } from "@gouvfr-lasuite/ui-components";
 import { downloadFile } from "../utils";
 import { downloadDecryptedFile } from "./useDecryptedContent";
 import { useAuth } from "@/features/auth/Auth";
@@ -21,7 +21,7 @@ export const useDownloadItem = () => {
         <ToasterItem type="error">
           <span className="material-icons">error</span>
           <span>{t("file_download_modal.error.no_url_or_title")}</span>
-        </ToasterItem>
+        </ToasterItem>,
       );
       return;
     }
@@ -47,7 +47,6 @@ export const useDownloadItem = () => {
         : t("file_download_modal.analyzing.title");
       description = t("file_download_modal.description");
     }
-
 
     const triggerDownload = async () => {
       posthog.capture("file_download", {

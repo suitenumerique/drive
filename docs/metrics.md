@@ -12,6 +12,8 @@ You must provide an authorization header as follows:
 Authorization: Api-Key <key>
 ```
 
+You should also provide `account_type=user|organization` query parameter.
+
 ## Enabling
 
 By default, this route is not available. You need to set the setting `METRICS_ENABLED` to `True`.
@@ -69,9 +71,22 @@ The `storage_used` is, by default, the sum of file sizes created by the user, in
 
 ## Filtering
 
-You can filter this by using `account_id` query parameter like so:
+You can filter this by using `account_id_key` and `account_id_value` query parameter like so:
 
-`GET /external_api/v1.0/metrics/usage/?account_id=<uuid>`
+- `account_type` | `user` or `organization`
+- `account_id_key` | The key to filter on (`sub` or `email` for `account_type=user`). Required if `account_type=organization`, it could be any oidc stored claim.
+- `account_id_value` | The value to filter on. Required if `account_type=organization`.
+- `account_email` | This will soon be migrated to \_key \_value pattern, but still needed.
+
+Examples:
+
+```
+GET /external_api/v1.0/metrics/usage/?account_type=user
+GET /external_api/v1.0/metrics/usage/?account_type=user&account_id_key=sub&account_id_value=<sub value>
+GET /external_api/v1.0/metrics/usage/?account_type=user&account_email=<email>
+GET /external_api/v1.0/metrics/usage/?account_type=organization # Forbidden
+GET /external_api/v1.0/metrics/usage/?account_type=organization&account_id_key=siret&account_id_value=<siret value>
+```
 
 ## How to customize the storage used computation?
 
@@ -83,7 +98,7 @@ You can see the default implementation `CreatorStorageComputeBackend` as an exam
 
 For aggregation purposes, you might want to expose some OIDC claims from this route that your external tool will use.
 
-For instance, with the ANCT, the implementation needs to get access to the `siret` claim.
+For instance, with the deploy center, the implementation needs to get access to the `siret` claim.
 
 Simply customize the setting `METRICS_USER_CLAIMS_EXPOSED=your_claim1,your_claim2` and the response will look like this:
 
@@ -111,3 +126,34 @@ Simply customize the setting `METRICS_USER_CLAIMS_EXPOSED=your_claim1,your_claim
 ```
 
 🚨 Make sure the claims you want to expose are stored by using the `OIDC_STORE_CLAIMS` setting as well. Otherwise, it will not work. 🚨
+
+## Organization metrics
+
+It is possibe to fetch usage metric grouped by organization, do to so, provide `account_type=organization`, when using account_type organization it is required that you also provide `account_id_key=siret` and `account_id_value=1234...`.
+
+It will sum the storage_used by user that have the same "claims.siret".
+
+> You should mind to add `siret` into OIDC_STORE_CLAIMS so the siret are stored on user records.
+
+Example:
+
+```
+GET /external_api/v1.0/metrics/usage?account_type=organization&account_id_key=siret&account_id_value=12345678900001
+{
+    "count": 123,
+    "next": None,
+    "previous": None,
+    "results": [
+        {
+            "account": {
+                "type": "organization",
+            },
+            "siret": "12345678900001"
+            "metrics": {
+                "storage_used": 10000000,
+            },
+        },
+        ...
+    ],
+}
+```

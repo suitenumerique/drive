@@ -445,6 +445,10 @@ msgstr "Deutsch"
 #~ msgid "Templates"
 #~ msgstr "Vorlagen"
 
+#: wopi/conversion/services.py:86
+msgid "converted"
+msgstr "konvertiert"
+
 #~ msgid "Template/user relation"
 #~ msgstr "Vorlage/Benutzer-Beziehung"
 

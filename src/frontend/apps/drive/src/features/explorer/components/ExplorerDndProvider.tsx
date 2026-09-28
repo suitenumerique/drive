@@ -19,9 +19,12 @@ import {
 } from "./GlobalExplorerContext";
 import { Item, TreeItem } from "@/features/drivers/types";
 import { ExplorerDragOverlay } from "./tree/ExploreDragOverlay";
-import { TreeViewNodeTypeEnum, useTreeContext } from "@gouvfr-lasuite/ui-kit";
+import {
+  TreeViewNodeTypeEnum,
+  useTreeContext,
+  useModal,
+} from "@gouvfr-lasuite/ui-components";
 import { addItemsMovedToast } from "./toasts/addItemsMovedToast";
-import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { createContext, useContext, useState } from "react";
 import {
   ConfirmationMoveState,
@@ -29,6 +32,7 @@ import {
 } from "./tree/ExplorerTreeMoveConfirmationModal";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { useMutationCreateFavoriteItem } from "../hooks/useMutations";
+import { useSelectionCount, useSelectionStore } from "../stores/selectionStore";
 
 const activationConstraint = {
   distance: 20,
@@ -63,7 +67,9 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
   const [moveState, setMoveState] = useState<ConfirmationMoveState | undefined>(
     undefined,
   );
-  const { itemId, selectedItems, setSelectedItems } = useGlobalExplorer();
+  const { itemId } = useGlobalExplorer();
+  const selectionStore = useSelectionStore();
+  const setSelectedItems = selectionStore.setSelectedItems;
   const { mutateAsync: createFavoriteItem } = useMutationCreateFavoriteItem();
 
   const treeContext = useTreeContext<TreeItem>();
@@ -93,7 +99,7 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
       return;
     }
 
-    if (selectedItems.length > 0) {
+    if (selectionStore.getSelectedItems().length > 0) {
       return;
     }
 
@@ -101,28 +107,33 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
   };
 
   const handleMoveConfirmation = async (newParentId: string) => {
-    selectedItems
+    const currentSelected = selectionStore.getSelectedItems();
+    currentSelected
       .map((item) => item.id)
       .forEach((id) => {
         treeContext?.treeData.moveNode(id, newParentId, 0);
       });
 
     setOveredItemIds({});
-    const ids = selectedItems.map((item) => item.id);
-    await moveItems.mutateAsync(
-      {
-        ids: ids,
-        parentId: newParentId,
-        oldParentId: itemId,
-      },
-      {
-        onSuccess: () => {
-          addItemsMovedToast(ids.length);
-          // Reset the selected items after the move
-          setSelectedItems([]);
+    const ids = currentSelected.map((item) => item.id);
+    await moveItems
+      .mutateAsync(
+        {
+          ids: ids,
+          parentId: newParentId,
+          oldParentId: itemId,
         },
-      },
-    );
+        {
+          onSuccess: () => {
+            addItemsMovedToast(ids.length);
+            // Reset the selected items after the move
+            setSelectedItems([]);
+          },
+        },
+      )
+      .catch(() => {
+        // The error feedback is already handled by the mutation's onError.
+      });
   };
 
   const handleDragEnd = async ({ active, over }: DragEndEvent) => {
@@ -186,7 +197,7 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
         onDragEnd={handleDragEnd}
       >
         <DragOverlay dropAnimation={null}>
-          <ExplorerDragOverlay count={selectedItems.length} />
+          <SelectionCountDragOverlay />
         </DragOverlay>
         <DragItemContext.Provider
           value={{
@@ -198,8 +209,7 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
         </DragItemContext.Provider>
       </DndContext>
       {moveState && moveConfirmationModal.isOpen && (
-        <ExplorerTreeMoveConfirmationModal
-          itemsCount={selectedItems.length}
+        <ExplorerTreeMoveConfirmationModalWithCount
           isOpen={moveConfirmationModal.isOpen}
           onClose={() => {
             moveConfirmationModal.close();
@@ -215,6 +225,21 @@ export const ExplorerDndProvider = ({ children }: ExplorerDndProviderProps) => {
       )}
     </>
   );
+};
+
+const SelectionCountDragOverlay = () => {
+  const count = useSelectionCount();
+  return <ExplorerDragOverlay count={count} />;
+};
+
+const ExplorerTreeMoveConfirmationModalWithCount = (
+  props: Omit<
+    React.ComponentProps<typeof ExplorerTreeMoveConfirmationModal>,
+    "itemsCount"
+  >,
+) => {
+  const count = useSelectionCount();
+  return <ExplorerTreeMoveConfirmationModal {...props} itemsCount={count} />;
 };
 
 export const snapToTopLeft: Modifier = ({

@@ -1,17 +1,15 @@
 import {
-  Button,
   Modal,
   ModalProps,
   ModalSize,
   useModals,
-} from "@gouvfr-lasuite/cunningham-react";
-import { useTranslation } from "react-i18next";
-
-import {
   QuickSearch,
   QuickSearchGroup,
   QuickSearchItemTemplate,
-} from "@gouvfr-lasuite/ui-kit";
+  SmartScroller,
+} from "@gouvfr-lasuite/ui-components";
+import { useTranslation } from "react-i18next";
+
 import { useEffect, useRef, useState } from "react";
 import { Item, ItemType } from "@/features/drivers/types";
 import { getDriver } from "@/features/config/Config";
@@ -21,16 +19,18 @@ import {
   useGlobalExplorer,
 } from "../../GlobalExplorerContext";
 import {
-  ExplorerFilterType,
-  ExplorerFilterWorkspace,
-  ExplorerFilterScope,
+  ExplorerFilterCategory,
+  ExplorerFilterContact,
+  ExplorerFilterLocation,
+  ExplorerFilterModified,
   handleFilterChange,
-} from "../../app-view/ExplorerFilters";
+} from "@/features/explorer/components/filters";
 import { ItemFilters } from "@/features/drivers/Driver";
-import { Key } from "react-aria-components";
 import { clearFromRoute, getItemTitle } from "@/features/explorer/utils/utils";
 import { messageModalTrashNavigate } from "../../trash/utils";
-import { useIsMinimalLayout } from "@/utils/useLayout";
+import { useAuth } from "@/features/auth/Auth";
+import { openWopiInNewTab } from "@/features/wopi/openWopi";
+import { itemToPreviewFile } from "@/features/explorer/utils/utils";
 
 type ExplorerSearchModalProps = Pick<ModalProps, "isOpen" | "onClose"> & {
   defaultFilters?: ItemFilters;
@@ -38,8 +38,8 @@ type ExplorerSearchModalProps = Pick<ModalProps, "isOpen" | "onClose"> & {
 
 export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [inputValue, setInputValue] = useState<string>("");
-  const isMinimalLayout = useIsMinimalLayout();
   const [filters, setFilters] = useState<ItemFilters>(
     props.defaultFilters || {},
   );
@@ -80,7 +80,7 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
     setInputValue(str);
   };
 
-  const onFilterChange = (name: string, value: Key | null) => {
+  const onFilterChange = (name: string, value: unknown) => {
     setFilters(handleFilterChange(filters, name, value));
   };
 
@@ -99,6 +99,11 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
         props.onClose();
       }
     } else {
+      if (item.is_wopi_supported) {
+        openWopiInNewTab(itemToPreviewFile(item));
+        props.onClose();
+        return;
+      }
       setPreviewItems([item]);
       setPreviewItem(item);
       inputTextSelected.current = false;
@@ -140,35 +145,29 @@ export const ExplorerSearchModal = (props: ExplorerSearchModalProps) => {
           loading={loading}
           placeholder={t("explorer.search.modal.placeholder")}
         >
-          <div className="explorer__search__modal__filters">
+          <SmartScroller className="explorer__search__modal__filters">
             <div className="explorer__search__modal__filters__inputs">
-              <ExplorerFilterType
-                value={filters?.type ?? null}
-                onChange={(value) => onFilterChange("type", value)}
+              <ExplorerFilterLocation
+                value={filters?.location ?? null}
+                onChange={(value) => onFilterChange("location", value)}
               />
-              <ExplorerFilterWorkspace
-                value={filters?.workspace ?? null}
-                isDisabled={isMinimalLayout}
-                onChange={(value) => onFilterChange("workspace", value)}
+              <ExplorerFilterCategory
+                value={filters?.category ?? null}
+                onChange={(value) => onFilterChange("category", value)}
               />
-              <ExplorerFilterScope
-                value={filters?.scope ?? null}
-                onChange={(value) => onFilterChange("scope", value)}
-              />
-            </div>
-
-            <div>
-              {Object.keys(filters).length > 0 && (
-                <Button
-                  variant="tertiary"
-                  size="small"
-                  onClick={() => setFilters({})}
-                >
-                  {t("explorer.search.modal.filters.reset")}
-                </Button>
+              {/* Contacts and user search both require authentication. */}
+              {user && (
+                <ExplorerFilterContact
+                  value={filters?.contact}
+                  onChange={(value) => onFilterChange("contact", value)}
+                />
               )}
+              <ExplorerFilterModified
+                onChange={(value) => onFilterChange("modified", value)}
+                value={filters?.modified}
+              />
             </div>
-          </div>
+          </SmartScroller>
           {items.length > 0 && (
             <div className="explorer__search__modal__items__container">
               <div className="explorer__search__modal__items">

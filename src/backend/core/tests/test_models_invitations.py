@@ -78,6 +78,25 @@ def test_models_invitations_is_expired():
         assert expired_invitation.is_expired is True
 
 
+def test_models_invitations_is_expired_custom_duration(settings):
+    """
+    The 'is_expired' property should honor the INVITATION_VALIDITY_DURATION setting,
+    which is configurable via env var.
+    """
+    settings.INVITATION_VALIDITY_DURATION = 60  # 1 minute
+
+    invitation = factories.InvitationFactory()
+    assert invitation.is_expired is False
+
+    not_late = timezone.now() + timedelta(seconds=59)
+    with mock.patch("django.utils.timezone.now", return_value=not_late):
+        assert invitation.is_expired is False
+
+    too_late = timezone.now() + timedelta(seconds=60)
+    with mock.patch("django.utils.timezone.now", return_value=too_late):
+        assert invitation.is_expired is True
+
+
 def test_models_invitationd_new_userd_convert_invitations_to_accesses():
     """
     Upon creating a new user, invitations linked to the email

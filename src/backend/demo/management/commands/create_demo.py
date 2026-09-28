@@ -1,4 +1,3 @@
-# ruff: noqa: S106
 """create_demo management command"""
 
 import logging
@@ -7,6 +6,7 @@ import time
 from io import BytesIO
 
 from django.conf import settings
+from django.contrib.auth.hashers import make_password
 from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand, CommandError
 
@@ -19,6 +19,84 @@ from demo import defaults
 fake = Faker()
 
 logger = logging.getLogger(__file__)
+DEFAULT_PARENT = object()
+
+
+FILE_TYPE_ITEMS = (
+    {
+        "title": "Demo text document",
+        "filename": "demo-text-document.docx",
+        "mimetype": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    },
+    {
+        "title": "Demo spreadsheet",
+        "filename": "demo-spreadsheet.xlsx",
+        "mimetype": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    },
+    {
+        "title": "Demo presentation",
+        "filename": "demo-presentation.pptx",
+        "mimetype": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    },
+    {
+        "title": "Demo PDF",
+        "filename": "demo-pdf.pdf",
+        "mimetype": "application/pdf",
+    },
+    {
+        "title": "Demo image",
+        "filename": "demo-image.png",
+        "mimetype": "image/png",
+    },
+    {
+        "title": "Demo video",
+        "filename": "demo-video.mp4",
+        "mimetype": "video/mp4",
+    },
+    {
+        "title": "Demo archive",
+        "filename": "demo-archive.zip",
+        "mimetype": "application/zip",
+    },
+    {
+        "title": "Demo audio",
+        "filename": "demo-audio.mp3",
+        "mimetype": "audio/mpeg",
+    },
+    {
+        "title": "Demo other file",
+        "filename": "demo-other.bin",
+        "mimetype": "application/octet-stream",
+    },
+)
+
+
+def get_or_create_demo_user(user_data):
+    """Get an existing demo user or create it when absent."""
+    email = user_data["email"]
+    user, _created = models.User.objects.get_or_create(
+        sub=email,
+        defaults={
+            "admin_email": email,
+            "email": email,
+            "full_name": user_data["full_name"],
+            "short_name": user_data["short_name"],
+            "password": make_password("pass"),  # NOSONAR
+            "is_superuser": False,
+            "is_active": True,
+            "is_staff": False,
+        },
+    )
+    update_fields = []
+    for field in ["full_name", "short_name"]:
+        if not getattr(user, field):
+            setattr(user, field, user_data[field])
+            update_fields.append(field)
+
+    if update_fields:
+        user.save(update_fields=update_fields)
+
+    return user
 
 
 class Timeit:
@@ -65,58 +143,51 @@ class Timeit:
 
 def create_users():
     """Create random users"""
-    for user_id in range(defaults.NB_OBJECTS["users"]):
-        email = f"user.test{user_id:d}@example.com"
-        yield factories.UserFactory(
-            admin_email=email,
-            email=email,
-            sub=email,
-            password="!",
-            is_superuser=False,
-            is_active=True,
-            is_staff=False,
-        )
+    for user_data in defaults.USERS[: defaults.NB_OBJECTS["users"]]:
+        yield get_or_create_demo_user(user_data)
 
 
 def create_dev_users():
     """Create development users"""
     for dev_user in defaults.DEV_USERS:
-        email = dev_user["email"]
-        user = factories.UserFactory(
-            admin_email=email,
-            email=email,
-            sub=email,
-            password="!",
-            is_superuser=False,
-            is_active=True,
-            is_staff=False,
-        )
+        user = get_or_create_demo_user(dev_user)
 
         create_item(user)
         yield user
 
 
-def create_item(user):
+def create_item(
+    user,
+    title=None,
+    file_data=None,
+    parent=DEFAULT_PARENT,
+):
     """Create file item with the given user as creator"""
-    parent = factories.ItemFactory(
-        creator=user,
-        users=[(user, models.RoleChoices.OWNER)],
-        type=models.ItemTypeChoices.FOLDER,
-    )
+    file_data = file_data or {}
+    content = file_data.get("content") or fake.sentence(nb_words=50).encode()
+    if parent is DEFAULT_PARENT:
+        parent = factories.ItemFactory(
+            creator=user,
+            users=[(user, models.RoleChoices.OWNER)],
+            type=models.ItemTypeChoices.FOLDER,
+        )
+
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
         update_upload_state=models.ItemUploadStateChoices.READY,
         link_reach=models.LinkReachChoices.AUTHENTICATED,
         link_role=models.LinkRoleChoices.READER,
         creator=user,
+        users=[(user, models.RoleChoices.OWNER)] if parent is None else None,
         parent=parent,
-        title=fake.sentence(nb_words=4),
-        filename="content.txt",
+        title=title or fake.sentence(nb_words=4),
+        filename=file_data.get("filename", "content.txt"),
         description=fake.sentence(nb_words=10),
-        mimetype="text/plain",
+        mimetype=file_data.get("mimetype", "text/plain"),
+        size=len(content),
     )
 
-    default_storage.save(item.file_key, BytesIO(fake.sentence(nb_words=50).encode()))
+    default_storage.save(item.file_key, BytesIO(content))
 
     return item
 
@@ -128,7 +199,22 @@ def create_items(users):
         yield create_item(user)
 
 
-def create_demo(stdout):
+def create_file_type_items(user):
+    """Create one ready file for each file type category described in issue #597."""
+    for file_type_item in FILE_TYPE_ITEMS:
+        yield create_item(
+            user,
+            title=file_type_item["title"],
+            file_data={
+                "filename": file_type_item["filename"],
+                "mimetype": file_type_item["mimetype"],
+                "content": f"{file_type_item['title']} fixture".encode(),
+            },
+            parent=None,
+        )
+
+
+def create_demo(stdout, *, file_types=False):
     """
     Create a database with demo data for developers to work in a realistic environment.
     """
@@ -152,6 +238,28 @@ def create_demo(stdout):
                     role=models.RoleChoices.READER,
                 )
 
+    if file_types:
+        with Timeit(stdout, "Creating file type items"):
+            list(create_file_type_items(dev_users[0]))
+
+    with Timeit(stdout, "Sharing development users items with demo users"):
+        dev_items = models.Item.objects.filter(
+            creator__in=dev_users, type=models.ItemTypeChoices.FILE
+        ).exclude(accesses__user__in=users)
+        for item in dev_items:
+            nb_users = secrets.randbelow(len(users)) + 1
+            shared_users = fake.random_sample(elements=users, length=nb_users)
+            for user in shared_users:
+                factories.UserItemAccessFactory(
+                    item=item,
+                    user=user,
+                    role=models.RoleChoices.READER,
+                )
+
+            names = ", ".join(user.short_name for user in shared_users)
+            item.title = f"{item.title} (shared with {names})"
+            item.save(update_fields=["title"])
+
 
 class Command(BaseCommand):
     """A management command to create a demo database."""
@@ -167,6 +275,13 @@ class Command(BaseCommand):
             default=False,
             help="Force command execution despite DEBUG is set to False",
         )
+        parser.add_argument(
+            "--file_types",
+            "--file-types",
+            action="store_true",
+            default=False,
+            help="Create items for several file types",
+        )
 
     def handle(self, *args, **options):
         """Handling of the management command."""
@@ -178,4 +293,7 @@ class Command(BaseCommand):
                 )
             )
 
-        create_demo(self.stdout)
+        create_demo(
+            self.stdout,
+            file_types=options["file_types"],
+        )

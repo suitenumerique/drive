@@ -1,11 +1,15 @@
 """Task configuring WOPI using discovery url."""
 
+from base64 import b64decode
+
 from django.conf import settings
 from django.core.cache import cache
 
 import requests
 from celery import Celery
 from celery.schedules import crontab
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicNumbers
 from defusedxml.ElementTree import fromstring
 
 from drive.celery_app import app as celery_app
@@ -44,6 +48,19 @@ def configure_wopi_clients():
         )
 
 
+def build_rsa_public_key(modulus, exponent):
+    """Build RSA public key from modulus and exponent."""
+    mod = int(b64decode(modulus).hex(), 16)
+    exp = int(b64decode(exponent).hex(), 16)
+
+    rsa_public_key = RSAPublicNumbers(exp, mod).public_key()
+
+    return rsa_public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+
+
 def _configure_wopi_client_from_discovery(client, discovery_url):
     """Configure wopi client from discovery url."""
 
@@ -67,6 +84,27 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
     if net_zone is None:
         raise RuntimeError(f"net-zone element not found in discovery url for wopi client {client}")
 
+    proof_key_node = root.find(".//proof-key")
+    proof_keys = {}
+
+    if proof_key_node is not None:
+        # build current and old public key
+        current_public_key = build_rsa_public_key(
+            proof_key_node.get("modulus"), proof_key_node.get("exponent")
+        )
+        old_public_key = build_rsa_public_key(
+            proof_key_node.get("oldmodulus"), proof_key_node.get("oldexponent")
+        )
+
+        proof_keys = {
+            "public_key": current_public_key,
+            "old_public_key": old_public_key,
+        }
+
+    wopi_configuration[client] = {
+        "proof_keys": proof_keys,
+    }
+
     # Iterate through all app elements
     for app in net_zone.findall(".//app"):
         app_name = app.get("name")
@@ -85,7 +123,7 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
                     continue
 
                 wopi_configuration["mimetypes"][mimetype] = {
-                    "url": action.get("urlsrc"),
+                    "launch_url": action.get("urlsrc"),
                     "client": client,
                 }
 
@@ -96,7 +134,7 @@ def _configure_wopi_client_from_discovery(client, discovery_url):
                     continue
 
                 wopi_configuration["extensions"][extension] = {
-                    "url": action.get("urlsrc"),
+                    "launch_url": action.get("urlsrc"),
                     "client": client,
                 }
 

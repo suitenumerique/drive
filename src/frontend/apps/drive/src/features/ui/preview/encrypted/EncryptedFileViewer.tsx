@@ -1,17 +1,19 @@
 import {
-  getEffectiveMimetype,
+  Button,
+  FilePreviewType,
   getMimeCategory,
+  ImageViewer,
+  Loader,
   MimeCategory,
-} from "@/features/explorer/utils/mimeTypes";
+  NotSupportedPreview,
+  AudioPlayer,
+  VideoPlayer,
+  useCustomTranslations,
+} from "@gouvfr-lasuite/ui-components";
+import { getEffectiveMimetype } from "@/features/explorer/utils/mimeTypes";
 import { useDecryptedContent } from "@/features/items/hooks/useDecryptedContent";
 import { Item } from "@/features/drivers/types";
 import { useTranslation } from "react-i18next";
-import { ImageViewer } from "../image-viewer/ImageViewer";
-import { VideoPlayer } from "../video-player/VideoPlayer";
-import { AudioPlayer } from "../audio-player/AudioPlayer";
-import { PreviewPdf } from "../pdf-preview/PreviewPdf";
-import { NotSupportedPreview } from "../not-supported/NotSupportedPreview";
-import { type FilePreviewType } from "../files-preview/FilesPreview";
 import { OOEditor } from "@/features/encryption/oo-bridge/OOEditor";
 import { MIME_TO_DOC_TYPE } from "@/features/encryption/oo-bridge/types";
 import {
@@ -23,11 +25,28 @@ import {
   MissingEncryptionKeysPanel,
 } from "@/features/encryption/MissingEncryptionKeysModal";
 import { useVaultClient } from "@/features/encryption/VaultClientProvider";
-import { Button, Loader } from "@gouvfr-lasuite/cunningham-react";
 import { EncryptionState } from "@/features/encryption/EncryptionLayout";
 
+/**
+ * The design system's preview file, plus what the encrypted viewers read off
+ * the item (`itemToPreviewFile` fills them in).
+ */
+export type EncryptedPreviewFile = FilePreviewType & {
+  filename?: string;
+  is_encrypted?: boolean;
+  is_pending_encryption_for_user?: boolean;
+  encryption_public_key_version_for_user?: number | null;
+  abilities?: {
+    partial_update?: boolean;
+    update?: boolean;
+    destroy?: boolean;
+    encrypt?: boolean;
+    remove_encryption?: boolean;
+  };
+};
+
 interface EncryptedFileViewerProps {
-  file: FilePreviewType;
+  file: EncryptedPreviewFile;
   onDownload?: () => void;
 }
 
@@ -36,7 +55,7 @@ interface EncryptedFileViewerProps {
  *
  * Fetches the encrypted content from S3, decrypts it client-side via the
  * vault, and renders the appropriate viewer using a blob URL.
- * The decrypted content never leaves the browser — no plaintext on S3.
+ * The decrypted content never leaves the browser: no plaintext on S3.
  */
 export const EncryptedFileViewer = ({
   file,
@@ -106,7 +125,7 @@ export const EncryptedFileViewer = ({
     ) ?? file.mimetype;
 
   // Office files: use OnlyOffice client-side editor (handles its own decryption).
-  // Use the OO bridge's own MIME_TO_DOC_TYPE as the source of truth — it covers
+  // Use the OO bridge's own MIME_TO_DOC_TYPE as the source of truth: it covers
   // formats like text/plain and text/csv that getMimeCategory classifies as OTHER.
   // Dispatched to a child component so the office and non-office paths
   // each have a stable hook order. Calling the OO branch as an early
@@ -135,7 +154,7 @@ export const EncryptedFileViewer = ({
 };
 
 interface NonOfficeEncryptedViewerProps {
-  file: FilePreviewType;
+  file: EncryptedPreviewFile;
   effectiveMimetype: string;
   onDownload?: () => void;
 }
@@ -146,6 +165,7 @@ const NonOfficeEncryptedViewer = ({
   onDownload,
 }: NonOfficeEncryptedViewerProps) => {
   const { t } = useTranslation();
+  const { t: tPreview } = useCustomTranslations();
   const { openEncryptionOnboarding, error: vaultClientError } =
     useVaultClient();
   const category = getMimeCategory(effectiveMimetype);
@@ -222,7 +242,7 @@ const NonOfficeEncryptedViewer = ({
       if (file.mimetype.includes("heic")) {
         return (
           <NotSupportedPreview
-            title={t("file_preview.unsupported.heic_title")}
+            title={tPreview("components.filePreview.unsupported.heicTitle")}
             file={file}
             onDownload={onDownload}
           />
@@ -232,16 +252,19 @@ const NonOfficeEncryptedViewer = ({
         <ImageViewer
           src={blobUrl}
           alt={file.title}
-          className="file-preview-viewer"
+          className="file-preview__viewer"
         />
       );
     case MimeCategory.VIDEO:
       return (
-        <div className="video-preview-viewer-container">
+        <div
+          className="video-preview-viewer-container"
+          data-preview-backdrop="true"
+        >
           <div className="video-preview-viewer">
             <VideoPlayer
               src={blobUrl}
-              className="file-preview-viewer"
+              className="file-preview__viewer"
               controls={true}
             />
           </div>
@@ -249,18 +272,31 @@ const NonOfficeEncryptedViewer = ({
       );
     case MimeCategory.AUDIO:
       return (
-        <div className="video-preview-viewer-container">
+        <div
+          className="video-preview-viewer-container"
+          data-preview-backdrop="true"
+        >
           <div className="video-preview-viewer">
             <AudioPlayer
               src={blobUrl}
               title={file.title}
-              className="file-preview-viewer"
+              className="file-preview__viewer"
             />
           </div>
         </div>
       );
     case MimeCategory.PDF:
-      return <PreviewPdf src={blobUrl} />;
+      // The design system's PDF viewer is not exported: the browser's own
+      // viewer reads the decrypted blob instead.
+      return (
+        <iframe
+          src={blobUrl}
+          title={file.title}
+          width="100%"
+          height="100%"
+          className="drive__encrypted-pdf"
+        />
+      );
     default:
       return <NotSupportedPreview file={file} onDownload={onDownload} />;
   }

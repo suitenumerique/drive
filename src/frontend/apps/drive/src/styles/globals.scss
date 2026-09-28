@@ -1,5 +1,6 @@
-@use "@gouvfr-lasuite/ui-kit/sass/fonts";
-@use "@gouvfr-lasuite/ui-kit/style";
+@use "@gouvfr-lasuite/ui-components/fonts/marianne";
+@use "@gouvfr-lasuite/ui-components/sass/fonts/material-icons";
+@use "@gouvfr-lasuite/ui-components/style";
 @use "./cunningham-tokens.css";
 @use "./../features/layouts/components/global/GlobalLayout.scss";
 @use "./../features/layouts/components/explorer/ExplorerLayout.scss";
@@ -13,18 +14,20 @@
 @use "./../features/explorer/components/modals/share/ItemShareModal.scss";
 @use "./../features/layouts/components/header/index.scss";
 @use "./../features/ui/components/breadcrumbs";
+@use "./../features/ui/components/anonymous-cta/AnonymousCTA.scss";
 @use "./../features/ui/components/toaster";
 @use "./../features/ui/components/generic-disclaimer/GenericDisclaimer.scss";
+@use "./../features/auth/components/UserReconciliation.scss";
 @use "./../features/explorer/components/tree/ExplorerTree.scss";
 @use "./../features/ui/components/info/InfoRow.scss";
 @use "./../features/ui/components/responsive";
-@use "./../features/ui/preview/preview.scss";
+@use "./../features/wopi/WopiEditorFrame.scss";
 @use "./../features/items/components/ItemInfo.scss";
-@use "./../features/explorer/components/icons/ItemIcon.scss";
 @use "./../features/encryption/Encryption.scss";
+@use "./../features/ui/preview/encrypted/EncryptedFilesPreview.scss";
 @use "./../features/ui/components/spinner/SpinnerPage.scss";
+@use "./../features/ui/components/loading-ring/LoadingRing.scss";
 @use "./../features/ui/components/infinite-scroll/InfiniteScroll.scss";
-@use "./../features/layouts/components/left-panel/LeftPanelMobile.scss";
 @use "./../pages/index.scss" as *;
 @use "./../pages/sdk/index.scss" as *;
 body {
@@ -75,6 +78,11 @@ body {
 .c__left-panel {
   border-right: none;
 }
+// Keep toasts behind modals and file preview overlays (z-index: 1000)
+:root {
+  --toastify-z-index: 999;
+}
+
 .c__modal__backdrop {
   z-index: 1000;
 }
@@ -88,4 +96,19 @@ body {
 
 .c__modal__title {
   text-align: left;
+}
+
+.c__modal:has(.cancel-upload-modal__content) {
+  .c__modal__footer__right {
+    flex-wrap: wrap;
+
+    @media (max-width: $tablet) {
+      flex-direction: column;
+      width: 100%;
+
+      button {
+        width: 100%;
+      }
+    }
+  }
 }

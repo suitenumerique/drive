@@ -1,4 +1,4 @@
-import { MenuItem, IconSize } from "@gouvfr-lasuite/ui-kit";
+import { MenuItem, IconSize, useModal } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
 import createFolderSvg from "@/assets/icons/create_folder.svg";
@@ -11,11 +11,15 @@ import {
   ExplorerCreateFileType,
 } from "../components/modals/ExplorerCreateFileModal";
 import { ExplorerCreateFolderModal } from "../components/modals/ExplorerCreateFolderModal";
-import { useModal } from "@gouvfr-lasuite/cunningham-react";
 import { useState } from "react";
+import { useRouter } from "next/router";
+import { isMyFilesRoute } from "@/utils/defaultRoutes";
+import { useEntitlements } from "@/features/entitlement-disclaimers/hooks/useEntitlements";
+import { getCannotUploadReasonDescription } from "@/features/entitlement-disclaimers/disclaimers/CannotUploadDisclaimer";
 
 type UseCreateMenuItemsProps = {
   includeImport?: boolean;
+  includeCreate?: boolean;
 };
 
 type UseCreateMenuItemsReturn = {
@@ -33,11 +37,31 @@ const renderFileIcon = (item: Partial<Item>) => {
 
 export const useCreateMenuItems = ({
   includeImport = false,
+  includeCreate = true,
 }: UseCreateMenuItemsProps = {}): UseCreateMenuItemsReturn => {
   const { t } = useTranslation();
   const { item } = useGlobalExplorer();
-  const canCreateChildren = item ? item?.abilities?.children_create : true;
-  const isHidden = !canCreateChildren;
+  const router = useRouter();
+  const isOnMyFiles = isMyFilesRoute(router.pathname);
+  const canCreateHere = item?.abilities?.children_create ?? false;
+  // The full Item (not only its id) lets the modals encrypt the new child
+  // when the parent is encrypted.
+  const effectiveParent = canCreateHere ? item : undefined;
+  // On "My files", the item is created without a parent, which already puts
+  // it in the current view — no redirect needed.
+  const shouldRedirectToCreated = !canCreateHere && !isOnMyFiles;
+
+  // Creating a document writes a real file to storage, so it is gated on the
+  // same entitlement as an upload. Assume it is allowed while the query is in
+  // flight: the backend rejects the creation anyway, and greying the entries
+  // out on every page load would be worse than a rare late disable.
+  const { data: entitlements } = useEntitlements();
+  const canUpload = entitlements?.can_upload.result ?? true;
+  const cannotUploadReason = canUpload
+    ? undefined
+    : (entitlements?.can_upload.message ??
+      getCannotUploadReasonDescription(entitlements?.can_upload.reason) ??
+      t("entitlements.can_upload.cannot_upload"));
 
   const createFolderModal = useModal();
   const [createFileModalType, setCreateFileModalType] =
@@ -53,7 +77,6 @@ export const useCreateMenuItems = ({
     {
       icon: <img src={createFolderSvg.src} alt="" />,
       label: t("explorer.tree.create.folder"),
-      isHidden,
       callback: createFolderModal.open,
     },
     { type: "separator" },
@@ -64,7 +87,6 @@ export const useCreateMenuItems = ({
       {
         icon: <img src={uploadFileSvg.src} alt="" />,
         label: t("explorer.tree.import.files"),
-        isHidden,
         callback: () => {
           document.getElementById("import-files")?.click();
         },
@@ -72,7 +94,6 @@ export const useCreateMenuItems = ({
       {
         icon: <img src={uploadFolderSvg.src} alt="" />,
         label: t("explorer.tree.import.folders"),
-        isHidden,
         callback: () => {
           document.getElementById("import-folders")?.click();
         },
@@ -81,48 +102,58 @@ export const useCreateMenuItems = ({
     );
   }
 
-  items.push(
-    {
-      icon: renderFileIcon({
-        type: ItemType.FILE,
-        filename: "doc.odt",
-        mimetype:
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      }),
-      label: t("explorer.tree.create.file.doc"),
-      isHidden,
-      callback: () => openCreateFileModal(ExplorerCreateFileType.DOC),
-    },
-    {
-      icon: renderFileIcon({
-        type: ItemType.FILE,
-        filename: "powerpoint.odp",
-        mimetype:
-          "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      }),
-      label: t("explorer.tree.create.file.powerpoint"),
-      isHidden,
-      callback: () => openCreateFileModal(ExplorerCreateFileType.POWERPOINT),
-    },
-    {
-      icon: renderFileIcon({
-        type: ItemType.FILE,
-        filename: "calc.ods",
-        mimetype:
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      }),
-      label: t("explorer.tree.create.file.calc"),
-      isHidden,
-      callback: () => openCreateFileModal(ExplorerCreateFileType.CALC),
-    },
-  );
+  if (includeCreate) {
+    items.push(
+      {
+        icon: renderFileIcon({
+          type: ItemType.FILE,
+          filename: "doc.odt",
+          mimetype:
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }),
+        label: t("explorer.tree.create.file.doc"),
+        callback: () => openCreateFileModal(ExplorerCreateFileType.DOC),
+        isDisabled: !canUpload,
+        subText: cannotUploadReason,
+      },
+      {
+        icon: renderFileIcon({
+          type: ItemType.FILE,
+          filename: "powerpoint.odp",
+          mimetype:
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        }),
+        label: t("explorer.tree.create.file.powerpoint"),
+        callback: () => openCreateFileModal(ExplorerCreateFileType.POWERPOINT),
+        isDisabled: !canUpload,
+        subText: cannotUploadReason,
+      },
+      {
+        icon: renderFileIcon({
+          type: ItemType.FILE,
+          filename: "calc.ods",
+          mimetype:
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }),
+        label: t("explorer.tree.create.file.calc"),
+        callback: () => openCreateFileModal(ExplorerCreateFileType.CALC),
+        isDisabled: !canUpload,
+        subText: cannotUploadReason,
+      },
+    );
+  }
 
   const modals = (
     <>
-      <ExplorerCreateFolderModal {...createFolderModal} parent={item} />
+      <ExplorerCreateFolderModal
+        {...createFolderModal}
+        parent={effectiveParent}
+        redirectAfterCreate={shouldRedirectToCreated}
+      />
       <ExplorerCreateFileModal
         {...createFileModal}
-        parent={item}
+        parent={effectiveParent}
+        redirectAfterCreate={shouldRedirectToCreated}
         type={createFileModalType}
       />
     </>

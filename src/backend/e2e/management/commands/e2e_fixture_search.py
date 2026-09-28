@@ -15,6 +15,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """E2E fixture search."""
         user = get_or_create_e2e_user("drive@example.com")
+        other = factories.UserFactory()
         content = [
             {
                 "title": "Project 2025",
@@ -25,11 +26,13 @@ class Command(BaseCommand):
                         "title": "Budget report",
                         "type": models.ItemTypeChoices.FILE,
                         "creator": user,
+                        "filename": "budget-report.pdf",
                     },
                     {
                         "title": "Sales report",
                         "type": models.ItemTypeChoices.FILE,
                         "creator": user,
+                        "filename": "sales-report.pdf",
                     },
                     {
                         "title": "I am deleted",
@@ -42,6 +45,7 @@ class Command(BaseCommand):
                         "type": models.ItemTypeChoices.FILE,
                         "creator": user,
                         "deleted": True,
+                        "filename": "resume.pdf",
                     },
                 ],
             },
@@ -54,6 +58,7 @@ class Command(BaseCommand):
                         "title": "Backlog",
                         "type": models.ItemTypeChoices.FILE,
                         "creator": user,
+                        "filename": "backlog.pdf",
                     },
                     {
                         "title": "Meetings",
@@ -64,21 +69,43 @@ class Command(BaseCommand):
                                 "title": "Meeting notes 5th September",
                                 "type": models.ItemTypeChoices.FILE,
                                 "creator": user,
+                                "filename": "meeting-notes-5th-september.pdf",
                             },
                             {
                                 "title": "Meeting notes 15th September",
                                 "type": models.ItemTypeChoices.FILE,
                                 "creator": user,
+                                "filename": "meeting-notes-15th-september.pdf",
                             },
                         ],
                     },
                 ],
             },
+            {
+                "title": "Quarterly review mine",
+                "type": models.ItemTypeChoices.FILE,
+                "creator": user,
+                "filename": "quarterly-mine.pdf",
+            },
+            {
+                "title": "Quarterly review starred",
+                "type": models.ItemTypeChoices.FILE,
+                "creator": user,
+                "filename": "quarterly-starred.pdf",
+                "favorite": True,
+            },
+            {
+                "title": "Quarterly review shared",
+                "type": models.ItemTypeChoices.FILE,
+                "creator": other,
+                "filename": "quarterly-shared.pdf",
+                "access": [(user, models.RoleChoices.READER)],
+            },
         ]
 
-        self._create_item(None, content)
+        self._create_item(None, content, favorite_user=user)
 
-    def _create_item(self, parent, content, depth=0):
+    def _create_item(self, parent, content, depth=0, favorite_user=None):
         if content is None:
             return
         for data in content:
@@ -87,6 +114,7 @@ class Command(BaseCommand):
                 type=data["type"],
                 creator=data["creator"],
                 parent=parent,
+                filename=data.get("filename"),
                 update_upload_state=models.ItemUploadStateChoices.READY
                 if data["type"] == models.ItemTypeChoices.FILE
                 else None,
@@ -94,8 +122,12 @@ class Command(BaseCommand):
             )
             if data.get("deleted"):
                 item.soft_delete()
+            for access_user, role in data.get("access", []):
+                factories.UserItemAccessFactory(item=item, user=access_user, role=role)
+            if data.get("favorite") and favorite_user:
+                models.ItemFavorite.objects.create(user=favorite_user, item=item)
             self.stdout.write(
                 f"Item created: {item.title} with parent: {parent.title if parent else None} "
                 f"and depth: {depth} and deleted: {data.get('deleted')}"
             )
-            self._create_item(item, data.get("children"), depth + 1)
+            self._create_item(item, data.get("children"), depth + 1, favorite_user)

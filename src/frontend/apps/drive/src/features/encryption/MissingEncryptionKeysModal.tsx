@@ -1,5 +1,4 @@
-import { Button, Modal, ModalSize } from "@gouvfr-lasuite/cunningham-react";
-import { Icon } from "@gouvfr-lasuite/ui-kit";
+import { Button, Icon, Modal, ModalSize } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { EncryptionModalContent, EncryptionState } from "./EncryptionLayout";
 

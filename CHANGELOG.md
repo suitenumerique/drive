@@ -8,10 +8,203 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.23.0] - 2026-09-23
+
+### Added
+
+- 🔧(backend) allow enabling and configuring the psycopg connection pool
+- 🔧(helm) allow specific env vars for the backend web deployment
+
+### Fixed
+
+- 🐛(frontend) refresh the Recent view after item mutations
+- 🧑‍💻(project) install frontend dependencies via container in bootstrap
+- 🐛(backend) gate item creation at the root on the upload entitlement
+
+## [v0.22.0] - 2026-09-09
+
+### Added
+
+- 📈(backend) add a Sentry performance monitoring sample rate setting
+- ♻️(backend) route permission decisions through a swappable backend
+- ✨(backend) add restricted access on folders, detached behind a restriction
+
+### Changed
+
+- ♻️(frontend) migrate to the merged @gouvfr-lasuite/ui-components package
+
+### Fixed
+
+- 🐛(frontend) resolve region-less browser languages to the locale we ship
+- 🐛(frontend) render the JPEG 2000 layers of scanned PDFs in the preview
+- 🐛(backend) prevent item deletion by a creator whose access was revoked
+- 🐛(backend) resolve the direct parent by exact path after a move
+
+## [v0.21.2] - 2026-08-25
+
+### Added
+
+- 🔧(helm) schedule the malware detection reconciliation commands
+- ✨(admin) add actions to abandon malware analyses
+
+### Fixed
+
+- 🐛(backend) fix malware analysis processing slots exhaustion
+
+## [v0.21.1] - 2026-08-21
+
+### Fixed
+
+- 🐛(backend) fix malware re-analysis of a file already scanned
+
+## [v0.21.0] - 2026-08-07
+
+### Added
+
+- ✨(load-tests) add JMeter load-testing scenarios and a LoadTest configuration
+- ✨(backend) make the upload ACL configurable to support GCS based storages
+- ✨(frontend) show the messages widget button on the homepage
+- ✨(frontend) open the messages widget from the help menu
+- ✨(backend) add an item batch share endpoint gated by ALLOW_SHARE_IMPORT_FILE
+- ✨(frontend) share an item with contacts imported from a file
+- ✨(backend) add a quota_excluded flag on items
+- ✨(backend) apply per-audience attributes to external api items
+- ✨(backend) add a grant_unlimited_storage command
+- ✨(wopi) verify the WOPI request proof signature
+
+### Changed
+
+- 🔧(docker) drop the unused pip upgrade and apk caches from the image
+- ✨(backend) expose item existence in the malware detection admin
+- ✨(backend) show human readable item size in the admin
+- 🚚(global) move favorite items API endpoint to `/items/favorites/`
+
+### Fixed
+
+- 🐛(docker) pin collabora image and adapt to its new runtime contract
+- 🐛(backend) delete malware detection record when purging an item
+- 🔒️(backend) reject unsafe filenames requested by WOPI renames
+- 🔒️(backend) analyze file content written through WOPI
+
+## [v0.20.0] - 2026-07-15
+
+### Added
+
+- ✨(backend) allow converting a file while it is being analyzed
+- ✨(frontend) add file type, contact and modification date topbar filters
+- ✨(frontend) add location, file type, contact and date search filters
+- ✨(backend) add a local entitlements backend with per-user storage limits
+- ✨(frontend) add storage gauge and settings modal
+
+### Fixed
+
+- 🐛(nginx) let search engines see the noindex directive to drop public URLs
+- 🐛(backend) find deleted root items when searching the trashbin
+- 🐛(backend) exclude folders from file type search results
+- 🐛(frontend) keep uploaded items usable while malware analysis runs
+- 🐛(backend) stream export files from S3 without buffering
+
+## [v0.19.0] - 2026-06-09
+
+### Added
+
+- ✨(backend) manage reconciliation requests for user accounts
+- ✨(backend) add recursive folder export as ZIP archive
+- ✨(frontend) add folder export action
+- ✨(backend) background conversion of legacy Office files
+- ✨(backend) allow grist file upload
+- ✨(frontend) add CTA on public link for anonymous and authenticated users
+
+### Changed
+
+- 🐛(backend) replace VersionId by Etag for WOPI
+- 🐛(backend) sanitize slash in template-created filenames
+
+### Removed
+
+- 🔥(backend) drop deprecated numchild columns from item
+
+## [v0.18.0] - 2026-05-04
+
+### Added
+
+- ✨(backend) add organization metrics to usage API
+- ✨(backend) add entitlements context and can_upload reason
+- ✨(frontend) add entitlement disclaimer modal
+- ✨(frontend) render PDF previews at per-page dimensions
+- ✨(tracking) add posthog events on custom columns and item duplication
+
+### Changed
+
+- ♻️(frontend) delegate file icons to ui-kit FileIcon
+- ♻️(frontend) replace custom file preview with ui-kit FilePreview
+- ✅(frontend) replace per-format preview tests with smoke tests
+
+### Fixed
+
+- 🐛(backend) accept CDFV2 mimetype from newer libmagic
+- 🐛(backend) better transaction management on duplicate action
+
+### Removed
+
+- 🔥(backend) remove mirroring feature
+
+## [v0.17.0] - 2026-04-23
+
+### Added
+
+- ✨(backend) make invitation validity duration configurable via env var
+- ✨(frontend) enhance upload toast with progress, errors and cancel support
+- ✨(frontend) add ErrorIcon component and support numeric icon sizes
+- ✨(frontend) make file upload abortable in driver layer
+- ✨(frontend) files preview v2
+- 🔧(project) add DJANGO_EMAIL_URL_APP environment variable
+
+### Fixed
+
+- 🐛(frontend) add actions menu on mobile My Files page
+- 🐛(frontend) show actual selection count in hard delete modal
+- 🐛(frontend) Responsive broken with long filters in search #659
+- 🐛(front) set size and variant on trash navigate modal #666
+- 🐛(frontend) fix uploads continuing after parent folder deletion
+- 🐛(frontend) fix SDK picker link reach promotion
+- 🐛(backend) route share invitation link to file view for files
+- 🐛(frontend) fix "+ New" menu in read-only folders and virtual tabs
+- 🐛(frontend) range selection freezes when there are many items in the list
+- 🐛(backend) fix openapi schema for item access endpoints
+- 🐛(backend) load jwks url when OIDC_RS_PRIVATE_KEY_STR is set
+
+## [v0.16.0] - 2026-04-09
+
+### Added
+
+- ✨(frontend) add PDF viewer with thumbnail sidebar, zoom and page navigation
+- ✨(frontend) integrate PDF viewer into file preview modal
+- 📝(doc) add local network setup documentation
+- ✨(global) add custom columns feature with configurable grid columns
+- 🔒️(frontend) prevent search engine indexing
+- ✨(backend) allow ordering items by creator full name
+- ✨(frontend) add item duplication with polling and visual feedback
+- ⚡(ci) shard e2e tests and cache playwright browsers
+- ⬆️(frontend) upgrade cunningham-react and ui-kit to 0.20.0
+- ✨(frontend) improve custom columns with sortable config and i18n
+- ✨(frontend) preserve empty folders when uploading via drag & drop
+
+### Changed
+
+- 🏷️(sdk) update Item interface by adding url_permalink
+- 🔧(backend) allow extra CSRF origins via env variable
+- 🔧(nginx) serve .mjs files with correct MIME type
+
 ### Fixed
 
 - 🐛(backend) fix hard delete of files created by other users
 - 🐛(backend) handle race condition on concurrent LinkTrace creation
+- 🐛(frontend) fix React SVG attributes in AddFolderButton
+- 🔧(scalingo) compile translation files at deploy time
+- 🐛(frontend) fix trash items not refreshing after hard delete
+- 🐛(frontend) show modal when clicking files in trash
+- 🐛(frontend) fix toasts appearing above modals
 
 ## [v0.15.0] - 2026-03-16
 
@@ -355,7 +548,17 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.15.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.23.0...main
+[v0.23.0]: https://github.com/suitenumerique/drive/releases/v0.23.0
+[v0.22.0]: https://github.com/suitenumerique/drive/releases/v0.22.0
+[v0.21.2]: https://github.com/suitenumerique/drive/releases/v0.21.2
+[v0.21.1]: https://github.com/suitenumerique/drive/releases/v0.21.1
+[v0.21.0]: https://github.com/suitenumerique/drive/releases/v0.21.0
+[v0.20.0]: https://github.com/suitenumerique/drive/releases/v0.20.0
+[v0.19.0]: https://github.com/suitenumerique/drive/releases/v0.19.0
+[v0.18.0]: https://github.com/suitenumerique/drive/releases/v0.18.0
+[v0.17.0]: https://github.com/suitenumerique/drive/releases/v0.17.0
+[v0.16.0]: https://github.com/suitenumerique/drive/releases/v0.16.0
 [v0.15.0]: https://github.com/suitenumerique/drive/releases/v0.15.0
 [v0.14.0]: https://github.com/suitenumerique/drive/releases/v0.13.0
 [v0.13.0]: https://github.com/suitenumerique/drive/releases/v0.13.0

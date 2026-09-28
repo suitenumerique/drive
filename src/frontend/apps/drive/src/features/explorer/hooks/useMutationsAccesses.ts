@@ -19,6 +19,23 @@ export const useMutationCreateAccess = () => {
   });
 };
 
+export const useMutationBatchShare = () => {
+  const driver = getDriver();
+  const onSuccessAccessOrInvitation = useOnSuccessAccessOrInvitationMutation();
+  return useMutation({
+    // Errors are displayed inside the import modal, not by the global toast
+    meta: { noGlobalError: true },
+    mutationFn: (...payload: Parameters<typeof driver.batchShare>) => {
+      return driver.batchShare(...payload);
+    },
+    onSuccess: (_, variables) => {
+      // A batch can create both accesses and invitations
+      onSuccessAccessOrInvitation(variables.itemId, false);
+      onSuccessAccessOrInvitation(variables.itemId, true);
+    },
+  });
+};
+
 export const useMutationCreateInvitation = () => {
   const driver = getDriver();
   const onSuccessAccessOrInvitation = useOnSuccessAccessOrInvitationMutation();

@@ -23,7 +23,7 @@ def is_item_wopi_supported(item, user):
 
 
 def get_wopi_client_config(item, user):
-    """make
+    """
     Get the WOPI client configuration for an item.
     """
     if (
@@ -33,19 +33,38 @@ def get_wopi_client_config(item, user):
     ):
         return None
 
-    wopi_configuration = cache.get(WOPI_CONFIGURATION_CACHE_KEY, default=WOPI_DEFAULT_CONFIGURATION)
+    wopi_configuration = get_wopi_configuration()
 
     if not wopi_configuration:
         return None
 
     result = None
-    # Extension must always be checked first.
-    if item.extension in wopi_configuration["extensions"]:
-        result = wopi_configuration["extensions"][item.extension]
+    # Extension must always be checked first. Filenames preserve case (REPORT.DOC),
+    # while the discovery stores extensions in lowercase, so normalize the lookup.
+    extension = item.extension.lower() if item.extension else None
+    if extension and extension in wopi_configuration["extensions"]:
+        result = wopi_configuration["extensions"][extension]
     elif item.mimetype in wopi_configuration["mimetypes"]:
         result = wopi_configuration["mimetypes"][item.mimetype]
 
     return result
+
+
+def get_wopi_client_proof_keys(item, user):
+    """get the wopi proof keys for an item"""
+    wopi_client_config = get_wopi_client_config(item, user)
+
+    if not wopi_client_config:
+        return None
+
+    wopi_configuration = get_wopi_configuration()
+
+    return wopi_configuration[wopi_client_config["client"]]["proof_keys"]
+
+
+def get_wopi_configuration():
+    """get the wopi configuration"""
+    return cache.get(WOPI_CONFIGURATION_CACHE_KEY, default=WOPI_DEFAULT_CONFIGURATION)
 
 
 def compute_wopi_launch_url(launch_url, get_file_info_path, lang=None):
@@ -88,3 +107,17 @@ def compute_wopi_launch_url(launch_url, get_file_info_path, lang=None):
             query_params[match.group("name")] = placeholders[match.group("placeholder")]
 
     return parsed_launch_url._replace(query=urlencode(query_params)).geturl()
+
+
+def get_wopi_item_version(head_object):
+    """Build a stable WOPI item version token from storage metadata."""
+
+    if etag := head_object.get("ETag"):
+        return etag.strip('"')
+
+    if last_modified := head_object.get("LastModified"):
+        if hasattr(last_modified, "isoformat"):
+            return last_modified.isoformat()
+        return str(last_modified)
+
+    return str(head_object.get("ContentLength", "0"))

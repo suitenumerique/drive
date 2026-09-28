@@ -55,6 +55,18 @@ def test_models_items_path_for_children_contains_parent_path():
     assert str(child.path) == f"{parent.id!s}.{child.id!s}"
 
 
+def test_models_items_parent_resolves_by_path_after_move():
+    """The parent should stay the direct one after the subtree was moved."""
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    child = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    new_grandparent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+
+    parent.move(new_grandparent)
+    child.refresh_from_db()
+
+    assert child.parent() == parent
+
+
 def test_models_items_title_max_length():
     """The "title" field should be 100 characters maximum."""
     factories.ItemFactory(title="a" * 255)
@@ -101,7 +113,12 @@ def test_models_items_soft_delete(depth):
 
     with pytest.raises(RuntimeError) as exc_info:
         items[-1].soft_delete()
-        assert str(exc_info) == "This item is already deleted or has deleted ancestors."
+
+    # The item deleted at random is either the last item itself or one of its ancestors
+    assert str(exc_info.value) in (
+        "This item is already deleted or has deleted ancestors.",
+        "Cannot delete this item because one or more ancestors are already deleted.",
+    )
 
     assert deleted_item.deleted_at is not None
     assert deleted_item.ancestors_deleted_at == deleted_item.deleted_at
@@ -213,6 +230,58 @@ def test_models_items_hard_delete():
 
 
 @pytest.mark.parametrize(
+    "extension,expected",
+    [
+        ("doc", True),
+        ("DOC", True),
+        ("xls", True),
+        ("ppt", True),
+        ("docx", False),
+        ("pdf", False),
+        (None, False),
+    ],
+)
+def test_models_items_get_abilities_convert(extension, expected, settings):
+    """Flag convert only for legacy extensions on READY files with update access."""
+    settings.WOPI_ONLYOFFICE_CONVERT_JWT_SECRET = "test-jwt-secret"
+    user = factories.UserFactory()
+    filename = f"file.{extension}" if extension else None
+    item = factories.ItemFactory(
+        users=[(user, "editor")],
+        type=models.ItemTypeChoices.FILE,
+        filename=filename or "file",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    assert item.get_abilities(user)["convert"] is expected
+
+
+def test_models_items_get_abilities_convert_while_analyzing(settings):
+    """Flag convert while malware analysis is still running on the source."""
+    settings.WOPI_ONLYOFFICE_CONVERT_JWT_SECRET = "test-jwt-secret"
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        users=[(user, "editor")],
+        type=models.ItemTypeChoices.FILE,
+        filename="file.doc",
+        update_upload_state=models.ItemUploadStateChoices.ANALYZING,
+    )
+    assert item.get_abilities(user)["convert"] is True
+
+
+def test_models_items_get_abilities_convert_disabled_without_jwt_secret(settings):
+    """Disable convert ability when the JWT secret is not configured."""
+    settings.WOPI_ONLYOFFICE_CONVERT_JWT_SECRET = None
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        users=[(user, "editor")],
+        type=models.ItemTypeChoices.FILE,
+        filename="file.doc",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    assert item.get_abilities(user)["convert"] is False
+
+
+@pytest.mark.parametrize(
     "is_authenticated,reach,role",
     [
         (True, "restricted", "reader"),
@@ -240,6 +309,7 @@ def test_models_items_get_abilities_forbidden(
         "children_list": False,
         "destroy": False,
         "duplicate": False,
+        "export": False,
         "hard_delete": False,
         "favorite": False,
         "invite_owner": False,
@@ -249,12 +319,18 @@ def test_models_items_get_abilities_forbidden(
         "link_configuration": False,
         "link_select_options": {},
         "partial_update": False,
+        "restrict": False,
         "restore": False,
         "retrieve": False,
         "tree": False,
         "update": False,
         "upload_ended": False,
         "wopi": False,
+        "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": False,
+        "key_chain": False,
+        "remove_encryption": False,
     }
     nb_queries = 1 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
@@ -279,6 +355,7 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
     """
     item = factories.ItemFactory(link_reach=reach, link_role="reader")
     user = factories.UserFactory() if is_authenticated else AnonymousUser()
+    can_export = item.type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": False,
@@ -287,6 +364,7 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         "children_list": True,
         "destroy": False,
         "duplicate": False,
+        "export": can_export,
         "hard_delete": False,
         "favorite": is_authenticated,
         "invite_owner": False,
@@ -296,12 +374,18 @@ def test_models_items_get_abilities_reader(is_authenticated, reach, django_asser
         "download": True,
         "move": False,
         "partial_update": False,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": False,
         "upload_ended": False,
         "wopi": True,
+        "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": False,
+        "key_chain": is_authenticated,
+        "remove_encryption": False,
     }
     nb_queries = 1 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
@@ -377,9 +461,11 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913
         link_role="editor",
         type=item_type,
         update_upload_state=upload_state,
+        filename="document.pdf" if item_type == models.ItemTypeChoices.FILE else None,
     )
 
     user = factories.UserFactory() if is_authenticated else AnonymousUser()
+    can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": False,
@@ -388,6 +474,7 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913
         "children_list": True,
         "destroy": False,
         "duplicate": can_duplicate,
+        "export": can_export,
         "hard_delete": False,
         "favorite": is_authenticated,
         "invite_owner": False,
@@ -397,12 +484,18 @@ def test_models_items_get_abilities_editor(  # noqa: PLR0913
         "download": True,
         "move": False,
         "partial_update": True,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": True,
         "upload_ended": is_authenticated,
         "wopi": True,
+        "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": is_authenticated,
+        "key_chain": is_authenticated,
+        "remove_encryption": False,
     }
     nb_queries = 1 if is_authenticated else 0
     with django_assert_num_queries(nb_queries):
@@ -438,8 +531,12 @@ def test_models_items_not_root_get_abilities_owner(
     """Check abilities returned for the owner of an item."""
     user = factories.UserFactory()
     item = factories.ItemFactory(
-        users=[(user, "owner")], type=item_type, update_upload_state=upload_state
+        users=[(user, "owner")],
+        type=item_type,
+        update_upload_state=upload_state,
+        filename="document.pdf" if item_type == models.ItemTypeChoices.FILE else None,
     )
+    can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -448,6 +545,7 @@ def test_models_items_not_root_get_abilities_owner(
         "children_list": True,
         "destroy": True,
         "duplicate": can_duplicate,
+        "export": can_export,
         "hard_delete": True,
         "favorite": True,
         "invite_owner": True,
@@ -461,14 +559,22 @@ def test_models_items_not_root_get_abilities_owner(
         "download": True,
         "move": True,
         "partial_update": True,
+        "restrict": False,
         "restore": True,
         "retrieve": True,
         "tree": True,
         "update": True,
         "upload_ended": True,
         "wopi": True,
+        "convert": False,
+        "encrypt": True,
+        "encryption_upload_url": True,
+        "key_chain": True,
+        "remove_encryption": True,
     }
-    with django_assert_num_queries(1):
+    # A folder at the tree root checks for a targeting restriction
+    nb_queries = 2 if item_type == models.ItemTypeChoices.FOLDER else 1
+    with django_assert_num_queries(nb_queries):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
@@ -480,6 +586,7 @@ def test_models_items_not_root_get_abilities_owner(
         "children_list": False,
         "destroy": False,
         "duplicate": False,
+        "export": False,
         "hard_delete": True,
         "favorite": False,
         "invite_owner": False,
@@ -489,12 +596,18 @@ def test_models_items_not_root_get_abilities_owner(
         "download": False,
         "move": False,
         "partial_update": False,
+        "restrict": False,
         "restore": True,
         "retrieve": True,
         "tree": False,
         "update": False,
         "upload_ended": False,
         "wopi": False,
+        "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": False,
+        "key_chain": False,
+        "remove_encryption": False,
     }
 
 
@@ -523,7 +636,9 @@ def test_models_items_not_root_get_abilities_administrator(
         users=[(user, "administrator")],
         type=item_type,
         update_upload_state=upload_state,
+        filename="document.pdf" if item_type == models.ItemTypeChoices.FILE else None,
     )
+    can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": True,
         "accesses_view": True,
@@ -532,6 +647,7 @@ def test_models_items_not_root_get_abilities_administrator(
         "children_list": True,
         "destroy": False,
         "duplicate": can_duplicate,
+        "export": can_export,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
@@ -545,14 +661,22 @@ def test_models_items_not_root_get_abilities_administrator(
         "download": True,
         "move": True,
         "partial_update": True,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": True,
         "upload_ended": True,
         "wopi": True,
+        "convert": False,
+        "encrypt": True,
+        "encryption_upload_url": True,
+        "key_chain": True,
+        "remove_encryption": True,
     }
-    with django_assert_num_queries(1):
+    # A folder at the tree root checks for a targeting restriction
+    nb_queries = 2 if item_type == models.ItemTypeChoices.FOLDER else 1
+    with django_assert_num_queries(nb_queries):
         assert item.get_abilities(user) == expected_abilities
     item.soft_delete()
     item.refresh_from_db()
@@ -591,9 +715,11 @@ def test_models_items_not_root_get_abilities_editor_user(
     item = factories.ItemFactory(
         parent=parent,
         type=item_type,
+        filename="document.pdf" if item_type == models.ItemTypeChoices.FILE else None,
         update_upload_state=upload_state,
     )
     link_select_options = LinkReachChoices.get_select_options(**item.ancestors_link_definition)
+    can_export = item_type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": True,
@@ -602,6 +728,7 @@ def test_models_items_not_root_get_abilities_editor_user(
         "children_list": True,
         "destroy": False,
         "duplicate": can_duplicate,
+        "export": can_export,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
@@ -611,12 +738,18 @@ def test_models_items_not_root_get_abilities_editor_user(
         "download": True,
         "move": False,
         "partial_update": True,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": True,
         "upload_ended": True,
         "wopi": True,
+        "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": True,
+        "key_chain": True,
+        "remove_encryption": False,
     }
     with django_assert_num_queries(1):
         assert item.get_abilities(user) == expected_abilities
@@ -640,6 +773,7 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
     )
     item = factories.ItemFactory(parent=parent)
     access_from_link = item.link_reach != "restricted" and item.link_role == "editor"
+    can_export = item.type == models.ItemTypeChoices.FOLDER
     expected_abilities = {
         "accesses_manage": False,
         "accesses_view": True,
@@ -648,6 +782,7 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "children_list": True,
         "destroy": False,
         "duplicate": access_from_link,
+        "export": can_export,
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
@@ -661,12 +796,18 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "download": True,
         "move": False,
         "partial_update": access_from_link,
+        "restrict": False,
         "restore": False,
         "retrieve": True,
         "tree": True,
         "update": access_from_link,
         "upload_ended": access_from_link,
         "wopi": True,
+        "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": access_from_link,
+        "key_chain": True,
+        "remove_encryption": False,
     }
     with django_assert_num_queries(2):
         assert item.get_abilities(user) == expected_abilities
@@ -709,6 +850,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "destroy": True,
         "download": True,
         "duplicate": False,
+        "export": False,
         "hard_delete": True,
         "favorite": True,
         "invite_owner": True,
@@ -717,12 +859,18 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "media_auth": True,
         "move": True,
         "partial_update": True,
+        "restrict": False,
         "restore": True,
         "retrieve": True,
         "tree": True,
         "update": True,
         "upload_ended": True,
         "wopi": True,
+        "convert": False,
+        "encrypt": True,
+        "encryption_upload_url": True,
+        "key_chain": True,
+        "remove_encryption": True,
     }
     with django_assert_num_queries(1):
         assert child.get_abilities(owner) == expected_abilities
@@ -738,6 +886,7 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "destroy": False,
         "download": False,
         "duplicate": False,
+        "export": False,
         "hard_delete": True,
         "favorite": False,
         "invite_owner": False,
@@ -746,20 +895,77 @@ def test_models_items_get_abilities_hard_delete_non_root_by_non_creator(
         "media_auth": False,
         "move": False,
         "partial_update": False,
+        "restrict": False,
         "restore": True,
         "retrieve": True,
         "tree": False,
         "update": False,
         "upload_ended": False,
         "wopi": False,
+        "convert": False,
+        "encrypt": False,
+        "encryption_upload_url": False,
+        "key_chain": False,
+        "remove_encryption": False,
     }
+
+
+def test_models_items_get_abilities_delete_non_root_by_creator_with_editor_access():
+    """
+    The creator of a non-root item keeps the right to delete it as long as they
+    still hold editor access on it.
+    """
+    owner = factories.UserFactory()
+    creator = factories.UserFactory()
+
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, "owner"), (creator, "editor")],
+    )
+    child = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        parent=folder,
+        creator=creator,
+    )
+
+    abilities = child.get_abilities(creator)
+    assert abilities["destroy"] is True
+    assert abilities["hard_delete"] is True
+
+
+def test_models_items_get_abilities_delete_non_root_by_creator_without_access():
+    """
+    Once the creator's access has been revoked, they must no longer be able to
+    delete an item they created, even though they remain its creator. This
+    guards against deleting a subtree in a folder they can no longer access.
+    """
+    owner = factories.UserFactory()
+    creator = factories.UserFactory()
+
+    folder = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(owner, "owner"), (creator, "editor")],
+    )
+    child = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        parent=folder,
+        creator=creator,
+    )
+
+    # Revoke the creator's access.
+    models.ItemAccess.objects.filter(item=folder, user=creator).delete()
+
+    abilities = child.get_abilities(creator)
+    assert abilities["destroy"] is False
+    assert abilities["hard_delete"] is False
+    assert abilities["retrieve"] is False
 
 
 def test_models_items__email_invitation__success():
     """
     The email invitation is sent successfully.
     """
-    item = factories.ItemFactory()
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
 
     # pylint: disable-next=no-member
     assert len(mail.outbox) == 0
@@ -787,7 +993,7 @@ def test_models_items__email_invitation__success_fr():
     """
     The email invitation is sent successfully in french.
     """
-    item = factories.ItemFactory()
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
 
     # pylint: disable-next=no-member
     assert len(mail.outbox) == 0
@@ -814,6 +1020,66 @@ def test_models_items__email_invitation__success_fr():
         f"sur le item suivant: {item.title}" in email_content
     )
     assert f"items/{item.id}/" in email_content
+
+
+def test_models_items__email_invitation__link_for_folder():
+    """
+    The invitation email link for a folder item points to the folder explorer route.
+    """
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    sender = factories.UserFactory()
+
+    item.send_invitation_email("guest-folder@example.com", models.RoleChoices.EDITOR, sender, "en")
+
+    # pylint: disable-next=no-member
+    email = mail.outbox[-1]
+    assert f"/explorer/items/{item.id}/" in email.body
+    assert f"/explorer/items/files/{item.id}/" not in email.body
+
+
+def test_models_items__email_invitation__link_for_file():
+    """
+    The invitation email link for a file item points to the dedicated file route,
+    so the recipient opens the file preview rather than an empty folder view.
+    """
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FILE, filename="doc.pdf")
+    sender = factories.UserFactory()
+
+    item.send_invitation_email("guest-file@example.com", models.RoleChoices.EDITOR, sender, "en")
+
+    # pylint: disable-next=no-member
+    email = mail.outbox[-1]
+    assert f"/explorer/items/files/{item.id}/" in email.body
+    assert f"/explorer/items/{item.id}/" not in email.body
+
+
+@pytest.mark.parametrize(
+    "email_url_app",
+    [
+        "https://test-example.com",  # Test with EMAIL_URL_APP set
+        None,  # Test fallback to Site domain
+    ],
+)
+def test_models_items__email_invitation__url_app_param(email_url_app, settings):
+    """
+    Email invitation uses EMAIL_URL_APP when set, or falls back to the Site domain.
+    """
+    settings.EMAIL_URL_APP = email_url_app
+
+    item = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER)
+    sender = factories.UserFactory()
+
+    item.send_invitation_email("guest@example.com", models.RoleChoices.EDITOR, sender, "en")
+
+    # pylint: disable-next=no-member
+    email = mail.outbox[-1]
+    email_content = " ".join(email.body.split())
+
+    if email_url_app:
+        assert f"https://test-example.com/explorer/items/{item.id}/" in email_content
+    else:
+        # Default Site domain is example.com
+        assert f"example.com/explorer/items/{item.id}/" in email_content
 
 
 @mock.patch(
@@ -945,7 +1211,10 @@ def test_models_items_nb_accesses_cache_is_invalidated_on_access_removal(
 @pytest.mark.parametrize("item_type", models.ItemTypeChoices.values)
 def test_models_items_default_upload_state(item_type):
     """The default value for the upload_state field depends on the item type."""
-    item = factories.ItemFactory(type=item_type)
+    if item_type == models.ItemTypeChoices.RESTRICTION:
+        item = factories.RestrictionFactory()
+    else:
+        item = factories.ItemFactory(type=item_type)
     assert item.upload_state == (
         models.ItemUploadStateChoices.PENDING if item.type == models.ItemTypeChoices.FILE else None
     )

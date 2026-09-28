@@ -1,6 +1,10 @@
-import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
+import { Button, useModal } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { useGlobalExplorer } from "@/features/explorer/components/GlobalExplorerContext";
+import {
+  useSelectedItems,
+  useSetSelectedItems,
+} from "@/features/explorer/stores/selectionStore";
 import { useAppExplorer } from "@/features/explorer/components/app-view/AppExplorer";
 import { addToast } from "@/features/ui/components/toaster/Toaster";
 import { ToasterItem } from "@/features/ui/components/toaster/Toaster";
@@ -10,8 +14,9 @@ import { ExplorerMoveFolder } from "@/features/explorer/components/modals/move/E
 
 export const ExplorerSelectionBar = () => {
   const { t } = useTranslation();
-  const { selectedItems, setSelectedItems, setRightPanelForcedItem } =
-    useGlobalExplorer();
+  const { setRightPanelForcedItem } = useGlobalExplorer();
+  const selectedItems = useSelectedItems();
+  const setSelectedItems = useSetSelectedItems();
   const { selectionBarActions } = useAppExplorer();
 
   const handleClearSelection = () => {
@@ -50,7 +55,9 @@ export const ExplorerSelectionBar = () => {
 
 export const ExplorerSelectionBarActions = () => {
   const { t } = useTranslation();
-  const { selectedItems, setSelectedItems, item } = useGlobalExplorer();
+  const { item, cancelUploadsForDeletedItems } = useGlobalExplorer();
+  const selectedItems = useSelectedItems();
+  const setSelectedItems = useSetSelectedItems();
   const moveModal = useModal();
 
   const deleteItems = useMutationDeleteItems();
@@ -71,16 +78,18 @@ export const ExplorerSelectionBarActions = () => {
               count: selectedItems.length,
             })}
           </span>
-        </ToasterItem>
+        </ToasterItem>,
       );
+      const deletedIds = selectedItems.map((item) => item.id);
       setSelectedItems([]);
-      await deleteItems.mutateAsync(selectedItems.map((item) => item.id));
+      await deleteItems.mutateAsync(deletedIds);
+      cancelUploadsForDeletedItems(deletedIds);
     } else {
       addToast(
         <ToasterItem type="error">
           <span className="material-icons">delete</span>
           <span>{t("explorer.actions.delete.low_rights_toast")}</span>
-        </ToasterItem>
+        </ToasterItem>,
       );
     }
   };

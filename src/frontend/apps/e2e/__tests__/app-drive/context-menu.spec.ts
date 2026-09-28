@@ -79,9 +79,42 @@ test.describe("Context menu", () => {
     ).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Share" })).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Move" })).toBeVisible();
+    await expect(
+      page.getByRole("menuitem", { name: "Download" }),
+    ).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Rename" })).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Star" })).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Delete" })).toBeVisible();
+  });
+
+  test("Right-click on folder > Download calls the export endpoint", async ({
+    page,
+  }) => {
+    await createFolderInCurrentFolder(page, "TestFolder");
+
+    await page.route("**/api/v1.0/items/*/export/", async (route) => {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          "content-disposition": "attachment; filename=test.zip",
+          "content-type": "application/zip",
+        },
+        body: "",
+      });
+    });
+
+    const exportRequestPromise = page.waitForRequest((request) =>
+      /\/api\/v1\.0\/items\/[^/]+\/export\/$/.test(request.url()),
+    );
+
+    const row = await getRowItem(page, "TestFolder");
+    await row.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Download" }).click();
+
+    const exportRequest = await exportRequestPromise;
+    expect(exportRequest.url()).toMatch(
+      /\/api\/v1\.0\/items\/[^/]+\/export\/$/,
+    );
   });
 
   test("Right-click on item > Rename works", async ({ page }) => {

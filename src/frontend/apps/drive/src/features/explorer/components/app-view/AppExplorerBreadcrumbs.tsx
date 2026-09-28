@@ -1,14 +1,16 @@
-import { Button, useModal } from "@gouvfr-lasuite/cunningham-react";
+import {
+  Button,
+  useModal,
+  DropdownMenu,
+  HorizontalSeparator,
+  IconSize,
+  useDropdownMenu,
+} from "@gouvfr-lasuite/ui-components";
 import {
   NavigationEventType,
   useGlobalExplorer,
 } from "@/features/explorer/components/GlobalExplorerContext";
-import {
-  HorizontalSeparator,
-  IconSize,
-  useDropdownMenu,
-} from "@gouvfr-lasuite/ui-kit";
-import { FolderIcon } from "@/features/explorer/components/icons/ItemIcon";
+import { ItemIcon } from "@/features/explorer/components/icons/ItemIcon";
 import createFolderSvg from "@/assets/icons/add_folder.svg";
 import { EmbeddedExplorerGridBreadcrumbs } from "@/features/explorer/components/embedded-explorer/EmbeddedExplorerGridBreadcrumbs";
 import { ExplorerCreateFolderModal } from "../modals/ExplorerCreateFolderModal";
@@ -24,6 +26,8 @@ import {
   ORDERED_DEFAULT_ROUTES,
 } from "@/utils/defaultRoutes";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
+import { useCreateMenuItems } from "../../hooks/useCreateMenuItems";
+import { Item, ItemType } from "@/features/drivers/types";
 
 export const AppExplorerBreadcrumbs = () => {
   const { item, onNavigate } = useGlobalExplorer();
@@ -99,6 +103,11 @@ export const ExplorerBreadcrumbsMobile = () => {
   const { item, onNavigate } = useGlobalExplorer();
   const { data: breadcrumb } = useBreadcrumbQuery(item?.id);
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
+  const { menuItems, modals: createModals } = useCreateMenuItems({
+    includeImport: true,
+    includeCreate: false,
+  });
 
   const defaultRouteId = getDefaultRouteId(router.pathname);
   const defaultRouteData = ORDERED_DEFAULT_ROUTES.find(
@@ -121,13 +130,29 @@ export const ExplorerBreadcrumbsMobile = () => {
 
   if (!item && defaultRouteData) {
     return (
-      <div className="explorer__content__breadcrumbs--mobile">
-        <div className="explorer__content__breadcrumbs--mobile__default-route">
-          <defaultRouteData.icon size={IconSize.MEDIUM} />
+      <>
+        <div className="explorer__content__breadcrumbs--mobile">
+          <div className="explorer__content__breadcrumbs--mobile__default-route">
+            <defaultRouteData.icon size={IconSize.MEDIUM} />
 
-          {t(defaultRouteData.label)}
+            {t(defaultRouteData.label)}
+          </div>
+          {defaultRouteId === DefaultRoute.MY_FILES && (
+            <DropdownMenu
+              options={menuItems}
+              isOpen={isCreateMenuOpen}
+              onOpenChange={setIsCreateMenuOpen}
+            >
+              <Button
+                variant="tertiary"
+                icon={<span className="material-icons">more_vert</span>}
+                onClick={() => setIsCreateMenuOpen(true)}
+              />
+            </DropdownMenu>
+          )}
         </div>
-      </div>
+        {defaultRouteId === DefaultRoute.MY_FILES && createModals}
+      </>
     );
   }
 
@@ -145,7 +170,14 @@ export const ExplorerBreadcrumbsMobile = () => {
     <div className="explorer__content__breadcrumbs--mobile">
       {isRoot ? (
         <div className="explorer__content__breadcrumbs--mobile__workspace">
-          <FolderIcon iconSize={IconSize.X_SMALL} />
+          <ItemIcon
+            item={
+              {
+                type: ItemType.FOLDER,
+              } as unknown as Item
+            }
+            size={IconSize.SMALL}
+          />
           <span>{workspaceTitle}</span>
         </div>
       ) : (
@@ -175,7 +207,14 @@ export const ExplorerBreadcrumbsMobile = () => {
           </div>
           <div className="explorer__content__breadcrumbs--mobile__container__info">
             <div className="explorer__content__breadcrumbs--mobile__container__info__title">
-              <FolderIcon iconSize={IconSize.X_SMALL} />
+              <ItemIcon
+                item={
+                  {
+                    type: ItemType.FOLDER,
+                  } as unknown as Item
+                }
+                size={IconSize.SMALL}
+              />
               <span>{workspaceTitle}</span>
             </div>
             <div className="explorer__content__breadcrumbs--mobile__container__info__folder">

@@ -3,13 +3,14 @@ import {
   Modal,
   ModalProps,
   ModalSize,
-} from "@gouvfr-lasuite/cunningham-react";
+} from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { RhfInput } from "@/features/forms/components/RhfInput";
 import { Item } from "@/features/drivers/types";
 import { useMutationCreateFolder } from "../../hooks/useMutations";
 import { useRouter } from "next/router";
+import { useSetSelectedItems } from "../../stores/selectionStore";
 
 type Inputs = {
   title: string;
@@ -19,6 +20,7 @@ type ExplorerCreateFolderModalProps = Pick<ModalProps, "isOpen" | "onClose"> & {
   // Full parent Item. Omit for root / workspace-level creation.
   // When `parent.is_encrypted`, the driver mints a wrapped folder key.
   parent?: Item;
+  redirectAfterCreate?: boolean;
 };
 
 export const ExplorerCreateFolderModal = ({
@@ -28,6 +30,7 @@ export const ExplorerCreateFolderModal = ({
   const form = useForm<Inputs>();
   const createFolder = useMutationCreateFolder();
   const router = useRouter();
+  const setSelectedItems = useSetSelectedItems();
 
   const onSubmit: SubmitHandler<Inputs> = async (data) => {
     form.reset();
@@ -37,11 +40,12 @@ export const ExplorerCreateFolderModal = ({
         parent: props.parent,
       },
       {
-        onSuccess: () => {
+        onSuccess: (createdItem) => {
           form.reset();
           props.onClose();
-          if (!props.parent) {
-            router.push(`/explorer/items/my-files`);
+          if (props.redirectAfterCreate && createdItem?.id) {
+            router.push(`/explorer/items/${createdItem.id}`);
+            setSelectedItems([createdItem]);
           }
         },
       },

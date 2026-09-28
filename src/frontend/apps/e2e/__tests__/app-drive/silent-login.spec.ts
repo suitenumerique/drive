@@ -26,7 +26,15 @@ const getSilentLoginRetryKey = async (page: Page): Promise<string | null> => {
  * Helper to clear the silent-login-retry key from localStorage
  */
 const clearSilentLoginRetryKey = async (page: Page) => {
-  await page.evaluate((key) => localStorage.removeItem(key), SILENT_LOGIN_RETRY_KEY);
+  // The app can navigate while we evaluate (e.g. right after the session
+  // cookie is cleared), which destroys the execution context. Retry until
+  // the evaluation lands on a settled page.
+  await expect(async () => {
+    await page.evaluate(
+      (key) => localStorage.removeItem(key),
+      SILENT_LOGIN_RETRY_KEY,
+    );
+  }).toPass({ timeout: 10000 });
 };
 
 test.describe("Silent Login", () => {
@@ -40,7 +48,7 @@ test.describe("Silent Login", () => {
 
     // Verify user is logged in
     await expect(
-      page.getByRole("button", { name: "Open user menu" })
+      page.getByRole("button", { name: "User menu" })
     ).toBeVisible({ timeout: 10000 });
 
     // Step 2: Clear only the Django session cookie (keep Keycloak session)
@@ -165,7 +173,7 @@ test.describe("Silent Login", () => {
 
     // Step 2: Verify user is logged in
     await expect(
-      page.getByRole("button", { name: "Open user menu" })
+      page.getByRole("button", { name: "User menu" })
     ).toBeVisible({ timeout: 10000 });
 
     // Step 3: Mock config API to enable silent login
@@ -185,7 +193,7 @@ test.describe("Silent Login", () => {
 
     // Step 6: Verify user is still logged in (no redirect to login page)
     await expect(
-      page.getByRole("button", { name: "Open user menu" })
+      page.getByRole("button", { name: "User menu" })
     ).toBeVisible({ timeout: 10000 });
 
     // Step 7: Verify no silent login redirect was attempted

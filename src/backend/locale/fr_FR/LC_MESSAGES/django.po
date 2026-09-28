@@ -327,6 +327,12 @@ msgstr ""
 msgid "Item invitations"
 msgstr ""
 
+#: core/api/viewsets.py:1614
+#, python-brace-format
+msgid "copy of {title}"
+msgstr "copie de {title}"
+
+
 #: core/templates/mail/html/invitation.html:162
 #: core/templates/mail/text/invitation.txt:3
 msgid "Logo email"
@@ -363,6 +369,10 @@ msgstr ""
 #: drive/settings.py:252
 msgid "German"
 msgstr ""
+
+#: wopi/conversion/services.py:86
+msgid "converted"
+msgstr "converti"
 
 #~ msgid "A new item was created on your behalf!"
 #~ msgstr "Un nouveau item a été créé pour vous !"

@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+import uuid
 from io import BytesIO
 from urllib.parse import quote, unquote, urlparse
 
@@ -17,10 +18,11 @@ from django.db import IntegrityError, transaction
 from django.db import models as db
 from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
+from django.http import StreamingHttpResponse
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
-from django.utils.text import slugify
+from django.utils.text import capfirst, slugify
 from django.utils.translation import gettext_lazy as _
 
 import rest_framework as drf
@@ -29,6 +31,7 @@ from corsheaders.middleware import (
     ACCESS_CONTROL_ALLOW_METHODS,
     ACCESS_CONTROL_ALLOW_ORIGIN,
 )
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
 from lasuite.drf.models.choices import (
     PRIVILEGED_ROLES,
     LinkReachChoices,
@@ -36,27 +39,43 @@ from lasuite.drf.models.choices import (
 )
 from lasuite.malware_detection import malware_detection
 from lasuite.oidc_login.decorators import refresh_oidc_access_token
-from rest_framework import filters, status, viewsets
 from rest_framework import response as drf_response
+from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.throttling import UserRateThrottle
 from rest_framework_api_key.permissions import HasAPIKey
 
 from core import enums, models
 from core.entitlements import get_entitlements_backend
-from core.services.mirror import mirror_item
+from core.services.accesses import (
+    batch_share_process_rows,
+    synchronize_descendants_accesses,
+)
+from core.services.item_exports import build_zip_stream, export_descendants
 from core.services.sdk_relay import SDKRelayManager
 from core.services.search_indexers import (
     get_file_indexer,
     get_visited_items_ids_of,
 )
-from core.tasks.item import duplicate_file, process_item_deletion, rename_file
+from core.storage.cache import invalidate_storage_used_cache
+from core.tasks.item import duplicate_file, process_item_purge, rename_file
 from core.utils.analytics import posthog_capture
+from wopi.conversion import exceptions as conversion_exceptions
+from wopi.conversion.services import prepare_conversion
 from wopi.services import access as access_service
+from wopi.tasks.conversion import convert_file
 from wopi.utils import compute_wopi_launch_url, get_wopi_client_config
 
 from . import permissions, serializers, utils
-from .filters import ItemFilter, ListItemFilter, SearchItemFilter
+from .filters import (
+    ItemFilter,
+    ItemOrdering,
+    ListItemFilter,
+    OrganizationUsageMetricFilter,
+    SearchItemFilter,
+    UsageMetricAccountTypeChoices,
+    UsageMetricFilter,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +86,6 @@ MEDIA_STORAGE_URL_PATTERN = re.compile(
     f"{settings.MEDIA_URL:s}(?P<preview>preview/)?"
     f"(?P<key>{ITEM_FOLDER:s}/(?P<pk>{UUID_REGEX:s})/.*{FILE_EXT_REGEX:s})$"
 )
-
-
 # pylint: disable=too-many-ancestors
 
 
@@ -179,6 +196,7 @@ class UserViewSet(
     queryset = models.User.objects.all().filter(is_active=True)
     serializer_class = serializers.UserSerializer
     get_me_serializer_class = serializers.UserMeSerializer
+    contacts_serializer_class = serializers.UserLightSerializer
     pagination_class = None
     throttle_classes = []
 
@@ -239,6 +257,60 @@ class UserViewSet(
         context = {"request": request}
         return drf.response.Response(self.get_serializer(request.user, context=context).data)
 
+    @drf.decorators.action(detail=False, methods=["get"], url_path="contacts")
+    def contacts(self, request):
+        """
+        Return the people involved in sharing with the current user, in either
+        direction, most frequent first.
+
+        A contact either holds an access on one of the user's items ("shared
+        with") or created one of them ("shared by"). Frequency is the number of
+        such items they hold an access on, so a contact's own private items do
+        not inflate their ranking.
+        """
+        user = request.user
+        # Restrict to live items the user has access to, directly or through a
+        # team, matching the contact filter perimeter so every returned contact
+        # yields at least one item.
+        shared_items = models.Item.objects.filter(
+            db.Q(accesses__user=user) | db.Q(accesses__team__in=user.teams),
+            hard_deleted_at__isnull=True,
+            ancestors_deleted_at__isnull=True,
+        )
+
+        shared_with = db.Q(itemaccess__item_id__in=shared_items.values("pk"))
+        shared_by = db.Q(pk__in=shared_items.values("creator_id"))
+        created_shared = db.Q(items_created__in=shared_items)
+        frequency = db.Count("itemaccess", filter=shared_with) + db.Count(
+            "items_created", filter=created_shared
+        )
+        contacts = (
+            models.User.objects.filter(is_active=True)
+            .filter(shared_with | shared_by)
+            .exclude(pk=user.pk)
+            .annotate(frequency=frequency)
+        )
+
+        if query := request.query_params.get("q", ""):
+            if "@" in query:
+                contacts = contacts.annotate(
+                    distance=RawSQL("levenshtein(email::text, %s::text)", (query,))
+                ).filter(distance__lte=3)
+                ordering = ("distance", "email")
+            else:
+                contacts = (
+                    contacts.filter(email__trigram_word_similar=query)
+                    .annotate(similarity=TrigramSimilarity("email", query))
+                    .filter(similarity__gt=0.2)
+                )
+                ordering = ("-similarity", "email")
+        else:
+            ordering = ("-frequency", "email")
+
+        contacts = contacts.order_by(*ordering)[: settings.API_USERS_LIST_LIMIT]
+
+        return drf.response.Response(self.get_serializer(contacts, many=True).data)
+
 
 class ItemMetadata(drf.metadata.SimpleMetadata):
     """Custom metadata class to add information"""
@@ -279,6 +351,8 @@ def compute_effective_descendants_for_encryption(item):
     Stacked encryption: a folder may already contain inner encrypted
     subtrees. Those keep their existing keys and per-user ItemAccess
     rows; we only operate on the "outer" subtree they don't cover.
+    Restrictions are excluded too: they only point at a folder living at
+    the tree root and hold no content to encrypt.
     """
     inner_roots = list(
         item.descendants().filter(
@@ -286,7 +360,7 @@ def compute_effective_descendants_for_encryption(item):
             encrypted_symmetric_key__isnull=True,
         )
     )
-    qs = item.descendants()
+    qs = item.descendants().exclude(type=models.ItemTypeChoices.RESTRICTION)
     for inner in inner_roots:
         qs = qs.exclude(path__descendants=inner.path)
     return qs
@@ -330,9 +404,7 @@ def write_subtree_encryption(
 
     for descendant in effective_descendants:
         descendant.is_encrypted = True
-        descendant.encrypted_symmetric_key = encrypted_keys_for_descendants.get(
-            str(descendant.pk)
-        )
+        descendant.encrypted_symmetric_key = encrypted_keys_for_descendants.get(str(descendant.pk))
         desc_fields = ["is_encrypted", "encrypted_symmetric_key"]
         if str(descendant.pk) in file_key_mapping:
             old_s3_keys.append(descendant.file_key)
@@ -391,8 +463,8 @@ class ItemViewSet(
        Example: DELETE /items/{id}/
 
     ### Additional Actions:
-    1. **Trashbin**: List soft deleted items for a item owner
-        Example: GET /items/{id}/trashbin/
+    1. **Trashbin**: List soft deleted items for an items owner
+        Example: GET /items/trashbin/
 
     2. **Children**: List or create child items.
         Example: GET, POST /items/{id}/children/
@@ -400,7 +472,7 @@ class ItemViewSet(
     3. **Favorite**: Get list of favorite items for a user. Mark or unmark
         a item as favorite.
         Examples:
-        - GET /items/favorite/
+        - GET /items/favorites/
         - POST, DELETE /items/{id}/favorite/
 
     4. **Link Configuration**: Update item link configuration.
@@ -440,7 +512,15 @@ class ItemViewSet(
 
     metadata_class = ItemMetadata
     ordering = ["-updated_at"]
-    ordering_fields = ["created_at", "updated_at", "title", "type"]
+    ordering_fields = [
+        "created_at",
+        "updated_at",
+        "size",
+        "title",
+        "type",
+        "updated_at",
+        "creator__full_name",
+    ]
     pagination_class = Pagination
     permission_classes = [
         permissions.ItemPermission,
@@ -484,7 +564,7 @@ class ItemViewSet(
     def get_queryset(self):
         """Get queryset performing all annotation and filtering on the item tree structure."""
         user = self.request.user
-        queryset = super().get_queryset().select_related("creator")
+        queryset = super().get_queryset().select_related("creator").annotate_has_restriction()
         # Remove items with upload_state SUSPICIOUS for non-creators
         queryset = self._filter_suspicious_items(queryset, user)
 
@@ -549,7 +629,7 @@ class ItemViewSet(
         for path in root_paths:
             path_list |= db.Q(path__descendants=path)
 
-        queryset = self.queryset.select_related("creator")
+        queryset = self.queryset.select_related("creator").annotate_has_restriction()
         # Remove items with upload_state SUSPICIOUS for non-creators
         queryset = self._filter_suspicious_items(queryset, user)
         queryset = self._exclude_pending_items(queryset)
@@ -565,6 +645,7 @@ class ItemViewSet(
         queryset = queryset.annotate_is_favorite(user)
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.annotate_encryption_state(user)
         return queryset
 
     def get_response_for_queryset(
@@ -654,7 +735,7 @@ class ItemViewSet(
     def _create_file_from_template(self, item, extension):
         """Read template file and upload it to storage for the given item."""
         template_path = os.path.join(
-            settings.BASE_DIR, "assets", "file_templates", f"template.{extension}"
+            settings.BASE_DIR, "assets", "file_templates", enums.TEMPLATE_FILES[extension]
         )
 
         try:
@@ -691,14 +772,33 @@ class ItemViewSet(
         item.size = len(template_content)
         item.save(update_fields=["upload_state", "mimetype", "size", "updated_at"])
 
+    def _check_can_upload(self, user, item_type):
+        """Refuse the creation of a file when the upload entitlement is falsy."""
+        if item_type != models.ItemTypeChoices.FILE:
+            return
+
+        can_upload = get_entitlements_backend().can_upload(user)
+        if not can_upload["result"]:
+            raise drf.exceptions.PermissionDenied(
+                detail=can_upload.get("message", "You do not have permission to upload files."),
+                code=can_upload.get("reason"),
+            )
+
+    def get_create_extra_attributes(self):
+        """Extra model attributes applied to items created by this viewset (subclass hook)."""
+        return {}
+
     def perform_create(self, serializer):
         """Set the current user as creator and owner of the newly created object."""
+        self._check_can_upload(self.request.user, serializer.validated_data["type"])
+
         extension = serializer.validated_data.pop("extension", None)
 
         obj = models.Item.objects.create_child(
             creator=self.request.user,
             link_reach=LinkReachChoices.RESTRICTED,
             **serializer.validated_data,
+            **self.get_create_extra_attributes(),
         )
         if extension:
             self._create_file_from_template(obj, extension)
@@ -711,7 +811,10 @@ class ItemViewSet(
 
     def perform_destroy(self, instance):
         """Override to implement a soft delete instead of dumping the record in database."""
-        instance.soft_delete()
+        if instance.type == models.ItemTypeChoices.RESTRICTION:
+            instance.detach()
+        else:
+            instance.soft_delete()
 
     def perform_update(self, serializer):
         """Override to check if a file is renamed in order to rename file on storage."""
@@ -730,8 +833,40 @@ class ItemViewSet(
         """
         instance = self.get_object()
         instance.hard_delete()
-        process_item_deletion.delay(instance.id)
+        process_item_purge.delay(instance.id)
         return drf.response.Response(status=status.HTTP_204_NO_CONTENT)
+
+    @drf.decorators.action(detail=True, methods=["post"], url_path="convert")
+    def convert(self, request, *args, **kwargs):
+        """Queue a legacy Office file conversion.
+
+        Creates a placeholder Item in CONVERTING state in the destination folder
+        and dispatches the celery task that will attach the converted bytes.
+        """
+        source = self.get_object()
+        try:
+            placeholder = prepare_conversion(source, request.user)
+        except conversion_exceptions.ConversionPermissionDenied as exc:
+            raise drf.exceptions.PermissionDenied() from exc
+        except (
+            conversion_exceptions.ConversionRejected,
+            conversion_exceptions.ConversionMisconfigured,
+        ) as exc:
+            raise drf.exceptions.ValidationError({"detail": str(exc)}) from exc
+
+        try:
+            convert_file.delay(
+                source_item_id=str(source.id),
+                converted_item_id=str(placeholder.id),
+                user_id=str(request.user.id),
+            )
+        except Exception:
+            placeholder.soft_delete()
+            placeholder.delete()
+            raise
+
+        serializer = self.get_serializer(placeholder)
+        return drf.response.Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def list(self, request, *args, **kwargs):
         """List top level items with pagination and filtering."""
@@ -743,9 +878,10 @@ class ItemViewSet(
             raise drf.exceptions.ValidationError(filterset.errors)
         filter_data = filterset.form.cleaned_data
 
-        # Filter as early as possible on fields that are available on the model
-        for field in ["is_creator_me", "title", "type"]:
-            queryset = filterset.filters[field].filter(queryset, filter_data[field])
+        # Filter early, excluding is_favorite whose annotation does not exist yet
+        for field in filterset.filters:
+            if field != "is_favorite":
+                queryset = filterset.filters[field].filter(queryset, filter_data[field])
         user = request.user
         queryset = queryset.annotate_user_roles(user)
 
@@ -757,6 +893,39 @@ class ItemViewSet(
         )
         queryset = queryset.filter(path__in=root_paths)
 
+        # Hide restricted roots the user already reaches through a live
+        # restriction, so the folder shows up in a single location
+        if user.is_authenticated:
+            reachable_restrictions = models.Item.objects.filter(
+                type=models.ItemTypeChoices.RESTRICTION,
+                target_id=db.OuterRef("pk"),
+                ancestors_deleted_at__isnull=True,
+            ).filter(
+                db.Exists(
+                    models.ItemAccess.objects.filter(
+                        db.Q(user=user) | db.Q(team__in=user.teams),
+                        item__path__ancestors=db.OuterRef("path"),
+                    )
+                )
+                | (
+                    db.Exists(
+                        models.Item.objects.filter(
+                            path__ancestors=db.OuterRef("path"),
+                            link_reach__in=[
+                                LinkReachChoices.PUBLIC,
+                                LinkReachChoices.AUTHENTICATED,
+                            ],
+                        )
+                    )
+                    & db.Exists(
+                        models.LinkTrace.objects.filter(
+                            user=user, item__path__ancestors=db.OuterRef("path")
+                        )
+                    )
+                )
+            )
+            queryset = queryset.exclude(db.Exists(reachable_restrictions))
+
         # Annotate the queryset with an attribute marking instances as highest ancestor
         # in order to save some time while computing abilities in the instance
         queryset = queryset.annotate(
@@ -767,9 +936,10 @@ class ItemViewSet(
         queryset = queryset.annotate_is_favorite(user)
         queryset = filterset.filters["is_favorite"].filter(queryset, filter_data["is_favorite"])
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.annotate_encryption_state(user)
 
         # Apply ordering only now that everyting is filtered and annotated
-        queryset = filters.OrderingFilter().filter_queryset(self.request, queryset, self)
+        queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
         return self.get_response_for_queryset(queryset)
 
@@ -798,7 +968,8 @@ class ItemViewSet(
         if not can_upload["result"]:
             self._complete_item_deletion(item)
             raise drf.exceptions.PermissionDenied(
-                detail=can_upload.get("message", "You do not have permission to upload files.")
+                detail=can_upload.get("message", "You do not have permission to upload files."),
+                code=can_upload.get("reason"),
             )
 
         s3_client = default_storage.connection.meta.client
@@ -825,7 +996,6 @@ class ItemViewSet(
             item.mimetype = "application/octet-stream"
             item.size = file_size
             item.save(update_fields=["upload_state", "mimetype", "size"])
-            mirror_item(item)
             serializer = self.get_serializer(item)
             posthog_capture(
                 "item_uploaded",
@@ -904,7 +1074,6 @@ class ItemViewSet(
                 )
 
         malware_detection.analyse_file(item.file_key, item_id=item.id)
-        mirror_item(item)
 
         serializer = self.get_serializer(item)
 
@@ -925,12 +1094,13 @@ class ItemViewSet(
         """Completely delete an item."""
         item.soft_delete()
         item.hard_delete()
-        process_item_deletion.delay(item.id)
+        process_item_purge.delay(item.id)
 
     @drf.decorators.action(
         detail=False,
         methods=["get"],
         permission_classes=[permissions.IsAuthenticated],
+        url_path="favorites",
     )
     def favorite_list(self, request, *args, **kwargs):
         """Get list of favorite items for the current user."""
@@ -952,6 +1122,9 @@ class ItemViewSet(
         queryset = queryset.filter(id__in=favorite_items_ids)
         queryset = queryset.annotate_with_numchild()
 
+        # Apply ordering only now that everyting is filtered and annotated
+        queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
+
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
     @drf.decorators.action(
@@ -970,24 +1143,14 @@ class ItemViewSet(
         """
         user = request.user
 
-        # Build the EXISTS subquery to check if user has owner access
-        # to the item or any of its ancestors
-        owner_access_exists = models.ItemAccess.objects.filter(
-            db.Q(user=user) | db.Q(team__in=user.teams),
-            role=models.RoleChoices.OWNER,
-            item__path__ancestors=db.OuterRef("path"),
-        )
-
-        # Filter trashbin items to only those where user has owner access
-        # Before we were filtering on the user_roles annotation, but it was too slow
-        # Here the optimization is to filter on the owner_access_exists subquery
-        # which is much faster.
+        # Restrict to soft-deleted items the user owns (directly or through an
+        # ancestor access). Filtering on the owner access subquery is much faster
+        # than on the user_roles annotation.
         queryset = (
             self.queryset.select_related("creator")
-            .filter(
-                deleted_at__gte=models.get_trashbin_cutoff(),
-            )
-            .filter(db.Exists(owner_access_exists))
+            .annotate_has_restriction()
+            .filter(deleted_at__gte=models.get_trashbin_cutoff())
+            .owned_by(user)
         )
 
         # Apply filtering similar to children method
@@ -999,6 +1162,7 @@ class ItemViewSet(
         # Only annotate with user roles for the filtered set if needed by serializer
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.annotate_encryption_state(user)
 
         return self.get_response_for_queryset(queryset)
 
@@ -1043,6 +1207,18 @@ class ItemViewSet(
                 {"target_item_id": message}, code="item_move_missing_permission"
             )
 
+        # Moving a file to the root without a direct access reassigns its creator
+        # (see below), shifting the file size to the mover's storage usage: gate it
+        # like an upload so an over-quota user cannot take ownership of more storage.
+        has_direct_access = models.ItemAccess.objects.filter(item=item, user=user).exists()
+        if not target_item and not has_direct_access and item.type == models.ItemTypeChoices.FILE:
+            can_upload = get_entitlements_backend().can_upload(user)
+            if not can_upload["result"]:
+                raise drf.exceptions.PermissionDenied(
+                    detail=can_upload.get("message", "You cannot take ownership of more storage."),
+                    code=can_upload.get("reason"),
+                )
+
         # Encryption-aware move. Five resolved shapes — see
         # `MoveItemSerializer` for the payload schema. We validate first
         # (so a malformed payload never moves the item) then apply the
@@ -1050,9 +1226,7 @@ class ItemViewSet(
         encrypted_symmetric_key = validated_data.get("encrypted_symmetric_key")
         is_encryption_root_flag = validated_data.get("is_encryption_root")
         per_user_encrypted_keys = validated_data.get("per_user_encrypted_keys")
-        version_per_user = validated_data.get(
-            "encryption_public_key_versions", {}
-        )
+        version_per_user = validated_data.get("encryption_public_key_versions", {})
         # Encrypt-on-move payload: the presence of either field is the
         # signal we're looking at the plaintext-into-chain shape (an
         # empty dict still counts — single-file moves have no
@@ -1061,17 +1235,13 @@ class ItemViewSet(
             "encrypted_keys_for_descendants" in validated_data
             or "file_key_mapping" in validated_data
         )
-        encrypted_keys_for_descendants = validated_data.get(
-            "encrypted_keys_for_descendants", {}
-        )
+        encrypted_keys_for_descendants = validated_data.get("encrypted_keys_for_descendants", {})
         file_key_mapping = validated_data.get("file_key_mapping", {})
         target_is_encrypted = target_item.is_encrypted if target_item else False
         # Source flags. `source_is_root` means the item currently holds
         # its key per-user (no chain wrap of its own).
         source_is_encrypted = bool(item.is_encrypted)
-        source_is_root = bool(
-            source_is_encrypted and item.encrypted_symmetric_key is None
-        )
+        source_is_root = bool(source_is_encrypted and item.encrypted_symmetric_key is None)
         source_in_chain = source_is_encrypted and not source_is_root
 
         # Encrypt-on-move (plaintext → encrypted): plaintext source
@@ -1082,28 +1252,21 @@ class ItemViewSet(
                 raise drf.exceptions.ValidationError(
                     {
                         "detail": _(
-                            "Encrypt-on-move payload is only valid for "
-                            "plaintext source items."
+                            "Encrypt-on-move payload is only valid for plaintext source items."
                         )
                     },
                     code="item_move_encrypt_on_move_source_encrypted",
                 )
             if not target_is_encrypted:
                 raise drf.exceptions.ValidationError(
-                    {
-                        "detail": _(
-                            "Encrypt-on-move requires moving INTO an "
-                            "encrypted folder."
-                        )
-                    },
+                    {"detail": _("Encrypt-on-move requires moving INTO an encrypted folder.")},
                     code="item_move_encrypt_on_move_plain_target",
                 )
             if not encrypted_symmetric_key:
                 raise drf.exceptions.ValidationError(
                     {
                         "encrypted_symmetric_key": _(
-                            "Required for encrypt-on-move (chain wrap of "
-                            "the item's symmetric key)."
+                            "Required for encrypt-on-move (chain wrap of the item's symmetric key)."
                         )
                     },
                     code="item_move_chain_wrap_required",
@@ -1122,8 +1285,7 @@ class ItemViewSet(
                 raise drf.exceptions.ValidationError(
                     {
                         "per_user_encrypted_keys": _(
-                            "Encrypt-on-move uses chain wraps only — no "
-                            "per-user wraps."
+                            "Encrypt-on-move uses chain wraps only — no per-user wraps."
                         )
                     },
                     code="item_move_conflicting_wrap",
@@ -1133,25 +1295,16 @@ class ItemViewSet(
             # build time; once `item.move(target)` rewrites paths via
             # raw SQL, re-evaluating the queryset returns nothing
             # (filter still references the old path value).
-            effective_descendants = list(
-                compute_effective_descendants_for_encryption(item)
-            )
+            effective_descendants = list(compute_effective_descendants_for_encryption(item))
             live_descendant_ids = {str(d.pk) for d in effective_descendants}
             provided_descendant_ids = set(encrypted_keys_for_descendants.keys())
             if live_descendant_ids != provided_descendant_ids:
                 return drf.response.Response(
                     {
-                        "detail": _(
-                            "Folder contents changed during the operation. "
-                            "Please retry."
-                        ),
+                        "detail": _("Folder contents changed during the operation. Please retry."),
                         "code": "subtree_mutated",
-                        "missing": sorted(
-                            live_descendant_ids - provided_descendant_ids
-                        ),
-                        "extra": sorted(
-                            provided_descendant_ids - live_descendant_ids
-                        ),
+                        "missing": sorted(live_descendant_ids - provided_descendant_ids),
+                        "extra": sorted(provided_descendant_ids - live_descendant_ids),
                     },
                     status=drf.status.HTTP_409_CONFLICT,
                 )
@@ -1199,8 +1352,7 @@ class ItemViewSet(
                 raise drf.exceptions.ValidationError(
                     {
                         "is_encryption_root": _(
-                            "Cannot promote a plaintext item to an "
-                            "encryption root via /move/."
+                            "Cannot promote a plaintext item to an encryption root via /move/."
                         )
                     },
                     code="item_move_promote_plain",
@@ -1219,8 +1371,7 @@ class ItemViewSet(
                 raise drf.exceptions.ValidationError(
                     {
                         "per_user_encrypted_keys": _(
-                            "Required when promoting an item to encryption "
-                            "root."
+                            "Required when promoting an item to encryption root."
                         )
                     },
                     code="item_move_per_user_keys_required",
@@ -1229,8 +1380,7 @@ class ItemViewSet(
                 raise drf.exceptions.ValidationError(
                     {
                         "encrypted_symmetric_key": _(
-                            "Cannot supply a chain wrap when promoting to "
-                            "encryption root."
+                            "Cannot supply a chain wrap when promoting to encryption root."
                         )
                     },
                     code="item_move_conflicting_wrap",
@@ -1247,8 +1397,7 @@ class ItemViewSet(
                 raise drf.exceptions.ValidationError(
                     {
                         "per_user_encrypted_keys": _(
-                            "You must include a wrapped key for yourself "
-                            "when re-anchoring an item."
+                            "You must include a wrapped key for yourself when re-anchoring an item."
                         )
                     },
                     code="item_move_caller_wrap_required",
@@ -1282,8 +1431,7 @@ class ItemViewSet(
                 raise drf.exceptions.ValidationError(
                     {
                         "is_encryption_root": _(
-                            "Item is not currently an encryption root; "
-                            "cannot demote it."
+                            "Item is not currently an encryption root; cannot demote it."
                         )
                     },
                     code="item_move_not_root",
@@ -1302,8 +1450,7 @@ class ItemViewSet(
                 raise drf.exceptions.ValidationError(
                     {
                         "encrypted_symmetric_key": _(
-                            "Required when demoting from encryption root "
-                            "into a chain."
+                            "Required when demoting from encryption root into a chain."
                         )
                     },
                     code="item_move_chain_wrap_required",
@@ -1312,8 +1459,7 @@ class ItemViewSet(
                 raise drf.exceptions.ValidationError(
                     {
                         "per_user_encrypted_keys": _(
-                            "Cannot supply per-user wraps when demoting "
-                            "into a chain."
+                            "Cannot supply per-user wraps when demoting into a chain."
                         )
                     },
                     code="item_move_conflicting_wrap",
@@ -1378,12 +1524,8 @@ class ItemViewSet(
             ).select_related("user"):
                 user_sub = access.user.sub
                 if user_sub in per_user_encrypted_keys:
-                    access.encrypted_item_symmetric_key_for_user = (
-                        per_user_encrypted_keys[user_sub]
-                    )
-                    access.encryption_public_key_version = (
-                        version_per_user.get(user_sub) or None
-                    )
+                    access.encrypted_item_symmetric_key_for_user = per_user_encrypted_keys[user_sub]
+                    access.encryption_public_key_version = version_per_user.get(user_sub) or None
                     access.save(
                         update_fields=[
                             "encrypted_item_symmetric_key_for_user",
@@ -1399,8 +1541,7 @@ class ItemViewSet(
             # caller forgot someone, defensively).
             if remaining_user_subs:
                 users_by_sub = {
-                    u.sub: u
-                    for u in models.User.objects.filter(sub__in=remaining_user_subs)
+                    u.sub: u for u in models.User.objects.filter(sub__in=remaining_user_subs)
                 }
                 for user_sub in remaining_user_subs:
                     inherited_user = users_by_sub.get(user_sub)
@@ -1411,12 +1552,8 @@ class ItemViewSet(
                         item=item,
                         user=inherited_user,
                         role=role,
-                        encrypted_item_symmetric_key_for_user=per_user_encrypted_keys[
-                            user_sub
-                        ],
-                        encryption_public_key_version=(
-                            version_per_user.get(user_sub) or None
-                        ),
+                        encrypted_item_symmetric_key_for_user=per_user_encrypted_keys[user_sub],
+                        encryption_public_key_version=(version_per_user.get(user_sub) or None),
                     )
 
         elif is_encryption_root_flag is False:
@@ -1442,12 +1579,17 @@ class ItemViewSet(
 
         # If the item is moved to the root and the user does not have an access on the item,
         # create an owner access for the user. Otherwise, the item will be invisible for the user.
+        # Checked again: a re-anchor above may have materialised the mover's access
         if not target_item and not models.ItemAccess.objects.filter(item=item, user=user).exists():
             models.ItemAccess.objects.create(
                 item=item,
                 user=self.request.user,
                 role=models.RoleChoices.OWNER,
             )
+            # Saving the item only invalidates the storage used cache of the
+            # new creator, the previous one loses this item from its usage.
+            previous_creator_id = item.creator_id
+            transaction.on_commit(lambda: invalidate_storage_used_cache([previous_creator_id]))
             item.creator = user
             update_fields.append("creator")
 
@@ -1505,20 +1647,10 @@ class ItemViewSet(
             )
             serializer.is_valid(raise_exception=True)
 
-            entitlements_backend = get_entitlements_backend()
-            can_upload = entitlements_backend.can_upload(self.request.user)
-            if (
-                serializer.validated_data.get("type") == models.ItemTypeChoices.FILE
-                and not can_upload["result"]
-            ):
-                raise drf.exceptions.PermissionDenied(
-                    detail=can_upload.get("message", "You do not have permission to upload files.")
-                )
+            self._check_can_upload(self.request.user, serializer.validated_data["type"])
 
             extension = serializer.validated_data.pop("extension", None)
-            encrypted_symmetric_key = serializer.validated_data.pop(
-                "encrypted_symmetric_key", None
-            )
+            encrypted_symmetric_key = serializer.validated_data.pop("encrypted_symmetric_key", None)
 
             # If parent is encrypted, child must provide an encrypted_symmetric_key
             if item.is_encrypted:
@@ -1532,6 +1664,16 @@ class ItemViewSet(
                         },
                         status=drf.status.HTTP_400_BAD_REQUEST,
                     )
+                # A template would be written in plaintext into the encrypted folder
+                if extension:
+                    return drf.response.Response(
+                        {
+                            "detail": _(
+                                "Files cannot be created from a template in an encrypted folder."
+                            )
+                        },
+                        status=drf.status.HTTP_400_BAD_REQUEST,
+                    )
                 serializer.validated_data["is_encrypted"] = True
                 serializer.validated_data["encrypted_symmetric_key"] = encrypted_symmetric_key
 
@@ -1539,6 +1681,7 @@ class ItemViewSet(
                 creator=request.user,
                 parent=item,
                 **serializer.validated_data,
+                **self.get_create_extra_attributes(),
             )
 
             if extension:
@@ -1553,7 +1696,22 @@ class ItemViewSet(
             )
 
         # GET: List children
-        queryset = item.children().select_related("creator").filter(deleted_at__isnull=True)
+        queryset = (
+            item.children()
+            .select_related("creator", "target")
+            .annotate_has_restriction()
+            .filter(deleted_at__isnull=True)
+        )
+        if request.user.is_authenticated:
+            queryset = queryset.prefetch_related(
+                db.Prefetch(
+                    "target__accesses",
+                    queryset=models.ItemAccess.objects.filter(
+                        db.Q(user=request.user) | db.Q(team__in=request.user.teams)
+                    ),
+                    to_attr="viewer_accesses",
+                )
+            )
         queryset = self._filter_suspicious_items(queryset, request.user)
         queryset = self._exclude_pending_items(queryset)
         queryset = self.filter_queryset(queryset)
@@ -1563,7 +1721,7 @@ class ItemViewSet(
         queryset = filterset.qs
 
         # Apply ordering only now that everything is filtered and annotated
-        queryset = filters.OrderingFilter().filter_queryset(self.request, queryset, self)
+        queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
         # Pre-compute number of accesses
         item_nb_accesses = item.nb_accesses
@@ -1591,8 +1749,15 @@ class ItemViewSet(
         including the item itself. Used by recursive operations (encryption,
         bulk actions) so the frontend can enumerate a subtree in one query.
         """
+        queryset = (
+            self.queryset.select_related("creator")
+            .annotate_has_restriction()
+            .annotate_user_roles(request.user)
+            .annotate_with_numchild()
+            .annotate_encryption_state(request.user)
+        )
         try:
-            item = self.queryset.get(pk=pk)
+            item = queryset.get(pk=pk)
         except models.Item.DoesNotExist as exc:
             raise drf.exceptions.NotFound from exc
 
@@ -1609,11 +1774,13 @@ class ItemViewSet(
                 status=drf.status.HTTP_200_OK,
             )
 
+        # Restrictions are left out, consistently with the encryption scope
         subtree_qs = (
-            self.queryset.filter(
+            queryset.filter(
                 path__descendants=item.path,
                 ancestors_deleted_at__isnull=True,
             )
+            .exclude(type=models.ItemTypeChoices.RESTRICTION)
             .order_by("path")
         )
         serializer = self.get_serializer(subtree_qs, many=True)
@@ -1630,8 +1797,9 @@ class ItemViewSet(
         except models.Item.DoesNotExist as exc:
             raise drf.exceptions.NotFound from exc
 
+        prefixes = [str(item.path[:i]) for i in range(1, len(item.path) + 1)]
         highest_ancestor = (
-            self.queryset.filter(path__ancestors=item.path, ancestors_deleted_at__isnull=True)
+            self.queryset.filter(path__in=prefixes, ancestors_deleted_at__isnull=True)
             .readable_per_se(request.user)
             .only("path")
             .order_by("path")
@@ -1685,8 +1853,13 @@ class ItemViewSet(
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
         tree = (
-            self.queryset.select_related("creator")
-            .filter(clause, type=models.ItemTypeChoices.FOLDER, deleted_at__isnull=True)
+            self.queryset.select_related("creator", "target")
+            .annotate_has_restriction()
+            .filter(
+                clause,
+                type__in=[models.ItemTypeChoices.FOLDER, models.ItemTypeChoices.RESTRICTION],
+                deleted_at__isnull=True,
+            )
             .order_by("created_at")
         )
 
@@ -1694,6 +1867,7 @@ class ItemViewSet(
         tree = tree.annotate_user_roles(user)
         tree = tree.annotate_is_favorite(user)
         tree = tree.annotate_with_numchild()
+        tree = tree.annotate_encryption_state(user)
         tree = self._filter_suspicious_items(tree, user)
 
         serializer = self.get_serializer(
@@ -1716,7 +1890,7 @@ class ItemViewSet(
         permission_classes=[permissions.IsAuthenticated],
     )
     def recents(self, request, *args, **kwargs):
-        """Get list of favorite items for the current user."""
+        """Get list of recents items for the current user."""
         user = self.request.user
         queryset = self.get_queryset_for_descendants()
 
@@ -1729,8 +1903,10 @@ class ItemViewSet(
         queryset = queryset.annotate_is_favorite(user)
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.annotate_encryption_state(user)
 
-        queryset = queryset.order_by("-updated_at")
+        # Apply ordering only now that everyting is filtered and annotated
+        queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
         return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
@@ -1741,8 +1917,9 @@ class ItemViewSet(
         """
         item = self.get_object()
 
+        prefixes = [str(item.path[:i]) for i in range(1, len(item.path) + 1)]
         highest_ancestor = (
-            self.queryset.filter(path__ancestors=item.path, ancestors_deleted_at__isnull=True)
+            self.queryset.filter(path__in=prefixes, ancestors_deleted_at__isnull=True)
             .readable_per_se(request.user)
             .only("path")
             .order_by("path")
@@ -1788,6 +1965,7 @@ class ItemViewSet(
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_is_favorite(user)
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.annotate_encryption_state(user)
 
         files_by_uuid = {str(d.pk): d for d in queryset}
         ordered_files = [files_by_uuid[id] for id in result_ids if id in files_by_uuid]
@@ -1831,16 +2009,22 @@ class ItemViewSet(
 
         workspace = filterset.form.cleaned_data.get("workspace")
 
-        # First look for all top level items user has access to
+        # First look for all top level items user has access to. Soft deleted items
+        # are kept: a deleted root item is its own access holder and would become
+        # unreachable, even from the trashbin. The scope filter excludes them from
+        # the results.
         user = request.user
         item_access_queryset = models.ItemAccess.objects.select_related("item").filter(
             db.Q(user=user) | db.Q(team__in=user.teams),
-            item__deleted_at__isnull=True,
+            item__hard_deleted_at__isnull=True,
         )
 
         # Remove items with upload_state SUSPICIOUS for non-creators
         queryset = self._filter_suspicious_items(queryset, user)
         queryset = self._exclude_pending_items(queryset)
+
+        # Restrictions are tree entries, not searchable content
+        queryset = queryset.exclude(type=models.ItemTypeChoices.RESTRICTION)
 
         queryset = queryset.annotate_is_favorite(user)
 
@@ -1881,6 +2065,7 @@ class ItemViewSet(
         queryset = filterset.filter_queryset(queryset)
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
+        queryset = queryset.annotate_encryption_state(user)
 
         page = self.paginate_queryset(queryset)
 
@@ -1911,6 +2096,7 @@ class ItemViewSet(
         if missing_parent_ids:
             for parent in (
                 models.Item.objects.annotate_with_numchild()
+                .annotate_encryption_state(self.request.user)
                 .filter(id__in=missing_parent_ids)
                 .iterator()
             ):
@@ -1956,9 +2142,7 @@ class ItemViewSet(
 
         return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
-    @drf.decorators.action(
-        detail=True, methods=["post"], url_path="encryption-upload-url"
-    )
+    @drf.decorators.action(detail=True, methods=["post"], url_path="encryption-upload-url")
     def encryption_upload_url(self, request, *args, **kwargs):
         """Return a presigned S3 PUT URL for uploading encrypted file content.
 
@@ -1995,7 +2179,6 @@ class ItemViewSet(
             status=drf.status.HTTP_200_OK,
         )
 
-
     @drf.decorators.action(detail=True, methods=["patch"], url_path="encrypt")
     @transaction.atomic
     def encrypt(self, request, *args, **kwargs):
@@ -2028,9 +2211,7 @@ class ItemViewSet(
         serializer.is_valid(raise_exception=True)
 
         encrypted_key_per_user = serializer.validated_data["encrypted_symmetric_key_per_user"]
-        encrypted_keys_for_descendants = serializer.validated_data[
-            "encrypted_keys_for_descendants"
-        ]
+        encrypted_keys_for_descendants = serializer.validated_data["encrypted_keys_for_descendants"]
 
         # Validate: all users with access (direct OR inherited via an
         # ancestor's ItemAccess) must be present in the payload. Values
@@ -2061,10 +2242,7 @@ class ItemViewSet(
         # The caller is the one performing the encryption — they must hold
         # the key. Explicit null for themselves is never legitimate.
         caller_sub = request.user.sub
-        if (
-            caller_sub in encrypted_key_per_user
-            and encrypted_key_per_user[caller_sub] is None
-        ):
+        if caller_sub in encrypted_key_per_user and encrypted_key_per_user[caller_sub] is None:
             return drf.response.Response(
                 {
                     "detail": _(
@@ -2081,9 +2259,7 @@ class ItemViewSet(
         # Materialise into a list so subsequent operations (post-move
         # in the encrypt-on-move flow; here just defensive) don't
         # re-query against a possibly-stale path predicate.
-        effective_descendants = list(
-            compute_effective_descendants_for_encryption(item)
-        )
+        effective_descendants = list(compute_effective_descendants_for_encryption(item))
 
         # Validate descendant set: every effective descendant must be
         # covered by a wrapped key entry. Doubles as a mutation check —
@@ -2094,10 +2270,7 @@ class ItemViewSet(
         if live_descendant_ids != provided_descendant_ids:
             return drf.response.Response(
                 {
-                    "detail": _(
-                        "Folder contents changed during the operation. "
-                        "Please retry."
-                    ),
+                    "detail": _("Folder contents changed during the operation. Please retry."),
                     "code": "subtree_mutated",
                     "missing": sorted(live_descendant_ids - provided_descendant_ids),
                     "extra": sorted(provided_descendant_ids - live_descendant_ids),
@@ -2140,9 +2313,7 @@ class ItemViewSet(
         # wrapped key so clients can later tell which key the file was
         # encrypted for (surfaced in the "key mismatch" panel when
         # decrypt fails on a rotated key).
-        version_per_user = serializer.validated_data[
-            "encryption_public_key_version_per_user"
-        ]
+        version_per_user = serializer.validated_data["encryption_public_key_version_per_user"]
         version_subs = set(version_per_user.keys())
         if version_subs != provided_user_subs:
             version_missing = provided_user_subs - version_subs
@@ -2169,22 +2340,17 @@ class ItemViewSet(
         ).select_related("user"):
             user_sub = access.user.sub
             if user_sub in encrypted_key_per_user:
-                access.encrypted_item_symmetric_key_for_user = encrypted_key_per_user[
-                    user_sub
-                ]
+                access.encrypted_item_symmetric_key_for_user = encrypted_key_per_user[user_sub]
                 update_fields = ["encrypted_item_symmetric_key_for_user"]
                 if user_sub in version_per_user:
-                    access.encryption_public_key_version = (
-                        version_per_user[user_sub] or None
-                    )
+                    access.encryption_public_key_version = version_per_user[user_sub] or None
                     update_fields.append("encryption_public_key_version")
                 access.save(update_fields=update_fields)
                 remaining_user_subs.discard(user_sub)
 
         if remaining_user_subs:
             users_by_sub = {
-                u.sub: u
-                for u in models.User.objects.filter(sub__in=remaining_user_subs)
+                u.sub: u for u in models.User.objects.filter(sub__in=remaining_user_subs)
             }
             for user_sub in remaining_user_subs:
                 user = users_by_sub.get(user_sub)
@@ -2198,12 +2364,8 @@ class ItemViewSet(
                     item=item,
                     user=user,
                     role=role,
-                    encrypted_item_symmetric_key_for_user=encrypted_key_per_user[
-                        user_sub
-                    ],
-                    encryption_public_key_version=(
-                        version_per_user.get(user_sub) or None
-                    ),
+                    encrypted_item_symmetric_key_for_user=encrypted_key_per_user[user_sub],
+                    encryption_public_key_version=(version_per_user.get(user_sub) or None),
                 )
 
         schedule_s3_cleanup(old_s3_keys)
@@ -2213,9 +2375,7 @@ class ItemViewSet(
             status=drf.status.HTTP_200_OK,
         )
 
-    @drf.decorators.action(
-        detail=True, methods=["patch"], url_path="remove-encryption"
-    )
+    @drf.decorators.action(detail=True, methods=["patch"], url_path="remove-encryption")
     @transaction.atomic
     def remove_encryption(self, request, *args, **kwargs):
         """Remove encryption from an item or subtree.
@@ -2302,10 +2462,7 @@ class ItemViewSet(
         if live_file_ids != provided_ids:
             return drf.response.Response(
                 {
-                    "detail": _(
-                        "Folder contents changed during the operation. "
-                        "Please retry."
-                    ),
+                    "detail": _("Folder contents changed during the operation. Please retry."),
                     "code": "subtree_mutated",
                     "missing": sorted(live_file_ids - provided_ids),
                     "extra": sorted(provided_ids - live_file_ids),
@@ -2366,7 +2523,6 @@ class ItemViewSet(
 
             for file_key, item_id in file_items_to_scan:
                 malware_detection.analyse_file(file_key, item_id=item_id)
-                mirror_item(models.Item.objects.get(pk=item_id))
 
         transaction.on_commit(_post_commit)
 
@@ -2498,6 +2654,84 @@ class ItemViewSet(
             status=drf.status.HTTP_200_OK,
         )
 
+    @extend_schema(
+        request=serializers.BatchShareSerializer,
+        responses={
+            200: inline_serializer(
+                name="BatchShareResponse",
+                fields={
+                    "accesses_created": drf.serializers.IntegerField(),
+                    "invitations_created": drf.serializers.IntegerField(),
+                    "skipped": drf.serializers.ListField(child=drf.serializers.DictField()),
+                },
+            )
+        },
+    )
+    @drf.decorators.action(detail=True, methods=["post"], url_path="batch-share")
+    def batch_share(self, request, *args, **kwargs):
+        """
+        Share an item with a list of contacts in a single request.
+
+        Emails matching an existing user get an access, unknown emails get an
+        invitation. All rows are validated before any database write so a
+        rejected batch never creates a partial share state.
+        """
+        if not settings.ALLOW_SHARE_IMPORT_FILE:
+            raise drf.exceptions.PermissionDenied(
+                "Batch sharing from an imported file is not enabled."
+            )
+
+        item = self.get_object()
+
+        serializer = serializers.BatchShareSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # Deduplicate rows by email, keeping the first occurrence
+        rows = {}
+        for row in serializer.validated_data["rows"]:
+            rows.setdefault(row["email"], row["role"])
+
+        # A user cannot grant a role higher than their own. This also enforces
+        # that only owners can assign the owner role.
+        user_role_priority = models.RoleChoices.get_priority(item.get_role(request.user))
+        for role in rows.values():
+            if models.RoleChoices.get_priority(role) > user_role_priority:
+                raise drf.exceptions.PermissionDenied(
+                    f"You cannot grant the role {role} which is higher than your own role."
+                )
+
+        created_accesses, created_invitations, skipped = batch_share_process_rows(
+            item, request.user, rows
+        )
+
+        for email, role in created_accesses + created_invitations:
+            item.send_invitation_email(
+                email,
+                role,
+                request.user,
+                request.user.language or settings.LANGUAGE_CODE,
+            )
+
+        posthog_capture(
+            "item_batch_share",
+            request.user,
+            {
+                "accesses_created": len(created_accesses),
+                "invitations_created": len(created_invitations),
+                "skipped": len(skipped),
+            },
+            item=item,
+        )
+
+        return drf.response.Response(
+            {
+                "accesses_created": len(created_accesses),
+                "invitations_created": len(created_invitations),
+                "skipped": skipped,
+            },
+            status=drf.status.HTTP_200_OK,
+        )
+
     @drf.decorators.action(detail=True, methods=["post", "delete"], url_path="favorite")
     def favorite(self, request, *args, **kwargs):
         """
@@ -2544,6 +2778,19 @@ class ItemViewSet(
             {"detail": "item was already not marked as favorite"},
             status=drf.status.HTTP_200_OK,
         )
+
+    @drf.decorators.action(detail=True, methods=["post", "delete"], url_path="restrict")
+    def restrict(self, request, *args, **kwargs):
+        """Activate or deactivate restriction on the folder based on the HTTP method."""
+        item = self.get_object()
+
+        if request.method == "POST":
+            item = item.restrict(request.user)
+        else:
+            item = item.unrestrict()
+
+        serializer = self.get_serializer(item)
+        return drf.response.Response(serializer.data, status=drf.status.HTTP_200_OK)
 
     def _authorize_subrequest(self, request, pattern):
         """
@@ -2641,6 +2888,23 @@ class ItemViewSet(
             headers={"Location": redirect_url},
         )
 
+    @drf.decorators.action(detail=True, methods=["get"], url_path="export")
+    def export(self, request, *args, **kwargs):
+        """
+        Stream a recursive ZIP archive of a folder's content.
+        """
+        folder = self.get_object()
+
+        descendants = export_descendants(folder)
+        zip_stream = build_zip_stream(descendants)
+
+        encoded_name = quote(f"{folder.title}.zip", safe="")
+        return StreamingHttpResponse(
+            zip_stream,
+            content_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_name}"},
+        )
+
     @drf.decorators.action(detail=False, methods=["get"], url_path="media-auth")
     def media_auth(self, request, *args, **kwargs):
         """
@@ -2692,7 +2956,7 @@ class ItemViewSet(
             if request.user.is_authenticated and request.user.language
             else settings.LANGUAGE_CODE
         )
-        launch_url = compute_wopi_launch_url(wopi_client["url"], get_file_info, language)
+        launch_url = compute_wopi_launch_url(wopi_client.get("launch_url"), get_file_info, language)
 
         return drf.response.Response(
             {
@@ -2708,7 +2972,6 @@ class ItemViewSet(
         methods=["post"],
         url_path="duplicate",
     )
-    @transaction.atomic
     def duplicate(self, request, *args, **kwargs):
         """
         Duplicate an item of type File. The item is duplicated in the folder where the original
@@ -2719,32 +2982,43 @@ class ItemViewSet(
         item_to_duplicate = self.get_object()
         user = request.user
 
+        # The duplicator becomes the creator of a new sized file: gate it like an
+        # upload so an over-quota user cannot grow their storage usage.
+        can_upload = get_entitlements_backend().can_upload(user)
+        if not can_upload["result"]:
+            raise drf.exceptions.PermissionDenied(
+                detail=can_upload.get("message", "You do not have permission to upload files."),
+                code=can_upload.get("reason"),
+            )
+
         parent = item_to_duplicate.parent() if item_to_duplicate.depth > 1 else None
 
         if parent and parent.get_role(user) == models.RoleChoices.READER:
             # If the user as reader role on the parent folder, then the duplicated
             # item must be created at the user's root
             parent = None
-
-        duplicated_item = models.Item.objects.create_child(
-            creator=user,
-            link_reach=None if parent else LinkReachChoices.RESTRICTED,
-            parent=parent,
-            title=item_to_duplicate.title,  # Title uniqueness is managed in the create_child method
-            type=models.ItemTypeChoices.FILE,
-            size=item_to_duplicate.size,
-            upload_state=models.ItemUploadStateChoices.DUPLICATING,
-            mimetype=item_to_duplicate.mimetype,
-            filename=item_to_duplicate.filename,
-            description=item_to_duplicate.description,
-        )
-
-        if duplicated_item.is_root:
-            models.ItemAccess.objects.create(
-                item=duplicated_item,
-                user=user,
-                role=models.RoleChoices.OWNER,
+        with transaction.atomic():
+            duplicated_item = models.Item.objects.create_child(
+                creator=user,
+                link_reach=None if parent else LinkReachChoices.RESTRICTED,
+                parent=parent,
+                title=capfirst(
+                    _("copy of {title}").format(title=item_to_duplicate.title)
+                ),  # Title uniqueness is managed in the create_child method
+                type=models.ItemTypeChoices.FILE,
+                size=item_to_duplicate.size,
+                upload_state=models.ItemUploadStateChoices.DUPLICATING,
+                mimetype=item_to_duplicate.mimetype,
+                filename=item_to_duplicate.filename,
+                description=item_to_duplicate.description,
             )
+
+            if duplicated_item.is_root:
+                models.ItemAccess.objects.create(
+                    item=duplicated_item,
+                    user=user,
+                    role=models.RoleChoices.OWNER,
+                )
 
         # Then duplicate the file in async way
         duplicate_file.delay(
@@ -2752,10 +3026,23 @@ class ItemViewSet(
             duplicated_item_id=duplicated_item.id,
         )
 
+        posthog_capture("item_duplicate", user, {}, item=duplicated_item)
+
         serializer = self.get_serializer(duplicated_item)
         return drf.response.Response(serializer.data, status=drf.status.HTTP_201_CREATED)
 
 
+# Declare the schema statically because `get_serializer_class` depends on
+# `self.item`, which reads `self.kwargs["resource_id"]` — unavailable during
+# drf-spectacular introspection. Without this, spectacular fails to resolve
+# the serializer and drops the requestBody for POST/PUT/PATCH operations.
+@extend_schema(
+    request=serializers.ItemAccessSerializer,
+    responses=serializers.ItemAccessSerializer,
+)
+@extend_schema_view(
+    list=extend_schema(responses=serializers.ItemAccessSerializer(many=True)),
+)
 class ItemAccessViewSet(
     drf.mixins.CreateModelMixin,
     drf.mixins.DestroyModelMixin,
@@ -2787,6 +3074,9 @@ class ItemAccessViewSet(
     """
 
     lookup_field = "pk"
+    # Forcing to None makes sure the OpenApi schema does not infer that the
+    # list endpoint supports pagination.
+    pagination_class = None
     permission_classes = [permissions.ItemAccessPermission]
     queryset = models.ItemAccess.objects.select_related("user", "item").all()
     resource_field_name = "item"
@@ -2814,6 +3104,7 @@ class ItemAccessViewSet(
         """Extra context provided to the serializer class."""
         context = super().get_serializer_context()
         context["resource_id"] = self.kwargs["resource_id"]
+        context["item"] = self.item
         return context
 
     def filter_queryset(self, queryset):
@@ -2916,15 +3207,13 @@ class ItemAccessViewSet(
             # We don't want to have two consecutive explicit accesses with the same role.
             # We have to delete the current access, this item will have an inherited access
             # with the correct role.
-            self._raise_if_would_strand_pending_users(
-                instance, action="role_match_delete"
-            )
+            self._raise_if_would_strand_pending_users(instance, action="role_match_delete")
             instance.delete()
             return drf.response.Response(status=drf.status.HTTP_204_NO_CONTENT)
 
         access = serializer.save()
 
-        self._syncronize_descendants_accesses(access)
+        synchronize_descendants_accesses(self.item, access)
 
         if access.role != old_role:
             posthog_capture(
@@ -2994,9 +3283,7 @@ class ItemAccessViewSet(
         # onboarded. Whether the invitee actually has a public key is a
         # client-side concern — the backend only enforces "key provided ⇒
         # item must be encrypted".
-        encrypted_key = serializer.validated_data.get(
-            "encrypted_item_symmetric_key_for_user"
-        )
+        encrypted_key = serializer.validated_data.get("encrypted_item_symmetric_key_for_user")
         if encrypted_key and not self.item.is_encrypted:
             raise drf.exceptions.ValidationError(
                 {
@@ -3016,15 +3303,11 @@ class ItemAccessViewSet(
         # Block team-based access for encrypted items
         if self.item.is_encrypted and serializer.validated_data.get("team"):
             raise drf.exceptions.ValidationError(
-                {
-                    "team": _(
-                        "Team-based access is not supported for encrypted items."
-                    )
-                }
+                {"team": _("Team-based access is not supported for encrypted items.")}
             )
 
         access = serializer.save(item_id=self.kwargs["resource_id"])
-        self._syncronize_descendants_accesses(access)
+        synchronize_descendants_accesses(self.item, access)
         if access.user:
             access.item.send_invitation_email(
                 access.user.email,
@@ -3049,9 +3332,7 @@ class ItemAccessViewSet(
         # user who holds a wrapped key while pending users remain would
         # leave the subtree undecryptable by anyone (no one left to
         # "accept" the pending rows). Block it.
-        self._raise_if_would_strand_pending_users(
-            instance, action="remove"
-        )
+        self._raise_if_would_strand_pending_users(instance, action="remove")
         access_id = instance.id
         item = instance.item
         role = instance.role
@@ -3066,9 +3347,7 @@ class ItemAccessViewSet(
             item=item,
         )
 
-    @drf.decorators.action(
-        detail=True, methods=["patch"], url_path="encryption-key"
-    )
+    @drf.decorators.action(detail=True, methods=["patch"], url_path="encryption-key")
     def encryption_key(self, request, *args, **kwargs):
         """Accept a pending collaborator by re-wrapping the subtree's
         symmetric key against their public key.
@@ -3122,17 +3401,15 @@ class ItemAccessViewSet(
                 status=drf.status.HTTP_403_FORBIDDEN,
             )
 
-        serializer = serializers.AcceptEncryptionAccessSerializer(
-            data=request.data
-        )
+        serializer = serializers.AcceptEncryptionAccessSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        access.encrypted_item_symmetric_key_for_user = (
-            serializer.validated_data["encrypted_item_symmetric_key_for_user"]
-        )
-        access.encryption_public_key_version = (
-            serializer.validated_data["encryption_public_key_version"]
-        )
+        access.encrypted_item_symmetric_key_for_user = serializer.validated_data[
+            "encrypted_item_symmetric_key_for_user"
+        ]
+        access.encryption_public_key_version = serializer.validated_data[
+            "encryption_public_key_version"
+        ]
         access.save(
             update_fields=[
                 "encrypted_item_symmetric_key_for_user",
@@ -3178,12 +3455,14 @@ class ItemAccessViewSet(
         if not instance.encrypted_item_symmetric_key_for_user:
             return
 
-        other_accesses = models.ItemAccess.objects.filter(item=item).exclude(
-            pk=instance.pk
+        other_accesses = models.ItemAccess.objects.filter(item=item).exclude(pk=instance.pk)
+        remaining_validated = (
+            other_accesses.filter(
+                encrypted_item_symmetric_key_for_user__isnull=False,
+            )
+            .exclude(encrypted_item_symmetric_key_for_user="")
+            .exists()
         )
-        remaining_validated = other_accesses.filter(
-            encrypted_item_symmetric_key_for_user__isnull=False,
-        ).exclude(encrypted_item_symmetric_key_for_user="").exists()
         has_pending = other_accesses.filter(
             encrypted_item_symmetric_key_for_user__isnull=True,
         ).exists()
@@ -3200,31 +3479,6 @@ class ItemAccessViewSet(
                     "code": "would_strand_pending_users",
                 }
             )
-
-    def _syncronize_descendants_accesses(self, access):
-        """
-        Syncronize the accesses of the descendants of the item
-        by removing accesses with roles lower than the current user's role.
-        """
-        descendants = self.item.descendants().filter(ancestors_deleted_at__isnull=True)
-
-        condition_filter = db.Q()
-        if access.user:
-            condition_filter |= db.Q(user=access.user)
-        if access.team:
-            condition_filter |= db.Q(team=access.team)
-
-        role_priority = models.RoleChoices.get_priority(access.role)
-
-        lower_roles = [
-            role
-            for role in models.RoleChoices.values
-            if models.RoleChoices.get_priority(role) <= role_priority
-        ]
-
-        models.ItemAccess.objects.filter(
-            condition_filter, item__in=descendants, role__in=lower_roles
-        ).delete()
 
 
 class InvitationViewset(
@@ -3366,6 +3620,53 @@ class InvitationViewset(
         )
 
 
+class ReconciliationConfirmView(drf.views.APIView):
+    """API endpoint to confirm user reconciliation emails.
+
+    GET /user-reconciliations/{user_type}/{confirmation_id}/
+    Marks `active_email_checked` or `inactive_email_checked` to True.
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, user_type, confirmation_id):
+        """Check the confirmation ID and mark the corresponding email as checked."""
+        try:
+            # validate UUID
+            uuid_obj = uuid.UUID(str(confirmation_id))
+        except ValueError:
+            return drf_response.Response(
+                {"detail": "Badly formatted confirmation id"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if user_type not in ("active", "inactive"):
+            return drf_response.Response(
+                {"detail": "Invalid user_type"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        lookup = (
+            {"active_email_confirmation_id": uuid_obj}
+            if user_type == "active"
+            else {"inactive_email_confirmation_id": uuid_obj}
+        )
+
+        try:
+            reconciliation = models.UserReconciliation.objects.get(**lookup)
+        except models.UserReconciliation.DoesNotExist:
+            return drf_response.Response(
+                {"detail": "Reconciliation entry not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        field_name = "active_email_checked" if user_type == "active" else "inactive_email_checked"
+        if not getattr(reconciliation, field_name):
+            setattr(reconciliation, field_name, True)
+            reconciliation.save()
+
+        return drf_response.Response({"detail": "Confirmation received"})
+
+
 class ConfigView(drf.views.APIView):
     """API ViewSet for sharing some public settings."""
 
@@ -3377,6 +3678,8 @@ class ConfigView(drf.views.APIView):
             Return a dictionary of public settings.
         """
         array_settings = [
+            "ALLOW_SHARE_IMPORT_FILE",
+            "AWS_S3_UPLOAD_ACL",
             "CRISP_WEBSITE_ID",
             "DATA_UPLOAD_MAX_MEMORY_SIZE",
             "ENCRYPTION_FEATURE_ENABLED",
@@ -3392,10 +3695,13 @@ class ConfigView(drf.views.APIView):
             "FRONTEND_FEEDBACK_MESSAGES_WIDGET_API_URL",
             "FRONTEND_FEEDBACK_MESSAGES_WIDGET_CHANNEL",
             "FRONTEND_FEEDBACK_MESSAGES_WIDGET_PATH",
+            "FRONTEND_HELP_MENU_CONFIG",
             "FRONTEND_HIDE_GAUFRE",
             "FRONTEND_SILENT_LOGIN_ENABLED",
             "FRONTEND_EXTERNAL_HOME_URL",
             "FRONTEND_RELEASE_NOTE_ENABLED",
+            "FRONTEND_ENTITLEMENTS_DISCLAIMERS",
+            "FRONTEND_STORAGE_GAUGE_INFORMATION_LINK",
             "FRONTEND_CSS_URL",
             "FRONTEND_JS_URL",
             "MEDIA_BASE_URL",
@@ -3511,19 +3817,51 @@ class UsageMetricViewset(drf.mixins.ListModelMixin, viewsets.GenericViewSet):
 
     permission_classes = [HasAPIKey]
     queryset = models.User.objects.all().filter(is_active=True)
-    serializer_class = serializers.UsageMetricSerializer
+    serializer_class = serializers.UserUsageMetricSerializer
     pagination_class = Pagination
 
     def get_queryset(self):
-        """
-        Return the queryset applying the filters from the query params.
-        """
-        queryset = self.queryset
+        """Return the queryset filtered through `UsageMetricFilter`."""
+        filterset = UsageMetricFilter(
+            self.request.GET, queryset=self.queryset, request=self.request
+        )
+        if not filterset.is_valid():
+            raise drf.exceptions.ValidationError(filterset.errors)
+        return filterset.filter_queryset(self.queryset)
 
-        if self.request.query_params.get("account_id"):
-            queryset = queryset.filter(sub=self.request.query_params.get("account_id"))
+    def list(self, request, *args, **kwargs):
+        """Handle listing with account_type branching."""
+        account_type = request.query_params.get("account_type", UsageMetricAccountTypeChoices.USER)
 
-        return queryset
+        if account_type == UsageMetricAccountTypeChoices.ORGANIZATION:
+            return self._list_organization(request)
+
+        return super().list(request, *args, **kwargs)
+
+    def _list_organization(self, request):
+        """Aggregate storage metrics across users of an organization."""
+        base_qs = models.User.objects.filter(is_active=True)
+        filterset = OrganizationUsageMetricFilter(request.GET, queryset=base_qs, request=request)
+        if not filterset.is_valid():
+            raise drf.exceptions.ValidationError(filterset.errors)
+        users = filterset.filter_queryset(base_qs)
+
+        serializer = serializers.OrganizationUsageMetricSerializer(
+            {
+                "account_id_key": filterset.form.cleaned_data["account_id_key"],
+                "account_id_value": filterset.form.cleaned_data["account_id_value"],
+                "users": users,
+            }
+        )
+
+        return drf.response.Response(
+            {
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "results": [serializer.data],
+            }
+        )
 
 
 class EntitlementsViewset(viewsets.ViewSet):
@@ -3542,4 +3880,7 @@ class EntitlementsViewset(viewsets.ViewSet):
                 method = getattr(entitlements_backend, method_name)
                 if callable(method):
                     entitlements[method_name] = method(request.user)
+        if quota := entitlements_backend.get_quota(request.user):
+            entitlements["quota"] = quota
+        entitlements["context"] = entitlements_backend.get_context(request.user)
         return drf.response.Response(entitlements)

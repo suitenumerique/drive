@@ -266,6 +266,8 @@ def test_services_is_allowed_mimetype():
             },
             False,
         ),
+        # The stored content of an encrypted file is ciphertext
+        ({"mimetype": "text/plain", "is_encrypted": True}, False),
     ],
 )
 def test_services_search_can_serialize_content(indexer_settings, kwargs, expected):
@@ -479,8 +481,25 @@ def test_services_search_indexers_index_errors(indexer_settings):
         body=json_dumps({"message": "Authentication failed."}),
     )
 
+    indexer = SearchIndexer()
     with pytest.raises(HTTPError):
-        SearchIndexer().index()
+        indexer.index()
+
+
+@pytest.mark.usefixtures("indexer_settings")
+@patch.object(SearchIndexer, "push")
+def test_services_search_indexers_index_skips_restrictions(mock_push):
+    """Restrictions are never sent to the search index."""
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(type=models.ItemTypeChoices.FOLDER, users=[(user, "owner")])
+    folder = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    folder = folder.restrict(user)
+
+    count = SearchIndexer().index()
+
+    assert count == 2
+    indexed_ids = {doc["id"] for call in mock_push.call_args_list for doc in call.args[0]}
+    assert indexed_ids == {str(parent.id), str(folder.id)}
 
 
 @patch.object(SearchIndexer, "push")
@@ -619,6 +638,30 @@ def test_services_search_indexers_ignore_content_if_not_ready(mock_push):
         str(pdf_item.id): "",
         **{str(item.id): "" for item in not_ready_items},
     }
+
+
+@patch.object(SearchIndexer, "push")
+@pytest.mark.usefixtures("indexer_settings")
+def test_services_search_indexers_ignore_content_if_encrypted(mock_push):
+    """The stored content of an encrypted file is ciphertext and must never be indexed."""
+    item = factories.ItemFactory(
+        mimetype="text/plain",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes="this is a text",
+    )
+    encrypted_item = factories.ItemFactory(
+        mimetype="text/plain",
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        upload_bytes="this is ciphertext",
+        is_encrypted=True,
+    )
+
+    assert SearchIndexer().index() == 2
+
+    results = {item["id"]: item["content"] for item in mock_push.call_args[0][0]}
+    assert results == {str(item.id): "this is a text", str(encrypted_item.id): ""}
 
 
 @patch.object(SearchIndexer, "push")
@@ -871,8 +914,9 @@ def test_services_search_indexers_search_errors(indexer_settings):
         body=json_dumps({"message": "Authentication failed."}),
     )
 
+    indexer = SearchIndexer()
     with pytest.raises(HTTPError):
-        SearchIndexer().search("alpha", token="mytoken")
+        indexer.search("alpha", token="mytoken")
 
 
 @patch("requests.post")

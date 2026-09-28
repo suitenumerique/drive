@@ -1,2 +1,7 @@
 FRONTEND_RELEASE_NOTE_ENABLED=False
+FRONTEND_HELP_MENU_CONFIG={"documentationUrl": "https://docs.numerique.gouv.fr/docs/87938a46-6f85-4a08-9043-62d1d7d43176/", "legal": {"personalDataUrl": "https://docs.numerique.gouv.fr/docs/1b2c0c97-5141-4a4a-a98d-2a57802f5e72/", "termsOfUseUrl": "https://docs.numerique.gouv.fr/docs/637b1d6a-3b22-4195-b3a2-d88c42e48133/", "accessibilityUrl": "https://docs.numerique.gouv.fr/docs/96653d0c-c9e0-49e3-b98d-d19d5613506a/", "legalNoticeUrl": "https://docs.numerique.gouv.fr/docs/96653d0c-c9e0-49e3-b98d-d19d5613506a/"},"supportEmail": "mailto:support@numerique.gouv.fr"}
 WOPI_CLIENTS="collabora"
+# Report uploads as safe synchronously so files are ready instantly in e2e.
+MALWARE_DETECTION_BACKEND=lasuite.malware_detection.backends.dummy.DummyBackend
+# Enable the share modal contacts file import tested by share-import.spec.ts
+ALLOW_SHARE_IMPORT_FILE=True

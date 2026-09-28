@@ -68,22 +68,25 @@ class AccessUserItemService:
         """Generate a random access token"""
         return token_urlsafe()
 
-    def insert_new_access(self, item: Item, user: AbstractUser) -> tuple[str, int]:
+    def insert_new_access(
+        self, item: Item, user: AbstractUser, ttl: int | None = None
+    ) -> tuple[str, int]:
         """
         Insert a new access token for the user and item. Return an access_token and access_token_ttl
-        access_token_ttl must be a timestamp in milliseconds
+        access_token_ttl must be a timestamp in milliseconds.
+
+        ttl overrides the default WOPI_ACCESS_TOKEN_TIMEOUT lifetime. Pass a short
+        ttl for one-shot uses (server-to-server conversion source download, etc.).
         """
         abilities = item.get_abilities(user)
         if not abilities["retrieve"]:
             raise AccessUserItemNotAllowed()
+
+        effective_ttl = ttl if ttl is not None else settings.WOPI_ACCESS_TOKEN_TIMEOUT
         token = self.generate_token()
         access_user_item = AccessUserItem(item=item, user=user)
-        token_eol = timezone.now() + timedelta(seconds=settings.WOPI_ACCESS_TOKEN_TIMEOUT)
-        cache.set(
-            token,
-            access_user_item.to_dict(),
-            timeout=settings.WOPI_ACCESS_TOKEN_TIMEOUT,
-        )
+        token_eol = timezone.now() + timedelta(seconds=effective_ttl)
+        cache.set(token, access_user_item.to_dict(), timeout=effective_ttl)
         return token, int(round(token_eol.timestamp())) * 1000
 
     def get_access_user_item(self, token: str) -> AccessUserItem:

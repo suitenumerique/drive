@@ -32,6 +32,7 @@ const createInfiniteItemsHook = (
       },
       initialPageParam: 1,
       enabled: enabled,
+      placeholderData: (previousData) => previousData,
     });
   };
 };

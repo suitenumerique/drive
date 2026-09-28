@@ -1,5 +1,4 @@
-import { Button } from "@gouvfr-lasuite/cunningham-react";
-import { Icon, UserAvatar } from "@gouvfr-lasuite/ui-kit";
+import { Button, Icon, UserAvatar } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useState } from "react";
 import { Access } from "@/features/drivers/types";
@@ -24,7 +23,7 @@ interface Props {
  *    such row. This prevents the "click Accept, get a cryptic error" loop.
  *
  * Rendered inline above the regular ShareModal contents so the main
- * ui-kit access list stays untouched.
+ * design system access list stays untouched.
  */
 export const PendingEncryptionSection = ({
   itemId,

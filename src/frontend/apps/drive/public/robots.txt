@@ -1,0 +1,5 @@
+# Crawling is allowed on purpose: crawlers can only honor the noindex
+# directive (meta tag and X-Robots-Tag header) on pages they can fetch.
+# A "Disallow: /" would leave already discovered URLs indexed forever.
+User-agent: *
+Disallow:

@@ -352,6 +352,29 @@ def test_get_wopi_client_config():
     assert get_wopi_client_config(item, user) is None
 
 
+def test_get_wopi_client_config_normalizes_uppercase_extension():
+    """Match the WOPI client config when the item extension is uppercase."""
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            "mimetypes": {},
+            "extensions": {
+                "doc": {"url": "https://vendorA.com/launch_url", "client": "vendorA"},
+            },
+        },
+    )
+    user = UserFactory()
+    item = ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        filename="REPORT.DOC",
+    )
+    assert get_wopi_client_config(item, user) == {
+        "url": "https://vendorA.com/launch_url",
+        "client": "vendorA",
+    }
+
+
 @pytest.mark.parametrize(
     "upload_state",
     [

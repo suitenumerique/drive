@@ -4,6 +4,7 @@ Unit tests for the User model
 
 from unittest import mock
 
+from django.core import mail
 from django.core.exceptions import ValidationError
 
 import pytest
@@ -68,3 +69,35 @@ def test_models_users_convert_valid_invitations():
     assert not models.Invitation.objects.filter(id=invitation_item.id).exists()
     assert not models.Invitation.objects.filter(id=invitation_other_item.id).exists()
     assert models.Invitation.objects.filter(id=other_email_invitation.id).exists()
+
+
+def test_models_users_send_email():
+    """The "send_email" method should send a templated email to the user."""
+    user = factories.UserFactory(email="recipient@example.com")
+
+    # pylint: disable-next=no-member
+    assert len(mail.outbox) == 0
+
+    user.send_email(
+        "my subject",
+        {
+            "title": "My title",
+            "message": "My message",
+            "link": "https://example.com/some-link/",
+            "link_label": "Click here",
+            "button_label": "Confirm",
+        },
+        "en",
+    )
+
+    # pylint: disable-next=no-member
+    assert len(mail.outbox) == 1
+
+    # pylint: disable-next=no-member
+    email = mail.outbox[0]
+
+    assert email.to == ["recipient@example.com"]
+    email_content = " ".join(email.body.split())
+
+    assert "My message" in email_content
+    assert "https://example.com/some-link/" in email_content
