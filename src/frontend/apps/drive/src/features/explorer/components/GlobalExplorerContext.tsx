@@ -5,6 +5,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useAutoAcceptPendingMembers } from "@/features/encryption/sharing/useAutoAcceptPendingMembers";
 import { Dispatch } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -199,6 +200,8 @@ export const GlobalExplorerProvider = ({
   const [previewItem, setPreviewItem] = useState<Item | undefined>(undefined);
   const [previewItems, setPreviewItems] = useState<Item[]>([]);
 
+  useAutoAcceptPendingMembers(item);
+  useAutoAcceptPendingMembers(previewItem);
 
   return (
     <GlobalExplorerContext.Provider

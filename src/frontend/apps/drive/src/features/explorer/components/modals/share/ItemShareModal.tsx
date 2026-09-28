@@ -204,17 +204,9 @@ export const ItemShareModal = ({
       });
     });
 
+    // On an encrypted item the invitee becomes a pending member when they
+    // sign up, like anyone added without encryption.
     const promisesInvitation = inviteByEmail.map((user) => {
-      // Block email invitations for encrypted items (same as Docs)
-      if (item?.is_encrypted) {
-        throw new Error(
-          t(
-            "share_modal.encrypted_invite_error",
-            "Only registered users with encryption enabled can be added to encrypted items.",
-          ),
-        );
-      }
-
       return createInvitation({
         itemId: itemId,
         email: user.email,
@@ -258,11 +250,10 @@ export const ItemShareModal = ({
     // return result;
     // Find parent_id_max_role for each access
     return result.map((access) => {
-      // Pending encryption onboarding → mutate the displayed name with a
-      // suffix so the ui-kit's row (which renders `user.full_name`
-      // verbatim) visibly marks the user. We don't have a supported
-      // extension slot in ShareModal for a proper badge; this is the
-      // least invasive way to surface the state at row level.
+      // Pending member → mutate the displayed name with a suffix so the
+      // ui-kit's row (which renders `user.full_name` verbatim) visibly marks
+      // the user. ShareModal has no extension slot for a badge with a
+      // tooltip; the "Action needed" section above explains the state.
       const displayUser = access.is_pending_encryption
         ? {
             ...access.user,
@@ -270,7 +261,7 @@ export const ItemShareModal = ({
               `${access.user.full_name || access.user.email} ` +
               t(
                 "share_modal.pending_encryption.suffix",
-                "(pending encryption access)",
+                "(waiting for encryption)",
               ),
           }
         : access.user;
@@ -559,7 +550,11 @@ export const ItemShareModal = ({
       outsideSearchContent={
         <>
           {item?.is_encrypted && (
-            <PendingEncryptionSection itemId={itemId} accesses={accessesData} />
+            <PendingEncryptionSection
+              itemId={itemId}
+              accesses={accessesData}
+              canAccept={!!item.abilities?.accesses_manage}
+            />
           )}
           <ShareModalCopyLinkFooter
             onCopyLink={() => {

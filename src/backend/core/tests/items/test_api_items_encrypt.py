@@ -455,12 +455,13 @@ def test_api_items_key_chain_falls_back_to_hybrid_for_outsiders():
 
 
 # ============================================================================
-# Constraints: invitations blocked for encrypted items
+# Invitations: an invitee has no account, hence no encryption key, so their
+# invitation becomes a pending access (no wrapped key) when they sign up.
 # ============================================================================
 
 
-def test_api_items_invitation_blocked_for_encrypted():
-    """Cannot create invitation on encrypted item."""
+def test_api_items_invitation_allowed_for_encrypted():
+    """Invitations can be created on an encrypted item."""
     user = factories.UserFactory()
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER,
@@ -477,8 +478,36 @@ def test_api_items_invitation_blocked_for_encrypted():
         {"email": "new@example.com", "role": "reader"},
         format="json",
     )
-    assert response.status_code == 400
-    assert "not supported" in str(response.json()).lower()
+    assert response.status_code == 201
+
+
+def test_api_items_encrypt_with_pending_invitation():
+    """A pending invitation does not block encrypting, and the invitee signs
+    up as a pending member."""
+    user = factories.UserFactory()
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+    factories.InvitationFactory(item=item, issuer=user, email="new@example.com")
+
+    client = APIClient()
+    client.force_login(user)
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/encrypt/",
+        {
+            "encrypted_symmetric_key_per_user": {user.sub: "encrypted_key_for_user"},
+            "encryption_public_key_version_per_user": {user.sub: 1},
+            "encrypted_keys_for_descendants": {},
+        },
+        format="json",
+    )
+    assert response.status_code == 200
+
+    newcomer = factories.UserFactory(email="new@example.com")
+    access = models.ItemAccess.objects.get(item=item, user=newcomer)
+    assert access.encrypted_item_symmetric_key_for_user is None
 
 
 # ============================================================================

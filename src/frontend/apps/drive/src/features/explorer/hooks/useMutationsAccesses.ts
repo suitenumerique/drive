@@ -73,35 +73,6 @@ export const useMutationDeleteAccess = () => {
   });
 };
 
-export const useMutationAcceptEncryptionAccess = () => {
-  const driver = getDriver();
-  const onSuccessAccessOrInvitation = useOnSuccessAccessOrInvitationMutation();
-  return useMutation({
-    mutationFn: (
-      payload: {
-        itemId: string;
-        accessId: string;
-        encrypted_item_symmetric_key_for_user: string;
-        encryption_public_key_version: number;
-      },
-    ) => {
-      return driver.acceptEncryptionAccess(
-        payload.itemId,
-        payload.accessId,
-        {
-          encrypted_item_symmetric_key_for_user:
-            payload.encrypted_item_symmetric_key_for_user,
-          encryption_public_key_version:
-            payload.encryption_public_key_version,
-        },
-      );
-    },
-    onSuccess: (_data, variables) => {
-      onSuccessAccessOrInvitation(variables.itemId, false);
-    },
-  });
-};
-
 export const useMutationDeleteInvitation = () => {
   const driver = getDriver();
   const onSuccessAccessOrInvitation = useOnSuccessAccessOrInvitationMutation();

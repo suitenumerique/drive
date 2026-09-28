@@ -1128,20 +1128,6 @@ class ItemViewSet(
                     },
                     code="item_move_conflicting_wrap",
                 )
-            # No pending invitations on item or descendants (mirrors
-            # /encrypt/'s precondition).
-            descendant_ids_pre = list(item.descendants().values_list("pk", flat=True))
-            all_item_ids = [item.pk] + descendant_ids_pre
-            if models.Invitation.objects.filter(item_id__in=all_item_ids).exists():
-                raise drf.exceptions.ValidationError(
-                    {
-                        "detail": _(
-                            "All pending invitations must be resolved "
-                            "before encrypting on move."
-                        )
-                    },
-                    code="item_move_pending_invitations",
-                )
             # Materialise the descendant set BEFORE the move. The path
             # filter on `descendants()` captures `item.path` at filter-
             # build time; once `item.move(target)` rewrites paths via
@@ -2035,19 +2021,6 @@ class ItemViewSet(
         if item.ancestors().filter(is_encrypted=True).exists():
             return drf.response.Response(
                 {"detail": _("Item is inside an already encrypted subtree.")},
-                status=drf.status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Validate: no pending invitations on item or descendants
-        descendant_ids = list(item.descendants().values_list("pk", flat=True))
-        all_item_ids = [item.pk] + descendant_ids
-        if models.Invitation.objects.filter(item_id__in=all_item_ids).exists():
-            return drf.response.Response(
-                {
-                    "detail": _(
-                        "All pending invitations must be resolved before encrypting."
-                    )
-                },
                 status=drf.status.HTTP_400_BAD_REQUEST,
             )
 
@@ -3333,17 +3306,9 @@ class InvitationViewset(
 
     def perform_create(self, serializer):
         """Save invitation to an item then send an email to the invited user."""
-        # Block invitations for encrypted items
-        if self.item.is_encrypted:
-            raise drf.exceptions.ValidationError(
-                {
-                    "detail": _(
-                        "Invitations are not supported for encrypted items. "
-                        "Add the user directly with their encryption key."
-                    )
-                }
-            )
-
+        # On an encrypted item the invitee signs up without a key: their
+        # invitation becomes a pending access, accepted once they have enabled
+        # encryption.
         self._validate_provided_role(serializer.validated_data.get("role"))
         invitation = serializer.save()
 

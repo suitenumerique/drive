@@ -15,9 +15,9 @@ import { type FilePreviewType } from "../files-preview/FilesPreview";
 import { OOEditor } from "@/features/encryption/oo-bridge/OOEditor";
 import { MIME_TO_DOC_TYPE } from "@/features/encryption/oo-bridge/types";
 import {
-  KeyMismatchPanel,
-  isWrongSecretKeyError,
-} from "@/features/encryption/KeyMismatchPanel";
+  DecryptionFailurePanel,
+  decryptionFailureOf,
+} from "@/features/encryption/DecryptionFailurePanel";
 import {
   isMissingKeysError,
   MissingEncryptionKeysPanel,
@@ -43,23 +43,39 @@ export const EncryptedFileViewer = ({
   onDownload,
 }: EncryptedFileViewerProps) => {
   const { t } = useTranslation();
+  const { hasKeys, openEncryptionOnboarding } = useVaultClient();
 
-  // Pending-onboarding short-circuit: the user has access to this
-  // encrypted item but hasn't completed their vault setup yet. Render a
-  // dedicated panel directly — don't try to decrypt, don't call
-  // /key-chain/ (which would 403 and trigger the global /403 redirect).
+  // Pending member: no key was wrapped for this user yet (the file was
+  // encrypted before they enabled encryption). Render the explanation
+  // directly: don't try to decrypt, don't call /key-chain/ (which would 403
+  // and trigger the global /403 redirect).
   if (file.is_pending_encryption_for_user) {
     return (
       <EncryptionState
         illustration="document-encrypting"
-        title={t(
-          "explorer.encrypted.pending_self.title",
-          "Enable encryption to open this file",
-        )}
-        description={t(
-          "explorer.encrypted.pending_self.body",
-          "This file is encrypted. Enable encryption from your profile menu, then a collaborator who already has access will accept you from the share dialog.",
-        )}
+        title={t("explorer.encrypted.pending_self.title", "Waiting for access")}
+        description={
+          hasKeys
+            ? t(
+                "explorer.encrypted.pending_self.body_with_keys",
+                "This file was encrypted before you enabled encryption, so its key could not be shared with you then. You will get access the next time the file owner opens it.",
+              )
+            : t(
+                "explorer.encrypted.pending_self.body_without_keys",
+                "This file was encrypted before you enabled encryption, so its key could not be shared with you. Enable encryption on your account: you will get access the next time the file owner opens it.",
+              )
+        }
+        actions={
+          hasKeys ? undefined : (
+            <Button
+              size="small"
+              variant="tertiary"
+              onClick={openEncryptionOnboarding}
+            >
+              {t("encryption.missing_keys.set_up", "Enable encryption")}
+            </Button>
+          )
+        }
       />
     );
   }
@@ -121,6 +137,8 @@ const NonOfficeEncryptedViewer = ({
     url: file.url,
     is_encrypted: true,
     mimetype: file.mimetype,
+    encryption_public_key_version_for_user:
+      file.encryption_public_key_version_for_user,
   };
   const { blobUrl, isDecrypting, error } = useDecryptedContent(
     item as unknown as Item,
@@ -162,20 +180,12 @@ const NonOfficeEncryptedViewer = ({
   }
 
   if (error) {
-    if (isWrongSecretKeyError(error)) {
-      return (
-        <KeyMismatchPanel
-          shareTimeVersion={file.encryption_public_key_version_for_user}
-        />
-      );
-    }
     if (isMissingKeysError(error)) {
       return <MissingEncryptionKeysPanel onSetUp={openEncryptionOnboarding} />;
     }
     return (
-      <EncryptionState
-        title={t("explorer.encrypted.error", "Failed to decrypt file")}
-        description={error.message}
+      <DecryptionFailurePanel
+        failure={decryptionFailureOf((error as VaultError).code)}
       />
     );
   }

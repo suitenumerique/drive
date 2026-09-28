@@ -414,14 +414,18 @@ export function useRecursiveEncryptionJob({
               );
             } else {
               // Partial: some users are pending. They'll be written as
-              // pending on the backend and accepted later from the share
-              // dialog. Informational, not blocking.
+              // pending on the backend and get the key once they have
+              // enabled encryption. Informational, not blocking. Invitees
+              // on the item join them: an invitation becomes a pending
+              // access when its invitee signs up.
               publicKeysRef.current = publicKeys;
               versionsRef.current = versions;
               pendingUserIdsRef.current = missing;
+              const invitations = await driver.getItemInvitations(item.id);
+              if (cancelled) return;
               dispatch({
                 type: 'SET_PENDING_USER_COUNT',
-                count: missing.length,
+                count: missing.length + invitations.count,
               });
             }
           }

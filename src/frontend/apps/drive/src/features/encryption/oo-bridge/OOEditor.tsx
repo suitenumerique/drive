@@ -27,7 +27,10 @@ import {
 } from './x2tConverter';
 import { EXTENSION_TO_X2T_TYPE } from './types';
 import { getEffectiveMimetype } from '@/features/explorer/utils/mimeTypes';
-import { KeyMismatchPanel } from '@/features/encryption/KeyMismatchPanel';
+import {
+  DecryptionFailurePanel,
+  decryptionFailureOf,
+} from '@/features/encryption/DecryptionFailurePanel';
 import {
   addPeerLockShownToEditor,
   consumePeerLocksShownToEditor,
@@ -3562,20 +3565,12 @@ export const OOEditor = ({ item }: OOEditorProps) => {
   }, [item.id, reinitKey]);
 
   if (state === 'error') {
-    // Users who were invited at a time when they had a DIFFERENT public
-    // key (e.g. they reset their vault and re-onboarded) — the wrapped
-    // symmetric key was encrypted against their old key, so vault
-    // decryption aborts with WRONG_SECRET_KEY. Surface the shared
-    // key-mismatch panel (also used by the non-office viewer) so the
-    // user sees a specific, actionable explanation and their current
-    // key's fingerprint, rather than the generic failure.
-    const isKeyMismatch = errorCode === 'WRONG_SECRET_KEY';
-    if (isKeyMismatch) {
-      return (
-        <KeyMismatchPanel
-          shareTimeVersion={item.encryption_public_key_version_for_user}
-        />
-      );
+    // A key that cannot open the file, or content that fails its integrity
+    // check, gets the same explanation as the non-office viewer; the other
+    // failures keep this overlay and its escape hatches.
+    const failure = decryptionFailureOf(errorCode);
+    if (failure !== 'unknown') {
+      return <DecryptionFailurePanel failure={failure} />;
     }
 
     const isNoKeysError = errorCode === 'MISSING_KEYS';

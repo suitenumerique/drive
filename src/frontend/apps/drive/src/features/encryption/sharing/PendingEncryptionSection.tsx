@@ -1,16 +1,15 @@
 import { Button } from "@gouvfr-lasuite/cunningham-react";
 import { Icon } from "@gouvfr-lasuite/ui-kit";
 import { useTranslation } from "react-i18next";
-import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Access } from "@/features/drivers/types";
-import { useMutationAcceptEncryptionAccess } from "@/features/explorer/hooks/useMutationsAccesses";
-import { fetchSubtreeEntryKey, wrapSubtreeKeyForUser } from "./wrapKeyForUser";
 import { fetchRegisteredKeys } from "@/features/encryption/fetchRegisteredKeys";
+import { useAcceptPendingMembers } from "./acceptPendingMembers";
 
 interface Props {
   itemId: string;
   accesses: Access[];
+  canAccept: boolean;
 }
 
 /**
@@ -20,19 +19,20 @@ interface Props {
  * Two distinct sub-states per row:
  *  - They HAVE a public key → Accept button is actionable. One click
  *    re-wraps the subtree key for them and PATCHes the access row.
- *  - They have NO public key yet → no Accept button. A disabled-looking
- *    hint explains we're waiting for *them* to complete their encryption
- *    onboarding before anyone can re-wrap the key. Surfacing this
- *    distinction prevents the "click Accept, get a cryptic error" loop
- *    and makes clear who owns the next step.
+ *  - They have NO public key yet → no Accept button, a "Waiting for
+ *    encryption" chip; one line under the heading explains it for every
+ *    such row. This prevents the "click Accept, get a cryptic error" loop.
  *
  * Rendered inline above the regular ShareModal contents so the main
  * ui-kit access list stays untouched.
  */
-export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
+export const PendingEncryptionSection = ({
+  itemId,
+  accesses,
+  canAccept: mayAccept,
+}: Props) => {
   const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const acceptMutation = useMutationAcceptEncryptionAccess();
+  const acceptPendingMembers = useAcceptPendingMembers();
   const [inFlight, setInFlight] = useState<Set<string>>(new Set());
   const [errorByAccessId, setErrorByAccessId] = useState<
     Record<string, string>
@@ -115,16 +115,10 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
       return copy;
     });
     try {
-      const entryKey = await fetchSubtreeEntryKey(itemId);
-      const wrapped = await wrapSubtreeKeyForUser(entryKey, {
-        sub: access.user.sub,
-        email: access.user.email,
-        name: access.user.full_name,
-      });
-      if (!wrapped) {
-        // Race: the key probe said they had one but fetching just now
-        // returned nothing. Surface a concrete message and remove the
-        // button optimistically.
+      const { accepted, notReady } = await acceptPendingMembers(itemId, [
+        access,
+      ]);
+      if (notReady.length > 0 || accepted.length === 0) {
         setHasPublicKeyBySub((m) => ({ ...m, [access.user.sub]: false }));
         throw new Error(
           t(
@@ -132,28 +126,6 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
             "This user still hasn't completed their encryption onboarding.",
           ),
         );
-      }
-      // The ItemAccess row physically lives on the encryption root
-      // (the outermost ancestor where the share was granted), NOT on
-      // the currently-viewed item. When the user opens the share modal
-      // on a file inside a shared encrypted folder, the file's access
-      // list contains INHERITED rows whose `item.id` points to the
-      // folder. The PATCH URL must target that owning item — otherwise
-      // `ItemAccessViewSet.filter_queryset` restricts the queryset to
-      // accesses directly attached to the URL item and returns 404.
-      await acceptMutation.mutateAsync({
-        itemId: access.item.id,
-        accessId: access.id,
-        encrypted_item_symmetric_key_for_user: wrapped.wrappedKeyBase64,
-        encryption_public_key_version: wrapped.version,
-      });
-      // Invalidate the currently-viewed item's access cache too when
-      // it differs from where the access lives — the modal is looking
-      // at a different query key and otherwise wouldn't refresh.
-      if (access.item.id !== itemId) {
-        queryClient.invalidateQueries({
-          queryKey: ["itemAccesses", itemId],
-        });
       }
     } catch (err) {
       setErrorByAccessId((prev) => ({
@@ -169,6 +141,14 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
     }
   };
 
+  // Treat "probing" as "don't show the button yet" to avoid a flicker where
+  // Accept appears then disappears.
+  const canAcceptAccess = (access: Access) =>
+    mayAccept && hasPublicKeyBySub[access.user.sub] === true && !probing;
+  const someoneWaiting =
+    !probing &&
+    pending.some((access) => hasPublicKeyBySub[access.user.sub] !== true);
+
   const initials = (label: string) =>
     label
       .trim()
@@ -181,17 +161,25 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
 
   return (
     <div className="drive__encryption-pending">
-      <p className="drive__encryption-pending__title">
-        {t("share_modal.pending_encryption.section_title", "Action needed")}
-      </p>
+      <div className="drive__encryption-pending__heading">
+        <p className="drive__encryption-pending__title">
+          {t("share_modal.pending_encryption.section_title", "Action needed")}
+        </p>
+        {someoneWaiting && (
+          <p className="drive__encryption-pending__hint">
+            {t(
+              "share_modal.pending_encryption.waiting_hint",
+              "Members who have not enabled encryption yet get access once they do.",
+            )}
+          </p>
+        )}
+      </div>
       <ul className="drive__encryption-pending__rows">
         {pending.map((access) => {
           const isBusy = inFlight.has(access.id);
           const error = errorByAccessId[access.id];
-          const hasPublicKey = hasPublicKeyBySub[access.user.sub];
-          // Treat "probing" as "don't show the button yet" to avoid a
-          // flicker where Accept appears then disappears.
-          const canAccept = hasPublicKey === true && !probing;
+          const hasPublicKey = hasPublicKeyBySub[access.user.sub] === true;
+          const canAccept = canAcceptAccess(access);
           const name = access.user.full_name || access.user.email;
           return (
             <li key={access.id} className="drive__encryption-pending__row">
@@ -214,11 +202,12 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
                       {access.user.email}
                     </p>
                   )}
-                  {!canAccept && !probing && (
-                    <p className="drive__encryption-pending__secondary">
+                  {hasPublicKey && !probing && (
+                    <p className="drive__encryption-pending__enabled">
+                      <Icon aria-hidden name="verified_user" />
                       {t(
-                        "share_modal.pending_encryption.awaiting_their_onboarding",
-                        "Waiting for them to enable encryption. You will be able to accept them once they have.",
+                        "share_modal.pending_encryption.encryption_enabled",
+                        "Encryption enabled",
                       )}
                     </p>
                   )}
@@ -241,12 +230,18 @@ export const PendingEncryptionSection = ({ itemId, accesses }: Props) => {
                       )
                     : t("share_modal.pending_encryption.accept", "Accept")}
                 </Button>
-              ) : (
-                <span className="drive__encryption-pending__chip">
+              ) : hasPublicKey ? null : (
+                <span
+                  className="drive__encryption-pending__chip"
+                  title={t(
+                    "share_modal.pending_encryption.waiting_chip_hint",
+                    "Waiting for them to enable encryption",
+                  )}
+                >
                   <Icon aria-hidden name="schedule" />
                   {t(
-                    "share_modal.pending_encryption.pending_chip",
-                    "Pending encryption",
+                    "share_modal.pending_encryption.waiting_chip",
+                    "Waiting for encryption",
                   )}
                 </span>
               )}

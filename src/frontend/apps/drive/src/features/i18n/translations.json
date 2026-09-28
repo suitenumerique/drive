@@ -549,14 +549,15 @@
           }
         },
         "pending_encryption": {
-          "title": "Utilisateurs en attente d'accès au chiffrement ({{count}})",
           "accept": "Accepter",
           "accepting": "Acceptation…",
-          "suffix": "(en attente d'accès au chiffrement)",
+          "suffix": "(en attente de chiffrement)",
           "no_public_key": "Cet utilisateur n'a pas encore terminé sa configuration du chiffrement.",
-          "awaiting_their_onboarding": "En attente de l'activation du chiffrement par cette personne. Vous pourrez l'accepter une fois que ce sera fait.",
           "section_title": "Action requise",
-          "pending_chip": "Chiffrement en attente"
+          "waiting_hint": "Les membres qui n'ont pas encore activé le chiffrement auront accès dès qu'ils l'auront fait.",
+          "encryption_enabled": "Chiffrement activé",
+          "waiting_chip": "En attente de chiffrement",
+          "waiting_chip_hint": "En attente de l'activation du chiffrement par cette personne"
         }
       },
       "file_download_modal": {
@@ -612,7 +613,9 @@
           "large_set": "{{count}} éléments dans ce dossier. La progression par élément n'est pas affichée pour les opérations volumineuses — voir le résumé ci-dessus.",
           "large_set_failures": "{{count}} en échec.",
           "description_file": "Le fichier sera chiffré de bout en bout. Seules les personnes avec qui vous le partagez pourront y accéder.",
-          "pending_users": "{{count}} collaborateur(s) n'ont pas encore activé le chiffrement. Ils verront cet élément mais ne pourront pas l'ouvrir tant qu'ils ne l'auront pas fait et qu'une personne ne les aura pas acceptés depuis la fenêtre de partage."
+          "pending_users_one": "{{count}} personne n'a pas encore activé le chiffrement. Elle sera ajoutée en attente et aura accès dès qu'elle l'aura activé.",
+          "pending_users_many": "{{count}} personnes n'ont pas encore activé le chiffrement. Elles seront ajoutées en attente et auront accès dès qu'elles l'auront activé.",
+          "pending_users_other": "{{count}} personnes n'ont pas encore activé le chiffrement. Elles seront ajoutées en attente et auront accès dès qu'elles l'auront activé."
         },
         "errors": {
           "self_missing_key": "Vous devez terminer votre configuration du chiffrement avant de chiffrer cet élément.",
@@ -669,6 +672,10 @@
         },
         "host_modal": {
           "label": "Chiffrement"
+        },
+        "user_menu": {
+          "settings": "Paramètres de chiffrement",
+          "enable": "Activer le chiffrement"
         }
       },
       "clipboard": {
@@ -752,7 +759,6 @@
           "encrypted": "Dossier chiffré"
         },
         "encrypted": {
-          "error": "Échec du déchiffrement du fichier",
           "decrypting": "Déchiffrement…",
           "converting": "Préparation de l'éditeur…",
           "loading_editor": "Chargement de l'éditeur…",
@@ -781,15 +787,28 @@
           "oo_crashed_body": "Une erreur est survenue lors de la synchronisation avec les autres participants. Comme le document est chiffré de bout en bout, nous ne pouvons pas toujours réconcilier parfaitement les modifications. Veuillez recharger l'éditeur pour récupérer le dernier état enregistré.",
           "oo_crashed_waiting": "En attente de l'enregistrement par un autre participant…",
           "oo_crashed_reload": "Recharger l'éditeur",
-          "key_mismatch": {
-            "title": "Ce fichier a été chiffré avec une autre clé",
-            "body": "Le fichier a été chiffré pour vous à un moment où vous utilisiez une autre clé de chiffrement — probablement avant une réinitialisation de vos clés ou un changement d'appareil sans restauration de sauvegarde. Votre clé actuelle ne peut plus le déchiffrer. Demandez à un propriétaire ou administrateur de ce fichier de vous retirer de la liste d'accès puis de vous ajouter à nouveau afin qu'il soit rechiffré avec votre clé actuelle.",
-            "share_time_version_label": "Version de la clé au moment du partage avec vous :",
-            "current_version_label": "Version actuelle de votre clé :"
-          },
           "pending_self": {
-            "title": "Activez le chiffrement pour ouvrir ce fichier",
-            "body": "Ce fichier est chiffré. Activez le chiffrement depuis le menu de votre profil, puis une personne ayant déjà accès vous acceptera depuis la fenêtre de partage."
+            "title": "En attente d'accès",
+            "body_with_keys": "Ce fichier a été chiffré avant que vous activiez le chiffrement, sa clé n'a donc pas pu vous être partagée à ce moment-là. Vous aurez accès la prochaine fois que le propriétaire du fichier l'ouvrira.",
+            "body_without_keys": "Ce fichier a été chiffré avant que vous activiez le chiffrement, sa clé n'a donc pas pu vous être partagée. Activez le chiffrement sur votre compte : vous aurez accès la prochaine fois que le propriétaire du fichier l'ouvrira."
+          },
+          "decryption_failure": {
+            "key_unavailable": {
+              "title": "Ce fichier a été partagé avec une ancienne clé",
+              "body": "Cette clé n'est plus sur votre compte, sans doute parce que vous avez réinitialisé votre chiffrement. Demandez au propriétaire du fichier de vous retirer de ses membres puis de vous ajouter à nouveau."
+            },
+            "key_mismatch": {
+              "title": "Ce fichier a été chiffré avec une autre clé",
+              "body": "Votre clé de chiffrement actuelle ne permet pas de l'ouvrir. Demandez au propriétaire du fichier de vous retirer de ses membres puis de vous ajouter à nouveau."
+            },
+            "content_integrity": {
+              "title": "Ce fichier ne peut pas être déchiffré",
+              "body": "Votre clé est la bonne, mais le contenu enregistré est endommagé ou a été modifié : il n'est pas fiable. Contactez le propriétaire de ce fichier ou votre support."
+            },
+            "unknown": {
+              "title": "Ce fichier n'a pas pu être déchiffré",
+              "body": "Une erreur est survenue lors du déchiffrement de ce fichier. Réessayez."
+            }
           }
         },
         "modal": {

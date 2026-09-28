@@ -161,22 +161,6 @@
     flex-wrap: wrap;
     justify-content: center;
   }
-
-  &__versions {
-    display: flex;
-    flex-direction: column;
-    gap: var(--c--globals--spacings--2xs);
-    font-size: 12px;
-    color: var(--c--contextuals--content--semantic--neutral--secondary);
-
-    code {
-      padding: 2px 6px;
-      border-radius: 3px;
-      background: var(--c--contextuals--background--surface--tertiary);
-      color: var(--c--contextuals--content--semantic--neutral--primary);
-      font-family: monospace;
-    }
-  }
 }
 
 // The share modal's "action needed" block: people added to an encrypted item
@@ -193,6 +177,34 @@
     line-height: 16px;
     font-weight: var(--c--globals--font--weights--bold);
     color: var(--c--contextuals--content--semantic--neutral--secondary);
+  }
+
+  &__heading {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--c--contextuals--content--semantic--neutral--tertiary);
+  }
+
+  &__enabled {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: var(--c--globals--font--weights--medium);
+    color: var(--c--contextuals--content--semantic--success--primary);
+
+    .material-icons {
+      font-size: 14px;
+    }
   }
 
   &__rows {

@@ -144,11 +144,13 @@ export const ModalRecursiveEncrypt = ({
         {job.pendingUserCount > 0 &&
           (job.phase === "ready" || job.phase === "validating") && (
             <Alert type={VariantType.WARNING}>
-              {t(
-                "encryption.encrypt_modal.pending_users",
-                "{{count}} collaborator(s) have not enabled encryption yet. They will see this item but cannot open it until they do and someone accepts them from the share dialog.",
-                { count: job.pendingUserCount },
-              )}
+              {t("encryption.encrypt_modal.pending_users", {
+                count: job.pendingUserCount,
+                defaultValue_one:
+                  "{{count}} collaborator has not enabled encryption yet. They will be added as pending and get access once they enable it.",
+                defaultValue_other:
+                  "{{count}} collaborators have not enabled encryption yet. They will be added as pending and get access once they enable it.",
+              })}
             </Alert>
           )}
 
