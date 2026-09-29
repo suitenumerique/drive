@@ -6,7 +6,17 @@
  * itself (room state, peer join/leave) come over text frames unencrypted.
  */
 
-const RELAY_URL = process.env.NEXT_PUBLIC_RELAY_URL ?? 'ws://localhost:4100';
+// The relay sits on Drive's own host, so the browser sends it the session cookie it
+// checks access with. The development server runs apart: NEXT_PUBLIC_RELAY_URL.
+const RELAY_PATH = '/collaboration/relay';
+
+function relayUrl(): string {
+  if (process.env.NEXT_PUBLIC_RELAY_URL) return process.env.NEXT_PUBLIC_RELAY_URL;
+
+  const { protocol, host } = window.location;
+
+  return `${protocol === 'https:' ? 'wss:' : 'ws:'}//${host}${RELAY_PATH}`;
+}
 
 // --- System message types (discriminated union) ---
 
@@ -447,7 +457,7 @@ export class EncryptedRelay {
     this.inHistoryPhase = true;
 
     const params = new URLSearchParams({ room: this.roomId });
-    const url = `${RELAY_URL}?${params.toString()}`;
+    const url = `${relayUrl()}?${params.toString()}`;
     console.warn(`[relay] connecting url=${url}`);
     this.ws = new WebSocket(url);
     // Don't set binaryType to 'arraybuffer' — we need to distinguish

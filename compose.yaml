@@ -333,6 +333,7 @@ services:
     build:
       context: ./src/frontend/servers/collaboration
       dockerfile: Dockerfile
+      target: dev # The production stage ships compiled JavaScript only; tsx is in this one
     # Bind-mount the relay source so edits on the host hot-reload through
     # `tsx watch` without rebuilding the image. The host's node_modules
     # (populated by `npm install` in the relay dir) is used directly.
