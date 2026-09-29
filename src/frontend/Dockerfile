@@ -27,7 +27,15 @@ EXPOSE 3000
 RUN yarn build-theme
 CMD ["yarn", "dev"]
 
-# Tilt will rebuild drive target so, we dissociate drive and drive-builder 
+# ---- OnlyOffice client-side assets (for encryption) ----
+FROM alpine:3.24 AS onlyoffice-assets
+
+RUN apk add --no-cache bash curl unzip
+
+COPY ./scripts/install-onlyoffice.sh /build/scripts/install-onlyoffice.sh
+RUN bash /build/scripts/install-onlyoffice.sh
+
+# Tilt will rebuild drive target so, we dissociate drive and drive-builder
 # to avoid rebuilding the app at every changes.
 FROM drive AS drive-builder
 
@@ -35,6 +43,11 @@ WORKDIR /home/frontend/apps/drive
 
 ARG API_ORIGIN
 ENV NEXT_PUBLIC_API_ORIGIN=${API_ORIGIN}
+
+# Copied into public/ so the static export ships them under /onlyoffice/.
+COPY --from=onlyoffice-assets \
+    /build/src/frontend/apps/drive/public/onlyoffice \
+    ./public/onlyoffice
 
 RUN yarn build
 
