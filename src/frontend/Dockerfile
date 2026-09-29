@@ -1,4 +1,6 @@
-FROM node:22-alpine AS frontend-deps
+# Below stages that only output JS/WASM files are run just once for multi-platform build
+# to save time (only the nginx stage has specifics)
+FROM --platform=$BUILDPLATFORM node:22-alpine AS frontend-deps
 
 WORKDIR /home/frontend/
 
@@ -28,7 +30,7 @@ RUN yarn build-theme
 CMD ["yarn", "dev"]
 
 # ---- OnlyOffice client-side assets (for encryption) ----
-FROM alpine:3.24 AS onlyoffice-assets
+FROM --platform=$BUILDPLATFORM alpine:3.24 AS onlyoffice-assets
 
 RUN apk add --no-cache bash curl unzip
 
