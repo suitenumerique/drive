@@ -1,6 +1,8 @@
 """Test the Prometheus metrics endpoint."""
 
+import re
 import socket
+from unittest import mock
 
 from django.urls import resolve
 
@@ -190,3 +192,39 @@ def test_api_metrics_requests_are_labelled_by_view(settings):
         for sample in family.samples
         for value in sample.labels.values()
     )
+
+
+@pytest.mark.usefixtures("metrics_enabled")
+def test_api_metrics_celery_queue_length(settings):
+    """The length of the Celery queue is asked at scrape time, unless it is turned off."""
+    path = "core.metrics.collectors.CeleryQueueCollector.queue_length"
+
+    with mock.patch(path, return_value=7) as mock_queue_length:
+        response = _get_metrics(HTTP_AUTHORIZATION=f"Bearer {API_KEY}")
+    assert response.status_code == 200
+    assert re.search(
+        # the text format sorts the labels
+        rf'drive_celery_queue_length{{hostname="{socket.gethostname()}",queue="celery"}} 7\.0',
+        response.content.decode(),
+    )
+    mock_queue_length.assert_called_once()
+
+    settings.PROMETHEUS_CELERY_QUEUE_METRICS_ENABLED = False
+    with mock.patch(path, return_value=7) as mock_queue_length:
+        response = _get_metrics(HTTP_AUTHORIZATION=f"Bearer {API_KEY}")
+    assert response.status_code == 200
+    assert "drive_celery_queue_length" not in response.content.decode()
+    mock_queue_length.assert_not_called()
+
+
+@pytest.mark.usefixtures("metrics_enabled")
+def test_api_metrics_celery_queue_unreachable_broker():
+    """A broker that cannot be asked should leave the gauge out, not fail the scrape."""
+    with mock.patch(
+        "core.metrics.collectors.celery_app.connection_for_read",
+        side_effect=ConnectionError("broker down"),
+    ):
+        response = _get_metrics(HTTP_AUTHORIZATION=f"Bearer {API_KEY}")
+
+    assert response.status_code == 200
+    assert "drive_celery_queue_length" not in response.content.decode()
