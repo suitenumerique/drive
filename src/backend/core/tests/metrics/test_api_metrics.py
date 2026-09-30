@@ -4,6 +4,7 @@ import re
 import socket
 from unittest import mock
 
+from django.core.cache import cache
 from django.urls import resolve
 
 import pytest
@@ -228,3 +229,21 @@ def test_api_metrics_celery_queue_unreachable_broker():
 
     assert response.status_code == 200
     assert "drive_celery_queue_length" not in response.content.decode()
+
+
+@pytest.mark.usefixtures("metrics_enabled")
+def test_api_metrics_business(settings):
+    """The business metrics should be served, unless they are turned off."""
+    settings.PROMETHEUS_CELERY_QUEUE_METRICS_ENABLED = False
+    cache.clear()
+
+    response = _get_metrics(HTTP_AUTHORIZATION=f"Bearer {API_KEY}")
+    assert response.status_code == 200
+    assert f'drive_items_count{{hostname="{socket.gethostname()}"}} 0.0' in (
+        response.content.decode()
+    )
+
+    settings.PROMETHEUS_BUSINESS_METRICS_ENABLED = False
+    response = _get_metrics(HTTP_AUTHORIZATION=f"Bearer {API_KEY}")
+    assert response.status_code == 200
+    assert "drive_items_count" not in response.content.decode()
