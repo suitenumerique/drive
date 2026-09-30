@@ -63,6 +63,34 @@ add_header Content-Disposition "attachment";
 | `ingressMediaPreview.annotations.nginx.ingress.kubernetes.io/upstream-vhost`        |                                                      | `minio.drive.svc.cluster.local:9000`                                                                            |
 | `ingressMediaPreview.annotations.nginx.ingress.kubernetes.io/configuration-snippet` |                                                      | `add_header Content-Security-Policy "default-src 'none'" always;
 `                                              |
+| `ingressMetrics.enabled` | whether to enable the Ingress publishing the metrics of the backend | `false` |
+| `ingressMetrics.className` | IngressClass to use for the Ingress | `nil` |
+| `ingressMetrics.host` | Host for the Ingress. Use a host of its own, and add it to ALLOWED_HOSTS | `metrics.drive.example.com` |
+| `ingressMetrics.path` | Path of the backend metrics, matched exactly | `/metrics` |
+| `ingressMetrics.hosts` | Additional host to configure for the Ingress | `[]` |
+| `ingressMetrics.tls.enabled` | Whether to enable TLS for the Ingress | `true` |
+| `ingressMetrics.tls.secretName` | Secret name for TLS config | `nil` |
+| `ingressMetrics.tls.additional[].secretName` | Secret name for additional TLS config |  |
+| `ingressMetrics.tls.additional[].hosts[]` | Hosts for additional TLS config |  |
+| `ingressMetrics.annotations` | Annotations of the Ingress. Restrict the callers by address here | `{}` |
+| `serviceMonitor.enabled` | Create a ServiceMonitor for the backend | `false` |
+| `serviceMonitor.namespace` | Namespace the ServiceMonitor is created in, the release one when empty | `""` |
+| `serviceMonitor.labels` | Labels of the ServiceMonitor, which the Prometheus Operator selects it by (e.g. release: kube-prometheus-stack) | `{}` |
+| `serviceMonitor.annotations` | Annotations of the ServiceMonitor | `{}` |
+| `serviceMonitor.interval` | Scrape interval, the Prometheus default when empty | `""` |
+| `serviceMonitor.scrapeTimeout` | Scrape timeout, the Prometheus default when empty | `""` |
+| `serviceMonitor.honorLabels` | Keep the labels of the scraped samples when they clash with the target ones | `false` |
+| `serviceMonitor.relabelings` | Relabelings of the targets, before the scrape | `[]` |
+| `serviceMonitor.metricRelabelings` | Relabelings of the samples, after the scrape | `[]` |
+| `podMonitor.enabled` | Create a PodMonitor for the backend | `false` |
+| `podMonitor.namespace` | Namespace the PodMonitor is created in, the release one when empty | `""` |
+| `podMonitor.labels` | Labels of the PodMonitor, which the Prometheus Operator selects it by (e.g. release: kube-prometheus-stack) | `{}` |
+| `podMonitor.annotations` | Annotations of the PodMonitor | `{}` |
+| `podMonitor.interval` | Scrape interval, the Prometheus default when empty | `""` |
+| `podMonitor.scrapeTimeout` | Scrape timeout, the Prometheus default when empty | `""` |
+| `podMonitor.honorLabels` | Keep the labels of the scraped samples when they clash with the target ones | `false` |
+| `podMonitor.relabelings` | Relabelings of the targets, before the scrape | `[]` |
+| `podMonitor.metricRelabelings` | Relabelings of the samples, after the scrape | `[]` |
 | `serviceMedia.host`                                                                 |                                                      | `minio.drive.svc.cluster.local`                                                                                 |
 | `serviceMedia.port`                                                                 |                                                      | `9000`                                                                                                          |
 | `serviceMedia.annotations`                                                          |                                                      | `{}`                                                                                                            |
@@ -85,6 +113,9 @@ add_header Content-Disposition "attachment";
 | `backend.envVars.FROM_SECRET.secretKeyRef.name`           | Name of a Secret when configuring env vars from a Secret                           |                                                                                                                               |
 | `backend.envVars.FROM_SECRET.secretKeyRef.key`            | Key within a Secret when configuring env vars from a Secret                        |                                                                                                                               |
 | `backend.django.envVars`                                  | Backend web deployment specific environment variables, overriding backend.envVars (e.g. DB_PSYCOPG_POOL_ENABLED, which prefork celery workers do not benefit from) | `{}`                                                                                                                          |
+| `backend.metrics.enabled` | Serve the prometheus metrics on /metrics (PROMETHEUS_METRICS_ENABLED) on the web pods, not on celery. PROMETHEUS_API_KEY has to be given in backend.envVars | `false` |
+| `backend.metrics.apiKeySecret.name` | Secret the monitors read the bearer token from, when PROMETHEUS_API_KEY is not a secretKeyRef of backend.envVars | `""` |
+| `backend.metrics.apiKeySecret.key` | Key of the bearer token in that Secret | `""` |
 | `backend.podAnnotations`                                  | Annotations to add to the backend Pod                                              | `{}`                                                                                                                          |
 | `backend.dpAnnotations`                                   | Annotations to add to the backend Deployment                                       | `{}`                                                                                                                          |
 | `backend.service.type`                                    | backend Service type                                                               | `ClusterIP`                                                                                                                   |

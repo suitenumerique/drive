@@ -50,6 +50,9 @@ spec:
             {{- if $envVars}}
             {{- $envVars | indent 12 }}
             {{- end }}
+            {{- with include "drive.backend.metrics.env" . }}
+            {{- . | nindent 12 }}
+            {{- end }}
           {{- with .Values.backend.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}

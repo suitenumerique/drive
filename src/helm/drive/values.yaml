@@ -139,6 +139,83 @@ ingressMediaPreview:
     nginx.ingress.kubernetes.io/configuration-snippet: |
       add_header Content-Security-Policy "default-src 'none'" always;
 
+## @param ingressMetrics.enabled whether to enable the Ingress publishing the metrics of the backend
+## @param ingressMetrics.className IngressClass to use for the Ingress
+## @param ingressMetrics.host Host for the Ingress. Use a host of its own, and add it to ALLOWED_HOSTS
+## @param ingressMetrics.path Path of the backend metrics, matched exactly
+ingressMetrics:
+  enabled: false
+  className: null
+  host: metrics.drive.example.com
+  path: /metrics
+  ## @param ingressMetrics.hosts Additional host to configure for the Ingress
+  hosts: []
+  ## @param ingressMetrics.tls.enabled Whether to enable TLS for the Ingress
+  ## @param ingressMetrics.tls.secretName Secret name for TLS config
+  ## @skip ingressMetrics.tls.additional
+  ## @extra ingressMetrics.tls.additional[].secretName Secret name for additional TLS config
+  ## @extra ingressMetrics.tls.additional[].hosts[] Hosts for additional TLS config
+  tls:
+    enabled: true
+    secretName: null
+    additional: []
+
+  ## @param ingressMetrics.annotations Annotations of the Ingress. Restrict the callers by address here
+  ## The bearer token travels in a header: keep TLS on, and filter the source
+  ## addresses, e.g. with ingress-nginx:
+  ##   nginx.ingress.kubernetes.io/whitelist-source-range: "203.0.113.10/32"
+  annotations: {}
+
+## Prometheus Operator. With backend.metrics.enabled, a monitor makes a
+## Prometheus inside the cluster scrape every backend pod directly, each pod a
+## target of its own, rather than one replica at random through the ingress.
+## The scrape presents the bearer token read from the Secret PROMETHEUS_API_KEY
+## comes from (or backend.metrics.apiKeySecret). That Secret has to live in the
+## namespace of the monitors, and the operator be allowed to read it.
+##
+## A ServiceMonitor finds the pods through their Service, a PodMonitor through
+## their labels. They give the same targets: pick the kind your Prometheus
+## selects.
+## @param serviceMonitor.enabled Create a ServiceMonitor for the backend
+## @param serviceMonitor.namespace Namespace the ServiceMonitor is created in, the release one when empty
+## @param serviceMonitor.labels Labels of the ServiceMonitor, which the Prometheus Operator selects it by (e.g. release: kube-prometheus-stack)
+## @param serviceMonitor.annotations Annotations of the ServiceMonitor
+## @param serviceMonitor.interval Scrape interval, the Prometheus default when empty
+## @param serviceMonitor.scrapeTimeout Scrape timeout, the Prometheus default when empty
+## @param serviceMonitor.honorLabels Keep the labels of the scraped samples when they clash with the target ones
+## @param serviceMonitor.relabelings Relabelings of the targets, before the scrape
+## @param serviceMonitor.metricRelabelings Relabelings of the samples, after the scrape
+serviceMonitor:
+  enabled: false
+  namespace: ""
+  labels: {}
+  annotations: {}
+  interval: ""
+  scrapeTimeout: ""
+  honorLabels: false
+  relabelings: []
+  metricRelabelings: []
+
+## @param podMonitor.enabled Create a PodMonitor for the backend
+## @param podMonitor.namespace Namespace the PodMonitor is created in, the release one when empty
+## @param podMonitor.labels Labels of the PodMonitor, which the Prometheus Operator selects it by (e.g. release: kube-prometheus-stack)
+## @param podMonitor.annotations Annotations of the PodMonitor
+## @param podMonitor.interval Scrape interval, the Prometheus default when empty
+## @param podMonitor.scrapeTimeout Scrape timeout, the Prometheus default when empty
+## @param podMonitor.honorLabels Keep the labels of the scraped samples when they clash with the target ones
+## @param podMonitor.relabelings Relabelings of the targets, before the scrape
+## @param podMonitor.metricRelabelings Relabelings of the samples, after the scrape
+podMonitor:
+  enabled: false
+  namespace: ""
+  labels: {}
+  annotations: {}
+  interval: ""
+  scrapeTimeout: ""
+  honorLabels: false
+  relabelings: []
+  metricRelabelings: []
+
 ## @param serviceMedia.host
 ## @param serviceMedia.port
 ## @param serviceMedia.annotations
@@ -190,6 +267,15 @@ backend:
   ## @param backend.django.envVars Backend web deployment specific environment variables, overriding backend.envVars (e.g. DB_PSYCOPG_POOL_ENABLED, which prefork celery workers do not benefit from)
   django:
     envVars: {}
+
+  ## @param backend.metrics.enabled Serve the prometheus metrics on /metrics (PROMETHEUS_METRICS_ENABLED) on the web pods, not on celery. PROMETHEUS_API_KEY has to be given in backend.envVars
+  ## @param backend.metrics.apiKeySecret.name Secret the monitors read the bearer token from, when PROMETHEUS_API_KEY is not a secretKeyRef of backend.envVars
+  ## @param backend.metrics.apiKeySecret.key Key of the bearer token in that Secret
+  metrics:
+    enabled: false
+    apiKeySecret:
+      name: ""
+      key: ""
 
   ## @param backend.podAnnotations Annotations to add to the backend Pod
   podAnnotations: {}
