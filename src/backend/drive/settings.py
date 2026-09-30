@@ -1590,6 +1590,20 @@ class Base(Configuration):
         environ_name="PROMETHEUS_CELERY_QUEUE_METRICS_ENABLED",
         environ_prefix=None,
     )
+    # Report the business metrics of Drive (items, users, accesses, storage) on
+    # /metrics. They are computed from the database and kept in the shared cache
+    # for PROMETHEUS_BUSINESS_METRICS_CACHE_TTL seconds, so that the replicas
+    # and the scrapes share one set of queries.
+    PROMETHEUS_BUSINESS_METRICS_ENABLED = values.BooleanValue(
+        True,
+        environ_name="PROMETHEUS_BUSINESS_METRICS_ENABLED",
+        environ_prefix=None,
+    )
+    PROMETHEUS_BUSINESS_METRICS_CACHE_TTL = values.PositiveIntegerValue(
+        300,
+        environ_name="PROMETHEUS_BUSINESS_METRICS_CACHE_TTL",
+        environ_prefix=None,
+    )
     # gunicorn runs several worker processes, and a scrape is answered by one of
     # them: they all write their numbers to this directory so that whichever
     # answers can add them up. Defaults to a directory of the system's temporary
