@@ -12,6 +12,10 @@ and this project adheres to
 
 - 🔧(docker) replace MinIO with RustFS for local object storage
 
+### Fixed
+
+- 📝(docs) fix minio and CA settings in the kubernetes guide
+
 ## [v0.23.0] - 2026-09-23
 
 ### Added
