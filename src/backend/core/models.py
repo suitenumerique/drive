@@ -13,6 +13,7 @@ from os.path import splitext
 from django.conf import settings
 from django.contrib.auth import models as auth_models
 from django.contrib.auth.base_user import AbstractBaseUser
+from django.contrib.auth.hashers import check_password, identify_hasher, make_password
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.indexes import GistIndex
 from django.contrib.sites.models import Site
@@ -37,8 +38,8 @@ from lasuite.drf.models.choices import (
     LinkReachChoices,
     LinkRoleChoices,
     RoleChoices,
-    get_equivalent_link_definition,
 )
+from lasuite.drf.models.choices import get_equivalent_link_definition as get_equivalent_reach_role
 from pydantic import BaseModel as PydanticBaseModel
 from timezone_field import TimeZoneField
 
@@ -800,6 +801,33 @@ class AnnotateUserRoleQuerySetMixin:
         )
 
 
+def link_unlock_key(item_id, link_password):
+    """Return the key remembering an unlock, bound to the password it was made with."""
+    # The salt is regenerated with every password, no need to hash anything
+    salt = identify_hasher(link_password).decode(link_password)["salt"]
+    return f"{item_id}:{salt}"
+
+
+def get_equivalent_link_definition(links):
+    """
+    Return the (reach, role, password item) equivalent to a list of link definitions.
+    The password is the one of the closest link providing the equivalent reach and role.
+    """
+    definition = get_equivalent_reach_role(links)
+    definition["link_password_item"] = None
+    definition["link_unlock_key"] = None
+    if definition["link_reach"] not in (None, LinkReachChoices.RESTRICTED):
+        for link in reversed(links):
+            if (
+                link["link_reach"] == definition["link_reach"]
+                and link["link_role"] == definition["link_role"]
+            ):
+                definition["link_password_item"] = link.get("link_password_item")
+                definition["link_unlock_key"] = link.get("link_unlock_key")
+                break
+    return definition
+
+
 class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
     """Custom queryset for Item model with additional methods."""
 
@@ -818,14 +846,27 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         :param user: The user for whom readable documents are to be fetched.
         :return: A queryset of documents readable by the user.
         """
+        link_not_expired = models.Q(link_expires_at__isnull=True) | models.Q(
+            link_expires_at__gt=timezone.now()
+        )
         if user.is_authenticated:
+            link_unlocked = models.Q(
+                link_traces__user=user, link_traces__link_unlocked_at__isnull=False
+            )
+            link_open = link_not_expired & (models.Q(link_password__isnull=True) | link_unlocked)
             return self.filter(
                 models.Q(accesses__user=user)
                 | models.Q(accesses__team__in=user.teams)
-                | ~models.Q(link_reach=LinkReachChoices.RESTRICTED)
+                | (~models.Q(link_reach=LinkReachChoices.RESTRICTED) & link_open)
             )
 
-        return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC))
+        link_open = models.Q(link_password__isnull=True)
+        for key in getattr(user, "unlocked_link_items", ()):
+            item_id, salt = key.split(":", 1)
+            link_open |= models.Q(id=item_id, link_password__contains=salt)
+        return self.filter(
+            models.Q(link_reach=LinkReachChoices.PUBLIC) & link_not_expired & link_open
+        )
 
     def filter_non_deleted(self, **kwargs):
         """Filter the non deleted items"""
@@ -1002,6 +1043,8 @@ class Item(TreeModel, BaseModel):
     link_role = models.CharField(
         max_length=20, choices=LinkRoleChoices.choices, default=LinkRoleChoices.READER
     )
+    link_expires_at = models.DateTimeField(_("link expiration date"), null=True, blank=True)
+    link_password = models.CharField(_("link password"), max_length=128, null=True, blank=True)
     creator = models.ForeignKey(
         User,
         on_delete=models.RESTRICT,
@@ -1288,17 +1331,47 @@ class Item(TreeModel, BaseModel):
         paths_links_mapping = {}
 
         for ancestor in ancestors:
-            ancestors_links.append(
-                {"link_reach": ancestor.link_reach, "link_role": ancestor.link_role}
-            )
+            ancestors_links.append(ancestor.link_definition)
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
 
         return paths_links_mapping
 
     @property
+    def is_link_expired(self):
+        """Return whether the link expiration date is past."""
+        return self.link_expires_at is not None and self.link_expires_at <= timezone.now()
+
+    @property
     def link_definition(self):
-        """Returns link reach/role as a definition in dictionary format."""
-        return {"link_reach": self.link_reach, "link_role": self.link_role}
+        """Return link reach/role/password item as a definition in dictionary format."""
+        if self.is_link_expired:
+            return {
+                "link_reach": LinkReachChoices.RESTRICTED,
+                "link_role": None,
+                "link_password_item": None,
+                "link_unlock_key": None,
+            }
+        return {
+            "link_reach": self.link_reach,
+            "link_role": self.link_role,
+            "link_password_item": self.id if self.link_password else None,
+            "link_unlock_key": self.link_unlock_key,
+        }
+
+    @property
+    def link_unlock_key(self):
+        """Return the key remembering an unlock of this item link, or None without password."""
+        return link_unlock_key(self.id, self.link_password) if self.link_password else None
+
+    def set_link_password(self, raw_password):
+        """Store the hash of the given link password, or remove it when empty."""
+        self.link_password = make_password(raw_password) if raw_password else None
+        # Changing the password locks the link again for everyone
+        self.link_traces.update(link_unlocked_at=None)
+
+    def check_link_password(self, raw_password):
+        """Return whether the given password matches the link password."""
+        return bool(self.link_password) and check_password(raw_password, self.link_password)
 
     @property
     def ancestors_link_definition(self):
@@ -1807,6 +1880,7 @@ class LinkTrace(BaseModel):
         related_name="link_traces",
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="link_traces")
+    link_unlocked_at = models.DateTimeField(_("link unlocked at"), null=True, blank=True)
 
     class Meta:
         db_table = "drive_link_trace"
