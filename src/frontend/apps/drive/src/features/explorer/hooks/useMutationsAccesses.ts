@@ -1,5 +1,5 @@
 import { getDriver } from "@/features/config/Config";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useOnSuccessAccessOrInvitationMutation } from "./useRefreshItems";
 
 // ============================================================================
@@ -99,6 +99,42 @@ export const useMutationDeleteInvitation = () => {
     },
     onSuccess: (_, variables) => {
       onSuccessAccessOrInvitation(variables.itemId, true);
+    },
+  });
+};
+
+export const useMutationCreateAccessRequest = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    // Errors are displayed inside the access request screen, not by the global toast
+    meta: { noGlobalError: true },
+    mutationFn: (...payload: Parameters<typeof driver.createAccessRequest>) => {
+      return driver.createAccessRequest(...payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["itemAccessRequests", variables.itemId],
+      });
+    },
+  });
+};
+
+export const useMutationUpdateAccessRequest = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (...payload: Parameters<typeof driver.updateAccessRequest>) => {
+      return driver.updateAccessRequest(...payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["itemAccessRequests", variables.itemId],
+      });
+      // Accepting a request grants a new access
+      queryClient.invalidateQueries({
+        queryKey: ["itemAccesses", variables.itemId],
+      });
     },
   });
 };

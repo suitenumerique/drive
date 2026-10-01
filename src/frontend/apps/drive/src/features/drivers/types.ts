@@ -179,6 +179,23 @@ export enum Role {
   OWNER = "owner",
 }
 
+export type AccessRequestStatus = "pending" | "accepted" | "refused";
+
+export type AccessRequest = {
+  id: string;
+  created_at: string;
+  item: string;
+  requester: User;
+  status: AccessRequestStatus;
+  message: string;
+  abilities: {
+    destroy: boolean;
+    retrieve: boolean;
+    partial_update: boolean;
+    update: boolean;
+  };
+};
+
 export type User = {
   id: string;
   email: string;
