@@ -202,10 +202,14 @@ class WopiViewSet(viewsets.ViewSet):
 
         return StreamingHttpResponse(
             streaming_content=file["Body"].iter_chunks(),
-            content_type=item.mimetype,
+            # A null mimetype would fall back to Django's text/html default.
+            content_type=item.mimetype or "application/octet-stream",
             headers={
                 "X-WOPI-ItemVersion": get_wopi_item_version(head_object),
                 "Content-Length": head_object["ContentLength"],
+                # Stored bytes must never render on the application origin.
+                "Content-Disposition": "attachment",
+                "Content-Security-Policy": "default-src 'none'; sandbox",
             },
             status=200,
         )

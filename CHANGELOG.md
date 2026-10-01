@@ -12,6 +12,10 @@ and this project adheres to
 
 - 🔧(docker) replace MinIO with RustFS for local object storage
 
+### Fixed
+
+- 🔒️(backend) serve WOPI file content as a sandboxed download
+
 ## [v0.23.0] - 2026-09-23
 
 ### Added
