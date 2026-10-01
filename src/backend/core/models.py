@@ -28,6 +28,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import get_language, override
 from django.utils.translation import gettext_lazy as _
 
+from django_ltree.fields import PathField
 from django_ltree.functions import NLevel
 from django_ltree.managers import TreeManager, TreeQuerySet
 from django_ltree.models import TreeModel
@@ -773,6 +774,154 @@ class UserReconciliationCsvImport(BaseModel):
         self.send_email(subject, emails, context, language)
 
 
+class IdInPath(models.Func):  # pylint: disable=abstract-method
+    """
+    Whether an item id is one of the labels of a path, meaning the item is the one at
+    the path or one of its ancestors: an item path is made of its ancestors ids and its
+    own id.
+
+    Prefer it to an `item__path__ancestors` lookup in correlated subqueries: it is
+    resolved on the item id index of the filtered table without joining items, where
+    the ancestors lookup scans every row of the filtered table that matches the other
+    conditions (e.g. all the accesses of a user) for each outer row.
+
+    Measured on a production sized dataset (4M items, 140k accesses), for a user
+    holding 1,526 accesses and listing 200 items: the user roles subquery took
+    830ms with `item__path__ancestors`, because Postgres went through all the
+    accesses of the user for each listed item (305k index lookups). With IdInPath
+    it takes 5ms, with the same results. Do not switch back to `__ancestors` here:
+    its `@>` operator can only use the GiST index of paths, and Postgres misestimates
+    it, so it picks the wrong side of the join. See docs/scaling.md.
+    """
+
+    arity = 2
+    output_field = models.BooleanField()
+
+    def as_sql(self, compiler, connection, **extra_context):  # pylint: disable=arguments-differ
+        """Compare the id to the path labels cast to uuids."""
+        id_sql, id_params = compiler.compile(self.source_expressions[0])
+        path_sql, path_params = compiler.compile(self.source_expressions[1])
+        return (
+            f"{id_sql} = ANY(string_to_array(({path_sql})::text, '.')::uuid[])",
+            (*id_params, *path_params),
+        )
+
+
+# ltree compares labels byte by byte and the hyphen is the lowest byte allowed in a
+# label, so the subtree of "a.b" (the path itself and all its descendants, and only
+# them) sorts in ["a.b", "a.b-"). Looking a subtree up as a range of the path btree
+# index is much faster than a `path__descendants` lookup on the GiST index: see the
+# `path__in_subtree` lookup (InSubtree) and IdInSubtrees.
+SUBTREE_UPPER_BOUND_SUFFIX = "-"
+
+
+@PathField.register_lookup
+class InSubtree(models.Lookup):  # pylint: disable=abstract-method
+    """
+    `path__in_subtree=X` matches X and all its descendants: the same rows as the
+    built-in `path__descendants=X`, found faster.
+
+    `path__descendants` uses the ltree `<@` operator, which only the GiST index on
+    paths supports. On millions of paths made of UUIDs, one GiST search costs about
+    1ms. This lookup reads the subtree as a range of the unique btree index on paths
+    instead, about 20 times faster (see SUBTREE_UPPER_BOUND_SUFFIX for why the range
+    is exact).
+
+    Before:
+        Item.objects.filter(path__descendants="A.B")
+        -- WHERE path <@ 'A.B'                          GiST index scan
+
+    After:
+        Item.objects.filter(path__in_subtree="A.B")
+        -- WHERE path >= 'A.B' AND path < 'A.B-'        btree index range
+
+    Both match A.B, A.B.C and A.B.C.D, but neither A.C nor a sibling like A.BX.
+    The value can be a path, an F() or an OuterRef(), for example to count the
+    children of each item in a correlated subquery.
+    """
+
+    lookup_name = "in_subtree"
+
+    def as_sql(self, compiler, connection):
+        """Compare the path with the bounds of the subtree, both served by the btree."""
+        lhs, lhs_params = self.process_lhs(compiler, connection)
+        rhs, rhs_params = self.process_rhs(compiler, connection)
+        upper_bound = f"(({rhs})::text || '{SUBTREE_UPPER_BOUND_SUFFIX}')::ltree"
+        return (
+            f"({lhs} >= {rhs} AND {lhs} < {upper_bound})",
+            (*lhs_params, *rhs_params, *lhs_params, *rhs_params),
+        )
+
+
+class IdInSubtrees(models.Func):  # pylint: disable=abstract-method
+    """
+    Whether an item id belongs to one of the subtrees rooted at the given paths.
+
+    Equivalent to OR-ing `path__descendants` lookups, which Postgres resolves with one
+    scan of the GiST index per path: too slow for users reaching thousands of trees.
+    Instead, each subtree is looked up as a range of the path btree index. Ids are read
+    from the last label of the paths found, which lets the btree answer alone, and the
+    whole list is computed once before looking items up by id.
+    """
+
+    arity = 1
+    output_field = models.BooleanField()
+
+    def __init__(self, expression, paths, **extra):
+        super().__init__(expression, **extra)
+        self.paths = [str(path) for path in paths]
+
+    def as_sql(self, compiler, connection, **extra_context):  # pylint: disable=arguments-differ
+        """Build the id list from a join of the subtree ranges on the path index."""
+        # Example with paths ["A.B", "F"], where every label is an item id:
+        #
+        #   tree                     path btree index (sorted)
+        #   A                        A.B     ┐ subtree of A.B: ["A.B", "A.B-")
+        #   ├── A.B      ← path      A.B.C   ┘
+        #   │   └── A.B.C            A.C       excluded: "A.C" sorts after "A.B-"
+        #   └── A.C                  F       ┐ subtree of F: ["F", "F-")
+        #   F            ← path      F.G     ┘
+        #   └── F.G
+        #
+        # 1. The query receives two parameters, the lower and upper bounds:
+        #        %s = ["A.B", "F"]      %s = ["A.B-", "F-"]
+        #    unnest() with two arrays reads them side by side, element by element,
+        #    and builds a table with one row per subtree, named "subtree":
+        #        subtree
+        #        lower_bound | upper_bound
+        #        ------------+------------
+        #        A.B         | A.B-
+        #        F           | F-
+        #    The ::text[]::ltree[] casts turn the Python lists of strings into ltree
+        #    arrays, so that the bounds can be compared with paths.
+        # 2. Each row of "subtree" is joined with a range scan of the unique btree
+        #    index on paths, which returns A.B, A.B.C, F and F.G.
+        # 3. subpath(path, -1) keeps the last label, which is the item id: B, C, F, G.
+        #    Reading only the path lets Postgres answer from the btree alone (index
+        #    only scan). Selecting subtree_item.id instead needs the table, and
+        #    Postgres then picks the GiST index, about 40 times slower.
+        # 4. ARRAY() does not depend on the outer row: Postgres computes the id list
+        #    once, then looks the outer items up by primary key with
+        #    "id = ANY(...)". Written as "id IN (subquery)", the ranges were
+        #    misestimated and Postgres scanned the whole item table instead.
+        id_sql, id_params = compiler.compile(self.source_expressions[0])
+        table = connection.ops.quote_name(Item._meta.db_table)  # noqa: SLF001
+        # Only the compiled id expression and the quoted table name are interpolated
+        return (
+            f"{id_sql} = ANY(ARRAY("  # noqa: S608
+            "SELECT subpath(subtree_item.path, -1)::text::uuid "
+            "FROM unnest(%s::text[]::ltree[], %s::text[]::ltree[]) "
+            "AS subtree(lower_bound, upper_bound) "
+            f"JOIN {table} AS subtree_item ON subtree_item.path >= subtree.lower_bound "
+            "AND subtree_item.path < subtree.upper_bound))",
+            (
+                *id_params,
+                self.paths,
+                [f"{path}{SUBTREE_UPPER_BOUND_SUFFIX}" for path in self.paths],
+            ),
+        )
+
+
 class AnnotateUserRoleQuerySetMixin:
     """Mixin to use in a QuerySet to add user_roles annotation."""
 
@@ -786,7 +935,7 @@ class AnnotateUserRoleQuerySetMixin:
         if user.is_authenticated:
             user_roles_subquery = ItemAccess.objects.filter(
                 models.Q(user=user) | models.Q(team__in=user.teams),
-                item__path__ancestors=models.OuterRef(self.path_property),
+                IdInPath(models.F("item_id"), models.OuterRef(self.path_property)),
             ).values_list("role", flat=True)
 
             return self.annotate(
@@ -858,8 +1007,8 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         """Filter items the given user owns, directly or through an ancestor access."""
         owner_access = ItemAccess.objects.filter(
             models.Q(user=user) | models.Q(team__in=user.teams),
+            IdInPath(models.F("item_id"), models.OuterRef("path")),
             role=RoleChoices.OWNER,
-            item__path__ancestors=models.OuterRef("path"),
         )
         return self.filter(models.Exists(owner_access))
 
@@ -885,7 +1034,7 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         if user.is_authenticated:
             user_roles_subquery = ItemAccess.objects.filter(
                 models.Q(user=user) | models.Q(team__in=user.teams),
-                item__path__ancestors=models.OuterRef("path"),
+                IdInPath(models.F("item_id"), models.OuterRef("path")),
             ).values_list("role", flat=True)
 
             return self.annotate(
@@ -906,10 +1055,12 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         """
         direct_children_qs = (
             Item.objects.filter(
-                path__descendants=models.OuterRef("path"),
+                path__in_subtree=models.OuterRef("path"),
                 deleted_at__isnull=True,
                 ancestors_deleted_at__isnull=True,
             )
+            # Keep the depth as a difference: a depth equality would make Postgres
+            # combine the path range with the depth index, matching a whole tree level
             .annotate(_depth_diff=NLevel("path") - NLevel(models.OuterRef("path")))
             .filter(_depth_diff=1)
             .order_by()
@@ -1208,6 +1359,22 @@ class Item(TreeModel, BaseModel):
             title,
         )
 
+    @classmethod
+    def prefetch_nb_accesses(cls, items):
+        """
+        Read the cached number of accesses of many items in a single cache round trip,
+        items missing from the cache compute it when their `nb_accesses` is read.
+        """
+        items_by_cache_key = {
+            item.get_nb_accesses_cache_key(): item
+            for item in items
+            if not hasattr(item, "_nb_accesses")
+        }
+        for cache_key, nb_accesses in cache.get_many(list(items_by_cache_key)).items():
+            if nb_accesses is not None:
+                # pylint: disable-next=protected-access
+                items_by_cache_key[cache_key]._nb_accesses = nb_accesses  # noqa: SLF001
+
     @property
     def nb_accesses(self):
         """Calculate the number of accesses."""
@@ -1292,6 +1459,46 @@ class Item(TreeModel, BaseModel):
                 {"link_reach": ancestor.link_reach, "link_role": ancestor.link_role}
             )
             paths_links_mapping[str(ancestor.path)] = ancestors_links.copy()
+
+        return paths_links_mapping
+
+    @classmethod
+    def compute_items_ancestors_links_paths_mapping(cls, items):
+        """
+        Compute the ancestors links of a collection of items in a single query. The
+        mapping is meant to be read at the items parent path: unlike the mapping
+        computed on an item, it covers the items parents and their ancestors but not
+        the items themselves, so that no query is needed for root items.
+        """
+        paths = set()
+        for item in items:
+            labels = str(item.path).split(".")
+            paths.update(".".join(labels[:depth]) for depth in range(1, len(labels)))
+        if not paths:
+            return {}
+
+        ancestors = (
+            cls.objects.filter(path__in=paths, ancestors_deleted_at__isnull=True)
+            .order_by("path")
+            .values_list("path", "link_reach", "link_role")
+        )
+        paths_links_mapping = {}
+        for path, link_reach, link_role in ancestors:
+            # Paths are sorted so the closest ancestor found is already mapped. Deleted
+            # ancestors are skipped, as when walking the ancestors of a single item.
+            labels = str(path).split(".")
+            ancestors_links = next(
+                (
+                    paths_links_mapping[parent_path]
+                    for depth in range(len(labels) - 1, 0, -1)
+                    if (parent_path := ".".join(labels[:depth])) in paths_links_mapping
+                ),
+                [],
+            )
+            paths_links_mapping[str(path)] = [
+                *ancestors_links,
+                {"link_reach": link_reach, "link_role": link_role},
+            ]
 
         return paths_links_mapping
 

@@ -264,6 +264,17 @@ class RestrictionTargetSerializer(serializers.ModelSerializer):
         )
 
 
+class ItemListSerializer(serializers.ListSerializer):
+    """Serialize a list of items, reading what can be read at once for all of them."""
+
+    def to_representation(self, data):
+        """Read the number of accesses of all the items from the cache at once."""
+        items = list(data.all() if hasattr(data, "all") else data)
+        if "nb_accesses" in self.child.fields:
+            models.Item.prefetch_nb_accesses(items)
+        return super().to_representation(items)
+
+
 class ListItemSerializer(serializers.ModelSerializer):
     """Serialize items with limited fields for display in lists."""
 
@@ -281,6 +292,7 @@ class ListItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Item
+        list_serializer_class = ItemListSerializer
         fields = [
             "id",
             "abilities",
@@ -432,7 +444,20 @@ class ListItemSerializer(serializers.ModelSerializer):
     def get_is_wopi_supported(self, item):
         """Return whether the item is supported by WOPI protocol."""
         request = self.context.get("request")
-        return wopi_utils.is_item_wopi_supported(item, request.user if request else None)
+        return wopi_utils.is_item_wopi_supported(
+            item,
+            request.user if request else None,
+            wopi_configuration=self._get_wopi_configuration(),
+        )
+
+    def _get_wopi_configuration(self):
+        """
+        Fetch the WOPI configuration from the cache once for all the serialized items:
+        it is large and fetching it for each item dominated the serialization time.
+        """
+        if "wopi_configuration" not in self.context:
+            self.context["wopi_configuration"] = wopi_utils.get_wopi_configuration()
+        return self.context["wopi_configuration"]
 
 
 class ListItemLightSerializer(ListItemSerializer):
