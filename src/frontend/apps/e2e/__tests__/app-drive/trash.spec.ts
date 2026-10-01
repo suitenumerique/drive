@@ -61,7 +61,11 @@ test("Checks that hard deleting an item from the trash via the selection bar ref
     .locator(".explorer__selection-bar")
     .getByRole("button", { name: "Delete forever" })
     .click();
-  await page.getByRole("button", { name: "Delete forever" }).click();
+  // Scope to the confirmation dialog, the selection bar button has the same name
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Delete forever" })
+    .click();
 
   await expectRowItemIsNotVisible(page, folderName);
 });
