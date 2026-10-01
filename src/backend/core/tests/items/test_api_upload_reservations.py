@@ -129,13 +129,15 @@ def test_api_upload_reservations_missing_size():
 
 def test_api_upload_reservations_per_file_limit_for_unlimited_account(settings):
     """An account without a storage limit is still bound by the per-file limit."""
-    settings.DATA_UPLOAD_MAX_MEMORY_SIZE = 10
+    # Django also applies this limit to the request body, so it has to stay larger
+    # than the JSON payload sent by the test.
+    settings.DATA_UPLOAD_MAX_MEMORY_SIZE = 1000
 
     client = APIClient()
     client.force_login(factories.UserFactory(storage_limit_override=0))
 
-    assert create_upload(client, 11).status_code == 400
-    assert create_upload(client, 10).status_code == 201
+    assert create_upload(client, 1001).status_code == 400
+    assert create_upload(client, 1000).status_code == 201
 
 
 @pytest.mark.parametrize("acl", ["private", "default"])
