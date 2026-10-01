@@ -73,3 +73,22 @@ def test_commands_create_demo_can_be_run_twice_without_resetting_database():
     call_command("create_demo", "--file_types")
 
     assert models.User.objects.filter(email="drive@drive.world").count() == 1
+
+
+@override_settings(DEBUG=True)
+def test_commands_create_demo_with_bench():
+    """The create_demo command should optionally build the benchmark dataset for dev users."""
+    call_command("create_demo", "--bench", "smoke", "--bench-role", "reader")
+
+    dev_user = models.User.objects.get(email="drive@drive.world")
+    reader = models.User.objects.get(sub="bench-reader")
+    assert models.Item.objects.filter(title="bench-ws").exists()
+    reader_accesses = models.ItemAccess.objects.filter(user=reader)
+    assert reader_accesses.exists()
+    for access in reader_accesses:
+        assert models.ItemAccess.objects.filter(
+            user=dev_user, item_id=access.item_id, role=access.role
+        ).exists()
+    assert models.LinkTrace.objects.filter(user=dev_user).count() == (
+        models.LinkTrace.objects.filter(user=reader).count()
+    )
