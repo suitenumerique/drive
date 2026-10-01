@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) rate limit the item creation endpoints
+- ✨(backend) schedule management commands with celery beat
 
 ### Changed
 

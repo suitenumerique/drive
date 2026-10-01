@@ -263,6 +263,9 @@ backend:
   #       - "-c"
   #       - python manage.py flush --no-input
   ## @param backend.cronjobs Cronjob name, schedule, command
+  # clean-pending-items and purge-deleted-items can instead be scheduled by celery
+  # beat with the CLEAN_PENDING_ITEMS_SCHEDULE and PURGE_DELETED_ITEMS_SCHEDULE env
+  # vars: remove them here if you do so.
   cronjobs:
     - name: clean-pending-items
       schedule: "30 0 * * *"
