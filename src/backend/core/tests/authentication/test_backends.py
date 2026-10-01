@@ -631,3 +631,22 @@ def test_authentication_get_or_create_user_raises_exception_when_entitlement_bac
     # Verify the entitlement backend was called
     mock_get_entitlements_backend.assert_called_once()
     mock_entitlement_backend.can_access.assert_called_once()
+
+
+@override_settings(OIDC_TEAMS_CLAIM="groups")
+def test_authentication_stores_teams_claim(monkeypatch):
+    """
+    When OIDC_TEAMS_CLAIM is set, the claim is stored on the user (even if absent
+    from OIDC_STORE_CLAIMS) and surfaced through ``User.teams``.
+    """
+    klass = OIDCAuthenticationBackend()
+
+    def get_userinfo_mocked(*args):
+        return {"sub": "123", "email": "drive@example.com", "groups": ["team-a", "team-b"]}
+
+    monkeypatch.setattr(OIDCAuthenticationBackend, "get_userinfo", get_userinfo_mocked)
+
+    user = klass.get_or_create_user(access_token="test-token", id_token=None, payload=None)
+
+    assert user.claims.get("groups") == ["team-a", "team-b"]
+    assert user.teams == ["team-a", "team-b"]

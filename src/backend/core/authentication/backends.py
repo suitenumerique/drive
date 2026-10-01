@@ -35,8 +35,12 @@ class OIDCAuthenticationBackend(LaSuiteOIDCAuthenticationBackend):
         """
 
         # We need to add the claims that we want to store so that they are
-        # available in the post_get_or_create_user method.
-        claims_to_store = {claim: user_info.get(claim) for claim in settings.OIDC_STORE_CLAIMS}
+        # available in the post_get_or_create_user method. The team claim (if
+        # configured) is always stored so that ``User.teams`` can read it.
+        store_claims = list(settings.OIDC_STORE_CLAIMS)
+        if settings.OIDC_TEAMS_CLAIM and settings.OIDC_TEAMS_CLAIM not in store_claims:
+            store_claims.append(settings.OIDC_TEAMS_CLAIM)
+        claims_to_store = {claim: user_info.get(claim) for claim in store_claims}
         return {
             "full_name": self.compute_full_name(user_info),
             "short_name": user_info.get(settings.OIDC_USERINFO_SHORTNAME_FIELD),
