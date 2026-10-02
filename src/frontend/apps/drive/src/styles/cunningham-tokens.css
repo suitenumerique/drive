@@ -3871,7 +3871,7 @@
 	--c--components--badge--info--background-color: var(--c--contextuals--background--semantic--info--secondary);
 	--c--components--badge--info--color: var(--c--contextuals--content--semantic--info--secondary);
 	--c--components--gaufre--widgetPath: 'https://static.suite.anct.gouv.fr/widgets/lagaufre.js';
-	--c--components--gaufre--apiUrl: 'https://operateurs.suite.anct.gouv.fr/api/v1.0/lagaufre/services/?operator=9f5624fc-ef99-4d10-ae3f-403a81eb16ef&siret=21870030000013';
+	--c--components--gaufre--apiUrl: 'https://operateurs.suite.anct.gouv.fr/api/v1.0/lagaufre/services/?operator=9f5624fc-ef99-4d10-ae3f-403a81eb16ef';
 	--c--components--favicon--src: '/assets/anct_favicon.png';
 	--c--components--logo--src: url('/assets/anct_logo_beta.svg');
 	--c--components--logo-icon--src: url('/assets/anct_logo-icon.svg');

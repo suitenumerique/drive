@@ -23,7 +23,7 @@ const themesGaufre = {
   "anct-light": {
     widgetPath: "https://static.suite.anct.gouv.fr/widgets/lagaufre.js",
     apiUrl:
-      "https://operateurs.suite.anct.gouv.fr/api/v1.0/lagaufre/services/?operator=9f5624fc-ef99-4d10-ae3f-403a81eb16ef&siret=21870030000013",
+      "https://operateurs.suite.anct.gouv.fr/api/v1.0/lagaufre/services/?operator=9f5624fc-ef99-4d10-ae3f-403a81eb16ef",
   },
   "dsfr-dark": {
     widgetPath: "https://static.suite.anct.gouv.fr/widgets/lagaufre.js",
