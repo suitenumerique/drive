@@ -82,6 +82,31 @@ def test_models_items_path_in_subtree_lookup(tree):
     }
 
 
+def test_models_items_parent_path(tree):
+    """ParentPath should return the path of the parent, an empty path for a root."""
+    parent_paths = dict(
+        models.Item.objects.annotate(parent_path=models.ParentPath("path")).values_list(
+            "id", "parent_path"
+        )
+    )
+
+    assert str(parent_paths[tree["root"].id]) == ""
+    assert str(parent_paths[tree["parent"].id]) == str(tree["root"].path)
+    assert str(parent_paths[tree["child"].id]) == str(tree["parent"].path)
+
+
+def test_models_items_children(tree):
+    """children() should return the descendants one level down, using the parent path."""
+    for item in tree.values():
+        expected = models.Item.objects.filter(
+            path__descendants=item.path, path__depth=len(item.path) + 1
+        )
+        assert set(item.children()) == set(expected)
+
+    assert set(tree["root"].children()) == {tree["parent"], tree["sibling"]}
+    assert "subpath(" in str(tree["root"].children().query)
+
+
 def test_models_items_numchild_annotation_ignores_siblings_subtrees(tree):
     """The children of a sibling or of a child should not be counted."""
     item = models.Item.objects.annotate_with_numchild().get(pk=tree["parent"].pk)
