@@ -1225,11 +1225,20 @@ class ItemViewSet(
         # Apply ordering only now that everything is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
 
-        # Pre-compute number of accesses
+        # Pre-compute number of accesses. The direct accesses of each child are counted
+        # in a subquery: joining them would group the whole query, including the
+        # pagination count, which would then compute every annotation again
         item_nb_accesses = item.nb_accesses
+        nb_direct_accesses = (
+            models.ItemAccess.objects.filter(item_id=db.OuterRef("pk"))
+            .order_by()
+            .values("item_id")
+            .annotate(count=db.Count("id"))
+            .values("count")
+        )
         queryset = queryset.annotate(
             _nb_accesses=db.Value(item_nb_accesses)
-            + Coalesce(db.Count("accesses", distinct=True), 0),
+            + Coalesce(db.Subquery(nb_direct_accesses, output_field=db.IntegerField()), 0),
         )
 
         # Pass ancestors' links paths mapping to the serializer as a context variable

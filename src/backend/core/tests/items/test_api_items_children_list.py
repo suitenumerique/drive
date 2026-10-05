@@ -5,6 +5,8 @@ Tests for items API endpoint in drive's core app: retrieve
 import random
 
 from django.contrib.auth.models import AnonymousUser
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
 import pytest
 from rest_framework.test import APIClient
@@ -1571,3 +1573,45 @@ def test_api_items_children_list_filter_contact_inherited():
     assert response.status_code == 200
     results = response.json()["results"]
     assert {result["id"] for result in results} == {str(child.id)}
+
+
+def test_api_items_children_list_pagination_count_is_not_grouped():
+    """
+    The number of accesses of the children should not group the query: the pagination
+    count must stay a plain count, without computing the annotations of each child.
+
+    Counting the accesses with `Count("accesses")` joins the accesses table, so Django
+    adds a `GROUP BY` to get back one row per child. On a grouped query, Django cannot
+    count the rows directly: the pagination `queryset.count()` then wraps the whole
+    query, with all its annotations (restrictions, children counts...), in
+    `SELECT COUNT(*) FROM (... GROUP BY ...) subquery`, computing them again only to
+    get the number of children. On a large folder, this count alone took hundreds of ms.
+
+    Counting the accesses in a correlated subquery returns the same numbers without
+    grouping the query, so the count stays `SELECT COUNT(*) FROM drive_item WHERE ...`.
+    """
+    user = factories.UserFactory()
+    item = factories.ItemFactory(users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER)
+    child1, child2 = factories.ItemFactory.create_batch(
+        2, parent=item, type=models.ItemTypeChoices.FOLDER
+    )
+    factories.UserItemAccessFactory.create_batch(2, item=child1)
+
+    client = APIClient()
+    client.force_login(user)
+    with CaptureQueriesContext(connection) as context:
+        response = client.get(f"/api/v1.0/items/{item.id!s}/children/")
+
+    assert response.status_code == 200
+    nb_accesses = {result["id"]: result["nb_accesses"] for result in response.json()["results"]}
+    assert nb_accesses == {str(child1.id): 3, str(child2.id): 1}
+
+    # The pagination count, not the count of the accesses of the listed item
+    count_queries = [
+        q["sql"]
+        for q in context.captured_queries
+        if q["sql"].startswith("SELECT COUNT(*)") and '"drive_item_access"' not in q["sql"][:60]
+    ]
+    assert len(count_queries) == 1
+    assert count_queries[0].startswith('SELECT COUNT(*) AS "__count" FROM "drive_item" WHERE')
+    assert "GROUP BY" not in count_queries[0]
