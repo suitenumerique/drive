@@ -8,6 +8,7 @@ import {
 } from "@gouvfr-lasuite/ui-components";
 import { useAuth } from "@/features/auth/Auth";
 import { logout } from "@/features/auth/Auth";
+import { useConfig } from "@/features/config/ConfigProvider";
 import { LanguagePickerUserMenu } from "@/features/layouts/components/header/Header";
 import { LANGUAGES } from "@/features/i18n/conf";
 import { AnonymousCTA } from "../anonymous-cta/AnonymousCTA";
@@ -16,13 +17,19 @@ import { useClipboard } from "@/hooks/useCopyToClipboard";
 
 export const UserProfile = () => {
   const { user } = useAuth();
+  const { config } = useConfig();
+  // Same source as the help menu's "terms of use" entry, so an instance
+  // declares its terms once. Undefined hides the link rather than pointing
+  // every deployment at another operator's document.
+  const termOfServiceUrl = config?.FRONTEND_HELP_MENU_CONFIG?.legal?.termsOfUseUrl;
+
   return (
     <div className="user-profile">
       {user ? (
         <UserMenu
           user={user}
           logout={logout}
-          termOfServiceUrl="https://docs.numerique.gouv.fr/docs/8e298e03-c95f-44c7-be4a-ffb618af1854/"
+          termOfServiceUrl={termOfServiceUrl}
           actions={<LanguagePickerUserMenu />}
         />
       ) : (

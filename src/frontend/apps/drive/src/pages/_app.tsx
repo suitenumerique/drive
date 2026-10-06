@@ -108,7 +108,10 @@ export default function MyApp({
   pageProps,
   router,
 }: AppPropsWithLayout) {
-  const [theme, setTheme] = useState<string>("anct-light");
+  // Neutral until /config answers with FRONTEND_THEME. Seeding this with a
+  // branded theme flashed one operator's logo and favicon on every instance,
+  // including those configured for another one.
+  const [theme, setTheme] = useState<string>("default");
 
   return (
     <AppContext.Provider value={{ theme, setTheme }}>
@@ -130,15 +133,18 @@ const MyAppInner = ({ Component, pageProps }: AppPropsWithLayout) => {
     [router.pathname],
   );
 
+  const faviconSrc = themeTokens.components.favicon?.src as string | undefined;
+
   return (
     <>
       <Head>
         <title>{t("app_title")}</title>
-        <link
-          rel="icon"
-          href={removeQuotes(themeTokens.components.favicon.src)}
-          type="image/png"
-        />
+        {/* Only the government themes declare a favicon token; the neutral
+            "default" and "dark" ones don't, so the operator's own favicon in
+            /public stands instead of this crashing on a missing token. */}
+        {faviconSrc && (
+          <link rel="icon" href={removeQuotes(faviconSrc)} type="image/png" />
+        )}
       </Head>
       <QueryClientProvider client={queryClient}>
         <CunninghamProvider

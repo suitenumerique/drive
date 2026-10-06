@@ -8,8 +8,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- 🔧(backend) make operator-specific links configurable
+- 🔧(frontend) read branding from config instead of hard-coding it
+
 ### Fixed
 
+- 🐛(frontend) guard the theme tokens only the government themes define
 - 🐛(frontend) refresh the Recent view after item mutations
 - 🧑‍💻(project) install frontend dependencies via container in bootstrap
 - 🐛(backend) gate item creation at the root on the upload entitlement

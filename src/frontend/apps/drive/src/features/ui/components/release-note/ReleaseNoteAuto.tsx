@@ -10,6 +10,7 @@ export const ReleaseNoteAuto = () => {
   const { config } = useConfig();
   const { t } = useTranslation();
   const enabled = config?.FRONTEND_RELEASE_NOTE_ENABLED;
+  const releaseNoteUrl = config?.FRONTEND_RELEASE_NOTE_URL;
   const [isOpen, setIsOpen] = useState(false);
   const { shouldShow, mainTitle, steps, markAsSeen } = useReleaseNote();
 
@@ -38,10 +39,14 @@ export const ReleaseNoteAuto = () => {
       appName={t("release_notes.labels.app_name")}
       mainTitle={mainTitle}
       steps={steps}
-      footerLink={{
-        label: t("release_notes.labels.see_whats_new"),
-        href: "https://docs.numerique.gouv.fr/docs/46085eec-8fd9-4466-98db-b8a40fb545fd/",
-      }}
+      footerLink={
+        releaseNoteUrl
+          ? {
+              label: t("release_notes.labels.see_whats_new"),
+              href: releaseNoteUrl,
+            }
+          : undefined
+      }
       onClose={handleClose}
       onComplete={handleClose}
     />

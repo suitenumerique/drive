@@ -24,6 +24,7 @@ import { Feedback } from "@/features/feedback/Feedback";
 import { useRedirectAfterLogin } from "@/hooks/useRedirectAfterLogin";
 import { LeftPanelFooter } from "@/features/layouts/components/explorer/ExplorerLayout";
 import { useMessagesWidget } from "@/features/feedback/useMessagesWidget";
+import { useAppContext } from "@/pages/_app";
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -151,6 +152,21 @@ const HomePageContent = () => {
   );
 };
 
+/**
+ * French State block-marque. Only the government themes are entitled to it,
+ * so a white-label or self-hosted instance gets the app logo alone instead of
+ * someone else's institutional branding.
+ */
+const GovLogo = () => {
+  const { theme } = useAppContext();
+
+  if (!theme.startsWith("dsfr") && !theme.startsWith("anct")) {
+    return null;
+  }
+
+  return <img src={logoGouv.src} alt="" />;
+};
+
 const HomePageLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <MainLayout
@@ -159,7 +175,7 @@ const HomePageLayout = ({ children }: { children: React.ReactNode }) => {
       leftPanelFooter={<LeftPanelFooter />}
       icon={
         <div className="drive__header__left">
-          <img src={logoGouv.src} alt="" />
+          <GovLogo />
           <div className="drive__header__logo" />
           <Feedback />
         </div>

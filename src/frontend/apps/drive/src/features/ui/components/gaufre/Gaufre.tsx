@@ -11,10 +11,17 @@ export const Gaufre = () => {
   const { theme: themeName } = useAppContext();
   const hideGaufre = config?.FRONTEND_HIDE_GAUFRE;
   const theme = useCunninghamTheme();
-  const widgetPath = removeQuotes(theme.components.gaufre.widgetPath);
-  const apiUrl = removeQuotes(theme.components.gaufre.apiUrl);
+  // Only the dsfr-*/anct-light themes carry gaufre tokens. On the neutral
+  // themes there are none, which used to throw here — and leaves the widget
+  // off, which is the right default: it loads a third-party script and lists
+  // one operator's services.
+  const gaufre = theme.components.gaufre as
+    | { widgetPath: string; apiUrl: string }
+    | undefined;
+  const widgetPath = gaufre && removeQuotes(gaufre.widgetPath);
+  const apiUrl = gaufre && removeQuotes(gaufre.apiUrl);
 
-  if (hideGaufre) {
+  if (hideGaufre || !widgetPath || !apiUrl) {
     return null;
   }
 
