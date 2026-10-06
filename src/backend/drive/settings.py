@@ -1073,6 +1073,12 @@ class Base(Configuration):
     FRONTEND_RELEASE_NOTE_ENABLED = values.BooleanValue(
         default=True, environ_name="FRONTEND_RELEASE_NOTE_ENABLED", environ_prefix=None
     )
+    # "See what's new" link at the bottom of the release-note modal. Empty on
+    # purpose: the modal drops the link rather than sending every instance to
+    # another operator's release notes.
+    FRONTEND_RELEASE_NOTE_URL = values.Value(
+        "", environ_name="FRONTEND_RELEASE_NOTE_URL", environ_prefix=None
+    )
     FRONTEND_ENTITLEMENTS_DISCLAIMERS = values.DictValue(
         {}, environ_name="FRONTEND_ENTITLEMENTS_DISCLAIMERS", environ_prefix=None
     )
