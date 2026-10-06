@@ -141,3 +141,28 @@ def test_clean_pending_items_failure_does_not_stop_others():
     # The soft delete of the failing item was rolled back with the failed delete
     failing.refresh_from_db()
     assert failing.deleted_at is None
+
+
+def test_clean_pending_items_upload_ended_meanwhile():
+    """An item whose upload ended after being listed should be left untouched."""
+    old_date = timezone.now() - timedelta(hours=49)
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="foo.txt",
+        update_upload_state=models.ItemUploadStateChoices.PENDING,
+    )
+    models.Item.objects.filter(pk=item.pk).update(created_at=old_date)
+
+    def end_upload_then_list(queryset, *args, **kwargs):
+        item_ids = list(queryset)
+        models.Item.objects.filter(pk=item.pk).update(
+            upload_state=models.ItemUploadStateChoices.READY
+        )
+        return iter(item_ids)
+
+    with mock.patch("django.db.models.query.QuerySet.iterator", end_upload_then_list):
+        call_command("clean_pending_items")
+
+    item.refresh_from_db()
+    assert item.deleted_at is None
+    assert item.hard_deleted_at is None

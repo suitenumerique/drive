@@ -22,6 +22,7 @@ and this project adheres to
 ### Fixed
 
 - ⚡️(backend) speed up the item list, recents and favorites on large databases
+- 🐛(backend) do not clean a pending item whose upload just ended
 
 ## [v0.23.0] - 2026-09-23
 
