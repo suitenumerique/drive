@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    """Remove pending items older than a given threshold."""
+    """Hard delete pending items older than a given threshold."""
 
-    help = "Delete pending items that have been stuck for too long"
+    help = "Hard delete pending items that have been stuck for too long"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -38,7 +38,9 @@ class Command(BaseCommand):
         failed = 0
         for item_id in item_ids.iterator():
             try:
-                if not self._delete_if_still_pending(item_id):
+                # The item row is the only pointer to the stored object, so it is
+                # left to purge_deleted_items which removes the object first.
+                if not self._mark_as_hard_deleted(item_id):
                     continue
             except Exception:  # pylint: disable=broad-exception-caught
                 logger.exception("Failed to clean stale pending item %s", item_id)
@@ -51,10 +53,10 @@ class Command(BaseCommand):
             self.stderr.write(f"Failed to clean {failed} stale pending item(s).")
 
     @staticmethod
-    def _delete_if_still_pending(item_id):
+    def _mark_as_hard_deleted(item_id):
         """
-        Delete the item under a lock, unless its upload ended since it was listed.
-        Return whether it was deleted.
+        Mark the item as hard deleted so that purge_deleted_items purges it. Return
+        False if the upload ended or the item was already hard deleted in the meantime.
         """
         with transaction.atomic():
             item = (
@@ -69,9 +71,14 @@ class Command(BaseCommand):
             if item is None:
                 return False
 
-            # The item may already be in the trash, directly or through an ancestor
             if item.deleted_at is None and item.ancestors_deleted_at is None:
                 item.soft_delete()
-            item.delete()
+
+            if item.deleted_at is not None:
+                item.hard_delete()
+            else:
+                # In the trash through an ancestor only: hard_delete() refuses it
+                item.hard_deleted_at = timezone.now()
+                item.save(update_fields=["hard_deleted_at"])
 
         return True

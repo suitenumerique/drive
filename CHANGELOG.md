@@ -23,6 +23,7 @@ and this project adheres to
 
 - ⚡️(backend) speed up the item list, recents and favorites on large databases
 - 🐛(backend) do not clean a pending item whose upload just ended
+- 🐛(backend) purge the stored object of stale pending items
 
 ## [v0.23.0] - 2026-09-23
 
