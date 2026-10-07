@@ -1343,6 +1343,17 @@ class Item(TreeModel, BaseModel):
         """
         return Item.objects.alias(parent_path=ParentPath("path")).filter(parent_path=self.path)
 
+    def set_quota_excluded(self, value):
+        """Set quota_excluded on the item and its descendants, return the updated count."""
+        items = self._meta.model.objects.filter(path__in_subtree=self.path).exclude(
+            quota_excluded=value
+        )
+        # The bulk update bypasses Item.save() invalidating the storage used cache
+        creator_ids = set(items.values_list("creator_id", flat=True))
+        count = items.update(quota_excluded=value)
+        transaction.on_commit(lambda: invalidate_storage_used_cache(creator_ids))
+        return count
+
     @property
     def extension(self):
         """Return the extension related to the filename."""
