@@ -683,3 +683,23 @@ def test_api_items_update_no_title_should_not_rename_file():
     item.refresh_from_db()
     assert item.filename == "old_title.txt"
     rename_file_mock.assert_not_called()
+
+
+def test_api_items_update_quota_excluded_read_only():
+    """The quota exclusion of an item should not be editable through the API."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(creator=user, users=[(user, models.RoleChoices.OWNER)])
+
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/",
+        {"quota_excluded": True},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert response.json()["quota_excluded"] is False
+    item.refresh_from_db()
+    assert item.quota_excluded is False

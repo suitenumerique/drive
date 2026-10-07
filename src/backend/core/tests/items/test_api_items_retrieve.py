@@ -69,6 +69,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -128,6 +129,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -234,6 +236,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
     assert models.LinkTrace.objects.filter(item=item, user=user).exists() is True
 
@@ -299,6 +302,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -442,6 +446,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -511,6 +516,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -690,6 +696,7 @@ def test_api_items_retrieve_authenticated_related_team_members(teams, role, mock
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -767,6 +774,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(teams, rol
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -844,6 +852,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_t
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -1243,6 +1252,7 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -1318,6 +1328,7 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -1385,6 +1396,7 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -1509,6 +1521,7 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "is_restricted": False,
         "target": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
         "link_reach": "public",
         "link_role": item.link_role,
         "nb_accesses": 1,
@@ -1568,3 +1581,17 @@ def test_api_items_retrieve_wopi_supported():
 
     assert response.status_code == 200
     assert response.json()["is_wopi_supported"] is True
+
+
+def test_api_items_retrieve_quota_excluded():
+    """The quota exclusion of an item should be returned."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(quota_excluded=True, users=[(user, "owner")])
+
+    response = client.get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["quota_excluded"] is True

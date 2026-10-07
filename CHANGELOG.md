@@ -14,6 +14,7 @@ and this project adheres to
 - ✨(backend) add a command to generate a production sized dataset
 - ✨(backend) add a command to profile the main API endpoints
 - ✨(backend) schedule management commands with celery beat
+- ✨(backend) show and change the storage quota exclusion of items
 
 ### Changed
 

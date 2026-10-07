@@ -106,6 +106,7 @@ def test_api_items_trashbin_format(settings):
         "is_restricted": False,
         "target": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 

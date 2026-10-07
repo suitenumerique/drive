@@ -182,6 +182,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": level2_2.get_abilities(AnonymousUser()),
@@ -223,6 +224,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
         "created_at": level1_2.created_at.isoformat().replace("+00:00", "Z"),
@@ -258,6 +260,7 @@ def test_items_api_anonymous_to_a_public_tree_structure():
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -419,6 +422,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "deleted_at": None,
                         "hard_delete_at": None,
                         "is_wopi_supported": False,
+                        "quota_excluded": False,
                     },
                     {
                         "abilities": level2_2.item.get_abilities(user),
@@ -474,6 +478,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                                 "deleted_at": None,
                                 "hard_delete_at": None,
                                 "is_wopi_supported": False,
+                                "quota_excluded": False,
                             },
                         ],
                         "created_at": level2_2.item.created_at.isoformat().replace("+00:00", "Z"),
@@ -509,6 +514,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                         "deleted_at": None,
                         "hard_delete_at": None,
                         "is_wopi_supported": False,
+                        "quota_excluded": False,
                     },
                 ],
                 "created_at": level1_1.item.created_at.isoformat().replace("+00:00", "Z"),
@@ -544,6 +550,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": level1_2.item.get_abilities(user),
@@ -585,6 +592,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": level1_3.item.get_abilities(user),
@@ -626,6 +634,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
         "created_at": root.item.created_at.isoformat().replace("+00:00", "Z"),
@@ -661,6 +670,7 @@ def test_items_api_tree_authenticated_direct_access(django_assert_num_queries):
         "deleted_at": None,
         "hard_delete_at": None,
         "is_wopi_supported": False,
+        "quota_excluded": False,
     }
 
 
@@ -774,6 +784,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
         "user_role": None,
         "main_workspace": False,
         "is_wopi_supported": False,
+        "quota_excluded": False,
         "abilities": level1_1.get_abilities(user),
         "ancestors_link_reach": None,
         "ancestors_link_role": None,
@@ -825,6 +836,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": level2_2.get_abilities(user),
@@ -866,6 +878,7 @@ def test_api_items_tree_authenticated_with_access_authenticated():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
