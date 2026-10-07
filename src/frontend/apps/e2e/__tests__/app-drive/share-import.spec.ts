@@ -28,7 +28,9 @@ const getImportModal = (page: Page) => {
 
 const openImportModal = async (page: Page) => {
   const shareModal = await openShareModal(page);
-  await shareModal.getByRole("button", { name: "Import contacts" }).click();
+  await shareModal
+    .getByRole("button", { name: "More actions", exact: true })
+    .click();
   await page.getByRole("menuitem", { name: "Import contacts" }).click();
   const importModal = getImportModal(page);
   await expect(importModal).toBeVisible();
@@ -53,9 +55,17 @@ test.describe("Share modal contacts import", () => {
 
     const shareModal = await openShareModal(page);
     await expect(shareModal.getByTestId("members-list")).toBeVisible();
+    const moreActions = shareModal.getByRole("button", {
+      name: "More actions",
+      exact: true,
+    });
+    if (await moreActions.isVisible()) {
+      await moreActions.click();
+      await expect(page.getByRole("menu")).toBeVisible();
+    }
     await expect(
-      shareModal.getByRole("button", { name: "Import contacts" }),
-    ).toBeHidden();
+      page.getByRole("menuitem", { name: "Import contacts" }),
+    ).toHaveCount(0);
   });
 
   test("importing a file shares with users and invites unknown emails", async ({
