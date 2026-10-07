@@ -168,6 +168,7 @@ class ItemAdmin(admin.ModelAdmin):
                     "title",
                     "filename",
                     "size_display",
+                    "quota_excluded",
                     "deleted_at",
                     "ancestors_deleted_at",
                     "malware_detection_info",
@@ -204,6 +205,8 @@ class ItemAdmin(admin.ModelAdmin):
         "id",
         "title",
         "type",
+        "size_display",
+        "quota_excluded",
         "link_reach",
         "link_role",
         "upload_state",
@@ -223,12 +226,14 @@ class ItemAdmin(admin.ModelAdmin):
         "malware_detection_info",
     )
     search_fields = ("id", "title", "creator__email")
-    list_filter = ("upload_state", "link_reach", "link_role")
+    list_filter = ("upload_state", "link_reach", "link_role", "quota_excluded")
     show_facets = admin.ShowFacets.ALWAYS
     actions = (
         "trigger_file_analysis",
         "mark_items_ready",
         "mark_items_file_too_large",
+        "exclude_from_quota",
+        "include_in_quota",
     )
 
     def get_queryset(self, request):
@@ -237,7 +242,7 @@ class ItemAdmin(admin.ModelAdmin):
 
         return queryset
 
-    @admin.display(description=_("size"))
+    @admin.display(description=_("size"), ordering="size")
     def size_display(self, obj):
         """Return the human readable size of the item file."""
         if obj.size is None:
@@ -275,6 +280,27 @@ class ItemAdmin(admin.ModelAdmin):
         self._force_upload_state(
             request, queryset, models.ItemUploadStateChoices.FILE_TOO_LARGE_TO_ANALYZE
         )
+
+    def _set_quota_excluded(self, request, queryset, value):
+        """Apply quota_excluded to the selected items and their descendants."""
+        updated = sum(item.set_quota_excluded(value) for item in queryset)
+        self.message_user(request, f"{updated} items updated.")
+
+    @admin.action(description=_("Exclude from storage quota"))
+    def exclude_from_quota(self, request, queryset):
+        """Exclude the selected items and their descendants from the storage quota."""
+        self._set_quota_excluded(request, queryset, True)
+
+    @admin.action(description=_("Include in storage quota"))
+    def include_in_quota(self, request, queryset):
+        """Count the selected items and their descendants in the storage quota."""
+        self._set_quota_excluded(request, queryset, False)
+
+    def save_model(self, request, obj, form, change):
+        """Propagate a quota_excluded change to the descendants of the item."""
+        super().save_model(request, obj, form, change)
+        if "quota_excluded" in form.changed_data:
+            obj.set_quota_excluded(obj.quota_excluded)
 
 
 @admin.register(models.Invitation)
