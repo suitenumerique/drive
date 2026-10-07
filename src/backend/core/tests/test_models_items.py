@@ -18,6 +18,7 @@ import pytest
 from lasuite.drf.models.choices import LinkReachChoices
 
 from core import factories, models
+from core.storage.cache import get_storage_used_cache_key
 
 pytestmark = pytest.mark.django_db
 
@@ -1479,3 +1480,60 @@ def test_models_items_restore_complex_bis():
     assert item.ancestors_deleted_at == item.deleted_at
     assert child1.ancestors_deleted_at == item.deleted_at
     assert child2.ancestors_deleted_at == item.deleted_at
+
+
+def _create_quota_tree():
+    """Create a folder with a subfolder and a file created by two users."""
+    alice, bob = factories.UserFactory.create_batch(2)
+    folder = factories.ItemFactory(creator=alice, type=models.ItemTypeChoices.FOLDER)
+    subfolder = factories.ItemFactory(
+        creator=bob, parent=folder, type=models.ItemTypeChoices.FOLDER
+    )
+    file = factories.ItemFactory(creator=alice, parent=subfolder, type=models.ItemTypeChoices.FILE)
+    return [folder, subfolder, file], [alice, bob]
+
+
+def test_models_items_set_quota_excluded_descendants(django_capture_on_commit_callbacks):
+    """Setting quota_excluded on a folder should apply it to all its descendants."""
+    tree, users = _create_quota_tree()
+    outside = factories.ItemFactory(creator=users[0])
+    for user in users:
+        cache.set(get_storage_used_cache_key(user.id), 1)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        assert tree[0].set_quota_excluded(True) == 3
+
+    for item in tree:
+        item.refresh_from_db()
+        assert item.quota_excluded is True
+    outside.refresh_from_db()
+    assert outside.quota_excluded is False
+    for user in users:
+        assert cache.get(get_storage_used_cache_key(user.id)) is None
+
+
+def test_models_items_set_quota_excluded_unchanged_items(django_capture_on_commit_callbacks):
+    """Items already at the value should not be counted nor invalidate their creator cache."""
+    (folder, subfolder, file), (alice, bob) = _create_quota_tree()
+    models.Item.objects.filter(pk=subfolder.pk).update(quota_excluded=True)
+    cache.set(get_storage_used_cache_key(bob.id), 1)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        assert folder.set_quota_excluded(True) == 2
+
+    file.refresh_from_db()
+    assert file.quota_excluded is True
+    assert cache.get(get_storage_used_cache_key(bob.id)) == 1
+    assert cache.get(get_storage_used_cache_key(alice.id)) is None
+
+
+def test_models_items_set_quota_excluded_file():
+    """Setting quota_excluded on a file should only change this file."""
+    (folder, _subfolder, file), _users = _create_quota_tree()
+
+    assert file.set_quota_excluded(True) == 1
+
+    file.refresh_from_db()
+    folder.refresh_from_db()
+    assert file.quota_excluded is True
+    assert folder.quota_excluded is False
