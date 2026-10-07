@@ -67,6 +67,27 @@ def test_commands_create_demo_with_file_types():
 
 
 @override_settings(DEBUG=True)
+def test_commands_create_demo_with_profiles():
+    """The create_demo command should optionally add users shaped like production profiles."""
+    call_command("create_demo", "--profiles", "median", "deepest", "history")
+
+    deepest = models.User.objects.get(email="deepest@profiles.demo")
+    deepest_items = models.Item.objects.filter(creator=deepest)
+    assert deepest_items.count() == 20000
+    assert deepest_items.filter(type=models.ItemTypeChoices.FOLDER).count() == 12000
+    assert max(len(item.path) for item in deepest_items.only("path")) == 24
+
+    median = models.User.objects.get(email="median@profiles.demo")
+    assert models.Item.objects.filter(creator=median).count() == 8
+    assert models.ItemAccess.objects.filter(user=median, role="reader").count() == 1
+    assert models.LinkTrace.objects.filter(user=median).count() == 2
+
+    history = models.User.objects.get(email="history@profiles.demo")
+    assert models.Item.objects.filter(creator=history, deleted_at__isnull=False).count() == 800
+    assert models.LinkTrace.objects.filter(user=history).count() == 3400
+
+
+@override_settings(DEBUG=True)
 def test_commands_create_demo_can_be_run_twice_without_resetting_database():
     """The create_demo command should reuse deterministic demo users."""
     call_command("create_demo", "--file_types")
