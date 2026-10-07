@@ -79,6 +79,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -125,6 +126,7 @@ def test_api_items_children_list_anonymous_public_standalone():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -205,6 +207,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": child2.get_abilities(AnonymousUser()),
@@ -245,6 +248,7 @@ def test_api_items_children_list_anonymous_public_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -345,6 +349,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -391,6 +396,7 @@ def test_api_items_children_list_authenticated_unrelated_public_or_authenticated
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -474,6 +480,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -520,6 +527,7 @@ def test_api_items_children_list_authenticated_public_or_authenticated_parent(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -628,6 +636,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -674,6 +683,7 @@ def test_api_items_children_list_authenticated_related_direct():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -760,6 +770,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -806,6 +817,7 @@ def test_api_items_children_list_authenticated_related_parent():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -949,6 +961,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
             {
                 "abilities": child2.get_abilities(user),
@@ -995,6 +1008,7 @@ def test_api_items_children_list_authenticated_related_team_members(
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -1075,6 +1089,7 @@ def test_api_items_children_list_filter_type():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -1134,6 +1149,7 @@ def test_api_items_children_list_filter_type():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             },
         ],
     }
@@ -1437,6 +1453,7 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             }
         ],
     }
@@ -1487,6 +1504,7 @@ def test_api_items_children_list_computed_link_reach_and_role():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
             }
         ],
     }

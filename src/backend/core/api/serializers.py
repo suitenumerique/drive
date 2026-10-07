@@ -328,6 +328,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "quota_excluded",
         ]
         read_only_fields = [
             "id",
@@ -360,6 +361,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "quota_excluded",
         ]
 
     def to_representation(self, instance):
@@ -496,6 +498,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "quota_excluded",
         ]
         read_only_fields = [
             "id",
@@ -521,6 +524,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "quota_excluded",
         ]
 
 
@@ -575,6 +579,7 @@ class ItemSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "quota_excluded",
         ]
         read_only_fields = [
             "id",
@@ -606,6 +611,7 @@ class ItemSerializer(ListItemSerializer):
             "deleted_at",
             "hard_delete_at",
             "is_wopi_supported",
+            "quota_excluded",
         ]
 
     def create(self, validated_data):

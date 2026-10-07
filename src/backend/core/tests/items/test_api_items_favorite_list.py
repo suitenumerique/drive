@@ -103,6 +103,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 "deleted_at": None,
                 "hard_delete_at": None,
                 "is_wopi_supported": False,
+                "quota_excluded": False,
                 "is_favorite": True,
             }
         ],
