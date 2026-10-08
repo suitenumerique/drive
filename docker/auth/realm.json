@@ -161,6 +161,132 @@
           }
         ],
         "realmRoles": ["user"]
+      },
+      {
+        "username": "median",
+        "email": "median@profiles.demo",
+        "firstName": "Profile",
+        "lastName": "median",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
+      },
+      {
+        "username": "power",
+        "email": "power@profiles.demo",
+        "firstName": "Profile",
+        "lastName": "power",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
+      },
+      {
+        "username": "biggest_shared",
+        "email": "biggest_shared@profiles.demo",
+        "firstName": "Profile",
+        "lastName": "biggest_shared",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
+      },
+      {
+        "username": "biggest_owner",
+        "email": "biggest_owner@profiles.demo",
+        "firstName": "Profile",
+        "lastName": "biggest_owner",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
+      },
+      {
+        "username": "deepest",
+        "email": "deepest@profiles.demo",
+        "firstName": "Profile",
+        "lastName": "deepest",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
+      },
+      {
+        "username": "flat",
+        "email": "flat@profiles.demo",
+        "firstName": "Profile",
+        "lastName": "flat",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
+      },
+      {
+        "username": "big_folder",
+        "email": "big_folder@profiles.demo",
+        "firstName": "Profile",
+        "lastName": "big_folder",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
+      },
+      {
+        "username": "most_shared",
+        "email": "most_shared@profiles.demo",
+        "firstName": "Profile",
+        "lastName": "most_shared",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
+      },
+      {
+        "username": "history",
+        "email": "history@profiles.demo",
+        "firstName": "Profile",
+        "lastName": "history",
+        "enabled": true,
+        "credentials": [
+          {
+            "type": "password",
+            "value": "pass"
+          }
+        ],
+        "realmRoles": ["user"]
       }
     ],
     "roles": {
