@@ -11,7 +11,6 @@ const config: Config = {
     // Handle static assets FIRST (before path aliases)
     "\\.(css|less|scss|sass|svg|png|jpg|jpeg|gif)$":
       "<rootDir>/__mocks__/fileMock.js",
-    "^pretty-bytes$": "<rootDir>/__mocks__/pretty-bytes.js",
     "^saxen$": "<rootDir>/__mocks__/saxen.js",
     // Then handle path aliases
     ...pathsToModuleNameMapper(tsconfig.compilerOptions.paths || {}, {

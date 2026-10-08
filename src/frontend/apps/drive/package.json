@@ -28,7 +28,6 @@
     "next": "15.5.27",
     "next-i18next": "15.4.2",
     "posthog-js": "1.293.0",
-    "pretty-bytes": "7.1.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-dropzone": "14.3.8",
