@@ -15,7 +15,7 @@ from core.permissions.backends.base import PermissionsBackend
 from wopi.conversion.policy import target_extension_for
 
 
-class ItemAbilities:  # pylint: disable=too-many-public-methods
+class ItemAbilities:  # pylint: disable=too-many-public-methods,too-many-instance-attributes
     """Compute the abilities of a user on an item, one method per ability."""
 
     def __init__(self, user: models.User | AnonymousUser, item: models.Item) -> None:
@@ -24,7 +24,19 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
 
         # Explicitly compute anything that may hit the database, once
         # The access role is based on accesses only, before any link boost
-        self.access_role = item.get_role(user)
+        self._has_direct_access = None  # Resolved lazily when roles are annotated
+        if not user.is_authenticated or hasattr(item, "user_roles"):
+            self.access_role = item.get_role(user)
+        else:
+            # Same lookup as roles_at, also telling which accesses are on the item itself
+            accesses = list(
+                models.ItemAccess.objects.filter(
+                    Q(user=user) | Q(team__in=user.teams),
+                    item_id__in=str(item.path).split("."),
+                ).values_list("role", "item_id")
+            )
+            self.access_role = RoleChoices.max(*(role for role, _ in accesses))
+            self._has_direct_access = any(item_id == item.pk for _, item_id in accesses)
         self.is_deleted = bool(item.ancestors_deleted_at)
         link_definition = item.computed_link_definition
         link_reach = link_definition["link_reach"]
@@ -140,13 +152,14 @@ class ItemAbilities:  # pylint: disable=too-many-public-methods
 
     def can_leave(self) -> bool:
         """Return whether the user can remove themselves from this item."""
-        if not self.user.is_authenticated or self.is_deleted:
+        # Owners and admins must hand over the item before leaving it
+        if not self.user.is_authenticated or self.is_deleted or self.is_owner_or_admin:
             return False
-        if self.has_access_role():
-            # get_role returns the maximum role across the item and all its ancestors,
-            # so a user who is owner on a parent but has an explicit editor access on a
-            # child will still be considered owner here and cannot leave the child.
-            return not self.is_owner_or_admin
+        # Only a direct access can be removed, an inherited one belongs to an ancestor
+        if self.access_role:
+            if self._has_direct_access is None:
+                return self.item.has_direct_access(self.user)
+            return self._has_direct_access
         return self.item.has_link_trace(self.user)
 
     def can_favorite(self) -> bool:

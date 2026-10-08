@@ -243,6 +243,10 @@ class RestrictionTargetSerializer(serializers.ModelSerializer):
         accesses = getattr(target, "viewer_accesses", None)
         if accesses is not None:
             target.user_roles = [access.role for access in accesses]
+            target.user_has_direct_access = bool(accesses)
+        link_traces = getattr(target, "viewer_link_traces", None)
+        if link_traces is not None:
+            target.user_has_link_trace = bool(link_traces)
         target.has_restriction = True
         return target.get_abilities(request.user)
 

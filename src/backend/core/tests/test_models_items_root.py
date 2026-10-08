@@ -56,7 +56,7 @@ def test_models_sub_item_abilities_downgraded():
         "hard_delete": True,
         "favorite": True,
         "invite_owner": False,
-        "leave": True,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {
             "authenticated": ["reader", "editor"],
@@ -94,7 +94,7 @@ def test_models_sub_item_abilities_downgraded():
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
-        "leave": True,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {
             "authenticated": ["reader", "editor"],

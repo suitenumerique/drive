@@ -1013,7 +1013,12 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
                     models.Q(user=user) | models.Q(team__in=user.teams)
                 ),
                 to_attr="viewer_accesses",
-            )
+            ),
+            models.Prefetch(
+                "target__link_traces",
+                queryset=LinkTrace.objects.filter(user=user),
+                to_attr="viewer_link_traces",
+            ),
         )
 
     def readable_per_se(self, user):
@@ -1099,6 +1104,16 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
             link_trace_subquery = LinkTrace.objects.filter(item_id=models.OuterRef("pk"), user=user)
             return self.annotate(user_has_link_trace=models.Exists(link_trace_subquery))
         return self.annotate(user_has_link_trace=models.Value(False))
+
+    def annotate_user_has_direct_access(self, user):
+        """Annotate item queryset with whether the current user has a direct ItemAccess on it."""
+        if user.is_authenticated:
+            direct_access_subquery = ItemAccess.objects.filter(
+                models.Q(user=user) | models.Q(team__in=user.teams),
+                item_id=models.OuterRef("pk"),
+            )
+            return self.annotate(user_has_direct_access=models.Exists(direct_access_subquery))
+        return self.annotate(user_has_direct_access=models.Value(False))
 
     def annotate_is_favorite(self, user):
         """
@@ -1680,6 +1695,17 @@ class Item(TreeModel, BaseModel):
             return self.user_has_link_trace
         except AttributeError:
             return self.link_traces.filter(user=user).exists()
+
+    def has_direct_access(self, user):
+        """Return whether the user has a direct ItemAccess on this item."""
+        if not user.is_authenticated:
+            return False
+        try:
+            return self.user_has_direct_access
+        except AttributeError:
+            return self.accesses.filter(
+                models.Q(user=user) | models.Q(team__in=user.teams)
+            ).exists()
 
     def get_abilities(self, user):
         """Compute and return abilities for a given user on the item."""
