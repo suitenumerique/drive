@@ -717,7 +717,7 @@ def test_models_items_not_root_get_abilities_editor_user(
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
-        "leave": True,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": link_select_options,
         "media_auth": True,
@@ -768,7 +768,7 @@ def test_models_items_not_root_get_abilities_reader_user(django_assert_num_queri
         "hard_delete": False,
         "favorite": True,
         "invite_owner": False,
-        "leave": True,
+        "leave": False,
         "link_configuration": False,
         "link_select_options": {
             "authenticated": ["reader", "editor"],

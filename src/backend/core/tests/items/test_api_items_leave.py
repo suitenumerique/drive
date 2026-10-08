@@ -166,6 +166,24 @@ def test_api_items_leave_with_access_and_link_trace():
     assert models.LinkTrace.objects.filter(item=item, user=user).exists() is False
 
 
+def test_api_items_leave_inherited_access_only_forbidden():
+    """A user with only inherited access on a child cannot leave it."""
+    user_a = factories.UserFactory()
+    user_b = factories.UserFactory()
+    parent = factories.ItemFactory(
+        users=[(user_a, "owner"), (user_b, "reader")],
+        type=models.ItemTypeChoices.FOLDER,
+    )
+    child = factories.ItemFactory(parent=parent)
+
+    client = APIClient()
+    client.force_login(user_b)
+
+    # The leave action must be rejected: user_b has no direct ItemAccess on child
+    response = client.post(f"/api/v1.0/items/{child.id!s}/leave/")
+    assert response.status_code == 403
+
+
 def test_api_items_leave_does_not_affect_other_items():
     """Leaving one item does not remove the user's access on other items."""
     user = factories.UserFactory()

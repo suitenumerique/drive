@@ -571,6 +571,7 @@ class ItemViewSet(
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
         queryset = queryset.annotate_user_has_link_trace(user)
+        queryset = queryset.annotate_user_has_direct_access(user)
         return queryset
 
     def get_response_for_queryset(
@@ -844,6 +845,7 @@ class ItemViewSet(
         queryset = filterset.filters["is_favorite"].filter(queryset, filter_data["is_favorite"])
         queryset = queryset.annotate_with_numchild()
         queryset = queryset.annotate_user_has_link_trace(user)
+        queryset = queryset.annotate_user_has_direct_access(user)
 
         # Apply ordering only now that everyting is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
@@ -1028,6 +1030,7 @@ class ItemViewSet(
         queryset = queryset.filter(id__in=favorite_items_ids)
         queryset = queryset.annotate_with_numchild()
         queryset = queryset.annotate_user_has_link_trace(user)
+        queryset = queryset.annotate_user_has_direct_access(user)
 
         # Apply ordering only now that everyting is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
@@ -1068,6 +1071,7 @@ class ItemViewSet(
 
         # Only annotate with user roles for the filtered set if needed by serializer
         queryset = queryset.annotate_user_roles(user)
+        queryset = queryset.annotate_user_has_direct_access(user)
         queryset = queryset.annotate_with_numchild()
 
         return self.get_response_for_queryset(queryset)
@@ -1342,6 +1346,7 @@ class ItemViewSet(
         tree = tree.annotate_is_favorite(user)
         tree = tree.annotate_with_numchild()
         tree = tree.annotate_user_has_link_trace(user)
+        tree = tree.annotate_user_has_direct_access(user)
         tree = self._filter_suspicious_items(tree, user)
 
         serializer = self.get_serializer(
@@ -1378,6 +1383,7 @@ class ItemViewSet(
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
         queryset = queryset.annotate_user_has_link_trace(user)
+        queryset = queryset.annotate_user_has_direct_access(user)
 
         # Apply ordering only now that everyting is filtered and annotated
         queryset = ItemOrdering().filter_queryset(self.request, queryset, self)
@@ -1437,6 +1443,7 @@ class ItemViewSet(
 
         queryset = queryset.filter(pk__in=result_ids)
         queryset = queryset.annotate_user_roles(user)
+        queryset = queryset.annotate_user_has_direct_access(user)
         queryset = queryset.annotate_is_favorite(user)
         queryset = queryset.annotate_with_numchild()
 
@@ -1537,6 +1544,7 @@ class ItemViewSet(
         # Without the indexer, the "title" filtering is kept
         queryset = filterset.filter_queryset(queryset)
         queryset = queryset.annotate_user_roles(user)
+        queryset = queryset.annotate_user_has_direct_access(user)
         queryset = queryset.annotate_with_numchild()
 
         page = self.paginate_queryset(queryset)
