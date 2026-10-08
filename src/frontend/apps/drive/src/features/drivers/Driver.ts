@@ -122,7 +122,10 @@ export abstract class Driver {
     filters?: ItemFilters,
   ): Promise<PaginatedChildrenResult>;
   abstract getTrashItems(filters?: ItemFilters): Promise<Item[]>;
-  abstract getItem(id: string): Promise<Item>;
+  abstract getItem(
+    id: string,
+    options?: { redirectOn40x?: boolean },
+  ): Promise<Item>;
   abstract getItemBreadcrumb(id: string): Promise<ItemBreadcrumb[]>;
   abstract updateItem(item: Partial<Item>): Promise<Item>;
   abstract updateItemRestriction(payload: {

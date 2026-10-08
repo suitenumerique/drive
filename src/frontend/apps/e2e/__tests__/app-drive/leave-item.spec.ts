@@ -151,3 +151,47 @@ test("A failed leave shows the item again with an error toast", async ({
   // 5. The folder is back in the list, without reloading the page.
   await expectRowItem(userB.page, "Shared Folder");
 });
+
+test("Leaving a folder whose parent is not readable stays on Shared with me", async ({
+  userA,
+  userB,
+}) => {
+  // 1. Setup: user A creates "Parent/Child" and shares only "Child" with
+  //    user B, so user B cannot open "Parent".
+  await clearDb();
+  await login(userA.page, "drive@example.com");
+  await login(userB.page, "user@webkit.test");
+  await userA.page.goto("/");
+  await clickToMyFiles(userA.page);
+  await createFolderInCurrentFolder(userA.page, "Parent");
+  await navigateToFolder(userA.page, "Parent", ["My files", "Parent"]);
+  await createFolderInCurrentFolder(userA.page, "Child");
+  await navigateToFolder(userA.page, "Child", ["My files", "Parent", "Child"]);
+  await shareCurrentItemWithWebkitUser(userA.page, "Editor");
+
+  // 2. User B finds "Child" in "Shared with me".
+  await userB.page.goto("/");
+  await clickToSharedWithMe(userB.page);
+  await expectRowItem(userB.page, "Child");
+
+  // 3. User B leaves "Child". After leaving, the app checks whether "Parent"
+  //    is readable before navigating to it: wait for that check to get its
+  //    403, which used to send the whole app to the 403 page.
+  const parentCheck = userB.page.waitForResponse(
+    (response) =>
+      /\/api\/v1\.0\/items\/[^/]+\/$/.test(response.url()) &&
+      response.status() === 403,
+  );
+  await clickOnRowItemActions(userB.page, "Child", "Leave");
+  await userB.page.getByRole("button", { name: "Leave" }).click();
+  await parentCheck;
+
+  // 4. User B stays on "Shared with me" and "Child" is gone.
+  await expectDefaultRoute(
+    userB.page,
+    "Shared with me",
+    "/explorer/items/shared-with-me",
+  );
+  await expectRowItemIsNotVisible(userB.page, "Child");
+  await expect(userB.page).not.toHaveURL(/\/403/);
+});

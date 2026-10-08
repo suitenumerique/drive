@@ -85,8 +85,11 @@ export class StandardDriver extends Driver {
     return jsonToItems(data.results);
   }
 
-  async getItem(id: string): Promise<Item> {
-    const response = await fetchAPI(`items/${id}/`);
+  async getItem(
+    id: string,
+    options?: { redirectOn40x?: boolean },
+  ): Promise<Item> {
+    const response = await fetchAPI(`items/${id}/`, undefined, options);
     const data = await response.json();
     return jsonToItem(data);
   }
