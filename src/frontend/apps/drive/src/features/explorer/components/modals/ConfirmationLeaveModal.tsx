@@ -23,29 +23,20 @@ export const ConfirmationLeaveModal = ({
   const { mutateAsync: leaveItem, isPending } = useMutationLeaveItem();
 
   const handleLeave = async () => {
-    try {
-      await leaveItem(item.id);
-      props.onClose();
-      addToast(
-        <ToasterItem>
-          <span className="material-icons">logout</span>
-          <span>{t("explorer.item.actions.leave_toast")}</span>
-        </ToasterItem>,
-      );
-      const parentId = getParentIdFromPath(item.path);
-      if (parentId) {
-        setManualNavigationItemId(parentId);
-        router.push(`/explorer/items/${parentId}`);
-      } else {
-        router.push(`/explorer/items/shared-with-me`);
-      }
-    } catch {
-      addToast(
-        <ToasterItem type="error">
-          <span className="material-icons">logout</span>
-          <span>{t("explorer.item.actions.leave_toast_error")}</span>
-        </ToasterItem>,
-      );
+    await leaveItem(item.id);
+    props.onClose();
+    addToast(
+      <ToasterItem>
+        <span className="material-icons">logout</span>
+        <span>{t("explorer.item.actions.leave_toast")}</span>
+      </ToasterItem>,
+    );
+    const parentId = getParentIdFromPath(item.path);
+    if (parentId) {
+      setManualNavigationItemId(parentId);
+      router.push(`/explorer/items/${parentId}`);
+    } else {
+      router.push(`/explorer/items/shared-with-me`);
     }
   };
 

@@ -15,6 +15,7 @@ import {
   useRefreshEntitlementsQueryCache,
 } from "./useRefreshItems";
 import { DefaultRoute } from "@/utils/defaultRoutes";
+import { addLeaveItemErrorToast } from "../components/toasts/addLeaveItemErrorToast";
 
 // ============================================================================
 // MUTATIONS
@@ -244,13 +245,20 @@ export const useMutationDuplicateItem = () => {
 export const useMutationLeaveItem = () => {
   const driver = getDriver();
   const refresh = useRefreshQueryCacheAfterMutation();
+  const removeItems = useRemoveItemsFromPaginatedList();
 
   return useMutation({
     mutationFn: (itemId: string) => {
       return driver.leaveItem(itemId);
     },
+    onMutate: (itemId: string) => {
+      removeItems(["items", "infinite"], [itemId]);
+    },
     onSuccess: () => {
       refresh();
+    },
+    onError: () => {
+      addLeaveItemErrorToast();
     },
     meta: {
       noGlobalError: true,
