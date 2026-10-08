@@ -28,6 +28,7 @@ and this project adheres to
 - 🔧(docker) replace MinIO with RustFS for local object storage
 - ✨(backend) require a size reservation to upload a file
 - ♻️(backend,frontend) format sizes the same way in the admin and the app
+- 🔧(helm) relax the backend readiness probe
 
 ### Fixed
 
