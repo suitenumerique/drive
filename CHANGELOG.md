@@ -20,11 +20,13 @@ and this project adheres to
 - ✨(backend) capture a posthog event on folder export
 - ✨(wopi) capture a posthog event on document edition
 - ✨(backend) show and change the storage quota exclusion of items
+- ✨(backend) show user storage quota and biggest files in the admin
 
 ### Changed
 
 - 🔧(docker) replace MinIO with RustFS for local object storage
 - ✨(backend) require a size reservation to upload a file
+- ♻️(backend,frontend) format sizes the same way in the admin and the app
 
 ### Fixed
 
