@@ -1,5 +1,7 @@
 """Test leave item API endpoint for users in drive's core app."""
 
+from django.core.cache import cache
+
 import pytest
 from rest_framework.test import APIClient
 
@@ -197,3 +199,29 @@ def test_api_items_leave_does_not_affect_other_items():
     assert response.status_code == 204
     assert models.ItemAccess.objects.filter(item=item_to_leave, user=user).exists() is False
     assert models.ItemAccess.objects.filter(item=other_item, user=user).exists()
+
+
+def test_api_items_leave_invalidates_nb_accesses_cache_for_subtree():
+    """
+    Leaving a parent removes accesses on all descendants; the nb_accesses cache
+    must be invalidated for every affected item, not just the root.
+    """
+    user = factories.UserFactory()
+    parent = factories.ItemFactory(users=[(user, "editor")], type=models.ItemTypeChoices.FOLDER)
+    child = factories.ItemFactory(parent=parent, users=[(user, "editor")])
+    client = APIClient()
+    client.force_login(user)
+
+    # Warm the cache for both items.
+    # nb_accesses counts effective (inherited) accesses: parent has 1, child has 2
+    # (parent's access is inherited by the child).
+    assert parent.nb_accesses == 1
+    assert child.nb_accesses == 2
+    assert cache.get(parent.get_nb_accesses_cache_key()) == 1
+    assert cache.get(child.get_nb_accesses_cache_key()) == 2
+
+    response = client.post(f"/api/v1.0/items/{parent.id!s}/leave/")
+
+    assert response.status_code == 204
+    assert cache.get(parent.get_nb_accesses_cache_key()) is None
+    assert cache.get(child.get_nb_accesses_cache_key()) is None
