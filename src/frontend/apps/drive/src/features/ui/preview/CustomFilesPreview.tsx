@@ -1,4 +1,5 @@
 import { Item, ItemType } from "@/features/drivers/types";
+import { isFolderAccessDenied } from "@/features/drivers/utils";
 import {
   FilePreview,
   FilePreviewType,
@@ -41,7 +42,9 @@ export const CustomFilesPreview = ({
 
   const files = useMemo(() => {
     return items
-      .filter((item) => item.type === ItemType.FILE)
+      .filter(
+        (item) => item.type === ItemType.FILE || isFolderAccessDenied(item),
+      )
       .map(itemToPreviewFile);
   }, [items]);
 

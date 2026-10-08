@@ -1,5 +1,6 @@
 import { Item, ItemType, ItemUploadState } from "@/features/drivers/types";
 import folderIcon from "@/assets/folder/folder.svg";
+import folderRestrictedIcon from "@/assets/folder/folder-restricted.svg";
 import {
   FileIcon,
   FileIconContent,
@@ -41,6 +42,10 @@ export const getItemExtendedIcon = (
   item: Item,
   type: "normal" | "mini",
 ): string | null => {
+  if (item.is_restricted || item.type === ItemType.RESTRICTION) {
+    return folderRestrictedIcon.src;
+  }
+
   if (item.type === ItemType.FOLDER) {
     return folderIcon.src;
   }

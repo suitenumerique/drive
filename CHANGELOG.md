@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) rate limit the item creation endpoints
+- ✨(frontend) restrict and reopen folder access from the share modal
 
 ### Changed
 
