@@ -13,8 +13,14 @@ import {
   useRefreshItemCache,
   useRefreshFavoriteCache,
   useRefreshEntitlementsQueryCache,
+  useGetQueryKeyToRefresh,
 } from "./useRefreshItems";
 import { DefaultRoute } from "@/utils/defaultRoutes";
+import { useTranslation } from "react-i18next";
+import {
+  addToast,
+  ToasterItem,
+} from "@/features/ui/components/toaster/Toaster";
 
 // ============================================================================
 // MUTATIONS
@@ -270,15 +276,43 @@ export const useMutationDuplicateItem = () => {
 };
 
 export const useMutationLeaveItem = () => {
+  const { t } = useTranslation();
   const driver = getDriver();
+  const queryClient = useQueryClient();
+  const getQueryKeys = useGetQueryKeyToRefresh();
   const refresh = useRefreshQueryCacheAfterMutation();
+  const removeItems = useRemoveItemsFromPaginatedList();
 
   return useMutation({
     mutationFn: (itemId: string) => {
       return driver.leaveItem(itemId);
     },
+    onMutate: async (itemId: string) => {
+      const queryKeys = getQueryKeys();
+      // Stop pending refetches so they don't bring the item back meanwhile
+      await Promise.all(
+        queryKeys.map((queryKey) => queryClient.cancelQueries({ queryKey })),
+      );
+      // Snapshot every listing so the item can be shown again if leaving fails
+      const previousData = queryKeys.flatMap((queryKey) =>
+        queryClient.getQueriesData({ queryKey }),
+      );
+      queryKeys.forEach((queryKey) => removeItems(queryKey, [itemId]));
+      return { previousData };
+    },
     onSuccess: () => {
       refresh();
+    },
+    onError: (_error, _itemId, context) => {
+      context?.previousData.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+      addToast(
+        <ToasterItem type="error">
+          <span className="material-icons">logout</span>
+          <span>{t("explorer.item.actions.leave_toast_error")}</span>
+        </ToasterItem>,
+      );
     },
     meta: {
       noGlobalError: true,

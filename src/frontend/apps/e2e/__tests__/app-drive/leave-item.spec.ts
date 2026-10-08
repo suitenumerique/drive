@@ -113,3 +113,41 @@ test("Leave option is not shown to the folder owner", async ({ userA }) => {
     userA.page.getByRole("menuitem", { name: "Leave" }),
   ).not.toBeVisible();
 });
+
+test("A failed leave shows the item again with an error toast", async ({
+  userA,
+  userB,
+}) => {
+  // 1. Setup: user A shares a folder with user B, who opens "Shared with me".
+  await clearDb();
+  await createAndShareFolder(userA.page, userB.page, "Shared Folder", "Editor");
+  await userB.page.goto("/");
+  await clickToSharedWithMe(userB.page);
+  await expectRowItem(userB.page, "Shared Folder");
+
+  // 2. Make the leave request fail, but hold it until the optimistic removal
+  //    has been checked, otherwise the rollback could happen before we look.
+  let releaseLeaveRequest: () => void = () => {};
+  const leaveRequestHeld = new Promise<void>((resolve) => {
+    releaseLeaveRequest = resolve;
+  });
+  await userB.page.route("**/api/v1.0/items/*/leave/", async (route) => {
+    await leaveRequestHeld;
+    await route.fulfill({ status: 500, body: "{}" });
+  });
+
+  // 3. User B confirms leaving: the folder disappears right away (the modal
+  //    goes with it, as it belongs to the row).
+  await clickOnRowItemActions(userB.page, "Shared Folder", "Leave");
+  await userB.page.getByRole("button", { name: "Leave" }).click();
+  await expectRowItemIsNotVisible(userB.page, "Shared Folder");
+
+  // 4. The request fails: an error toast is shown.
+  releaseLeaveRequest();
+  await expect(
+    userB.page.getByText("An error occurred while leaving the item."),
+  ).toBeVisible();
+
+  // 5. The folder is back in the list, without reloading the page.
+  await expectRowItem(userB.page, "Shared Folder");
+});
