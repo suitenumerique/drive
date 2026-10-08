@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
 import { CircularProgress } from "@/features/ui/components/circular-progress/CircularProgress";
-import prettyBytes from "pretty-bytes";
+import { formatSize } from "@/features/explorer/utils/utils";
 import { ToastContentProps } from "react-toastify";
 import { ItemIcon } from "../icons/ItemIcon";
 import {
@@ -62,7 +62,7 @@ export const FileRow = ({
         <span>{name}</span>
         {meta.status !== FileUploadStatus.ERROR && (
           <span className="file-upload-toast__files__item__size">
-            {prettyBytes(meta.file.size)}
+            {formatSize(meta.file.size, t)}
           </span>
         )}
       </div>
