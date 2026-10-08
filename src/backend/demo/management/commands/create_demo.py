@@ -282,10 +282,10 @@ def build_tree(rng, owner, folders, files, depth):
     return tree_folders + tree_files, [root]
 
 
-def create_profile(name, spec):
-    """Create a user whose visible items follow a production profile."""
+def create_profile(name, spec, user=None):
+    """Create items following a production profile for the given or a dedicated user."""
     rng = random.Random(name)  # noqa: S311  # seeded for reproducible shapes
-    user = get_or_create_demo_user(
+    user = user or get_or_create_demo_user(
         {"email": f"{name}@profiles.demo", "full_name": f"Profile {name}", "short_name": name}
     )
     org = get_or_create_demo_user(
@@ -334,7 +334,7 @@ def create_profile(name, spec):
     )
 
 
-def create_demo(stdout, *, file_types=False, profiles=()):
+def create_demo(stdout, *, file_types=False, profiles=(), profile_user=None):
     """
     Create a database with demo data for developers to work in a realistic environment.
     """
@@ -380,9 +380,15 @@ def create_demo(stdout, *, file_types=False, profiles=()):
             item.title = f"{item.title} (shared with {names})"
             item.save(update_fields=["title"])
 
+    user = None
+    if profile_user:
+        user = models.User.objects.filter(email=profile_user).first()
+        if user is None:
+            raise CommandError(f"No user found with email {profile_user}")
+
     for name in profiles:
         with Timeit(stdout, f"Creating profile {name}"):
-            create_profile(name, defaults.PROFILES[name])
+            create_profile(name, defaults.PROFILES[name], user=user)
 
 
 class Command(BaseCommand):
@@ -413,6 +419,11 @@ class Command(BaseCommand):
             default=None,
             help="Create users with item trees shaped like production profiles (all by default)",
         )
+        parser.add_argument(
+            "--profile-user",
+            default=None,
+            help="Email of an existing user to attach the single selected profile to",
+        )
 
     def handle(self, *args, **options):
         """Handling of the management command."""
@@ -429,8 +440,12 @@ class Command(BaseCommand):
         if profiles == []:
             profiles = list(defaults.PROFILES)
 
+        if options["profile_user"] and len(profiles or ()) != 1:
+            raise CommandError("--profile-user requires exactly one profile in --profiles")
+
         create_demo(
             self.stdout,
             file_types=options["file_types"],
             profiles=profiles or (),
+            profile_user=options["profile_user"],
         )

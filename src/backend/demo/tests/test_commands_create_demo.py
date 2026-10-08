@@ -1,6 +1,6 @@
 """Test the `create_demo` management command"""
 
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.test import override_settings
 
 import pytest
@@ -85,6 +85,35 @@ def test_commands_create_demo_with_profiles():
     history = models.User.objects.get(email="history@profiles.demo")
     assert models.Item.objects.filter(creator=history, deleted_at__isnull=False).count() == 800
     assert models.LinkTrace.objects.filter(user=history).count() == 3400
+
+
+@override_settings(DEBUG=True)
+def test_commands_create_demo_with_profile_user():
+    """The create_demo command should attach a profile to an existing user."""
+    call_command("create_demo", "--profiles", "median", "--profile-user", "drive@drive.world")
+
+    dev_user = models.User.objects.get(email="drive@drive.world")
+    assert models.Item.objects.filter(creator=dev_user, title__startswith="Folder ").count() == 2
+    assert models.LinkTrace.objects.filter(user=dev_user).count() == 2
+    assert not models.User.objects.filter(email="median@profiles.demo").exists()
+
+
+@override_settings(DEBUG=True)
+def test_commands_create_demo_with_profile_user_requires_one_profile():
+    """The create_demo command should refuse a profile user without exactly one profile."""
+    with pytest.raises(CommandError, match="requires exactly one profile"):
+        call_command("create_demo", "--profiles", "--profile-user", "drive@drive.world")
+
+    assert models.Item.objects.count() == 0
+
+
+@override_settings(DEBUG=True)
+def test_commands_create_demo_with_unknown_profile_user():
+    """The create_demo command should fail when the profile user does not exist."""
+    with pytest.raises(CommandError, match="No user found with email unknown@example.com"):
+        call_command("create_demo", "--profiles", "median", "--profile-user", "unknown@example.com")
+
+    assert not models.User.objects.filter(email="median@profiles.demo").exists()
 
 
 @override_settings(DEBUG=True)
