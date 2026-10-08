@@ -1758,10 +1758,10 @@ class ItemViewSet(
         try:
             with transaction.atomic():
                 models.ItemAccess.objects.filter(
-                    item__path__descendants=item.path, user=request.user
+                    item__path__in_subtree=item.path, user=request.user
                 ).delete()
                 models.LinkTrace.objects.filter(
-                    item__path__descendants=item.path, user=request.user
+                    item__path__in_subtree=item.path, user=request.user
                 ).delete()
         except DatabaseError:
             logger.error(
