@@ -1757,9 +1757,10 @@ class ItemViewSet(
         item = self.get_object()
         try:
             with transaction.atomic():
-                models.ItemAccess.objects.filter(
+                for access in models.ItemAccess.objects.filter(
                     item__path__in_subtree=item.path, user=request.user
-                ).delete()
+                ):
+                    access.delete()
                 models.LinkTrace.objects.filter(
                     item__path__in_subtree=item.path, user=request.user
                 ).delete()
