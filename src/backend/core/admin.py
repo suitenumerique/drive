@@ -9,7 +9,9 @@ from django.db.models import Exists, OuterRef, Subquery, UUIDField
 from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast
 from django.shortcuts import redirect
-from django.template.defaultfilters import filesizeformat
+from django.template.loader import render_to_string
+from django.templatetags.static import static
+from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
 from lasuite.malware_detection import malware_detection
@@ -17,7 +19,10 @@ from lasuite.malware_detection.admin import MalwareDetectionAdmin as BaseMalware
 from lasuite.malware_detection.models import MalwareDetection
 
 from core import models
+from core.entitlements import get_entitlements_backend
+from core.storage import get_storage_compute_backend
 from core.tasks.user_reconciliation import user_reconciliation_csv_import_job
+from core.utils.sizes import format_size
 
 
 @admin.register(models.User)
@@ -49,6 +54,17 @@ class UserAdmin(auth_admin.UserAdmin):
             },
         ),
         (
+            _("Entitlements"),
+            {
+                "fields": (
+                    "storage_limit_override",
+                    "quota_display",
+                    "top_files",
+                )
+            },
+        ),
+        (_("Important dates"), {"fields": ("created_at", "updated_at")}),
+        (
             _("Permissions"),
             {
                 "fields": (
@@ -61,8 +77,6 @@ class UserAdmin(auth_admin.UserAdmin):
                 ),
             },
         ),
-        (_("Entitlements"), {"fields": ("storage_limit_override",)}),
-        (_("Important dates"), {"fields": ("created_at", "updated_at")}),
     )
     add_fieldsets = (
         (
@@ -83,7 +97,8 @@ class UserAdmin(auth_admin.UserAdmin):
         "is_staff",
         "is_superuser",
         "is_device",
-        "storage_limit_override",
+        "storage_used_display",
+        "storage_limit_display",
         "created_at",
         "updated_at",
     )
@@ -104,8 +119,106 @@ class UserAdmin(auth_admin.UserAdmin):
         "short_name",
         "created_at",
         "updated_at",
+        "quota_display",
+        "top_files",
     )
     search_fields = ("id", "sub", "admin_email", "email", "full_name")
+    top_files_choices = (5, 20, 50, 100)
+    top_files_max = 500
+
+    def get_queryset(self, request):
+        """Annotate the users with the storage counted in their quota."""
+        return (
+            super()
+            .get_queryset(request)
+            .annotate(storage_used=get_storage_compute_backend().storage_used_expression())
+        )
+
+    def get_object(self, request, object_id, from_field=None):
+        """Load the user with the number of biggest files to show, from the top parameter."""
+        obj = super().get_object(request, object_id, from_field)
+        if obj is not None:
+            try:
+                top = int(request.GET.get("top", self.top_files_choices[0]))
+            except ValueError:
+                top = self.top_files_choices[0]
+            obj.top_files_limit = min(max(top, 1), self.top_files_max)
+        return obj
+
+    @staticmethod
+    def _storage_limit(obj):
+        """Return the effective storage limit of the user, or None when unlimited or unknown."""
+        backend = get_entitlements_backend()
+        if not hasattr(backend, "get_storage_limit"):
+            return None
+        return backend.get_storage_limit(obj)
+
+    @admin.display(description=_("storage used"), ordering="storage_used")
+    def storage_used_display(self, obj):
+        """Return the human readable storage counted in the user quota."""
+        limit = self._storage_limit(obj)
+        if not limit:
+            return format_size(obj.storage_used)
+        return f"{format_size(obj.storage_used)} ({obj.storage_used * 100 / limit:.0f} %)"
+
+    @admin.display(description=_("storage limit"))
+    def storage_limit_display(self, obj):
+        """Return the human readable effective storage limit, empty if the backend has none."""
+        backend = get_entitlements_backend()
+        if not hasattr(backend, "get_storage_limit"):
+            return None
+        limit = backend.get_storage_limit(obj)
+        if limit:
+            return format_size(limit)
+        # Same icon as the admin boolean fields
+        return format_html('<img src="{}" alt="False">', static("admin/img/icon-no.svg"))
+
+    @admin.display(description=_("storage used"))
+    def quota_display(self, obj):
+        """Return the storage used against the quota of the entitlements backend."""
+        # get_quota may call an external service, so it is kept out of the list
+        quota = get_entitlements_backend().get_quota(obj)
+        if quota.get("limit"):
+            usage, limit = quota["usage"], quota["limit"]
+            return f"{format_size(usage)} / {format_size(limit)} ({usage * 100 / limit:.0f} %)"
+        if quota:
+            return f"{format_size(obj.storage_used)} ({', '.join(map(str, quota.values()))})"
+        return format_size(obj.storage_used)
+
+    @staticmethod
+    def _file_flags(item):
+        """Return the trash and quota exclusion flags of a file."""
+        flags = []
+        if item.deleted_at or item.ancestors_deleted_at:
+            flags.append(str(_("in trash")))
+        if item.quota_excluded:
+            flags.append(str(_("excluded from quota")))
+        return ", ".join(flags)
+
+    @admin.display(description=_("biggest files"))
+    def top_files(self, obj):
+        """Return the biggest files created by the user, with links to change their count."""
+        limit = getattr(obj, "top_files_limit", self.top_files_choices[0])
+        files = models.Item.objects.filter(
+            creator=obj,
+            type=models.ItemTypeChoices.FILE,
+            hard_deleted_at__isnull=True,
+            size__isnull=False,
+        ).order_by("-size")[:limit]
+        return render_to_string(
+            "core/admin/user_top_files.html",
+            {
+                "choices": self.top_files_choices,
+                "files": [
+                    {
+                        "item": item,
+                        "size": format_size(item.size),
+                        "flags": self._file_flags(item),
+                    }
+                    for item in files
+                ],
+            },
+        )
 
 
 @admin.register(models.UserReconciliationCsvImport)
@@ -247,7 +360,7 @@ class ItemAdmin(admin.ModelAdmin):
         """Return the human readable size of the item file."""
         if obj.size is None:
             return None
-        return filesizeformat(obj.size)
+        return format_size(obj.size)
 
     def trigger_file_analysis(self, request, queryset):
         """Reanalyse the file of the items."""
@@ -415,4 +528,4 @@ class MalwareDetectionAdmin(BaseMalwareDetectionAdmin):
         """Return the human readable size of the item file."""
         if obj.item_size is None:
             return None
-        return filesizeformat(obj.item_size)
+        return format_size(obj.item_size)
