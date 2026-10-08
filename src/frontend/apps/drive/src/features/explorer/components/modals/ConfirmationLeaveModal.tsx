@@ -7,6 +7,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { Item } from "@/features/drivers/types";
 import { useMutationLeaveItem } from "../../hooks/useMutations";
+import { getDriver } from "@/features/config/Config";
 import {
   addToast,
   ToasterItem,
@@ -20,6 +21,7 @@ export const ConfirmationLeaveModal = ({
 }: Pick<ModalProps, "isOpen" | "onClose"> & { item: Item }) => {
   const { t } = useTranslation();
   const router = useRouter();
+  const driver = getDriver();
   const { mutateAsync: leaveItem, isPending } = useMutationLeaveItem();
 
   const handleLeave = async () => {
@@ -33,8 +35,13 @@ export const ConfirmationLeaveModal = ({
     );
     const parentId = getParentIdFromPath(item.path);
     if (parentId) {
-      setManualNavigationItemId(parentId);
-      router.push(`/explorer/items/${parentId}`);
+      try {
+        await driver.getItem(parentId);
+        setManualNavigationItemId(parentId);
+        router.push(`/explorer/items/${parentId}`);
+      } catch {
+        router.push(`/explorer/items/shared-with-me`);
+      }
     } else {
       router.push(`/explorer/items/shared-with-me`);
     }
