@@ -84,7 +84,7 @@ backend:
   # Extra volume mounts to manage our local custom CA and avoid to set ssl_verify: false
   extraVolumeMounts:
     - name: certs
-      mountPath: /usr/local/lib/python3.12/site-packages/certifi/cacert.pem
+      mountPath: /app/.venv/lib/python3.13/site-packages/certifi/cacert.pem
       subPath: cacert.pem
 
   # Extra volumes to manage our local custom CA and avoid to set ssl_verify: false
@@ -143,4 +143,4 @@ ingressMediaPreview:
 
 serviceMedia:
   host: minio-dev-backend-minio.drive.svc.cluster.local
-  port: 80
+  port: 9000

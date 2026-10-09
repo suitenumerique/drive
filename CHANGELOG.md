@@ -36,6 +36,10 @@ and this project adheres to
 - 🐛(backend) purge the stored object of stale pending items
 - 🔒️(backend) serve WOPI file content as a sandboxed download
 
+### Fixed
+
+- 📝(docs) fix minio and CA settings in the kubernetes guide
+
 ## [v0.23.0] - 2026-09-23
 
 ### Added
