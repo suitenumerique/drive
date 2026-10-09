@@ -25,6 +25,7 @@ from core import models
 from core.entitlements import get_entitlements_backend
 from core.storage import get_storage_compute_backend
 from core.tasks.user_reconciliation import user_reconciliation_csv_import_job
+from core.utils.quota import quota_to_str
 from core.utils.sizes import format_size
 
 BYTES_PER_GB = 1000**3
@@ -206,17 +207,16 @@ class UserAdmin(auth_admin.UserAdmin):
         # Same icon as the admin boolean fields
         return format_html('<img src="{}" alt="False">', static("admin/img/icon-no.svg"))
 
-    @admin.display(description=_("storage used"))
+    @admin.display(description=_("quota"))
     def quota_display(self, obj):
-        """Return the storage used against the quota of the entitlements backend."""
+        """Return the quota of the entitlements backend, with the storage counted by Drive."""
         # get_quota may call an external service, so it is kept out of the list
         quota = get_entitlements_backend().get_quota(obj)
-        if quota.get("limit"):
-            usage, limit = quota["usage"], quota["limit"]
-            return f"{format_size(usage)} / {format_size(limit)} ({usage * 100 / limit:.0f} %)"
-        if quota:
-            return f"{format_size(obj.storage_used)} ({', '.join(map(str, quota.values()))})"
-        return format_size(obj.storage_used)
+        lines = [quota_to_str(quota)]
+        # Only when it differs from the usage of the backend, a stale cache or metric
+        if quota.get("usage") != obj.storage_used:
+            lines.append(f"{_('Counted by Drive')}: {format_size(obj.storage_used)}")
+        return "\n".join(lines)
 
     @staticmethod
     def _file_flags(item):

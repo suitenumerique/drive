@@ -166,25 +166,44 @@ def test_admin_users_quota_local_backend():
 
     admin_instance, loaded = _get_user(user)
 
-    assert admin_instance.quota_display(loaded) == "250 B / 1.00 KB (25 %)"
+    assert admin_instance.quota_display(loaded) == (
+        "State: default\nUsage: 250 B\nLimit: 1.00 KB\nUsed: 25 %"
+    )
+
+
+def test_admin_users_quota_usage_differs():
+    """The storage counted by Drive should be shown when the backend usage differs."""
+    user = factories.UserFactory()
+    factories.ItemFactory(creator=user, type=models.ItemTypeChoices.FILE, size=250)
+    admin_instance, loaded = _get_user(user)
+
+    with mock.patch("core.admin.get_entitlements_backend") as get_backend:
+        get_backend.return_value.get_quota.return_value = {
+            "state": "default",
+            "usage": 100,
+            "limit": 1000,
+        }
+        assert admin_instance.quota_display(loaded) == (
+            "State: default\nUsage: 100 B\nLimit: 1.00 KB\nUsed: 10 %\nCounted by Drive: 250 B"
+        )
 
 
 @pytest.mark.parametrize(
     "quota,expected",
     [
-        ({}, "250 B"),
+        ({}, "No quota\nCounted by Drive: 250 B"),
         (
             {"state": "error", "error": "metric_account_not_found"},
-            "250 B (error, metric_account_not_found)",
+            "State: error\nError: metric_account_not_found\nCounted by Drive: 250 B",
         ),
         (
             {"state": "exceeded_locked", "reason": "organization_quota_exceeded"},
-            "250 B (exceeded_locked, organization_quota_exceeded)",
+            "State: exceeded_locked\nReason: organization_quota_exceeded\nCounted by Drive: 250 B",
         ),
     ],
 )
 def test_admin_users_quota_without_limit(quota, expected):
-    """A quota without limit should show the storage used, with its state if any."""
+    """A quota without limit should show its state and the storage counted by Drive."""
     user = factories.UserFactory()
     factories.ItemFactory(creator=user, type=models.ItemTypeChoices.FILE, size=250)
     admin_instance, loaded = _get_user(user)
