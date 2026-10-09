@@ -21,6 +21,7 @@ and this project adheres to
 - ✨(wopi) capture a posthog event on document edition
 - ✨(backend) show and change the storage quota exclusion of items
 - ✨(backend) show user storage quota and biggest files in the admin
+- ✨(backend) set the storage limit override of users in GB in the admin
 
 ### Changed
 

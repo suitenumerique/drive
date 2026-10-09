@@ -1,5 +1,6 @@
 """Tests for the user admin class."""
 
+from decimal import Decimal
 from unittest import mock
 
 from django.conf import settings
@@ -21,6 +22,53 @@ def _get_user(user, query=""):
     admin_instance = UserAdmin(models.User, admin.site)
     request = RequestFactory().get(f"/{query}")
     return admin_instance, admin_instance.get_object(request, str(user.pk))
+
+
+def _get_change_form(user, storage_limit_override=None):
+    """Build the admin change form of a user, bound to a new override when given."""
+    request = RequestFactory().get("/")
+    request.user = factories.UserFactory(is_staff=True, is_superuser=True)
+    form_class = UserAdmin(models.User, admin.site).get_form(request, user, change=True)
+    form = form_class(instance=user)
+    if storage_limit_override is None:
+        return form
+    data = {name: form[name].value() for name in form.fields}
+    data = {name: value for name, value in data.items() if value is not None}
+    data["storage_limit_override"] = storage_limit_override
+    return form_class(data, instance=user)
+
+
+@pytest.mark.parametrize(
+    "override,expected",
+    [(None, None), (0, 0), (20_000_000_000, 20), (1_234_567_890, Decimal("1.23456789"))],
+)
+def test_admin_users_storage_limit_override_shown_in_gb(override, expected):
+    """The storage limit override stored in bytes should be shown in GB."""
+    form = _get_change_form(factories.UserFactory(storage_limit_override=override))
+
+    assert form.initial["storage_limit_override"] == expected
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [("", None), ("0", 0), ("20", 20_000_000_000), ("0.5", 500_000_000)],
+)
+def test_admin_users_storage_limit_override_set_in_gb(value, expected):
+    """The storage limit override set in GB should be saved in bytes."""
+    user = factories.UserFactory(storage_limit_override=1000)
+    form = _get_change_form(user, value)
+
+    assert form.is_valid(), form.errors
+    form.save()
+    user.refresh_from_db()
+    assert user.storage_limit_override == expected
+
+
+def test_admin_users_storage_limit_override_negative():
+    """A negative storage limit override should be rejected."""
+    form = _get_change_form(factories.UserFactory(), "-1")
+
+    assert "storage_limit_override" in form.errors
 
 
 def test_admin_users_storage_used():

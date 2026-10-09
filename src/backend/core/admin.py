@@ -1,9 +1,12 @@
 """Admin classes and registrations for core app."""
 
+from decimal import Decimal
 from functools import partial
 
+from django import forms
 from django.contrib import admin, messages
 from django.contrib.auth import admin as auth_admin
+from django.contrib.auth import forms as auth_forms
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Subquery, UUIDField
 from django.db.models.fields.json import KeyTextTransform
@@ -24,10 +27,40 @@ from core.storage import get_storage_compute_backend
 from core.tasks.user_reconciliation import user_reconciliation_csv_import_job
 from core.utils.sizes import format_size
 
+BYTES_PER_GB = 1000**3
+
+
+class UserChangeForm(auth_forms.UserChangeForm):
+    """User change form setting the storage limit override in GB."""
+
+    storage_limit_override = forms.DecimalField(
+        label=_("storage limit override (GB)"),
+        help_text=_(
+            "Leave empty to use the configured default limit. Set to 0 for unlimited storage."
+        ),
+        required=False,
+        min_value=0,
+    )
+
+    def __init__(self, *args, **kwargs):
+        """Show the storage limit override stored in bytes in GB."""
+        super().__init__(*args, **kwargs)
+        if self.instance.storage_limit_override is not None:
+            self.initial["storage_limit_override"] = (
+                Decimal(self.instance.storage_limit_override) / BYTES_PER_GB
+            )
+
+    def clean_storage_limit_override(self):
+        """Convert the storage limit override from GB to bytes."""
+        value = self.cleaned_data["storage_limit_override"]
+        return None if value is None else int(value * BYTES_PER_GB)
+
 
 @admin.register(models.User)
 class UserAdmin(auth_admin.UserAdmin):
     """Admin class for the User model"""
+
+    form = UserChangeForm
 
     fieldsets = (
         (
