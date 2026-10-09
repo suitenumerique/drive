@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.24.0] - 2026-10-09
+
 ### Added
 
 - ✨(backend) rate limit the item creation endpoints
@@ -577,7 +579,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.23.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.24.0...main
+[v0.24.0]: https://github.com/suitenumerique/drive/releases/v0.24.0
 [v0.23.0]: https://github.com/suitenumerique/drive/releases/v0.23.0
 [v0.22.0]: https://github.com/suitenumerique/drive/releases/v0.22.0
 [v0.21.2]: https://github.com/suitenumerique/drive/releases/v0.21.2
