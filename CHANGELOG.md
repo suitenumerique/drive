@@ -29,6 +29,7 @@ and this project adheres to
 - ✨(backend) require a size reservation to upload a file
 - ♻️(backend,frontend) format sizes the same way in the admin and the app
 - 🔧(helm) relax the backend readiness probe
+- ⚡️(docker) build the frontend assets once on the native platform
 
 ### Fixed
 
