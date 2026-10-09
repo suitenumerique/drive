@@ -36,6 +36,7 @@ and this project adheres to
 - 🐛(backend) do not clean a pending item whose upload just ended
 - 🐛(backend) purge the stored object of stale pending items
 - 🔒️(backend) serve WOPI file content as a sandboxed download
+- 🐛(backend) do not fail the parent path index migration on an existing index
 
 ## [v0.23.0] - 2026-09-23
 

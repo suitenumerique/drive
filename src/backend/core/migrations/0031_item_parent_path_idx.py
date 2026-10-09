@@ -1,5 +1,5 @@
 import core.models
-from django.contrib.postgres.operations import AddIndexConcurrently
+from core.utils.migrations import AddIndexConcurrentlyIfMissing
 from django.db import migrations, models
 
 
@@ -15,7 +15,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        AddIndexConcurrently(
+        # Queries read the whole item table until this index is valid, so on large
+        # databases it is created by hand before the release is deployed.
+        AddIndexConcurrentlyIfMissing(
             model_name='item',
             index=models.Index(core.models.ParentPath(models.F('path')), name='item_parent_path_idx'),
         ),
