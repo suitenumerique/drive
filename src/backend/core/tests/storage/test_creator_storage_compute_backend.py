@@ -4,7 +4,7 @@ Tests for the CreatorStorageComputeBackend.
 
 import pytest
 
-from core import factories
+from core import factories, models
 from core.storage.creator_storage_compute_backend import CreatorStorageComputeBackend
 
 pytestmark = pytest.mark.django_db
@@ -57,3 +57,31 @@ def test_compute_storage_used_only_quota_excluded_items():
     factories.ItemFactory(creator=user, size=250, quota_excluded=True)
 
     assert CreatorStorageComputeBackend().compute_storage_used([user]) == 0
+
+
+def test_storage_used_expression_matches_compute_storage_used():
+    """The annotation should give each user the storage computed by compute_storage_used."""
+    user = factories.UserFactory()
+    factories.ItemFactory(creator=user, size=100)
+    factories.ItemFactory(creator=user, size=250, quota_excluded=True)
+    hard_deleted = factories.ItemFactory(creator=user, size=500)
+    hard_deleted.soft_delete()
+    hard_deleted.hard_delete()
+    other = factories.UserFactory()
+    factories.ItemFactory(creator=other, size=999)
+    empty = factories.UserFactory()
+
+    backend = CreatorStorageComputeBackend()
+    storage_used = dict(
+        models.User.objects.annotate(storage_used=backend.storage_used_expression()).values_list(
+            "id", "storage_used"
+        )
+    )
+
+    assert storage_used == {
+        user.id: 100,
+        other.id: 999,
+        empty.id: 0,
+    }
+    for each in (user, other, empty):
+        assert storage_used[each.id] == backend.compute_storage_used([each])
