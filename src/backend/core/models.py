@@ -889,14 +889,20 @@ class IdInSubtrees(models.Func):  # pylint: disable=abstract-method
     Instead, each subtree is looked up as a range of the path btree index. Ids are read
     from the last label of the paths found, which lets the btree answer alone, and the
     whole list is computed once before looking items up by id.
+
+    With `trashed=True`, only the soft-deleted items of the subtrees are matched. They
+    are read from the index holding the paths of soft-deleted items only
+    (item_trashed_path_idx): the cost then depends on how many items were deleted in
+    the subtrees, not on their size.
     """
 
     arity = 1
     output_field = models.BooleanField()
 
-    def __init__(self, expression, paths, **extra):
+    def __init__(self, expression, paths, trashed=False, **extra):
         super().__init__(expression, **extra)
         self.paths = [str(path) for path in paths]
+        self.trashed = trashed
 
     def as_sql(self, compiler, connection, **extra_context):  # pylint: disable=arguments-differ
         """Build the id list from a join of the subtree ranges on the path index."""
@@ -931,16 +937,24 @@ class IdInSubtrees(models.Func):  # pylint: disable=abstract-method
         #    once, then looks the outer items up by primary key with
         #    "id = ANY(...)". Written as "id IN (subquery)", the ranges were
         #    misestimated and Postgres scanned the whole item table instead.
+        # 5. With trashed=True, the condition added to the join is the one of the
+        #    partial index on the paths of soft-deleted items, written the same way
+        #    for Postgres to pick this index instead of the one on all paths.
         id_sql, id_params = compiler.compile(self.source_expressions[0])
         table = connection.ops.quote_name(Item._meta.db_table)  # noqa: SLF001
-        # Only the compiled id expression and the quoted table name are interpolated
+        join_condition = (
+            "subtree_item.path >= subtree.lower_bound AND subtree_item.path < subtree.upper_bound"
+        )
+        if self.trashed:
+            join_condition += " AND subtree_item.deleted_at IS NOT NULL"
+        # Only the compiled id expression, the quoted table name and a constant
+        # join condition are interpolated
         return (
             f"{id_sql} = ANY(ARRAY("  # noqa: S608
             "SELECT subpath(subtree_item.path, -1)::text::uuid "
             "FROM unnest(%s::text[]::ltree[], %s::text[]::ltree[]) "
             "AS subtree(lower_bound, upper_bound) "
-            f"JOIN {table} AS subtree_item ON subtree_item.path >= subtree.lower_bound "
-            "AND subtree_item.path < subtree.upper_bound))",
+            f"JOIN {table} AS subtree_item ON {join_condition}))",
             (
                 *id_params,
                 self.paths,
@@ -1038,6 +1052,30 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
             role=RoleChoices.OWNER,
         )
         return self.filter(models.Exists(owner_access))
+
+    def trashed_owned_by(self, user):
+        """
+        Filter soft-deleted items the given user owns, directly or through an ancestor
+        access.
+
+        `owned_by` checks each candidate item against the accesses of the user: on
+        soft-deleted items, every item deleted by anyone is a candidate. Here the
+        subtrees the user owns are resolved first, and only the items deleted inside
+        them are read (see IdInSubtrees).
+        """
+        owned_paths = list(
+            ItemAccess.objects.filter(
+                models.Q(user=user) | models.Q(team__in=user.teams),
+                role=RoleChoices.OWNER,
+            ).values_list("item__path", flat=True)
+        )
+        if not owned_paths:
+            return self.none()
+
+        return self.filter(
+            IdInSubtrees(models.F("id"), owned_paths, trashed=True),
+            deleted_at__isnull=False,
+        )
 
     def annotate_is_favorite(self, user):
         """
@@ -1254,6 +1292,12 @@ class Item(TreeModel, BaseModel):
             models.Index(NLevel(models.F("path")), name="drive_item_path_nlevel_idx"),
             # Finds the children of an item, see ParentPath.
             models.Index(ParentPath(models.F("path")), name="item_parent_path_idx"),
+            # Finds the soft-deleted items of a subtree, see IdInSubtrees.
+            models.Index(
+                fields=["path"],
+                condition=models.Q(deleted_at__isnull=False),
+                name="item_trashed_path_idx",
+            ),
             # Covers the storage used computation by creator.
             models.Index(
                 fields=["creator"],
