@@ -1079,7 +1079,7 @@ class ItemViewSet(
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
 
-        return self.get_response_for_queryset(queryset)
+        return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
     @drf.decorators.action(detail=True, methods=["post"])
     @transaction.atomic
