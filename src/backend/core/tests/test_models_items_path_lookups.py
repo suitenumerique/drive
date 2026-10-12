@@ -64,6 +64,74 @@ def test_models_items_id_in_subtrees(tree):
     )
 
 
+def test_models_items_id_in_subtrees_trashed(tree):
+    """With trashed=True, IdInSubtrees should only match the soft-deleted items."""
+    tree["child"].soft_delete()
+    tree["sibling"].soft_delete()
+    tree["other_root"].soft_delete()
+    paths = [tree["parent"].path, tree["other_root"].path]
+
+    matched = models.Item.objects.filter(models.IdInSubtrees(F("id"), paths, trashed=True))
+
+    # "sibling" is out of the subtrees, "nephew" is only deleted through its ancestor
+    assert set(matched) == {tree["child"], tree["other_root"]}
+
+    matched = models.Item.objects.filter(
+        models.IdInSubtrees(F("id"), [tree["root"].path], trashed=True)
+    )
+
+    assert set(matched) == {tree["child"], tree["sibling"]}
+
+
+def test_models_items_trashed_owned_by(tree, mock_user_teams):
+    """
+    trashed_owned_by should match the soft-deleted items the user owns, directly,
+    through an ancestor or through a team: the same items as owned_by.
+    """
+    user = factories.UserFactory()
+    mock_user_teams.return_value = ["team"]
+    # Owner of "parent" directly and of "child" below it: "child" is owned twice
+    factories.UserItemAccessFactory(item=tree["parent"], user=user, role="owner")
+    factories.UserItemAccessFactory(item=tree["child"], user=user, role="owner")
+    # Owner of "other_root" through a team
+    factories.TeamItemAccessFactory(item=tree["other_root"], team="team", role="owner")
+    # Administrator only of "sibling"
+    factories.UserItemAccessFactory(item=tree["sibling"], user=user, role="administrator")
+    # Another user owns everything
+    factories.UserItemAccessFactory(item=tree["root"], role="owner")
+    factories.UserItemAccessFactory(item=tree["other_root"], role="owner")
+
+    for name in ("child", "nephew", "other_root"):
+        tree[name].soft_delete()
+
+    matched = models.Item.objects.trashed_owned_by(user)
+
+    assert sorted(item.pk for item in matched) == sorted([tree["child"].pk, tree["other_root"].pk])
+    assert set(matched) == set(models.Item.objects.filter(deleted_at__isnull=False).owned_by(user))
+
+
+def test_models_items_trashed_owned_by_parent_deleted(tree):
+    """A soft-deleted item should be matched when the access is on the item itself."""
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=tree["parent"], user=user, role="owner")
+    tree["parent"].soft_delete()
+
+    matched = models.Item.objects.trashed_owned_by(user)
+
+    # "child" is deleted through "parent", it is not in the trashbin on its own
+    assert list(matched) == [tree["parent"]]
+
+
+def test_models_items_trashed_owned_by_no_owner_access(tree, django_assert_num_queries):
+    """A user owning nothing should get no item, without querying the items."""
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=tree["root"], user=user, role="editor")
+    tree["child"].soft_delete()
+
+    with django_assert_num_queries(1):
+        assert not list(models.Item.objects.trashed_owned_by(user))
+
+
 def test_models_items_path_in_subtree_lookup(tree):
     """The in_subtree lookup should match the same items as the descendants lookup."""
     matched = models.Item.objects.filter(path__in_subtree=tree["parent"].path)

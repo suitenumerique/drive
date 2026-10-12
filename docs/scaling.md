@@ -114,6 +114,8 @@ In queries that run on every request or for every item, prefer the helpers in
 - `path__in_subtree=X` matches `X` and its descendants, like
   `path__descendants=X`, as a range of the btree index.
 - `IdInSubtrees` matches the items under many roots at once.
+  With `trashed=True` it only reads the soft-deleted items, from a small index
+  holding their paths: use it rather than checking every deleted item.
 - `IdInPath` matches an item and its ancestors from the ids in a path, instead of
   `__ancestors`.
 
