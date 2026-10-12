@@ -340,3 +340,35 @@ def test_api_items_trashbin_distinct():
     assert len(content["results"]) == 1
     assert content["results"][0]["id"] == str(item.id)
 
+
+def test_api_items_trashbin_nested_items_constant_queries(django_assert_num_queries):
+    """
+    The number of queries should not depend on the number of listed items, even when
+    they are nested: their ancestors are fetched at once.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    root = factories.ItemFactory(users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER)
+    items = []
+    for _index in range(3):
+        folder = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
+        item = factories.ItemFactory(
+            parent=folder,
+            type=models.ItemTypeChoices.FILE,
+            update_upload_state=models.ItemUploadStateChoices.READY,
+        )
+        item.soft_delete()
+        items.append(item)
+
+    # Warm up the caches read by the serializer
+    client.get("/api/v1.0/items/trashbin/")
+
+    with django_assert_num_queries(5):
+        response = client.get("/api/v1.0/items/trashbin/")
+
+    assert response.status_code == 200
+    assert {result["id"] for result in response.json()["results"]} == {
+        str(item.id) for item in items
+    }
