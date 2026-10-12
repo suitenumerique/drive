@@ -265,6 +265,7 @@ def test_usage_metrics_organization_type(api_key):
     Organization metrics should aggregate storage across users
     sharing the same claim value.
     """
+    reload_urls()
     client = APIClient()
     siret = "12345678901234"
     user1 = factories.UserFactory(claims={"siret": siret})
@@ -301,6 +302,7 @@ def test_usage_metrics_organization_type_missing_params(api_key):
     Organization metrics should return 400 when account_id_key
     or account_id_value is missing.
     """
+    reload_urls()
     client = APIClient()
 
     response = client.get(
@@ -316,6 +318,7 @@ def test_usage_metrics_organization_type_no_matching_users(api_key):
     Organization metrics should return storage_used=0 when no users
     match the given claim.
     """
+    reload_urls()
     client = APIClient()
     factories.UserFactory(claims={"siret": "11111111111111"})
 
