@@ -63,15 +63,6 @@ export default function UnauthorizedPage() {
     });
   }, [itemId]);
 
-  const canAskForAccess = Boolean(itemId) && !requestSent && !alreadyRequested;
-
-  const getMessageKey = () => {
-    if (requestSent) return "403.ask_for_access.success";
-    if (alreadyRequested) return "403.ask_for_access.already_requested";
-    return "403.title";
-  };
-  const message = t(getMessageKey());
-
   const handleAskForAccess = () => {
     if (!itemId) return;
     createAskForAccess(
@@ -88,19 +79,23 @@ export default function UnauthorizedPage() {
   };
 
   return (
-    <GenericDisclaimer message={message} imageSrc="/assets/403-background.png">
+    <GenericDisclaimer message={t("403.title")} imageSrc="/assets/403-background.png">
       <div className="drive__403__buttons">
         <Button href="/" variant="tertiary">
           <Icon name="home" />
           {t("403.button")}
         </Button>
-        {canAskForAccess && (
+        {itemId && (
           <Button
             onClick={handleAskForAccess}
-            disabled={isPending}
+            disabled={isPending || requestSent || alreadyRequested}
             icon={<Icon name="mail" />}
           >
-            {t("403.ask_for_access.button")}
+            {requestSent
+              ? t("403.ask_for_access.success")
+              : alreadyRequested
+                ? t("403.ask_for_access.already_requested")
+                : t("403.ask_for_access.button")}
           </Button>
         )}
       </div>
