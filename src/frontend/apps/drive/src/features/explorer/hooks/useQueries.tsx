@@ -30,8 +30,6 @@ export const useItemAskForAccesses = (itemId: string) => {
   return useQuery({
     queryKey: ["itemAskForAccesses", itemId],
     queryFn: () => getDriver().getItemAskForAccesses(itemId),
-    staleTime: 0,
-    gcTime: 0,
   });
 };
 

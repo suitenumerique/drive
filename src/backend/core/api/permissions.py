@@ -125,8 +125,6 @@ class ItemAskForAccessPermission(IsAuthenticated):
     request (privilege checks happen inside the viewset action).
     """
 
-    resources = "accesses"
-
     def has_object_permission(self, request, view, obj):
         """Check permission for a given object."""
         abilities = obj.get_abilities(request.user)

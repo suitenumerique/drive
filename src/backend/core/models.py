@@ -2406,7 +2406,11 @@ class ItemAskForAccess(BaseModel):
         on_delete=models.CASCADE,
         related_name="ask_for_accesses",
     )
-    role = models.CharField(max_length=20, choices=RoleChoices.choices, default=RoleChoices.READER)
+    role = models.CharField(
+        max_length=20,
+        choices=[(r.value, r.label) for r in RoleChoices if r != RoleChoices.OWNER],
+        default=RoleChoices.READER,
+    )
 
     class Meta:
         db_table = "drive_item_ask_for_access"
