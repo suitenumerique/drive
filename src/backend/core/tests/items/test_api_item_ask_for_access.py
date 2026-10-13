@@ -150,8 +150,8 @@ def test_api_item_ask_for_access_create_authenticated_owner_role():
     }
 
 
-def test_api_item_ask_for_access_create_authenticated_already_has_access():
-    """Authenticated users with existing access can ask for access with a different role."""
+def test_api_item_ask_for_access_create_authenticated_upgrade_role():
+    """Users with existing access can ask for a higher role."""
     user = UserFactory()
     item = ItemFactory(users=[(user, RoleChoices.READER)])
 
@@ -193,6 +193,48 @@ def test_api_item_ask_for_access_create_authenticated_already_has_ask_for_access
                 "attr": None,
                 "code": "already_requested",
                 "detail": "You have already requested access to this item.",
+            }
+        ],
+        "type": "validation_error",
+    }
+
+
+@pytest.mark.parametrize(
+    "current_role, request_data",
+    [
+        # reader with no role: defaults to reader, reader <= reader
+        (RoleChoices.READER, {}),
+        # reader requesting reader explicitly
+        (RoleChoices.READER, {"role": RoleChoices.READER}),
+        # editor with no role: defaults to reader, reader <= editor
+        (RoleChoices.EDITOR, {}),
+        # editor requesting editor: editor <= editor
+        (RoleChoices.EDITOR, {"role": RoleChoices.EDITOR}),
+        # editor requesting reader: reader <= editor
+        (RoleChoices.EDITOR, {"role": RoleChoices.READER}),
+    ],
+)
+def test_api_item_ask_for_access_create_authenticated_already_has_access(
+    current_role, request_data
+):
+    """
+    Users should not be able to ask for an access level they already have or that is lower
+    than their current role.
+    """
+    user = UserFactory()
+    item = ItemFactory(users=[(user, current_role)])
+
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post(f"/api/v1.0/items/{item.id}/ask-for-access/", data=request_data)
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": None,
+                "code": "already_has_access",
+                "detail": "You already have access to this item.",
             }
         ],
         "type": "validation_error",
