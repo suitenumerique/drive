@@ -10,6 +10,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from core import factories, models
+from core.api.deletion_serializers import DELETION_INFO_MAX_IDS
 
 pytestmark = pytest.mark.django_db
 URL = "/api/v1.0/items/deletion-info/"
@@ -128,3 +129,24 @@ def test_deletion_info_queries_across_trees():
         assert response.status_code == 200
         counts.append(len(queries))
     assert counts[0] == counts[1]
+
+
+def test_deletion_info_bounded_selection():
+    """An oversized selection is rejected before any item is queried."""
+    client = APIClient()
+    client.force_login(factories.UserFactory())
+    ids = [str(uuid.uuid4()) for _ in range(DELETION_INFO_MAX_IDS + 1)]
+    with CaptureQueriesContext(connection) as queries:
+        response = client.post(URL, {"ids": ids}, format="json")
+    assert response.status_code == 400
+    assert not [query for query in queries if "drive_item" in query["sql"]]
+    assert client.post(URL, {"ids": ids[:-1]}, format="json").status_code == 404
+
+
+def test_deletion_info_anonymous():
+    """Anonymous users are rejected before any item is queried."""
+    item = factories.ItemFactory(type="folder", link_reach=models.LinkReachChoices.PUBLIC)
+    with CaptureQueriesContext(connection) as queries:
+        response = APIClient().post(URL, {"ids": [str(item.pk)]}, format="json")
+    assert response.status_code == 401
+    assert len(queries) == 0
