@@ -15,6 +15,25 @@ import {
   selectLinkReach,
 } from "./utils/share-utils";
 
+const setup = async (userA: UserFixture, userB: UserFixture): Promise<string> => {
+  await clearDb();
+  await login(userA.page, "drive@example.com");
+  await login(userB.page, "user@webkit.test");
+  return createFolder(userA);
+};
+
+const openAccessRequestsModal = async (
+  userA: UserFixture,
+  userB: UserFixture,
+  folderUrl: string,
+) => {
+  await requestAccessToFolder(userB, folderUrl);
+  await userA.page.reload();
+  const shareModal = await openShareModal(userA.page);
+  await expect(shareModal.getByText("Access requests")).toBeVisible();
+  return shareModal;
+};
+
 const createFolder = async (userA: UserFixture): Promise<string> => {
   // User A (owner) creates a folder.
   await userA.page.goto("/");
@@ -56,19 +75,9 @@ test("authenticated user can request access from the 403 page and owner sees the
   userA,
   userB,
 }) => {
-  await clearDb();
-  await login(userA.page, "drive@example.com");
-  await login(userB.page, "user@webkit.test");
+  const folderUrl = await setup(userA, userB);
 
-  const folderUrl = await createFolder(userA);
-
-  // User B visits the folder URL directly — gets redirected to /403.
-  await requestAccessToFolder(userB, folderUrl);
-
-  // User A (owner) opens the share modal and sees the pending request from user B.
-  await userA.page.reload();
-  const shareModal = await openShareModal(userA.page);
-  await expect(shareModal.getByText("Access requests")).toBeVisible();
+  const shareModal = await openAccessRequestsModal(userA, userB, folderUrl);
   await expect(shareModal.getByText("user@webkit.test").first()).toBeVisible();
 
   await closeShareModal(userA.page);
@@ -81,19 +90,9 @@ test("owner can accept a pending access request and user can access the folder",
   userA,
   userB,
 }) => {
-  await clearDb();
-  await login(userA.page, "drive@example.com");
-  await login(userB.page, "user@webkit.test");
+  const folderUrl = await setup(userA, userB);
 
-  const folderUrl = await createFolder(userA);
-
-  // User B requests access.
-  await requestAccessToFolder(userB, folderUrl);
-
-  // User A (owner) opens the share modal and accepts the request.
-  await userA.page.reload();
-  const shareModal = await openShareModal(userA.page);
-  await expect(shareModal.getByText("Access requests")).toBeVisible();
+  const shareModal = await openAccessRequestsModal(userA, userB, folderUrl);
   await shareModal.getByRole("button", { name: "Accept" }).click();
 
   // The "Access requests" section disappears once there are no more pending requests.
@@ -122,26 +121,9 @@ test("owner can deny a pending access request and user still gets a 403", async 
   userA,
   userB,
 }) => {
-  await clearDb();
-  await login(userA.page, "drive@example.com");
-  await login(userB.page, "user@webkit.test");
+  const folderUrl = await setup(userA, userB);
 
-  await userA.page.goto("/");
-  await clickToMyFiles(userA.page);
-  await createFolderInCurrentFolder(userA.page, "Shared folder");
-  await navigateToFolder(userA.page, "Shared folder", [
-    "My files",
-    "Shared folder",
-  ]);
-  const folderUrl = await createFolder(userA);
-
-  // User B requests access.
-  await requestAccessToFolder(userB, folderUrl);
-
-  // User A (owner) opens the share modal and denies the request.
-  await userA.page.reload();
-  const shareModal = await openShareModal(userA.page);
-  await expect(shareModal.getByText("Access requests")).toBeVisible();
+  const shareModal = await openAccessRequestsModal(userA, userB, folderUrl);
   await shareModal.getByRole("button", { name: "Deny" }).click();
 
   // The "Access requests" section disappears once there are no more pending requests.
@@ -165,12 +147,8 @@ test("user viewing a public folder sees cannot-view message and request access b
   userA,
   userB,
 }) => {
-  await clearDb();
-  await login(userA.page, "drive@example.com");
-  await login(userB.page, "user@webkit.test");
-
   // User A (owner) creates a folder and makes it publicly accessible.
-  const folderUrl = await createFolder(userA);
+  const folderUrl = await setup(userA, userB);
   await openShareModal(userA.page);
   await selectLinkReach(userA.page, "Public");
   await closeShareModal(userA.page);

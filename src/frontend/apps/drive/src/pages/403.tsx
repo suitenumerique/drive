@@ -48,13 +48,19 @@ export default function UnauthorizedPage() {
       .then(() => {
         try {
           const raw = Array.isArray(from) ? from[0] : (from as string);
-          const target = decodeURIComponent(raw ?? "");
-          // exec so match[0] contains only the regex-bounded path+UUID,
-          // never trailing query params or extra paths from `target`.
-          const match = ITEM_URL_PATTERN.exec(target);
-          if (match && match[0].startsWith("/")) {
-            void router.replace(match[0]);
+          const decoded = decodeURIComponent(raw ?? "");
+          // Build the redirect from itemId (a validated UUID) + a static prefix.
+          // `decoded` is only used as a condition, never in the redirect URL,
+          // so no user-controlled value reaches router.replace.
+          let safePath: string | undefined;
+          if (decoded.startsWith("/explorer/items/files/")) {
+            safePath = `/explorer/items/files/${itemId}`;
+          } else if (decoded.startsWith("/wopi/")) {
+            safePath = `/wopi/${itemId}`;
+          } else if (decoded.startsWith("/explorer/items/")) {
+            safePath = `/explorer/items/${itemId}`;
           }
+          if (safePath !== undefined) void router.replace(safePath);
         } catch {
           // malformed encoding, stay on this page
         }
@@ -62,7 +68,12 @@ export default function UnauthorizedPage() {
       .catch(() => {
         // item not yet accessible, stay on this page
       });
-  }, [itemId]);
+  }, [itemId]); // No need for `from` here as `itemId` already depends on it.
+
+  let askForAccessLabel = t("403.ask_for_access.button");
+  if (requestSent) askForAccessLabel = t("403.ask_for_access.success");
+  else if (alreadyRequested)
+    askForAccessLabel = t("403.ask_for_access.already_requested");
 
   const handleAskForAccess = () => {
     if (!itemId) return;
@@ -97,11 +108,7 @@ export default function UnauthorizedPage() {
               disabled={isPending || requestSent || alreadyRequested}
               icon={<Icon name="mail" />}
             >
-              {requestSent
-                ? t("403.ask_for_access.success")
-                : alreadyRequested
-                  ? t("403.ask_for_access.already_requested")
-                  : t("403.ask_for_access.button")}
+              {askForAccessLabel}
             </Button>
           )}
         </div>
