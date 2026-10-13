@@ -2601,7 +2601,8 @@ class ItemAskForAccessViewSet(
         item = self.item
         user = request.user
 
-        if item.get_role(user) in PRIVILEGED_ROLES:
+        role = item.get_role(user)
+        if role in PRIVILEGED_ROLES:
             raise drf.exceptions.ValidationError(
                 "You already have privileged access to this item.",
                 code="already_has_privileged_access",
@@ -2609,6 +2610,15 @@ class ItemAskForAccessViewSet(
 
         serializer = serializers.ItemAskForAccessCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        requested_role = serializer.validated_data["role"]
+        if role is not None and (
+            models.RoleChoices.get_priority(requested_role) <= models.RoleChoices.get_priority(role)
+        ):
+            raise drf.exceptions.ValidationError(
+                "You already have access to this item.",
+                code="already_has_access",
+            )
 
         if models.ItemAskForAccess.objects.filter(item=item, user=user).exists():
             raise drf.exceptions.ValidationError(

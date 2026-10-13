@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0030_item_add_restriction_target'),
+        ('core', '0031_item_parent_path_idx'),
     ]
 
     operations = [
