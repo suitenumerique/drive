@@ -95,7 +95,10 @@
           "accept": "Accept",
           "deny": "Deny",
           "request_access": "Request access",
-          "request_sent": "Access request sent"
+          "request_sent": "Access request sent",
+          "accept_error": "Failed to accept the access request.",
+          "deny_error": "Failed to deny the access request.",
+          "create_error": "Failed to send the access request."
         }
       },
       "file_download_modal": {
@@ -816,7 +819,10 @@
           "accept": "Accepter",
           "deny": "Refuser",
           "request_access": "Demander l'accès",
-          "request_sent": "Demande d'accès envoyée"
+          "request_sent": "Demande d'accès envoyée",
+          "accept_error": "Échec de l'acceptation de la demande d'accès.",
+          "deny_error": "Échec du refus de la demande d'accès.",
+          "create_error": "Échec de l'envoi de la demande d'accès."
         }
       },
       "file_download_modal": {
@@ -1537,7 +1543,10 @@
           "accept": "Accepteren",
           "deny": "Weigeren",
           "request_access": "Toegang aanvragen",
-          "request_sent": "Toegangsverzoek verzonden"
+          "request_sent": "Toegangsverzoek verzonden",
+          "accept_error": "Accepteren van het toegangsverzoek mislukt.",
+          "deny_error": "Weigeren van het toegangsverzoek mislukt.",
+          "create_error": "Verzenden van het toegangsverzoek mislukt."
         }
       },
       "file_download_modal": {
