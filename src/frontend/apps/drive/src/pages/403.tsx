@@ -89,19 +89,21 @@ export default function UnauthorizedPage() {
 
   return (
     <GenericDisclaimer message={message} imageSrc="/assets/403-background.png">
-      {canAskForAccess && (
-        <Button
-          onClick={handleAskForAccess}
-          disabled={isPending}
-          icon={<Icon name="mail" />}
-        >
-          {t("403.ask_for_access.button")}
+      <div className="drive__403__buttons">
+        <Button href="/" variant="tertiary">
+          <Icon name="home" />
+          {t("403.button")}
         </Button>
-      )}
-      <Button href="/" variant={canAskForAccess ? "tertiary" : undefined}>
-        <Icon name="home" />
-        {t("403.button")}
-      </Button>
+        {canAskForAccess && (
+          <Button
+            onClick={handleAskForAccess}
+            disabled={isPending}
+            icon={<Icon name="mail" />}
+          >
+            {t("403.ask_for_access.button")}
+          </Button>
+        )}
+      </div>
     </GenericDisclaimer>
   );
 }
