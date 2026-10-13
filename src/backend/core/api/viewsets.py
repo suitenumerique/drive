@@ -2621,17 +2621,17 @@ class ItemAskForAccessViewSet(
                 code="already_has_access",
             )
 
-        if models.ItemAskForAccess.objects.filter(item=item, user=user).exists():
+        try:
+            ask_for_access = models.ItemAskForAccess.objects.create(
+                item=item,
+                user=user,
+                role=requested_role,
+            )
+        except (IntegrityError, ValidationError) as exc:
             raise drf.exceptions.ValidationError(
                 "You have already requested access to this item.",
                 code="already_requested",
-            )
-
-        ask_for_access = models.ItemAskForAccess.objects.create(
-            item=item,
-            user=user,
-            role=serializer.validated_data["role"],
-        )
+            ) from exc
 
         privileged_accesses = models.ItemAccess.objects.filter(
             models.IdInPath(db.F("item_id"), db.Value(str(item.path))),
