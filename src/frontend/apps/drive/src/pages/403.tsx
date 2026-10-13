@@ -44,8 +44,8 @@ export default function UnauthorizedPage() {
   // means the user still has no access, so we simply stay on this page.
   useEffect(() => {
     if (!itemId) return;
-    fetchAPI(`items/${itemId}/`, undefined, { redirectOn40x: false }).then(
-      () => {
+    fetchAPI(`items/${itemId}/`, undefined, { redirectOn40x: false })
+      .then(() => {
         try {
           const raw = Array.isArray(from) ? from[0] : (from as string);
           const target = decodeURIComponent(raw ?? "");
@@ -58,10 +58,10 @@ export default function UnauthorizedPage() {
         } catch {
           // malformed encoding, stay on this page
         }
-      },
-    ).catch(() => {
-      // item not yet accessible, stay on this page
-    });
+      })
+      .catch(() => {
+        // item not yet accessible, stay on this page
+      });
   }, [itemId]);
 
   const canAskForAccess = Boolean(itemId) && !requestSent && !alreadyRequested;
@@ -95,19 +95,21 @@ export default function UnauthorizedPage() {
         message={message}
         imageSrc="/assets/403-background.png"
       >
-        {canAskForAccess && (
-          <Button
-            onClick={handleAskForAccess}
-            disabled={isPending}
-            icon={<Icon name="mail" />}
-          >
-            {t("403.ask_for_access.button")}
+        <div className="drive__403__buttons">
+          <Button href="/" variant={canAskForAccess ? "tertiary" : undefined}>
+            <Icon name="home" />
+            {t("403.button")}
           </Button>
-        )}
-        <Button href="/" variant={canAskForAccess ? "tertiary" : undefined}>
-          <Icon name="home" />
-          {t("403.button")}
-        </Button>
+          {canAskForAccess && (
+            <Button
+              onClick={handleAskForAccess}
+              disabled={isPending}
+              icon={<Icon name="mail" />}
+            >
+              {t("403.ask_for_access.button")}
+            </Button>
+          )}
+        </div>
       </GenericDisclaimer>
     </>
   );
