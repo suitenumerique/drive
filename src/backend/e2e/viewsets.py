@@ -30,7 +30,9 @@ class UserAuthViewSet(drf.viewsets.ViewSet):
         user = models.User.objects.filter(email=serializer.validated_data["email"]).first()
         if not user:
             email = serializer.validated_data["email"]
-            user = models.User(email=email, full_name=email)
+            # full_name defaults to email when not provided
+            full_name = serializer.validated_data.get("full_name", email)
+            user = models.User(email=email, full_name=full_name)
             user.set_unusable_password()
             user.save()
 
