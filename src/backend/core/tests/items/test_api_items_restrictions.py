@@ -270,3 +270,40 @@ def test_api_items_restrictions_tree_includes_restrictions():
     tree = response.json()
     children_ids = {child["id"] for child in tree["children"]}
     assert str(restriction.id) in children_ids
+
+
+@pytest.mark.parametrize("endpoint", ["recents", "tree"])
+def test_api_items_restrictions_listings_constant_queries(endpoint):
+    """Recents and tree load restriction targets with the listing, not per entry."""
+    parent_owner = factories.UserFactory()
+    parent = factories.ItemFactory(
+        type=models.ItemTypeChoices.FOLDER,
+        users=[(parent_owner, "owner")],
+    )
+    sibling = factories.ItemFactory(parent=parent, type=models.ItemTypeChoices.FOLDER)
+    url = "/api/v1.0/items/recents/"
+    if endpoint == "tree":
+        url = f"/api/v1.0/items/{sibling.id!s}/tree/"
+    _create_restricted_folder(parent, factories.UserFactory())
+
+    client = APIClient()
+    client.force_login(parent_owner)
+
+    # Warm the nb_accesses cache so both measures run in the same conditions
+    client.get(url)
+
+    with CaptureQueriesContext(connection) as single:
+        response = client.get(url)
+        assert response.status_code == 200
+
+    for _ in range(3):
+        _create_restricted_folder(parent, factories.UserFactory())
+    client.get(url)
+
+    with CaptureQueriesContext(connection) as many:
+        response = client.get(url)
+        assert response.status_code == 200
+        items = response.json()["children"] if endpoint == "tree" else response.json()["results"]
+        assert len([item for item in items if item["target"]]) == 4
+
+    assert len(many) == len(single)
