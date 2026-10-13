@@ -33,6 +33,9 @@ import {
 import { DTODeleteAccess } from "../DTOs/AccessesDTO";
 import { convertFiltersToQueryParams } from "@/features/explorer/components/filters/filterUtils";
 
+// Keep in sync with DELETION_INFO_MAX_IDS in the backend.
+const DELETION_INFO_MAX_IDS = 100;
+
 export class StandardDriver extends Driver {
   async getConfig(): Promise<ApiConfig> {
     const response = await fetchAPI(`config/`);
@@ -526,12 +529,22 @@ export class StandardDriver extends Driver {
   async getItemsDeletionInfo(
     ids: string[],
   ): Promise<Record<string, ItemDeletionInfo>> {
-    const response = await fetchAPI(
-      "items/deletion-info/",
-      { method: "POST", body: JSON.stringify({ ids }) },
-      { redirectOn40x: false },
-    );
-    return response.json();
+    // The API bounds the number of ids per request, so split large selections.
+    const metadata: Record<string, ItemDeletionInfo> = {};
+    for (let i = 0; i < ids.length; i += DELETION_INFO_MAX_IDS) {
+      const response = await fetchAPI(
+        "items/deletion-info/",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            ids: ids.slice(i, i + DELETION_INFO_MAX_IDS),
+          }),
+        },
+        { redirectOn40x: false },
+      );
+      Object.assign(metadata, await response.json());
+    }
+    return metadata;
   }
 
   async deleteItems(ids: string[]): Promise<void> {
