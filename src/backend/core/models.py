@@ -822,7 +822,10 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
             return self.filter(
                 models.Q(accesses__user=user)
                 | models.Q(accesses__team__in=user.teams)
-                | ~models.Q(link_reach=LinkReachChoices.RESTRICTED)
+                # A null link reach is inherited: it grants nothing by itself.
+                | models.Q(
+                    link_reach__in=[LinkReachChoices.PUBLIC, LinkReachChoices.AUTHENTICATED]
+                )
             )
 
         return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC))

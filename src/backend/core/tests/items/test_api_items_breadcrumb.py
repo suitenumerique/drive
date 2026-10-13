@@ -461,3 +461,53 @@ def test_breadcrumb_stops_at_broken_restriction_boundary(boundary):
     response = client.get(f"/api/v1.0/items/{child.pk}/breadcrumb/")
     assert response.status_code == 200
     assert [item["id"] for item in response.json()] == [str(target.pk), str(child.pk)]
+
+
+def test_breadcrumb_restriction_hides_inheriting_parent():
+    """A parent inheriting its link reach grants nothing by itself."""
+    owner = factories.UserFactory()
+    root = factories.ItemFactory(type="folder", users=[(owner, "owner")])
+    middle = factories.ItemFactory(type="folder", parent=root, link_reach=None)
+    secret = factories.ItemFactory(type="folder", parent=middle, link_reach=None).restrict(owner)
+    reader = factories.UserFactory()
+    factories.UserItemAccessFactory(item=secret, user=reader, role="reader")
+    client = APIClient()
+    client.force_login(reader)
+    response = client.get(f"/api/v1.0/items/{secret.pk}/breadcrumb/")
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()] == [str(secret.pk)]
+
+
+def test_breadcrumb_direct_access_hides_inheriting_ancestors():
+    """Ancestors inheriting a restricted link reach stay hidden above a direct access."""
+    root = factories.ItemFactory(type="folder")
+    middle = factories.ItemFactory(type="folder", parent=root, link_reach=None)
+    item = factories.ItemFactory(type="folder", parent=middle, link_reach=None)
+    reader = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=reader, role="reader")
+    client = APIClient()
+    client.force_login(reader)
+    response = client.get(f"/api/v1.0/items/{item.pk}/breadcrumb/")
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()] == [str(item.pk)]
+
+
+@pytest.mark.parametrize("restricted", [False, True])
+def test_breadcrumb_inherited_public_link(restricted):
+    """Folders inheriting a public link reach remain visible below the public ancestor."""
+    owner = factories.UserFactory()
+    root = factories.ItemFactory(
+        type="folder", users=[(owner, "owner")], link_reach=models.LinkReachChoices.PUBLIC
+    )
+    middle = factories.ItemFactory(type="folder", parent=root, link_reach=None)
+    item = factories.ItemFactory(type="folder", parent=middle, link_reach=None)
+    if restricted:
+        item = item.restrict(owner)
+        models.Item.objects.filter(pk=item.pk).update(link_reach=models.LinkReachChoices.PUBLIC)
+    response = APIClient().get(f"/api/v1.0/items/{item.pk}/breadcrumb/")
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()] == [
+        str(root.pk),
+        str(middle.pk),
+        str(item.pk),
+    ]
