@@ -37,6 +37,7 @@ import {
   Button,
   CustomTranslations,
   HorizontalSeparator,
+  Icon,
   removeFileExtension,
   ShareModal,
   ShareModalCopyLinkFooter,
@@ -668,6 +669,8 @@ const ItemShareAskForAccessRequests = ({ itemId }: { itemId: string }) => {
                 {t(`roles.${request.role}`)}
               </span>
               <Button
+                size="small"
+                variant="secondary"
                 onClick={() =>
                   acceptRequest({ itemId, askForAccessId: request.id })
                 }
@@ -675,13 +678,14 @@ const ItemShareAskForAccessRequests = ({ itemId }: { itemId: string }) => {
                 {t("share_modal.ask_for_access.accept")}
               </Button>
               <Button
-                variant="bordered"
+                size="small"
+                variant="tertiary"
+                icon={<Icon name="close" />}
+                aria-label={t("share_modal.ask_for_access.deny")}
                 onClick={() =>
                   denyRequest({ itemId, askForAccessId: request.id })
                 }
-              >
-                {t("share_modal.ask_for_access.deny")}
-              </Button>
+              />
             </div>
           </div>
         ))}
