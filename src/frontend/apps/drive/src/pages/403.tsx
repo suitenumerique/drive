@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 const ITEM_URL_PATTERN =
   /^\/(?:explorer\/items\/files\/|explorer\/items\/|wopi\/)([0-9a-f-]{36})/;
 
-const itemIdFromFrom = (from?: string | string[]): string | null => {
+export const itemIdFromFrom = (from?: string | string[]): string | null => {
   if (!from) return null;
   const url = Array.isArray(from) ? from[0] : from;
   try {
