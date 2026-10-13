@@ -2623,7 +2623,7 @@ class ItemAskForAccessViewSet(
         )
 
         privileged_accesses = models.ItemAccess.objects.filter(
-            item__path__ancestors=item.path,
+            models.IdInPath(db.F("item_id"), db.Value(str(item.path))),
             role__in=PRIVILEGED_ROLES,
         ).select_related("user")
 
