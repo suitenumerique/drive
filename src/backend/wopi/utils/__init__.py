@@ -22,6 +22,20 @@ def is_item_wopi_supported(item, user, wopi_configuration=None):
     return bool(get_wopi_client_config(item, user, wopi_configuration=wopi_configuration))
 
 
+def _find_wopi_client_config(item, wopi_configuration):
+    """Find the WOPI client configuration matching the item extension or mimetype."""
+    result = None
+    # Extension must always be checked first. Filenames preserve case (REPORT.DOC),
+    # while the discovery stores extensions in lowercase, so normalize the lookup.
+    extension = item.extension.lower() if item.extension else None
+    if extension and extension in wopi_configuration["extensions"]:
+        result = wopi_configuration["extensions"][extension]
+    elif item.mimetype in wopi_configuration["mimetypes"]:
+        result = wopi_configuration["mimetypes"][item.mimetype]
+
+    return result
+
+
 def get_wopi_client_config(item, user, wopi_configuration=None):
     """
     Get the WOPI client configuration for an item. The WOPI configuration can be
@@ -40,16 +54,7 @@ def get_wopi_client_config(item, user, wopi_configuration=None):
     if not wopi_configuration:
         return None
 
-    result = None
-    # Extension must always be checked first. Filenames preserve case (REPORT.DOC),
-    # while the discovery stores extensions in lowercase, so normalize the lookup.
-    extension = item.extension.lower() if item.extension else None
-    if extension and extension in wopi_configuration["extensions"]:
-        result = wopi_configuration["extensions"][extension]
-    elif item.mimetype in wopi_configuration["mimetypes"]:
-        result = wopi_configuration["mimetypes"][item.mimetype]
-
-    return result
+    return _find_wopi_client_config(item, wopi_configuration)
 
 
 def get_wopi_client_proof_keys(item, user):
