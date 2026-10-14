@@ -419,6 +419,49 @@ def test_check_file_info_connected_user_with_access_with_invalid_signature(
     )
 
 
+@pytest.mark.parametrize("upload_state", models.ItemUploadStateChoices.values)
+def test_check_file_info_invalid_signature_whatever_the_upload_state(
+    configure_wopi_clients,
+    upload_state,
+):
+    """The request signature should be checked whatever the item upload state."""
+    wopi_configuration = configure_wopi_clients
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=upload_state,
+        link_reach=models.LinkReachChoices.RESTRICTED,
+        mimetype="text/plain",
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
+
+    service = AccessUserItemService()
+    access_token, _ = service.insert_new_access(item, user)
+
+    wopi_timestamp = (
+        signature_utils.DOTNET_EPOCH_TICKS + now().timestamp() * signature_utils.TICKS_PER_SECOND
+    )
+
+    client = APIClient()
+    with mock.patch.object(signature_utils, "verify_wopi_proof") as mock_verify_wopi_proof:
+        mock_verify_wopi_proof.return_value = False
+        with pytest.raises(WopiRequestSignatureError, match="Invalid request signature"):
+            client.get(
+                f"/api/v1.0/wopi/files/{item.id}/",
+                HTTP_AUTHORIZATION=f"Bearer {access_token}",
+                HTTP_X_WOPI_PROOF="invalid_signature",
+                HTTP_X_WOPI_TIMESTAMP=wopi_timestamp,
+            )
+
+    mock_verify_wopi_proof.assert_called_once_with(
+        wopi_configuration["vendorA"]["proof_keys"],
+        "invalid_signature",
+        None,
+        mock.ANY,
+    )
+
+
 def test_check_file_info_connected_user_with_access_with_expired_wopi_timestamp(
     configure_wopi_clients,  # pylint: disable=unused-argument
 ):

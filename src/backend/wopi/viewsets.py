@@ -74,7 +74,7 @@ class WopiViewSet(viewsets.ViewSet):
 
     def _verify_request_signature(self, request):
         """Verify the request signature."""
-        proof_keys = get_wopi_client_proof_keys(request.auth.item, request.user)
+        proof_keys = get_wopi_client_proof_keys(request.auth.item)
 
         if not proof_keys:
             # The proof key is not provided by the wopi client,

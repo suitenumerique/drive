@@ -57,14 +57,15 @@ def get_wopi_client_config(item, user, wopi_configuration=None):
     return _find_wopi_client_config(item, wopi_configuration)
 
 
-def get_wopi_client_proof_keys(item, user):
-    """get the wopi proof keys for an item"""
-    wopi_client_config = get_wopi_client_config(item, user)
-
-    if not wopi_client_config:
+def get_wopi_client_proof_keys(item):
+    """Get the proof keys of the WOPI client handling the item, whatever its upload state."""
+    wopi_configuration = get_wopi_configuration()
+    if not wopi_configuration:
         return None
 
-    wopi_configuration = get_wopi_configuration()
+    wopi_client_config = _find_wopi_client_config(item, wopi_configuration)
+    if not wopi_client_config:
+        return None
 
     return wopi_configuration[wopi_client_config["client"]]["proof_keys"]
 
