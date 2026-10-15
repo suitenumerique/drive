@@ -2,6 +2,7 @@
     "extends": ["github>suitenumerique/ci//renovate/default"],
     "dependencyDashboard": true,
     "labels": ["dependencies", "noChangeLog"],
+    "schedule": ["* 12-15 * * 0"],
     "packageRules": [
         {
             "groupName": "allowed redis versions",
@@ -26,6 +27,11 @@
             "matchManagers": ["pep621"],
             "matchPackageNames": ["python"],
             "enabled": false
+        },
+        {
+            "description": "Schedule dependency updates on Sunday afternoon (UTC). Placed last on purpose: a matching packageRule's schedule replaces the preset's per-group 'before 7am on monday' schedule, and the top-level schedule alone would be ignored for these groups.",
+            "matchManagers": ["github-actions", "npm", "setup-cfg", "pep621"],
+            "schedule": ["* 12-15 * * 0"]
         }
     ]
 }
