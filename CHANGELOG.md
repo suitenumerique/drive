@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) add file-scanner malware webhook endpoint
+- 🔧(backend) make malware reschedule delay configurable
+
 ## [v0.24.0] - 2026-10-09
 
 ### Added
