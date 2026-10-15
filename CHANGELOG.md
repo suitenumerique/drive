@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) show the last login of users in the admin
+- ✨(backend) filter users sharing an email in the admin
 
 ### Fixed
 

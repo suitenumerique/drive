@@ -10,7 +10,7 @@ from django.contrib.auth import forms as auth_forms
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Subquery, UUIDField
 from django.db.models.fields.json import KeyTextTransform
-from django.db.models.functions import Cast
+from django.db.models.functions import Cast, Lower
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from django.templatetags.static import static
@@ -55,6 +55,26 @@ class UserChangeForm(auth_forms.UserChangeForm):
         """Convert the storage limit override from GB to bytes."""
         value = self.cleaned_data["storage_limit_override"]
         return None if value is None else int(value * BYTES_PER_GB)
+
+
+class DuplicateEmailFilter(admin.SimpleListFilter):
+    """Filter the users whose email is shared with another user, case ignored."""
+
+    title = _("duplicate email")
+    parameter_name = "duplicate_email"
+
+    def lookups(self, request, model_admin):
+        """Return the filter options."""
+        return [("yes", _("Yes"))]
+
+    def queryset(self, request, queryset):
+        """Keep the users sharing their email with another user."""
+        if self.value() != "yes":
+            return queryset
+        others = models.User.objects.filter(email__iexact=OuterRef("email")).exclude(
+            pk=OuterRef("pk")
+        )
+        return queryset.filter(Exists(others))
 
 
 @admin.register(models.User)
@@ -137,7 +157,7 @@ class UserAdmin(auth_admin.UserAdmin):
         "last_login",
         "updated_at",
     )
-    list_filter = ("is_staff", "is_superuser", "is_device", "is_active")
+    list_filter = ("is_staff", "is_superuser", "is_device", "is_active", DuplicateEmailFilter)
     ordering = (
         "is_active",
         "-is_superuser",
@@ -180,6 +200,12 @@ class UserAdmin(auth_admin.UserAdmin):
                 top = self.top_files_choices[0]
             obj.top_files_limit = min(max(top, 1), self.top_files_max)
         return obj
+
+    def get_ordering(self, request):
+        """Group the users sharing an email when filtering on duplicates."""
+        if DuplicateEmailFilter.parameter_name in request.GET:
+            return (Lower("email"), "created_at")
+        return super().get_ordering(request)
 
     @staticmethod
     def _storage_limit(obj):
