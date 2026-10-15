@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(backend) log in the active user when several users share an email
+
 ## [v0.24.0] - 2026-10-09
 
 ### Added
