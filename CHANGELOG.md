@@ -12,6 +12,7 @@ and this project adheres to
 
 - ✨(backend) show the last login of users in the admin
 - ✨(backend) filter users sharing an email in the admin
+- ✨(backend) merge users from the admin
 
 ### Fixed
 

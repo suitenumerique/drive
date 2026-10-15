@@ -5,6 +5,8 @@ from functools import partial
 
 from django import forms
 from django.contrib import admin, messages
+from django.contrib.admin import helpers
+from django.contrib.admin.widgets import AutocompleteSelect
 from django.contrib.auth import admin as auth_admin
 from django.contrib.auth import forms as auth_forms
 from django.db import transaction
@@ -13,6 +15,7 @@ from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast, Lower
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
+from django.template.response import TemplateResponse
 from django.templatetags.static import static
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
@@ -75,6 +78,19 @@ class DuplicateEmailFilter(admin.SimpleListFilter):
             pk=OuterRef("pk")
         )
         return queryset.filter(Exists(others))
+
+
+class MergeUsersForm(forms.Form):
+    """Form choosing the user the selected users are merged into."""
+
+    user = forms.ModelChoiceField(
+        label=_("merge into"),
+        queryset=models.User.objects.filter(is_active=True),
+        widget=AutocompleteSelect(
+            models.UserReconciliation._meta.get_field("active_user"),  # noqa: SLF001
+            admin.site,
+        ),
+    )
 
 
 @admin.register(models.User)
@@ -158,6 +174,7 @@ class UserAdmin(auth_admin.UserAdmin):
         "updated_at",
     )
     list_filter = ("is_staff", "is_superuser", "is_device", "is_active", DuplicateEmailFilter)
+    actions = ("merge_users",)
     ordering = (
         "is_active",
         "-is_superuser",
@@ -206,6 +223,43 @@ class UserAdmin(auth_admin.UserAdmin):
         if DuplicateEmailFilter.parameter_name in request.GET:
             return (Lower("email"), "created_at")
         return super().get_ordering(request)
+
+    @admin.action(description=_("Merge into another user"))
+    def merge_users(self, request, queryset):
+        """Merge the selected users into the chosen user, then deactivate them."""
+        form = MergeUsersForm(request.POST if "apply" in request.POST else None)
+        if not form.is_valid():
+            return TemplateResponse(
+                request,
+                "core/admin/merge_users.html",
+                {
+                    **self.admin_site.each_context(request),
+                    "title": _("Merge users"),
+                    "form": form,
+                    "users": queryset,
+                    "action_checkbox_name": helpers.ACTION_CHECKBOX_NAME,
+                },
+            )
+
+        target = form.cleaned_data["user"]
+        merged = queryset.exclude(pk=target.pk)
+        if not target.email or any(not user.email for user in merged):
+            self.message_user(request, _("Users without email cannot be merged."), messages.ERROR)
+            return None
+        with transaction.atomic():
+            for user in merged:
+                # Created ready with both users set, so its save does not look them up by email
+                models.UserReconciliation.objects.create(
+                    active_email=target.email,
+                    inactive_email=user.email,
+                    active_user=target,
+                    inactive_user=user,
+                    active_email_checked=True,
+                    inactive_email_checked=True,
+                    status="ready",
+                ).process_reconciliation_request()
+        self.message_user(request, f"{len(merged)} users merged into {target}.")
+        return None
 
     @staticmethod
     def _storage_limit(obj):

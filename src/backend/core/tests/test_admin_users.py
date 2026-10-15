@@ -287,3 +287,91 @@ def test_admin_users_duplicate_email_filter(client):
 
     assert response.status_code == 200
     assert {user.pk for user in response.context["cl"].result_list} == {first.pk, second.pk}
+
+
+@override_settings(STORAGES=STATIC_STORAGES)
+def test_admin_users_merge_users_form(client):
+    """The merge action should first ask for the user to merge into."""
+    user = factories.UserFactory()
+
+    response = _admin_client(client).post(
+        "/admin/core/user/",
+        {"action": "merge_users", "_selected_action": [user.pk], "index": 0},
+    )
+
+    assert response.status_code == 200
+    assert response.templates[0].name == "core/admin/merge_users.html"
+    assert str(user.pk) in response.content.decode()
+
+
+def test_admin_users_merge_users(client):
+    """The merge action should move the data of the selected users and deactivate them."""
+    target = factories.UserFactory(email="john.doe@example.com")
+    duplicate = factories.UserFactory(email="john.doe@example.com")
+    item = factories.ItemFactory(creator=duplicate, users=[(duplicate, "owner")])
+
+    response = _admin_client(client).post(
+        "/admin/core/user/",
+        {
+            "action": "merge_users",
+            "_selected_action": [duplicate.pk, target.pk],
+            "apply": "1",
+            "user": target.pk,
+        },
+    )
+
+    assert response.status_code == 302
+    duplicate.refresh_from_db()
+    item.refresh_from_db()
+    assert not duplicate.is_active
+    assert item.creator == target
+    assert item.accesses.get().user == target
+    reconciliation = models.UserReconciliation.objects.get()
+    assert reconciliation.inactive_user == duplicate
+    assert reconciliation.status == "done"
+
+
+@override_settings(STORAGES=STATIC_STORAGES)
+def test_admin_users_merge_users_without_email(client):
+    """The merge action should refuse users without email."""
+    target = factories.UserFactory(email="john.doe@example.com")
+    duplicate = factories.UserFactory(email=None)
+
+    response = _admin_client(client).post(
+        "/admin/core/user/",
+        {
+            "action": "merge_users",
+            "_selected_action": [duplicate.pk],
+            "apply": "1",
+            "user": target.pk,
+        },
+        follow=True,
+    )
+
+    assert response.status_code == 200
+    assert "Users without email cannot be merged." in response.content.decode()
+    assert not models.UserReconciliation.objects.exists()
+    duplicate.refresh_from_db()
+    assert duplicate.is_active
+
+
+@override_settings(STORAGES=STATIC_STORAGES)
+def test_admin_users_merge_users_into_inactive_user(client):
+    """The merge action should refuse an inactive user as target."""
+    target = factories.UserFactory(is_active=False)
+    duplicate = factories.UserFactory()
+
+    response = _admin_client(client).post(
+        "/admin/core/user/",
+        {
+            "action": "merge_users",
+            "_selected_action": [duplicate.pk],
+            "apply": "1",
+            "user": target.pk,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.templates[0].name == "core/admin/merge_users.html"
+    assert list(response.context["form"].errors) == ["user"]
+    assert not models.UserReconciliation.objects.exists()
