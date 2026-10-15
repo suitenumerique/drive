@@ -14,6 +14,7 @@ and this project adheres to
 - ✨(backend) filter users sharing an email in the admin
 - ✨(backend) merge users from the admin
 - ✨(backend) show the release in the admin header
+- ✨(backend) transfer items from a user to another in the admin
 
 ### Fixed
 

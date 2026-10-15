@@ -29,6 +29,7 @@ from lasuite.malware_detection.models import MalwareDetection
 from core import models
 from core.entitlements import get_entitlements_backend
 from core.storage import get_storage_compute_backend
+from core.storage.cache import invalidate_storage_used_cache
 from core.tasks.user_reconciliation import user_reconciliation_csv_import_job
 from core.utils.quota import quota_to_str
 from core.utils.sizes import format_size
@@ -387,6 +388,37 @@ class ItemAccessInline(admin.TabularInline):
     extra = 0
 
 
+class TransferItemsForm(forms.Form):
+    """Form choosing the users the selected items are transferred between."""
+
+    source = forms.ModelChoiceField(
+        label=_("from"),
+        queryset=models.User.objects.all(),
+        widget=AutocompleteSelect(
+            models.ItemAccess._meta.get_field("user"),  # noqa: SLF001
+            admin.site,
+        ),
+    )
+    target = forms.ModelChoiceField(
+        label=_("to"),
+        queryset=models.User.objects.all(),
+        widget=AutocompleteSelect(
+            models.ItemAccess._meta.get_field("user"),  # noqa: SLF001
+            admin.site,
+        ),
+    )
+    keep_source_accesses = forms.BooleanField(
+        label=_("keep the accesses of the source user"), required=False
+    )
+
+    def clean(self):
+        """Refuse a transfer from a user to the same user."""
+        cleaned_data = super().clean()
+        if cleaned_data.get("source") and cleaned_data.get("source") == cleaned_data.get("target"):
+            raise forms.ValidationError(_("The source and target users must differ."))
+        return cleaned_data
+
+
 @admin.register(models.Item)
 class ItemAdmin(admin.ModelAdmin):
     """item admin interface declaration."""
@@ -466,6 +498,7 @@ class ItemAdmin(admin.ModelAdmin):
         "mark_items_file_too_large",
         "exclude_from_quota",
         "include_in_quota",
+        "transfer_items",
     )
 
     def get_queryset(self, request):
@@ -527,6 +560,79 @@ class ItemAdmin(admin.ModelAdmin):
     def include_in_quota(self, request, queryset):
         """Count the selected items and their descendants in the storage quota."""
         self._set_quota_excluded(request, queryset, False)
+
+    @staticmethod
+    def _transfer_access(access, target, target_access, keep_source_access):
+        """Give the role of a source access to the target, moving or copying it."""
+        if target_access:
+            role = models.RoleChoices.max(access.role, target_access.role)
+            if role != target_access.role:
+                target_access.role = role
+                target_access.save()
+            if not keep_source_access:
+                access.delete()
+        elif keep_source_access:
+            models.ItemAccess.objects.create(item=access.item, user=target, role=access.role)
+        else:
+            access.user = target
+            access.save()
+
+    @admin.action(description=_("Transfer to another user"))
+    def transfer_items(self, request, queryset):
+        """Transfer the selected items and their descendants from a user to another."""
+        form = TransferItemsForm(request.POST if "apply" in request.POST else None)
+        if not form.is_valid():
+            return TemplateResponse(
+                request,
+                "core/admin/transfer_items.html",
+                {
+                    **self.admin_site.each_context(request),
+                    "title": _("Transfer items"),
+                    "form": form,
+                    "items": queryset,
+                    "action_checkbox_name": helpers.ACTION_CHECKBOX_NAME,
+                },
+            )
+
+        source = form.cleaned_data["source"]
+        target = form.cleaned_data["target"]
+        subtree = models.Item.objects.filter(
+            models.IdInSubtrees("id", [item.path for item in queryset])
+        )
+        accesses = list(
+            models.ItemAccess.objects.filter(user=source, item__in=subtree).select_related("item")
+        )
+        target_accesses = {
+            access.item_id: access
+            for access in models.ItemAccess.objects.filter(user=target, item__in=subtree)
+        }
+        # The source reaches the selected items it has no direct access to through
+        # their ancestors, which it keeps: the target gets the same role on them.
+        direct = {access.item_id for access in accesses}
+        inherited = [
+            models.ItemAccess(item=item, user=source, role=role)
+            for item in queryset
+            if item.pk not in direct and (role := item.get_role(source))
+        ]
+        with transaction.atomic():
+            # The update bypasses Item.save, which invalidates the storage used cache
+            items = subtree.filter(creator=source).update(creator=target)
+            transaction.on_commit(lambda: invalidate_storage_used_cache([source.pk, target.pk]))
+            for access in accesses:
+                self._transfer_access(
+                    access,
+                    target,
+                    target_accesses.get(access.item_id),
+                    form.cleaned_data["keep_source_accesses"],
+                )
+            for access in inherited:
+                self._transfer_access(access, target, target_accesses.get(access.item_id), True)
+        self.message_user(
+            request,
+            f"{items} items and {len(accesses) + len(inherited)} accesses transferred "
+            f"from {source} to {target}.",
+        )
+        return None
 
     def save_model(self, request, obj, form, change):
         """Propagate a quota_excluded change to the descendants of the item."""
