@@ -15,6 +15,7 @@ and this project adheres to
 - ✨(backend) merge users from the admin
 - ✨(backend) show the release in the admin header
 - ✨(backend) transfer items from a user to another in the admin
+- ✨(backend) deactivate the least recently used duplicates in the admin
 
 ### Fixed
 

@@ -13,7 +13,7 @@ from django.contrib.auth import forms as auth_forms
 from django.db import transaction
 from django.db.models import Exists, OuterRef, Subquery, UUIDField
 from django.db.models.fields.json import KeyTextTransform
-from django.db.models.functions import Cast, Lower
+from django.db.models.functions import Cast, Coalesce, Lower
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
@@ -179,7 +179,7 @@ class UserAdmin(auth_admin.UserAdmin):
         "updated_at",
     )
     list_filter = ("is_staff", "is_superuser", "is_device", "is_active", DuplicateEmailFilter)
-    actions = ("merge_users",)
+    actions = ("merge_users", "deactivate_duplicates")
     ordering = (
         "is_active",
         "-is_superuser",
@@ -265,6 +265,19 @@ class UserAdmin(auth_admin.UserAdmin):
                 ).process_reconciliation_request()
         self.message_user(request, f"{len(merged)} users merged into {target}.")
         return None
+
+    @admin.action(description=_("Deactivate the least recently used duplicates"))
+    def deactivate_duplicates(self, request, queryset):
+        """Keep the most recently used user of each shared email, deactivate the others."""
+        kept = {}
+        deactivated = []
+        for user in queryset.order_by(Coalesce("last_login", "created_at").desc()):
+            if not user.email:
+                continue
+            if kept.setdefault(user.email.lower(), user) is not user:
+                deactivated.append(user.pk)
+        models.User.objects.filter(pk__in=deactivated).update(is_active=False)
+        self.message_user(request, f"{len(deactivated)} users deactivated.")
 
     @staticmethod
     def _storage_limit(obj):

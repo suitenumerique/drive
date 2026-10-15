@@ -1,11 +1,13 @@
 """Tests for the user admin class."""
 
+from datetime import timedelta
 from decimal import Decimal
 from unittest import mock
 
 from django.conf import settings
 from django.contrib import admin
 from django.test import RequestFactory, override_settings
+from django.utils import timezone
 
 import pytest
 
@@ -375,3 +377,31 @@ def test_admin_users_merge_users_into_inactive_user(client):
     assert response.templates[0].name == "core/admin/merge_users.html"
     assert list(response.context["form"].errors) == ["user"]
     assert not models.UserReconciliation.objects.exists()
+
+
+def test_admin_users_deactivate_duplicates():
+    """The action should keep the most recently used user of each email."""
+    now = timezone.now()
+    kept = [
+        factories.UserFactory(email="john.doe@example.com", last_login=now + timedelta(days=1)),
+        factories.UserFactory(email="jane.doe@example.com", last_login=None),
+        factories.UserFactory(email="single@example.com", last_login=None),
+        factories.UserFactory(email=None, last_login=None),
+        factories.UserFactory(email=None, last_login=None),
+    ]
+    deactivated = [
+        factories.UserFactory(email="JOHN.DOE@example.com", last_login=now),
+        factories.UserFactory(email="john.doe@example.com", last_login=None),
+        factories.UserFactory(email="jane.doe@example.com", last_login=now),
+    ]
+    # Without last login, the creation date counts
+    kept[1].created_at = now + timedelta(days=1)
+    kept[1].save()
+    request = RequestFactory().post("/")
+
+    with mock.patch.object(UserAdmin, "message_user") as message_user:
+        UserAdmin(models.User, admin.site).deactivate_duplicates(request, models.User.objects.all())
+
+    assert set(models.User.objects.filter(is_active=True)) == set(kept)
+    assert set(models.User.objects.filter(is_active=False)) == set(deactivated)
+    message_user.assert_called_once_with(request, "3 users deactivated.")
