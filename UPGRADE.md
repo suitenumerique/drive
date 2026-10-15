@@ -18,3 +18,5 @@ the following command inside your docker container:
 
 - ⚠️ `FILE_MIMETYPE_ALLOWED` was read from `DJANGO_FILE_MIMETYPE_ALLOWED`:
   rename the variable if you override it.
+- ⚠️ `RESTRICT_UPLOAD_FILE_TYPE` is no longer a boolean: replace `True` with
+  `allowlist` and `False` with `off`. Any other value stops the startup.

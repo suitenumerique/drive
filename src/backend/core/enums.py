@@ -2,6 +2,8 @@
 Core application enums declaration
 """
 
+from enum import StrEnum
+
 from django.conf import global_settings
 from django.utils.translation import gettext_lazy as _
 
@@ -43,3 +45,11 @@ FILE_CATEGORY_CHOICES = [
     ("archive", _("Archive")),
     ("other", _("Other")),
 ]
+
+
+class UploadScreeningMode(StrEnum):
+    """Modes of the RESTRICT_UPLOAD_FILE_TYPE setting."""
+
+    OFF = "off"
+    ALLOWLIST = "allowlist"
+    DENYLIST = "denylist"

@@ -57,7 +57,9 @@ This document lists all configurable environment variables for the Drive applica
 | `FEATURES_ALPHA` | Enable alpha features | `False` |
 | `FEATURES_INDEXED_SEARCH` | Enable the search of indexed files through the API | `True` |
 | `FILE_EXTENSIONS_ALLOWED` | List of file extension allowed to be uploaded | See in the settings.py file |
+| `FILE_EXTENSIONS_DENIED` | List of file extension refused at upload in `denylist` mode | See in the settings.py file |
 | `FILE_MIMETYPE_ALLOWED` | List of file mimetype allowed to be uploaded | See in the setings.py file |
+| `FILE_MIMETYPE_DENIED` | List of file mimetype refused at upload in `denylist` mode | See in the settings.py file |
 | `FRONTEND_THEME` | Frontend theme configuration | `None` |
 | `FRONTEND_EXTERNAL_HOME_URL` | Frontend external home url to redirect to | `None` |
 | `FRONTEND_FEEDBACK_BUTTON_SHOW` | Show feedback button | `False` |
@@ -118,7 +120,7 @@ This document lists all configurable environment variables for the Drive applica
 | `PROMETHEUS_METRICS_SSL_REDIRECT_EXEMPT` | Take `/metrics` out of the redirect to https | `False` |
 | `PROMETHEUS_MULTIPROC_DIR` | Directory the gunicorn workers share their metrics through | `<tmp>/drive-prometheus-<uid>` |
 | `REDIS_URL` | Redis connection URL | `redis://redis:6379/0` |
-| `RESTRICT_UPLOAD_FILE_TYPE` | Boolean to enable or not upload restriction based on file type (extension + mimetype) | `True` |
+| `RESTRICT_UPLOAD_FILE_TYPE` | Upload screening by extension and detected mimetype: `off`, `allowlist` (`FILE_*_ALLOWED`) or `denylist` (`FILE_*_DENIED`). Any other value stops the startup. The denylist does not inspect archives, refuses text starting with HTML markup, and relies on the media ingress serving files as attachments with `Content-Security-Policy: default-src 'none'`, as the Helm chart does | `allowlist` |
 | `S3_TRANSFER_CONFIG_MULTIPART_THRESHOLD` | `multipart_threshold` value for the `TransferConfig` configuration | `8388608` (8MB) |
 | `S3_TRANSFER_CONFIG_MULTIPART_CHUNKSIZE` | `multipart_chunksize` value for the `TransferConfig` configuration | `8388608` (8MB) |
 | `S3_TRANSFER_CONFIG_MAX_CONCURRENCY` | `max_concurrency` value for the `TransferConfig` configuration | `10` |

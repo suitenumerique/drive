@@ -19,7 +19,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from sentry_sdk import capture_exception
 
-from core.api.utils import get_item_file_head_object
+from core.api.utils import get_item_file_head_object, is_extension_allowed
 from core.models import Item
 from core.utils.analytics import posthog_capture
 from wopi.authentication import WopiAccessTokenAuthentication, get_access_token
@@ -440,9 +440,7 @@ class WopiViewSet(viewsets.ViewSet):
             invalid_filename_error = None
             if any(char in new_filename for char in ILLEGAL_FILENAME_CHARS):
                 invalid_filename_error = "Invalid filename"
-            elif settings.RESTRICT_UPLOAD_FILE_TYPE and target_extension.lower() not in {
-                extension.lower() for extension in settings.FILE_EXTENSIONS_ALLOWED
-            }:
+            elif not is_extension_allowed(new_filename_with_extension):
                 logger.info(
                     "rename_file: file extension not allowed %r for filename %r",
                     target_extension,

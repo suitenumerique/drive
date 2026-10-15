@@ -283,7 +283,7 @@ def test_api_item_upload_ended_mimetype_not_allowed(settings, caplog):
     Test that the API returns a 400 when the mimetype is not allowed.
     Item should be deleted and the file should be deleted from the storage.
     """
-    settings.RESTRICT_UPLOAD_FILE_TYPE = True
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "allowlist"
     settings.FILE_MIMETYPE_ALLOWED = ["application/pdf"]
     user = factories.UserFactory()
     client = APIClient()
@@ -313,7 +313,7 @@ def test_api_item_upload_ended_mimetype_not_allowed_not_checking_mimetype(
     """
     Test that the API returns a 200 when the mimetype is not allowed but not checking the mimetype.
     """
-    settings.RESTRICT_UPLOAD_FILE_TYPE = False
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "off"
     settings.FILE_MIMETYPE_ALLOWED = ["application/pdf"]
     user = factories.UserFactory()
     client = APIClient()
@@ -339,6 +339,58 @@ def test_api_item_upload_ended_mimetype_not_allowed_not_checking_mimetype(
     assert item.mimetype == "text/plain"
     assert item.size == 8
 
+    assert response.json()["mimetype"] == "text/plain"
+
+
+def test_api_item_upload_ended_mimetype_denied(settings, caplog):
+    """
+    Test that the API returns a 400 when the mimetype is denied in denylist mode.
+    Item should be deleted and the file should be deleted from the storage.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "denylist"
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=ItemTypeChoices.FILE, filename="my_file.pdf")
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    default_storage.save(
+        item.file_key,
+        BytesIO(b"<!DOCTYPE html><html><body><script>alert(1)</script></body></html>"),
+    )
+
+    with caplog.at_level(logging.INFO):
+        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 400
+    assert "upload_ended: mimetype not allowed text/html for filename my_file.pdf" in caplog.text
+
+    assert not models.Item.objects.filter(id=item.id).exists()
+    assert not default_storage.exists(item.file_key)
+
+
+def test_api_item_upload_ended_mimetype_not_denied(settings, django_capture_on_commit_callbacks):
+    """
+    Test that the API returns a 200 when the mimetype is not denied in denylist mode,
+    even if it is missing from the allowlist.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "denylist"
+    settings.FILE_MIMETYPE_ALLOWED = ["application/pdf"]
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(type=ItemTypeChoices.FILE, filename="my_file.txt")
+    factories.UserItemAccessFactory(item=item, user=user, role="owner")
+
+    default_storage.save(item.file_key, BytesIO(b"my prose"))
+
+    with mock.patch.object(malware_detection, "analyse_file"):
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+
+    assert response.status_code == 200
     assert response.json()["mimetype"] == "text/plain"
 
 

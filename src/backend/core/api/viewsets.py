@@ -912,7 +912,7 @@ class ItemViewSet(
         logger.info("upload_ended: detecting mimetype for file: %s", item.file_key)
         mimetype = utils.detect_mimetype(file_head, filename=item.filename)
 
-        if settings.RESTRICT_UPLOAD_FILE_TYPE and mimetype not in settings.FILE_MIMETYPE_ALLOWED:
+        if not utils.is_mimetype_allowed(mimetype):
             self._complete_item_deletion(item)
             logger.info(
                 "upload_ended: mimetype not allowed %s for filename %s",

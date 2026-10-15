@@ -16,6 +16,8 @@ import boto3
 import botocore
 import magic
 
+from core.enums import UploadScreeningMode
+
 logger = logging.getLogger(__name__)
 
 
@@ -242,6 +244,43 @@ def detect_mimetype(file_buffer: bytes, filename: str | None = None) -> str:
 
     # Default to content-based detection (most reliable)
     return mimetype_from_content or "application/octet-stream"
+
+
+def get_file_extension(filename):
+    """Return the lowercased extension of a filename, ignoring trailing dots and spaces."""
+    # Unlike splitext, a leading dot counts: Windows runs ".exe" as an executable
+    _root, dot, extension = filename.rstrip(". ").rpartition(".")
+    return f".{extension}".lower() if dot else ""
+
+
+def _is_upload_type_allowed(value, allowed, denied):
+    """Screen a lowercased file type against the RESTRICT_UPLOAD_FILE_TYPE mode."""
+    if settings.RESTRICT_UPLOAD_FILE_TYPE == UploadScreeningMode.ALLOWLIST:
+        return value in {item.lower() for item in allowed}
+    if settings.RESTRICT_UPLOAD_FILE_TYPE == UploadScreeningMode.DENYLIST:
+        return value not in {item.lower() for item in denied}
+    if settings.RESTRICT_UPLOAD_FILE_TYPE == UploadScreeningMode.OFF:
+        return True
+    # post_setup already rejects it, fail closed anyway
+    raise ValueError(f"Unknown RESTRICT_UPLOAD_FILE_TYPE {settings.RESTRICT_UPLOAD_FILE_TYPE!r}")
+
+
+def is_extension_allowed(filename):
+    """Check the extension of a filename against the upload screening."""
+    return _is_upload_type_allowed(
+        get_file_extension(filename),
+        settings.FILE_EXTENSIONS_ALLOWED,
+        settings.FILE_EXTENSIONS_DENIED,
+    )
+
+
+def is_mimetype_allowed(mimetype):
+    """Check a detected mimetype against the upload screening."""
+    return _is_upload_type_allowed(
+        mimetype.lower(),
+        settings.FILE_MIMETYPE_ALLOWED,
+        settings.FILE_MIMETYPE_DENIED,
+    )
 
 
 def format_template_filename(title, extension):

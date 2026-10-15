@@ -263,7 +263,7 @@ def test_api_items_create_file_authenticated_not_checking_extension(settings):
     """
     Creating a file item with an extension not allowed should fail.
     """
-    settings.RESTRICT_UPLOAD_FILE_TYPE = False
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "off"
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
@@ -287,7 +287,7 @@ def test_api_items_create_file_authenticated_no_extension_but_checking_it_should
     """
     Creating a file without an extension but checking the extension should fail.
     """
-    settings.RESTRICT_UPLOAD_FILE_TYPE = True
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "allowlist"
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
@@ -319,7 +319,7 @@ def test_api_items_create_file_authenticated_hidden_file_but_checking_extension_
     """
     Creating a hidden file (starting with a dot) but checking the extension should fail.
     """
-    settings.RESTRICT_UPLOAD_FILE_TYPE = True
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "allowlist"
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
@@ -343,6 +343,64 @@ def test_api_items_create_file_authenticated_hidden_file_but_checking_extension_
         ],
         "type": "validation_error",
     }
+
+
+@pytest.mark.parametrize(
+    "filename", ["file.exe", "file.EXE", "file.exe ", "file.exe.", ".exe", "file.exé."]
+)
+def test_api_items_create_file_authenticated_denied_extension_should_fail(settings, filename):
+    """
+    Creating a file with a denied extension should fail in denylist mode.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "denylist"
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "size": 8,
+            "type": ItemTypeChoices.FILE,
+            "filename": filename,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "filename",
+                "code": "item_create_file_extension_not_allowed",
+                "detail": "This file extension is not allowed.",
+            },
+        ],
+        "type": "validation_error",
+    }
+
+
+@pytest.mark.parametrize("filename", ["file.notallowed", "file.pdf", "file"])
+def test_api_items_create_file_authenticated_not_denied_extension(settings, filename):
+    """
+    Creating a file with an extension that is not denied should work in denylist mode.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "denylist"
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "size": 8,
+            "type": ItemTypeChoices.FILE,
+            "filename": filename,
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    item = Item.objects.get()
+    assert item.title == filename
 
 
 def test_api_items_create_authenticated_title_null():

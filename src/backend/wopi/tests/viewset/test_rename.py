@@ -289,7 +289,18 @@ def test_rename_file_rejects_disallowed_target_extension():
     assert item.filename == "wopi_test"
 
 
-@override_settings(RESTRICT_UPLOAD_FILE_TYPE=True, FILE_EXTENSIONS_ALLOWED=[".STEP"])
+@override_settings(RESTRICT_UPLOAD_FILE_TYPE="denylist")
+def test_rename_file_rejects_denied_target_extension():
+    """An extensionless file cannot be renamed to acquire a denied extension."""
+    item, response = request_rename("wopi_test", "malware.exe")
+
+    assert response.status_code == 400
+    assert response.headers.get(X_WOPI_INVALIDFILENAMERROR) == "This file extension is not allowed"
+    item.refresh_from_db()
+    assert item.filename == "wopi_test"
+
+
+@override_settings(RESTRICT_UPLOAD_FILE_TYPE="allowlist", FILE_EXTENSIONS_ALLOWED=[".STEP"])
 def test_rename_file_allows_extension_case_insensitively():
     """Allowed extensions should be matched case-insensitively."""
     item, response = request_rename("model.STEP", "renamed")

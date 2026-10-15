@@ -16,6 +16,7 @@ and this project adheres to
 ### Changed
 
 - ⬆️(ci) bump GitHub Actions to latest versions
+- ✨(backend) screen uploads with a denylist
 
 ### Fixed
 

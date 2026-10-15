@@ -26,6 +26,8 @@ from configurations import Configuration, values
 from lasuite.configuration.values import SecretFileValue
 from sentry_sdk.integrations.django import DjangoIntegration
 
+from core.enums import UploadScreeningMode
+
 # pylint: disable=too-many-lines
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -261,8 +263,8 @@ class Base(Configuration):
         environ_name="DATA_UPLOAD_MAX_MEMORY_SIZE",
         environ_prefix=None,
     )
-    RESTRICT_UPLOAD_FILE_TYPE = values.BooleanValue(
-        default=True,
+    RESTRICT_UPLOAD_FILE_TYPE = values.Value(
+        default=UploadScreeningMode.ALLOWLIST,
         environ_name="RESTRICT_UPLOAD_FILE_TYPE",
         environ_prefix=None,
     )
@@ -603,6 +605,109 @@ class Base(Configuration):
         environ_name="FILE_EXTENSIONS_ALLOWED",
         environ_prefix=None,
     )
+    FILE_EXTENSIONS_DENIED = values.ListValue(
+        [
+            # Windows executables and libraries
+            ".exe",
+            ".dll",
+            ".sys",
+            ".drv",
+            ".ocx",
+            ".scr",
+            ".com",
+            ".cpl",
+            ".pif",
+            # Windows installers and app packages
+            ".msi",
+            ".msp",
+            ".mst",
+            ".msu",
+            ".msix",
+            ".msixbundle",
+            ".appx",
+            ".appxbundle",
+            ".appinstaller",
+            ".application",
+            ".appref-ms",
+            ".gadget",
+            ".diagcab",
+            # Windows scripts
+            ".bat",
+            ".cmd",
+            ".ps1",
+            ".psm1",
+            ".psd1",
+            ".ps1xml",
+            ".psc1",
+            ".vbs",
+            ".vbe",
+            ".js",
+            ".jse",
+            ".mjs",
+            ".wsf",
+            ".wsh",
+            ".wsc",
+            ".sct",
+            ".hta",
+            ".reg",
+            ".inf",
+            # Shortcuts and shell handlers
+            ".lnk",
+            ".url",
+            ".website",
+            ".scf",
+            ".library-ms",
+            ".search-ms",
+            ".settingcontent-ms",
+            ".msc",
+            ".rdp",
+            # Help files
+            ".chm",
+            ".hlp",
+            # Java
+            ".jar",
+            ".jnlp",
+            ".class",
+            # Active web content
+            ".html",
+            ".htm",
+            ".xhtml",
+            ".xht",
+            ".shtml",
+            ".mht",
+            ".mhtml",
+            ".swf",
+            # Office add-ins and compiled Access
+            ".xll",
+            ".xlam",
+            ".ppam",
+            ".wll",
+            ".ade",
+            ".adp",
+            ".mde",
+            ".accde",
+            ".iqy",
+            # macOS
+            ".app",
+            ".command",
+            ".scpt",
+            ".workflow",
+            ".action",
+            ".pkg",
+            # Linux
+            ".appimage",
+            ".run",
+            ".elf",
+            ".so",
+            ".desktop",
+            ".rpm",
+            # Browser extensions
+            ".crx",
+            ".xpi",
+        ],
+        environ_name="FILE_EXTENSIONS_DENIED",
+        environ_prefix=None,
+    )
 
     FILE_MIMETYPE_ALLOWED = values.ListValue(
         [
@@ -767,6 +872,62 @@ class Base(Configuration):
             "application/octet-stream",
         ],
         environ_name="FILE_MIMETYPE_ALLOWED",
+        environ_prefix=None,
+    )
+    FILE_MIMETYPE_DENIED = values.ListValue(
+        [
+            # Windows executables, libraries, installers
+            "application/x-dosexec",
+            "application/vnd.microsoft.portable-executable",
+            "application/x-msdownload",
+            "application/x-msdos-program",
+            "application/x-ms-dos-executable",
+            "application/x-msi",
+            "application/x-ms-installer",
+            "application/x-ms-application",
+            "application/x-ms-manifest",
+            "application/appx",
+            "application/msix",
+            "application/appinstaller",
+            # Linux / macOS native binaries
+            "application/x-executable",
+            "application/x-pie-executable",
+            "application/x-sharedlib",
+            "application/x-object",
+            "application/x-mach-binary",
+            "application/vnd.appimage",
+            # Java
+            "application/java-archive",
+            "application/x-java-archive",
+            "application/x-java-applet",
+            "application/java-vm",
+            "application/x-java-jnlp-file",
+            # Windows script hosts
+            "text/x-msdos-batch",
+            "application/x-bat",
+            "application/x-powershell",
+            "text/vbscript",
+            "application/x-vbs",
+            "text/javascript",
+            "application/javascript",
+            "application/x-javascript",
+            "application/hta",
+            "text/x-ms-regedit",
+            # Shortcuts and help files
+            "application/x-ms-shortcut",
+            "application/x-mswinurl",
+            "application/internet-shortcut",
+            "application/vnd.ms-htmlhelp",
+            # Active web content
+            "text/html",
+            "application/xhtml+xml",
+            "application/x-shockwave-flash",
+            "application/vnd.adobe.flash.movie",
+            # Browser extensions
+            "application/x-chrome-extension",
+            "application/x-xpinstall",
+        ],
+        environ_name="FILE_MIMETYPE_DENIED",
         environ_prefix=None,
     )
 
@@ -1747,6 +1908,12 @@ class Base(Configuration):
             raise ValueError(
                 "Both OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION and "
                 "OIDC_ALLOW_DUPLICATE_EMAILS cannot be set to True simultaneously. "
+            )
+
+        if cls.RESTRICT_UPLOAD_FILE_TYPE not in UploadScreeningMode:
+            raise ValueError(
+                "RESTRICT_UPLOAD_FILE_TYPE must be one of off, allowlist or denylist, "
+                f"got {cls.RESTRICT_UPLOAD_FILE_TYPE!r}."
             )
 
         # The e2e auth endpoints allow logging in as anyone without credentials.

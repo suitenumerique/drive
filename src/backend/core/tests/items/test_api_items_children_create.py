@@ -303,7 +303,7 @@ def test_api_items_children_create_file_extension_not_allowed(settings):
     """
     Creating a file item with an extension not allowed should fail.
     """
-    settings.RESTRICT_UPLOAD_FILE_TYPE = True
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "allowlist"
     user = factories.UserFactory()
     item = factories.ItemFactory(link_reach="restricted", type=ItemTypeChoices.FOLDER)
     factories.UserItemAccessFactory(user=user, item=item, role="owner")
@@ -337,7 +337,7 @@ def test_api_items_children_create_file_extension_not_allowed_not_checking_exten
     """
     Creating a file item with an extension not allowed should fail.
     """
-    settings.RESTRICT_UPLOAD_FILE_TYPE = False
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "off"
     user = factories.UserFactory()
     item = factories.ItemFactory(link_reach="restricted", type=ItemTypeChoices.FOLDER)
     factories.UserItemAccessFactory(user=user, item=item, role="owner")

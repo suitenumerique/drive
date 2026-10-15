@@ -31,6 +31,23 @@ def test_invalid_settings_oidc_email_configuration():
     )
 
 
+@pytest.mark.parametrize("value", [True, False, "True", "deny"])
+def test_invalid_settings_restrict_upload_file_type(value):
+    """RESTRICT_UPLOAD_FILE_TYPE should only accept off, allowlist or denylist."""
+
+    class TestSettings(Base):
+        """Fake test settings."""
+
+        RESTRICT_UPLOAD_FILE_TYPE = value
+
+    with pytest.raises(ValueError) as excinfo:
+        TestSettings().post_setup()
+
+    assert str(excinfo.value) == (
+        f"RESTRICT_UPLOAD_FILE_TYPE must be one of off, allowlist or denylist, got {value!r}."
+    )
+
+
 def test_load_e2e_urls_is_not_environment_configurable():
     """
     LOAD_E2E_URLS exposes credential-less login endpoints: it must be a plain

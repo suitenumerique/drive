@@ -652,6 +652,75 @@ def test_api_items_update_file_rename_invalid_filename():
     assert response.status_code == 400
 
 
+@pytest.mark.parametrize("title", ["new_title.exe", "new_title.EXE.", ".exe"])
+def test_api_items_update_file_rename_denied_extension(settings, title):
+    """
+    Renaming a file to a denied extension should fail in denylist mode.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "denylist"
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        title="old_title.txt",
+        type=models.ItemTypeChoices.FILE,
+        filename="old_title.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    with mock.patch.object(rename_file, "delay") as rename_file_mock:
+        response = client.patch(
+            f"/api/v1.0/items/{item.id!s}/",
+            {"title": title},
+            format="json",
+        )
+    rename_file_mock.assert_not_called()
+    assert response.status_code == 400
+    assert response.json() == {
+        "errors": [
+            {
+                "attr": "title",
+                "code": "item_update_file_extension_not_allowed",
+                "detail": "This file extension is not allowed.",
+            },
+        ],
+        "type": "validation_error",
+    }
+    item.refresh_from_db()
+    assert item.title == "old_title.txt"
+
+
+def test_api_items_update_file_rename_unchanged_extension_not_allowed(settings):
+    """
+    Renaming a file without changing its extension should work even if it is not allowed.
+    """
+    settings.RESTRICT_UPLOAD_FILE_TYPE = "allowlist"
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    item = factories.ItemFactory(
+        title="old_title.exe",
+        type=models.ItemTypeChoices.FILE,
+        filename="old_title.exe",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+        creator=user,
+        users=[(user, models.RoleChoices.OWNER)],
+    )
+
+    with mock.patch.object(rename_file, "delay") as rename_file_mock:
+        response = client.patch(
+            f"/api/v1.0/items/{item.id!s}/",
+            {"title": "new_title.exe"},
+            format="json",
+        )
+    assert response.status_code == 200
+    rename_file_mock.assert_called_once_with(item.id, "new_title.exe")
+
+
 def test_api_items_update_no_title_should_not_rename_file():
     """
     Test the update of a file without title should not rename the file.
