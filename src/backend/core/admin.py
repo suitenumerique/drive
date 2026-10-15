@@ -97,7 +97,7 @@ class UserAdmin(auth_admin.UserAdmin):
                 )
             },
         ),
-        (_("Important dates"), {"fields": ("created_at", "updated_at")}),
+        (_("Important dates"), {"fields": ("created_at", "updated_at", "last_login")}),
         (
             _("Permissions"),
             {
@@ -134,6 +134,7 @@ class UserAdmin(auth_admin.UserAdmin):
         "storage_used_display",
         "storage_limit_display",
         "created_at",
+        "last_login",
         "updated_at",
     )
     list_filter = ("is_staff", "is_superuser", "is_device", "is_active")
@@ -153,6 +154,7 @@ class UserAdmin(auth_admin.UserAdmin):
         "short_name",
         "created_at",
         "updated_at",
+        "last_login",
         "quota_display",
         "top_files",
     )

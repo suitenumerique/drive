@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) show the last login of users in the admin
+
 ### Fixed
 
 - 🐛(backend) log in the active user when several users share an email
