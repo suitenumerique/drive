@@ -4,6 +4,7 @@ from decimal import Decimal
 from functools import partial
 
 from django import forms
+from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.admin import helpers
 from django.contrib.admin.widgets import AutocompleteSelect
@@ -18,6 +19,7 @@ from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.templatetags.static import static
 from django.utils.html import format_html
+from django.utils.text import format_lazy
 from django.utils.translation import gettext_lazy as _
 
 from lasuite.malware_detection import malware_detection
@@ -32,6 +34,8 @@ from core.utils.quota import quota_to_str
 from core.utils.sizes import format_size
 
 BYTES_PER_GB = 1000**3
+
+admin.site.site_header = format_lazy("{} {}", admin.site.site_header, settings.RELEASE)
 
 
 class UserChangeForm(auth_forms.UserChangeForm):
