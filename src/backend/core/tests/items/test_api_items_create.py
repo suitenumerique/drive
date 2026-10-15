@@ -238,6 +238,27 @@ def test_api_items_create_file_authenticated_extension_case_insensitive():
     assert item.title == "file.JPG"
 
 
+def test_api_items_create_file_authenticated_allowed_extension_with_uppercase():
+    """
+    Creating a file item with an allowed extension declared with uppercase letters should work.
+    """
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+    response = client.post(
+        "/api/v1.0/items/",
+        {
+            "size": 8,
+            "type": ItemTypeChoices.FILE,
+            "filename": "model.step",
+        },
+        format="json",
+    )
+    assert response.status_code == 201
+    item = Item.objects.get()
+    assert item.title == "model.step"
+
+
 def test_api_items_create_file_authenticated_not_checking_extension(settings):
     """
     Creating a file item with an extension not allowed should fail.

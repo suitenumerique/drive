@@ -694,7 +694,8 @@ class Base(Configuration):
             "application/x-msaccess",
             "application/x-msmetafile",
             "application/x-mspublisher",
-            "application/x-python-bytecodeapplication/x-shellscript",
+            "application/x-python-bytecode",
+            "application/x-shellscript",
             "application/x-python-code",
             "application/x-rar",
             "application/x-rar-compressed",
@@ -766,7 +767,7 @@ class Base(Configuration):
             "application/octet-stream",
         ],
         environ_name="FILE_MIMETYPE_ALLOWED",
-        environt_prefix=None,
+        environ_prefix=None,
     )
 
     ITEM_PREVIEWABLE_MIME_TYPES = values.ListValue(

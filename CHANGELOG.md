@@ -20,6 +20,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(frontend) show the full item title in a tooltip when truncated
+- 🐛(backend) fix the upload mimetype allowlist
 
 ## [v0.25.3] - 2026-10-23
 
