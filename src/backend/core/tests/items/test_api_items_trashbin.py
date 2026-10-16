@@ -341,7 +341,8 @@ def test_api_items_trashbin_distinct():
     assert content["results"][0]["id"] == str(item.id)
 
 
-def test_api_items_trashbin_nested_items_constant_queries(django_assert_num_queries):
+@pytest.mark.parametrize("nb_items", [1, 3, 10])
+def test_api_items_trashbin_nested_items_constant_queries(django_assert_num_queries, nb_items):
     """
     The number of queries should not depend on the number of listed items, even when
     they are nested: their ancestors are fetched at once.
@@ -352,7 +353,7 @@ def test_api_items_trashbin_nested_items_constant_queries(django_assert_num_quer
 
     root = factories.ItemFactory(users=[(user, "owner")], type=models.ItemTypeChoices.FOLDER)
     items = []
-    for _index in range(3):
+    for _index in range(nb_items):
         folder = factories.ItemFactory(parent=root, type=models.ItemTypeChoices.FOLDER)
         item = factories.ItemFactory(
             parent=folder,
