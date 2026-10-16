@@ -109,6 +109,14 @@ This document lists all configurable environment variables for the Drive applica
 | `PERMISSIONS_BACKEND_PARAMETERS` | Dictionary of parameters for the permissions backend | `{}` |
 | `POSTHOG_HOST` | PostHog analytics host URL | `https://eu.i.posthog.com` |
 | `POSTHOG_KEY` | PostHog analytics API key | `None` |
+| `PROMETHEUS_API_KEY` | Bearer token required on `/metrics`, see [prometheus.md](prometheus.md) | `None` |
+| `PROMETHEUS_BUSINESS_METRICS_CACHE_TTL` | Seconds the business metrics are kept in the cache | `300` |
+| `PROMETHEUS_BUSINESS_METRICS_ENABLED` | Report the business metrics on `/metrics` | `True` |
+| `PROMETHEUS_CELERY_QUEUE_METRICS_ENABLED` | Report the length of the Celery queue on `/metrics` | `True` |
+| `PROMETHEUS_DB_METRICS_ENABLED` | Count and time the SQL queries | `True` |
+| `PROMETHEUS_METRICS_ENABLED` | Serve the Prometheus metrics on `/metrics` | `False` |
+| `PROMETHEUS_METRICS_SSL_REDIRECT_EXEMPT` | Take `/metrics` out of the redirect to https | `False` |
+| `PROMETHEUS_MULTIPROC_DIR` | Directory the gunicorn workers share their metrics through | `<tmp>/drive-prometheus-<uid>` |
 | `REDIS_URL` | Redis connection URL | `redis://redis:6379/0` |
 | `RESTRICT_UPLOAD_FILE_TYPE` | Boolean to enable or not upload restriction based on file type (extension + mimetype) | `True` |
 | `S3_TRANSFER_CONFIG_MULTIPART_THRESHOLD` | `multipart_threshold` value for the `TransferConfig` configuration | `8388608` (8MB) |

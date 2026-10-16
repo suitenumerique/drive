@@ -28,6 +28,15 @@ if settings.DEBUG:
         + debug_toolbar_urls()
     )
 
+# Serve the Prometheus metrics only when they are enabled for this environment.
+# Outside of /api/ on purpose, so that the ingress of the application does not
+# publish them, and behind a bearer token (core.middleware.PrometheusAuthMiddleware).
+if settings.PROMETHEUS_METRICS_ENABLED:
+    from core.metrics.views import metrics_view
+    from core.middleware import METRICS_PATH
+
+    urlpatterns += [path(METRICS_PATH.lstrip("/"), metrics_view, name="prometheus-metrics")]
+
 if settings.LOAD_E2E_URLS:
     urlpatterns += [path("", include("e2e.urls"))]
 

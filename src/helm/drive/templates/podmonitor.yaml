@@ -1,0 +1,33 @@
+{{- /*
+A PodMonitor scraping every backend pod, for a Prometheus Operator inside the
+cluster. The same targets as the ServiceMonitor, found by the labels of the
+pods rather than through their Service.
+*/ -}}
+{{- if and .Values.podMonitor.enabled .Values.backend.metrics.enabled -}}
+{{- $monitor := .Values.podMonitor -}}
+{{- $component := "backend" -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "drive.backend.fullname" . }}
+  namespace: {{ $monitor.namespace | default .Release.Namespace | quote }}
+  labels:
+    {{- include "drive.common.labels" (list . $component) | nindent 4 }}
+    {{- with $monitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with $monitor.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  jobLabel: app.kubernetes.io/component
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace | quote }}
+  selector:
+    matchLabels:
+      {{- include "drive.common.selectorLabels" (list . $component) | nindent 6 }}
+  podMetricsEndpoints:
+    {{- include "drive.metrics.endpoint" (dict "root" . "monitor" $monitor) | nindent 4 }}
+{{- end }}

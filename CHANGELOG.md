@@ -37,6 +37,10 @@ and this project adheres to
 - ✨(backend) show and change the storage quota exclusion of items
 - ✨(backend) show user storage quota and biggest files in the admin
 - ✨(backend) set the storage limit override of users in GB in the admin
+- ✨(backend) add opt-in prometheus metrics on /metrics
+- ✨(backend) add database pool and celery queue metrics
+- ✨(backend) add business metrics to the prometheus endpoint
+- ✨(helm) add metrics monitors and ingress
 
 ### Changed
 
