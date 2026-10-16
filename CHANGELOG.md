@@ -23,6 +23,10 @@ and this project adheres to
 - 🔒️(wopi) verify WOPI request proofs whatever the item upload state
 - 🐛(backend) keep re-analyzed items ready when the analysis fails
 
+### Removed
+
+- 🔥(backend) remove unused default authentication backend
+
 ## [v0.24.0] - 2026-10-09
 
 ### Added
