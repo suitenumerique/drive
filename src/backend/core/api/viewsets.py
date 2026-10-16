@@ -1054,19 +1054,19 @@ class ItemViewSet(
         The selected items are those deleted within the cutoff period defined in the
         settings (see TRASHBIN_CUTOFF_DAYS), before they are considered permanently deleted.
 
-        Optimized version that uses EXISTS instead of expensive subqueries to check
-        owner access on items or their ancestors.
+        Owner access on items or their ancestors is resolved from the subtrees the user
+        owns, see `trashed_owned_by`.
         """
         user = request.user
 
         # Restrict to soft-deleted items the user owns (directly or through an
-        # ancestor access). Filtering on the owner access subquery is much faster
-        # than on the user_roles annotation.
+        # ancestor access), read from the subtrees the user owns rather than checking
+        # the owner of every deleted item.
         queryset = (
             self.queryset.select_related("creator")
             .annotate_has_restriction()
             .filter(deleted_at__gte=models.get_trashbin_cutoff())
-            .owned_by(user)
+            .trashed_owned_by(user)
         )
 
         # Apply filtering similar to children method
@@ -1079,7 +1079,7 @@ class ItemViewSet(
         queryset = queryset.annotate_user_roles(user)
         queryset = queryset.annotate_with_numchild()
 
-        return self.get_response_for_queryset(queryset)
+        return self.get_response_for_queryset(queryset, with_ancestors_link_definition=True)
 
     @drf.decorators.action(detail=True, methods=["post"])
     @transaction.atomic

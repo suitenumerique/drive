@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- ⚡️(backend) speed up the trashbin on large databases
+
 ## [v0.24.0] - 2026-10-09
 
 ### Added
