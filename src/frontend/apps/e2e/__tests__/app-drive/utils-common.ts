@@ -1,4 +1,11 @@
-import { expect, Page } from "@playwright/test";
+import {
+  test as base,
+  Browser,
+  BrowserContext,
+  expect,
+  Page,
+  TestFixture,
+} from "@playwright/test";
 import { exec } from "child_process";
 import path from "path";
 // We need to use __dirname to get the root path of the project
@@ -70,3 +77,25 @@ export const login = async (page: Page, email: string) => {
 export const getStorageState = (username: string) => {
   return `${__dirname}/../../playwright/.auth/user-${username}.json`;
 };
+
+type UserFixture = { context: BrowserContext; page: Page };
+
+type TwoUsers = {
+  userA: UserFixture;
+  userB: UserFixture;
+};
+
+const createUser: TestFixture<UserFixture, { browser: Browser }> = async (
+  { browser },
+  use,
+) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await use({ context, page });
+  await context.close();
+};
+
+export const MultiUserTest = base.extend<TwoUsers>({
+  userA: createUser,
+  userB: createUser,
+});

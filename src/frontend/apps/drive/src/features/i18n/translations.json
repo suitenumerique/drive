@@ -612,7 +612,16 @@
             "unfavorite": "Unstar",
             "duplicate": "Duplicate",
             "duplicate_error": "An error occurred while duplicating the item.",
-            "delete": "Delete"
+            "delete": "Delete",
+            "leave": "Leave",
+            "leave_toast": "You have left the item.",
+            "leave_toast_error": "An error occurred while leaving the item.",
+            "leave_modal": {
+              "title": "Leave item",
+              "content": "This item and all its sub-items will no longer be visible in your file list. The rights that were given to you on this item will be removed.",
+              "cancel": "Cancel",
+              "confirm": "Leave"
+            }
           },
           "duplicating": "duplication in progress",
           "converting": "conversion in progress"
@@ -1321,7 +1330,16 @@
             "unfavorite": "Retirer des favoris",
             "duplicate": "Dupliquer",
             "duplicate_error": "Une erreur est survenue lors de la duplication.",
-            "delete": "Supprimer"
+            "delete": "Supprimer",
+            "leave": "Quitter",
+            "leave_toast": "Vous avez quitté l'élément.",
+            "leave_toast_error": "Une erreur est survenue en quittant l'élément.",
+            "leave_modal": {
+              "title": "Quitter l'élément",
+              "content": "Cet élément et tous ses sous-éléments ne seront plus visibles dans votre liste de fichiers. Les droits qui vous ont été accordés sur cet élément seront supprimés.",
+              "cancel": "Annuler",
+              "confirm": "Quitter"
+            }
           },
           "duplicating": "duplication en cours",
           "converting": "conversion en cours"
@@ -2030,7 +2048,16 @@
             "unfavorite": "Verwijder uit favorieten",
             "duplicate": "Dupliceer",
             "duplicate_error": "Er is een fout opgetreden bij het dupliceren.",
-            "delete": "Verwijder"
+            "delete": "Verwijder",
+            "leave": "Verlaten",
+            "leave_toast": "U heeft het item verlaten.",
+            "leave_toast_error": "Er is een fout opgetreden bij het verlaten van het item.",
+            "leave_modal": {
+              "title": "Item verlaten",
+              "content": "Dit item en alle sub-items zijn niet meer zichtbaar in uw bestandslijst. De rechten die u op dit item zijn gegeven, worden verwijderd.",
+              "cancel": "Annuleren",
+              "confirm": "Verlaten"
+            }
           },
           "duplicating": "duplicatie bezig",
           "converting": "conversie bezig"
