@@ -14,6 +14,7 @@ LOGGING_LEVEL_LOGGERS_APP=INFO
 PYTHONPATH=/app
 
 # Drive settings
+SDK_ENABLED=True
 
 # Mail
 DJANGO_EMAIL_BRAND_NAME="La Suite Numérique"

@@ -16,6 +16,7 @@ and this project adheres to
 - ✨(backend) show the release in the admin header
 - ✨(backend) transfer items from a user to another in the admin
 - ✨(backend) deactivate the least recently used duplicates in the admin
+- ✨(backend) add SDK_ENABLED setting to gate the sdk relay
 
 ### Fixed
 

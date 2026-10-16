@@ -125,6 +125,7 @@ This document lists all configurable environment variables for the Drive applica
 | `SEARCH_INDEXER_CONTENT_MAX_SIZE` | Maximum size for an indexable file | `2097152` |
 | `SEARCH_INDEXER_URL` | Find application endpoint for indexation | `None` |
 | `SEARCH_INDEXER_QUERY_LIMIT` | Maximum number of results expected from search endpoint | 50 |
+| `SDK_ENABLED` | Enable the SDK picker pages (`/sdk`) and the SDK relay API | `False` |
 | `SENTRY_DSN` | Sentry DSN for error tracking | `None` |
 | `SENTRY_TRACES_SAMPLE_RATE` | Ratio of requests traced for Sentry performance monitoring (0 to 1) | `0.0` |
 | `SPECTACULAR_SETTINGS_ENABLE_DJANGO_DEPLOY_CHECK` | Enable Django deploy check in Spectacular | `False` |

@@ -1354,6 +1354,9 @@ class Base(Configuration):
     )
 
     # SDK Relay
+    SDK_ENABLED = values.BooleanValue(
+        default=False, environ_name="SDK_ENABLED", environ_prefix=None
+    )
     SDK_RELAY_CACHE_TIMEOUT = values.PositiveIntegerValue(
         600,  # 10 minutes
         environ_name="SDK_RELAY_CACHE_TIMEOUT",

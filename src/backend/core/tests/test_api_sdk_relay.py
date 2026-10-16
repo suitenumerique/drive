@@ -10,6 +10,32 @@ from core import factories
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def enable_sdk(settings):
+    """The SDK is disabled by default, enable it for all tests in this module."""
+    settings.SDK_ENABLED = True
+
+
+@pytest.mark.parametrize("is_authenticated", [False, True])
+def test_api_sdk_relay_disabled(settings, is_authenticated):
+    """All SDK relay endpoints should return a 404 when the SDK is disabled."""
+    settings.SDK_ENABLED = False
+    client = APIClient()
+    if is_authenticated:
+        client.force_login(factories.UserFactory())
+
+    url = "/api/v1.0/sdk-relay/events/1Az6SO4CE7JAl9hE96dXl7145nghwZNP/"
+    assert client.get(url).status_code == 404
+    assert client.options(url).status_code == 404
+
+    response = client.post(
+        "/api/v1.0/sdk-relay/events/",
+        {"token": "1Az6SO4CE7JAl9hE96dXl7145nghwZNP", "event": {"type": "test"}},
+        format="json",
+    )
+    assert response.status_code == 404
+
+
 def test_api_sdk_relay_get_event_anonymous():
     """Anonymous users should be allowed to get an event."""
     client = APIClient()

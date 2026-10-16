@@ -2484,6 +2484,7 @@ class ConfigView(drf.views.APIView):
             "POSTHOG_HOST",
             "LANGUAGES",
             "LANGUAGE_CODE",
+            "SDK_ENABLED",
             "SENTRY_DSN",
         ]
         dict_settings = {}
@@ -2533,6 +2534,12 @@ class SDKRelayEventViewset(drf.viewsets.ViewSet):
     permission_classes = [AllowAny]
 
     throttle_scope = "sdk_event_relay"
+
+    def initial(self, request, *args, **kwargs):
+        """Hide the whole relay when the SDK is disabled."""
+        if not settings.SDK_ENABLED:
+            raise drf.exceptions.NotFound()
+        super().initial(request, *args, **kwargs)
 
     def get_permissions(self):
         """
