@@ -939,16 +939,19 @@ class IdInSubtrees(models.Func):  # pylint: disable=abstract-method
         #    for Postgres to pick this index instead of the one on all paths.
         id_sql, id_params = compiler.compile(self.source_expressions[0])
         table = connection.ops.quote_name(Item._meta.db_table)  # noqa: SLF001
-        trashed_sql = " AND subtree_item.deleted_at IS NOT NULL" if self.trashed else ""
+        join_condition = (
+            "subtree_item.path >= subtree.lower_bound AND subtree_item.path < subtree.upper_bound"
+        )
+        if self.trashed:
+            join_condition += " AND subtree_item.deleted_at IS NOT NULL"
         # Only the compiled id expression, the quoted table name and a constant
-        # condition are interpolated
+        # join condition are interpolated
         return (
             f"{id_sql} = ANY(ARRAY("  # noqa: S608
             "SELECT subpath(subtree_item.path, -1)::text::uuid "
             "FROM unnest(%s::text[]::ltree[], %s::text[]::ltree[]) "
             "AS subtree(lower_bound, upper_bound) "
-            f"JOIN {table} AS subtree_item ON subtree_item.path >= subtree.lower_bound "
-            f"AND subtree_item.path < subtree.upper_bound{trashed_sql}))",
+            f"JOIN {table} AS subtree_item ON {join_condition}))",
             (
                 *id_params,
                 self.paths,
