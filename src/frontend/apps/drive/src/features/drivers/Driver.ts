@@ -2,8 +2,10 @@ import { ExplorerFilterModifiedValue } from "../explorer/components/filters/Expl
 import {
   DTOBatchShare,
   DTOCreateAccess,
+  DTOCreateAccessRequest,
   DTODeleteAccess,
   DTOUpdateAccess,
+  DTOUpdateAccessRequest,
   DTOUpdateLinkConfiguration,
 } from "./DTOs/AccessesDTO";
 import {
@@ -13,6 +15,7 @@ import {
 } from "./DTOs/InvitationDTO";
 import {
   Access,
+  AccessRequest,
   ApiConfig,
   APIList,
   Invitation,
@@ -154,6 +157,15 @@ export abstract class Driver {
   abstract createInvitation(data: DTOCreateInvitation): Promise<Invitation>;
   abstract deleteInvitation(payload: DTODeleteInvitation): Promise<void>;
   abstract updateInvitation(payload: DTOUpdateInvitation): Promise<Invitation>;
+
+  // Access requests
+  abstract getItemAccessRequests(itemId: string): Promise<APIList<AccessRequest>>;
+  abstract createAccessRequest(
+    data: DTOCreateAccessRequest,
+  ): Promise<AccessRequest>;
+  abstract updateAccessRequest(
+    payload: DTOUpdateAccessRequest,
+  ): Promise<AccessRequest>;
 
   // Users
   abstract getUsers(filters?: UserFilters): Promise<User[]>;
