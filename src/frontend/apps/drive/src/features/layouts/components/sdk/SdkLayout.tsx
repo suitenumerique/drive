@@ -1,11 +1,16 @@
 import { Auth } from "@/features/auth/Auth";
 import { GlobalExplorerProvider } from "@/features/explorer/components/GlobalExplorerContext";
+import { SdkEnabledGuard } from "@/features/sdk/SdkEnabledGuard";
 import { HorizontalSeparator, Spinner } from "@gouvfr-lasuite/ui-components";
 import { createContext, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export const getSdkLayout = (page: React.ReactElement) => {
-  return <SdkLayout>{page}</SdkLayout>;
+  return (
+    <SdkEnabledGuard>
+      <SdkLayout>{page}</SdkLayout>
+    </SdkEnabledGuard>
+  );
 };
 
 export const SdkContext = createContext<{
@@ -47,7 +52,11 @@ export const SdkLayout = ({ children }: { children: React.ReactNode }) => {
  */
 
 export const getSdkPickerLayout = (page: React.ReactElement) => {
-  return <SdkPickerLayout>{page}</SdkPickerLayout>;
+  return (
+    <SdkEnabledGuard>
+      <SdkPickerLayout>{page}</SdkPickerLayout>
+    </SdkEnabledGuard>
+  );
 };
 
 export const SdkPickerLayout = ({

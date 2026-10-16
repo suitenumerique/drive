@@ -17,6 +17,7 @@ and this project adheres to
 - ✨(backend) transfer items from a user to another in the admin
 - ✨(backend) deactivate the least recently used duplicates in the admin
 - ✨(backend) add SDK_ENABLED setting to gate the sdk relay
+- ✨(frontend) hide sdk pages when SDK_ENABLED is off
 
 ### Fixed
 

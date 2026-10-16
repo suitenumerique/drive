@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { login, useAuth } from "@/features/auth/Auth";
 import { GlobalLayout } from "@/features/layouts/components/global/GlobalLayout";
 import { useSearchParams } from "next/navigation";
+import { SdkEnabledGuard } from "@/features/sdk/SdkEnabledGuard";
 
 export default function SDKPage() {
   const { user } = useAuth();
@@ -41,5 +42,9 @@ export default function SDKPage() {
 }
 
 SDKPage.getLayout = function getLayout(page: React.ReactElement) {
-  return <GlobalLayout>{page}</GlobalLayout>;
+  return (
+    <SdkEnabledGuard>
+      <GlobalLayout>{page}</GlobalLayout>
+    </SdkEnabledGuard>
+  );
 };
