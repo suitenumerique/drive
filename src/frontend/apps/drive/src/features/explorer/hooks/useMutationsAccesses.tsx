@@ -1,5 +1,11 @@
+import { errorToCode } from "@/features/api/APIError";
 import { getDriver } from "@/features/config/Config";
-import { useMutation } from "@tanstack/react-query";
+import {
+  addToast,
+  ToasterItem,
+} from "@/features/ui/components/toaster/Toaster";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useOnSuccessAccessOrInvitationMutation } from "./useRefreshItems";
 
 // ============================================================================
@@ -99,6 +105,86 @@ export const useMutationDeleteInvitation = () => {
     },
     onSuccess: (_, variables) => {
       onSuccessAccessOrInvitation(variables.itemId, true);
+    },
+  });
+};
+
+// ============================================================================
+// ASK FOR ACCESS MUTATIONS
+// ============================================================================
+
+export const useMutationCreateAskForAccess = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  return useMutation({
+    meta: { noGlobalError: true },
+    mutationFn: (...payload: Parameters<typeof driver.createAskForAccess>) => {
+      return driver.createAskForAccess(...payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["itemAskForAccesses", variables.itemId],
+      });
+    },
+    onError: (error) => {
+      // already_requested is handled at the call site; all other errors get a toast
+      if (errorToCode(error) === "already_requested") return;
+      addToast(
+        <ToasterItem type="error">
+          <span>{t("share_modal.ask_for_access.create_error")}</span>
+        </ToasterItem>,
+      );
+    },
+  });
+};
+
+export const useMutationDeleteAskForAccess = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  return useMutation({
+    meta: { noGlobalError: true },
+    mutationFn: (...payload: Parameters<typeof driver.deleteAskForAccess>) => {
+      return driver.deleteAskForAccess(...payload);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["itemAskForAccesses", variables.itemId],
+      });
+    },
+    onError: () => {
+      addToast(
+        <ToasterItem type="error">
+          <span>{t("share_modal.ask_for_access.deny_error")}</span>
+        </ToasterItem>,
+      );
+    },
+  });
+};
+
+export const useMutationAcceptAskForAccess = () => {
+  const driver = getDriver();
+  const queryClient = useQueryClient();
+  const onSuccessAccessOrInvitation = useOnSuccessAccessOrInvitationMutation();
+  const { t } = useTranslation();
+  return useMutation({
+    meta: { noGlobalError: true },
+    mutationFn: (...payload: Parameters<typeof driver.acceptAskForAccess>) => {
+      return driver.acceptAskForAccess(...payload);
+    },
+    onSuccess: (_, variables) => {
+      onSuccessAccessOrInvitation(variables.itemId, false);
+      queryClient.invalidateQueries({
+        queryKey: ["itemAskForAccesses", variables.itemId],
+      });
+    },
+    onError: () => {
+      addToast(
+        <ToasterItem type="error">
+          <span>{t("share_modal.ask_for_access.accept_error")}</span>
+        </ToasterItem>,
+      );
     },
   });
 };

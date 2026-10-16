@@ -197,6 +197,12 @@ class ItemCreateThrottleSustained(UserRateThrottle):
     scope = "item_create_sustained"
 
 
+class ItemAskForAccessWriteThrottle(UserRateThrottle):
+    """Throttle for write actions on the ask-for-access endpoint."""
+
+    scope = "item_ask_for_access"
+
+
 class UserViewSet(
     SerializerPerActionMixin,
     drf.mixins.UpdateModelMixin,
@@ -2526,6 +2532,141 @@ class ConfigView(drf.views.APIView):
             )
 
         return theme_customization
+
+
+class ItemAskForAccessViewSet(
+    drf.mixins.ListModelMixin,
+    drf.mixins.RetrieveModelMixin,
+    drf.mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    """
+    API ViewSet for item access requests.
+
+    GET /api/v1.0/items/<resource_id>/ask-for-access/
+        Admins/owners see all pending requests for the item.
+        Other authenticated users see only their own request.
+
+    POST /api/v1.0/items/<resource_id>/ask-for-access/ with optional data:
+        - role: str [reader|editor|administrator]  (default: reader)
+        Creates an access request and notifies all admins/owners by email.
+
+    POST /api/v1.0/items/<resource_id>/ask-for-access/<pk>/accept/ with optional data:
+        - role: str  (override the requested role, capped to the accepting user's own role)
+        Grants access and deletes the request.
+
+    DELETE /api/v1.0/items/<resource_id>/ask-for-access/<pk>/
+        Admins/owners can delete (deny) any request.
+    """
+
+    lookup_field = "pk"
+    pagination_class = Pagination
+    permission_classes = [permissions.ItemAskForAccessPermission]
+    queryset = models.ItemAskForAccess.objects.select_related("user", "item").order_by("created_at")
+    resource_field_name = "item"
+    serializer_class = serializers.ItemAskForAccessSerializer
+
+    def get_throttles(self):
+        """Apply throttle only to write actions."""
+        self.throttle_classes = []
+        if self.action in {"create", "accept", "destroy"}:
+            self.throttle_classes = [ItemAskForAccessWriteThrottle]
+        return super().get_throttles()
+
+    @cached_property
+    def item(self):
+        """Get related item from resource ID in url."""
+        try:
+            return models.Item.objects.annotate_user_roles(self.request.user).get(
+                pk=self.kwargs["resource_id"]
+            )
+        except models.Item.DoesNotExist as excpt:
+            raise drf.exceptions.NotFound() from excpt
+
+    def get_serializer_context(self):
+        """Extra context provided to the serializer class."""
+        context = super().get_serializer_context()
+        context["resource_id"] = self.kwargs["resource_id"]
+        context["item"] = self.item  # annotated; avoids extra DB query in get_abilities
+        return context
+
+    def get_queryset(self):
+        """Filter requests to the current item. Non-privileged users see only their own."""
+        queryset = super().get_queryset().filter(item=self.kwargs["resource_id"])
+        if self.item.get_role(self.request.user) not in PRIVILEGED_ROLES:
+            queryset = queryset.filter(user=self.request.user)
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        """Create an access request and notify all admins/owners by email."""
+        item = self.item
+        user = request.user
+
+        role = item.get_role(user)
+        if role in PRIVILEGED_ROLES:
+            raise drf.exceptions.ValidationError(
+                "You already have privileged access to this item.",
+                code="already_has_privileged_access",
+            )
+
+        serializer = serializers.ItemAskForAccessCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        requested_role = serializer.validated_data["role"]
+        if role is not None and (
+            models.RoleChoices.get_priority(requested_role) <= models.RoleChoices.get_priority(role)
+        ):
+            raise drf.exceptions.ValidationError(
+                "You already have access to this item.",
+                code="already_has_access",
+            )
+
+        try:
+            ask_for_access = models.ItemAskForAccess.objects.create(
+                item=item,
+                user=user,
+                role=requested_role,
+            )
+        except (IntegrityError, ValidationError) as exc:
+            raise drf.exceptions.ValidationError(
+                "You have already requested access to this item.",
+                code="already_requested",
+            ) from exc
+
+        privileged_accesses = models.ItemAccess.objects.filter(
+            models.IdInPath(db.F("item_id"), db.Value(str(item.path))),
+            role__in=PRIVILEGED_ROLES,
+        ).select_related("user")
+
+        for access in privileged_accesses:
+            if access.user and access.user.email:
+                ask_for_access.send_ask_for_access_email(
+                    access.user.email,
+                    access.user.language or settings.LANGUAGE_CODE,
+                )
+
+        return drf.response.Response(status=drf.status.HTTP_201_CREATED)
+
+    @drf.decorators.action(detail=True, methods=["post"])
+    def accept(self, request, *args, **kwargs):
+        """Accept an access request, optionally overriding the requested role."""
+        ask_for_access = self.get_object()
+        ask_for_access.item = self.item  # use annotated item for get_abilities
+
+        serializer = serializers.RoleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        target_role = serializer.validated_data.get("role", ask_for_access.role)
+        abilities = ask_for_access.get_abilities(request.user)
+
+        if target_role not in abilities["set_role_to"]:
+            raise drf.exceptions.ValidationError(
+                "You cannot accept a role higher than your own.",
+                code="role_too_high",
+            )
+
+        ask_for_access.accept(role=target_role)
+        return drf.response.Response(status=drf.status.HTTP_204_NO_CONTENT)
 
 
 class SDKRelayEventViewset(drf.viewsets.ViewSet):

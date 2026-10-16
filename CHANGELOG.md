@@ -45,6 +45,8 @@ and this project adheres to
 - ✨(backend) show and change the storage quota exclusion of items
 - ✨(backend) show user storage quota and biggest files in the admin
 - ✨(backend) set the storage limit override of users in GB in the admin
+- ✨(backend) ask for access on an item/folder 
+- ✨(frontend) ask for access on an item/folder
 
 ### Changed
 
