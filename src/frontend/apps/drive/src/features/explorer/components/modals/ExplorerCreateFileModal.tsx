@@ -58,9 +58,10 @@ export const ExplorerCreateFileModal = (
         onSuccess: (createdItem) => {
           form.reset();
           props.onClose();
+          // Select the new file so users can spot it among the items.
+          setSelectedItems([createdItem]);
           if (props.redirectAfterCreate && createdItem?.id) {
             router.push(`/explorer/items/my-files`);
-            setSelectedItems([createdItem]);
           }
         },
       },
