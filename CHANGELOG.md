@@ -24,6 +24,7 @@ and this project adheres to
 - 🐛(backend) log in the active user when several users share an email
 - 🔒️(wopi) verify WOPI request proofs whatever the item upload state
 - 🐛(backend) keep re-analyzed items ready when the analysis fails
+- 🐛(frontend) show the full item title in a tooltip when truncated
 
 ### Removed
 
