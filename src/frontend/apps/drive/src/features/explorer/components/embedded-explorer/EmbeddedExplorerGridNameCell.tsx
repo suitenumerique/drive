@@ -108,7 +108,13 @@ const EmbeddedExplorerGridNameCellComponent = (
           <ItemIcon key={item.id} item={item} size={IconSize.LARGE} />
         )}
         {isOverflown ? (
-          <Tooltip content={item.title}>{renderTitle()}</Tooltip>
+          <Tooltip content={item.title}>
+            {/* Tooltip injects its ref and hover handlers into its direct
+                child, which Draggable would drop: a plain div receives them. */}
+            <div className="explorer__grid__item__name__title-wrapper">
+              {renderTitle()}
+            </div>
+          </Tooltip>
         ) : (
           renderTitle()
         )}
