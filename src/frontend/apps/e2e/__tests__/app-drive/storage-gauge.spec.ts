@@ -324,14 +324,15 @@ test.describe("StorageGauge", () => {
       // The backend couples upload-ended to its own entitlements provider
       // (it may reject the upload server-side); fulfill it so the upload
       // flow completes regardless of the backend entitlements setup. The
-      // response body is not used by the frontend.
-      await page.route("**/api/v1.0/items/*/upload-ended/", (route) =>
-        route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: "{}",
-        }),
-      );
+      // frontend uses the returned item (e.g. to select it), so answer with
+      // the real item fetched from the item detail endpoint.
+      await page.route("**/api/v1.0/items/*/upload-ended/", async (route) => {
+        const response = await route.fetch({
+          url: route.request().url().replace("upload-ended/", ""),
+          method: "GET",
+        });
+        await route.fulfill({ response });
+      });
       await page.route(ENTITLEMENTS_URL, async (route) => {
         await route.fulfill({
           status: 200,
