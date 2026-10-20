@@ -345,6 +345,18 @@ class ItemMetadata(drf.metadata.SimpleMetadata):
 # =============================================================================
 
 
+def describe_maintenance_escrow(root, user):
+    """What a holder entering the tree at its root needs to refresh or backfill
+    the root's maintenance escrow copy: the root's owner, whose organization
+    decides the maintenance key, and whether they may store the copy."""
+    return {
+        "root_item_id": str(root.pk),
+        "owner_sub": root.creator.sub if root.creator else None,
+        "has_maintenance_key": bool(root.maintenance_wrapped_item_key),
+        "can_store": bool(root.get_abilities(user).get("maintenance_key")),
+    }
+
+
 def compute_effective_descendants_for_encryption(item):
     """Descendants of `item` minus everything inside inner encrypted roots.
 
@@ -413,6 +425,103 @@ def write_subtree_encryption(
         descendant.save(update_fields=desc_fields)
 
     return old_s3_keys
+
+
+def compute_removal_scope(item):
+    """Descendants whose encryption goes with `item`'s: all of them, minus inner encrypted roots.
+
+    Stacked encryption: inner roots are independent encrypted trees with their own
+    per-user keys and stay intact when the outer one goes back to plaintext.
+    """
+    scope = item.descendants()
+    for inner in item.descendants().filter(is_encrypted=True, encrypted_symmetric_key__isnull=True):
+        scope = scope.exclude(path__descendants=inner.path)
+    return scope
+
+
+def clear_subtree_encryption(*, item, file_key_mapping, effective_descendants, file_metadata=None):
+    """Set `item` and its effective descendants back to plaintext.
+
+    `file_key_mapping` maps str(file item id) to the filename under which its
+    plaintext was uploaded (a new object key: objects are never overwritten). The
+    per-user wrapped keys on the root's accesses and its maintenance copy are cleared.
+    `file_metadata` maps str(file item id) to fields to set with the new filename
+    (the plaintext's `mimetype` and `size`), when the caller already knows them.
+
+    Returns the old S3 keys to delete and the (file key, item id) pairs to scan,
+    both for after the transaction commits.
+    """
+    old_s3_keys = []
+    file_metadata = file_metadata or {}
+
+    def switch_file(target, fields):
+        if str(target.pk) not in file_key_mapping:
+            return
+        old_s3_keys.append(target.file_key)
+        target.filename = file_key_mapping[str(target.pk)]
+        fields.append("filename")
+        for name, value in file_metadata.get(str(target.pk), {}).items():
+            setattr(target, name, value)
+            fields.append(name)
+
+    update_fields = ["is_encrypted", "encrypted_symmetric_key", "maintenance_wrapped_item_key"]
+    switch_file(item, update_fields)
+    item.is_encrypted = False
+    item.encrypted_symmetric_key = None
+    item.maintenance_wrapped_item_key = None
+    item.save(update_fields=update_fields)
+
+    for descendant in effective_descendants.iterator():
+        desc_fields = ["is_encrypted", "encrypted_symmetric_key"]
+        descendant.is_encrypted = False
+        descendant.encrypted_symmetric_key = None
+        switch_file(descendant, desc_fields)
+        descendant.save(update_fields=desc_fields)
+
+    models.ItemAccess.objects.filter(item=item).update(
+        encrypted_item_symmetric_key_for_user=None,
+        encryption_public_key_version=None,
+    )
+
+    # Plaintext again: the server can now inspect them.
+    files_to_scan = []
+    if item.type == models.ItemTypeChoices.FILE and item.filename:
+        files_to_scan.append((item.file_key, item.pk))
+    for descendant in effective_descendants.iterator():
+        if descendant.type == models.ItemTypeChoices.FILE and descendant.filename:
+            files_to_scan.append((descendant.file_key, descendant.pk))
+
+    return old_s3_keys, files_to_scan
+
+
+def stored_file_metadata(file_key, filename):
+    """The `mimetype` and `size` of a stored plaintext file, detected as `upload_ended`
+    does, or None when it cannot be read."""
+    s3_client = default_storage.connection.meta.client
+    bucket = default_storage.bucket_name
+
+    try:
+        size = s3_client.head_object(Bucket=bucket, Key=file_key)["ContentLength"]
+        if size > 2048:
+            head = s3_client.get_object(Bucket=bucket, Key=file_key, Range="bytes=0-2047")
+        else:
+            head = s3_client.get_object(Bucket=bucket, Key=file_key)
+    except ClientError:
+        logger.warning("Could not read %s to detect its type", file_key)
+        return None
+
+    return {"mimetype": utils.detect_mimetype(head["Body"].read(), filename=filename), "size": size}
+
+
+def refresh_file_metadata(files, file_key_mapping):
+    """Give the files switched to their plaintext (those in `file_key_mapping`) the
+    plaintext's type and size: uploaded encrypted, they carry the ciphertext's."""
+    for file_key, item_id in files:
+        if str(item_id) not in file_key_mapping:
+            continue
+        metadata = stored_file_metadata(file_key, file_key_mapping[str(item_id)])
+        if metadata:
+            models.Item.objects.filter(pk=item_id).update(**metadata)
 
 
 def schedule_s3_cleanup(old_s3_keys):
@@ -1227,6 +1336,7 @@ class ItemViewSet(
         is_encryption_root_flag = validated_data.get("is_encryption_root")
         per_user_encrypted_keys = validated_data.get("per_user_encrypted_keys")
         version_per_user = validated_data.get("encryption_public_key_versions", {})
+        maintenance_key = validated_data.get("maintenance_key")
         # Encrypt-on-move payload: the presence of either field is the
         # signal we're looking at the plaintext-into-chain shape (an
         # empty dict still counts — single-file moves have no
@@ -1502,6 +1612,18 @@ class ItemViewSet(
                     code="item_move_demote_required",
                 )
 
+        # Only a re-anchor makes a new root, and only a root carries the escrow copy.
+        if maintenance_key and is_encryption_root_flag is not True:
+            raise drf.exceptions.ValidationError(
+                {
+                    "maintenance_key": _(
+                        "Only an item re-anchored as its own encryption root carries a "
+                        "maintenance escrow copy."
+                    )
+                },
+                code="item_move_maintenance_key_not_root",
+            )
+
         # ----- Apply the position change first; encryption state writes
         # depend on the target tree state being settled. -----
         item.move(target_item)
@@ -1515,7 +1637,12 @@ class ItemViewSet(
             # pattern as /encrypt/.
             item.is_encrypted = True
             item.encrypted_symmetric_key = None
-            update_fields += ["is_encrypted", "encrypted_symmetric_key"]
+            item.maintenance_wrapped_item_key = maintenance_key
+            update_fields += [
+                "is_encrypted",
+                "encrypted_symmetric_key",
+                "maintenance_wrapped_item_key",
+            ]
 
             # Update existing access rows on this item.
             remaining_user_subs = set(per_user_encrypted_keys.keys())
@@ -1570,7 +1697,13 @@ class ItemViewSet(
             # walking the chain).
             item.is_encrypted = True
             item.encrypted_symmetric_key = encrypted_symmetric_key
-            update_fields += ["is_encrypted", "encrypted_symmetric_key"]
+            # No longer a root: the destination root's copy covers it through the chain.
+            item.maintenance_wrapped_item_key = None
+            update_fields += [
+                "is_encrypted",
+                "encrypted_symmetric_key",
+                "maintenance_wrapped_item_key",
+            ]
 
         elif source_in_chain and target_is_encrypted:
             # Same-tree chain rewrap.
@@ -2164,6 +2297,14 @@ class ItemViewSet(
         if new_filename:
             key = f"{item.key_base}/{new_filename}"
         else:
+            # An editor still open on a file switched back to plaintext (by its owner
+            # or a batch recovery) would write ciphertext over the plaintext, or to a
+            # key nothing points to any more: its save must fail, visibly.
+            if not item.is_encrypted:
+                raise drf.exceptions.ValidationError(
+                    {"item": _("This file is no longer encrypted.")},
+                    code="item_not_encrypted",
+                )
             key = item.file_key
 
         upload_url = utils.generate_upload_policy_for_key(
@@ -2290,6 +2431,16 @@ class ItemViewSet(
             file_key_mapping=file_key_mapping,
             effective_descendants=effective_descendants,
         )
+        # The copy is for the organization of the root's owner (its creator), but the
+        # vault escrows a new key for the caller's: from an administrator encrypting
+        # someone else's item it would be another organization's. Left empty, it is
+        # backfilled for the creator by the next holder opening the tree.
+        item.maintenance_wrapped_item_key = (
+            serializer.validated_data["maintenance_key"]
+            if item.creator_id is not None and item.creator_id == request.user.id
+            else None
+        )
+        item.save(update_fields=["maintenance_wrapped_item_key"])
 
         # Store per-user encrypted keys on ItemAccess records that live on
         # THIS item. Keys *must* sit here — not on an ancestor's ItemAccess
@@ -2429,17 +2580,7 @@ class ItemViewSet(
         # Stacked encryption: exclude inner encryption roots and their
         # subtrees from the removal scope. Those are independent encrypted
         # trees with their own per-user keys and must stay intact.
-        inner_roots = list(
-            item.descendants().filter(
-                is_encrypted=True,
-                encrypted_symmetric_key__isnull=True,
-            )
-        )
-        effective_descendants_qs = item.descendants()
-        for inner in inner_roots:
-            effective_descendants_qs = effective_descendants_qs.exclude(
-                path__descendants=inner.path,
-            )
+        effective_descendants_qs = compute_removal_scope(item)
 
         # Integrity check: keys must be provided for exactly the set of
         # encrypted FILES in the effective scope (plus the root if it's
@@ -2470,45 +2611,11 @@ class ItemViewSet(
                 status=drf.status.HTTP_409_CONFLICT,
             )
 
-        # Collect old S3 keys for cleanup after commit
-        old_s3_keys = []
-
-        # Clear encryption on item, swap filename to new S3 key if provided
-        update_fields = ["is_encrypted", "encrypted_symmetric_key"]
-        if str(item.pk) in file_key_mapping:
-            old_s3_keys.append(item.file_key)
-            item.filename = file_key_mapping[str(item.pk)]
-            update_fields.append("filename")
-        item.is_encrypted = False
-        item.encrypted_symmetric_key = None
-        item.save(update_fields=update_fields)
-
-        # Clear encryption on descendants in the effective scope only —
-        # inner encrypted subtrees keep their existing state.
-        for descendant in effective_descendants_qs.iterator():
-            desc_fields = ["is_encrypted", "encrypted_symmetric_key"]
-            descendant.is_encrypted = False
-            descendant.encrypted_symmetric_key = None
-            if str(descendant.pk) in file_key_mapping:
-                old_s3_keys.append(descendant.file_key)
-                descendant.filename = file_key_mapping[str(descendant.pk)]
-                desc_fields.append("filename")
-            descendant.save(update_fields=desc_fields)
-
-        # Clear all per-user encrypted keys on this item's accesses
-        models.ItemAccess.objects.filter(item=item).update(
-            encrypted_item_symmetric_key_for_user=None,
-            encryption_public_key_version=None,
+        old_s3_keys, file_items_to_scan = clear_subtree_encryption(
+            item=item,
+            file_key_mapping=file_key_mapping,
+            effective_descendants=effective_descendants_qs,
         )
-
-        # Collect file items in the effective scope for post-commit
-        # malware scanning (now that they're plaintext again).
-        file_items_to_scan = []
-        if item.type == models.ItemTypeChoices.FILE and item.filename:
-            file_items_to_scan.append((item.file_key, item.pk))
-        for descendant in effective_descendants_qs.iterator():
-            if descendant.type == models.ItemTypeChoices.FILE and descendant.filename:
-                file_items_to_scan.append((descendant.file_key, descendant.pk))
 
         # After DB commit: clean up old S3 objects and trigger malware scan
         # on newly decrypted files (the server can now inspect them)
@@ -2521,6 +2628,7 @@ class ItemViewSet(
                 except ClientError:
                     logger.warning("Failed to delete old S3 key: %s", old_key)
 
+            refresh_file_metadata(file_items_to_scan, file_key_mapping)
             for file_key, item_id in file_items_to_scan:
                 malware_detection.analyse_file(file_key, item_id=item_id)
 
@@ -2649,10 +2757,76 @@ class ItemViewSet(
                 "encryption_tree_root_item_id": (
                     str(encryption_tree_root_pk) if encryption_tree_root_pk else None
                 ),
+                "item_creator_sub": item.creator.sub if item.creator else None,
+                "maintenance_escrow": (
+                    describe_maintenance_escrow(entry_point_item, user)
+                    if entry_point_item.pk == encryption_tree_root_pk
+                    else None
+                ),
                 "chain": chain,
             },
             status=drf.status.HTTP_200_OK,
         )
+
+    @drf.decorators.action(detail=True, methods=["patch"], url_path="maintenance-key")
+    def maintenance_key(self, request, *args, **kwargs):
+        """Store a maintenance escrow copy on an encryption root, when it brings something.
+
+        Accepted when the root has no copy (encrypted before the escrow was enabled,
+        or before its owner's domain was covered: the frontend backfills it with an
+        empty share), or when the stored copy names another maintenance key (the
+        owner's organization moved to a new one). A copy for the key already stored
+        is refused: it only differs by the randomness of its wrap.
+
+        The backend cannot check that the copy is for the right key, nor that it
+        wraps the root's key: the key list lives on the encryption service and only
+        the custodians can open a copy. A forged header can therefore replace a good
+        copy, but only by someone who can already edit the tree, so it corrupts the
+        tree for them alone, outside the maintenance process.
+        """
+        item = self.get_object()
+
+        if not item.is_encrypted or item.encrypted_symmetric_key is not None:
+            return drf.response.Response(
+                {"detail": _("Only an encryption root carries a maintenance escrow copy.")},
+                status=drf.status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = serializers.MaintenanceKeySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_copy = serializer.validated_data["maintenance_key"]
+        old_copy = item.maintenance_wrapped_item_key
+
+        if old_copy:
+            if serializers.maintenance_key_id(new_copy) == serializers.maintenance_key_id(old_copy):
+                return drf.response.Response(
+                    {
+                        "detail": _("The root already carries a copy for this maintenance key."),
+                        "code": "maintenance_key_already_stored",
+                    },
+                    status=drf.status.HTTP_409_CONFLICT,
+                )
+            # Filling an empty copy is a backfill any writer may run. Replacing one
+            # could swap a copy the custodians can open for one they cannot: an owner
+            # or an administrator only, and on the record.
+            if item.get_role(request.user) not in PRIVILEGED_ROLES:
+                raise drf.exceptions.PermissionDenied(
+                    _("Only an owner or an administrator can replace a maintenance escrow copy.")
+                )
+            logger.warning(
+                "Maintenance escrow copy of item %s replaced by user %s: key %s, was %s",
+                item.pk,
+                request.user.pk,
+                serializers.maintenance_key_id(new_copy),
+                serializers.maintenance_key_id(old_copy),
+            )
+
+        # `update_fields` keeps `updated_at` as it is: a copy is no edit of the item,
+        # and the batch import compares `updated_at` with the export's.
+        item.maintenance_wrapped_item_key = new_copy
+        item.save(update_fields=["maintenance_wrapped_item_key"])
+
+        return drf.response.Response(status=drf.status.HTTP_204_NO_CONTENT)
 
     @extend_schema(
         request=serializers.BatchShareSerializer,

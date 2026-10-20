@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Item } from "@/features/drivers/types";
 import { getDriver } from "@/features/config/Config";
+import { backfillMaintenanceCopy } from "@/features/encryption/maintenanceEscrow";
 
 /**
  * Hook that fetches an encrypted file, decrypts it via the vault,
@@ -44,6 +45,9 @@ export const useDecryptedContent = (item?: Item) => {
       // to a "waiting for acceptance" panel. A 403 here now means the
       // user actually has no access — the global /403 redirect applies.
       const keyChain = await driver.getKeyChain(item.id);
+      // A root encrypted before the maintenance escrow was on gets its copy
+      // from the first holder who opens something in it, in the background.
+      void backfillMaintenanceCopy(keyChain);
 
       // 2. Fetch the encrypted file content
       const response = await fetch(item.url, { credentials: "include" });

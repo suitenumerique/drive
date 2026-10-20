@@ -142,6 +142,38 @@ export type Entitlements = {
   };
 };
 
+/**
+ * The encryption root behind a key chain, when the caller's entry key is that
+ * root's key: with it, an empty share of the entry key backfills the root's
+ * missing maintenance escrow copy (see features/encryption/maintenanceEscrow).
+ */
+export type MaintenanceEscrow = {
+  root_item_id: string;
+  /** The root's creator: their organization decides the maintenance key. */
+  owner_sub: string | null;
+  has_maintenance_key: boolean;
+  can_store: boolean;
+};
+
+export type KeyChain = {
+  user_access_item_id: string;
+  encrypted_key_for_user: string;
+  /**
+   * Identity of the encryption tree the item belongs to — the deepest
+   * encryption root that's an ancestor (or self) of the item. Stable
+   * across hybrid wraps (demoted self-rooted items still expose the
+   * outer tree root here, even though their own access row carries a
+   * per-user wrap). Use THIS field for cross-root comparisons on
+   * moves; `user_access_item_id` is the user's entry point and can
+   * land on the item itself for hybrids.
+   */
+  encryption_tree_root_item_id: string | null;
+  /** The item's creator: the owner when the item is re-anchored as its own root. */
+  item_creator_sub: string | null;
+  maintenance_escrow: MaintenanceEscrow | null;
+  chain: Array<{ item_id: string; encrypted_symmetric_key: string }>;
+};
+
 export abstract class Driver {
   abstract getConfig(): Promise<ApiConfig>;
   abstract getItems(filters?: ItemFilters): Promise<PaginatedChildrenResult>;
@@ -252,6 +284,7 @@ export abstract class Driver {
       encryptionPublicKeyVersionPerUser: Record<string, number | null>;
       encryptedKeysForDescendants: Record<string, string>;
       fileKeyMapping?: Record<string, string>;
+      maintenanceKey?: string | null;
     },
   ): Promise<Item>;
   abstract removeEncryption(
@@ -278,11 +311,12 @@ export abstract class Driver {
       fileKeyMapping?: Record<string, string>;
     },
   ): Promise<void>;
-  abstract getKeyChain(itemId: string): Promise<{
-    user_access_item_id: string;
-    encrypted_key_for_user: string;
-    chain: Array<{ item_id: string; encrypted_symmetric_key: string }>;
-  }>;
+  abstract getKeyChain(itemId: string): Promise<KeyChain>;
+  /** Store a backfilled maintenance escrow copy on an encryption root. */
+  abstract storeMaintenanceKey(
+    itemId: string,
+    maintenanceKey: string,
+  ): Promise<void>;
   abstract acceptEncryptionAccess(
     itemId: string,
     accessId: string,

@@ -21,6 +21,7 @@ import { Item } from '@/features/drivers/types';
 import { getDriver } from '@/features/config/Config';
 import { useConfig } from '@/features/config/ConfigProvider';
 import { fetchAPI } from '@/features/api/fetchApi';
+import { errorToCode } from '@/features/api/APIError';
 import {
   convertToInternal,
   convertFromInternal,
@@ -82,6 +83,7 @@ import {
 import { useAuth } from '@/features/auth/Auth';
 import { downloadDecryptedFile } from '@/features/items/hooks/useDecryptedContent';
 import { ModalRecursiveRemoveEncryption } from '@/features/encryption/ModalRecursiveRemoveEncryption';
+import { backfillMaintenanceCopy } from '@/features/encryption/maintenanceEscrow';
 import styles from './OOEditor.module.scss';
 
 // The OnlyOffice DocsAPI is loaded as a global from the static assets
@@ -838,15 +840,30 @@ export const OOEditor = ({ item }: OOEditorProps) => {
 
       // Get a presigned S3 upload URL for the existing file key.
       // S3 versioning keeps previous versions — no new filename needed.
-      const urlResponse = await fetchAPI(
-        `items/${item.id}/encryption-upload-url/`,
-        {
-          method: 'POST',
-          body: JSON.stringify({}),
-          headers: { 'Content-Type': 'application/json' },
-        },
-        { redirectOn40x: false }
-      );
+      let urlResponse: Response;
+      try {
+        urlResponse = await fetchAPI(
+          `items/${item.id}/encryption-upload-url/`,
+          {
+            method: 'POST',
+            body: JSON.stringify({}),
+            headers: { 'Content-Type': 'application/json' },
+          },
+          { redirectOn40x: false }
+        );
+      } catch (error) {
+        // Switched back to plaintext while open (by its owner, or a batch
+        // recovery): this save would write ciphertext nothing reads any more.
+        if (errorToCode(error) === 'item_not_encrypted') {
+          throw new Error(
+            t(
+              'explorer.encrypted.save_error_not_encrypted',
+              'This file is no longer encrypted. Close it and open it again to keep editing: the latest changes were not saved.'
+            )
+          );
+        }
+        throw error;
+      }
       const { upload_url: uploadUrl } = await urlResponse.json();
 
       // Upload encrypted content to S3 via presigned URL (XHR like regular Drive uploads)
@@ -886,7 +903,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
       // handled peer-to-peer.
       relayRef.current?.sendSaveCommitted();
     },
-    [item.id, uploadAcl]
+    [item.id, uploadAcl, t]
   );
 
   /**
@@ -1042,6 +1059,7 @@ export const OOEditor = ({ item }: OOEditorProps) => {
         setState('decrypting');
         const driver = getDriver();
         const keyChain = await driver.getKeyChain(item.id);
+        void backfillMaintenanceCopy(keyChain);
 
         const itemUrl = item.url!;
         const response = await fetch(itemUrl, {

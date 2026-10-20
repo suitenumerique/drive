@@ -10,6 +10,12 @@ export declare interface AuthContext {
     suiteUserId: string;
 }
 
+/** This browser held the user's vault and forgot it after VAULT_DEVICE_INACTIVITY_DAYS without use. */
+export declare interface DeEnrollment {
+    deEnrolledAt: number;
+    inactivityDays: number;
+}
+
 export declare interface EncryptionClientEventMap {
     /** Fired when the hidden vault iframe is ready for encrypt/decrypt operations */
     [MSG_VAULT_READY]: void;
@@ -50,6 +56,12 @@ export declare interface EncryptionClientOptions {
     theme?: string;
     /** Language code for the interface iframe: "fr", "en", etc. (default: browser language) */
     lang?: string;
+}
+
+export declare interface HasKeysResult {
+    hasKeys: boolean;
+    /** Set while this browser holds no vault because it forgot it for inactivity, until it is enrolled again. */
+    deEnrolled?: DeEnrollment;
 }
 
 export declare const isVaultError: (err: unknown) => err is VaultError;
@@ -144,10 +156,11 @@ export declare class VaultClient {
      * Clean up all iframes and event listeners.
      */
     destroy(): void;
-    /** Check if the user has encryption keys on this device. */
-    hasKeys(): Promise<{
-        hasKeys: boolean;
-    }>;
+    /**
+     * Check if the user has encryption keys on this device. `deEnrolled` is set when
+     * this browser forgot them after a long inactivity: the onboarding explains it.
+     */
+    hasKeys(): Promise<HasKeysResult>;
     /** Get the user's public key as ArrayBuffer. */
     getPublicKey(): Promise<{
         publicKey: ArrayBuffer;
@@ -168,13 +181,22 @@ export declare class VaultClient {
      * Use this for standalone encrypted files (no parent) and for the root
      * folder of an encrypted subtree.
      *
-     * @returns encryptedContent and encryptedKeys (userId → wrappedKey)
+     * When the deployment runs the maintenance escrow, the result also carries
+     * `maintenanceKey`: the same key wrapped for the maintenance key covering the
+     * current user's email domain (the creator owns the resource). Persist it on the
+     * resource whenever it is present (a nullable column next to the ciphertext);
+     * never treat it as a recipient. It is absent otherwise, including for a user
+     * no configured key covers.
+     *
+     * @returns encryptedContent, encryptedKeys (userId → wrappedKey) and, when
+     *   configured, maintenanceKey
      */
     encryptWithoutKey(data: ArrayBuffer, recipients: Record<string, RecipientLabel>, options?: {
         optimizeMemory?: boolean;
     }): Promise<{
         encryptedContent: ArrayBuffer;
         encryptedKeys: Record<string, ArrayBuffer>;
+        maintenanceKey?: ArrayBuffer;
     }>;
     private encryptWithoutKeyRequest;
     /**
@@ -302,10 +324,21 @@ export declare class VaultClient {
      * @param encryptedKeyChain - optional chain of wrapped keys for Drive's key hierarchy.
      *   When provided, resolves the chain from entry point to the target item's key
      *   before re-encrypting for the target users.
-     * @returns encryptedKeys - Record of userId → ArrayBuffer encrypted symmetric key for each user
+     * @param ownerSub - the OIDC sub of the resource's owner (its creator, say), whose
+     *   email domain decides the maintenance key; the current user when omitted.
+     *   Pass it whenever the sharer may not be the owner, or the copy would follow
+     *   the sharer's organization.
+     * @returns encryptedKeys - Record of userId → ArrayBuffer encrypted symmetric key for each user,
+     *   plus `maintenanceKey` when the deployment runs the maintenance escrow and a
+     *   configured key covers the owner (persist it on the resource, replacing any
+     *   previous value: the bytes differ on every wrap, the key behind them only when
+     *   the owner's coverage changed). An empty `recipients` map is valid and returns
+     *   only that copy: use it to backfill a resource that predates the escrow, or the
+     *   coverage of its owner's domain, from any current holder.
      */
-    shareKeys(encryptedSymmetricKey: ArrayBuffer, recipients: Record<string, RecipientLabel>, encryptedKeyChain?: ArrayBuffer[]): Promise<{
+    shareKeys(encryptedSymmetricKey: ArrayBuffer, recipients: Record<string, RecipientLabel>, encryptedKeyChain?: ArrayBuffer[], ownerSub?: string): Promise<{
         encryptedKeys: Record<string, ArrayBuffer>;
+        maintenanceKey?: ArrayBuffer;
     }>;
     private shareKeysRequest;
     /**
@@ -344,14 +377,13 @@ export declare class VaultClient {
         }>;
     }>;
     /**
-     * Compute a 128-bit DECIMAL fingerprint of a public key: the first 16 bytes of
-     * its SHA-256, read big-endian as a fixed-width 40-digit decimal. Matches the
-     * device-pairing fingerprint so every surface shows the same value.
-     * This is a pure client-side operation — no vault iframe needed.
+     * Compute the 40-digit identity fingerprint of a user, the value people compare
+     * out of band: the same computation as the vault and the interface, so every
+     * surface shows the same value. Pure client-side, no vault iframe needed.
      *
-     * @param publicKey - The public key as ArrayBuffer (from fetchPublicKeys or getPublicKey)
+     * @param signaturePublicKey - The identity (signature) public key wire blob, as returned by fetchPublicKeys or getPublicKey
      */
-    computeKeyFingerprint(publicKey: ArrayBuffer): Promise<string>;
+    computeKeyFingerprint(signaturePublicKey: ArrayBuffer): Promise<string>;
     /**
      * Format a raw decimal fingerprint for display, grouped in blocks of five.
      */
@@ -545,7 +577,7 @@ export declare const VaultErrorCode: {
      * AEAD verification failed. Either the ciphertext is for a different
      * recipient (their wrapped symmetric key was encrypted against another
      * pubkey) or the underlying KEM secret didn't match. Bubbles up from
-     * libsodium's "wrong secret key for the given ciphertext".
+     * libsodium's "ciphertext cannot be decrypted using that key".
      */
     readonly WRONG_SECRET_KEY: "WRONG_SECRET_KEY";
     /**
@@ -584,12 +616,20 @@ export declare const VaultErrorCode: {
     readonly CIPHERTEXT_TOO_SHORT: "CIPHERTEXT_TOO_SHORT";
     /** Ciphertext structure is inconsistent (e.g. a wrong length field): corrupt, not merely truncated. */
     readonly MALFORMED_CIPHERTEXT: "MALFORMED_CIPHERTEXT";
+    /** A value that should be base64 is not (corrupt or tampered input). */
+    readonly MALFORMED_BASE64: "MALFORMED_BASE64";
     /** A field cannot be represented in the canonical signed-payload encoding (length or number out of range). */
     readonly INVALID_CANONICAL_PAYLOAD: "INVALID_CANONICAL_PAYLOAD";
     /** Blob's leading version byte doesn't match a format this build can decode. */
     readonly UNSUPPORTED_CRYPTO_VERSION: "UNSUPPORTED_CRYPTO_VERSION";
     /** A signature public key didn't have the expected Ed25519 length. */
     readonly INVALID_SIGNATURE_KEY: "INVALID_SIGNATURE_KEY";
+    /** A configured maintenance public key, or a maintenance seed, is not a well-formed X-Wing key. */
+    readonly INVALID_MAINTENANCE_KEY: "INVALID_MAINTENANCE_KEY";
+    /** A maintenance copy names another maintenance key than the one trying to open it (another organization's). */
+    readonly OTHER_MAINTENANCE_KEY: "OTHER_MAINTENANCE_KEY";
+    /** The owner a product named for the maintenance copy has no account on the encryption service. */
+    readonly UNKNOWN_MAINTENANCE_OWNER: "UNKNOWN_MAINTENANCE_OWNER";
     /**
      * A registry entry's binding signature did not verify against its claimed
      * identity (signature) key — the directory record is forged, tampered, or

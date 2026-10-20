@@ -111,6 +111,7 @@ def test_api_items_trashbin_format(settings):
         "encryption_public_key_version_for_user": None,
         "is_encrypted": False,
         "is_encryption_root": False,
+        "has_maintenance_key": None,
         "is_inside_encrypted_subtree": False,
         "is_pending_encryption_for_user": False,
     }

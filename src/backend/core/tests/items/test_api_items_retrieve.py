@@ -74,6 +74,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "encryption_public_key_version_for_user": None,
         "is_encrypted": False,
         "is_encryption_root": False,
+        "has_maintenance_key": None,
         "is_inside_encrypted_subtree": False,
         "is_pending_encryption_for_user": False,
     }
@@ -140,6 +141,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "encryption_public_key_version_for_user": None,
         "is_encrypted": False,
         "is_encryption_root": False,
+        "has_maintenance_key": None,
         "is_inside_encrypted_subtree": False,
         "is_pending_encryption_for_user": False,
     }
@@ -253,6 +255,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "encryption_public_key_version_for_user": None,
         "is_encrypted": False,
         "is_encryption_root": False,
+        "has_maintenance_key": None,
         "is_inside_encrypted_subtree": False,
         "is_pending_encryption_for_user": False,
     }
@@ -325,6 +328,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "encryption_public_key_version_for_user": None,
         "is_encrypted": False,
         "is_encryption_root": False,
+        "has_maintenance_key": None,
         "is_inside_encrypted_subtree": False,
         "is_pending_encryption_for_user": False,
     }
@@ -475,6 +479,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "encryption_public_key_version_for_user": None,
         "is_encrypted": False,
         "is_encryption_root": False,
+        "has_maintenance_key": None,
         "is_inside_encrypted_subtree": False,
         "is_pending_encryption_for_user": False,
     }
@@ -551,6 +556,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "encryption_public_key_version_for_user": None,
         "is_encrypted": False,
         "is_encryption_root": False,
+        "has_maintenance_key": None,
         "is_inside_encrypted_subtree": False,
         "is_pending_encryption_for_user": False,
     }
@@ -737,6 +743,7 @@ def test_api_items_retrieve_authenticated_related_team_members(teams, role, mock
         "encryption_public_key_version_for_user": None,
         "is_encrypted": False,
         "is_encryption_root": False,
+        "has_maintenance_key": None,
         "is_inside_encrypted_subtree": False,
         "is_pending_encryption_for_user": False,
     }
@@ -821,6 +828,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(teams, rol
         "encryption_public_key_version_for_user": None,
         "is_encrypted": False,
         "is_encryption_root": False,
+        "has_maintenance_key": None,
         "is_inside_encrypted_subtree": False,
         "is_pending_encryption_for_user": False,
     }
@@ -905,6 +913,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_t
         "encryption_public_key_version_for_user": None,
         "is_encrypted": False,
         "is_encryption_root": False,
+        "has_maintenance_key": None,
         "is_inside_encrypted_subtree": False,
         "is_pending_encryption_for_user": False,
     }
@@ -1311,6 +1320,7 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "encryption_public_key_version_for_user": None,
         "is_encrypted": False,
         "is_encryption_root": False,
+        "has_maintenance_key": None,
         "is_inside_encrypted_subtree": False,
         "is_pending_encryption_for_user": False,
     }
@@ -1393,6 +1403,7 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         "encryption_public_key_version_for_user": None,
         "is_encrypted": False,
         "is_encryption_root": False,
+        "has_maintenance_key": None,
         "is_inside_encrypted_subtree": False,
         "is_pending_encryption_for_user": False,
     }
@@ -1467,6 +1478,7 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "encryption_public_key_version_for_user": None,
         "is_encrypted": False,
         "is_encryption_root": False,
+        "has_maintenance_key": None,
         "is_inside_encrypted_subtree": False,
         "is_pending_encryption_for_user": False,
     }
@@ -1598,6 +1610,7 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "encryption_public_key_version_for_user": None,
         "is_encrypted": False,
         "is_encryption_root": False,
+        "has_maintenance_key": None,
         "is_inside_encrypted_subtree": False,
         "is_pending_encryption_for_user": False,
         "link_reach": "public",
