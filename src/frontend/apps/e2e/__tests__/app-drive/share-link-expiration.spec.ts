@@ -116,3 +116,59 @@ test("Set, change and remove the expiration of a share link", async ({
   expect(await neverBody).toMatchObject({ link_expires_at: null });
   await expect(roleButton(page)).toHaveText("Reader");
 });
+
+test("Reopening an expired share link drops its past expiration", async ({
+  page,
+}) => {
+  // 1. Create a folder whose link is open to connected users until a future
+  // date: the backend refuses past dates, so the expiration is faked below.
+  await clearDb();
+  await login(page, "drive@example.com");
+  await page.goto("/");
+  await clickToMyFiles(page);
+  await createFolderInCurrentFolder(page, "Folder");
+  await navigateToFolder(page, "Folder", ["My files", "Folder"]);
+  const itemId = page.url().split("/").filter(Boolean).pop();
+  await openShareModal(page);
+  await selectLinkReach(page, "Connected");
+  await openLinkExpiresMenu(page);
+  const presetBody = waitForLinkConfiguration(page);
+  await page.getByRole("menuitem", { name: "7 days" }).click();
+  await presetBody;
+  await closeShareModal(page);
+
+  // 2. Serve the item as the backend does once its link has expired: the
+  // stored reach and date are kept, the computed reach becomes restricted.
+  const itemUrl = new RegExp(`/api/v1\\.0/items/${itemId}/(\\?.*)?$`);
+  await page.route(itemUrl, async (route) => {
+    const response = await route.fetch();
+    const item = await response.json();
+    await route.fulfill({
+      response,
+      json: {
+        ...item,
+        link_expires_at: "2020-01-01T00:00:00Z",
+        computed_link_reach: "restricted",
+        computed_link_role: null,
+      },
+    });
+  });
+  await openShareModal(page);
+  await expect(
+    page.getByTestId("share-link-reach-dropdown-button"),
+  ).toContainText("Private");
+  await expect(roleButton(page)).toHaveCount(0);
+
+  // 3. Reopening the link must also clear the past date, otherwise the backend
+  // keeps it and the link stays expired. The real item is served again so the
+  // modal reflects what the backend stored.
+  await page.unroute(itemUrl);
+  const reopenBody = waitForLinkConfiguration(page);
+  await selectLinkReach(page, "Connected");
+  expect(await reopenBody).toMatchObject({
+    link_reach: "authenticated",
+    link_role: "reader",
+    link_expires_at: null,
+  });
+  await expect(roleButton(page)).toHaveText("Reader");
+});

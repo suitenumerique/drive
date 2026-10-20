@@ -329,6 +329,12 @@ export const ItemShareModal = ({
     onRestrictionUpdated,
   );
 
+  // An expired link reads as restricted, but the backend keeps its past date
+  // when the payload omits it: reopening the link must drop it as well.
+  const isLinkExpired =
+    !!item?.link_expires_at && new Date(item.link_expires_at) <= new Date();
+  const linkExpirationReset = isLinkExpired ? { link_expires_at: null } : {};
+
   return (
     <DragEventBarrier>
       <ShareModal
@@ -537,6 +543,7 @@ export const ItemShareModal = ({
               item?.link_reach ??
               LinkReach.RESTRICTED,
             link_role: value as LinkRole,
+            ...linkExpirationReset,
           });
         }}
         onUpdateLinkReach={(value) => {
@@ -550,6 +557,7 @@ export const ItemShareModal = ({
             itemId: itemId,
             link_reach: value as LinkReach,
             link_role: linkRole,
+            ...linkExpirationReset,
           });
         }}
         allowFileImport={config.ALLOW_SHARE_IMPORT_FILE ?? false}
