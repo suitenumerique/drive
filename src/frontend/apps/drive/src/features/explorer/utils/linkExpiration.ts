@@ -20,6 +20,18 @@ type ItemLink = Pick<
   | "ancestors_link_role"
 >;
 
+export const isLinkExpired = (
+  item: Pick<Item, "link_expires_at">,
+  now = new Date(),
+) => !!item.link_expires_at && new Date(item.link_expires_at) <= now;
+
+// An expired link reads as restricted, but the backend keeps its past date
+// when a link update omits it: reopening the link must drop it as well.
+export const getLinkExpirationReset = (
+  item: Pick<Item, "link_expires_at">,
+): { link_expires_at?: null } =>
+  isLinkExpired(item) ? { link_expires_at: null } : {};
+
 // The backend combines the item link with the one inherited from its parents
 // and keeps the widest. An expiration only closes the item's own link, so it
 // has an effect only when that link opens more than the inherited one.

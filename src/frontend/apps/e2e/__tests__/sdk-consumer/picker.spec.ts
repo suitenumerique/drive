@@ -8,6 +8,32 @@ const PDF_FILE_PATH = path.join(__dirname, "../app-drive/assets/pv_cm.pdf");
 
 const SDK_CONSUMER_URL = "http://localhost:5173/";
 
+const API_URL = "http://localhost:8071/api/v1.0";
+
+// Replaces the expiration of the given item wherever it shows in a response.
+const withLinkExpiresAt = (
+  value: unknown,
+  itemId: string,
+  linkExpiresAt: string,
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((entry) =>
+      withLinkExpiresAt(entry, itemId, linkExpiresAt),
+    );
+  }
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value).map(([key, entry]) => [
+      key,
+      withLinkExpiresAt(entry, itemId, linkExpiresAt),
+    ]);
+    const result = Object.fromEntries(entries);
+    return result.id === itemId
+      ? { ...result, link_expires_at: linkExpiresAt }
+      : result;
+  }
+  return value;
+};
+
 test.describe("SDK file picker", () => {
   test.beforeEach(async () => {
     await clearDb();
@@ -144,5 +170,93 @@ test.describe("SDK file picker", () => {
     } finally {
       await anonContext.close();
     }
+  });
+
+  test("pick an expired public file, its link is opened again", async ({
+    page,
+  }) => {
+    // 1. Log in, upload a file and make its link public until next week.
+    await login(page, "drive@example.com");
+    await page.goto("/");
+    await clickToMyFiles(page);
+    await uploadFile(page, PDF_FILE_PATH);
+    await expect(
+      page.getByRole("cell", { name: "pv_cm", exact: true }),
+    ).toBeVisible({ timeout: 15000 });
+
+    const searchRes = await page.request.get(
+      `${API_URL}/items/search/?q=pv_cm`,
+    );
+    const body = await searchRes.json();
+    const items = Array.isArray(body) ? body : body.results;
+    const fileId = items.find(
+      (it: { title: string }) => it.title === "pv_cm.pdf",
+    ).id;
+    const csrf = (await page.context().cookies(API_URL)).find(
+      (cookie) => cookie.name === "csrftoken",
+    )!.value;
+    const inOneWeek = new Date(Date.now() + 7 * 24 * 3600 * 1000);
+    const configured = await page.request.put(
+      `${API_URL}/items/${fileId}/link-configuration/`,
+      {
+        data: {
+          link_reach: "public",
+          link_role: "reader",
+          link_expires_at: inOneWeek.toISOString(),
+        },
+        headers: { "X-CSRFToken": csrf },
+      },
+    );
+    expect(configured.ok()).toBeTruthy();
+
+    // 2. Serve the file as the backend does once its link has expired: the
+    // reach stays public with a past date. The backend refuses past dates, so
+    // the picker listings are faked.
+    const itemsUrl = "**/api/v1.0/items/**";
+    await page.context().route(itemsUrl, async (route) => {
+      if (route.request().method() !== "GET") {
+        return route.fallback();
+      }
+      const response = await route.fetch();
+      const json = await response.json().catch(() => undefined);
+      if (json === undefined) {
+        return route.fulfill({ response });
+      }
+      await route.fulfill({
+        response,
+        json: withLinkExpiresAt(json, fileId, "2020-01-01T00:00:00Z"),
+      });
+    });
+
+    // 3. Pick the file from the SDK consumer.
+    await page.goto(SDK_CONSUMER_URL);
+    const popupPromise = page.waitForEvent("popup");
+    await page.getByRole("button", { name: "Open picker" }).click();
+    const picker = await popupPromise;
+    await picker.waitForLoadState("domcontentloaded");
+    const fileRow = picker.locator("tr", { hasText: "pv_cm" });
+    await expect(fileRow).toBeVisible({ timeout: 15000 });
+    await fileRow.click();
+
+    // 4. Its reach is already public, but the picker must still update the
+    // link and clear the past date, otherwise the link stays closed.
+    const linkConfiguration = picker.waitForRequest(
+      (request) =>
+        request.url().includes(`/items/${fileId}/link-configuration/`) &&
+        request.method() === "PUT",
+    );
+    await picker.getByRole("button", { name: "Choose", exact: true }).click();
+    expect((await linkConfiguration).postDataJSON()).toMatchObject({
+      link_reach: "public",
+      link_expires_at: null,
+    });
+    await expect(
+      page.getByRole("heading", { name: "Selected items:" }),
+    ).toBeVisible();
+
+    // 5. The backend no longer holds an expiration for the file.
+    await page.context().unroute(itemsUrl);
+    const item = await page.request.get(`${API_URL}/items/${fileId}/`);
+    expect((await item.json()).link_expires_at).toBeNull();
   });
 });

@@ -1,5 +1,9 @@
 import { LinkReach, LinkRole } from "@/features/drivers/types";
-import { canLinkExpire } from "../linkExpiration";
+import {
+  canLinkExpire,
+  getLinkExpirationReset,
+  isLinkExpired,
+} from "../linkExpiration";
 
 const link = (
   link_reach: LinkReach | undefined,
@@ -12,6 +16,45 @@ const link = (
   link_expires_at: null,
   ancestors_link_reach,
   ancestors_link_role,
+});
+
+describe("isLinkExpired", () => {
+  const now = new Date("2026-11-10T12:00:00Z");
+
+  it("is false without an expiration date", () => {
+    expect(isLinkExpired({ link_expires_at: null }, now)).toBe(false);
+    expect(isLinkExpired({}, now)).toBe(false);
+  });
+
+  it("is false for a future date", () => {
+    expect(
+      isLinkExpired({ link_expires_at: "2026-11-11T00:00:00Z" }, now),
+    ).toBe(false);
+  });
+
+  it("is true for a past or current date", () => {
+    expect(
+      isLinkExpired({ link_expires_at: "2020-01-01T00:00:00Z" }, now),
+    ).toBe(true);
+    expect(isLinkExpired({ link_expires_at: now.toISOString() }, now)).toBe(
+      true,
+    );
+  });
+});
+
+describe("getLinkExpirationReset", () => {
+  it("clears a past date", () => {
+    expect(
+      getLinkExpirationReset({ link_expires_at: "2020-01-01T00:00:00Z" }),
+    ).toEqual({ link_expires_at: null });
+  });
+
+  it("keeps a future or missing date", () => {
+    expect(
+      getLinkExpirationReset({ link_expires_at: "2999-01-01T00:00:00Z" }),
+    ).toEqual({});
+    expect(getLinkExpirationReset({ link_expires_at: null })).toEqual({});
+  });
 });
 
 describe("canLinkExpire", () => {

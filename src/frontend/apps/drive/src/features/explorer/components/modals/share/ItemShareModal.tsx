@@ -43,7 +43,10 @@ import { errorToString } from "@/features/api/APIError";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/features/auth/Auth";
 import { DragEventBarrier } from "@/features/ui/components/drag-event-barrier/DragEventBarrier";
-import { canLinkExpire } from "@/features/explorer/utils/linkExpiration";
+import {
+  canLinkExpire,
+  getLinkExpirationReset,
+} from "@/features/explorer/utils/linkExpiration";
 import posthog from "posthog-js";
 
 type WorkspaceShareModalProps = {
@@ -360,6 +363,8 @@ export const ItemShareModal = ({
     onRestrictionUpdated,
   );
 
+  const linkExpirationReset = item ? getLinkExpirationReset(item) : {};
+
   return (
     <DragEventBarrier>
       <ShareModal
@@ -573,6 +578,7 @@ export const ItemShareModal = ({
               item?.link_reach ??
               LinkReach.RESTRICTED,
             link_role: value as LinkRole,
+            ...linkExpirationReset,
           });
         }}
         onUpdateLinkReach={(value) => {
@@ -586,6 +592,7 @@ export const ItemShareModal = ({
             itemId: itemId,
             link_reach: value as LinkReach,
             link_role: linkRole,
+            ...linkExpirationReset,
           });
         }}
         allowFileImport={config.ALLOW_SHARE_IMPORT_FILE ?? false}
