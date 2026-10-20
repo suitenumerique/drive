@@ -43,6 +43,7 @@ import { errorToString } from "@/features/api/APIError";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/features/auth/Auth";
 import { DragEventBarrier } from "@/features/ui/components/drag-event-barrier/DragEventBarrier";
+import { canLinkExpire } from "@/features/explorer/utils/linkExpiration";
 import posthog from "posthog-js";
 
 type WorkspaceShareModalProps = {
@@ -350,6 +351,10 @@ export const ItemShareModal = ({
     };
   }, []);
 
+  // When the parents open the same link, a date would close nothing: the
+  // expiration is neither offered nor shown.
+  const isLinkExpirable = !!item && canLinkExpire(item);
+
   const updateLinkConfiguration = useMutationUpdateLinkConfiguration();
   const updateRestriction = useMutationUpdateRestriction(
     onRestrictionUpdated,
@@ -538,6 +543,26 @@ export const ItemShareModal = ({
         showLinkRole={true}
         linkReach={item?.computed_link_reach ?? item?.link_reach}
         linkRole={item?.computed_link_role ?? item?.link_role}
+        linkExpiresAt={
+          isLinkExpirable && item?.link_expires_at
+            ? new Date(item.link_expires_at)
+            : null
+        }
+        onUpdateLinkExpiresAt={
+          isLinkExpirable
+            ? (value) => {
+                updateLinkConfiguration.mutate({
+                  itemId: itemId,
+                  // The backend requires the reach and role on every link
+                  // update, even partial ones, so the item's own ones are
+                  // sent back as is.
+                  link_reach: item?.link_reach ?? LinkReach.RESTRICTED,
+                  link_role: item?.link_role,
+                  link_expires_at: value?.toISOString() ?? null,
+                });
+              }
+            : undefined
+        }
         topLinkReachMessage={linkReachTopMessage}
         topLinkRoleMessage={linkRoleTopMessage}
         onUpdateLinkRole={(value) => {
