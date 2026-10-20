@@ -18,6 +18,7 @@ and this project adheres to
 - ✨(backend) deactivate the least recently used duplicates in the admin
 - ✨(backend) add SDK_ENABLED setting to gate the sdk relay
 - ✨(frontend) hide sdk pages when SDK_ENABLED is off
+- ✨(frontend) set an expiration date on item share links
 
 ### Fixed
 
