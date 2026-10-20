@@ -484,6 +484,22 @@ export const ItemShareModal = ({
         showLinkRole={true}
         linkReach={item?.computed_link_reach ?? item?.link_reach}
         linkRole={item?.computed_link_role ?? item?.link_role}
+        linkExpiresAt={
+          item?.link_expires_at ? new Date(item.link_expires_at) : null
+        }
+        onUpdateLinkExpiresAt={(value) => {
+          updateLinkConfiguration.mutate({
+            itemId: itemId,
+            // The backend requires the reach and role on every link update,
+            // even partial ones, so the current ones are sent back as is.
+            link_reach:
+              item?.computed_link_reach ??
+              item?.link_reach ??
+              LinkReach.RESTRICTED,
+            link_role: item?.computed_link_role ?? item?.link_role,
+            link_expires_at: value?.toISOString() ?? null,
+          });
+        }}
         topLinkReachMessage={linkReachTopMessage}
         topLinkRoleMessage={linkRoleTopMessage}
         onUpdateLinkRole={(value) => {
