@@ -11,6 +11,8 @@ and this project adheres to
 ### Fixed
 
 - 🐛(backend) fix anonymous export of public folders
+- 🐛(backend) fix user's inactive token introspection failure
+  (upgrade to `django-lasuite==0.1.0`)
 
 ## [v0.25.0] - 2026-10-19
 

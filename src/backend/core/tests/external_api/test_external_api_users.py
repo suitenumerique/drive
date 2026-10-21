@@ -7,6 +7,7 @@ because the resource server viewsets inherit from the api viewsets.
 """
 
 import pytest
+import responses
 from rest_framework.test import APIClient
 
 from core import factories
@@ -69,6 +70,27 @@ def test_api_users_me_connected_resource_server_with_invalid_token(
     Connected users should not be allowed to retrieve their own user information from external API
     if resource server is enabled with an invalid token.
     """
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
+
+    response = client.get("/external_api/v1.0/users/me/")
+
+    assert response.status_code == 401
+
+
+def test_api_users_me_resource_server_inactive_token(
+    user_token, resource_server_backend, user_specific_sub
+):
+    """
+    When the token introspection reports the user as inactive, the resource server
+    authentication backend raises an AuthenticationFailed, which should result in a 401
+    and not a 500.
+    """
+    resource_server_backend.replace(
+        responses.POST,
+        "https://oidc.example.com/introspect",
+        json={"active": False},
+    )
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {user_token}")
 

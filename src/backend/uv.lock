@@ -480,7 +480,7 @@ wheels = [
 
 [[package]]
 name = "django-lasuite"
-version = "0.0.29"
+version = "0.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
@@ -491,15 +491,17 @@ dependencies = [
     { name = "requests" },
     { name = "requests-toolbelt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f4/ab/72a79b7133fb2d17835bef40f45f7e6d2b4343469c37fd00386122e9068d/django_lasuite-0.0.29.tar.gz", hash = "sha256:831cb859e45e33963c9d89168c2de14f9844e805000b0f0d1512ffd0b9731a39", size = 35248, upload-time = "2026-08-25T13:03:43.597Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ea/ec/dd2d8a2d4f1c8f866f51877b2fff6edc5912930b4285086b3ffcbc0562a3/django_lasuite-0.1.0.tar.gz", hash = "sha256:057366ff1ff9536910b99219edd0de1e63e8a8a892f4af4bc5d816096747c03c", size = 44751, upload-time = "2026-10-21T16:48:24.748Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a1/cf/86648643221816f18ebd5a3e59b6d2a85ee85b38b19c7abe939f798a2845/django_lasuite-0.0.29-py3-none-any.whl", hash = "sha256:33bcff90ced2709190ef01241badb17ceed08a32725b9cdd3105650b36da303b", size = 54899, upload-time = "2026-08-25T13:03:42.212Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/99/7489298fd05f65fdea0b61ea40d2e800ce813a843ca2497413da4eb0e659/django_lasuite-0.1.0-py3-none-any.whl", hash = "sha256:1992156a2aff92853f3092940fb4ef9c4f41f572df471bfbea85985ee63fa0a9", size = 68130, upload-time = "2026-10-21T16:48:23.26Z" },
 ]
 
 [package.optional-dependencies]
 all = [
     { name = "celery" },
+    { name = "cryptography" },
     { name = "django-configurations" },
+    { name = "python-icap" },
 ]
 
 [[package]]
@@ -754,7 +756,7 @@ requires-dist = [
     { name = "django-debug-toolbar", marker = "extra == 'dev'", specifier = "==6.3.0" },
     { name = "django-extensions", marker = "extra == 'dev'", specifier = "==4.1" },
     { name = "django-filter", specifier = "==25.2" },
-    { name = "django-lasuite", extras = ["all"], specifier = "==0.0.29" },
+    { name = "django-lasuite", extras = ["all"], specifier = "==0.1.0" },
     { name = "django-ltree", specifier = "==0.6.0" },
     { name = "django-parler", specifier = "==2.3" },
     { name = "django-prometheus", specifier = "==2.5.0" },
@@ -1498,6 +1500,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/66/c0/0c8b6ad9f17a802ee498c46e004a0eb49bc148f2fd230864601a86dcf6db/python-dateutil-2.9.0.post0.tar.gz", hash = "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3", size = 342432, upload-time = "2024-03-01T18:36:20.211Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl", hash = "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427", size = 229892, upload-time = "2024-03-01T18:36:18.57Z" },
+]
+
+[[package]]
+name = "python-icap"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/0a/123c30f4041eabb94c587d35fb64aa9498435d028a8577340a4e5adc5224/python_icap-0.2.0.tar.gz", hash = "sha256:627869ac29119074542de6ae95370914854fdb35ee0a13c8ae4c55847cfcb80e", size = 684516, upload-time = "2026-07-08T22:21:58.842Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d8/f2/b437a5e08b94dfc4cd8505cfc3e63922247e9ce3957707550ab08c514560/python_icap-0.2.0-py3-none-any.whl", hash = "sha256:b648d55b68abe387849a124d1b4a443801342a566afd2141f4515953ed4bd738", size = 70680, upload-time = "2026-07-08T22:21:57.307Z" },
 ]
 
 [[package]]
