@@ -49,13 +49,28 @@ export declare interface EncryptionClientOptions {
     /** Timeout in ms for vault operations (default: 30000) */
     timeout?: number;
     /**
-     * Cunningham theme name for the interface iframe.
-     * Standard names: "default", "dark", "dsfr", "dsfr-dark", "anct", "anct-dark".
+     * Design system theme for the interface iframe.
+     * Standard names: "default", "dark", "dsfr" (or "dsfr-light"), "dsfr-dark", "anct" (or "anct-light"), "anct-dark".
      * Default: "default"
      */
     theme?: string;
     /** Language code for the interface iframe: "fr", "en", etc. (default: browser language) */
     lang?: string;
+}
+
+/**
+ * Where encryption stands for the signed-in user on this device, for a product's
+ * own account page:
+ * - `active`: this device holds the user's keys and they are the ones registered for the account;
+ * - `disabled-for-account`: this device holds keys, but encryption was turned off for the account;
+ * - `needs-attention`: this device holds keys of another identity than the one registered (replaced elsewhere),
+ *   or the registered record fails its binding check;
+ * - `not-set-up`: this device holds no keys. `registered` then tells whether the account set
+ *   encryption up on another device (the onboarding offers to restore it rather than start over).
+ */
+export declare interface EncryptionStatus {
+    state: 'active' | 'disabled-for-account' | 'needs-attention' | 'not-set-up';
+    registered: boolean;
 }
 
 export declare interface HasKeysResult {
@@ -99,6 +114,8 @@ export declare type RegisteredUser = {
     createdAtMillis: number;
     encryptionPublicKey: null;
 };
+
+export declare type SettingsSection = 'manage' | 'add-device' | 'verification-code' | 'recovery-phrase' | 'trusted-contacts';
 
 export declare class VaultClient {
     private vaultIframe;
@@ -165,6 +182,14 @@ export declare class VaultClient {
     getPublicKey(): Promise<{
         publicKey: ArrayBuffer;
     }>;
+    /**
+     * Where encryption stands for the signed-in user on this device (see
+     * {@link EncryptionStatus}), from the vault (the keys on this device) and the
+     * public directory (the identity registered for the account). Needs no sign-in
+     * to the encryption interface: an account page can show it before any modal is
+     * opened, and each of its actions opens the interface, which signs in if needed.
+     */
+    getEncryptionStatus(): Promise<EncryptionStatus>;
     /**
      * Create a new ROOT encrypted resource. Mints a fresh symmetric key,
      * encrypts `data` with it, and wraps the new key once per recipient.
@@ -407,9 +432,18 @@ export declare class VaultClient {
      */
     openRestore(): void;
     /**
-     * Open the encryption settings (view fingerprint, delete keys).
+     * Open the encryption settings. Without a section, the interface's own
+     * encryption home (status and every flow below), for a product with no account
+     * page of its own. With a section, that single flow, which closes the interface
+     * when it ends, for a product listing the flows on its own page:
+     * - `manage`: turn encryption off (this device or the account), or review a
+     *   device out of step with the account (turned off, replaced elsewhere);
+     * - `add-device`: give another device access, from this one;
+     * - `verification-code`: the code others compare to verify this user;
+     * - `recovery-phrase`: change the recovery phrase;
+     * - `trusted-contacts`: the trusted contacts, and the people this user can help.
      */
-    openSettings(): void;
+    openSettings(section?: SettingsSection): void;
     /**
      * Open device approval: enroll this device from another, or approve a new one.
      */
@@ -628,8 +662,6 @@ export declare const VaultErrorCode: {
     readonly INVALID_MAINTENANCE_KEY: "INVALID_MAINTENANCE_KEY";
     /** A maintenance copy names another maintenance key than the one trying to open it (another organization's). */
     readonly OTHER_MAINTENANCE_KEY: "OTHER_MAINTENANCE_KEY";
-    /** The owner a product named for the maintenance copy has no account on the encryption service. */
-    readonly UNKNOWN_MAINTENANCE_OWNER: "UNKNOWN_MAINTENANCE_OWNER";
     /**
      * A registry entry's binding signature did not verify against its claimed
      * identity (signature) key — the directory record is forged, tampered, or
