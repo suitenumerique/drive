@@ -35,6 +35,14 @@ def clear_cache():
     get_storage_compute_backend.cache_clear()
 
 
+@pytest.fixture(autouse=True)
+def posthog_capture_mock(settings):
+    """Run the PostHog tracking code in every test without sending events."""
+    settings.POSTHOG_KEY = "test-key"
+    with mock.patch("core.utils.analytics.posthog.capture") as capture:
+        yield capture
+
+
 @pytest.fixture
 def mock_user_teams():
     """Mock for the "teams" property on the User model."""

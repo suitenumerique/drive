@@ -362,14 +362,12 @@ def test_api_items_export_posthog_event(settings):
     mock_capture.assert_called_once_with("item_exported", user, {}, item=folder)
 
 
-def test_api_items_export_posthog_event_anonymous(settings):
+def test_api_items_export_posthog_event_anonymous(posthog_capture_mock):
     """Exporting a public folder anonymously should send an event without distinct id."""
-    settings.POSTHOG_KEY = "fake-key"
     folder = factories.ItemFactory(link_reach="public", type=models.ItemTypeChoices.FOLDER)
 
-    with mock.patch("core.utils.analytics.posthog.capture") as mock_capture:
-        response = APIClient().get(f"/api/v1.0/items/{folder.pk}/export/")
+    response = APIClient().get(f"/api/v1.0/items/{folder.pk}/export/")
 
     assert response.status_code == 200
-    mock_capture.assert_called_once()
-    assert mock_capture.call_args.kwargs["distinct_id"] is None
+    posthog_capture_mock.assert_called_once()
+    assert posthog_capture_mock.call_args.kwargs["distinct_id"] is None
