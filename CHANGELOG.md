@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛(backend) fix anonymous export of public folders
+
 ## [v0.25.0] - 2026-10-19
 
 ### Added
