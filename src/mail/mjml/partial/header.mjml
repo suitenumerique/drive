@@ -5,7 +5,7 @@
             We load django tags here, in this way there are put within the body in html output
             so the html-to-text command includes it within its output
         -->
-        {% load i18n static extra_tags %}
+        {% load i18n static %}
         {{ title }}
     </mj-preview>
     <mj-attributes>

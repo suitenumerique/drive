@@ -867,7 +867,6 @@ class Base(Configuration):
         "rest_framework_api_key",
         "parler",
         "django_ltree",
-        "easy_thumbnails",
         # Django
         "django.contrib.admin",
         "django.contrib.auth",
@@ -1117,12 +1116,6 @@ class Base(Configuration):
     )
     # Crisp
     CRISP_WEBSITE_ID = values.Value(None, environ_name="CRISP_WEBSITE_ID", environ_prefix=None)
-
-    # Easy thumbnails
-    THUMBNAIL_EXTENSION = "webp"
-    THUMBNAIL_TRANSPARENCY_EXTENSION = "webp"
-    THUMBNAIL_DEFAULT_STORAGE_ALIAS = "default"
-    THUMBNAIL_ALIASES = {}
 
     # Celery
     CELERY_BROKER_URL = values.Value("redis://redis:6379/0")
