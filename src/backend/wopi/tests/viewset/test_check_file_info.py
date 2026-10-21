@@ -1,5 +1,6 @@
 """Testing the check file info endpoint"""
 
+import logging
 from datetime import timedelta
 from io import BytesIO
 from unittest import mock
@@ -310,6 +311,25 @@ def test_check_file_info_non_existing_access_token():
         HTTP_AUTHORIZATION="Bearer not_existing_token",
     )
     assert response.status_code == 403
+
+
+def test_check_file_info_rejected_request_logged_as_warning(caplog):
+    """A rejected CheckFileInfo request should be logged as a warning."""
+    item = factories.ItemFactory()
+    client = APIClient()
+    with caplog.at_level("WARNING", logger="wopi.viewsets"):
+        response = client.get(
+            f"/api/v1.0/wopi/files/{item.id}/",
+            HTTP_AUTHORIZATION="Bearer not_existing_token",
+        )
+    assert response.status_code == 403
+    assert (
+        "wopi.viewsets",
+        logging.WARNING,
+        f"WOPI request rejected: method=GET override=None item={item.id} user=None "
+        "status=403 lock_held=False detail={'type': 'client_error', 'errors': "
+        "[{'code': 'authentication_failed', 'detail': 'Invalid access token', 'attr': None}]}",
+    ) in caplog.record_tuples
 
 
 def test_check_file_info_connected_user_with_access_with_valid_signature(

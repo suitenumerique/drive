@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- 🔊(backend) log rejected WOPI requests
+
 ### Fixed
 
 - 🐛(backend) fix anonymous export of public folders
