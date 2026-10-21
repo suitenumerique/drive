@@ -47,7 +47,6 @@ dependencies = [
     "dockerflow==2026.3.4",
     "drf_spectacular==0.29.0",
     "drf-standardized-errors==0.15.0",
-    "easy_thumbnails==2.10.1",
     "factory_boy==3.3.3",
     "gunicorn==25.3.0",
     "jsonschema==4.26.0",
@@ -97,10 +96,6 @@ dev = [
 
 [tool.uv]
 constraint-dependencies = [
-    # Pin pillow above the versions vulnerable to the image decoder and
-    # encoder advisories fixed in 13.0.0. Pulled transitively via
-    # easy_thumbnails, which has no upper bound on pillow.
-    "pillow>=13.0.0",
     # Pin joserfc above the version vulnerable to CVE-2026-49852
     # (HMAC verify accepts an empty key). Pulled transitively via
     # django-lasuite, which has no upper bound on joserfc.

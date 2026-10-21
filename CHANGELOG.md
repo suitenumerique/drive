@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Removed
+
+- 🔥(backend) remove unused easy-thumbnails and pillow
+
 ## [v0.25.0] - 2026-10-19
 
 ### Added
