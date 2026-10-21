@@ -343,9 +343,8 @@ def test_api_items_export_filename_with_unicode():
     assert disposition == "attachment; filename*=UTF-8''%C3%A9t%C3%A9%202026.zip"
 
 
-def test_api_items_export_posthog_event(settings):
+def test_api_items_export_posthog_event(posthog_capture_mock):
     """Exporting a folder should send an 'item_exported' event."""
-    settings.POSTHOG_KEY = "fake-key"
     user = factories.UserFactory()
     folder = factories.ItemFactory(
         type=models.ItemTypeChoices.FOLDER,
@@ -355,11 +354,14 @@ def test_api_items_export_posthog_event(settings):
     client = APIClient()
     client.force_login(user)
 
-    with mock.patch("core.api.viewsets.posthog_capture") as mock_capture:
-        response = client.get(f"/api/v1.0/items/{folder.pk}/export/")
+    response = client.get(f"/api/v1.0/items/{folder.pk}/export/")
 
     assert response.status_code == 200
-    mock_capture.assert_called_once_with("item_exported", user, {}, item=folder)
+    posthog_capture_mock.assert_called_once_with(
+        "item_exported", distinct_id=user.email, properties=mock.ANY
+    )
+    properties = posthog_capture_mock.call_args.kwargs["properties"]
+    assert properties.items() >= {"item_id": folder.id}.items()
 
 
 def test_api_items_export_posthog_event_anonymous(posthog_capture_mock):

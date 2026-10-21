@@ -386,9 +386,8 @@ def test_api_item_favorite_suspicious_item_should_work_for_creator():
 # Posthog events
 
 
-def test_api_item_favorite_posthog_event(settings):
+def test_api_item_favorite_posthog_event(posthog_capture_mock):
     """Marking an item as favorite should send an 'item_favorited' event."""
-    settings.POSTHOG_KEY = "fake-key"
     user = factories.UserFactory()
     item = factories.ItemFactory(
         link_reach="authenticated",
@@ -398,21 +397,18 @@ def test_api_item_favorite_posthog_event(settings):
     client = APIClient()
     client.force_login(user)
 
-    with mock.patch("core.api.viewsets.posthog_capture") as mock_capture:
-        response = client.post(f"/api/v1.0/items/{item.id!s}/favorite/")
+    response = client.post(f"/api/v1.0/items/{item.id!s}/favorite/")
 
     assert response.status_code == 201
-    mock_capture.assert_called_once_with(
-        "item_favorited",
-        user,
-        {},
-        item=item,
+    posthog_capture_mock.assert_called_once_with(
+        "item_favorited", distinct_id=user.email, properties=mock.ANY
     )
+    properties = posthog_capture_mock.call_args.kwargs["properties"]
+    assert properties.items() >= {"item_id": item.id}.items()
 
 
-def test_api_item_favorite_already_favorited_no_posthog_event(settings):
+def test_api_item_favorite_already_favorited_no_posthog_event(posthog_capture_mock):
     """Marking an already favorited item should not send any event."""
-    settings.POSTHOG_KEY = "fake-key"
     user = factories.UserFactory()
     item = factories.ItemFactory(
         link_reach="authenticated",
@@ -423,16 +419,14 @@ def test_api_item_favorite_already_favorited_no_posthog_event(settings):
     client = APIClient()
     client.force_login(user)
 
-    with mock.patch("core.api.viewsets.posthog_capture") as mock_capture:
-        response = client.post(f"/api/v1.0/items/{item.id!s}/favorite/")
+    response = client.post(f"/api/v1.0/items/{item.id!s}/favorite/")
 
     assert response.status_code == 200
-    mock_capture.assert_not_called()
+    posthog_capture_mock.assert_not_called()
 
 
-def test_api_item_unfavorite_posthog_event(settings):
+def test_api_item_unfavorite_posthog_event(posthog_capture_mock):
     """Unmarking an item as favorite should send an 'item_unfavorited' event."""
-    settings.POSTHOG_KEY = "fake-key"
     user = factories.UserFactory()
     item = factories.ItemFactory(
         link_reach="authenticated",
@@ -443,21 +437,18 @@ def test_api_item_unfavorite_posthog_event(settings):
     client = APIClient()
     client.force_login(user)
 
-    with mock.patch("core.api.viewsets.posthog_capture") as mock_capture:
-        response = client.delete(f"/api/v1.0/items/{item.id!s}/favorite/")
+    response = client.delete(f"/api/v1.0/items/{item.id!s}/favorite/")
 
     assert response.status_code == 200
-    mock_capture.assert_called_once_with(
-        "item_unfavorited",
-        user,
-        {},
-        item=item,
+    posthog_capture_mock.assert_called_once_with(
+        "item_unfavorited", distinct_id=user.email, properties=mock.ANY
     )
+    properties = posthog_capture_mock.call_args.kwargs["properties"]
+    assert properties.items() >= {"item_id": item.id}.items()
 
 
-def test_api_item_unfavorite_not_favorited_no_posthog_event(settings):
+def test_api_item_unfavorite_not_favorited_no_posthog_event(posthog_capture_mock):
     """Unmarking a non-favorited item should not send any event."""
-    settings.POSTHOG_KEY = "fake-key"
     user = factories.UserFactory()
     item = factories.ItemFactory(
         link_reach="authenticated",
@@ -467,8 +458,7 @@ def test_api_item_unfavorite_not_favorited_no_posthog_event(settings):
     client = APIClient()
     client.force_login(user)
 
-    with mock.patch("core.api.viewsets.posthog_capture") as mock_capture:
-        response = client.delete(f"/api/v1.0/items/{item.id!s}/favorite/")
+    response = client.delete(f"/api/v1.0/items/{item.id!s}/favorite/")
 
     assert response.status_code == 200
-    mock_capture.assert_not_called()
+    posthog_capture_mock.assert_not_called()

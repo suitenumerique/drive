@@ -2296,9 +2296,8 @@ def test_api_item_accesses_in_tree():
 # Posthog events
 
 
-def test_api_item_accesses_update_posthog_event_on_role_change(settings):
+def test_api_item_accesses_update_posthog_event_on_role_change(posthog_capture_mock):
     """Updating an access role should send an 'item_access_updated' event."""
-    settings.POSTHOG_KEY = "fake-key"
     user = factories.UserFactory()
     other_user = factories.UserFactory()
     item = factories.ItemFactory(users=[(user, "owner")])
@@ -2307,25 +2306,25 @@ def test_api_item_accesses_update_posthog_event_on_role_change(settings):
     client = APIClient()
     client.force_login(user)
 
-    with mock.patch("core.api.viewsets.posthog_capture") as mock_capture:
-        response = client.patch(
-            f"/api/v1.0/items/{item.id!s}/accesses/{access.id!s}/",
-            {"role": "reader"},
-            format="json",
-        )
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/accesses/{access.id!s}/",
+        {"role": "reader"},
+        format="json",
+    )
 
     assert response.status_code == 200
-    mock_capture.assert_called_once_with(
-        "item_access_updated",
-        user,
-        {"id": access.id, "role": "reader", "old_role": "editor"},
-        item=item,
+    posthog_capture_mock.assert_called_once_with(
+        "item_access_updated", distinct_id=user.email, properties=mock.ANY
+    )
+    properties = posthog_capture_mock.call_args.kwargs["properties"]
+    assert (
+        properties.items()
+        >= {"id": access.id, "role": "reader", "old_role": "editor", "item_id": item.id}.items()
     )
 
 
-def test_api_item_accesses_update_no_posthog_event_without_role_change(settings):
+def test_api_item_accesses_update_no_posthog_event_without_role_change(posthog_capture_mock):
     """Updating an access without changing the role should not send any event."""
-    settings.POSTHOG_KEY = "fake-key"
     user = factories.UserFactory()
     other_user = factories.UserFactory()
     item = factories.ItemFactory(users=[(user, "owner")])
@@ -2334,20 +2333,18 @@ def test_api_item_accesses_update_no_posthog_event_without_role_change(settings)
     client = APIClient()
     client.force_login(user)
 
-    with mock.patch("core.api.viewsets.posthog_capture") as mock_capture:
-        response = client.patch(
-            f"/api/v1.0/items/{item.id!s}/accesses/{access.id!s}/",
-            {"role": "editor"},
-            format="json",
-        )
+    response = client.patch(
+        f"/api/v1.0/items/{item.id!s}/accesses/{access.id!s}/",
+        {"role": "editor"},
+        format="json",
+    )
 
     assert response.status_code == 200
-    mock_capture.assert_not_called()
+    posthog_capture_mock.assert_not_called()
 
 
-def test_api_item_accesses_delete_posthog_event(settings):
+def test_api_item_accesses_delete_posthog_event(posthog_capture_mock):
     """Deleting an access should send an 'item_access_deleted' event."""
-    settings.POSTHOG_KEY = "fake-key"
     user = factories.UserFactory()
     other_user = factories.UserFactory()
     item = factories.ItemFactory(users=[(user, "owner")])
@@ -2357,15 +2354,13 @@ def test_api_item_accesses_delete_posthog_event(settings):
     client = APIClient()
     client.force_login(user)
 
-    with mock.patch("core.api.viewsets.posthog_capture") as mock_capture:
-        response = client.delete(
-            f"/api/v1.0/items/{item.id!s}/accesses/{access.id!s}/",
-        )
+    response = client.delete(
+        f"/api/v1.0/items/{item.id!s}/accesses/{access.id!s}/",
+    )
 
     assert response.status_code == 204
-    mock_capture.assert_called_once_with(
-        "item_access_deleted",
-        user,
-        {"id": access_id, "role": "reader"},
-        item=item,
+    posthog_capture_mock.assert_called_once_with(
+        "item_access_deleted", distinct_id=user.email, properties=mock.ANY
     )
+    properties = posthog_capture_mock.call_args.kwargs["properties"]
+    assert properties.items() >= {"id": access_id, "role": "reader", "item_id": item.id}.items()
