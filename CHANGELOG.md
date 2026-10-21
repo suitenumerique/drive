@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(frontend) restrict and reopen folder access from the share modal
+- 🔊(backend) log rejected WOPI requests
 
 ## [v0.25.3] - 2026-10-23
 
