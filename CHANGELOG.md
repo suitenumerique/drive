@@ -8,6 +8,11 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) add file-scanner malware webhook endpoint
+- 🔧(backend) make malware reschedule delay configurable
+
 ### Fixed
 
 - 🐛(backend) fix anonymous export of public folders
