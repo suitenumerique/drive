@@ -1103,6 +1103,11 @@ class Base(Configuration):
         environ_name="FRONTEND_STORAGE_GAUGE_INFORMATION_LINK",
         environ_prefix=None,
     )
+    # Banner displayed at the top of every page, e.g. to announce a maintenance.
+    # See docs/customization.md for the expected format.
+    FRONTEND_HEADER_BANNER = values.DictValue(
+        {}, environ_name="FRONTEND_HEADER_BANNER", environ_prefix=None
+    )
     FRONTEND_CSS_URL = values.Value(None, environ_name="FRONTEND_CSS_URL", environ_prefix=None)
     FRONTEND_JS_URL = values.Value(None, environ_name="FRONTEND_JS_URL", environ_prefix=None)
     THEME_CUSTOMIZATION_FILE_PATH = values.Value(
