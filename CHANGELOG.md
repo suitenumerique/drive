@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) publish announcements from the Django admin
+- ✨(frontend) display the header banner announcements
 
 ### Changed
 

@@ -200,6 +200,28 @@ export interface ThemeCustomization {
   footer?: LocalizedThemeCustomization<FooterProps>;
 }
 
+/**
+ * A text translated per language, with a `default` fallback, e.g.
+ * `{ "default": "Maintenance", "en": "Maintenance", "fr": "Maintenance" }`.
+ */
+export type LocalizedText = { default: string; [language: string]: string };
+
+export type AnnouncementLevel = "info" | "warning" | "error";
+
+/**
+ * A message published by the administrators from the Django admin.
+ */
+export type Announcement = {
+  id: string;
+  /** Where to display it, e.g. "header_banner". Unknown values are ignored. */
+  display: string;
+  level: AnnouncementLevel;
+  title: LocalizedText | null;
+  body: LocalizedText;
+  cta: { label: LocalizedText; url: string; new_tab: boolean } | null;
+  is_dismissible: boolean;
+};
+
 export type ApiConfig = {
   ALLOW_SHARE_IMPORT_FILE?: boolean;
   AWS_S3_UPLOAD_ACL?: string;
