@@ -72,6 +72,24 @@ class WopiViewSet(viewsets.ViewSet):
         """Get the file id from the URL path."""
         return uuid.UUID(self.kwargs.get("pk"))
 
+    def finalize_response(self, request, response, *args, **kwargs):
+        """Log rejected WOPI requests, as errors for a rejected save."""
+        if response.status_code >= 400:
+            override = request.META.get(HTTP_X_WOPI_OVERRIDE)
+            log_at_level = logger.error if override == "PUT" else logger.warning
+            log_at_level(
+                "WOPI request rejected: method=%s override=%s item=%s user=%s "
+                "status=%s lock_held=%s detail=%s",
+                request.method,
+                override,
+                kwargs.get("pk"),
+                request.user.id,
+                response.status_code,
+                bool(response.get(X_WOPI_LOCK)),
+                getattr(response, "data", None),
+            )
+        return super().finalize_response(request, response, *args, **kwargs)
+
     def _verify_request_signature(self, request):
         """Verify the request signature."""
         proof_keys = get_wopi_client_proof_keys(request.auth.item)

@@ -1,5 +1,6 @@
 """Test the PUT file content viewset."""
 
+import logging
 from unittest import mock
 
 from django.core.files.storage import default_storage
@@ -324,6 +325,69 @@ def test_put_file_content_with_invalid_lock():
     )
     assert response.status_code == 409
     assert response.headers.get("X-WOPI-Lock") == "1234567890"
+
+
+def test_put_file_content_with_invalid_lock_logged_as_error(caplog):
+    """A save rejected for an invalid lock should be logged as an error."""
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+    user = factories.UserFactory()
+    factories.UserItemAccessFactory(item=item, user=user, role=models.RoleChoices.EDITOR)
+    access_token, _ = AccessUserItemService().insert_new_access(item, user)
+    LockService(item).lock("1234567890")
+
+    client = APIClient()
+    with caplog.at_level("WARNING", logger="wopi.viewsets"):
+        response = client.post(
+            f"/api/v1.0/wopi/files/{item.id}/contents/",
+            data=b"new content",
+            content_type="text/plain",
+            HTTP_AUTHORIZATION=f"Bearer {access_token}",
+            headers={
+                "X-WOPI-Override": "PUT",
+                "X-WOPI-Lock": "invalid-lock",
+            },
+        )
+    assert response.status_code == 409
+    assert (
+        "wopi.viewsets",
+        logging.ERROR,
+        f"WOPI request rejected: method=POST override=PUT item={item.id} user={user.id} "
+        "status=409 lock_held=True detail=None",
+    ) in caplog.record_tuples
+
+
+def test_put_file_content_with_unknown_access_token_logged_as_error(caplog):
+    """A save rejected for an unknown access token should be logged as an error."""
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="wopi_test.txt",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    client = APIClient()
+    with caplog.at_level("WARNING", logger="wopi.viewsets"):
+        response = client.post(
+            f"/api/v1.0/wopi/files/{item.id}/contents/",
+            data=b"new content",
+            content_type="text/plain",
+            HTTP_AUTHORIZATION="Bearer not_existing_token",
+            headers={
+                "X-WOPI-Override": "PUT",
+                "X-WOPI-Lock": "1234567890",
+            },
+        )
+    assert response.status_code == 403
+    assert (
+        "wopi.viewsets",
+        logging.ERROR,
+        f"WOPI request rejected: method=POST override=PUT item={item.id} user=None "
+        "status=403 lock_held=False detail={'type': 'client_error', 'errors': "
+        "[{'code': 'authentication_failed', 'detail': 'Invalid access token', 'attr': None}]}",
+    ) in caplog.record_tuples
 
 
 def test_put_file_content_with_no_lock_header_and_body_size_greater_than_0():
