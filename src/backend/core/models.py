@@ -40,6 +40,8 @@ from lasuite.drf.models.choices import (
     RoleChoices,
     get_equivalent_link_definition,
 )
+from parler.managers import TranslatableQuerySet
+from parler.models import TranslatableModelMixin, TranslatedFields
 from pydantic import BaseModel as PydanticBaseModel
 from timezone_field import TimeZoneField
 
@@ -2438,3 +2440,128 @@ class Invitation(BaseModel):
             "partial_update": is_owner_or_admin,
             "retrieve": is_owner_or_admin,
         }
+
+
+class AnnouncementDisplayChoices(models.TextChoices):
+    """Where an announcement is displayed in the frontend."""
+
+    HEADER_BANNER = "header_banner", _("Header banner")
+
+
+class AnnouncementLevelChoices(models.TextChoices):
+    """How important an announcement is, it drives its color."""
+
+    INFO = "info", _("Info")
+    WARNING = "warning", _("Warning")
+    ERROR = "error", _("Error")
+
+
+class AnnouncementQuerySet(TranslatableQuerySet):
+    """Queryset for announcements."""
+
+    def live(self, now=None):
+        """Active announcements whose display window contains `now`."""
+        now = now or timezone.now()
+        return self.filter(
+            models.Q(starts_at__isnull=True) | models.Q(starts_at__lte=now),
+            models.Q(ends_at__isnull=True) | models.Q(ends_at__gt=now),
+            is_active=True,
+        )
+
+
+class Announcement(TranslatableModelMixin, BaseModel):
+    """
+    A message published by the administrators to the users of the frontend, e.g. to
+    announce a maintenance. `display` tells the frontend how to show it.
+    """
+
+    # A header banner is a single line
+    HEADER_BANNER_BODY_MAX_LENGTH = 200
+
+    display = models.CharField(
+        _("display"),
+        max_length=30,
+        choices=AnnouncementDisplayChoices.choices,
+        default=AnnouncementDisplayChoices.HEADER_BANNER,
+        help_text=_("Where the announcement is displayed."),
+    )
+    level = models.CharField(
+        _("level"),
+        max_length=20,
+        choices=AnnouncementLevelChoices.choices,
+        default=AnnouncementLevelChoices.INFO,
+        help_text=_("Drives the color of the announcement."),
+    )
+    translations = TranslatedFields(
+        title=models.CharField(
+            _("title"),
+            max_length=255,
+            blank=True,
+            help_text=_("Not displayed in header banners."),
+        ),
+        body=models.TextField(_("body"), help_text=_("Message of the announcement.")),
+        cta_label=models.CharField(
+            _("link label"),
+            max_length=100,
+            blank=True,
+            help_text=_("Label of the optional link displayed with the announcement."),
+        ),
+    )
+    cta_url = models.URLField(_("link URL"), blank=True)
+    cta_new_tab = models.BooleanField(_("open the link in a new tab"), default=True)
+    is_dismissible = models.BooleanField(
+        _("dismissible"),
+        default=True,
+        help_text=_("Users can close the announcement, it then stays closed for them."),
+    )
+    is_active = models.BooleanField(
+        _("active"),
+        default=False,
+        help_text=_("Only active announcements are displayed."),
+    )
+    starts_at = models.DateTimeField(
+        _("starts at"),
+        null=True,
+        blank=True,
+        help_text=_("Leave empty to display it as soon as it is active."),
+    )
+    ends_at = models.DateTimeField(
+        _("ends at"),
+        null=True,
+        blank=True,
+        help_text=_("Leave empty to display it until it is deactivated."),
+    )
+    priority = models.SmallIntegerField(
+        _("priority"),
+        default=0,
+        help_text=_(
+            "Announcements with a higher priority come first. "
+            "Only the first header banner is displayed."
+        ),
+    )
+
+    objects = AnnouncementQuerySet.as_manager()
+
+    class Meta:
+        db_table = "drive_announcement"
+        verbose_name = _("announcement")
+        verbose_name_plural = _("announcements")
+        ordering = ["-priority", "-updated_at"]
+
+    def __str__(self):
+        return self.safe_translation_getter("body", any_language=True) or str(self.id)
+
+    def is_live(self, now=None):
+        """Whether the announcement is active and its display window contains `now`."""
+        now = now or timezone.now()
+        return (
+            self.is_active
+            and (self.starts_at is None or self.starts_at <= now)
+            and (self.ends_at is None or self.ends_at > now)
+        )
+
+    def clean(self):
+        """Validate the display window."""
+        super().clean()
+        if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
+            raise ValidationError({"ends_at": _("The end must be after the start.")})

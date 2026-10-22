@@ -25,9 +25,12 @@ from django.utils.translation import gettext_lazy as _
 from lasuite.malware_detection import malware_detection
 from lasuite.malware_detection.admin import MalwareDetectionAdmin as BaseMalwareDetectionAdmin
 from lasuite.malware_detection.models import MalwareDetection
+from parler.admin import TranslatableAdmin
+from parler.forms import TranslatableModelForm
 
 from core import models
 from core.entitlements import get_entitlements_backend
+from core.services.announcements import invalidate_announcements_cache
 from core.storage import get_storage_compute_backend
 from core.storage.cache import invalidate_storage_used_cache
 from core.tasks.user_reconciliation import user_reconciliation_csv_import_job
@@ -767,3 +770,93 @@ class MalwareDetectionAdmin(BaseMalwareDetectionAdmin):
         if obj.item_size is None:
             return None
         return format_size(obj.item_size)
+
+
+class AnnouncementAdminForm(TranslatableModelForm):
+    """Validate the translated fields of an announcement, one language at a time."""
+
+    class Meta:
+        model = models.Announcement
+        fields = "__all__"
+
+    def clean(self):
+        """Check the link and the length of the header banners."""
+        cleaned_data = super().clean()
+        body = cleaned_data.get("body") or ""
+        cta_label = cleaned_data.get("cta_label")
+        cta_url = cleaned_data.get("cta_url")
+        max_length = models.Announcement.HEADER_BANNER_BODY_MAX_LENGTH
+
+        if (
+            cleaned_data.get("display") == models.AnnouncementDisplayChoices.HEADER_BANNER
+            and len(body) > max_length
+        ):
+            self.add_error(
+                "body",
+                _("A header banner is limited to %(max_length)s characters.")
+                % {"max_length": max_length},
+            )
+
+        if cta_label and not cta_url:
+            self.add_error("cta_url", _("The link needs a URL."))
+
+        if cta_url and not cta_label and not self._has_cta_label_in_other_language():
+            self.add_error("cta_label", _("The link needs a label."))
+
+        return cleaned_data
+
+    def _has_cta_label_in_other_language(self):
+        """Whether another language already gives a label to the link."""
+        if not self.instance.pk:
+            return False
+        return (
+            self.instance.translations.exclude(language_code=self.language_code)
+            .exclude(cta_label="")
+            .exists()
+        )
+
+
+@admin.register(models.Announcement)
+class AnnouncementAdmin(TranslatableAdmin):
+    """Admin interface to publish announcements to the users."""
+
+    form = AnnouncementAdminForm
+    fieldsets = (
+        (None, {"fields": ("display", "level", "title", "body")}),
+        (_("Link"), {"fields": ("cta_label", "cta_url", "cta_new_tab")}),
+        (
+            _("Publication"),
+            {"fields": ("is_active", "starts_at", "ends_at", "priority", "is_dismissible")},
+        ),
+    )
+    list_display = (
+        "__str__",
+        "display",
+        "level",
+        "is_active",
+        "is_live",
+        "starts_at",
+        "ends_at",
+        "priority",
+        "language_column",
+    )
+    list_filter = ("display", "level", "is_active")
+    search_fields = ("translations__body", "translations__title")
+    actions = ("activate", "deactivate")
+
+    @admin.display(boolean=True, description=_("currently displayed"))
+    def is_live(self, obj):
+        """Whether the announcement is displayed right now."""
+        return obj.is_live()
+
+    @admin.action(description=_("Activate the selected announcements"))
+    def activate(self, request, queryset):
+        """Activate the selected announcements."""
+        queryset.update(is_active=True)
+        invalidate_announcements_cache()
+
+    @admin.action(description=_("Deactivate the selected announcements"))
+    def deactivate(self, request, queryset):
+        """Deactivate the selected announcements."""
+        queryset.update(is_active=False)
+        invalidate_announcements_cache()

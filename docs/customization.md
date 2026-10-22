@@ -89,6 +89,34 @@ Then, set the `FRONTEND_JS_URL` environment variable to the URL of your custom J
 
 ----
 
+## Announcements 📢
+
+Administrators can publish announcements to the users from the Django admin,
+for instance to announce a maintenance or an incident: **Drive core
+application › Announcements**.
+
+Today, announcements are displayed as a **header banner** at the top of every
+page. Only the first live header banner is displayed, by priority.
+
+| Field | Description |
+| --- | --- |
+| Display | Where the announcement is displayed: header banner. |
+| Level | `Info`, `Warning` or `Error`, it drives the color. |
+| Title | Not displayed in header banners. |
+| Body | The message. A header banner is limited to 200 characters. |
+| Link label, Link URL | Optional link displayed with the announcement. |
+| Active, Starts at, Ends at | An announcement is displayed when it is active, between its optional start and end dates. |
+| Priority | Announcements with a higher priority come first. |
+| Dismissible | Users can close the announcement, it then stays closed in their browser. Publish a new announcement to show it to everyone again. |
+
+The texts are translated from the language tabs of the form. Users get the text
+in their language, or in the default language (`LANGUAGE_CODE`) when it is not
+translated.
+
+Announcements are served by `GET /api/v1.0/announcements/` and cached for
+`ANNOUNCEMENTS_CACHE_TIMEOUT` seconds (60 by default). Changes made from the
+admin are published right away, start and end dates within this delay.
+
 ## **Footer Configuration** 📝
 
 The footer is configurable from the theme customization file.

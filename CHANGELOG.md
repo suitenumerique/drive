@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) publish announcements from the Django admin
+
 ### Changed
 
 - ⬆️(frontend) upgrade @gouvfr-lasuite/ui-components to 1.3.0

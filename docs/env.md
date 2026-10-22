@@ -8,6 +8,7 @@ This document lists all configurable environment variables for the Drive applica
 | `ALLOWED_HOSTS` | List of allowed hosts for the application (used in Production) | `[]` |
 | `ALLOW_LOGOUT_GET_METHOD` | Allow logout via GET method | `True` |
 | `ALLOW_SHARE_IMPORT_FILE` | Enable batch sharing of an item from an imported contacts file | `False` |
+| `ANNOUNCEMENTS_CACHE_TIMEOUT` | Duration during which the announcements are cached, in seconds | `60` |
 | `API_ITEMS_CREATE_THROTTLE_RATE_BURST` | Burst throttle rate for the item creation endpoints (create, children and duplicate) | `300/minute` |
 | `API_ITEMS_CREATE_THROTTLE_RATE_SUSTAINED` | Sustained throttle rate for the item creation endpoints (create, children and duplicate) | `5000/hour` |
 | `API_USERS_LIST_LIMIT` | Maximum number of users returned in API user list | `5` |
