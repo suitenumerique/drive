@@ -2,6 +2,9 @@
 Unit tests for the User model
 """
 
+import logging
+from unittest import mock
+
 import pytest
 from configurations import values
 
@@ -100,3 +103,30 @@ def test_psycopg_pool_enabled(monkeypatch):
         "sslmode": "require",
         "pool": {"min_size": 4, "max_size": 10, "timeout": 3},
     }
+
+
+def test_logging_request_id(client):
+    """Logs emitted during a request should carry its X-Request-ID header."""
+    handler = next(h for h in logging.getLogger().handlers if h.name == "console")
+    lines = []
+
+    with mock.patch.object(
+        handler, "emit", side_effect=lambda record: lines.append(handler.format(record))
+    ):
+        client.get("/api/v1.0/unknown/", HTTP_X_REQUEST_ID="migrator-42")
+
+    assert any("rid=migrator-42 Not Found: /api/v1.0/unknown/" in line for line in lines)
+
+
+def test_logging_request_id_heartbeat(client):
+    """Heartbeat logs should not carry the X-Request-ID of the previous request."""
+    handler = next(h for h in logging.getLogger().handlers if h.name == "console")
+    lines = []
+
+    client.get("/api/v1.0/unknown/", HTTP_X_REQUEST_ID="migrator-42")
+    with mock.patch.object(
+        handler, "emit", side_effect=lambda record: lines.append(handler.format(record))
+    ):
+        client.get("/__lbheartbeat__/")
+
+    assert any("request.summary INFO rid=None" in line for line in lines)
