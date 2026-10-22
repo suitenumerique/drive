@@ -61,7 +61,12 @@ const RightPanelSelectionContent = ({
           <Button
             size="small"
             variant="tertiary"
-            icon={<span className="material-icons">close</span>}
+            icon={
+              <span className="material-icons" aria-hidden="true">
+                close
+              </span>
+            }
+            aria-label={t("explorer.rightPanel.close")}
             onClick={() => setRightPanelOpen(false)}
           />
         </div>
@@ -83,7 +88,12 @@ const RightPanelSelectionContent = ({
           <Button
             size="small"
             variant="tertiary"
-            icon={<span className="material-icons">close</span>}
+            icon={
+              <span className="material-icons" aria-hidden="true">
+                close
+              </span>
+            }
+            aria-label={t("explorer.rightPanel.close")}
             onClick={() => setRightPanelOpen(false)}
           />
         </div>
@@ -104,7 +114,12 @@ const RightPanelSelectionContent = ({
               <Button
                 size="small"
                 variant="tertiary"
-                icon={<span className="material-icons">close</span>}
+                icon={
+                  <span className="material-icons" aria-hidden="true">
+                    close
+                  </span>
+                }
+                aria-label={t("explorer.rightPanel.close")}
                 onClick={() => setRightPanelOpen(false)}
               />
             </div>

@@ -8,7 +8,7 @@ test("Create a folder", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("This tab is empty")).toBeVisible();
   await expect(page.getByText("Import or create files and")).toBeVisible();
-  await page.getByRole("button", { name: "Create Folder" }).click();
+  await page.getByRole("button", { name: "New folder" }).click();
 
   await page
     .getByRole("textbox", { name: "Folder name" })

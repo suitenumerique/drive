@@ -2,7 +2,7 @@ import { expect, Page } from "@playwright/test";
 import { getRowItem } from "./utils-embedded-grid";
 
 export const createFolder = async (page: Page, folderName: string) => {
-  await page.getByRole("button", { name: "Create Folder" }).click();
+  await page.getByRole("button", { name: "New folder" }).click();
   await page.getByRole("textbox", { name: "Folder name" }).click();
   await page.getByRole("textbox", { name: "Folder name" }).fill(folderName);
   await page.getByRole("button", { name: "Create" }).click();
