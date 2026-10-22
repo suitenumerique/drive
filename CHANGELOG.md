@@ -8,6 +8,8 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [v0.25.1] - 2026-10-22
+
 ### Fixed
 
 - 🐛(backend) fix anonymous export of public folders
@@ -614,7 +616,8 @@ and this project adheres to
 - 🌐(front) add english translation for rename modal
 - 🐛(global) fix wrong Content-Type on specific s3 implementations
 
-[unreleased]: https://github.com/suitenumerique/drive/compare/v0.25.0...main
+[unreleased]: https://github.com/suitenumerique/drive/compare/v0.25.1...main
+[v0.25.1]: https://github.com/suitenumerique/drive/releases/v0.25.1
 [v0.25.0]: https://github.com/suitenumerique/drive/releases/v0.25.0
 [v0.24.0]: https://github.com/suitenumerique/drive/releases/v0.24.0
 [v0.23.0]: https://github.com/suitenumerique/drive/releases/v0.23.0
