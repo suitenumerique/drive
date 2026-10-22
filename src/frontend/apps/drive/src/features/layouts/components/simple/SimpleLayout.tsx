@@ -3,6 +3,7 @@ import { GlobalLayout } from "../global/GlobalLayout";
 import { HeaderRight } from "../header/Header";
 import { Toaster } from "@/features/ui/components/toaster/Toaster";
 import { LeftPanelFooter } from "../explorer/ExplorerLayout";
+import { useConfigHeaderBanner } from "@/features/header-banner/useConfigHeaderBanner";
 
 export const getSimpleLayout = (page: React.ReactElement) => {
   return <SimpleLayout>{page}</SimpleLayout>;
@@ -14,11 +15,14 @@ export const getSimpleLayout = (page: React.ReactElement) => {
  * Auth context to the children.
  */
 export const SimpleLayout = ({ children }: { children: React.ReactNode }) => {
+  const topBanner = useConfigHeaderBanner();
+
   return (
     <div>
       <GlobalLayout>
         <MainLayout
           enableResize
+          topBanner={topBanner}
           hideLeftPanelOnDesktop={true}
           leftPanelFooter={<LeftPanelFooter />}
           rightHeaderContent={<HeaderRight />}

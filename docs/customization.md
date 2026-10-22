@@ -89,6 +89,31 @@ Then, set the `FRONTEND_JS_URL` environment variable to the URL of your custom J
 
 ----
 
+## Header Banner 📢
+
+A banner can be displayed at the top of every page, for instance to announce a
+maintenance or an incident.
+
+### Settings 🔧
+
+```shellscript
+FRONTEND_HEADER_BANNER={"id": "maintenance-2026-10", "color": "warning", "label": {"default": "An update is scheduled today at 1 p.m.", "fr": "Une mise à jour est prévue aujourd'hui à 13h."}, "cta": {"label": {"default": "Read more", "fr": "En savoir plus"}, "href": "https://status.example.com", "target": "_blank"}}
+```
+
+| Key | Description |
+| --- | --- |
+| `label` | **Required.** Message of the banner. |
+| `color` | `brand` (default), `warning` or `error`. |
+| `cta` | Optional link displayed at the end of the banner, with a `label`, an `href` and an optional `target`. |
+| `id` | Optional. When set, users can close the banner and it stays closed for them. Change it to show a new banner to everyone again. Without it, the banner cannot be closed. |
+
+`label` and `cta.label` are either a plain string, or one text per language
+with `default` as the fallback (e.g. `{"default": "Hello", "fr": "Bonjour"}`).
+
+The value is read as a Python literal: use `True`/`False` rather than
+`true`/`false` if you ever need a boolean. Leave the variable unset to hide the
+banner.
+
 ## **Footer Configuration** 📝
 
 The footer is configurable from the theme customization file.

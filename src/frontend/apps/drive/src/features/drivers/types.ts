@@ -200,6 +200,27 @@ export interface ThemeCustomization {
   footer?: LocalizedThemeCustomization<FooterProps>;
 }
 
+/**
+ * A text either given as is, or translated per language with a `default`
+ * fallback, e.g. `{ "default": "Maintenance", "fr": "Maintenance" }`.
+ */
+export type LocalizedText = string | LocalizedThemeCustomization<string>;
+
+export type HeaderBannerConfig = {
+  /**
+   * When set, users can close the banner and it stays closed for this id.
+   * Change the id to show a new banner to everyone again.
+   */
+  id?: string;
+  color?: "brand" | "warning" | "error";
+  label?: LocalizedText;
+  cta?: {
+    label?: LocalizedText;
+    href?: string;
+    target?: string;
+  };
+};
+
 export type ApiConfig = {
   ALLOW_SHARE_IMPORT_FILE?: boolean;
   AWS_S3_UPLOAD_ACL?: string;
@@ -237,6 +258,7 @@ export type ApiConfig = {
     };
   };
   FRONTEND_STORAGE_GAUGE_INFORMATION_LINK?: string;
+  FRONTEND_HEADER_BANNER?: HeaderBannerConfig;
   FRONTEND_CSS_URL?: string;
   SDK_ENABLED?: boolean;
   FRONTEND_JS_URL?: string;

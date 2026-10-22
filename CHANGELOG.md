@@ -8,6 +8,14 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(frontend) configure a header banner with FRONTEND_HEADER_BANNER
+
+### Changed
+
+- ⬆️(frontend) upgrade @gouvfr-lasuite/ui-components to 1.3.0
+
 ### Fixed
 
 - 🐛(backend) fix anonymous export of public folders
