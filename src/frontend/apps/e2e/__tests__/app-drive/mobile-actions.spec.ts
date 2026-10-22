@@ -18,7 +18,7 @@ test.describe("Mobile actions menu", () => {
     await page.setViewportSize(MOBILE_VIEWPORT);
     await page.goto("/explorer/items/my-files");
 
-    const moreButton = page.getByRole("button", { name: "more_vert" });
+    const moreButton = page.getByRole("button", { name: "More actions" });
     await expect(moreButton).toBeVisible();
     await moreButton.click();
 
@@ -48,7 +48,9 @@ test.describe("Mobile actions menu", () => {
     await page.setViewportSize(MOBILE_VIEWPORT);
     await page.goto(folderUrl);
 
-    const moreButton = page.getByRole("button", { name: "more_vert" });
+    const moreButton = page.getByRole("button", {
+      name: "More actions for TestFolder",
+    });
     await expect(moreButton).toBeVisible();
   });
 });

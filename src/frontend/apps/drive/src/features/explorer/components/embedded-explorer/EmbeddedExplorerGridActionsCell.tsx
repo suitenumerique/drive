@@ -48,7 +48,11 @@ const EmbeddedExplorerGridActionsCellComponent = (
               aria-label={t("explorer.grid.actions.button_aria_label", {
                 name: item.title,
               })}
-              icon={<span className="material-icons">more_horiz</span>}
+              icon={
+                <span className="material-icons" aria-hidden="true">
+                  more_horiz
+                </span>
+              }
               size="nano"
             />
           }

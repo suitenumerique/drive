@@ -3,6 +3,7 @@ import { Item } from "@/features/drivers/types";
 import clsx from "clsx";
 import { ItemActionDropdown } from "../item-actions/ItemActionDropdown";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { UseItemActionMenuItemsReturn } from "../../hooks/useItemActionMenuItems";
 
@@ -15,6 +16,7 @@ export const ExplorerTreeItemActions = ({
   getMenuItems,
 }: ExplorerTreeItemActionsProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { t } = useTranslation();
   return (
     <>
       <div
@@ -34,9 +36,15 @@ export const ExplorerTreeItemActions = ({
               size="nano"
               variant="tertiary"
               onClick={() => setIsOpen(!isOpen)}
-              aria-label="more_actions"
+              aria-label={t("explorer.grid.actions.button_aria_label", {
+                name: item.title,
+              })}
               className="explorer__tree__item__actions__button-more"
-              icon={<span className="material-icons more">more_horiz</span>}
+              icon={
+                <span className="material-icons more" aria-hidden="true">
+                  more_horiz
+                </span>
+              }
             />
           }
         />
