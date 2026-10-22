@@ -181,3 +181,13 @@ class InvitationFactory(factory.django.DjangoModelFactory):
     item = factory.SubFactory(ItemFactory)
     role = factory.fuzzy.FuzzyChoice([role[0] for role in RoleChoices.choices])
     issuer = factory.SubFactory(UserFactory)
+
+
+class AnnouncementFactory(factory.django.DjangoModelFactory):
+    """A factory to create live announcements in the current language."""
+
+    class Meta:
+        model = models.Announcement
+
+    body = factory.Faker("sentence")
+    is_active = True

@@ -8,6 +8,15 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) publish announcements from the Django admin
+- ✨(frontend) display the header banner announcements
+
+### Changed
+
+- ⬆️(frontend) upgrade @gouvfr-lasuite/ui-components to 1.3.0
+
 ## [v0.25.2] - 2026-10-22
 
 ### Fixed

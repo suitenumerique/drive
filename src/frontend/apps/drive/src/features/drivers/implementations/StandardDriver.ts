@@ -19,6 +19,7 @@ import {
 import { DTOUpdateAccess } from "../DTOs/AccessesDTO";
 import {
   Access,
+  Announcement,
   ApiConfig,
   APIList,
   Invitation,
@@ -534,6 +535,14 @@ export class StandardDriver extends Driver {
     const response = await fetchAPI(`entitlements/`);
     const data = await response.json();
     return data;
+  }
+
+  async getAnnouncements(): Promise<Announcement[]> {
+    // Announcements are public: never redirect to an error page because of them.
+    const response = await fetchAPI(`announcements/`, undefined, {
+      redirectOn40x: false,
+    });
+    return response.json();
   }
 
   async confirmUserReconciliation(

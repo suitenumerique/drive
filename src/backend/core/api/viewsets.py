@@ -51,6 +51,7 @@ from core.services.accesses import (
     batch_share_process_rows,
     synchronize_descendants_accesses,
 )
+from core.services.announcements import get_live_announcements
 from core.services.item_exports import build_zip_stream, export_descendants
 from core.services.sdk_relay import SDKRelayManager
 from core.services.search_indexers import (
@@ -2644,6 +2645,20 @@ class UsageMetricViewset(drf.mixins.ListModelMixin, viewsets.GenericViewSet):
                 "results": [serializer.data],
             }
         )
+
+
+class AnnouncementViewSet(viewsets.ViewSet):
+    """API ViewSet listing the announcements published by the administrators."""
+
+    permission_classes = [AllowAny]
+
+    def list(self, request):
+        """
+        GET /api/v1.0/announcements/
+            Return the live announcements, ordered by priority. Texts are given per
+            language with a `default` fallback.
+        """
+        return drf.response.Response(get_live_announcements())
 
 
 class EntitlementsViewset(viewsets.ViewSet):

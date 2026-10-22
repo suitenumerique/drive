@@ -24,6 +24,7 @@ import { Feedback } from "@/features/feedback/Feedback";
 import { useRedirectAfterLogin } from "@/hooks/useRedirectAfterLogin";
 import { LeftPanelFooter } from "@/features/layouts/components/explorer/ExplorerLayout";
 import { useMessagesWidget } from "@/features/feedback/useMessagesWidget";
+import { useHeaderBannerAnnouncement } from "@/features/announcements/useHeaderBannerAnnouncement";
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -152,9 +153,12 @@ const HomePageContent = () => {
 };
 
 const HomePageLayout = ({ children }: { children: React.ReactNode }) => {
+  const topBanner = useHeaderBannerAnnouncement();
+
   return (
     <MainLayout
       enableResize
+      topBanner={topBanner}
       hideLeftPanelOnDesktop={true}
       leftPanelFooter={<LeftPanelFooter />}
       icon={

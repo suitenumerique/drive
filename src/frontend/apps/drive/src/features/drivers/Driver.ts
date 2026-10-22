@@ -13,6 +13,7 @@ import {
 } from "./DTOs/InvitationDTO";
 import {
   Access,
+  Announcement,
   ApiConfig,
   APIList,
   Invitation,
@@ -187,6 +188,8 @@ export abstract class Driver {
   abstract convertItem(itemId: string): Promise<Item>;
 
   abstract getEntitlements(): Promise<Entitlements>;
+
+  abstract getAnnouncements(): Promise<Announcement[]>;
 
   // User reconciliation
   abstract confirmUserReconciliation(

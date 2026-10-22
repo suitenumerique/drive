@@ -38,6 +38,7 @@ import { useEntitlements } from "@/features/entitlement-disclaimers/hooks/useEnt
 import { Info, Warning } from "@gouvfr-lasuite/ui-components/icons";
 import { useTranslation } from "react-i18next";
 import i18n from "@/features/i18n/initI18n";
+import { useHeaderBannerAnnouncement } from "@/features/announcements/useHeaderBannerAnnouncement";
 import { useMemo } from "react";
 import { UserProfile } from "@/features/ui/components/user/UserProfile";
 import { Gaufre } from "@/features/ui/components/gaufre/Gaufre";
@@ -121,10 +122,12 @@ export const ExplorerPanelsLayout = ({
   } = useGlobalExplorer();
 
   const { user } = useAuth();
+  const topBanner = useHeaderBannerAnnouncement();
 
   return (
     <MainLayout
       enableResize
+      topBanner={topBanner}
       rightPanelContent={<ExplorerRightPanelContent item={rightPanelItem} />}
       rightPanelIsOpen={rightPanelOpen}
       onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}

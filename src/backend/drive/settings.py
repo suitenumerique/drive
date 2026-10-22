@@ -1115,6 +1115,11 @@ class Base(Configuration):
         environ_name="THEME_CUSTOMIZATION_CACHE_TIMEOUT",
         environ_prefix=None,
     )
+    # Announcements
+    ANNOUNCEMENTS_CACHE_TIMEOUT = values.PositiveIntegerValue(
+        60, environ_name="ANNOUNCEMENTS_CACHE_TIMEOUT", environ_prefix=None
+    )
+
     # Crisp
     CRISP_WEBSITE_ID = values.Value(None, environ_name="CRISP_WEBSITE_ID", environ_prefix=None)
 
