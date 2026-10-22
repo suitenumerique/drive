@@ -43,7 +43,11 @@ export const ExplorerSelectionBar = () => {
       <div className="explorer__selection-bar__actions">
         <Button
           onClick={handleClearSelection}
-          icon={<span className="material-icons">close</span>}
+          icon={
+            <span className="material-icons" aria-hidden="true">
+              close
+            </span>
+          }
           variant="tertiary"
           size="small"
           aria-label={t("explorer.selectionBar.reset_selection")}
@@ -120,14 +124,22 @@ export const ExplorerSelectionBarActions = () => {
       /> */}
       <Button
         onClick={handleDelete}
-        icon={<span className="material-icons">delete</span>}
+        icon={
+          <span className="material-icons" aria-hidden="true">
+            delete
+          </span>
+        }
         variant="tertiary"
         size="small"
         aria-label={t("explorer.selectionBar.delete")}
       />
       <Button
         onClick={moveModal.open}
-        icon={<span className="material-icons">arrow_forward</span>}
+        icon={
+          <span className="material-icons" aria-hidden="true">
+            arrow_forward
+          </span>
+        }
         variant="tertiary"
         size="small"
         aria-label={t("explorer.selectionBar.move")}

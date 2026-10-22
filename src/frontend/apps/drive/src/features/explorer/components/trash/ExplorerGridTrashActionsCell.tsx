@@ -58,14 +58,14 @@ export const ExplorerGridTrashActionsCell = (
       <DropdownMenu
         options={[
           {
-            icon: <img src={undoIcon.src} alt="info" width={24} height={24} />,
+            icon: <img src={undoIcon.src} alt="" width={24} height={24} />,
             label: t("explorer.grid.actions.restore"),
             value: "restore",
             callback: handleRestore,
           },
           {
             icon: (
-              <img src={cancelIcon.src} alt="info" width={24} height={24} />
+              <img src={cancelIcon.src} alt="" width={24} height={24} />
             ),
             label: t("explorer.grid.actions.hard_delete"),
             value: "hard_delete",
@@ -79,7 +79,14 @@ export const ExplorerGridTrashActionsCell = (
           onClick={() => setIsOpen(!isOpen)}
           variant="tertiary"
           className="c__language-picker"
-          icon={<span className="material-icons">more_horiz</span>}
+          aria-label={t("explorer.grid.actions.button_aria_label", {
+            name: item.title,
+          })}
+          icon={
+            <span className="material-icons" aria-hidden="true">
+              more_horiz
+            </span>
+          }
         ></Button>
       </DropdownMenu>
       {hardDeleteConfirmationModal.isOpen && (

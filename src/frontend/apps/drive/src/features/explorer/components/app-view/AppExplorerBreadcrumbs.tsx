@@ -78,7 +78,8 @@ export const AppExplorerBreadcrumbs = () => {
               }
             />
             <Button
-              icon={<img src={createFolderSvg.src} alt="Create Folder" />}
+              icon={<img src={createFolderSvg.src} alt="" />}
+              aria-label={t("explorer.tree.create.folder")}
               variant="tertiary"
               data-testid="create-folder-button"
               size="small"
@@ -145,7 +146,12 @@ export const ExplorerBreadcrumbsMobile = () => {
             >
               <Button
                 variant="tertiary"
-                icon={<span className="material-icons">more_vert</span>}
+                icon={
+                  <span className="material-icons" aria-hidden="true">
+                    more_vert
+                  </span>
+                }
+                aria-label={t("explorer.breadcrumbs.more_actions")}
                 onClick={() => setIsCreateMenuOpen(true)}
               />
             </DropdownMenu>
@@ -186,7 +192,12 @@ export const ExplorerBreadcrumbsMobile = () => {
             <Button
               variant="bordered"
               color="neutral"
-              icon={<span className="material-icons">chevron_left</span>}
+              icon={
+                <span className="material-icons" aria-hidden="true">
+                  chevron_left
+                </span>
+              }
+              aria-label={t("explorer.breadcrumbs.back")}
               onClick={() => {
                 if (parent?.id === DefaultRoute.SHARED_WITH_ME) {
                   router.push("/explorer/items/shared-with-me");
@@ -232,7 +243,14 @@ export const ExplorerBreadcrumbsMobile = () => {
           trigger={
             <Button
               variant="tertiary"
-              icon={<span className="material-icons">more_vert</span>}
+              icon={
+                <span className="material-icons" aria-hidden="true">
+                  more_vert
+                </span>
+              }
+              aria-label={t("explorer.grid.actions.button_aria_label", {
+                name: item.title,
+              })}
               onClick={() => setIsActionMenuOpen(true)}
             />
           }
