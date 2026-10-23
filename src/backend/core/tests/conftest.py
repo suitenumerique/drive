@@ -9,6 +9,7 @@ from django.core.cache import cache
 
 import pytest
 import responses
+import structlog
 from cryptography.fernet import Fernet
 
 from core import factories
@@ -50,6 +51,8 @@ def console_logs():
     """Collect the lines written by the console handler, as formatted in production."""
     handler = logging.getHandlerByName("console")
     lines = []
+    # Forget the context that a previous test of this process left behind
+    structlog.contextvars.clear_contextvars()
 
     def emit(record):
         line = json.loads(handler.format(record))

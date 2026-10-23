@@ -5,11 +5,14 @@ from unittest import mock
 from uuid import uuid4
 
 import pytest
+import structlog
 from celery.app.log import Logging
+from celery.signals import before_task_publish, task_prerun
 from rest_framework.test import APIClient
 
 from core import factories
 from core.models import ItemTypeChoices
+from core.tasks.item import process_item_purge
 
 from drive.celery_app import app as celery_app
 
@@ -174,4 +177,27 @@ def test_logging_celery_worker(console_logs):
 
     assert console_logs == [
         {"event": "Task succeeded", "level": "info", "logger": "celery.app.trace"}
+    ]
+
+
+def test_logging_celery_task(console_logs):
+    """Logs of a task should carry the request id of the request that sent it."""
+    task = process_item_purge
+    # Start the steps of a worker, which hold its signal receivers
+    _worker_steps = [step(mock.Mock()) for step in celery_app.steps["worker"]]
+    headers = {}
+    structlog.contextvars.bind_contextvars(request_id="migrator-42")
+    before_task_publish.send(sender=task.name, headers=headers, body=None)
+
+    # The worker runs the task in another process, with the message headers
+    structlog.contextvars.clear_contextvars()
+    task.push_request(**headers)
+    try:
+        task_prerun.send(sender=task, task_id="task-1", task=task, args=(), kwargs={})
+        logging.getLogger("core.tasks.item").info("Processing item purge")
+    finally:
+        task.pop_request()
+
+    assert console_logs == [
+        {"event": "Processing item purge", "level": "info", "logger": "core.tasks.item"}
     ]
