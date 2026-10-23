@@ -1,6 +1,5 @@
 """Test related to item upload ended API."""
 
-import logging
 from io import BytesIO
 from unittest import mock
 
@@ -278,7 +277,12 @@ def test_api_item_upload_ended_entitlements_backend_returns_falsy_custom_message
     assert not models.Item.objects.filter(id=item.id).exists()
 
 
-def test_api_item_upload_ended_mimetype_not_allowed(settings, caplog):
+def viewset_logs(console_logs):
+    """Return the logs written by the viewsets."""
+    return [log for log in console_logs if log["logger"] == "core.api.viewsets"]
+
+
+def test_api_item_upload_ended_mimetype_not_allowed(settings, console_logs):
     """
     Test that the API returns a 400 when the mimetype is not allowed.
     Item should be deleted and the file should be deleted from the storage.
@@ -297,11 +301,25 @@ def test_api_item_upload_ended_mimetype_not_allowed(settings, caplog):
         BytesIO(b"my prose"),
     )
 
-    with caplog.at_level(logging.INFO):
-        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+    response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
 
     assert response.status_code == 400
-    assert "upload_ended: mimetype not allowed text/plain for filename my_file.txt" in caplog.text
+    assert viewset_logs(console_logs) == [
+        {
+            "event": f"upload_ended: detecting mimetype for file: {item.file_key}",
+            "level": "info",
+            "logger": "core.api.viewsets",
+            "request_id": mock.ANY,
+            "user_id": str(user.pk),
+        },
+        {
+            "event": "upload_ended: mimetype not allowed text/plain for filename my_file.txt",
+            "level": "info",
+            "logger": "core.api.viewsets",
+            "request_id": mock.ANY,
+            "user_id": str(user.pk),
+        },
+    ]
 
     assert not models.Item.objects.filter(id=item.id).exists()
     assert not default_storage.exists(item.file_key)
@@ -342,7 +360,7 @@ def test_api_item_upload_ended_mimetype_not_allowed_not_checking_mimetype(
     assert response.json()["mimetype"] == "text/plain"
 
 
-def test_api_upload_ended_mismatch_mimetype_with_object_storage(caplog):
+def test_api_upload_ended_mismatch_mimetype_with_object_storage(console_logs):
     """
     Object on storage should have the same mimetype than the one saved in the
     Item object.
@@ -375,12 +393,26 @@ def test_api_upload_ended_mismatch_mimetype_with_object_storage(caplog):
     head_object = s3_client.head_object(Bucket=default_storage.bucket_name, Key=item.file_key)
 
     assert head_object["ContentType"] == "text/html"
-    with caplog.at_level(logging.INFO, logger="core.api.viewsets"):
-        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
-    assert (
-        "upload_ended: content type mismatch between object storage and item, "
-        "updating from text/html to application/pdf" in caplog.text
-    )
+    response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+    assert viewset_logs(console_logs) == [
+        {
+            "event": f"upload_ended: detecting mimetype for file: {item.file_key}",
+            "level": "info",
+            "logger": "core.api.viewsets",
+            "request_id": mock.ANY,
+            "user_id": str(user.pk),
+        },
+        {
+            "event": (
+                "upload_ended: content type mismatch between object storage and item, "
+                "updating from text/html to application/pdf"
+            ),
+            "level": "info",
+            "logger": "core.api.viewsets",
+            "request_id": mock.ANY,
+            "user_id": str(user.pk),
+        },
+    ]
     assert response.status_code == 200
 
     item.refresh_from_db()
@@ -392,7 +424,7 @@ def test_api_upload_ended_mismatch_mimetype_with_object_storage(caplog):
     assert head_object["Metadata"] == {"foo": "bar"}
 
 
-def test_api_upload_ended_file_size_exceeded(settings, caplog):
+def test_api_upload_ended_file_size_exceeded(settings, console_logs):
     """
     Test when the file size exceed the allowed max upload file size
     should return a 400 and delete the file.
@@ -412,10 +444,17 @@ def test_api_upload_ended_file_size_exceeded(settings, caplog):
         BytesIO(b"my prose"),
     )
 
-    with caplog.at_level(logging.INFO, logger="core.api.viewsets"):
-        response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
-    assert (
-        f"upload_ended: file size (8) for file {item.file_key} higher than the allowed max size"
-        in caplog.text
-    )
+    response = client.post(f"/api/v1.0/items/{item.id!s}/upload-ended/")
+    assert viewset_logs(console_logs) == [
+        {
+            "event": (
+                f"upload_ended: file size (8) for file {item.file_key} higher than the allowed"
+                " max size"
+            ),
+            "level": "info",
+            "logger": "core.api.viewsets",
+            "request_id": mock.ANY,
+            "user_id": str(user.pk),
+        }
+    ]
     assert response.status_code == 400
