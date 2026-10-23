@@ -14,6 +14,10 @@ workers = 3
 # Logging
 # Using '-' for the access log file makes gunicorn log accesses to stdout
 accesslog = "-"
+# Gunicorn's default format plus the request id, to match the application logs
+access_log_format = (
+    '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %({x-request-id}i)s'
+)
 # Using '-' for the error log file makes gunicorn log errors to stderr
 errorlog = "-"
 loglevel = "info"
