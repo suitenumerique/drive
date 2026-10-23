@@ -87,6 +87,43 @@ def test_logging_request_user(client, console_logs):
     }
 
 
+def test_logging_request_exception(client, console_logs):
+    """A request that raises should be logged with its traceback."""
+    client.raise_request_exception = False
+    user = factories.UserFactory()
+    client.force_login(user)
+
+    with mock.patch(
+        "core.api.viewsets.UserViewSet.get_serializer", side_effect=ValueError("unknown user")
+    ):
+        client.get("/api/v1.0/users/me/", HTTP_X_REQUEST_ID="migrator-42")
+
+    assert console_logs[1:] == [
+        {
+            "event": "request_failed",
+            "level": "error",
+            "logger": "django_structlog.middlewares.request",
+            "code": 500,
+            "exception": mock.ANY,
+            "request": "GET /api/v1.0/users/me/",
+            "request_id": "migrator-42",
+            "user_id": str(user.pk),
+        },
+        {
+            "event": "Server Error (500): /api/v1.0/users/me/",
+            "level": "error",
+            "logger": "django.request",
+            "exception": mock.ANY,
+            "request": "<WSGIRequest: GET '/api/v1.0/users/me/'>",
+            "request_id": "migrator-42",
+            "status_code": 500,
+            "user_id": str(user.pk),
+        },
+    ]
+    assert console_logs[1]["exception"].endswith("\nValueError: unknown user")
+    assert console_logs[2]["exception"].endswith("\nValueError: unknown user")
+
+
 def test_logging_heartbeat(client, console_logs):
     """A heartbeat should not be logged."""
     client.get("/__lbheartbeat__/")
