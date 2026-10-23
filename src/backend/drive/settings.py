@@ -1444,6 +1444,10 @@ class Base(Configuration):
                 "handlers": ["null"],
                 "propagate": False,
             },
+            "django.request": {
+                "handlers": ["null"],
+                "propagate": False,
+            },
         },
     }
     # Personal data, which the access logs already hold

@@ -37,7 +37,7 @@ def test_logging_extra_fields(console_logs):
 
 
 def test_logging_request(client, console_logs):
-    """A request should be logged when it starts and ends, and by Django when it fails."""
+    """A request should be logged when it starts and ends."""
     client.get("/api/v1.0/unknown/", HTTP_X_REQUEST_ID="migrator-42")
 
     assert console_logs == [
@@ -58,13 +58,6 @@ def test_logging_request(client, console_logs):
             "request": "GET /api/v1.0/unknown/",
             "request_id": "migrator-42",
             "user_id": None,
-        },
-        {
-            "event": "Not Found: /api/v1.0/unknown/",
-            "level": "warning",
-            "logger": "django.request",
-            "request": "<WSGIRequest: GET '/api/v1.0/unknown/'>",
-            "status_code": 404,
         },
     ]
 
@@ -109,19 +102,8 @@ def test_logging_request_exception(client, console_logs):
             "request_id": "migrator-42",
             "user_id": str(user.pk),
         },
-        {
-            "event": "Server Error (500): /api/v1.0/users/me/",
-            "level": "error",
-            "logger": "django.request",
-            "exception": mock.ANY,
-            "request": "<WSGIRequest: GET '/api/v1.0/users/me/'>",
-            "request_id": "migrator-42",
-            "status_code": 500,
-            "user_id": str(user.pk),
-        },
     ]
     assert console_logs[1]["exception"].endswith("\nValueError: unknown user")
-    assert console_logs[2]["exception"].endswith("\nValueError: unknown user")
 
 
 def test_logging_heartbeat(client, console_logs):
