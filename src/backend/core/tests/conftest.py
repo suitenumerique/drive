@@ -1,6 +1,7 @@
 """Fixtures for tests in the drive core application"""
 
 import base64
+import logging
 from unittest import mock
 
 from django.core.cache import cache
@@ -41,6 +42,17 @@ def posthog_capture_mock(settings):
     settings.POSTHOG_KEY = "test-key"
     with mock.patch("core.utils.analytics.posthog.capture") as capture:
         yield capture
+
+
+@pytest.fixture
+def console_logs():
+    """Collect the lines written by the console handler, as formatted in production."""
+    handler = logging.getHandlerByName("console")
+    lines = []
+    with mock.patch.object(
+        handler, "emit", side_effect=lambda record: lines.append(handler.format(record))
+    ):
+        yield lines
 
 
 @pytest.fixture
