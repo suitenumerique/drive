@@ -2,6 +2,9 @@
 Unit tests for the UserReconciliation model.
 """
 
+import smtplib
+from unittest import mock
+
 from django.core import mail
 
 import pytest
@@ -198,3 +201,17 @@ def test_models_user_reconciliation_toggles_is_active_and_sends_done_email():
     assert len(mail.outbox) == 1
     # pylint: disable-next=no-member
     assert mail.outbox[0].to == ["active@example.com"]
+
+
+@mock.patch("core.models.send_mail", side_effect=smtplib.SMTPException("Error SMTPException"))
+def test_models_user_reconciliation_csv_import_email_failed(_mock_send_mail, console_logs):
+    """An SMTP error when sending the email of a CSV import should be logged."""
+    models.UserReconciliationCsvImport().send_email("Hello", ["admin@example.com"])
+
+    assert console_logs == [
+        {
+            "event": "email to ['admin@example.com'] was not sent: Error SMTPException",
+            "level": "error",
+            "logger": "core.models",
+        }
+    ]

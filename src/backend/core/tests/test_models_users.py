@@ -2,6 +2,7 @@
 Unit tests for the User model
 """
 
+import smtplib
 from unittest import mock
 
 from django.core import mail
@@ -12,6 +13,23 @@ import pytest
 from core import factories, models
 
 pytestmark = pytest.mark.django_db
+
+
+@mock.patch("core.models.send_mail", side_effect=smtplib.SMTPException("Error SMTPException"))
+def test_models_users_send_email_failed(_mock_send_mail, console_logs):
+    """An SMTP error when sending an email to a user should be logged."""
+    user = factories.UserFactory()
+    console_logs.clear()
+
+    user.send_email("Hello")
+
+    assert console_logs == [
+        {
+            "event": f"email to {user.email} was not sent: Error SMTPException",
+            "level": "error",
+            "logger": "core.models",
+        }
+    ]
 
 
 def test_models_users_str():

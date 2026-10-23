@@ -5,7 +5,6 @@ Unit tests for the item model
 import random
 import smtplib
 from datetime import timedelta
-from logging import Logger
 from unittest import mock
 
 from django.contrib.auth.models import AnonymousUser
@@ -1047,8 +1046,7 @@ def test_models_items__email_invitation__url_app_param(email_url_app, settings):
     "core.models.send_mail",
     side_effect=smtplib.SMTPException("Error SMTPException"),
 )
-@mock.patch.object(Logger, "error")
-def test_models_items__email_invitation__failed(mock_logger, _mock_send_mail):
+def test_models_items__email_invitation__failed(_mock_send_mail, console_logs):
     """Check mail behavior when an SMTP error occurs when sent an email invitation."""
     item = factories.ItemFactory()
 
@@ -1056,6 +1054,7 @@ def test_models_items__email_invitation__failed(mock_logger, _mock_send_mail):
     assert len(mail.outbox) == 0
 
     sender = factories.UserFactory()
+    console_logs.clear()
     item.send_invitation_email(
         "guest3@example.com",
         models.RoleChoices.ADMIN,
@@ -1067,22 +1066,18 @@ def test_models_items__email_invitation__failed(mock_logger, _mock_send_mail):
     # pylint: disable-next=no-member
     assert len(mail.outbox) == 0
 
-    # Logger should be called
-    mock_logger.assert_called_once()
-
-    (
-        _,
-        emails,
-        exception,
-    ) = mock_logger.call_args.args
-
-    assert emails == ["guest3@example.com"]
-    assert isinstance(exception, smtplib.SMTPException)
+    assert console_logs == [
+        {
+            "event": "invitation to ['guest3@example.com'] was not sent: Error SMTPException",
+            "level": "error",
+            "logger": "core.models",
+        }
+    ]
 
 
 @mock.patch("core.models.send_mail")
 def test_models_items__email_invitation__skipped_when_email_host_missing(
-    mock_send_mail, caplog, settings
+    mock_send_mail, caplog, console_logs, settings
 ):
     """
     The email invitation is skipped when EMAIL_HOST is not configured.
@@ -1094,6 +1089,7 @@ def test_models_items__email_invitation__skipped_when_email_host_missing(
     assert len(mail.outbox) == 0
 
     sender = factories.UserFactory()
+    console_logs.clear()
     with caplog.at_level("DEBUG", logger="core.models"):
         item.send_invitation_email(
             "guest4@example.com",
@@ -1108,8 +1104,13 @@ def test_models_items__email_invitation__skipped_when_email_host_missing(
     mock_send_mail.assert_not_called()
 
     # Logger should be called to indicate skipping
-    assert len(caplog.records) == 1
-    assert caplog.records[0].message == "EMAIL_HOST host is not set, skipping email sending"
+    assert console_logs == [
+        {
+            "event": "EMAIL_HOST host is not set, skipping email sending",
+            "level": "debug",
+            "logger": "core.models",
+        }
+    ]
 
 
 # item number of accesses
