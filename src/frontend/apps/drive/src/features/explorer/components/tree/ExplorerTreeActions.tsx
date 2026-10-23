@@ -29,7 +29,11 @@ export const ExplorerTreeActions = () => {
             onOpenChange={createMenu.setIsOpen}
           >
             <Button
-              icon={<span className="material-icons">add</span>}
+              icon={
+                <span className="material-icons" aria-hidden="true">
+                  add
+                </span>
+              }
               onClick={() => createMenu.setIsOpen(true)}
             >
               {t("explorer.tree.create.label")}

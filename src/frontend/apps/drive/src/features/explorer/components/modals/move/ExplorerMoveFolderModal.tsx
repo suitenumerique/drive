@@ -77,6 +77,7 @@ export const ExplorerMoveFolder = ({
         size="small"
         variant="tertiary"
         icon={<AddFolderButton />}
+        aria-label={t("explorer.tree.create.folder")}
         onClick={createFolderModal.open}
       />
     ),
