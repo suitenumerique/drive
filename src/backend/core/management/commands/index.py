@@ -2,14 +2,15 @@
 Handle search setup that needs to be done at bootstrap time.
 """
 
-import logging
 import time
 
 from django.core.management.base import BaseCommand, CommandError
 
+import structlog
+
 from core.services.search_indexers import get_file_indexer
 
-logger = logging.getLogger("drive.search.bootstrap_search")
+logger = structlog.get_logger("drive.search.bootstrap_search")
 
 
 class Command(BaseCommand):
@@ -33,21 +34,20 @@ class Command(BaseCommand):
         indexer = get_file_indexer()
 
         if not indexer:
-            logger.warning("The indexer is not enabled or properly configured.")
+            logger.warning("search_index_disabled")
             return
 
-        logger.info("Starting to regenerate Find index...")
+        logger.info("search_index_started")
         start = time.perf_counter()
 
         try:
             count = indexer.index(batch_size=options["batch_size"])
         except Exception as err:
-            logger.exception(err)
+            logger.exception("search_index_failed", error=str(err))
             raise CommandError("Unable to regenerate index") from err
 
-        duration = time.perf_counter() - start
         logger.info(
-            "Search index regenerated from %d files(s) in %.2f seconds.",
-            count,
-            duration,
+            "search_index_finished",
+            count=count,
+            duration_ms=round((time.perf_counter() - start) * 1000),
         )

@@ -90,7 +90,7 @@ def test_index_improperly_configured(indexer_settings, console_logs):
 
     assert command_logs(console_logs) == [
         {
-            "event": "The indexer is not enabled or properly configured.",
+            "event": "search_index_disabled",
             "level": "warning",
             "logger": "drive.search.bootstrap_search",
         }
