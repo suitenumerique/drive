@@ -11,6 +11,7 @@ and this project adheres to
 ### Security
 
 - ⬆️(backend) upgrade djangorestframework to 3.18.3 to fix CVEs
+- ⬆️(backend) upgrade Brotli to 1.2.1 to fix a CVE
 
 ## [v0.25.2] - 2026-10-22
 
