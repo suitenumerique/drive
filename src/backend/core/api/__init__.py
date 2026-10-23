@@ -1,13 +1,35 @@
 """Drive core API endpoints"""
 
+import logging
+
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.utils.log import request_logger
 
 from drf_standardized_errors.handler import exception_handler as drf_exception_handler
 from rest_framework import exceptions as drf_exceptions
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.serializers import as_serializer_error
+
+
+def _log_error_response(request, response):
+    """Log the error like Django does, with its codes and user, never its details."""
+    user_id = request.user.pk
+    request_logger.log(
+        logging.ERROR if response.status_code >= 500 else logging.WARNING,
+        "%s: %s",
+        response.reason_phrase,
+        request.path,
+        extra={
+            "status_code": response.status_code,
+            "request": request._request,  # noqa: SLF001  # pylint: disable=protected-access
+            "codes": [error["code"] for error in response.data.get("errors", [])],
+            "uid": str(user_id) if user_id else None,
+        },
+    )
+    # Tells Django's handler that this response is already logged
+    response._has_been_logged = True  # noqa: SLF001  # pylint: disable=protected-access
 
 
 def exception_handler(exc, context):
@@ -20,7 +42,10 @@ def exception_handler(exc, context):
     if isinstance(exc, DjangoValidationError):
         exc = drf_exceptions.ValidationError(as_serializer_error(exc))
 
-    return drf_exception_handler(exc, context)
+    response = drf_exception_handler(exc, context)
+    if response is not None:
+        _log_error_response(context["request"], response)
+    return response
 
 
 # pylint: disable=unused-argument
