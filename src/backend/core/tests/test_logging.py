@@ -5,8 +5,10 @@ from unittest import mock
 from uuid import uuid4
 
 import pytest
+from rest_framework.test import APIClient
 
 from core import factories
+from core.models import ItemTypeChoices
 
 pytestmark = pytest.mark.django_db
 
@@ -79,6 +81,27 @@ def test_logging_request_user(client, console_logs):
         "duration_ms": mock.ANY,
         "request": "GET /api/v1.0/users/me/",
         "request_id": "migrator-42",
+        "user_id": str(user.pk),
+    }
+
+
+def test_logging_request_api_error(console_logs):
+    """A request refused by the API should be logged with its status code."""
+    user = factories.UserFactory()
+    client = APIClient()
+    client.force_login(user)
+
+    response = client.post("/api/v1.0/items/", {"type": ItemTypeChoices.FILE}, format="json")
+
+    assert response.status_code == 400
+    assert console_logs[-1] == {
+        "event": "request_finished",
+        "level": "warning",
+        "logger": "django_structlog.middlewares.request",
+        "code": 400,
+        "duration_ms": mock.ANY,
+        "request": "POST /api/v1.0/items/",
+        "request_id": mock.ANY,
         "user_id": str(user.pk),
     }
 
