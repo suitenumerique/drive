@@ -1,6 +1,5 @@
 """Document search index management utilities and indexers"""
 
-import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import cache
@@ -13,10 +12,11 @@ from django.db.models import Subquery
 from django.utils.module_loading import import_string
 
 import requests
+import structlog
 
 from core import models
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 SERVICE_NAME = "drive"
 
@@ -28,16 +28,16 @@ def get_file_indexer():
 
     # For this usecase an empty indexer class is not an issue but a feature.
     if not classpath:
-        logger.info("Item indexer is not configured (see SEARCH_INDEXER_CLASS)")
+        logger.info("search_indexer_disabled")
         return None
 
     try:
         indexer_class = import_string(settings.SEARCH_INDEXER_CLASS)
         return indexer_class()
     except ImportError as err:
-        logger.error("SEARCH_INDEXER_CLASS setting is not valid : %s", err)
+        logger.error("search_indexer_class_invalid", classpath=classpath, error=str(err))
     except ImproperlyConfigured as err:
-        logger.error("Item indexer is not properly configured : %s", err)
+        logger.error("search_indexer_improperly_configured", classpath=classpath, error=str(err))
 
     return None
 
