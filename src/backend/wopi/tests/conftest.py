@@ -4,6 +4,7 @@ from django.core.cache import cache
 
 import pytest
 
+from core.tests.conftest import console_logs  # noqa: F401  # pylint: disable=unused-import
 from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
 
 

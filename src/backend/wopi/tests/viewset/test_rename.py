@@ -1,7 +1,7 @@
 """Test the rename file operation from the WOPI viewset."""
 
 from io import BytesIO
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 from django.core.files.storage import default_storage
 from django.test import override_settings
@@ -279,7 +279,7 @@ def test_rename_file_rejects_path_separator(requested_name):
     assert item.filename == "wopi_test.txt"
 
 
-def test_rename_file_rejects_disallowed_target_extension():
+def test_rename_file_rejects_disallowed_target_extension(console_logs):
     """An extensionless file cannot be renamed to acquire a disallowed extension."""
     item, response = request_rename("wopi_test", "malware.exe")
 
@@ -287,6 +287,15 @@ def test_rename_file_rejects_disallowed_target_extension():
     assert response.headers.get(X_WOPI_INVALIDFILENAMERROR) == "This file extension is not allowed"
     item.refresh_from_db()
     assert item.filename == "wopi_test"
+    assert [log for log in console_logs if log["logger"] == "wopi.viewsets"] == [
+        {
+            "event": "rename_file: file extension not allowed '.exe' for filename 'malware.exe'",
+            "level": "info",
+            "logger": "wopi.viewsets",
+            "request_id": ANY,
+            "user_id": None,
+        }
+    ]
 
 
 @override_settings(RESTRICT_UPLOAD_FILE_TYPE=True, FILE_EXTENSIONS_ALLOWED=[".STEP"])
