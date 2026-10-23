@@ -4,6 +4,12 @@ import logging
 from unittest import mock
 from uuid import uuid4
 
+import pytest
+
+from core import factories
+
+pytestmark = pytest.mark.django_db
+
 
 def test_logging_core_logger(console_logs):
     """Logs of the core application should be written to the console."""
@@ -31,22 +37,27 @@ def test_logging_extra_fields(console_logs):
 
 
 def test_logging_request(client, console_logs):
-    """A request should be summarized, and logged by Django when it fails."""
+    """A request should be logged when it starts and ends, and by Django when it fails."""
     client.get("/api/v1.0/unknown/", HTTP_X_REQUEST_ID="migrator-42")
 
     assert console_logs == [
         {
-            "event": "",
+            "event": "request_started",
             "level": "info",
-            "logger": "request.summary",
-            "agent": "",
-            "errno": 0,
-            "lang": "",
-            "method": "GET",
-            "path": "/api/v1.0/unknown/",
-            "rid": "migrator-42",
-            "t": mock.ANY,
-            "uid": "",
+            "logger": "django_structlog.middlewares.request",
+            "request": "GET /api/v1.0/unknown/",
+            "request_id": "migrator-42",
+            "user_agent": None,
+            "user_id": None,
+        },
+        {
+            "event": "request_finished",
+            "level": "warning",
+            "logger": "django_structlog.middlewares.request",
+            "code": 404,
+            "request": "GET /api/v1.0/unknown/",
+            "request_id": "migrator-42",
+            "user_id": None,
         },
         {
             "event": "Not Found: /api/v1.0/unknown/",
@@ -58,27 +69,29 @@ def test_logging_request(client, console_logs):
     ]
 
 
-def test_logging_heartbeat(client, console_logs):
-    """A heartbeat should be summarized, with the request id of the previous request."""
-    client.get("/api/v1.0/unknown/", HTTP_X_REQUEST_ID="migrator-42")
-    console_logs.clear()
+def test_logging_request_user(client, console_logs):
+    """A request should be logged with the id of its user."""
+    user = factories.UserFactory()
+    client.force_login(user)
 
+    client.get("/api/v1.0/users/me/", HTTP_X_REQUEST_ID="migrator-42")
+
+    assert console_logs[-1] == {
+        "event": "request_finished",
+        "level": "info",
+        "logger": "django_structlog.middlewares.request",
+        "code": 200,
+        "request": "GET /api/v1.0/users/me/",
+        "request_id": "migrator-42",
+        "user_id": str(user.pk),
+    }
+
+
+def test_logging_heartbeat(client, console_logs):
+    """A heartbeat should not be logged."""
     client.get("/__lbheartbeat__/")
 
-    assert console_logs == [
-        {
-            "event": "",
-            "level": "info",
-            "logger": "request.summary",
-            "agent": "",
-            "errno": 0,
-            "lang": "",
-            "method": "GET",
-            "path": "/__lbheartbeat__/",
-            "rid": "migrator-42",
-            "uid": "",
-        }
-    ]
+    assert console_logs == []
 
 
 def test_logging_exception(console_logs):

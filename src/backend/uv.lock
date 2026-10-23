@@ -482,6 +482,19 @@ wheels = [
 ]
 
 [[package]]
+name = "django-ipware"
+version = "8.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "python-ipware" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/41/3a/e90c321c10cdf4c53dbad3cfd28efceb6fc164c3ec2d98cf71f4ae060c04/django_ipware-8.0.0.tar.gz", hash = "sha256:377cc7926ea377d8f544511b019cd32b28060e1c9caa3d0c43c3e5e923560f33", size = 17747, upload-time = "2026-09-22T21:30:47.55Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ea/58/29dd16630be7516b079d66537ac7725e92720807347558478a1f2a738fb6/django_ipware-8.0.0-py3-none-any.whl", hash = "sha256:63e9e589aa58c37fbcd3f7624d18a08e69d95b03c84bab7e5ad2a12b03f8c4ec", size = 12626, upload-time = "2026-09-22T21:30:46.565Z" },
+]
+
+[[package]]
 name = "django-lasuite"
 version = "0.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -586,6 +599,21 @@ wheels = [
 [package.optional-dependencies]
 s3 = [
     { name = "boto3" },
+]
+
+[[package]]
+name = "django-structlog"
+version = "10.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "asgiref" },
+    { name = "django" },
+    { name = "django-ipware" },
+    { name = "structlog" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6d/18/5826ed903a3ab7c9e21092a2519b477dba1ef48ab9dfee5e101c91ee2663/django_structlog-10.1.0.tar.gz", hash = "sha256:812f61dea873e559511f42c0f3a7cdc36d4472f6cc15460565a97e5cbe06a76d", size = 23303, upload-time = "2026-05-30T23:15:49.473Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/04/96/c635a5b295246f9dd73098986694b2011968a502d5221261a1b0f439586b/django_structlog-10.1.0-py3-none-any.whl", hash = "sha256:450842bfb03887fc14469570769e515d22ea67d753848a25cdbd05405382c090", size = 18461, upload-time = "2026-05-30T23:15:48.118Z" },
 ]
 
 [[package]]
@@ -697,6 +725,7 @@ dependencies = [
     { name = "django-pydantic-field" },
     { name = "django-redis" },
     { name = "django-storages", extra = ["s3"] },
+    { name = "django-structlog" },
     { name = "django-timezone-field" },
     { name = "djangorestframework" },
     { name = "djangorestframework-api-key" },
@@ -767,6 +796,7 @@ requires-dist = [
     { name = "django-pydantic-field", specifier = "==0.5.4" },
     { name = "django-redis", specifier = "==6.0.0" },
     { name = "django-storages", extras = ["s3"], specifier = "==1.14.6" },
+    { name = "django-structlog", specifier = "==10.1.0" },
     { name = "django-timezone-field", specifier = ">=5.1" },
     { name = "djangorestframework", specifier = "==3.18.3" },
     { name = "djangorestframework-api-key", specifier = "==3.1.0" },
@@ -1514,6 +1544,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/5c/0a/123c30f4041eabb94c587d35fb64aa9498435d028a8577340a4e5adc5224/python_icap-0.2.0.tar.gz", hash = "sha256:627869ac29119074542de6ae95370914854fdb35ee0a13c8ae4c55847cfcb80e", size = 684516, upload-time = "2026-07-08T22:21:58.842Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d8/f2/b437a5e08b94dfc4cd8505cfc3e63922247e9ce3957707550ab08c514560/python_icap-0.2.0-py3-none-any.whl", hash = "sha256:b648d55b68abe387849a124d1b4a443801342a566afd2141f4515953ed4bd738", size = 70680, upload-time = "2026-07-08T22:21:57.307Z" },
+]
+
+[[package]]
+name = "python-ipware"
+version = "4.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/80/1c/dca9478d5e2c51c5effcc8fbc9903c40c59a8f107d2ef5ea2e4cf53085f0/python_ipware-4.1.1.tar.gz", hash = "sha256:fd6102058e74c29112b4376f8abbae718852c95f8de6965801de88ca9780d22f", size = 40567, upload-time = "2026-10-01T18:44:47.003Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fb/63/4c5c354d10ec19d6258acc04cb8bbc36ba670019e2ad9c60e8289af9e845/python_ipware-4.1.1-py3-none-any.whl", hash = "sha256:52eedd4cb7bb9e1bb6b9dd92db974e729fe54be22e1389703e21c60344b9f039", size = 27636, upload-time = "2026-10-01T18:44:46.055Z" },
 ]
 
 [[package]]

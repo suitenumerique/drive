@@ -26,6 +26,7 @@ from boto3.s3.transfer import TransferConfig
 from configurations import Configuration, values
 from lasuite.configuration.values import SecretFileValue
 from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.logging import ignore_logger
 
 # pylint: disable=too-many-lines
 
@@ -48,6 +49,16 @@ def get_release():
         return pyproject_data["project"]["version"]
     except (FileNotFoundError, KeyError):
         return "NA"  # Default: not available
+
+
+# Hand the structlog events to the standard loggers, so that the LOGGING
+# formatter writes them like any other log
+structlog.configure(
+    processors=[structlog.stdlib.render_to_log_kwargs],
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
+    cache_logger_on_first_use=True,
+)
 
 
 class Base(Configuration):
@@ -847,6 +858,8 @@ class Base(Configuration):
         "django.contrib.auth.middleware.AuthenticationMiddleware",
         "django.contrib.messages.middleware.MessageMiddleware",
         "dockerflow.django.middleware.DockerflowMiddleware",
+        # After DockerflowMiddleware, which answers the heartbeats without logging them here
+        "django_structlog.middlewares.RequestMiddleware",
     ]
 
     AUTHENTICATION_BACKENDS = [
@@ -1388,6 +1401,7 @@ class Base(Configuration):
             "json": {
                 "()": structlog.stdlib.ProcessorFormatter,
                 "foreign_pre_chain": [
+                    structlog.contextvars.merge_contextvars,
                     structlog.stdlib.ExtraAdder(),
                     structlog.stdlib.add_logger_name,
                     structlog.stdlib.add_log_level,
@@ -1404,6 +1418,9 @@ class Base(Configuration):
             "console": {
                 "class": "logging.StreamHandler",
                 "formatter": "json",
+            },
+            "null": {
+                "class": "logging.NullHandler",
             },
         },
         # Override root logger to send it to console
@@ -1422,8 +1439,15 @@ class Base(Configuration):
                 ),
                 "propagate": True,
             },
+            # Replaced by the request logs of django-structlog
+            "request.summary": {
+                "handlers": ["null"],
+                "propagate": False,
+            },
         },
     }
+    # Personal data, which the access logs already hold
+    DJANGO_STRUCTLOG_IP_LOGGING_ENABLED = False
 
     API_USERS_LIST_LIMIT = values.PositiveIntegerValue(
         default=5,
@@ -1751,6 +1775,8 @@ class Base(Configuration):
                 traces_sample_rate=cls.SENTRY_TRACES_SAMPLE_RATE,
             )
             sentry_sdk.set_tag("application", "backend")
+            # Like django.request for the Django integration: its errors are already reported
+            ignore_logger("django_structlog.middlewares.request")
 
         if cls.OIDC_FALLBACK_TO_EMAIL_FOR_IDENTIFICATION and cls.OIDC_ALLOW_DUPLICATE_EMAILS:
             raise ValueError(
