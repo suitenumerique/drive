@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Security
+
+- ⬆️(backend) upgrade djangorestframework to 3.18.3 to fix CVEs
+
 ## [v0.25.2] - 2026-10-22
 
 ### Fixed
