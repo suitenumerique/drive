@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import json
-import logging
 from datetime import timedelta
 from os.path import splitext
 from urllib.parse import quote
@@ -15,6 +14,7 @@ from django.db.models import Q
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
+import structlog
 from lasuite.drf.models.choices import LinkReachChoices, get_equivalent_link_definition
 from rest_framework import serializers
 
@@ -24,7 +24,7 @@ from core.api.fields import SchemaField
 from core.storage import get_storage_compute_backend
 from wopi import utils as wopi_utils
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -756,11 +756,7 @@ class CreateItemSerializer(ItemSerializer):
                 if settings.RESTRICT_UPLOAD_FILE_TYPE:
                     _root, extension = splitext(attrs["filename"])
                     if extension.lower() not in settings.FILE_EXTENSIONS_ALLOWED:
-                        logger.info(
-                            "create_item: file extension not allowed %s for filename %s",
-                            extension,
-                            attrs["filename"],
-                        )
+                        logger.info("item_create_extension_not_allowed", extension=extension)
                         raise serializers.ValidationError(
                             {"filename": _("This file extension is not allowed.")},
                             code="item_create_file_extension_not_allowed",
