@@ -21,6 +21,7 @@ from django.utils.translation import gettext_lazy as _
 import dj_database_url
 import posthog
 import sentry_sdk
+import structlog
 from boto3.s3.transfer import TransferConfig
 from configurations import Configuration, values
 from lasuite.configuration.values import SecretFileValue
@@ -1384,15 +1385,25 @@ class Base(Configuration):
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": {
-            "simple": {
-                "format": "{asctime} {name} {levelname} {message}",
-                "style": "{",
+            "json": {
+                "()": structlog.stdlib.ProcessorFormatter,
+                "foreign_pre_chain": [
+                    structlog.stdlib.ExtraAdder(),
+                    structlog.stdlib.add_logger_name,
+                    structlog.stdlib.add_log_level,
+                    structlog.processors.TimeStamper(fmt="iso", utc=True),
+                ],
+                "processors": [
+                    structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                    structlog.processors.format_exc_info,
+                    structlog.processors.JSONRenderer(default=str),
+                ],
             },
         },
         "handlers": {
             "console": {
                 "class": "logging.StreamHandler",
-                "formatter": "simple",
+                "formatter": "json",
             },
         },
         # Override root logger to send it to console

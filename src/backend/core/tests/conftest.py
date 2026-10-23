@@ -1,6 +1,7 @@
 """Fixtures for tests in the drive core application"""
 
 import base64
+import json
 import logging
 from unittest import mock
 
@@ -49,9 +50,14 @@ def console_logs():
     """Collect the lines written by the console handler, as formatted in production."""
     handler = logging.getHandlerByName("console")
     lines = []
-    with mock.patch.object(
-        handler, "emit", side_effect=lambda record: lines.append(handler.format(record))
-    ):
+
+    def emit(record):
+        line = json.loads(handler.format(record))
+        # The timestamp changes on each run
+        del line["timestamp"]
+        lines.append(line)
+
+    with mock.patch.object(handler, "emit", side_effect=emit):
         yield lines
 
 
