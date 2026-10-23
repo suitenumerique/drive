@@ -1,15 +1,16 @@
 """Clean stale pending items that were never fully uploaded."""
 
-import logging
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
 
+import structlog
+
 from core.models import Item, ItemUploadStateChoices
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class Command(BaseCommand):
@@ -43,7 +44,7 @@ class Command(BaseCommand):
                 if not self._mark_as_hard_deleted(item_id):
                     continue
             except Exception:  # pylint: disable=broad-exception-caught
-                logger.exception("Failed to clean stale pending item %s", item_id)
+                logger.exception("pending_item_clean_failed", item_id=item_id)
                 failed += 1
                 continue
             count += 1
