@@ -26,3 +26,15 @@ def test_logging_heartbeat(client, console_logs):
 
     assert len(console_logs) == 1
     assert console_logs[0].endswith(" request.summary INFO ")
+
+
+def test_logging_exception(console_logs):
+    """An exception should be logged with its traceback."""
+    try:
+        raise ValueError("unknown item")
+    except ValueError:
+        logging.getLogger("core.api").exception("item creation failed")
+
+    assert len(console_logs) == 1
+    assert " core.api ERROR item creation failed\nTraceback " in console_logs[0]
+    assert console_logs[0].endswith("\nValueError: unknown item")
