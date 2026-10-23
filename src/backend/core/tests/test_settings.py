@@ -2,9 +2,6 @@
 Unit tests for the User model
 """
 
-import logging
-from unittest import mock
-
 import pytest
 from configurations import values
 
@@ -105,28 +102,18 @@ def test_psycopg_pool_enabled(monkeypatch):
     }
 
 
-def test_logging_request_id(client):
+def test_logging_request_id(client, console_logs):
     """Logs emitted during a request should carry its X-Request-ID header."""
-    handler = next(h for h in logging.getLogger().handlers if h.name == "console")
-    lines = []
-
-    with mock.patch.object(
-        handler, "emit", side_effect=lambda record: lines.append(handler.format(record))
-    ):
-        client.get("/api/v1.0/unknown/", HTTP_X_REQUEST_ID="migrator-42")
-
-    assert any("rid=migrator-42 Not Found: /api/v1.0/unknown/" in line for line in lines)
-
-
-def test_logging_request_id_heartbeat(client):
-    """Heartbeat logs should not carry the X-Request-ID of the previous request."""
-    handler = next(h for h in logging.getLogger().handlers if h.name == "console")
-    lines = []
-
     client.get("/api/v1.0/unknown/", HTTP_X_REQUEST_ID="migrator-42")
-    with mock.patch.object(
-        handler, "emit", side_effect=lambda record: lines.append(handler.format(record))
-    ):
-        client.get("/__lbheartbeat__/")
 
-    assert any("request.summary INFO rid=None" in line for line in lines)
+    assert "rid=migrator-42 Not Found: /api/v1.0/unknown/" in console_logs[-1]
+
+
+def test_logging_request_id_heartbeat(client, console_logs):
+    """Heartbeat logs should not carry the X-Request-ID of the previous request."""
+    client.get("/api/v1.0/unknown/", HTTP_X_REQUEST_ID="migrator-42")
+    console_logs.clear()
+
+    client.get("/__lbheartbeat__/")
+
+    assert "request.summary INFO rid=None" in console_logs[0]
