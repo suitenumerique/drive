@@ -44,3 +44,11 @@ def start_request_timer(request, **kwargs):  # pylint: disable=unused-argument
 def log_request_duration(request, log_kwargs, **kwargs):  # pylint: disable=unused-argument
     """Log the duration of the request with its end."""
     log_kwargs["duration_ms"] = round((time.monotonic() - request.started_at) * 1000)
+
+
+@receiver(structlog_signals.bind_extra_request_finished_metadata)
+def log_api_error_codes(response, log_kwargs, **kwargs):  # pylint: disable=unused-argument
+    """Log the codes of the API errors, never their details, which can hold file names."""
+    data = getattr(response, "data", None)
+    if response.status_code >= 400 and isinstance(data, dict) and "errors" in data:
+        log_kwargs["error_codes"] = [error["code"] for error in data["errors"]]

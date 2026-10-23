@@ -86,7 +86,7 @@ def test_logging_request_user(client, console_logs):
 
 
 def test_logging_request_api_error(console_logs):
-    """A request refused by the API should be logged with its status code."""
+    """A request refused by the API should be logged with its error codes."""
     user = factories.UserFactory()
     client = APIClient()
     client.force_login(user)
@@ -100,6 +100,7 @@ def test_logging_request_api_error(console_logs):
         "logger": "django_structlog.middlewares.request",
         "code": 400,
         "duration_ms": mock.ANY,
+        "error_codes": ["item_create_file_filename_required"],
         "request": "POST /api/v1.0/items/",
         "request_id": mock.ANY,
         "user_id": str(user.pk),
