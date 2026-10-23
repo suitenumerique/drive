@@ -3,7 +3,6 @@ Tasks related to items.
 """
 
 import hashlib
-import logging
 from datetime import timedelta
 from os.path import splitext
 
@@ -13,6 +12,7 @@ from django.utils import timezone
 
 import boto3
 import botocore
+import structlog
 from lasuite.malware_detection.models import MalwareDetection
 
 from core.api.utils import sanitize_filename
@@ -20,7 +20,7 @@ from core.models import Item, ItemTypeChoices, ItemUploadStateChoices
 
 from drive.celery_app import app
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 @app.task
@@ -34,12 +34,12 @@ def process_item_purge(item_id):
     - delete file from storage first, then item from database
     - delete children first, then parents
     """
-    logger.info("Processing item purge for %s", item_id)
+    logger.info("item_purge_started", item_id=item_id)
 
     try:
         root = Item.objects.get(id=item_id)
     except Item.DoesNotExist:
-        logger.error("Item %s does not exist", item_id)
+        logger.error("item_purge_item_not_found", item_id=item_id)
         return
 
     # Compute cutoff only if relevant
@@ -51,12 +51,12 @@ def process_item_purge(item_id):
     )
 
     if not (is_hard_deleted or is_soft_deleted_and_purgeable):
-        if root.deleted_at is None:
-            reason = "item is not deleted"
-        else:
-            reason = f"soft-deleted but not past purge cutoff: {root.deleted_at.isoformat()}"
-
-        logger.info("Item %s is not eligible for purge: %s", item_id, reason)
+        logger.info(
+            "item_purge_skipped",
+            item_id=item_id,
+            reason="not_deleted" if root.deleted_at is None else "not_past_purge_cutoff",
+            deleted_at=root.deleted_at,
+        )
         return
 
     # Get descendants, leaf first. Don't burst memory
@@ -79,21 +79,21 @@ def rename_file(item_id, new_title):
     """Rename the file of an item. Update the filename and then rename the file on storage."""
 
     if not new_title:
-        logger.error("New title is empty, skipping rename file")
+        logger.error("file_rename_empty_title", item_id=item_id)
         return
 
     try:
         item = Item.objects.get(id=item_id)
     except Item.DoesNotExist:
-        logger.error("Item %s does not exist", item_id)
+        logger.error("file_rename_item_not_found", item_id=item_id)
         return
 
     if item.type != ItemTypeChoices.FILE:
-        logger.error("Item %s is not a file", item_id)
+        logger.error("file_rename_item_not_a_file", item_id=item_id)
         return
 
     if item.upload_state != ItemUploadStateChoices.READY:
-        logger.error("Item %s is not ready for renaming", item_id)
+        logger.error("file_rename_item_not_ready", item_id=item_id, upload_state=item.upload_state)
         return
 
     _, extension = splitext(item.filename)
@@ -102,10 +102,7 @@ def rename_file(item_id, new_title):
     from_file_key = item.file_key
 
     if item.filename == new_filename:
-        logger.info(
-            "Item %s filename has not changed, no need to move it on storage",
-            item_id,
-        )
+        logger.info("file_rename_unchanged", item_id=item_id)
         return
 
     item.filename = new_filename
@@ -140,10 +137,14 @@ def update_suspicious_item_file_hash(item_id):
     try:
         item = Item.objects.get(id=item_id)
     except Item.DoesNotExist:
-        logger.error("updating suspicious item file hash: Item %s does not exist", item_id)
+        logger.error("suspicious_file_hash_item_not_found", item_id=item_id)
         return
     if item.upload_state != ItemUploadStateChoices.SUSPICIOUS:
-        logger.error("updating suspicious item file hash: Item %s is not suspicious", item_id)
+        logger.error(
+            "suspicious_file_hash_item_not_suspicious",
+            item_id=item_id,
+            upload_state=item.upload_state,
+        )
         return
     with default_storage.open(item.file_key, "rb") as file:
         file_hash = hashlib.file_digest(file, "sha256").hexdigest()
@@ -158,26 +159,20 @@ def duplicate_file(self, item_to_duplicate_id, duplicated_item_id):
     try:
         item_to_duplicate = Item.objects.get(id=item_to_duplicate_id)
     except Item.DoesNotExist:
-        logger.exception(
-            "duplicating file: item_to_duplicate with id %s does not exist, aborting",
-            item_to_duplicate_id,
-        )
+        logger.exception("file_duplication_source_not_found", item_id=item_to_duplicate_id)
         return
 
     try:
         duplicated_item = Item.objects.get(id=duplicated_item_id)
     except Item.DoesNotExist:
-        logger.exception(
-            "duplicating file: duplicated_item with id %s does not exist, aborting",
-            duplicated_item_id,
-        )
+        logger.exception("file_duplication_copy_not_found", item_id=duplicated_item_id)
         return
 
     if duplicated_item.upload_state != ItemUploadStateChoices.DUPLICATING:
         logger.error(
-            "duplicating file: the duplidated file upload_state is not duplicating but %s, "
-            "aborting",
-            duplicated_item.upload_state,
+            "file_duplication_copy_not_duplicating",
+            item_id=duplicated_item_id,
+            upload_state=duplicated_item.upload_state,
         )
         return
 
@@ -201,18 +196,19 @@ def duplicate_file(self, item_to_duplicate_id, duplicated_item_id):
         if self.request.retries >= self.max_retries:
             # delete the duplicated item
             logger.error(
-                "duplicating file: %d max retries exceeded, the duplicated item %s is deleted",
-                self.max_retries,
-                duplicated_item.id,
+                "file_duplication_abandoned",
+                item_id=duplicated_item_id,
+                max_retries=self.max_retries,
             )
             duplicated_item.soft_delete()
             duplicated_item.delete()
 
         logger.error(
-            "duplicating file: error while copying file (retries %d on %d). Error: %s",
-            self.request.retries,
-            self.max_retries,
-            exc,
+            "file_duplication_failed",
+            item_id=duplicated_item_id,
+            retries=self.request.retries,
+            max_retries=self.max_retries,
+            error=str(exc),
         )
 
         self.retry(exc=exc)

@@ -22,8 +22,13 @@ def test_process_item_purge_item_does_not_exist(console_logs, django_assert_num_
         process_item_purge(1)
 
     assert console_logs == [
-        {"event": "Processing item purge for 1", "level": "info", "logger": "core.tasks.item"},
-        {"event": "Item 1 does not exist", "level": "error", "logger": "core.tasks.item"},
+        {"event": "item_purge_started", "level": "info", "logger": "core.tasks.item", "item_id": 1},
+        {
+            "event": "item_purge_item_not_found",
+            "level": "error",
+            "logger": "core.tasks.item",
+            "item_id": 1,
+        },
     ]
 
 
@@ -39,14 +44,18 @@ def test_process_item_purge_neither_soft_nor_hard_deleted(console_logs, django_a
     assert item.hard_deleted_at is None
     assert console_logs == [
         {
-            "event": f"Processing item purge for {item.id!s}",
+            "event": "item_purge_started",
             "level": "info",
             "logger": "core.tasks.item",
+            "item_id": str(item.id),
         },
         {
-            "event": f"Item {item.id!s} is not eligible for purge: item is not deleted",
+            "event": "item_purge_skipped",
             "level": "info",
             "logger": "core.tasks.item",
+            "item_id": str(item.id),
+            "reason": "not_deleted",
+            "deleted_at": None,
         },
     ]
 
@@ -70,17 +79,18 @@ def test_process_item_purge_soft_deleted_not_purgeable(
     assert item.hard_deleted_at is None
     assert console_logs == [
         {
-            "event": f"Processing item purge for {item.id!s}",
+            "event": "item_purge_started",
             "level": "info",
             "logger": "core.tasks.item",
+            "item_id": str(item.id),
         },
         {
-            "event": (
-                f"Item {item.id!s} is not eligible for purge: soft-deleted but not past purge"
-                f" cutoff: {item.deleted_at.isoformat()}"
-            ),
+            "event": "item_purge_skipped",
             "level": "info",
             "logger": "core.tasks.item",
+            "item_id": str(item.id),
+            "reason": "not_past_purge_cutoff",
+            "deleted_at": str(item.deleted_at),
         },
     ]
 

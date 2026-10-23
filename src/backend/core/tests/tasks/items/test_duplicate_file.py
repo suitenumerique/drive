@@ -26,13 +26,11 @@ def test_duplicate_file_item_to_duplicate_does_not_exist(console_logs):
 
     assert console_logs == [
         {
-            "event": (
-                f"duplicating file: item_to_duplicate with id {item_to_duplicate_id} does not"
-                " exist, aborting"
-            ),
+            "event": "file_duplication_source_not_found",
             "level": "error",
             "logger": "core.tasks.item",
             "exception": mock.ANY,
+            "item_id": str(item_to_duplicate_id),
         }
     ]
 
@@ -51,13 +49,11 @@ def test_duplicate_file_duplicated_item_does_not_exist(console_logs):
 
     assert console_logs == [
         {
-            "event": (
-                f"duplicating file: duplicated_item with id {duplicated_item_id} does not exist,"
-                " aborting"
-            ),
+            "event": "file_duplication_copy_not_found",
             "level": "error",
             "logger": "core.tasks.item",
             "exception": mock.ANY,
+            "item_id": str(duplicated_item_id),
         }
     ]
 
@@ -82,12 +78,11 @@ def test_duplicate_file_duplicated_file_not_in_duplicating_state(console_logs):
 
     assert console_logs == [
         {
-            "event": (
-                "duplicating file: the duplidated file upload_state is not duplicating but ready, "
-                "aborting"
-            ),
+            "event": "file_duplication_copy_not_duplicating",
             "level": "error",
             "logger": "core.tasks.item",
+            "item_id": str(duplicated_item.id),
+            "upload_state": "ready",
         }
     ]
 
@@ -145,13 +140,16 @@ def test_duplicate_file_retry(console_logs):
 
     assert console_logs == [
         {
-            "event": (
-                "duplicating file: error while copying file (retries 0 on 10). Error: An error "
-                "occurred (NoSuchKey) when calling the CopyObject operation: The specified key "
-                "does not exist."
-            ),
+            "event": "file_duplication_failed",
             "level": "error",
             "logger": "core.tasks.item",
+            "item_id": str(duplicated_item.id),
+            "retries": 0,
+            "max_retries": 10,
+            "error": (
+                "An error occurred (NoSuchKey) when calling the CopyObject operation: The "
+                "specified key does not exist."
+            ),
         }
     ]
 
@@ -183,20 +181,22 @@ def test_duplicate_file_max_retries_exceeded(console_logs):
 
     assert console_logs == [
         {
-            "event": (
-                f"duplicating file: 0 max retries exceeded, the duplicated item"
-                f" {duplicated_item.id} is deleted"
-            ),
+            "event": "file_duplication_abandoned",
             "level": "error",
             "logger": "core.tasks.item",
+            "item_id": str(duplicated_item.id),
+            "max_retries": 0,
         },
         {
-            "event": (
-                "duplicating file: error while copying file (retries 0 on 0). Error: An error "
-                "occurred (NoSuchKey) when calling the CopyObject operation: The specified key "
-                "does not exist."
-            ),
+            "event": "file_duplication_failed",
             "level": "error",
             "logger": "core.tasks.item",
+            "item_id": str(duplicated_item.id),
+            "retries": 0,
+            "max_retries": 0,
+            "error": (
+                "An error occurred (NoSuchKey) when calling the CopyObject operation: The "
+                "specified key does not exist."
+            ),
         },
     ]

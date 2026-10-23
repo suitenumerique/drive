@@ -113,9 +113,11 @@ def test_rename_file_item_not_ready(console_logs):
     assert item.filename == "old_title.txt"
     assert console_logs == [
         {
-            "event": f"Item {item.id} is not ready for renaming",
+            "event": "file_rename_item_not_ready",
             "level": "error",
             "logger": "core.tasks.item",
+            "item_id": str(item.id),
+            "upload_state": "pending",
         }
     ]
 
@@ -138,9 +140,10 @@ def test_rename_file_new_title_is_empty(console_logs):
     assert item.filename == "old_title.txt"
     assert console_logs == [
         {
-            "event": "New title is empty, skipping rename file",
+            "event": "file_rename_empty_title",
             "level": "error",
             "logger": "core.tasks.item",
+            "item_id": str(item.id),
         }
     ]
 
@@ -163,8 +166,9 @@ def test_rename_file_new_title_is_none(console_logs):
     assert item.filename == "old_title.txt"
     assert console_logs == [
         {
-            "event": "New title is empty, skipping rename file",
+            "event": "file_rename_empty_title",
             "level": "error",
             "logger": "core.tasks.item",
+            "item_id": str(item.id),
         }
     ]

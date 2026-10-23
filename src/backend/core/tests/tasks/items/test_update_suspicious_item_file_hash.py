@@ -18,9 +18,10 @@ def test_update_suspicious_item_file_hash_item_does_not_exist(console_logs):
     update_suspicious_item_file_hash(1)
     assert console_logs == [
         {
-            "event": "updating suspicious item file hash: Item 1 does not exist",
+            "event": "suspicious_file_hash_item_not_found",
             "level": "error",
             "logger": "core.tasks.item",
+            "item_id": 1,
         }
     ]
 
@@ -32,9 +33,11 @@ def test_update_suspicious_item_file_hash_item_not_suspicious(console_logs):
     update_suspicious_item_file_hash(item.id)
     assert console_logs == [
         {
-            "event": f"updating suspicious item file hash: Item {item.id} is not suspicious",
+            "event": "suspicious_file_hash_item_not_suspicious",
             "level": "error",
             "logger": "core.tasks.item",
+            "item_id": str(item.id),
+            "upload_state": item.upload_state,
         }
     ]
 
