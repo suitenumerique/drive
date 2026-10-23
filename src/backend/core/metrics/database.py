@@ -1,12 +1,11 @@
 """Metrics of the psycopg pool of each worker process (DB_PSYCOPG_POOL_ENABLED)."""
 
-import logging
-
 from django.db import connections
 
+import structlog
 from prometheus_client import Counter, Gauge
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # The gauges are what the pool looked like at the end of the last request of
 # each worker; the counters are exact, the pool counts them itself.
@@ -74,7 +73,7 @@ def record_database_pool(**_kwargs):
             stats = connection.pool.pop_stats()
         except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             # a measurement never fails a request
-            logger.debug("could not read the database pool stats", exc_info=True)
+            logger.debug("database_pool_stats_failed", database=alias, exc_info=True)
             continue
         DATABASE_POOL_SIZE.labels(alias).set(stats.get("pool_size", 0))
         DATABASE_POOL_AVAILABLE.labels(alias).set(stats.get("pool_available", 0))

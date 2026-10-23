@@ -1,15 +1,15 @@
 """Collectors assembled by the metrics view on every scrape."""
 
-import logging
 import socket
 
+import structlog
 from prometheus_client import CollectorRegistry
 from prometheus_client.core import GaugeMetricFamily, Metric
 from prometheus_client.multiprocess import MultiProcessCollector
 
 from drive.celery_app import app as celery_app
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 HOSTNAME_LABEL = "hostname"
 
@@ -59,7 +59,7 @@ class CeleryQueueCollector:
                 ]
                 return sum(channel.client.llen(key) for key in keys)
         except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
-            logger.debug("could not read the celery queue length", exc_info=True)
+            logger.debug("celery_queue_length_failed", queue=self.queue_name(), exc_info=True)
             return None
 
 

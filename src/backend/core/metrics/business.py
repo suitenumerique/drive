@@ -7,17 +7,16 @@ values are kept in the shared cache for PROMETHEUS_BUSINESS_METRICS_CACHE_TTL
 seconds, so that the replicas and the scrapes share one set of queries.
 """
 
-import logging
-
 from django.conf import settings
 from django.core.cache import cache
 from django.db.models import Count, Sum
 
+import structlog
 from prometheus_client.core import GaugeMetricFamily
 
 from core import models
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 CACHE_KEY = "metrics:business"
 
@@ -87,7 +86,7 @@ def compute_business_values():
         try:
             results[name] = compute()
         except Exception:  # pylint: disable=broad-exception-caught
-            logger.exception("could not compute the %s business metrics", name)
+            logger.exception("business_metrics_failed", family=name)
 
     if len(results) == len(FAMILIES):
         cache.set(CACHE_KEY, results, settings.PROMETHEUS_BUSINESS_METRICS_CACHE_TTL)
