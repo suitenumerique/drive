@@ -9,6 +9,7 @@ import {
 import i18n from "@/features/i18n/initI18n";
 import { FilePreviewType } from "@gouvfr-lasuite/ui-components";
 import { DefaultRoute } from "@/utils/defaultRoutes";
+import { isFolderAccessDenied } from "@/features/drivers/utils";
 
 /**
  * When passing through my-files, favorites, shared with me, etc. we set a fromRoute key in the session storage.
@@ -200,15 +201,17 @@ export const getItemTitle = (item: Item) => {
   return item.title;
 };
 
-export const itemToPreviewFile = (item: Item) => {
+export const itemToPreviewFile = (item: Item): FilePreviewType => {
+  const accessDenied = isFolderAccessDenied(item);
   return {
     id: item.id,
     title: item.title,
-    mimetype: item.mimetype ?? "",
-    url_preview: item.url_preview ?? "",
-    url: item.url ?? "",
+    mimetype: accessDenied ? "" : (item.mimetype ?? ""),
+    url_preview: accessDenied ? "" : (item.url_preview ?? ""),
+    url: accessDenied ? "" : (item.url ?? ""),
+    isFolderAccessDenied: accessDenied,
     isSuspicious: item.upload_state === ItemUploadState.SUSPICIOUS,
     is_wopi_supported: item.is_wopi_supported,
-    size: item.size,
-  } as FilePreviewType;
+    size: accessDenied ? 0 : (item.size ?? 0),
+  };
 };

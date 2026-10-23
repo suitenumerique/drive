@@ -23,11 +23,25 @@ import { useRouter } from "next/router";
 import { DefaultRoute } from "@/utils/defaultRoutes";
 import { setFromRoute } from "../../utils/utils";
 import folderIconTree from "@/assets/tree/folder.svg";
+import { FolderRestricted } from "@gouvfr-lasuite/ui-components/icons";
+import {
+  getNavigableItem,
+  isFolderAccessDenied,
+  isUnavailableRestriction,
+} from "@/features/drivers/utils";
 
-type ExplorerTreeItemProps = NodeRendererProps<TreeDataItem<TreeItem>>;
+import { UseItemActionMenuItemsReturn } from "../../hooks/useItemActionMenuItems";
 
-export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
-  const { onNavigate, setPreviewItem, setPreviewItems } = useGlobalExplorer();
+type ExplorerTreeItemProps = NodeRendererProps<TreeDataItem<TreeItem>> & {
+  getMenuItems: UseItemActionMenuItemsReturn["getMenuItems"];
+};
+
+export const ExplorerTreeItem = ({
+  getMenuItems,
+  ...props
+}: ExplorerTreeItemProps) => {
+  const { onNavigate, setPreviewItem, setPreviewItems } =
+    useGlobalExplorer();
   const router = useRouter();
 
   const item: TreeViewDataType<TreeItemData> = props.node.data.value;
@@ -41,7 +55,7 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
           onClick={() => {
             if (
               item.nodeType === TreeViewNodeTypeEnum.NODE &&
-              item.type === ItemType.FILE
+              (item.type === ItemType.FILE || isFolderAccessDenied(item))
             ) {
               setPreviewItems([item as Item]);
               setPreviewItem(item as Item);
@@ -53,15 +67,29 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
               }
               return;
             }
+            const navigableItem = getNavigableItem(item as Item);
+            if (!navigableItem) return;
             setFromRoute(DefaultRoute.FAVORITES);
             onNavigate({
               type: NavigationEventType.ITEM,
-              item: item as Item,
+              item: navigableItem,
             });
           }}
         >
-          <div className="explorer__tree__item" data-testid="tree_item_content">
-            <div className="explorer__tree__item__content">
+          <div
+            className="explorer__tree__item"
+            data-testid="tree_item_content"
+          >
+            <div
+              className="explorer__tree__item__content"
+              style={
+                item.nodeType === TreeViewNodeTypeEnum.NODE &&
+                isUnavailableRestriction(item) &&
+                !isFolderAccessDenied(item)
+                  ? { opacity: 0.5, cursor: "not-allowed" }
+                  : undefined
+              }
+            >
               <ExplorerTreeItemIcon item={item} size={IconSize.MEDIUM} />
               {/* 
                 We need to check the nodeType because the generic type T in TreeViewDataType 
@@ -87,7 +115,10 @@ export const ExplorerTreeItem = ({ ...props }: ExplorerTreeItemProps) => {
             </div>
 
             {item?.nodeType === TreeViewNodeTypeEnum.NODE && (
-              <ExplorerTreeItemActions item={item as Item} />
+              <ExplorerTreeItemActions
+                item={item as Item}
+                getMenuItems={getMenuItems}
+              />
             )}
           </div>
         </TreeViewItem>
@@ -103,6 +134,9 @@ export const ExplorerTreeItemIcon = ({
   size?: IconSize;
 }) => {
   if (item.nodeType === TreeViewNodeTypeEnum.NODE) {
+    if (item.is_restricted || item.type === ItemType.RESTRICTION) {
+      return <FolderRestricted size={IconSize.SMALL} />;
+    }
     return (
       <img
         className="c__file-icon icon--small"

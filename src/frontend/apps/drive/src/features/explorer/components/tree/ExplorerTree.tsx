@@ -11,8 +11,12 @@ import {
   useTreeContext,
 } from "@gouvfr-lasuite/ui-components";
 import { useTranslation } from "react-i18next";
-import { useGlobalExplorer } from "../GlobalExplorerContext";
-import { Item, TreeItem } from "@/features/drivers/types";
+import {
+  getOriginalIdFromTreeId,
+  useGlobalExplorer,
+} from "../GlobalExplorerContext";
+import { Item, ItemType, TreeItem } from "@/features/drivers/types";
+import { getDropTarget } from "@/features/drivers/utils";
 import {
   DefaultRoute,
   getDefaultRoute,
@@ -30,6 +34,9 @@ import React from "react";
 import { useAuth } from "@/features/auth/Auth";
 import { ExplorerTreeNavItem } from "./nav/ExplorerTreeNavItem";
 import { useRouter } from "next/router";
+import { useItemActionMenuItems } from "../../hooks/useItemActionMenuItems";
+import { useAppRestrictionUpdated } from "../app-view/useAppRestrictionUpdated";
+import { useSelectionStore } from "../../stores/selectionStore";
 
 export const ExplorerTree = () => {
   const move = useMoveItems();
@@ -42,11 +49,19 @@ export const ExplorerTree = () => {
   }>();
 
   const treeContext = useTreeContext<TreeItem>();
-  const [initialOpenState, setInitialOpenState] = useState<OpenMap | undefined>(
-    undefined,
-  );
+  const [initialOpenState, setInitialOpenState] = useState<
+    OpenMap | undefined
+  >(undefined);
 
   const { itemId, treeIsInitialized } = useGlobalExplorer();
+  const selectionStore = useSelectionStore();
+  const updateAppAfterRestriction = useAppRestrictionUpdated();
+  const { getMenuItems, modals: actionModals } = useItemActionMenuItems({
+    onRestrictionUpdated: async () => {
+      selectionStore.clear();
+      await updateAppAfterRestriction();
+    },
+  });
   const defaultSelectedNodeId = useMemo(() => {
     const defaultRoute = getDefaultRoute(router.pathname);
     if (defaultRoute) {
@@ -91,11 +106,23 @@ export const ExplorerTree = () => {
   }, [treeContext?.treeData.nodes]);
 
   const handleMove = (result: TreeViewMoveResult) => {
+    const parent = treeContext?.treeData.getNode(result.targetModeId) as
+      | Item
+      | undefined;
+    const target = parent ? getDropTarget(parent) : undefined;
+    if (parent && !target) return;
     move.mutate(
       {
-        ids: [result.sourceId],
-        parentId: result.targetModeId,
-        oldParentId: result.oldParentId ?? itemId,
+        ids: [getOriginalIdFromTreeId(result.sourceId)],
+        parentId:
+          parent?.type === ItemType.RESTRICTION
+            ? target?.id
+            : result.targetModeId
+              ? getOriginalIdFromTreeId(result.targetModeId)
+              : undefined,
+        oldParentId: result.oldParentId
+          ? getOriginalIdFromTreeId(result.oldParentId)
+          : itemId,
       },
       {
         onSuccess: () => {
@@ -121,9 +148,12 @@ export const ExplorerTree = () => {
               return;
             }
 
-            const parent = treeContext?.treeData.getNode(
+            const parentEntry = treeContext?.treeData.getNode(
               moveResult.newParentId,
             ) as Item | undefined;
+            const parent = parentEntry
+              ? getDropTarget(parentEntry)
+              : undefined;
             const oldParent = treeContext?.treeData.getNode(
               moveResult.oldParentId,
             ) as Item | undefined;
@@ -169,11 +199,14 @@ export const ExplorerTree = () => {
 
             return result;
           }}
-          renderNode={ExplorerTreeItem}
+          renderNode={(props) => (
+            <ExplorerTreeItem {...props} getMenuItems={getMenuItems} />
+          )}
           rootNodeId={"root"}
         />
       )}
       <ExplorerTreeNav />
+      {actionModals}
       {moveState && moveConfirmationModal.isOpen && (
         <ExplorerTreeMoveConfirmationModal
           isOpen={moveConfirmationModal.isOpen}

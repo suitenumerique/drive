@@ -1001,6 +1001,21 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
             has_restriction=models.Exists(self.model.objects.filter(target=models.OuterRef("pk")))
         )
 
+    def with_restriction_target(self, user):
+        """Load restriction targets along with the accesses the user holds on them."""
+        queryset = self.select_related("target")
+        if not user.is_authenticated:
+            return queryset
+        return queryset.prefetch_related(
+            models.Prefetch(
+                "target__accesses",
+                queryset=ItemAccess.objects.filter(
+                    models.Q(user=user) | models.Q(team__in=user.teams)
+                ),
+                to_attr="viewer_accesses",
+            )
+        )
+
     def readable_per_se(self, user):
         """
         Filters the queryset to return documents that the given user has
@@ -1012,7 +1027,8 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
             return self.filter(
                 models.Q(accesses__user=user)
                 | models.Q(accesses__team__in=user.teams)
-                | ~models.Q(link_reach=LinkReachChoices.RESTRICTED)
+                # A null link reach is inherited: it grants nothing by itself.
+                | models.Q(link_reach__in=[LinkReachChoices.PUBLIC, LinkReachChoices.AUTHENTICATED])
             )
 
         return self.filter(models.Q(link_reach=LinkReachChoices.PUBLIC))
@@ -1143,7 +1159,9 @@ class ItemQuerySet(AnnotateUserRoleQuerySetMixin, TreeQuerySet):
         )
 
         numchild_folder_sq = models.Subquery(
-            direct_children_qs.filter(type=ItemTypeChoices.FOLDER)
+            direct_children_qs.filter(
+                type__in=[ItemTypeChoices.FOLDER, ItemTypeChoices.RESTRICTION]
+            )
             .values(group_key=models.Value(1))
             .annotate(count=models.Count("pk"))
             .values("count"),
