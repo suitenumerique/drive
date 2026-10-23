@@ -1,10 +1,9 @@
 """Trigger document indexation using celery task."""
 
-from logging import getLogger
-
 from django.conf import settings
 from django.core.cache import cache
 
+import structlog
 from django_redis.cache import RedisCache
 
 from core import models
@@ -12,7 +11,7 @@ from core.services.search_indexers import get_file_indexer
 
 from drive.celery_app import app
 
-logger = getLogger(__file__)
+logger = structlog.get_logger(__name__)
 
 
 def batch_indexer_throttle_acquire(timeout: int = 0, atomic: bool = True):
@@ -46,7 +45,7 @@ def file_indexer_task(item_id):
         )
 
         indexer.index(queryset)
-        logger.info("Start file %s indexation", item_id)
+        logger.info("file_indexed", item_id=item_id)
 
 
 @app.task
@@ -61,7 +60,7 @@ def batch_file_indexer_task(timestamp):
         )
 
         count = indexer.index(queryset)
-        logger.info("Indexed %d files", count)
+        logger.info("files_indexed", count=count)
 
 
 def trigger_batch_file_indexer(item):
@@ -86,13 +85,13 @@ def trigger_batch_file_indexer(item):
         # counter and each task decrease it, so the index be run only once.
         if batch_indexer_throttle_acquire(timeout=countdown):
             logger.info(
-                "Add task for batch file indexation from updated_at=%s in %d seconds",
-                item.updated_at.isoformat(),
-                countdown,
+                "file_batch_indexation_scheduled",
+                updated_at=item.updated_at.isoformat(),
+                countdown=countdown,
             )
 
             batch_file_indexer_task.apply_async(args=[item.updated_at], countdown=countdown)
         else:
-            logger.info("Skip task for batch file %s indexation", item.pk)
+            logger.info("file_batch_indexation_skipped", item_id=item.pk)
     else:
         file_indexer_task.apply(args=[item.pk])
