@@ -27,6 +27,7 @@ import {
   useItem,
   useItemAccesses,
 } from "@/features/explorer/hooks/useQueries";
+import { getShareRecipients } from "@/features/explorer/utils/shareRecipients";
 import { useUsers } from "@/features/users/hooks/useUserQueries";
 import { useClipboard } from "@/hooks/useCopyToClipboard";
 import {
@@ -128,26 +129,31 @@ export const ItemShareModal = ({
   }, [users]);
 
   const onInviteUser = async (users: User[], role: Role) => {
-    const inviteByEmail = users.filter((user) => user.email === user.id);
-    const inviteByUsername = users.filter((user) => user.email !== user.id);
+    const { userIds, emails } = getShareRecipients(
+      users,
+      accessesData,
+      invitationsData,
+    );
 
-    const promises = inviteByUsername.map((user) =>
+    const promises = userIds.map((userId) =>
       createAccess({
         itemId: itemId,
-        userId: user.id,
+        userId: userId,
         role: role as Role,
       }),
     );
 
-    const promisesInvitation = inviteByEmail.map((user) =>
+    const promisesInvitation = emails.map((email) =>
       createInvitation({
         itemId: itemId,
-        email: user.email,
+        email: email,
         role: role as Role,
       }),
     );
 
-    await Promise.all([...promises, ...promisesInvitation]);
+    // A failed request must neither skip the refresh below nor leave an
+    // unhandled rejection: the mutation cache already shows its error.
+    await Promise.allSettled([...promises, ...promisesInvitation]);
 
     queryClient.invalidateQueries({
       queryKey: ["itemAccesses", itemId],

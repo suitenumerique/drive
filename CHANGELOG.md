@@ -12,6 +12,10 @@ and this project adheres to
 
 - ✨(frontend) restrict and reopen folder access from the share modal
 
+### Fixed
+
+- 🐛(frontend) avoid duplicate share requests for the same recipient
+
 ### Security
 
 - ⬆️(backend) upgrade djangorestframework to 3.18.3 to fix CVEs
