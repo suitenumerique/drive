@@ -8,7 +8,9 @@ from uuid import uuid4
 
 import pytest
 from celery.app.log import Logging
+from celery.signals import before_task_publish, task_prerun
 from configurations import values
+from dockerflow.logging import request_id_context
 
 from drive.celery_app import app as celery_app
 from drive.settings import Base, Feature, LoadTest, PreProduction, Production, Staging
@@ -167,3 +169,22 @@ def test_logging_celery_worker(console_logs):
     log = console_logs[0]
     assert log["Type"] == "celery.app.trace"
     assert log["Fields"]["msg"] == "Task succeeded"
+
+
+def test_logging_celery_task_request_id(console_logs):
+    """Logs of a task should carry the X-Request-ID of the request that sent it."""
+    task = celery_app.tasks["core.tasks.item.process_item_purge"]
+    headers = {}
+    request_id_context.set("migrator-42")
+    before_task_publish.send(sender=task.name, headers=headers, body=None)
+
+    # The worker runs the task in another process, with the message headers
+    request_id_context.set(None)
+    task.push_request(**headers)
+    try:
+        task_prerun.send(sender=task, task_id="1", task=task, args=(), kwargs={})
+        logging.getLogger("core.tasks.item").info("Processing item purge")
+    finally:
+        task.pop_request()
+
+    assert console_logs[-1]["Fields"]["rid"] is None
