@@ -1142,6 +1142,8 @@ class Base(Configuration):
     CELERY_BROKER_URL = values.Value("redis://redis:6379/0")
     CELERY_BROKER_TRANSPORT_OPTIONS = values.DictValue({})
     CELERY_TASK_ROUTES = values.DictValue({})
+    # Keep the LOGGING handlers in the workers instead of Celery's own
+    CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
     # Session
     SESSION_ENGINE = "django.contrib.sessions.backends.cache"
