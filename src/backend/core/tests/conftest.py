@@ -1,6 +1,7 @@
 """Fixtures for tests in the drive core application"""
 
 import base64
+import json
 import logging
 from unittest import mock
 
@@ -53,7 +54,9 @@ def console_logs():
     # Forget the request id that a previous request of this thread left behind
     request_id_context.set(None)
     with mock.patch.object(
-        handler, "emit", side_effect=lambda record: lines.append(handler.format(record))
+        handler,
+        "emit",
+        side_effect=lambda record: lines.append(json.loads(handler.format(record))),
     ):
         yield lines
 

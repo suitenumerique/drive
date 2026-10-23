@@ -3,6 +3,7 @@ Unit tests for the User model
 """
 
 import logging
+from uuid import uuid4
 
 import pytest
 from configurations import values
@@ -108,7 +109,10 @@ def test_logging_request_id(client, console_logs):
     """Logs emitted during a request should carry its X-Request-ID header."""
     client.get("/api/v1.0/unknown/", HTTP_X_REQUEST_ID="migrator-42")
 
-    assert "rid=migrator-42 Not Found: /api/v1.0/unknown/" in console_logs[-1]
+    log = console_logs[-1]
+    assert log["Type"] == "django.request"
+    assert log["Fields"]["rid"] == "migrator-42"
+    assert log["Fields"]["msg"] == "Not Found: /api/v1.0/unknown/"
 
 
 def test_logging_request_id_heartbeat(client, console_logs):
@@ -118,7 +122,10 @@ def test_logging_request_id_heartbeat(client, console_logs):
 
     client.get("/__lbheartbeat__/")
 
-    assert "request.summary INFO rid=None" in console_logs[0]
+    log = console_logs[0]
+    assert log["Type"] == "request.summary"
+    assert log["Fields"]["path"] == "/__lbheartbeat__/"
+    assert log["Fields"]["rid"] is None
 
 
 def test_logging_core_logger(console_logs):
@@ -126,4 +133,18 @@ def test_logging_core_logger(console_logs):
     logging.getLogger("core.api").warning("item creation refused")
 
     assert len(console_logs) == 1
-    assert "core.api WARNING rid=None item creation refused" in console_logs[0]
+    log = console_logs[0]
+    assert log["Type"] == "core.api"
+    assert log["Logger"] == "drive"
+    assert log["Level"] == "WARNING"
+    assert log["Severity"] == 4
+    assert log["Fields"] == {"msg": "item creation refused", "rid": None}
+
+
+def test_logging_uuid(console_logs):
+    """UUIDs passed to a log should be written as text."""
+    user_id = uuid4()
+
+    logging.getLogger("core.api").warning("item creation refused", extra={"uid": user_id})
+
+    assert console_logs[0]["Fields"]["uid"] == str(user_id)
