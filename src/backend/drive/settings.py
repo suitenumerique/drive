@@ -1410,7 +1410,6 @@ class Base(Configuration):
         },
         "loggers": {
             "core": {
-                "handlers": ["console"],
                 "level": values.Value(
                     "INFO",
                     environ_name="LOGGING_LEVEL_LOGGERS_APP",
