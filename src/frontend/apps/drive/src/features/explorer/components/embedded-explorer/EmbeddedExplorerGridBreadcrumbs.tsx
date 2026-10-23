@@ -304,6 +304,7 @@ export const LastItemBreadcrumb = ({
   item: Item;
   onRestrictionUpdated?: (item: Item) => void | Promise<void>;
 }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const { getMenuItems, modals, openShareModal } = useItemActionMenuItems({
     onRestrictionUpdated,
@@ -352,6 +353,7 @@ export const LastItemBreadcrumb = ({
           variant="tertiary"
           size="small"
           icon={icon}
+          aria-label={t("explorer.rightPanel.share")}
           onClick={() => openShareModal(item)}
           data-testid="share-button"
         />

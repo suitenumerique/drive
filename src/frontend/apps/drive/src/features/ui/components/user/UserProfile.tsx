@@ -67,6 +67,7 @@ const AnonymousDropdownMenu = () => {
       <Button
         icon={<Icon name="more_horiz" />}
         variant="tertiary"
+        aria-label={t("anonymous_dropdown_menu.button")}
         onClick={() => setIsOpen(!isOpen)}
         data-testid="anonymous-dropdown-menu"
       />

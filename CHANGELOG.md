@@ -20,6 +20,7 @@ and this project adheres to
 ### Fixed
 
 - 🐛(frontend) show the full item title in a tooltip when truncated
+- ♿️(frontend) fix accessible names of icon buttons
 
 ## [v0.25.3] - 2026-10-23
 
