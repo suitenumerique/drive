@@ -130,8 +130,10 @@ def test_run_management_command_passes_args_and_logs_output(console_logs):
     assert recent.hard_deleted_at is None
     assert console_logs == [
         {
-            "event": "clean_pending_items: Cleaned 1 stale pending item(s).",
+            "event": "management_command_finished",
             "level": "info",
             "logger": "core.tasks.management_commands",
+            "command": "clean_pending_items",
+            "output": "Cleaned 1 stale pending item(s).",
         }
     ]

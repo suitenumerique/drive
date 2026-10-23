@@ -1,6 +1,5 @@
 """Run management commands on a schedule with celery beat."""
 
-import logging
 import shlex
 from io import StringIO
 
@@ -13,12 +12,13 @@ from django.core.management import (
     load_command_class,
 )
 
+import structlog
 from celery import Celery
 from celery.schedules import crontab
 
 from drive.celery_app import app
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Commands that can be scheduled, with the setting holding their schedule
 PERIODIC_COMMAND_SETTINGS = {
@@ -107,4 +107,4 @@ def run_management_command(name, *args):
     """Run a management command and send its output to the logs."""
     output = StringIO()
     call_command(name, *args, stdout=output, stderr=output)
-    logger.info("%s: %s", name, output.getvalue().strip())
+    logger.info("management_command_finished", command=name, output=output.getvalue().strip())
