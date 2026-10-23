@@ -51,6 +51,13 @@ def get_release():
         return "NA"  # Default: not available
 
 
+def drop_celery_task_data(_logger, _method_name, event_dict):
+    """Drop the task context that Celery adds to its logs, whose arguments can hold user data."""
+    if event_dict["_record"].name.startswith("celery."):
+        event_dict.pop("data", None)
+    return event_dict
+
+
 # Hand the structlog events to the standard loggers, so that the LOGGING
 # formatter writes them like any other log
 structlog.configure(
@@ -1406,6 +1413,7 @@ class Base(Configuration):
                 "foreign_pre_chain": [
                     structlog.contextvars.merge_contextvars,
                     structlog.stdlib.ExtraAdder(),
+                    drop_celery_task_data,
                     structlog.stdlib.add_logger_name,
                     structlog.stdlib.add_log_level,
                     structlog.processors.TimeStamper(fmt="iso", utc=True),

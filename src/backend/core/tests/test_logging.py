@@ -193,7 +193,6 @@ def test_logging_celery_task_arguments(console_logs):
             "event": "Task core.tasks.item.rename_file[task-1] received",
             "level": "info",
             "logger": "celery.worker.strategy",
-            "data": context,
         }
     ]
 
