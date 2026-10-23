@@ -144,6 +144,10 @@ build-frontend: ## build the frontend container
 	@$(FRONTEND_YARN) install --frozen-lockfile
 .PHONY: build-frontend-development
 
+docker-hub-build: ## build and push the images of the current branch to Docker Hub
+	@gh workflow run docker-hub.yml --ref $$(git branch --show-current)
+.PHONY: docker-hub-build
+
 down: ## stop and remove containers, networks, images, and volumes
 	@$(COMPOSE) down
 	rm -rf data/postgresql.*
