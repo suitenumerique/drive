@@ -2,6 +2,8 @@
 Unit tests for the User model
 """
 
+import logging
+
 import pytest
 from configurations import values
 
@@ -117,3 +119,12 @@ def test_logging_request_id_heartbeat(client, console_logs):
     client.get("/__lbheartbeat__/")
 
     assert "request.summary INFO rid=None" in console_logs[0]
+
+
+def test_logging_core_logger(console_logs):
+    """Logs of the core application should be written to the console."""
+    logging.getLogger("core.api").warning("item creation refused")
+
+    assert len(console_logs) == 2
+    assert "core.api WARNING rid=None item creation refused" in console_logs[0]
+    assert "core.api WARNING rid=None item creation refused" in console_logs[1]
