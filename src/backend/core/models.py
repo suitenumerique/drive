@@ -7,7 +7,6 @@ import smtplib
 import uuid
 from datetime import timedelta
 from enum import StrEnum
-from logging import getLogger
 from os.path import splitext
 
 from django.conf import settings
@@ -28,6 +27,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import get_language, override
 from django.utils.translation import gettext_lazy as _
 
+import structlog
 from django_ltree.fields import PathField
 from django_ltree.functions import NLevel
 from django_ltree.managers import TreeManager, TreeQuerySet
@@ -47,7 +47,7 @@ from core.permissions import get_permissions_backend
 from core.storage.cache import invalidate_storage_used_cache
 from core.utils.item_title import manage_unique_title as manage_unique_title_utils
 
-logger = getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Item fields whose update can change the storage used by a user.
 STORAGE_USED_FIELDS = {"size", "creator", "creator_id", "hard_deleted_at", "quota_excluded"}
@@ -355,7 +355,7 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
         """Generate and send email to the user from a template."""
 
         if not settings.EMAIL_HOST:
-            logger.info("EMAIL_HOST host is not set, skipping email sending")
+            logger.info("user_email_skipped", user_id=self.pk, reason="email_host_not_set")
             return
 
         context = context or {}
@@ -384,7 +384,7 @@ class User(AbstractBaseUser, BaseModel, auth_models.PermissionsMixin):
                     fail_silently=False,
                 )
             except smtplib.SMTPException as exception:
-                logger.error("email to %s was not sent: %s", self.email, exception)
+                logger.error("user_email_failed", user_id=self.pk, error=str(exception))
 
     @cached_property
     def teams(self):
@@ -719,7 +719,9 @@ class UserReconciliationCsvImport(BaseModel):
         """Generate and send email to the user from a template."""
 
         if not settings.EMAIL_HOST:
-            logger.debug("EMAIL_HOST host is not set, skipping email sending")
+            logger.debug(
+                "reconciliation_import_email_skipped", job_id=self.pk, reason="email_host_not_set"
+            )
             return
 
         context = context or {}
@@ -748,7 +750,12 @@ class UserReconciliationCsvImport(BaseModel):
                     fail_silently=False,
                 )
             except smtplib.SMTPException as exception:
-                logger.error("email to %s was not sent: %s", emails, exception)
+                logger.error(
+                    "reconciliation_import_email_failed",
+                    job_id=self.pk,
+                    recipients=len(emails),
+                    error=str(exception),
+                )
 
     def send_reconciliation_error_email(self, recipient_email, other_email, language=None):
         """Method allowing to send email for reconciliation requests with errors."""
@@ -1655,7 +1662,7 @@ class Item(TreeModel, BaseModel):
         """Generate and send email from a template."""
 
         if not settings.EMAIL_HOST:
-            logger.debug("EMAIL_HOST host is not set, skipping email sending")
+            logger.debug("item_email_skipped", item_id=self.pk, reason="email_host_not_set")
             return
 
         context = context or {}
@@ -1690,7 +1697,12 @@ class Item(TreeModel, BaseModel):
                     fail_silently=False,
                 )
             except smtplib.SMTPException as exception:
-                logger.error("invitation to %s was not sent: %s", emails, exception)
+                logger.error(
+                    "item_email_failed",
+                    item_id=self.pk,
+                    recipients=len(emails),
+                    error=str(exception),
+                )
 
     def send_invitation_email(self, email, role, sender, language=None):
         """Method allowing a user to send an email invitation to another user for a item."""

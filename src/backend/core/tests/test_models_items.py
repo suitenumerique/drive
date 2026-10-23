@@ -1068,9 +1068,12 @@ def test_models_items__email_invitation__failed(_mock_send_mail, console_logs):
 
     assert console_logs == [
         {
-            "event": "invitation to ['guest3@example.com'] was not sent: Error SMTPException",
+            "event": "item_email_failed",
             "level": "error",
             "logger": "core.models",
+            "item_id": str(item.pk),
+            "recipients": 1,
+            "error": "Error SMTPException",
         }
     ]
 
@@ -1106,9 +1109,11 @@ def test_models_items__email_invitation__skipped_when_email_host_missing(
     # Logger should be called to indicate skipping
     assert console_logs == [
         {
-            "event": "EMAIL_HOST host is not set, skipping email sending",
+            "event": "item_email_skipped",
             "level": "debug",
             "logger": "core.models",
+            "item_id": str(item.pk),
+            "reason": "email_host_not_set",
         }
     ]
 

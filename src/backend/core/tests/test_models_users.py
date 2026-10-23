@@ -25,9 +25,11 @@ def test_models_users_send_email_failed(_mock_send_mail, console_logs):
 
     assert console_logs == [
         {
-            "event": f"email to {user.email} was not sent: Error SMTPException",
+            "event": "user_email_failed",
             "level": "error",
             "logger": "core.models",
+            "user_id": str(user.pk),
+            "error": "Error SMTPException",
         }
     ]
 

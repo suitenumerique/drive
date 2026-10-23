@@ -206,12 +206,16 @@ def test_models_user_reconciliation_toggles_is_active_and_sends_done_email():
 @mock.patch("core.models.send_mail", side_effect=smtplib.SMTPException("Error SMTPException"))
 def test_models_user_reconciliation_csv_import_email_failed(_mock_send_mail, console_logs):
     """An SMTP error when sending the email of a CSV import should be logged."""
-    models.UserReconciliationCsvImport().send_email("Hello", ["admin@example.com"])
+    job = models.UserReconciliationCsvImport()
+    job.send_email("Hello", ["admin@example.com"])
 
     assert console_logs == [
         {
-            "event": "email to ['admin@example.com'] was not sent: Error SMTPException",
+            "event": "reconciliation_import_email_failed",
             "level": "error",
             "logger": "core.models",
+            "job_id": str(job.pk),
+            "recipients": 1,
+            "error": "Error SMTPException",
         }
     ]
