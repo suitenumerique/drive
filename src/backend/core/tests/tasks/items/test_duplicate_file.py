@@ -2,6 +2,7 @@
 
 import uuid
 from io import BytesIO
+from unittest import mock
 
 from django.core.files.storage import default_storage
 
@@ -17,38 +18,51 @@ pytestmark = pytest.mark.django_db
 # pylint: disable=no-value-for-parameter
 
 
-def test_duplicate_file_item_to_duplicate_does_not_exist(caplog):
+def test_duplicate_file_item_to_duplicate_does_not_exist(console_logs):
     """Test when the item_to_duplicate does not exists, should abort the task."""
 
-    with caplog.at_level("ERROR", logger="core.tasks.item"):
-        item_to_duplicate_id = uuid.uuid4()
-        duplicate_file(item_to_duplicate_id=item_to_duplicate_id, duplicated_item_id=uuid.uuid4())
+    item_to_duplicate_id = uuid.uuid4()
+    duplicate_file(item_to_duplicate_id=item_to_duplicate_id, duplicated_item_id=uuid.uuid4())
 
-    assert (
-        f"duplicating file: item_to_duplicate with id {item_to_duplicate_id} does not exist, "
-        "aborting" in caplog.text
-    )
+    assert console_logs == [
+        {
+            "event": (
+                f"duplicating file: item_to_duplicate with id {item_to_duplicate_id} does not"
+                " exist, aborting"
+            ),
+            "level": "error",
+            "logger": "core.tasks.item",
+            "exception": mock.ANY,
+        }
+    ]
 
 
-def test_duplicate_file_duplicated_item_does_not_exist(caplog):
+def test_duplicate_file_duplicated_item_does_not_exist(console_logs):
     """Test when the duplicated_item does not exists, should abort the task."""
 
     item_to_duplicate = factories.ItemFactory(type=models.ItemTypeChoices.FILE)
+    console_logs.clear()
 
-    with caplog.at_level("ERROR", logger="core.tasks.item"):
-        duplicated_item_id = uuid.uuid4()
-        duplicate_file(
-            item_to_duplicate_id=item_to_duplicate.id,
-            duplicated_item_id=duplicated_item_id,
-        )
-
-    assert (
-        f"duplicating file: duplicated_item with id {duplicated_item_id} does not exist, aborting"
-        in caplog.text
+    duplicated_item_id = uuid.uuid4()
+    duplicate_file(
+        item_to_duplicate_id=item_to_duplicate.id,
+        duplicated_item_id=duplicated_item_id,
     )
 
+    assert console_logs == [
+        {
+            "event": (
+                f"duplicating file: duplicated_item with id {duplicated_item_id} does not exist,"
+                " aborting"
+            ),
+            "level": "error",
+            "logger": "core.tasks.item",
+            "exception": mock.ANY,
+        }
+    ]
 
-def test_duplicate_file_duplicated_file_not_in_duplicating_state(caplog):
+
+def test_duplicate_file_duplicated_file_not_in_duplicating_state(console_logs):
     """Test when the duplicated_item upload_state is not uploading, should abort the task."""
 
     item_to_duplicate = factories.ItemFactory(
@@ -60,16 +74,22 @@ def test_duplicate_file_duplicated_file_not_in_duplicating_state(caplog):
         update_upload_state=models.ItemUploadStateChoices.READY,
     )
 
-    with caplog.at_level("ERROR", logger="core.tasks.item"):
-        duplicate_file(
-            item_to_duplicate_id=item_to_duplicate.id,
-            duplicated_item_id=duplicated_item.id,
-        )
-
-    assert (
-        "duplicating file: the duplidated file upload_state is not duplicating but ready, "
-        "aborting" in caplog.text
+    console_logs.clear()
+    duplicate_file(
+        item_to_duplicate_id=item_to_duplicate.id,
+        duplicated_item_id=duplicated_item.id,
     )
+
+    assert console_logs == [
+        {
+            "event": (
+                "duplicating file: the duplidated file upload_state is not duplicating but ready, "
+                "aborting"
+            ),
+            "level": "error",
+            "logger": "core.tasks.item",
+        }
+    ]
 
 
 def test_duplicate_file():
@@ -101,7 +121,7 @@ def test_duplicate_file():
     assert default_storage.exists(duplicated_item.file_key)
 
 
-def test_duplicate_file_retry(caplog):
+def test_duplicate_file_retry(console_logs):
     """Test duplicating file should retry if a botocore exception is raised."""
 
     item_to_duplicate = factories.ItemFactory(
@@ -115,24 +135,28 @@ def test_duplicate_file_retry(caplog):
         filename="my_file.txt",
     )
     # don't create a file to raise a botocore exception
+    console_logs.clear()
 
-    with (
-        caplog.at_level("ERROR", logger="core.tasks.item"),
-        pytest.raises(botocore.exceptions.ClientError),
-    ):
+    with pytest.raises(botocore.exceptions.ClientError):
         duplicate_file(
             item_to_duplicate_id=item_to_duplicate.id,
             duplicated_item_id=duplicated_item.id,
         )
 
-    assert (
-        "duplicating file: error while copying file (retries 0 on 10). Error: An error occurred "
-        "(NoSuchKey) when calling the CopyObject operation: The specified key does not exist."
-        in caplog.text
-    )
+    assert console_logs == [
+        {
+            "event": (
+                "duplicating file: error while copying file (retries 0 on 10). Error: An error "
+                "occurred (NoSuchKey) when calling the CopyObject operation: The specified key "
+                "does not exist."
+            ),
+            "level": "error",
+            "logger": "core.tasks.item",
+        }
+    ]
 
 
-def test_duplicate_file_max_retries_exceeded(caplog):
+def test_duplicate_file_max_retries_exceeded(console_logs):
     """Test duplicating file max retries exceeded should delete the duplicated item."""
 
     item_to_duplicate = factories.ItemFactory(
@@ -146,11 +170,9 @@ def test_duplicate_file_max_retries_exceeded(caplog):
         filename="my_file.txt",
     )
     # don't create a file to raise a botocore exception
+    console_logs.clear()
 
-    with (
-        caplog.at_level("ERROR", logger="core.tasks.item"),
-        pytest.raises(botocore.exceptions.ClientError),
-    ):
+    with pytest.raises(botocore.exceptions.ClientError):
         duplicate_file.max_retries = 0
         duplicate_file(
             item_to_duplicate_id=item_to_duplicate.id,
@@ -159,7 +181,22 @@ def test_duplicate_file_max_retries_exceeded(caplog):
 
     assert not models.Item.objects.filter(id=duplicated_item.id).exists()
 
-    assert (
-        f"duplicating file: 0 max retries exceeded, the duplicated item {duplicated_item.id} is"
-        " deleted" in caplog.text
-    )
+    assert console_logs == [
+        {
+            "event": (
+                f"duplicating file: 0 max retries exceeded, the duplicated item"
+                f" {duplicated_item.id} is deleted"
+            ),
+            "level": "error",
+            "logger": "core.tasks.item",
+        },
+        {
+            "event": (
+                "duplicating file: error while copying file (retries 0 on 0). Error: An error "
+                "occurred (NoSuchKey) when calling the CopyObject operation: The specified key "
+                "does not exist."
+            ),
+            "level": "error",
+            "logger": "core.tasks.item",
+        },
+    ]

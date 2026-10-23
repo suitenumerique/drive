@@ -96,7 +96,7 @@ def test_rename_file_filename_has_not_changed():
     assert default_storage.exists(file_key)
 
 
-def test_rename_file_item_not_ready(caplog):
+def test_rename_file_item_not_ready(console_logs):
     """Renaming a file that is not ready should abort the task."""
     user = factories.UserFactory()
     item = factories.ItemFactory(
@@ -107,14 +107,20 @@ def test_rename_file_item_not_ready(caplog):
         creator=user,
         users=[(user, models.RoleChoices.OWNER)],
     )
-    with caplog.at_level("ERROR", logger="core.tasks.item"):
-        rename_file(item.id, "new_title")
+    console_logs.clear()
+    rename_file(item.id, "new_title")
     item.refresh_from_db()
     assert item.filename == "old_title.txt"
-    assert f"Item {item.id} is not ready for renaming" in caplog.text
+    assert console_logs == [
+        {
+            "event": f"Item {item.id} is not ready for renaming",
+            "level": "error",
+            "logger": "core.tasks.item",
+        }
+    ]
 
 
-def test_rename_file_new_title_is_empty(caplog):
+def test_rename_file_new_title_is_empty(console_logs):
     """Renaming a file with an empty new title should abort the task."""
     user = factories.UserFactory()
     item = factories.ItemFactory(
@@ -126,14 +132,20 @@ def test_rename_file_new_title_is_empty(caplog):
         users=[(user, models.RoleChoices.OWNER)],
     )
 
-    with caplog.at_level("ERROR", logger="core.tasks.item"):
-        rename_file(item.id, "")
+    console_logs.clear()
+    rename_file(item.id, "")
     item.refresh_from_db()
     assert item.filename == "old_title.txt"
-    assert "New title is empty, skipping rename file" in caplog.text
+    assert console_logs == [
+        {
+            "event": "New title is empty, skipping rename file",
+            "level": "error",
+            "logger": "core.tasks.item",
+        }
+    ]
 
 
-def test_rename_file_new_title_is_none(caplog):
+def test_rename_file_new_title_is_none(console_logs):
     """Renaming a file with a None new title should abort the task."""
     user = factories.UserFactory()
     item = factories.ItemFactory(
@@ -145,8 +157,14 @@ def test_rename_file_new_title_is_none(caplog):
         users=[(user, models.RoleChoices.OWNER)],
     )
 
-    with caplog.at_level("ERROR", logger="core.tasks.item"):
-        rename_file(item.id, None)
+    console_logs.clear()
+    rename_file(item.id, None)
     item.refresh_from_db()
     assert item.filename == "old_title.txt"
-    assert "New title is empty, skipping rename file" in caplog.text
+    assert console_logs == [
+        {
+            "event": "New title is empty, skipping rename file",
+            "level": "error",
+            "logger": "core.tasks.item",
+        }
+    ]

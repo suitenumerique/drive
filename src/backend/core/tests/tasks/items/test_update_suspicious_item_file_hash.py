@@ -13,21 +13,30 @@ from core.tasks.item import update_suspicious_item_file_hash
 pytestmark = pytest.mark.django_db
 
 
-def test_update_suspicious_item_file_hash_item_does_not_exist(caplog):
+def test_update_suspicious_item_file_hash_item_does_not_exist(console_logs):
     """Test the update_suspicious_item_file_hash task when the item does not exist"""
-    with caplog.at_level("ERROR", logger="core.tasks.item"):
-        update_suspicious_item_file_hash(1)
-        assert "updating suspicious item file hash: Item 1 does not exist" in caplog.text
+    update_suspicious_item_file_hash(1)
+    assert console_logs == [
+        {
+            "event": "updating suspicious item file hash: Item 1 does not exist",
+            "level": "error",
+            "logger": "core.tasks.item",
+        }
+    ]
 
 
-def test_update_suspicious_item_file_hash_item_not_suspicious(caplog):
+def test_update_suspicious_item_file_hash_item_not_suspicious(console_logs):
     """Test the update_suspicious_item_file_hash task when the item is not suspicious"""
     item = ItemFactory(update_upload_state=ItemUploadStateChoices.READY)
-    with caplog.at_level("ERROR", logger="core.tasks.item"):
-        update_suspicious_item_file_hash(item.id)
-        assert (
-            f"updating suspicious item file hash: Item {item.id} is not suspicious" in caplog.text
-        )
+    console_logs.clear()
+    update_suspicious_item_file_hash(item.id)
+    assert console_logs == [
+        {
+            "event": f"updating suspicious item file hash: Item {item.id} is not suspicious",
+            "level": "error",
+            "logger": "core.tasks.item",
+        }
+    ]
 
 
 def test_update_suspicious_item_file_hash_item_suspicious():

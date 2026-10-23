@@ -1,6 +1,5 @@
 """Test the process item purge task."""
 
-import logging
 from datetime import timedelta
 from io import BytesIO
 from random import randint
@@ -17,30 +16,44 @@ from core.tasks.item import process_item_purge
 pytestmark = pytest.mark.django_db
 
 
-def test_process_item_purge_item_does_not_exist(caplog, django_assert_num_queries):
+def test_process_item_purge_item_does_not_exist(console_logs, django_assert_num_queries):
     """Test the process item purge task when the item does not exist."""
-    with caplog.at_level(logging.ERROR), django_assert_num_queries(1):
+    with django_assert_num_queries(1):
         process_item_purge(1)
 
-    assert "Item 1 does not exist" in caplog.records[0].message
+    assert console_logs == [
+        {"event": "Processing item purge for 1", "level": "info", "logger": "core.tasks.item"},
+        {"event": "Item 1 does not exist", "level": "error", "logger": "core.tasks.item"},
+    ]
 
 
-def test_process_item_purge_neither_soft_nor_hard_deleted(caplog, django_assert_num_queries):
+def test_process_item_purge_neither_soft_nor_hard_deleted(console_logs, django_assert_num_queries):
     """Test the process item purge task when the item is neither soft nor hard deleted."""
     item = factories.ItemFactory()
-    with caplog.at_level(logging.INFO), django_assert_num_queries(1):
+    console_logs.clear()
+    with django_assert_num_queries(1):
         process_item_purge(item.id)
 
     assert models.Item.objects.filter(id=item.id).exists()
     item.refresh_from_db()
     assert item.hard_deleted_at is None
-    assert (
-        f"Item {item.id!s} is not eligible for purge: item is not deleted"
-        in caplog.records[1].message
-    )
+    assert console_logs == [
+        {
+            "event": f"Processing item purge for {item.id!s}",
+            "level": "info",
+            "logger": "core.tasks.item",
+        },
+        {
+            "event": f"Item {item.id!s} is not eligible for purge: item is not deleted",
+            "level": "info",
+            "logger": "core.tasks.item",
+        },
+    ]
 
 
-def test_process_item_purge_soft_deleted_not_purgeable(caplog, django_assert_num_queries, settings):
+def test_process_item_purge_soft_deleted_not_purgeable(
+    console_logs, django_assert_num_queries, settings
+):
     """Test the process item purge task when the item is soft deleted but not purgeable."""
     settings.TRASHBIN_CUTOFF_DAYS = cutoff = randint(0, 50)
     settings.PURGE_GRACE_DAYS = grace = randint(0, 20)
@@ -48,16 +61,28 @@ def test_process_item_purge_soft_deleted_not_purgeable(caplog, django_assert_num
     item = factories.ItemFactory(
         deleted_at=timezone.now() - timedelta(days=cutoff + grace - 1, hours=23, minutes=59)
     )
-    with caplog.at_level(logging.INFO), django_assert_num_queries(1):
+    console_logs.clear()
+    with django_assert_num_queries(1):
         process_item_purge(item.id)
 
     assert models.Item.objects.filter(id=item.id).exists()
     item.refresh_from_db()
     assert item.hard_deleted_at is None
-    assert (
-        f"Item {item.id!s} is not eligible for purge: soft-deleted but not past purge cutoff"
-        in caplog.records[1].message
-    )
+    assert console_logs == [
+        {
+            "event": f"Processing item purge for {item.id!s}",
+            "level": "info",
+            "logger": "core.tasks.item",
+        },
+        {
+            "event": (
+                f"Item {item.id!s} is not eligible for purge: soft-deleted but not past purge"
+                f" cutoff: {item.deleted_at.isoformat()}"
+            ),
+            "level": "info",
+            "logger": "core.tasks.item",
+        },
+    ]
 
 
 def test_process_item_purge_soft_deleted_purgeable(settings):
