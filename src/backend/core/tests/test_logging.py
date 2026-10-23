@@ -5,10 +5,13 @@ from unittest import mock
 from uuid import uuid4
 
 import pytest
+from celery.app.log import Logging
 from rest_framework.test import APIClient
 
 from core import factories
 from core.models import ItemTypeChoices
+
+from drive.celery_app import app as celery_app
 
 pytestmark = pytest.mark.django_db
 
@@ -157,3 +160,16 @@ def test_logging_exception(console_logs):
     ]
     assert console_logs[0]["exception"].startswith("Traceback ")
     assert console_logs[0]["exception"].endswith("\nValueError: unknown item")
+
+
+def test_logging_celery_worker(console_logs):
+    """Celery workers should write the logs to the console."""
+    root = logging.getLogger()
+    with (
+        mock.patch.object(root, "handlers", list(root.handlers)),
+        mock.patch.object(Logging, "_setup", False),
+    ):
+        celery_app.log.setup_logging_subsystem(loglevel="INFO")
+        logging.getLogger("celery.app.trace").info("Task succeeded")
+
+    assert console_logs == []
