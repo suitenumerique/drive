@@ -55,11 +55,13 @@ def test_logging_request(client, console_logs):
             "level": "warning",
             "logger": "django_structlog.middlewares.request",
             "code": 404,
+            "duration_ms": mock.ANY,
             "request": "GET /api/v1.0/unknown/",
             "request_id": "migrator-42",
             "user_id": None,
         },
     ]
+    assert isinstance(console_logs[1]["duration_ms"], int)
 
 
 def test_logging_request_user(client, console_logs):
@@ -74,6 +76,7 @@ def test_logging_request_user(client, console_logs):
         "level": "info",
         "logger": "django_structlog.middlewares.request",
         "code": 200,
+        "duration_ms": mock.ANY,
         "request": "GET /api/v1.0/users/me/",
         "request_id": "migrator-42",
         "user_id": str(user.pk),
